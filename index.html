@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DAWNBLADE — Silver Age Training Hall</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Spline+Sans:wght@400;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#14100E; --forge:#241B16; --rust:#4A382C; --bone:#E8DFD0; --dim:#9A8A78;
+          --r:#C4302B; --y:#E8B33C; --b:#3B6FB0; --ok:#5C8A4A; --bad:#A33333; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--ink); color:var(--bone);
+         font-family:'Spline Sans',system-ui,sans-serif; }
+  #root { max-width:520px; margin:0 auto; min-height:100vh; }
+  .disp { font-family:'Big Shoulders Display','Arial Narrow',sans-serif; }
+  .mono { font-family:'Spline Sans Mono',monospace; }
+
+  .head { padding:16px 16px 10px; border-bottom:1px solid var(--rust); }
+  .wordmark { font-weight:900; font-size:28px; letter-spacing:.06em; text-transform:uppercase; line-height:.9; margin:0; }
+  .sub { font-size:10px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-top:6px; }
+
+  .tabs { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--rust); }
+  .tabs button { padding:13px 0; background:none; border:0; color:var(--dim); font-weight:700;
+                 font-size:12px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; }
+  .tabs button.on { color:var(--bone); box-shadow:inset 0 -2px 0 var(--bone); }
+  .body { padding:14px 14px 40px; }
+
+  .h2 { font-weight:700; font-size:12px; letter-spacing:.2em; text-transform:uppercase;
+        color:var(--dim); margin:14px 0 8px; }
+  .h2:first-child { margin-top:0; }
+
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .tile { aspect-ratio:5/6; background:var(--forge); border:1px solid var(--rust); padding:8px;
+          cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; text-align:left;
+          position:relative; transition:transform .12s,border-color .12s; color:var(--bone);
+          clip-path:polygon(0 0,100% 0,100% 90%,88% 100%,0 100%); }
+  .tile:hover { transform:translateY(-2px); }
+  .tile.picked { border-color:var(--bone); }
+  .tile:focus-visible { outline:2px solid var(--bone); outline-offset:2px; }
+  .tile .arch { position:absolute; top:6px; left:8px; font-size:8px; letter-spacing:.14em;
+                text-transform:uppercase; color:var(--dim); }
+  .tname { font-weight:700; font-size:15px; line-height:1; text-transform:uppercase; }
+  .tcls { font-size:8px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin-top:3px; }
+
+  .panel { margin-top:12px; border:1px solid var(--rust); background:var(--forge); padding:14px; }
+  .lore { font-size:13px; line-height:1.55; margin:8px 0 0; }
+  .jnote { font-size:11px; line-height:1.5; color:var(--dim); border-left:2px solid var(--rust);
+           padding-left:9px; margin:10px 0 0; }
+
+  .btn { width:100%; padding:14px; margin-top:12px; background:var(--bone); color:var(--ink); border:0;
+         font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:900; font-size:17px;
+         letter-spacing:.14em; text-transform:uppercase; cursor:pointer;
+         clip-path:polygon(0 0,100% 0,100% 72%,97% 100%,0 100%); }
+  .btn.ghost { background:transparent; color:var(--bone); border:1px solid var(--rust); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ------- table ------- */
+  .dummy { border:1px solid var(--rust); background:var(--forge); padding:12px; text-align:center; }
+  .dummy.hit { animation:thud .28s ease-out; }
+  @keyframes thud { 30% { transform:translateX(-4px) rotate(-.5deg); } 60% { transform:translateX(3px); } }
+  .dummyhp { font-weight:900; font-size:52px; line-height:1; }
+  .hpbar { height:5px; background:var(--rust); margin-top:8px; }
+  .hpbar > div { height:100%; background:var(--bone); transition:width .25s; }
+  .dummylabel { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); margin-top:7px; }
+
+  .meters { display:flex; gap:6px; margin-top:8px; }
+  .meter { flex:1; border:1px solid var(--rust); padding:7px 9px; background:var(--forge); }
+  .meter b { display:block; font-size:17px; font-weight:900; }
+  .meter span { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+
+  .log { font-size:11px; color:var(--dim); min-height:16px; margin:9px 2px 0; line-height:1.4; }
+  .paybanner { margin-top:9px; padding:9px 11px; border:1px dashed var(--y); font-size:12px;
+               display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .paybanner button { background:none; border:1px solid var(--rust); color:var(--bone); padding:5px 9px;
+                      font-size:10px; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; }
+
+  .zones { display:flex; gap:6px; margin-top:10px; }
+  .slot { flex:1; border:1px solid var(--rust); background:var(--forge); padding:7px 9px; min-height:52px; }
+  .slot .zl { font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+  .slot .zv { font-size:13px; font-weight:600; margin-top:3px; line-height:1.2; }
+  .slot.tappable { cursor:pointer; } .slot.tappable:hover { border-color:var(--bone); }
+
+  .hand { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
+  .card { aspect-ratio:5/7; background:var(--forge); border:1px solid var(--rust); padding:0;
+          cursor:pointer; position:relative; display:flex; flex-direction:column; color:var(--bone);
+          text-align:left; overflow:hidden; transition:transform .1s,border-color .1s; }
+  .card:hover { transform:translateY(-3px); }
+  .card:disabled { opacity:.45; cursor:default; transform:none; }
+  .card .strip { height:7px; width:100%; }
+  .card .cn { font-weight:700; font-size:10px; line-height:1.05; text-transform:uppercase;
+              padding:5px 6px 0; font-family:'Big Shoulders Display','Arial Narrow',sans-serif; }
+  .card .stats { margin-top:auto; padding:0 6px 5px; display:flex; align-items:flex-end; justify-content:space-between; }
+  .card .pow { font-weight:900; font-size:21px; line-height:1; }
+  .card .cost { font-size:9px; color:var(--dim); }
+  .card .ga { position:absolute; top:9px; right:5px; font-size:8px; letter-spacing:.08em;
+              color:var(--y); text-transform:uppercase; }
+  .card.paysel { border-color:var(--y); box-shadow:inset 0 0 0 1px var(--y); }
+  .card.pending { border-color:var(--bone); }
+
+  .veil { position:fixed; inset:0; background:rgba(10,8,7,.94); display:grid; place-items:center;
+          padding:22px; z-index:20; }
+  .reveal { width:100%; max-width:300px; text-align:center; }
+  .slab { border:1px solid var(--rust); background:var(--forge); padding:22px 14px; }
+  .bigscore { font-weight:900; font-size:44px; line-height:1; }
+  .rtag { font-size:10px; letter-spacing:.22em; text-transform:uppercase; margin-top:10px; }
+  .trophy { margin-top:14px; padding:12px; border:1px solid var(--rust); }
+  .trophy .cn { font-weight:700; font-size:16px; text-transform:uppercase; }
+
+  .qopt { width:100%; text-align:left; padding:12px; margin-bottom:6px; background:var(--forge);
+          border:1px solid var(--rust); color:var(--bone); font-family:inherit; font-size:14px; cursor:pointer; }
+  .qopt.right { border-color:var(--ok); } .qopt.wrong { border-color:var(--bad); }
+  .why { font-size:13px; color:var(--dim); line-height:1.5; margin-top:10px; }
+  .note { font-size:11px; color:var(--dim); line-height:1.55; margin-top:12px; }
+  .src { color:var(--dim); text-decoration:none; border-bottom:1px dotted var(--dim); }
+
+  .decklist { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+  .decklist td { padding:6px 7px; border-bottom:1px solid var(--rust); }
+  .decklist .pw { text-align:right; font-weight:600; }
+  .pdot { display:inline-block; width:8px; height:8px; margin-right:7px; }
+
+  @media (prefers-reduced-motion:reduce) { * { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+/* ================= DATA ================= */
+
+// Silver Age roster — verified vs fabtcg.com product pages (Ch1–3).
+// Lore is original writing for this app. archetype drives which drill deck loads.
+const HEROES = [
+  { id:"kayo", name:"Kayo", cls:"Brute", ch:1, arch:"balanced",
+    lore:"A pit-fighter who treats every duel like a dice game with his own bones as the stake.",
+    tip:"Brute discards are random — dice and random-selection rulings live here." },
+  { id:"iyslander", name:"Iyslander", cls:"Elemental Wizard", ch:1, arch:"balanced",
+    lore:"Winter with a will. She freezes the game solid and lets you shiver through your own turn.",
+    tip:"Instants on the opponent's turn — know your priority windows." },
+  { id:"viserai", name:"Viserai", cls:"Runeblade", ch:1, arch:"balanced",
+    lore:"Raised in the Demonastery to be a weapon. He stacks Runechants like a debt you'll pay all at once.",
+    tip:"Multiple triggers, one controller: that player picks the order." },
+  { id:"dash", name:"Dash", cls:"Mechanologist", ch:1, arch:"tempo",
+    lore:"Metrix's brightest inventor, allergic to the word 'prototype-phase.' Boost trades deck for speed.",
+    tip:"Boost banishes face down — hidden from both players." },
+  { id:"bravo", name:"Bravo, Flattering Showman", cls:"Guardian", ch:1, arch:"power",
+    lore:"The show is the swing and the swing is the show. He crushes politely, then bows.",
+    tip:"Crush checks damage DEALT (4+), not attack power." },
+  { id:"azalea", name:"Azalea", cls:"Ranger", ch:2, arch:"tempo",
+    lore:"An Outlands dead-eye. One answer in the chamber; aim as a substitute for mercy.",
+    tip:"Arrows are played from arsenal via a bow — the most misplayed Ranger rule." },
+  { id:"dorinthea", name:"Dorinthea", cls:"Warrior", ch:2, arch:"balanced",
+    lore:"The cadet who picked up the Dawnblade and refused to put it down. This app is named after her sword.",
+    tip:"Weapon attacks + reactions mid-chain: learn the chain steps cold." },
+  { id:"fai", name:"Fai", cls:"Draconic Ninja", ch:2, arch:"tempo",
+    lore:"Burned down to nothing and came back angrier. Phoenix-flame chains that rise from ash.",
+    tip:"Graveyard-return timings: know when the window opens and closes." },
+  { id:"enigma", name:"Enigma", cls:"Mystic Illusionist", ch:2, arch:"balanced",
+    lore:"A question wearing a person. Disbelieve one of these attacks and it was never there at all.",
+    tip:"Phantasm: what pops an illusion, and when — peak judge material." },
+  { id:"arakni", name:"Arakni, Web of Deceit", cls:"Chaos Assassin", ch:2, arch:"tempo",
+    lore:"Nobody hires Arakni. Arakni decides — later someone finds a contract they don't remember signing.",
+    tip:"Hidden information rulings: what is each player allowed to know?" },
+  { id:"blaze", name:"Blaze, Firemind", cls:"Wizard", ch:3, arch:"tempo",
+    lore:"Former convention-promo royalty, now everyone's problem. Casts faster than regret travels.",
+    tip:"Arcane damage prevention: 'when would deal damage' timing." },
+  { id:"boltyn", name:"Boltyn", cls:"Light Warrior", ch:3, arch:"power",
+    lore:"Solana's beacon made flesh. Charges his soul with light and spends it in one blinding strike.",
+    tip:"Soul is a public zone — charged cards sit face up." },
+  { id:"briar", name:"Briar", cls:"Elemental Runeblade", ch:3, arch:"balanced",
+    lore:"The wild given a grudge. Where she walks, weather takes sides.",
+    tip:"Embodiment tokens mid-chain: when they grant, when they pop." },
+  { id:"gravy", name:"Gravy Bones", cls:"Pirate Necromancer", ch:3, arch:"power",
+    lore:"Captain of a crew that clocked out of being alive and back in for plunder.",
+    tip:"Graveyard order matters to Necromancers. Judges earn stripes here." },
+  { id:"lyath", name:"Lyath Goldmane", cls:"Reviled Guardian", ch:3, arch:"power",
+    lore:"A name spat in every tavern. Hits like a debt collector, because that's roughly what he is.",
+    tip:"Newest hero, freshest errata — check the Card Vault before ruling." },
+];
+
+/* Sourced signature cards per Ch1 precon (names only) — from Cards Realm's
+   Chapter 1 precon review, Feb 2026. Reference, not simulated. */
+const OFFICIAL_SIGNATURES = {
+  dash:      ["Hyper Driver","Boom Grenade","Jump Start","Rev Up","Overblast","Plasma Barrel Shot"],
+  iyslander: ["Wounded Bull","Fyendal's Fighting Spirit","Look Tuff","Ice Bolt","Aether Icevein","Winter's Bite","Cold Snap"],
+  kayo:      ["Strongest Survive","Might (token)"],
+  viserai:   ["Mauvrion Skies","Flying High","Read the Runes","Spellblade Assault","Malefic Incantation","Amplify the Arknight","Runic Fellingsong","Reduce to Runechant","Sigil of Suffering"],
+  bravo:     ["Boulder Drop","Chokeslam","Cartilage Crush","Pummel","Staunch Response","Steelbraid Buckler"],
+};
+
+/* Training Hall drill cards — ORIGINAL designs (not LSS cards), built on the
+   real FaB frame: pitch 1/2/3, resource cost, power, go again. */
+const POOL = {
+  straight:{ id:"straight", name:"Straight Drill",    p:1, c:0, pow:4, d:3 },
+  jab:     { id:"jab",      name:"Combo Jab",         p:1, c:0, pow:2, d:2, ga:true },
+  heavy:   { id:"heavy",    name:"Heavy Drill Swing", p:1, c:2, pow:7, d:3 },
+  follow:  { id:"follow",   name:"Follow-Through",    p:1, c:1, pow:5, d:3 },
+  measured:{ id:"measured", name:"Measured Blow",     p:2, c:0, pow:3, d:3 },
+  form:    { id:"form",     name:"Balanced Form",     p:2, c:1, pow:4, d:3, ga:true },
+  pivot:   { id:"pivot",    name:"Pivot Strike",      p:2, c:2, pow:6, d:3 },
+  breath:  { id:"breath",   name:"Breath Control",    p:3, c:0, pow:1, d:3, ga:true },
+  iron:    { id:"iron",     name:"Iron Stance",       p:3, c:0, pow:2, d:3 },
+  anchor:  { id:"anchor",   name:"Anchor Step",       p:3, c:1, pow:3, d:3 },
+};
+// Each archetype drops 2 of the 10 drills → 8 uniques × 3 copies = 24 cards.
+const ARCHETYPES = {
+  tempo:    { label:"Tempo Drill",    drop:["heavy","pivot"],  blurb:"Cheap go-again chains. Kill fast before you run out of gas." },
+  power:    { label:"Power Drill",    drop:["jab","breath"],   blurb:"One big swing a turn. Pitch blue, hit red, repeat." },
+  balanced: { label:"Balanced Drill", drop:["follow","iron"],  blurb:"A little of everything. Sequencing wins." },
+};
+function buildDeck(arch) {
+  const drop = new Set(ARCHETYPES[arch].drop);
+  const deck = [];
+  Object.values(POOL).forEach(c => { if (!drop.has(c.id)) for (let i=0;i<3;i++) deck.push({...c, uid:c.id+"-"+i}); });
+  for (let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
+  return deck;
+}
+
+const PITCH_COLOR = { 1:"var(--r)", 2:"var(--y)", 3:"var(--b)" };
+
+/* Trophy pulls — real card names + rarity only (no stats fabricated). */
+const TROPHIES = {
+  M:{ w:80, label:"Majestic",  color:"#C87B2E", cards:["Command and Conquer","Enlightened Strike","Art of War","Fyendal's Spring Tunic"] },
+  L:{ w:15, label:"Legendary", color:"#B5A24A", cards:["Arknight Shard","Crown of Seeds","Heartened Cross Strap"] },
+  F:{ w:5,  label:"Fabled",    color:"#8E5FA8", cards:["Eye of Ophidia","Heart of Fyendal"] },
+};
+function rollTrophy(){
+  let roll = Math.random()*100;
+  for (const [tier,t] of Object.entries(TROPHIES)){
+    if ((roll -= t.w) <= 0) return { tier, name:t.cards[Math.floor(Math.random()*t.cards.length)] };
+  }
+  return { tier:"M", name:TROPHIES.M.cards[0] };
+}
+
+/* Judge bank. Frame-level rulings + one sourced Silver Age call.
+   Verify against current Comprehensive Rules before judge training use. */
+const JUDGE = [
+  { q:"A card with no defense value is declared as a defending card. Legal?",
+    a:["Yes, defends for 0","No — it can't be declared","Only via an effect"], k:1,
+    why:"Only cards with a defense value can be declared as defending cards." },
+  { q:"You pitch a blue card to pay a cost. Where does it end up?",
+    a:["Discard pile","Bottom of deck at end of turn","Banished"], k:1,
+    why:"Pitch zone first, then bottom of your deck at end of turn — in the order you choose." },
+  { q:"Your opponent registers Sink Below in a Silver Age deck. Ruling?",
+    a:["Legal — it's a common","Illegal — banned in Silver Age","Legal only in sideboard"], k:1,
+    why:"Silver Age keeps its own ban list; Sink Below and Fate Foreseen are on it. Check the current list — it moves." },
+  { q:"End of your turn, one card in hand, one in arsenal. What must you do?",
+    a:["Discard both","Keep both — you just draw up","Discard hand only"], k:1,
+    why:"There's no end-of-turn discard in FaB. You draw up to intellect; arsenal persists." },
+  { q:"An attack gains +1 power from a reaction mid-chain. When is power checked?",
+    a:["Locked at declaration","During the damage step","Defender's choice"], k:1,
+    why:"Power is calculated at the damage step, after reactions resolve." },
+  { q:"A card is banished face down. May its owner peek?",
+    a:["Yes, owners may always look","No — hidden from both players","Only at end of turn"], k:1,
+    why:"Face-down banished cards are hidden unless an effect says otherwise." },
+  { q:"A hero charges a card to their soul. Who may inspect the soul?",
+    a:["Only that player","Both players — it's public","Neither"], k:1,
+    why:"Soul is a public zone; cards sit face up." },
+  { q:"Three triggers you control go off at once. Who orders them?",
+    a:["Turn player always","You do","Random"], k:1,
+    why:"Multiple triggers with one controller are ordered by that controller." },
+];
+
+/* ================= STORAGE (artifact / hosted / memory) ================= */
+const mem = {};
+function readStore(key, cb){
+  if (window.storage && window.storage.get) {
+    window.storage.get(key).then(r => cb(r ? JSON.parse(r.value) : null)).catch(() => cb(null));
+  } else {
+    try { cb(JSON.parse(localStorage.getItem(key))); } catch(e){ cb(mem[key] || null); }
+  }
+}
+function writeStore(key, val){
+  const s = JSON.stringify(val); mem[key] = val;
+  if (window.storage && window.storage.set) { window.storage.set(key, s).catch(()=>{}); }
+  else { try { localStorage.setItem(key, s); } catch(e){} }
+}
+const SAVE_KEY = "dawnblade:final:v1";
+
+/* ================= ENGINE ================= */
+const DUMMY_HP = 42;
+
+function freshGame(hero){
+  const deck = buildDeck(hero.arch);
+  const hand = deck.splice(0,4);
+  return { heroId:hero.id, deck, hand, arsenal:null, pitchZone:[], chain:[],
+           dummy:DUMMY_HP, turn:1, ap:1, res:0, wasted:0, dealt:0,
+           paying:null, phase:"play", log:"Turn 1 — 1 action point. Tap a card to play it." };
+}
+
+function App(){
+  const [tab, setTab] = useState("arena");
+  const [heroId, setHeroId] = useState(null);
+  const [g, setG] = useState(null);
+  const [best, setBest] = useState({});
+  const [result, setResult] = useState(null);
+  const [qi, setQi] = useState(0);
+  const [ans, setAns] = useState(null);
+  const [jScore, setJScore] = useState({c:0,t:0});
+  const [hit, setHit] = useState(0);
+
+  useEffect(() => { readStore(SAVE_KEY, v => { if (v) setBest(v); }); }, []);
+
+  const hero = HEROES.find(h => h.id === heroId);
+
+  function start(h){ setHeroId(h.id); setG(freshGame(h)); setResult(null); }
+
+  function tapCard(zone, idx){
+    if (!g || g.phase !== "play") return;
+    const card = zone === "hand" ? g.hand[idx] : g.arsenal;
+    if (!card) return;
+
+    // Paying mode: taps pitch cards toward the pending cost.
+    if (g.paying){
+      if (zone === g.paying.zone && idx === g.paying.idx) return; // can't pitch the pending card
+      if (zone !== "hand") return;
+      const pitched = g.hand[idx];
+      const hand = g.hand.filter((_,i) => i !== idx);
+      const res = g.res + pitched.p;
+      const paying = { ...g.paying, idx: g.paying.zone === "hand" && idx < g.paying.idx ? g.paying.idx - 1 : g.paying.idx };
+      const next = { ...g, hand, res, pitchZone:[...g.pitchZone, pitched], paying,
+                     log:`Pitched ${pitched.name} for ${pitched.p}. ${res} resource${res===1?"":"s"} floating.` };
+      const target = paying.zone === "hand" ? next.hand[paying.idx] : next.arsenal;
+      if (target && res >= target.c) return resolvePlay(next, paying.zone, paying.idx);
+      return setG(next);
+    }
+
+    if (g.ap < 1) return setG({ ...g, log:"No action points left — end the turn." });
+    if (card.c > g.res)
+      return setG({ ...g, paying:{ zone, idx },
+                    log:`${card.name} costs ${card.c} — pay ${card.c - g.res} more. Tap cards to pitch.` });
+    resolvePlay(g, zone, idx);
+  }
+
+  function resolvePlay(state, zone, idx){
+    const card = zone === "hand" ? state.hand[idx] : state.arsenal;
+    const hand = zone === "hand" ? state.hand.filter((_,i) => i !== idx) : state.hand;
+    const arsenal = zone === "arsenal" ? null : state.arsenal;
+    const dummy = Math.max(0, state.dummy - card.pow);
+    const ap = state.ap - 1 + (card.ga ? 1 : 0);
+    const next = { ...state, hand, arsenal, dummy, ap, res: state.res - card.c,
+                   dealt: state.dealt + card.pow, chain: [...state.chain, card], paying:null,
+                   log: `${card.name} hits for ${card.pow}${card.ga ? " — go again!" : "."} ${ap} AP left.` };
+    setHit(h => h + 1);
+    if (dummy <= 0){
+      next.phase = "won";
+      const score = { turns: next.turn, wasted: next.wasted };
+      const prev = best[state.heroId];
+      const isBest = !prev || score.turns < prev.turns || (score.turns === prev.turns && score.wasted < prev.wasted);
+      const nb = isBest ? { ...best, [state.heroId]: score } : best;
+      if (isBest){ setBest(nb); writeStore(SAVE_KEY, nb); }
+      setResult({ ...score, isBest, trophy: rollTrophy() });
+    }
+    setG(next);
+  }
+
+  function endTurn(){
+    if (!g || g.phase !== "play") return;
+    if (g.hand.length > 0 && !g.arsenal) return setG({ ...g, phase:"arsenal", paying:null,
+      log:"Set one card face down into arsenal for next turn — or skip." });
+    finishTurn(g, null);
+  }
+  function finishTurn(state, arsenalIdx){
+    let hand = [...state.hand], arsenal = state.arsenal;
+    if (arsenalIdx !== null){ arsenal = hand[arsenalIdx]; hand = hand.filter((_,i)=>i!==arsenalIdx); }
+    const deck = [...state.deck, ...state.pitchZone];          // pitch → bottom, played order
+    while (hand.length < 4 && deck.length) hand.push(deck.shift()); // draw up to intellect
+    setG({ ...state, hand, arsenal, deck, pitchZone:[], chain:[],
+           wasted: state.wasted + state.res, res:0, ap:1, turn: state.turn + 1, phase:"play", paying:null,
+           log:`Turn ${state.turn + 1}. Pitched cards went to the BOTTOM of your deck — they'll be back.` });
+  }
+
+  /* ---------------- render ---------------- */
+  return (
+    <div>
+      <header className="head">
+        <h1 className="wordmark disp">Dawnblade</h1>
+        <div className="sub mono">Silver Age training hall · fan-made · not affiliated with LSS</div>
+      </header>
+
+      <nav className="tabs disp">
+        {["arena","decks","judge"].map(t =>
+          <button key={t} className={tab===t ? "on" : ""} onClick={() => setTab(t)}>{t}</button>)}
+      </nav>
+
+      <div className="body">
+        {tab === "arena" && !g && <CharacterSelect best={best} onPick={start} />}
+        {tab === "arena" && g && hero &&
+          <Table g={g} hero={hero} hit={hit} tapCard={tapCard} endTurn={endTurn}
+                 finishTurn={finishTurn} quit={() => setG(null)}
+                 cancelPay={() => setG({ ...g, paying:null, log:"Payment cancelled." })} />}
+        {tab === "decks" && <Decks hero={hero} />}
+        {tab === "judge" &&
+          <Judge qi={qi} ans={ans} score={jScore}
+                 onAnswer={i => { if (ans!==null) return; setAns(i);
+                   setJScore(s => ({ c: s.c + (i===JUDGE[qi%JUDGE.length].k ? 1 : 0), t: s.t + 1 })); }}
+                 onNext={() => { setQi(q => q+1); setAns(null); }} />}
+      </div>
+
+      {result && g && hero &&
+        <Victory hero={hero} r={result}
+                 rematch={() => start(hero)}
+                 changeHero={() => { setG(null); setResult(null); }} />}
+    </div>
+  );
+}
+
+function CharacterSelect({ best, onPick }){
+  const [sel, setSel] = useState(HEROES[0]);
+  return (
+    <div>
+      {[1,2,3].map(ch =>
+        <div key={ch}>
+          <div className="h2 disp">Chapter {ch}</div>
+          <div className="grid">
+            {HEROES.filter(h => h.ch === ch).map(h =>
+              <button key={h.id} className={"tile" + (sel.id===h.id ? " picked" : "")} onClick={() => setSel(h)}>
+                <span className="arch mono">{h.arch}</span>
+                <span className="tname disp">{h.name.split(",")[0]}</span>
+                <span className="tcls">{h.cls}</span>
+              </button>)}
+          </div>
+        </div>)}
+      <div className="panel">
+        <div className="tname disp" style={{fontSize:22}}>{sel.name}</div>
+        <div className="tcls">{sel.cls} · Chapter {sel.ch} precon · {ARCHETYPES[sel.arch].label}</div>
+        <p className="lore">{sel.lore}</p>
+        <p className="jnote">Judge focus: {sel.tip}</p>
+        {best[sel.id] &&
+          <p className="jnote">Best clear: {best[sel.id].turns} turns · {best[sel.id].wasted} resources wasted</p>}
+        <button className="btn" onClick={() => onPick(sel)}>Enter the hall</button>
+        <p className="note">Drill decks are original training cards on the real FaB turn frame —
+          hero abilities and official card text aren't simulated in v1. Official signature cards
+          are on the Decks tab.</p>
+      </div>
+    </div>
+  );
+}
+
+function Table({ g, hero, hit, tapCard, endTurn, finishTurn, quit, cancelPay }){
+  const pct = Math.max(0, (g.dummy / DUMMY_HP) * 100);
+  return (
+    <div>
+      <div className={"dummy" + (hit ? " hit" : "")} key={hit}>
+        <div className="dummyhp disp">{g.dummy}</div>
+        <div className="hpbar"><div style={{width:pct+"%"}} /></div>
+        <div className="dummylabel mono">Training dummy · 42 — you know why · takes no turns</div>
+      </div>
+
+      <div className="meters mono">
+        <div className="meter"><b>{g.turn}</b><span>turn</span></div>
+        <div className="meter"><b>{g.ap}</b><span>action pts</span></div>
+        <div className="meter"><b>{g.res}</b><span>resources</span></div>
+        <div className="meter"><b>{g.deck.length}</b><span>deck</span></div>
+      </div>
+
+      <div className="log">{g.log}</div>
+
+      {g.paying &&
+        <div className="paybanner">
+          <span>Paying for <b>{(g.paying.zone==="hand" ? g.hand[g.paying.idx] : g.arsenal).name}</b> — tap cards to pitch</span>
+          <button onClick={cancelPay}>Cancel</button>
+        </div>}
+
+      <div className="zones">
+        <div className={"slot" + (g.arsenal && g.phase==="play" ? " tappable" : "")}
+             onClick={() => g.arsenal && tapCard("arsenal", 0)}>
+          <div className="zl mono">Arsenal</div>
+          <div className="zv">{g.arsenal ? g.arsenal.name + " (" + g.arsenal.pow + ")" : "— empty —"}</div>
+        </div>
+        <div className="slot">
+          <div className="zl mono">Pitched ({g.pitchZone.length}) → bottom of deck</div>
+          <div className="zv">{g.pitchZone.length ? g.pitchZone.map(c=>c.name).join(", ") : "—"}</div>
+        </div>
+      </div>
+
+      <div className="h2 disp" style={{marginTop:14}}>
+        {g.phase === "arsenal" ? "Pick one for arsenal" : "Hand"}
+      </div>
+      <div className="hand">
+        {g.hand.map((c, i) =>
+          <button key={c.uid} disabled={g.phase==="won"}
+            className={"card" +
+              (g.paying && g.paying.zone==="hand" && g.paying.idx===i ? " pending" : "") +
+              (g.paying && !(g.paying.zone==="hand" && g.paying.idx===i) ? " paysel" : "")}
+            onClick={() => g.phase==="arsenal" ? finishTurn(g, i) : tapCard("hand", i)}>
+            <span className="strip" style={{background:PITCH_COLOR[c.p]}} />
+            {c.ga && <span className="ga mono">go again</span>}
+            <span className="cn">{c.name}</span>
+            <span className="stats"><span className="pow disp">{c.pow}</span>
+              <span className="cost mono">cost {c.c} · d{c.d}</span></span>
+          </button>)}
+        {g.hand.length === 0 && <div className="note" style={{gridColumn:"1/-1"}}>Hand empty.</div>}
+      </div>
+
+      {g.phase === "arsenal"
+        ? <button className="btn ghost" onClick={() => finishTurn(g, null)}>Skip arsenal</button>
+        : <button className="btn" onClick={endTurn} disabled={g.phase!=="play"}>End turn</button>}
+      <button className="btn ghost" onClick={quit}>Leave the hall</button>
+      <p className="note">Real frame: 1 action point per turn, go again refunds it, pitch pays costs,
+        pitched cards bottom-deck at end of turn, draw back up to 4 (intellect). Floating resources
+        vanish at end of turn — they count as WASTED. Defense step arrives with multiplayer.</p>
+    </div>
+  );
+}
+
+function Victory({ hero, r, rematch, changeHero }){
+  const t = TROPHIES[r.trophy.tier];
+  return (
+    <div className="veil" role="dialog" aria-label="Dummy destroyed">
+      <div className="reveal">
+        <div className="slab">
+          <div className="rtag mono" style={{color:"var(--dim)"}}>Dummy destroyed</div>
+          <div className="bigscore disp">{r.turns} turns</div>
+          <div className="rtag mono">{r.wasted} resources wasted{r.isBest ? " · NEW BEST" : ""}</div>
+          <div className="trophy">
+            <div className="rtag mono" style={{color:t.color, marginTop:0}}>{t.label} pull</div>
+            <div className="cn disp">{r.trophy.name}</div>
+          </div>
+        </div>
+        <button className="btn" onClick={rematch}>Rematch</button>
+        <button className="btn ghost" onClick={changeHero}>Character select</button>
+      </div>
+    </div>
+  );
+}
+
+function Decks({ hero }){
+  const h = hero || HEROES[0];
+  const deck = [];
+  const drop = new Set(ARCHETYPES[h.arch].drop);
+  Object.values(POOL).forEach(c => { if (!drop.has(c.id)) deck.push(c); });
+  const sigs = OFFICIAL_SIGNATURES[h.id];
+  return (
+    <div>
+      <div className="h2 disp">{h.name.split(",")[0]} — {ARCHETYPES[h.arch].label} (playable)</div>
+      <p className="note" style={{marginTop:0}}>{ARCHETYPES[h.arch].blurb} Original training cards ×3 each — 24 total.</p>
+      <table className="decklist"><tbody>
+        {deck.map(c =>
+          <tr key={c.id}>
+            <td><span className="pdot" style={{background:PITCH_COLOR[c.p]}} />{c.name}{c.ga ? " · go again" : ""}</td>
+            <td className="pw mono">c{c.c} / p{c.pow}</td>
+          </tr>)}
+      </tbody></table>
+
+      <div className="h2 disp">Official precon — signature cards</div>
+      {sigs
+        ? <div>
+            <p className="note" style={{marginTop:0}}>Confirmed cards from the Chapter 1 {h.name.split(",")[0]} precon,
+              per Cards Realm's Feb 2026 review. Reference only — full 55-card list and stats not yet imported.</p>
+            <table className="decklist"><tbody>
+              {sigs.map(n => <tr key={n}><td>{n}</td><td className="pw mono">official</td></tr>)}
+            </tbody></table>
+          </div>
+        : <p className="note" style={{marginTop:0}}>No sourced list embedded for this hero yet.
+            Full official lists live at fabtcg.com/decklists — the import pipeline from the project
+            files (parseFabraryExport → resolveDeck) slots them straight in.</p>}
+      <p className="note">Flesh and Blood, its card names, and set names are property of Legend Story Studios.
+        This fan project is not affiliated with LSS.</p>
+    </div>
+  );
+}
+
+function Judge({ qi, ans, score, onAnswer, onNext }){
+  const q = JUDGE[qi % JUDGE.length];
+  return (
+    <div>
+      <div className="h2 disp">Judge call · {score.c}/{score.t} correct</div>
+      <div className="panel">
+        <p style={{fontSize:15, lineHeight:1.45, margin:"0 0 12px"}}>{q.q}</p>
+        {q.a.map((opt, i) =>
+          <button key={i} onClick={() => onAnswer(i)}
+            className={"qopt" + (ans===null ? "" : i===q.k ? " right" : ans===i ? " wrong" : "")}>
+            {opt}
+          </button>)}
+        {ans !== null && <div>
+          <p className="why">{q.why}</p>
+          <button className="btn" onClick={onNext}>Next call</button>
+        </div>}
+      </div>
+      <p className="note">Seed bank of frame-level rulings. Before using this as real judge prep,
+        verify every answer against the current Comprehensive Rules and the live Silver Age ban list.</p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+<script>
+  // If the CDN scripts are blocked, say so instead of a blank page.
+  setTimeout(function(){
+    var r = document.getElementById("root");
+    if (r && !r.hasChildNodes()){
+      r.innerHTML = '<div style="padding:24px;font-family:sans-serif;color:#E8DFD0">' +
+        '<h2>Dawnblade needs its libraries</h2>' +
+        '<p>React failed to load from cdnjs. If you are offline or the CDN is blocked, ' +
+        'host this file with internet access or vendor the three script files locally.</p></div>';
+    }
+  }, 4000);
+</script>
+</body>
+</html>
