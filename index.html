@@ -49,16 +49,21 @@ img{display:block;max-width:100%}
 .prog{height:3px;background:var(--forge2);margin-top:5px;width:100%}
 .prog i{display:block;height:100%;background:var(--y);transition:width .3s}
 
-/* hero select */
-.chapter{margin:16px 0 8px;font-size:12px;color:var(--bone-dim);letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
-.chapter::after{content:"";flex:1;height:1px;background:var(--line)}
-.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.hcard{position:relative;background:var(--forge);border:1px solid var(--line);text-align:left;overflow:hidden;padding:0}
-.hcard .art{width:100%;aspect-ratio:5/7;object-fit:cover;object-position:top;filter:saturate(.92)}
-.hcard .nm{position:absolute;left:0;right:0;bottom:0;padding:22px 9px 8px;background:linear-gradient(transparent,rgba(20,16,14,.95) 55%)}
-.hcard .nm b{display:block;font-family:'Big Shoulders Display';font-size:17px;font-weight:800;letter-spacing:.04em;line-height:1}
-.hcard .nm span{font-size:10px;color:var(--y);text-transform:uppercase;letter-spacing:.1em}
-.hcard .best{position:absolute;top:6px;right:6px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-size:10px;padding:2px 6px;font-family:'Spline Sans Mono'}
+/* hero select — full roster on one screen, smash-style */
+.hgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.hcard{position:relative;background:var(--forge);border:1px solid var(--line);padding:0;overflow:hidden;display:flex;flex-direction:column}
+.hcard img.art{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 16%;filter:saturate(.92)}
+.hcard .fallbackart{aspect-ratio:1/1;font-size:12px}
+.hcard .nm{display:block;padding:2px 3px;background:var(--forge2);border-top:1px solid var(--line);font-family:'Big Shoulders Display';font-weight:700;font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-top:auto}
+.hcard.ch1{box-shadow:inset 0 -2px 0 var(--r)}
+.hcard.ch2{box-shadow:inset 0 -2px 0 var(--y)}
+.hcard.ch3{box-shadow:inset 0 -2px 0 var(--b)}
+.hcard .best{position:absolute;top:2px;right:2px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-size:8px;padding:0 3px;font-family:'Spline Sans Mono'}
+.openslot{border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--bone-dim);background:transparent;min-height:64px}
+.openslot b{font-family:'Big Shoulders Display';font-size:16px;font-weight:700;line-height:1}
+.openslot span{font-size:7.5px;letter-spacing:.14em;text-transform:uppercase}
+.roster-legend{display:flex;gap:12px;margin:8px 2px 2px;font-size:10px;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.1em;align-items:center;flex-wrap:wrap}
+.roster-legend i{width:8px;height:8px;display:inline-block;margin-right:4px}
 .fallbackart{width:100%;aspect-ratio:5/7;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--forge2),var(--ink));font-family:'Big Shoulders Display';font-size:34px;font-weight:800;color:var(--line)}
 
 /* hero sheet */
@@ -924,23 +929,26 @@ function DbBanner({db,reload}){
 
 /* ---------- hero select + deck view ---------- */
 function HeroGrid({onPick,best,db}){
-  const chapters = [1,2,3];
   return (
     <div>
-      {chapters.map(ch=>(
-        <div key={ch}>
-          <div className="chapter">Chapter {ch}</div>
-          <div className="hgrid">
-            {HEROES.filter(h=>h.ch===ch).map(h=>(
-              <button key={h.k} className="hcard clip" onClick={()=>onPick(h)}>
-                <HeroArt h={h} db={db} key={db.status}/>
-                {best[h.k]!=null && <span className="best">★ {best[h.k]}</span>}
-                <span className="nm"><b>{h.n}</b><span>{h.cls}</span></span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ))}
+      <div className="hgrid">
+        {HEROES.map(h=>(
+          <button key={h.k} className={"hcard clip-sm ch"+h.ch} onClick={()=>onPick(h)}>
+            <HeroArt h={h} db={db} key={db.status}/>
+            {best[h.k]!=null && <span className="best">★{best[h.k]}</span>}
+            <span className="nm">{h.n.split(",")[0]}</span>
+          </button>
+        ))}
+        {[1,2,3].map(i=>(
+          <div key={"open"+i} className="openslot clip-sm"><b>+</b><span>open</span></div>
+        ))}
+      </div>
+      <div className="roster-legend">
+        <span><i style={{background:"var(--r)"}}/>Chapter 1</span>
+        <span><i style={{background:"var(--y)"}}/>Chapter 2</span>
+        <span><i style={{background:"var(--b)"}}/>Chapter 3</span>
+        <span style={{marginLeft:"auto"}}>15 fighters · 3 slots reserved</span>
+      </div>
     </div>
   );
 }
