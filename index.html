@@ -191,6 +191,14 @@ img{display:block;max-width:100%}
 .dpost{width:7px;height:13px;background:var(--forge2);border:1px solid var(--line)}
 @keyframes sway{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(2.2deg)}}
 @keyframes bonk{0%{transform:rotate(0)}30%{transform:rotate(15deg)}60%{transform:rotate(-9deg)}100%{transform:rotate(0)}}
+
+/* battle strip — appears when P1 is locked in */
+.battlebtn{display:block;width:100%;margin-top:10px;padding:11px 8px;background:linear-gradient(180deg,#D43A34,var(--r) 55%,#9E2722);color:var(--bone);font-family:'Big Shoulders Display';font-weight:800;font-size:30px;letter-spacing:.24em;text-transform:uppercase;text-align:center;position:relative;overflow:hidden;text-shadow:0 2px 0 rgba(20,16,14,.35)}
+.battlebtn::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(20,16,14,.14) 0 10px,transparent 10px 22px)}
+.battlebtn::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(232,223,208,.28) 50%,transparent 70%);transform:translateX(-120%);animation:bsweep 2.6s ease-in-out infinite}
+@keyframes bsweep{0%{transform:translateX(-120%)}55%,100%{transform:translateX(120%)}}
+.battlebtn:disabled{filter:grayscale(.65) brightness(.7)}
+.battlebtn span{position:relative;z-index:1}
 </style>
 </head>
 <body>
@@ -1032,9 +1040,6 @@ function HeroSheet({h,db,onBack,onFight,best}){
           <span>DECK <b>{d.deck.reduce((a,e)=>a+e.q,0)}</b></span><span>GEAR <b>{d.gear.length}</b></span>
           {best[h.k]!=null && <span>BEST <b>{best[h.k]}</b></span>}
         </div>
-        <button className="bigbtn" disabled={db.status!=="ready"} onClick={()=>onFight(h)}>
-          {db.status==="ready" ? "Enter the training hall" : "Waiting on card DB…"}
-        </button>
         <button className="bigbtn alt" onClick={()=>setView(v=>!v)}>{view?"Hide official 55":"View official 55"}</button>
       </div>
       {view && <DeckView h={h} db={db} onZoom={setZoom}/>}
@@ -1549,6 +1554,7 @@ function App(){
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && !fighting && <>
         <HeroGrid best={best} onPick={setHero} db={db} selected={hero}/>
+        {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setFighting(hero)}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <VsStrip hero={hero} db={db}/>
         {hero && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
       </>}
