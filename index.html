@@ -169,6 +169,28 @@ img{display:block;max-width:100%}
 .tokpills{display:flex;gap:6px;flex-wrap:wrap;font-family:'Spline Sans Mono';font-size:11px}
 .tokpills .tk{border:1px solid var(--y);color:var(--y);padding:2px 7px}
 .tokpills .tk.bad{border-color:var(--r);color:var(--r)}
+
+/* vs strip — P1 / P2 slots under the roster */
+.hcard.sel{outline:2px solid var(--y);outline-offset:-1px;z-index:1}
+.vs{display:flex;align-items:stretch;gap:8px;margin-top:10px}
+.vslot{flex:1;background:var(--forge);border:1px solid var(--line);padding:14px 8px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:126px;position:relative;color:inherit}
+.vslot.p1{box-shadow:inset 0 -3px 0 var(--r)}
+.vslot.p2{box-shadow:inset 0 -3px 0 var(--b)}
+.vslot.empty{border-style:dashed;justify-content:center;color:var(--bone-dim)}
+.vslot .ptag{position:absolute;top:4px;left:6px;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em}
+.vslot .port{width:62px}
+.vslot img.art{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 16%}
+.vslot .fallbackart{aspect-ratio:1/1;font-size:11px}
+.vslot .vname{font-family:'Big Shoulders Display';font-weight:800;font-size:12px;letter-spacing:.05em;text-transform:uppercase;text-align:center}
+.vslot .taunt{font-size:9px;color:var(--bone-dim);font-style:italic}
+.vsmid{display:flex;align-items:center;font-family:'Big Shoulders Display';font-weight:800;font-size:24px;color:var(--y);padding:0 2px}
+.dmy{display:flex;flex-direction:column;align-items:center;animation:sway 3.4s ease-in-out infinite;transform-origin:50% 100%}
+.dmy[data-bonk]{animation:bonk .55s ease-out, sway 3.4s ease-in-out .55s infinite}
+.dhead{width:36px;height:30px;border-radius:4px;background:linear-gradient(160deg,#8A7355,#6F5B42);border:1px solid var(--ink);display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Spline Sans Mono';font-size:10px;color:var(--ink)}
+.dbody{width:42px;height:16px;background:#5C4B37;border:1px solid var(--ink);border-top:none;clip-path:polygon(8% 0,92% 0,100% 100%,0 100%)}
+.dpost{width:7px;height:13px;background:var(--forge2);border:1px solid var(--line)}
+@keyframes sway{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(2.2deg)}}
+@keyframes bonk{0%{transform:rotate(0)}30%{transform:rotate(15deg)}60%{transform:rotate(-9deg)}100%{transform:rotate(0)}}
 </style>
 </head>
 <body>
@@ -928,12 +950,12 @@ function DbBanner({db,reload}){
 }
 
 /* ---------- hero select + deck view ---------- */
-function HeroGrid({onPick,best,db}){
+function HeroGrid({onPick,best,db,selected}){
   return (
     <div>
       <div className="hgrid">
         {HEROES.map(h=>(
-          <button key={h.k} className={"hcard clip-sm ch"+h.ch} onClick={()=>onPick(h)}>
+          <button key={h.k} className={"hcard clip-sm ch"+h.ch+(selected&&selected.k===h.k?" sel":"")} onClick={()=>onPick(h)}>
             <HeroArt h={h} db={db} key={db.status}/>
             {best[h.k]!=null && <span className="best">★{best[h.k]}</span>}
             <span className="nm">{h.n.split(",")[0]}</span>
@@ -949,6 +971,31 @@ function HeroGrid({onPick,best,db}){
         <span><i style={{background:"var(--b)"}}/>Chapter 3</span>
         <span style={{marginLeft:"auto"}}>15 fighters · 3 slots reserved</span>
       </div>
+    </div>
+  );
+}
+const TAUNTS=["hit me.","still undefeated.","creaks menacingly.","zero fear detected.","42 and holding.","your move, hero."];
+function VsStrip({hero,db}){
+  const [t,setT]=useState(()=>Math.floor(Math.random()*TAUNTS.length));
+  const [bonk,setBonk]=useState(0);
+  return (
+    <div className="vs">
+      <div className={"vslot p1 clip-sm"+(hero?"":" empty")}>
+        <span className="ptag" style={{color:"var(--r)"}}>P1</span>
+        {hero
+          ? <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>
+          : <span style={{fontSize:11,textAlign:"center"}}>choose your fighter</span>}
+      </div>
+      <div className="vsmid">VS</div>
+      <button className="vslot p2 clip-sm" onClick={()=>{setBonk(b=>b+1);setT(x=>(x+1)%TAUNTS.length);}}>
+        <span className="ptag" style={{color:"var(--b)"}}>P2</span>
+        <div className="dmy" key={bonk} data-bonk={bonk>0?"1":undefined}>
+          <div className="dhead"><span>✕</span><span>✕</span></div>
+          <div className="dbody"/><div className="dpost"/>
+        </div>
+        <span className="vname">The Dummy <b className="mono" style={{color:"var(--r)"}}>42</b></span>
+        <span className="taunt">{TAUNTS[t]}</span>
+      </button>
     </div>
   );
 }
@@ -970,7 +1017,7 @@ function HeroSheet({h,db,onBack,onFight,best}){
   const [zoom,setZoom]=useState(null);
   return (
     <div>
-      <button className="tag" onClick={onBack}>← all heroes</button>
+      <button className="tag" onClick={onBack}>✕ clear fighter</button>
       <div className="sheet clip">
         <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
           <div style={{width:92,flex:"none"}} className="clip-sm"><HeroArt h={h} db={db} key={db.status}/></div>
@@ -1500,9 +1547,11 @@ function App(){
         <span className="tag">Silver Age training hall</span>
       </div>
       <DbBanner db={db} reload={reload}/>
-      {tab==="heroes" && !fighting && (hero
-        ? <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>
-        : <HeroGrid best={best} onPick={setHero} db={db}/>)}
+      {tab==="heroes" && !fighting && <>
+        <HeroGrid best={best} onPick={setHero} db={db} selected={hero}/>
+        <VsStrip hero={hero} db={db}/>
+        {hero && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
+      </>}
       {fighting && <Battle h={fighting} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && !fighting && <Judge/>}
       {tab==="trophies" && !fighting && <Trophies/>}
