@@ -1,608 +1,1515 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>DAWNBLADE — Silver Age Training Hall</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Spline+Sans:wght@400;600&family=Spline+Sans+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
-  :root { --ink:#14100E; --forge:#241B16; --rust:#4A382C; --bone:#E8DFD0; --dim:#9A8A78;
-          --r:#C4302B; --y:#E8B33C; --b:#3B6FB0; --ok:#5C8A4A; --bad:#A33333; }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; background:var(--ink); color:var(--bone);
-         font-family:'Spline Sans',system-ui,sans-serif; }
-  #root { max-width:520px; margin:0 auto; min-height:100vh; }
-  .disp { font-family:'Big Shoulders Display','Arial Narrow',sans-serif; }
-  .mono { font-family:'Spline Sans Mono',monospace; }
+:root{
+  --r:#C4302B; --y:#E8B33C; --b:#3B6FB0;
+  --ink:#14100E; --forge:#241B16; --forge2:#2E241D;
+  --bone:#E8DFD0; --bone-dim:#B8AC98; --line:#4A3B2E;
+  --ok:#7BA05B;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--ink);color:var(--bone);font-family:'Spline Sans',sans-serif;font-size:15px;line-height:1.45;overscroll-behavior:none}
+#root{min-height:100%;display:flex;flex-direction:column}
+h1,h2,h3,.disp{font-family:'Big Shoulders Display',sans-serif;letter-spacing:.02em;text-transform:uppercase}
+.mono{font-family:'Spline Sans Mono',monospace}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+img{display:block;max-width:100%}
+.clip{clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+.clip-sm{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px))}
 
-  .head { padding:16px 16px 10px; border-bottom:1px solid var(--rust); }
-  .wordmark { font-weight:900; font-size:28px; letter-spacing:.06em; text-transform:uppercase; line-height:.9; margin:0; }
-  .sub { font-size:10px; color:var(--dim); letter-spacing:.16em; text-transform:uppercase; margin-top:6px; }
+/* shell */
+.shell{flex:1;display:flex;flex-direction:column;max-width:560px;width:100%;margin:0 auto;padding:max(10px,env(safe-area-inset-top)) 12px calc(64px + env(safe-area-inset-bottom))}
+.topbar{display:flex;align-items:baseline;justify-content:space-between;padding:6px 2px 10px}
+.brand{font-family:'Big Shoulders Display';font-weight:800;font-size:22px;letter-spacing:.06em}
+.brand em{font-style:normal;color:var(--y)}
+.tag{font-size:10px;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.14em}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:2px;background:var(--ink);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:40}
+.tab{flex:1;max-width:132px;text-align:center;padding:9px 4px;font-family:'Big Shoulders Display';font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone-dim)}
+.tab.on{color:var(--ink);background:var(--y)}
+.tab.on.fight{background:var(--r);color:var(--bone)}
 
-  .tabs { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--rust); }
-  .tabs button { padding:13px 0; background:none; border:0; color:var(--dim); font-weight:700;
-                 font-size:12px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; }
-  .tabs button.on { color:var(--bone); box-shadow:inset 0 -2px 0 var(--bone); }
-  .body { padding:14px 14px 40px; }
+/* db banner */
+.dbbar{display:flex;align-items:center;gap:8px;background:var(--forge);border:1px solid var(--line);padding:8px 10px;margin-bottom:10px;font-size:12px}
+.dbbar .dot{width:8px;height:8px;flex:none;background:var(--y);animation:pulse 1.1s infinite alternate}
+.dbbar.ok .dot{background:var(--ok);animation:none}
+.dbbar.err .dot{background:var(--r);animation:none}
+@keyframes pulse{to{opacity:.25}}
+.dbbar .retry{margin-left:auto;color:var(--y);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.prog{height:3px;background:var(--forge2);margin-top:5px;width:100%}
+.prog i{display:block;height:100%;background:var(--y);transition:width .3s}
 
-  .h2 { font-weight:700; font-size:12px; letter-spacing:.2em; text-transform:uppercase;
-        color:var(--dim); margin:14px 0 8px; }
-  .h2:first-child { margin-top:0; }
+/* hero select */
+.chapter{margin:16px 0 8px;font-size:12px;color:var(--bone-dim);letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.chapter::after{content:"";flex:1;height:1px;background:var(--line)}
+.hgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.hcard{position:relative;background:var(--forge);border:1px solid var(--line);text-align:left;overflow:hidden;padding:0}
+.hcard .art{width:100%;aspect-ratio:5/7;object-fit:cover;object-position:top;filter:saturate(.92)}
+.hcard .nm{position:absolute;left:0;right:0;bottom:0;padding:22px 9px 8px;background:linear-gradient(transparent,rgba(20,16,14,.95) 55%)}
+.hcard .nm b{display:block;font-family:'Big Shoulders Display';font-size:17px;font-weight:800;letter-spacing:.04em;line-height:1}
+.hcard .nm span{font-size:10px;color:var(--y);text-transform:uppercase;letter-spacing:.1em}
+.hcard .best{position:absolute;top:6px;right:6px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-size:10px;padding:2px 6px;font-family:'Spline Sans Mono'}
+.fallbackart{width:100%;aspect-ratio:5/7;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--forge2),var(--ink));font-family:'Big Shoulders Display';font-size:34px;font-weight:800;color:var(--line)}
 
-  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .tile { aspect-ratio:5/6; background:var(--forge); border:1px solid var(--rust); padding:8px;
-          cursor:pointer; display:flex; flex-direction:column; justify-content:flex-end; text-align:left;
-          position:relative; transition:transform .12s,border-color .12s; color:var(--bone);
-          clip-path:polygon(0 0,100% 0,100% 90%,88% 100%,0 100%); }
-  .tile:hover { transform:translateY(-2px); }
-  .tile.picked { border-color:var(--bone); }
-  .tile:focus-visible { outline:2px solid var(--bone); outline-offset:2px; }
-  .tile .arch { position:absolute; top:6px; left:8px; font-size:8px; letter-spacing:.14em;
-                text-transform:uppercase; color:var(--dim); }
-  .tname { font-weight:700; font-size:15px; line-height:1; text-transform:uppercase; }
-  .tcls { font-size:8px; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin-top:3px; }
+/* hero sheet */
+.sheet{background:var(--forge);border:1px solid var(--line);padding:14px;margin-top:12px}
+.sheet h2{font-size:26px;font-weight:800}
+.sheet .cls{color:var(--y);font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.statrow{display:flex;gap:14px;margin:10px 0;font-family:'Spline Sans Mono';font-size:13px}
+.statrow b{color:var(--y)}
+.bigbtn{display:block;width:100%;padding:14px;background:var(--r);color:var(--bone);font-family:'Big Shoulders Display';font-weight:800;font-size:19px;letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-top:12px}
+.bigbtn.alt{background:var(--forge2);border:1px solid var(--line);color:var(--bone);font-size:15px;padding:11px}
+.bigbtn:disabled{opacity:.4}
 
-  .panel { margin-top:12px; border:1px solid var(--rust); background:var(--forge); padding:14px; }
-  .lore { font-size:13px; line-height:1.55; margin:8px 0 0; }
-  .jnote { font-size:11px; line-height:1.5; color:var(--dim); border-left:2px solid var(--rust);
-           padding-left:9px; margin:10px 0 0; }
+/* deck viewer */
+.dsec{margin:14px 0 6px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+.dsec.p1{color:var(--r)}.dsec.p2{color:var(--y)}.dsec.p3{color:var(--b)}
+.cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.cgrid .cc{position:relative;padding:0;background:var(--forge)}
+.cgrid img{aspect-ratio:5/7;object-fit:cover;width:100%}
+.cc .q{position:absolute;top:4px;left:4px;background:var(--ink);border:1px solid var(--line);font-family:'Spline Sans Mono';font-size:11px;padding:1px 5px}
+.ccfall{aspect-ratio:5/7;display:flex;flex-direction:column;justify-content:space-between;padding:8px;border:1px solid var(--line);font-size:11px;line-height:1.25}
+.ccfall .pn{font-family:'Big Shoulders Display';font-weight:700;font-size:13px}
+.pb1{box-shadow:inset 0 -3px 0 var(--r)}.pb2{box-shadow:inset 0 -3px 0 var(--y)}.pb3{box-shadow:inset 0 -3px 0 var(--b)}
 
-  .btn { width:100%; padding:14px; margin-top:12px; background:var(--bone); color:var(--ink); border:0;
-         font-family:'Big Shoulders Display','Arial Narrow',sans-serif; font-weight:900; font-size:17px;
-         letter-spacing:.14em; text-transform:uppercase; cursor:pointer;
-         clip-path:polygon(0 0,100% 0,100% 72%,97% 100%,0 100%); }
-  .btn.ghost { background:transparent; color:var(--bone); border:1px solid var(--rust); }
-  .btn:disabled { opacity:.4; cursor:not-allowed; }
+/* battle */
+.board{display:flex;flex-direction:column;gap:10px}
+.dummy{background:var(--forge);border:1px solid var(--line);padding:12px;display:flex;align-items:center;gap:12px}
+.dummy .hp{font-family:'Big Shoulders Display';font-weight:800;font-size:40px;line-height:1;color:var(--r)}
+.dummy .lbl{font-size:11px;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.1em}
+.dummy .incoming{margin-left:auto;text-align:right;font-family:'Spline Sans Mono';font-size:12px;color:var(--y)}
+.mystat{display:flex;gap:8px;flex-wrap:wrap;font-family:'Spline Sans Mono';font-size:12px}
+.pill{background:var(--forge);border:1px solid var(--line);padding:5px 9px}
+.pill b{color:var(--y)}
+.pill.hp b{color:var(--r)}
+.log{background:var(--forge);border:1px solid var(--line);padding:9px 10px;font-size:12.5px;min-height:44px;color:var(--bone)}
+.log .dim{color:var(--bone-dim)}
+.zone{font-size:11px;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.12em;margin:2px 2px 4px}
+.hand{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.hand .hc{position:relative;padding:0;background:var(--forge);border:1px solid var(--line);transition:transform .12s}
+.hand .hc img{aspect-ratio:5/7;object-fit:cover;width:100%}
+.hand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 1px var(--y)}
+.hand .hc.dis{opacity:.45}
+.hand .hc .cost{position:absolute;top:3px;left:3px;background:var(--ink);font-family:'Spline Sans Mono';font-size:11px;padding:1px 5px;border:1px solid var(--line)}
+.hand .hc .pw{position:absolute;bottom:3px;left:3px;background:var(--ink);font-family:'Spline Sans Mono';font-size:11px;padding:1px 5px;border:1px solid var(--r);color:var(--r)}
+.hand .hc .df{position:absolute;bottom:3px;right:3px;background:var(--ink);font-family:'Spline Sans Mono';font-size:11px;padding:1px 5px;border:1px solid var(--b);color:var(--b)}
+.arsenalrow{display:flex;gap:8px;align-items:stretch}
+.arsenalrow .slot{width:64px;flex:none;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:4px}
+.arsenalrow .slot img{aspect-ratio:5/7;object-fit:cover}
+.gearrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.gearrow .g{flex:none;width:56px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line)}
+.gearrow .g img{aspect-ratio:5/7;object-fit:cover}
+.gearrow .g.used{opacity:.35}
+.gearrow .g .gd{position:absolute;bottom:2px;right:2px;background:var(--ink);font-family:'Spline Sans Mono';font-size:10px;padding:0 4px;border:1px solid var(--b);color:var(--b)}
+.actrow{display:flex;gap:8px}
+.actrow .a{flex:1;padding:12px 6px;font-family:'Big Shoulders Display';font-weight:800;font-size:16px;letter-spacing:.08em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line)}
+.actrow .a.go{background:var(--r)}
+.actrow .a.pay{background:var(--y);color:var(--ink)}
+.actrow .a:disabled{opacity:.4}
+.paymode{border:1px solid var(--y);background:rgba(232,179,60,.07);padding:8px 10px;font-size:12.5px}
+.blockmode{border:1px solid var(--b);background:rgba(59,111,176,.08);padding:8px 10px;font-size:12.5px}
 
-  /* ------- table ------- */
-  .dummy { border:1px solid var(--rust); background:var(--forge); padding:12px; text-align:center; }
-  .dummy.hit { animation:thud .28s ease-out; }
-  @keyframes thud { 30% { transform:translateX(-4px) rotate(-.5deg); } 60% { transform:translateX(3px); } }
-  .dummyhp { font-weight:900; font-size:52px; line-height:1; }
-  .hpbar { height:5px; background:var(--rust); margin-top:8px; }
-  .hpbar > div { height:100%; background:var(--bone); transition:width .25s; }
-  .dummylabel { font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); margin-top:7px; }
+/* card modal */
+.modal{position:fixed;inset:0;background:rgba(10,8,7,.82);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+.modal .inner{max-width:340px;width:100%}
+.modal img{width:100%;border:1px solid var(--line)}
+.modal .txt{background:var(--forge);border:1px solid var(--line);padding:10px;font-size:13px;margin-top:8px}
+.modal .chip{display:inline-block;margin-top:8px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--line);padding:2px 7px}
 
-  .meters { display:flex; gap:6px; margin-top:8px; }
-  .meter { flex:1; border:1px solid var(--rust); padding:7px 9px; background:var(--forge); }
-  .meter b { display:block; font-size:17px; font-weight:900; }
-  .meter span { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+/* reveal + judge + misc */
+.reveal{position:fixed;inset:0;background:rgba(10,8,7,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:70;text-align:center;padding:24px}
+.reveal .card{width:200px;background:var(--forge);border:1px solid var(--y);padding:18px 14px;position:relative;overflow:hidden}
+.reveal .card::before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,var(--r),var(--y),var(--b));transform:translateX(-101%);animation:bleed 1.1s .15s forwards}
+@keyframes bleed{60%{transform:translateX(0)}100%{transform:translateX(101%)}}
+.reveal h3{font-size:22px;position:relative}
+.reveal .rar{font-size:11px;letter-spacing:.2em;color:var(--y);text-transform:uppercase;position:relative}
+.qopt{display:block;width:100%;text-align:left;padding:11px 12px;background:var(--forge);border:1px solid var(--line);margin-top:8px;font-size:14px}
+.qopt.right{border-color:var(--ok);color:var(--ok)}
+.qopt.wrong{border-color:var(--r);color:var(--r)}
+.explain{border-left:3px solid var(--y);padding:8px 10px;background:var(--forge);margin-top:10px;font-size:13px}
+.note{font-size:11.5px;color:var(--bone-dim);margin-top:10px;line-height:1.5}
+.note a{color:var(--y)}
+.win{border:1px solid var(--ok);background:rgba(123,160,91,.08);padding:12px;text-align:center}
+.lose{border:1px solid var(--r);background:rgba(196,48,43,.08);padding:12px;text-align:center}
+.cdnfail{display:none;padding:40px 20px;text-align:center;font-family:sans-serif;color:#E8DFD0}
 
-  .log { font-size:11px; color:var(--dim); min-height:16px; margin:9px 2px 0; line-height:1.4; }
-  .paybanner { margin-top:9px; padding:9px 11px; border:1px dashed var(--y); font-size:12px;
-               display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  .paybanner button { background:none; border:1px solid var(--rust); color:var(--bone); padding:5px 9px;
-                      font-size:10px; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; }
-
-  .zones { display:flex; gap:6px; margin-top:10px; }
-  .slot { flex:1; border:1px solid var(--rust); background:var(--forge); padding:7px 9px; min-height:52px; }
-  .slot .zl { font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
-  .slot .zv { font-size:13px; font-weight:600; margin-top:3px; line-height:1.2; }
-  .slot.tappable { cursor:pointer; } .slot.tappable:hover { border-color:var(--bone); }
-
-  .hand { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; }
-  .card { aspect-ratio:5/7; background:var(--forge); border:1px solid var(--rust); padding:0;
-          cursor:pointer; position:relative; display:flex; flex-direction:column; color:var(--bone);
-          text-align:left; overflow:hidden; transition:transform .1s,border-color .1s; }
-  .card:hover { transform:translateY(-3px); }
-  .card:disabled { opacity:.45; cursor:default; transform:none; }
-  .card .strip { height:7px; width:100%; }
-  .card .cn { font-weight:700; font-size:10px; line-height:1.05; text-transform:uppercase;
-              padding:5px 6px 0; font-family:'Big Shoulders Display','Arial Narrow',sans-serif; }
-  .card .stats { margin-top:auto; padding:0 6px 5px; display:flex; align-items:flex-end; justify-content:space-between; }
-  .card .pow { font-weight:900; font-size:21px; line-height:1; }
-  .card .cost { font-size:9px; color:var(--dim); }
-  .card .ga { position:absolute; top:9px; right:5px; font-size:8px; letter-spacing:.08em;
-              color:var(--y); text-transform:uppercase; }
-  .card.paysel { border-color:var(--y); box-shadow:inset 0 0 0 1px var(--y); }
-  .card.pending { border-color:var(--bone); }
-
-  .veil { position:fixed; inset:0; background:rgba(10,8,7,.94); display:grid; place-items:center;
-          padding:22px; z-index:20; }
-  .reveal { width:100%; max-width:300px; text-align:center; }
-  .slab { border:1px solid var(--rust); background:var(--forge); padding:22px 14px; }
-  .bigscore { font-weight:900; font-size:44px; line-height:1; }
-  .rtag { font-size:10px; letter-spacing:.22em; text-transform:uppercase; margin-top:10px; }
-  .trophy { margin-top:14px; padding:12px; border:1px solid var(--rust); }
-  .trophy .cn { font-weight:700; font-size:16px; text-transform:uppercase; }
-
-  .qopt { width:100%; text-align:left; padding:12px; margin-bottom:6px; background:var(--forge);
-          border:1px solid var(--rust); color:var(--bone); font-family:inherit; font-size:14px; cursor:pointer; }
-  .qopt.right { border-color:var(--ok); } .qopt.wrong { border-color:var(--bad); }
-  .why { font-size:13px; color:var(--dim); line-height:1.5; margin-top:10px; }
-  .note { font-size:11px; color:var(--dim); line-height:1.55; margin-top:12px; }
-  .src { color:var(--dim); text-decoration:none; border-bottom:1px dotted var(--dim); }
-
-  .decklist { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
-  .decklist td { padding:6px 7px; border-bottom:1px solid var(--rust); }
-  .decklist .pw { text-align:right; font-weight:600; }
-  .pdot { display:inline-block; width:8px; height:8px; margin-right:7px; }
-
-  @media (prefers-reduced-motion:reduce) { * { animation:none!important; transition:none!important; } }
+/* v5: effects engine UI */
+.fxdot{position:absolute;top:4px;right:4px;width:9px;height:9px;border:1px solid var(--ink)}
+.fxdot.full{background:var(--ok)}.fxdot.part{background:var(--y)}.fxdot.none{background:#6B6258}
+.cov{margin:12px 0 4px;font-size:12px}
+.covbar{height:6px;background:var(--forge2);display:flex;margin-top:4px}
+.covbar i{height:100%}
+.covbar .cf{background:var(--ok)}.covbar .cp{background:var(--y)}.covbar .cn{background:#6B6258}
+.fxlist{margin-top:6px;font-size:12px;border-top:1px solid var(--line);padding-top:6px}
+.fxlist .fc{display:flex;gap:6px;margin:3px 0;align-items:flex-start}
+.fxlist .fs{flex:none;font-family:'Spline Sans Mono';font-size:10px;padding:0 4px;border:1px solid var(--line);margin-top:1px}
+.fxlist .fs.run{color:var(--ok);border-color:var(--ok)}
+.fxlist .fs.noop{color:var(--y);border-color:var(--y)}
+.fxlist .fs.skip{color:var(--bone-dim)}
+.boardrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.boardrow .b{flex:none;width:56px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line)}
+.boardrow .b img{aspect-ratio:5/7;object-fit:cover}
+.boardrow .b .sw{position:absolute;bottom:0;left:0;right:0;background:var(--r);font-family:'Spline Sans Mono';font-size:10px;text-align:center;padding:1px 0}
+.boardrow .b.spent{opacity:.4}
+.tokpills{display:flex;gap:6px;flex-wrap:wrap;font-family:'Spline Sans Mono';font-size:11px}
+.tokpills .tk{border:1px solid var(--y);color:var(--y);padding:2px 7px}
+.tokpills .tk.bad{border-color:var(--r);color:var(--r)}
 </style>
 </head>
 <body>
 <div id="root"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef } = React;
-
-/* ================= DATA ================= */
-
-// Silver Age roster — verified vs fabtcg.com product pages (Ch1–3).
-// Lore is original writing for this app. archetype drives which drill deck loads.
-const HEROES = [
-  { id:"kayo", name:"Kayo", cls:"Brute", ch:1, arch:"balanced",
-    lore:"A pit-fighter who treats every duel like a dice game with his own bones as the stake.",
-    tip:"Brute discards are random — dice and random-selection rulings live here." },
-  { id:"iyslander", name:"Iyslander", cls:"Elemental Wizard", ch:1, arch:"balanced",
-    lore:"Winter with a will. She freezes the game solid and lets you shiver through your own turn.",
-    tip:"Instants on the opponent's turn — know your priority windows." },
-  { id:"viserai", name:"Viserai", cls:"Runeblade", ch:1, arch:"balanced",
-    lore:"Raised in the Demonastery to be a weapon. He stacks Runechants like a debt you'll pay all at once.",
-    tip:"Multiple triggers, one controller: that player picks the order." },
-  { id:"dash", name:"Dash", cls:"Mechanologist", ch:1, arch:"tempo",
-    lore:"Metrix's brightest inventor, allergic to the word 'prototype-phase.' Boost trades deck for speed.",
-    tip:"Boost banishes face down — hidden from both players." },
-  { id:"bravo", name:"Bravo, Flattering Showman", cls:"Guardian", ch:1, arch:"power",
-    lore:"The show is the swing and the swing is the show. He crushes politely, then bows.",
-    tip:"Crush checks damage DEALT (4+), not attack power." },
-  { id:"azalea", name:"Azalea", cls:"Ranger", ch:2, arch:"tempo",
-    lore:"An Outlands dead-eye. One answer in the chamber; aim as a substitute for mercy.",
-    tip:"Arrows are played from arsenal via a bow — the most misplayed Ranger rule." },
-  { id:"dorinthea", name:"Dorinthea", cls:"Warrior", ch:2, arch:"balanced",
-    lore:"The cadet who picked up the Dawnblade and refused to put it down. This app is named after her sword.",
-    tip:"Weapon attacks + reactions mid-chain: learn the chain steps cold." },
-  { id:"fai", name:"Fai", cls:"Draconic Ninja", ch:2, arch:"tempo",
-    lore:"Burned down to nothing and came back angrier. Phoenix-flame chains that rise from ash.",
-    tip:"Graveyard-return timings: know when the window opens and closes." },
-  { id:"enigma", name:"Enigma", cls:"Mystic Illusionist", ch:2, arch:"balanced",
-    lore:"A question wearing a person. Disbelieve one of these attacks and it was never there at all.",
-    tip:"Phantasm: what pops an illusion, and when — peak judge material." },
-  { id:"arakni", name:"Arakni, Web of Deceit", cls:"Chaos Assassin", ch:2, arch:"tempo",
-    lore:"Nobody hires Arakni. Arakni decides — later someone finds a contract they don't remember signing.",
-    tip:"Hidden information rulings: what is each player allowed to know?" },
-  { id:"blaze", name:"Blaze, Firemind", cls:"Wizard", ch:3, arch:"tempo",
-    lore:"Former convention-promo royalty, now everyone's problem. Casts faster than regret travels.",
-    tip:"Arcane damage prevention: 'when would deal damage' timing." },
-  { id:"boltyn", name:"Boltyn", cls:"Light Warrior", ch:3, arch:"power",
-    lore:"Solana's beacon made flesh. Charges his soul with light and spends it in one blinding strike.",
-    tip:"Soul is a public zone — charged cards sit face up." },
-  { id:"briar", name:"Briar", cls:"Elemental Runeblade", ch:3, arch:"balanced",
-    lore:"The wild given a grudge. Where she walks, weather takes sides.",
-    tip:"Embodiment tokens mid-chain: when they grant, when they pop." },
-  { id:"gravy", name:"Gravy Bones", cls:"Pirate Necromancer", ch:3, arch:"power",
-    lore:"Captain of a crew that clocked out of being alive and back in for plunder.",
-    tip:"Graveyard order matters to Necromancers. Judges earn stripes here." },
-  { id:"lyath", name:"Lyath Goldmane", cls:"Reviled Guardian", ch:3, arch:"power",
-    lore:"A name spat in every tavern. Hits like a debt collector, because that's roughly what he is.",
-    tip:"Newest hero, freshest errata — check the Card Vault before ruling." },
-];
-
-/* Sourced signature cards per Ch1 precon (names only) — from Cards Realm's
-   Chapter 1 precon review, Feb 2026. Reference, not simulated. */
-const OFFICIAL_SIGNATURES = {
-  dash:      ["Hyper Driver","Boom Grenade","Jump Start","Rev Up","Overblast","Plasma Barrel Shot"],
-  iyslander: ["Wounded Bull","Fyendal's Fighting Spirit","Look Tuff","Ice Bolt","Aether Icevein","Winter's Bite","Cold Snap"],
-  kayo:      ["Strongest Survive","Might (token)"],
-  viserai:   ["Mauvrion Skies","Flying High","Read the Runes","Spellblade Assault","Malefic Incantation","Amplify the Arknight","Runic Fellingsong","Reduce to Runechant","Sigil of Suffering"],
-  bravo:     ["Boulder Drop","Chokeslam","Cartilage Crush","Pummel","Staunch Response","Steelbraid Buckler"],
-};
-
-/* Training Hall drill cards — ORIGINAL designs (not LSS cards), built on the
-   real FaB frame: pitch 1/2/3, resource cost, power, go again. */
-const POOL = {
-  straight:{ id:"straight", name:"Straight Drill",    p:1, c:0, pow:4, d:3 },
-  jab:     { id:"jab",      name:"Combo Jab",         p:1, c:0, pow:2, d:2, ga:true },
-  heavy:   { id:"heavy",    name:"Heavy Drill Swing", p:1, c:2, pow:7, d:3 },
-  follow:  { id:"follow",   name:"Follow-Through",    p:1, c:1, pow:5, d:3 },
-  measured:{ id:"measured", name:"Measured Blow",     p:2, c:0, pow:3, d:3 },
-  form:    { id:"form",     name:"Balanced Form",     p:2, c:1, pow:4, d:3, ga:true },
-  pivot:   { id:"pivot",    name:"Pivot Strike",      p:2, c:2, pow:6, d:3 },
-  breath:  { id:"breath",   name:"Breath Control",    p:3, c:0, pow:1, d:3, ga:true },
-  iron:    { id:"iron",     name:"Iron Stance",       p:3, c:0, pow:2, d:3 },
-  anchor:  { id:"anchor",   name:"Anchor Step",       p:3, c:1, pow:3, d:3 },
-};
-// Each archetype drops 2 of the 10 drills → 8 uniques × 3 copies = 24 cards.
-const ARCHETYPES = {
-  tempo:    { label:"Tempo Drill",    drop:["heavy","pivot"],  blurb:"Cheap go-again chains. Kill fast before you run out of gas." },
-  power:    { label:"Power Drill",    drop:["jab","breath"],   blurb:"One big swing a turn. Pitch blue, hit red, repeat." },
-  balanced: { label:"Balanced Drill", drop:["follow","iron"],  blurb:"A little of everything. Sequencing wins." },
-};
-function buildDeck(arch) {
-  const drop = new Set(ARCHETYPES[arch].drop);
-  const deck = [];
-  Object.values(POOL).forEach(c => { if (!drop.has(c.id)) for (let i=0;i<3;i++) deck.push({...c, uid:c.id+"-"+i}); });
-  for (let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
-  return deck;
-}
-
-const PITCH_COLOR = { 1:"var(--r)", 2:"var(--y)", 3:"var(--b)" };
-
-/* Trophy pulls — real card names + rarity only (no stats fabricated). */
-const TROPHIES = {
-  M:{ w:80, label:"Majestic",  color:"#C87B2E", cards:["Command and Conquer","Enlightened Strike","Art of War","Fyendal's Spring Tunic"] },
-  L:{ w:15, label:"Legendary", color:"#B5A24A", cards:["Arknight Shard","Crown of Seeds","Heartened Cross Strap"] },
-  F:{ w:5,  label:"Fabled",    color:"#8E5FA8", cards:["Eye of Ophidia","Heart of Fyendal"] },
-};
-function rollTrophy(){
-  let roll = Math.random()*100;
-  for (const [tier,t] of Object.entries(TROPHIES)){
-    if ((roll -= t.w) <= 0) return { tier, name:t.cards[Math.floor(Math.random()*t.cards.length)] };
-  }
-  return { tier:"M", name:TROPHIES.M.cards[0] };
-}
-
-/* Judge bank. Frame-level rulings + one sourced Silver Age call.
-   Verify against current Comprehensive Rules before judge training use. */
-const JUDGE = [
-  { q:"A card with no defense value is declared as a defending card. Legal?",
-    a:["Yes, defends for 0","No — it can't be declared","Only via an effect"], k:1,
-    why:"Only cards with a defense value can be declared as defending cards." },
-  { q:"You pitch a blue card to pay a cost. Where does it end up?",
-    a:["Discard pile","Bottom of deck at end of turn","Banished"], k:1,
-    why:"Pitch zone first, then bottom of your deck at end of turn — in the order you choose." },
-  { q:"Your opponent registers Sink Below in a Silver Age deck. Ruling?",
-    a:["Legal — it's a common","Illegal — banned in Silver Age","Legal only in sideboard"], k:1,
-    why:"Silver Age keeps its own ban list; Sink Below and Fate Foreseen are on it. Check the current list — it moves." },
-  { q:"End of your turn, one card in hand, one in arsenal. What must you do?",
-    a:["Discard both","Keep both — you just draw up","Discard hand only"], k:1,
-    why:"There's no end-of-turn discard in FaB. You draw up to intellect; arsenal persists." },
-  { q:"An attack gains +1 power from a reaction mid-chain. When is power checked?",
-    a:["Locked at declaration","During the damage step","Defender's choice"], k:1,
-    why:"Power is calculated at the damage step, after reactions resolve." },
-  { q:"A card is banished face down. May its owner peek?",
-    a:["Yes, owners may always look","No — hidden from both players","Only at end of turn"], k:1,
-    why:"Face-down banished cards are hidden unless an effect says otherwise." },
-  { q:"A hero charges a card to their soul. Who may inspect the soul?",
-    a:["Only that player","Both players — it's public","Neither"], k:1,
-    why:"Soul is a public zone; cards sit face up." },
-  { q:"Three triggers you control go off at once. Who orders them?",
-    a:["Turn player always","You do","Random"], k:1,
-    why:"Multiple triggers with one controller are ordered by that controller." },
-];
-
-/* ================= STORAGE (artifact / hosted / memory) ================= */
-const mem = {};
-function readStore(key, cb){
-  if (window.storage && window.storage.get) {
-    window.storage.get(key).then(r => cb(r ? JSON.parse(r.value) : null)).catch(() => cb(null));
-  } else {
-    try { cb(JSON.parse(localStorage.getItem(key))); } catch(e){ cb(mem[key] || null); }
-  }
-}
-function writeStore(key, val){
-  const s = JSON.stringify(val); mem[key] = val;
-  if (window.storage && window.storage.set) { window.storage.set(key, s).catch(()=>{}); }
-  else { try { localStorage.setItem(key, s); } catch(e){} }
-}
-const SAVE_KEY = "dawnblade:final:v1";
-
-/* ================= ENGINE ================= */
-const DUMMY_HP = 42;
-
-function freshGame(hero){
-  const deck = buildDeck(hero.arch);
-  const hand = deck.splice(0,4);
-  return { heroId:hero.id, deck, hand, arsenal:null, pitchZone:[], chain:[],
-           dummy:DUMMY_HP, turn:1, ap:1, res:0, wasted:0, dealt:0,
-           paying:null, phase:"play", log:"Turn 1 — 1 action point. Tap a card to play it." };
-}
-
-function App(){
-  const [tab, setTab] = useState("arena");
-  const [heroId, setHeroId] = useState(null);
-  const [g, setG] = useState(null);
-  const [best, setBest] = useState({});
-  const [result, setResult] = useState(null);
-  const [qi, setQi] = useState(0);
-  const [ans, setAns] = useState(null);
-  const [jScore, setJScore] = useState({c:0,t:0});
-  const [hit, setHit] = useState(0);
-
-  useEffect(() => { readStore(SAVE_KEY, v => { if (v) setBest(v); }); }, []);
-
-  const hero = HEROES.find(h => h.id === heroId);
-
-  function start(h){ setHeroId(h.id); setG(freshGame(h)); setResult(null); }
-
-  function tapCard(zone, idx){
-    if (!g || g.phase !== "play") return;
-    const card = zone === "hand" ? g.hand[idx] : g.arsenal;
-    if (!card) return;
-
-    // Paying mode: taps pitch cards toward the pending cost.
-    if (g.paying){
-      if (zone === g.paying.zone && idx === g.paying.idx) return; // can't pitch the pending card
-      if (zone !== "hand") return;
-      const pitched = g.hand[idx];
-      const hand = g.hand.filter((_,i) => i !== idx);
-      const res = g.res + pitched.p;
-      const paying = { ...g.paying, idx: g.paying.zone === "hand" && idx < g.paying.idx ? g.paying.idx - 1 : g.paying.idx };
-      const next = { ...g, hand, res, pitchZone:[...g.pitchZone, pitched], paying,
-                     log:`Pitched ${pitched.name} for ${pitched.p}. ${res} resource${res===1?"":"s"} floating.` };
-      const target = paying.zone === "hand" ? next.hand[paying.idx] : next.arsenal;
-      if (target && res >= target.c) return resolvePlay(next, paying.zone, paying.idx);
-      return setG(next);
-    }
-
-    if (g.ap < 1) return setG({ ...g, log:"No action points left — end the turn." });
-    if (card.c > g.res)
-      return setG({ ...g, paying:{ zone, idx },
-                    log:`${card.name} costs ${card.c} — pay ${card.c - g.res} more. Tap cards to pitch.` });
-    resolvePlay(g, zone, idx);
-  }
-
-  function resolvePlay(state, zone, idx){
-    const card = zone === "hand" ? state.hand[idx] : state.arsenal;
-    const hand = zone === "hand" ? state.hand.filter((_,i) => i !== idx) : state.hand;
-    const arsenal = zone === "arsenal" ? null : state.arsenal;
-    const dummy = Math.max(0, state.dummy - card.pow);
-    const ap = state.ap - 1 + (card.ga ? 1 : 0);
-    const next = { ...state, hand, arsenal, dummy, ap, res: state.res - card.c,
-                   dealt: state.dealt + card.pow, chain: [...state.chain, card], paying:null,
-                   log: `${card.name} hits for ${card.pow}${card.ga ? " — go again!" : "."} ${ap} AP left.` };
-    setHit(h => h + 1);
-    if (dummy <= 0){
-      next.phase = "won";
-      const score = { turns: next.turn, wasted: next.wasted };
-      const prev = best[state.heroId];
-      const isBest = !prev || score.turns < prev.turns || (score.turns === prev.turns && score.wasted < prev.wasted);
-      const nb = isBest ? { ...best, [state.heroId]: score } : best;
-      if (isBest){ setBest(nb); writeStore(SAVE_KEY, nb); }
-      setResult({ ...score, isBest, trophy: rollTrophy() });
-    }
-    setG(next);
-  }
-
-  function endTurn(){
-    if (!g || g.phase !== "play") return;
-    if (g.hand.length > 0 && !g.arsenal) return setG({ ...g, phase:"arsenal", paying:null,
-      log:"Set one card face down into arsenal for next turn — or skip." });
-    finishTurn(g, null);
-  }
-  function finishTurn(state, arsenalIdx){
-    let hand = [...state.hand], arsenal = state.arsenal;
-    if (arsenalIdx !== null){ arsenal = hand[arsenalIdx]; hand = hand.filter((_,i)=>i!==arsenalIdx); }
-    const deck = [...state.deck, ...state.pitchZone];          // pitch → bottom, played order
-    while (hand.length < 4 && deck.length) hand.push(deck.shift()); // draw up to intellect
-    setG({ ...state, hand, arsenal, deck, pitchZone:[], chain:[],
-           wasted: state.wasted + state.res, res:0, ap:1, turn: state.turn + 1, phase:"play", paying:null,
-           log:`Turn ${state.turn + 1}. Pitched cards went to the BOTTOM of your deck — they'll be back.` });
-  }
-
-  /* ---------------- render ---------------- */
-  return (
-    <div>
-      <header className="head">
-        <h1 className="wordmark disp">Dawnblade</h1>
-        <div className="sub mono">Silver Age training hall · fan-made · not affiliated with LSS</div>
-      </header>
-
-      <nav className="tabs disp">
-        {["arena","decks","judge"].map(t =>
-          <button key={t} className={tab===t ? "on" : ""} onClick={() => setTab(t)}>{t}</button>)}
-      </nav>
-
-      <div className="body">
-        {tab === "arena" && !g && <CharacterSelect best={best} onPick={start} />}
-        {tab === "arena" && g && hero &&
-          <Table g={g} hero={hero} hit={hit} tapCard={tapCard} endTurn={endTurn}
-                 finishTurn={finishTurn} quit={() => setG(null)}
-                 cancelPay={() => setG({ ...g, paying:null, log:"Payment cancelled." })} />}
-        {tab === "decks" && <Decks hero={hero} />}
-        {tab === "judge" &&
-          <Judge qi={qi} ans={ans} score={jScore}
-                 onAnswer={i => { if (ans!==null) return; setAns(i);
-                   setJScore(s => ({ c: s.c + (i===JUDGE[qi%JUDGE.length].k ? 1 : 0), t: s.t + 1 })); }}
-                 onNext={() => { setQi(q => q+1); setAns(null); }} />}
-      </div>
-
-      {result && g && hero &&
-        <Victory hero={hero} r={result}
-                 rematch={() => start(hero)}
-                 changeHero={() => { setG(null); setResult(null); }} />}
-    </div>
-  );
-}
-
-function CharacterSelect({ best, onPick }){
-  const [sel, setSel] = useState(HEROES[0]);
-  return (
-    <div>
-      {[1,2,3].map(ch =>
-        <div key={ch}>
-          <div className="h2 disp">Chapter {ch}</div>
-          <div className="grid">
-            {HEROES.filter(h => h.ch === ch).map(h =>
-              <button key={h.id} className={"tile" + (sel.id===h.id ? " picked" : "")} onClick={() => setSel(h)}>
-                <span className="arch mono">{h.arch}</span>
-                <span className="tname disp">{h.name.split(",")[0]}</span>
-                <span className="tcls">{h.cls}</span>
-              </button>)}
-          </div>
-        </div>)}
-      <div className="panel">
-        <div className="tname disp" style={{fontSize:22}}>{sel.name}</div>
-        <div className="tcls">{sel.cls} · Chapter {sel.ch} precon · {ARCHETYPES[sel.arch].label}</div>
-        <p className="lore">{sel.lore}</p>
-        <p className="jnote">Judge focus: {sel.tip}</p>
-        {best[sel.id] &&
-          <p className="jnote">Best clear: {best[sel.id].turns} turns · {best[sel.id].wasted} resources wasted</p>}
-        <button className="btn" onClick={() => onPick(sel)}>Enter the hall</button>
-        <p className="note">Drill decks are original training cards on the real FaB turn frame —
-          hero abilities and official card text aren't simulated in v1. Official signature cards
-          are on the Decks tab.</p>
-      </div>
-    </div>
-  );
-}
-
-function Table({ g, hero, hit, tapCard, endTurn, finishTurn, quit, cancelPay }){
-  const pct = Math.max(0, (g.dummy / DUMMY_HP) * 100);
-  return (
-    <div>
-      <div className={"dummy" + (hit ? " hit" : "")} key={hit}>
-        <div className="dummyhp disp">{g.dummy}</div>
-        <div className="hpbar"><div style={{width:pct+"%"}} /></div>
-        <div className="dummylabel mono">Training dummy · 42 — you know why · takes no turns</div>
-      </div>
-
-      <div className="meters mono">
-        <div className="meter"><b>{g.turn}</b><span>turn</span></div>
-        <div className="meter"><b>{g.ap}</b><span>action pts</span></div>
-        <div className="meter"><b>{g.res}</b><span>resources</span></div>
-        <div className="meter"><b>{g.deck.length}</b><span>deck</span></div>
-      </div>
-
-      <div className="log">{g.log}</div>
-
-      {g.paying &&
-        <div className="paybanner">
-          <span>Paying for <b>{(g.paying.zone==="hand" ? g.hand[g.paying.idx] : g.arsenal).name}</b> — tap cards to pitch</span>
-          <button onClick={cancelPay}>Cancel</button>
-        </div>}
-
-      <div className="zones">
-        <div className={"slot" + (g.arsenal && g.phase==="play" ? " tappable" : "")}
-             onClick={() => g.arsenal && tapCard("arsenal", 0)}>
-          <div className="zl mono">Arsenal</div>
-          <div className="zv">{g.arsenal ? g.arsenal.name + " (" + g.arsenal.pow + ")" : "— empty —"}</div>
-        </div>
-        <div className="slot">
-          <div className="zl mono">Pitched ({g.pitchZone.length}) → bottom of deck</div>
-          <div className="zv">{g.pitchZone.length ? g.pitchZone.map(c=>c.name).join(", ") : "—"}</div>
-        </div>
-      </div>
-
-      <div className="h2 disp" style={{marginTop:14}}>
-        {g.phase === "arsenal" ? "Pick one for arsenal" : "Hand"}
-      </div>
-      <div className="hand">
-        {g.hand.map((c, i) =>
-          <button key={c.uid} disabled={g.phase==="won"}
-            className={"card" +
-              (g.paying && g.paying.zone==="hand" && g.paying.idx===i ? " pending" : "") +
-              (g.paying && !(g.paying.zone==="hand" && g.paying.idx===i) ? " paysel" : "")}
-            onClick={() => g.phase==="arsenal" ? finishTurn(g, i) : tapCard("hand", i)}>
-            <span className="strip" style={{background:PITCH_COLOR[c.p]}} />
-            {c.ga && <span className="ga mono">go again</span>}
-            <span className="cn">{c.name}</span>
-            <span className="stats"><span className="pow disp">{c.pow}</span>
-              <span className="cost mono">cost {c.c} · d{c.d}</span></span>
-          </button>)}
-        {g.hand.length === 0 && <div className="note" style={{gridColumn:"1/-1"}}>Hand empty.</div>}
-      </div>
-
-      {g.phase === "arsenal"
-        ? <button className="btn ghost" onClick={() => finishTurn(g, null)}>Skip arsenal</button>
-        : <button className="btn" onClick={endTurn} disabled={g.phase!=="play"}>End turn</button>}
-      <button className="btn ghost" onClick={quit}>Leave the hall</button>
-      <p className="note">Real frame: 1 action point per turn, go again refunds it, pitch pays costs,
-        pitched cards bottom-deck at end of turn, draw back up to 4 (intellect). Floating resources
-        vanish at end of turn — they count as WASTED. Defense step arrives with multiplayer.</p>
-    </div>
-  );
-}
-
-function Victory({ hero, r, rematch, changeHero }){
-  const t = TROPHIES[r.trophy.tier];
-  return (
-    <div className="veil" role="dialog" aria-label="Dummy destroyed">
-      <div className="reveal">
-        <div className="slab">
-          <div className="rtag mono" style={{color:"var(--dim)"}}>Dummy destroyed</div>
-          <div className="bigscore disp">{r.turns} turns</div>
-          <div className="rtag mono">{r.wasted} resources wasted{r.isBest ? " · NEW BEST" : ""}</div>
-          <div className="trophy">
-            <div className="rtag mono" style={{color:t.color, marginTop:0}}>{t.label} pull</div>
-            <div className="cn disp">{r.trophy.name}</div>
-          </div>
-        </div>
-        <button className="btn" onClick={rematch}>Rematch</button>
-        <button className="btn ghost" onClick={changeHero}>Character select</button>
-      </div>
-    </div>
-  );
-}
-
-function Decks({ hero }){
-  const h = hero || HEROES[0];
-  const deck = [];
-  const drop = new Set(ARCHETYPES[h.arch].drop);
-  Object.values(POOL).forEach(c => { if (!drop.has(c.id)) deck.push(c); });
-  const sigs = OFFICIAL_SIGNATURES[h.id];
-  return (
-    <div>
-      <div className="h2 disp">{h.name.split(",")[0]} — {ARCHETYPES[h.arch].label} (playable)</div>
-      <p className="note" style={{marginTop:0}}>{ARCHETYPES[h.arch].blurb} Original training cards ×3 each — 24 total.</p>
-      <table className="decklist"><tbody>
-        {deck.map(c =>
-          <tr key={c.id}>
-            <td><span className="pdot" style={{background:PITCH_COLOR[c.p]}} />{c.name}{c.ga ? " · go again" : ""}</td>
-            <td className="pw mono">c{c.c} / p{c.pow}</td>
-          </tr>)}
-      </tbody></table>
-
-      <div className="h2 disp">Official precon — signature cards</div>
-      {sigs
-        ? <div>
-            <p className="note" style={{marginTop:0}}>Confirmed cards from the Chapter 1 {h.name.split(",")[0]} precon,
-              per Cards Realm's Feb 2026 review. Reference only — full 55-card list and stats not yet imported.</p>
-            <table className="decklist"><tbody>
-              {sigs.map(n => <tr key={n}><td>{n}</td><td className="pw mono">official</td></tr>)}
-            </tbody></table>
-          </div>
-        : <p className="note" style={{marginTop:0}}>No sourced list embedded for this hero yet.
-            Full official lists live at fabtcg.com/decklists — the import pipeline from the project
-            files (parseFabraryExport → resolveDeck) slots them straight in.</p>}
-      <p className="note">Flesh and Blood, its card names, and set names are property of Legend Story Studios.
-        This fan project is not affiliated with LSS.</p>
-    </div>
-  );
-}
-
-function Judge({ qi, ans, score, onAnswer, onNext }){
-  const q = JUDGE[qi % JUDGE.length];
-  return (
-    <div>
-      <div className="h2 disp">Judge call · {score.c}/{score.t} correct</div>
-      <div className="panel">
-        <p style={{fontSize:15, lineHeight:1.45, margin:"0 0 12px"}}>{q.q}</p>
-        {q.a.map((opt, i) =>
-          <button key={i} onClick={() => onAnswer(i)}
-            className={"qopt" + (ans===null ? "" : i===q.k ? " right" : ans===i ? " wrong" : "")}>
-            {opt}
-          </button>)}
-        {ans !== null && <div>
-          <p className="why">{q.why}</p>
-          <button className="btn" onClick={onNext}>Next call</button>
-        </div>}
-      </div>
-      <p className="note">Seed bank of frame-level rulings. Before using this as real judge prep,
-        verify every answer against the current Comprehensive Rules and the live Silver Age ban list.</p>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
+<div id="cdnfail" class="cdnfail">
+  <h2>Script CDN blocked</h2>
+  <p>dawnblade needs cdnjs.cloudflare.com to load React. Check your network and reload.</p>
+</div>
 
 <script>
-  // If the CDN scripts are blocked, say so instead of a blank page.
-  setTimeout(function(){
-    var r = document.getElementById("root");
-    if (r && !r.hasChildNodes()){
-      r.innerHTML = '<div style="padding:24px;font-family:sans-serif;color:#E8DFD0">' +
-        '<h2>Dawnblade needs its libraries</h2>' +
-        '<p>React failed to load from cdnjs. If you are offline or the CDN is blocked, ' +
-        'host this file with internet access or vendor the three script files locally.</p></div>';
+/* ============================================================
+   DATA — Official Silver Age precon decklists (Chapters 1–3)
+   Sources: fabtcg.com/decklists/* (Legend Story Studios) and
+   starcitygames.com Silver Age product pages, July 2026.
+   Format per line:  qty|Card Name|pitch(1/2/3, 0=lookup)|printCode(optional)
+   G| prefix = hero zone (weapons + equipment). H| = hero card.
+   Images: LSS public card CDN, keyed by print code, with
+   database + typographic fallbacks. Not affiliated with LSS.
+   ============================================================ */
+window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
+window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
+window.DATA_VER = "sage-v3";
+
+window.HEROES = [
+ {k:"kayo",n:"Kayo",cls:"Brute",ch:1,code:"SKA001",blurb:"Hit big, laugh bigger. Kayo clashes and gambles his way through every fight."},
+ {k:"iyslander",n:"Iyslander",cls:"Elemental Wizard",ch:1,code:"SIY001",blurb:"Frostbite arcane pressure. Chip, freeze, and let the ice do the arguing."},
+ {k:"viserai",n:"Viserai",cls:"Runeblade",ch:1,code:"SVI001",blurb:"Every spell feeds the blade. Stack runes, then cash them in."},
+ {k:"dash",n:"Dash",cls:"Mechanologist",ch:1,code:"SDA001",blurb:"Boost items, chain attacks, never stop moving."},
+ {k:"bravo",n:"Bravo, Flattering Showman",cls:"Guardian",ch:1,code:"SBR001",blurb:"The crowd came for a show. Give them a very heavy one."},
+ {k:"azalea",n:"Azalea",cls:"Ranger",ch:2,code:"SAZ001",blurb:"One arrow in the arsenal is worth ten in the hand."},
+ {k:"dorinthea",n:"Dorinthea",cls:"Warrior",ch:2,code:"SDO001",blurb:"Dawnblade in hand, every swing sharpened by the last."},
+ {k:"fai",n:"Fai",cls:"Draconic Ninja",ch:2,code:"SFA001",blurb:"Burn fast, rise faster. The phoenix does not apologize."},
+ {k:"enigma",n:"Enigma",cls:"Mystic Illusionist",ch:2,code:"SEN001",blurb:"What they cannot touch, they cannot beat."},
+ {k:"arakni",n:"Arakni, Web of Deceit",cls:"Chaos Assassin",ch:2,code:"SAR001",blurb:"Traps, marks, and a thousand small cuts."},
+ {k:"blaze",n:"Blaze, Firemind",cls:"Wizard",ch:3,code:"SBZ001",blurb:"Think fast, cast faster. The mind is the tinderbox."},
+ {k:"boltyn",n:"Boltyn",cls:"Light Warrior",ch:3,code:"SBL001",blurb:"Charge your soul, then spend it in blinding swings."},
+ {k:"briar",n:"Briar",cls:"Elemental Runeblade",ch:3,code:"SBA001",blurb:"Lightning in one hand, rot in the other."},
+ {k:"gravy",n:"Gravy Bones",cls:"Pirate Necromancer",ch:3,code:"SGB001",blurb:"Dead men tell no tales, but they crew a fine ship."},
+ {k:"lyath",n:"Lyath Goldmane",cls:"Reviled Guardian",ch:3,code:"SLY001",blurb:"Five cards, dirty tricks, one colossal payoff."}
+];
+
+window.DECKS = {
+kayo:`H|Kayo|0|SKA001
+G|Beaten Trackers|0|
+G|Blade Beckoner Gauntlets|0|
+G|Knucklehead|0|
+G|Mandible Claw|0|
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Hood|0|SLY006
+G|Nullrune Robe|0|
+G|Predatory Plating|0|
+2|Bare Fangs|1|
+2|Buckwild|1|
+2|Clash of Agility|1|
+2|Clash of Might|1|
+2|High Pitched Howl|1|
+2|Pulping|1|
+2|Rough Up|1|
+2|Savage Feast|1|
+2|Strongest Survive|1|
+2|Test of Might|0|
+2|Wild Ride|1|
+2|Bare Fangs|2|
+1|Clash of Might|2|
+2|Strongest Survive|2|
+2|Wild Ride|2|
+2|Agile Windup|3|
+2|Bear Hug|3|
+2|Buckwild|3|
+2|Rally the Coast Guard|3|
+2|Reincarnate|3|
+2|Run Roughshod|0|
+2|Smash Instinct|3|
+2|Strongest Survive|3|
+2|Unexpected Backhand|3|`,
+iyslander:`H|Iyslander|0|SIY001
+G|Aetherstorm Wellingtons|0|
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Gauntlets|0|SBZ005
+G|Blade Beckoner Helm|0|SBA004
+G|Crucible of Aetherweave|0|
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Hood|0|SLY006
+G|Spellfire Cloak|0|
+2|Absorb in Aether|1|
+2|Aether Icevein|1|
+2|Fyendal's Fighting Spirit|1|
+2|Ice Bolt|1|
+1|Look Tuff|1|
+2|On the Horizon|1|
+2|Polar Cap|1|
+2|Wounded Bull|1|
+2|Aether Icevein|2|
+2|Aether Hail|3|
+2|Aether Icevein|3|
+2|Arcane Twining|3|
+2|Brain Freeze|3|
+2|Brothers in Arms|3|
+2|Cold Snap|3|
+2|Emeritus Scolding|3|
+2|Frosting|3|
+2|Frost Spike|0|
+2|Ice Bolt|3|
+2|Ice Eternal|0|
+2|Photon Splicing|3|
+1|Pyroglyphic Protection|3|
+1|Stir the Aetherwinds|3|
+2|Voltic Bolt|3|
+2|Winter's Bite|3|`,
+viserai:`H|Viserai|0|SVI001
+G|Beckoning Haunt|0|
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Helm|0|SBA004
+G|Blossom of Spring|0|DDD004
+G|Crown of Dichotomy|0|
+G|Nullrune Boots|0|
+G|Nullrune Gloves|0|SGB006
+G|Reaping Blade|0|
+G|Runebleed Robe|0|
+2|Amplify the Arknight|1|
+2|Condemn to Slaughter|1|
+2|Hit the High Notes|1|
+2|Malefic Incantation|1|
+2|Mauvrion Skies|1|
+2|Read the Runes|1|
+2|Reduce to Runechant|1|
+2|Rune Flash|1|
+2|Runerager Swarm|1|
+2|Runic Fellingsong|1|
+2|Shrill of Skullform|1|
+2|Sigil of Suffering|0|
+2|Spellblade Assault|1|
+2|Malefic Incantation|2|
+2|Shrill of Skullform|2|
+2|Condemn to Slaughter|3|
+2|Flying High|3|
+2|Mauvrion Skies|3|
+2|Shrill of Skullform|3|
+2|Sigil of Silphidae|0|
+2|Spellblade Assault|3|
+2|Trot Along|0|DDD016
+2|Vexing Malice|3|`,
+dash:`H|Dash|0|SDA001
+G|Achilles Accelerator|0|SDA010
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Gauntlets|0|SBZ005
+G|Blade Beckoner Helm|0|SBA004
+G|Blossom of Spring|0|DDD004
+G|Hope Merchant's Hood|0|SFA004
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Hood|0|SLY006
+G|Plasma Barrel Shot|0|SDA002
+G|Talishar, the Lost Prince|0|SDA003
+2|Boom Grenade|1|SDA023
+2|Crankshaft|1|SDA012
+2|Fender Bender|1|SDA013
+1|Hyper Driver|1|SDA024
+2|Jump Start|1|SDA014
+2|Out Pace|1|SDA015
+2|Overblast|1|SDA016
+2|Re-Charge!|1|SDA022
+2|Rev Up|1|SDA017
+2|Throttle|1|SDA018
+2|Under Loop|1|SDA019
+2|Zero to Sixty|1|SDA020
+2|Zipper Hit|1|SDA021
+2|Jump Start|2|SDA025
+2|Zero to Sixty|2|SDA026
+2|Zipper Hit|2|SDA027
+2|Big Bertha|3|SDA028
+2|Crankshaft|3|SDA029
+2|Jump Start|3|SDA030
+2|Teklo Trebuchet 2000|3|PEN066
+2|Throttle|3|SDA032
+2|Zero to Sixty|3|SDA033
+2|Zipper Hit|3|SDA034`,
+bravo:`H|Bravo, Flattering Showman|0|SBR001
+G|Basalt Boots|0|
+G|Blade Beckoner Gauntlets|0|SBZ005
+G|Blade Beckoner Helm|0|SBA004
+G|Enclosed Firemind|0|
+G|Magmatic Carapace|0|
+G|Nullrune Boots|0|
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Robe|0|
+G|Sledge of Anvilheim|0|
+G|Steelbraid Buckler|0|
+G|Titan's Fist|0|
+2|Boulder Drop|1|
+2|Buckling Blow|1|
+2|Cartilage Crush|1|
+2|Chokeslam|1|
+2|Crash and Bash|1|
+2|Debilitate|1|
+2|Fault Line|0|
+2|Pummel|1|
+2|Staunch Response|1|
+2|Zealous Belting|1|
+2|Boulder Drop|3|
+2|Buckling Blow|3|
+2|Chokeslam|3|
+2|Clash of Vigor|3|
+2|Crush the Weak|3|
+2|Debilitate|3|
+2|Disable|3|
+2|Edge of Their Seats|3|
+2|Flatten the Field|3|
+2|Macho Grande|3|
+2|The Suspense is Killing Me|0|
+2|Thunder Quake|3|`,
+azalea:`H|Azalea|0|SAZ001
+G|Blade Beckoner Helm|0|SBA004
+G|Blossom of Spring|0|DDD004
+G|Bolt'n Boots|0|
+G|Bull's Eye Bracers|0|
+G|Crow's Nest|0|
+G|Death Dealer|0|
+G|Quick Clicks|0|
+G|Talismanic Lens|0|SBZ003
+2|Bolt'n' Shot|1|
+2|Call in the Big Guns|1|
+2|Drill Shot|1|
+2|Drop the Anchor|0|
+2|Dry Powder Shot|0|
+2|Entangling Shot|0|
+2|Infecting Shot|1|
+2|Lace with Bloodrot|0|
+2|Lace with Frailty|0|
+2|Lace with Inertia|0|
+2|Murkmire Grapnel|1|
+2|Nimblism|1|
+2|Ravenous Rabble|1|
+2|Read the Glide Path|1|
+2|Release the Tension|1|
+2|Ridge Rider Shot|1|
+2|Scout the Periphery|1|
+2|Searing Shot|1|
+2|Swift Shot|0|
+2|Take Aim|1|
+2|Infecting Shot|2|
+1|Memorial Ground|2|
+2|Spire Sniping|2|
+2|Widowmaker|2|`,
+dorinthea:`H|Dorinthea|0|SDO001
+G|Blossom of Spring|0|DDD004
+G|Dawnblade|0|MPW156-MV
+G|Gauntlets of Unity|0|SBL007
+G|Helm of Unity|0|SBL004
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Hood|0|SLY006
+G|Nullrune Robe|0|SBL006
+G|Refraction Bolters|0|SDO009
+2|Agile Engagement|1|SDO012
+2|Ironsong Response|1|SDO013
+2|Lead with Speed|1|SDO018
+2|Oasis Respite|1|SLY019
+2|Out for Blood|1|SDO014
+2|Overpower|1|SDO015
+2|Puncture|1|SDO016
+2|Scar for a Scar|1|I-WTR191
+2|Sharpen Steel|1|SDO019
+2|Stroke of Foresight|1|SDO017
+2|Warrior's Valor|1|DDD010
+2|Wreck Havoc|1|SDO010
+1|Run Through|2|MPW049
+2|Springboard Somersault|2|I-CRU187
+2|Warrior's Valor|2|SDO024
+1|Energy Potion|3|SDO030
+2|Goblet of Bloodrun Wine|3|SDO031
+2|Hit and Run|3|SDO032
+2|Ironsong Response|3|SDO025
+2|Nip at the Heels|3|SDO026
+2|Overpower|3|SDO027
+1|Puncture|3|SDO028
+2|Put in Context|3|SEN029
+2|Trot Along|3|DDD016
+2|Warrior's Valor|3|SDO034`,
+fai:`H|Fai|0|SFA001
+G|Blade Beckoner Helm|0|SBA004
+G|Blood Scent|0|
+G|Double Cross Strap|0|
+G|Hope Merchant's Hood|0|SFA004
+G|Mask of the Swarming Claw|0|
+G|Pouncing Paws|0|
+G|Searing Emberblade|0|
+G|Tearing Shuko|0|
+1|Arcane Polarity|1|SBA030
+1|Art of the Dragon: Fire|0|
+2|Blaze Headlong|0|
+2|Brand with Cinderclaw|1|
+2|Display Loyalty|0|
+2|Enflame the Firebrand|0|
+2|Fire Tenet: Strike First|1|
+2|Fire that Burns Within|0|
+2|Flamecall Awakening|0|
+2|Hot on Their Heels|0|
+2|Lava Burst|0|
+2|Mounting Anger|1|
+2|Phoenix Flame|0|
+2|Rise from the Ashes|1|
+2|Rising Resentment|1|
+2|Ronin Renegade|1|
+2|Scar for a Scar|1|I-WTR191
+2|Snatch|1|
+1|Wax On|1|
+2|Brand with Cinderclaw|2|
+1|Salt the Wound|0|
+2|Brand with Cinderclaw|3|
+2|Cinderskin Devotion|3|
+2|Dragon Power|3|
+1|Energy Potion|3|SDO030
+2|Nip at the Heels|3|SDO026`,
+enigma:`H|Enigma|0|SEN001
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Helm|0|SBA004
+G|Blossom of Spring|0|DDD004
+G|Cosmo, Scroll of Ancestral Tapestry|0|
+G|Nullrune Hood|0|SLY006
+G|Nullrune Robe|0|SBL006
+G|Silent Stilettos|0|
+G|Uphold Tradition|0|
+2|Astral Etchings|1|
+2|Enigma Chimera|1|
+2|Look Tuff|0|
+2|Oasis Respite|1|SLY019
+2|On the Horizon|1|
+2|Spectral Manifestations|1|
+2|Test of Strength|0|
+2|Unmovable|1|
+2|Waning Vengeance|1|
+2|Waxing Specter|1|
+2|Enigma Chimera|2|
+2|Springboard Somersault|2|I-CRU187
+1|A Drop in the Ocean|0|
+2|Big Blue Sky|0|
+2|Fluid Motion|0|
+1|Homage to Ancestors|3|
+2|Manifest Muscle|0|
+1|Pass Over|3|
+2|Phantasmal Haze|3|
+1|Preserve Tradition|3|
+2|Put in Context|3|SEN029
+1|Rising Sun, Setting Moon|3|
+2|Second Tenet of Chi: Wind|0|
+2|Spears of Surreality|3|
+2|Spectral Rider|3|
+2|Unmovable|3|`,
+arakni:`H|Arakni, Web of Deceit|0|SAR001
+G|Blade Beckoner Boots|0|SBZ008
+G|Blossom of Spring|0|DDD004
+G|Danger Digits|0|
+G|Mark of the Huntsman|0|
+G|Mark of the Huntsman|0|
+G|Nullrune Robe|0|SBL006
+G|Prey Spotters|0|
+G|Stalker's Steps|0|
+G|Topsy Turvy|0|
+2|Art of Desire: Body|0|
+2|Concoct Disorder|1|
+2|Den of the Spider|0|
+2|Frailty Trap|0|
+2|Hyper Inflation|1|
+2|Inertia Trap|0|
+2|Infect|1|
+2|Lair of the Spider|0|
+2|Mark of the Black Widow|1|
+2|Mark of the Funnel Web|1|
+2|Mark the Prey|1|
+2|Orb-Weaver Spinneret|1|
+2|Pick Up the Point|1|
+2|Scar Tissue|1|
+2|Spike with Bloodrot|0|
+2|Stains of the Redback|1|
+2|Two Sides to the Blade|0|
+2|Up Sticks and Run|1|
+2|Art of Desire: Mind|0|
+2|Mark of the Black Widow|3|
+2|Night's Embrace|0|
+2|Reaper's Call|3|
+2|Shred|3|`,
+blaze:`H|Blaze, Firemind|0|SBZ001
+G|Aetherstorm Wellingtons|0|SBZ007
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Gauntlets|0|SBZ005
+G|Crucible of Aetherweave|0|SBZ002
+G|Seeker's Mitts|0|OMN207
+G|Spellfire Cloak|0|SBZ004
+G|Talismanic Lens|0|SBZ003
+2|Absorb in Aether|1|SBZ012
+2|Aether Spindle|1|SBZ013
+2|Arcane Polarity|1|SBA030
+2|Cindering Foresight|1|SBZ014
+2|Emeritus Scolding|1|SBZ015
+2|Fyendal's Fighting Spirit|1|SBZ009
+2|Look Tuff|1|SBZ010
+2|Snapback|1|SBZ016
+2|Turn to Mindfire|1|SBZ017
+2|Voltic Bolt|1|SBZ018
+2|Whisper of the Oracle|1|SBZ019
+2|Wounded Bull|1|SBZ011
+2|Cindering Foresight|2|SBZ021
+2|Emeritus Scolding|2|SBZ022
+2|Whisper of the Oracle|2|SBZ023
+2|Aether Quickening|3|SBZ024
+2|Aether Spindle|3|SBZ025
+2|Arcane Twining|3|SBZ026
+2|Cindering Foresight|3|SBZ027
+2|Emeritus Scolding|3|SBZ028
+2|Open the Flood Gates|3|SBZ029
+2|Photon Splicing|3|SBZ030
+2|Voltic Bolt|3|SBZ031
+2|Whisper of the Oracle|3|SBZ032`,
+boltyn:`H|Boltyn|0|SBL001
+G|Flat Trackers|0|SBL009
+G|Garland of Spring|0|SBL005
+G|Gauntlets of Unity|0|SBL007
+G|Halo of Illumination|0|SBL003
+G|Helm of Unity|0|SBL004
+G|Nullrune Boots|0|
+G|Nullrune Robe|0|SBL006
+G|Radiant Touch|0|
+G|Raydn, Duskbane|0|
+2|Beaming Bravado|1|
+2|Bolt of Courage|1|
+2|Courageous Steelhand|1|
+2|Duty Bound Blitz|1|
+2|Edict of Steel|1|
+2|Engulfing Light|1|
+2|Glisten|1|
+2|Illuminate|1|
+2|Light the Way|1|
+2|Snatch|1|
+2|Take Flight|1|
+2|Toe the Line|0|
+2|Banneret of Salvation|0|
+2|Beaming Bravado|2|
+2|Bolt of Courage|2|
+2|Duty Bound Blitz|2|
+2|Engulfing Light|2|
+2|Light the Way|2|
+2|Roaring Beam|0|
+2|Springboard Somersault|2|I-CRU187
+2|Take Flight|2|
+2|V of the Vanguard|0|
+2|Valiant Thrust|2|`,
+briar:`H|Briar|0|SBA001
+G|Blade Beckoner Boots|0|SBZ008
+G|Blade Beckoner Gauntlets|0|SBZ005
+G|Blade Beckoner Helm|0|SBA004
+G|Blossom of Spring|0|DDD004
+G|Crown of Dichotomy|0|SBA005
+G|Quick Clicks|0|
+G|Scorpio, Comet Tail|0|
+G|Star Fall|0|
+G|Swiftstrike Bracers|0|
+2|Arcane Polarity|1|SBA030
+2|Arcane Seeds // Life|0|
+2|Arcanic Shockwave|1|
+2|Burn Up // Shock|0|
+2|Cloud Cover|1|
+2|Entwine Lightning|1|
+2|Fry|1|
+2|Jack Be Quick|0|
+2|Lightning Press|1|
+2|Lightning Surge|1|
+2|Nimblism|1|
+2|Path of Same Ends|1|
+2|Ravenous Rabble|1|
+2|Rush of Power|1|
+2|Scar for a Scar|1|I-WTR191
+2|Second Strike|1|
+2|Sigil of Suffering|0|
+2|Sizzle|1|
+2|Snatch|1|
+2|Sprout Strength|1|
+2|Static Shock|1|
+2|Weave Lightning|1|
+2|Nimblism|2|`,
+gravy:`H|Gravy Bones|0|SGB001
+G|Carrion Crown|0|SGB003
+G|Compass of Sunken Depths|0|SGB002
+G|Mage Master Boots|0|SGB008
+G|Mournful Casket|0|SGB004
+G|Nullrune Gloves|0|SGB006
+G|Nullrune Robe|0|SBL006
+G|Scuttle Toes|0|
+G|Washed Up Wave|0|
+2|Battalion Barque|1|
+2|Golden Tipple|1|
+2|Saltwater Swell|1|
+2|Swiftwater Sloop|1|
+2|Barnacle|0|
+2|Cutty Shark, Quick Clip|0|
+2|Golden Tipple|2|
+2|Limpit, Hop-a-long|0|
+2|Oysten, Heart of Gold|0|
+2|Riggermortis|0|
+2|Swabbie|0|
+2|Avast Ye!|0|
+1|Back Alley Breakline|3|
+2|Flying High|3|
+2|Golden Tipple|3|
+2|Jittery Bones|3|
+2|Loot the Arsenal|0|
+2|Loot the Hold|0|
+2|Murderous Rabble|3|
+2|Portside Exchange|0|
+2|Saltwater Swell|3|
+2|Swiftwater Sloop|3|
+2|Throw Caution to the Wind|0|
+1|Timesnap Potion|0|
+1|Yo Ho Ho!|0|`,
+lyath:`H|Lyath Goldmane|0|SLY001
+G|Arcane Lantern|0|
+G|Blade Beckoner Helm|0|SBA004
+G|Blade Beckoner Plating|0|
+G|Line Crossers|0|
+G|Nullrune Hood|0|SLY006
+G|Nullrune Robe|0|SBL006
+G|Stand Strong|0|
+G|Stonewall Impasse|0|
+G|Titan's Fist|0|
+2|Act of Glory|1|
+2|Drag Down|1|
+2|Edge of Their Seats|1|
+2|Mocking Blow|1|
+2|Oasis Respite|1|SLY019
+2|Prime the Crowd|1|
+2|Sadistic Scowl|1|
+2|Tension in the Air|1|
+2|Villainous Pose|1|
+2|Mocking Blow|2|
+2|Short Shrift|2|
+2|Walk in My Shoes|2|
+2|Wee Wrecking Ball|2|
+2|Booze!|3|
+2|Brothers in Arms|3|
+2|Concealed Object|3|
+2|Edge of Their Seats|3|
+2|Full of Bravado|3|
+2|Goon Beatdown|3|
+2|Goon Tactics|3|
+2|Mocking Blow|3|
+2|Power Play|3|
+2|The Suspense is Killing Me|0|`
+};
+
+window.JUDGE_QS = [
+ {q:"Your opponent declares a card with no defense value as a blocker. Legal?",a:["Yes, it blocks for 0","No — a card without a defense value can't be declared as a defending card","Only if they pitch it first"],c:1,x:"Cards with no defense value (like many instants and some actions) can never be declared as defending cards."},
+ {q:"Where do pitched cards go?",a:["Graveyard immediately","Bottom of the deck at end of turn","Banished face-down"],c:1,x:"Pitched cards sit in the pitch zone, then go to the BOTTOM of your deck at end of turn — Silver Age games often come down to knowing what you pitched early."},
+ {q:"End of your turn, you have 2 cards in hand and an empty arsenal. What happens?",a:["Discard both, draw 4","Optionally arsenal 1 face-down, then draw up to intellect","Keep both, draw nothing"],c:1,x:"You may set one card into arsenal if it's empty, then draw up to your hero's intellect. No discarding."},
+ {q:"An attack reaction adds +3 power mid-chain. When is power checked?",a:["When the attack was declared","At the damage step, after reactions","At start of combat only"],c:1,x:"Attack power is calculated when damage would be dealt — after both players' reaction windows."},
+ {q:"A card is banished face-down. Who can look at it?",a:["Its owner","Both players","Neither player"],c:2,x:"Face-down banished cards are hidden information for BOTH players unless an effect says otherwise."},
+ {q:"Is the soul zone public?",a:["Yes — cards in soul are face up","No — face down","Only the count is public"],c:0,x:"Soul (used by Light heroes like Boltyn) is face-up, public information."},
+ {q:"Two of your triggered effects go off at once. Who orders them?",a:["Random","You — their controller chooses the order","Opponent chooses"],c:1,x:"When multiple effects you control trigger simultaneously, you stack them in the order you choose."},
+ {q:"Azalea wants to play an arrow from her hand. Legal?",a:["Yes, arrows play like any attack","No — arrows can only be played from arsenal","Only with a bow equipped AND from hand"],c:1,x:"Arrows can only be played from the arsenal zone — the heart of Ranger play. Get them there first."}
+];
+
+window.TROPHIES = [
+ {n:"Command and Conquer",r:"Majestic",w:40},{n:"Enlightened Strike",r:"Majestic",w:40},
+ {n:"Art of War",r:"Majestic",w:40},{n:"Fyendal's Spring Tunic",r:"Majestic",w:40},
+ {n:"Arknight Shard",r:"Legendary",w:10},{n:"Crown of Seeds",r:"Legendary",w:10},
+ {n:"Heartened Cross Strap",r:"Legendary",w:10},
+ {n:"Eye of Ophidia",r:"Fabled",w:3},{n:"Heart of Fyendal",r:"Fabled",w:3}
+];
+</script>
+
+<script type="text/babel" data-presets="env,react">
+const {useState,useEffect,useMemo,useCallback} = React;
+
+/* ---------- storage ---------- */
+const store = {
+  get(k,f){ try{const v=localStorage.getItem("dawnblade."+k); return v==null?f:JSON.parse(v);}catch(e){return f;} },
+  set(k,v){ try{localStorage.setItem("dawnblade."+k, JSON.stringify(v));}catch(e){} }
+};
+
+/* ---------- helpers ---------- */
+const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+const cdnImg = code => code ? (CDN + code + ".webp") : null;
+const toNum = v => { const n = parseInt(v,10); return isNaN(n) ? null : n; };
+const PITCH_NAME = {1:"red",2:"yellow",3:"blue"};
+
+function parseDeck(raw){
+  const gear=[], deck=[]; let hero=null;
+  raw.trim().split("\n").forEach(line=>{
+    const [a,name,p,code] = line.split("|");
+    const e = {name:name.trim(), p:parseInt(p,10)||0, code:(code||"").trim()||null};
+    if(a==="H") hero=e; else if(a==="G") gear.push(e); else { e.q=parseInt(a,10)||1; deck.push(e); }
+  });
+  return {hero,gear,deck};
+}
+const PARSED = {}; HEROES.forEach(h=>{ PARSED[h.k]=parseDeck(DECKS[h.k]); });
+
+/* every card name we need from the database */
+const NEEDED = new Set();
+Object.values(PARSED).forEach(d=>{
+  NEEDED.add(norm(d.hero.name));
+  d.gear.forEach(e=>NEEDED.add(norm(e.name)));
+  d.deck.forEach(e=>{ NEEDED.add(norm(e.name)); if(e.name.includes("//")) NEEDED.add(norm(e.name.split("//")[0])); });
+});
+
+/* print codes + hero name stems for robust DB matching */
+const CODES = new Set();
+Object.values(PARSED).forEach(d=>{ [d.hero].concat(d.gear,d.deck).forEach(e=>{ if(e.code) CODES.add(e.code); }); });
+const HERO_STEMS = HEROES.map(h=>norm(PARSED[h.k].hero.name));
+
+/* ---------- card database (the-fab-cube, open data) ---------- */
+function useCardDB(){
+  const [state,setState] = useState({status:"idle",pct:0,byNP:{},byName:{},byCode:{},count:0,err:null});
+  const load = useCallback(async(force)=>{
+    setState(s=>({...s,status:"loading",pct:0,err:null}));
+    try{
+      let cards = null;
+      if(!force){
+        const cached = store.get("dbcache_"+DATA_VER, null);
+        if(cached && Array.isArray(cached)) cards = cached;
+      }
+      if(!cards){
+        const res = await fetch(DBSRC);
+        if(!res.ok) throw new Error("HTTP "+res.status);
+        const total = +res.headers.get("content-length") || 0;
+        let text;
+        if(res.body && total){
+          const reader = res.body.getReader(); const chunks=[]; let got=0;
+          for(;;){ const {done,value}=await reader.read(); if(done)break;
+            chunks.push(value); got+=value.length;
+            setState(s=>({...s,pct:Math.min(99,Math.round(got/total*100))})); }
+          const buf=new Uint8Array(got); let o=0; chunks.forEach(c=>{buf.set(c,o);o+=c.length;});
+          text = new TextDecoder().decode(buf);
+        } else { text = await res.text(); }
+        const all = JSON.parse(text);
+        cards = [];
+        all.forEach(c=>{
+          if(!c || !c.name) return;
+          const nm = norm(c.name);
+          const isTok = /token/i.test(c.type_text||"") || /token/i.test((c.types||[]).join(" "));
+          const prints={};
+          (c.printings||[]).forEach(pr=>{
+            const id = pr.id || pr.identifier || pr.set_printing_unique_id || null;
+            const url = pr.image_url || pr.image || null;
+            if(url){ if(id) prints[id]=url; if(!prints._first) prints._first=url; }
+          });
+          const isHero = /hero/i.test(c.type_text||"") && HERO_STEMS.some(st=>nm.includes(st));
+          const hasCode = Object.keys(prints).some(id=>id!=="_first" && CODES.has(id));
+          if(!NEEDED.has(nm) && !isTok && !isHero && !hasCode) return;
+          cards.push({
+            n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
+            d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
+            tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]).concat(c.granted_keywords||[]),
+            tx:c.functional_text_plain||c.functional_text||"", pr:prints
+          });
+        });
+        store.set("dbcache_"+DATA_VER, cards);
+      }
+      const byNP={}, byName={}, byCode={};
+      cards.forEach(c=>{
+        const k=norm(c.n);
+        byNP[k+"|"+(c.p==null?0:c.p)]=c;
+        (byName[k]=byName[k]||[]).push(c);
+        Object.keys(c.pr||{}).forEach(id=>{ if(id!=="_first") byCode[id]=c; });
+      });
+      setState({status:"ready",pct:100,byNP,byName,byCode,count:cards.length,err:null});
+    }catch(e){ setState(s=>({...s,status:"error",err:String(e&&e.message||e)})); }
+  },[]);
+  useEffect(()=>{ load(false); },[load]);
+  return [state,load];
+}
+
+function resolveEntry(db, e){
+  const k = norm(e.name);
+  let cands = db.byName[k];
+  if(!cands && e.name.includes("//")) cands = db.byName[norm(e.name.split("//")[0])];
+  let card = null;
+  if(!cands && e.code && db.byCode && db.byCode[e.code]) cands = [db.byCode[e.code]];
+  if(cands){
+    if(e.p>0) card = cands.find(c=>c.p===e.p) || null;
+    if(!card && e.code) card = cands.find(c=>c.pr[e.code]) || null;
+    if(!card) card = cands.slice().sort((a,b)=>(a.p??9)-(b.p??9))[0];
+  }
+  const img = cdnImg(e.code) || (card ? (card.pr[e.code]||card.pr._first) : null);
+  const dbImg = card ? (card.pr._first||null) : null;
+  return {
+    name:e.name, q:e.q||1, code:e.code,
+    pitch: card&&card.p!=null ? card.p : (e.p||0),
+    cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
+    tt: card?card.tt:"", kw: card?card.kw:[], tx: card?card.tx:"",
+    img, dbImg, resolved: !!card
+  };
+}
+function resolveHero(db, e){
+  if(!db || db.status!=="ready") return null;
+  const k = norm(e.name);
+  let c = (db.byName[k]||[])[0] || null;
+  if(!c && e.code && db.byCode) c = db.byCode[e.code] || null;
+  if(!c){
+    let best=null;
+    Object.keys(db.byName).forEach(nm=>{
+      if(!nm.includes(k)) return;
+      db.byName[nm].forEach(x=>{
+        if(!/hero/i.test(x.tt||"")) return;
+        if(best==null || (x.hp!=null?x.hp:99) < (best.hp!=null?best.hp:99)) best=x;
+      });
+    });
+    c = best;
+  }
+  return c;
+}
+const isAttack = c => /attack/i.test(c.tt) && /action/i.test(c.tt) && c.power!=null;
+const isArrow  = c => /arrow/i.test(c.tt);
+const isWeapon = c => /weapon/i.test(c.tt) && c.power!=null;
+const hasGA = c => (c.kw||[]).some(k=>/go again/i.test(k)) || /\bgo again\b/i.test(c.tx||"");
+const arcaneDmg = c => { const m=(c.tx||"").match(/deals? (\d+) arcane damage/i); return m?+m[1]:null; };
+
+/* ---------- shared UI ---------- */
+function CardImg({card, className}){
+  const [stage,setStage] = useState(0); // 0 primary, 1 db, 2 fallback
+  const src = stage===0 ? card.img : stage===1 ? card.dbImg : null;
+  if(src) return <img className={className} src={src} loading="lazy" alt={card.name}
+    onError={()=>setStage(s=> s===0 && card.dbImg && card.dbImg!==card.img ? 1 : 2)}/>;
+  return (
+    <div className={"ccfall pb"+(card.pitch||1)}>
+      <div className="pn">{card.name}</div>
+      <div className="mono">{card.cost!=null?("cost "+card.cost):""} {card.power!=null?(" · "+card.power+"⚔"):""} {card.def!=null?(" · "+card.def+"🛡"):""}</div>
+    </div>
+  );
+}
+function CardModal({card,onClose}){
+  if(!card) return null;
+  return (
+    <div className="modal" onClick={onClose}>
+      <div className="inner" onClick={e=>e.stopPropagation()}>
+        <CardImg card={card}/>
+        <div className="txt">
+          <b>{card.name}</b>{card.pitch?<span className="mono"> · pitch {card.pitch} ({PITCH_NAME[card.pitch]})</span>:null}
+          <div className="mono" style={{margin:"4px 0"}}>{card.tt}</div>
+          {card.tx ? <div>{card.tx}</div> : <div className="dim">Stats loaded; rules text pending database.</div>}
+          <FxChip card={card}/>
+        </div>
+        <button className="bigbtn alt" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+function DbBanner({db,reload}){
+  if(db.status==="ready") return (
+    <div className="dbbar ok"><span className="dot"/><span>Card database forged — {db.count} cards live (fab-cube open data)</span></div>
+  );
+  if(db.status==="error") return (
+    <div className="dbbar err"><span className="dot"/><span>Database fetch failed: {db.err}. Art still loads; stats need the DB.</span>
+      <button className="retry" onClick={()=>reload(true)}>Retry</button></div>
+  );
+  return (
+    <div className="dbbar"><span className="dot"/>
+      <span style={{flex:1}}>Forging card database — first visit only<div className="prog"><i style={{width:db.pct+"%"}}/></div></span>
+    </div>
+  );
+}
+
+/* ---------- hero select + deck view ---------- */
+function HeroGrid({onPick,best,db}){
+  const chapters = [1,2,3];
+  return (
+    <div>
+      {chapters.map(ch=>(
+        <div key={ch}>
+          <div className="chapter">Chapter {ch}</div>
+          <div className="hgrid">
+            {HEROES.filter(h=>h.ch===ch).map(h=>(
+              <button key={h.k} className="hcard clip" onClick={()=>onPick(h)}>
+                <HeroArt h={h} db={db} key={db.status}/>
+                {best[h.k]!=null && <span className="best">★ {best[h.k]}</span>}
+                <span className="nm"><b>{h.n}</b><span>{h.cls}</span></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function HeroArt({h,db}){
+  const [stage,setStage]=useState(0);
+  const hc = db && db.status==="ready" ? resolveHero(db, PARSED[h.k].hero) : null;
+  const dbImg = hc && hc.pr ? hc.pr._first : null;
+  const src = stage===0 ? cdnImg(h.code) : stage===1 ? dbImg : null;
+  if(src) return <img className="art" src={src} loading="lazy" alt={h.n}
+    onError={()=>setStage(s=> s===0 && dbImg ? 1 : 2)}/>;
+  return <div className="fallbackart">{h.n.split(/[ ,]/)[0]}</div>;
+}
+function HeroSheet({h,db,onBack,onFight,best}){
+  const d = PARSED[h.k];
+  const hc = resolveHero(db, d.hero);
+  const hHP = hc&&hc.hp!=null ? hc.hp : 20;
+  const hINT = hc&&hc.int!=null ? hc.int : 4;
+  const [view,setView]=useState(false);
+  const [zoom,setZoom]=useState(null);
+  return (
+    <div>
+      <button className="tag" onClick={onBack}>← all heroes</button>
+      <div className="sheet clip">
+        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+          <div style={{width:92,flex:"none"}} className="clip-sm"><HeroArt h={h} db={db} key={db.status}/></div>
+          <div>
+            <h2>{h.n}</h2>
+            <div className="cls">{h.cls} · Chapter {h.ch} · Silver Age precon</div>
+            <p style={{fontSize:13.5}}>{h.blurb}</p>
+          </div>
+        </div>
+        <div className="statrow">
+          <span>LIFE <b>{hHP}</b></span><span>INTELLECT <b>{hINT}</b></span>
+          <span>DECK <b>{d.deck.reduce((a,e)=>a+e.q,0)}</b></span><span>GEAR <b>{d.gear.length}</b></span>
+          {best[h.k]!=null && <span>BEST <b>{best[h.k]}</b></span>}
+        </div>
+        <button className="bigbtn" disabled={db.status!=="ready"} onClick={()=>onFight(h)}>
+          {db.status==="ready" ? "Enter the training hall" : "Waiting on card DB…"}
+        </button>
+        <button className="bigbtn alt" onClick={()=>setView(v=>!v)}>{view?"Hide official 55":"View official 55"}</button>
+      </div>
+      {view && <DeckView h={h} db={db} onZoom={setZoom}/>}
+      <CardModal card={zoom} onClose={()=>setZoom(null)}/>
+      <p className="note">Decklist as published by Legend Story Studios for the Silver Age {h.n} precon. Card images © LSS, served from their public card CDN. This is an unofficial fan trainer, not affiliated with LSS.</p>
+    </div>
+  );
+}
+function DeckView({h,db,onZoom}){
+  const d = PARSED[h.k];
+  const ready = db.status==="ready";
+  const R = e => ready ? resolveEntry(db,e) : {name:e.name,q:e.q||1,pitch:e.p,img:cdnImg(e.code),dbImg:null,tt:"",tx:"",kw:[]};
+  const gear = [Object.assign({},d.hero,{q:1})].concat(d.gear).map(R);
+  const secs = [[1,"Pitch 1 — Red"],[2,"Pitch 2 — Yellow"],[3,"Pitch 3 — Blue"]];
+  const byPitch = p => d.deck.map(R).filter(c=>c.pitch===p);
+  const other = d.deck.map(R).filter(c=>!c.pitch||c.pitch<1||c.pitch>3);
+  const missing = ready ? d.deck.concat(d.gear).map(R).filter(c=>!c.resolved).map(c=>c.name) : [];
+  const Grid = ({cards}) => (
+    <div className="cgrid">{cards.map((c,i)=>(
+      <button key={i} className="cc clip-sm" onClick={()=>onZoom(c)}>
+        <CardImg card={c}/><span className="q">{c.q}×</span><FxDot card={c}/>
+      </button>))}
+    </div>
+  );
+  return (
+    <div>
+      <div className="dsec">Hero · Weapons · Equipment</div><Grid cards={gear}/>
+      {secs.map(([p,label])=> byPitch(p).length ? <div key={p}><div className={"dsec p"+p}>{label}</div><Grid cards={byPitch(p)}/></div> : null)}
+      {other.length ? <div><div className="dsec">Awaiting pitch data</div><Grid cards={other}/></div> : null}
+      {ready && <FxCoverage cards={d.deck.map(R).concat(gear)}/>}
+      {missing.length ? <p className="note">Not yet in the open card DB (stats pending): {[...new Set(missing)].join(", ")}.</p> : null}
+    </div>
+  );
+}
+</script>
+
+<script type="text/babel" data-presets="env,react">
+const {useState:uS,useMemo:uM,useEffect:uE} = React;
+const shuffle = a => { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; };
+
+/* ============================================================
+   FX — card effects interpreter.
+   Every executed effect is parsed from the card's own rules
+   text loaded at runtime. Unparsed clauses are never guessed:
+   they are shown, labeled, and counted against coverage.
+   ============================================================ */
+const NWORD = {a:1,an:1,one:1,two:2,three:3,four:4};
+const num = w => NWORD[w] || parseInt(w,10) || 1;
+const clean = t => (t||"").replace(/\*\*?/g,"").replace(/\s+/g," ").trim();
+
+function classifyClause(raw){
+  const c = clean(raw).toLowerCase().replace(/\.$/,"");
+  if(!c) return null;
+  const R = (ops,extra) => Object.assign({status:"run",ops},extra||{});
+  const NOOP = why => ({status:"noop",ops:[["noop",why]]});
+  let m;
+  if(m=c.match(/^(?:if|when) ([^,:]+)[,:] ?(.+)$/)){
+    const cond=m[1], rest=classifyClause(m[2]);
+    if(!rest || rest.status!=="run") return null;
+    if(/hits?$|hit$|this hits/.test(cond)) return Object.assign(rest,{onHit:true});
+    if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
+    if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
+    return null;
+  }
+  if(/^go again$/.test(c)) return R([["ga"]]);
+  if(/^(dominate|intimidate)$/.test(c)) return NOOP("no defender to restrict — training dummy");
+  if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
+  if(m=c.match(/deals? (\d+) arcane damage/)) return R([["arcane",+m[1]]]);
+  if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
+  if(m=c.match(/gains? (\d+) (?:\{r\}|resource)/)) return R([["res",+m[1]]]);
+  if(m=c.match(/gains? (\d+) (?:\{h\}|life)/)) return R([["life",+m[1]]]);
+  if(m=c.match(/your next attack[^+]*\+(\d+)/)) return R([["buffNext",+m[1]]]);
+  if(m=c.match(/(?:^|this attack |it )(?:gains?|gets?) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
+  if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
+  if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
+  if(/create .*frostbite/.test(c)) return NOOP("frostbite — dummy pays no costs");
+  if(/(create|give).*bloodrot/.test(c)) return R([["rot",1]],{approx:true});
+  if(/(create|give).*frailty/.test(c)) return R([["fra",1]],{approx:true});
+  if(/inertia/.test(c)) return NOOP("inertia — dummy has no action phase");
+  return null;
+}
+
+const FXMEMO = new Map();
+function fxParse(card){
+  const key = norm(card.name)+"|"+(card.pitch||0);
+  if(FXMEMO.has(key)) return FXMEMO.get(key);
+  const tt = (card.tt||"").toLowerCase();
+  const kw = (card.kw||[]).map(k=>String(k).toLowerCase());
+  const fx = {ga:kw.some(k=>k==="go again"), self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+  if(/\bally\b/.test(tt)) fx.perm="ally";
+  else if(/\bitem\b/.test(tt)) fx.perm="item";
+  else if(/\baura\b/.test(tt)) fx.perm="aura";
+  else if(/\btrap\b/.test(tt)) fx.perm="trap";
+  const clauses = clean(card.tx).split(/\.\s+|\n+/).map(s=>s.trim()).filter(Boolean);
+  clauses.forEach(raw=>{
+    const r = classifyClause(raw);
+    if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
+    fx.clauses.push({t:raw, st:r.status});
+    if(r.approx) fx.approx = true;
+    r.ops.forEach(op=>{
+      if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
+      if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
+      if(r.onHit) fx.onHit.push(op);
+      else if(r.cond) fx.conds.push({cond:r.cond, op});
+      else fx.ops.push(op);
+    });
+  });
+  const runs = fx.clauses.filter(x=>x.st!=="skip").length;
+  fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
+  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || fx.conds.length>0 || !!fx.perm || fx.ga;
+  FXMEMO.set(key,fx);
+  return fx;
+}
+function FxDot({card}){ const t=fxParse(card).tier; return <span className={"fxdot "+t} title={"effects: "+t}/>; }
+function FxChip({card}){
+  const fx = fxParse(card);
+  const label = {full:"fully scripted", part:"partially scripted", none:"text only — not executed"}[fx.tier];
+  return (
+    <div>
+      <span className="chip">{label}{fx.approx?" · approx":""}{card.tt&&/defense reaction/i.test(card.tt)?" · blocks from hand":""}</span>
+      {fx.clauses.length>0 &&
+        <div className="fxlist">{fx.clauses.map((cl,i)=>(
+          <div key={i} className="fc"><span className={"fs "+cl.st}>{cl.st==="run"?"▶":cl.st==="noop"?"○":"—"}</span><span>{cl.t}</span></div>
+        ))}</div>}
+    </div>
+  );
+}
+function FxCoverage({cards}){
+  const n = {full:0,part:0,none:0};
+  cards.forEach(c=>{ n[fxParse(c).tier] += (c.q||1); });
+  const tot = n.full+n.part+n.none || 1;
+  return (
+    <div className="cov">
+      <b>Effects engine coverage:</b> {n.full} scripted · {n.part} partial · {n.none} text-only
+      <div className="covbar">
+        <i className="cf" style={{width:(n.full/tot*100)+"%"}}/>
+        <i className="cp" style={{width:(n.part/tot*100)+"%"}}/>
+        <i className="cn" style={{width:(n.none/tot*100)+"%"}}/>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- BATTLE (v5: effects live) ---------- */
+function Battle({h,db,onExit,onRecord}){
+  const built = uM(()=>{
+    const d = PARSED[h.k];
+    const heroRec = resolveHero(db, d.hero) || {};
+    const runeTok = (db.byName["runechant"]||[])[0];
+    const runeDmg = runeTok && (clean(runeTok.tx).toLowerCase().match(/deal (\d+) arcane damage/)||[])[1];
+    let uid=0;
+    const deck = shuffle(d.deck.flatMap(e=>{
+      const c = resolveEntry(db,e);
+      return Array.from({length:e.q},()=>({...c,uid:++uid}));
+    }));
+    const gear = d.gear.map(e=>({...resolveEntry(db,e),uid:++uid,used:false}));
+    return {deck,gear,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+  },[h,db]);
+
+  const [g,setG] = uS(()=>({
+    deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
+    arsenal:null, pitch:[], grave:[], gear:built.gear, board:[],
+    res:0, ap:1, turn:1, wasted:0, dHP:42, myHP:built.myHP, myInt:built.myInt,
+    buffNext:0, amp:0, ward:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
+    weaponUsed:{}, mode:"act", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
+    log:["The dummy creaks to life. 42 to carve away — go."], over:null, inspect:false
+  }));
+  const [zoom,setZoom]=uS(null);
+  const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4)});
+  const winCheck = s => s.dHP<=0 && !s.over
+    ? L({...s, over:{win:true, score:s.turn+s.wasted}}, `Dummy down on turn ${s.turn}. Score ${s.turn+s.wasted} (turns + wasted).`)
+    : s;
+
+  const runOps = (s, ops, srcName) => {
+    let n = {...s};
+    ops.forEach(op=>{
+      const [k,v] = op;
+      if(k==="draw"){ const take=n.deck.slice(0,v); n.hand=[...n.hand,...take]; n.deck=n.deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
+      else if(k==="res"){ n.res+=v; n=L(n,`+${v} resource.`); }
+      else if(k==="life"){ n.myHP+=v; n=L(n,`+${v} life.`); }
+      else if(k==="arcane"){ const total=v+n.amp; n.amp=0; n.dHP-=total; n=L(n,`${srcName}: ${total} arcane damage.`); }
+      else if(k==="buffNext"){ n.buffNext+=v; n=L(n,`Next attack +${v}.`); }
+      else if(k==="amp"){ n.amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
+      else if(k==="ward"){ n.ward+=v; n=L(n,`Ward ${v}.`); }
+      else if(k==="rune"){ n.rune+=v; n=L(n,`+${v} Runechant.`); }
+      else if(k==="rot"){ n.rot+=v; n=L(n,`Bloodrot on the dummy (ticks ${v}/turn).`); }
+      else if(k==="fra"){ n.fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
+      else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
+    });
+    return n;
+  };
+
+  const execute = (s,card,from,idx) => {
+    const fx = fxParse(card);
+    let n = {...s, res:s.res-(card.cost||0), mode:"act", pending:null, paySel:[]};
+    // move the card out of its zone
+    if(from==="hand"){ n.hand = n.hand.filter((_,i)=>i!==idx); }
+    if(from==="arsenal"){ n.arsenal = null; }
+    if(from==="weapon"){ n.weaponUsed = {...n.weaponUsed,[card.uid]:true}; }
+    const attacking = isAttack(card) || from==="weapon";
+    let ga = fx.ga;
+    // conditional clauses evaluated against this turn's history (before this card)
+    fx.conds.forEach(({cond,op})=>{
+      const met = cond==="atk" ? n.hist.atk>0 : cond==="non" ? n.hist.non>0 : false;
+      if(!met){ n = L(n, `${card.name}: condition not met (${cond==="atk"?"no other attack yet":"no other non-attack yet"}).`); return; }
+      if(op[0]==="ga") ga = true;
+      else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
+      else n = runOps(n,[op],card.name);
+    });
+    if(attacking){
+      const bonus = (fx.self||0)+(n._condSelf||0)+n.buffNext;
+      const total = (card.power||0)+bonus;
+      n.buffNext = 0; delete n._condSelf;
+      n.dHP -= total;
+      let runeMsg = "";
+      if(n.rune>0){ const rd = n.rune*built.runeDmg; n.dHP-=rd; runeMsg = ` ${n.rune} Runechant${n.rune>1?"s":""} pop for ${rd} arcane.`; n.rune=0; }
+      n = L(n, `${card.name} hits for ${total}${bonus?` (+${bonus})`:""}.${runeMsg}`);
+      n = runOps(n, fx.ops, card.name);
+      n = runOps(n, fx.onHit, card.name);
+      n.hist = {...n.hist, atk:n.hist.atk+1};
+      if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
+    } else {
+      n = runOps(n, fx.ops, card.name);
+      if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
+      if(fx.perm){ n.board=[...n.board,{card,kind:fx.perm,spent:false,uid:card.uid}]; n=L(n,`${card.name} enters play (${fx.perm}).`); }
+      else if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
+      n.hist = {...n.hist, non:n.hist.non+1};
     }
-  }, 4000);
+    n.ap = ga ? n.ap : n.ap-1;
+    if(ga) n = L(n,"Go again — action point kept.");
+    return winCheck(n);
+  };
+
+  const tryPlay = (card,from,idx) => setG(s=>{
+    if(s.over||s.mode==="block"||s.mode==="arsenal") return s;
+    if(s.inspect){ setZoom(card); return s; }
+    if(s.mode==="pay"){
+      if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
+      const sel = s.paySel.includes(idx) ? s.paySel.filter(i=>i!==idx) : [...s.paySel,idx];
+      return {...s,paySel:sel};
+    }
+    if(s.ap<1) return L(s,"No action point left — end your turn.");
+    const fx = fxParse(card);
+    if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
+    if(from!=="weapon" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
+    if(from==="weapon" && s.weaponUsed[card.uid]) return L(s,`${card.name} already swung this turn.`);
+    const cost = card.cost||0;
+    if(s.res>=cost) return execute(s,card,from,idx);
+    return {...s, mode:"pay", pending:{card,from,idx}, paySel:[], log:[`Pitch ${cost-s.res} more for ${card.name}.`,...s.log].slice(0,4)};
+  });
+  const confirmPay = () => setG(s=>{
+    if(!s.pending) return s;
+    const gain = s.paySel.reduce((a,i)=>a+(s.hand[i].pitch||0),0);
+    const need = (s.pending.card.cost||0)-s.res;
+    if(gain<need) return L(s,`Selected pitch ${gain}, need ${need}.`);
+    const pitched = s.paySel.map(i=>s.hand[i]);
+    const keepIdx = s.hand.map((_,i)=>i).filter(i=>!s.paySel.includes(i));
+    let pendIdx = s.pending.from==="hand" ? keepIdx.indexOf(s.pending.idx) : s.pending.idx;
+    let n = {...s, res:s.res+gain, hand:keepIdx.map(i=>s.hand[i]), pitch:[...s.pitch,...pitched]};
+    n = L(n, `Pitched ${pitched.map(c=>c.name).join(", ")} for ${gain}.`);
+    return execute(n, s.pending.card, s.pending.from, pendIdx);
+  });
+  const cancelPay = () => setG(s=>({...s,mode:"act",pending:null,paySel:[]}));
+
+  const allySwing = bi => setG(s=>{
+    if(s.over||s.mode!=="act") return s;
+    const b = s.board[bi];
+    if(!b || b.kind!=="ally" || b.spent || !(b.card.power>0)) return s;
+    let n = {...s, dHP:s.dHP-b.card.power, board:s.board.map((x,i)=>i===bi?{...x,spent:true}:x)};
+    n = L(n, `${b.card.name} attacks for ${b.card.power} (ally — simplified, no action point).`);
+    return winCheck(n);
+  });
+
+  const endTurn = () => setG(s=>{
+    if(s.over||s.mode!=="act") return s;
+    let n = {...s, wasted:s.wasted+s.res, res:0, buffNext:0};
+    if(s.res>0) n = L(n, `${s.res} resource${s.res>1?"s":""} fizzled — wasted.`);
+    n.deck = [...n.deck, ...n.pitch]; n.pitch=[];
+    if(!n.arsenal && n.hand.length) return {...n, mode:"arsenal", log:["Set one card into arsenal, or skip.",...n.log].slice(0,4)};
+    return afterArsenal(n);
+  });
+  const pickArsenal = idx => setG(s=>{
+    if(s.mode!=="arsenal") return s;
+    let n = {...s, arsenal:s.hand[idx], hand:s.hand.filter((_,i)=>i!==idx)};
+    return afterArsenal(L(n,`${n.arsenal.name} set face down in arsenal.`));
+  });
+  const skipArsenal = () => setG(s=> s.mode==="arsenal" ? afterArsenal(s) : s);
+  function afterArsenal(s){
+    let n={...s};
+    const need = Math.max(0, n.myInt - n.hand.length);
+    const drawn = n.deck.slice(0,need);
+    n.hand=[...n.hand,...drawn]; n.deck=n.deck.slice(need);
+    if(drawn.length<need && n.hand.length===0){ n.over={win:false}; return L(n,"Deck empty — fatigued. The dummy wins by attrition."); }
+    if(n.rot>0){ n.dHP-=n.rot; n=L(n,`Bloodrot ticks the dummy for ${n.rot}.`); n=winCheck(n); if(n.over) return n; }
+    const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
+    n.incoming = Math.max(0, base - n.fra);
+    if(n.fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); n.fra=0; }
+    n.mode="block"; n.blockH=[]; n.blockG=[];
+    return L(n, `Dummy swings for ${n.incoming}. Tap blockers, then take it.`);
+  }
+  const toggleBlock = (kind,i) => setG(s=>{
+    if(s.mode!=="block") return s;
+    const key = kind==="h"?"blockH":"blockG";
+    const arr = s[key].includes(i)?s[key].filter(x=>x!==i):[...s[key],i];
+    return {...s,[key]:arr};
+  });
+  const takeIt = () => setG(s=>{
+    if(s.mode!=="block") return s;
+    const dh = s.blockH.reduce((a,i)=>a+(s.hand[i].def||0),0);
+    const dg = s.blockG.reduce((a,i)=>a+(s.gear[i].def||0),0);
+    let through = Math.max(0, s.incoming-dh-dg);
+    let wardNote = "";
+    let ward = s.ward;
+    if(through>0 && ward>0){ const use=Math.min(ward,through); through-=use; ward-=use; wardNote=` Ward soaks ${use}.`; }
+    const drNames = s.blockH.filter(i=>fxParse(s.hand[i]).dr).map(i=>s.hand[i].name);
+    let n = {...s, myHP:s.myHP-through, ward,
+      hand:s.hand.filter((_,i)=>!s.blockH.includes(i)),
+      grave:[...s.blockH.map(i=>s.hand[i]),...s.grave],
+      gear:s.gear.map((gr,i)=>s.blockG.includes(i)?{...gr,used:true}:gr),
+      blockH:[],blockG:[]};
+    n = L(n, `Blocked ${dh+dg}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
+    if(n.myHP<=0){ n.over={win:false}; return L(n,"You hit the boards. The dummy remains undefeated."); }
+    return newTurn(n);
+  });
+  function newTurn(s){
+    return L({...s, turn:s.turn+1, ap:1, weaponUsed:{}, hist:{atk:0,non:0},
+      board:s.board.map(b=>({...b,spent:false})), mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
+  }
+  uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
+
+  const toks = [
+    g.rune>0 && ["Runechant ×"+g.rune], g.buffNext>0 && ["Next atk +"+g.buffNext],
+    g.amp>0 && ["Amp "+g.amp], g.ward>0 && ["Ward "+g.ward],
+    g.rot>0 && ["Bloodrot "+g.rot,"bad"], g.fra>0 && ["Frailty "+g.fra,"bad"]
+  ].filter(Boolean);
+  return (
+    <div className="board">
+      <button className="tag" onClick={onExit}>← leave the hall</button>
+      <div className="dummy clip">
+        <div><div className="hp">{Math.max(0,g.dHP)}</div><div className="lbl">Training dummy</div></div>
+        <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
+      </div>
+      <div className="mystat">
+        <span className="pill hp">LIFE <b>{g.myHP}</b></span>
+        <span className="pill">RES <b>{g.res}</b></span>
+        <span className="pill">AP <b>{g.ap}</b></span>
+        <span className="pill">DECK <b>{g.deck.length}</b></span>
+        <span className="pill">WASTED <b>{g.wasted}</b></span>
+        <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
+      </div>
+      {toks.length>0 && <div className="tokpills">{toks.map((t,i)=><span key={i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}</div>}
+      <div className="log">{g.log.map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
+
+      {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm">Paying for <b>{g.pending.card.name}</b> (cost {g.pending.card.cost}) — tap hand cards to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered. Hit pitch & play.</span>}</div>;})()}
+      {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap hand cards (blue shield) and unused equipment. Defense reactions block from hand too. Ward soaks the rest.</div>}
+      {g.mode==="arsenal" && <div className="paymode clip-sm">End of turn — tap one card to set into <b>arsenal</b> (arrows must live here), or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
+
+      <div className="zone">Weapons & equipment {g.mode==="block"?"(tap shields to block — once per game)":""}</div>
+      <div className="gearrow">
+        {g.gear.map((gr,i)=>{
+          const w = isWeapon(gr), blockable = g.mode==="block" && gr.def>0 && !gr.used;
+          const sel = g.blockG.includes(i);
+          return (
+            <button key={gr.uid} className={"g clip-sm"+(gr.used?" used":"")}
+              style={sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null}
+              onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : (g.inspect?setZoom(gr): w&&tryPlay(gr,"weapon",i))}>
+              <CardImg card={gr}/>
+              {gr.def>0 && <span className="gd">{gr.def}</span>}
+            </button>);
+        })}
+      </div>
+
+      {g.board.length>0 && <>
+        <div className="zone">In play — allies swing once a turn, tap to attack</div>
+        <div className="boardrow">
+          {g.board.map((b,i)=>(
+            <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")}
+              onClick={()=> g.inspect ? setZoom(b.card) : allySwing(i)}>
+              <CardImg card={b.card}/>
+              {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
+            </button>))}
+        </div>
+      </>}
+
+      <div className="arsenalrow">
+        <div className="slot clip-sm">{g.arsenal
+          ? <button style={{padding:0}} onClick={()=> g.inspect?setZoom(g.arsenal):tryPlay(g.arsenal,"arsenal",0)}><CardImg card={g.arsenal}/></button>
+          : "arsenal empty"}</div>
+        <div style={{flex:1}}>
+          <div className="zone">Hand — tap to play · pitch value rides the card art</div>
+          <div className="hand">
+            {g.hand.map((c,i)=>{
+              const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(i) : false;
+              const dim = g.mode==="block" && !(c.def>0) && !sel;
+              return (
+                <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
+                  onClick={()=> g.mode==="block" ? (c.def>0&&toggleBlock("h",i)) : g.mode==="arsenal" ? pickArsenal(i) : tryPlay(c,"hand",i)}>
+                  <CardImg card={c}/>
+                  {c.cost!=null && <span className="cost">{c.cost}</span>}
+                  {c.power!=null && <span className="pw">{c.power}</span>}
+                  {c.def!=null && c.def>0 && <span className="df">{c.def}</span>}
+                </button>);
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="actrow">
+        {g.mode==="pay" ? <>
+          <button className="a" onClick={cancelPay}>Cancel</button>
+          <button className="a pay" onClick={confirmPay}>Pitch & play</button>
+        </> : g.mode==="block" ? (
+          <button className="a go" onClick={takeIt}>Take it</button>
+        ) : (
+          <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
+        )}
+      </div>
+
+      {g.over && (g.over.win
+        ? <WinPanel score={g.over.score} onExit={onExit}/>
+        : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
+            <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
+      <CardModal card={zoom} onClose={()=>setZoom(null)}/>
+      <p className="note">Effects engine: every executed clause is parsed from the card's own rules text at runtime — go again, draws, resources, arcane damage, amps, wards, runechants, buffs, on-hit riders, poisons (approx), allies (simplified). Unparsed clauses are shown with ℹ and counted in each deck's coverage bar, never guessed.</p>
+    </div>
+  );
+}
+function WinPanel({score,onExit}){
+  const [t] = uS(()=>{
+    let pool=[]; TROPHIES.forEach(x=>{for(let i=0;i<x.w;i++)pool.push(x);});
+    return pool[Math.floor(Math.random()*pool.length)];
+  });
+  uE(()=>{ const seen = store.get("case",[]); store.set("case",[...seen,{n:t.n,r:t.r,at:Date.now()}]); },[]);
+  return (
+    <div className="reveal" onClick={onExit}>
+      <h2 className="disp" style={{marginBottom:14}}>DUMMY DESTROYED</h2>
+      <div className="card clip"><div className="rar">{t.r} pull</div><h3>{t.n}</h3></div>
+      <p style={{marginTop:14,fontSize:13}}>Efficiency score <b className="mono">{score}</b> — lower is cleaner. Tap anywhere.</p>
+    </div>
+  );
+}
+
+/* ---------- JUDGE ---------- */
+function Judge(){
+  const [i,setI]=uS(0),[pick,setPick]=uS(null),[right,setRight]=uS(0);
+  const q = JUDGE_QS[i%JUDGE_QS.length];
+  const done = i>=JUDGE_QS.length;
+  if(done) return (
+    <div className="sheet clip"><h2>Bench cleared</h2>
+      <p style={{margin:"8px 0"}}>{right} / {JUDGE_QS.length} correct. Rules and pitch discipline win Silver Age games.</p>
+      <button className="bigbtn alt" onClick={()=>{setI(0);setPick(null);setRight(0);}}>Run it again</button>
+      <p className="note">Rules per the official Comprehensive Rules — always confirm current bans and errata at fabtcg.com before an event.</p>
+    </div>);
+  return (
+    <div className="sheet clip">
+      <div className="tag">Judge call {i+1} / {JUDGE_QS.length}</div>
+      <h2 style={{fontSize:18,textTransform:"none",fontFamily:"'Spline Sans'",fontWeight:600,letterSpacing:0,margin:"6px 0"}}>{q.q}</h2>
+      {q.a.map((a,ai)=>(
+        <button key={ai} className={"qopt clip-sm"+(pick==null?"":ai===q.c?" right":ai===pick?" wrong":"")}
+          onClick={()=>{ if(pick==null){ setPick(ai); if(ai===q.c) setRight(r=>r+1);} }}>{a}</button>
+      ))}
+      {pick!=null && <><div className="explain">{q.x}</div>
+        <button className="bigbtn" onClick={()=>{setI(i+1);setPick(null);}}>Next ruling</button></>}
+    </div>
+  );
+}
+
+/* ---------- TROPHIES ---------- */
+function Trophies(){
+  const pulls = store.get("case",[]);
+  const best = store.get("best",{});
+  const count = {}; pulls.forEach(p=>{count[p.n]=(count[p.n]||0)+1;});
+  return (
+    <div>
+      <div className="sheet clip">
+        <h2>Trophy case</h2>
+        <p className="tag" style={{margin:"4px 0 10px"}}>Cosmetic pulls from dummy kills — no gambling, no wallet</p>
+        {Object.keys(count).length===0 && <p style={{fontSize:13.5}}>Empty shelves. Destroy a dummy to hang your first trophy.</p>}
+        {TROPHIES.filter(t=>count[t.n]).map(t=>(
+          <div key={t.n} className="statrow" style={{justifyContent:"space-between"}}>
+            <span>{t.n} <span className="tag">{t.r}</span></span><b>×{count[t.n]}</b>
+          </div>))}
+      </div>
+      <div className="sheet clip" style={{marginTop:10}}>
+        <h2 style={{fontSize:20}}>Best clears</h2>
+        {Object.keys(best).length===0 ? <p style={{fontSize:13.5}}>No clears logged yet.</p> :
+          HEROES.filter(h=>best[h.k]!=null).map(h=>(
+            <div key={h.k} className="statrow" style={{justifyContent:"space-between"}}>
+              <span>{h.n}</span><b className="mono">{best[h.k]}</b>
+            </div>))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- APP ---------- */
+function App(){
+  const [db,reload] = useCardDB();
+  const [tab,setTab]=uS("heroes");
+  const [hero,setHero]=uS(null);
+  const [fighting,setFighting]=uS(null);
+  const [best,setBest]=uS(()=>store.get("best",{}));
+  const record=(k,score)=>setBest(b=>{
+    const nb={...b,[k]: b[k]==null?score:Math.min(b[k],score)}; store.set("best",nb); return nb;
+  });
+  return (
+    <div className="shell">
+      <div className="topbar">
+        <span className="brand">DAWN<em>BLADE</em></span>
+        <span className="tag">Silver Age training hall</span>
+      </div>
+      <DbBanner db={db} reload={reload}/>
+      {tab==="heroes" && !fighting && (hero
+        ? <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>
+        : <HeroGrid best={best} onPick={setHero} db={db}/>)}
+      {fighting && <Battle h={fighting} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
+      {tab==="judge" && !fighting && <Judge/>}
+      {tab==="trophies" && !fighting && <Trophies/>}
+      {!fighting && <nav className="tabs">
+        <button className={"tab"+(tab==="heroes"?" on":"")} onClick={()=>{setTab("heroes");}}>Heroes</button>
+        <button className={"tab"+(tab==="judge"?" on":"")} onClick={()=>setTab("judge")}>Judge</button>
+        <button className={"tab"+(tab==="trophies"?" on":"")} onClick={()=>setTab("trophies")}>Trophies</button>
+      </nav>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+<script>
+setTimeout(function(){ if(!window.React || !document.querySelector(".shell")) document.getElementById("cdnfail").style.display="block"; },4000);
 </script>
 </body>
 </html>
