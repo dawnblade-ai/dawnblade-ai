@@ -50,7 +50,8 @@ img{display:block;max-width:100%}
 .prog i{display:block;height:100%;background:var(--y);transition:width .3s}
 
 /* hero select — full roster on one screen, smash-style */
-.hgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.hgrid{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.hgrid .hcard{width:calc((100% - 20px)/6)}
 .hcard{position:relative;background:var(--forge);border:1px solid var(--line);padding:0;overflow:hidden;display:flex;flex-direction:column}
 .hcard img.art{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 16%;filter:saturate(.92)}
 .hcard .fallbackart{aspect-ratio:1/1;font-size:12px}
@@ -297,6 +298,17 @@ img{display:block;max-width:100%}
 .gearrow .g{width:62px}
 .boardrow .b{width:62px}
 .dg{width:40px}
+
+.hcard.rand .fallbackart{aspect-ratio:1/1;font-size:26px;color:var(--y)}
+.hcard.rand{box-shadow:inset 0 -2px 0 var(--y)}
+.shell{padding-left:8px;padding-right:8px}
+.board{gap:8px}
+.dummy{padding:10px}
+.heroplate{padding:5px 7px}
+.ticker{min-height:38px}
+.hand{gap:4px}
+.gearrow .g{width:64px}
+.boardrow .b{width:64px}
 </style>
 </head>
 <body>
@@ -318,6 +330,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
+window.APP_VER = "1.0"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1043,9 +1056,7 @@ function CardModal({card,onClose}){
   );
 }
 function DbBanner({db,reload}){
-  if(db.status==="ready") return (
-    <div className="dbbar ok"><span className="dot"/><span>Card database forged — {db.count} cards live (fab-cube open data)</span></div>
-  );
+  if(db.status==="ready") return null;
   if(db.status==="error") return (
     <div className="dbbar err"><span className="dot"/><span>Database fetch failed: {db.err}. Art still loads; stats need the DB.</span>
       <button className="retry" onClick={()=>reload(true)}>Retry</button></div>
@@ -1063,21 +1074,22 @@ function HeroGrid({onPick,best,db,selected}){
     <div>
       <div className="hgrid">
         {HEROES.map(h=>(
-          <button key={h.k} className={"hcard clip-sm ch"+h.ch+(selected&&selected.k===h.k?" sel":"")} onClick={()=>onPick(h)}>
+          <button key={h.k} className={"hcard clip-sm ch"+h.ch+(selected&&!selected.mystery&&selected.k===h.k?" sel":"")} onClick={()=>onPick(h)}>
             <HeroArt h={h} db={db} key={db.status}/>
             {best[h.k]!=null && <span className="best">★{best[h.k]}</span>}
             <span className="nm">{h.n.split(",")[0]}</span>
           </button>
         ))}
-        {[1,2,3].map(i=>(
-          <div key={"open"+i} className="openslot clip-sm"><b>+</b><span>open</span></div>
-        ))}
+        <button className={"hcard rand clip-sm"+(selected&&selected.mystery?" sel":"")} onClick={()=>onPick({random:true})}>
+          <div className="fallbackart">?</div>
+          <span className="nm">Random</span>
+        </button>
       </div>
       <div className="roster-legend">
         <span><i style={{background:"var(--r)"}}/>Chapter 1</span>
         <span><i style={{background:"var(--y)"}}/>Chapter 2</span>
         <span><i style={{background:"var(--b)"}}/>Chapter 3</span>
-        <span style={{marginLeft:"auto"}}>15 fighters · 3 slots reserved</span>
+        <span style={{marginLeft:"auto"}}>15 fighters · fate optional</span>
       </div>
     </div>
   );
@@ -1091,7 +1103,9 @@ function VsStrip({hero,db}){
       <div className={"vslot p1 clip-sm"+(hero?"":" empty")}>
         <span className="ptag" style={{color:"var(--r)"}}>P1</span>
         {hero
-          ? <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>
+          ? (hero.mystery
+            ? <><div className="port clip-sm"><div className="fallbackart" style={{aspectRatio:"1/1",fontSize:26,color:"var(--y)"}}>?</div></div><span className="vname">???</span></>
+            : <><div className="port clip-sm"><HeroArt h={hero} db={db} key={db.status}/></div><span className="vname">{hero.n.split(",")[0]}</span></>)
           : <span style={{fontSize:11,textAlign:"center"}}>choose your fighter</span>}
       </div>
       <div className="vsmid">VS</div>
@@ -2109,6 +2123,10 @@ function Loadout({h,db,onBack,onStart}){
   return (
     <div className="lo">
       <button className="tag" onClick={onBack}>← back to select</button>
+      <div className="heroplate clip-sm" style={{marginTop:8}}>
+        <div className="hport"><HeroArt h={h} db={db}/></div>
+        <div className="hinfo"><b>{h.n.split(",")[0]}</b><span className="hab">{h.cls} · Chapter {h.ch}{h.mystery?" · fate chose":""}</span></div>
+      </div>
       <div className="sec">Scout the opponent</div>
       <div className="dgear" style={{padding:"8px 10px",background:"var(--forge)",border:"1px solid var(--line)"}}>
         <span className="lblg">The Dummy wears Ironrot — blocks hits ≥4, once each. Arcane slips past the iron.</span>
@@ -2136,7 +2154,7 @@ function Loadout({h,db,onBack,onStart}){
         })}
       </div>
       <button className="battlebtn clip" style={{marginTop:14}} onClick={start}><span>Fight</span></button>
-      <p className="note">Zone rules per the official Comprehensive Rules: one piece per armor zone (head, chest, arms, legs) and two weapon zones — a 2H fills both hands, an off-hand takes one, max one off-hand, and quivers perch on a 2H. Slots are read from each card's own type line. Loadout remembered per hero.</p>
+      <p className="note">One per armor zone, two hands, one off-hand, quivers perch on a 2H — per the official rules, read from each card. Blitz runs 40 exactly. Loadout saved per hero.</p>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
   );
@@ -2157,14 +2175,15 @@ function App(){
     <div className="shell">
       <div className="topbar">
         <span className="brand">DAWN<em>BLADE</em></span>
-        <span className="tag">Silver Age training hall</span>
+        <span className="tag">v{APP_VER}{db.status==="ready" ? " · "+db.count+" cards" : ""}</span>
       </div>
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && !fighting && !loHero && <>
-        <HeroGrid best={best} onPick={setHero} db={db} selected={hero}/>
+        <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero(hero)}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <VsStrip hero={hero} db={db}/>
-        {hero && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
+        {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
+        {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
       {loHero && !fighting && <Loadout h={loHero} db={db} onBack={()=>setLoHero(null)} onStart={cfg=>{setFighting({h:loHero,cfg}); setLoHero(null);}}/>}
       {fighting && <Battle h={fighting.h} cfg={fighting.cfg} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
