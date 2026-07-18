@@ -406,7 +406,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.02"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.03"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1362,6 +1362,15 @@ function parseHeroPower(tx, allowDestroy){
   return {cost, ga, sd:!!sd, eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
+function weaponCost(tx){
+  const t = clean(tx||"");
+  const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,40}?):\s*attack\b/i);
+  if(!m) return null;
+  const cs = (m[1]||"").trim();
+  const dm = cs.match(/(\d+)/);
+  const rs = (cs.match(/\{r\}/gi)||[]).length;
+  return {cost: dm ? +dm[1] : rs};
+}
 const gearDef = gr => gr.destroyed ? 0 : (gr.curDef!=null ? gr.curDef : (gr.def||0));
 function gearBlockApply(gr){
   const kws = (gr.kw||[]).map(k=>String(k).toLowerCase());
@@ -1660,7 +1669,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
     }));
     const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e),gi,uid:++uid,used:false}));
     const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
-    gear.forEach(gr=>{ if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+    gear.forEach(gr=>{
+      if(isWeapon(gr) && gr.cost==null && gr.tx){ const wc=weaponCost(gr.tx); if(wc) gr.cost=wc.cost; }
+      if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
       if(pw){ gr.pow=pw; gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
         tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:pw.eff,sd:pw.sd,img:null,dbImg:null,uid:"gp"+gr.uid}; } } });
     const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++uid,used:false}));
