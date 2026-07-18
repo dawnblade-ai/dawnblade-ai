@@ -309,6 +309,31 @@ img{display:block;max-width:100%}
 .hand{gap:4px}
 .gearrow .g{width:64px}
 .boardrow .b{width:64px}
+
+/* tabletop — 3 vertical flick screens, each with a horizontal swipe pane */
+.tablewrap{height:63vh;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;margin-top:4px;border:1px solid var(--line)}
+.vscreen{scroll-snap-align:start;scroll-snap-stop:always;height:63vh;min-height:63vh;display:flex;flex-direction:column;overflow:hidden;background:var(--ink)}
+.vscreen .hscroll{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:6px 8px 10px;box-sizing:border-box}
+.screennav{display:flex;gap:5px;margin:6px 0 0}
+.screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
+.paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between}
+.modehint{font-size:10px;color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
+.gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.gyrow .gyc{width:46px;flex:none}
+.gyempty{font-size:12px;color:var(--bone-dim);font-style:italic;padding:10px 4px}
+.histturn{margin-bottom:10px}
+.histturn .htlabel{font-size:10px;color:var(--bone-dim);margin-bottom:3px;font-family:'Spline Sans Mono';letter-spacing:.08em;text-transform:uppercase}
+.zstrip{background:var(--forge);border:1px solid var(--line);padding:6px 8px;margin-top:6px}
+.zlbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:4px}
+.zrow{display:flex;align-items:center;gap:6px;margin:4px 0}
+.zk{font-family:'Spline Sans Mono';font-size:10px;color:var(--bone-dim);flex:none;width:50px}
+.zthumbs{display:flex;gap:4px;overflow-x:auto;flex:1}
+.mini{width:26px;flex:none}
+.mini img,.mini .ct{width:100%;aspect-ratio:5/7;object-fit:cover;border:1px solid var(--line);background:var(--forge)}
+.zpitch{display:flex;gap:5px}
+.zpchip{font-family:'Spline Sans Mono';font-size:10px;border:1px solid var(--line);padding:0 4px}
+.zempty{font-size:11.5px;color:var(--bone-dim);font-style:italic}
 </style>
 </head>
 <body>
@@ -1191,7 +1216,7 @@ function DeckView({h,db,onZoom}){
 </script>
 
 <script type="text/babel" data-presets="env,react">
-const {useState:uS,useMemo:uM,useEffect:uE} = React;
+const {useState:uS,useMemo:uM,useEffect:uE,useRef:uR} = React;
 const shuffle = a => { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; };
 
 /* ============================================================
@@ -1542,7 +1567,27 @@ function Advisor({g,ctx,read}){
 }
 
 /* ---------- BATTLE (v5: effects live) ---------- */
+function ZoneStrip({label,none,hand,arsenal,pitch}){
+  if(none) return <div className="zstrip"><div className="zlbl">{label}</div><div className="zempty">{none}</div></div>;
+  const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
+  return (
+    <div className="zstrip">
+      <div className="zlbl">{label}</div>
+      <div className="zrow"><span className="zk">Hand {hand.length}</span>
+        <div className="zthumbs">{hand.map((c,i)=><div key={i} className="mini"><CardImg card={c}/></div>)}</div>
+      </div>
+      <div className="zrow"><span className="zk">Arsenal</span>
+        {arsenal ? <div className="mini"><CardImg card={arsenal}/></div> : <span className="zempty">empty</span>}
+      </div>
+      <div className="zrow"><span className="zk">Pitch {pitch.length}</span>
+        <div className="zpitch">{[1,2,3].map(p=><span key={p} className="zpchip" style={{borderColor:PD[p],color:PD[p]}}>{p}:{pitch.filter(c=>c.pitch===p).length}</span>)}</div>
+      </div>
+    </div>
+  );
+}
 function Battle({h,cfg,db,onExit,onRecord}){
+  const oppRef=uR(null), chainRef=uR(null), youRef=uR(null);
+  const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth",block:"start"});
   const built = uM(()=>{
     const d = PARSED[h.k];
     const heroRec = resolveHero(db, d.hero) || {};
@@ -1586,7 +1631,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     weaponUsed:{}, mode:"act", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
-    dGear:built.dGear, stack:[], pend:null, blockRx:[], chain:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
+    dGear:built.dGear, stack:[], pend:null, blockRx:[], chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
   }));
   const [zoom,setZoom]=uS(null);
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
@@ -1815,8 +1860,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
     return newTurn(n);
   });
   function newTurn(s){
+    const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
     return L({...s, turn:s.turn+1, ap:1, weaponUsed:{}, hist:{atk:0,non:0},
-      board:s.board.map(b=>({...b,spent:false})), chain:[], mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
+      board:s.board.map(b=>({...b,spent:false})), chain:[], chainHist:hEntry, mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
   }
   uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
 
@@ -1829,116 +1875,178 @@ function Battle({h,cfg,db,onExit,onRecord}){
     <div className="board">
       <Ticker feed={g.feed}/>
       <button className="tag" onClick={onExit}>← leave the hall</button>
-      <div className="dummy clip">
-        <div className="drow">
-          <div><div className="hp">{Math.max(0,g.dHP)}</div><div className="lbl">Training dummy</div></div>
-          {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
-          <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
-        </div>
-        <div className="dgear"><span className="lblg">Ironrot — blocks hits ≥4</span>
-          {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(gearDef(x)===0?" used":"")} onClick={()=>setZoom(x)}><CardFrame card={{...x, def:gearDef(x)}} className="sm"/></button>)}
-        </div>
-      </div>
-      {g.chain.length>0 && <div className="chainwrap"><div className="zone">Combat chain</div><div className="chain">
-        {g.chain.map((l,i)=><ChainLink key={i} l={l}/>)}
-      </div></div>}
-      <div className="heroplate clip-sm">
-        <button className="hport" onClick={()=>setZoom(built.HZOOM)}><HeroArt h={h} db={db}/></button>
-        <div className="hinfo">
-          <b>{h.n.split(",")[0]}</b>
-          <span className="hab">{built.heroPow ? "⚡ "+built.heroPow.label : (built.heroRec.tx ? "tap portrait for ability text" : "ability text pending database")}</span>
-        </div>
-        <div className="hlife"><span>LIFE</span><b>{g.myHP}</b></div>
-        {built.heroPow && <button className="hact clip-sm" disabled={!!g.weaponUsed["hpow"]||g.mode!=="act"||!!g.over}
-          onClick={()=>tryPlay(built.HPOW,"hero",0)}>{g.weaponUsed["hpow"]?"USED":"USE"}</button>}
-      </div>
-      <div className="mystat">
-        <span className="pill">RES <b>{g.res}</b></span>
-        <span className="pill">AP <b>{g.ap}</b></span>
-        <span className="pill">DECK <b>{g.deck.length}</b></span>
-        <span className="pill">WASTED <b>{g.wasted}</b></span>
-        <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
-      </div>
-      {toks.length>0 && <div className="tokpills">{toks.map((t,i)=><span key={i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}</div>}
-      <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
-      {g.mode==="stack" && <div className="stackv clip-sm"><div className="sh"><span>The stack</span><span>top resolves first</span></div>
-        {[...g.stack].reverse().map((l,i)=><div key={i} className={"slayer "+l.k+(i===0?" top":"")}><span className="sk">{l.k}</span><span>{l.label}</span></div>)}
-      </div>}
-      {g.mode==="block" && g.blockRx.length>0 && <div className="stackv clip-sm"><div className="sh"><span>Your reactions</span></div>
-        {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
-      </div>}
-      <div className="log">{g.log.slice(0,2).map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
-
-      {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm">Paying for <b>{g.pending.card.name}</b> (cost {g.pending.card.cost}) — tap hand cards to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered. Hit pitch & play.</span>}</div>;})()}
-      {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap blockers and standing iron; defense reactions and instants play from hand for their cost. Ward soaks the rest.</div>}
-      {g.mode==="stack" && <div className="blockmode clip-sm">Priority window — tap attack reactions or instants (paid from floating <b>{g.res}</b>), or pass to resolve.</div>}
-      {g.mode==="arsenal" && <div className="paymode clip-sm">End of turn — tap one card to set into <b>arsenal</b> (arrows must live here), or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
-
-      <div className="zone">Gear{g.mode==="block"?" — tap standing iron to block":""}</div>
-      <div className="gearrow">
-        {g.gear.map((gr,i)=>{
-          const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
-          const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
-          const sel = g.blockG.includes(i);
-          return (
-            <button key={gr.uid} className={"g clip-sm"+(spent?" used":"")}
-              style={sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null}
-              onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : (gr.pow && !gr.destroyed) ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
-              <CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/>
-              {gr.pow && !gr.destroyed && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
-            </button>);
-        })}
+      <div className="screennav">
+        <button onClick={()=>jump(oppRef)}>▲ Opponent</button>
+        <button onClick={()=>jump(chainRef)}>Chain / Stack</button>
+        <button onClick={()=>jump(youRef)}>Your board ▼</button>
       </div>
 
-      {g.board.length>0 && <>
-        <div className="zone">In play — tap allies to swing</div>
-        <div className="boardrow">
-          {g.board.map((b,i)=>(
-            <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")}
-              onClick={()=> g.inspect ? setZoom(b.card) : allySwing(i)}>
-              <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
-              {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
-            </button>))}
-        </div>
-      </>}
-
-      <div className="arsenalrow">
-        <div className="slot clip-sm">{g.arsenal
-          ? <button style={{padding:0}} onClick={()=> g.inspect?setZoom(g.arsenal):tryPlay(g.arsenal,"arsenal",0)}><CardFrame card={g.arsenal} className="sm"/></button>
-          : "arsenal empty"}</div>
-        <div style={{flex:1}}>
-          <div className="zone">Hand</div>
-          <div className="hand">
-            {g.hand.map((c,i)=>{
-              const fx = fxParse(c);
-              const rxB = fx.dr || (isInstantT(c)&&fx.ops.length>0);
-              const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
-              const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(i) : false;
-              const dim = (g.mode==="block" && !(c.def>0) && !rxB && !sel) || (g.mode==="stack" && !rxA);
-              return (
-                <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
-                  onClick={()=>{ if(g.mode==="block"){ if(rxB && (c.cost||0)<=g.res) playRx(i); else if(c.def>0) toggleBlock("h",i); }
-                    else if(g.mode==="stack") playRx(i);
-                    else if(g.mode==="arsenal") pickArsenal(i);
-                    else tryPlay(c,"hand",i); }}>
-                  <CardFrame card={c}/>
-                </button>);
-            })}
+      <div className="tablewrap">
+        {/* ---- SCREEN 1: opponent's board ---- */}
+        <div className="vscreen" ref={oppRef}>
+          <div className="hscroll">
+            <div className="hpane">
+              <div className="paneflag"><span>Opponent</span><span>swipe → graveyard</span></div>
+              <div className="dummy clip">
+                <div className="drow">
+                  <div><div className="hp">{Math.max(0,g.dHP)}</div><div className="lbl">Training dummy</div></div>
+                  {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
+                  <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
+                </div>
+                <div className="dgear"><span className="lblg">Ironrot — blocks hits ≥4</span>
+                  {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(gearDef(x)===0?" used":"")} onClick={()=>setZoom(x)}><CardFrame card={{...x, def:gearDef(x)}} className="sm"/></button>)}
+                </div>
+              </div>
+              <p className="note">A real opponent's hero, weapons, and armor will fill this pane the same way the dummy's iron does.</p>
+            </div>
+            <div className="hpane">
+              <div className="paneflag"><span>Opponent graveyard / banish</span><span>swipe ← back</span></div>
+              <div className="gyempty">The dummy discards nothing — it has no hand to lose. This pane is wired and ready for a real opponent's graveyard and banish zone.</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="actrow">
-        {g.mode==="pay" ? <>
-          <button className="a" onClick={cancelPay}>Cancel</button>
-          <button className="a pay" onClick={confirmPay}>Pitch & play</button>
-        </> : g.mode==="stack" ? (
-          <button className="a go" onClick={resolveStack}>Pass — resolve</button>
-        ) : g.mode==="block" ? (
-          <button className="a go" onClick={takeIt}>Take it</button>
-        ) : (
-          <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
-        )}
+        {/* ---- SCREEN 2: chain / stack ---- */}
+        <div className="vscreen" ref={chainRef}>
+          <div className="hscroll">
+            <div className="hpane">
+              <div className="paneflag"><span>Combat chain</span><span>swipe → previous turns</span></div>
+              {g.chain.length>0
+                ? <div className="chain">{g.chain.map((l,i)=><ChainLink key={i} l={l}/>)}</div>
+                : <p className="note">No links yet this turn — play an attack or spell to start the chain.</p>}
+              {g.mode==="stack" && <div className="stackv clip-sm"><div className="sh"><span>The stack</span><span>top resolves first</span></div>
+                {[...g.stack].reverse().map((l,i)=><div key={i} className={"slayer "+l.k+(i===0?" top":"")}><span className="sk">{l.k}</span><span>{l.label}</span></div>)}
+              </div>}
+              {g.mode==="block" && g.blockRx.length>0 && <div className="stackv clip-sm"><div className="sh"><span>Your reactions</span></div>
+                {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
+              </div>}
+              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm">Paying for <b>{g.pending.card.name}</b> (cost {g.pending.card.cost}) — tap hand cards on your board to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered. Hit pitch & play.</span>}</div>;})()}
+              {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap blockers and standing iron on your board; defense reactions and instants play from hand for their cost. Ward soaks the rest.</div>}
+              {g.mode==="stack" && <div className="blockmode clip-sm">Priority window — tap attack reactions or instants on your board (paid from floating <b>{g.res}</b>), or pass to resolve.</div>}
+              {g.mode==="arsenal" && <div className="paymode clip-sm">End of turn — tap one card on your board to set into <b>arsenal</b>, or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
+              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              <div className="log">{g.log.slice(0,2).map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
+              <ZoneStrip label="You" hand={g.hand} arsenal={g.arsenal} pitch={g.pitch}/>
+              <ZoneStrip label="Opponent" none="The dummy has no hand, arsenal, or pitch zone — it only raises its iron."/>
+            </div>
+            <div className="hpane">
+              <div className="paneflag"><span>Previous turns</span><span>swipe ← back to now</span></div>
+              {g.chainHist.length===0 && <p className="note">Nothing logged yet — finish a turn to see it here.</p>}
+              {g.chainHist.map((t,i)=>(
+                <div key={i} className="histturn">
+                  <div className="htlabel">Turn {t.turn}</div>
+                  <div className="chain">{t.links.map((l,j)=><ChainLink key={j} l={l}/>)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ---- SCREEN 3: your board ---- */}
+        <div className="vscreen" ref={youRef}>
+          <div className="hscroll">
+            <div className="hpane">
+              <div className="paneflag"><span>Your board</span><span>swipe → graveyard</span></div>
+              {g.mode!=="act" && <div className="modehint">{
+                g.mode==="pay" ? `Pitching for ${g.pending.card.name}` :
+                g.mode==="block" ? `Blocking ${g.incoming} — tap defenders below` :
+                g.mode==="stack" ? "Priority window — react or pass (flick up for the stack)" :
+                g.mode==="arsenal" ? "Choose an arsenal card below" : ""
+              }</div>}
+              <div className="heroplate clip-sm">
+                <button className="hport" onClick={()=>setZoom(built.HZOOM)}><HeroArt h={h} db={db}/></button>
+                <div className="hinfo">
+                  <b>{h.n.split(",")[0]}</b>
+                  <span className="hab">{built.heroPow ? "⚡ "+built.heroPow.label : (built.heroRec.tx ? "tap portrait for ability text" : "ability text pending database")}</span>
+                </div>
+                <div className="hlife"><span>LIFE</span><b>{g.myHP}</b></div>
+                {built.heroPow && <button className="hact clip-sm" disabled={!!g.weaponUsed["hpow"]||g.mode!=="act"||!!g.over}
+                  onClick={()=>tryPlay(built.HPOW,"hero",0)}>{g.weaponUsed["hpow"]?"USED":"USE"}</button>}
+              </div>
+              <div className="mystat">
+                <span className="pill">RES <b>{g.res}</b></span>
+                <span className="pill">AP <b>{g.ap}</b></span>
+                <span className="pill">DECK <b>{g.deck.length}</b></span>
+                <span className="pill">WASTED <b>{g.wasted}</b></span>
+                <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
+              </div>
+              {toks.length>0 && <div className="tokpills">{toks.map((t,i)=><span key={i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}</div>}
+
+              <div className="zone">Gear{g.mode==="block"?" — tap standing iron to block":""}</div>
+              <div className="gearrow">
+                {g.gear.map((gr,i)=>{
+                  const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
+                  const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
+                  const sel = g.blockG.includes(i);
+                  return (
+                    <button key={gr.uid} className={"g clip-sm"+(spent?" used":"")}
+                      style={sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null}
+                      onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : (gr.pow && !gr.destroyed) ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
+                      <CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/>
+                      {gr.pow && !gr.destroyed && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
+                    </button>);
+                })}
+              </div>
+
+              {g.board.length>0 && <>
+                <div className="zone">In play — tap allies to swing</div>
+                <div className="boardrow">
+                  {g.board.map((b,i)=>(
+                    <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")}
+                      onClick={()=> g.inspect ? setZoom(b.card) : allySwing(i)}>
+                      <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
+                      {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
+                    </button>))}
+                </div>
+              </>}
+
+              <div className="arsenalrow">
+                <div className="slot clip-sm">{g.arsenal
+                  ? <button style={{padding:0}} onClick={()=> g.inspect?setZoom(g.arsenal):tryPlay(g.arsenal,"arsenal",0)}><CardFrame card={g.arsenal} className="sm"/></button>
+                  : "arsenal empty"}</div>
+                <div style={{flex:1}}>
+                  <div className="zone">Hand</div>
+                  <div className="hand">
+                    {g.hand.map((c,i)=>{
+                      const fx = fxParse(c);
+                      const rxB = fx.dr || (isInstantT(c)&&fx.ops.length>0);
+                      const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
+                      const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(i) : false;
+                      const dim = (g.mode==="block" && !(c.def>0) && !rxB && !sel) || (g.mode==="stack" && !rxA);
+                      return (
+                        <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
+                          onClick={()=>{ if(g.mode==="block"){ if(rxB && (c.cost||0)<=g.res) playRx(i); else if(c.def>0) toggleBlock("h",i); }
+                            else if(g.mode==="stack") playRx(i);
+                            else if(g.mode==="arsenal") pickArsenal(i);
+                            else tryPlay(c,"hand",i); }}>
+                          <CardFrame card={c}/>
+                        </button>);
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="actrow">
+                {g.mode==="pay" ? <>
+                  <button className="a" onClick={cancelPay}>Cancel</button>
+                  <button className="a pay" onClick={confirmPay}>Pitch & play</button>
+                </> : g.mode==="stack" ? (
+                  <button className="a go" onClick={resolveStack}>Pass — resolve</button>
+                ) : g.mode==="block" ? (
+                  <button className="a go" onClick={takeIt}>Take it</button>
+                ) : (
+                  <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
+                )}
+              </div>
+            </div>
+            <div className="hpane">
+              <div className="paneflag"><span>Your graveyard / banish</span><span>swipe ← back</span></div>
+              {g.grave.length===0
+                ? <div className="gyempty">Empty — the first card you play or pitch-spend lands here. Banish zone reserved for future effects.</div>
+                : <div className="gyrow">{g.grave.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div>}
+            </div>
+          </div>
+        </div>
       </div>
 
       {g.over && (g.over.win
@@ -1946,7 +2054,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
-      <p className="note">Parsed effects run; unscripted text shows via ℹ. Iron wears by its keywords. Every attack opens the stack.</p>
+      <p className="note">Three screens, flick to move: opponent's board, the chain/stack, your board. Swipe sideways on either board for its graveyard and banish zone. Parsed effects run; unscripted text shows via ℹ.</p>
     </div>
   );
 }
