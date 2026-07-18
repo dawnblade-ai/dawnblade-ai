@@ -211,6 +211,34 @@ img{display:block;max-width:100%}
 .advhead{width:100%;text-align:left;padding:7px 10px;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.14em;color:var(--y);text-transform:uppercase}
 .advbody{padding:0 10px 9px;font-size:13px}
 .advwhy{font-size:11px;color:var(--bone-dim);margin-top:3px;line-height:1.4}
+
+/* hero plate, combat chain, damage pops, sticky actions */
+.heroplate{display:flex;gap:8px;align-items:center;background:var(--forge);border:1px solid var(--line);padding:6px 8px}
+.heroplate .hport{width:40px;flex:none;padding:0}
+.heroplate img.art{width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 16%}
+.heroplate .fallbackart{aspect-ratio:1/1;font-size:10px}
+.heroplate .hinfo{flex:1;min-width:0}
+.heroplate .hinfo b{font-family:'Big Shoulders Display';font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.heroplate .hab{display:block;font-size:10px;color:var(--bone-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heroplate .hlife{text-align:right;font-family:'Spline Sans Mono';flex:none}
+.heroplate .hlife span{font-size:8px;color:var(--bone-dim);letter-spacing:.1em}
+.heroplate .hlife b{display:block;font-size:22px;line-height:1;color:var(--r);font-family:'Big Shoulders Display'}
+.heroplate .hact{flex:none;background:var(--y);color:var(--ink);font-family:'Big Shoulders Display';font-weight:800;font-size:12px;letter-spacing:.06em;padding:8px 9px}
+.heroplate .hact:disabled{opacity:.35}
+.chainwrap{margin-top:-2px}
+.chain{display:flex;gap:7px;overflow-x:auto;align-items:center;padding:2px 0 4px}
+.clink{position:relative;flex:none;width:34px}
+.clink img,.clink .ct{width:100%;aspect-ratio:5/7;object-fit:cover;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:'Big Shoulders Display';font-size:14px;color:var(--bone-dim);background:var(--forge)}
+.clink b{position:absolute;bottom:-2px;right:-3px;background:var(--ink);border:1px solid var(--r);color:var(--r);font-family:'Spline Sans Mono';font-size:10px;padding:0 3px;font-weight:400}
+.clink.arc b{border-color:var(--b);color:var(--b)}
+.clink i{position:absolute;top:-2px;right:-3px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-style:normal;font-size:9px;padding:0 2px}
+.clink.foe img,.clink.foe .ct{border-color:var(--r)}
+.clink:not(:last-child)::after{content:"";position:absolute;right:-5px;top:50%;width:4px;height:2px;background:var(--line)}
+.dummy{position:relative}
+.dmgpop{position:absolute;top:8px;right:10px;font-family:'Big Shoulders Display';font-weight:800;font-size:24px;color:var(--r);animation:dpop .9s ease-out forwards;pointer-events:none}
+@keyframes dpop{0%{opacity:0;transform:translateY(6px)}15%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
+.actrow{position:sticky;bottom:calc(6px + env(safe-area-inset-bottom));z-index:28}
+.actrow .a{box-shadow:0 -4px 14px rgba(10,8,7,.55)}
 </style>
 </head>
 <body>
@@ -1165,6 +1193,22 @@ function fxParse(card){
   FXMEMO.set(key,fx);
   return fx;
 }
+function parseHeroPower(tx){
+  const t = clean(tx);
+  const m = t.match(/(once per turn )?(action|instant)\s*[-—]*\s*([^:]{0,40}?):\s*([^.]+)/i);
+  if(!m) return null;
+  const costStr = (m[3]||"").trim();
+  if(/(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
+  const dm = costStr.match(/(\d+)/);
+  const rsym = (costStr.match(/\{r\}/gi)||[]).length;
+  const cost = dm ? +dm[1] : rsym;
+  const eff = classifyClause(m[4]);
+  if(!eff || eff.status!=="run" || eff.cond || eff.onHit) return null;
+  const after = t.slice(m.index + m[0].length);
+  const ga = /^\.?\s*go again/i.test(after);
+  return {cost, ga, eff:m[4].trim(),
+    label:(m[1]?"once/turn: ":"")+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
+}
 function FxDot({card}){ const t=fxParse(card).tier; return <span className={"fxdot "+t} title={"effects: "+t}/>; }
 function FxChip({card}){
   const fx = fxParse(card);
@@ -1286,6 +1330,8 @@ function advise(g, ctx){
   if(g.arsenal && (isAttack(g.arsenal)||fxParse(g.arsenal).playable) && (g.arsenal.cost||0)<=g.res+advPitchPotential(g.hand,null))
     cands.push({c:g.arsenal,from:"arsenal",idx:0,excl:null});
   g.gear.forEach((w,i)=>{ if(isWeapon(w)&&!g.weaponUsed[w.uid]&&(w.cost||0)<=g.res+advPitchPotential(g.hand,null)) cands.push({c:w,from:"weapon",idx:i,excl:null}); });
+  if(ctx.hpow && !g.weaponUsed["hpow"] && (ctx.hpow.cost||0)<=g.res+advPitchPotential(g.hand,null))
+    cands.push({c:ctx.hpow,from:"hero",idx:0,excl:null});
   g.board.forEach((b,i)=>{ if(b.kind==="ally"&&!b.spent&&b.card.power>0) cands.push({c:b.card,from:"ally",idx:i,excl:null,free:true}); });
   if(!cands.length){
     return {line: g.res>0 ? `End turn — but ${g.res} will fizzle. If anything costs ≤${g.res}, squeeze it in.` : "End turn. Nothing profitable left — don't force it.",
@@ -1314,7 +1360,7 @@ function advise(g, ctx){
   const fx=fxParse(best.c);
   const out = advCardOut(best.c,g,ctx);
   const pitchTxt = best.set.idxs.length ? ` (pitch ${best.set.idxs.map(i=>nm(g.hand[i])).join(" + ")})` : "";
-  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
+  const srcTxt = best.from==="arsenal" ? " from arsenal" : best.from==="hero" ? " — hero power" : best.from==="weapon" ? " — weapon swing" : best.from==="ally" ? " — send the ally in" : "";
   const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
   const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`
@@ -1324,6 +1370,17 @@ function advise(g, ctx){
   return {line:`Play ${nm(best.c)}${srcTxt}${pitchTxt} → ${bits.join(", ")||"effect"}.`, why};
 }
 
+function ChainLink({l}){
+  const [err,setErr]=uS(false);
+  const s = !err ? (l.img||l.dbImg) : null;
+  return (
+    <div className={"clink "+l.kind}>
+      {s ? <img src={s} loading="lazy" alt={l.n} onError={()=>setErr(true)}/> : <span className="ct">{l.n[0]}</span>}
+      <b>{l.dmg}</b>
+      {l.ga && <i>↻</i>}
+    </div>
+  );
+}
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -1363,6 +1420,11 @@ function Battle({h,db,onExit,onRecord}){
   const built = uM(()=>{
     const d = PARSED[h.k];
     const heroRec = resolveHero(db, d.hero) || {};
+    const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
+    const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
+      tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, img:null, dbImg:null, uid:"hpow"} : null;
+    const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
+      tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
     const runeTok = (db.byName["runechant"]||[])[0];
     const runeDmg = runeTok && (clean(runeTok.tx).toLowerCase().match(/deal (\d+) arcane damage/)||[])[1];
     let uid=0;
@@ -1378,8 +1440,8 @@ function Battle({h,db,onExit,onRecord}){
     const _perm = deck.filter(c=>fxParse(c).perm).length;
     const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
     const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-      +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". Chain go again into your heaviest hit; let nothing fizzle.";
-    return {deck,gear,read,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+      +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". Chain go again into your heaviest hit; let nothing fizzle."+(heroPow?" Hero power online — "+heroPow.label+".":"");
+    return {deck,gear,read,heroPow,HPOW,HZOOM,heroRec,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
   },[h,db]);
 
   const [g,setG] = uS(()=>({
@@ -1390,7 +1452,7 @@ function Battle({h,db,onExit,onRecord}){
     weaponUsed:{}, mode:"act", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
-    flags:{}, over:null, inspect:false
+    chain:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
   }));
   const [zoom,setZoom]=uS(null);
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
@@ -1426,7 +1488,8 @@ function Battle({h,db,onExit,onRecord}){
     // move the card out of its zone
     if(from==="hand"){ n.hand = n.hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ n.arsenal = null; }
-    if(from==="weapon"){ n.weaponUsed = {...n.weaponUsed,[card.uid]:true}; }
+    if(from==="weapon"||from==="hero"){ n.weaponUsed = {...n.weaponUsed,[card.uid]:true}; }
+    const preHP = n.dHP;
     const attacking = isAttack(card) || from==="weapon";
     let ga = fx.ga;
     // conditional clauses evaluated against this turn's history (before this card)
@@ -1456,6 +1519,8 @@ function Battle({h,db,onExit,onRecord}){
       else if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
       n.hist = {...n.hist, non:n.hist.non+1};
     }
+    const delta = preHP - n.dHP;
+    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     n.ap = ga ? n.ap : n.ap-1;
     if(ga) n = L(n,"Go again — action point kept.");
     return winCheck(n);
@@ -1472,8 +1537,8 @@ function Battle({h,db,onExit,onRecord}){
     if(s.ap<1) return L(s,"No action point left — end your turn.");
     const fx = fxParse(card);
     if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
-    if(from!=="weapon" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
-    if(from==="weapon" && s.weaponUsed[card.uid]) return L(s,`${card.name} already swung this turn.`);
+    if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
+    if((from==="weapon"||from==="hero") && s.weaponUsed[card.uid]) return L(s, from==="hero" ? "Hero power already used this turn." : `${card.name} already swung this turn.`);
     const cost = card.cost||0;
     if(s.res>=cost) return execute(s,card,from,idx);
     return {...s, mode:"pay", pending:{card,from,idx}, paySel:[], log:[`Pitch ${cost-s.res} more for ${card.name}.`,...s.log].slice(0,4)};
@@ -1497,6 +1562,8 @@ function Battle({h,db,onExit,onRecord}){
     const b = s.board[bi];
     if(!b || b.kind!=="ally" || b.spent || !(b.card.power>0)) return s;
     let n = {...s, dHP:s.dHP-b.card.power, board:s.board.map((x,i)=>i===bi?{...x,spent:true}:x)};
+    n.chain=[...n.chain,{n:b.card.name,img:b.card.img,dbImg:b.card.dbImg,dmg:b.card.power,ga:false,kind:"atk"}];
+    n.hitSeq=n.hitSeq+1; n.lastDmg=b.card.power;
     n = L(n, `${b.card.name} attacks for ${b.card.power} (ally — simplified, no action point).`);
     return winCheck(n);
   });
@@ -1521,10 +1588,11 @@ function Battle({h,db,onExit,onRecord}){
     const drawn = n.deck.slice(0,need);
     n.hand=[...n.hand,...drawn]; n.deck=n.deck.slice(need);
     if(drawn.length<need && n.hand.length===0){ n.over={win:false}; return L(n,"Deck empty — fatigued. The dummy wins by attrition."); }
-    if(n.rot>0){ n.dHP-=n.rot; n=L(n,`Bloodrot ticks the dummy for ${n.rot}.`); n=winCheck(n); if(n.over) return n; }
+    if(n.rot>0){ n.dHP-=n.rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:n.rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=n.rot; n=L(n,`Bloodrot ticks the dummy for ${n.rot}.`); n=winCheck(n); if(n.over) return n; }
     const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
     n.incoming = Math.max(0, base - n.fra);
     if(n.fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); n.fra=0; }
+    n.chain=[...n.chain,{n:"Dummy",img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
     n.mode="block"; n.blockH=[]; n.blockG=[];
     return L(n, `Dummy swings for ${n.incoming}. Tap blockers, then take it.`);
   }
@@ -1555,7 +1623,7 @@ function Battle({h,db,onExit,onRecord}){
   });
   function newTurn(s){
     return L({...s, turn:s.turn+1, ap:1, weaponUsed:{}, hist:{atk:0,non:0},
-      board:s.board.map(b=>({...b,spent:false})), mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
+      board:s.board.map(b=>({...b,spent:false})), chain:[], mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
   }
   uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
 
@@ -1570,10 +1638,23 @@ function Battle({h,db,onExit,onRecord}){
       <button className="tag" onClick={onExit}>← leave the hall</button>
       <div className="dummy clip">
         <div><div className="hp">{Math.max(0,g.dHP)}</div><div className="lbl">Training dummy</div></div>
+        {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
         <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
       </div>
+      {g.chain.length>0 && <div className="chainwrap"><div className="zone">Combat chain</div><div className="chain">
+        {g.chain.map((l,i)=><ChainLink key={i} l={l}/>)}
+      </div></div>}
+      <div className="heroplate clip-sm">
+        <button className="hport" onClick={()=>setZoom(built.HZOOM)}><HeroArt h={h} db={db}/></button>
+        <div className="hinfo">
+          <b>{h.n.split(",")[0]}</b>
+          <span className="hab">{built.heroPow ? "⚡ "+built.heroPow.label : (built.heroRec.tx ? "tap portrait for ability text" : "ability text pending database")}</span>
+        </div>
+        <div className="hlife"><span>LIFE</span><b>{g.myHP}</b></div>
+        {built.heroPow && <button className="hact clip-sm" disabled={!!g.weaponUsed["hpow"]||g.mode!=="act"||!!g.over}
+          onClick={()=>tryPlay(built.HPOW,"hero",0)}>{g.weaponUsed["hpow"]?"USED":"USE"}</button>}
+      </div>
       <div className="mystat">
-        <span className="pill hp">LIFE <b>{g.myHP}</b></span>
         <span className="pill">RES <b>{g.res}</b></span>
         <span className="pill">AP <b>{g.ap}</b></span>
         <span className="pill">DECK <b>{g.deck.length}</b></span>
@@ -1581,8 +1662,8 @@ function Battle({h,db,onExit,onRecord}){
         <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
       </div>
       {toks.length>0 && <div className="tokpills">{toks.map((t,i)=><span key={i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}</div>}
-      <Advisor g={g} ctx={{runeDmg:built.runeDmg}} read={built.read}/>
-      <div className="log">{g.log.map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
+      <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW}} read={built.read}/>
+      <div className="log">{g.log.slice(0,2).map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
 
       {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm">Paying for <b>{g.pending.card.name}</b> (cost {g.pending.card.cost}) — tap hand cards to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered. Hit pitch & play.</span>}</div>;})()}
       {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap hand cards (blue shield) and unused equipment. Defense reactions block from hand too. Ward soaks the rest.</div>}
