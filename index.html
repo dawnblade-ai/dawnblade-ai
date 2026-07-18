@@ -16,6 +16,7 @@
   --ink:#14100E; --forge:#241B16; --forge2:#2E241D;
   --bone:#E8DFD0; --bone-dim:#B8AC98; --line:#4A3B2E;
   --ok:#7BA05B;
+  --tv:calc(100vh - 92px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
@@ -311,10 +312,10 @@ img{display:block;max-width:100%}
 .boardrow .b{width:64px}
 
 /* tabletop — 3 vertical flick screens, each with a horizontal swipe pane */
-.tablewrap{height:63vh;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;margin-top:4px;border:1px solid var(--line)}
-.vscreen{scroll-snap-align:start;scroll-snap-stop:always;height:63vh;min-height:63vh;display:flex;flex-direction:column;overflow:hidden;background:var(--ink)}
+.tablewrap{height:var(--tv);overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;margin-top:4px;border:1px solid var(--line)}
+.vscreen{scroll-snap-align:start;scroll-snap-stop:always;height:var(--tv);min-height:var(--tv);display:flex;flex-direction:column;overflow:hidden;background:var(--ink)}
 .vscreen .hscroll{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:6px 8px 10px;box-sizing:border-box}
+.hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box}
 .screennav{display:flex;gap:5px;margin:6px 0 0}
 .screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
 .paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between}
@@ -379,6 +380,11 @@ img{display:block;max-width:100%}
 .gamelog .gl{font-size:12px;padding:5px 8px;background:var(--forge);border-left:2px solid var(--line)}
 .gamelog .gl:first-child{border-left-color:var(--y)}
 .chand{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+
+.wslot:not(.filled){flex:.5;min-height:44px}
+.featempty{border:1px dashed var(--line);width:100%;aspect-ratio:auto;padding:10px;font-size:11px;color:var(--bone-dim);text-align:center}
+.hpane.vfill{display:flex;flex-direction:column}
+.vfillsp{flex:1;min-height:6px}
 </style>
 </head>
 <body>
@@ -400,7 +406,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.01"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.02"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1953,18 +1959,18 @@ function Battle({h,cfg,db,onExit,onRecord}){
   };
   return (
     <div className="board">
-      <button className="tag" onClick={onExit}>← leave the hall</button>
       <div className="screennav">
-        <button onClick={()=>jump(oppRef)}>▲ Opponent</button>
-        <button onClick={()=>jump(chainRef)}>Chain / Stack</button>
-        <button onClick={()=>jump(youRef)}>Your board ▼</button>
+        <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
+        <button onClick={()=>jump(oppRef)}>▲ Opp</button>
+        <button onClick={()=>jump(chainRef)}>Chain</button>
+        <button onClick={()=>jump(youRef)}>You ▼</button>
       </div>
 
       <div className="tablewrap">
         {/* ---- SCREEN 1: opponent board (mirror: active rows nearest the chain) ---- */}
         <div className="vscreen" ref={oppRef}>
           <div className="hscroll">
-            <div className="hpane">
+            <div className="hpane vfill">
               <div className="paneflag"><span>Opponent board</span><span>swipe → graveyard</span></div>
               <div className="midrow">
                 <div className="armorgrid">
@@ -1990,6 +1996,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                 </div>
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>
               </div>
+              <div className="vfillsp"/>
               <div className="prow" style={{marginTop:8}}><span className="plbl">In play</span><span className="zempty">nothing yet — a real opponent's allies and items land here</span></div>
             </div>
             <div className="hpane">
@@ -2013,10 +2020,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
             </div>
             <div className="hpane">
               <div className="paneflag"><span>▲ opp · ← links</span><span>log → · you ▼</span></div>
-              <div className="oppstrip"><span>Opp hand</span><b style={{color:"var(--bone)"}}>0</b><span>— mechanical</span></div>
-              <div className="scorebar clip-sm" style={{marginTop:6}}>
+              <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{g.myHP}</span> you · R<b>{g.res}</b> A<b>{g.ap}</b></span>
-                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span></span>
+                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span> · hand <b>0</b></span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
@@ -2061,7 +2067,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
         {/* ---- SCREEN 3: your board (the sketch) ---- */}
         <div className="vscreen" ref={youRef}>
           <div className="hscroll">
-            <div className="hpane">
+            <div className="hpane vfill">
               <div className="paneflag"><span>Your board</span><span>swipe → graveyard</span></div>
               {g.mode!=="act" && <div className="modehint">Action needed — flick up to the chain screen</div>}
               <div className="prow"><span className="plbl">In play</span>
@@ -2113,6 +2119,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                   </div>
                 </div>
               </div>
+              <div className="vfillsp"/>
               <div className="mystat" style={{marginTop:8}}>
                 <span className="pill">WASTED <b>{g.wasted}</b></span>
                 <span className="pill">TURN <b>{g.turn}</b></span>
@@ -2134,7 +2141,6 @@ function Battle({h,cfg,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
-      <p className="note">Flick: opponent · chain · your board. Swipe the chain screen left for previous links, right for the game log; swipe either board for its graveyard.</p>
     </div>
   );
 }
@@ -2361,10 +2367,10 @@ function App(){
   });
   return (
     <div className="shell">
-      <div className="topbar">
+      {!fighting && <div className="topbar">
         <span className="brand">DAWN<em>BLADE</em></span>
         <span className="tag">v{APP_VER}{db.status==="ready" ? " · "+db.count+" cards" : ""}</span>
-      </div>
+      </div>}
       <DbBanner db={db} reload={reload}/>
       {tab==="heroes" && !fighting && !loHero && <>
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
