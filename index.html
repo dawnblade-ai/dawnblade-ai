@@ -265,6 +265,20 @@ img{display:block;max-width:100%}
 .cutrow .qq{margin-left:auto;font-family:'Spline Sans Mono';font-size:11px;color:var(--bone-dim)}
 .cutrow.cut{opacity:.5}
 .cutrow.cut .nm2{text-decoration:line-through}
+
+.slotb{position:absolute;bottom:0;left:0;right:0;background:rgba(20,16,14,.88);border-top:1px solid var(--line);font-size:8px;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:1px 0;color:var(--bone-dim)}
+.pick.on .slotb{color:var(--y)}
+.pick.lockout{opacity:.35}
+
+/* the stack — priority windows */
+.stackv{border:1px solid var(--b);background:rgba(59,111,176,.07);padding:8px 10px}
+.stackv .sh{font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--b);display:flex;justify-content:space-between;margin-bottom:5px}
+.slayer{display:flex;align-items:center;gap:7px;padding:5px 8px;border:1px solid var(--line);background:var(--forge);margin-top:4px;font-size:12.5px}
+.slayer.top{border-color:var(--y)}
+.slayer .sk{flex:none;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.1em;padding:0 4px;border:1px solid var(--line);color:var(--bone-dim)}
+.slayer.atk .sk{border-color:var(--r);color:var(--r)}
+.slayer.def .sk{border-color:var(--b);color:var(--b)}
+.slayer.rx .sk{border-color:var(--y);color:var(--y)}
 </style>
 </head>
 <body>
@@ -1175,6 +1189,7 @@ function classifyClause(raw){
   if(/^go again$/.test(c)) return R([["ga"]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("no defender to restrict — training dummy");
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
+  if(m=c.match(/prevent (?:the next )?(\d+) (?:point(?:s)? of )?(arcane )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
   if(m=c.match(/deals? (\d+) arcane damage/)) return R([["arcane",+m[1]]]);
   if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
   if(m=c.match(/gains? (\d+) (?:\{r\}|resource)/)) return R([["res",+m[1]]]);
@@ -1221,12 +1236,14 @@ function fxParse(card){
   FXMEMO.set(key,fx);
   return fx;
 }
-function parseHeroPower(tx){
+function parseHeroPower(tx, allowDestroy){
   const t = clean(tx);
   const m = t.match(/(once per turn )?(action|instant)\s*[-—]*\s*([^:]{0,40}?):\s*([^.]+)/i);
   if(!m) return null;
   const costStr = (m[3]||"").trim();
-  if(/(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
+  const sd = allowDestroy && /\bdestroy\b/i.test(costStr);
+  if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
+  if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
   const rsym = (costStr.match(/\{r\}/gi)||[]).length;
   const cost = dm ? +dm[1] : rsym;
@@ -1234,9 +1251,20 @@ function parseHeroPower(tx){
   if(!eff || eff.status!=="run" || eff.cond || eff.onHit) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
-  return {cost, ga, eff:m[4].trim(),
-    label:(m[1]?"once/turn: ":"")+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
+  return {cost, ga, sd:!!sd, eff:m[4].trim(),
+    label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
+const gearDef = gr => gr.destroyed ? 0 : (gr.curDef!=null ? gr.curDef : (gr.def||0));
+function gearBlockApply(gr){
+  const kws = (gr.kw||[]).map(k=>String(k).toLowerCase());
+  const d = gearDef(gr); const n = {...gr};
+  if(kws.some(k=>k.includes("blade break"))) n.destroyed = true;
+  else if(kws.some(k=>k.includes("temper"))){ n.curDef = Math.max(0,d-1); if(n.curDef===0) n.destroyed = true; }
+  else if(kws.some(k=>k.includes("battleworn"))){ n.curDef = Math.max(0,d-1); }
+  return n;
+}
+const isAR = c => /attack reaction/i.test(c.tt||"");
+const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt||"");
 function FxDot({card}){ const t=fxParse(card).tier; return <span className={"fxdot "+t} title={"effects: "+t}/>; }
 function FxChip({card}){
   const fx = fxParse(card);
@@ -1290,6 +1318,7 @@ function advValue(c, g, ctx){
     else if(op[0]==="buffNext") v += op[1]*0.6;
     else if(op[0]==="life") v += op[1]*0.4;
     else if(op[0]==="ward") v += op[1]*0.4;
+    else if(op[0]==="awd") v += op[1]*0.1;
     else if(op[0]==="amp") v += op[1]*0.7;
     else if(op[0]==="rot") v += 2;
   });
@@ -1321,6 +1350,13 @@ function advise(g, ctx){
     const names = set.idxs.map(i=>nm(g.hand[i])).join(" + ");
     return {line:`Pitch ${names} — exactly ${set.gain}${set.waste?` (${set.waste} floats: spend it before end of turn)`:""}.`,
             why:"Fodder first — feed the fire with the cards you'd least like to swing."};
+  }
+  if(g.mode==="stack"){
+    const rx = g.hand.map(c=>({c,fx:fxParse(c)})).filter(x=>(isAR(x.c)||(isInstantT(x.c)&&x.fx.ops.length>0)) && (x.c.cost||0)<=g.res)
+      .map(x=>({...x,p:(x.fx.self||0)+x.fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0)}))
+      .sort((a,b)=>b.p-a.p)[0];
+    if(rx && rx.p>0) return {line:`React with ${rx.c.name} (+${rx.p}), then pass.`, why:"Reactions land before the iron — every point punches through."};
+    return {line:"Pass — let it resolve.", why:"No profitable reaction in hand; keep your cards for the swing back."};
   }
   if(g.mode==="arsenal"){
     const arrows = g.hand.map((c,i)=>({c,i})).filter(x=>isAttack(x.c)&&isArrow(x.c));
@@ -1466,9 +1502,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
     }));
     const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e),gi,uid:++uid,used:false}));
     const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
-    gear.forEach(gr=>{ if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx);
+    gear.forEach(gr=>{ if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
       if(pw){ gr.pow=pw; gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-        tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:pw.eff,img:null,dbImg:null,uid:"gp"+gr.uid}; } } });
+        tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:pw.eff,sd:pw.sd,img:null,dbImg:null,uid:"gp"+gr.uid}; } } });
     const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++uid,used:false}));
     const _atk = deck.filter(isAttack);
     const _ga = deck.filter(c=>fxParse(c).ga).length;
@@ -1485,11 +1521,11 @@ function Battle({h,cfg,db,onExit,onRecord}){
     deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
     arsenal:null, pitch:[], grave:[], gear:built.gear, board:[],
     res:0, ap:1, turn:1, wasted:0, dHP:42, myHP:built.myHP, myInt:built.myInt,
-    buffNext:0, amp:0, ward:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
+    buffNext:0, amp:0, ward:0, awd:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
     weaponUsed:{}, mode:"act", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
-    dGear:built.dGear, chain:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
+    dGear:built.dGear, stack:[], pend:null, blockRx:[], chain:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
   }));
   const [zoom,setZoom]=uS(null);
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
@@ -1511,6 +1547,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       else if(k==="buffNext"){ n.buffNext+=v; n=L(n,`Next attack +${v}.`); }
       else if(k==="amp"){ n.amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
       else if(k==="ward"){ n.ward+=v; n=L(n,`Ward ${v}.`); }
+      else if(k==="awd"){ n.awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="rune"){ n.rune+=v; n=L(n,`+${v} Runechant.`); }
       else if(k==="rot"){ n.rot+=v; n=L(n,`Bloodrot on the dummy (ticks ${v}/turn).`); }
       else if(k==="fra"){ n.fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
@@ -1539,27 +1576,24 @@ function Battle({h,cfg,db,onExit,onRecord}){
     });
     if(attacking){
       const bonus = (fx.self||0)+(n._condSelf||0)+n.buffNext;
-      let total = (card.power||0)+bonus;
+      const total = (card.power||0)+bonus;
       n.buffNext = 0; delete n._condSelf;
-      let blkNote = "";
-      if(total>=4){
-        const gi = n.dGear.findIndex(x=>!x.used);
-        if(gi>=0){ const piece=n.dGear[gi]; const bdef=piece.def||1;
-          n.dGear = n.dGear.map((x,ix)=>ix===gi?{...x,used:true}:x);
-          blkNote = ` Dummy raises ${piece.name} — blocks ${Math.min(bdef,total)}.`;
-          total = Math.max(0, total-bdef);
-        }
-      }
-      n.dHP -= total;
-      let runeMsg = "";
-      if(n.rune>0){ const rd = n.rune*built.runeDmg; n.dHP-=rd; runeMsg = ` ${n.rune} Runechant${n.rune>1?"s":""} pop for ${rd} arcane.`; n.rune=0; }
-      n = L(n, `${card.name} hits for ${total}${bonus?` (+${bonus})`:""}.${blkNote}${runeMsg}`);
-      n = runOps(n, fx.ops, card.name);
-      n = runOps(n, fx.onHit, card.name);
-      n.hist = {...n.hist, atk:n.hist.atk+1};
       if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
+      n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit};
+      n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
+      const gi = n.dGear.findIndex(x=>gearDef(x)>0);
+      if(total>=4 && gi>=0){
+        const piece = n.dGear[gi];
+        n.stack = [...n.stack, {k:"def", label:`Dummy: ${piece.name} — defend ${gearDef(piece)}`, gi}];
+        n = L(n, `Dummy responds — ${piece.name} raised. Priority to you.`);
+      } else {
+        n = L(n, "Dummy passes. Priority to you — react or pass.");
+      }
+      n.mode = "stack";
+      return n;
     } else {
       n = runOps(n, fx.ops, card.name);
+      if(from==="hero" && card.sd){ n.gear = n.gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
       if(fx.perm){ n.board=[...n.board,{card,kind:fx.perm,spent:false,uid:card.uid}]; n=L(n,`${card.name} enters play (${fx.perm}).`); }
       else if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
@@ -1572,8 +1606,59 @@ function Battle({h,cfg,db,onExit,onRecord}){
     return winCheck(n);
   };
 
+  const playRx = i => setG(s=>{
+    if(s.mode!=="stack" && s.mode!=="block") return s;
+    const c = s.hand[i]; if(!c) return s;
+    const fx = fxParse(c);
+    const inAtk = s.mode==="stack";
+    const ok = inAtk ? (isAR(c) || (isInstantT(c)&&fx.ops.length>0)) : (fx.dr || (isInstantT(c)&&fx.ops.length>0));
+    if(!ok) return s;
+    const cost = c.cost||0;
+    if(s.res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
+    let n = {...s, res:s.res-cost, hand:s.hand.filter((_,x)=>x!==i), grave:[c,...s.grave]};
+    if(inAtk){
+      const pump = (fx.self||0) + fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0);
+      n = runOps(n, fx.ops.filter(o=>o[0]!=="buffNext"), c.name);
+      n.stack = [...n.stack, {k:"rx", label:`${c.name} — +${pump}`, pump}];
+      return L(n, `${c.name} on the stack (+${pump}). Dummy passes back.`);
+    }
+    const dv = c.def||0;
+    n = runOps(n, fx.ops, c.name);
+    n.blockRx = [...n.blockRx, {label:`${c.name} — defend ${dv}`, def:dv}];
+    return L(n, `${c.name} played at instant speed — +${dv} defense.`);
+  });
+  const resolveStack = () => setG(s=>{
+    if(s.mode!=="stack" || !s.pend) return s;
+    let n = {...s};
+    const pumps = n.stack.filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
+    const defL = n.stack.find(l=>l.k==="def");
+    let total = n.pend.total + pumps;
+    let blkNote = "";
+    if(defL){
+      const piece = n.dGear[defL.gi];
+      const bd = Math.min(gearDef(piece), total);
+      n.dGear = n.dGear.map((x,ix)=>ix===defL.gi?gearBlockApply(x):x);
+      blkNote = ` ${piece.name} blocks ${bd}.`;
+      total = Math.max(0, total-bd);
+    }
+    n.dHP -= total;
+    let rd = 0, runeMsg = "";
+    if(n.rune>0){ rd = n.rune*built.runeDmg; n.dHP-=rd; runeMsg = ` ${n.rune} Runechant${n.rune>1?"s":""} pop for ${rd} arcane.`; n.rune=0; }
+    const pc = n.pend.card;
+    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, kind:"atk"}];
+    if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
+    n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} reactions)`:""}.${blkNote}${runeMsg}`);
+    n = runOps(n, n.pend.ops, pc.name);
+    if(total>0) n = runOps(n, n.pend.onHit, pc.name);
+    else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    n.hist = {...n.hist, atk:n.hist.atk+1};
+    n.ap = n.pend.ga ? n.ap : n.ap-1;
+    if(n.pend.ga) n = L(n, "Go again — action point kept.");
+    n.stack = []; n.pend = null; n.mode = "act";
+    return winCheck(n);
+  });
   const tryPlay = (card,from,idx) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -1639,8 +1724,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n.incoming = Math.max(0, base - n.fra);
     if(n.fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); n.fra=0; }
     n.chain=[...n.chain,{n:"Dummy",img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
-    n.mode="block"; n.blockH=[]; n.blockG=[];
-    return L(n, `Dummy swings for ${n.incoming}. Tap blockers, then take it.`);
+    n.mode="block"; n.blockH=[]; n.blockG=[]; n.blockRx=[];
+    return L(n, `Dummy swings for ${n.incoming}. Priority to you — reactions, blocks, or take it.`);
   }
   const toggleBlock = (kind,i) => setG(s=>{
     if(s.mode!=="block") return s;
@@ -1651,8 +1736,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
   const takeIt = () => setG(s=>{
     if(s.mode!=="block") return s;
     const dh = s.blockH.reduce((a,i)=>a+(s.hand[i].def||0),0);
-    const dg = s.blockG.reduce((a,i)=>a+(s.gear[i].def||0),0);
-    let through = Math.max(0, s.incoming-dh-dg);
+    const dg = s.blockG.reduce((a,i)=>a+gearDef(s.gear[i]),0);
+    const drx = s.blockRx.reduce((a,l)=>a+l.def,0);
+    let through = Math.max(0, s.incoming-dh-dg-drx);
     let wardNote = "";
     let ward = s.ward;
     if(through>0 && ward>0){ const use=Math.min(ward,through); through-=use; ward-=use; wardNote=` Ward soaks ${use}.`; }
@@ -1660,9 +1746,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
     let n = {...s, myHP:s.myHP-through, ward,
       hand:s.hand.filter((_,i)=>!s.blockH.includes(i)),
       grave:[...s.blockH.map(i=>s.hand[i]),...s.grave],
-      gear:s.gear.map((gr,i)=>s.blockG.includes(i)?{...gr,used:true}:gr),
-      blockH:[],blockG:[]};
-    n = L(n, `Blocked ${dh+dg}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
+      gear:s.gear.map((gr,i)=>s.blockG.includes(i)?gearBlockApply(gr):gr),
+      blockH:[],blockG:[],blockRx:[]};
+    n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(n.myHP<=5 && n.myHP>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
     if(n.myHP<=0){ n.over={win:false}; return L(n,"You hit the boards. The dummy remains undefeated."); }
     return newTurn(n);
@@ -1675,7 +1761,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
 
   const toks = [
     g.rune>0 && ["Runechant ×"+g.rune], g.buffNext>0 && ["Next atk +"+g.buffNext],
-    g.amp>0 && ["Amp "+g.amp], g.ward>0 && ["Ward "+g.ward],
+    g.amp>0 && ["Amp "+g.amp], g.ward>0 && ["Ward "+g.ward], g.awd>0 && ["ArcWard "+g.awd],
     g.rot>0 && ["Bloodrot "+g.rot,"bad"], g.fra>0 && ["Frailty "+g.fra,"bad"]
   ].filter(Boolean);
   return (
@@ -1689,7 +1775,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
           <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
         </div>
         <div className="dgear"><span className="lblg">Ironrot — blocks hits ≥4, once each</span>
-          {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(x.used?" used":"")} onClick={()=>setZoom(x)}><CardImg card={x}/><span>{x.def!=null?x.def:1}</span></button>)}
+          {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(gearDef(x)===0?" used":"")} onClick={()=>setZoom(x)}><CardImg card={x}/><span>{gearDef(x)}</span></button>)}
         </div>
       </div>
       {g.chain.length>0 && <div className="chainwrap"><div className="zone">Combat chain</div><div className="chain">
@@ -1713,25 +1799,33 @@ function Battle({h,cfg,db,onExit,onRecord}){
         <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
       </div>
       {toks.length>0 && <div className="tokpills">{toks.map((t,i)=><span key={i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}</div>}
-      <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>!x.used).length, dDef:((g.dGear.find(x=>!x.used)||{}).def||1)}} read={built.read}/>
+      <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+      {g.mode==="stack" && <div className="stackv clip-sm"><div className="sh"><span>The stack</span><span>top resolves first</span></div>
+        {[...g.stack].reverse().map((l,i)=><div key={i} className={"slayer "+l.k+(i===0?" top":"")}><span className="sk">{l.k}</span><span>{l.label}</span></div>)}
+      </div>}
+      {g.mode==="block" && g.blockRx.length>0 && <div className="stackv clip-sm"><div className="sh"><span>Your reactions</span></div>
+        {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
+      </div>}
       <div className="log">{g.log.slice(0,2).map((l,i)=><div key={i} className={i?"dim":""}>{l}</div>)}</div>
 
       {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm">Paying for <b>{g.pending.card.name}</b> (cost {g.pending.card.cost}) — tap hand cards to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered. Hit pitch & play.</span>}</div>;})()}
-      {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap hand cards (blue shield) and unused equipment. Defense reactions block from hand too. Ward soaks the rest.</div>}
+      {g.mode==="block" && <div className="blockmode clip-sm">Blocking <b>{g.incoming}</b> — tap blockers and standing iron; defense reactions and instants play from hand for their cost. Ward soaks the rest.</div>}
+      {g.mode==="stack" && <div className="blockmode clip-sm">Priority window — tap attack reactions or instants (paid from floating <b>{g.res}</b>), or pass to resolve.</div>}
       {g.mode==="arsenal" && <div className="paymode clip-sm">End of turn — tap one card to set into <b>arsenal</b> (arrows must live here), or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
 
       <div className="zone">Weapons & equipment {g.mode==="block"?"(tap shields to block — once per game)":""}</div>
       <div className="gearrow">
         {g.gear.map((gr,i)=>{
-          const w = isWeapon(gr), blockable = g.mode==="block" && gr.def>0 && !gr.used;
+          const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
+          const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
           const sel = g.blockG.includes(i);
           return (
-            <button key={gr.uid} className={"g clip-sm"+(gr.used?" used":"")}
+            <button key={gr.uid} className={"g clip-sm"+(spent?" used":"")}
               style={sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null}
-              onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : gr.pow ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
+              onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : (gr.pow && !gr.destroyed) ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
               <CardImg card={gr}/>
-              {gr.pow && !gr.used && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
-              {gr.def>0 && <span className="gd">{gr.def}</span>}
+              {gr.pow && !gr.destroyed && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
+              {gearDef(gr)>0 && <span className="gd">{gearDef(gr)}</span>}
             </button>);
         })}
       </div>
@@ -1756,11 +1850,17 @@ function Battle({h,cfg,db,onExit,onRecord}){
           <div className="zone">Hand — tap to play · pitch value rides the card art</div>
           <div className="hand">
             {g.hand.map((c,i)=>{
+              const fx = fxParse(c);
+              const rxB = fx.dr || (isInstantT(c)&&fx.ops.length>0);
+              const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
               const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(i) : false;
-              const dim = g.mode==="block" && !(c.def>0) && !sel;
+              const dim = (g.mode==="block" && !(c.def>0) && !rxB && !sel) || (g.mode==="stack" && !rxA);
               return (
                 <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
-                  onClick={()=> g.mode==="block" ? (c.def>0&&toggleBlock("h",i)) : g.mode==="arsenal" ? pickArsenal(i) : tryPlay(c,"hand",i)}>
+                  onClick={()=>{ if(g.mode==="block"){ if(rxB && (c.cost||0)<=g.res) playRx(i); else if(c.def>0) toggleBlock("h",i); }
+                    else if(g.mode==="stack") playRx(i);
+                    else if(g.mode==="arsenal") pickArsenal(i);
+                    else tryPlay(c,"hand",i); }}>
                   <CardImg card={c}/>
                   {c.cost!=null && <span className="cost">{c.cost}</span>}
                   {c.power!=null && <span className="pw">{c.power}</span>}
@@ -1775,7 +1875,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
         {g.mode==="pay" ? <>
           <button className="a" onClick={cancelPay}>Cancel</button>
           <button className="a pay" onClick={confirmPay}>Pitch & play</button>
-        </> : g.mode==="block" ? (
+        </> : g.mode==="stack" ? (
+          <button className="a go" onClick={resolveStack}>Pass — resolve</button>
+        ) : g.mode==="block" ? (
           <button className="a go" onClick={takeIt}>Take it</button>
         ) : (
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
@@ -1787,7 +1889,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
-      <p className="note">Effects engine: every executed clause is parsed from the card's own rules text at runtime — go again, draws, resources, arcane damage, amps, wards, runechants, buffs, on-hit riders, poisons (approx), allies (simplified). Unparsed clauses are shown with ℹ and counted in each deck's coverage bar, never guessed. Claude's call is a heuristic coach — it can't see tomorrow's draws, and it loves a clean chain.</p>
+      <p className="note">Effects engine: every executed clause is parsed from the card's own rules text at runtime — go again, draws, resources, arcane damage, amps, wards, runechants, buffs, on-hit riders, poisons (approx), allies (simplified). Unparsed clauses are shown with ℹ and counted in each deck's coverage bar, never guessed. Claude's call is a heuristic coach — it can't see tomorrow's draws, and it loves a clean chain. Equipment wears by its own keywords: Blade Break shatters, Battleworn and Temper grind down, plain steel holds forever. Every attack opens a priority window on the stack.</p>
     </div>
   );
 }
@@ -1859,30 +1961,108 @@ function Trophies(){
   );
 }
 
-/* ---------- LOADOUT — scout the enemy, pick your iron, trim to 40 ---------- */
+/* ---------- LOADOUT — official zones: 4 armor slots, 2 hands ---------- */
+function slotOf(c){
+  const t = ((c&&c.tt)||"").toLowerCase();
+  if(/off[\s-]?hand/.test(t)) return {z:"off",h:1,lab:"off"};
+  if(/\bquiver\b/.test(t)) return {z:"qvr",h:0,lab:"quiver"};
+  if(/\b2h\b/.test(t)) return {z:"2h",h:2,lab:"2h"};
+  if(/\b1h\b/.test(t)) return {z:"1h",h:1,lab:"1h"};
+  if(/\bhead\b/.test(t)) return {z:"head",h:0,lab:"head"};
+  if(/\bchest\b/.test(t)) return {z:"chest",h:0,lab:"chest"};
+  if(/\barms\b/.test(t)) return {z:"arms",h:0,lab:"arms"};
+  if(/\blegs\b/.test(t)) return {z:"legs",h:0,lab:"legs"};
+  if(/weapon/.test(t) || (c&&c.power!=null)) return {z:"1h",h:1,lab:"1h?"};
+  return {z:"misc",h:0,lab:"gear"};
+}
+const ARMOR_Z = ["head","chest","arms","legs"];
+const HAND_Z = ["1h","2h","off","qvr"];
+function applyPick(list, sel, i){
+  const item = idx => list.find(x=>x.i===idx);
+  if(sel.includes(i)){
+    let out = sel.filter(x=>x!==i);
+    if(item(i).s.z==="2h") out = out.filter(x=>item(x).s.z!=="qvr");
+    return out;
+  }
+  const s = item(i).s;
+  let out = sel.slice();
+  if(ARMOR_Z.includes(s.z) || s.z==="misc"){
+    if(ARMOR_Z.includes(s.z)) out = out.filter(x=>item(x).s.z!==s.z);
+    const armorN = out.filter(x=>ARMOR_Z.includes(item(x).s.z)||item(x).s.z==="misc").length;
+    if(armorN>=4) return sel;
+    return [...out,i];
+  }
+  if(s.z==="qvr"){
+    out = out.filter(x=>item(x).s.z!=="qvr");
+    if(!out.some(x=>item(x).s.z==="2h")) return sel;
+    return [...out,i];
+  }
+  if(s.z==="2h"){
+    out = out.filter(x=>!["1h","off"].includes(item(x).s.z));
+    return [...out,i];
+  }
+  out = out.filter(x=>item(x).s.z!=="2h" && item(x).s.z!=="qvr");
+  if(s.z==="off") out = out.filter(x=>item(x).s.z!=="off");
+  let hands = out.filter(x=>["1h","off"].includes(item(x).s.z));
+  hands.sort((a,b)=>(item(a).s.z==="off"?0:1)-(item(b).s.z==="off"?0:1));
+  while(hands.reduce((a,x)=>a+item(x).s.h,0) + s.h > 2){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
+  return [...out,i];
+}
+function defaultPicks(list){
+  let sel = [];
+  ARMOR_Z.forEach(z=>{
+    const best = list.filter(x=>x.s.z===z).sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
+    if(best) sel = applyPick(list, sel, best.i);
+  });
+  const twoH = list.filter(x=>x.s.z==="2h").sort((a,b)=>(b.c.power||0)-(a.c.power||0))[0];
+  if(twoH && twoH.c.power!=null){
+    sel = applyPick(list, sel, twoH.i);
+    const q = list.find(x=>x.s.z==="qvr"); if(q) sel = applyPick(list, sel, q.i);
+  } else {
+    list.filter(x=>x.s.z==="1h").sort((a,b)=>(b.c.power||0)-(a.c.power||0)).slice(0,2).forEach(x=>{ sel = applyPick(list, sel, x.i); });
+    const off = list.filter(x=>x.s.z==="off").sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
+    if(off) sel = applyPick(list, sel, off.i);
+  }
+  return sel;
+}
 function Loadout({h,db,onBack,onStart}){
   const d = PARSED[h.k];
-  const gearR = uM(()=>d.gear.map((e,i)=>({i, c:resolveEntry(db,e)})),[h,db]);
-  const weapons = gearR.filter(x=>isWeapon(x.c));
-  const equips = gearR.filter(x=>!isWeapon(x.c));
+  const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e); return {i, c, s:slotOf(c)}; }),[h,db]);
+  const handL = gearR.filter(x=>HAND_Z.includes(x.s.z));
+  const armorL = gearR.filter(x=>!HAND_Z.includes(x.s.z));
   const saved = store.get("loadout."+h.k, null);
-  const defTop4 = equips.slice().sort((a,b)=>(b.c.def||0)-(a.c.def||0)).slice(0,4).map(x=>x.i);
-  const [sel,setSel] = uS(()=> saved&&saved.sel ? saved.sel.filter(i=>equips.some(x=>x.i===i)).slice(0,4) : defTop4);
+  const [sel,setSel] = uS(()=>{
+    if(saved && saved.sel){ let s=[]; saved.sel.forEach(i=>{ if(gearR.some(x=>x.i===i)) s=applyPick(gearR,s,i); }); if(s.length) return s; }
+    return defaultPicks(gearR);
+  });
   const [cuts,setCuts] = uS(()=> (saved&&saved.cuts)||{});
   const [zoom,setZoom] = uS(null);
+  const item = i => gearR.find(x=>x.i===i);
+  const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
+  const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
+  const has2H = sel.some(i=>item(i).s.z==="2h");
   const deckTotal = d.deck.reduce((a,e)=>a+e.q,0);
   const cutN = Object.values(cuts).reduce((a,b)=>a+b,0);
   const size = deckTotal - cutN;
-  const toggleSel = i => setSel(s=> s.includes(i) ? s.filter(x=>x!==i) : (s.length>=4 ? s : [...s,i]));
   const tapCut = (ei,q) => setCuts(c=>{
     const cur = c[ei]||0;
     if(cur<q && size>40) return {...c,[ei]:cur+1};
     const n={...c}; delete n[ei]; return n;
   });
-  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:[...weapons.map(x=>x.i),...sel], cuts}); };
+  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts}); };
   const dg = DUMMY_GEAR.map(nm=>resolveEntry(db,{name:nm,p:0,code:null,q:1}));
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
+  const Tile = ({x}) => {
+    const on = sel.includes(x.i);
+    const dead = x.s.z==="qvr" && !on && !has2H;
+    return (
+      <button className={"pick clip-sm"+(on?" on":"")+(dead?" lockout":"")} onClick={()=>{ if(dead){setZoom(x.c);return;} setSel(s=>applyPick(gearR,s,x.i)); }}>
+        <CardImg card={x.c}/>
+        <span className="slotb">{x.s.lab}</span>
+        {on && <span className="chk">✓</span>}
+      </button>);
+  };
   return (
     <div className="lo">
       <button className="tag" onClick={onBack}>← back to select</button>
@@ -1891,24 +2071,14 @@ function Loadout({h,db,onBack,onStart}){
         <span className="lblg">The Dummy wears Ironrot — blocks hits ≥4, once each. Arcane slips past the iron.</span>
         {dg.map((x,i)=><button key={i} className="dg" onClick={()=>setZoom(x)}><CardImg card={x}/><span>{x.def!=null?x.def:1}</span></button>)}
       </div>
-      <div className="sec">Weapons <b>locked in</b></div>
+      <div className="sec">Hands <b>{hands} / 2</b> <span style={{textTransform:"none",letterSpacing:0}}>two 1H, or 1H + off-hand, or one 2H{gearR.some(x=>x.s.z==="qvr")?" (+ quiver on a 2H)":""}</span></div>
       <div className="pickgrid">
-        {weapons.map(x=>(
-          <button key={x.i} className="pick lock clip-sm" onClick={()=>setZoom(x.c)}>
-            <CardImg card={x.c}/><span className="wtag">weapon</span>
-          </button>))}
-        {!weapons.length && <span className="tag">no weapons — this hero fights with cards alone</span>}
+        {handL.map(x=><Tile key={x.i} x={x}/>)}
+        {!handL.length && <span className="tag">no weapons — this hero fights with cards alone</span>}
       </div>
-      <div className="sec">Pick your equipment <b>{sel.length} / 4</b></div>
+      <div className="sec">Armor <b>{armorN} / 4</b> <span style={{textTransform:"none",letterSpacing:0}}>one each: head · chest · arms · legs</span></div>
       <div className="pickgrid">
-        {equips.map(x=>{
-          const on = sel.includes(x.i);
-          return (
-            <button key={x.i} className={"pick clip-sm"+(on?" on":"")} onClick={()=>toggleSel(x.i)}>
-              <CardImg card={x.c}/>
-              {on && <span className="chk">✓</span>}
-            </button>);
-        })}
+        {armorL.map(x=><Tile key={x.i} x={x}/>)}
       </div>
       <div className="sec">Trim the deck <b>{size}</b> <span style={{textTransform:"none",letterSpacing:0}}>(min 40 — tap to cut, tap through to restore)</span></div>
       <div className="cutlist">
@@ -1923,7 +2093,7 @@ function Loadout({h,db,onBack,onStart}){
         })}
       </div>
       <button className="battlebtn clip" style={{marginTop:14}} onClick={start}><span>Fight</span></button>
-      <p className="note">Real Blitz runs exactly 40; the precon ships fat. Cut the cards your plan doesn't want — your loadout is remembered per hero.</p>
+      <p className="note">Zone rules per the official Comprehensive Rules: one piece per armor zone (head, chest, arms, legs) and two weapon zones — a 2H fills both hands, an off-hand takes one, max one off-hand, and quivers perch on a 2H. Slots are read from each card's own type line. Loadout remembered per hero.</p>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
   );
