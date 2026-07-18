@@ -279,6 +279,24 @@ img{display:block;max-width:100%}
 .slayer.atk .sk{border-color:var(--r);color:var(--r)}
 .slayer.def .sk{border-color:var(--b);color:var(--b)}
 .slayer.rx .sk{border-color:var(--y);color:var(--y)}
+
+/* card frame overlay — real FaB corner order */
+.cfw{position:relative;width:100%}
+.b-pit,.b-cost,.b-atk,.b-def{position:absolute;font-family:'Spline Sans Mono';font-weight:700;font-size:12px;line-height:1;padding:2px 5px;color:#FFF;background:rgba(16,12,10,.92);border:1px solid var(--line)}
+.b-pit{top:2px;left:2px;border:none}
+.b-pit.p1{background:var(--r)}
+.b-pit.p2{background:var(--y);color:var(--ink)}
+.b-pit.p3{background:var(--b)}
+.b-cost{top:2px;right:2px;border-color:#E8DFD0}
+.b-atk{bottom:2px;left:2px;border-color:var(--r)}
+.b-def{bottom:2px;right:2px;border-color:var(--b)}
+.b-typ{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:.07em;text-transform:uppercase;background:rgba(16,12,10,.9);color:var(--bone-dim);padding:1px 4px;border:1px solid var(--line);white-space:nowrap;pointer-events:none}
+.cfw.sm .b-pit,.cfw.sm .b-cost,.cfw.sm .b-atk,.cfw.sm .b-def{font-size:9px;padding:1px 3px}
+.cfw.sm .b-typ{font-size:6px;padding:0 3px}
+.hand{gap:5px}
+.gearrow .g{width:62px}
+.boardrow .b{width:62px}
+.dg{width:40px}
 </style>
 </head>
 <body>
@@ -1446,6 +1464,35 @@ function ChainLink({l}){
     </div>
   );
 }
+function typeAbbr(c){
+  const t = (c.tt||"").toLowerCase();
+  if(/attack reaction/.test(t)) return "React";
+  if(/defense reaction/.test(t)) return "D-React";
+  if(/\binstant\b/.test(t)) return "Instant";
+  if(/\bally\b/.test(t)) return "Ally";
+  if(/\bitem\b/.test(t)) return "Item";
+  if(/\baura\b/.test(t)) return "Aura";
+  if(/\btrap\b/.test(t)) return "Trap";
+  if(/\bhero\b/.test(t)) return "Hero";
+  if(/weapon|off[\s-]?hand|\b[12]h\b/.test(t)) return slotOf(c).lab.toUpperCase();
+  if(/attack/.test(t) && /action/.test(t)) return "Attack";
+  if(/equipment/.test(t)) return "Block";
+  if(/action/.test(t)) return "Non-attack";
+  return "";
+}
+function CardFrame({card,className,noType}){
+  const t = noType ? "" : typeAbbr(card);
+  return (
+    <div className={"cfw"+(className?" "+className:"")}>
+      <CardImg card={card}/>
+      {card.pitch>=1 && card.pitch<=3 && <span className={"b-pit p"+card.pitch}>{card.pitch}</span>}
+      {card.cost!=null && <span className="b-cost">{card.cost}</span>}
+      {card.power!=null && <span className="b-atk">{card.power}</span>}
+      {card.def!=null && <span className="b-def">{card.def}</span>}
+      {t && <span className="b-typ">{t}</span>}
+    </div>
+  );
+}
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -1774,8 +1821,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
           {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
           <div className="incoming">turn {g.turn}<br/>{g.mode==="block"?`INCOMING ${g.incoming}`:`next swing ${[3,4,5][(g.turn-1)%3]+(g.turn>6?1:0)}`}</div>
         </div>
-        <div className="dgear"><span className="lblg">Ironrot — blocks hits ≥4, once each</span>
-          {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(gearDef(x)===0?" used":"")} onClick={()=>setZoom(x)}><CardImg card={x}/><span>{gearDef(x)}</span></button>)}
+        <div className="dgear"><span className="lblg">Ironrot — blocks hits ≥4</span>
+          {g.dGear.map((x,i)=><button key={x.uid} className={"dg"+(gearDef(x)===0?" used":"")} onClick={()=>setZoom(x)}><CardFrame card={{...x, def:gearDef(x)}} className="sm"/></button>)}
         </div>
       </div>
       {g.chain.length>0 && <div className="chainwrap"><div className="zone">Combat chain</div><div className="chain">
@@ -1813,7 +1860,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       {g.mode==="stack" && <div className="blockmode clip-sm">Priority window — tap attack reactions or instants (paid from floating <b>{g.res}</b>), or pass to resolve.</div>}
       {g.mode==="arsenal" && <div className="paymode clip-sm">End of turn — tap one card to set into <b>arsenal</b> (arrows must live here), or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
 
-      <div className="zone">Weapons & equipment {g.mode==="block"?"(tap shields to block — once per game)":""}</div>
+      <div className="zone">Gear{g.mode==="block"?" — tap standing iron to block":""}</div>
       <div className="gearrow">
         {g.gear.map((gr,i)=>{
           const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
@@ -1823,20 +1870,19 @@ function Battle({h,cfg,db,onExit,onRecord}){
             <button key={gr.uid} className={"g clip-sm"+(spent?" used":"")}
               style={sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null}
               onClick={()=> g.mode==="block" ? (blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : (gr.pow && !gr.destroyed) ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
-              <CardImg card={gr}/>
+              <CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/>
               {gr.pow && !gr.destroyed && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
-              {gearDef(gr)>0 && <span className="gd">{gearDef(gr)}</span>}
             </button>);
         })}
       </div>
 
       {g.board.length>0 && <>
-        <div className="zone">In play — allies swing once a turn, tap to attack</div>
+        <div className="zone">In play — tap allies to swing</div>
         <div className="boardrow">
           {g.board.map((b,i)=>(
             <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")}
               onClick={()=> g.inspect ? setZoom(b.card) : allySwing(i)}>
-              <CardImg card={b.card}/>
+              <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
               {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
             </button>))}
         </div>
@@ -1844,10 +1890,10 @@ function Battle({h,cfg,db,onExit,onRecord}){
 
       <div className="arsenalrow">
         <div className="slot clip-sm">{g.arsenal
-          ? <button style={{padding:0}} onClick={()=> g.inspect?setZoom(g.arsenal):tryPlay(g.arsenal,"arsenal",0)}><CardImg card={g.arsenal}/></button>
+          ? <button style={{padding:0}} onClick={()=> g.inspect?setZoom(g.arsenal):tryPlay(g.arsenal,"arsenal",0)}><CardFrame card={g.arsenal} className="sm"/></button>
           : "arsenal empty"}</div>
         <div style={{flex:1}}>
-          <div className="zone">Hand — tap to play · pitch value rides the card art</div>
+          <div className="zone">Hand</div>
           <div className="hand">
             {g.hand.map((c,i)=>{
               const fx = fxParse(c);
@@ -1861,10 +1907,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                     else if(g.mode==="stack") playRx(i);
                     else if(g.mode==="arsenal") pickArsenal(i);
                     else tryPlay(c,"hand",i); }}>
-                  <CardImg card={c}/>
-                  {c.cost!=null && <span className="cost">{c.cost}</span>}
-                  {c.power!=null && <span className="pw">{c.power}</span>}
-                  {c.def!=null && c.def>0 && <span className="df">{c.def}</span>}
+                  <CardFrame card={c}/>
                 </button>);
             })}
           </div>
@@ -1889,7 +1932,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
-      <p className="note">Effects engine: every executed clause is parsed from the card's own rules text at runtime — go again, draws, resources, arcane damage, amps, wards, runechants, buffs, on-hit riders, poisons (approx), allies (simplified). Unparsed clauses are shown with ℹ and counted in each deck's coverage bar, never guessed. Claude's call is a heuristic coach — it can't see tomorrow's draws, and it loves a clean chain. Equipment wears by its own keywords: Blade Break shatters, Battleworn and Temper grind down, plain steel holds forever. Every attack opens a priority window on the stack.</p>
+      <p className="note">Parsed effects run; unscripted text shows via ℹ. Iron wears by its keywords. Every attack opens the stack.</p>
     </div>
   );
 }
