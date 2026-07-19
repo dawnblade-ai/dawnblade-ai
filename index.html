@@ -397,7 +397,7 @@ img{display:block;max-width:100%}
 
 /* v1.06 judge pass: fixed action bar, playmat armor, deck back, tap */
 .actbar{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:8px;max-width:544px;margin:0 auto}
-.armorgrid{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"head head" "chest arms" "legs legs";gap:5px;flex:1.1}
+.armorgrid{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"head ." "chest arms" "legs .";gap:5px;flex:1.1}
 .aslot{border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;min-height:56px}
 .aslot .wempty{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim)}
 .deckback{width:100%;aspect-ratio:5/7;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);border:2px solid #7A2A1E;position:relative;display:flex;align-items:center;justify-content:center}
@@ -406,6 +406,9 @@ img{display:block;max-width:100%}
 .dcnt{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);background:var(--ink);border:1px solid var(--y);color:var(--y);font-family:'Spline Sans Mono';font-size:12px;font-weight:700;padding:0 6px;z-index:2}
 .tapwrap{display:block;transition:transform .28s}
 .tapwrap.tapped{transform:rotate(90deg) scale(.72)}
+
+.armorgrid .g,.armorgrid .aslot{max-width:118px;width:100%}
+.wslot .cfw{max-width:118px;margin:0 auto}
 </style>
 </head>
 <body>
@@ -427,7 +430,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.06"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.07"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1469,7 +1472,7 @@ function advValue(c, g, ctx){
     else if(op[0]==="rot") v += 2;
   });
   if(fx.perm==="ally") v += (c.power||0)*1.5;
-  if(hasKw(c,"boost")) v += 0.8;
+  if(hasKw(c,"boost") && ctx.boostOn!==false) v += 0.8;
   return v - (c.cost||0)*0.15;
 }
 function advBestPitch(hand, need, exclIdx, valueOf){
@@ -1724,7 +1727,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
           ally:"Line: crew up early — every ally is free damage each turn after."};
         return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
       })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
-    return {deck,gear,dGear,read,heroPow,HPOW,HZOOM,heroRec,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+    const hasBoost = deck.some(c=>hasKw(c,"boost"));
+    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
   },[h,db]);
 
   const [g,setG] = uS(()=>({
@@ -1735,7 +1739,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     weaponUsed:{}, mode:"act", bphase:"defend", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
-    dGear:built.dGear, banish:[], soul:[], stack:[], pend:null, blockRx:[], chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
+    dGear:built.dGear, banish:[], soul:[], boostOn:true, stack:[], pend:null, blockRx:[], chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
   }));
   const [zoom,setZoom]=uS(null);
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
@@ -1794,7 +1798,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       let total = (card.power||0)+bonus;
       n.buffNext = 0; delete n._condSelf;
       let declNote = "";
-      if(hasKw(card,"boost") && n.deck.length){
+      if(n.boostOn && hasKw(card,"boost") && n.deck.length){
         const top = n.deck[0];
         n.deck = n.deck.slice(1); n.banish = [...n.banish, top];
         const mech = /mechanologist/i.test(top.tt||"");
@@ -2144,7 +2148,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                 <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span> · hand <b>0</b></span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
-              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
               <div className="featwrap">
                 {featured
                   ? <>{featured.foe
@@ -2243,6 +2247,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
               <div className="mystat" style={{marginTop:8}}>
                 <span className="pill">WASTED <b>{g.wasted}</b></span>
                 <span className="pill">TURN <b>{g.turn}</b></span>
+                {built.hasBoost && <button className={"pill"+(g.boostOn?"":" hp")} onClick={()=>setG(s=>({...s,boostOn:!s.boostOn}))}>BOOST {g.boostOn?"✓":"✗"}</button>}
                 <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
               </div>
             </div>
