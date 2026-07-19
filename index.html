@@ -406,7 +406,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.03"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.04"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1896,25 +1896,33 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n.mode="block"; n.blockH=[]; n.blockG=[]; n.blockRx=[];
     return L(n, `Dummy swings for ${n.incoming}. Priority to you — reactions, blocks, or take it.`);
   }
-  const toggleBlock = (kind,i) => setG(s=>{
+  const toggleBlock = (kind,v) => setG(s=>{
     if(s.mode!=="block") return s;
-    const key = kind==="h"?"blockH":"blockG";
-    const arr = s[key].includes(i)?s[key].filter(x=>x!==i):[...s[key],i];
-    return {...s,[key]:arr};
+    if(kind==="h"){
+      const c = s.hand.find(x=>x.uid===v);
+      if(!c || c.def==null) return s;
+      const arr = s.blockH.includes(v)?s.blockH.filter(x=>x!==v):[...s.blockH,v];
+      return {...s, blockH:arr};
+    }
+    const gr = s.gear[v];
+    if(!gr || gearDef(gr)<=0) return s;
+    const arr = s.blockG.includes(v)?s.blockG.filter(x=>x!==v):[...s.blockG,v];
+    return {...s, blockG:arr};
   });
   const takeIt = () => setG(s=>{
     if(s.mode!=="block") return s;
-    const dh = s.blockH.reduce((a,i)=>a+(s.hand[i].def||0),0);
+    const bcards = s.blockH.map(u=>s.hand.find(x=>x.uid===u)).filter(Boolean);
+    const dh = bcards.reduce((a,c)=>a+(c.def||0),0);
     const dg = s.blockG.reduce((a,i)=>a+gearDef(s.gear[i]),0);
     const drx = s.blockRx.reduce((a,l)=>a+l.def,0);
     let through = Math.max(0, s.incoming-dh-dg-drx);
     let wardNote = "";
     let ward = s.ward;
     if(through>0 && ward>0){ const use=Math.min(ward,through); through-=use; ward-=use; wardNote=` Ward soaks ${use}.`; }
-    const drNames = s.blockH.filter(i=>fxParse(s.hand[i]).dr).map(i=>s.hand[i].name);
+    const drNames = bcards.filter(c=>fxParse(c).dr).map(c=>c.name);
     let n = {...s, myHP:s.myHP-through, ward,
-      hand:s.hand.filter((_,i)=>!s.blockH.includes(i)),
-      grave:[...s.blockH.map(i=>s.hand[i]),...s.grave],
+      hand:s.hand.filter(c=>!s.blockH.includes(c.uid)),
+      grave:[...bcards,...s.grave],
       gear:s.gear.map((gr,i)=>s.blockG.includes(i)?gearBlockApply(gr):gr),
       blockH:[],blockG:[],blockRx:[]};
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
@@ -1955,13 +1963,14 @@ function Battle({h,cfg,db,onExit,onRecord}){
   };
   const handCell = (c,i) => {
     const fx = fxParse(c);
-    const rxB = fx.dr || (isInstantT(c)&&fx.ops.length>0);
+    const rxPlay = fx.ops.length>0 && (fx.dr || isInstantT(c));
     const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
-    const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(i) : false;
-    const dim = (g.mode==="block" && !(c.def>0) && !rxB && !sel) || (g.mode==="stack" && !rxA);
+    const canDefend = c.def!=null;
+    const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(c.uid) : false;
+    const dim = (g.mode==="block" && !canDefend && !rxPlay && !sel) || (g.mode==="stack" && !rxA);
     return (
       <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
-        onClick={()=>{ if(g.mode==="block"){ if(rxB && (c.cost||0)<=g.res) playRx(i); else if(c.def>0) toggleBlock("h",i); }
+        onClick={()=>{ if(g.mode==="block"){ if(canDefend) toggleBlock("h",c.uid); else if(rxPlay && (c.cost||0)<=g.res) playRx(i); }
           else if(g.mode==="stack") playRx(i);
           else if(g.mode==="arsenal") pickArsenal(i);
           else tryPlay(c,"hand",i); }}>
@@ -2049,7 +2058,11 @@ function Battle({h,cfg,db,onExit,onRecord}){
                 {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
               </div>}
               {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm" style={{marginTop:8}}>Paying for <b>{g.pending.card.name}</b> — tap hand cards below to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered.</span>}</div>;})()}
-              {g.mode==="block" && <div className="blockmode clip-sm" style={{marginTop:8}}>Blocking <b>{g.incoming}</b> — tap blockers below or iron on your board; reactions play for their cost.</div>}
+              {g.mode==="block" && <>
+                <div className="blockmode clip-sm" style={{marginTop:8}}>Defend step — declare blockers free; a card needs a printed defense (zero counts). Incoming <b>{g.incoming}</b>.</div>
+                <div className="zone" style={{marginTop:6}}>Your equipment — tap standing pieces to defend</div>
+                <div className="gearrow">{g.gear.map((gr,i)=> gearDef(gr)>0 ? gearBtn(gr,i) : null)}</div>
+              </>}
               {g.mode==="stack" && <div className="blockmode clip-sm" style={{marginTop:8}}>Priority window — tap reactions below (from floating <b>{g.res}</b>) or pass.</div>}
               {g.mode==="arsenal" && <div className="paymode clip-sm" style={{marginTop:8}}>Tap one card below for <b>arsenal</b>, or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
               {prevLinks.length>0 && <div className="subchain">{prevLinks.slice(0,6).map((l,j)=><ChainLink key={j} l={l}/>)}</div>}
