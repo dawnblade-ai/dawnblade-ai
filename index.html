@@ -409,6 +409,16 @@ img{display:block;max-width:100%}
 
 .armorgrid .g,.armorgrid .aslot{max-width:118px;width:100%}
 .wslot .cfw{max-width:118px;margin:0 auto}
+
+/* v1.08 sideboarding table */
+.lo .tablewrap,.lo .vscreen{height:calc(100vh - 236px);min-height:calc(100vh - 236px)}
+.cutgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cutgrid .pick{display:block}
+.pick.cut{opacity:.45}
+.qstrip{display:block;text-align:center;font-family:'Spline Sans Mono';font-size:10px;background:var(--forge2);border-top:1px solid var(--line);padding:1px 0;color:var(--bone-dim)}
+.pick.cut .qstrip{color:var(--r)}
+.cutx{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);background:var(--r);color:#FFF;font-family:'Big Shoulders Display';font-weight:800;font-size:13px;letter-spacing:.1em;padding:2px 9px;z-index:2}
+.loprev .heromid .hlife2{font-size:20px}
 </style>
 </head>
 <body>
@@ -430,7 +440,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.07"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.08"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v4";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1662,7 +1672,6 @@ function Advisor({g,ctx,read}){
 /* ---------- BATTLE (v5: effects live) ---------- */
 function ZoneStrip({label,none,hand,arsenal,pitch}){
   if(none) return <div className="zstrip"><div className="zlbl">{label}</div><div className="zempty">{none}</div></div>;
-  const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   return (
     <div className="zstrip">
       <div className="zlbl">{label}</div>
@@ -2445,7 +2454,6 @@ function Loadout({h,db,onBack,onStart}){
     const n={...c}; delete n[ei]; return n;
   });
   const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts}); };
-  const dg = DUMMY_GEAR.map(nm=>resolveEntry(db,{name:nm,p:0,code:null,q:1}));
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -2458,41 +2466,107 @@ function Loadout({h,db,onBack,onStart}){
         {on && <span className="chk">✓</span>}
       </button>);
   };
+  const sc1=uR(null), sc2=uR(null), sc3=uR(null);
+  const jumpL = r => r.current && r.current.scrollIntoView({behavior:"smooth",block:"start"});
+  const selItems = sel.map(i=>gearR.find(x=>x.i===i)).filter(Boolean);
+  const selHand = selItems.filter(x=>HAND_Z.includes(x.s.z));
+  const selArmor = z => selItems.find(x=>x.s.z===z);
+  const p2h = selHand[0] && selHand[0].s.z==="2h";
+  const hcv = resolveHero(db, d.hero);
+  const hHP = hcv && hcv.hp!=null ? hcv.hp : 20;
+  const prevTile = x => (
+    <button key={x.i} className="g clip-sm" style={{width:"100%",maxWidth:118}} onClick={()=>setSel(s=>applyPick(gearR,s,x.i))}>
+      <CardFrame card={x.c} className="sm"/>
+    </button>);
   return (
     <div className="lo">
-      <button className="tag" onClick={onBack}>← back to select</button>
-      <div className="heroplate clip-sm" style={{marginTop:8}}>
-        <div className="hport"><HeroArt h={h} db={db}/></div>
-        <div className="hinfo"><b>{h.n.split(",")[0]}</b><span className="hab">{h.cls} · Chapter {h.ch}{h.mystery?" · fate chose":""}</span></div>
+      <div className="screennav">
+        <button onClick={onBack} style={{flex:.7}}>✕ back</button>
+        <button onClick={()=>jumpL(sc1)}>▲ Scout</button>
+        <button onClick={()=>jumpL(sc2)}>Loadout</button>
+        <button onClick={()=>jumpL(sc3)}>Deck ▼</button>
       </div>
-      <div className="sec">Scout the opponent</div>
-      <div className="dgear" style={{padding:"8px 10px",background:"var(--forge)",border:"1px solid var(--line)"}}>
-        <span className="lblg">The Dummy wears Ironrot — blocks hits ≥4, once each. Arcane slips past the iron.</span>
-        {dg.map((x,i)=><button key={i} className="dg" onClick={()=>setZoom(x)}><CardImg card={x}/><span>{x.def!=null?x.def:1}</span></button>)}
+      <div className="tablewrap">
+        {/* ---- SCOUT: hero card only ---- */}
+        <div className="vscreen" ref={sc1}>
+          <div className="hpane vfill" style={{flex:1}}>
+            <div className="paneflag"><span>Scout the opponent</span><span>hero only — the rest stays hidden</span></div>
+            <div className="vfillsp"/>
+            <div className="featwrap">
+              <div className="featfoe">
+                <div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
+                <b>{"42"}</b><span>The Dummy · Life</span>
+              </div>
+              <span className="linkchip">Opponent hero</span>
+            </div>
+            <div className="vfillsp"/>
+            <p className="note">Real sideboarding shows you only the enemy hero. Their iron, their habits — you learn those in the pit.</p>
+          </div>
+        </div>
+        {/* ---- LOADOUT: live playmat preview + picks ---- */}
+        <div className="vscreen" ref={sc2}>
+          <div className="hpane" style={{flex:1}}>
+            <div className="paneflag"><span>Your loadout — preview updates live</span><span>tap preview to unequip</span></div>
+            <div className="loprev">
+              <div className="heror">
+                <div className={"wslot clip-sm"+(selHand[0]?" filled":"")}>
+                  {selHand[0] ? prevTile(selHand[0]) : <span className="wempty">weapon 1</span>}
+                </div>
+                <div className="heromid clip-sm">
+                  <div className="hport2"><HeroArt h={h} db={db}/></div>
+                  <span className="hname">{h.n.split(",")[0]}</span>
+                  <b className="hlife2">{hHP}</b>
+                  <span className="hlbl">life</span>
+                </div>
+                <div className={"wslot clip-sm"+(selHand[1]?" filled":"")}>
+                  {selHand[1] ? prevTile(selHand[1]) : <span className="wempty">{p2h ? "2H occupies both hands" : "weapon 2 / off-hand"}</span>}
+                </div>
+              </div>
+              <div className="midrow">
+                <div className="armorgrid">
+                  {["head","chest","arms","legs"].map(z=>{
+                    const it = selArmor(z);
+                    return it ? <span key={z} style={{gridArea:z}}>{prevTile(it)}</span>
+                      : <div key={z} className="aslot clip-sm" style={{gridArea:z}}><span className="wempty">{z}</span></div>;
+                  })}
+                </div>
+                <div style={{flex:1}}/>
+                <div style={{flex:1}}/>
+              </div>
+            </div>
+            <div className="sec">Hands <b>{hands} / 2</b> <span style={{textTransform:"none",letterSpacing:0}}>two 1H, or 1H + off-hand, or one 2H{gearR.some(x=>x.s.z==="qvr")?" (+ quiver on a 2H)":""}</span></div>
+            <div className="pickgrid">
+              {handL.map(x=><Tile key={x.i} x={x}/>)}
+              {!handL.length && <span className="tag">no weapons — this hero fights with cards alone</span>}
+            </div>
+            <div className="sec">Armor <b>{armorN} / 4</b> <span style={{textTransform:"none",letterSpacing:0}}>one each: head · chest · arms · legs</span></div>
+            <div className="pickgrid">
+              {armorL.map(x=><Tile key={x.i} x={x}/>)}
+            </div>
+          </div>
+        </div>
+        {/* ---- DECK: image tiles, tap to cut ---- */}
+        <div className="vscreen" ref={sc3}>
+          <div className="hpane" style={{flex:1}}>
+            <div className="paneflag"><span>Trim the deck · {size}</span><span>min 40 — tap to cut, tap through to restore</span></div>
+            <div className="cutgrid">
+              {deckRows.map(({ei,e,c})=>{
+                const cut = cuts[ei]||0, kept = e.q-cut;
+                return (
+                  <button key={ei} className={"pick clip-sm"+(cut>0?" cut":"")} onClick={()=>tapCut(ei,e.q)}>
+                    <CardFrame card={c}/>
+                    {cut>0 && <span className="cutx">CUT {cut}</span>}
+                    <span className="qstrip">{cut>0?`${kept} of ${e.q} kept`:`×${e.q}`}</span>
+                  </button>);
+              })}
+            </div>
+            <p className="note">Blitz runs exactly 40 — cut what your plan won't miss. Loadout and cuts saved per hero.</p>
+          </div>
+        </div>
       </div>
-      <div className="sec">Hands <b>{hands} / 2</b> <span style={{textTransform:"none",letterSpacing:0}}>two 1H, or 1H + off-hand, or one 2H{gearR.some(x=>x.s.z==="qvr")?" (+ quiver on a 2H)":""}</span></div>
-      <div className="pickgrid">
-        {handL.map(x=><Tile key={x.i} x={x}/>)}
-        {!handL.length && <span className="tag">no weapons — this hero fights with cards alone</span>}
+      <div className="actbar">
+        <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
       </div>
-      <div className="sec">Armor <b>{armorN} / 4</b> <span style={{textTransform:"none",letterSpacing:0}}>one each: head · chest · arms · legs</span></div>
-      <div className="pickgrid">
-        {armorL.map(x=><Tile key={x.i} x={x}/>)}
-      </div>
-      <div className="sec">Trim the deck <b>{size}</b> <span style={{textTransform:"none",letterSpacing:0}}>(min 40 — tap to cut, tap through to restore)</span></div>
-      <div className="cutlist">
-        {deckRows.map(({ei,e,c})=>{
-          const cut = cuts[ei]||0, kept = e.q-cut;
-          return (
-            <button key={ei} className={"cutrow clip-sm"+(cut>0?" cut":"")} onClick={()=>tapCut(ei,e.q)}>
-              <span className="pd" style={{background:PD[c.pitch]||"var(--line)"}}/>
-              <span className="nm2">{e.name}</span>
-              <span className="qq">{cut>0?`${kept} of ${e.q}`:`×${e.q}`}</span>
-            </button>);
-        })}
-      </div>
-      <button className="battlebtn clip" style={{marginTop:14}} onClick={start}><span>Fight</span></button>
-      <p className="note">One per armor zone, two hands, one off-hand, quivers perch on a 2H — per the official rules, read from each card. Blitz runs 40 exactly. Loadout saved per hero.</p>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
   );
