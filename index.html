@@ -315,7 +315,7 @@ img{display:block;max-width:100%}
 .tablewrap{height:var(--tv);overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;margin-top:4px;border:1px solid var(--line)}
 .vscreen{scroll-snap-align:start;scroll-snap-stop:always;height:var(--tv);min-height:var(--tv);display:flex;flex-direction:column;overflow:hidden;background:var(--ink)}
 .vscreen .hscroll{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box}
+.hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always}
 .screennav{display:flex;gap:5px;margin:6px 0 0}
 .screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
 .paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between}
@@ -419,6 +419,17 @@ img{display:block;max-width:100%}
 .pick.cut .qstrip{color:var(--r)}
 .cutx{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-12deg);background:var(--r);color:#FFF;font-family:'Big Shoulders Display';font-weight:800;font-size:13px;letter-spacing:.1em;padding:2px 9px;z-index:2}
 .loprev .heromid .hlife2{font-size:20px}
+
+.b-zone{position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:6.5px;letter-spacing:.08em;text-transform:uppercase;background:rgba(16,12,10,.92);color:var(--y);padding:1px 4px;border:1px solid var(--y);white-space:nowrap;z-index:2}
+
+/* v1.09 counters + playables strip */
+.ctr{position:absolute;top:2px;left:2px;display:flex;gap:2px;z-index:3}
+.ctr .cc{font-family:'Spline Sans Mono';font-size:8px;font-weight:700;padding:0 3px;border:1px solid var(--ink);color:var(--ink);line-height:1.3}
+.ctr .cc.steam{background:#8Fb8d8}
+.ctr .cc.rust{background:#B26A3C;color:#fff}
+.extras{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.extras .hc{position:relative}
+.exlbl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);margin:8px 0 2px}
 </style>
 </head>
 <body>
@@ -440,8 +451,8 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.08"; /* dawnblade versioning: +0.001 per release until 2.0 */
-window.DATA_VER = "sage-v4";
+window.APP_VER = "1.09"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.DATA_VER = "sage-v5";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
 window.HEROES = [
@@ -1070,7 +1081,7 @@ function useCardDB(){
           cards.push({
             n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
             d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
-            tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]).concat(c.granted_keywords||[]),
+            tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
             tx:c.functional_text_plain||c.functional_text||"", pr:prints
           });
         });
@@ -1107,7 +1118,7 @@ function resolveEntry(db, e){
     name:e.name, q:e.q||1, code:e.code,
     pitch: card&&card.p!=null ? card.p : (e.p||0),
     cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
-    tt: card?card.tt:"", kw: card?card.kw:[], tx: card?card.tx:"",
+    tt: card?card.tt:"", kw: card?card.kw:[], gkw: card?(card.gkw||[]):[], tx: card?card.tx:"",
     img, dbImg, resolved: !!card
   };
 }
@@ -1329,6 +1340,11 @@ function classifyClause(raw){
     return null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
+  if(/(?:this|it) (?:gains?|gets?) go again$/.test(c)) return R([["ga"]]);
+  if(/^as an additional cost/.test(c)) return NOOP("additional cost — enforced when played");
+  if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
+  if(m=c.match(/(?:^|this |it )(?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
+  if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/)) return R([["atkMinus",+m[1]]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("no defender to restrict — training dummy");
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
   if(m=c.match(/prevent (?:the next )?(\d+) (?:point(?:s)? of )?(arcane )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
@@ -1378,6 +1394,11 @@ function fxParse(card){
       else fx.ops.push(op);
     });
   });
+  const tl = clean(card.tx||"").toLowerCase();
+  const am = tl.match(/as an additional cost to play(?: this)?,? (you may )?discard (a|an|one|two|\d+) cards?/);
+  if(am && !am[1]) fx.addCost = {discard: num(am[2])};
+  if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
+  if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
   fx.playable = fx.ops.length>0 || fx.onHit.length>0 || fx.conds.length>0 || !!fx.perm || fx.ga;
@@ -1399,17 +1420,17 @@ function parseHeroPower(tx, allowDestroy){
   if(!eff || eff.status!=="run" || eff.cond || eff.onHit) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
-  return {cost, ga, sd:!!sd, eff:m[4].trim(),
+  return {cost, ga, sd:!!sd, kind:m[2].toLowerCase(), eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
 function weaponCost(tx){
   const t = clean(tx||"");
-  const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,40}?):\s*attack\b/i);
+  const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
   if(!m) return null;
   const cs = (m[1]||"").trim();
-  const dm = cs.match(/(\d+)/);
+  const dm = cs.match(/(\d+)\s*(?:resource|\{r\})/i) || cs.match(/(\d+)/);
   const rs = (cs.match(/\{r\}/gi)||[]).length;
-  return {cost: dm ? +dm[1] : rs};
+  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs), needSteam:/remove a steam counter/i.test(cs)};
 }
 const gearDef = gr => gr.destroyed ? 0 : (gr.curDef!=null ? gr.curDef : (gr.def||0));
 function gearBlockApply(gr){
@@ -1622,11 +1643,12 @@ function typeAbbr(c){
   if(/action/.test(t)) return "Non-attack";
   return "";
 }
-function CardFrame({card,className,noType}){
+function CardFrame({card,className,noType,zone}){
   const t = noType ? "" : typeAbbr(card);
   return (
     <div className={"cfw"+(className?" "+className:"")}>
       <CardImg card={card}/>
+      {zone && <span className="b-zone">{zone}</span>}
       {card.pitch>=1 && card.pitch<=3 && <span className={"b-pit p"+card.pitch}>{card.pitch}</span>}
       {card.cost!=null && <span className="b-cost">{card.cost}</span>}
       {card.power!=null && <span className="b-atk">{card.power}</span>}
@@ -1696,7 +1718,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const heroRec = resolveHero(db, d.hero) || {};
     const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
     const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-      tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, img:null, dbImg:null, uid:"hpow"} : null;
+      tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
     const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
       tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
     const runeTok = (db.byName["runechant"]||[])[0];
@@ -1712,10 +1734,14 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e),gi,uid:++uid,used:false}));
     const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
     gear.forEach(gr=>{
-      if(isWeapon(gr) && gr.cost==null && gr.tx){ const wc=weaponCost(gr.tx); if(wc) gr.cost=wc.cost; }
+      if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
+        if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
+        if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
+        if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:null,dbImg:null,uid:"gp"+gr.uid}; }
+      }
       if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
       if(pw){ gr.pow=pw; gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-        tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:pw.eff,sd:pw.sd,img:null,dbImg:null,uid:"gp"+gr.uid}; } } });
+        tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:pw.eff,sd:pw.sd,_instant:pw.kind==="instant",img:null,dbImg:null,uid:"gp"+gr.uid}; } } });
     const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++uid,used:false}));
     const _atk = deck.filter(isAttack);
     const _ga = deck.filter(c=>fxParse(c).ga).length;
@@ -1748,7 +1774,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     weaponUsed:{}, mode:"act", bphase:"defend", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
-    dGear:built.dGear, banish:[], soul:[], boostOn:true, stack:[], pend:null, blockRx:[], chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
+    dGear:built.dGear, banish:[], soul:[], boostOn:true, chainOpen:false, featured:null, counters:{}, boostChain:0, stack:[], pend:null, blockRx:[], chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false
   }));
   const [zoom,setZoom]=uS(null);
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
@@ -1772,6 +1798,12 @@ function Battle({h,cfg,db,onExit,onRecord}){
       else if(k==="ward"){ n.ward+=v; n=L(n,`Ward ${v}.`); }
       else if(k==="awd"){ n.awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="soulSelf"){ n._soulSelf = true; }
+      else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
+      else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
+      else if(k==="atkMinus"){
+        if(n.mode==="block"){ n.incoming = Math.max(0, n.incoming - v); n = L(n, `Incoming shaved by ${v} → ${n.incoming}.`); }
+        else n = L(n, `-${v} power — nothing hostile to shave.`);
+      }
       else if(k==="soulSpend"){
         if((n.soul||[]).length >= v){ n.soul = n.soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — you have ${(n.soul||[]).length}.`);
@@ -1790,6 +1822,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
     // move the card out of its zone
     if(from==="hand"){ n.hand = n.hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ n.arsenal = null; }
+    if(from==="grave"){ n.grave = n.grave.filter((_,i)=>i!==idx); }
+    if(from==="banish"){ n.banish = n.banish.filter((_,i)=>i!==idx); }
     if(from==="weapon"||from==="hero"){ n.weaponUsed = {...n.weaponUsed,[card.uid]:true}; }
     const preHP = n.dHP;
     const attacking = isAttack(card) || from==="weapon";
@@ -1804,12 +1838,21 @@ function Battle({h,cfg,db,onExit,onRecord}){
     });
     if(attacking){
       const bonus = (fx.self||0)+(n._condSelf||0)+n.buffNext;
-      let total = (card.power||0)+bonus;
+      const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0);
+      let total = base + bonus;
       n.buffNext = 0; delete n._condSelf;
+      if(fx.addCost && fx.addCost.discard && n.hand.length){
+        const pool = n.hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        const ids = new Set(pool.map(p=>p.i2));
+        n.grave = [...pool.map(p=>p.c2), ...n.grave];
+        n.hand = n.hand.filter((_,i2)=>!ids.has(i2));
+        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
+      }
       let declNote = "";
       if(n.boostOn && hasKw(card,"boost") && n.deck.length){
         const top = n.deck[0];
         n.deck = n.deck.slice(1); n.banish = [...n.banish, top];
+        n.boostChain = (n.boostChain||0)+1;
         const mech = /mechanologist/i.test(top.tt||"");
         if(mech) ga = true;
         declNote += ` Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`;
@@ -1823,12 +1866,15 @@ function Battle({h,cfg,db,onExit,onRecord}){
           const wm = clean(card.tx||"").toLowerCase().match(/if you win the clash,? ([^.]+)/);
           const eff = wm ? classifyClause(wm[1]) : null;
           if(eff && eff.status==="run"){
-            eff.ops.forEach(op=>{ if(op[0]==="self") total += op[1]; });
-            n = runOps(n, eff.ops.filter(o=>o[0]!=="self"), card.name);
+            eff.ops.forEach(op=>{ if(op[0]==="self") total += op[1]; if(op[0]==="ga") ga = true; });
+            n = runOps(n, eff.ops.filter(o=>o[0]!=="self"&&o[0]!=="ga"), card.name);
           } else declNote += " (win bonus not scripted — shown via ℹ)";
         }
       }
+      if(from==="weapon" && card.addRust){ const cur=(n.counters[card.uid]||{}); n.counters={...n.counters,[card.uid]:{...cur,rust:(cur.rust||0)+1}}; declNote += ` Rust counter placed — now ${(cur.rust||0)+1}.`; }
+      if(from==="weapon" && card.needSteam){ const cur=(n.counters[card.uid]||{}); n.counters={...n.counters,[card.uid]:{...cur,steam:Math.max(0,(cur.steam||0)-1)}}; declNote += ` Steam counter spent.`; }
       if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
+      if(from==="grave"||from==="banish") n.banish=[card,...n.banish];
       n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       const gi = n.dGear.findIndex(x=>gearDef(x)>0);
@@ -1842,11 +1888,22 @@ function Battle({h,cfg,db,onExit,onRecord}){
       n.mode = "stack";
       return n;
     } else {
+      if(card._buildSteam){ const tgt=card._steamFor, cur=(n.counters[tgt]||{}); if((cur.steam||0)===0){ n.counters={...n.counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
+      if(fx.addCost && fx.addCost.discard && n.hand.length){
+        const pool = n.hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        const ids = new Set(pool.map(p=>p.i2));
+        n.grave = [...pool.map(p=>p.c2), ...n.grave];
+        n.hand = n.hand.filter((_,i2)=>!ids.has(i2));
+        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
+      }
       n = runOps(n, fx.ops, card.name);
+      if(n._gaGrant){ ga = true; delete n._gaGrant; }
+      n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ n.gear = n.gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
       if(fx.perm){ n.board=[...n.board,{card,kind:fx.perm,spent:false,uid:card.uid}]; n=L(n,`${card.name} enters play (${fx.perm}).`); }
       else if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
+      else if(from==="grave"||from==="banish") n.banish=[card,...n.banish];
       n.hist = {...n.hist, non:n.hist.non+1};
     }
     const delta = preHP - n.dHP;
@@ -1873,8 +1930,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
       n.stack = [...n.stack, {k:"rx", label:`${c.name} — +${pump}`, pump}];
       return L(n, `${c.name} on the stack (+${pump}). Dummy passes back.`);
     }
-    const dv = c.def||0;
-    n = runOps(n, fx.ops, c.name);
+    const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
+    const dv = (c.def||0) + dbuff;
+    n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
     n.blockRx = [...n.blockRx, {label:`${c.name} — defend ${dv}`, def:dv}];
     return L(n, `${c.name} played at instant speed — +${dv} defense.`);
   });
@@ -1884,9 +1942,11 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(!(fx.dr || (isInstantT(c)&&fx.ops.length>0))) return L(s, `${c.name} isn't a reaction.`);
     const cost = c.cost||0;
     if(s.res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
+    const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
+    const dv = (c.def||0)+dbuff;
     let n = {...s, res:s.res-cost, arsenal:null, grave:[c,...s.grave]};
-    n = runOps(n, fx.ops, c.name);
-    n.blockRx = [...n.blockRx, {label:`${c.name} (arsenal) — defend ${c.def||0}`, def:c.def||0}];
+    n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
+    n.blockRx = [...n.blockRx, {label:`${c.name} (arsenal) — defend ${dv}`, def:dv}];
     return L(n, `${c.name} fired from arsenal — +${c.def||0} defense.`);
   });
   const resolveStack = () => setG(s=>{
@@ -1917,9 +1977,12 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(n._soulSelf){ delete n._soulSelf;
       if(total>0){ n.grave = n.grave.filter(x=>x!==pc); n.soul = [...n.soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
     }
+    n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
+    if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
     n.hist = {...n.hist, atk:n.hist.atk+1};
     n.ap = n.pend.ga ? n.ap : n.ap-1;
     if(n.pend.ga) n = L(n, "Go again — action point kept.");
+    n.chainOpen = true;
     n.stack = []; n.pend = null; n.mode = "act";
     return winCheck(n);
   });
@@ -1936,6 +1999,13 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
     if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
     if((from==="weapon"||from==="hero") && s.weaponUsed[card.uid]) return L(s, from==="hero" ? "Already used this turn." : `${card.name} already swung this turn.`);
+    if(s.chainOpen && from!=="weapon" && !isAttack(card) && !isInstantT(card) && !card._instant)
+      return L(s, "Combat chain is open — close it (⛓) before playing a non-attack action.");
+    if(fx.addCost && fx.addCost.discard){
+      const avail = s.hand.length - (from==="hand" ? 1 : 0);
+      if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
+    }
+    if(from==="weapon" && card.needSteam && !((s.counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
     const cost = card.cost||0;
     if(s.res>=cost) return execute(s,card,from,idx);
     return {...s, mode:"pay", pending:{card,from,idx}, paySel:[], log:[`Pitch ${cost-s.res} more for ${card.name}.`,...s.log].slice(0,4)};
@@ -1961,13 +2031,22 @@ function Battle({h,cfg,db,onExit,onRecord}){
     let n = {...s, dHP:s.dHP-b.card.power, board:s.board.map((x,i)=>i===bi?{...x,spent:true}:x)};
     n.chain=[...n.chain,{n:b.card.name,img:b.card.img,dbImg:b.card.dbImg,dmg:b.card.power,ga:false,kind:"atk"}];
     n.hitSeq=n.hitSeq+1; n.lastDmg=b.card.power;
+    n.chainOpen = true;
+    n.featured = {card:{name:b.card.name,img:b.card.img,dbImg:b.card.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${b.card.power} DMG`};
     n = L(n, `${b.card.name} attacks for ${b.card.power} (ally — simplified, no action point).`);
     return winCheck(n);
   });
 
+  const closeChain = () => setG(s=>{
+    if(s.mode!=="act" || !s.chainOpen) return s;
+    const hEntry = s.chain.length ? [{turn:s.turn, links:s.chain}, ...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
+    return L({...s, chain:[], chainHist:hEntry, chainOpen:false, boostChain:0, featured:null}, `Chain closed — ${s.chain.length} link${s.chain.length!==1?"s":""} banked. Non-attacks free to play.`);
+  });
   const endTurn = () => setG(s=>{
     if(s.over||s.mode!=="act") return s;
     let n = {...s, wasted:s.wasted+s.res, res:0, buffNext:0};
+    const rusted = n.gear.filter(gr=>((n.counters[gr.uid]||{}).rust||0)>=3 && !gr.destroyed);
+    if(rusted.length){ n.gear = n.gear.map(gr=> rusted.includes(gr) ? {...gr,destroyed:true} : gr); rusted.forEach(gr=> { n=L(n,`${gr.name} rusts through — 3 rust counters, it shatters.`); }); }
     if(s.res>0) n = L(n, `${s.res} resource${s.res>1?"s":""} fizzled — wasted.`);
     n.deck = [...n.deck, ...n.pitch]; n.pitch=[];
     if(!n.arsenal && n.hand.length) return {...n, mode:"arsenal", log:["Set one card into arsenal, or skip.",...n.log].slice(0,4)};
@@ -1990,6 +2069,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n.incoming = Math.max(0, base - n.fra);
     if(n.fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); n.fra=0; }
     n.chain=[...n.chain,{n:"Dummy",img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
+    n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — DUMMY ATTACK`};
     n.mode="block"; n.bphase="defend"; n.blockH=[]; n.blockG=[]; n.blockRx=[];
     return L(n, `Dummy swings for ${n.incoming}. Priority to you — reactions, blocks, or take it.`);
   }
@@ -1997,7 +2077,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(s.mode!=="block" || s.bphase!=="defend") return s;
     if(kind==="h"){
       const c = s.hand.find(x=>x.uid===v);
-      if(!c || c.def==null) return s;
+      if(!c || c.def==null || fxParse(c).dr) return s;
       const arr = s.blockH.includes(v)?s.blockH.filter(x=>x!==v):[...s.blockH,v];
       return {...s, blockH:arr};
     }
@@ -2036,7 +2116,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
     return L({...s, turn:s.turn+1, ap:1, weaponUsed:{}, hist:{atk:0,non:0},
-      board:s.board.map(b=>({...b,spent:false})), chain:[], chainHist:hEntry, mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
+      board:s.board.map(b=>({...b,spent:false})), chain:[], chainHist:hEntry, chainOpen:false, featured:null, boostChain:0, mode:"act"}, `— Turn ${s.turn+1}. Action point refreshed.`);
   }
   uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
 
@@ -2048,23 +2128,19 @@ function Battle({h,cfg,db,onExit,onRecord}){
   const handGear = g.gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = g.gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const lastL = g.chain[g.chain.length-1];
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total}
-    : lastL ? (lastL.kind==="foe"
-        ? {foe:true, dmg:lastL.dmg, chip:"LINK "+g.chain.length+" — DUMMY ATTACK"}
-        : {card:{name:lastL.n, img:lastL.img, dbImg:lastL.dbImg, pitch:0}, chip:"LINK "+g.chain.length+" — "+lastL.dmg+" DMG"})
-    : null;
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st) => {
     const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
     const spent = gr.destroyed || (gr.curDef!=null && gr.curDef===0);
     const sel = g.blockG.includes(i);
-    const tapped = w && !!g.weaponUsed[gr.uid];
+    const tapped = w && !!g.weaponUsed[gr.uid] && /\btap\b/i.test(gr.tx||"");
     return (
       <button key={gr.uid} className={"g clip-sm"+(spent?" used":"")+(extra||"")}
         style={Object.assign({}, st||{}, sel?{borderColor:"var(--b)",boxShadow:"0 0 0 1px var(--b)"}:null)}
         onClick={()=> g.mode==="block" ? (g.bphase==="defend"&&blockable&&toggleBlock("g",i)) : g.inspect ? setZoom(gr) : w ? tryPlay(gr,"weapon",i) : (gr.pow && !gr.destroyed) ? tryPlay(gr.powCard,"hero",i) : setZoom(gr)}>
         <span className={"tapwrap"+(tapped?" tapped":"")}><CardFrame card={{...gr, def:(gr.def!=null||gr.curDef!=null)?gearDef(gr):null}} className="sm"/></span>
+        {(()=>{ const ct=g.counters[gr.uid]; if(!ct||(!ct.steam&&!ct.rust)) return null; return <span className="ctr">{ct.steam?<span className="cc steam">S{ct.steam}</span>:null}{ct.rust?<span className="cc rust">R{ct.rust}</span>:null}</span>; })()}
         {gr.pow && !gr.destroyed && <span className="gp">{g.weaponUsed["gp"+gr.uid]?"·":"⚡"}</span>}
       </button>);
   };
@@ -2074,17 +2150,32 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
     const canDefend = c.def!=null;
     const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(c.uid) : false;
-    const dim = (g.mode==="block" && (g.bphase==="defend" ? (!canDefend && !sel) : !rxD)) || (g.mode==="stack" && !rxA);
+    const dim = (g.mode==="block" && (g.bphase==="defend" ? (!(canDefend && !fx.dr) && !sel) : !rxD)) || (g.mode==="stack" && !rxA);
     return (
       <button key={c.uid} className={"hc clip-sm"+(sel?" sel":"")+(dim?" dis":"")}
-        onClick={()=>{ if(g.mode==="block"){ if(g.bphase==="react"){ if(rxD && (c.cost||0)<=g.res) playRx(i); } else if(canDefend) toggleBlock("h",c.uid); }
+        onClick={()=>{ if(g.mode==="block"){ if(g.bphase==="react"){ if(rxD && (c.cost||0)<=g.res) playRx(i); } else if(canDefend && !fx.dr) toggleBlock("h",c.uid); }
           else if(g.mode==="stack") playRx(i);
           else if(g.mode==="arsenal") pickArsenal(i);
           else tryPlay(c,"hand",i); }}>
         {sel && g.mode==="block" && <span className="defsel">⛨ DEF</span>}
-        <CardFrame card={c}/>
+        <CardFrame card={c} zone="hand"/>
       </button>);
   };
+  const playables = (()=>{
+    if(g.mode==="pay"||g.mode==="arsenal"||g.mode==="stack") return [];
+    const out = [];
+    if(g.mode==="block"){
+      if(g.bphase==="react" && g.arsenal){ const fx=fxParse(g.arsenal); if(fx.dr||(isInstantT(g.arsenal)&&fx.ops.length>0)) out.push({card:g.arsenal, zone:"arsenal", fn:playRxA}); }
+      return out;
+    }
+    if(g.arsenal) out.push({card:g.arsenal, zone:"arsenal", fn:()=>tryPlay(g.arsenal,"arsenal",0)});
+    g.gear.forEach((gr,i)=>{ if(isWeapon(gr)&&!gr.destroyed&&!g.weaponUsed[gr.uid]) out.push({card:{...gr,def:null}, zone:slotOf(gr).lab, fn:()=>tryPlay(gr,"weapon",i)}); });
+    g.gear.forEach((gr,i)=>{ if(gr.pow&&!gr.destroyed&&!g.weaponUsed["gp"+gr.uid]) out.push({card:gr.powCard, zone:slotOf(gr).lab, fn:()=>tryPlay(gr.powCard,"hero",i)}); });
+    if(built.HPOW && !g.weaponUsed["hpow"]) out.push({card:built.HPOW, zone:"hero", fn:()=>tryPlay(built.HPOW,"hero",0)});
+    g.grave.forEach((c,i)=>{ if(fxParse(c).fromGY) out.push({card:c, zone:"discard", fn:()=>tryPlay(c,"grave",i)}); });
+    g.banish.forEach((c,i)=>{ if(fxParse(c).fromBan) out.push({card:c, zone:"banish", fn:()=>tryPlay(c,"banish",i)}); });
+    return out;
+  })();
   return (
     <div className="board">
       <div className="screennav">
@@ -2185,6 +2276,13 @@ function Battle({h,cfg,db,onExit,onRecord}){
               {prevLinks.length>0 && <div className="subchain">{prevLinks.slice(0,6).map((l,j)=><ChainLink key={j} l={l}/>)}</div>}
               <div className="zone" style={{marginTop:8}}>Your hand</div>
               <div className="chand">{g.hand.map(handCell)}</div>
+              {playables.length>0 && <>
+                <div className="exlbl">Also playable — from your board, arsenal, and beyond</div>
+                <div className="extras">{playables.map((p,i)=>(
+                  <button key={p.zone+"-"+(p.card.uid||p.card.name)+"-"+i} className="hc clip-sm" onClick={p.fn}>
+                    <CardFrame card={p.card} zone={p.zone}/>
+                  </button>))}</div>
+              </>}
             </div>
             <div className="hpane">
               <div className="paneflag"><span>← back to now</span><span>Game log</span></div>
@@ -2204,7 +2302,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                 {g.board.map((b,i)=>(
                   <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
                     onClick={()=> g.inspect ? setZoom(b.card) : allySwing(i)}>
-                    <span className={"tapwrap"+(b.spent?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
+                    <span className={"tapwrap"+((b.spent&&/\btap\b/i.test(b.card.tx||""))?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
                     {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
                   </button>))}
                 {toks.length===0 && g.board.length===0 && <span className="zempty">allies, items and tokens live here</span>}
@@ -2214,7 +2312,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                   {handGear[0] ? gearBtn(handGear[0].gr, handGear[0].i) : <span className="wempty">weapon 1</span>}
                 </div>
                 <div className="heromid clip-sm">
-                  <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+(g.weaponUsed["hpow"]?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
+                  <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+((g.weaponUsed["hpow"]&&/\btap\b/i.test(built.heroRec.tx||""))?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
                   <span className="hname">{h.n.split(",")[0]}</span>
                   <b className="hlife2">{g.myHP}</b>
                   <span className="hlbl">life</span>
@@ -2285,9 +2383,10 @@ function Battle({h,cfg,db,onExit,onRecord}){
           <button className="a go" onClick={moveToReact}>Defend → reactions</button>
         </> : (
           <button className="a go" onClick={takeIt}>Resolve damage</button>
-        )) : (
+        )) : (<>
+          {g.chainOpen && <button className="a" onClick={closeChain}>⛓ Close</button>}
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
-        )}
+        </>)}
       </div>
       {g.over && (g.over.win
         ? <WinPanel score={g.over.score} onExit={onExit}/>
