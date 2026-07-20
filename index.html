@@ -451,7 +451,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.11"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.12"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1427,6 +1427,8 @@ function parseHeroPower(tx, allowDestroy){
   return {cost, ga, sd:!!sd, kind:m[2].toLowerCase(), eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
+function runeRed(c){ const m=clean(c.tx||"").toLowerCase().match(/costs? (?:\{?(\d+)\}?|a|an|one) less for each runechant/); return m?(m[1]?+m[1]:1):0; }
+function effCost(c,g){ return Math.max(0,(c.cost||0)-runeRed(c)*((g&&g.rune)||0)); }
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -1508,7 +1510,7 @@ function advValue(c, g, ctx){
   });
   if(fx.perm==="ally") v += (c.power||0)*1.5;
   if(hasKw(c,"boost") && ctx.boostOn!==false) v += 0.8;
-  return v - (c.cost||0)*0.15;
+  return v - effCost(c,g)*0.15;
 }
 function advBestPitch(hand, need, exclIdx, valueOf){
   if(need<=0) return {idxs:[],gain:0,waste:0,loss:0};
@@ -1529,7 +1531,7 @@ function advise(g, ctx){
   const PV = c => (isAttack(c)&&isArrow(c)) ? V(c)*0.3 : V(c);
   const nm = c => c.name;
   if(g.mode==="pay" && g.pending){
-    const need = (g.pending.card.cost||0)-g.res;
+    const need = effCost(g.pending.card,g)-g.res;
     const set = advBestPitch(g.hand, need, g.pending.from==="hand"?g.pending.idx:null, PV);
     if(!set) return {line:"Cancel — you can't cover this cost.", why:"Not enough pitch in hand. Pick a cheaper line."};
     const names = set.idxs.map(i=>nm(g.hand[i])).join(" + ");
@@ -1574,7 +1576,7 @@ function advise(g, ctx){
     const fx=fxParse(c); const atk=isAttack(c);
     if(atk&&isArrow(c)) return;
     if(!atk&&!fx.playable) return;
-    if((c.cost||0) > g.res + advPitchPotential(g.hand,i)) return;
+    if(effCost(c,g) > g.res + advPitchPotential(g.hand,i)) return;
     cands.push({c,from:"hand",idx:i,excl:i});
   });
   if(g.arsenal && (isAttack(g.arsenal)||fxParse(g.arsenal).playable) && (g.arsenal.cost||0)<=g.res+advPitchPotential(g.hand,null))
@@ -1770,7 +1772,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const _htx = clean(heroRec.tx||"").toLowerCase();
     const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
     const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
-    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+    const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
+    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
   },[h,db]);
 
   const [g,setG] = uS(()=>({
@@ -1825,13 +1828,14 @@ function Battle({h,cfg,db,onExit,onRecord}){
 
   const execute = (s,card,from,idx) => {
     const fx = fxParse(card);
-    let n = {...s, res:s.res-(card.cost||0), mode:"act", pending:null, paySel:[]};
+    let n = {...s, res:s.res-effCost(card,s), mode:"act", pending:null, paySel:[]};
     // move the card out of its zone
     if(from==="hand"){ n.hand = n.hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ n.arsenal = null; }
     if(from==="grave"){ n.grave = n.grave.filter((_,i)=>i!==idx); }
     if(from==="banish"){ n.banish = n.banish.filter((_,i)=>i!==idx); }
     if(from==="weapon"||from==="hero"){ n.weaponUsed = {...n.weaponUsed,[card.uid]:true}; }
+    if(built.viseraiPassive && /runeblade/i.test(card.tt||"") && n.hist.non>0){ n.rune=(n.rune||0)+1; n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${n.rune}).`); }
     const preHP = n.dHP;
     const attacking = isAttack(card) || from==="weapon";
     let ga = fx.ga;
@@ -2049,14 +2053,14 @@ function Battle({h,cfg,db,onExit,onRecord}){
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
     }
     if(from==="weapon" && card.needSteam && !((s.counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
-    const cost = card.cost||0;
+    const cost = effCost(card,s);
     if(s.res>=cost) return execute(s,card,from,idx);
     return {...s, mode:"pay", pending:{card,from,idx}, paySel:[], log:[`Pitch ${cost-s.res} more for ${card.name}.`,...s.log].slice(0,4)};
   });
   const confirmPay = () => setG(s=>{
     if(!s.pending) return s;
     const gain = s.paySel.reduce((a,i)=>a+(s.hand[i].pitch||0),0);
-    const need = (s.pending.card.cost||0)-s.res;
+    const need = effCost(s.pending.card,s)-s.res;
     if(gain<need) return L(s,`Selected pitch ${gain}, need ${need}.`);
     const pitched = s.paySel.map(i=>s.hand[i]);
     const keepIdx = s.hand.map((_,i)=>i).filter(i=>!s.paySel.includes(i));
@@ -2309,7 +2313,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
               {g.mode==="block" && g.blockRx.length>0 && <div className="stackv clip-sm" style={{marginTop:8}}><div className="sh"><span>Your reactions</span></div>
                 {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
               </div>}
-              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,(g.pending.card.cost||0)-g.res-sel); return <div className="paymode clip-sm" style={{marginTop:8}}>Paying for <b>{g.pending.card.name}</b> — tap hand cards below to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered.</span>}</div>;})()}
+              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="paymode clip-sm" style={{marginTop:8}}>Paying for <b>{g.pending.card.name}</b> — tap hand cards below to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered.</span>}</div>;})()}
               {g.mode==="block" && <>
                 <div className="blockmode clip-sm" style={{marginTop:8}}>{g.bphase==="defend"
                   ? <span>Defend step — declare blockers free (printed defense required; zero counts). Incoming <b>{g.incoming}</b>.</span>
