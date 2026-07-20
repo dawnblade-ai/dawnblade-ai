@@ -451,7 +451,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.10"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.11"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1767,13 +1767,16 @@ function Battle({h,cfg,db,onExit,onRecord}){
         return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
       })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
     const hasBoost = deck.some(c=>hasKw(c,"boost"));
-    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+    const _htx = clean(heroRec.tx||"").toLowerCase();
+    const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
+    const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
+    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
   },[h,db]);
 
   const [g,setG] = uS(()=>({
     deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
     arsenal:null, pitch:[], grave:[], gear:built.gear, board:[],
-    res:0, ap:1, turn:1, wasted:0, dHP:42, myHP:built.myHP, myInt:built.myInt,
+    res:0, ap:1, turn:1, wasted:0, dHP:42, dFrost:0, myHP:built.myHP, myInt:built.myInt,
     buffNext:0, amp:0, ward:0, awd:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
     weaponUsed:{}, mode:"act", bphase:"defend", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
@@ -1962,6 +1965,26 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
     n.blockRx = [...n.blockRx, {label:`${c.name} (arsenal) — defend ${dv}`, def:dv}];
     return L(n, `${c.name} fired from arsenal — +${c.def||0} defense.`);
+  });
+  const playArsenalInstant = () => setG(s=>{
+    if(s.mode!=="block" || s.bphase!=="react" || !s.arsenal || !built.arsenalInstant) return s;
+    const c = s.arsenal; const fx = fxParse(c);
+    if(isAttack(c)) return L(s, `${c.name} is an attack — her ability frees blue non-attacks only.`);
+    if((c.pitch||0) < 3) return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
+    let n = {...s};
+    const cost = c.cost||0;
+    while(n.res < cost && n.hand.length){
+      const idx = n.hand.map((h,i)=>({i,v:advValue(h,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v)[0].i;
+      const p = n.hand[idx];
+      n.res += (p.pitch||0); n.pitch = [...n.pitch, p]; n.hand = n.hand.filter((_,i)=>i!==idx);
+      n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+    }
+    if(n.res < cost) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it.`);
+    n = {...n, res:n.res-cost, arsenal:null, grave:[c,...n.grave]};
+    n = runOps(n, fx.ops, c.name);
+    if(built.iceFrostbite && /ice/i.test(c.tt||"")){ n.dFrost=(n.dFrost||0)+1; n=L(n,`Ice card on the opponent's turn — Frostbite token created (now ${n.dFrost}).`); }
+    n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter mid-defense.`);
+    return winCheck(n);
   });
   const resolveStack = () => setG(s=>{
     if(s.mode!=="stack" || !s.pend) return s;
@@ -2185,7 +2208,10 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(g.mode==="pay"||g.mode==="arsenal"||g.mode==="stack") return [];
     const out = [];
     if(g.mode==="block"){
-      if(g.bphase==="react" && g.arsenal){ const fx=fxParse(g.arsenal); if(fx.dr||(isInstantT(g.arsenal)&&fx.ops.length>0)) out.push({card:g.arsenal, zone:"arsenal", fn:playRxA}); }
+      if(g.bphase==="react" && g.arsenal){ const fx=fxParse(g.arsenal);
+        if(fx.dr||(isInstantT(g.arsenal)&&fx.ops.length>0)) out.push({card:g.arsenal, zone:"arsenal", fn:playRxA});
+        else if(built.arsenalInstant && !isAttack(g.arsenal) && (g.arsenal.pitch||0)>=3 && fx.ops.length>0) out.push({card:g.arsenal, zone:"arsenal", fn:playArsenalInstant});
+      }
       return out;
     }
     if(g.arsenal) out.push({card:g.arsenal, zone:"arsenal", fn:()=>tryPlay(g.arsenal,"arsenal",0)});
@@ -2265,7 +2291,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
               <div className="paneflag"><span>▲ opp · ← links</span><span>log → · you ▼</span></div>
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{g.myHP}</span> you · R<b>{g.res}</b> A<b>{g.ap}</b></span>
-                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span> · hand <b>0</b></span>
+                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span>{g.dFrost>0?` · ❄${g.dFrost}`:""} · hand <b>0</b></span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
