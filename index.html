@@ -451,8 +451,8 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.09"; /* dawnblade versioning: +0.001 per release until 2.0 */
-window.DATA_VER = "sage-v5";
+window.APP_VER = "1.10"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
 window.HEROES = [
@@ -1337,6 +1337,10 @@ function classifyClause(raw){
     if(/hits?$|hit$|this hits/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
+    if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
+    if(/defended by fewer than 2 non-equipment/.test(cond)) return Object.assign(rest,{cond:"defLt2"});
+    if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
+    if(/^you attack with /.test(cond)) return rest;
     return null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
@@ -1830,8 +1834,11 @@ function Battle({h,cfg,db,onExit,onRecord}){
     let ga = fx.ga;
     // conditional clauses evaluated against this turn's history (before this card)
     fx.conds.forEach(({cond,op})=>{
-      const met = cond==="atk" ? n.hist.atk>0 : cond==="non" ? n.hist.non>0 : false;
-      if(!met){ n = L(n, `${card.name}: condition not met (${cond==="atk"?"no other attack yet":"no other non-attack yet"}).`); return; }
+      if(cond==="defLt2" || cond==="discard6") return; // resolved after blocks / after the cost is paid
+      const met = cond==="atk" ? n.hist.atk>0 : cond==="non" ? n.hist.non>0
+        : cond==="pitch6" ? n.pitch.some(c=>(c.power||0)>=6) : false;
+      const why = {atk:"no other attack yet", non:"no other non-attack yet", pitch6:"no 6+ power card in your pitch zone"}[cond]||cond;
+      if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
       if(op[0]==="ga") ga = true;
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
       else n = runOps(n,[op],card.name);
@@ -1847,6 +1854,13 @@ function Battle({h,cfg,db,onExit,onRecord}){
         n.grave = [...pool.map(p=>p.c2), ...n.grave];
         n.hand = n.hand.filter((_,i2)=>!ids.has(i2));
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
+        const bigDiscard = pool.some(p=>(p.c2.power||0)>=6);
+        fx.conds.filter(x=>x.cond==="discard6").forEach(({op})=>{
+          if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
+          else n=L(n,`${card.name}: nothing 6+ power discarded — bonus skips.`);
+        });
+      } else if(fx.conds.some(x=>x.cond==="discard6")){
+        n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
       }
       let declNote = "";
       if(n.boostOn && hasKw(card,"boost") && n.deck.length){
@@ -1875,7 +1889,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       if(from==="weapon" && card.needSteam){ const cur=(n.counters[card.uid]||{}); n.counters={...n.counters,[card.uid]:{...cur,steam:Math.max(0,(cur.steam||0)-1)}}; declNote += ` Steam counter spent.`; }
       if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
       if(from==="grave"||from==="banish") n.banish=[card,...n.banish];
-      n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit};
+      n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit, lateConds:fx.conds.filter(x=>x.cond==="defLt2")};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       const gi = n.dGear.findIndex(x=>gearDef(x)>0);
       if(total>=4 && gi>=0){
@@ -1966,6 +1980,12 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n.dHP -= total;
     let rd = 0, runeMsg = "";
     if(n.rune>0){ rd = n.rune*built.runeDmg; n.dHP-=rd; runeMsg = ` ${n.rune} Runechant${n.rune>1?"s":""} pop for ${rd} arcane.`; n.rune=0; }
+    (n.pend.lateConds||[]).forEach(({cond,op})=>{
+      if(cond==="defLt2"){ // the dummy blocks only with equipment (or nothing): zero non-equipment defenders
+        if(op[0]==="ga"){ n.pend = {...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: defended by fewer than 2 non-equipment cards — go again!`); }
+        else n = runOps(n,[op],n.pend.card.name);
+      }
+    });
     const pc = n.pend.card;
     n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, kind:"atk"}];
     if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
