@@ -458,6 +458,7 @@ img{display:block;max-width:100%}
 .mini.top{border-color:var(--y)}
 .mini .mk{font-family:'Spline Sans Mono';font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
 .mini b{color:var(--r)}
+.sidecol .mini{width:100%;box-sizing:border-box}
 .statusline{flex:none;font-size:10.5px;color:var(--bone-dim);padding:5px 8px;background:var(--forge);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
 .statusline b{color:var(--y)}
 .statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px}
@@ -487,7 +488,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.15"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.16"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1922,7 +1923,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
         n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
       }
       let declNote = "";
-      if(n.boostOn && hasKw(card,"boost") && n.deck.length){
+      if(n._doBoost && hasKw(card,"boost") && n.deck.length){
         const top = n.deck[0];
         n.deck = n.deck.slice(1); n.banish = [...n.banish, top];
         n.boostChain = (n.boostChain||0)+1;
@@ -2086,8 +2087,12 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n.stack = []; n.pend = null; n.mode = "act";
     return winCheck(n);
   });
+  const maybeBoost = (s,card,from,idx) => (s.boostOn!==false && isAttack(card) && hasKw(card,"boost") && s.deck.length>0)
+    ? {...s, mode:"boostpick", pending:{card,from,idx}}
+    : execute({...s,_doBoost:false},card,from,idx);
+  const confirmBoost = (doBoost) => setG(s=>{ if(s.mode!=="boostpick"||!s.pending) return s; const {card,from,idx}=s.pending; return execute({...s,mode:"act",pending:null,_doBoost:doBoost},card,from,idx); });
   const tryPlay = (card,from,idx) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -2107,7 +2112,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     }
     if(from==="weapon" && card.needSteam && !((s.counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
     const cost = effCost(card,s);
-    if(s.res>=cost) return execute(s,card,from,idx);
+    if(s.res>=cost) return maybeBoost(s,card,from,idx);
     return {...s, mode:"pay", pending:{card,from,idx}, paySel:[], log:[`Pitch ${cost-s.res} more for ${card.name}.`,...s.log].slice(0,4)};
   });
   const confirmPay = () => setG(s=>{
@@ -2120,7 +2125,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     let pendIdx = s.pending.from==="hand" ? keepIdx.indexOf(s.pending.idx) : s.pending.idx;
     let n = {...s, res:s.res+gain, hand:keepIdx.map(i=>s.hand[i]), pitch:[...s.pitch,...pitched]};
     n = L(n, `Pitched ${pitched.map(c=>c.name).join(", ")} for ${gain}.`);
-    return execute(n, s.pending.card, s.pending.from, pendIdx);
+    return maybeBoost(n, s.pending.card, s.pending.from, pendIdx);
   });
   const cancelPay = () => setG(s=>({...s,mode:"act",pending:null,paySel:[]}));
 
@@ -2228,7 +2233,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
   const handGear = g.gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = g.gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : g.featured;
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st) => {
     const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
@@ -2380,6 +2385,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
               {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{g.res}</b></span>}</div>}
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{g.res}</b> or pass</div>}
               {g.mode==="arsenal" && <div className="statusline">Tap a card below for <b>arsenal</b><button onClick={skipArsenal}>skip</button></div>}
+              {g.mode==="boostpick" && <div className="statusline">Boost <b>{g.pending.card.name}</b>? Banish the top card of your deck — a Mechanologist card grants go again.</div>}
               <div className="phand"><span className="hlbl">Hand</span>
                 {g.hand.map(handCell)}
                 {playables.map((p,i)=>(
@@ -2494,7 +2500,10 @@ function Battle({h,cfg,db,onExit,onRecord}){
           <button className="a go" onClick={moveToReact}>Defend → reactions</button>
         </> : (
           <button className="a go" onClick={takeIt}>Resolve damage</button>
-        )) : (<>
+        )) : g.mode==="boostpick" ? (<>
+          <button className="a go" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
+          <button className="a" onClick={()=>confirmBoost(false)}>No boost</button>
+        </>) : (<>
           {g.chainOpen && <button className="a" onClick={closeChain}>⛓ Close</button>}
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
         </>)}
