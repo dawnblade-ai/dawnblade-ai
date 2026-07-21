@@ -430,6 +430,42 @@ img{display:block;max-width:100%}
 .extras{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
 .extras .hc{position:relative}
 .exlbl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);margin:8px 0 2px}
+
+/* v1.14 — the play-screen sketch: hands top/bottom, stack|card|defend center */
+.playpane{display:flex;flex-direction:column;height:100%;padding:0!important;overflow:hidden}
+.logpane{padding:6px 8px}
+.dhand{flex:none;display:flex;gap:5px;align-items:center;overflow-x:auto;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--forge2)}
+.dhand .hlbl,.phand .hlbl{flex:none;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);writing-mode:vertical-rl;transform:rotate(180deg);opacity:.85}
+.dcardph{flex:none;width:40px;aspect-ratio:5/7;border:1px solid #7A2A1E;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);position:relative;opacity:.7}
+.dcardph::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);width:42%;aspect-ratio:1;border:1px solid #B9542F}
+.playmid{flex:1;min-height:0;overflow-y:auto;display:flex;align-items:flex-start;gap:6px;padding:8px 6px}
+.sidecol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:5px}
+.scol-lbl{font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line)}
+.sidecol.stack .scol-lbl{color:var(--r)}
+.sidecol.defend .scol-lbl{color:var(--b)}
+.sidecol .dash{text-align:center;color:var(--bone-dim);opacity:.35;padding:14px 0;font-size:13px}
+.centerslot{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.centerslot .featured{width:132px}
+.centerslot .featfoe{width:132px;aspect-ratio:5/7;gap:4px}
+.centerslot .featfoe b{font-size:36px}
+.centerslot .featfoe .fx2{font-size:12px;padding:1px 7px}
+.centerslot .featempty{width:132px;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
+.centerslot .linkchip{font-size:9px;text-align:center}
+.mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.25;word-break:break-word}
+.mini.atk{border-left:2px solid var(--r)}
+.mini.def{border-left:2px solid var(--b)}
+.mini.foe{border-left:2px solid var(--r);background:rgba(178,60,60,.08)}
+.mini.top{border-color:var(--y)}
+.mini .mk{font-family:'Spline Sans Mono';font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
+.mini b{color:var(--r)}
+.statusline{flex:none;font-size:10.5px;color:var(--bone-dim);padding:5px 8px;background:var(--forge);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
+.statusline b{color:var(--y)}
+.statusline button{background:none;border:1px solid var(--line);color:var(--y);font-size:9px;padding:1px 6px;margin-left:5px}
+.phand{flex:none;display:flex;gap:5px;align-items:stretch;overflow-x:auto;padding:7px 8px;border-top:1px solid var(--line);background:var(--forge2);scroll-snap-type:x proximity}
+.phand .hlbl{align-self:center}
+.phand .hc{flex:none;width:80px;position:relative;padding:0;background:var(--forge);border:1px solid var(--line);scroll-snap-align:start;transition:transform .12s}
+.phand .hc.sel{transform:translateY(-6px);border-color:var(--y);box-shadow:0 0 0 2px var(--y)}
+.phand .hc.dis{opacity:.4}
 </style>
 </head>
 <body>
@@ -451,7 +487,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.13"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.14"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -2229,7 +2265,9 @@ function Battle({h,cfg,db,onExit,onRecord}){
     if(g.mode==="pay"||g.mode==="arsenal"||g.mode==="stack") return [];
     const out = [];
     if(g.mode==="block"){
-      if(g.bphase==="react" && g.arsenal){ const fx=fxParse(g.arsenal);
+      if(g.bphase==="defend"){
+        g.gear.forEach((gr,i)=>{ if(gearDef(gr)>0 && !gr.destroyed) out.push({card:{...gr,def:gearDef(gr)}, zone:"equip", sel:g.blockG.includes(i), fn:()=>toggleBlock("g",i)}); });
+      } else if(g.bphase==="react" && g.arsenal){ const fx=fxParse(g.arsenal);
         if(fx.dr||(isInstantT(g.arsenal)&&fx.ops.length>0)) out.push({card:g.arsenal, zone:"arsenal", fn:playRxA});
         else if(built.arsenalInstant && !isAttack(g.arsenal) && (g.arsenal.pitch||0)>=3 && fx.ops.length>0) out.push({card:g.arsenal, zone:"arsenal", fn:playArsenalInstant});
       }
@@ -2299,61 +2337,67 @@ function Battle({h,cfg,db,onExit,onRecord}){
         {/* ---- SCREEN 2: chain command center ---- */}
         <div className="vscreen" ref={chainRef}>
           <div className="hscroll" ref={midRef}>
+            {/* PANE 1 — LOG: scoreboard + Claude's call + live feed */}
+            <div className="hpane logpane">
+              <div className="paneflag"><span>log & advisor</span><span>play →</span></div>
+              <div className="scorebar clip-sm">
+                <span className="sside"><span className="hpme">{g.myHP}</span> you · R<b>{g.res}</b> A<b>{g.ap}</b></span>
+                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span>{g.dFrost>0?` · ❄${g.dFrost}`:""}</span>
+              </div>
+              <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
+              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
+            </div>
+            {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}
+            <div className="hpane playpane">
+              <div className="dhand"><span className="hlbl">Foe</span>{[0,1,2,3].map(i=><div key={i} className="dcardph"/>)}</div>
+              <div className="playmid">
+                <div className="sidecol stack">
+                  <div className="scol-lbl">Stack</div>
+                  {g.mode==="stack"
+                    ? [...g.stack].reverse().map((l,i)=><div key={i} className={"mini "+l.k+(i===0?" top":"")}><span className="mk">{l.k}</span><span>{l.label}</span></div>)
+                    : <div className="dash">—</div>}
+                </div>
+                <div className="centerslot">
+                  {featured
+                    ? <>{featured.foe
+                        ? <div className="featfoe"><span className="fx2">✕✕</span><b>{featured.dmg}</b><span>Dummy</span></div>
+                        : <div className="featured"><CardFrame card={featured.card}/></div>}
+                      <span className="linkchip">{featured.chip}</span></>
+                    : <div className="featempty">Most recently played lands here</div>}
+                </div>
+                <div className="sidecol defend">
+                  <div className="scol-lbl">Defend</div>
+                  {g.mode==="block"
+                    ? <><div className="mini foe"><span className="mk">Dummy atk</span><span><b>{g.incoming}</b> incoming</span></div>
+                        {g.blockH.map(uid=>{const c=g.hand.find(x=>x.uid===uid);return c?<div key={uid} className="mini def"><span>{c.name}</span><span className="mk">def {c.def||0}</span></div>:null;})}
+                        {g.blockG.map(gi=>{const gr=g.gear[gi];return gr?<div key={"g"+gi} className="mini def"><span>{gr.name}</span><span className="mk">def {gearDef(gr)}</span></div>:null;})}
+                        {g.blockRx.map((l,i)=><div key={"rx"+i} className="mini def"><span>{l.label}</span></div>)}</>
+                    : <div className="dash">—</div>}
+                </div>
+              </div>
+              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}</div>;})()}
+              {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{g.res}</b></span>}</div>}
+              {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{g.res}</b> or pass</div>}
+              {g.mode==="arsenal" && <div className="statusline">Tap a card below for <b>arsenal</b><button onClick={skipArsenal}>skip</button></div>}
+              <div className="phand"><span className="hlbl">Hand</span>
+                {g.hand.map(handCell)}
+                {playables.map((p,i)=>(
+                  <button key={p.zone+"-"+(p.card.uid||p.card.name)+"-"+i} className={"hc clip-sm"+(p.sel?" sel":"")} onClick={p.fn}>
+                    {p.sel && <span className="defsel">⛨ DEF</span>}
+                    <CardFrame card={p.card} zone={p.zone}/>
+                  </button>))}
+              </div>
+            </div>
+            {/* PANE 3 — CHAIN: the links */}
             <div className="hpane">
-              <div className="paneflag"><span>← previous links</span><span>back to now →</span></div>
-              {prevLinks.length===0 && g.chainHist.length===0 && <p className="note">No earlier links yet.</p>}
-              {prevLinks.length>0 && <div className="histturn"><div className="htlabel">Earlier this turn</div>
+              <div className="paneflag"><span>← play</span><span>the chain</span></div>
+              {prevLinks.length===0 && g.chainHist.length===0 && <p className="note">No links yet — play an attack to start the chain.</p>}
+              {prevLinks.length>0 && <div className="histturn"><div className="htlabel">This turn</div>
                 <div className="chain">{prevLinks.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>}
               {g.chainHist.map((t,i)=>(
                 <div key={i} className="histturn"><div className="htlabel">Turn {t.turn}</div>
                   <div className="chain">{t.links.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>))}
-            </div>
-            <div className="hpane">
-              <div className="paneflag"><span>▲ opp · ← links</span><span>log → · you ▼</span></div>
-              <div className="scorebar clip-sm">
-                <span className="sside"><span className="hpme">{g.myHP}</span> you · R<b>{g.res}</b> A<b>{g.ap}</b></span>
-                <span className="sside r">dummy <span className="hpopp">{Math.max(0,g.dHP)}</span>{g.dFrost>0?` · ❄${g.dFrost}`:""} · hand <b>0</b></span>
-              </div>
-              <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
-              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:g.dGear.filter(x=>gearDef(x)>0).length, dDef:gearDef(g.dGear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
-              <div className="featwrap">
-                {featured
-                  ? <>{featured.foe
-                      ? <div className="featfoe"><span className="fx2">✕ ✕</span><b>{featured.dmg}</b><span>Dummy attacks</span></div>
-                      : <div className="featured"><CardFrame card={featured.card}/></div>}
-                    <span className="linkchip">{featured.chip}</span></>
-                  : <div className="featempty">Play a card — it lands here, front and center.</div>}
-              </div>
-              {g.mode==="stack" && <div className="stackv clip-sm" style={{marginTop:8}}><div className="sh"><span>The stack</span><span>top resolves first</span></div>
-                {[...g.stack].reverse().map((l,i)=><div key={i} className={"slayer "+l.k+(i===0?" top":"")}><span className="sk">{l.k}</span><span>{l.label}</span></div>)}
-              </div>}
-              {g.mode==="block" && g.blockRx.length>0 && <div className="stackv clip-sm" style={{marginTop:8}}><div className="sh"><span>Your reactions</span></div>
-                {g.blockRx.map((l,i)=><div key={i} className="slayer rx"><span className="sk">rx</span><span>{l.label}</span></div>)}
-              </div>}
-              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="paymode clip-sm" style={{marginTop:8}}>Paying for <b>{g.pending.card.name}</b> — tap hand cards below to pitch. Selected <b>{sel}</b>{need>0?<span>, need <b>{need}</b> more.</span>:<span> — covered.</span>}</div>;})()}
-              {g.mode==="block" && <>
-                <div className="blockmode clip-sm" style={{marginTop:8}}>{g.bphase==="defend"
-                  ? <span>Defend step — declare blockers free (printed defense required; zero counts). Incoming <b>{g.incoming}</b>.</span>
-                  : <span>Reaction step — your priority: play defense reactions and instants (cost from floating <b>{g.res}</b>), then resolve.</span>}</div>
-                <div className="zone" style={{marginTop:6}}>{g.bphase==="defend" ? "Your equipment — tap standing pieces to defend" : "Equipment locked — declared pieces glow blue"}</div>
-                <div className="gearrow">{g.gear.map((gr,i)=> gearDef(gr)>0 ? gearBtn(gr,i) : null)}</div>
-              </>}
-              {g.mode==="stack" && <div className="blockmode clip-sm" style={{marginTop:8}}>Priority window — tap reactions below (from floating <b>{g.res}</b>) or pass.</div>}
-              {g.mode==="arsenal" && <div className="paymode clip-sm" style={{marginTop:8}}>Tap one card below for <b>arsenal</b>, or <button className="retry" onClick={skipArsenal}>skip</button>.</div>}
-              {prevLinks.length>0 && <div className="subchain">{prevLinks.slice(0,6).map((l,j)=><ChainLink key={j} l={l}/>)}</div>}
-              <div className="zone" style={{marginTop:8}}>Your hand</div>
-              <div className="chand">{g.hand.map(handCell)}</div>
-              {playables.length>0 && <>
-                <div className="exlbl">Also playable — from your board, arsenal, and beyond</div>
-                <div className="extras">{playables.map((p,i)=>(
-                  <button key={p.zone+"-"+(p.card.uid||p.card.name)+"-"+i} className="hc clip-sm" onClick={p.fn}>
-                    <CardFrame card={p.card} zone={p.zone}/>
-                  </button>))}</div>
-              </>}
-            </div>
-            <div className="hpane">
-              <div className="paneflag"><span>← back to now</span><span>Game log</span></div>
-              <div className="gamelog">{[...g.feed].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
             </div>
           </div>
         </div>
