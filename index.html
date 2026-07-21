@@ -438,8 +438,8 @@ img{display:block;max-width:100%}
 .dhand .hlbl,.phand .hlbl{flex:none;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);writing-mode:vertical-rl;transform:rotate(180deg);opacity:.85}
 .dcardph{flex:none;width:40px;aspect-ratio:5/7;border:1px solid #7A2A1E;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);position:relative;opacity:.7}
 .dcardph::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);width:42%;aspect-ratio:1;border:1px solid #B9542F}
-.playmid{flex:1;min-height:0;overflow-y:auto;display:flex;align-items:flex-start;gap:6px;padding:8px 6px}
-.sidecol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:5px}
+.playmid{flex:1;min-height:0;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;gap:6px;padding:8px 6px}
+.sidecol{flex:0 1 98px;min-width:72px;display:flex;flex-direction:column;gap:5px}
 .scol-lbl{font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line)}
 .sidecol.stack .scol-lbl{color:var(--r)}
 .sidecol.defend .scol-lbl{color:var(--b)}
@@ -451,7 +451,7 @@ img{display:block;max-width:100%}
 .centerslot .featfoe .fx2{font-size:12px;padding:1px 7px}
 .centerslot .featempty{width:132px;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
 .centerslot .linkchip{font-size:9px;text-align:center}
-.mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.25;word-break:break-word}
+.mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.3;word-break:normal;overflow-wrap:break-word;hyphens:none}
 .mini.atk{border-left:2px solid var(--r)}
 .mini.def{border-left:2px solid var(--b)}
 .mini.foe{border-left:2px solid var(--r);background:rgba(178,60,60,.08)}
@@ -487,7 +487,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.14"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.15"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -2369,7 +2369,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                 <div className="sidecol defend">
                   <div className="scol-lbl">Defend</div>
                   {g.mode==="block"
-                    ? <><div className="mini foe"><span className="mk">Dummy atk</span><span><b>{g.incoming}</b> incoming</span></div>
+                    ? <><div className="mini foe"><span className="mk">Incoming</span><span style={{fontSize:15,fontWeight:700,color:"var(--r)"}}>{g.incoming}</span></div>
                         {g.blockH.map(uid=>{const c=g.hand.find(x=>x.uid===uid);return c?<div key={uid} className="mini def"><span>{c.name}</span><span className="mk">def {c.def||0}</span></div>:null;})}
                         {g.blockG.map(gi=>{const gr=g.gear[gi];return gr?<div key={"g"+gi} className="mini def"><span>{gr.name}</span><span className="mk">def {gearDef(gr)}</span></div>:null;})}
                         {g.blockRx.map((l,i)=><div key={"rx"+i} className="mini def"><span>{l.label}</span></div>)}</>
