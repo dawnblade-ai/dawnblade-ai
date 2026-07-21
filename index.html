@@ -438,18 +438,24 @@ img{display:block;max-width:100%}
 .dhand .hlbl,.phand .hlbl{flex:none;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);writing-mode:vertical-rl;transform:rotate(180deg);opacity:.85}
 .dcardph{flex:none;width:40px;aspect-ratio:5/7;border:1px solid #7A2A1E;background:linear-gradient(150deg,#5A1310,#2A0908 55%,#1A0605);position:relative;opacity:.7}
 .dcardph::before{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);width:42%;aspect-ratio:1;border:1px solid #B9542F}
-.playmid{flex:1;min-height:0;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;gap:6px;padding:8px 6px}
-.sidecol{flex:0 1 98px;min-width:72px;display:flex;flex-direction:column;gap:5px}
+.playmid{flex:1;min-height:0;overflow:hidden;display:flex;align-items:stretch;justify-content:center;gap:8px;padding:8px 6px}
+.sidecol{flex:0 0 58px;display:flex;flex-direction:column;min-height:0;gap:4px}
 .scol-lbl{font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding-bottom:3px;border-bottom:1px solid var(--line)}
 .sidecol.stack .scol-lbl{color:var(--r)}
 .sidecol.defend .scol-lbl{color:var(--b)}
+.scol-cards{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-top:2px}
+.stackcard{width:100%;aspect-ratio:5/7;border:1px solid var(--line);overflow:hidden;flex:none;background:var(--forge);position:relative}
+.stackcard img{width:100%;height:100%;object-fit:cover;display:block}
+.stackcard .ccfall{font-size:5px;padding:2px;overflow:hidden;line-height:1.1}
+.stackcard .ccfall .mono{display:none}
+.chainclose{width:100%;margin-bottom:8px;padding:9px;background:var(--forge2);border:1px solid var(--y);color:var(--y);font-family:'Spline Sans Mono';font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
 .sidecol .dash{text-align:center;color:var(--bone-dim);opacity:.35;padding:14px 0;font-size:13px}
-.centerslot{flex:0 0 132px;display:flex;flex-direction:column;align-items:center;gap:5px}
-.centerslot .featured{width:132px}
-.centerslot .featfoe{width:132px;aspect-ratio:5/7;gap:4px}
+.centerslot{flex:0 0 158px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;overflow-y:auto;gap:5px}
+.centerslot .featured{width:158px}
+.centerslot .featfoe{width:158px;aspect-ratio:5/7;gap:4px}
 .centerslot .featfoe b{font-size:36px}
 .centerslot .featfoe .fx2{font-size:12px;padding:1px 7px}
-.centerslot .featempty{width:132px;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
+.centerslot .featempty{width:158px;aspect-ratio:5/7;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font-size:9px;color:var(--bone-dim);padding:8px;line-height:1.45}
 .centerslot .linkchip{font-size:9px;text-align:center}
 .mini{border:1px solid var(--line);background:var(--forge);padding:4px 6px;font-size:10.5px;display:flex;flex-direction:column;gap:1px;line-height:1.3;word-break:normal;overflow-wrap:break-word;hyphens:none}
 .mini.atk{border-left:2px solid var(--r)}
@@ -488,7 +494,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.16"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.17"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -2359,26 +2365,24 @@ function Battle({h,cfg,db,onExit,onRecord}){
               <div className="playmid">
                 <div className="sidecol stack">
                   <div className="scol-lbl">Stack</div>
-                  {g.mode==="stack"
-                    ? [...g.stack].reverse().map((l,i)=><div key={i} className={"mini "+l.k+(i===0?" top":"")}><span className="mk">{l.k}</span><span>{l.label}</span></div>)
-                    : <div className="dash">—</div>}
+                  <div className="scol-cards">
+                    {(()=>{ const cs = (g.mode==="stack" && g.pend) ? [g.pend.card, ...g.stack.filter(l=>l.k==="def").map(l=>g.dGear[l.gi]).filter(Boolean)] : [];
+                      return cs.length ? cs.map((c,i)=><div key={i} className="stackcard"><CardImg card={c}/></div>) : <div className="dash">—</div>; })()}
+                  </div>
                 </div>
                 <div className="centerslot">
                   {featured
-                    ? <>{featured.foe
+                    ? (featured.foe
                         ? <div className="featfoe"><span className="fx2">✕✕</span><b>{featured.dmg}</b><span>Dummy</span></div>
-                        : <div className="featured"><CardFrame card={featured.card}/></div>}
-                      <span className="linkchip">{featured.chip}</span></>
+                        : <div className="featured"><CardFrame card={featured.card}/></div>)
                     : <div className="featempty">Most recently played lands here</div>}
                 </div>
                 <div className="sidecol defend">
                   <div className="scol-lbl">Defend</div>
-                  {g.mode==="block"
-                    ? <><div className="mini foe"><span className="mk">Incoming</span><span style={{fontSize:15,fontWeight:700,color:"var(--r)"}}>{g.incoming}</span></div>
-                        {g.blockH.map(uid=>{const c=g.hand.find(x=>x.uid===uid);return c?<div key={uid} className="mini def"><span>{c.name}</span><span className="mk">def {c.def||0}</span></div>:null;})}
-                        {g.blockG.map(gi=>{const gr=g.gear[gi];return gr?<div key={"g"+gi} className="mini def"><span>{gr.name}</span><span className="mk">def {gearDef(gr)}</span></div>:null;})}
-                        {g.blockRx.map((l,i)=><div key={"rx"+i} className="mini def"><span>{l.label}</span></div>)}</>
-                    : <div className="dash">—</div>}
+                  <div className="scol-cards">
+                    {(()=>{ const cs = (g.mode==="block") ? [...g.blockH.map(uid=>g.hand.find(c=>c.uid===uid)), ...g.blockG.map(gi=>g.gear[gi])].filter(Boolean) : [];
+                      return cs.length ? cs.map((c,i)=><div key={i} className="stackcard"><CardImg card={c}/></div>) : <div className="dash">—</div>; })()}
+                  </div>
                 </div>
               </div>
               {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}</div>;})()}
@@ -2398,6 +2402,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
             {/* PANE 3 — CHAIN: the links */}
             <div className="hpane">
               <div className="paneflag"><span>← play</span><span>the chain</span></div>
+              {g.chainOpen && <button className="chainclose" onClick={closeChain}>⛓ Close chain — bank {g.chain.length} link{g.chain.length!==1?"s":""}</button>}
               {prevLinks.length===0 && g.chainHist.length===0 && <p className="note">No links yet — play an attack to start the chain.</p>}
               {prevLinks.length>0 && <div className="histturn"><div className="htlabel">This turn</div>
                 <div className="chain">{prevLinks.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>}
@@ -2504,7 +2509,6 @@ function Battle({h,cfg,db,onExit,onRecord}){
           <button className="a go" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
           <button className="a" onClick={()=>confirmBoost(false)}>No boost</button>
         </>) : (<>
-          {g.chainOpen && <button className="a" onClick={closeChain}>⛓ Close</button>}
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
         </>)}
       </div>
