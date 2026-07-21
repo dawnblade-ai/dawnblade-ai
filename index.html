@@ -451,7 +451,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.12"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.13"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1356,7 +1356,8 @@ function classifyClause(raw){
   if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
   if(m=c.match(/gains? (\d+) (?:\{r\}|resource)/)) return R([["res",+m[1]]]);
   if(m=c.match(/gains? (\d+) (?:\{h\}|life)/)) return R([["life",+m[1]]]);
-  if(m=c.match(/your next attack[^+]*\+(\d+)/)) return R([["buffNext",+m[1]]]);
+  if(m=c.match(/your next(?:[^.+]{0,25})attack[^+]*\+(\d+)/)) return R([["buffNext",+m[1]]]);
+  if(/the next[^.]*attack[^.]*go again/.test(c)){ const o=[["gaNext"]]; if(/create a runechant/.test(c)) o.push(["runeHitNext"]); return R(o); }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
@@ -1773,14 +1774,19 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
     const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
     const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
-    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
+    let startItem = null;
+    if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
+      const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
+      if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
+    }
+    return {deck,gear,dGear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok};
   },[h,db]);
 
   const [g,setG] = uS(()=>({
     deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
-    arsenal:null, pitch:[], grave:[], gear:built.gear, board:[],
+    arsenal:null, pitch:[], grave:[], gear:built.gear, board:built.startItem?[built.startItem]:[],
     res:0, ap:1, turn:1, wasted:0, dHP:42, dFrost:0, myHP:built.myHP, myInt:built.myInt,
-    buffNext:0, amp:0, ward:0, awd:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
+    buffNext:0, gaNext:false, runeHitNext:false, amp:0, ward:0, awd:0, rune:0, rot:0, fra:0, hist:{atk:0,non:0},
     weaponUsed:{}, mode:"act", bphase:"defend", pending:null, paySel:[], incoming:0, blockH:[], blockG:[],
     log:["The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read, "The dummy creaks to life. 42 to carve away — go."],
@@ -1804,6 +1810,8 @@ function Battle({h,cfg,db,onExit,onRecord}){
       else if(k==="life"){ n.myHP+=v; n=L(n,`+${v} life.`); }
       else if(k==="arcane"){ const total=v+n.amp; n.amp=0; n.dHP-=total; n=L(n,`${srcName}: ${total} arcane damage.`); }
       else if(k==="buffNext"){ n.buffNext+=v; n=L(n,`Next attack +${v}.`); }
+      else if(k==="gaNext"){ n.gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
+      else if(k==="runeHitNext"){ n.runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
       else if(k==="amp"){ n.amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
       else if(k==="ward"){ n.ward+=v; n=L(n,`Ward ${v}.`); }
       else if(k==="awd"){ n.awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
@@ -1855,6 +1863,14 @@ function Battle({h,cfg,db,onExit,onRecord}){
       const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0);
       let total = base + bonus;
       n.buffNext = 0; delete n._condSelf;
+      if(n.gaNext){ ga = true; delete n.gaNext; n = L(n, "The rite empowers this swing — go again."); }
+      const runeOnHit = !!n.runeHitNext; if(n.runeHitNext) delete n.runeHitNext;
+      { const nb=[]; n.board.forEach(b=>{ const vtx=(b.card.tx||"").toLowerCase();
+          if((b.verse||0)>0 && b.verseTurn!==n.turn && /remove a verse counter[^.]{0,40}create a runechant/.test(vtx)){
+            n.rune=(n.rune||0)+1; const e={...b, verse:b.verse-1, verseTurn:n.turn};
+            n=L(n,`${b.card.name}: a verse counter unwinds into a Runechant (${e.verse} verse left).`);
+            if(e.verse>0) nb.push(e); else n=L(n,`${b.card.name} spends its last verse and fades.`);
+          } else nb.push(b); }); n.board=nb; }
       if(fx.addCost && fx.addCost.discard && n.hand.length){
         const pool = n.hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
         const ids = new Set(pool.map(p=>p.i2));
@@ -1896,7 +1912,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       if(from==="weapon" && card.needSteam){ const cur=(n.counters[card.uid]||{}); n.counters={...n.counters,[card.uid]:{...cur,steam:Math.max(0,(cur.steam||0)-1)}}; declNote += ` Steam counter spent.`; }
       if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
       if(from==="grave"||from==="banish") n.banish=[card,...n.banish];
-      n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit, lateConds:fx.conds.filter(x=>x.cond==="defLt2")};
+      n.pend = {card, total, ga, ops:fx.ops, onHit:fx.onHit, lateConds:fx.conds.filter(x=>x.cond==="defLt2"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       const gi = n.dGear.findIndex(x=>gearDef(x)>0);
       if(total>=4 && gi>=0){
@@ -1922,7 +1938,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ n.gear = n.gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
-      if(fx.perm){ n.board=[...n.board,{card,kind:fx.perm,spent:false,uid:card.uid}]; n=L(n,`${card.name} enters play (${fx.perm}).`); }
+      if(fx.perm){ const _vm=(card.tx||"").toLowerCase().match(/with (\d+) verse counter/); n.board=[...n.board,{card,kind:fx.perm,spent:false,uid:card.uid,verse:_vm?+_vm[1]:0}]; n=L(n,`${card.name} enters play (${fx.perm})${_vm?` with ${_vm[1]} verse counters`:""}.`); }
       else if(from==="hand"||from==="arsenal") n.grave=[card,...n.grave];
       else if(from==="grave"||from==="banish") n.banish=[card,...n.banish];
       n.hist = {...n.hist, non:n.hist.non+1};
@@ -2020,6 +2036,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     n = runOps(n, n.pend.ops, pc.name);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    if(n.pend.runeOnHit && total>0){ n.rune=(n.rune||0)+1; n = L(n, `${pc.name} connects — a Runechant is forged (now ${n.rune}), poised for your next swing.`); }
     if(hasKw(pc,"crush") && total>=4) n = L(n, "Crush — the dummy owns no arsenal to lose.");
     if(n._soulSelf){ delete n._soulSelf;
       if(total>0){ n.grave = n.grave.filter(x=>x!==pc); n.soul = [...n.soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
