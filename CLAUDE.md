@@ -43,6 +43,9 @@ text — never to special-case the card by name.
 ## Versioning & release
 
 - `APP_VER` bumps by 0.01 per release. It is displayed in-game.
+- **v2.0x line starts at v2.01** (2026-07-22): marks the engine/ extraction +
+  pool audit system. Below 2.0 = single-file-only history; 2.0+ = engine/ and
+  index.html co-exist under the sync-guard rule (see below).
 - After any change: validate (below), then the file is uploaded/pushed to the Pages repo.
 - Keep a one-line summary of what each version changed.
 
@@ -50,14 +53,44 @@ text — never to special-case the card by name.
 
 ## Validation — run before every ship
 
-1. **Bracket balance** on both `text/babel` blocks. The checker must be string- and
-   template-literal-aware. It is *not* regex-literal-aware, so pre-neutralize the
-   three regexes containing apostrophes: `code.replace("hero'?s?", "heroQsQ")`.
-2. **Deck integrity:** exactly 15 decks, each summing to exactly 55 cards.
-3. **Node drills** for any parser change — extract the function from `index.html`,
-   stub its helpers, assert expected output. Existing drills cover `weaponCost`,
-   `classifyClause` conditionals, and the `{p}` pump parser.
-4. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
+Fast path, no network, run on every change:
+```
+npm test
+```
+This is `node --test "test/*.test.js"` — currently 109 drills:
+1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
+   String- and template-literal-aware, not regex-literal-aware — the three
+   regexes with apostrophes are pre-neutralized inside the checker.
+2. **Deck integrity** (`test/decks.test.js`): exactly 15 decks, each deck +
+   gear summing to exactly 55 cards.
+3. **Parser/game/advisor drills** (`test/parser.test.js`, `game.test.js`,
+   `advisor.test.js`): `weaponCost`, `classifyClause` conditionals, the `{p}`
+   pump parser, the Kayo printed-vs-granted regression, equipment wear, the
+   fxParse memo gotcha.
+4. **Sync guard** (`test/sync.test.js`): the parser/game/advisor/cards logic
+   now also lives in `engine/*.js` (Phase 1 extraction), textually identical
+   to the copies inside `index.html`. **Edit one side, mirror the other** —
+   this test fails on drift. (index.html is still what ships; engine/ is not
+   yet imported by it.)
+5. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
+
+Slower path, needs network the first time, run before shipping any card-text
+or parser change:
+```
+npm run audit          # regenerate AUDIT.md — read it, look for new gaps/flags
+node tools/audit.js --write-baseline   # only once you've reviewed the diff —
+                                        # repins the coverage floor so future
+                                        # runs fail if a card's tier regresses
+```
+`test/coverage.test.js` then checks every pool card still resolves and no
+card's `fxParse` tier dropped below the pinned baseline (skips cleanly if
+`tools/.cache/card.json` / `tools/coverage-baseline.json` aren't present).
+
+Always, regardless of what the tests say:
+6. **On a real phone.** Type checking and drills verify the parser is
+   correct, not that the feature is fun or legible — validate on-device
+   per the roadmap's loop (play → record → extract frames → fix) before
+   calling anything shipped.
 
 ### Drill gotcha
 `fxParse` memoizes on `name|pitch`. Test cards **must have unique `name` fields**
