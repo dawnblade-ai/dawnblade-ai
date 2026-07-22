@@ -494,7 +494,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "1.18"; /* dawnblade versioning: +0.001 per release until 2.0 */
+window.APP_VER = "1.20"; /* dawnblade versioning: +0.001 per release until 2.0 */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -1377,7 +1377,7 @@ function classifyClause(raw){
   if(m=c.match(/^(?:if|when) ([^,:]+)[,:] ?(.+)$/)){
     const cond=m[1], rest=classifyClause(m[2]);
     if(!rest || rest.status!=="run") return null;
-    if(/hits?$|hit$|this hits/.test(cond)) return Object.assign(rest,{onHit:true});
+    if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
@@ -1393,6 +1393,7 @@ function classifyClause(raw){
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/)) return R([["atkMinus",+m[1]]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("no defender to restrict — training dummy");
+  if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) discards?/.test(c)) return R([["foeDiscard",1]]);
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
   if(m=c.match(/prevent (?:the next )?(\d+) (?:point(?:s)? of )?(arcane )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
   if(m=c.match(/deals? (\d+) arcane damage/)) return R([["arcane",+m[1]]]);
@@ -1447,6 +1448,11 @@ function fxParse(card){
   if(am && !am[1]) fx.addCost = {discard: num(am[2])};
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
+  if(!fx.self && !isAttack(card)){
+    const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
+    if(pm) fx.self = +pm[1];
+    else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
+  }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
   fx.playable = fx.ops.length>0 || fx.onHit.length>0 || fx.conds.length>0 || !!fx.perm || fx.ga;
@@ -1849,6 +1855,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     ops.forEach(op=>{
       const [k,v] = op;
       if(k==="draw"){ const take=n.deck.slice(0,v); n.hand=[...n.hand,...take]; n.deck=n.deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
+      else if(k==="foeDiscard"){ n = L(n, "Pummel connects — a real opponent would discard here; the dummy holds no hand."); }
       else if(k==="res"){ n.res+=v; n=L(n,`+${v} resource.`); }
       else if(k==="life"){ n.myHP+=v; n=L(n,`+${v} life.`); }
       else if(k==="arcane"){ const total=v+n.amp; n.amp=0; n.dHP-=total; n=L(n,`${srcName}: ${total} arcane damage.`); }
@@ -1978,6 +1985,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
       }
       n = runOps(n, fx.ops, card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
+      if(fx.self && !isAttack(card)){ n.buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ n.gear = n.gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
@@ -1999,7 +2007,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
     const c = s.hand[i]; if(!c) return s;
     const fx = fxParse(c);
     const inAtk = s.mode==="stack";
-    const ok = inAtk ? (isAR(c) || (isInstantT(c)&&fx.ops.length>0)) : (fx.dr || (isInstantT(c)&&fx.ops.length>0));
+    const ok = inAtk ? (isAR(c) || (isInstantT(c)&&fx.ops.length>0) || (!isAttack(c)&&(fx.self||0)>0)) : (fx.dr || (isInstantT(c)&&fx.ops.length>0));
     if(!ok) return s;
     const cost = c.cost||0;
     if(s.res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
@@ -2258,7 +2266,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
   const handCell = (c,i) => {
     const fx = fxParse(c);
     const rxD = fx.dr || (isInstantT(c)&&fx.ops.length>0);
-    const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0);
+    const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0) || (!isAttack(c)&&(fx.self||0)>0);
     const canDefend = c.def!=null;
     const sel = g.mode==="pay" ? g.paySel.includes(i) : g.mode==="block" ? g.blockH.includes(c.uid) : false;
     const dim = (g.mode==="block" && (g.bphase==="defend" ? (!(canDefend && !fx.dr) && !sel) : !rxD)) || (g.mode==="stack" && !rxA);
