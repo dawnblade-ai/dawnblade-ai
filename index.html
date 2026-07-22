@@ -494,7 +494,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.02"; /* v2.02: tapped hand card features immediately during pitch (pay mode). */
+window.APP_VER = "2.03"; /* v2.03: inline ✕ cancel in the paying banner (pay mode). */
 window.DATA_VER = "sage-v6";
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 
@@ -2393,7 +2393,7 @@ function Battle({h,cfg,db,onExit,onRecord}){
                   </div>
                 </div>
               </div>
-              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}</div>;})()}
+              {g.mode==="pay" && (()=>{const sel=g.paySel.reduce((a,i)=>a+(g.hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card,g)-g.res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
               {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{g.res}</b></span>}</div>}
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{g.res}</b> or pass</div>}
               {g.mode==="arsenal" && <div className="statusline">Tap a card below for <b>arsenal</b><button onClick={skipArsenal}>skip</button></div>}
