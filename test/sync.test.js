@@ -12,9 +12,18 @@ const SHARED = {
   "engine/parser.js": [
     "norm","isAttack","isArrow","isWeapon","hasGA","arcaneDmg","NWORD","num","clean",
     "classifyClause","fxParse","parseHeroPower","runeRed","effCost","weaponCost",
+    /* boardRed was NOT listed here and drifted silently during the v2.18
+       migration — index.html read sides[0] while parser.js read the raw
+       object. Anything the trainer shares must be in this list. */
+    "boardRed",
     "hasKw","isAR","isInstantT"
   ],
   "engine/game.js": ["shuffle","parseDeck","gearDef","gearBlockApply","slotOf"],
+  /* the pregame throw is driven by the UI, so it lives on both sides too */
+  "engine/rps.js": ["RPS_THROWS","RPS_BEATS","rpsResolve","rpsSeries","rpsThrow","rpsSeat"],
+  /* the prompt machinery is rendered by the trainer, so it is mirrored */
+  "engine/prompts.js": ["PROMPT_ZONES","promptZone","promptFilter","buildPrompt",
+    "promptToggleSel","promptChoose","promptReady","moveCards","applyPrompt"],
   "engine/cards.js": ["cdnImg","toNum","resolveEntry","resolveHero"],
   "engine/advisor.js": ["advPitchPotential","advCardOut","advValue","advBestPitch","advise"]
 };

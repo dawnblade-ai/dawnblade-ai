@@ -36,3 +36,26 @@ for(const h of Object.keys((() => W.DECKS)() )){
     assert.equal(n, 55, `${h} sums to ${n}, want 55`);
   });
 }
+
+/* ---- v2.05: the dummy's own pile ----------------------------------
+   The dummy blocks from hand now. Its deck is deliberately built from
+   Generic attack actions with NO rules text, so its cards need zero
+   parser support — nothing about the dummy is faked. Guard both facts. */
+test("dummy deck — 30 cards, every entry resolvable", () => {
+  const W = loadData();
+  assert.ok(Array.isArray(W.DUMMY_DECK), "DUMMY_DECK is exported to window");
+  const total = W.DUMMY_DECK.reduce((a,[,,q]) => a + q, 0);
+  assert.equal(total, 30, "the dummy pitches from a 30-card pile");
+  for(const [nm,p,q] of W.DUMMY_DECK){
+    assert.equal(typeof nm, "string");
+    assert.ok(p >= 1 && p <= 3, `${nm} has a real pitch value`);
+    assert.ok(q >= 1, `${nm} has at least one copy`);
+  }
+});
+
+test("dummy deck — the dummy draws to intellect", () => {
+  const W = loadData();
+  assert.equal(W.DUMMY_INT, 4, "four cards in hand, like any hero");
+  const total = W.DUMMY_DECK.reduce((a,[,,q]) => a + q, 0);
+  assert.ok(total > W.DUMMY_INT * 4, "deep enough to spar for several turns before recycling");
+});

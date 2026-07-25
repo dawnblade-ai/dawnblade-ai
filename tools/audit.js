@@ -35,7 +35,20 @@ const HERO_STATICS = [
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"}
 ];
-const TOKEN_NAMES = ["Runechant","Frostbite","Seismic Surge","Vigor","Bloodrot","Frailty"];
+/* Tokens are read out of the pool's own text rather than listed by hand —
+   a hardcoded list silently rots (it carried 6 of the 17 real tokens, and
+   named "Bloodrot" for what the database calls "Bloodrot Pox"). Every
+   token our cards reference is itself a card in the database, so the
+   golden rule applies: resolve it, never describe it. */
+const tokensReferencedIn = texts => {
+  const found = new Set();
+  for(const tx of texts)
+    for(const m of (tx||"").matchAll(/\b([A-Z][A-Za-z0-9'-]*(?: [A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g)){
+      /* "Create X Frostbite tokens" — drop a leading count word */
+      found.add(m[1].replace(/^(?:Create|Equip|Destroy) (?:X |\d+ )?/, "").trim());
+    }
+  return [...found].sort();
+};
 
 async function loadDB(refresh, DBSRC){
   if(!refresh && fs.existsSync(CACHE)) return JSON.parse(fs.readFileSync(CACHE, "utf8"));
@@ -108,7 +121,8 @@ function analyzeHero(rec, heroName){
   const tl = P.clean(rec.tx||"").toLowerCase();
   const statics = HERO_STATICS.filter(s=>s.re.test(tl)).map(s=>s.note);
   const power = P.parseHeroPower(rec.tx||"");
-  const clauses = P.clean(rec.tx||"").split(/\.\s+|\n+/).map(s=>s.trim()).filter(Boolean).map(cl=>{
+  const clauses = (rec.tx||"").split(/\n+/).map(s=>P.clean(s)).filter(Boolean)
+    .reduce((a,s)=>a.concat(s.split(/\.\s+/)),[]).map(s=>s.trim()).filter(Boolean).map(cl=>{
     const cll = cl.toLowerCase();
     const covered = HERO_STATICS.some(s=>s.re.test(cll))
       || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl));
@@ -146,9 +160,14 @@ async function main(){
   }
   for(const nm of W.DUMMY_GEAR) addCard(C.resolveEntry(db, {name:nm, p:0, code:null, q:1}), "dummy", "gear");
   const tokens = {};
-  for(const nm of TOKEN_NAMES){
-    const rec = (db.byName[P.norm(nm)]||[])[0] || null;
-    tokens[nm] = rec ? {found:true, tt:rec.tt, tx:rec.tx} : {found:false};
+  for(const nm of tokensReferencedIn(Object.values(cards).map(c=>c.tx))){
+    /* prefer the record actually typed as a token — several token names
+       (Gold, Might) collide with ordinary cards */
+    const cands = db.byName[P.norm(nm)] || [];
+    const rec = cands.find(c=>/token/i.test(c.tt||"")) || cands[0] || null;
+    tokens[nm] = rec ? {found:true, tt:rec.tt, tx:rec.tx, pw:rec.pw, def:rec.d,
+      fx: P.fxParse({name:"token:"+nm, pitch:0, tt:rec.tt, kw:rec.kw, tx:rec.tx}).tier}
+      : {found:false};
   }
 
   /* ---- inventories ---- */
