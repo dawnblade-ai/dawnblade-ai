@@ -1,0 +1,343 @@
+{
+ "token-library": {
+  "at": "2026-07-25",
+  "mechanic": "token library",
+  "status": "unmodelled",
+  "cards": [
+   "High Pitched Howl (1)",
+   "Agile Windup (3)",
+   "Magmatic Carapace (0)",
+   "Crash and Bash (1)",
+   "Agile Engagement (1)",
+   "Lead with Speed (1)",
+   "Goblet of Bloodrun Wine (3)",
+   "Waning Vengeance (1)",
+   "Frailty Trap (1)",
+   "Inertia Trap (1)",
+   "Turn to Mindfire (1)",
+   "Flat Trackers (0)",
+   "Toe the Line (1)",
+   "Golden Tipple (1)",
+   "Golden Tipple (2)",
+   "Golden Tipple (3)",
+   "Loot the Arsenal (3)",
+   "Loot the Hold (3)",
+   "Portside Exchange (3)",
+   "Stand Strong (0)",
+   "Full of Bravado (3)"
+  ],
+  "ruling": "Each player has a section on their board where tokens (and items and allies and auras) can live. If the card conditions are satisfied - put 1 copy of the specific token on the correct player's board."
+ },
+ "arsenal-triggers": {
+  "at": "2026-07-25",
+  "mechanic": "arsenal triggers",
+  "status": "unmodelled",
+  "cards": [
+   "Fault Line (1)",
+   "Bull's Eye Bracers (0)",
+   "Death Dealer (0)",
+   "Call in the Big Guns (1)",
+   "Dry Powder Shot (1)",
+   "Entangling Shot (1)",
+   "Swift Shot (1)",
+   "Wreck Havoc (1)",
+   "Springboard Somersault (2)",
+   "Unmovable (1)",
+   "Unmovable (3)",
+   "Concoct Disorder (1)",
+   "Lightning Surge (1)",
+   "Power Play (3)"
+  ],
+  "ruling": "These cards have a bonus effect if they are 'played from arsenal' - all cards that are 'arrow attack's can *only* be played from arsenal - arsenal card is 'face-down' (but you are allowed to look at it) when you set it at end of turn - other card effects and turn it face up or face down."
+ },
+ "charge": {
+  "at": "2026-07-25",
+  "mechanic": "charge",
+  "status": "pending",
+  "cards": [
+   "Beaming Bravado (1)",
+   "Bolt of Courage (1)",
+   "Engulfing Light (1)",
+   "Light the Way (1)",
+   "Take Flight (1)",
+   "Beaming Bravado (2)",
+   "Bolt of Courage (2)",
+   "Engulfing Light (2)",
+   "Light the Way (2)",
+   "Roaring Beam (2)",
+   "Take Flight (2)",
+   "V of the Vanguard (2)"
+  ],
+  "ruling": "So you first need to evaluate boltyn's hero ability to truly understand this - as a light hero he has a soul - players usually stack this under their hero card - cards in soul can be used for different effects - 'charging' is a mechanic defined by the official rules where you put a card from hand to soul and having done so qualifies you for bonuses on these cards."
+ },
+ "opt": {
+  "at": "2026-07-25",
+  "mechanic": "opt",
+  "status": "unreviewed",
+  "cards": [
+   "Read the Glide Path (1)",
+   "Ridge Rider Shot (1)",
+   "Aether Spindle (1)",
+   "Cindering Foresight (1)",
+   "Whisper of the Oracle (1)",
+   "Cindering Foresight (2)",
+   "Whisper of the Oracle (2)",
+   "Aether Spindle (3)",
+   "Cindering Foresight (3)",
+   "Whisper of the Oracle (3)"
+  ],
+  "ruling": "When you opt x you look at the top x cards of your deck and then you can choose to put them on the top or bottom in any order."
+ },
+ "auras": {
+  "at": "2026-07-25",
+  "mechanic": "auras",
+  "status": "unmodelled",
+  "cards": [
+   "Beckoning Haunt (0)",
+   "Condemn to Slaughter (1)",
+   "Hit the High Notes (1)",
+   "Runerager Swarm (1)",
+   "Runic Fellingsong (1)",
+   "Shrill of Skullform (1)",
+   "Shrill of Skullform (2)",
+   "Condemn to Slaughter (3)",
+   "Shrill of Skullform (3)",
+   "Sigil of Silphidae (3)"
+  ],
+  "ruling": "auras are non-attack actions - they stay in play until their specific abilities (or the ability of another card) say otherwise."
+ },
+ "clash-payoffs": {
+  "at": "2026-07-25",
+  "mechanic": "clash payoffs",
+  "status": "unmodelled",
+  "cards": [
+   "Clash of Agility (1)",
+   "Clash of Might (1)",
+   "Test of Might (1)",
+   "Clash of Might (2)",
+   "Unexpected Backhand (3)",
+   "Clash of Vigor (3)",
+   "Test of Strength (1)",
+   "Stonewall Impasse (0)"
+  ],
+  "ruling": "per the official rules compare the attack value (bottom left) of each card revealed - the higher card wins the clash. the conditional effects on the card will depend on whether the player wins or not"
+ },
+ "stealth": {
+  "at": "2026-07-25",
+  "mechanic": "stealth",
+  "status": "unreviewed",
+  "cards": [
+   "Art of Desire: Body (1)",
+   "Infect (1)",
+   "Mark of the Black Widow (1)",
+   "Mark of the Funnel Web (1)",
+   "Mark the Prey (1)",
+   "Art of Desire: Mind (3)",
+   "Mark of the Black Widow (3)",
+   "Reaper's Call (3)"
+  ],
+  "ruling": "Stealth is a unique ability that does nothing on its own - other cards check to see if an attack has stealth as a qualifier for other abilities"
+ },
+ "the-crowd-boos": {
+  "at": "2026-07-25",
+  "mechanic": "the crowd boos",
+  "status": "unreviewed",
+  "cards": [
+   "Mocking Blow (1)",
+   "Prime the Crowd (1)",
+   "Villainous Pose (1)",
+   "Mocking Blow (2)",
+   "Booze! (3)",
+   "Concealed Object (3)",
+   "Goon Beatdown (3)",
+   "Mocking Blow (3)"
+  ],
+  "ruling": "This is a unique ability to reviled heroes that synchronizes with lyath's hero ability"
+ },
+ "draconic-chain": {
+  "at": "2026-07-25",
+  "mechanic": "draconic chain",
+  "status": "unmodelled",
+  "cards": [
+   "Searing Emberblade (0)",
+   "Display Loyalty (1)",
+   "Enflame the Firebrand (1)",
+   "Mounting Anger (1)",
+   "Phoenix Flame (1)",
+   "Rising Resentment (1)",
+   "Cinderskin Devotion (3)"
+  ],
+  "ruling": "this is when the chain really matters - when you play attack actions in a row - they stay on the chain - the first attack each turn is chain link 1 - certain cards will look for a certain chain link number. some cards will also have the addtional qualifier of requiring 'draconic chains' draconic cards say draconic next to their other typings - this is considered a 'talent' per the official rules"
+ },
+ "deck-peek": {
+  "at": "2026-07-25",
+  "mechanic": "deck peek",
+  "status": "unmodelled",
+  "cards": [
+   "On the Horizon (1)",
+   "Talismanic Lens (0)",
+   "Scout the Periphery (1)",
+   "Spire Sniping (2)",
+   "Seeker's Mitts (0)",
+   "Compass of Sunken Depths (0)"
+  ],
+  "ruling": "when you are looking at the top of your deck a popup screen should appear and give the player instructions - sometimes they will have the option to put some of the cards on the bottom so a few buttons may need to be available. Make sure the player's hand is still visible below the popup"
+ },
+ "power-counters": {
+  "at": "2026-07-25",
+  "mechanic": "power counters",
+  "status": "unmodelled",
+  "cards": [
+   "Dawnblade (0)",
+   "Cosmo, Scroll of Ancestral Tapestry (0)",
+   "Astral Etchings (1)",
+   "Spectral Manifestations (1)",
+   "Waxing Specter (1)",
+   "Glisten (1)"
+  ],
+  "ruling": "+1 attack power or other modification counters will sometimes be added to cards that are in play. they persist turn to turn until a card effect says otherwise.  in real life players often represent this with dice and special dice with the attack symbol are a hot item!"
+ },
+ "mark": {
+  "at": "2026-07-25",
+  "mechanic": "mark",
+  "status": "unreviewed",
+  "cards": [
+   "Hot on Their Heels (1)",
+   "Mark of the Huntsman (0)",
+   "Den of the Spider (1)",
+   "Lair of the Spider (1)",
+   "Mark the Prey (1)",
+   "Two Sides to the Blade (1)"
+  ],
+  "ruling": "marking is a specific ability to arachni and assassins - having a mark does nothing on its own but is a qualifier for many other abilities."
+ },
+ "ice-fusion": {
+  "at": "2026-07-25",
+  "mechanic": "ice fusion",
+  "status": "unreviewed",
+  "cards": [
+   "Aether Icevein (1)",
+   "Polar Cap (1)",
+   "Aether Icevein (2)",
+   "Aether Icevein (3)",
+   "Brain Freeze (3)",
+   "Ice Eternal (3)"
+  ],
+  "ruling": "to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'"
+ },
+ "steam-counters": {
+  "at": "2026-07-25",
+  "mechanic": "steam counters",
+  "status": "unmodelled",
+  "cards": [
+   "Plasma Barrel Shot (0)",
+   "Crankshaft (1)",
+   "Hyper Driver (1)",
+   "Re-Charge! (1)",
+   "Big Bertha (3)",
+   "Crankshaft (3)"
+  ],
+  "ruling": "steam counters will be added to cards that are 'in play' they persist until the card effect says otherwise. often times the abilities will remove steam counters but also they are removed at the beginning of turn. having no steam counters usually means that the item is destroyed at the end of the next turn. many of these 'steam powered' items work very similar but it is still important to read the conditions carefully."
+ },
+ "watery-grave": {
+  "at": "2026-07-25",
+  "mechanic": "watery grave",
+  "status": "unreviewed",
+  "cards": [
+   "Barnacle (2)",
+   "Cutty Shark, Quick Clip (2)",
+   "Limpit, Hop-a-long (2)",
+   "Oysten, Heart of Gold (2)",
+   "Riggermortis (2)",
+   "Swabbie (2)"
+  ],
+  "ruling": "Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents"
+ },
+ "suspense": {
+  "at": "2026-07-25",
+  "mechanic": "suspense",
+  "status": "unreviewed",
+  "cards": [
+   "Edge of Their Seats (3)",
+   "The Suspense is Killing Me (3)",
+   "Act of Glory (1)",
+   "Edge of Their Seats (1)",
+   "Tension in the Air (1)"
+  ],
+  "ruling": "just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is destroyed"
+ },
+ "phantasm": {
+  "at": "2026-07-25",
+  "mechanic": "phantasm",
+  "status": "unreviewed",
+  "cards": [
+   "Enigma Chimera (1)",
+   "Enigma Chimera (2)",
+   "Phantasmal Haze (3)",
+   "Spears of Surreality (3)",
+   "Spectral Rider (3)"
+  ],
+  "ruling": "phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed."
+ },
+ "transcend": {
+  "at": "2026-07-25",
+  "mechanic": "transcend",
+  "status": "unreviewed",
+  "cards": [
+   "A Drop in the Ocean (3)",
+   "Homage to Ancestors (3)",
+   "Pass Over (3)",
+   "Preserve Tradition (3)",
+   "Rising Sun, Setting Moon (3)"
+  ],
+  "ruling": "these 'trancend' cards are the cornerstone of the mystic talent identity. on the back there is a card called inner-chi - we'll have to pull it from fabrary.net - the inner chi can be used to activate the hero's hero ability"
+ },
+ "soul-charge": {
+  "at": "2026-07-25",
+  "mechanic": "soul charge",
+  "status": "unmodelled",
+  "cards": [
+   "Halo of Illumination (0)",
+   "Radiant Touch (0)",
+   "Raydn, Duskbane (0)",
+   "Courageous Steelhand (1)",
+   "Valiant Thrust (2)"
+  ],
+  "ruling": "we will have to make room for boltyn's soul on the player's board - the soul cards can be stacked up - they could also be spread out on the graveyard screen - once in soul - they are used as amo for his hero ability, weapon and other card effects."
+ },
+ "graveyard": {
+  "at": "2026-07-25",
+  "mechanic": "graveyard",
+  "status": "unmodelled",
+  "cards": [
+   "Crown of Dichotomy (0)",
+   "Memorial Ground (2)",
+   "Rise from the Ashes (1)",
+   "Mournful Casket (0)"
+  ],
+  "ruling": "sometimes a card in the graveyard will be able to be played - it should appear in the hero's hand - when these cards interact with the graveyard we must show the player a pop up with their whole graveyard and they must choose a qualified card. the necro chest checks if a card has been put into the grave this turn - we may have to install a new variable on the board for gravy to check this."
+ },
+ "aim-counters": {
+  "at": "2026-07-25",
+  "mechanic": "aim counters",
+  "status": "unmodelled",
+  "cards": [
+   "Crow's Nest (0)",
+   "Infecting Shot (1)",
+   "Murkmire Grapnel (1)",
+   "Infecting Shot (2)"
+  ],
+  "ruling": "aim counters do nothing on their own but activate extra abilities printed on the card"
+ },
+ "action-points": {
+  "at": "2026-07-25",
+  "mechanic": "action points",
+  "status": "unmodelled",
+  "cards": [
+   "Beaten Trackers (0)",
+   "Silent Stilettos (0)",
+   "Back Alley Breakline (3)"
+  ],
+  "ruling": "action points allow a player to play actions - the player should get a little notification each time they get +1 action points - each time a card with 'go again' resolves an action point is added."
+ }
+}
