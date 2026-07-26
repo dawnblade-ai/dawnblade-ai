@@ -7,6 +7,7 @@
     "test": "node --test \"test/*.test.js\"",
     "audit": "node tools/audit.js",
     "stack": "node tools/stack.js",
+    "failstates": "node tools/failstates.js",
     "sweep": "node tools/sweep.js"
   }
 }

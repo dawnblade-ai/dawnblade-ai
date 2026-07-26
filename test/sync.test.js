@@ -23,7 +23,7 @@ const BABEL = '<script type="text/babel"';
 
 /* Load order matters only in that parser.js must precede its dependents
    (advisor, cards and prompts each take it as their factory argument). */
-const MODULES = ["parser","game","rps","sides","priority","prompts","cards","advisor"];
+const MODULES = ["parser","game","rps","sides","priority","prompts","invariants","cards","advisor"];
 
 for(const m of MODULES){
   test(`index.html loads engine/${m}.js`, () => {

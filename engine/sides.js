@@ -163,15 +163,25 @@ function symmetryGap(){
 function makeGame(o){
   o = o || {};
   const sides = o.sides || [makeSide({id:0}), makeSide({id:1})];
+  /* CR 4.3.2 — action points are issued to the TURN-PLAYER at the
+     beginning of their action phase, and a game opens in the start phase.
+     `makeSide` defaults ap:1 because the trainer's seat 0 is always the
+     turn player; a genuine two-player game starts with neither seat
+     holding one, and priority.js's toPhase("action") issues it. */
+  const seated = sides.map(sd => sd && sd.ap ? {...sd, ap:0} : sd);
   return {
-    sides,
+    sides: seated,
     /* seating, decided by the pregame throw (see rps.js). turnPlayer is
        whose turn it is; priority is who may act right now — in a real
        two-player game those come apart constantly, which is exactly why
        they are separate fields. */
     firstPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
     turnPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
-    priority: o.firstPlayer!=null ? o.firstPlayer : 0,
+    /* NULL, not the first player: a game opens in the start phase, and
+       CR 4.2.1 says players do not get priority during the start phase.
+       priority.js grants it on entering the action phase (CR 4.3.3).
+       engine/invariants.js fails the state if anyone holds it here. */
+    priority: null,
     passed: [false,false],
     turn: 1, phase: "start", step: "layer",
     mode: "act", bphase: "defend", pending: null, incoming: 0,

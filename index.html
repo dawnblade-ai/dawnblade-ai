@@ -318,7 +318,7 @@ img{display:block;max-width:100%}
 .hpane{flex:0 0 100%;max-width:100%;overflow-y:auto;padding:5px 6px 10px;box-sizing:border-box;scroll-snap-align:start;scroll-snap-stop:always}
 .screennav{display:flex;gap:5px;margin:6px 0 0}
 .screennav button{flex:1;padding:6px 0;font-family:'Spline Sans Mono';font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:var(--forge2);border:1px solid var(--line);color:var(--bone-dim)}
-.paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between}
+.paneflag{text-align:center;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);padding:0 0 6px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .modehint{font-size:10px;color:var(--y);text-align:center;padding:3px 0 6px;letter-spacing:.05em;text-transform:uppercase}
 .gyrow{display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
 .gyrow .gyc{width:46px;flex:none}
@@ -581,6 +581,27 @@ img{display:block;max-width:100%}
   background:var(--forge);border:1px solid var(--line);border-radius:3px;padding:7px 9px;max-height:88px;overflow-y:auto}
 .rps .rback{align-self:center;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--bone-dim);background:none;border:none;padding:6px}
+/* ---- JUDGE!! — the in-game bug report (v2.22) ---- */
+.judgebtn{flex:none;background:var(--r);color:var(--bone);border:none;border-radius:2px;
+  font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
+  padding:3px 8px;cursor:pointer;text-transform:uppercase;line-height:1.4}
+.judgebtn:active{transform:translateY(1px)}
+.bugwrap{position:fixed;inset:0;z-index:80;background:rgba(8,6,5,.78);
+  display:flex;align-items:flex-end;justify-content:center}
+.bugsheet{width:100%;max-width:560px;background:var(--forge);border-top:2px solid var(--r);
+  padding:12px 14px calc(14px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto}
+.bugh{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.bugt{font-family:'Big Shoulders Display';font-weight:800;font-size:21px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--r)}
+.bugmeta{font-family:'Spline Sans Mono',monospace;font-size:9.5px;color:var(--bone-dim);
+  letter-spacing:.06em;text-transform:uppercase}
+.bughint{font-size:11.5px;color:var(--bone-dim);line-height:1.45;margin:7px 0 8px}
+.bugta{width:100%;min-height:96px;background:var(--ink);color:var(--bone);border:1px solid var(--line);
+  border-radius:3px;padding:9px 10px;font:13px/1.5 inherit;resize:vertical}
+.bugok{margin-top:8px;font-size:11.5px;color:var(--y);font-family:'Spline Sans Mono',monospace;
+  letter-spacing:.04em}
+.bugrow{display:flex;gap:7px;margin-top:10px}
+.bugrow .bigbtn{flex:1;font-size:12px;padding:11px 6px}
 </style>
 </head>
 <body>
@@ -602,7 +623,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.20"; /* v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
+window.APP_VER = "2.22"; /* v2.22: JUDGE!! — a bug report written at the table. The button sits on the log pane and captures the whole board with the note (zones with uids, counters, chain, prompt, the feed, and any invariant violations), so the note can be one line; Copy or Save Report. Also fixes a real rules bug: CR 4.4.3f says "if it is the first turn of the game, all other players draw cards until the number of cards in their hand is equal to their hero's intellect" — the non-turn player refills on turn one only. The opponent-first opening never did it, so going second cost an extra swing AND left you short-handed for your first action phase. That is a large part of why opponent-first played harder than it should. v2.21: THE GUARD RAILS. engine/invariants.js is a judge that audits the STATE rather than the cards — a card in two zones at once, a per-side field written to the game object, a defending card re-declared on a second chain link (CR 7.3.2b), priority held in a phase that has none (CR 4.2.1/4.4.1). It is wired into setG, so every state change in a real game is audited; it never throws. Four genuine CR violations fixed in engine/priority.js: priority was granted during the start and end phases, the defend step handed priority to the defender instead of the turn-player (CR 7.3), only the turn player's floating resources fizzled instead of BOTH players' (CR 4.4.3e — a real two-player bug), and the action point was issued in the end phase instead of the action phase (CR 4.3.2). New: tools/failstates.js re-reads every card and asks how it goes WRONG at the table rather than how much text is unread, and feeds sweep.html a ranked section 4. It found the noop blind spot: phantasm and watery grave are filed as "does nothing", so Spears of Surreality, Enigma Chimera and five Gravy Bones allies report tier=FULL with their whole mechanic ignored. v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
 window.DATA_VER = "sage-v8"; /* v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1173,6 +1194,7 @@ window.TROPHIES = [
 <script src="engine/sides.js"></script>
 <script src="engine/priority.js"></script>
 <script src="engine/prompts.js"></script>
+<script src="engine/invariants.js"></script>
 <script src="engine/cards.js"></script>
 <script src="engine/advisor.js"></script>
 <script>
@@ -1764,7 +1786,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      can reach it — it is a pure (state, message) function with no dependency
      on `g`, so hoisting it costs nothing. */
   const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
-  const [g,setG] = uS(()=>{
+  const [g,setGRaw] = uS(()=>{
    /* named `initial` rather than `base` so the drill that scans this literal
       out of the file has an unambiguous marker — engine/prompts.js mirrors a
       `const base = {` of its own into this file, higher up. */
@@ -1801,9 +1823,117 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       avoids a frame of action-mode flicker. */
    return foeFirst ? foeSwing(initial) : initial;
   });
+  /* ---- THE GUARD RAILS -------------------------------------------------
+     Every state change in this component funnels through setG, which makes
+     it the one place worth auditing. engine/invariants.js reads the state
+     and reports anything the rules of Flesh and Blood do not permit — a
+     card in two zones at once, a per-side field written to the game object,
+     a defending card re-declared on a second chain link (CR 7.3.2b).
+
+     Every bug this cycle was found by eye or in play, never by a red test:
+     crumbling auras that came back, defenders never cleared, a pitch
+     selection carried into the next payment. All of them were states the
+     judge would have named instantly.
+
+     It never throws. A violation must not cost a player their game, so it
+     logs, records, and raises a badge; the sim keeps running. Read the
+     details in the console or via window.__dawnJudge. */
+  const judgeRef = uR([]);
+  const [judgeN, setJudgeN] = uS(0);
+  const setG = updater => setGRaw(s => {
+    const n = typeof updater === "function" ? updater(s) : updater;
+    try {
+      const bad = DawnInvariants.errors(n);
+      if(bad.length){
+        const seen = judgeRef.current;
+        for(const v of bad){
+          /* one entry per distinct violation, not per render */
+          if(seen.some(x => x.code === v.code && x.msg === v.msg)) continue;
+          seen.push({turn:n.turn, mode:n.mode, code:v.code, msg:v.msg});
+          console.error("[dawnblade judge] " + v.code + " — " + v.msg);
+        }
+        if(typeof window !== "undefined") window.__dawnJudge = seen;
+        setJudgeN(seen.length);
+      }
+    } catch(e){ /* the judge must never be the thing that breaks play */ }
+    return n;
+  });
   const [zoom,setZoom]=uS(null);
+  /* the JUDGE!! bug-report sheet: null when closed */
+  const [bug,setBug]=uS(null);
   /* uid of the card being peeked in the hand rail — see handCell */
   const [peek,setPeek]=uS(null);
+
+  /* ---- JUDGE!! ---------------------------------------------------------
+     A bug report written at the table, on the phone, in the moment — which
+     is where the bugs actually surface. Every fix this cycle came from
+     playing and noticing, so the expensive part was never the noticing, it
+     was reconstructing the board afterwards from a screenshot.
+
+     So the report captures the board itself. The note can just be "this
+     looked wrong": the zones, counters, chain, prompt, the whole feed and
+     any invariant violations travel with it. Card lists are names + uids,
+     not the resolved records, so a report stays readable and small. */
+  const judgeReport = note => {
+    const side = sd => ({
+      name:sd.name, hp:sd.hp, maxHp:sd.maxHp, int:sd.int,
+      res:sd.res, ap:sd.ap, wasted:sd.wasted,
+      counts:{deck:(sd.deck||[]).length, hand:(sd.hand||[]).length, grave:(sd.grave||[]).length,
+        pitch:(sd.pitch||[]).length, banish:(sd.banish||[]).length, soul:(sd.soul||[]).length,
+        board:(sd.board||[]).length, gear:(sd.gear||[]).length, arsenal:sd.arsenal?1:0},
+      hand:(sd.hand||[]).map(c=>c.name+"#"+c.uid),
+      arsenal:sd.arsenal ? sd.arsenal.name+"#"+sd.arsenal.uid : null,
+      board:(sd.board||[]).map(b=>((b.card&&b.card.name)||b.name||"?")+(b.sd?" [dies:"+b.sd+"]":"")),
+      gear:(sd.gear||[]).map(gr=>gr.name+(gr.destroyed?" (destroyed)":"")+" d"+gearDef(gr)),
+      grave:(sd.grave||[]).map(c=>c.name+(c._gy!=null?" _gy"+c._gy:"")),
+      pitch:(sd.pitch||[]).map(c=>c.name+" p"+(c.pitch||0)),
+      soul:(sd.soul||[]).map(c=>c.name),
+      banish:(sd.banish||[]).map(c=>c.name),
+      counters:sd.counters, blockH:(sd.blockH||[]).length, blockG:(sd.blockG||[]).length,
+      chainBlocked:sd.chainBlocked, intimidated:(sd.intimidated||[]).map(c=>c.name),
+      status:{amp:sd.amp, ward:sd.ward, awd:sd.awd, rune:sd.rune, rot:sd.rot, fra:sd.fra,
+        frost:sd.frost, arcShield:sd.arcShield, lifeLock:sd.lifeLock, marked:sd.marked,
+        buffNext:sd.buffNext, gaNext:sd.gaNext, weaponUsed:sd.weaponUsed},
+      hist:sd.hist
+    });
+    return {
+      _what:"Dawnblade bug report — open an issue or paste this to Claude.",
+      note, at:new Date().toISOString(),
+      appVer:window.APP_VER, dataVer:window.DATA_VER,
+      hero:h.k, heroName:h.n, seating:foeFirst?"opponent first":"you first",
+      turn:g.turn, mode:g.mode, bphase:g.bphase, incoming:g.incoming,
+      chainOpen:g.chainOpen,
+      chain:(g.chain||[]).map(l=>l.label||l.k||"link"),
+      stack:(g.stack||[]).map(l=>l.label||l.k),
+      pending:g.pending?{card:g.pending.card&&g.pending.card.name, from:g.pending.from}:null,
+      pend:g.pend?{card:g.pend.card&&g.pend.card.name, total:g.pend.total}:null,
+      prompt:g.prompt?{tag:g.prompt.tag, side:g.prompt.side, src:g.prompt.src,
+        cards:(g.prompt.cards||[]).map(c=>c.name), sel:g.prompt.sel, choice:g.prompt.choice}:null,
+      promptQ:(g.promptQ||[]).map(p=>p.tag+":"+(p.src||"")),
+      lastRoll:g.lastRoll, lastDmg:g.lastDmg, flags:g.flags, over:g.over,
+      you:side(you(g)), opponent:side(opp(g)),
+      /* what the invariant judge has flagged this game, if anything */
+      invariantsNow:DawnInvariants.check(g).map(v=>v.severity+" "+v.code+": "+v.msg),
+      invariantsSeen:judgeRef.current,
+      feed:g.feed
+    };
+  };
+  const judgeDownload = () => {
+    const rep = judgeReport(bug && bug.note || "");
+    const blob = new Blob([JSON.stringify(rep,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "dawnblade-bug-" + h.k + "-t" + g.turn + "-" + Date.now() + ".json";
+    a.click();
+    setBug(b=>({...b, saved:"downloaded"}));
+  };
+  const judgeCopy = () => {
+    const txt = JSON.stringify(judgeReport(bug && bug.note || ""), null, 2);
+    const done = () => setBug(b=>({...b, saved:"copied"}));
+    if(navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(txt).then(done, ()=>setBug(b=>({...b, saved:"copy failed — use Download"})));
+    else done();
+  };
   /* RULING 2026-07-25: "cards in grave will have to have a 'turn added to
      grave' characteristic". Stamp it on the way in, and every "discarded a
      card with 6 or more {p} this turn" question becomes answerable — for
@@ -2742,6 +2872,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       let o = {...n, _opening:false, mode:"act", chain:[], chainOpen:false,
         featured:null, boostChain:0};
       const os = oppMut(o); os.blockedHand = 0; os.chainBlocked = [];
+      /* CR 4.4.3f — "If it is the first turn of the game, ALL OTHER PLAYERS
+         draw cards until the number of cards in their hand is equal to their
+         hero's intellect." On turn one only, the non-turn player refills too.
+         That is precisely what pays you back for blocking the opening swing,
+         and it was missing: going second cost an extra swing AND left you
+         short-handed for your first action phase, which is a large part of
+         why opponent-first played harder than it should. */
+      const need = Math.max(0, you(o).int - you(o).hand.length);
+      if(need > 0){
+        const ps = youMut(o);
+        const take = ps.deck.slice(0, need);
+        ps.hand = [...ps.hand, ...take];
+        ps.deck = ps.deck.slice(take.length);
+        if(take.length) o = L(o, `You draw back up to ${you(o).int} — first turn of the game (CR 4.4.3f).`);
+      }
       return L(o, "— Turn 1. The floor is yours.");
     }
     return newTurn(n);
@@ -2974,7 +3119,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           <div className="hscroll" ref={midRef}>
             {/* PANE 1 — LOG: scoreboard + Claude's call + live feed */}
             <div className="hpane logpane">
-              <div className="paneflag"><span>log & advisor</span><span>play →</span></div>
+              <div className="paneflag">
+                <span>log & advisor</span>
+                {/* Bug reports from the phone, where the bugs actually show up.
+                    Captures the whole board so the note can just be "this
+                    looked wrong" — see judgeReport(). */}
+                <button className="judgebtn" onClick={()=>setBug({note:"", saved:false})}>
+                  JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
+                </button>
+                <span>play →</span>
+              </div>
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{you(g).hp}</span> you · R<b>{you(g).res}</b> A<b>{you(g).ap}</b></span>
                 <span className="sside r">dummy <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{opp(g).frost>0?` · ❄${opp(g).frost}`:""}</span>
@@ -3163,6 +3317,28 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
+      {/* JUDGE!! — write down what looked wrong while it is still on screen.
+          The board travels with the note, so the note can be one line. */}
+      {bug && <div className="bugwrap" onClick={e=>{ if(e.target===e.currentTarget) setBug(null); }}>
+        <div className="bugsheet clip">
+          <div className="bugh">
+            <span className="bugt">Judge!!</span>
+            <span className="bugmeta">v{window.APP_VER} · {h.n} · turn {g.turn} · {g.mode}
+              {judgeN>0 ? ` · ⚠ ${judgeN} invariant${judgeN>1?"s":""}` : " · state clean"}</span>
+          </div>
+          <p className="bughint">What looked wrong? The whole board — zones, counters, chain,
+            the feed and any invariant violations — is captured with it, so one line is plenty.</p>
+          <textarea className="bugta" autoFocus placeholder="e.g. Look Tuff attacked for 4, should have been 3 — I never got asked to pay"
+            value={bug.note} onChange={e=>setBug({...bug, note:e.target.value, saved:false})}/>
+          {bug.saved && <div className="bugok">{bug.saved === "copied" ? "Copied to clipboard."
+            : bug.saved === "downloaded" ? "Saved to your downloads." : bug.saved}</div>}
+          <div className="bugrow">
+            <button className="bigbtn alt" onClick={()=>setBug(null)}>Close</button>
+            <button className="bigbtn alt" onClick={judgeCopy}>Copy</button>
+            <button className="bigbtn" onClick={judgeDownload}>Save report</button>
+          </div>
+        </div>
+      </div>}
       {/* the peeked card, big enough to actually read, docked above the
           action bar so the hand rail stays visible underneath it */}
       {(()=>{

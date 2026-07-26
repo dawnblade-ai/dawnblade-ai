@@ -139,6 +139,54 @@ open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
 
+### Fail states — how cards go WRONG at the table (v2.21)
+
+```
+node tools/failstates.js     # ranked report
+npm run sweep                # feeds section 4 of SWEEP.md + tools/sweep.html
+```
+
+The audit answers a **coverage** question: how much of this card's text does the
+parser read? That is right for building the parser and wrong for judging a game.
+A card can be 90% read and still hand a player a win they did not earn.
+`tools/failstates.js` asks the judge's question instead — *if this card is played
+tonight, what happens that should not?* — and ranks by damage to a game judged at
+pro-tour standards, which is a **different order** from "most unread text":
+
+| sev | category | why it ranks there |
+|---|---|---|
+| 3 | illegal play allowed · drawback skipped · **keyword filed as no-op but is a drawback** | the player wins games they should lose; the sim teaches wrong play |
+| 2 | displayed total is wrong · no schedule to fire on | insidious — the player *trusts* the number on screen |
+| 1 | ability inert (cost not modelled) · choice never offered · earned value denied | honest and visible; they can see the card did nothing |
+| 0 | inert | does nothing, looks like it does nothing |
+
+**"Ability inert" is NOT a free lunch and must not be reported as one.** v2.04
+deliberately made unpayable costs inert rather than free, and "If you do, …" is
+intentionally unread for the same reason. Those cards are listed because the `pay`
+prompt variant now exists to build them, not because they are broken.
+
+#### THE NO-OP BLIND SPOT — the most dangerous thing this found
+
+The audit files a clause as `noop` to mean "parsed, and genuinely does nothing on
+its own" — correct for stealth, mark and the crowd's boo, where the ruling says so
+in as many words. But **a keyword filed as `noop` that actually has rules meaning
+is invisible to every coverage tool**, because `noop` counts as accounted for:
+
+```
+Spears of Surreality   tier = FULL   kw = [Phantasm, Go again]
+Barnacle               tier = FULL   kw = [Watery Grave]
+```
+
+Both report as **fully scripted** with their entire mechanic ignored. Phantasm
+destroys an attack blocked by a 6+ power card; watery grave turns a dead ally
+face-down *specifically so it cannot be replayed infinitely*. Eleven cards are in
+this state across Enigma's and Gravy Bones's identities.
+
+The honest test is the ruling's own words: where a ruling says a keyword "does
+nothing on its own", `noop` is right; where it describes real behaviour, `noop` is
+a mis-filing. **A coverage audit can never surface this. Don't trust `tier: full`
+on a card whose keywords are noops.**
+
 ### The sweep — the axes the stack never looked at
 
 ```
@@ -481,10 +529,122 @@ placeholder.
 
 ---
 
+## The guard rails (v2.21) — `engine/invariants.js`
+
+**A judge that audits the STATE, not the cards.** Every bug that shipped this
+cycle was found by eye or in play, never by a red test — crumbling auras that
+came back, defenders never cleared, a pitch selection carried into the next
+payment. They share a shape: the state reached a condition the rules of Flesh
+and Blood do not permit, and detecting it needed no card text at all. It needed
+somebody to look at the board and say *that card is in two places at once*.
+
+```js
+DawnInvariants.check(game)   // [{code, severity, msg, where}]
+DawnInvariants.errors(game)  // severity "error" only — a rule is broken NOW
+DawnInvariants.assertClean(game, "takeIt")   // throws, for drills
+```
+
+**It is wired into `setG`**, which is the single funnel every state change in
+`Battle` passes through, so every play in a real game is audited. It **never
+throws** in the trainer — a violation must not cost a player their game, so it
+logs, records to `window.__dawnJudge`, and keeps running. Read the console.
+
+What it enforces, with citations where the CR is the source:
+
+| code | what |
+|---|---|
+| `CARD-IN-TWO-ZONES` | the crumbling-aura bug, exactly |
+| `CARD-DUP-IN-ZONE` | same uid twice in one zone |
+| `SIDE-FIELD-ON-GAME` | the v2.18/v2.19 bug class: a per-side field written as a top-level game key, so the side kept its old value |
+| `DEFENDER-REUSED-ON-CHAIN` | CR 7.3.2b — a card already defending cannot be re-declared |
+| `PRIORITY-IN-CLOSED-PHASE` | CR 4.2.1 / 4.4.1 — no priority in the start or end phase |
+| `NEGATIVE-RES` / `NEGATIVE-AP` | CR 4.4.3e — points are lost, never owed |
+| `SIDES-ASYMMETRIC` | a second human cannot occupy a seat of a different shape |
+| `ZONE-NOT-ARRAY`, `ARSENAL-SHAPE`, `NAN-FIELD`, `BAD-PHASE`/`BAD-STEP` | structural |
+
+Verified against real state, not just fixtures: driven to turn 3 in a live game
+it censused 86 actual cards and reported clean, and duplicating one real card
+into the graveyard produced the exact `CARD-IN-TWO-ZONES` report. **When adding
+a zone or a per-side field, check the census still sees it** — a zone the census
+misses is a false negative, which is worse than no guard at all.
+
+---
+
 ## Rules fidelity
 
 This is a rules-accurate sim, judged to pro-tour standards. Combat follows the
 Comprehensive Rules: Attack → Defend → Reaction → Damage → Resolution.
+
+### Four CR violations fixed in v2.21 — read these before touching `priority.js`
+
+Found by grounding `engine/priority.js` against the actual CR
+(`rules.fabtcg.com/en/cr/04-game-structure/` and `/07-combat/`):
+
+1. **No priority in the start or end phase** (CR 4.2.1, 4.4.1). `priority` is
+   now legitimately `null` there — that is a real value meaning "nobody may
+   act", not "unset". `give()` refuses to grant it in a closed phase, and
+   `toPhase("action")` is what hands it over (CR 4.3.3).
+2. **The defend step gives priority to the TURN-PLAYER, not the defender**
+   (CR 7.3). Counter-intuitive but explicit: declaring defenders *is not
+   playing* them (CR 7.3.2) — it is a free, simultaneous game-state action, so
+   it is not a priority action at all. That is exactly why
+   `canDeclareDefenders` is a separate question from `canAct`.
+3. **BOTH players' floating resources fizzle** (CR 4.4.3e: "All players lose
+   action/resource points"). Only the turn player's did. Invisible today (the
+   dummy never floats a resource) and a **real two-player bug**: a Wizard who
+   banks a resource off Spellfire Cloak during *your* turn must lose it at the
+   end of *your* turn.
+4. **The action point is issued at the beginning of the ACTION phase**
+   (CR 4.3.2), not handed out in the end phase. `makeGame` therefore opens with
+   neither seat holding one.
+
+The CR's end-phase procedure is a **fixed order** (CR 4.4.3) worth checking
+`newTurn` against: ally life resets → arsenal → *all* players' pitch to deck
+bottom → untap → *all* players lose points → turn player draws to intellect.
+
+### The first-turn draw (CR 4.4.3f) — fixed in v2.22
+
+> "If it is the first turn of the game, **all other players** draw cards until
+> the number of cards in their hand is equal to their hero's intellect."
+
+On turn one **only**, the non-turn player refills too. This is what pays the
+second player back for blocking the opening swing, and the opponent-first
+opening never did it — so going second cost an extra swing **and** left you
+short-handed for your first action phase. That is a large part of why
+opponent-first played harder than it should; retune with a play session.
+
+The dummy's side of this is over-generous rather than missing: `newTurn`
+refills it to `DUMMY_INT` every turn, which stands in for the turn it never
+takes. When it gets a real action phase (roadmap item 3), that refill must move
+to the end of *its* turn and this rule becomes turn-1-only for both seats.
+
+---
+
+## JUDGE!! — bug reports from the table (v2.22)
+
+A button on the log pane. Every fix this cycle came from playing and noticing,
+so the expensive part was never noticing — it was reconstructing the board
+afterwards from a screenshot. So the report captures the board:
+
+- both sides' zones as `name#uid` lists, with the graveyard's `_gy` stamps
+- every counter and status, `hist`, the chain, stack, pending and prompt
+- the whole feed, plus `invariantsNow` and every violation seen this game
+
+The note can therefore be one line ("this looked wrong"). **Copy** or **Save
+report** → `dawnblade-bug-<hero>-t<turn>-<ts>.json`. The button also shows
+`⚠ N` when the invariant judge has flagged anything, so a broken state is
+visible on the phone rather than only in the console.
+
+Written by `judgeReport()` in `Battle`. **When adding a zone or a per-side
+field, add it there too** — a report that silently omits state is worse than
+no report.
+
+Also confirmed from the CR and not yet modelled: **simultaneous triggers are
+ordered by the first-turn-player** (CR 4.1.8a), and the chain closes
+automatically at the resolution step once all pass with no queued attack
+(CR 7.6/7.7) — the trainer's deliberate ⛓ button is a UI approximation of that.
+"Hit" is defined precisely (CR 7.5.5): if prevention means no damage is dealt,
+**it is no longer a hit**, so on-hit effects must not fire.
 
 Key implemented rules:
 - Defenders are declared free and simultaneously; printed defense required; zero counts.

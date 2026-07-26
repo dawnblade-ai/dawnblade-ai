@@ -41,20 +41,35 @@ const other = i => i === 0 ? 1 : 0;
 
 /* ---- seating --------------------------------------------------------- */
 /* The pregame throw decides this (see rps.js): the winner *chooses* a
-   seat rather than being handed one, so `first` is an argument here. */
+   seat rather than being handed one, so `first` is an argument here.
+
+   Priority starts NULL because a turn opens in the start phase, and
+   CR 4.2.1 is explicit: "Players do not get priority during the Start
+   Phase." It is granted on entering the action phase (CR 4.3.3). */
 function seat(g, first){
-  return {...g, firstPlayer:first, turnPlayer:first, priority:first,
+  return {...g, firstPlayer:first, turnPlayer:first, priority:null,
     passed:[false,false], turn:1, round:1, phase:"start", step:"layer"};
 }
 
 /* ---- priority -------------------------------------------------------- */
-const holder      = g => g.over ? null : g.priority;
-const hasPriority = (g,i) => !g.over && g.priority === i;
+/* NULL is a real value here, not "unset": it means nobody holds priority,
+   which is the correct state during the start and end phases. Layers
+   still resolve there — CR 4.2.2 resolves them "as if all players are
+   passing priority in succession" — but no player may act. */
+const CLOSED_PHASES = ["start","end"];
+const phaseGivesPriority = g => CLOSED_PHASES.indexOf(g.phase) < 0;
+
+const holder      = g => (g.over || g.priority == null) ? null : g.priority;
+const hasPriority = (g,i) => !g.over && g.priority != null && g.priority === i;
 const allPassed   = g => !!(g.passed && g.passed[0] && g.passed[1]);
 
 /* Hand priority to a specific player and clear the pass record — every
-   time something resolves or is added to the chain, the count restarts. */
-function give(g, i){ return {...g, priority:i, passed:[false,false]}; }
+   time something resolves or is added to the chain, the count restarts.
+   Refuses to grant it in a phase that has none (CR 4.2.1 / 4.4.1). */
+function give(g, i){
+  if(!phaseGivesPriority(g)) return {...g, priority:null, passed:[false,false]};
+  return {...g, priority:i, passed:[false,false]};
+}
 
 /* The turn player receives priority again after anything resolves. */
 function reset(g){ return give(g, g.turnPlayer); }
@@ -64,7 +79,7 @@ function reset(g){ return give(g, g.turnPlayer); }
    step (`allPassed` reports it — this function never advances on its own,
    because what "advance" means depends on the step). */
 function pass(g){
-  if(g.over) return g;
+  if(g.over || g.priority == null) return g;   /* nobody to pass */
   const passed = (g.passed||[false,false]).slice();
   passed[g.priority] = true;
   const o = other(g.priority);
@@ -102,8 +117,16 @@ function declareAttack(g, attacker){
   const a = attacker != null ? attacker : g.turnPlayer;
   return {...give({...g, attacker:a, chainOpen:true}, a), step:"attack"};
 }
-/* Defend step: the defender declares, so they are the one being waited on. */
-function toDefend(g){ return {...give(g, defendingPlayer(g)), step:"defend"}; }
+/* Defend step. CR 7.3 is counter-intuitive and worth stating plainly: the
+   defending player declares the defending cards, but the TURN-PLAYER gains
+   priority in this step. Declaring is not playing (CR 7.3.2) — it is a
+   game-state action performed at the start of the step, free and
+   simultaneous — so it is not a priority action at all. That is exactly
+   why `canDeclareDefenders` is a separate question from `canAct`.
+
+   This module used to hand priority to the defender here, which reads
+   naturally ("we're waiting on them to block") but is not the rule. */
+function toDefend(g){ return {...give(g, g.turnPlayer), step:"defend"}; }
 /* Reaction step: the attacking player receives priority first (CR). */
 function toReaction(g){ return {...give(g, attackingPlayer(g)), step:"reaction"}; }
 function toDamage(g){ return {...give(g, attackingPlayer(g)), step:"damage"}; }
@@ -137,25 +160,49 @@ function advance(g){
   }
 }
 
-/* ---- phases and the turn handoff ------------------------------------- */
+/* ---- phases and the turn handoff -------------------------------------
+   Entering the action phase grants the turn-player priority (CR 4.3.3).
+   Entering the start or end phase grants nobody any (CR 4.2.1 / 4.4.1) —
+   `give` enforces that, so this is just "reset, in the new phase". */
 function toPhase(g, phase){
-  return {...reset({...g, phase}), step: phase === "action" ? "layer" : g.step};
+  let n = {...g, phase};
+  /* CR 4.3.2 — "The turn-player has 1 action point" at the beginning of
+     the action phase. This is the only place an action point is issued. */
+  if(phase === "action" && n.sides){
+    const sides = n.sides.slice();
+    sides[n.turnPlayer] = {...sides[n.turnPlayer], ap:1};
+    n = {...n, sides};
+  }
+  return {...reset(n), step: phase === "action" ? "layer" : g.step};
 }
 
-/* End of turn: the turn player's floating resources fizzle (counted, as
-   the trainer already counts them), the seat passes, and the clock ticks.
+/* End of turn: floating resources fizzle, the seat passes, the clock ticks.
    Drawing and arsenal are NOT here — they are zone work, and this module
-   deliberately owns none. */
+   deliberately owns none.
+
+   CR 4.4.3e — "All players lose action/resource points." BOTH seats, not
+   just the turn player. That distinction is invisible in the trainer today
+   (the dummy never holds resources) and becomes a real bug the moment a
+   human sits in seat 1: a Wizard who floats a resource off Spellfire Cloak
+   during YOUR turn must lose it at the end of your turn like anyone else.
+   Both sides' fizzle is counted into `wasted`, which is the sim's score.
+
+   The incoming action point is NOT granted here. CR 4.3.2 gives the
+   turn-player 1 action point at the beginning of the ACTION phase, which
+   is where `toPhase` grants it — a turn opens in the start phase, and a
+   player should not be holding an action point before their action phase. */
 function endTurn(g){
   const i = g.turnPlayer, nxt = other(i);
   const sides = g.sides ? g.sides.slice() : null;
   if(sides){
-    sides[i] = {...sides[i], wasted:(sides[i].wasted||0)+(sides[i].res||0), res:0, ap:0};
-    sides[nxt] = {...sides[nxt], ap:1};
+    for(let s = 0; s < sides.length; s++){
+      sides[s] = {...sides[s],
+        wasted:(sides[s].wasted||0)+(sides[s].res||0), res:0, ap:0};
+    }
   }
   const wrapped = nxt === g.firstPlayer;
   return {...g, ...(sides?{sides}:{}),
-    turnPlayer:nxt, priority:nxt, passed:[false,false],
+    turnPlayer:nxt, priority:null, passed:[false,false],
     turn:(g.turn||1)+1, round:(g.round||1)+(wrapped?1:0),
     phase:"start", step:"layer", attacker:null, chainOpen:false, chain:[]};
 }
