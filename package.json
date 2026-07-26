@@ -6,6 +6,7 @@
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
     "audit": "node tools/audit.js",
-    "stack": "node tools/stack.js"
+    "stack": "node tools/stack.js",
+    "sweep": "node tools/sweep.js"
   }
 }

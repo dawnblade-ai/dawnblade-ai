@@ -246,6 +246,46 @@ test("withSide accepts a function patch", () => {
   assert.equal(n.sides[0].hp, 17);
 });
 
+/* A per-side field set as a TOP-LEVEL KEY on a state spread is the other
+   half of the migration bug, and the read-guards above cannot see it:
+   `{...s, ward, blockH:[]}` writes to the game object, so the side keeps
+   its stale value and the write silently does nothing. That shipped in
+   v2.18 for ward/hist/blockH/blockG/blockRx and paySel — five real bugs —
+   because the guards only checked `X.field` reads. This scan is brace-aware
+   so it sees keys past a nested literal like `pending:{card,from,idx}`. */
+test("no per-side field is written as a top-level key on a state spread", () => {
+  const src = html();
+  const from = src.indexOf("function Battle(");
+  const body = src.slice(from);
+  const lineOffset = src.slice(0, from).split("\n").length;
+  const skip = new Set(S.META);
+  const fields = new Set(S.SIDE_FIELDS.filter(f => !skip.has(f)));
+  const hits = [];
+  const spread = /\{\s*\.\.\.\s*(?:s|n|g|clashState|st|fresh)\b/g;
+  let m;
+  while((m = spread.exec(body))){
+    let i = body.lastIndexOf("{", m.index + 2), d = 0, q = null, expect = false;
+    for(; i < body.length; i++){
+      const c = body[i];
+      if(q){ if(c === "\\"){ i++; } else if(c === q){ q = null; } continue; }
+      if(c === '"' || c === "'" || c === "`"){ q = c; continue; }
+      if(c === "{" || c === "[" || c === "("){ d++; if(d === 1) expect = true; continue; }
+      if(c === "}" || c === "]" || c === ")"){ d--; if(d === 0) break; continue; }
+      if(c === "," && d === 1){ expect = true; continue; }
+      if(expect && /[A-Za-z_$]/.test(c)){
+        let j = i; while(j < body.length && /[\w$]/.test(body[j])) j++;
+        let k = j; while(k < body.length && /\s/.test(body[k])) k++;
+        const word = body.slice(i, j);
+        if(body[k] === ":" && fields.has(word))
+          hits.push(`${body.slice(0,i).split("\n").length + lineOffset - 1}: ${word}`);
+        expect = false; i = j - 1;
+      }
+    }
+  }
+  assert.deepEqual([...new Set(hits)], [],
+    "these write a side field onto the game object — use youMut()/oppMut()");
+});
+
 /* THE PROGRESS METER. Pinned deliberately: moving these numbers should be
    a visible, intentional edit to this drill, not a quiet drift.
 

@@ -26,28 +26,39 @@ still ships as-is.
   priority passing, seating and the turn handoff. Owns no zones and reads no
   card text. Browser: `window.DawnPriority`.
 - **rps.js** — the pregame throw. The winner *chooses* the seating rather than
-  being handed it. Mirrored into `index.html` (the pregame UI calls it), so it
-  is under the lockstep rule. Browser: `window.DawnRPS`.
+  being handed it. Driven by the pregame UI. Browser: `window.DawnRPS`.
 - **prompts.js** — the choice machinery a quarter of the recorded rulings were
   waiting on: `opt`, `pick`, `modal`, `pay` (pay-or-decline) and `reveal`, all
   driven by spec objects rather than a branch per card. Prompts are addressed to
   a **side**, so a ruling can ask the opponent. Runs no effects and touches no
   resources — `applyPrompt` returns `{game, msgs, ops, pay}` and the trainer
   does the rest, which is what keeps an unpaid optional cost from firing its
-  payload. Mirrored into `index.html`. Browser: `window.DawnPrompts`.
+  payload. Rendered by the trainer. Browser: `window.DawnPrompts`.
 
-`sides.js` and `priority.js` are engine-only so far — the trainer still runs on
-the flat state and gates windows with `mode`/`bphase`. They are the target
-shape, drilled independently; adoption is roadmap item 1.
+`priority.js` is the one module the trainer does not call yet — it still gates
+windows with `mode`/`bphase` and the player holds priority by construction. It
+is the target shape, drilled independently; adoption is roadmap item 1, step 4.
 
 Not yet here: `judge.js` (`runOps` / `execute` / `resolveStack` still live
 inside the trainer's Battle component).
 
-## The lockstep rule
+## The no-mirror rule (v2.20)
 
-Until the trainer imports these files, every shared function exists in **both**
-`index.html` and `engine/`. `test/sync.test.js` asserts the bodies are textually
-identical — **edit one side, mirror the other, run the tests.**
+**`engine/` is the only copy. Edit here, never in `index.html`.**
+
+Until v2.20 every shared function existed twice — here and hand-copied into
+`index.html` — kept identical by a drift test. `index.html` now loads these
+files with plain `<script src>` tags (no build step; still fine over
+`file://`) and a small bridge lifts each export into the bare name the
+trainer calls. 51 duplicated definitions were deleted, ~20% of the file.
+
+`test/sync.test.js` now guards the inverse: every module is loaded,
+`parser.js` loads before its dependents, every bare-called export is
+bridged, and **no export is re-declared inside `index.html`** (which would
+silently shadow the module). Adding a new export? Add it to the bridge too.
+
+Three names collide with trainer-local ones on purpose — `endTurn`, `other`,
+`you` — and the drill pins that set. Rename when `priority.js` is wired in.
 
 ## Tests
 
@@ -55,8 +66,11 @@ identical — **edit one side, mirror the other, run the tests.**
 npm test        # node --test "test/*.test.js"
 ```
 
-252 drills: the historical ad-hoc node drills formalized (weaponCost,
+220 drills: the historical ad-hoc node drills formalized (weaponCost,
 classifyClause conditionals, the {p} pump parser), the Kayo printed-vs-granted
 keyword regression, the fxParse memo gotcha (fixture names must be unique),
 equipment wear, deck integrity (15 decks × 55 = deck + gear), bracket balance
-of both babel blocks, and the engine↔trainer sync guard.
+of both babel blocks, and the no-mirror guard.
+
+(It was 253 before v2.20: 48 body-comparison drills retired with the mirrors,
+15 sharper structural ones added in their place.)

@@ -1128,5 +1128,95 @@
    "Jack Be Quick (1)"
   ],
   "ruling": "CONDITIONAL EXTRA ABILITY - CHECK GRAVEYARD FOR 'NIMBLISM' - IF YES - POPUP : SHOW ALL NIMBLISM IN GRAVEYARD - PLAYER SELECTS 1 - MOVE IT TO BANISH ZONE - ADD 1 ATTACK POWER - ADD 'GO AGAIN' \n\nON HIT EFFECT - CHAOTIC! - CHECK OPPONENTS BOARD FOR 'ALLY' IF YES - POP UP : SELECT ALLY FROM OPPONENT'S BOARD - UNTAP ALLY (IF TAPPED) - MOVE ALLY FROM OPPONENT'S BOARD TO YOUR BOARD - ADD MACRO : RETURN THE ALLY TO OPPONENT AT END OF ACTION PHASE."
+ },
+ "card-path-of-same-ends-1": {
+  "at": "2026-07-25",
+  "mechanic": "Path of Same Ends · pitch 1",
+  "status": "one-off",
+  "cards": [
+   "Path of Same Ends (1)"
+  ],
+  "ruling": "EXTRA EFFECT ON ATTACK - DEAL 1 ARCANE DAMAGE TO OPPONENT - CONDITIONAL ADDITIONAL EFFECT - CHECK LOG IF ARCANE DAMAGE FROM PATH OF SAME ENDS WAS PREVENTED - IF NO - ADD 'GO AGAIN'"
+ },
+ "fusion": {
+  "at": "2026-07-25",
+  "mechanic": "fusion",
+  "status": "unmodelled",
+  "cards": [
+   "Weave Lightning (1)"
+  ],
+  "ruling": "CREATES MACRO - TRIGGER - CHECK PLAYED ATTACK ACTIONS FOR 'LIGHTNING' OR 'ELEMENTAL' - IF YES - ADD 3 ATTACK POWER - CONDITIONAL EXTRA EFFECT WHEN TRIGGERED - CHECK ATTACKING CARD FOR 'FUSION' AND CHECK LOG FOR WHETHER PLAYER REVEALED A CARD - IF YES - ADD 'GO AGAIN' TO THE ATTACK - ONCE TRIGGERED REMOVE MACRO AFTER"
+ },
+ "card-carrion-crown-0": {
+  "at": "2026-07-25",
+  "mechanic": "Carrion Crown · pitch 0",
+  "status": "one-off",
+  "cards": [
+   "Carrion Crown (0)"
+  ],
+  "ruling": "CONDITIONAL ACTIVATION 'ACTION' - CHECK HAND FOR ALLY - IF YES - CAN BE ACTIVATED - DESTROYS SELF AS COST - PLAYER GETS POPUP : SELECT ALLY CARD FROM HAND - PLAYER DRAWS CARD. GO AGAIN."
+ },
+ "card-scuttle-toes-0": {
+  "at": "2026-07-25",
+  "mechanic": "Scuttle Toes · pitch 0",
+  "status": "one-off",
+  "cards": [
+   "Scuttle Toes (0)"
+  ],
+  "ruling": "CONDITIONALLY ACTIVE INSTANT - CHECK IF ALLY IN PLAY - IF YES - IS ACTIVE COST 2 RESOURCES - DESTROYS SELF AS COST - POPUP: SELECT ALLY - UNTAP THE SELECTED ALLY - ADD MACRO - DESTROY THE ALLY AT END OF TURN"
+ },
+ "card-washed-up-wave-0": {
+  "at": "2026-07-25",
+  "mechanic": "Washed Up Wave · pitch 0",
+  "status": "one-off",
+  "cards": [
+   "Washed Up Wave (0)"
+  ],
+  "ruling": "EXTRA ABILITY ON DEFENSE - POPUP: PLAYER SELECTS BETWEEN TOP CARD OF DECK (FACEDOWN) AND A CARD IN THEIR HAND - CHECK IF THE DISCARDED CARD HAS 'WATERY GRAVE' - IF YES - ADD 2 DEFENSE"
+ },
+ "card-saltwater-swell-1": {
+  "at": "2026-07-25",
+  "mechanic": "Saltwater Swell · pitch 1",
+  "status": "one-off",
+  "cards": [
+   "Saltwater Swell (1)"
+  ],
+  "ruling": "EXTRA ABILITY ON ATTACK - POPUP FOR BOTH PLAYER AND OPPONENT : SHOW TOP CARD OF PLAYERS DECK - CHECK IF IT IS BLUE - IF YES MOVE IT TO THE PITCH ZONE - ADD 3 RESOURCES TO PLAYER -"
+ },
+ "card-jittery-bones-3": {
+  "at": "2026-07-25",
+  "mechanic": "Jittery Bones · pitch 3",
+  "status": "one-off",
+  "cards": [
+   "Jittery Bones (3)"
+  ],
+  "ruling": "EXTRA ABILITY ON ATTACK - POPUP: PLAYER SELECTS BETWEEN TOP CARD OF DECK (FACEDOWN) AND A CARD IN THEIR HAND - CHECK IF THE DISCARDED CARD HAS 'WATERY GRAVE' - IF YES - ADD GO AGAIN"
+ },
+ "card-saltwater-swell-3": {
+  "at": "2026-07-25",
+  "mechanic": "Saltwater Swell · pitch 3",
+  "status": "one-off",
+  "cards": [
+   "Saltwater Swell (3)"
+  ],
+  "ruling": "EXTRA ABILITY ON ATTACK - POPUP FOR BOTH PLAYER AND OPPONENT : SHOW TOP CARD OF PLAYERS DECK - CHECK IF IT IS BLUE - IF YES MOVE IT TO THE PITCH ZONE - ADD 3 RESOURCES TO PLAYER -"
+ },
+ "card-throw-caution-to-the-wind-3": {
+  "at": "2026-07-25",
+  "mechanic": "Throw Caution to the Wind · pitch 3",
+  "status": "one-off",
+  "cards": [
+   "Throw Caution to the Wind (3)"
+  ],
+  "ruling": "POPUP TO PLAYER & OPPONENT : REVEAL TOP CARD OF PLAYER'S DECK - CHECK PITCH VALUE OF CARD - ADD 1/2/3 DAMAGE PREVENTION (CLEARS AT END OF TURN)"
+ },
+ "card-line-crossers-0": {
+  "at": "2026-07-25",
+  "mechanic": "Line Crossers · pitch 0",
+  "status": "one-off",
+  "cards": [
+   "Line Crossers (0)"
+  ],
+  "ruling": "EXTRA EFFECT - CHAOS! - CARDS THAT COMPARE LIFE NEED TO BE FLAGGED TO CHECK IF THIS IS IN PLAY - IF IT IS - AND THE RESULTING COMPARISON IS A TIE - THE ABILITY WILL STILL TRIGGER AS THOUGH THE REQUIRED OUTCOME HAD BEEN MET"
  }
 }

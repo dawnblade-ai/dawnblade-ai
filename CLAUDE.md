@@ -5,23 +5,43 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.18
+**Current version:** v2.19
 
 ---
 
 ## The one hard constraint
 
-**Everything ships as a single `index.html`.** No build step, no bundler, no module
-imports, no external project files. It is served directly by GitHub Pages and opened
-on an iPhone. Do not split it into modules, do not add a package.json build, do not
-introduce a framework CLI. React and Babel come from CDN `<script>` tags.
+**No build step. Ever.** No bundler, no ES modules, no framework CLI, no
+`package.json` build. The site is served directly by GitHub Pages and opened on an
+iPhone; React and Babel come from CDN `<script>` tags. Everything must run exactly
+as authored, including from `file://`.
+
+**What ships is `index.html` + `engine/*.js`** (changed in v2.20 — before that it
+was literally one file). The engine modules are plain UMD scripts loaded with
+ordinary `<script src>` tags, which is *not* a build step and costs nothing at
+runtime. What it buys is that a shared function exists **once**. Until v2.20 every
+shared function was hand-copied into `index.html` and a test kept the two copies
+textually identical; that guard caught real drift (`boardRed`) but the duplication
+was a permanent tax on every engine change, and it silently missed anything nobody
+remembered to list (`makeSide`, `freshHist`).
+
+Load order (`parser.js` must precede `advisor` / `cards` / `prompts`, which take it
+as their factory argument), then a small plain-JS **bridge** lifts the engine's
+exports into the bare names the babel blocks call. `test/sync.test.js` guards all
+of this — see "The no-mirror rule" below.
 
 File structure inside `index.html`:
 - one `<style>` block (single `</style>` — CSS is appended before it)
-- `script0` (`text/babel`) — loader, card resolver, UI shell
-- `script1` (`text/babel`) — engine: FX parser, advisor, Ticker, ChainLink, CardFrame,
-  Battle, WinPanel, Loadout, App
 - a plain data `<script>` — CDN paths, `APP_VER`, `DATA_VER`, `HEROES`, `DECKS`, etc.
+- the `engine/*.js` `<script src>` tags + the bridge (plain JS, **not** `text/babel`,
+  so there is no ambiguity about scope — it declares real globals with `var`)
+- `script0` (`text/babel`) — loader, card resolver, UI shell
+- `script1` (`text/babel`) — trainer: Ticker, ChainLink, CardFrame, Battle, WinPanel,
+  Loadout, Pregame, App
+
+Both babel blocks are compiled as *scripts*, not modules, so their top-level `const`
+becomes a global `var` — which is how `script1` sees names declared in `script0` and
+in the bridge. Do not "fix" this into modules; it is load-bearing.
 
 ---
 
@@ -57,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 252 drills:
+This is `node --test "test/*.test.js"` — currently 220 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the three
    regexes with apostrophes are pre-neutralized inside the checker.
@@ -67,12 +87,12 @@ This is `node --test "test/*.test.js"` — currently 252 drills:
    `advisor.test.js`): `weaponCost`, `classifyClause` conditionals, the `{p}`
    pump parser, the Kayo printed-vs-granted regression, equipment wear, the
    fxParse memo gotcha.
-4. **Sync guard** (`test/sync.test.js`): the parser/game/advisor/cards logic
-   now also lives in `engine/*.js` (Phase 1 extraction), textually identical
-   to the copies inside `index.html`. **Edit one side, mirror the other** —
-   this test fails on drift. (index.html is still what ships; engine/ is not
-   yet imported by it.) `engine/rps.js` is mirrored too, because the pregame
-   UI calls it; `sides.js` and `priority.js` are engine-only so far.
+4. **No-mirror guard** (`test/sync.test.js`): every engine module is loaded,
+   `parser.js` loads before its dependents, the bridge lifts every name the
+   trainer calls bare, and — the real check — **no engine export is re-declared
+   inside `index.html`**, which would silently shadow the module. It also pins
+   the three engine/trainer **name collisions** (`endTurn`, `other`, `you`);
+   see "The no-mirror rule" below.
 5. **Multiplayer groundwork** (`test/sides.test.js`, `test/priority.test.js`,
    `test/rps.test.js`) — see "The two-player migration" below.
 6. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
@@ -118,6 +138,39 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### The sweep — the axes the stack never looked at
+
+```
+npm run sweep            # ranked summary + SWEEP.md + tools/sweep.html
+npm run sweep --html     # regenerate the station only
+```
+
+**The card stack is empty as of 2026-07-26** — 119 rulings, 0 open. That does
+not mean the pool is understood, because `stack.js` only ever charged *pool
+cards*. `tools/sweep.js` covers the three axes it never touched:
+
+1. **Hero abilities** — 13 of 15 heroes have unread ability clauses, **32 in
+   total**. The stack never charged a hero, so none of this was ever asked.
+2. **Tokens** — of 17, five have unread text and are barely named in the
+   trainer (`Confidence`, `Fealty`, `Flurry`, `Graphene Chelicera`, `Courage`).
+   Five more are unread but *named* often (`Runechant`, `Frostbite`,
+   `Bloodrot Pox`, `Frailty`, `Seismic Surge`).
+3. **Ruled but not built** — 147 cards carry a ruling and still do not resolve
+   in full (35 read nothing, 112 partial). Understood ≠ built, and that
+   distance is invisible in the stack once every card is answered.
+
+**The mention count is a signal, not a verdict.** A high count is *consistent*
+with dedicated handling — runechant and frostbite really do have counters — but
+it is not proof: "Seismic Surge" appears only inside a refusal message. Only
+`zero mentions + unread text` reliably means absent. The tool reports the
+number and lets you judge; it must not assert design intent from a grep.
+
+Notes autosave to localStorage and export to **`tools/sweep-notes.json`** —
+deliberately a *different file* from `rulings.json`, because a note here is an
+engineering observation rather than a rules ruling, and nothing the sweep does
+can put the 119 rulings at risk. Its export merges from the whole prior file,
+same discipline as the review station.
 
 **The export can no longer lose a ruling.** It used to build the download from
 the OPEN entries only — answered slugs aren't in that list, so a re-export dropped
@@ -268,11 +321,42 @@ runechants and the board that discount a card belong to whoever is *playing* it.
 Call them `effCost(card, you(s))` — passing the game would silently read side 0
 for both players.
 
-This one bit already: `boardRed` was not in the sync guard's SHARED list and
+This one bit already: `boardRed` was not in the old sync guard's SHARED list and
 **drifted silently** during the migration — `index.html` read `sides[0].board`
-while `engine/parser.js` read the raw object, and no drill noticed. It is in the
-list now. **Anything the trainer shares with `engine/` must be in that list**, or
-the lockstep rule is decorative.
+while `engine/parser.js` read the raw object, and no drill noticed. That whole
+failure mode was retired in v2.20; there is only one `boardRed` now.
+
+### The no-mirror rule (v2.20) — replaces the lockstep rule
+
+**There is one copy of every shared function, and it lives in `engine/`.** If you
+need to change the parser, the advisor, the prompt machinery or the card resolver,
+**edit `engine/*.js` and only that.** `index.html` no longer contains any of it.
+
+Historic note, because the old rule is quoted in several places: until v2.20 each
+shared function existed twice — once in `engine/`, once copy-pasted into
+`index.html` — and `test/sync.test.js` asserted the two bodies were textually
+identical ("edit one side, mirror the other"). **That rule is dead.** It did real
+work, but it only covered names someone remembered to list, which is how `makeSide`
+and `freshHist` ended up mirrored and unguarded, and it doubled the cost of every
+engine change. v2.20 deleted 51 duplicated definitions (−55KB, ~20% of the file).
+
+What replaces it, all enforced by `test/sync.test.js`:
+
+- every `engine/*.js` module is loaded by a `<script src>` tag, `parser.js` first;
+- the **bridge** (plain JS, right after the data script) lifts each engine export
+  into the bare name the babel blocks call — add a new export there or the trainer
+  gets a `ReferenceError` no other drill would catch;
+- **no engine export may be re-declared in `index.html`.** A stray
+  `const fxParse = …` in the trainer would shadow the module and put us back to two
+  copies with nothing watching them. This is the guard that matters.
+
+**Three names collide on purpose**, and the drill pins them so a fourth cannot
+appear unnoticed: the trainer's `endTurn` (a `setG` reducer) vs `priority.endTurn`
+(pure seat handoff), the trainer's `other` (off-pitch cards in `DeckView`) vs
+`priority.other` (the other seat), and `you`. They never meet today because the
+trainer calls its own bare and would reach the engine's as `DawnPriority.endTurn`.
+**Resolve them by renaming when `priority.js` is wired in** — that wiring replaces
+exactly those functions, so a silent bridge there would be a genuine bug.
 
 ### The access rule — `you()`/`opp()` read, `youMut()`/`oppMut()` write
 
@@ -293,6 +377,19 @@ The Mut helpers return the fresh side, so
 of a function and every later write in it is safe — `L()` spreads only the top
 level, so it carries the fresh array forward untouched. Calling a Mut twice is
 harmless, just a wasted copy.
+
+**A side field written as a top-level KEY is the other half of this bug, and
+it is invisible to a read-guard.** `{...s, ward, blockH:[]}` writes to the game
+object; the side keeps its old value and the write silently does nothing. Five
+shipped that way in v2.18 — `ward`, `hist`, `blockH`, `blockG`, `blockRx` in
+`takeIt` (so **stale defenders were never cleared after a block**) and `paySel`
+in `tryPlay` (so a new payment inherited the previous pitch selection). Both
+were found in v2.19 by reading the code, not by a drill.
+
+There is a drill for it now, and it must stay **brace-aware**: a naive regex
+cannot see a key that sits past a nested literal like `pending:{card,from,idx}`,
+which is exactly how `paySel` hid. Write to a side only through
+`youMut()` / `oppMut()`.
 
 **When migrating more fields, whitelist the holders — never blacklist.** The
 holders that carry state are `s`, `n`, `g`, `clashState`, `st`. A blacklist
@@ -350,6 +447,37 @@ When making many edits in one pass, apply them **resiliently**: record misses to
 list and continue, then write the file and print the misses. Never abort the whole
 batch on one bad anchor — that discards all the good edits. (With Claude Code editing
 files directly this matters less, but the principle stands for scripted passes.)
+
+---
+
+## The two-tap card interaction (v2.19)
+
+A card in the rail is 80px wide — unreadable on the phone this is played on.
+So **every tappable card peeks first and commits second**:
+
+1. first tap → the card renders large above the action bar, with its name and
+   a verb telling you exactly what the second tap will do;
+2. second tap on the *same* card → commits.
+
+One helper, `tapTwice(card, verb, action)`, serves all of it, and `peekables()`
+is the lookup the preview uses — it must span **every zone a tap can originate
+in** (hand, arsenal, gear, powCards, board) or the preview silently fails to
+render while the tap still arms. The verb is captured at tap time and the peek
+is dropped on any `mode` / `bphase` / `turn` change, so it can never go stale.
+
+Verbs in use: *play · pitch · unpitch · defend · react · set in arsenal ·
+swing · activate · use the hero power · play from the graveyard · play from
+banish · full card*. Peeking is allowed on cards you cannot legally play —
+looking is free — the second tap simply does nothing.
+
+Two deliberate exceptions: with **inspect** on, one tap opens the full modal
+(that is what inspect is for); and the **opponent's** gear opens its card on a
+single tap, because it is not actionable and there is nothing to commit to.
+
+An **equipment ability peeks as its `powCard`, not the piece** — the ability's
+text is what you are deciding about. Those powCards also inherit the parent
+piece's art (`img`/`dbImg`), so the rail shows iron rather than a text
+placeholder.
 
 ---
 
@@ -515,9 +643,20 @@ it carded effects only once the engine can actually read them.
 
 ## Roadmap (highest leverage first)
 
+> **See `ROADMAP-MULTIPLAYER.md`** — as of v2.20 the road to online play is
+> planned there in full (the actor/perspective split, the seeded RNG, the pure
+> reducer, and the three phases: hotseat → P2P friend play → hosted ladder).
+> The items below remain accurate; that document sequences them and explains
+> *why* this order. **Item 1's remaining step is not just wiring `priority.js`
+> — it is that `you()` means `sides[0]`, not "the acting player", at 458 call
+> sites.** Read that section before starting any two-player work.
+
 **Decision 2026-07-25: no AI opponent.** The goal is real multiplayer — two humans,
 each piloting a deck. The dummy stays as the solo trainer and as the proving ground
 for symmetric state; do not build a deck-piloting AI.
+
+**Decision 2026-07-26: multiplayer is phased** — serverless friend-vs-friend
+(WebRTC room codes, no backend) first, then a hosted backend for the ELO ladder.
 
 1. **Make the state symmetric.** *Groundwork landed in v2.14 — see "The two-player
    migration" above.* `engine/sides.js` defines the shape, `toSides`/`fromSides`
