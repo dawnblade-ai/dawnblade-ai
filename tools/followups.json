@@ -1,0 +1,3 @@
+{
+  "_README": "Follow-up questions on entries that already have a ruling. A slug listed here comes BACK into the stack (flagged 'needs detail') with this exact question replacing the generic prompt, so the review tool asks the narrow thing instead of the broad one. Delete a slug once its answer is in the ruling. Written by Claude after trying to build from the ruling and hitting a specific wall."
+}
