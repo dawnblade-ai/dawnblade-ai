@@ -386,27 +386,44 @@ const FXMEMO = new Map();
    Reads printed FIELDS only (type line, pitch, cost, name), never rules
    text, exactly as promptFilter does. */
 function optFilter(phrase){
-  const p = String(phrase||"").toLowerCase().trim().replace(/^(?:a|an|another|one)\s+/, "");
-  if(!p) return null;
+  let rest = String(phrase||"").trim();
+  if(!rest) return null;
+  /* "ANOTHER aura" excludes the card itself, and a prompts.js filter reads
+     printed fields — it cannot express "not this one". Refuse rather than
+     flatten it into "an aura", which would offer an illegal choice. */
+  if(/^another\s+/i.test(rest)) return null;
+  rest = rest.replace(/^(?:a|an|one)\s+/i, "");
+
   const f = {};
-  const cm = p.match(/\bwith cost (\d+) or less\b/);
-  if(cm) f.costLe = +cm[1];
-  const base = p.replace(/\bwith cost \d+ or less\b/, "").trim();
-  if(/\baura\b/.test(base))                    { f.tt = "aura";  return f; }
-  if(/\battack action card\b/.test(base))      { f.type = "attack"; return f; }
-  if(/^yellow cards?$/.test(base))             { f.pitch = 2; return f; }
-  if(/^blue cards?$/.test(base))               { f.pitch = 3; return f; }
-  if(/^red cards?$/.test(base))                { f.pitch = 1; return f; }
-  /* A NAMED card — "a Nimblism", "a Phoenix Flame". Take the name off the
-     original (case-preserving) phrase, and only when it actually looks
-     like a proper noun, so "a card" never becomes a name filter. */
-  const raw = String(phrase||"").trim().replace(/^(?:A|An|Another|One)\s+/i, "")
-    .replace(/\s+with cost \d+ or less$/i, "").trim();
-  if(/^[A-Z][A-Za-z'\- ]*$/.test(raw) && !/^(Card|Cards)$/i.test(raw)){
-    f.name = "^" + raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
+  /* Consume the qualifiers we can actually express, removing each from the
+     phrase as we go. */
+  const cm = rest.match(/\s*\bwith cost (\d+) or less\b/i);
+  if(cm){ f.costLe = +cm[1]; rest = (rest.slice(0, cm.index) + " " + rest.slice(cm.index + cm[0].length)).trim(); }
+
+  /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of
+     these EXACTLY — not as a substring.
+
+     This is the difference between reading a card and guessing at it.
+     Mounting Anger says "an attack action card from your hand with cost
+     LESS THAN THE NUMBER OF DRACONIC CHAIN LINKS YOU CONTROL": a loose
+     substring test saw "attack action card", returned {type:"attack"} and
+     silently dropped the restriction — which would let a player banish any
+     attack card at all and make the card strictly better than printed.
+     A dynamic limit like that is genuinely unreadable here, so the honest
+     answer is null and the card stays unclaimed. */
+  const low = rest.toLowerCase();
+  if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
+  if(/^attack action cards?$/.test(low))  { f.type = "attack"; return f; }
+  if(/^yellow cards?$/.test(low))         { f.pitch = 2;       return f; }
+  if(/^blue cards?$/.test(low))           { f.pitch = 3;       return f; }
+  if(/^red cards?$/.test(low))            { f.pitch = 1;       return f; }
+  /* A NAMED card — "a Nimblism", "a Phoenix Flame". Only when what remains
+     is a bare proper noun, so "a card" never becomes a name filter. */
+  if(/^[A-Z][A-Za-z'\-]*(?: [A-Z][A-Za-z'\-]*)*$/.test(rest) && !/^cards?$/i.test(rest)){
+    f.name = "^" + rest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
     return f;
   }
-  return Object.keys(f).length ? f : null;
+  return null;
 }
 
 function fxParse(card){

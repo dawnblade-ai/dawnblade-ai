@@ -712,3 +712,71 @@ test("optFilter — reads printed fields only, and refuses the rest", () => {
   assert.equal(P.optFilter("a card"), null, "'a card' is not a filter — it would match everything");
   assert.equal(P.optFilter(""), null);
 });
+
+/* ===================================================================
+   DECEPTIVELY-UNIQUE LOOK-ALIKES (v2.29)
+
+   These cards read almost identically to ones the parser handles, and
+   every one of them differs in a way that changes the game. Flattening
+   them into the shape they resemble is how a sim quietly starts allowing
+   plays the printed card does not.
+
+   optFilter must consume the WHOLE subject phrase or refuse: a loose
+   substring test is what let Mounting Anger through with its cost
+   restriction dropped, making it strictly better than printed.
+   =================================================================== */
+
+test("look-alike — a DYNAMIC cost limit is refused, not flattened", () => {
+  /* Mounting Anger / Rising Resentment: "with cost less than the number of
+     Draconic chain links you control". A substring test saw "attack action
+     card" and returned {type:"attack"}, silently dropping the limit — so
+     any attack card in hand became a legal banish. */
+  assert.equal(
+    P.optFilter("an attack action card from your hand with cost less than the number of Draconic chain links you control"),
+    null, "an inexpressible limit must leave the card unclaimed");
+  assert.equal(
+    P.optFilter("an attack action card with cost less than the number of Draconic chain links you control"),
+    null);
+  /* the readable sibling still works, so the refusal is specific */
+  assert.deepEqual(P.optFilter("an attack action card with cost 2 or less"),
+    {costLe:2, type:"attack"});
+});
+
+test("look-alike — 'ANOTHER aura' is an exclusion and is refused", () => {
+  /* Sigil of Silphidae says "banish ANOTHER aura", which excludes itself.
+     A prompts filter reads printed fields and cannot say "not this one",
+     so offering it as "an aura" would offer an illegal choice. */
+  assert.equal(P.optFilter("another aura"), null);
+  assert.deepEqual(P.optFilter("an aura"), {tt:"aura"}, "the plain form is still read");
+});
+
+test("look-alike — a RULES-TEXT qualifier is refused", () => {
+  /* Crash and Bash: "a card with crush from your hand". `crush` is a
+     keyword in the card's text, not a printed field, and promptFilter
+     reads fields only. */
+  assert.equal(P.optFilter("a card with crush"), null);
+});
+
+test("look-alike — Mounting Anger and Rising Resentment are BOTH unclaimed", () => {
+  const MA = P.fxParse({name:"Mounting Anger", pitch:1, tt:"Draconic Ninja Action - Attack",
+    tx:"When Mounting Anger hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it gains +1{p} and you may play it this turn.\nGo again", kw:["Go again"]});
+  const RR = P.fxParse({name:"Rising Resentment", pitch:1, tt:"Draconic Ninja Action - Attack",
+    tx:"When Rising Resentment hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it costs {r} less to play and you may play it this turn.\nGo again", kw:["Go again"]});
+  assert.equal(MA.optCost, undefined,
+    "Mounting Anger's limit is dynamic — claiming it allowed an illegal banish");
+  assert.equal(RR.optCost, undefined, "and its look-alike must be refused for the same reason");
+});
+
+test("look-alike — the payload's SUBJECT differs between siblings", () => {
+  /* Even had the filter been readable, these two riders are NOT the same
+     effect and must never share one reading:
+       Mounting Anger    — "IT gains +1{p}"        (the banished card)
+       Rising Resentment — "IT costs {r} less"     (a cost reduction)
+     and in both, "it" is the BANISHED card, not the attacker — so the
+     existing `self` op (which buffs the card being played) is the wrong
+     op for either. Pinned so a future wiring pass cannot assume it. */
+  const ma = P.classifyClause("it gains +1{p} and you may play it this turn");
+  const rr = P.classifyClause("it costs {r} less to play and you may play it this turn");
+  assert.notDeepEqual(ma && ma.ops, rr && rr.ops,
+    "two different riders must not resolve to the same ops");
+});

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.28
+**Current version:** v2.29
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 355 drills:
+This is `node --test "test/*.test.js"` — currently 360 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -403,6 +403,33 @@ fx.optCost = {trigger, kind:"banish"|"discard", zone, filter, ops}
 **It returns `null` on anything it cannot read honestly, and the card is then
 left unclaimed rather than guessed** — the golden rule applied to a cost. A
 wrong guess would let a player pay the wrong thing, or pay nothing and collect.
+
+**THE WHOLE SUBJECT PHRASE MUST BE CONSUMED, or it refuses (v2.29).** This is
+the difference between reading a card and guessing at it, and getting it wrong
+shipped a real bug:
+
+> **Mounting Anger** — "banish an attack action card from your hand **with cost
+> less than the number of Draconic chain links you control**"
+
+A loose substring test saw `attack action card`, returned `{type:"attack"}` and
+**silently dropped the limit**, so any attack card in hand became a legal
+banish — strictly better than printed, the sev-3 "illegal play allowed"
+category. Its look-alike Rising Resentment escaped only by accident, because
+its *payload* was unreadable rather than its filter.
+
+Three shapes now refuse, each pinned by a drill:
+
+| phrase | why it is refused |
+|---|---|
+| `with cost less than the number of …` | a **dynamic** limit; no printed field expresses it |
+| `another aura` | an **exclusion** — a field filter cannot say "not this one" |
+| `a card with crush` | a **rules-text** qualifier; `promptFilter` reads fields only |
+
+**Look-alike cards are the hazard here, not exotic ones.** Mounting Anger and
+Rising Resentment share a cost clause verbatim and differ in the rider
+(`it gains +1{p}` vs `it costs {r} less`) — and in both, "it" is the *banished*
+card, not the attacker, so the existing `self` op is the wrong op for either.
+Pinned so a future wiring pass cannot assume they are the same card.
 
 **The printed zone wins, and it is not always at the end.** "an attack action
 card **from your hand** with cost 2 or less" puts the zone mid-phrase; an
