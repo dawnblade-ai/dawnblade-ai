@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.19
+**Current version:** v2.24
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 220 drills:
+This is `node --test "test/*.test.js"` — currently 298 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the three
    regexes with apostrophes are pre-neutralized inside the checker.
@@ -91,10 +91,13 @@ This is `node --test "test/*.test.js"` — currently 220 drills:
    `parser.js` loads before its dependents, the bridge lifts every name the
    trainer calls bare, and — the real check — **no engine export is re-declared
    inside `index.html`**, which would silently shadow the module. It also pins
-   the three engine/trainer **name collisions** (`endTurn`, `other`, `you`);
-   see "The no-mirror rule" below.
+   the engine/trainer **name collisions** (`endTurn`, `other` — `you` was
+   retired in v2.24); see "The no-mirror rule" below.
 5. **Multiplayer groundwork** (`test/sides.test.js`, `test/priority.test.js`,
    `test/rps.test.js`) — see "The two-player migration" below.
+   **`test/actor.test.js`** is the actor/perspective ledger: it fails if a
+   MIGRATED rules function still reaches for `you(`/`opp(`, and if a PENDING
+   one has quietly stopped — see "ACTOR vs PERSPECTIVE" below.
 6. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -331,7 +334,7 @@ and a bridge to migrate *across*, so it can proceed a function at a time
 instead of as one big-bang rewrite.
 
 **`engine/sides.js` — the shape a second human can occupy.**
-`makeSide()` defines the 41 fields a player needs in order to *be* a player;
+`makeSide()` defines the 47 fields a player needs in order to *be* a player;
 both seats get all of them, so giving the dummy an action phase becomes
 filling in blanks rather than inventing plumbing. `makeGame()` wraps
 `sides[0]` (you) and `sides[1]` (opponent) with the genuinely shared state.
@@ -346,14 +349,14 @@ while the rest of `Battle` keeps reading the flat state.
 both and `test/sides.test.js` pins both. Moving either should be a **deliberate
 edit to that drill**, the way the coverage baseline works.
 
-**DONE as of v2.18.** Both seats carry all 41 fields, both are built by a single
+**DONE as of v2.18.** Both seats carry all 47 fields, both are built by a single
 `makeSide` call, and `flatRemaining` is **0** — nothing a hero owns lives on the
 game object any more.
 
 | | fields | native | still flat |
 |---|---|---|---|
-| player | 41 / 41 | 41 | 0 |
-| opponent | 41 / 41 | 41 | 0 |
+| player | 47 / 47 | 47 | 0 |
+| opponent | 47 / 47 | 47 | 0 |
 
 `P_MAP` and `O_MAP` are now empty. They stay as the ledger's shape: if a flat
 per-side field is ever reintroduced it belongs in one of them, and the drills
@@ -361,6 +364,58 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### ACTOR vs PERSPECTIVE — the seam (v2.24)
+
+`ROADMAP-MULTIPLAYER.md` Phase A step 1, "the whole ballgame". `you()` means
+**seat 0**, not "the player acting", and today those two readings coincide only
+because one seat ever acts. Two concepts have to come apart:
+
+| | question | helpers |
+|---|---|---|
+| **perspective** | whose board does THIS CLIENT render? | `you()` / `opp()` / `youMut()` / `oppMut()` — **UI only** |
+| **actor** | whose effect is RESOLVING right now? | `act()` / `foe()` / `actMut()` / `foeMut()` — **rules only** |
+
+```js
+const actorOf = s => s.actor||0;
+const act    = s => s.sides[actorOf(s)];
+const foe    = s => s.sides[1-actorOf(s)];
+const actMut = n => actorOf(n)===0 ? youMut(n) : oppMut(n);   // one clone path
+const foeMut = n => actorOf(n)===0 ? oppMut(n) : youMut(n);
+```
+
+`s.actor` defaults to 0, so **`act(s) === you(s)` today** and every `you`→`act`
+swap is behaviour-identical *now* while being correct the moment seat 1 acts.
+That is what makes this migratable a function at a time instead of big-bang.
+`actor` is in `GAME_KEYS` (shared, not per-side — it *names* a seat).
+
+**The ledger is `test/actor.test.js`**, and it works like `flatRemaining`:
+`MIGRATED` functions must contain **no** perspective helper; `PENDING` ones are
+pinned so the remaining work is a number, not folklore. Moving a name between
+the lists must be a deliberate edit.
+
+| | |
+|---|---|
+| MIGRATED | `runOps` |
+| PENDING | `execute`, `resolveStack`, `tryPlay`, `takeIt` |
+
+The drill slices function bodies by **anchor pairs, not brace matching** — a
+brace counter that is not regex-literal-aware miscounts inside `execute`'s
+regexes (the same hazard `html-balance.test.js` documents). `ANCHORS` must stay
+in true file order; a drill enforces exactly that.
+
+**A seat index hardcoded in a rules call is the same bug wearing a different
+hat.** `popRunechants(n, 0, …)` in `execute` pops **seat 0's** runechants
+whoever is swinging — correct today, wrong for seat 1. Sweep for literal seat
+indices as each function migrates.
+
+Two dead engine helpers were **deleted** in v2.24 rather than pinned:
+`sides.js` exported a seat-hardcoded `you`/`foe` pair that nothing called.
+Introducing the trainer's actor-relative `foe` would have made `foe` a
+collision with *different semantics* (engine `sides[1]` vs trainer
+`sides[1-actor]`) — the dangerous kind. So `KNOWN_COLLISIONS` **shrank** to
+`["endTurn","other"]`. Prefer deleting a dead engine export over adding a name
+to that list.
 
 ### Cost readers take a SIDE, not the game
 
@@ -398,10 +453,11 @@ What replaces it, all enforced by `test/sync.test.js`:
   `const fxParse = …` in the trainer would shadow the module and put us back to two
   copies with nothing watching them. This is the guard that matters.
 
-**Three names collide on purpose**, and the drill pins them so a fourth cannot
-appear unnoticed: the trainer's `endTurn` (a `setG` reducer) vs `priority.endTurn`
-(pure seat handoff), the trainer's `other` (off-pitch cards in `DeckView`) vs
-`priority.other` (the other seat), and `you`. They never meet today because the
+**Two names collide on purpose** (three until v2.24), and the drill pins them so
+a fourth cannot appear unnoticed: the trainer's `endTurn` (a `setG` reducer) vs
+`priority.endTurn` (pure seat handoff), and the trainer's `other` (off-pitch
+cards in `DeckView`) vs `priority.other` (the other seat). `you` left the list
+when `sides.js`'s dead seat-hardcoded `you`/`foe` were deleted. They never meet today because the
 trainer calls its own bare and would reach the engine's as `DawnPriority.endTurn`.
 **Resolve them by renaming when `priority.js` is wired in** — that wiring replaces
 exactly those functions, so a silent bridge there would be a genuine bug.
@@ -931,7 +987,7 @@ for symmetric state; do not build a deck-piloting AI.
 1. **Make the state symmetric.** *Groundwork landed in v2.14 — see "The two-player
    migration" above.* `engine/sides.js` defines the shape, `toSides`/`fromSides`
    bridge to it losslessly, `engine/priority.js` holds the turn/priority machine,
-   and the drills pin the gap at player 35 / opponent 12 of 41 fields.
+   and the drills pin the gap at player 35 / opponent 12 of 47 fields.
    **What is left is the adoption**, and the order that keeps it safe:
    1. ~~The opponent's zones and life.~~ **Done in v2.15** — `hp`, `deck`,
       `hand`, `grave`, `gear`, `board` are native to `sides[1]`, reached via

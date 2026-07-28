@@ -623,7 +623,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.23"; /* v2.23: RUNECHANTS ARE AURAS, NOT A COUNTER. The printed token is a "Runeblade Token - Aura", and seven pool cards ask about auras generically ("if you control 3 or more auras", "you may destroy an aura you control", "whenever you play an aura") — none of which could ever see an integer. They are now real board permanents, so they render the actual token art instead of the text chip "Runechant ×2", and runeCount/auraCount read the board. Two rules fixes fall out: the trigger fires on PLAY, so a runechant the attack itself conjures (Viserai's rite) no longer pops on that same attack; and because a triggered ability sits above the attack on the stack, the arcane resolves at declaration BEFORE the attack's damage rather than after it. Also: attack targets (CR 1.4.5) — resolveEntry carries an ally's life, engine/game.js gains attackTargets/damageAlly/resetAllyLife and prompts.js a sixth `target` variant; an attack on an ally cannot be blocked (CR 7.3.2a). Trainer wiring for the target prompt is still to do — see CLAUDE.md. v2.22: JUDGE!! — a bug report written at the table. The button sits on the log pane and captures the whole board with the note (zones with uids, counters, chain, prompt, the feed, and any invariant violations), so the note can be one line; Copy or Save Report. Also fixes a real rules bug: CR 4.4.3f says "if it is the first turn of the game, all other players draw cards until the number of cards in their hand is equal to their hero's intellect" — the non-turn player refills on turn one only. The opponent-first opening never did it, so going second cost an extra swing AND left you short-handed for your first action phase. That is a large part of why opponent-first played harder than it should. v2.21: THE GUARD RAILS. engine/invariants.js is a judge that audits the STATE rather than the cards — a card in two zones at once, a per-side field written to the game object, a defending card re-declared on a second chain link (CR 7.3.2b), priority held in a phase that has none (CR 4.2.1/4.4.1). It is wired into setG, so every state change in a real game is audited; it never throws. Four genuine CR violations fixed in engine/priority.js: priority was granted during the start and end phases, the defend step handed priority to the defender instead of the turn-player (CR 7.3), only the turn player's floating resources fizzled instead of BOTH players' (CR 4.4.3e — a real two-player bug), and the action point was issued in the end phase instead of the action phase (CR 4.3.2). New: tools/failstates.js re-reads every card and asks how it goes WRONG at the table rather than how much text is unread, and feeds sweep.html a ranked section 4. It found the noop blind spot: phantasm and watery grave are filed as "does nothing", so Spears of Surreality, Enigma Chimera and five Gravy Bones allies report tier=FULL from coverage alone. CORRECTED in v2.23 — the tool now cross-checks the trainer by name the way the sweep does, because phantasm IS enforced (the trainer pops the attack at declaration) and reporting it ignored from parser status was an over-claim. Watery grave is the real half-built one: the permission to replay from the graveyard exists, the face-down rule does not. v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
+window.APP_VER = "2.24"; /* v2.24: THE ACTOR SEAM — ROADMAP-MULTIPLAYER.md Phase A step 1, "the whole ballgame". you() means SEAT 0, not "the player acting", and the two readings only coincide because one seat ever acts; the moment a second human sits down, every rules function draws from the wrong deck. So perspective and actor come apart: you()/opp() stay as UI helpers, and act()/foe()/actMut()/foeMut() read a new shared s.actor for the RULES. actor defaults to 0, so act(s)===you(s) today and every swap is behaviour-identical NOW while being correct for seat 1 later — which is what makes this migratable a function at a time instead of big-bang. runOps is migrated (92 call sites); execute/resolveStack/tryPlay/takeIt are pinned as PENDING in the new test/actor.test.js ledger, which fails if a migrated function reaches for you( again. Also DELETED sides.js's dead seat-hardcoded you/foe rather than pinning them: the trainer's actor-relative foe would have collided with DIFFERENT semantics (sides[1] vs sides[1-actor]), so KNOWN_COLLISIONS SHRANK to [endTurn, other]. v2.23: RUNECHANTS ARE AURAS, NOT A COUNTER. The printed token is a "Runeblade Token - Aura", and seven pool cards ask about auras generically ("if you control 3 or more auras", "you may destroy an aura you control", "whenever you play an aura") — none of which could ever see an integer. They are now real board permanents, so they render the actual token art instead of the text chip "Runechant ×2", and runeCount/auraCount read the board. Two rules fixes fall out: the trigger fires on PLAY, so a runechant the attack itself conjures (Viserai's rite) no longer pops on that same attack; and because a triggered ability sits above the attack on the stack, the arcane resolves at declaration BEFORE the attack's damage rather than after it. Also: attack targets (CR 1.4.5) — resolveEntry carries an ally's life, engine/game.js gains attackTargets/damageAlly/resetAllyLife and prompts.js a sixth `target` variant; an attack on an ally cannot be blocked (CR 7.3.2a). Trainer wiring for the target prompt is still to do — see CLAUDE.md. v2.22: JUDGE!! — a bug report written at the table. The button sits on the log pane and captures the whole board with the note (zones with uids, counters, chain, prompt, the feed, and any invariant violations), so the note can be one line; Copy or Save Report. Also fixes a real rules bug: CR 4.4.3f says "if it is the first turn of the game, all other players draw cards until the number of cards in their hand is equal to their hero's intellect" — the non-turn player refills on turn one only. The opponent-first opening never did it, so going second cost an extra swing AND left you short-handed for your first action phase. That is a large part of why opponent-first played harder than it should. v2.21: THE GUARD RAILS. engine/invariants.js is a judge that audits the STATE rather than the cards — a card in two zones at once, a per-side field written to the game object, a defending card re-declared on a second chain link (CR 7.3.2b), priority held in a phase that has none (CR 4.2.1/4.4.1). It is wired into setG, so every state change in a real game is audited; it never throws. Four genuine CR violations fixed in engine/priority.js: priority was granted during the start and end phases, the defend step handed priority to the defender instead of the turn-player (CR 7.3), only the turn player's floating resources fizzled instead of BOTH players' (CR 4.4.3e — a real two-player bug), and the action point was issued in the end phase instead of the action phase (CR 4.3.2). New: tools/failstates.js re-reads every card and asks how it goes WRONG at the table rather than how much text is unread, and feeds sweep.html a ranked section 4. It found the noop blind spot: phantasm and watery grave are filed as "does nothing", so Spears of Surreality, Enigma Chimera and five Gravy Bones allies report tier=FULL from coverage alone. CORRECTED in v2.23 — the tool now cross-checks the trainer by name the way the sweep does, because phantasm IS enforced (the trainer pops the attack at declaration) and reporting it ignored from parser status was an over-claim. Watery grave is the real half-built one: the permission to replay from the graveyard exists, the face-down rule does not. v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
 window.DATA_VER = "sage-v9"; /* v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1518,6 +1518,27 @@ const you = s => s.sides[0];
 const opp = s => s.sides[1];
 const youMut = n => { n.sides = [{...n.sides[0]}, n.sides[1]]; return n.sides[0]; };
 const oppMut = n => { n.sides = [n.sides[0], {...n.sides[1]}]; return n.sides[1]; };
+/* ACTOR vs PERSPECTIVE — ROADMAP-MULTIPLAYER.md, Phase A step 1 ("the whole
+   ballgame"). Two concepts are conflated in you()/opp() today only because the
+   two readings coincide with one acting seat:
+     - PERSPECTIVE — the seat THIS CLIENT renders. That is a UI question, and
+       you()/opp() stay as its helpers (seat 0 on a single device).
+     - ACTOR — the side whose effect is RESOLVING right now. That is a RULES
+       question, and it is not always seat 0: a defence reaction resolves for
+       the defender during the attacker's turn.
+   act()/foe() read s.actor (default 0), so today act(s)===you(s) and every
+   swap of you->act inside a rules function is behaviour-identical. The moment
+   seat 1 becomes a real actor, those functions are already correct because
+   they resolve relative to s.actor instead of a hardcoded slot 0. The Mut
+   helpers delegate to youMut/oppMut so there is exactly ONE clone path.
+   Migrate RULES functions (runOps, execute, resolveStack, newTurn, takeIt,
+   tryPlay, foeSwing) to act/foe; leave the UI on you/opp. test/actor.test.js
+   fails if a migrated function still reaches for you(/opp(. */
+const actorOf = s => s.actor||0;
+const act    = s => s.sides[actorOf(s)];
+const foe    = s => s.sides[1-actorOf(s)];
+const actMut = n => actorOf(n)===0 ? youMut(n) : oppMut(n);
+const foeMut = n => actorOf(n)===0 ? oppMut(n) : youMut(n);
 
 
 /* 1 = a takes it, -1 = b takes it, 0 = tie. null if either throw is not
@@ -1809,7 +1830,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       out of the file has an unambiguous marker — engine/prompts.js mirrors a
       `const base = {` of its own into this file, higher up. */
    const initial = {
-    turn:1, mode:"act", bphase:"defend", pending:null, incoming:0,
+    turn:1, actor:0, mode:"act", bphase:"defend", pending:null, incoming:0,
     log:[foeFirst ? "It won the throw and took the first turn. Iron up." : "The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read,
       foeFirst ? "The dummy won the throw and elected to swing first." : "You won the seating and took the first turn.",
@@ -2076,30 +2097,30 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = {...s};
     ops.forEach(op=>{
       const [k,v] = op;
-      if(k==="draw"){ const take=you(n).deck.slice(0,v); youMut(n).hand=[...you(n).hand,...take]; youMut(n).deck=you(n).deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
+      if(k==="draw"){ const take=act(n).deck.slice(0,v); actMut(n).hand=[...act(n).hand,...take]; actMut(n).deck=act(n).deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
       else if(k==="foeDiscard"){
-        const take = opp(n).hand.slice(-Math.max(1,v));
+        const take = foe(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: the dummy's hand is already empty.`);
         else {
-          oppMut(n).hand = opp(n).hand.slice(0, opp(n).hand.length-take.length);
-          oppMut(n).grave = [...take, ...opp(n).grave];
-          n = L(n, `${srcName}: dummy discards ${take.map(c=>c.name).join(", ")} — ${opp(n).hand.length} left in hand.`);
+          foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
+          foeMut(n).grave = [...take, ...foe(n).grave];
+          n = L(n, `${srcName}: dummy discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
-      else if(k==="res"){ youMut(n).res+=v; n=L(n,`+${v} resource.`); }
-      else if(k==="ap"){ youMut(n).ap+=v; n=L(n,`+${v} action point${v>1?"s":""} — the turn stretches.`); }
+      else if(k==="res"){ actMut(n).res+=v; n=L(n,`+${v} resource.`); }
+      else if(k==="ap"){ actMut(n).ap+=v; n=L(n,`+${v} action point${v>1?"s":""} — the turn stretches.`); }
       else if(k==="life"){
         /* RULING (Reaping Blade): if you are the hero ahead, the gain fizzles */
-        if(you(n).lifeLock && you(n).hp > opp(n).hp){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
-        youMut(n).hp+=v; n=L(n,`+${v} life.`);
+        if(act(n).lifeLock && act(n).hp > foe(n).hp){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
+        actMut(n).hp+=v; n=L(n,`+${v} life.`);
       }
-      else if(k==="arcane"){ const total=v+you(n).amp; youMut(n).amp=0; oppMut(n).hp-=total; youMut(n).hist={...you(n).hist, arc:(you(n).hist.arc||0)+1}; n=L(n,`${srcName}: ${total} arcane damage.`); }
-      else if(k==="buffNext"){ youMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
-      else if(k==="gaNext"){ youMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
-      else if(k==="runeHitNext"){ youMut(n).runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
-      else if(k==="amp"){ youMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
-      else if(k==="ward"){ youMut(n).ward+=v; n=L(n,`Ward ${v}.`); }
-      else if(k==="awd"){ youMut(n).awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
+      else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; foeMut(n).hp-=total; actMut(n).hist={...act(n).hist, arc:(act(n).hist.arc||0)+1}; n=L(n,`${srcName}: ${total} arcane damage.`); }
+      else if(k==="buffNext"){ actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
+      else if(k==="gaNext"){ actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
+      else if(k==="runeHitNext"){ actMut(n).runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
+      else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
+      else if(k==="ward"){ actMut(n).ward+=v; n=L(n,`Ward ${v}.`); }
+      else if(k==="awd"){ actMut(n).awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="soulSelf"){ n._soulSelf = true; }
       else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
       else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
@@ -2108,10 +2129,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         else n = L(n, `-${v} power — nothing hostile to shave.`);
       }
       else if(k==="soulSpend"){
-        if((you(n).soul||[]).length >= v){ youMut(n).soul = you(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
-        else n = L(n,`Needs ${v} soul — you have ${(you(n).soul||[]).length}.`);
+        if((act(n).soul||[]).length >= v){ actMut(n).soul = act(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
+        else n = L(n,`Needs ${v} soul — you have ${(act(n).soul||[]).length}.`);
       }
-      else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(you(n))} on the board.`); }
+      else if(k==="rune"){ n = mkRune(n, v); n=L(n,`+${v} Runechant${v>1?"s":""} — ${runeCount(act(n))} on the board.`); }
       /* RULING: a token is a card. Resolve it through the same reader as
          everything else and stand it up on the correct player's board —
          never describe it, never hardcode what it does. */
@@ -2121,11 +2142,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         const side = op[3]==="foe" ? "foe" : "self";
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
-          if(side==="foe") oppMut(n).board = [...(opp(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid}];
-          else youMut(n).board = [...you(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid}];
+          if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid}];
+          else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid}];
         }
-        youMut(n).hist = {...you(n).hist, made:(you(n).hist.made||0)+1};
-        if(/aura/i.test(rec.tt||"")) youMut(n).hist = {...you(n).hist, aura:(you(n).hist.aura||0)+1};
+        actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
+        if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
         const who = side==="foe" ? "the dummy's" : "your";
         n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
         if(side==="foe") n = L(n, "The dummy pays no costs and takes no action phase, so anything that taxes those sits idle.");
@@ -2135,83 +2156,83 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
            any order — the player's call, so it queues a prompt. Queued rather
            than opened inline: opt only touches the deck, so it is safe to ask
            after the action finishes resolving. */
-        if(!you(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
-        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:Math.min(v, you(n).deck.length), src:srcName}];
+        if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:Math.min(v, act(n).deck.length), src:srcName}];
       }
       /* RULING: the card flips and BECOMES Inner Chi, returning to hand
          instead of the graveyard. Inner Chi is a real database card. */
       else if(k==="transcend"){
         const chi = resolveEntry(db, {name:"Inner Chi", p:0, code:null, q:1});
         if(!chi.resolved){ n = L(n, `${srcName}: Inner Chi not found in the database.`); return; }
-        youMut(n).hand = [...you(n).hand, {...chi, uid:"chi"+tokSeq()}];
+        actMut(n).hand = [...act(n).hand, {...chi, uid:"chi"+tokSeq()}];
         n._transcended = true;
-        youMut(n).hist = {...you(n).hist, trans:(you(n).hist.trans||0)+1};
+        actMut(n).hist = {...act(n).hist, trans:(act(n).hist.trans||0)+1};
         n = L(n, `${srcName} transcends — it flips to Inner Chi and returns to your hand.`);
       }
       /* RULING (Reaping Blade): the hero ahead on life can't gain any */
-      else if(k==="lifeLock"){ youMut(n).lifeLock = true; n = L(n, "Life-gain locked while a hero is ahead on life."); }
+      else if(k==="lifeLock"){ actMut(n).lifeLock = true; n = L(n, "Life-gain locked while a hero is ahead on life."); }
       /* RULING (Pyroglyphic Protection): prevents arcane PER SOURCE, unlike
          ward/awd which is one draining pool. Runechants are separate sources. */
-      else if(k==="arcShield"){ youMut(n).arcShield = (you(n).arcShield||0)+v; n = L(n, `Arcane shield ${you(n).arcShield} — that much off EVERY arcane source, not a pool.`); }
+      else if(k==="arcShield"){ actMut(n).arcShield = (act(n).arcShield||0)+v; n = L(n, `Arcane shield ${act(n).arcShield} — that much off EVERY arcane source, not a pool.`); }
       else if(k==="selfDestruct"){ n._selfDestruct = v; }
       /* RULING (Under Loop): recycles on hit instead of hitting the graveyard;
          the combat chain stays open either way. */
       else if(k==="bottomSelf"){
         const pc = n.pend && n.pend.card;
         if(!pc){ n = L(n, `${srcName}: nothing on the chain to recycle.`); return; }
-        youMut(n).grave = you(n).grave.filter(x=>x.uid!==pc.uid);
-        youMut(n).deck = [...you(n).deck, pc];
+        actMut(n).grave = act(n).grave.filter(x=>x.uid!==pc.uid);
+        actMut(n).deck = [...act(n).deck, pc];
         n = L(n, `${pc.name} loops under — bottom of your deck instead of the graveyard.`);
       }
       /* the dummy has a real deck, so banishing off its top is a real cost */
       else if(k==="foeBanishTop"){
-        const take = opp(n).deck.slice(0,v);
+        const take = foe(n).deck.slice(0,v);
         if(!take.length){ n = L(n, `${srcName}: the dummy's deck is empty.`); return; }
-        oppMut(n).deck = opp(n).deck.slice(take.length);
-        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of the dummy's deck (${opp(n).deck.length} left).`);
+        foeMut(n).deck = foe(n).deck.slice(take.length);
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of the dummy's deck (${foe(n).deck.length} left).`);
       }
       else if(k==="firstAtkBuff"){
         /* a standing buff on the turn's FIRST attack only */
-        if((you(n).hist.atk||0)===0){ youMut(n).buffNext += v; n = L(n, `First attack this turn will carry +${v}.`); }
+        if((act(n).hist.atk||0)===0){ actMut(n).buffNext += v; n = L(n, `First attack this turn will carry +${v}.`); }
         else n = L(n, `${srcName}: you've already attacked this turn — no first-attack bonus.`);
       }
-      else if(k==="dmg"){ oppMut(n).hp -= v; n = L(n, `${srcName}: ${v} damage.`); }
+      else if(k==="dmg"){ foeMut(n).hp -= v; n = L(n, `${srcName}: ${v} damage.`); }
       /* RULING (Pouncing Paws): mint a real card into the banished zone,
          playable this turn only. Resolved from the database like any card. */
       else if(k==="mkBanish"){
         const rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database.`); return; }
         const made = {...rec, uid:"mk"+tokSeq(), _playTurn:n.turn};
-        youMut(n).banish = [made, ...you(n).banish];
-        youMut(n).hist = {...you(n).hist, made:(you(n).hist.made||0)+1};
+        actMut(n).banish = [made, ...act(n).banish];
+        actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         n = L(n, `${rec.name} springs into your banished zone — playable this turn (${clean(rec.tx||"").split("\n")[0]}).`);
       }
       else if(k==="namedBuff"){
-        youMut(n).namedBuff = {name:norm(v), amount:op[2]||0};
+        actMut(n).namedBuff = {name:norm(v), amount:op[2]||0};
         n = L(n, `Your next ${v} this turn gets +${op[2]||0} power.`);
       }
       /* the dummy holds a hand now, so showing it is real information */
       else if(k==="foeReveal"){
-        n = L(n, opp(n).hand.length
-          ? `The dummy shows its hand: ${opp(n).hand.map(c=>c.name).join(", ")}.`
+        n = L(n, foe(n).hand.length
+          ? `The dummy shows its hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
           : "The dummy's hand is empty — nothing to show.");
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
-      else if(k==="dracNext"){ youMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
+      else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
       else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
       else if(k==="enterCounters"){ n._enterCounters = v; }
       else if(k==="boo"){
-        youMut(n).hist = {...you(n).hist, booed:(you(n).hist.booed||0)+1};
+        actMut(n).hist = {...act(n).hist, booed:(act(n).hist.booed||0)+1};
         n = L(n, "The crowd boos you — Reviled, and your Bravo cards know it.");
       }
       else if(k==="mark"){
-        oppMut(n).marked = true;
+        foeMut(n).marked = true;
         n = L(n, "The dummy is marked — a qualifier your Assassin cards can read.");
       }
       /* RULING (Ravenous Rabble): both players see the reveal, and the attack
          shifts by the revealed card's PITCH. The card stays on top. */
       else if(k==="reveal"){
-        const top = you(n).deck[0];
+        const top = act(n).deck[0];
         if(!top){ n = L(n, `${srcName}: deck is empty — nothing to reveal.`); return; }
         n.revealed = top;
         n = L(n, `${srcName} reveals ${top.name} (pitch ${top.pitch}) off the top — it stays there.`);
@@ -2230,17 +2251,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       }
       else if(k==="intRoll"){
         if(!n.lastRoll){ n = L(n, `${srcName}: no die has been rolled — nothing to set.`); return; }
-        youMut(n).intWas = you(n).intWas==null ? you(n).int : you(n).intWas;
-        youMut(n).int = n.lastRoll;
-        n = L(n, `Base intellect is ${you(n).int} until end of turn — that many cards at the draw step.`);
+        actMut(n).intWas = act(n).intWas==null ? act(n).int : act(n).intWas;
+        actMut(n).int = n.lastRoll;
+        n = L(n, `Base intellect is ${act(n).int} until end of turn — that many cards at the draw step.`);
       }
       else if(k==="aim"){
         const tgt = n.pend && n.pend.card ? n.pend.card.uid : null;
-        if(tgt){ const cur=(you(n).counters[tgt]||{}); youMut(n).counters={...you(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
+        if(tgt){ const cur=(act(n).counters[tgt]||{}); actMut(n).counters={...act(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
         n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
       }
-      else if(k==="rot"){ youMut(n).rot+=v; n=L(n,`Bloodrot on the dummy (ticks ${v}/turn).`); }
-      else if(k==="fra"){ youMut(n).fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
+      else if(k==="rot"){ actMut(n).rot+=v; n=L(n,`Bloodrot on the dummy (ticks ${v}/turn).`); }
+      else if(k==="fra"){ actMut(n).fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
       else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
     });
     return n;

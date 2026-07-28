@@ -124,6 +124,11 @@ const GAME_KEYS = [
   "prompt","promptQ","revealed","lastRoll","boostOn",
   "chain","chainHist","chainOpen","boostChain","stack","pend","featured",
   "hitSeq","lastDmg",
+  /* the side whose effect is RESOLVING (ROADMAP-MULTIPLAYER.md Phase A step 1).
+     Distinct from turnPlayer: a defence reaction resolves for the defender
+     during the attacker's turn. Shared, not per-side — it names one of the two
+     seats, it does not live on either. Default 0 on a single-actor device. */
+  "actor",
   /* set when the opponent won the seating: its opening swing lands before
      the first action phase, so the clock has not started ticking yet */
   "_opening"
@@ -177,6 +182,9 @@ function makeGame(o){
        they are separate fields. */
     firstPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
     turnPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
+    /* whose effect is resolving; defaults to the turn player and moves during
+       reactions. See GAME_KEYS above and act()/foe() in the trainer. */
+    actor: o.actor!=null ? o.actor : (o.firstPlayer!=null ? o.firstPlayer : 0),
     /* NULL, not the first player: a game opens in the start phase, and
        CR 4.2.1 says players do not get priority during the start phase.
        priority.js grants it on entering the action phase (CR 4.3.3).
@@ -193,8 +201,16 @@ function makeGame(o){
 }
 
 const other = i => i === 0 ? 1 : 0;
-const you   = g => g.sides[0];
-const foe   = g => g.sides[1];
+/* `you = g => g.sides[0]` and `foe = g => g.sides[1]` used to live here.
+   BOTH ARE DELETED (v2.24) and should not come back. They were exported,
+   called by nobody, and encoded the exact conflation ROADMAP-MULTIPLAYER.md
+   step 1 exists to undo: a seat index hardcoded into a rules-shaped name.
+   The trainer's act()/foe() read s.actor and are the actor-relative
+   replacements; `activeSide` below is the turn-player question, which is a
+   genuinely different one. Deleting them also retired two pinned entries in
+   test/sync.test.js's KNOWN_COLLISIONS — `you` was already colliding with the
+   trainer, and `foe` would have collided with DIFFERENT semantics, which is
+   the dangerous kind. */
 const activeSide = g => g.sides[g.turnPlayer];
 
 /* Replace one side immutably — the workhorse every migrated function
@@ -252,6 +268,6 @@ function fromSides(game){
 return {
   SIDE_FIELDS, P_MAP, O_MAP, GAME_KEYS, NATIVE, META,
   makeSide, makeGame, freshHist, symmetryGap,
-  toSides, fromSides, withSide, other, you, foe, activeSide
+  toSides, fromSides, withSide, other, activeSide
 };
 });

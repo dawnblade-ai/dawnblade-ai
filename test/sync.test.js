@@ -98,9 +98,15 @@ test("the trainer does not re-declare (shadow) any bridged engine name", () => {
      engine  `endTurn` (priority) — pure: fizzles resources, passes the seat, ticks
      trainer `other`   (DeckView) — the off-pitch cards in a deck listing
      engine  `other`   (priority) — i => i === 0 ? 1 : 0, the OTHER seat
-     trainer `you`     — s => s.sides[0] (the access rule)
-     engine  `you`     — g => g.sides[0] (same thing, sides.js-private) */
-const KNOWN_COLLISIONS = ["endTurn", "other", "you"];
+
+   RESOLVED in v2.24 — `you` is off this list. engine/sides.js exported a
+   seat-hardcoded `you`/`foe` pair that nothing called; introducing the
+   trainer's actor-relative `foe` would have made `foe` a collision with
+   DIFFERENT semantics (engine: sides[1]; trainer: sides[1-actor]), which is
+   the dangerous kind rather than the harmless kind. Both engine helpers were
+   deleted instead of pinned, so the collision surface SHRANK. Keep it that
+   way: prefer deleting a dead engine export over adding a name here. */
+const KNOWN_COLLISIONS = ["endTurn", "other"];
 
 test("engine/trainer name collisions are exactly the pinned set", () => {
   const engineOnly = new Set(["sides","priority"].flatMap(m => exportsOf(m + ".js")));
