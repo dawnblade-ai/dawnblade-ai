@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.31
+**Current version:** v2.32
 
 ---
 
@@ -91,7 +91,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 371 drills:
+This is `node --test "test/*.test.js"` — currently 377 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -132,6 +132,50 @@ node tools/audit.js --write-baseline   # only once you've reviewed the diff —
 `test/coverage.test.js` then checks every pool card still resolves and no
 card's `fxParse` tier dropped below the pinned baseline (skips cleanly if
 `tools/.cache/card.json` / `tools/coverage-baseline.json` aren't present).
+
+### The fairness sweep — is any card STRONGER than printed? (v2.32)
+
+```
+npm run fairness          # ranked report; exits non-zero on any finding
+npm run fairness --json   # machine-readable
+```
+
+**The audit measures COVERAGE. This measures FAITHFULNESS, and they are not
+the same question.** Three bugs shipped in one week and the audit reported
+**identical tiers before and after every one of them** — every affected card
+said `full`. They were read, and read *wrong*:
+
+| ver | what | cards |
+|---|---|---|
+| 2.30 | a `+N{p}` read by two rules at once — Act of Glory printed +6 and gave **+12** | 34 |
+| 2.30 | a type qualifier dropped — an **arrow** buff landing on a sword | 24 |
+| 2.31 | go again granted unconditionally against the card's own text | 27 |
+| 2.32 | `instead` treated as an ADDITION — Emeritus Scolding dealt **6** where it prints 4 | 3 |
+
+Coverage cannot see any of that, by construction: it counts clauses consumed,
+not whether the consumption was faithful.
+
+The sweep is **deliberately one-sided** — it reports only cards that grant
+*more* than they print. A card that is too weak is `tools/failstates.js`'s
+business and is far less harmful; a card that is quietly too strong steals
+games. What it checks:
+
+| code | the shape |
+|---|---|
+| `COND-BYPASSED` | a condition gates an effect the engine also grants unconditionally, so the gate is decoration |
+| `VALUE-DOUBLED` | one printed value applied by two paths |
+| `RESTRICTION-DROPPED` | a printed limit (type, cost, "another") that no op carries |
+| `KEYWORD-UNGATED` | a keyword indexed in `card_keywords` but only conditionally granted in the text |
+| `COST-SKIPPED` | an optional cost's **rider** fires without the cost being paid |
+
+**A clean sweep is only worth having if it would shout when the bugs return**,
+so `test/fairness.test.js` pins that it is quiet on the fixed engine, and each
+check keeps a real card behind it. Reintroducing the four bugs makes it report
+41 / 33 / 22 / 3 findings respectively — verified, not assumed.
+
+**`instead` REPLACES.** `classifyClause` marks a conditional payload containing
+"instead", `fx.conds[].instead` carries it, and `execute` suppresses the
+unconditional base op of the same kind when that condition fires.
 
 ### The stack — what the pool is still waiting on
 

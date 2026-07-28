@@ -1,15 +1,15 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-07-28T19:04:43.790Z · app v2.30 · data sage-v9 · db 4862 records
+Generated 2026-07-28T19:23:02.581Z · app v2.31 · data sage-v9 · db 4862 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 263 |
-| Partially scripted | 109 |
-| Text-only (nothing parsed) | 33 |
+| Fully scripted | 260 |
+| Partially scripted | 110 |
+| Text-only (nothing parsed) | 35 |
 | Cards with audit flags | 69 |
 
 ## Symbols found in pool text
@@ -219,6 +219,13 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ Deal 3 arcane damage to any target
 - — If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
 - 🚩 unreviewed keyword: "ice fusion"
+
+### Aether Quickening (pitch 3) — part · [blaze]
+- type: Wizard Action · printed: Surge, Go again
+- ▶ Deal 2 arcane damage to target hero.
+- — Surge - If this deals more than 2 damage, it gets go again.
+- 🚩 unreviewed keyword: "surge"
+- 🚩 text mentions go again but no clause parses it
 
 ### Agile Engagement (pitch 1) — part · [dorinthea]
 - type: Warrior Attack Reaction
@@ -893,6 +900,18 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — When this is put face-up into your arsenal, it gets go again this turn.
 - 🚩 text mentions go again but no clause parses it
 
+### Swiftwater Sloop (pitch 1) — none · [gravy]
+- type: Pirate Action - Attack · printed: High Tide
+- — High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+- 🚩 unreviewed keyword: "high tide"
+- 🚩 text mentions go again but no clause parses it
+
+### Swiftwater Sloop (pitch 3) — none · [gravy]
+- type: Pirate Action - Attack · printed: High Tide
+- — High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+- 🚩 unreviewed keyword: "high tide"
+- 🚩 text mentions go again but no clause parses it
+
 ### Take Aim (pitch 1) — part · [azalea]
 - type: Ranger Action · printed: Reload, Go again
 - ▶ The next Ranger attack action card you play this turn, gains +3{p}.
@@ -1011,7 +1030,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ## Flags on otherwise fully-scripted cards
 
-- **Aether Quickening** (pitch 3): unreviewed keyword: "surge"
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
@@ -1035,8 +1053,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Second Strike** (pitch 1): text mentions go again but no clause parses it
 - **Static Shock** (pitch 1): unreviewed keyword: "lightning flow"
 - **Swabbie** (pitch 2): tap cost {t} — not enforced (see ledger)
-- **Swiftwater Sloop** (pitch 1): unreviewed keyword: "high tide"
-- **Swiftwater Sloop** (pitch 3): unreviewed keyword: "high tide"
 
 ## Fully scripted, no flags — the roll call
 

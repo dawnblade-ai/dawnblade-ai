@@ -2,12 +2,13 @@
   "name": "dawnblade",
   "private": true,
   "version": "1.20.0",
-  "description": "Dawnblade — FaB Silver Age sim. engine/ is the pure rules engine; index.html is the single-file trainer (served as-is by GitHub Pages).",
+  "description": "Dawnblade \u2014 FaB Silver Age sim. engine/ is the pure rules engine; index.html is the single-file trainer (served as-is by GitHub Pages).",
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
     "audit": "node tools/audit.js",
     "stack": "node tools/stack.js",
     "failstates": "node tools/failstates.js",
-    "sweep": "node tools/sweep.js"
+    "sweep": "node tools/sweep.js",
+    "fairness": "node tools/fairness.js"
   }
 }

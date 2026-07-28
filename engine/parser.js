@@ -84,6 +84,11 @@ function classifyClause(raw){
        it through rather than throwing the whole clause away —
        "When this attacks, intimidate." was failing for exactly this reason. */
     if(rest.status!=="run") return rest;
+    /* "INSTEAD" REPLACES, it does not add. Emeritus Scolding reads "Deal 2
+       arcane damage. If played during an opponent's turn, INSTEAD deal 4" —
+       parsed as an addition that is 2 + 4 = 6 when the card prints 4. Flag
+       it here; execute suppresses the base op when the condition fires. */
+    if(/\binstead\b/i.test(m[2])) rest.instead = true;
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
@@ -173,7 +178,12 @@ function classifyClause(raw){
     return null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
-  if(/(?:this|it) (?:gains?|gets?|has) go again$/.test(c)) return R([["ga"]]);
+  /* ANCHORED at both ends. Unanchored, this matched the TAIL of a gated
+     sentence that the if/when handler never saw because it does not START
+     with if/when — "Surge - If this deals more than 2 damage, it gets go
+     again" and "High Tide - If there are 2 or more blue cards in your pitch
+     zone, this gets go again" both granted go again outright. */
+  if(/^(?:this|it) (?:gains?|gets?|has) go again$/.test(c)) return R([["ga"]]);
   /* Printed keyword lines. The database prints these on their own line.
      The engine honors them through card_keywords — equipment wear, the
      boost prompt, the crush threshold — or they are honestly inert
@@ -573,7 +583,7 @@ function fxParse(card){
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
       if(r.onHit) fx.onHit.push(op);
-      else if(r.cond) fx.conds.push({cond:r.cond, op});
+      else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
     });
   });

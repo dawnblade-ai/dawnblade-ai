@@ -127,7 +127,10 @@ test("fxParse — conditional go again stays conditional, not printed", () => {
   const fx = P.fxParse({name:"buckwild-drill", pitch:1, tt:"Attack Action", power:4, kw:[],
     tx:"If there are 6 or more {p} worth of cards in your pitch zone, this gains go again."});
   assert.equal(fx.ga, false);
-  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"]}]);
+  /* `instead` rides along from v2.32 — a conditional payload that REPLACES
+     the printed value rather than adding to it. False here, and that is
+     the point: this card adds go again, it does not replace anything. */
+  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"], instead:false}]);
 });
 
 test("fxParse — the {p} pump drill: +1/2/3{p} reads the copy's pitch", () => {

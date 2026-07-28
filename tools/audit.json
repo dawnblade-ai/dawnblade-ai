@@ -1,13 +1,13 @@
 {
- "generated": "2026-07-28T19:04:43.790Z",
- "appVer": "2.30",
+ "generated": "2026-07-28T19:23:02.581Z",
+ "appVer": "2.31",
  "dataVer": "sage-v9",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 263,
-  "part": 109,
-  "none": 33
+  "full": 260,
+  "part": 110,
+  "none": 35
  },
  "heroes": {
   "kayo": {
@@ -10841,7 +10841,7 @@
     "go again",
     "surge"
    ],
-   "tier": "full",
+   "tier": "part",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10851,15 +10851,18 @@
     },
     {
      "t": "Surge - If this deals more than 2 damage, it gets go again.",
-     "st": "run"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Surge - If this deals more than 2 damage, it gets go again."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 2 arcane damage to target hero.\nSurge - If this deals more than 2 damage, it gets go again.",
    "flags": [
-    "unreviewed keyword: \"surge\""
+    "unreviewed keyword: \"surge\"",
+    "text mentions go again but no clause parses it"
    ]
   },
   "aether spindle|3": {
@@ -13114,21 +13117,24 @@
     "go again",
     "high tide"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "run"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\""
+    "unreviewed keyword: \"high tide\"",
+    "text mentions go again but no clause parses it"
    ]
   },
   "barnacle|2": {
@@ -13781,21 +13787,24 @@
     "go again",
     "high tide"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "run"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\""
+    "unreviewed keyword: \"high tide\"",
+    "text mentions go again but no clause parses it"
    ]
   },
   "throw caution to the wind|3": {
