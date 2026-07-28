@@ -1,4 +1,4 @@
-# Handoff — evaluate the state of Dawnblade
+# Handoff — Dawnblade, at v2.29
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -6,118 +6,108 @@ Paste everything below the line into a fresh Claude Code thread in this repo.
 
 ## The job
 
-**Evaluate, don't build.** The last stretch (v2.13 → v2.19) landed a lot: the
-two-player state migration, the prompt machinery, the pregame throw, a new
-sweep tool, and a UI pass. Nothing has been pushed. Before more is added,
-someone should look hard at what is actually there and say what is solid, what
-is approximate, and what is wrong.
+**Build carefully, one piece at a time.** The rules engine is strong and the
+guard rails are real; the work now is (a) finishing the two-player migration and
+(b) bringing the remaining pool cards online. Both reward reading over typing.
 
-**Read `CLAUDE.md` first, in full.** It carries the hard constraints, the golden
-rule, the access rules, and an honest list of known approximations. Several of
-those entries exist because breaking the rule already cost real bugs.
+**Read `CLAUDE.md` first, in full**, then `ROADMAP-MULTIPLAYER.md`. Several
+entries in them exist because breaking the rule already cost a real bug.
 
-## Where things stand (v2.19)
+## Where things stand (v2.29)
 
-- `npm test` → **253 drills, all green.** Never leave them red.
-- Pool: **405 unique cards · 258 full / 112 part / 35 none** — unchanged across
-  the whole migration, which is the evidence that none of it broke card coverage.
-- `tools/rulings.json` holds **119 rulings**. `npm run stack` → **0 open.**
-- `npm run sweep` → **170 entries** across three axes the stack never covered.
-- Everything is **local**. The Pages repo still has v2.13.
+- `npm test` → **360 drills, all green.** Never leave them red.
+- Pool: **405 unique cards · 263 full / 109 part / 33 none**.
+- **The project is under git now** (9 commits, `main`). It was not before —
+  10.6K lines had no version control at all.
+- **The user pushes to GitHub Pages manually.** Do not attempt to deploy: there
+  is no remote, no `gh`, no credentials, and none of that is your job here.
+- `npm run stack` → **2 open entries** (`charge`, `arsenal-triggers`), both
+  carrying specific follow-up questions in `tools/followups.json`.
 
-### What landed, version by version
+### What landed this stretch
 
 | ver | what |
 |---|---|
-| 2.14 | `engine/sides.js` (symmetric state + lossless bridge), `engine/priority.js` (phases, chain steps, priority), `engine/rps.js` + the pregame throw where the winner *chooses* seating |
-| 2.15 | opponent's zones + life onto `sides[1]` |
-| 2.16 | player's zones + life onto `sides[0]`; dummy gains arsenal/pitch/banish/soul |
-| 2.17 | `engine/prompts.js` — five side-addressed prompt variants as data specs |
-| 2.18 | counters + statuses migrate; `flatRemaining` hits **0**; both seats 41/41 |
-| 2.19 | two-tap card interaction, equipment-ability art, five v2.18 bug fixes |
+| 2.24 | the **actor seam** — `act()`/`foe()` read `s.actor`; `you()`/`opp()` demoted to UI-only |
+| 2.25 | the rules core speaks in actor terms — **5 of 7** functions migrated (~430 call sites) |
+| 2.26 | the **seeded RNG** (`engine/rng.js`) — replay, drills, lockstep |
+| 2.27 | the **priority machine in shadow** — turned on four dormant invariants |
+| 2.28 | **optional costs are read** — "you may X. If you do, Y" |
+| 2.29 | `optFilter` refuses what it cannot fully read (fixes a v2.28 bug) |
 
-## What to evaluate, in rough priority order
+## The next piece, already cut to fit
 
-**1. Is the sides[] migration actually sound?**
-`flatRemaining` is 0 and both seats are built by one `makeSide` call, but the
-migration was largely scripted. Two bug classes escaped the drills and were
-caught by eye:
-- reads (`X.field`) were guarded, **object keys were not** — five side fields
-  were being written onto the game object (see CLAUDE.md, the access rule);
-- `boardRed` had **drifted silently** between `index.html` and `engine/parser.js`
-  because it was never in the sync guard's SHARED list.
+**`arsenal-triggers` — 8 cards, one small mechanism.** Everything needed to
+start is in `tools/followups.json` under that slug. In short:
 
-Both are fixed and drilled. The question for a reviewer is whether a *third*
-class is hiding. Suggested attack: pick a few reducers (`execute`,
-`resolveStack`, `runOps`, `newTurn`, `takeIt`) and read them end to end against
-the access rule.
+- The trainer's end-of-turn arsenal sets cards **face DOWN**. All these arrows
+  trigger on **face UP**. They are different events — do not conflate them.
+  (An earlier note in this file claimed otherwise; it was wrong.)
+- The face-up path is a **hand → arsenal** move and it exists in the pool:
+  **3 enablers** (Bull's Eye Bracers, Death Dealer, Call in the Big Guns) feed
+  **5 payoffs** (Dry Powder Shot, Swift Shot, Entangling Shot, Ridge Rider Shot,
+  Spire Sniping).
+- Sizing, verified: `sd.arsenal` holds a card and is written in only **4**
+  places, so the card can carry a `_faceUp` flag the way minted cards carry
+  `_playTurn`. The mechanism is small; the work is the three enablers.
+- **One reading still open**: Call in the Big Guns lacks the "if you have no
+  cards in your arsenal" gate the other two have — may it overwrite an occupied
+  arsenal, or does it fizzle? Ask before building that one.
 
-**2. Does it still play correctly?**
-The drills cover the parser and the pure modules; they do **not** cover
-`Battle`'s state flow. Everything below was verified by driving a real game and
-reading React state, and that is the only evidence for it:
-- nine of ten zones exercised in play — **`soul` was never exercised**, because
-  the on-hit trigger needs an attack to connect and the dummy blocked everything.
-  It is untested, not proven. Drive Gravy Bones by hand.
-- all five prompt variants driven in the real UI, including the decline case.
-- both seatings, including the opponent-first opening swing.
+## The two rules that caught real bugs this stretch
 
-**3. Is the rules fidelity honest?**
-This is judged to pro-tour standards and the "Known approximations" list is the
-contract. Verify a few entries are still true, and look for approximations that
-have crept in *without* being listed. The crumbling-aura bug (v2.16) is the
-cautionary tale: it was real, shipped, and invisible until someone read the
-line.
+**1. Never parse ahead of wiring.** `fx.optCost` marks its clauses as read,
+which raises a card's tier. Parse a card the trainer does not act on and the
+audit starts claiming it works. That is the same over-claim as the `noop` blind
+spot in `CLAUDE.md`, and it shipped once (v2.28) before being caught.
 
-**4. Is the difficulty still tuned?**
-Untouched since before the migration, and **opponent-first was never tuned at
-all** — the dummy's turn-1 swing value gets used twice when you go second. Play
-a few games on both seatings.
+**2. Read the whole phrase or refuse.** `optFilter` matched its subject with
+loose substring tests and silently dropped a qualifier it could not express:
 
-## Things I would flag as genuinely open
+> Mounting Anger — "banish an attack action card from your hand **with cost less
+> than the number of Draconic chain links you control**"
 
-- **`engine/priority.js` is not wired in.** The trainer still gates windows with
-  `mode`/`bphase`. This is the last step of roadmap item 1 and the one that
-  changes control flow rather than field names. Mind the clock: `priority.js`
-  counts player-turns in `turn` and rounds in `round`; the trainer's `turn`
-  counts only your own turns, and both the escalation table and the score read it.
-- **Hero abilities are the biggest content gap** — 13 of 15 heroes, **32 unread
-  clauses**, never charged by the stack. Azalea, Kayo, Fai and Briar are 100%
-  unread. `npm run sweep` is the review station for this.
-- **Five tokens have no engine handling** — `Confidence`, `Fealty`, `Flurry`,
-  `Graphene Chelicera`, `Courage`.
-- **147 cards are ruled but not built.** Understood ≠ built.
-- The dummy still has **no action phase** — its swing is the scripted
-  `[3,4,5][(turn-1)%3]` escalation in `foeSwing`, which is the seam a real
-  played card slots into.
+It returned `{type:"attack"}`, dropping the limit — so any attack card became a
+legal banish, strictly better than printed. Look-alike cards are the hazard, not
+exotic ones: Rising Resentment shares that clause verbatim and differs in its
+rider, and in both, "it" is the *banished* card, not the attacker.
+
+## What is left, ranked
+
+1. **`arsenal-triggers`** (8 cards) — see above, ready to build.
+2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions. Both encode the
+   DUMMY specifically, so they migrate together with giving seat 1 a real action
+   phase; doing them separately is work you throw away.
+3. **Wire `priority.js` for real** — v2.27 put it in shadow and proved the
+   mapping. Replace `playRx`'s hand-rolled speed gates and the hand-dim logic
+   with `speedAllowed`/`canAct`, then retire `mode`/`bphase`. Mind the clock:
+   `priority.js` counts player-turns, the trainer's `turn` counts only your own
+   and feeds both the escalation table and the score.
+4. **Brothers in Arms** needs somewhere for a buff to an already-declared
+   defender to live (`blockH` holds bare uids). Design question is recorded.
+5. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
 
 ## Validation loop
 
 ```bash
-npm test                              # 253 drills — must stay green
-npm run audit                         # regenerate AUDIT.md, read the diff
-node tools/audit.js --write-baseline  # ONLY after reviewing the tier diff
-npm run stack                         # STACK.md + tools/review.html (0 open)
-npm run sweep                         # SWEEP.md + tools/sweep.html (170 entries)
+npm test                              # 360 drills — must stay green
+npm run audit                         # regenerate AUDIT.md, read the tier diff
+node tools/audit.js --write-baseline  # ONLY after reviewing that diff
+npm run stack                         # STACK.md + tools/review.html
+npm run sweep                         # hero abilities, tokens, ruled-not-built
 ```
 
-Also open `index.html` in a browser and actually play. Several bugs this cycle
-— crumbling auras, stale defenders, the pitch selection carrying over — were
-only ever visible in play or by reading, never from a red test.
+Then **open it and play**. Nearly every bug this project has had was found in
+play or by reading, never by a red test. The browser caches `engine/*.js`
+aggressively and `location.reload(true)` does not revalidate them — fetch and
+re-eval the module if a change seems not to have landed.
 
 ## Hard constraints that still apply
 
-- **One `index.html`.** No build step, no modules, no framework CLI.
-- **Never invent card effects.** Teach the parser to read the text.
-- **The sync guard is real**, and it only covers what is listed in
-  `test/sync.test.js`. Anything shared with `engine/` must be in that list or
-  it is unguarded — that is exactly how `boardRed` drifted.
+- **No build step, ever.** Plain UMD `<script src>`; must run from `file://`.
+- **Never invent card effects.** Teach the parser to read the text. If it cannot
+  be read honestly, leave the card unclaimed — do not guess.
+- `you()`/`opp()` **read**, `youMut()`/`oppMut()` **write**, and rules functions
+  use `act()`/`foe()`. Never write a side field as a top-level game key.
 - **Bump `DATA_VER`** if anything is added to `NEEDED`.
-- `you()`/`opp()` read, `youMut()`/`oppMut()` write. Never write a side field as
-  a top-level key.
-
-## Definition of done for the evaluation
-
-A written assessment covering: what is solid, what is approximate-and-listed,
-what is approximate-and-*not*-listed (the dangerous category), and a ranked list
-of what to fix first. Plus any bug found, with the reproduction.
+- Store the rng back after every draw (`n.rng = rng`), or the next draw repeats.
