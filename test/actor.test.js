@@ -40,7 +40,9 @@ const ANCHORS = [
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],
   ["foeSwing",     "  function foeSwing(s){"],
-  ["takeIt",       "  const takeIt = () => setG(s=>{"]
+  ["takeIt",       "  const takeIt = () => setG(s=>{"],
+  ["newTurn",      "  function newTurn(s){"],
+  ["__end",        "  const toks = ["]
 ];
 
 const OFFSETS = (() => {
@@ -62,14 +64,24 @@ function bodyOf(name){
   return src.slice(start, next ? OFFSETS[next[0]] : src.length);
 }
 
-/* The rules core — every function that resolves game effects and therefore
-   must speak in ACTOR terms, not perspective terms. */
-const RULES_FNS = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt"];
+/* THE RULES CORE — exactly the seven functions ROADMAP-MULTIPLAYER.md names
+   ("`Battle` holds runOps, execute, resolveStack, newTurn, takeIt, tryPlay,
+   foeSwing — the entire rules core"). All seven resolve game effects and so
+   must speak in ACTOR terms. Keeping the denominator honest matters: a
+   ledger that quietly omits two functions makes the remaining work look
+   smaller than it is. */
+const RULES_FNS = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt",
+                   "newTurn", "foeSwing"];
 
 /* Migrated to act()/foe(). Add a name here ONLY together with its edit. */
-const MIGRATED = ["runOps"];
-/* Still on perspective helpers. This is the remaining Phase A step-1 work. */
-const PENDING  = ["execute", "resolveStack", "tryPlay", "takeIt"];
+const MIGRATED = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt"];
+/* Still on perspective helpers — the remaining Phase A step-1 work.
+   Both are entangled with the DUMMY specifically rather than with a generic
+   opponent (`foeSwing` is the scripted [3,4,5] escalation; `newTurn` refills
+   the dummy to DUMMY_INT every turn to stand in for the turn it never
+   takes). Migrating them is best done together with giving seat 1 a real
+   action phase, which is what replaces both behaviours. */
+const PENDING  = ["newTurn", "foeSwing"];
 
 const PERSPECTIVE = /\b(you|opp|youMut|oppMut)\(/g;
 const hits = s => (s.match(PERSPECTIVE) || []);
@@ -106,6 +118,19 @@ for(const name of MIGRATED){
     const b = bodyOf(name);
     assert.ok(/\b(act|foe|actMut|foeMut)\(/.test(b),
       `${name} claims to be migrated but references no actor helper at all`);
+  });
+
+  /* A LITERAL SEAT INDEX is the same bug as you(), wearing a different hat.
+     `popRunechants(n, 0, …)` popped seat 0's runechants whoever was swinging
+     — correct today, wrong the moment seat 1 attacks. Reaching into
+     `sides[0]`/`sides[1]` by hand inside a rules function is the same thing.
+     Use actorOf(n) / act() / foe() instead. */
+  test(`${name} indexes no seat literally`, () => {
+    const b = bodyOf(name);
+    const bad = b.match(/sides\s*\[\s*[01]\s*\]/g) || [];
+    assert.deepEqual(bad, [],
+      `${name} indexes a seat literally (${[...new Set(bad)].join(", ")}). ` +
+      "A rules function must derive the seat from s.actor — use actorOf(n), act() or foe().");
   });
 }
 

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.24
+**Current version:** v2.25
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 298 drills:
+This is `node --test "test/*.test.js"` — currently 311 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the three
    regexes with apostrophes are pre-neutralized inside the checker.
@@ -365,7 +365,7 @@ soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
 
-### ACTOR vs PERSPECTIVE — the seam (v2.24)
+### ACTOR vs PERSPECTIVE — the seam (v2.24, migration v2.25)
 
 `ROADMAP-MULTIPLAYER.md` Phase A step 1, "the whole ballgame". `you()` means
 **seat 0**, not "the player acting", and today those two readings coincide only
@@ -394,10 +394,23 @@ That is what makes this migratable a function at a time instead of big-bang.
 pinned so the remaining work is a number, not folklore. Moving a name between
 the lists must be a deliberate edit.
 
+The ledger covers **exactly the seven functions the roadmap names** as the rules
+core. Keeping that denominator honest matters — a ledger that quietly omits two
+makes the remaining work look smaller than it is.
+
 | | |
 |---|---|
-| MIGRATED | `runOps` |
-| PENDING | `execute`, `resolveStack`, `tryPlay`, `takeIt` |
+| MIGRATED (5/7) | `runOps`, `execute`, `resolveStack`, `tryPlay`, `takeIt` |
+| PENDING (2/7) | `newTurn`, `foeSwing` |
+
+`newTurn` and `foeSwing` are last on purpose: both are entangled with the
+**dummy specifically** rather than a generic opponent (`foeSwing` *is* the
+scripted `[3,4,5]` escalation; `newTurn` refills the dummy to `DUMMY_INT` every
+turn to stand in for the turn it never takes). Migrate them together with
+giving seat 1 a real action phase — that work replaces both behaviours anyway.
+
+Not yet in the ledger, and smaller: `confirmPay`, `allySwing`, `dummyDefence`
+also write side state. They are seat-0-only today; fold them in as they come up.
 
 The drill slices function bodies by **anchor pairs, not brace matching** — a
 brace counter that is not regex-literal-aware miscounts inside `execute`'s
@@ -405,9 +418,20 @@ regexes (the same hazard `html-balance.test.js` documents). `ANCHORS` must stay
 in true file order; a drill enforces exactly that.
 
 **A seat index hardcoded in a rules call is the same bug wearing a different
-hat.** `popRunechants(n, 0, …)` in `execute` pops **seat 0's** runechants
-whoever is swinging — correct today, wrong for seat 1. Sweep for literal seat
-indices as each function migrates.
+hat.** `popRunechants(n, 0, …)` popped **seat 0's** runechants whoever was
+swinging — fixed in v2.25 to `popRunechants(n, actorOf(n), …)`, and a drill now
+fails any migrated function that writes `sides[0]` / `sides[1]` literally.
+
+**Watch for local names that shadow the helpers.** `tapTwice`'s third parameter
+was called `act`, silently shadowing the global `act()` for that whole closure
+— harmless while it is pure UI, a real trap the moment anything in there needs
+the acting side. Renamed to `commit` in v2.25. Same-name-different-meaning is
+the bug class `test/sync.test.js` pins for the engine; keep it out of the UI too.
+
+**`built.*` is still the PLAYER's hero build** (`built.viseraiPassive`,
+`built.runeDmg`, `built.iceFrostbite`, `built.arsenalInstant`), captured in
+closure. When seat 1 acts for real, each side needs its own build — that is the
+next layer after the helper migration, not part of it.
 
 Two dead engine helpers were **deleted** in v2.24 rather than pinned:
 `sides.js` exported a seat-hardcoded `you`/`foe` pair that nothing called.
