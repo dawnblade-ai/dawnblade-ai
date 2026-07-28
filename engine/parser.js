@@ -471,7 +471,28 @@ function fxParse(card){
   if(FXMEMO.has(key)) return FXMEMO.get(key);
   const tt = (card.tt||"").toLowerCase();
   const kw = (card.kw||[]).map(k=>String(k).toLowerCase());
-  const fx = {ga:kw.some(k=>k==="go again"), self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+  /* PRINTED go again, not merely MENTIONED go again.
+
+     The database's `card_keywords` is a keyword INDEX: it lists every
+     keyword that appears anywhere on the card, including ones the text
+     only grants conditionally. Seeding fx.ga straight from it gave 28
+     pool cards unconditional go again when their text says otherwise —
+     Buckwild ("IF there is a card with 6 or more {p} in your pitch zone,
+     this gets go again") went again on an empty pitch zone, and Runerager
+     Swarm logged "condition not met" and then went again anyway.
+
+     Go again is the tempo engine of this game, so that is not a small
+     mis-read. This is the same family as the Kayo bug — kw and gkw are
+     already kept apart; the remaining trap is INSIDE card_keywords.
+
+     The discriminator is the printed layout: the database puts real
+     keyword lines in their own paragraph, so a PRINTED go again stands
+     alone on a line while a granted one sits inside a sentence. If the
+     text never mentions it at all, trust the keyword list. */
+  const gaStandalone = (card.tx||"").split(/\n+/).some(l => /^\**go again\**\.?$/i.test(clean(l)));
+  const gaMentioned  = /\bgo again\b/i.test(card.tx||"");
+  const fx = {ga: gaStandalone || (!gaMentioned && kw.some(k=>k==="go again")),
+    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";

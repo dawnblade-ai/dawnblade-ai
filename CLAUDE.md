@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.30
+**Current version:** v2.31
 
 ---
 
@@ -57,6 +57,20 @@ text — never to special-case the card by name.
 - Printed keywords (`card_keywords`) and *granted* keywords (`granted_keywords`) must
   stay separate. Merging them caused the Kayo bug: conditional go-again was granted
   unconditionally.
+- **`card_keywords` is a keyword INDEX, not a claim of unconditional possession
+  (v2.31).** It lists every keyword *appearing* on the card, including ones the
+  text only grants conditionally — so keeping it apart from `gkw` is necessary
+  but **not sufficient**. Seeding `fx.ga` straight from it gave **27 pool cards
+  unconditional go again against their own printed text**: Buckwild went again on
+  an empty pitch zone, and Runerager Swarm logged *"condition not met"* and then
+  went again anyway. Go again keeps your action point, so it is the most valuable
+  keyword in the game to get wrong.
+
+  The discriminator is the printed **layout**: the database puts real keyword
+  lines in their own paragraph, so a printed go again stands alone on a line
+  while a granted one sits inside a sentence. If the text never mentions it at
+  all, trust the list. 77 cards keep it, 27 lose it, and the conditional path
+  still grants it when the condition is actually met.
 
 ---
 
@@ -77,7 +91,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 367 drills:
+This is `node --test "test/*.test.js"` — currently 371 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.

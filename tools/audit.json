@@ -1,6 +1,6 @@
 {
- "generated": "2026-07-28T18:49:30.301Z",
- "appVer": "2.29",
+ "generated": "2026-07-28T19:04:43.790Z",
+ "appVer": "2.30",
  "dataVer": "sage-v9",
  "dbCount": 4862,
  "poolUnique": 405,
@@ -5712,7 +5712,7 @@
    ],
    "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "If this's {p} is greater than its base {p}, it has go again and \"If this hits, reload.\"",
@@ -5725,7 +5725,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If Bolt'n' Shot's {p} is greater than its base {p}, it has go again and \"If this hits, reload.\"",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "call in the big guns|1": {
    "name": "Call in the Big Guns",
@@ -6354,7 +6356,7 @@
    ],
    "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this is put face-up into your arsenal, it gets go again this turn.",
@@ -6367,7 +6369,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put face-up into your arsenal, it gets go again this turn.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "take aim|1": {
    "name": "Take Aim",
@@ -7910,7 +7914,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this attacks a hero, create a Fealty token.\"",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "enflame the firebrand|1": {
    "name": "Enflame the Firebrand",
@@ -7942,7 +7948,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, if you control 2 or more Draconic chain links, this gets go again, 3 or more, your attacks are Draconic this combat chain, 4 or more, this gets +2{p}.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "fire tenet strike first|1": {
    "name": "Fire Tenet: Strike First",
@@ -8086,7 +8094,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this hits a hero, mark them.\"",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "lava burst|1": {
    "name": "Lava Burst",
@@ -9652,7 +9662,7 @@
    ],
    "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, each hero puts the top card of their deck face-down into their arsenal",
@@ -9670,7 +9680,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, each hero puts the top card of their deck face-down into their arsenal. If 2 or more cards are put into arsenals this way, this gets go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "den of the spider|1": {
    "name": "Den of the Spider",
@@ -11496,7 +11508,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "take flight|1": {
    "name": "Take Flight",
@@ -11783,7 +11797,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "roaring beam|2": {
    "name": "Roaring Beam",
@@ -12017,7 +12033,9 @@
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: Attack\nIf you've played a Lightning card this turn, this card's attacks get +1{p} and go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "swiftstrike bracers|0": {
    "name": "Swiftstrike Bracers",
@@ -12253,7 +12271,7 @@
    ],
    "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Lightning Fusion",
@@ -12272,7 +12290,8 @@
    "eqAbility": null,
    "tx": "Lightning Fusion\nIf Entwine Lightning was fused, it gains go again.",
    "flags": [
-    "unreviewed keyword: \"lightning fusion\""
+    "unreviewed keyword: \"lightning fusion\"",
+    "text mentions go again but no clause parses it"
    ]
   },
   "fry|1": {
@@ -12327,7 +12346,7 @@
    ],
    "tier": "part",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, you may banish a Nimblism from your graveyard",
@@ -12350,7 +12369,8 @@
    "tx": "When this attacks, you may banish a Nimblism from your graveyard. If you do, this gets +1{p} and go again.\nWhen this hits a hero, {u} an ally they control, then steal it until the end of this action phase.",
    "flags": [
     "unreviewed keyword: \"steal\"",
-    "untap {u} — not parsed (see ledger)"
+    "untap {u} — not parsed (see ledger)",
+    "text mentions go again but no clause parses it"
    ]
   },
   "lightning press|1": {
@@ -12451,7 +12471,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks a hero, deal 1 arcane damage to them. If damage is dealt this way, this gets go again.\nInstant - {r}: This gets go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "rush of power|1": {
    "name": "Rush of Power",
@@ -12523,7 +12545,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, if you've dealt damage this turn, this gets +1{p} and go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "sizzle|1": {
    "name": "Sizzle",
@@ -13518,7 +13542,7 @@
    ],
    "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, you may discard a card or destroy the top card of your deck",
@@ -13536,7 +13560,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a card or destroy the top card of your deck. If that card has watery grave, this gets go again.",
-   "flags": []
+   "flags": [
+    "text mentions go again but no clause parses it"
+   ]
   },
   "loot the arsenal|3": {
    "name": "Loot the Arsenal",

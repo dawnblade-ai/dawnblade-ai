@@ -879,3 +879,52 @@ test("double-count — an unqualified next-attack buff is also counted once", ()
   assert.equal(fx.self, 0, "printed +6 must not become +12");
   assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",6]]);
 });
+
+/* ===================================================================
+   PRINTED go again vs MENTIONED go again (v2.31)
+
+   The database's `card_keywords` is a keyword INDEX — it lists every
+   keyword appearing anywhere on the card, including ones the text only
+   grants conditionally. Seeding fx.ga from it gave 27 pool cards
+   unconditional go again against their own printed text.
+
+   This is the Kayo bug's family. kw and gkw are already kept apart; the
+   remaining trap was INSIDE card_keywords. Go again keeps your action
+   point, so it is the most valuable keyword in the game to get wrong.
+   =================================================================== */
+const gaOf = (name, tx, kw) => P.fxParse({name, pitch:1, tt:"Generic Action - Attack",
+  tx, kw: kw||[], power:4});
+
+test("go again — a CONDITIONAL grant is not unconditional", () => {
+  /* Buckwild: "IF there is a card with 6 or more {p} in your pitch zone,
+     this gets go again." It went again on an empty pitch zone. */
+  const fx = gaOf("GA buckwild",
+    "If there is a card with 6 or more {p} in your pitch zone, this gets go again.", ["Go again"]);
+  assert.equal(fx.ga, false, "the keyword index must not grant it outright");
+  assert.deepEqual(fx.conds.map(c=>c.cond+":"+c.op[0]), ["pitch6:ga"],
+    "and the conditional path must still carry it, so a MET condition still grants it");
+});
+
+test("go again — a PRINTED keyword line still grants it", () => {
+  /* A real printed keyword sits on its own line; that must keep working
+     or the fix trades one bug for a worse one. */
+  const fx = gaOf("GA printed", "When this attacks, draw a card.\nGo again", ["Go again"]);
+  assert.equal(fx.ga, true);
+});
+
+test("go again — trust the keyword list when the text never mentions it", () => {
+  /* Some records carry the keyword without repeating it in functional
+     text. Absent any mention, the list is the only evidence there is. */
+  const fx = gaOf("GA silent", "Deal 2 damage to target hero.", ["Go again"]);
+  assert.equal(fx.ga, true);
+});
+
+test("go again — the real cards land on the right side of the line", () => {
+  const cond = gaOf("GA swarm",
+    "If you've played or created an aura this turn, this gets go again.", ["Go again"]);
+  assert.equal(cond.ga, false, "Runerager Swarm logged 'condition not met' and went again anyway");
+
+  const printed = gaOf("GA tipple",
+    "When this attacks, you may discard a yellow card. If you do, draw a card.\nGo again", ["Go again"]);
+  assert.equal(printed.ga, true, "Golden Tipple really does print go again");
+});
