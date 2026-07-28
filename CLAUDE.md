@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.26
+**Current version:** v2.27
 
 ---
 
@@ -77,10 +77,17 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 326 drills:
+This is `node --test "test/*.test.js"` — currently 338 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
-   String- and template-literal-aware, not regex-literal-aware — the three
-   regexes with apostrophes are pre-neutralized inside the checker.
+   String- and template-literal-aware, not regex-literal-aware — the
+   offending regexes are pre-neutralized inside the checker.
+   It also rejects an **orphaned comment terminator** (a block comment
+   closed twice, so the prose after the first close becomes code). That is
+   not hypothetical: it shipped in v2.27 and broke the page completely
+   while all 338 drills stayed green, because the orphaned prose happened
+   to contain balanced brackets. **Bracket balance alone cannot see it.**
+   A regex ending in a star-slash looks identical to that, so add any new
+   one to the pre-neutralize list rather than weakening the check.
 2. **Deck integrity** (`test/decks.test.js`): exactly 15 decks, each deck +
    gear summing to exactly 55 cards.
 3. **Parser/game/advisor drills** (`test/parser.test.js`, `game.test.js`,
@@ -364,6 +371,61 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### The priority machine, in SHADOW (v2.27)
+
+Roadmap Phase A step 4 — *the* step that changes **control flow** rather than
+field names, so it lands in two moves. This is the first.
+
+`DawnPriority.fromTrainer(t, foeFirst)` derives the machine's state
+(`phase`/`step`/`priority`/`passed`/`turnPlayer`/`firstPlayer`/`attacker`) from
+the trainer's `mode`/`bphase`/`chainOpen`, and `withPriority` merges exactly
+`PRI_FIELDS` into every state that passes through `setG`. **It drives nothing
+yet** — `mode`/`bphase` are still the source of truth.
+
+Two reasons that is worth a version on its own:
+
+1. **It turned four dormant guards on.** `BAD-PHASE`, `BAD-STEP`,
+   `BAD-PRIORITY` and `PRIORITY-IN-CLOSED-PHASE` all guard with `!= null`,
+   and the trainer carried none of those fields — so since v2.21 they had
+   **never once fired on a real game**. Now they audit every state change.
+2. **It proves the mapping before anything depends on it.** Every bug this
+   cycle was found by eye rather than by a red test; this is the change where
+   that would have been most expensive.
+
+`fromTrainer` lives in `engine/priority.js`, not the trainer: it is pure, it is
+a statement about priority, and inside the React component no drill could reach
+it. It builds state by **calling the module's own transitions** rather than
+restating them, so there is one description of who holds priority when. It is
+passed **no `sides`** — `toPhase` issues an action point when it sees one, and a
+derivation must never touch resources.
+
+The mapping, verified in live play:
+
+| trainer | machine | why |
+|---|---|---|
+| `act`, no chain | action / **layer**, priority you | your open window |
+| `act`, chain open | action / **link** | the chain stays open after resolution |
+| `pay`,`arsenal`,`boostpick` | action / layer | UI sub-modes, still your window |
+| `stack` | **reaction**, attacker you, priority you | you attacked → `attack-reaction` |
+| `block`+`defend` | **defend**, turnPlayer **1**, priority **1** | CR 7.3 — see below |
+| `block`+`react` | **reaction**, attacker 1, priority you | dummy passes, window slides to you |
+| game over | **end**, priority `null` | CR 4.4.1 |
+
+**The counter-intuitive one is load-bearing.** In the defend step the
+*turn-player* holds priority (CR 7.3) — so while the dummy swings,
+`canAct(g,0)` is **false** and `canDeclareDefenders(g,0)` is **true**.
+Declaring blockers is a free, simultaneous game-state action (CR 7.3.2), not a
+priority action. That pair is the whole reason the two questions are separate.
+
+**The clock is deliberately NOT wired.** `priority.js`'s `turn` counts
+player-turns and ticks on every handoff; the trainer's `turn` counts only your
+own turns and is read by the escalation table *and* the score. That belongs
+with seat 1's action phase, together with `newTurn`/`foeSwing`.
+
+**What is left** is moving the consumers: replace `playRx`'s hand-rolled speed
+gates and the hand-dim logic with `speedAllowed`/`canAct`, then retire
+`mode`/`bphase`.
 
 ### The seeded RNG (v2.26) — `engine/rng.js`
 

@@ -138,6 +138,19 @@ const GAME_KEYS = [
      networked peers undiagnosable. `rng.seed` is the replay key and
      `rng.n` the draw counter / desync canary. */
   "rng",
+  /* THE PRIORITY MACHINE (engine/priority.js), carried in shadow from
+     v2.27: derived from the trainer's mode/bphase each time state changes,
+     not yet driving it. Registered here because they are genuinely shared
+     — a phase and a step belong to the game, not to a seat — and because
+     until they existed the invariant judge's BAD-PHASE / BAD-STEP /
+     BAD-PRIORITY / PRIORITY-IN-CLOSED-PHASE checks were all dormant: every
+     one of them guards with `!= null`.
+
+     NOTE the clock is deliberately NOT here. priority.js's `turn` counts
+     player-turns and ticks on every handoff; the trainer's `turn` counts
+     only the player's own turns and is read by the escalation table and
+     the score. Wiring that belongs with seat 1's action phase. */
+  "phase","step","priority","passed","turnPlayer","firstPlayer","attacker",
   /* set when the opponent won the seating: its opening swing lands before
      the first action phase, so the clock has not started ticking yet */
   "_opening"
