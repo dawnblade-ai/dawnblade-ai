@@ -47,7 +47,7 @@ const SIDE_FIELDS = [
   /* economy: floating resources, action points, fizzled resources */
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
-  "counters","weaponUsed","buffNext","gaNext","runeHitNext",
+  "counters","weaponUsed","buffNext","buffQ","gaNext","runeHitNext",
   "amp","ward","awd","rune","rot","fra","frost",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
@@ -79,7 +79,7 @@ function makeSide(o){
     deck: o.deck || [], hand: o.hand || [], arsenal: o.arsenal!=null ? o.arsenal : null,
     pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
-    counters: {}, weaponUsed: {}, buffNext: 0, gaNext: false, runeHitNext: false,
+    counters: {}, weaponUsed: {}, buffNext: 0, buffQ: [], gaNext: false, runeHitNext: false,
     amp: 0, ward: 0, awd: 0, rune: 0, rot: 0, fra: 0, frost: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,

@@ -263,7 +263,18 @@ function classifyClause(raw){
   if(m=c.match(/gains? ((?:\{r\})+)/)) return R([["res",m[1].split("{r}").length-1]]);
   if(m=c.match(/gains? (\d+) action points?/)) return R([["ap",+m[1]]]);
   if(m=c.match(/gains? (\d+)\s*(?:\{h\}|life)/)) return R([["life",+m[1]]]);
-  if(m=c.match(/(?:your|the) next(?:[^.+]{0,70})attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)) return R([["buffNext",+m[1]]]);
+  /* "Your next ARROW attack this turn gets +3{p}" — the qualifier is not
+     decoration. This pattern used to swallow it ([^.+]{0,70}) and emit a
+     bare buffNext, so 24 pool cards granted their pump to ANY next attack:
+     an arrow buff landed on a sword, a Runeblade buff on a Generic. That is
+     the same class as the Mounting Anger filter bug — a printed restriction
+     silently dropped, making the card strictly better than printed.
+     `attackQual` reads the qualifier off the type line, and null means
+     genuinely unqualified. */
+  if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)){
+    const q = attackQual(m[1]);
+    return R([q ? ["buffNext",+m[2],q] : ["buffNext",+m[2]]]);
+  }
   if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){ const o=[["gaNext"]]; if(/create a runechant/.test(c)) o.push(["runeHitNext"]); return R(o); }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
@@ -385,6 +396,35 @@ const FXMEMO = new Map();
 
    Reads printed FIELDS only (type line, pitch, cost, name), never rules
    text, exactly as promptFilter does. */
+/* Read the qualifier out of "your next <QUALIFIER> attack this turn gets
+   +N{p}" into a matcher over the printed TYPE LINE.
+
+   Two shapes, and they mean different things:
+     "Brute or Warrior"  -> OR   : either type line matches
+     "Pirate ally"       -> AND  : the type line needs BOTH words
+   so the result is an OR-list of AND-groups: [["brute"],["warrior"]] vs
+   [["pirate","ally"]].
+
+   Returns null when there is no qualifier at all ("your next attack"),
+   which is the honest unqualified case and must stay unqualified. */
+function attackQual(phrase){
+  const p = String(phrase||"").toLowerCase()
+    .replace(/[^a-z ]+/g, " ")
+    .replace(/\b(a|an|the|your|this|turn|other|another)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+  if(!p) return null;
+  const groups = p.split(/\s+or\s+/).map(g => g.split(/\s+/).filter(Boolean)).filter(g => g.length);
+  return groups.length ? groups : null;
+}
+
+/* Does a card satisfy such a qualifier? Reads the printed type line only —
+   never rules text — so it stays inside the golden rule. */
+function qualMatches(qual, card){
+  if(!qual || !qual.length) return true;          /* unqualified buffs hit everything */
+  const tt = String((card && card.tt) || "").toLowerCase();
+  return qual.some(group => group.every(word => tt.indexOf(word) >= 0));
+}
+
 function optFilter(phrase){
   let rest = String(phrase||"").trim();
   if(!rest) return null;
@@ -556,7 +596,16 @@ function fxParse(card){
     fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
-  if(!fx.self && !isAttack(card)){
+  /* Fallback self-pump: a non-attack whose "+N{p}" never became an op still
+     queues that pump for your next attack.
+
+     IT MUST NOT FIRE WHEN A buffNext OP ALREADY READ THAT SAME "+N{p}".
+     This scans the WHOLE text, so "Your next arrow attack this turn GAINS
+     +3{p}" matched here as well as in the buffNext rule, and `execute` added
+     both — Lace with Frailty granted +6 from a card that prints +3. Every
+     "your next X attack gains +N{p}" card was doubled the same way; the
+     phrasing "gets" vs "gains" is why some escaped and some did not. */
+  if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
     if(pm) fx.self = +pm[1];
     else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
@@ -649,7 +698,7 @@ const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt|
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isInstantT,
         isRunechant, runeCount, isAura, auraCount};

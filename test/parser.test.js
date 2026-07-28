@@ -68,7 +68,12 @@ test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Draw two cards.").ops, [["draw",2]]);
   assert.deepEqual(cc("Gain 2 {r}.").ops, [["res",2]]);
   assert.deepEqual(cc("Gain 3 {h}.").ops, [["life",3]]);
-  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1]]);
+  /* The qualifier is CARRIED now. This line used to assert a bare
+     [["buffNext",1]], which pinned the bug: a "weapon attack" buff was
+     applied to any next attack at all. op[2] is the type-line matcher. */
+  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1,[["weapon"]]]]);
+  assert.deepEqual(cc("Your next attack this turn gains +1 {p}.").ops, [["buffNext",1]],
+    "a genuinely unqualified buff must stay unqualified");
   assert.deepEqual(cc("This attack gains +3 {p}.").ops, [["self",3]]);
   assert.deepEqual(cc("Amp 1").ops, [["amp",1]]);
   assert.deepEqual(cc("Create a Runechant token.").ops, [["rune",1]]);
@@ -779,4 +784,98 @@ test("look-alike — the payload's SUBJECT differs between siblings", () => {
   const rr = P.classifyClause("it costs {r} less to play and you may play it this turn");
   assert.notDeepEqual(ma && ma.ops, rr && rr.ops,
     "two different riders must not resolve to the same ops");
+});
+
+/* ===================================================================
+   TYPE-QUALIFIED NEXT-ATTACK BUFFS (v2.30)
+
+   "Your next ARROW attack this turn gets +3{p}" is not "your next attack
+   gets +3". The old pattern swallowed the qualifier and 24 pool cards
+   granted their pump to any attack at all — an arrow buff landing on a
+   sword, a Runeblade buff on a Generic. Same class as the Mounting Anger
+   filter bug: a printed restriction silently dropped, making the card
+   strictly better than printed.
+
+   The qualifier is read off the printed TYPE LINE only, never rules text.
+   =================================================================== */
+test("qualified buff — the qualifier is carried, not swallowed", () => {
+  const q = t => P.classifyClause(t).ops[0];
+  assert.deepEqual(q("your next arrow attack this turn gets +3{p}"),  ["buffNext",3,[["arrow"]]]);
+  assert.deepEqual(q("your next runeblade attack this turn gets +3{p}"), ["buffNext",3,[["runeblade"]]]);
+  assert.deepEqual(q("your next attack this turn gets +3{p}"), ["buffNext",3],
+    "an unqualified buff must stay unqualified — it really does hit anything");
+});
+
+test("qualified buff — 'X or Y' is OR, 'X Y' is AND", () => {
+  /* These two shapes look alike and mean different things. "Brute or
+     Warrior" matches either type; "Pirate ally" needs BOTH words on the
+     type line, because it means an ally that is also a Pirate. */
+  assert.deepEqual(P.attackQual(" Brute or Warrior "), [["brute"],["warrior"]]);
+  assert.deepEqual(P.attackQual(" Pirate ally "), [["pirate","ally"]]);
+  assert.equal(P.attackQual(""), null, "no qualifier at all is null, not an empty matcher");
+});
+
+test("qualified buff — matching reads the printed type line", () => {
+  const arrow = P.attackQual("arrow");
+  assert.equal(P.qualMatches(arrow, {tt:"Ranger Action - Arrow Attack"}), true);
+  assert.equal(P.qualMatches(arrow, {tt:"Warrior Action - Attack"}), false,
+    "an arrow buff must NOT land on a non-arrow — this is the whole bug");
+
+  const bw = P.attackQual("Brute or Warrior");
+  assert.equal(P.qualMatches(bw, {tt:"Warrior Action - Attack"}), true);
+  assert.equal(P.qualMatches(bw, {tt:"Brute Action - Attack"}), true);
+  assert.equal(P.qualMatches(bw, {tt:"Ranger Action - Attack"}), false);
+
+  const pa = P.attackQual("Pirate ally");
+  assert.equal(P.qualMatches(pa, {tt:"Pirate Ally"}), true);
+  assert.equal(P.qualMatches(pa, {tt:"Pirate Action - Attack"}), false,
+    "AND means both words, so a Pirate ATTACK is not a Pirate ALLY");
+
+  assert.equal(P.qualMatches(null, {tt:"anything at all"}), true,
+    "no qualifier means it applies to everything");
+});
+
+test("qualified buff — the real cards keep their restriction", () => {
+  const big = P.fxParse({name:"CIBG probe", pitch:1, tt:"Ranger Action",
+    tx:"Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again", kw:["Go again"]});
+  const op = big.ops.find(o=>o[0]==="buffNext");
+  assert.ok(op && op[2], "Call in the Big Guns must carry its 'arrow' restriction");
+  assert.equal(P.qualMatches(op[2], {tt:"Ranger Action - Arrow Attack"}), true);
+  assert.equal(P.qualMatches(op[2], {tt:"Ranger Action - Attack"}), false,
+    "a plain Ranger attack is not an arrow and must not collect +3");
+});
+
+/* THE DOUBLE-COUNT (v2.30) — a card granting twice its printed buff.
+
+   fxParse has a fallback that scans the WHOLE text of a non-attack for
+   "gains/gets +N{p}" and queues it as a self-pump. "Your next arrow attack
+   this turn GAINS +3{p}" matched there as well as in the buffNext rule, and
+   execute added both — 34 pool cards granted double, up to Act of Glory at
+   +12 from a printed +6.
+
+   The coverage audit could not see this: every one of those cards reported
+   tier `full`. They were read, and read WRONG. Same blind spot as the
+   `noop` keywords in CLAUDE.md. */
+test("double-count — a buffNext op suppresses the fallback self-pump", () => {
+  const fx = P.fxParse({name:"DC next-attack", pitch:1, tt:"Ranger Action",
+    tx:'Your next arrow attack this turn gains +3{p} and "When this hits a hero, create a Frailty token under their control."'});
+  assert.equal(fx.self, 0,
+    "the fallback must not re-read a +N{p} the buffNext rule already took");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",3,[["arrow"]]]],
+    "and the buff is counted exactly once, with its qualifier");
+});
+
+test("double-count — the fallback still catches a genuine self-pump", () => {
+  /* The safety net must survive: a non-attack whose pump never became an
+     op still queues it. Removing the fallback entirely would break these. */
+  const fx = P.fxParse({name:"DC plain pump", pitch:1, tt:"Generic Action", tx:"This gains +2{p}."});
+  assert.equal(fx.self, 2, "a real self-pump with no buffNext op still reads");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), []);
+});
+
+test("double-count — an unqualified next-attack buff is also counted once", () => {
+  const fx = P.fxParse({name:"DC act of glory", pitch:1, tt:"Generic Action",
+    tx:"Your next attack this turn gains +6{p}."});
+  assert.equal(fx.self, 0, "printed +6 must not become +12");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",6]]);
 });

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.29
+**Current version:** v2.30
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 360 drills:
+This is `node --test "test/*.test.js"` — currently 367 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -341,7 +341,7 @@ and a bridge to migrate *across*, so it can proceed a function at a time
 instead of as one big-bang rewrite.
 
 **`engine/sides.js` — the shape a second human can occupy.**
-`makeSide()` defines the 47 fields a player needs in order to *be* a player;
+`makeSide()` defines the 48 fields a player needs in order to *be* a player;
 both seats get all of them, so giving the dummy an action phase becomes
 filling in blanks rather than inventing plumbing. `makeGame()` wraps
 `sides[0]` (you) and `sides[1]` (opponent) with the genuinely shared state.
@@ -371,6 +371,49 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### Next-attack buffs: two bugs, one clause (v2.30)
+
+> "Your next **arrow** attack this turn gains **+3{p}**"
+
+That single line was being read wrong twice over, and **the coverage audit
+could not see either one** — every affected card reported tier `full`. They
+were read, and read *wrong*. Same blind spot as the `noop` keywords above:
+**a card can be 100% covered and still hand a player a win they did not earn.**
+
+**1. The qualifier was swallowed — 24 cards.** The pattern used
+`[^.+]{0,70}` and emitted a bare `buffNext`, so an *arrow* buff landed on a
+sword and a *Runeblade* buff on a Generic. `attackQual` now reads the
+qualifier off the printed **type line** and it rides in the op as `op[2]`.
+
+Two shapes that look alike and are not:
+
+| printed | meaning | matcher |
+|---|---|---|
+| `Brute or Warrior` | **OR** — either type | `[["brute"],["warrior"]]` |
+| `Pirate ally` | **AND** — both words | `[["pirate","ally"]]` |
+
+Qualified buffs live on a new side field **`buffQ`** (`{amt, q}` entries)
+rather than the bare `buffNext` integer, and **a qualified buff that does not
+match is not spent** — it waits for an attack it actually applies to.
+
+**2. The buff was counted TWICE — 34 cards.** `fxParse` has a fallback that
+scans the *whole text* of a non-attack for `gains/gets +N{p}` and queues it as
+a self-pump. The same "+3{p}" matched there **and** in the `buffNext` rule, and
+`execute` added both:
+
+| card | printed | was granting |
+|---|---|---|
+| Act of Glory | +6 | **+12** |
+| Up Sticks and Run · Re-Charge! | +4 | **+8** |
+| Lace with Frailty / Bloodrot / Inertia | +3 | **+6** |
+
+The fallback now refuses when a `buffNext` op already read that `+N{p}`. It
+still fires for a genuine self-pump with no op — that safety net is drilled,
+because deleting it outright would break a different set of cards.
+
+**Both regressions are pinned, and both drills are proven to bite** by
+reintroducing the bug and watching them fail.
 
 ### Optional costs — "you may X. If you do, Y" (v2.28)
 
