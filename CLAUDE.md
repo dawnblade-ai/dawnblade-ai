@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.25
+**Current version:** v2.26
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 311 drills:
+This is `node --test "test/*.test.js"` — currently 326 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the three
    regexes with apostrophes are pre-neutralized inside the checker.
@@ -364,6 +364,51 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### The seeded RNG (v2.26) — `engine/rng.js`
+
+Roadmap Phase A step 2, and its own words: *"Do not skip the seed. It is
+thirty lines and it unlocks replay, drills for `Battle`, and lockstep all at
+once."* Three payoffs, only one of which is netcode:
+
+1. **Replay** — a game is its seed plus its action log.
+2. **Drills** — you cannot assert on a shuffled deck; with a pinned seed you can.
+3. **Lockstep** — two peers must deal the same decks from the same seed.
+
+**Every function is pure and returns a NEW rng beside its value.** Nothing in
+the module mutates and nothing calls `Math.random`.
+
+```js
+const {rng, v} = rngRoll(n.rng, 6);
+n.rng = rng;            // ALWAYS store it back
+```
+
+Forgetting to store it back means the next draw repeats the last one. `rng.n`
+(the draw counter) is what makes that visible — it only goes up, so a stalled
+`n` between two states that should differ is the tell. It doubles as a **desync
+canary**: two peers at the same action with different `n` have already diverged.
+
+**One seed per match**, stamped in `App` when the match begins and threaded
+`Loadout → Pregame → Battle` through `cfg`. The pregame throw runs on a
+*derived* sub-stream (`seed + ":rps"`) so the opponent's hand cannot correlate
+with the first card of anyone's deck.
+
+Seeded: both opening shuffles, the throw, Knucklehead's d6, intimidate's pick,
+the dummy's graveyard recycle. **Deliberately left on `Math.random`:** taunts,
+trophy text and the random-hero button — none of them touch game state.
+
+`rng.seed` + `rng.n` ride in the **JUDGE!!** report, so a one-line bug note is
+now a reproducible game rather than a screenshot to squint at.
+
+**`DawnGame.shuffle` is gone** (v2.26). An unseeded shuffle sitting beside the
+seeded one under a *shorter* name is a trap: someone reaches for it and silently
+breaks replay and lockstep with no test able to notice. Same reasoning that
+deleted `sides.js`'s `you`/`foe`. Use `rngShuffle(rng, arr)`.
+
+**Known, and left alone:** `addRunechants`'s `mkUid` fallback in
+`engine/game.js` still uses `Math.random`, but every real caller and every
+drill passes `tokSeq`, so it never fires. Making it deterministic would risk
+uid collisions in a path that does not execute.
 
 ### ACTOR vs PERSPECTIVE — the seam (v2.24, migration v2.25)
 

@@ -23,10 +23,13 @@
 
    Nothing here reads the DOM and nothing here invents a card effect.
    ============================================================ */
+/* Takes engine/rng.js as a dependency the same way prompts/cards/advisor
+   take parser.js — so rng.js must load BEFORE sides.js. test/sync.test.js
+   pins that ordering. */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory();
-  else root.DawnSides = factory();
-})(typeof self!=="undefined" ? self : this, function(){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./rng.js"));
+  else root.DawnSides = factory(root.DawnRNG);
+})(typeof self!=="undefined" ? self : this, function(RNG){
 
 /* ---- the per-side shape ---------------------------------------------
    Every field a player needs to BE a player. The dummy gets all of them
@@ -129,6 +132,12 @@ const GAME_KEYS = [
      during the attacker's turn. Shared, not per-side — it names one of the two
      seats, it does not live on either. Default 0 on a single-actor device. */
   "actor",
+  /* the SEEDED random source (engine/rng.js). Shared, and it must travel
+     WITH the state: a game is its seed plus its action log, so an rng that
+     lived outside the state would make the game unreplayable and two
+     networked peers undiagnosable. `rng.seed` is the replay key and
+     `rng.n` the draw counter / desync canary. */
+  "rng",
   /* set when the opponent won the seating: its opening swing lands before
      the first action phase, so the clock has not started ticking yet */
   "_opening"
@@ -185,6 +194,10 @@ function makeGame(o){
     /* whose effect is resolving; defaults to the turn player and moves during
        reactions. See GAME_KEYS above and act()/foe() in the trainer. */
     actor: o.actor!=null ? o.actor : (o.firstPlayer!=null ? o.firstPlayer : 0),
+    /* Seeded from o.seed when given (a room code, or a pinned seed in a
+       drill), otherwise from the clock. Passing a seed is what makes a
+       game replayable, so drills and networked play always pass one. */
+    rng: o.rng || RNG.make(o.seed),
     /* NULL, not the first player: a game opens in the start phase, and
        CR 4.2.1 says players do not get priority during the start phase.
        priority.js grants it on entering the action phase (CR 4.3.3).

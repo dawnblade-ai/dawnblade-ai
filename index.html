@@ -623,7 +623,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.25"; /* v2.25: THE RULES CORE SPEAKS IN ACTOR TERMS. Five of the seven functions ROADMAP-MULTIPLAYER.md names as the rules core — runOps, execute, resolveStack, tryPlay, takeIt — now resolve relative to s.actor instead of a hardcoded seat 0 (~430 call sites). Two genuine seat-hardcodings fixed on the way: popRunechants(n, 0, ...) popped SEAT 0's runechants whoever was swinging, and tapTwice's `act` parameter silently shadowed the global act() helper for that whole closure (renamed `commit`). A literal sides[0]/sides[1] inside a migrated function is now a drill failure — it is the same bug as you(), wearing a different hat. The ledger also grew an honest denominator: it tracks exactly the seven functions the roadmap names, so newTurn and foeSwing are visibly PENDING rather than quietly missing; both stay last on purpose because they encode the DUMMY specifically and get replaced when seat 1 gains a real action phase. v2.24: THE ACTOR SEAM — ROADMAP-MULTIPLAYER.md Phase A step 1, "the whole ballgame". you() means SEAT 0, not "the player acting", and the two readings only coincide because one seat ever acts; the moment a second human sits down, every rules function draws from the wrong deck. So perspective and actor come apart: you()/opp() stay as UI helpers, and act()/foe()/actMut()/foeMut() read a new shared s.actor for the RULES. actor defaults to 0, so act(s)===you(s) today and every swap is behaviour-identical NOW while being correct for seat 1 later — which is what makes this migratable a function at a time instead of big-bang. runOps is migrated (92 call sites); execute/resolveStack/tryPlay/takeIt are pinned as PENDING in the new test/actor.test.js ledger, which fails if a migrated function reaches for you( again. Also DELETED sides.js's dead seat-hardcoded you/foe rather than pinning them: the trainer's actor-relative foe would have collided with DIFFERENT semantics (sides[1] vs sides[1-actor]), so KNOWN_COLLISIONS SHRANK to [endTurn, other]. v2.23: RUNECHANTS ARE AURAS, NOT A COUNTER. The printed token is a "Runeblade Token - Aura", and seven pool cards ask about auras generically ("if you control 3 or more auras", "you may destroy an aura you control", "whenever you play an aura") — none of which could ever see an integer. They are now real board permanents, so they render the actual token art instead of the text chip "Runechant ×2", and runeCount/auraCount read the board. Two rules fixes fall out: the trigger fires on PLAY, so a runechant the attack itself conjures (Viserai's rite) no longer pops on that same attack; and because a triggered ability sits above the attack on the stack, the arcane resolves at declaration BEFORE the attack's damage rather than after it. Also: attack targets (CR 1.4.5) — resolveEntry carries an ally's life, engine/game.js gains attackTargets/damageAlly/resetAllyLife and prompts.js a sixth `target` variant; an attack on an ally cannot be blocked (CR 7.3.2a). Trainer wiring for the target prompt is still to do — see CLAUDE.md. v2.22: JUDGE!! — a bug report written at the table. The button sits on the log pane and captures the whole board with the note (zones with uids, counters, chain, prompt, the feed, and any invariant violations), so the note can be one line; Copy or Save Report. Also fixes a real rules bug: CR 4.4.3f says "if it is the first turn of the game, all other players draw cards until the number of cards in their hand is equal to their hero's intellect" — the non-turn player refills on turn one only. The opponent-first opening never did it, so going second cost an extra swing AND left you short-handed for your first action phase. That is a large part of why opponent-first played harder than it should. v2.21: THE GUARD RAILS. engine/invariants.js is a judge that audits the STATE rather than the cards — a card in two zones at once, a per-side field written to the game object, a defending card re-declared on a second chain link (CR 7.3.2b), priority held in a phase that has none (CR 4.2.1/4.4.1). It is wired into setG, so every state change in a real game is audited; it never throws. Four genuine CR violations fixed in engine/priority.js: priority was granted during the start and end phases, the defend step handed priority to the defender instead of the turn-player (CR 7.3), only the turn player's floating resources fizzled instead of BOTH players' (CR 4.4.3e — a real two-player bug), and the action point was issued in the end phase instead of the action phase (CR 4.3.2). New: tools/failstates.js re-reads every card and asks how it goes WRONG at the table rather than how much text is unread, and feeds sweep.html a ranked section 4. It found the noop blind spot: phantasm and watery grave are filed as "does nothing", so Spears of Surreality, Enigma Chimera and five Gravy Bones allies report tier=FULL from coverage alone. CORRECTED in v2.23 — the tool now cross-checks the trainer by name the way the sweep does, because phantasm IS enforced (the trainer pops the attack at declaration) and reporting it ignored from parser status was an over-claim. Watery grave is the real half-built one: the permission to replay from the graveyard exists, the face-down rule does not. v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
+window.APP_VER = "2.26"; /* v2.26: THE SEEDED RNG. engine/rng.js is a pure, serializable random source (mulberry32) carried IN game state as s.rng, and every game-affecting draw now comes off it: both opening shuffles, the pregame throw, Knucklehead's d6, intimidate's pick from the opponent's hand, and the dummy's graveyard recycle. A match now has ONE seed, stamped when the match begins and threaded Loadout -> Pregame -> Battle through cfg; the throw runs on a derived sub-stream so the opponent's hand does not correlate with anyone's deck. rng.seed is the replay key and rng.n a draw counter that doubles as a desync canary, and both now ride in the JUDGE!! report so "this looked wrong" becomes a reproducible game. The unseeded DawnGame.shuffle was DELETED rather than left beside the seeded one under a shorter name — the same reasoning that removed sides.js's you/foe in v2.24. Also fixes mkRune, which minted runechants and credited made/aura history to seat 0 whoever played the card — the same seat-hardcoding class as popRunechants. Cosmetic randomness (taunts, trophy text, the random-hero button) is deliberately left on Math.random. v2.25: THE RULES CORE SPEAKS IN ACTOR TERMS. Five of the seven functions ROADMAP-MULTIPLAYER.md names as the rules core — runOps, execute, resolveStack, tryPlay, takeIt — now resolve relative to s.actor instead of a hardcoded seat 0 (~430 call sites). Two genuine seat-hardcodings fixed on the way: popRunechants(n, 0, ...) popped SEAT 0's runechants whoever was swinging, and tapTwice's `act` parameter silently shadowed the global act() helper for that whole closure (renamed `commit`). A literal sides[0]/sides[1] inside a migrated function is now a drill failure — it is the same bug as you(), wearing a different hat. The ledger also grew an honest denominator: it tracks exactly the seven functions the roadmap names, so newTurn and foeSwing are visibly PENDING rather than quietly missing; both stay last on purpose because they encode the DUMMY specifically and get replaced when seat 1 gains a real action phase. v2.24: THE ACTOR SEAM — ROADMAP-MULTIPLAYER.md Phase A step 1, "the whole ballgame". you() means SEAT 0, not "the player acting", and the two readings only coincide because one seat ever acts; the moment a second human sits down, every rules function draws from the wrong deck. So perspective and actor come apart: you()/opp() stay as UI helpers, and act()/foe()/actMut()/foeMut() read a new shared s.actor for the RULES. actor defaults to 0, so act(s)===you(s) today and every swap is behaviour-identical NOW while being correct for seat 1 later — which is what makes this migratable a function at a time instead of big-bang. runOps is migrated (92 call sites); execute/resolveStack/tryPlay/takeIt are pinned as PENDING in the new test/actor.test.js ledger, which fails if a migrated function reaches for you( again. Also DELETED sides.js's dead seat-hardcoded you/foe rather than pinning them: the trainer's actor-relative foe would have collided with DIFFERENT semantics (sides[1] vs sides[1-actor]), so KNOWN_COLLISIONS SHRANK to [endTurn, other]. v2.23: RUNECHANTS ARE AURAS, NOT A COUNTER. The printed token is a "Runeblade Token - Aura", and seven pool cards ask about auras generically ("if you control 3 or more auras", "you may destroy an aura you control", "whenever you play an aura") — none of which could ever see an integer. They are now real board permanents, so they render the actual token art instead of the text chip "Runechant ×2", and runeCount/auraCount read the board. Two rules fixes fall out: the trigger fires on PLAY, so a runechant the attack itself conjures (Viserai's rite) no longer pops on that same attack; and because a triggered ability sits above the attack on the stack, the arcane resolves at declaration BEFORE the attack's damage rather than after it. Also: attack targets (CR 1.4.5) — resolveEntry carries an ally's life, engine/game.js gains attackTargets/damageAlly/resetAllyLife and prompts.js a sixth `target` variant; an attack on an ally cannot be blocked (CR 7.3.2a). Trainer wiring for the target prompt is still to do — see CLAUDE.md. v2.22: JUDGE!! — a bug report written at the table. The button sits on the log pane and captures the whole board with the note (zones with uids, counters, chain, prompt, the feed, and any invariant violations), so the note can be one line; Copy or Save Report. Also fixes a real rules bug: CR 4.4.3f says "if it is the first turn of the game, all other players draw cards until the number of cards in their hand is equal to their hero's intellect" — the non-turn player refills on turn one only. The opponent-first opening never did it, so going second cost an extra swing AND left you short-handed for your first action phase. That is a large part of why opponent-first played harder than it should. v2.21: THE GUARD RAILS. engine/invariants.js is a judge that audits the STATE rather than the cards — a card in two zones at once, a per-side field written to the game object, a defending card re-declared on a second chain link (CR 7.3.2b), priority held in a phase that has none (CR 4.2.1/4.4.1). It is wired into setG, so every state change in a real game is audited; it never throws. Four genuine CR violations fixed in engine/priority.js: priority was granted during the start and end phases, the defend step handed priority to the defender instead of the turn-player (CR 7.3), only the turn player's floating resources fizzled instead of BOTH players' (CR 4.4.3e — a real two-player bug), and the action point was issued in the end phase instead of the action phase (CR 4.3.2). New: tools/failstates.js re-reads every card and asks how it goes WRONG at the table rather than how much text is unread, and feeds sweep.html a ranked section 4. It found the noop blind spot: phantasm and watery grave are filed as "does nothing", so Spears of Surreality, Enigma Chimera and five Gravy Bones allies report tier=FULL from coverage alone. CORRECTED in v2.23 — the tool now cross-checks the trainer by name the way the sweep does, because phantasm IS enforced (the trainer pops the attack at declaration) and reporting it ignored from parser status was an over-claim. Watery grave is the real half-built one: the permission to replay from the graveyard exists, the face-down rule does not. v2.20: THE MIRRORS ARE GONE — index.html now LOADS engine/*.js with plain script tags instead of carrying a hand-mirrored copy of every shared function. 51 duplicated definitions deleted (-55KB, ~20% of the file); one copy of each function now exists in the project and drift is impossible by construction. sync.test.js flips from "the two copies must match" to "there must be no second copy", and pins the three engine/trainer name collisions (endTurn, other, you) that wiring priority.js will have to resolve. Still no build step: plain UMD scripts, works over file://. v2.19: Two-tap hand — first tap peeks the card at a readable size, second commits (play, pitch, defend, react, arsenal all through one cell). Equipment abilities show their own art instead of a text placeholder. Fixes five v2.18 leftovers where ward/hist/blockH/blockG/blockRx/paySel were written to the game object instead of the side. v2.18: THE MIGRATION IS DONE — every counter and status joins the zones on sides[], both seats are built by one makeSide, and flatRemaining hits 0. Cost readers now take a SIDE, not the game. v2.17: The prompt sheet becomes general — pick-a-card, choose-one modal, pay-or-decline, reveal, plus opt, all as DATA specs in engine/prompts.js rather than a branch per card. Prompts are addressed to a SIDE, so a ruling can ask the opponent. v2.16: The player's zones and life join the opponent's on sides[] — both seats now declare an identical zone set, and the dummy gains the arsenal, pitch, banish and soul it never had. Reads via you()/opp(), writes via youMut()/oppMut(). Fixes a pre-existing bug where auras that crumbled at the top of your turn were restored to the board on the same line. v2.15: The opponent's deck, hand, graveyard, iron, board and life move off the flat d* stubs and onto sides[1]. v2.14: Multiplayer groundwork — engine/sides.js (symmetric two-sided state + lossless legacy bridge), engine/priority.js (phases, chain steps, priority passing), and the rock-paper-scissors pregame whose winner CHOOSES the seating. */
 window.DATA_VER = "sage-v9"; /* v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1188,6 +1188,7 @@ window.TROPHIES = [
      there is only one copy of each function in the project. Plain UMD
      scripts — no build step, no modules, still fine over file://.
      Order matters only in that parser.js must precede its dependents. -->
+<script src="engine/rng.js"></script>
 <script src="engine/parser.js"></script>
 <script src="engine/game.js"></script>
 <script src="engine/rps.js"></script>
@@ -1211,7 +1212,15 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     isInstantT = DawnParser.isInstantT,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
     isAura = DawnParser.isAura, auraCount = DawnParser.auraCount;
-var shuffle = DawnGame.shuffle, parseDeck = DawnGame.parseDeck, gearDef = DawnGame.gearDef,
+/* The SEEDED source. `rngShuffle` is deliberately NOT named `shuffle`:
+   DawnGame.shuffle is the unseeded Math.random one, and two functions
+   with the same name and different determinism is exactly the
+   same-name-different-meaning trap sync.test.js pins. Game-affecting
+   randomness goes through these; taunts and trophy text do not. */
+var rngMake = DawnRNG.make, rngNext = DawnRNG.next, rngInt = DawnRNG.int,
+    rngRoll = DawnRNG.roll, rngPick = DawnRNG.pick, rngShuffle = DawnRNG.shuffle,
+    rngSeedFrom = DawnRNG.seedFrom, rngRestore = DawnRNG.restore;
+var parseDeck = DawnGame.parseDeck, gearDef = DawnGame.gearDef,
     gearBlockApply = DawnGame.gearBlockApply, slotOf = DawnGame.slotOf,
     addRunechants = DawnGame.addRunechants, popRunechants = DawnGame.popRunechants,
     attackTargets = DawnGame.attackTargets, targetCanBeDefended = DawnGame.targetCanBeDefended,
@@ -1753,12 +1762,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     } : null;
     let uid=0;
     const cuts = (cfg&&cfg.cuts)||{};
-    const deck = shuffle(d.deck.flatMap((e,ei)=>{
+    /* THE SEED. Both opening shuffles are drawn from one seeded source, so
+       the whole game is reproducible from `seed` alone — that is what makes
+       a bug report replayable and what will let two peers deal the same
+       decks from a shared room code. `cfg.seed` lets a drill or a replay pin
+       it; otherwise the clock. `rng` is threaded through both shuffles and
+       handed to Battle's initial state, so play continues the SAME stream
+       rather than starting a second one. */
+    let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
+    const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
       const q = Math.max(0, e.q - (cuts[ei]||0));
       if(!q) return [];
       const c = resolveEntry(db,e);
       return Array.from({length:q},()=>({...c,uid:++uid}));
     }));
+    rng = _pd.rng;
+    const deck = _pd.arr;
     const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e),gi,uid:++uid,used:false}));
     const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
     gear.forEach(gr=>{
@@ -1781,10 +1800,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
     const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++uid,used:false}));
     /* the dummy's pile, resolved through the same reader as the player's */
-    const dDeck = shuffle(DUMMY_DECK.reduce((acc,[nm,p,q])=>{
+    const _dd = rngShuffle(rng, DUMMY_DECK.reduce((acc,[nm,p,q])=>{
       for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++uid});
       return acc;
     },[]).filter(c=>c.resolved));
+    rng = _dd.rng;
+    const dDeck = _dd.arr;
     const _atk = deck.filter(isAttack);
     const _ga = deck.filter(c=>fxParse(c).ga).length;
     const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o=>o[0]==="arcane")).length;
@@ -1818,7 +1839,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
       if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
     }
-    return {deck,gear,dGear,dDeck,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok,runeCard};
+    return {deck,gear,dGear,dDeck,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok,runeCard,
+      /* the stream AFTER both opening shuffles — Battle continues it */
+      rng};
   },[h,db]);
 
   /* L is declared ahead of the state so the opening-swing initializer below
@@ -1830,7 +1853,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       out of the file has an unambiguous marker — engine/prompts.js mirrors a
       `const base = {` of its own into this file, higher up. */
    const initial = {
-    turn:1, actor:0, mode:"act", bphase:"defend", pending:null, incoming:0,
+    turn:1, actor:0, rng:built.rng, mode:"act", bphase:"defend", pending:null, incoming:0,
     log:[foeFirst ? "It won the throw and took the first turn. Iron up." : "The dummy creaks to life. 42 to carve away — go."],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read,
       foeFirst ? "The dummy won the throw and elected to swing first." : "You won the seating and took the first turn.",
@@ -1939,6 +1962,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       _what:"Dawnblade bug report — open an issue or paste this to Claude.",
       note, at:new Date().toISOString(),
       appVer:window.APP_VER, dataVer:window.DATA_VER,
+      /* THE REPLAY KEY. `seed` deals the same decks and rolls the same dice;
+         `s`/`n` say exactly how far the stream had advanced when this went
+         wrong. Together they turn "this looked wrong" into a reproducible
+         game rather than a screenshot to squint at. */
+      rng:g.rng ? {seed:g.rng.seed, s:g.rng.s, draws:g.rng.n} : null,
       hero:h.k, heroName:h.n, seating:foeFirst?"opponent first":"you first",
       turn:g.turn, mode:g.mode, bphase:g.bphase, incoming:g.incoming,
       chainOpen:g.chainOpen,
@@ -2000,8 +2028,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        counter collides with the loadout's card numbering — the first
        runechant minted took uid 1 and shared it with a deck card, and the
        invariant judge caught it in play as CARD-IN-TWO-ZONES. */
-    let n = built.runeCard ? addRunechants(s, 0, count, built.runeCard, tokSeq) : s;
-    const h = youMut(n);
+    /* THE ACTOR mints them, not seat 0. A runechant belongs to whoever
+       played the Runeblade card that conjured it, and the `made`/`aura`
+       history is that player's too — both were hardcoded to seat 0, the
+       same bug class as popRunechants(n, 0, …). */
+    let n = built.runeCard ? addRunechants(s, actorOf(s), count, built.runeCard, tokSeq) : s;
+    const h = actMut(n);
     h.hist = {...h.hist, made:(h.hist.made||0)+count, aura:(h.hist.aura||0)+count};
     return n;
   };
@@ -2246,7 +2278,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       /* RULING (Knucklehead): a d6 both players see; base intellect becomes
          the roll, and intellect is the end-of-turn draw. */
       else if(k==="roll"){
-        n.lastRoll = 1 + Math.floor(Math.random()*v);
+        /* SEEDED: a die both players see must be the SAME die on both
+           clients, and a replay must roll it again identically. */
+        const _r = rngRoll(n.rng, v); n.rng = _r.rng; n.lastRoll = _r.v;
         n = L(n, `${srcName}: d${v} comes up ${n.lastRoll}.`);
       }
       else if(k==="intRoll"){
@@ -2475,7 +2509,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          beginning of the end phase. It is a tempo tax for one turn, not a
          permanent loss — my first pass banished it forever. */
       if(hasKw(card,"intimidate") && foe(n).hand.length){
-        const pick = Math.floor(Math.random()*foe(n).hand.length);
+        /* SEEDED: which card intimidate strips is hidden information in a
+           real game, so it MUST come from the shared stream — two peers
+           rolling it independently would diverge on the spot. */
+        const _ip = rngInt(n.rng, foe(n).hand.length); n.rng = _ip.rng;
+        const pick = _ip.v;
         const lost = foe(n).hand[pick];
         foeMut(n).hand = foe(n).hand.filter((_,i)=>i!==pick);
         foeMut(n).intimidated = [...(foe(n).intimidated||[]), lost];
@@ -2993,12 +3031,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        partner that decked out would stop sparring, so its graveyard
        recycles instead of fatiguing — an approximation, logged as one. */
     let oHand = opp(s).hand||[], oDeck = opp(s).deck||[], oGrave = opp(s).grave||[], recycled = false;
+    /* SEEDED: the recycle shuffle decides every card the dummy draws for the
+       rest of the game, so it has to come from the game's own stream or the
+       game stops being replayable exactly when it gets interesting. */
+    let rng = s.rng;
     const need = Math.max(0, DUMMY_INT - oHand.length);
     if(need>0){
-      if(oDeck.length < need && oGrave.length){ oDeck = [...oDeck, ...shuffle(oGrave)]; oGrave = []; recycled = true; }
+      if(oDeck.length < need && oGrave.length){
+        const _gs = rngShuffle(rng, oGrave); rng = _gs.rng;
+        oDeck = [...oDeck, ..._gs.arr]; oGrave = []; recycled = true;
+      }
       oHand = [...oHand, ...oDeck.slice(0,need)]; oDeck = oDeck.slice(need);
     }
-    let n = {...s};
+    let n = {...s, rng};
     youMut(n).dracNext = false;
     const oSide = oppMut(n); oSide.blockedHand = 0; oSide.chainBlocked = [];
     const refilled = oppMut(n);
@@ -3795,7 +3840,7 @@ function Loadout({h,db,onBack,onStart}){
 const RPS_GLYPH = {rock:"✊", paper:"✋", scissors:"✌"};
 const RPS_LOSS = {rock:"Paper smothers it.", paper:"Scissors cut through.", scissors:"Rock shatters them."};
 
-function Pregame({h, onSeated, onBack}){
+function Pregame({h, seed, onSeated, onBack}){
   const [rounds,setRounds] = uS([]);
   const [live,setLive] = uS(null);
   const [phase,setPhase] = uS("throw");
@@ -3803,13 +3848,20 @@ function Pregame({h, onSeated, onBack}){
   const timer = uR(null);
   const say = m => setLog(l=>[...l,m].slice(-7));
   uE(()=>()=>{ if(timer.current) clearTimeout(timer.current); },[]);
+  /* The throw comes off the MATCH seed, on its own derived sub-stream.
+     Derived rather than shared so the opponent's hand does not correlate
+     with the first card of anyone's deck — same match seed, independent
+     sequences. A ref, not state: advancing it must not trigger a render,
+     and ties replay by drawing again rather than by re-rendering. */
+  const rps = uR(rngMake(rngSeedFrom(String(seed==null?0:seed) + ":rps")));
 
   const series = rpsSeries(rounds);
   const winner = series.winner;
 
   const throwIt = mine => {
     if(phase!=="throw") return;
-    const theirs = rpsThrow();
+    const _t = rngNext(rps.current); rps.current = _t.rng;
+    const theirs = rpsThrow(()=>_t.v);
     setLive({mine, theirs:null});
     setPhase("shaking");
     timer.current = setTimeout(()=>{
@@ -3919,8 +3971,15 @@ function App(){
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
-      {loHero && !fighting && <Loadout h={loHero} db={db} onBack={()=>setLoHero(null)} onStart={cfg=>{setSeating({h:loHero,cfg}); setLoHero(null);}}/>}
-      {seating && !fighting && <Pregame h={seating.h}
+      {/* THE MATCH SEED is stamped once, here, when the match begins — and
+          then everything random in the match derives from it: the pregame
+          throw, both opening shuffles, the d6, intimidate, the dummy's
+          recycle. One seed per match is what makes a game replayable, and
+          it is the value a networked room code will supply instead of the
+          clock. It rides in `cfg`, which already flows Loadout → Pregame →
+          Battle, so nothing new has to be plumbed. */}
+      {loHero && !fighting && <Loadout h={loHero} db={db} onBack={()=>setLoHero(null)} onStart={cfg=>{setSeating({h:loHero,cfg:{...cfg, seed:(cfg&&cfg.seed!=null)?cfg.seed:Date.now()}}); setLoHero(null);}}/>}
+      {seating && !fighting && <Pregame h={seating.h} seed={seating.cfg.seed}
         onBack={()=>{setLoHero(seating.h); setSeating(null);}}
         onSeated={first=>{setFighting({h:seating.h,cfg:seating.cfg,first}); setSeating(null);}}/>}
       {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}

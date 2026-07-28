@@ -13,7 +13,12 @@
   else root.DawnGame = factory();
 })(typeof self!=="undefined" ? self : this, function(){
 
-const shuffle = a => { const x=a.slice(); for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];} return x; };
+/* The unseeded `shuffle` lived here until v2.26. DELETED, not kept:
+   every game-affecting shuffle now goes through DawnRNG.shuffle(rng, arr),
+   and an unseeded one sitting beside it under a SHORTER name is a trap —
+   someone reaches for it and silently breaks replay and lockstep with no
+   test able to notice. Same reasoning that deleted sides.js's you/foe in
+   v2.24: prefer removing a misusable helper over documenting it. */
 
 function parseDeck(raw){
   const gear=[], deck=[]; let hero=null;
@@ -232,7 +237,7 @@ function popRunechants(game, side, limit, dmgEach){
           cards: popped};
 }
 
-return {shuffle, parseDeck, gearDef, gearBlockApply, slotOf,
+return {parseDeck, gearDef, gearBlockApply, slotOf,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,
         isRunechantEntry, addRunechants, popRunechants};
