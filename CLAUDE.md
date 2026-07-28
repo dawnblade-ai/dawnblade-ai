@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.27
+**Current version:** v2.28
 
 ---
 
@@ -77,7 +77,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 338 drills:
+This is `node --test "test/*.test.js"` — currently 355 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -371,6 +371,56 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### Optional costs — "you may X. If you do, Y" (v2.28)
+
+**24 pool cards are shaped like this and not one was fully read.** The rider
+was deliberately skipped because paying nothing and collecting the payload is
+the free-ability bug v2.04 fixed. The machinery to ask properly now exists, so
+the text is read instead of skipped.
+
+**`engine/prompts.js` — `pick` gained an `ops` rider.** With `min:0` a pick is
+an optional cost; `ops` is the payload; `applyPrompt` returns it **only when
+cards actually moved**. Decline and the rider does not fire — same rule the
+`pay` variant already enforced, and there is a drill named for the v2.04 bug
+that is proven to bite.
+
+**`engine/parser.js` — `fx.optCost`.** The two halves arrive as *separate*
+clauses (the splitter breaks on the period), so they are paired in `fxParse`
+where the whole card is visible, not in `classifyClause` which sees one at a
+time. The rider is classified by `classifyClause` itself, so `deal 1 arcane`
+/ `draw a card` / `this gets +2{p}` all keep using the one reader.
+
+```js
+fx.optCost = {trigger, kind:"banish"|"discard", zone, filter, ops}
+```
+
+`optFilter` reads the cost's subject into a prompts.js filter from printed
+**fields only** — `an aura` → `{tt:"aura"}`, `a yellow card` → `{pitch:2}`,
+`a Nimblism` → `{name:"^Nimblism$"}` (anchored, so it cannot match
+"Nimblism Adept"), `with cost 2 or less` → `{costLe:2}`.
+
+**It returns `null` on anything it cannot read honestly, and the card is then
+left unclaimed rather than guessed** — the golden rule applied to a cost. A
+wrong guess would let a player pay the wrong thing, or pay nothing and collect.
+
+**The printed zone wins, and it is not always at the end.** "an attack action
+card **from your hand** with cost 2 or less" puts the zone mid-phrase; an
+end-anchored read missed it and silently fell back to the graveyard, banishing
+from a zone the text never named. Drilled.
+
+Wired for the **`attacks`** trigger in `execute`, queued via `promptQ` (never
+inline — the attack finishes resolving first) and addressed to `actorOf(n)` so
+it asks whoever is swinging. `buildPrompt` returns `null` on an empty zone, so
+a cost you cannot pay skips itself.
+
+**Still to wire:** the `hits`, `defends` and `playAura` triggers. The parser
+reads them already — `fx.optCost.trigger` names which — so each is a queue site,
+not new machinery.
+
+**Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong and
+Mounting Anger went none/part → full; Golden Tipple (×3) and Fire that Burns
+Within → full.
 
 ### The priority machine, in SHADOW (v2.27)
 

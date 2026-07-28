@@ -90,6 +90,14 @@ function buildPrompt(game, spec){
     const min = Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
     return {...base, zone, cards:pool, min, max,
       to: spec.to || null, optional: min === 0,
+      /* THE "IF YOU DO" RIDER. A pick with `min:0` is an OPTIONAL COST —
+         "you may banish an aura from your graveyard. If you do, deal 1
+         arcane damage" — and these ops are the "if you do" half. They are
+         returned by applyPrompt ONLY when something was actually picked,
+         which is the whole rule: decline and the rider must not fire.
+         Paying nothing and getting the payload is the free-ability bug
+         v2.04 fixed, and there is a drill named for it. */
+      ops: spec.ops || [],
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
@@ -210,10 +218,16 @@ function applyPrompt(game, prompt){
   }
   if(prompt.tag === "pick"){
     const picked = prompt.sel.map(i=>prompt.cards[i]).filter(Boolean);
+    /* DECLINED. The cost was not paid, so the "if you do" rider does NOT
+       fire — out.ops stays empty. This is the same rule the `pay` variant
+       enforces, and the reason an optional cost can be modelled at all
+       without re-opening the v2.04 free-ability bug. */
     if(!picked.length){ out.msgs.push(who + " chose nothing."); return out; }
     if(prompt.to) out.game = moveCards(game, side, prompt.zone, prompt.to, picked);
     out.msgs.push(picked.map(c=>c.name).join(", ") +
       (prompt.to ? " → " + prompt.to : " revealed") + " from " + prompt.zone + ".");
+    /* PAID. The cards moved, so the rider resolves. */
+    out.ops = prompt.ops || [];
     return out;
   }
   if(prompt.tag === "modal"){

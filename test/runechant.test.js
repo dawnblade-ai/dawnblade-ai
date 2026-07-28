@@ -27,6 +27,7 @@ const P = require("../engine/parser.js");
 const G = require("../engine/game.js");
 const S = require("../engine/sides.js");
 const I = require("../engine/invariants.js");
+const { html } = require("./helpers/extract.js");
 
 /* the real token record, shaped as the loader hands it over */
 const TOKEN = {name:"Runechant", pitch:0, cost:null, power:null, def:null,
@@ -184,6 +185,59 @@ test("the cap never pops more than are actually there", () => {
 test("a null cap pops everything — the plain 'all of them' case", () => {
   const g = G.addRunechants(game(), 0, 4, TOKEN, uid);
   assert.equal(G.popRunechants(g, 0, null, 1).popped, 4);
+});
+
+/* ---- the pop must CREDIT THE HISTORY (v2.28) -----------------------
+   `popRunechants` is pure and deliberately does not touch `hist` — it
+   reports what popped and leaves the bookkeeping to its caller, exactly
+   as runOps's `arcane` op does its own. The trainer's call site forgot,
+   so three runechants could pop for 3 arcane (verified in live play
+   2026-07-27, opponent 42 -> 39) while `hist.arc` stayed 0. Two things
+   read that field and both went quietly wrong:
+
+     - `arcDealt` ("you have dealt arcane damage this turn"), which stayed
+       FALSE right after Viserai's PRIMARY arcane source resolved;
+     - the "arcane dealt" pip, which never lit from a runechant.
+
+   `execute` is inside the React component, so no drill can call it. Pin
+   the call site by reading it, the way the actor ledger does — a source
+   check is worth more than no check when the alternative is unreachable. */
+const popBlock = (() => {
+  const src = html();
+  const at = src.indexOf("if(runeAtPlay > 0){");
+  if(at < 0) throw new Error("the runechant pop block moved — re-anchor this drill");
+  const end = src.indexOf("\n      }", at);
+  return src.slice(at, end);
+})();
+
+test("the trainer's runechant pop credits hist.arc", () => {
+  assert.match(popBlock, /hist\s*=\s*\{\s*\.\.\.act\(n\)\.hist\s*,\s*arc\s*:/,
+    "without this, arcDealt and the arcane pip never see a runechant");
+});
+
+test("the pop counts one arcane instance per token, not one per pop", () => {
+  /* runOps counts one per arcane op regardless of the points dealt, so N
+     separate sources are N instances. `rp.popped` is that number; a bare
+     +1 would under-count and `rp.damage` would count POINTS, a different
+     quantity that happens to coincide only when the token deals 1. */
+  assert.match(popBlock, /arc\s*:\s*\(act\(n\)\.hist\.arc\s*\|\|\s*0\)\s*\+\s*rp\.popped/,
+    "credit rp.popped — not a literal 1, and not rp.damage");
+});
+
+test("the history is written through actMut, never as a game-object key", () => {
+  /* the v2.18/v2.19 bug class: `{...n, hist}` writes to the GAME object,
+     the side keeps its old value, and the write silently does nothing.
+     `hist` is a per-side field and SIDE-FIELD-ON-GAME exists for this. */
+  assert.match(popBlock, /actMut\(n\)\.hist\s*=/);
+  assert.doesNotMatch(popBlock, /\{\s*\.\.\.n\s*,[^}]*\bhist\b\s*[,:}]/,
+    "hist belongs to the side — write it with actMut, not as a top-level key");
+});
+
+test("the pop credits the ACTOR's history, not seat 0's", () => {
+  /* same bug class as popRunechants(n, 0, …), fixed in v2.25: the arcane
+     a runechant deals belongs to whoever swung. */
+  assert.doesNotMatch(popBlock, /you(Mut)?\(n\)\.hist/,
+    "a perspective helper here would credit seat 0 whoever is acting");
 });
 
 /* ---- cost reduction still works off the board --------------------- */

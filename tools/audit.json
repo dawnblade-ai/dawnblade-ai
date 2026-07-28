@@ -1,13 +1,13 @@
 {
- "generated": "2026-07-25T19:09:59.188Z",
- "appVer": "2.17",
- "dataVer": "sage-v8",
+ "generated": "2026-07-28T13:25:40.026Z",
+ "appVer": "2.27",
+ "dataVer": "sage-v9",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 258,
-  "part": 112,
-  "none": 35
+  "full": 264,
+  "part": 108,
+  "none": 33
  },
  "heroes": {
   "kayo": {
@@ -3107,23 +3107,20 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this attacks, you may banish an aura from your graveyard",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, deal 1 arcane damage to target hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may banish an aura from your graveyard",
-    "If you do, deal 1 arcane damage to target hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero.",
@@ -8000,27 +7997,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may discard a Phoenix Flame",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, draw a card and this gets +2{p}.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may discard a Phoenix Flame",
-    "If you do, draw a card and this gets +2{p}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a Phoenix Flame. If you do, draw a card and this gets +2{p}.\nGo again",
@@ -8145,27 +8139,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, it gains +1{p} and you may play it this turn.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-    "If you do, it gains +1{p} and you may play it this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When Mounting Anger hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it gains +1{p} and you may play it this turn.\nGo again",
@@ -12331,17 +12322,17 @@
     "go again",
     "steal"
    ],
-   "tier": "none",
+   "tier": "part",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may banish a Nimblism from your graveyard",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, this gets +1{p} and go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.",
@@ -12349,8 +12340,6 @@
     }
    ],
    "skipped": [
-    "When this attacks, you may banish a Nimblism from your graveyard",
-    "If you do, this gets +1{p} and go again.",
     "When this hits a hero, {u} an ally they control, then steal it until the end of this action phase."
    ],
    "weaponCost": null,
@@ -13019,27 +13008,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may discard a yellow card",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, draw a card and create a Gold token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may discard a yellow card",
-    "If you do, draw a card and create a Gold token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a yellow card. If you do, draw a card and create a Gold token.\nGo again",
@@ -13220,27 +13206,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may discard a yellow card",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, draw a card and create a Gold token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may discard a yellow card",
-    "If you do, draw a card and create a Gold token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a yellow card. If you do, draw a card and create a Gold token.\nGo again",
@@ -13491,27 +13474,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may discard a yellow card",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, draw a card and create a Gold token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may discard a yellow card",
-    "If you do, draw a card and create a Gold token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a yellow card. If you do, draw a card and create a Gold token.\nGo again",

@@ -627,3 +627,88 @@ test("rulings — Crouching Tiger is a real database card, 0 power with go again
   assert.equal(fx.ga, true, "go again comes off the printed keyword");
   assert.equal(fx.tier, "full");
 });
+
+/* ===================================================================
+   OPTIONAL COST + "If you do, …"  (v2.28)
+
+   24 pool cards are shaped "you may <banish/discard> X. If you do, Y"
+   and not one was fully read: the rider was deliberately skipped because
+   paying nothing and getting the payload is the v2.04 free-ability bug.
+   The `pick` prompt now carries a rider that fires only when cards moved,
+   so the text can be read instead of skipped.
+
+   NOTE every card below has a UNIQUE name — fxParse memoizes on
+   name|pitch and identical names silently collide in the cache.
+   =================================================================== */
+const oc = (name, tx, tt) => P.fxParse({name, tt: tt || "Attack Action", tx, kw: []}).optCost;
+
+test("optCost — banish an aura from the graveyard, deal arcane", () => {
+  const o = oc("OC Fellingsong",
+    "When this attacks, you may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero.");
+  assert.ok(o, "the pair must be read");
+  assert.equal(o.trigger, "attacks");
+  assert.equal(o.kind, "banish");
+  assert.equal(o.zone, "grave");
+  assert.deepEqual(o.filter, {tt:"aura"});
+  assert.deepEqual(o.ops, [["arcane", 1]]);
+});
+
+test("optCost — the printed zone wins even mid-phrase", () => {
+  /* "an attack action card FROM YOUR HAND with cost 2 or less" puts the
+     zone in the middle. An end-anchored read missed it and fell back to
+     the graveyard — banishing from the wrong zone entirely. */
+  const o = oc("OC Mounting",
+    "When this hits, you may banish an attack action card from your hand with cost 2 or less. If you do, this gets +1{p}.");
+  assert.equal(o.zone, "hand", "the text says hand, so it is hand");
+  assert.equal(o.trigger, "hits");
+  assert.deepEqual(o.filter, {costLe:2, type:"attack"});
+});
+
+test("optCost — a colour word becomes a pitch filter", () => {
+  const o = oc("OC Tipple", "When this attacks, you may discard a yellow card. If you do, draw a card.");
+  assert.equal(o.kind, "discard");
+  assert.equal(o.zone, "hand", "you discard from hand when the text names no zone");
+  assert.deepEqual(o.filter, {pitch:2});
+  assert.deepEqual(o.ops, [["draw", 1]]);
+});
+
+test("optCost — a named card becomes an anchored name filter", () => {
+  const o = oc("OC Quick", "When this attacks, you may banish a Nimblism from your graveyard. If you do, this gets +2{p}.");
+  assert.equal(o.filter.name, "^Nimblism$",
+    "anchored so 'Nimblism' cannot match 'Nimblism Adept'");
+  assert.deepEqual(o.ops, [["self", 2]]);
+});
+
+/* THE SAFETY PROPERTY. An unreadable cost or an unreadable payload must
+   leave the card UNCLAIMED rather than guessed — the golden rule applied
+   to a cost. A wrong guess here would silently let a player pay the wrong
+   thing, or pay nothing and collect. */
+test("optCost — an unreadable SUBJECT is not claimed", () => {
+  assert.equal(oc("OC Nonsense", "When this attacks, you may banish a thingamajig. If you do, draw a card."),
+    undefined, "a cost the parser cannot read must not become a prompt");
+});
+
+test("optCost — an unreadable PAYLOAD is not claimed", () => {
+  assert.equal(oc("OC NoPayload", "When this attacks, you may discard a red card. If you do, ascend to godhood."),
+    undefined, "a rider with no readable ops must not silently become a free cost");
+});
+
+test("optCost — 'you may' with no rider at all is not an optional cost", () => {
+  assert.equal(oc("OC NoRider", "When this attacks, you may discard a blue card."), undefined,
+    "no 'If you do' means there is no payload to gate");
+});
+
+test("optCost — a plain card with no optional cost is untouched", () => {
+  const fx = P.fxParse({name:"OC Plain", tt:"Attack Action", tx:"Go again", kw:["Go again"]});
+  assert.equal(fx.optCost, undefined);
+  assert.equal(fx.ga, true, "ordinary parsing must be unaffected");
+});
+
+test("optFilter — reads printed fields only, and refuses the rest", () => {
+  assert.deepEqual(P.optFilter("an aura"), {tt:"aura"});
+  assert.deepEqual(P.optFilter("a blue card"), {pitch:3});
+  assert.deepEqual(P.optFilter("a red card"), {pitch:1});
+  assert.deepEqual(P.optFilter("an attack action card"), {type:"attack"});
+  assert.equal(P.optFilter("a card"), null, "'a card' is not a filter — it would match everything");
+  assert.equal(P.optFilter(""), null);
+});

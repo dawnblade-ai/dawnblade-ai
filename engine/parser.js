@@ -97,8 +97,14 @@ function classifyClause(raw){
     if(/^this (?:leaves|enters|enters or leaves) the arena/.test(cond)) return Object.assign(rest,{approx:true});
     /* "When this is played, …" is just on-resolution, which is when every
        effect already fires — pass the inner clause (and its own condition)
-       straight through. Note "if you do, …" deliberately stays unread: it
-       hangs off an optional cost, and running it free is the bug v2.04 fixed. */
+       straight through.
+
+       "If you do, …" used to be listed here as deliberately unread. As of
+       v2.28 it IS read, but not by this function: an optional cost and its
+       rider are two separate clauses, so they are paired in fxParse where
+       the whole card is visible, and gated behind a `pick` prompt whose
+       rider only fires when the cost was actually paid. Running it free
+       is still the v2.04 bug; the difference is the prompt now exists. */
     if(/^(?:this is played|you play this|this attacks(?: a hero)?)$/.test(cond)) return rest;
     /* "When this defends, …" — the block step is a real trigger point */
     if(/^this defends(?: an attack)?$/.test(cond)) return rest;
@@ -371,6 +377,38 @@ function classifyClause(raw){
 }
 
 const FXMEMO = new Map();
+/* Read the SUBJECT of an optional cost ("an aura", "a yellow card",
+   "a Nimblism", "an attack action card with cost 2 or less") into a
+   prompts.js filter. Returns null when the phrase cannot be read
+   honestly — the caller then leaves the card unclaimed rather than
+   guessing, which is the golden rule applied to a cost.
+
+   Reads printed FIELDS only (type line, pitch, cost, name), never rules
+   text, exactly as promptFilter does. */
+function optFilter(phrase){
+  const p = String(phrase||"").toLowerCase().trim().replace(/^(?:a|an|another|one)\s+/, "");
+  if(!p) return null;
+  const f = {};
+  const cm = p.match(/\bwith cost (\d+) or less\b/);
+  if(cm) f.costLe = +cm[1];
+  const base = p.replace(/\bwith cost \d+ or less\b/, "").trim();
+  if(/\baura\b/.test(base))                    { f.tt = "aura";  return f; }
+  if(/\battack action card\b/.test(base))      { f.type = "attack"; return f; }
+  if(/^yellow cards?$/.test(base))             { f.pitch = 2; return f; }
+  if(/^blue cards?$/.test(base))               { f.pitch = 3; return f; }
+  if(/^red cards?$/.test(base))                { f.pitch = 1; return f; }
+  /* A NAMED card — "a Nimblism", "a Phoenix Flame". Take the name off the
+     original (case-preserving) phrase, and only when it actually looks
+     like a proper noun, so "a card" never becomes a name filter. */
+  const raw = String(phrase||"").trim().replace(/^(?:A|An|Another|One)\s+/i, "")
+    .replace(/\s+with cost \d+ or less$/i, "").trim();
+  if(/^[A-Z][A-Za-z'\- ]*$/.test(raw) && !/^(Card|Cards)$/i.test(raw)){
+    f.name = "^" + raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
+    return f;
+  }
+  return Object.keys(f).length ? f : null;
+}
+
 function fxParse(card){
   const key = norm(card.name)+"|"+(card.pitch||0);
   if(FXMEMO.has(key)) return FXMEMO.get(key);
@@ -396,7 +434,59 @@ function fxParse(card){
     const selfRe = new RegExp("\\b"+esc+"(?:'s)?\\b", "gi");
     clauses = clauses.map(s => s.replace(selfRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
   }
-  clauses.forEach(raw=>{
+  /* ---- OPTIONAL COST + "If you do, …"  (v2.28) ------------------------
+     "When this attacks, you may banish an aura from your graveyard.
+      If you do, deal 1 arcane damage to target hero."
+
+     Twenty-four pool cards are shaped like this and NOT ONE was fully
+     read: "If you do" was left deliberately unread because it hangs off
+     an optional cost, and running the payload for free is the bug v2.04
+     fixed. The prompt machinery to ask the question properly now exists
+     (engine/prompts.js `pick`, whose rider fires only when cards actually
+     moved), so the text can finally be read instead of skipped.
+
+     The two halves arrive as SEPARATE clauses — the splitter breaks on
+     the period — so they are paired here, where the whole card is
+     visible, rather than in classifyClause which sees one at a time.
+
+     The rider is classified by classifyClause itself, so "deal 1 arcane
+     damage" / "draw a card" / "this gets +2{p}" all keep using the one
+     reader. Nothing about a card is special-cased by name. */
+  const handled = new Set();
+  for(let i = 0; i < clauses.length - 1; i++){
+    const rider = clauses[i+1];
+    if(!/^if you do\b/i.test(rider)) continue;
+    const cm = clauses[i].match(
+      /^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (banish|discard) (.+)$/i);
+    if(!cm) continue;
+    let subject = cm[3].trim();
+    let zone = null;
+    /* NOT end-anchored: "an attack action card from your hand with cost 2
+       or less" puts the zone in the MIDDLE. Anchoring it missed that and
+       silently fell back to the wrong zone — banishing from the graveyard
+       a card the text says comes from hand. */
+    const zm = subject.match(/\s*\bfrom your (graveyard|hand)\b/i);
+    if(zm){ zone = zm[1].toLowerCase(); subject = (subject.slice(0, zm.index) + " " + subject.slice(zm.index + zm[0].length)).trim(); }
+    const filter = optFilter(subject);
+    if(!filter) continue;                       /* unreadable cost — do not claim the card */
+    const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+    if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — same */
+    fx.optCost = {
+      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
+      kind: cm[2].toLowerCase(),
+      /* the printed zone if it says one; otherwise the natural home of the
+         cost — you discard from hand, you banish from the graveyard */
+      zone: zone || (cm[2].toLowerCase() === "discard" ? "hand" : "grave"),
+      filter,
+      ops: rr.ops
+    };
+    if(fx.optCost.zone === "graveyard") fx.optCost.zone = "grave";
+    handled.add(i); handled.add(i+1);
+    break;                                       /* one optional cost per card in the pool */
+  }
+
+  clauses.forEach((raw,ci)=>{
+    if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
     fx.clauses.push({t:raw, st:r.status});
@@ -542,7 +632,7 @@ const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt|
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isInstantT,
         isRunechant, runeCount, isAura, auraCount};
