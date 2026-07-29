@@ -21,8 +21,8 @@ entries in them exist because breaking the rule already cost a real bug.
 - Pool: **405 unique cards · 263 full / 110 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
   remote, no `gh`, no credentials. Deploying is not this thread's job.
-- `npm run stack` → **2 open** (`charge`, `arsenal-triggers`), each carrying a
-  specific question in `tools/followups.json`.
+- `npm run stack` → **4 open**, including `charge` and `arsenal-triggers`, each
+  carrying a specific question in `tools/followups.json`.
 
 ## Start here: finish the arsenal cluster (2 enablers left)
 
@@ -99,7 +99,8 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 
 ## What is left, ranked
 
-1. **`arsenal-triggers`** (8 cards) — specified above, ready to build.
+1. **`arsenal-triggers`** — mechanism + 1 of 3 enablers shipped in v2.33;
+   Bull's Eye Bracers and Death Dealer remain. See above.
 2. **Brothers in Arms** — needs somewhere for a buff to an already-declared
    defender to live. `blockH` holds bare uids; `defBuff` exists but `runOps`
    only *logs* it (it is really applied by `playRx`, for cards played as
@@ -117,7 +118,7 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 ## Validation loop
 
 ```bash
-npm test                              # 377 drills — must stay green
+npm test                              # 381 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
