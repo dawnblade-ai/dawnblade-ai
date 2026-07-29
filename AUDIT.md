@@ -1,16 +1,16 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-07-25T19:09:59.188Z · app v2.17 · data sage-v8 · db 4862 records
+Generated 2026-07-29T16:05:32.400Z · app v2.32 · data sage-v9 · db 4862 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 258 |
-| Partially scripted | 112 |
-| Text-only (nothing parsed) | 35 |
-| Cards with audit flags | 57 |
+| Fully scripted | 263 |
+| Partially scripted | 110 |
+| Text-only (nothing parsed) | 32 |
+| Cards with audit flags | 69 |
 
 ## Symbols found in pool text
 
@@ -220,6 +220,13 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
 - 🚩 unreviewed keyword: "ice fusion"
 
+### Aether Quickening (pitch 3) — part · [blaze]
+- type: Wizard Action · printed: Surge, Go again
+- ▶ Deal 2 arcane damage to target hero.
+- — Surge - If this deals more than 2 damage, it gets go again.
+- 🚩 unreviewed keyword: "surge"
+- 🚩 text mentions go again but no clause parses it
+
 ### Agile Engagement (pitch 1) — part · [dorinthea]
 - type: Warrior Attack Reaction
 - ▶ Target Warrior attack gets +3{p}
@@ -300,6 +307,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 ### Bolt'n' Shot (pitch 1) — none · [azalea]
 - type: Ranger Action - Arrow Attack · printed: Go again, Reload
 - — If this's {p} is greater than its base {p}, it has go again and "If this hits, reload."
+- 🚩 text mentions go again but no clause parses it
 
 ### Bolt of Courage (pitch 1) — part · [boltyn]
 - type: Light Warrior Action - Attack · printed: Charge
@@ -396,6 +404,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Chaos Action - Attack · printed: Go again
 - — When this attacks, each hero puts the top card of their deck face-down into their arsenal
 - — If 2 or more cards are put into arsenals this way, this gets go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Condemn to Slaughter (pitch 1) — part · [viserai]
 - type: Runeblade Action · printed: Go again
@@ -476,10 +485,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — When this hits a hero, put a -1{d} counter on an equipment they control.
 - 🚩 unreviewed keyword: "piercing"
 
-### Dry Powder Shot (pitch 1) — none · [azalea]
-- type: Ranger Action - Arrow Attack
-- — When this is put face-up into your arsenal, it gets +2{p} this turn.
-
 ### Edge of Their Seats (pitch 1) — part · [lyath]
 - type: Guardian Instant - Aura · printed: Suspense
 - — Suspense
@@ -517,12 +522,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — Lightning Fusion
 - — If this was fused, it gains go again.
 - 🚩 unreviewed keyword: "lightning fusion"
-
-### Fire that Burns Within (pitch 1) — part · [fai]
-- type: Draconic Action - Attack · printed: Go again
-- — When this attacks, you may discard a Phoenix Flame
-- — If you do, draw a card and this gets +2{p}.
-- ▶ Go again
+- 🚩 text mentions go again but no clause parses it
 
 ### Flamecall Awakening (pitch 1) — part · [fai]
 - type: Draconic Action - Attack · printed: Go again
@@ -542,24 +542,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Light Instant
 - — Distribute up to four +1{p} counters among any number of weapons you control.
 - — At the beginning of your end phase, remove all +1{p} counters from weapons you control.
-
-### Golden Tipple (pitch 1) — part · [gravy]
-- type: Pirate Action - Attack · printed: Go again
-- — When this attacks, you may discard a yellow card
-- — If you do, draw a card and create a Gold token.
-- ▶ Go again
-
-### Golden Tipple (pitch 2) — part · [gravy]
-- type: Pirate Action - Attack · printed: Go again
-- — When this attacks, you may discard a yellow card
-- — If you do, draw a card and create a Gold token.
-- ▶ Go again
-
-### Golden Tipple (pitch 3) — part · [gravy]
-- type: Pirate Action - Attack · printed: Go again
-- — When this attacks, you may discard a yellow card
-- — If you do, draw a card and create a Gold token.
-- ▶ Go again
 
 ### Halo of Illumination (pitch 0) — part · [boltyn]
 - type: Light Equipment - Head · printed: Spellvoid 2
@@ -583,18 +565,20 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Assassin / Ranger Defense Reaction - Trap
 - — When this defends an attack with {p} greater than its base, create an Inertia token under the attacking hero's control.
 
-### Jack Be Quick (pitch 1) — none · [briar]
+### Jack Be Quick (pitch 1) — part · [briar]
 - type: Generic Action - Attack · printed: Go again, Steal
-- — When this attacks, you may banish a Nimblism from your graveyard
-- — If you do, this gets +1{p} and go again.
+- ▶ When this attacks, you may banish a Nimblism from your graveyard
+- ▶ If you do, this gets +1{p} and go again.
 - — When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
 - 🚩 unreviewed keyword: "steal"
 - 🚩 untap {u} — not parsed (see ledger)
+- 🚩 text mentions go again but no clause parses it
 
 ### Jittery Bones (pitch 3) — none · [gravy]
 - type: Pirate Necromancer Action - Attack · printed: Go again
 - — When this attacks, you may discard a card or destroy the top card of your deck
 - — If that card has watery grave, this gets go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Lair of the Spider (pitch 1) — none · [arakni]
 - type: Assassin / Ninja Action Defense Reaction - Trap · printed: Mark
@@ -605,11 +589,13 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Light Warrior Action - Attack · printed: Charge, Go again
 - ○ As an additional cost to play this, you may charge your hero's soul.
 - — When this hits, if a yellow card was charged this way, this gets go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Light the Way (pitch 2) — part · [boltyn]
 - type: Light Warrior Action - Attack · printed: Charge, Go again
 - ○ As an additional cost to play this, you may charge your hero's soul.
 - — When this hits, if a yellow card was charged this way, this gets go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Line Crossers (pitch 0) — part · [lyath]
 - type: Reviled Equipment - Arms · printed: Blade Break
@@ -713,6 +699,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ When this attacks a hero, deal 1 arcane damage to them
 - — If damage is dealt this way, this gets go again.
 - ○ Instant - {r}: This gets go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Phantasmal Haze (pitch 3) — part · [enigma]
 - type: Illusionist Action - Attack · printed: Phantasm
@@ -801,10 +788,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - 🚩 granted go-again with no parsed grant path
 - 🚩 text mentions go again but no clause parses it
 
-### Ridge Rider Shot (pitch 1) — none · [azalea]
-- type: Ranger Action - Arrow Attack · printed: Opt 1
-- — If this is put into your arsenal face up, opt 1.
-
 ### Rise from the Ashes (pitch 1) — part · [fai]
 - type: Draconic Ninja Action · printed: Go again
 - ▶ The next Draconic or Ninja attack action card you play this turn gains +3{p}.
@@ -821,11 +804,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Light Warrior Attack Reaction · printed: Charge
 - ▶ Create a Courage token.
 - — If there are no cards in your soul, return this to its owner's hand, then charge your soul.
-
-### Runic Fellingsong (pitch 1) — none · [viserai]
-- type: Runeblade Action - Attack
-- — When this attacks, you may banish an aura from your graveyard
-- — If you do, deal 1 arcane damage to target hero.
 
 ### Saltwater Swell (pitch 1) — part · [gravy]
 - type: Pirate Action - Attack · printed: Go again
@@ -902,15 +880,24 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Lightning Runeblade Weapon - Sword (2H) · printed: Go again
 - ○ Once per Turn Action - {r}: Attack
 - — If you've played a Lightning card this turn, this card's attacks get +1{p} and go again.
+- 🚩 text mentions go again but no clause parses it
 
 ### Staunch Response (pitch 1) — part · [bravo]
 - type: Guardian Defense Reaction
 - ○ As an additional cost to play this you may pay {r}{r}{r}{r}
 - — If you do, this gains +3{d}.
 
-### Swift Shot (pitch 1) — none · [azalea]
-- type: Ranger Action - Arrow Attack · printed: Go again
-- — When this is put face-up into your arsenal, it gets go again this turn.
+### Swiftwater Sloop (pitch 1) — none · [gravy]
+- type: Pirate Action - Attack · printed: High Tide
+- — High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+- 🚩 unreviewed keyword: "high tide"
+- 🚩 text mentions go again but no clause parses it
+
+### Swiftwater Sloop (pitch 3) — none · [gravy]
+- type: Pirate Action - Attack · printed: High Tide
+- — High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+- 🚩 unreviewed keyword: "high tide"
+- 🚩 text mentions go again but no clause parses it
 
 ### Take Aim (pitch 1) — part · [azalea]
 - type: Ranger Action · printed: Reload, Go again
@@ -1030,15 +1017,17 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ## Flags on otherwise fully-scripted cards
 
-- **Aether Quickening** (pitch 3): unreviewed keyword: "surge"
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
 - **Concealed Object** (pitch 3): tap cost {t} — not enforced (see ledger)
 - **Cutty Shark, Quick Clip** (pitch 2): tap cost {t} — not enforced (see ledger)
+- **Display Loyalty** (pitch 1): text mentions go again but no clause parses it
 - **Drop the Anchor** (pitch 1): tap cost {t} — not enforced (see ledger)
+- **Enflame the Firebrand** (pitch 1): text mentions go again but no clause parses it
 - **Gauntlets of Unity** (pitch 0): unreviewed keyword: "unity"
 - **Helm of Unity** (pitch 0): unreviewed keyword: "unity"
+- **Hot on Their Heels** (pitch 1): text mentions go again but no clause parses it
 - **Lava Burst** (pitch 1): unreviewed keyword: "rupture"
 - **Limpit, Hop-a-long** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Mandible Claw** (pitch 0): text mentions go again but no clause parses it
@@ -1048,11 +1037,11 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Riggermortis** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Rush of Power** (pitch 1): unreviewed keyword: "quickstrike" · text mentions go again but no clause parses it
 - **Scorpio, Comet Tail** (pitch 0): tap cost {t} — not enforced (see ledger)
+- **Second Strike** (pitch 1): text mentions go again but no clause parses it
 - **Static Shock** (pitch 1): unreviewed keyword: "lightning flow"
 - **Swabbie** (pitch 2): tap cost {t} — not enforced (see ledger)
-- **Swiftwater Sloop** (pitch 1): unreviewed keyword: "high tide"
-- **Swiftwater Sloop** (pitch 3): unreviewed keyword: "high tide"
+- **Swift Shot** (pitch 1): text mentions go again but no clause parses it
 
 ## Fully scripted, no flags — the roll call
 
-A Drop in the Ocean (3) · Absorb in Aether (1) · Achilles Accelerator (0) · Aether Hail (3) · Aether Spindle (1) · Aether Spindle (3) · Aetherstorm Wellingtons (0) · Amplify the Arknight (1) · Arcane Lantern (0) · Art of Desire: Body (1) · Art of Desire: Mind (3) · Art of the Dragon: Fire (1) · Avast Ye! (3) · Bare Fangs (1) · Bare Fangs (2) · Basalt Boots (0) · Bear Hug (3) · Big Blue Sky (3) · Blade Beckoner Boots (0) · Blade Beckoner Gauntlets (0) · Blade Beckoner Helm (0) · Blade Beckoner Plating (0) · Blaze Headlong (1) · Blood Scent (0) · Blossom of Spring (0) · Booze! (3) · Boulder Drop (1) · Boulder Drop (3) · Brand with Cinderclaw (1) · Brand with Cinderclaw (2) · Brand with Cinderclaw (3) · Buckling Blow (1) · Buckling Blow (3) · Buckwild (1) · Buckwild (3) · Cartilage Crush (1) · Chokeslam (1) · Chokeslam (3) · Cinderskin Devotion (3) · Clash of Agility (1) · Clash of Might (1) · Clash of Might (2) · Clash of Vigor (3) · Cloud Cover (1) · Crucible of Aetherweave (0) · Crush the Weak (3) · Debilitate (1) · Debilitate (3) · Disable (3) · Display Loyalty (1) · Double Cross Strap (0) · Drag Down (1) · Dragon Power (3) · Duty Bound Blitz (1) · Duty Bound Blitz (2) · Emeritus Scolding (1) · Emeritus Scolding (2) · Emeritus Scolding (3) · Enclosed Firemind (0) · Energy Potion (3) · Enflame the Firebrand (1) · Enigma Chimera (1) · Enigma Chimera (2) · Fault Line (1) · Fender Bender (1) · Fire Tenet: Strike First (1) · Flat Trackers (0) · Flatten the Field (3) · Fluid Motion (3) · Flying High (3) · Frost Spike (3) · Frosting (3) · Fry (1) · Fyendal's Fighting Spirit (1) · Garland of Spring (0) · Goblet of Bloodrun Wine (3) · Goon Beatdown (3) · Goon Tactics (3) · High Pitched Howl (1) · Hit and Run (3) · Hit the High Notes (1) · Homage to Ancestors (3) · Hot on Their Heels (1) · Hyper Driver (1) · Hyper Inflation (1) · Ice Bolt (1) · Ice Bolt (3) · Illuminate (1) · Infecting Shot (1) · Infecting Shot (2) · Infect (1) · Ironrot Gauntlet (0) · Ironrot Helm (0) · Ironrot Legs (0) · Ironrot Plate (0) · Ironsong Response (1) · Ironsong Response (3) · Jump Start (1) · Jump Start (2) · Jump Start (3) · Knucklehead (0) · Lace with Bloodrot (1) · Lace with Frailty (1) · Lace with Inertia (1) · Lead with Speed (1) · Lightning Press (1) · Lightning Surge (1) · Macho Grande (3) · Mage Master Boots (0) · Manifest Muscle (3) · Mark of the Huntsman (0) · Mark the Prey (1) · Mask of the Swarming Claw (0) · Mauvrion Skies (1) · Mauvrion Skies (3) · Mocking Blow (1) · Mocking Blow (2) · Mocking Blow (3) · Mournful Casket (0) · Murderous Rabble (3) · Murkmire Grapnel (1) · Nimblism (1) · Nimblism (2) · Nip at the Heels (3) · Nullrune Boots (0) · Nullrune Gloves (0) · Nullrune Hood (0) · Nullrune Robe (0) · On the Horizon (1) · Out for Blood (1) · Out Pace (1) · Overblast (1) · Overpower (1) · Overpower (3) · Phoenix Flame (1) · Pouncing Paws (0) · Power Play (3) · Predatory Plating (0) · Prey Spotters (0) · Prime the Crowd (1) · Put in Context (3) · Pyroglyphic Protection (3) · Quick Clicks (0) · Ravenous Rabble (1) · Read the Glide Path (1) · Read the Runes (1) · Reaping Blade (0) · Reduce to Runechant (1) · Reincarnate (3) · Release the Tension (1) · Rev Up (1) · Rising Sun, Setting Moon (3) · Ronin Renegade (1) · Rough Up (1) · Run Roughshod (3) · Run Through (2) · Rune Flash (1) · Runebleed Robe (0) · Runerager Swarm (1) · Sadistic Scowl (1) · Salt the Wound (2) · Savage Feast (1) · Scar for a Scar (1) · Scar Tissue (1) · Scout the Periphery (1) · Searing Shot (1) · Second Strike (1) · Second Tenet of Chi: Wind (3) · Seeker's Mitts (0) · Sharpen Steel (1) · Short Shrift (2) · Shrill of Skullform (1) · Shrill of Skullform (2) · Shrill of Skullform (3) · Sigil of Suffering (1) · Sizzle (1) · Sledge of Anvilheim (0) · Smash Instinct (3) · Snatch (1) · Spears of Surreality (3) · Spectral Manifestations (1) · Spellblade Assault (1) · Spellblade Assault (3) · Spellfire Cloak (0) · Spike with Bloodrot (1) · Springboard Somersault (2) · Sprout Strength (1) · Stand Strong (0) · Steelbraid Buckler (0) · Stir the Aetherwinds (3) · Stonewall Impasse (0) · Stroke of Foresight (1) · Strongest Survive (1) · Strongest Survive (2) · Strongest Survive (3) · Swiftstrike Bracers (0) · Talishar, the Lost Prince (0) · Talismanic Lens (0) · Tearing Shuko (0) · Teklo Trebuchet 2000 (3) · Test of Might (1) · Test of Strength (1) · Throttle (1) · Throttle (3) · Timesnap Potion (3) · Titan's Fist (0) · Trot Along (3) · Under Loop (1) · Unexpected Backhand (3) · Unmovable (1) · Unmovable (3) · Vexing Malice (3) · Villainous Pose (1) · Voltic Bolt (1) · Voltic Bolt (3) · Walk in My Shoes (2) · Warrior's Valor (1) · Warrior's Valor (2) · Warrior's Valor (3) · Wee Wrecking Ball (2) · Whisper of the Oracle (1) · Whisper of the Oracle (2) · Whisper of the Oracle (3) · Widowmaker (2) · Wild Ride (1) · Wild Ride (2) · Winter's Bite (3) · Wounded Bull (1) · Yo Ho Ho! (3) · Zealous Belting (1) · Zero to Sixty (1) · Zero to Sixty (2) · Zero to Sixty (3) · Zipper Hit (1) · Zipper Hit (2) · Zipper Hit (3)
+A Drop in the Ocean (3) · Absorb in Aether (1) · Achilles Accelerator (0) · Aether Hail (3) · Aether Spindle (1) · Aether Spindle (3) · Aetherstorm Wellingtons (0) · Amplify the Arknight (1) · Arcane Lantern (0) · Art of Desire: Body (1) · Art of Desire: Mind (3) · Art of the Dragon: Fire (1) · Avast Ye! (3) · Bare Fangs (1) · Bare Fangs (2) · Basalt Boots (0) · Bear Hug (3) · Big Blue Sky (3) · Blade Beckoner Boots (0) · Blade Beckoner Gauntlets (0) · Blade Beckoner Helm (0) · Blade Beckoner Plating (0) · Blaze Headlong (1) · Blood Scent (0) · Blossom of Spring (0) · Booze! (3) · Boulder Drop (1) · Boulder Drop (3) · Brand with Cinderclaw (1) · Brand with Cinderclaw (2) · Brand with Cinderclaw (3) · Buckling Blow (1) · Buckling Blow (3) · Buckwild (1) · Buckwild (3) · Cartilage Crush (1) · Chokeslam (1) · Chokeslam (3) · Cinderskin Devotion (3) · Clash of Agility (1) · Clash of Might (1) · Clash of Might (2) · Clash of Vigor (3) · Cloud Cover (1) · Crucible of Aetherweave (0) · Crush the Weak (3) · Debilitate (1) · Debilitate (3) · Disable (3) · Double Cross Strap (0) · Drag Down (1) · Dragon Power (3) · Dry Powder Shot (1) · Duty Bound Blitz (1) · Duty Bound Blitz (2) · Emeritus Scolding (1) · Emeritus Scolding (2) · Emeritus Scolding (3) · Enclosed Firemind (0) · Energy Potion (3) · Enigma Chimera (1) · Enigma Chimera (2) · Fault Line (1) · Fender Bender (1) · Fire Tenet: Strike First (1) · Fire that Burns Within (1) · Flat Trackers (0) · Flatten the Field (3) · Fluid Motion (3) · Flying High (3) · Frost Spike (3) · Frosting (3) · Fry (1) · Fyendal's Fighting Spirit (1) · Garland of Spring (0) · Goblet of Bloodrun Wine (3) · Golden Tipple (1) · Golden Tipple (2) · Golden Tipple (3) · Goon Beatdown (3) · Goon Tactics (3) · High Pitched Howl (1) · Hit and Run (3) · Hit the High Notes (1) · Homage to Ancestors (3) · Hyper Driver (1) · Hyper Inflation (1) · Ice Bolt (1) · Ice Bolt (3) · Illuminate (1) · Infecting Shot (1) · Infecting Shot (2) · Infect (1) · Ironrot Gauntlet (0) · Ironrot Helm (0) · Ironrot Legs (0) · Ironrot Plate (0) · Ironsong Response (1) · Ironsong Response (3) · Jump Start (1) · Jump Start (2) · Jump Start (3) · Knucklehead (0) · Lace with Bloodrot (1) · Lace with Frailty (1) · Lace with Inertia (1) · Lead with Speed (1) · Lightning Press (1) · Lightning Surge (1) · Macho Grande (3) · Mage Master Boots (0) · Manifest Muscle (3) · Mark of the Huntsman (0) · Mark the Prey (1) · Mask of the Swarming Claw (0) · Mauvrion Skies (1) · Mauvrion Skies (3) · Mocking Blow (1) · Mocking Blow (2) · Mocking Blow (3) · Mournful Casket (0) · Murderous Rabble (3) · Murkmire Grapnel (1) · Nimblism (1) · Nimblism (2) · Nip at the Heels (3) · Nullrune Boots (0) · Nullrune Gloves (0) · Nullrune Hood (0) · Nullrune Robe (0) · On the Horizon (1) · Out for Blood (1) · Out Pace (1) · Overblast (1) · Overpower (1) · Overpower (3) · Phoenix Flame (1) · Pouncing Paws (0) · Power Play (3) · Predatory Plating (0) · Prey Spotters (0) · Prime the Crowd (1) · Put in Context (3) · Pyroglyphic Protection (3) · Quick Clicks (0) · Ravenous Rabble (1) · Read the Glide Path (1) · Read the Runes (1) · Reaping Blade (0) · Reduce to Runechant (1) · Reincarnate (3) · Release the Tension (1) · Rev Up (1) · Ridge Rider Shot (1) · Rising Sun, Setting Moon (3) · Ronin Renegade (1) · Rough Up (1) · Run Roughshod (3) · Run Through (2) · Rune Flash (1) · Runebleed Robe (0) · Runerager Swarm (1) · Runic Fellingsong (1) · Sadistic Scowl (1) · Salt the Wound (2) · Savage Feast (1) · Scar for a Scar (1) · Scar Tissue (1) · Scout the Periphery (1) · Searing Shot (1) · Second Tenet of Chi: Wind (3) · Seeker's Mitts (0) · Sharpen Steel (1) · Short Shrift (2) · Shrill of Skullform (1) · Shrill of Skullform (2) · Shrill of Skullform (3) · Sigil of Suffering (1) · Sizzle (1) · Sledge of Anvilheim (0) · Smash Instinct (3) · Snatch (1) · Spears of Surreality (3) · Spectral Manifestations (1) · Spellblade Assault (1) · Spellblade Assault (3) · Spellfire Cloak (0) · Spike with Bloodrot (1) · Springboard Somersault (2) · Sprout Strength (1) · Stand Strong (0) · Steelbraid Buckler (0) · Stir the Aetherwinds (3) · Stonewall Impasse (0) · Stroke of Foresight (1) · Strongest Survive (1) · Strongest Survive (2) · Strongest Survive (3) · Swiftstrike Bracers (0) · Talishar, the Lost Prince (0) · Talismanic Lens (0) · Tearing Shuko (0) · Teklo Trebuchet 2000 (3) · Test of Might (1) · Test of Strength (1) · Throttle (1) · Throttle (3) · Timesnap Potion (3) · Titan's Fist (0) · Trot Along (3) · Under Loop (1) · Unexpected Backhand (3) · Unmovable (1) · Unmovable (3) · Vexing Malice (3) · Villainous Pose (1) · Voltic Bolt (1) · Voltic Bolt (3) · Walk in My Shoes (2) · Warrior's Valor (1) · Warrior's Valor (2) · Warrior's Valor (3) · Wee Wrecking Ball (2) · Whisper of the Oracle (1) · Whisper of the Oracle (2) · Whisper of the Oracle (3) · Widowmaker (2) · Wild Ride (1) · Wild Ride (2) · Winter's Bite (3) · Wounded Bull (1) · Yo Ho Ho! (3) · Zealous Belting (1) · Zero to Sixty (1) · Zero to Sixty (2) · Zero to Sixty (3) · Zipper Hit (1) · Zipper Hit (2) · Zipper Hit (3)

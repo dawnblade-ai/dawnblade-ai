@@ -8,7 +8,7 @@
   else root.DawnAdvisor = factory(root.DawnParser);
 })(typeof self!=="undefined" ? self : this, function(P){
 
-const {fxParse, effCost, isAttack, isArrow, isWeapon, isAR, isInstantT, hasKw} = P;
+const {fxParse, effCost, isAttack, isArrow, isWeapon, isAR, isInstantT, hasKw, runeCount} = P;
 
 /* Side accessors, declared locally so this module keeps its own dependencies.
    The trainer defines the same two names globally, which is what lets the
@@ -21,7 +21,7 @@ function advCardOut(c, g, ctx){
   const fx = fxParse(c);
   let dmg = 0;
   if(isAttack(c)){
-    dmg = (c.power||0) + (fx.self||0) + you(g).buffNext + you(g).rune*ctx.runeDmg;
+    dmg = (c.power||0) + (fx.self||0) + you(g).buffNext + runeCount(you(g))*ctx.runeDmg;
     fx.conds.forEach(cd=>{ if(cd.op[0]==="self" && ((cd.cond==="atk"&&you(g).hist.atk>0)||(cd.cond==="non"&&you(g).hist.non>0))) dmg += cd.op[1]; });
     if((ctx.dBlk||0)>0 && dmg>=4) dmg = Math.max(0, dmg-(ctx.dDef||1));
   }
@@ -150,7 +150,7 @@ function advise(g, ctx){
   const bits=[]; if(out>0) bits.push(out+" dmg"); if(fx.ga) bits.push("go again");
   fx.ops.forEach(op=>{ if(op[0]==="draw") bits.push("draw "+op[1]); if(op[0]==="rune") bits.push("+"+op[1]+" runechant"); if(op[0]==="amp") bits.push("amp "+op[1]); });
   const why = fx.ga ? `Chain it: go again keeps your action point${best.next?` — ${Math.round(best.next)} more damage is waiting behind it`:""}.`
-    : you(g).rune>0 && isAttack(best.c) ? `Your ${you(g).rune} runechant${you(g).rune>1?"s":""} pop on this swing — cash them in.`
+    : runeCount(you(g))>0 && isAttack(best.c) ? `Your ${runeCount(you(g))} runechant${runeCount(you(g))>1?"s":""} pop on this swing — cash them in.`
     : out>=5 ? "Biggest clean hit on the table; anything smaller wastes the turn."
     : "Best value line available right now.";
   return {line:`Play ${nm(best.c)}${srcTxt}${pitchTxt} → ${bits.join(", ")||"effect"}.`, why};

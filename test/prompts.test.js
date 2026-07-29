@@ -251,3 +251,64 @@ test("apply: resolution never mutates the state it was handed", () => {
   assert.equal(g.sides[0].grave.length, 1);
   assert.equal(g.sides[0].hand.length, 0);
 });
+
+/* ===================================================================
+   THE "IF YOU DO" RIDER on a pick (v2.28).
+
+   "You may banish an aura from your graveyard. If you do, deal 1 arcane
+   damage" is an OPTIONAL COST with a payload. `min:0` makes the pick
+   declinable; `ops` is the payload. The rule that matters is that the
+   payload fires ONLY if the cost was actually paid — granting it for
+   free is the bug v2.04 fixed, and it is why "If you do" was left
+   deliberately unread until the machinery existed.
+   =================================================================== */
+const riderGame = () => {
+  const g = S.makeGame({seed: 7});
+  g.sides[0].grave = [
+    {name:"Sigil of Silphidae", uid:71, tt:"Runeblade Action - Aura", pitch:3},
+    {name:"Wild Ride",          uid:72, tt:"Brute Attack Action",     pitch:1}
+  ];
+  return g;
+};
+const RIDER = [["arcane", 1]];
+
+test("pick rider — paying the cost fires the rider AND moves the card", () => {
+  const g = riderGame();
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, src:"Runic Fellingsong",
+    zone:"grave", to:"banish", filter:{tt:"aura"}, min:0, max:1, ops:RIDER});
+  assert.ok(p, "a graveyard with a matching aura must produce a prompt");
+  assert.equal(p.cards.length, 1, "only the aura matches the filter");
+  assert.equal(p.optional, true, "min:0 makes it declinable");
+
+  const out = Q.applyPrompt(g, Q.promptToggleSel(p, 0));
+  assert.deepEqual(out.ops, RIDER, "paying the cost must fire the rider");
+  assert.equal(Q.promptZone(out.game, 0, "banish").length, 1, "the aura moved to banish");
+  assert.equal(Q.promptZone(out.game, 0, "grave").length, 1, "and left the graveyard");
+});
+
+test("pick rider — DECLINING fires nothing and moves nothing (the v2.04 rule)", () => {
+  const g = riderGame();
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, src:"Runic Fellingsong",
+    zone:"grave", to:"banish", filter:{tt:"aura"}, min:0, max:1, ops:RIDER});
+  const out = Q.applyPrompt(g, p);          /* nothing selected */
+  assert.deepEqual(out.ops, [], "declining must NOT fire the rider — that is the free-ability bug");
+  assert.equal(out.pay, 0);
+  assert.equal(Q.promptZone(out.game, 0, "banish").length, 0, "nothing may move on a decline");
+  assert.equal(Q.promptZone(out.game, 0, "grave").length, 2, "the graveyard is untouched");
+});
+
+test("pick rider — a pick with no ops still behaves exactly as before", () => {
+  const g = riderGame();
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, zone:"grave", to:"hand", min:0, max:1});
+  const out = Q.applyPrompt(g, Q.promptToggleSel(p, 0));
+  assert.deepEqual(out.ops, [], "no rider declared, so no ops — retrieve/reload are unaffected");
+  assert.equal(Q.promptZone(out.game, 0, "hand").length, 1, "but the card still moves");
+});
+
+test("pick rider — an empty zone yields no prompt, so the cost cannot be paid", () => {
+  const g = S.makeGame({seed: 7});
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, zone:"grave",
+    to:"banish", filter:{tt:"aura"}, min:0, max:1, ops:RIDER});
+  assert.equal(p, null,
+    "nothing to banish means the prompt skips itself — and a skipped prompt fires no rider");
+});

@@ -68,7 +68,12 @@ test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Draw two cards.").ops, [["draw",2]]);
   assert.deepEqual(cc("Gain 2 {r}.").ops, [["res",2]]);
   assert.deepEqual(cc("Gain 3 {h}.").ops, [["life",3]]);
-  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1]]);
+  /* The qualifier is CARRIED now. This line used to assert a bare
+     [["buffNext",1]], which pinned the bug: a "weapon attack" buff was
+     applied to any next attack at all. op[2] is the type-line matcher. */
+  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1,[["weapon"]]]]);
+  assert.deepEqual(cc("Your next attack this turn gains +1 {p}.").ops, [["buffNext",1]],
+    "a genuinely unqualified buff must stay unqualified");
   assert.deepEqual(cc("This attack gains +3 {p}.").ops, [["self",3]]);
   assert.deepEqual(cc("Amp 1").ops, [["amp",1]]);
   assert.deepEqual(cc("Create a Runechant token.").ops, [["rune",1]]);
@@ -122,7 +127,10 @@ test("fxParse — conditional go again stays conditional, not printed", () => {
   const fx = P.fxParse({name:"buckwild-drill", pitch:1, tt:"Attack Action", power:4, kw:[],
     tx:"If there are 6 or more {p} worth of cards in your pitch zone, this gains go again."});
   assert.equal(fx.ga, false);
-  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"]}]);
+  /* `instead` rides along from v2.32 — a conditional payload that REPLACES
+     the printed value rather than adding to it. False here, and that is
+     the point: this card adds go again, it does not replace anything. */
+  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"], instead:false}]);
 });
 
 test("fxParse — the {p} pump drill: +1/2/3{p} reads the copy's pitch", () => {
@@ -244,14 +252,21 @@ test("parseHeroPower — refuses effects it cannot script", () => {
   assert.equal(P.parseHeroPower("Action - 2: Transmogrify the fortress"), null);
 });
 
+/* Runechants are AURAS on the board now, not an integer, so a cost-reduction
+   fixture has to build the real thing. `runeCount` reads the board — that is
+   the whole point of the v2.23 change (an integer could never be counted by
+   "3 or more auras" or destroyed by "destroy an aura you control"). */
+const runeBoard = n => ({board: Array.from({length:n}, (_,i) =>
+  ({card:{uid:"r"+i, name:"Runechant", tt:"Runeblade Token - Aura"}, kind:"aura", uid:"r"+i}))});
+
 /* ---------- runechant cost reduction ---------- */
 
 test("runeRed / effCost — 'costs less per runechant' discounts, floored at 0", () => {
   const card = {cost:3, tx:"This costs {1} less for each Runechant you control."};
   assert.equal(P.runeRed(card), 1);
-  assert.equal(P.effCost(card, {rune:2}), 1);
-  assert.equal(P.effCost(card, {rune:9}), 0);
-  assert.equal(P.effCost({cost:2, tx:"Go again."}, {rune:5}), 2);
+  assert.equal(P.effCost(card, runeBoard(2)), 1);
+  assert.equal(P.effCost(card, runeBoard(9)), 0);
+  assert.equal(P.effCost({cost:2, tx:"Go again."}, runeBoard(5)), 2);
 });
 
 /* ---------- predicates ---------- */
@@ -443,8 +458,8 @@ test("rulings — runechant cost reduction reads the printed {r} pip", () => {
      pattern meant the discount never applied to either card that has it */
   const c = {cost:2, tx:"This costs {r} less to play for each Runechant you control."};
   assert.equal(P.runeRed(c), 1);
-  assert.equal(P.effCost(c, {rune:2}), 0);
-  assert.equal(P.effCost(c, {rune:0}), 2);
+  assert.equal(P.effCost(c, runeBoard(2)), 0);
+  assert.equal(P.effCost(c, runeBoard(0)), 2);
 });
 
 test("rulings — 'Play this only if' is a gate, not an effect", () => {
@@ -619,4 +634,352 @@ test("rulings — Crouching Tiger is a real database card, 0 power with go again
     power:0, cost:0, kw:["Ephemeral","Go again"], tx:"Ephemeral\nGo again"});
   assert.equal(fx.ga, true, "go again comes off the printed keyword");
   assert.equal(fx.tier, "full");
+});
+
+/* ===================================================================
+   OPTIONAL COST + "If you do, …"  (v2.28)
+
+   24 pool cards are shaped "you may <banish/discard> X. If you do, Y"
+   and not one was fully read: the rider was deliberately skipped because
+   paying nothing and getting the payload is the v2.04 free-ability bug.
+   The `pick` prompt now carries a rider that fires only when cards moved,
+   so the text can be read instead of skipped.
+
+   NOTE every card below has a UNIQUE name — fxParse memoizes on
+   name|pitch and identical names silently collide in the cache.
+   =================================================================== */
+const oc = (name, tx, tt) => P.fxParse({name, tt: tt || "Attack Action", tx, kw: []}).optCost;
+
+test("optCost — banish an aura from the graveyard, deal arcane", () => {
+  const o = oc("OC Fellingsong",
+    "When this attacks, you may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero.");
+  assert.ok(o, "the pair must be read");
+  assert.equal(o.trigger, "attacks");
+  assert.equal(o.kind, "banish");
+  assert.equal(o.zone, "grave");
+  assert.deepEqual(o.filter, {tt:"aura"});
+  assert.deepEqual(o.ops, [["arcane", 1]]);
+});
+
+test("optCost — the printed zone wins even mid-phrase", () => {
+  /* "an attack action card FROM YOUR HAND with cost 2 or less" puts the
+     zone in the middle. An end-anchored read missed it and fell back to
+     the graveyard — banishing from the wrong zone entirely. */
+  const o = oc("OC Mounting",
+    "When this hits, you may banish an attack action card from your hand with cost 2 or less. If you do, this gets +1{p}.");
+  assert.equal(o.zone, "hand", "the text says hand, so it is hand");
+  assert.equal(o.trigger, "hits");
+  assert.deepEqual(o.filter, {costLe:2, type:"attack"});
+});
+
+test("optCost — a colour word becomes a pitch filter", () => {
+  const o = oc("OC Tipple", "When this attacks, you may discard a yellow card. If you do, draw a card.");
+  assert.equal(o.kind, "discard");
+  assert.equal(o.zone, "hand", "you discard from hand when the text names no zone");
+  assert.deepEqual(o.filter, {pitch:2});
+  assert.deepEqual(o.ops, [["draw", 1]]);
+});
+
+test("optCost — a named card becomes an anchored name filter", () => {
+  const o = oc("OC Quick", "When this attacks, you may banish a Nimblism from your graveyard. If you do, this gets +2{p}.");
+  assert.equal(o.filter.name, "^Nimblism$",
+    "anchored so 'Nimblism' cannot match 'Nimblism Adept'");
+  assert.deepEqual(o.ops, [["self", 2]]);
+});
+
+/* THE SAFETY PROPERTY. An unreadable cost or an unreadable payload must
+   leave the card UNCLAIMED rather than guessed — the golden rule applied
+   to a cost. A wrong guess here would silently let a player pay the wrong
+   thing, or pay nothing and collect. */
+test("optCost — an unreadable SUBJECT is not claimed", () => {
+  assert.equal(oc("OC Nonsense", "When this attacks, you may banish a thingamajig. If you do, draw a card."),
+    undefined, "a cost the parser cannot read must not become a prompt");
+});
+
+test("optCost — an unreadable PAYLOAD is not claimed", () => {
+  assert.equal(oc("OC NoPayload", "When this attacks, you may discard a red card. If you do, ascend to godhood."),
+    undefined, "a rider with no readable ops must not silently become a free cost");
+});
+
+test("optCost — 'you may' with no rider at all is not an optional cost", () => {
+  assert.equal(oc("OC NoRider", "When this attacks, you may discard a blue card."), undefined,
+    "no 'If you do' means there is no payload to gate");
+});
+
+test("optCost — a plain card with no optional cost is untouched", () => {
+  const fx = P.fxParse({name:"OC Plain", tt:"Attack Action", tx:"Go again", kw:["Go again"]});
+  assert.equal(fx.optCost, undefined);
+  assert.equal(fx.ga, true, "ordinary parsing must be unaffected");
+});
+
+test("optFilter — reads printed fields only, and refuses the rest", () => {
+  assert.deepEqual(P.optFilter("an aura"), {tt:"aura"});
+  assert.deepEqual(P.optFilter("a blue card"), {pitch:3});
+  assert.deepEqual(P.optFilter("a red card"), {pitch:1});
+  assert.deepEqual(P.optFilter("an attack action card"), {type:"attack"});
+  assert.equal(P.optFilter("a card"), null, "'a card' is not a filter — it would match everything");
+  assert.equal(P.optFilter(""), null);
+});
+
+/* ===================================================================
+   DECEPTIVELY-UNIQUE LOOK-ALIKES (v2.29)
+
+   These cards read almost identically to ones the parser handles, and
+   every one of them differs in a way that changes the game. Flattening
+   them into the shape they resemble is how a sim quietly starts allowing
+   plays the printed card does not.
+
+   optFilter must consume the WHOLE subject phrase or refuse: a loose
+   substring test is what let Mounting Anger through with its cost
+   restriction dropped, making it strictly better than printed.
+   =================================================================== */
+
+test("look-alike — a DYNAMIC cost limit is refused, not flattened", () => {
+  /* Mounting Anger / Rising Resentment: "with cost less than the number of
+     Draconic chain links you control". A substring test saw "attack action
+     card" and returned {type:"attack"}, silently dropping the limit — so
+     any attack card in hand became a legal banish. */
+  assert.equal(
+    P.optFilter("an attack action card from your hand with cost less than the number of Draconic chain links you control"),
+    null, "an inexpressible limit must leave the card unclaimed");
+  assert.equal(
+    P.optFilter("an attack action card with cost less than the number of Draconic chain links you control"),
+    null);
+  /* the readable sibling still works, so the refusal is specific */
+  assert.deepEqual(P.optFilter("an attack action card with cost 2 or less"),
+    {costLe:2, type:"attack"});
+});
+
+test("look-alike — 'ANOTHER aura' is an exclusion and is refused", () => {
+  /* Sigil of Silphidae says "banish ANOTHER aura", which excludes itself.
+     A prompts filter reads printed fields and cannot say "not this one",
+     so offering it as "an aura" would offer an illegal choice. */
+  assert.equal(P.optFilter("another aura"), null);
+  assert.deepEqual(P.optFilter("an aura"), {tt:"aura"}, "the plain form is still read");
+});
+
+test("look-alike — a RULES-TEXT qualifier is refused", () => {
+  /* Crash and Bash: "a card with crush from your hand". `crush` is a
+     keyword in the card's text, not a printed field, and promptFilter
+     reads fields only. */
+  assert.equal(P.optFilter("a card with crush"), null);
+});
+
+test("look-alike — Mounting Anger and Rising Resentment are BOTH unclaimed", () => {
+  const MA = P.fxParse({name:"Mounting Anger", pitch:1, tt:"Draconic Ninja Action - Attack",
+    tx:"When Mounting Anger hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it gains +1{p} and you may play it this turn.\nGo again", kw:["Go again"]});
+  const RR = P.fxParse({name:"Rising Resentment", pitch:1, tt:"Draconic Ninja Action - Attack",
+    tx:"When Rising Resentment hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it costs {r} less to play and you may play it this turn.\nGo again", kw:["Go again"]});
+  assert.equal(MA.optCost, undefined,
+    "Mounting Anger's limit is dynamic — claiming it allowed an illegal banish");
+  assert.equal(RR.optCost, undefined, "and its look-alike must be refused for the same reason");
+});
+
+test("look-alike — the payload's SUBJECT differs between siblings", () => {
+  /* Even had the filter been readable, these two riders are NOT the same
+     effect and must never share one reading:
+       Mounting Anger    — "IT gains +1{p}"        (the banished card)
+       Rising Resentment — "IT costs {r} less"     (a cost reduction)
+     and in both, "it" is the BANISHED card, not the attacker — so the
+     existing `self` op (which buffs the card being played) is the wrong
+     op for either. Pinned so a future wiring pass cannot assume it. */
+  const ma = P.classifyClause("it gains +1{p} and you may play it this turn");
+  const rr = P.classifyClause("it costs {r} less to play and you may play it this turn");
+  assert.notDeepEqual(ma && ma.ops, rr && rr.ops,
+    "two different riders must not resolve to the same ops");
+});
+
+/* ===================================================================
+   TYPE-QUALIFIED NEXT-ATTACK BUFFS (v2.30)
+
+   "Your next ARROW attack this turn gets +3{p}" is not "your next attack
+   gets +3". The old pattern swallowed the qualifier and 24 pool cards
+   granted their pump to any attack at all — an arrow buff landing on a
+   sword, a Runeblade buff on a Generic. Same class as the Mounting Anger
+   filter bug: a printed restriction silently dropped, making the card
+   strictly better than printed.
+
+   The qualifier is read off the printed TYPE LINE only, never rules text.
+   =================================================================== */
+test("qualified buff — the qualifier is carried, not swallowed", () => {
+  const q = t => P.classifyClause(t).ops[0];
+  assert.deepEqual(q("your next arrow attack this turn gets +3{p}"),  ["buffNext",3,[["arrow"]]]);
+  assert.deepEqual(q("your next runeblade attack this turn gets +3{p}"), ["buffNext",3,[["runeblade"]]]);
+  assert.deepEqual(q("your next attack this turn gets +3{p}"), ["buffNext",3],
+    "an unqualified buff must stay unqualified — it really does hit anything");
+});
+
+test("qualified buff — 'X or Y' is OR, 'X Y' is AND", () => {
+  /* These two shapes look alike and mean different things. "Brute or
+     Warrior" matches either type; "Pirate ally" needs BOTH words on the
+     type line, because it means an ally that is also a Pirate. */
+  assert.deepEqual(P.attackQual(" Brute or Warrior "), [["brute"],["warrior"]]);
+  assert.deepEqual(P.attackQual(" Pirate ally "), [["pirate","ally"]]);
+  assert.equal(P.attackQual(""), null, "no qualifier at all is null, not an empty matcher");
+});
+
+test("qualified buff — matching reads the printed type line", () => {
+  const arrow = P.attackQual("arrow");
+  assert.equal(P.qualMatches(arrow, {tt:"Ranger Action - Arrow Attack"}), true);
+  assert.equal(P.qualMatches(arrow, {tt:"Warrior Action - Attack"}), false,
+    "an arrow buff must NOT land on a non-arrow — this is the whole bug");
+
+  const bw = P.attackQual("Brute or Warrior");
+  assert.equal(P.qualMatches(bw, {tt:"Warrior Action - Attack"}), true);
+  assert.equal(P.qualMatches(bw, {tt:"Brute Action - Attack"}), true);
+  assert.equal(P.qualMatches(bw, {tt:"Ranger Action - Attack"}), false);
+
+  const pa = P.attackQual("Pirate ally");
+  assert.equal(P.qualMatches(pa, {tt:"Pirate Ally"}), true);
+  assert.equal(P.qualMatches(pa, {tt:"Pirate Action - Attack"}), false,
+    "AND means both words, so a Pirate ATTACK is not a Pirate ALLY");
+
+  assert.equal(P.qualMatches(null, {tt:"anything at all"}), true,
+    "no qualifier means it applies to everything");
+});
+
+test("qualified buff — the real cards keep their restriction", () => {
+  const big = P.fxParse({name:"CIBG probe", pitch:1, tt:"Ranger Action",
+    tx:"Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again", kw:["Go again"]});
+  const op = big.ops.find(o=>o[0]==="buffNext");
+  assert.ok(op && op[2], "Call in the Big Guns must carry its 'arrow' restriction");
+  assert.equal(P.qualMatches(op[2], {tt:"Ranger Action - Arrow Attack"}), true);
+  assert.equal(P.qualMatches(op[2], {tt:"Ranger Action - Attack"}), false,
+    "a plain Ranger attack is not an arrow and must not collect +3");
+});
+
+/* THE DOUBLE-COUNT (v2.30) — a card granting twice its printed buff.
+
+   fxParse has a fallback that scans the WHOLE text of a non-attack for
+   "gains/gets +N{p}" and queues it as a self-pump. "Your next arrow attack
+   this turn GAINS +3{p}" matched there as well as in the buffNext rule, and
+   execute added both — 34 pool cards granted double, up to Act of Glory at
+   +12 from a printed +6.
+
+   The coverage audit could not see this: every one of those cards reported
+   tier `full`. They were read, and read WRONG. Same blind spot as the
+   `noop` keywords in CLAUDE.md. */
+test("double-count — a buffNext op suppresses the fallback self-pump", () => {
+  const fx = P.fxParse({name:"DC next-attack", pitch:1, tt:"Ranger Action",
+    tx:'Your next arrow attack this turn gains +3{p} and "When this hits a hero, create a Frailty token under their control."'});
+  assert.equal(fx.self, 0,
+    "the fallback must not re-read a +N{p} the buffNext rule already took");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",3,[["arrow"]]]],
+    "and the buff is counted exactly once, with its qualifier");
+});
+
+test("double-count — the fallback still catches a genuine self-pump", () => {
+  /* The safety net must survive: a non-attack whose pump never became an
+     op still queues it. Removing the fallback entirely would break these. */
+  const fx = P.fxParse({name:"DC plain pump", pitch:1, tt:"Generic Action", tx:"This gains +2{p}."});
+  assert.equal(fx.self, 2, "a real self-pump with no buffNext op still reads");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), []);
+});
+
+test("double-count — an unqualified next-attack buff is also counted once", () => {
+  const fx = P.fxParse({name:"DC act of glory", pitch:1, tt:"Generic Action",
+    tx:"Your next attack this turn gains +6{p}."});
+  assert.equal(fx.self, 0, "printed +6 must not become +12");
+  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",6]]);
+});
+
+/* ===================================================================
+   PRINTED go again vs MENTIONED go again (v2.31)
+
+   The database's `card_keywords` is a keyword INDEX — it lists every
+   keyword appearing anywhere on the card, including ones the text only
+   grants conditionally. Seeding fx.ga from it gave 27 pool cards
+   unconditional go again against their own printed text.
+
+   This is the Kayo bug's family. kw and gkw are already kept apart; the
+   remaining trap was INSIDE card_keywords. Go again keeps your action
+   point, so it is the most valuable keyword in the game to get wrong.
+   =================================================================== */
+const gaOf = (name, tx, kw) => P.fxParse({name, pitch:1, tt:"Generic Action - Attack",
+  tx, kw: kw||[], power:4});
+
+test("go again — a CONDITIONAL grant is not unconditional", () => {
+  /* Buckwild: "IF there is a card with 6 or more {p} in your pitch zone,
+     this gets go again." It went again on an empty pitch zone. */
+  const fx = gaOf("GA buckwild",
+    "If there is a card with 6 or more {p} in your pitch zone, this gets go again.", ["Go again"]);
+  assert.equal(fx.ga, false, "the keyword index must not grant it outright");
+  assert.deepEqual(fx.conds.map(c=>c.cond+":"+c.op[0]), ["pitch6:ga"],
+    "and the conditional path must still carry it, so a MET condition still grants it");
+});
+
+test("go again — a PRINTED keyword line still grants it", () => {
+  /* A real printed keyword sits on its own line; that must keep working
+     or the fix trades one bug for a worse one. */
+  const fx = gaOf("GA printed", "When this attacks, draw a card.\nGo again", ["Go again"]);
+  assert.equal(fx.ga, true);
+});
+
+test("go again — trust the keyword list when the text never mentions it", () => {
+  /* Some records carry the keyword without repeating it in functional
+     text. Absent any mention, the list is the only evidence there is. */
+  const fx = gaOf("GA silent", "Deal 2 damage to target hero.", ["Go again"]);
+  assert.equal(fx.ga, true);
+});
+
+test("go again — the real cards land on the right side of the line", () => {
+  const cond = gaOf("GA swarm",
+    "If you've played or created an aura this turn, this gets go again.", ["Go again"]);
+  assert.equal(cond.ga, false, "Runerager Swarm logged 'condition not met' and went again anyway");
+
+  const printed = gaOf("GA tipple",
+    "When this attacks, you may discard a yellow card. If you do, draw a card.\nGo again", ["Go again"]);
+  assert.equal(printed.ga, true, "Golden Tipple really does print go again");
+});
+
+/* ===================================================================
+   ARSENAL FACE-UP (v2.33) — Azalea's engine.
+
+   The trainer's end-of-turn arsenal sets cards FACE DOWN. These arrows
+   trigger on FACE UP, which is a different event reached only by an
+   enabler that says so. Conflating the two would fire triggers the cards
+   do not have.
+   =================================================================== */
+const ars = (name, tx, tt) => P.fxParse({name, pitch:1, power:3,
+  tt: tt || "Ranger Action - Arrow Attack", tx, kw:[]});
+
+test("arsenal — the three printed phrasings are one trigger", () => {
+  assert.deepEqual(ars("ARS a", "When this is put face-up into your arsenal, it gets +2{p} this turn.").arsenalUp,
+    [["self",2]]);
+  assert.deepEqual(ars("ARS b", "If ARS b is put into your arsenal face up, opt 1.").arsenalUp,
+    [["opt",1]], "Ridge Rider Shot puts 'face up' at the END");
+  assert.deepEqual(ars("ARS c", "When ARS c is put or turned face up in arsenal, it gets +1{p} this turn.").arsenalUp,
+    [["self",1]], "Spire Sniping says 'put OR TURNED'");
+});
+
+test("arsenal — the payload is NOT the card's own on-play effect", () => {
+  /* Routed before the ga/self folds. Otherwise Swift Shot's "it gets go
+     again this turn" would become printed go again on the card itself. */
+  const fx = ars("ARS swift", "When this is put face-up into your arsenal, it gets go again this turn.");
+  assert.deepEqual(fx.arsenalUp, [["ga"]]);
+  assert.equal(fx.ga, false, "the arrow does not have printed go again");
+  assert.equal(fx.self, 0);
+  const dp = ars("ARS dry", "When this is put face-up into your arsenal, it gets +2{p} this turn.");
+  assert.equal(dp.self, 0, "the +2 waits for the arsenal, it is not an on-play pump");
+});
+
+test("arsenal — the enabler reads its SUBJECT, so it cannot put a non-arrow", () => {
+  const fx = P.fxParse({name:"ARS enabler", pitch:1, tt:"Ranger Action",
+    tx:"Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again", kw:["Go again"]});
+  assert.deepEqual(fx.arsenalPut, {filter:{tt:"arrow"}});
+  /* and its FIRST effect is unaffected — the user's ruling is that it
+     resolves whether or not the put happens */
+  assert.ok(fx.ops.some(o=>o[0]==="buffNext" && o[1]===3 && o[2]),
+    "the +3 arrow buff still resolves, and keeps its qualifier");
+});
+
+test("arsenal — an unreadable payload leaves the card unclaimed", () => {
+  /* Entangling Shot taps a hero (not modelled) and Spire Sniping's "put
+     them back in any order" is a REORDER, which opt is not — opt lets you
+     bottom cards, which would be strictly more powerful. */
+  assert.equal(ars("ARS tap", "When this is put face-up into your arsenal, you may {t} target hero.").arsenalUp,
+    undefined);
+  assert.equal(ars("ARS reorder",
+    "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
+    undefined);
 });

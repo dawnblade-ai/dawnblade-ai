@@ -25,6 +25,12 @@ function babelBlocks(s){
    here (apostrophes appear in JSX prose); the codebase uses none. */
 function checkBalance(code){
   code = code.split("hero'?s?").join("heroQsQ");
+  /* Pre-neutralized for the same reason and by the same ritual: this
+     checker is not regex-literal-aware, and a regex that ENDS in a star
+     followed by a slash looks exactly like a comment terminator to the
+     orphan check below. Add any new such regex here rather than weakening
+     the check — the check is what caught the v2.27 breakage. */
+  code = code.split("/^[^:]*:\\s*/").join("RX_NEUTRALIZED");
   const stack = [];
   const OPEN = {"(":")", "{":"}", "[":"]"};
   const CLOSE = {")":"(", "}":"{", "]":"["};
@@ -50,6 +56,15 @@ function checkBalance(code){
     if(ch === "`"){ mode = "tpl"; continue; }
     if(ch === "/" && nx === "/"){ mode = "line"; continue; }
     if(ch === "/" && nx === "*"){ mode = "block"; continue; }
+    /* AN ORPHANED COMMENT TERMINATOR reached in CODE mode: a block comment
+       was closed twice, so the prose after the first close became code.
+       Not hypothetical — it shipped in v2.27 and broke the page completely
+       while all 338 drills stayed green, because the orphaned prose
+       happened to contain balanced brackets. Bracket balance alone cannot
+       see this class at all. */
+    if(ch === "*" && nx === "/")
+      return {ok:false, at:i, ch:"star-slash",
+              top:"orphaned comment terminator — a block comment was closed twice"};
     if(OPEN[ch]){ stack.push(ch); continue; }
     if(CLOSE[ch]){
       const top = stack.pop();

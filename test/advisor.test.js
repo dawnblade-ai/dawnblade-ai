@@ -44,7 +44,10 @@ test("advCardOut — attack damage stacks self pump, buffNext, and runechants", 
   P.fxReset();
   const card = {name:"adv-drill-atk", pitch:1, tt:"Attack Action", power:4, kw:[],
     tx:"This attack gains +1 {p}."};
-  const g = sided({buffNext:1, rune:2});
+  /* two runechants, as the auras they now are (see engine/parser.js runeCount) */
+  const g = sided({buffNext:1, board:[
+    {card:{uid:"r1", name:"Runechant", tt:"Runeblade Token - Aura"}, kind:"aura", uid:"r1"},
+    {card:{uid:"r2", name:"Runechant", tt:"Runeblade Token - Aura"}, kind:"aura", uid:"r2"}]});
   assert.equal(A.advCardOut(card, g, {runeDmg:1}), 4+1+1+2);
 });
 

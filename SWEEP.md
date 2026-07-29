@@ -9,7 +9,7 @@ axes it never covered.
 | Hero abilities | 13 heroes, 32 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
 | Ruled but not built | 147 cards | understood ≠ built |
-| **Fail states** | 168 entries, 13 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 168 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -107,7 +107,7 @@ When this attacks a marked hero, the attack gets go again.
 > Your attack action cards played from arsenal and weapon attacks have -1{p}.
 At the beginning of your end phase destroy Frailty.
 
-### Runechant — fx `none`, 13 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
+### Runechant — fx `none`, 20 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
 > When you play an attack action card or activate a weapon attack, destroy this and deal 1 arcane damage to target opposing hero.
 
 ## 3. Ruled but not built
@@ -195,57 +195,20 @@ can be overruled. Same discipline as the mention count.
 | No schedule to fire on | 45 |
 | Displayed total is wrong | 37 |
 | Unread, effect unknown | 32 |
-| Keyword filed as no-op, but it is a DRAWBACK | 11 |
+| Keyword filed as no-op — but the trainer names it (verify) | 11 |
 | Drawback skipped | 2 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### UNFAIR — 13 entries
+### UNFAIR — 2 entries
 
 **A rule is broken every time one of these is played.** This is the
 worst thing a trainer can do: it teaches wrong play.
 
-- **Barnacle** (2) · tier `full` · gravy
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
-- **Cutty Shark, Quick Clip** (2) · tier `full`
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
-- **Enigma Chimera** (1) · tier `full` · enigma
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Phantasm" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power - a single blocker wi
-    > Phantasm
-- **Enigma Chimera** (2) · tier `full` · enigma
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Phantasm" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power - a single blocker wi
-    > Phantasm
-- **Limpit, Hop-a-long** (2) · tier `full`
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
 - **Look Tuff** (1) · tier `none` · iyslander, enigma, blaze
   - *Drawback skipped* — The card's own downside never lands, so it plays as strictly better than printed.
     > When this attacks, it gets -1{p} unless you pay {r}.
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > When this attacks, it gets -1{p} unless you pay {r}.
-- **Oysten, Heart of Gold** (2) · tier `part`
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this dies, create a Gold token.
-- **Phantasmal Haze** (3) · tier `part` · enigma
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Phantasm" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power - a single blocker wi
-    > Phantasm
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this is destroyed, create a Spectral Shield token.
-- **Riggermortis** (2) · tier `full` · gravy
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
-- **Spears of Surreality** (3) · tier `full` · enigma
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Phantasm" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power - a single blocker wi
-    > Phantasm
-- **Spectral Rider** (3) · tier `part` · enigma
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Phantasm" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power - a single blocker wi
-    > Phantasm
-- **Swabbie** (2) · tier `full` · gravy
-  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Watery Grave" as doing nothing, so this card can report as fully scripted while the keyword is ignored. Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - gravy bones' hero abi
-    > Watery Grave
 - **Lyath Goldmane** · tier `hero` · lyath-goldmane
   - *Drawback skipped* — The card's own downside never lands, so it plays as strictly better than printed.
     > The base {p} and {d} of cards you control are halved, rounded up.
@@ -383,7 +346,7 @@ worst thing a trainer can do: it teaches wrong play.
     > If it has 1 or more +1{p} counters, create a Flurry token.
 - … and 60 more (see the station)
 
-### LOST VALUE — 61 entries
+### LOST VALUE — 72 entries
 
 - **Aether Icevein** (1) · tier `part` · iyslander
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -403,6 +366,9 @@ worst thing a trainer can do: it teaches wrong play.
 - **Back Alley Breakline** (3) · tier `none` · gravy
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If an activated ability or action card effect puts this face up into a zone from your deck, gain 1 action point.
+- **Barnacle** (2) · tier `full` · gravy
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 8 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
+    > Watery Grave
 - **Beckoning Haunt** · tier `part` · viserai
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
@@ -474,6 +440,9 @@ worst thing a trainer can do: it teaches wrong play.
     > Action - {r}, destroy this: Put target Runeblade attack action card and target Runeblade 'non-attack' action card from your graveyard on top of your deck in any order.
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > Action - {r}, destroy this: Put target Runeblade attack action card and target Runeblade 'non-attack' action card from your graveyard on top of your deck in any order.
+- **Cutty Shark, Quick Clip** (2) · tier `full`
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 8 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
+    > Watery Grave
 - **Death Dealer** · tier `part` · azalea
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
@@ -481,18 +450,10 @@ worst thing a trainer can do: it teaches wrong play.
     > Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > If you do, draw a card
-- **Entangling Shot** (1) · tier `none` · azalea
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this is put face-up into your arsenal, you may {t} target hero.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this is put face-up into your arsenal, you may {t} target hero.
-- **Entwine Lightning** (1) · tier `none` · briar
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If this was fused, it gains go again.
-- **Frailty Trap** (1) · tier `none` · arakni
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this defends an attack with go again, create a Frailty token under the attacking hero's control.
-- … and 36 more (see the station)
+- **Enigma Chimera** (1) · tier `full` · enigma
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 6 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+    > Phantasm
+- … and 47 more (see the station)
 
 ### INERT — 9 entries
 

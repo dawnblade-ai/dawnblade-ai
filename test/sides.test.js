@@ -145,7 +145,7 @@ test("no flat per-side reference survives in Battle", () => {
   assert.ok(from > 0, "Battle component not found");
   const lineOffset = src.slice(0, from).split("\n").length;
   const dead = "(deck|hand|arsenal|pitch|grave|banish|soul|gear|board|myHP|myInt|_intWas"
-            + "|res|ap|wasted|buffNext|gaNext|runeHitNext|amp|ward|awd|rune|rot|fra"
+            + "|res|ap|wasted|buffNext|buffQ|gaNext|runeHitNext|amp|ward|awd|rune|rot|fra"
             + "|hist|counters|weaponUsed|lifeLock|arcShield|namedBuff|dracNext"
             + "|blockH|blockG|blockRx|paySel|chainBlocked|blockedHand"
             + "|frost|marked|fatigue|intimidated)";
@@ -299,9 +299,9 @@ test("no per-side field is written as a top-level key on a state spread", () => 
    missing the six statuses only the dummy has ever carried. */
 test("symmetry gap: coverage — how much of a hero each seat carries", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.fields, 41);
-  assert.equal(gap.player.length, 41);
-  assert.equal(gap.opponent.length, 41);
+  assert.equal(gap.fields, 42);   /* +buffQ in v2.30 */
+  assert.equal(gap.player.length, 42);
+  assert.equal(gap.opponent.length, 42);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -311,8 +311,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 41);
-  assert.equal(gap.nativeForOpponent.length, 41);
+  assert.equal(gap.nativeForPlayer.length, 42);
+  assert.equal(gap.nativeForOpponent.length, 42);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

@@ -84,6 +84,19 @@ function classifyClause(raw){
        it through rather than throwing the whole clause away —
        "When this attacks, intimidate." was failing for exactly this reason. */
     if(rest.status!=="run") return rest;
+    /* "INSTEAD" REPLACES, it does not add. Emeritus Scolding reads "Deal 2
+       arcane damage. If played during an opponent's turn, INSTEAD deal 4" —
+       parsed as an addition that is 2 + 4 = 6 when the card prints 4. Flag
+       it here; execute suppresses the base op when the condition fires. */
+    if(/\binstead\b/i.test(m[2])) rest.instead = true;
+    /* ARSENAL FACE-UP. Azalea's arrows fire when put FACE UP into the
+       arsenal, which is NOT the end-of-turn arsenal step (that sets face
+       DOWN). Three printed phrasings, one trigger:
+         "this is put face-up into your arsenal"
+         "this is put into your arsenal face up"     (Ridge Rider Shot)
+         "this is put or turned face up in arsenal"  (Spire Sniping) */
+    if(/\b(?:put|turned)\b/.test(cond) && /\barsenal\b/.test(cond) && /face.?up/.test(cond))
+      return Object.assign(rest,{arsUp:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
@@ -97,8 +110,14 @@ function classifyClause(raw){
     if(/^this (?:leaves|enters|enters or leaves) the arena/.test(cond)) return Object.assign(rest,{approx:true});
     /* "When this is played, …" is just on-resolution, which is when every
        effect already fires — pass the inner clause (and its own condition)
-       straight through. Note "if you do, …" deliberately stays unread: it
-       hangs off an optional cost, and running it free is the bug v2.04 fixed. */
+       straight through.
+
+       "If you do, …" used to be listed here as deliberately unread. As of
+       v2.28 it IS read, but not by this function: an optional cost and its
+       rider are two separate clauses, so they are paired in fxParse where
+       the whole card is visible, and gated behind a `pick` prompt whose
+       rider only fires when the cost was actually paid. Running it free
+       is still the v2.04 bug; the difference is the prompt now exists. */
     if(/^(?:this is played|you play this|this attacks(?: a hero)?)$/.test(cond)) return rest;
     /* "When this defends, …" — the block step is a real trigger point */
     if(/^this defends(?: an attack)?$/.test(cond)) return rest;
@@ -167,7 +186,12 @@ function classifyClause(raw){
     return null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
-  if(/(?:this|it) (?:gains?|gets?|has) go again$/.test(c)) return R([["ga"]]);
+  /* ANCHORED at both ends. Unanchored, this matched the TAIL of a gated
+     sentence that the if/when handler never saw because it does not START
+     with if/when — "Surge - If this deals more than 2 damage, it gets go
+     again" and "High Tide - If there are 2 or more blue cards in your pitch
+     zone, this gets go again" both granted go again outright. */
+  if(/^(?:this|it) (?:gains?|gets?|has) go again(?: this turn)?$/.test(c)) return R([["ga"]]);
   /* Printed keyword lines. The database prints these on their own line.
      The engine honors them through card_keywords — equipment wear, the
      boost prompt, the crush threshold — or they are honestly inert
@@ -257,7 +281,18 @@ function classifyClause(raw){
   if(m=c.match(/gains? ((?:\{r\})+)/)) return R([["res",m[1].split("{r}").length-1]]);
   if(m=c.match(/gains? (\d+) action points?/)) return R([["ap",+m[1]]]);
   if(m=c.match(/gains? (\d+)\s*(?:\{h\}|life)/)) return R([["life",+m[1]]]);
-  if(m=c.match(/(?:your|the) next(?:[^.+]{0,70})attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)) return R([["buffNext",+m[1]]]);
+  /* "Your next ARROW attack this turn gets +3{p}" — the qualifier is not
+     decoration. This pattern used to swallow it ([^.+]{0,70}) and emit a
+     bare buffNext, so 24 pool cards granted their pump to ANY next attack:
+     an arrow buff landed on a sword, a Runeblade buff on a Generic. That is
+     the same class as the Mounting Anger filter bug — a printed restriction
+     silently dropped, making the card strictly better than printed.
+     `attackQual` reads the qualifier off the type line, and null means
+     genuinely unqualified. */
+  if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)){
+    const q = attackQual(m[1]);
+    return R([q ? ["buffNext",+m[2],q] : ["buffNext",+m[2]]]);
+  }
   if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){ const o=[["gaNext"]]; if(/create a runechant/.test(c)) o.push(["runeHitNext"]); return R(o); }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
@@ -371,12 +406,111 @@ function classifyClause(raw){
 }
 
 const FXMEMO = new Map();
+/* Read the SUBJECT of an optional cost ("an aura", "a yellow card",
+   "a Nimblism", "an attack action card with cost 2 or less") into a
+   prompts.js filter. Returns null when the phrase cannot be read
+   honestly — the caller then leaves the card unclaimed rather than
+   guessing, which is the golden rule applied to a cost.
+
+   Reads printed FIELDS only (type line, pitch, cost, name), never rules
+   text, exactly as promptFilter does. */
+/* Read the qualifier out of "your next <QUALIFIER> attack this turn gets
+   +N{p}" into a matcher over the printed TYPE LINE.
+
+   Two shapes, and they mean different things:
+     "Brute or Warrior"  -> OR   : either type line matches
+     "Pirate ally"       -> AND  : the type line needs BOTH words
+   so the result is an OR-list of AND-groups: [["brute"],["warrior"]] vs
+   [["pirate","ally"]].
+
+   Returns null when there is no qualifier at all ("your next attack"),
+   which is the honest unqualified case and must stay unqualified. */
+function attackQual(phrase){
+  const p = String(phrase||"").toLowerCase()
+    .replace(/[^a-z ]+/g, " ")
+    .replace(/\b(a|an|the|your|this|turn|other|another)\b/g, " ")
+    .replace(/\s+/g, " ").trim();
+  if(!p) return null;
+  const groups = p.split(/\s+or\s+/).map(g => g.split(/\s+/).filter(Boolean)).filter(g => g.length);
+  return groups.length ? groups : null;
+}
+
+/* Does a card satisfy such a qualifier? Reads the printed type line only —
+   never rules text — so it stays inside the golden rule. */
+function qualMatches(qual, card){
+  if(!qual || !qual.length) return true;          /* unqualified buffs hit everything */
+  const tt = String((card && card.tt) || "").toLowerCase();
+  return qual.some(group => group.every(word => tt.indexOf(word) >= 0));
+}
+
+function optFilter(phrase){
+  let rest = String(phrase||"").trim();
+  if(!rest) return null;
+  /* "ANOTHER aura" excludes the card itself, and a prompts.js filter reads
+     printed fields — it cannot express "not this one". Refuse rather than
+     flatten it into "an aura", which would offer an illegal choice. */
+  if(/^another\s+/i.test(rest)) return null;
+  rest = rest.replace(/^(?:a|an|one)\s+/i, "");
+
+  const f = {};
+  /* Consume the qualifiers we can actually express, removing each from the
+     phrase as we go. */
+  const cm = rest.match(/\s*\bwith cost (\d+) or less\b/i);
+  if(cm){ f.costLe = +cm[1]; rest = (rest.slice(0, cm.index) + " " + rest.slice(cm.index + cm[0].length)).trim(); }
+
+  /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of
+     these EXACTLY — not as a substring.
+
+     This is the difference between reading a card and guessing at it.
+     Mounting Anger says "an attack action card from your hand with cost
+     LESS THAN THE NUMBER OF DRACONIC CHAIN LINKS YOU CONTROL": a loose
+     substring test saw "attack action card", returned {type:"attack"} and
+     silently dropped the restriction — which would let a player banish any
+     attack card at all and make the card strictly better than printed.
+     A dynamic limit like that is genuinely unreadable here, so the honest
+     answer is null and the card stays unclaimed. */
+  const low = rest.toLowerCase();
+  if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
+  if(/^attack action cards?$/.test(low))  { f.type = "attack"; return f; }
+  if(/^yellow cards?$/.test(low))         { f.pitch = 2;       return f; }
+  if(/^blue cards?$/.test(low))           { f.pitch = 3;       return f; }
+  if(/^red cards?$/.test(low))            { f.pitch = 1;       return f; }
+  /* A NAMED card — "a Nimblism", "a Phoenix Flame". Only when what remains
+     is a bare proper noun, so "a card" never becomes a name filter. */
+  if(/^[A-Z][A-Za-z'\-]*(?: [A-Z][A-Za-z'\-]*)*$/.test(rest) && !/^cards?$/i.test(rest)){
+    f.name = "^" + rest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
+    return f;
+  }
+  return null;
+}
+
 function fxParse(card){
   const key = norm(card.name)+"|"+(card.pitch||0);
   if(FXMEMO.has(key)) return FXMEMO.get(key);
   const tt = (card.tt||"").toLowerCase();
   const kw = (card.kw||[]).map(k=>String(k).toLowerCase());
-  const fx = {ga:kw.some(k=>k==="go again"), self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+  /* PRINTED go again, not merely MENTIONED go again.
+
+     The database's `card_keywords` is a keyword INDEX: it lists every
+     keyword that appears anywhere on the card, including ones the text
+     only grants conditionally. Seeding fx.ga straight from it gave 28
+     pool cards unconditional go again when their text says otherwise —
+     Buckwild ("IF there is a card with 6 or more {p} in your pitch zone,
+     this gets go again") went again on an empty pitch zone, and Runerager
+     Swarm logged "condition not met" and then went again anyway.
+
+     Go again is the tempo engine of this game, so that is not a small
+     mis-read. This is the same family as the Kayo bug — kw and gkw are
+     already kept apart; the remaining trap is INSIDE card_keywords.
+
+     The discriminator is the printed layout: the database puts real
+     keyword lines in their own paragraph, so a PRINTED go again stands
+     alone on a line while a granted one sits inside a sentence. If the
+     text never mentions it at all, trust the keyword list. */
+  const gaStandalone = (card.tx||"").split(/\n+/).some(l => /^\**go again\**\.?$/i.test(clean(l)));
+  const gaMentioned  = /\bgo again\b/i.test(card.tx||"");
+  const fx = {ga: gaStandalone || (!gaMentioned && kw.some(k=>k==="go again")),
+    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";
@@ -396,16 +530,73 @@ function fxParse(card){
     const selfRe = new RegExp("\\b"+esc+"(?:'s)?\\b", "gi");
     clauses = clauses.map(s => s.replace(selfRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
   }
-  clauses.forEach(raw=>{
+  /* ---- OPTIONAL COST + "If you do, …"  (v2.28) ------------------------
+     "When this attacks, you may banish an aura from your graveyard.
+      If you do, deal 1 arcane damage to target hero."
+
+     Twenty-four pool cards are shaped like this and NOT ONE was fully
+     read: "If you do" was left deliberately unread because it hangs off
+     an optional cost, and running the payload for free is the bug v2.04
+     fixed. The prompt machinery to ask the question properly now exists
+     (engine/prompts.js `pick`, whose rider fires only when cards actually
+     moved), so the text can finally be read instead of skipped.
+
+     The two halves arrive as SEPARATE clauses — the splitter breaks on
+     the period — so they are paired here, where the whole card is
+     visible, rather than in classifyClause which sees one at a time.
+
+     The rider is classified by classifyClause itself, so "deal 1 arcane
+     damage" / "draw a card" / "this gets +2{p}" all keep using the one
+     reader. Nothing about a card is special-cased by name. */
+  const handled = new Set();
+  for(let i = 0; i < clauses.length - 1; i++){
+    const rider = clauses[i+1];
+    if(!/^if you do\b/i.test(rider)) continue;
+    const cm = clauses[i].match(
+      /^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (banish|discard) (.+)$/i);
+    if(!cm) continue;
+    let subject = cm[3].trim();
+    let zone = null;
+    /* NOT end-anchored: "an attack action card from your hand with cost 2
+       or less" puts the zone in the MIDDLE. Anchoring it missed that and
+       silently fell back to the wrong zone — banishing from the graveyard
+       a card the text says comes from hand. */
+    const zm = subject.match(/\s*\bfrom your (graveyard|hand)\b/i);
+    if(zm){ zone = zm[1].toLowerCase(); subject = (subject.slice(0, zm.index) + " " + subject.slice(zm.index + zm[0].length)).trim(); }
+    const filter = optFilter(subject);
+    if(!filter) continue;                       /* unreadable cost — do not claim the card */
+    const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+    if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — same */
+    fx.optCost = {
+      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
+      kind: cm[2].toLowerCase(),
+      /* the printed zone if it says one; otherwise the natural home of the
+         cost — you discard from hand, you banish from the graveyard */
+      zone: zone || (cm[2].toLowerCase() === "discard" ? "hand" : "grave"),
+      filter,
+      ops: rr.ops
+    };
+    if(fx.optCost.zone === "graveyard") fx.optCost.zone = "grave";
+    handled.add(i); handled.add(i+1);
+    break;                                       /* one optional cost per card in the pool */
+  }
+
+  clauses.forEach((raw,ci)=>{
+    if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
     fx.clauses.push({t:raw, st:r.status});
     if(r.approx) fx.approx = true;
     r.ops.forEach(op=>{
+      /* An arsenal-face-up payload is not an on-play effect: it fires when
+         the card ENTERS the arsenal, and is stamped onto the card to be
+         collected when it is later played. Route it first, or "it gets go
+         again this turn" would become the card's own printed go again. */
+      if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op]; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
       if(r.onHit) fx.onHit.push(op);
-      else if(r.cond) fx.conds.push({cond:r.cond, op});
+      else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
     });
   });
@@ -449,10 +640,28 @@ function fxParse(card){
     fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
-  if(!fx.self && !isAttack(card)){
+  /* Fallback self-pump: a non-attack whose "+N{p}" never became an op still
+     queues that pump for your next attack.
+
+     IT MUST NOT FIRE WHEN A buffNext OP ALREADY READ THAT SAME "+N{p}".
+     This scans the WHOLE text, so "Your next arrow attack this turn GAINS
+     +3{p}" matched here as well as in the buffNext rule, and `execute` added
+     both — Lace with Frailty granted +6 from a card that prints +3. Every
+     "your next X attack gains +N{p}" card was doubled the same way; the
+     phrasing "gets" vs "gains" is why some escaped and some did not. */
+  if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
     if(pm) fx.self = +pm[1];
     else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
+  }
+  /* the enabler half: "you may put an arrow from your hand face-up into
+     your arsenal". Read the SUBJECT so a card that says "an arrow" cannot
+     put a non-arrow; anything else is left unclaimed. */
+  const apm = tl.match(/you may put an? ([a-z ]+?) (?:card )?from your hand face.?up into your arsenal/)
+           || tl.match(/you may put an? ([a-z ]+?) (?:card )?face.?up into your arsenal/);
+  if(apm){
+    const subj = apm[1].trim();
+    if(/^arrows?$/.test(subj)) fx.arsenalPut = {filter:{tt:"arrow"}};
   }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
@@ -497,7 +706,35 @@ function boardRed(c,sd){
   const want = norm(m[1]);
   return sd.board.some(b => norm(((b && b.card && b.card.name) || "")) === want) ? 1 : 0;
 }
-function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*((sd&&sd.rune)||0)-boardRed(c,sd)); }
+/* ---- RUNECHANTS ARE AURAS, NOT A COUNTER ----------------------------
+   The printed token reads:
+
+     Runechant — "Runeblade Token - Aura"
+     "When you play an attack action card or activate a weapon attack,
+      destroy this and deal 1 arcane damage to target opposing hero."
+
+   It is an AURA permanent in the arena, and that is load-bearing rather
+   than flavour: at least seven pool cards ask about auras generically —
+   "if you control 3 or more auras" (Goon Beatdown, Goon Tactics), "you
+   may destroy an aura you control" (Condemn to Slaughter), "whenever you
+   play an aura" (Magmatic Carapace), "if you've played or created an aura
+   this turn" (Runerager Swarm, Shrill of Skullform, Hit the High Notes).
+
+   While a runechant was a bare integer on the side, NONE of those could
+   see it: it could not be counted and it could not be destroyed. So the
+   board is the single source of truth and the count is derived from it.
+   That it also renders real card art instead of the text "Runechant ×2"
+   is a consequence, not the goal.
+
+   These live in the parser because it is the module everything else takes
+   as its dependency, and because `boardRed` already reads `sd.board`. */
+const isRunechant = b => !!(b && b.card && norm(b.card.name) === "runechant");
+const runeCount = sd => (sd && sd.board) ? sd.board.filter(isRunechant).length : 0;
+/* Any aura this side controls — what "3 or more auras" has to count. */
+const isAura = b => !!(b && (b.kind === "aura" || (b.card && /\baura\b/i.test(b.card.tt || ""))));
+const auraCount = sd => (sd && sd.board) ? sd.board.filter(isAura).length : 0;
+
+function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)); }
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -514,7 +751,8 @@ const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt|
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
-        weaponCost, hasKw, isAR, isInstantT};
+        weaponCost, hasKw, isAR, isInstantT,
+        isRunechant, runeCount, isAura, auraCount};
 });

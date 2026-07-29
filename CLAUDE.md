@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.19
+**Current version:** v2.32
 
 ---
 
@@ -57,6 +57,20 @@ text — never to special-case the card by name.
 - Printed keywords (`card_keywords`) and *granted* keywords (`granted_keywords`) must
   stay separate. Merging them caused the Kayo bug: conditional go-again was granted
   unconditionally.
+- **`card_keywords` is a keyword INDEX, not a claim of unconditional possession
+  (v2.31).** It lists every keyword *appearing* on the card, including ones the
+  text only grants conditionally — so keeping it apart from `gkw` is necessary
+  but **not sufficient**. Seeding `fx.ga` straight from it gave **27 pool cards
+  unconditional go again against their own printed text**: Buckwild went again on
+  an empty pitch zone, and Runerager Swarm logged *"condition not met"* and then
+  went again anyway. Go again keeps your action point, so it is the most valuable
+  keyword in the game to get wrong.
+
+  The discriminator is the printed **layout**: the database puts real keyword
+  lines in their own paragraph, so a printed go again stands alone on a line
+  while a granted one sits inside a sentence. If the text never mentions it at
+  all, trust the list. 77 cards keep it, 27 lose it, and the conditional path
+  still grants it when the condition is actually met.
 
 ---
 
@@ -66,8 +80,14 @@ text — never to special-case the card by name.
 - **v2.0x line starts at v2.01** (2026-07-22): marks the engine/ extraction +
   pool audit system. Below 2.0 = single-file-only history; 2.0+ = engine/ and
   index.html co-exist under the sync-guard rule (see below).
-- After any change: validate (below), then the file is uploaded/pushed to the Pages repo.
-- Keep a one-line summary of what each version changed.
+- After any change: validate (below), then the file is uploaded/pushed to the Pages repo
+  **by the user, manually** — there is no git remote here and deploying is not
+  this thread's job.
+- **The per-version summary lives in `CHANGELOG.md`, not in `index.html`.** Until
+  v2.32 it accumulated inside the `APP_VER` comment, which reached 14,723
+  characters on one line and shipped to every player on every page load. Add a
+  new section at the top of `CHANGELOG.md` and keep the `APP_VER` comment to a
+  single sentence.
 
 ---
 
@@ -77,10 +97,17 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 220 drills:
+This is `node --test "test/*.test.js"` — currently 377 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
-   String- and template-literal-aware, not regex-literal-aware — the three
-   regexes with apostrophes are pre-neutralized inside the checker.
+   String- and template-literal-aware, not regex-literal-aware — the
+   offending regexes are pre-neutralized inside the checker.
+   It also rejects an **orphaned comment terminator** (a block comment
+   closed twice, so the prose after the first close becomes code). That is
+   not hypothetical: it shipped in v2.27 and broke the page completely
+   while all 338 drills stayed green, because the orphaned prose happened
+   to contain balanced brackets. **Bracket balance alone cannot see it.**
+   A regex ending in a star-slash looks identical to that, so add any new
+   one to the pre-neutralize list rather than weakening the check.
 2. **Deck integrity** (`test/decks.test.js`): exactly 15 decks, each deck +
    gear summing to exactly 55 cards.
 3. **Parser/game/advisor drills** (`test/parser.test.js`, `game.test.js`,
@@ -91,10 +118,13 @@ This is `node --test "test/*.test.js"` — currently 220 drills:
    `parser.js` loads before its dependents, the bridge lifts every name the
    trainer calls bare, and — the real check — **no engine export is re-declared
    inside `index.html`**, which would silently shadow the module. It also pins
-   the three engine/trainer **name collisions** (`endTurn`, `other`, `you`);
-   see "The no-mirror rule" below.
+   the engine/trainer **name collisions** (`endTurn`, `other` — `you` was
+   retired in v2.24); see "The no-mirror rule" below.
 5. **Multiplayer groundwork** (`test/sides.test.js`, `test/priority.test.js`,
    `test/rps.test.js`) — see "The two-player migration" below.
+   **`test/actor.test.js`** is the actor/perspective ledger: it fails if a
+   MIGRATED rules function still reaches for `you(`/`opp(`, and if a PENDING
+   one has quietly stopped — see "ACTOR vs PERSPECTIVE" below.
 6. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -108,6 +138,50 @@ node tools/audit.js --write-baseline   # only once you've reviewed the diff —
 `test/coverage.test.js` then checks every pool card still resolves and no
 card's `fxParse` tier dropped below the pinned baseline (skips cleanly if
 `tools/.cache/card.json` / `tools/coverage-baseline.json` aren't present).
+
+### The fairness sweep — is any card STRONGER than printed? (v2.32)
+
+```
+npm run fairness          # ranked report; exits non-zero on any finding
+npm run fairness --json   # machine-readable
+```
+
+**The audit measures COVERAGE. This measures FAITHFULNESS, and they are not
+the same question.** Three bugs shipped in one week and the audit reported
+**identical tiers before and after every one of them** — every affected card
+said `full`. They were read, and read *wrong*:
+
+| ver | what | cards |
+|---|---|---|
+| 2.30 | a `+N{p}` read by two rules at once — Act of Glory printed +6 and gave **+12** | 34 |
+| 2.30 | a type qualifier dropped — an **arrow** buff landing on a sword | 24 |
+| 2.31 | go again granted unconditionally against the card's own text | 27 |
+| 2.32 | `instead` treated as an ADDITION — Emeritus Scolding dealt **6** where it prints 4 | 3 |
+
+Coverage cannot see any of that, by construction: it counts clauses consumed,
+not whether the consumption was faithful.
+
+The sweep is **deliberately one-sided** — it reports only cards that grant
+*more* than they print. A card that is too weak is `tools/failstates.js`'s
+business and is far less harmful; a card that is quietly too strong steals
+games. What it checks:
+
+| code | the shape |
+|---|---|
+| `COND-BYPASSED` | a condition gates an effect the engine also grants unconditionally, so the gate is decoration |
+| `VALUE-DOUBLED` | one printed value applied by two paths |
+| `RESTRICTION-DROPPED` | a printed limit (type, cost, "another") that no op carries |
+| `KEYWORD-UNGATED` | a keyword indexed in `card_keywords` but only conditionally granted in the text |
+| `COST-SKIPPED` | an optional cost's **rider** fires without the cost being paid |
+
+**A clean sweep is only worth having if it would shout when the bugs return**,
+so `test/fairness.test.js` pins that it is quiet on the fixed engine, and each
+check keeps a real card behind it. Reintroducing the four bugs makes it report
+41 / 33 / 22 / 3 findings respectively — verified, not assumed.
+
+**`instead` REPLACES.** `classifyClause` marks a conditional payload containing
+"instead", `fx.conds[].instead` carries it, and `execute` suppresses the
+unconditional base op of the same kind when that condition fires.
 
 ### The stack — what the pool is still waiting on
 
@@ -331,7 +405,7 @@ and a bridge to migrate *across*, so it can proceed a function at a time
 instead of as one big-bang rewrite.
 
 **`engine/sides.js` — the shape a second human can occupy.**
-`makeSide()` defines the 41 fields a player needs in order to *be* a player;
+`makeSide()` defines the 48 fields a player needs in order to *be* a player;
 both seats get all of them, so giving the dummy an action phase becomes
 filling in blanks rather than inventing plumbing. `makeGame()` wraps
 `sides[0]` (you) and `sides[1]` (opponent) with the genuinely shared state.
@@ -346,14 +420,14 @@ while the rest of `Battle` keeps reading the flat state.
 both and `test/sides.test.js` pins both. Moving either should be a **deliberate
 edit to that drill**, the way the coverage baseline works.
 
-**DONE as of v2.18.** Both seats carry all 41 fields, both are built by a single
+**DONE as of v2.18.** Both seats carry all 47 fields, both are built by a single
 `makeSide` call, and `flatRemaining` is **0** — nothing a hero owns lives on the
 game object any more.
 
 | | fields | native | still flat |
 |---|---|---|---|
-| player | 41 / 41 | 41 | 0 |
-| opponent | 41 / 41 | 41 | 0 |
+| player | 47 / 47 | 47 | 0 |
+| opponent | 47 / 47 | 47 | 0 |
 
 `P_MAP` and `O_MAP` are now empty. They stay as the ledger's shape: if a flat
 per-side field is ever reintroduced it belongs in one of them, and the drills
@@ -361,6 +435,302 @@ hold it to that. The dummy's resources, action point, arsenal, pitch, banish,
 soul and `hist` sit at their defaults because it pays no costs and takes no
 action phase yet — inert-but-present is the point, and it is what lets a second
 human occupy slot 1 without a single new field.
+
+### Next-attack buffs: two bugs, one clause (v2.30)
+
+> "Your next **arrow** attack this turn gains **+3{p}**"
+
+That single line was being read wrong twice over, and **the coverage audit
+could not see either one** — every affected card reported tier `full`. They
+were read, and read *wrong*. Same blind spot as the `noop` keywords above:
+**a card can be 100% covered and still hand a player a win they did not earn.**
+
+**1. The qualifier was swallowed — 24 cards.** The pattern used
+`[^.+]{0,70}` and emitted a bare `buffNext`, so an *arrow* buff landed on a
+sword and a *Runeblade* buff on a Generic. `attackQual` now reads the
+qualifier off the printed **type line** and it rides in the op as `op[2]`.
+
+Two shapes that look alike and are not:
+
+| printed | meaning | matcher |
+|---|---|---|
+| `Brute or Warrior` | **OR** — either type | `[["brute"],["warrior"]]` |
+| `Pirate ally` | **AND** — both words | `[["pirate","ally"]]` |
+
+Qualified buffs live on a new side field **`buffQ`** (`{amt, q}` entries)
+rather than the bare `buffNext` integer, and **a qualified buff that does not
+match is not spent** — it waits for an attack it actually applies to.
+
+**2. The buff was counted TWICE — 34 cards.** `fxParse` has a fallback that
+scans the *whole text* of a non-attack for `gains/gets +N{p}` and queues it as
+a self-pump. The same "+3{p}" matched there **and** in the `buffNext` rule, and
+`execute` added both:
+
+| card | printed | was granting |
+|---|---|---|
+| Act of Glory | +6 | **+12** |
+| Up Sticks and Run · Re-Charge! | +4 | **+8** |
+| Lace with Frailty / Bloodrot / Inertia | +3 | **+6** |
+
+The fallback now refuses when a `buffNext` op already read that `+N{p}`. It
+still fires for a genuine self-pump with no op — that safety net is drilled,
+because deleting it outright would break a different set of cards.
+
+**Both regressions are pinned, and both drills are proven to bite** by
+reintroducing the bug and watching them fail.
+
+### Optional costs — "you may X. If you do, Y" (v2.28)
+
+**24 pool cards are shaped like this and not one was fully read.** The rider
+was deliberately skipped because paying nothing and collecting the payload is
+the free-ability bug v2.04 fixed. The machinery to ask properly now exists, so
+the text is read instead of skipped.
+
+**`engine/prompts.js` — `pick` gained an `ops` rider.** With `min:0` a pick is
+an optional cost; `ops` is the payload; `applyPrompt` returns it **only when
+cards actually moved**. Decline and the rider does not fire — same rule the
+`pay` variant already enforced, and there is a drill named for the v2.04 bug
+that is proven to bite.
+
+**`engine/parser.js` — `fx.optCost`.** The two halves arrive as *separate*
+clauses (the splitter breaks on the period), so they are paired in `fxParse`
+where the whole card is visible, not in `classifyClause` which sees one at a
+time. The rider is classified by `classifyClause` itself, so `deal 1 arcane`
+/ `draw a card` / `this gets +2{p}` all keep using the one reader.
+
+```js
+fx.optCost = {trigger, kind:"banish"|"discard", zone, filter, ops}
+```
+
+`optFilter` reads the cost's subject into a prompts.js filter from printed
+**fields only** — `an aura` → `{tt:"aura"}`, `a yellow card` → `{pitch:2}`,
+`a Nimblism` → `{name:"^Nimblism$"}` (anchored, so it cannot match
+"Nimblism Adept"), `with cost 2 or less` → `{costLe:2}`.
+
+**It returns `null` on anything it cannot read honestly, and the card is then
+left unclaimed rather than guessed** — the golden rule applied to a cost. A
+wrong guess would let a player pay the wrong thing, or pay nothing and collect.
+
+**THE WHOLE SUBJECT PHRASE MUST BE CONSUMED, or it refuses (v2.29).** This is
+the difference between reading a card and guessing at it, and getting it wrong
+shipped a real bug:
+
+> **Mounting Anger** — "banish an attack action card from your hand **with cost
+> less than the number of Draconic chain links you control**"
+
+A loose substring test saw `attack action card`, returned `{type:"attack"}` and
+**silently dropped the limit**, so any attack card in hand became a legal
+banish — strictly better than printed, the sev-3 "illegal play allowed"
+category. Its look-alike Rising Resentment escaped only by accident, because
+its *payload* was unreadable rather than its filter.
+
+Three shapes now refuse, each pinned by a drill:
+
+| phrase | why it is refused |
+|---|---|
+| `with cost less than the number of …` | a **dynamic** limit; no printed field expresses it |
+| `another aura` | an **exclusion** — a field filter cannot say "not this one" |
+| `a card with crush` | a **rules-text** qualifier; `promptFilter` reads fields only |
+
+**Look-alike cards are the hazard here, not exotic ones.** Mounting Anger and
+Rising Resentment share a cost clause verbatim and differ in the rider
+(`it gains +1{p}` vs `it costs {r} less`) — and in both, "it" is the *banished*
+card, not the attacker, so the existing `self` op is the wrong op for either.
+Pinned so a future wiring pass cannot assume they are the same card.
+
+**The printed zone wins, and it is not always at the end.** "an attack action
+card **from your hand** with cost 2 or less" puts the zone mid-phrase; an
+end-anchored read missed it and silently fell back to the graveyard, banishing
+from a zone the text never named. Drilled.
+
+Wired for the **`attacks`** trigger in `execute`, queued via `promptQ` (never
+inline — the attack finishes resolving first) and addressed to `actorOf(n)` so
+it asks whoever is swinging. `buildPrompt` returns `null` on an empty zone, so
+a cost you cannot pay skips itself.
+
+**Still to wire:** the `hits`, `defends` and `playAura` triggers. The parser
+reads them already — `fx.optCost.trigger` names which — so each is a queue site,
+not new machinery.
+
+**Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong and
+Mounting Anger went none/part → full; Golden Tipple (×3) and Fire that Burns
+Within → full.
+
+### The priority machine, in SHADOW (v2.27)
+
+Roadmap Phase A step 4 — *the* step that changes **control flow** rather than
+field names, so it lands in two moves. This is the first.
+
+`DawnPriority.fromTrainer(t, foeFirst)` derives the machine's state
+(`phase`/`step`/`priority`/`passed`/`turnPlayer`/`firstPlayer`/`attacker`) from
+the trainer's `mode`/`bphase`/`chainOpen`, and `withPriority` merges exactly
+`PRI_FIELDS` into every state that passes through `setG`. **It drives nothing
+yet** — `mode`/`bphase` are still the source of truth.
+
+Two reasons that is worth a version on its own:
+
+1. **It turned four dormant guards on.** `BAD-PHASE`, `BAD-STEP`,
+   `BAD-PRIORITY` and `PRIORITY-IN-CLOSED-PHASE` all guard with `!= null`,
+   and the trainer carried none of those fields — so since v2.21 they had
+   **never once fired on a real game**. Now they audit every state change.
+2. **It proves the mapping before anything depends on it.** Every bug this
+   cycle was found by eye rather than by a red test; this is the change where
+   that would have been most expensive.
+
+`fromTrainer` lives in `engine/priority.js`, not the trainer: it is pure, it is
+a statement about priority, and inside the React component no drill could reach
+it. It builds state by **calling the module's own transitions** rather than
+restating them, so there is one description of who holds priority when. It is
+passed **no `sides`** — `toPhase` issues an action point when it sees one, and a
+derivation must never touch resources.
+
+The mapping, verified in live play:
+
+| trainer | machine | why |
+|---|---|---|
+| `act`, no chain | action / **layer**, priority you | your open window |
+| `act`, chain open | action / **link** | the chain stays open after resolution |
+| `pay`,`arsenal`,`boostpick` | action / layer | UI sub-modes, still your window |
+| `stack` | **reaction**, attacker you, priority you | you attacked → `attack-reaction` |
+| `block`+`defend` | **defend**, turnPlayer **1**, priority **1** | CR 7.3 — see below |
+| `block`+`react` | **reaction**, attacker 1, priority you | dummy passes, window slides to you |
+| game over | **end**, priority `null` | CR 4.4.1 |
+
+**The counter-intuitive one is load-bearing.** In the defend step the
+*turn-player* holds priority (CR 7.3) — so while the dummy swings,
+`canAct(g,0)` is **false** and `canDeclareDefenders(g,0)` is **true**.
+Declaring blockers is a free, simultaneous game-state action (CR 7.3.2), not a
+priority action. That pair is the whole reason the two questions are separate.
+
+**The clock is deliberately NOT wired.** `priority.js`'s `turn` counts
+player-turns and ticks on every handoff; the trainer's `turn` counts only your
+own turns and is read by the escalation table *and* the score. That belongs
+with seat 1's action phase, together with `newTurn`/`foeSwing`.
+
+**What is left** is moving the consumers: replace `playRx`'s hand-rolled speed
+gates and the hand-dim logic with `speedAllowed`/`canAct`, then retire
+`mode`/`bphase`.
+
+### The seeded RNG (v2.26) — `engine/rng.js`
+
+Roadmap Phase A step 2, and its own words: *"Do not skip the seed. It is
+thirty lines and it unlocks replay, drills for `Battle`, and lockstep all at
+once."* Three payoffs, only one of which is netcode:
+
+1. **Replay** — a game is its seed plus its action log.
+2. **Drills** — you cannot assert on a shuffled deck; with a pinned seed you can.
+3. **Lockstep** — two peers must deal the same decks from the same seed.
+
+**Every function is pure and returns a NEW rng beside its value.** Nothing in
+the module mutates and nothing calls `Math.random`.
+
+```js
+const {rng, v} = rngRoll(n.rng, 6);
+n.rng = rng;            // ALWAYS store it back
+```
+
+Forgetting to store it back means the next draw repeats the last one. `rng.n`
+(the draw counter) is what makes that visible — it only goes up, so a stalled
+`n` between two states that should differ is the tell. It doubles as a **desync
+canary**: two peers at the same action with different `n` have already diverged.
+
+**One seed per match**, stamped in `App` when the match begins and threaded
+`Loadout → Pregame → Battle` through `cfg`. The pregame throw runs on a
+*derived* sub-stream (`seed + ":rps"`) so the opponent's hand cannot correlate
+with the first card of anyone's deck.
+
+Seeded: both opening shuffles, the throw, Knucklehead's d6, intimidate's pick,
+the dummy's graveyard recycle. **Deliberately left on `Math.random`:** taunts,
+trophy text and the random-hero button — none of them touch game state.
+
+`rng.seed` + `rng.n` ride in the **JUDGE!!** report, so a one-line bug note is
+now a reproducible game rather than a screenshot to squint at.
+
+**`DawnGame.shuffle` is gone** (v2.26). An unseeded shuffle sitting beside the
+seeded one under a *shorter* name is a trap: someone reaches for it and silently
+breaks replay and lockstep with no test able to notice. Same reasoning that
+deleted `sides.js`'s `you`/`foe`. Use `rngShuffle(rng, arr)`.
+
+**Known, and left alone:** `addRunechants`'s `mkUid` fallback in
+`engine/game.js` still uses `Math.random`, but every real caller and every
+drill passes `tokSeq`, so it never fires. Making it deterministic would risk
+uid collisions in a path that does not execute.
+
+### ACTOR vs PERSPECTIVE — the seam (v2.24, migration v2.25)
+
+`ROADMAP-MULTIPLAYER.md` Phase A step 1, "the whole ballgame". `you()` means
+**seat 0**, not "the player acting", and today those two readings coincide only
+because one seat ever acts. Two concepts have to come apart:
+
+| | question | helpers |
+|---|---|---|
+| **perspective** | whose board does THIS CLIENT render? | `you()` / `opp()` / `youMut()` / `oppMut()` — **UI only** |
+| **actor** | whose effect is RESOLVING right now? | `act()` / `foe()` / `actMut()` / `foeMut()` — **rules only** |
+
+```js
+const actorOf = s => s.actor||0;
+const act    = s => s.sides[actorOf(s)];
+const foe    = s => s.sides[1-actorOf(s)];
+const actMut = n => actorOf(n)===0 ? youMut(n) : oppMut(n);   // one clone path
+const foeMut = n => actorOf(n)===0 ? oppMut(n) : youMut(n);
+```
+
+`s.actor` defaults to 0, so **`act(s) === you(s)` today** and every `you`→`act`
+swap is behaviour-identical *now* while being correct the moment seat 1 acts.
+That is what makes this migratable a function at a time instead of big-bang.
+`actor` is in `GAME_KEYS` (shared, not per-side — it *names* a seat).
+
+**The ledger is `test/actor.test.js`**, and it works like `flatRemaining`:
+`MIGRATED` functions must contain **no** perspective helper; `PENDING` ones are
+pinned so the remaining work is a number, not folklore. Moving a name between
+the lists must be a deliberate edit.
+
+The ledger covers **exactly the seven functions the roadmap names** as the rules
+core. Keeping that denominator honest matters — a ledger that quietly omits two
+makes the remaining work look smaller than it is.
+
+| | |
+|---|---|
+| MIGRATED (5/7) | `runOps`, `execute`, `resolveStack`, `tryPlay`, `takeIt` |
+| PENDING (2/7) | `newTurn`, `foeSwing` |
+
+`newTurn` and `foeSwing` are last on purpose: both are entangled with the
+**dummy specifically** rather than a generic opponent (`foeSwing` *is* the
+scripted `[3,4,5]` escalation; `newTurn` refills the dummy to `DUMMY_INT` every
+turn to stand in for the turn it never takes). Migrate them together with
+giving seat 1 a real action phase — that work replaces both behaviours anyway.
+
+Not yet in the ledger, and smaller: `confirmPay`, `allySwing`, `dummyDefence`
+also write side state. They are seat-0-only today; fold them in as they come up.
+
+The drill slices function bodies by **anchor pairs, not brace matching** — a
+brace counter that is not regex-literal-aware miscounts inside `execute`'s
+regexes (the same hazard `html-balance.test.js` documents). `ANCHORS` must stay
+in true file order; a drill enforces exactly that.
+
+**A seat index hardcoded in a rules call is the same bug wearing a different
+hat.** `popRunechants(n, 0, …)` popped **seat 0's** runechants whoever was
+swinging — fixed in v2.25 to `popRunechants(n, actorOf(n), …)`, and a drill now
+fails any migrated function that writes `sides[0]` / `sides[1]` literally.
+
+**Watch for local names that shadow the helpers.** `tapTwice`'s third parameter
+was called `act`, silently shadowing the global `act()` for that whole closure
+— harmless while it is pure UI, a real trap the moment anything in there needs
+the acting side. Renamed to `commit` in v2.25. Same-name-different-meaning is
+the bug class `test/sync.test.js` pins for the engine; keep it out of the UI too.
+
+**`built.*` is still the PLAYER's hero build** (`built.viseraiPassive`,
+`built.runeDmg`, `built.iceFrostbite`, `built.arsenalInstant`), captured in
+closure. When seat 1 acts for real, each side needs its own build — that is the
+next layer after the helper migration, not part of it.
+
+Two dead engine helpers were **deleted** in v2.24 rather than pinned:
+`sides.js` exported a seat-hardcoded `you`/`foe` pair that nothing called.
+Introducing the trainer's actor-relative `foe` would have made `foe` a
+collision with *different semantics* (engine `sides[1]` vs trainer
+`sides[1-actor]`) — the dangerous kind. So `KNOWN_COLLISIONS` **shrank** to
+`["endTurn","other"]`. Prefer deleting a dead engine export over adding a name
+to that list.
 
 ### Cost readers take a SIDE, not the game
 
@@ -398,10 +768,11 @@ What replaces it, all enforced by `test/sync.test.js`:
   `const fxParse = …` in the trainer would shadow the module and put us back to two
   copies with nothing watching them. This is the guard that matters.
 
-**Three names collide on purpose**, and the drill pins them so a fourth cannot
-appear unnoticed: the trainer's `endTurn` (a `setG` reducer) vs `priority.endTurn`
-(pure seat handoff), the trainer's `other` (off-pitch cards in `DeckView`) vs
-`priority.other` (the other seat), and `you`. They never meet today because the
+**Two names collide on purpose** (three until v2.24), and the drill pins them so
+a fourth cannot appear unnoticed: the trainer's `endTurn` (a `setG` reducer) vs
+`priority.endTurn` (pure seat handoff), and the trainer's `other` (off-pitch
+cards in `DeckView`) vs `priority.other` (the other seat). `you` left the list
+when `sides.js`'s dead seat-hardcoded `you`/`foe` were deleted. They never meet today because the
 trainer calls its own bare and would reach the engine's as `DawnPriority.endTurn`.
 **Resolve them by renaming when `priority.js` is wired in** — that wiring replaces
 exactly those functions, so a silent bridge there would be a genuine bug.
@@ -620,6 +991,116 @@ to the end of *its* turn and this rule becomes turn-1-only for both seats.
 
 ---
 
+## Runechants are AURAS, not a counter (v2.23)
+
+The printed token, verbatim:
+
+> **Runechant** — "Runeblade Token - Aura"
+> "When you play an attack action card or activate a weapon attack, destroy
+> this and deal 1 arcane damage to target opposing hero."
+
+**It is an aura in the arena, and that is load-bearing rather than flavour.**
+Seven pool cards ask about auras generically — "if you control 3 or more auras"
+(Goon Beatdown, Goon Tactics), "you may destroy an aura you control" (Condemn to
+Slaughter ×2), "whenever you play an aura" (Magmatic Carapace), "if you've
+played or created an aura this turn" (Runerager Swarm, Shrill of Skullform, Hit
+the High Notes). While a runechant was a bare integer on the side, **none of
+them could see it**: it could not be counted and it could not be destroyed.
+
+So the **board is the single source of truth** and the count is derived:
+`DawnParser.runeCount(sd)` / `auraCount(sd)` read `sd.board`. There is no
+`sd.rune` field any more — a drill would fail if one came back. `effCost` reads
+the board too, so "costs {r} less for each Runechant" still works.
+
+That they now render the **real token art** on the board instead of the text
+chip "Runechant ×2" is a *consequence* of the model being right, not a separate
+fix — the board renders its entries with `CardFrame`. `built.runeCard` is the
+token built from the database record (never invented), and `runeApprox` still
+reports when the token is missing from the pool.
+
+### Two rules fixes that fall out of the printed text
+
+1. **The trigger fires on PLAY.** "When you *play* an attack action card…" — a
+   runechant that did not exist at that instant never triggered for it. So one
+   created *by* the attack (Viserai's rite on a Runeblade attack, a verse
+   counter unwinding, an on-hit forge) **survives to the next swing**.
+   `execute` captures `runeAtPlay` before the card does anything and pops only
+   that many. This was a known approximation for several versions.
+2. **The arcane resolves BEFORE the attack's damage.** A triggered ability goes
+   onto the stack *above* the attack that triggered it, so it resolves first —
+   before the defend step even. The pop therefore happens at **declaration** in
+   `execute`, not in `resolveStack` where it used to land after the attack's own
+   damage. Arcane bypasses equipment, so it goes straight past the block wall.
+
+Each token is its own source and there is no "you may" in the text: they all
+pop, mandatorily, each dealing its own printed damage.
+
+### Token uids must be namespaced
+
+`tokSeq` counts from 1 and so does the loadout's card numbering, so a raw
+counter **collides with a real card**. The first runechant minted took uid 1 and
+shared it with a deck card; the invariant judge caught it in live play as
+`CARD-IN-TWO-ZONES` — exactly the job it was built for. `addRunechants` now
+prefixes the uid itself (`"rune"+seq`) so no call site can repeat it, and there
+is a regression drill. The other token sites prefix by hand (`"tok"`, `"chi"`,
+`"mk"`); keep that convention.
+
+**Still counters, deliberately:** Frostbite, Bloodrot Pox and Frailty. They sit
+on the *opponent* and nothing in the pool counts them as auras yet. Revisit if a
+card ever asks.
+
+---
+
+## Attack targets (CR 1.4.5) — engine done, trainer NOT wired (v2.23)
+
+**With an ally in the arena, declaring an attack is a choice, and it is
+mandatory.** CR 1.4.5: "If a player plays, activates, or triggers an attack or
+attack-layer, the player **must** declare an attackable object controlled by an
+opponent as the attack-target." CR 1.4.5a: attackable = a **living object** —
+which is what makes an ally attackable, because an ally has life.
+
+The consequence that matters is in the defend step. CR 7.3.2a: "If the
+attack-target is a hero, their controller may declare any number of
+non-defense-reaction cards … **Otherwise**, a player may only declare cards for
+an attack-target if a rule or effect specifies it."
+
+> **An attack on an ally cannot be blocked.** It always connects, and it kills.
+
+That is what makes it a real decision rather than a worse way to hit the hero.
+Allies heal every turn (CR 4.4.3a resets ally life to base in the end phase), so
+ally damage is a per-turn race, not attrition.
+
+**Built and drilled** (`test/targets.test.js`, 21 drills):
+- `resolveEntry` now carries an ally's **`life`** (the DB's `health`). It used to
+  drop it, so allies had no life and *could not be attacked at all*. This is a
+  loader schema change — `DATA_VER` went to `sage-v9`.
+- `engine/game.js` — `attackTargets(game, defIdx, heroCard)` (hero first, then
+  every ally with life > 0), `targetCanBeDefended(t)` (CR 7.3.2a),
+  `damageAlly()` (kills to its controller's graveyard, never spills onto the
+  hero), `resetAllyLife()` (CR 4.4.3a).
+- `engine/prompts.js` — a sixth variant, **`target`**. Candidates are supplied by
+  the caller so the module stays data-driven. With one legal target
+  `buildPrompt` returns `null` and the sheet skips itself, so an attack into an
+  empty arena never shows a prompt. No decline — the choice is mandatory.
+
+**Still to do — the trainer wiring.** `execute` declares the attack and calls
+`dummyDefence` in one pass, so the target must be chosen *before* that. Follow
+the **boost** precedent: `maybeBoost`/`confirmBoost` already pause before
+executing and re-enter `execute`, which is exactly the shape a target choice
+needs (`mode:"targetpick"`). Then:
+1. if the target is an ally, **skip the defend step entirely** (CR 7.3.2a);
+2. route damage in `resolveStack` through `damageAlly` instead of
+   `oppMut(n).hp -= total`;
+3. call `resetAllyLife` in `newTurn`.
+
+**Honest caveat:** none of this is observable in solo play yet. The dummy's deck
+is 30 vanilla attacks and it creates no allies, so the opponent never has one to
+target. It is a **multiplayer requirement** (and needed the moment the dummy can
+hold an ally). The mirror case — the dummy choosing to attack *your* Gravy Bones
+allies — is a strategic decision the dummy is deliberately not built to make.
+
+---
+
 ## JUDGE!! — bug reports from the table (v2.22)
 
 A button on the log pane. Every fix this cycle came from playing and noticing,
@@ -821,7 +1302,7 @@ for symmetric state; do not build a deck-piloting AI.
 1. **Make the state symmetric.** *Groundwork landed in v2.14 — see "The two-player
    migration" above.* `engine/sides.js` defines the shape, `toSides`/`fromSides`
    bridge to it losslessly, `engine/priority.js` holds the turn/priority machine,
-   and the drills pin the gap at player 35 / opponent 12 of 41 fields.
+   and the drills pin the gap at player 35 / opponent 12 of 47 fields.
    **What is left is the adoption**, and the order that keeps it safe:
    1. ~~The opponent's zones and life.~~ **Done in v2.15** — `hp`, `deck`,
       `hand`, `grave`, `gear`, `board` are native to `sides[1]`, reached via

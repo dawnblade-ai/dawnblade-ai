@@ -124,77 +124,26 @@ Static hero abilities are read from hero card text, not hardcoded. Implemented:
 
 ---
 
-## PART III — THE MACHINE (state of the code, v1.20)
+## PART III — THE MACHINE
 
-- **One file:** `index.html` (~160KB). React 18 UMD + Babel standalone from cdnjs.
-  Three scripts: loader/UI shell, engine (parser/advisor/Battle/Loadout/App), plain
-  data (CDN paths, `APP_VER`, `DATA_VER`, HEROES, DECKS, JUDGE_QS, TROPHIES).
-- **Card data at runtime** from the-fab-cube/flesh-and-blood-cards (open JSON,
-  community-maintained, errata-current; unique card = name+pitch). Images from the
-  LSS public card CDN by print code, with DB + typographic fallbacks. localStorage
-  cache keyed by `DATA_VER`.
-- **The parser is the crown jewel.** `classifyClause` + `fxParse` read card text into
-  ops (self/defBuff/atkMinus/arcane/draw/res/rune/soul/ward/amp/gaNext/runeHitNext/
-  addCost/fromGY/fromBan/conds/onHit/...). `fxParse` memoizes on `name|pitch`.
-  The golden rule: **teach the parser, never special-case a card by name.**
-- **UI:** three vertical snap screens (Opp board / Chain / Your board); the Chain
-  screen is three horizontal panes (Log+Advisor / PLAY / Chain links). PLAY is the
-  user's own sketch: foe hand pinned top, Stack rail | big center card | Defend rail
-  (mini card images, independently scrollable), player hand+extras as one scrolling
-  strip pinned bottom, action bar beneath. Sideboarding table in Loadout; hero-only
-  scouting (real-rules hidden information).
-- **v1.0 → v1.20 in ~5 days**, each version played on-device and judged from screen
-  recordings. The loop that built this: user plays → records → Claude extracts frames,
-  OCRs the logs, verifies rules against sources, fixes with tested parser changes.
-  **Claude Code should preserve this loop** — ask for recordings, read them hard.
+**Removed at v2.32.** This section described the code as it stood at **v1.20** —
+a single file, before the `engine/` extraction, the `sides[]` migration, the
+seeded RNG and the priority machine. It had become fiction rather than history.
+
+For the current state, in order of usefulness:
+
+- **`CLAUDE.md`** — the working conventions, the golden rule, the access rules,
+  and the honest list of known approximations. Read it first.
+- **`ROADMAP-MULTIPLAYER.md`** — the road to online play, which supersedes the
+  architecture and phase plan that used to live here.
+- **`CHANGELOG.md`** — what each version actually changed, v2.14 onward.
+- **`HANDOFF.md`** — where to pick up next.
+
+What this file is still *for* is everything those four do not carry: the world,
+the rules knowledge, the licensing posture, and the things that must never
+regress. That content is above and below; only the stale snapshot is gone.
 
 ---
-
-## PART IV — THE SUMMIT (breaking the constraints)
-
-The single-file constraint served the training sim. The mission now requires a real
-architecture. Retire the constraint **deliberately**, not accidentally:
-
-### Target architecture
-```
-dawnblade/
-├── engine/          # THE JUDGE — pure JS rules engine, zero DOM, runs in Node & browser
-│   ├── parser.js    # classifyClause/fxParse, extracted from index.html
-│   ├── game.js      # two-player state machine: turns, chain, stack, priority
-│   └── judge.js     # legality checks + rules Q&A surface
-├── server/          # Node + ws. AUTHORITATIVE: holds true state, validates every
-│   │                # action via engine/, emits per-player views (hide hands!)
-│   ├── rooms.js  matchmaking.js  elo.js  persist.js (SQLite)
-├── client/          # the forge UI, evolved from index.html; talks WebSocket
-└── trainer/         # the current single-file dummy sim, kept alive as-is
-```
-
-### The phases (each shippable, each testable)
-1. **Extract the engine.** Pull parser + game logic into `engine/` with the node
-   drills as a real test suite (they already exist as ad-hoc scripts — formalize
-   them). Acceptance: trainer still works, tests green.
-2. **Two-player rules engine, hotseat.** Replace the dummy with a second real player
-   sharing one screen. This flips the entire "inert" column live — dominate, Pummel's
-   discard, Crush debuffs, frostbite, clash with real pitching, defense from hand
-   both ways, priority passing both directions. **This is the judging engine's true
-   birth** and the hardest, most valuable phase. Acceptance: a full legal game of
-   Kayo vs Bravo, both seats human, every keyword firing.
-3. **The wire.** Small Node/ws server, room codes, authoritative state, per-player
-   redacted views, reconnect grace. (Talishar precedent: PHP polling via
-   GetNextTurn.php — we can do better with WebSockets, but their repo is GPL-3.0
-   reference reading for edge-case handling.) Deploy on a free tier (Fly/Render/
-   Railway). Acceptance: two phones, two networks, one game.
-4. **The ladder.** Accounts (anonymous + display name to start), match history,
-   **dual ELO**: a rating per player AND a rating per deck (the user explicitly wants
-   the 15 decks themselves ranked — over time the ladder reveals the Silver Age
-   power ordering, which is genuinely interesting data). Standard Elo: K=32 new /
-   K=16 established, expected = 1/(1+10^((Rb−Ra)/400)). Deck rating updates from the
-   same match results with a smaller K (8) since decks play many matches.
-   Acceptance: queue, match, play, ratings move, leaderboard page in the forge style.
-5. **The judge's chair.** Surface the engine's rulings in-game: an inspector that
-   answers "why can't I play this?" with the CR-grounded reason, a move-legality API,
-   and optional strict-timing mode for pro-tour precision (runechant snapshots,
-   reprise checks). The existing Judge Q&A and advisor fold in here.
 
 ### Licensing — read before ANY public launch
 This is a fan project using LSS's IP (card text via fab-cube, images via LSS CDN).
@@ -205,6 +154,16 @@ trademarks of Legend Story Studios."), keep it free, and support the user's stat
 plan to **pitch the project to LSS / James White directly** — a Silver Age ladder
 that teaches the game is aligned with what Silver Age exists to do. If any Talishar
 GPL code is ever incorporated, the repo must remain open under GPL-3.0.
+
+**Talishar was evaluated and deliberately NOT used (2026-07-28).** It is
+**GPL-3.0**, and translating its code — GPL explicitly counts translation as
+modification — would force this repo to GPL-3.0 as well. Beyond the licence, its
+architecture is the opposite of this project's golden rule: card effects are
+hardcoded per card ID in a `switch`, driven by a bespoke decision-queue VM with
+its own string opcode language, where Dawnblade streams real card text and
+teaches the parser to read it. Measured overlap: of 356 pool cards, Talishar has
+a bespoke `case` branch for 190, but only **2** of its 21 Super Slam entries are
+in our pool. **Use it as an oracle for rulings, never as a source of code.**
 
 ### What must never regress
 The trainer's soul: the advisor's voice, the honest approximation notes, the

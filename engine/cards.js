@@ -37,6 +37,13 @@ function resolveEntry(db, e){
     name:e.name, q:e.q||1, code:e.code,
     pitch: card&&card.p!=null ? card.p : (e.p||0),
     cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
+    /* An ally's LIFE. The database calls it `health` (mapDbCard puts it on
+       `hp`) and this resolver used to drop it, so allies had no life at all
+       in the trainer and could never be attacked — which made CR 1.4.5's
+       mandatory attack-target choice impossible to offer. Heroes read their
+       own health via resolveHero; this is what makes an ally a *living
+       object* (CR 1.4.5a) and therefore attackable. */
+    life: card&&card.hp!=null ? card.hp : null,
     tt: card?card.tt:"", kw: card?card.kw:[], gkw: card?(card.gkw||[]):[], tx: card?card.tx:"",
     img, dbImg, resolved: !!card
   };

@@ -191,8 +191,11 @@ function buildGap(){
 const FS = require("./failstates.js");
 
 function failEntries(){
-  const cards = FS.failStates(A, RULINGS);
-  const heroes = FS.heroFailStates(A, RULINGS);
+  /* `mentions` is the trainer cross-check: a keyword the parser files as a
+     noop may still be enforced by name (phantasm is), so failstates.js must
+     not call it ignored on parser status alone. */
+  const cards = FS.failStates(A, RULINGS, mentions);
+  const heroes = FS.heroFailStates(A, RULINGS, mentions);
   return [...cards, ...heroes].map(e => Object.assign({}, e, {
     art: e.isHero ? artFor(e.title, 0) : artFor(e.title, e.pitch),
     ask: e.sev >= 3

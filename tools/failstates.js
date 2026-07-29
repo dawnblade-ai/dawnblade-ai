@@ -189,7 +189,7 @@ const otherSubject = t => /\b(they|their|them|opponent|opposing|target card defe
    Where the ruling describes real behaviour, noop is a mis-filing. */
 const INERT_BY_DESIGN = /does nothing on its own|doesn'?t mean anything on it'?s own|nothing happens|is static and doesn'?t change|nothing on its own/i;
 
-function noopBlindSpots(card, RULINGS){
+function noopBlindSpots(card, RULINGS, mentionsFn){
   const out = [];
   for(const cl of (card.clauses || [])){
     if(!cl || cl.st !== "noop") continue;
@@ -199,6 +199,15 @@ function noopBlindSpots(card, RULINGS){
     if(!r) continue;
     const txt = String(r.ruling || r.answer || r.note || r.text || "");
     if(!txt || INERT_BY_DESIGN.test(txt)) continue;   /* correctly inert */
+    /* THE MENTION CROSS-CHECK, same discipline sweep.js uses for tokens.
+       A keyword the parser files as noop may still be enforced in the
+       trainer by name. Phantasm is exactly that: fxParse records it as a
+       noop, and the trainer nevertheless pops the attack at declaration.
+       Reporting "ignored" from parser status alone over-claims — so count
+       the trainer's mentions and let the reviewer judge. Zero mentions plus
+       real meaning is the only combination that reliably means absent. */
+    const hits = mentionsFn ? mentionsFn(kw) : null;
+    const likelyHandled = hits != null && hits >= 3;
     /* A drawback filed as noop is the worst case: the card is above rate
        and every tool reports it as handled. */
     /* "can not" with a space is how the watery-grave ruling phrases it, and
@@ -208,24 +217,35 @@ function noopBlindSpots(card, RULINGS){
     const isDrawback = /drawback|destroy(ed)?|penalt|can ?not|can'?t|reduce|restrict|prevent|infinit/i.test(txt);
     out.push({
       cat: "noop-with-meaning",
-      sev: isDrawback ? 3 : 2,
-      label: isDrawback ? "Keyword filed as no-op, but it is a DRAWBACK" : "Keyword filed as no-op, but it has meaning",
-      table: "The parser records \"" + clean(cl.t) + "\" as doing nothing, so this card can report as fully " +
-             "scripted while the keyword is ignored. Your ruling describes real behaviour: " +
-             txt.replace(/\s+/g, " ").trim().slice(0, 240),
+      /* a keyword the trainer clearly names is a VERIFY, not a defect */
+      sev: likelyHandled ? 1 : (isDrawback ? 3 : 2),
+      label: likelyHandled
+        ? "Keyword filed as no-op — but the trainer names it (verify)"
+        : (isDrawback ? "Keyword filed as no-op, but it is a DRAWBACK"
+                      : "Keyword filed as no-op, but it has meaning"),
+      table: "The parser records \"" + clean(cl.t) + "\" as doing nothing, so this card reports as fully " +
+             "scripted from coverage alone. " +
+             (likelyHandled
+               ? "The trainer names it " + hits + " times, so it is probably enforced by name (phantasm is: fxParse " +
+                 "calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned."
+               : (hits === 0
+                   ? "The trainer never names it, so it is almost certainly absent. "
+                   : "The trainer names it only " + hits + " time(s). ")) +
+             "Your ruling describes real behaviour: " + txt.replace(/\s+/g, " ").trim().slice(0, 220),
       clause: clean(cl.t),
-      keyword: kw
+      keyword: kw,
+      trainerMentions: hits
     });
   }
   return out;
 }
 
 /* ---- classify one card ---------------------------------------------- */
-function classify(card, RULINGS){
+function classify(card, RULINGS, mentionsFn){
   const clauses = card.clauses || [];
   const unread = clauses.filter(isUnread);
   const runs = clauses.filter(x => x && x.st === "run").length;
-  const blind = noopBlindSpots(card, RULINGS);
+  const blind = noopBlindSpots(card, RULINGS, mentionsFn);
 
   /* Nothing skipped AND no mis-filed keyword: genuinely not a fail state.
      A card with only blind spots still is one — that is the whole point. */
@@ -292,11 +312,11 @@ function rulingIndex(RULINGS){
 }
 
 /* ---- build ----------------------------------------------------------- */
-function failStates(A, RULINGS){
+function failStates(A, RULINGS, mentionsFn){
   const idx = rulingIndex(RULINGS);
   const out = [];
   for(const c of Object.values(A.cards || {})){
-    const f = classify(c, RULINGS);
+    const f = classify(c, RULINGS, mentionsFn);
     if(!f) continue;
     const key = slug(c.name) + "-" + (c.pitch || 0);
     const mechanics = idx.byCard.get(key) || [];
@@ -332,14 +352,14 @@ function failStates(A, RULINGS){
 
 /* Hero abilities get the same treatment. Their clauses use `covered`
    rather than a status, so adapt the shape and reuse one classifier. */
-function heroFailStates(A, RULINGS){
+function heroFailStates(A, RULINGS, mentionsFn){
   const out = [];
   for(const h of Object.values(A.heroes || {})){
     const shaped = {
       name: h.name, pitch: 0, tt: h.tt, tier: "hero", tx: h.tx,
       clauses: (h.clauses || []).map(c => ({t: c.t, st: c.covered ? "run" : "skip"}))
     };
-    const f = classify(shaped, RULINGS);
+    const f = classify(shaped, RULINGS, mentionsFn);
     if(!f) continue;
     out.push({
       slug: "fail-hero-" + slug(h.name),
@@ -364,7 +384,15 @@ module.exports = {failStates, heroFailStates, classify, CATS, SEV_NAME, isUnread
 if(require.main === module){
   const A = JSON.parse(fs.readFileSync(path.join(HERE, "audit.json"), "utf8"));
   let R = {}; try { R = JSON.parse(fs.readFileSync(path.join(HERE, "rulings.json"), "utf8")); } catch(e){}
-  const cards = failStates(A, R), heroes = heroFailStates(A, R);
+  /* the trainer source, so a keyword it enforces by name is not reported
+     as ignored on parser status alone (see noopBlindSpots) */
+  let TR = ""; try { TR = fs.readFileSync(path.join(HERE, "..", "index.html"), "utf8"); } catch(e){}
+  const mentionsFn = kw => {
+    const bare = String(kw||"").replace(/[^A-Za-z ]/g, "").trim();
+    if(!bare || !TR) return 0;
+    return (TR.match(new RegExp("\\b" + bare.replace(/\s+/g, "\\s*") + "\\b", "gi")) || []).length;
+  };
+  const cards = failStates(A, R, mentionsFn), heroes = heroFailStates(A, R, mentionsFn);
   const B = t => "\x1b[1m" + t + "\x1b[0m";
   console.log("\n" + B("FAIL STATES") + " — how each card goes wrong at the table\n");
   const bySev = s => cards.filter(c => c.sev === s);

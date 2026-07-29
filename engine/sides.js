@@ -23,10 +23,13 @@
 
    Nothing here reads the DOM and nothing here invents a card effect.
    ============================================================ */
+/* Takes engine/rng.js as a dependency the same way prompts/cards/advisor
+   take parser.js — so rng.js must load BEFORE sides.js. test/sync.test.js
+   pins that ordering. */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory();
-  else root.DawnSides = factory();
-})(typeof self!=="undefined" ? self : this, function(){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./rng.js"));
+  else root.DawnSides = factory(root.DawnRNG);
+})(typeof self!=="undefined" ? self : this, function(RNG){
 
 /* ---- the per-side shape ---------------------------------------------
    Every field a player needs to BE a player. The dummy gets all of them
@@ -44,7 +47,7 @@ const SIDE_FIELDS = [
   /* economy: floating resources, action points, fizzled resources */
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
-  "counters","weaponUsed","buffNext","gaNext","runeHitNext",
+  "counters","weaponUsed","buffNext","buffQ","gaNext","runeHitNext",
   "amp","ward","awd","rune","rot","fra","frost",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
@@ -76,7 +79,7 @@ function makeSide(o){
     deck: o.deck || [], hand: o.hand || [], arsenal: o.arsenal!=null ? o.arsenal : null,
     pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
-    counters: {}, weaponUsed: {}, buffNext: 0, gaNext: false, runeHitNext: false,
+    counters: {}, weaponUsed: {}, buffNext: 0, buffQ: [], gaNext: false, runeHitNext: false,
     amp: 0, ward: 0, awd: 0, rune: 0, rot: 0, fra: 0, frost: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
@@ -124,6 +127,30 @@ const GAME_KEYS = [
   "prompt","promptQ","revealed","lastRoll","boostOn",
   "chain","chainHist","chainOpen","boostChain","stack","pend","featured",
   "hitSeq","lastDmg",
+  /* the side whose effect is RESOLVING (ROADMAP-MULTIPLAYER.md Phase A step 1).
+     Distinct from turnPlayer: a defence reaction resolves for the defender
+     during the attacker's turn. Shared, not per-side — it names one of the two
+     seats, it does not live on either. Default 0 on a single-actor device. */
+  "actor",
+  /* the SEEDED random source (engine/rng.js). Shared, and it must travel
+     WITH the state: a game is its seed plus its action log, so an rng that
+     lived outside the state would make the game unreplayable and two
+     networked peers undiagnosable. `rng.seed` is the replay key and
+     `rng.n` the draw counter / desync canary. */
+  "rng",
+  /* THE PRIORITY MACHINE (engine/priority.js), carried in shadow from
+     v2.27: derived from the trainer's mode/bphase each time state changes,
+     not yet driving it. Registered here because they are genuinely shared
+     — a phase and a step belong to the game, not to a seat — and because
+     until they existed the invariant judge's BAD-PHASE / BAD-STEP /
+     BAD-PRIORITY / PRIORITY-IN-CLOSED-PHASE checks were all dormant: every
+     one of them guards with `!= null`.
+
+     NOTE the clock is deliberately NOT here. priority.js's `turn` counts
+     player-turns and ticks on every handoff; the trainer's `turn` counts
+     only the player's own turns and is read by the escalation table and
+     the score. Wiring that belongs with seat 1's action phase. */
+  "phase","step","priority","passed","turnPlayer","firstPlayer","attacker",
   /* set when the opponent won the seating: its opening swing lands before
      the first action phase, so the clock has not started ticking yet */
   "_opening"
@@ -177,6 +204,13 @@ function makeGame(o){
        they are separate fields. */
     firstPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
     turnPlayer: o.firstPlayer!=null ? o.firstPlayer : 0,
+    /* whose effect is resolving; defaults to the turn player and moves during
+       reactions. See GAME_KEYS above and act()/foe() in the trainer. */
+    actor: o.actor!=null ? o.actor : (o.firstPlayer!=null ? o.firstPlayer : 0),
+    /* Seeded from o.seed when given (a room code, or a pinned seed in a
+       drill), otherwise from the clock. Passing a seed is what makes a
+       game replayable, so drills and networked play always pass one. */
+    rng: o.rng || RNG.make(o.seed),
     /* NULL, not the first player: a game opens in the start phase, and
        CR 4.2.1 says players do not get priority during the start phase.
        priority.js grants it on entering the action phase (CR 4.3.3).
@@ -193,8 +227,16 @@ function makeGame(o){
 }
 
 const other = i => i === 0 ? 1 : 0;
-const you   = g => g.sides[0];
-const foe   = g => g.sides[1];
+/* `you = g => g.sides[0]` and `foe = g => g.sides[1]` used to live here.
+   BOTH ARE DELETED (v2.24) and should not come back. They were exported,
+   called by nobody, and encoded the exact conflation ROADMAP-MULTIPLAYER.md
+   step 1 exists to undo: a seat index hardcoded into a rules-shaped name.
+   The trainer's act()/foe() read s.actor and are the actor-relative
+   replacements; `activeSide` below is the turn-player question, which is a
+   genuinely different one. Deleting them also retired two pinned entries in
+   test/sync.test.js's KNOWN_COLLISIONS — `you` was already colliding with the
+   trainer, and `foe` would have collided with DIFFERENT semantics, which is
+   the dangerous kind. */
 const activeSide = g => g.sides[g.turnPlayer];
 
 /* Replace one side immutably — the workhorse every migrated function
@@ -252,6 +294,6 @@ function fromSides(game){
 return {
   SIDE_FIELDS, P_MAP, O_MAP, GAME_KEYS, NATIVE, META,
   makeSide, makeGame, freshHist, symmetryGap,
-  toSides, fromSides, withSide, other, you, foe, activeSide
+  toSides, fromSides, withSide, other, activeSide
 };
 });

@@ -68,9 +68,12 @@ test("parseDeck — hero, gear, and quantities from the pipe format", () => {
   assert.equal(d.deck[0].code, null);
 });
 
-test("shuffle — preserves the multiset, does not mutate", () => {
-  const a = [1,2,3,4,5,6,7,8];
-  const s = G.shuffle(a);
-  assert.deepEqual(a, [1,2,3,4,5,6,7,8]);
-  assert.deepEqual(s.slice().sort((x,y)=>x-y), a);
+/* G.shuffle was DELETED in v2.26 — the unseeded one was a replay/lockstep
+   trap sitting under a shorter name than the seeded one. Its behavioural
+   drills moved to test/rng.test.js ("a shuffle actually permutes and loses
+   nothing", "nothing mutates its input"). This drill stays as the guard
+   that it does not come back. */
+test("engine/game.js exports no unseeded shuffle", () => {
+  assert.equal(G.shuffle, undefined,
+    "an unseeded shuffle beside DawnRNG.shuffle silently breaks replay — use rngShuffle(rng, arr)");
 });

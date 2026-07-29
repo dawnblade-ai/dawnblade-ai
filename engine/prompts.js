@@ -90,6 +90,14 @@ function buildPrompt(game, spec){
     const min = Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
     return {...base, zone, cards:pool, min, max,
       to: spec.to || null, optional: min === 0,
+      /* THE "IF YOU DO" RIDER. A pick with `min:0` is an OPTIONAL COST —
+         "you may banish an aura from your graveyard. If you do, deal 1
+         arcane damage" — and these ops are the "if you do" half. They are
+         returned by applyPrompt ONLY when something was actually picked,
+         which is the whole rule: decline and the rider must not fire.
+         Paying nothing and getting the payload is the free-ability bug
+         v2.04 fixed, and there is a drill named for it. */
+      ops: spec.ops || [],
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
@@ -116,6 +124,22 @@ function buildPrompt(game, spec){
       title: spec.title || "Revealed",
       hint: spec.hint || "Both players see this."};
   }
+  /* CR 1.4.5 — declaring the attack-target. The candidates are supplied by
+     the caller (engine/game.js `attackTargets`), so this stays data-driven
+     and never reads the board itself.
+
+     With one legal target there is nothing to ask and this returns null,
+     which is how the prompt politely skips itself — an attack into an empty
+     arena still auto-targets the hero and never shows a sheet. The choice
+     is MANDATORY, so unlike `pick` there is no decline. */
+  if(spec.tag === "target"){
+    const cards = (spec.cards || []).filter(Boolean);
+    if(cards.length < 2) return null;
+    return {...base, cards, choice:null,
+      title: spec.title || "Declare your attack-target",
+      hint: spec.hint || "An ally is a living object, so it is attackable (CR 1.4.5a). " +
+        "An attack on an ally cannot be blocked (CR 7.3.2a) — it always connects."};
+  }
   return null;
 }
 
@@ -135,7 +159,8 @@ function promptToggleSel(prompt, i){
 }
 function promptChoose(prompt, choice){
   if(!prompt) return prompt;
-  if(prompt.tag === "modal" || prompt.tag === "pay") return {...prompt, choice};
+  if(prompt.tag === "modal" || prompt.tag === "pay" || prompt.tag === "target")
+    return {...prompt, choice};
   return prompt;
 }
 /* Can this be confirmed as it stands? */
@@ -144,6 +169,8 @@ function promptReady(prompt){
   if(prompt.tag === "pick") return prompt.sel.length >= prompt.min;
   if(prompt.tag === "modal") return prompt.choice != null;
   if(prompt.tag === "pay") return prompt.choice != null;
+  /* CR 1.4.5 makes declaring a target mandatory — no confirm until chosen. */
+  if(prompt.tag === "target") return prompt.choice != null;
   return true;
 }
 
@@ -191,10 +218,16 @@ function applyPrompt(game, prompt){
   }
   if(prompt.tag === "pick"){
     const picked = prompt.sel.map(i=>prompt.cards[i]).filter(Boolean);
+    /* DECLINED. The cost was not paid, so the "if you do" rider does NOT
+       fire — out.ops stays empty. This is the same rule the `pay` variant
+       enforces, and the reason an optional cost can be modelled at all
+       without re-opening the v2.04 free-ability bug. */
     if(!picked.length){ out.msgs.push(who + " chose nothing."); return out; }
     if(prompt.to) out.game = moveCards(game, side, prompt.zone, prompt.to, picked);
     out.msgs.push(picked.map(c=>c.name).join(", ") +
       (prompt.to ? " → " + prompt.to : " revealed") + " from " + prompt.zone + ".");
+    /* PAID. The cards moved, so the rider resolves. */
+    out.ops = prompt.ops || [];
     return out;
   }
   if(prompt.tag === "modal"){
@@ -208,6 +241,19 @@ function applyPrompt(game, prompt){
     out.pay = prompt.cost;
     out.ops = prompt.ops || [];
     out.msgs.push(who + " paid " + prompt.cost + " — the rider resolves.");
+    return out;
+  }
+  /* CR 1.4.5 — the declared attack-target. This module moves nothing and
+     deals no damage: it reports the choice on `out.target` and the trainer
+     routes the attack. Same discipline as `pay` returning `pay` rather than
+     spending, which is what keeps the whole module drillable. */
+  if(prompt.tag === "target"){
+    const t = prompt.cards[prompt.choice];
+    if(!t) return out;
+    out.target = t._target || {kind:"hero", side: side, uid:null};
+    out.msgs.push(out.target.kind === "ally"
+      ? "Attack declared at " + t.name + " — an ally cannot be defended (CR 7.3.2a)."
+      : "Attack declared at " + (t.name || "the hero") + ".");
     return out;
   }
   if(prompt.tag === "reveal"){

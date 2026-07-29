@@ -48,6 +48,11 @@ const other = i => i === 0 ? 1 : 0;
    Phase." It is granted on entering the action phase (CR 4.3.3). */
 function seat(g, first){
   return {...g, firstPlayer:first, turnPlayer:first, priority:null,
+    /* explicitly null, not absent: `attacker` is a field breakChain and
+       endTurn both clear, and a seated game has no attacker. Leaving it
+       undefined made fromTrainer return a state that PRI_FIELDS promised
+       and did not deliver, so the trainer merged `undefined` over it. */
+    attacker:null,
     passed:[false,false], turn:1, round:1, phase:"start", step:"layer"};
 }
 
@@ -207,8 +212,66 @@ function endTurn(g){
     phase:"start", step:"layer", attacker:null, chainOpen:false, chain:[]};
 }
 
+/* ---- the trainer bridge (v2.27) --------------------------------------
+   THE MACHINE, DERIVED FROM THE TRAINER'S GATES.
+
+   The trainer gates its windows with `mode`/`bphase` and has done since
+   long before this module existed. Flipping it to the phase/step machine
+   in one move would change control flow across the whole reducer, so it
+   lands in two: first the machine's state is DERIVED here and carried in
+   shadow, then the consumers move over.
+
+   This function is the mapping, and it lives here rather than in the
+   trainer for two reasons: it is pure and drillable, and it is a
+   statement about priority, so it belongs beside the rules it encodes.
+
+   It builds the state by CALLING the transitions above rather than
+   restating them, so there is exactly one description of who holds
+   priority in which step.
+
+   `t` is the trainer state ({mode, bphase, chainOpen, over}) and
+   `foeFirst` is the pregame seating. NO `sides` is read or written: this
+   derives, and `toPhase` would issue an action point if it saw one. */
+function fromTrainer(t, foeFirst){
+  t = t || {};
+  let p = seat({}, foeFirst ? 1 : 0);
+  if(t.over) return {...p, phase:"end", step:"layer", priority:null,
+                     passed:[false,false], attacker:null};
+
+  if(t.mode === "block"){
+    /* The dummy is swinging, so it is the dummy's turn and the dummy is
+       the attacker. CR 7.3: in the DEFEND step the TURN-PLAYER holds
+       priority. Declaring defenders is free and simultaneous (CR 7.3.2)
+       and is not a priority action at all — which is exactly why the
+       trainer can let you pick blockers while the dummy holds it, and
+       why canDeclareDefenders is a separate question from canAct. */
+    p = toPhase({...p, turnPlayer:1}, "action");
+    p = toDefend(declareAttack(p, 1));
+    /* CR: the attacking player receives priority first in the reaction
+       step. The dummy has no reactions, so it passes and priority slides
+       to you — which is the window the trainer actually presents. */
+    return t.bphase === "react" ? pass(toReaction(p)) : p;
+  }
+
+  p = toPhase({...p, turnPlayer:0}, "action");
+  if(t.mode === "stack"){
+    /* You attacked, the dummy has declared its defenders, and this is
+       your reaction window. You are the attacker, so priority is yours
+       first without anybody passing. */
+    return toReaction(toDefend(declareAttack(p, 0)));
+  }
+  /* Everything else — act, pay, arsenal, boostpick — is the action phase
+     with an open window. The only question is whether a chain is already
+     running, which is `link` rather than `layer`. */
+  return t.chainOpen ? {...p, step:"link"} : p;
+}
+
+/* The fields fromTrainer owns. The trainer merges exactly these back, so
+   naming them once here keeps the two from drifting. */
+const PRI_FIELDS = ["phase","step","priority","passed","turnPlayer","firstPlayer","attacker"];
+
 return {
-  PHASES, STEPS, other,
+  PHASES, STEPS, other, PRI_FIELDS, fromTrainer,
   seat, holder, hasPriority, allPassed, give, reset, pass,
   speedAllowed, canAct, canDeclareDefenders,
   attackingPlayer, defendingPlayer,

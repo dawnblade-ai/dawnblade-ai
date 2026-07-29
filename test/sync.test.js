@@ -23,7 +23,7 @@ const BABEL = '<script type="text/babel"';
 
 /* Load order matters only in that parser.js must precede its dependents
    (advisor, cards and prompts each take it as their factory argument). */
-const MODULES = ["parser","game","rps","sides","priority","prompts","invariants","cards","advisor"];
+const MODULES = ["rng","parser","game","rps","sides","priority","prompts","invariants","cards","advisor"];
 
 for(const m of MODULES){
   test(`index.html loads engine/${m}.js`, () => {
@@ -62,17 +62,29 @@ const trainerSrc  = htmlSrc.slice(htmlSrc.indexOf(BABEL));
 
 /* Only the names the bridge actually lifts can be shadowed, so that is the
    set to guard. sides.js and priority.js are reached as DawnSides.* /
-   DawnPriority.* and are deliberately NOT bridged wholesale. */
-const BRIDGED = [...bridgeSrc.matchAll(/\b([A-Za-z_$][\w$]*)\s*=\s*Dawn[A-Z]\w*\./g)].map(m => m[1]);
+   DawnPriority.* and are deliberately NOT bridged wholesale.
+
+   The bridge may ALIAS: `rngShuffle = DawnRNG.shuffle` is deliberate,
+   because a bare global `shuffle` already means DawnGame's unseeded one
+   and bare `make`/`next`/`int` would be indefensibly generic. So capture
+   both halves — the LOCAL name (what can be shadowed) and the MEMBER
+   (what must really exist on the module). */
+const BRIDGE_PAIRS = [...bridgeSrc.matchAll(/\b([A-Za-z_$][\w$]*)\s*=\s*(Dawn[A-Z]\w*)\.([A-Za-z_$][\w$]*)/g)]
+  .map(m => ({local: m[1], mod: m[2], member: m[3]}));
+const BRIDGED = BRIDGE_PAIRS.map(p => p.local);
 
 test("the bridge lifts a non-trivial set of names", () => {
   assert.ok(BRIDGED.length > 40, `bridge only lifts ${BRIDGED.length} names — did it get truncated?`);
 });
 
-test("every bridged name is really exported by its engine module", () => {
+/* The failure this catches is a typo'd or removed member: the bridge
+   would quietly lift `undefined` and the trainer would die far away from
+   the cause. Checking the MEMBER (not the alias) is what makes that real. */
+test("every bridged member is really exported by its engine module", () => {
   const all = new Set(MODULES.flatMap(m => exportsOf(m + ".js")));
-  const bogus = BRIDGED.filter(n => !all.has(n));
-  assert.deepEqual(bogus, [], `bridged but not exported by any engine module: ${bogus.join(", ")}`);
+  const bogus = BRIDGE_PAIRS.filter(p => !all.has(p.member))
+                            .map(p => p.local + " = " + p.mod + "." + p.member);
+  assert.deepEqual(bogus, [], `bridged from a member no engine module exports: ${bogus.join(", ")}`);
 });
 
 /* The real guard: a bridged name must not be re-declared in the trainer.
@@ -98,9 +110,15 @@ test("the trainer does not re-declare (shadow) any bridged engine name", () => {
      engine  `endTurn` (priority) — pure: fizzles resources, passes the seat, ticks
      trainer `other`   (DeckView) — the off-pitch cards in a deck listing
      engine  `other`   (priority) — i => i === 0 ? 1 : 0, the OTHER seat
-     trainer `you`     — s => s.sides[0] (the access rule)
-     engine  `you`     — g => g.sides[0] (same thing, sides.js-private) */
-const KNOWN_COLLISIONS = ["endTurn", "other", "you"];
+
+   RESOLVED in v2.24 — `you` is off this list. engine/sides.js exported a
+   seat-hardcoded `you`/`foe` pair that nothing called; introducing the
+   trainer's actor-relative `foe` would have made `foe` a collision with
+   DIFFERENT semantics (engine: sides[1]; trainer: sides[1-actor]), which is
+   the dangerous kind rather than the harmless kind. Both engine helpers were
+   deleted instead of pinned, so the collision surface SHRANK. Keep it that
+   way: prefer deleting a dead engine export over adding a name here. */
+const KNOWN_COLLISIONS = ["endTurn", "other"];
 
 test("engine/trainer name collisions are exactly the pinned set", () => {
   const engineOnly = new Set(["sides","priority"].flatMap(m => exportsOf(m + ".js")));
