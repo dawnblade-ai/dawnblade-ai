@@ -1,6 +1,6 @@
 # THE STACK — rulings Dawnblade is waiting on
 
-Generated 2026-07-28T18:20:52.744Z from `tools/audit.json`.
+Generated 2026-07-29T16:06:54.756Z from `tools/audit.json`.
 
 Every gap below is charged to the *mechanic* that causes it, so one
 answer lights up every card in its list. Nothing here is guessed:
@@ -16,7 +16,9 @@ node tools/stack.js explain <slug> "your ruling"
 | # | mechanic | status | cards | decks |
 |---|---|---|---|---|
 | 1 | `charge` | pending | 12 | 1 |
-| 2 | `arsenal-triggers` | unmodelled | 9 | 3 |
+| 2 | `arsenal-triggers` | unmodelled | 7 | 3 |
+| 3 | `high-tide` | unreviewed | 2 | 1 |
+| 4 | `surge` | unreviewed | 1 | 1 |
 
 ## charge  `charge`
 
@@ -94,15 +96,9 @@ Decks affected: Azalea, Dorinthea, Arakni
   You may put an arrow from your hand face-up into your arsenal.  
   Go again
   - ⛔ unread: You may put an arrow from your hand face-up into your arsenal.
-- **Dry Powder Shot** (pitch 1, Ranger Action - Arrow Attack)  
-  When this is put face-up into your arsenal, it gets +2{p} this turn.
-  - ⛔ unread: When this is put face-up into your arsenal, it gets +2{p} this turn.
 - **Entangling Shot** (pitch 1, Ranger Action - Arrow Attack)  
   When this is put face-up into your arsenal, you may {t} target hero.
   - ⛔ unread: When this is put face-up into your arsenal, you may {t} target hero.
-- **Swift Shot** (pitch 1, Ranger Action - Arrow Attack)  
-  When this is put face-up into your arsenal, it gets go again this turn.
-  - ⛔ unread: When this is put face-up into your arsenal, it gets go again this turn.
 - **Wreck Havoc** (pitch 1, Generic Action - Attack)  
   Defense reactions can't be played to this chain link.  
   When this hits a hero, you may turn a card in their arsenal face up, then destroy a defense reaction in their arsenal.
@@ -115,6 +111,30 @@ Decks affected: Azalea, Dorinthea, Arakni
   Stealth  
   When this hits a marked hero, banish a card in their arsenal.
   - ⛔ unread: When this hits a marked hero, banish a card in their arsenal.
+
+## high tide  `high-tide`
+
+*unreviewed* — 2+ blue cards in pitch zone rider (Gravy Bones)
+
+Decks affected: Gravy Bones
+
+- **Swiftwater Sloop** (pitch 1, Pirate Action - Attack)  
+  High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+  - ⛔ unread: High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+- **Swiftwater Sloop** (pitch 3, Pirate Action - Attack)  
+  High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+  - ⛔ unread: High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.
+
+## surge  `surge`
+
+*unreviewed* — bonus when dealing more than printed arcane (Blaze)
+
+Decks affected: Blaze
+
+- **Aether Quickening** (pitch 3, Wizard Action)  
+  Deal 2 arcane damage to target hero.  
+  Surge - If this deals more than 2 damage, it gets go again.
+  - ⛔ unread: Surge - If this deals more than 2 damage, it gets go again.
 
 ## One-off cards — 0 cards whose own text needs a reading
 

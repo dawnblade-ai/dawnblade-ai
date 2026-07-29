@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.32
+# Handoff — Dawnblade, at v2.33
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,15 +16,26 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **377 drills, all green.** Never leave them red.
+- `npm test` → **381 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
-- Pool: **405 unique cards · 260 full / 110 part / 35 none**.
+- Pool: **405 unique cards · 263 full / 110 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
   remote, no `gh`, no credentials. Deploying is not this thread's job.
 - `npm run stack` → **2 open** (`charge`, `arsenal-triggers`), each carrying a
   specific question in `tools/followups.json`.
 
-## Start here: the arsenal cluster (8 cards, fully specified)
+## Start here: finish the arsenal cluster (2 enablers left)
+
+**v2.33 built the mechanism and one enabler.** The face-up path works, the
+trigger fires, and Dry Powder Shot / Swift Shot / Ridge Rider Shot are live.
+What remains is in `tools/followups.json` under `arsenal-triggers`: **Bull's Eye
+Bracers** and **Death Dealer**, both activated abilities with costs rather than
+plain actions, and both gating on "no cards in your arsenal" (which means ZERO,
+not "a free slot"). Bull's Eye Bracers adds a second stamp of its own
+(`+1{p} until end of turn` on the arrow). Two payoffs stay unclaimed on purpose
+— see the followup for why, and for the one open reading.
+
+## The original cluster brief (kept for context)
 
 Everything needed is in `tools/followups.json` under `arsenal-triggers`. The
 short version:
