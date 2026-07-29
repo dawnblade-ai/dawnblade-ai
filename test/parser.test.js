@@ -931,3 +931,55 @@ test("go again — the real cards land on the right side of the line", () => {
     "When this attacks, you may discard a yellow card. If you do, draw a card.\nGo again", ["Go again"]);
   assert.equal(printed.ga, true, "Golden Tipple really does print go again");
 });
+
+/* ===================================================================
+   ARSENAL FACE-UP (v2.33) — Azalea's engine.
+
+   The trainer's end-of-turn arsenal sets cards FACE DOWN. These arrows
+   trigger on FACE UP, which is a different event reached only by an
+   enabler that says so. Conflating the two would fire triggers the cards
+   do not have.
+   =================================================================== */
+const ars = (name, tx, tt) => P.fxParse({name, pitch:1, power:3,
+  tt: tt || "Ranger Action - Arrow Attack", tx, kw:[]});
+
+test("arsenal — the three printed phrasings are one trigger", () => {
+  assert.deepEqual(ars("ARS a", "When this is put face-up into your arsenal, it gets +2{p} this turn.").arsenalUp,
+    [["self",2]]);
+  assert.deepEqual(ars("ARS b", "If ARS b is put into your arsenal face up, opt 1.").arsenalUp,
+    [["opt",1]], "Ridge Rider Shot puts 'face up' at the END");
+  assert.deepEqual(ars("ARS c", "When ARS c is put or turned face up in arsenal, it gets +1{p} this turn.").arsenalUp,
+    [["self",1]], "Spire Sniping says 'put OR TURNED'");
+});
+
+test("arsenal — the payload is NOT the card's own on-play effect", () => {
+  /* Routed before the ga/self folds. Otherwise Swift Shot's "it gets go
+     again this turn" would become printed go again on the card itself. */
+  const fx = ars("ARS swift", "When this is put face-up into your arsenal, it gets go again this turn.");
+  assert.deepEqual(fx.arsenalUp, [["ga"]]);
+  assert.equal(fx.ga, false, "the arrow does not have printed go again");
+  assert.equal(fx.self, 0);
+  const dp = ars("ARS dry", "When this is put face-up into your arsenal, it gets +2{p} this turn.");
+  assert.equal(dp.self, 0, "the +2 waits for the arsenal, it is not an on-play pump");
+});
+
+test("arsenal — the enabler reads its SUBJECT, so it cannot put a non-arrow", () => {
+  const fx = P.fxParse({name:"ARS enabler", pitch:1, tt:"Ranger Action",
+    tx:"Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again", kw:["Go again"]});
+  assert.deepEqual(fx.arsenalPut, {filter:{tt:"arrow"}});
+  /* and its FIRST effect is unaffected — the user's ruling is that it
+     resolves whether or not the put happens */
+  assert.ok(fx.ops.some(o=>o[0]==="buffNext" && o[1]===3 && o[2]),
+    "the +3 arrow buff still resolves, and keeps its qualifier");
+});
+
+test("arsenal — an unreadable payload leaves the card unclaimed", () => {
+  /* Entangling Shot taps a hero (not modelled) and Spire Sniping's "put
+     them back in any order" is a REORDER, which opt is not — opt lets you
+     bottom cards, which would be strictly more powerful. */
+  assert.equal(ars("ARS tap", "When this is put face-up into your arsenal, you may {t} target hero.").arsenalUp,
+    undefined);
+  assert.equal(ars("ARS reorder",
+    "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
+    undefined);
+});

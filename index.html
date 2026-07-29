@@ -623,7 +623,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.32"; /* v2.32 — the fairness sweep: tools/fairness.js asks whether any card is STRONGER than printed, which the coverage audit cannot see. Full history in CHANGELOG.md. */
+window.APP_VER = "2.33"; /* v2.33 — the arsenal goes FACE UP: Azalea's arrows fire when put face up, which is a different event from the end-of-turn arsenal (that sets face down). Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v9"; /* v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -2113,6 +2113,32 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     r.msgs.forEach(m => { n = L(n, m); });
     if(r.pay > 0){ const ps = youMut(n); ps.res = Math.max(0, ps.res - r.pay); }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
+    /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
+       different event from the end-of-turn arsenal step, which sets face
+       DOWN — Azalea's arrows trigger on the face-up one only. The flag
+       rides on the card itself, the way a minted card carries _playTurn,
+       so no new side field is needed.
+
+       The arrow's own payload is stamped ONTO the card rather than run
+       now: "+2{p} this turn" and "go again this turn" have to survive
+       until the arrow is actually played, which may be later the same
+       turn. `opt` is a real effect and runs immediately. */
+    if(p.tag === "pick" && p.to === "arsenal"){
+      const put = act(n).arsenal;
+      if(put && !put._faceUp){
+        const pfx = fxParse(put);
+        const up = {...put, _faceUp:true, _upTurn:n.turn};
+        for(const op of (pfx.arsenalUp||[])){
+          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+            n = L(n, `${put.name} goes face up — +${op[1]} power this turn.`); }
+          else if(op[0] === "ga"){ up._arsGA = true;
+            n = L(n, `${put.name} goes face up — it will go again this turn.`); }
+          else n = runOps(n, [op], put.name);
+        }
+        actMut(n).arsenal = up;
+        if(!(pfx.arsenalUp||[]).length) n = L(n, `${put.name} set face up in arsenal.`);
+      }
+    }
     return openPrompt(winCheck(n));
   });
   /* Declining is a real choice for optional prompts, not a cancel. */
@@ -2376,6 +2402,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
     const attacking = isAttack(card) || from==="weapon";
     let ga = fx.ga;
+    if(card._arsGA && card._upTurn === n.turn) ga = true;
     // conditional clauses evaluated against this turn's history (before this card)
     /* "INSTEAD" REPLACES. When a conditional payload says "instead" and its
        condition is MET, the unconditional base op of the same kind must NOT
@@ -2484,7 +2511,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          matches — qualMatches reads fields, never rules text */
       const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card)).reduce((a2,b)=>a2+b.amt,0);
       const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card));
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff;
+      /* what a face-up arsenal trigger stamped on this card, and only for
+         the turn it was stamped — "this turn" is printed on the arrow. */
+      const arsPow = (card._arsPow && card._upTurn === n.turn) ? card._arsPow : 0;
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow;
       const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0);
       let total = base + bonus;
       /* a qualified buff that did NOT match is not spent — it waits for an
@@ -2589,6 +2619,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          The prompt is addressed to the ACTOR, so it asks whoever is
          swinging rather than always seat 0. buildPrompt returns null on
          an empty zone, so a cost you cannot pay politely skips itself. */
+      /* "You may put an arrow from your hand face-up into your arsenal."
+         RULING (user, 2026-07-28): the card's OTHER effects resolve either
+         way — only the put is skipped when there is no free slot. Arsenal
+         capacity is normally 1 and can be 2 with New Horizon, which is not
+         in this pool; ARS_CAP is the seam rather than a hardcoded 1.
+         `min:0` keeps it optional, and buildPrompt returns null on an empty
+         hand so a put with nothing to put skips itself. */
+      if(fx.arsenalPut && !act(n).arsenal){
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:actorOf(n), src:card.name,
+          zone:"hand", to:"arsenal", filter:fx.arsenalPut.filter, min:0, max:1,
+          title:"Put an arrow face up in your arsenal?",
+          hint:"Optional — it goes FACE UP, so its arsenal trigger fires."}];
+      } else if(fx.arsenalPut){
+        n = L(n, `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
+      }
       if(fx.optCost && fx.optCost.trigger === "attacks"){
         const oc = fx.optCost;
         n.promptQ = [...(n.promptQ||[]), {

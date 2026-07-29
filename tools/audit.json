@@ -1,13 +1,13 @@
 {
- "generated": "2026-07-28T19:23:02.581Z",
- "appVer": "2.31",
+ "generated": "2026-07-29T16:05:32.400Z",
+ "appVer": "2.32",
  "dataVer": "sage-v9",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 260,
+  "full": 263,
   "part": 110,
-  "none": 35
+  "none": 32
  },
  "heroes": {
   "kayo": {
@@ -5864,18 +5864,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this is put face-up into your arsenal, it gets +2{p} this turn.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is put face-up into your arsenal, it gets +2{p} this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put face-up into your arsenal, it gets +2{p} this turn.",
@@ -6254,18 +6252,16 @@
    "mentions": [
     "opt"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "If this is put into your arsenal face up, opt 1.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If this is put into your arsenal face up, opt 1."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If Ridge Rider Shot is put into your arsenal face up, opt 1.",
@@ -6354,18 +6350,16 @@
    "mentions": [
     "go again"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this is put face-up into your arsenal, it gets go again this turn.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is put face-up into your arsenal, it gets go again this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put face-up into your arsenal, it gets go again this turn.",

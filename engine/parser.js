@@ -89,6 +89,14 @@ function classifyClause(raw){
        parsed as an addition that is 2 + 4 = 6 when the card prints 4. Flag
        it here; execute suppresses the base op when the condition fires. */
     if(/\binstead\b/i.test(m[2])) rest.instead = true;
+    /* ARSENAL FACE-UP. Azalea's arrows fire when put FACE UP into the
+       arsenal, which is NOT the end-of-turn arsenal step (that sets face
+       DOWN). Three printed phrasings, one trigger:
+         "this is put face-up into your arsenal"
+         "this is put into your arsenal face up"     (Ridge Rider Shot)
+         "this is put or turned face up in arsenal"  (Spire Sniping) */
+    if(/\b(?:put|turned)\b/.test(cond) && /\barsenal\b/.test(cond) && /face.?up/.test(cond))
+      return Object.assign(rest,{arsUp:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
@@ -183,7 +191,7 @@ function classifyClause(raw){
      with if/when — "Surge - If this deals more than 2 damage, it gets go
      again" and "High Tide - If there are 2 or more blue cards in your pitch
      zone, this gets go again" both granted go again outright. */
-  if(/^(?:this|it) (?:gains?|gets?|has) go again$/.test(c)) return R([["ga"]]);
+  if(/^(?:this|it) (?:gains?|gets?|has) go again(?: this turn)?$/.test(c)) return R([["ga"]]);
   /* Printed keyword lines. The database prints these on their own line.
      The engine honors them through card_keywords — equipment wear, the
      boost prompt, the crush threshold — or they are honestly inert
@@ -580,6 +588,11 @@ function fxParse(card){
     fx.clauses.push({t:raw, st:r.status});
     if(r.approx) fx.approx = true;
     r.ops.forEach(op=>{
+      /* An arsenal-face-up payload is not an on-play effect: it fires when
+         the card ENTERS the arsenal, and is stamped onto the card to be
+         collected when it is later played. Route it first, or "it gets go
+         again this turn" would become the card's own printed go again. */
+      if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op]; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
       if(r.onHit) fx.onHit.push(op);
@@ -640,6 +653,15 @@ function fxParse(card){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
     if(pm) fx.self = +pm[1];
     else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
+  }
+  /* the enabler half: "you may put an arrow from your hand face-up into
+     your arsenal". Read the SUBJECT so a card that says "an arrow" cannot
+     put a non-arrow; anything else is left unclaimed. */
+  const apm = tl.match(/you may put an? ([a-z ]+?) (?:card )?from your hand face.?up into your arsenal/)
+           || tl.match(/you may put an? ([a-z ]+?) (?:card )?face.?up into your arsenal/);
+  if(apm){
+    const subj = apm[1].trim();
+    if(/^arrows?$/.test(subj)) fx.arsenalPut = {filter:{tt:"arrow"}};
   }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";

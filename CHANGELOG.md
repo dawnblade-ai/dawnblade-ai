@@ -9,6 +9,28 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.33
+
+THE ARSENAL GOES FACE UP — Azalea's engine, 3 cards none -> full. The trainer's
+end-of-turn arsenal sets cards FACE DOWN; these arrows trigger on FACE UP, which
+is a different event reached only by an enabler that says so. Conflating the two
+would fire triggers the cards do not have. Built machinery-first so the parser
+reading came on LAST — never parse ahead of wiring. A card put face up carries
+`_faceUp`/`_upTurn` on the card itself (like a minted card's `_playTurn`), so no
+new side field: the arrow's payload is STAMPED onto it (`_arsPow`, `_arsGA`)
+rather than run immediately, because "+2{p} this turn" and "go again this turn"
+must survive until the arrow is actually played later that same turn — and
+expire if it is not. Dry Powder Shot 3 -> 5 power the turn it is set, back to 3
+after; Swift Shot goes again that turn only. Enabler wired: Call in the Big Guns,
+whose subject is read ("an arrow") so it cannot put a non-arrow, and whose FIRST
+effect resolves whether or not the put happens (user ruling 2026-07-28: only the
+put is skipped when a slot is occupied; arsenal capacity is a seam, normally 1
+and two with New Horizon). Entangling Shot and Spire Sniping deliberately stay
+unclaimed: tapping a hero is not modelled, and "put them back in any order" is a
+REORDER, which `opt` is not — opt lets you bottom cards, which would be strictly
+more powerful. Death Dealer and Bull's Eye Bracers are the two remaining
+enablers.
+
 ## v2.32
 
 THE FAIRNESS SWEEP — tools/fairness.js asks "is any card STRONGER than printed?", which is a different question from the audit's "how much did we read?" and the one that decides whether a game is fair. Three bugs shipped in a week with the audit reporting IDENTICAL tiers before and after each; every affected card said full. On its FIRST run the sweep found two more: Aether Quickening and Swiftwater Sloop x2 granted go again outright because their gated clause starts "Surge -" / "High Tide -" rather than "If", so the conditional handler never saw it and a rule matching the TAIL "it gets go again" fired — now anchored at both ends. And Emeritus Scolding x3 read "INSTEAD deal 4" as an ADDITION, dealing 6 where the card prints 4; "instead" now REPLACES, with execute suppressing the base op when the condition fires. The sweep is deliberately one-sided (too-weak is failstates.js's job) and test/fairness.test.js pins that it stays quiet, with each check backed by a real card — reintroducing the four bug classes makes it report 41/33/22/3.
