@@ -80,8 +80,14 @@ text — never to special-case the card by name.
 - **v2.0x line starts at v2.01** (2026-07-22): marks the engine/ extraction +
   pool audit system. Below 2.0 = single-file-only history; 2.0+ = engine/ and
   index.html co-exist under the sync-guard rule (see below).
-- After any change: validate (below), then the file is uploaded/pushed to the Pages repo.
-- Keep a one-line summary of what each version changed.
+- After any change: validate (below), then the file is uploaded/pushed to the Pages repo
+  **by the user, manually** — there is no git remote here and deploying is not
+  this thread's job.
+- **The per-version summary lives in `CHANGELOG.md`, not in `index.html`.** Until
+  v2.32 it accumulated inside the `APP_VER` comment, which reached 14,723
+  characters on one line and shipped to every player on every page load. Add a
+  new section at the top of `CHANGELOG.md` and keep the `APP_VER` comment to a
+  single sentence.
 
 ---
 

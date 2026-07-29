@@ -1,3 +1,9 @@
 node_modules/
 tools/.cache/
 .DS_Store
+
+# Generated review stations — regenerate with `npm run stack --html` / `npm run sweep --html`.
+# Kept on disk (they are opened by double-click and work offline), just not versioned:
+# together they were 476K of churn in every diff.
+tools/review.html
+tools/sweep.html
