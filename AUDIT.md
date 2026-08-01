@@ -1,15 +1,15 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-01T20:13:45.259Z · app v2.38 · data sage-v10 · db 4862 records
+Generated 2026-08-01T20:28:39.783Z · app v2.38 · data sage-v10 · db 4862 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 281 |
-| Partially scripted | 96 |
-| Text-only (nothing parsed) | 28 |
+| Fully scripted | 287 |
+| Partially scripted | 92 |
+| Text-only (nothing parsed) | 26 |
 | Cards with audit flags | 67 |
 
 ## Symbols found in pool text
@@ -199,27 +199,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — Suspense
 - ▶ When this leaves the arena, your next attack this turn gets +6{p}.
 
-### Aether Icevein (pitch 1) — part · [iyslander]
-- type: Elemental Wizard Action · printed: Ice Fusion
-- — Ice Fusion
-- ▶ Deal 5 arcane damage to any target
-- — If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
-- 🚩 unreviewed keyword: "ice fusion"
-
-### Aether Icevein (pitch 2) — part · [iyslander]
-- type: Elemental Wizard Action · printed: Ice Fusion
-- — Ice Fusion
-- ▶ Deal 4 arcane damage to any target
-- — If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
-- 🚩 unreviewed keyword: "ice fusion"
-
-### Aether Icevein (pitch 3) — part · [iyslander]
-- type: Elemental Wizard Action · printed: Ice Fusion
-- — Ice Fusion
-- ▶ Deal 3 arcane damage to any target
-- — If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
-- 🚩 unreviewed keyword: "ice fusion"
-
 ### Agile Engagement (pitch 1) — part · [dorinthea]
 - type: Warrior Attack Reaction
 - ▶ Target Warrior attack gets +3{p}
@@ -248,12 +227,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Wizard Action
 - ▶ Deal 1 arcane damage to any target.
 - — Instant - Discard this: Amp 1
-
-### Arcanic Shockwave (pitch 1) — none · [briar]
-- type: Elemental Runeblade Action - Attack · printed: Lightning Fusion
-- — Lightning Fusion
-- — When you attack with this, if it was fused, deal 1 arcane damage to target hero.
-- 🚩 unreviewed keyword: "lightning fusion"
 
 ### Astral Etchings (pitch 1) — none · [enigma]
 - type: Illusionist Action
@@ -301,7 +274,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ### Brain Freeze (pitch 3) — part · [iyslander]
 - type: Elemental Wizard Action · printed: Ice Fusion
-- — Ice Fusion
+- ○ Ice Fusion
 - ▶ Target opponent reveals their hand
 - — If this was fused, put an action card with cost 0 from their hand on top of their deck.
 - 🚩 unreviewed keyword: "ice fusion"
@@ -463,13 +436,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — When this is put face-up into your arsenal, you may {t} target hero.
 - 🚩 tap cost {t} — not enforced (see ledger)
 
-### Entwine Lightning (pitch 1) — none · [briar]
-- type: Elemental Action - Attack · printed: Lightning Fusion, Go again
-- — Lightning Fusion
-- — If this was fused, it gains go again.
-- 🚩 unreviewed keyword: "lightning fusion"
-- 🚩 text mentions go again but no clause parses it
-
 ### Flamecall Awakening (pitch 1) — part · [fai]
 - type: Draconic Action - Attack · printed: Go again
 - — When you attack with this, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
@@ -502,7 +468,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 ### Ice Eternal (pitch 3) — part · [iyslander]
 - type: Elemental Wizard Action · printed: Iyslander Specialization, Ice Fusion
 - ○ Iyslander Specialization
-- — Ice Fusion
+- ○ Ice Fusion
 - ○ Create X Frostbite tokens under target hero's control
 - — Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.
 - 🚩 unreviewed keyword: "ice fusion"
@@ -657,13 +623,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — Action - {r}{r}: If there are no steam counters on this, put a steam counter on it
 - ▶ Go again
 - — X is equal to 1 plus the number of times you have boosted this combat chain.
-
-### Polar Cap (pitch 1) — part · [iyslander]
-- type: Elemental Wizard Action · printed: Ice Fusion
-- — Ice Fusion
-- ▶ Deal 4 arcane damage to any target
-- ○ If this was fused and deals damage to a hero, create a Frostbite token under their control.
-- 🚩 unreviewed keyword: "ice fusion"
 
 ### Portside Exchange (pitch 3) — part · [gravy]
 - type: Pirate Action · printed: Go again
@@ -918,7 +877,11 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ## Flags on otherwise fully-scripted cards
 
+- **Aether Icevein** (pitch 1): unreviewed keyword: "ice fusion"
+- **Aether Icevein** (pitch 2): unreviewed keyword: "ice fusion"
+- **Aether Icevein** (pitch 3): unreviewed keyword: "ice fusion"
 - **Aether Quickening** (pitch 3): unreviewed keyword: "surge"
+- **Arcanic Shockwave** (pitch 1): unreviewed keyword: "lightning fusion"
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
@@ -927,6 +890,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Display Loyalty** (pitch 1): text mentions go again but no clause parses it
 - **Drop the Anchor** (pitch 1): tap cost {t} — not enforced (see ledger)
 - **Enflame the Firebrand** (pitch 1): text mentions go again but no clause parses it
+- **Entwine Lightning** (pitch 1): unreviewed keyword: "lightning fusion"
 - **Gauntlets of Unity** (pitch 0): unreviewed keyword: "unity"
 - **Helm of Unity** (pitch 0): unreviewed keyword: "unity"
 - **Hot on Their Heels** (pitch 1): text mentions go again but no clause parses it
@@ -936,6 +900,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Limpit, Hop-a-long** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Mandible Claw** (pitch 0): text mentions go again but no clause parses it
 - **Open the Flood Gates** (pitch 3): unreviewed keyword: "surge"
+- **Polar Cap** (pitch 1): unreviewed keyword: "ice fusion"
 - **Puncture** (pitch 1): unreviewed keyword: "piercing"
 - **Puncture** (pitch 3): unreviewed keyword: "piercing"
 - **Riggermortis** (pitch 2): tap cost {t} — not enforced (see ledger)

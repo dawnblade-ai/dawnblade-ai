@@ -1136,13 +1136,13 @@
   "ruling": "EXTRA EFFECT ON ATTACK - DEAL 1 ARCANE DAMAGE TO OPPONENT - CONDITIONAL ADDITIONAL EFFECT - CHECK LOG IF ARCANE DAMAGE FROM PATH OF SAME ENDS WAS PREVENTED - IF NO - ADD 'GO AGAIN'"
  },
  "fusion": {
-  "at": "2026-07-25",
+  "at": "2026-08-01",
   "mechanic": "fusion",
   "status": "unmodelled",
   "cards": [
    "Weave Lightning (1)"
   ],
-  "ruling": "CREATES MACRO - TRIGGER - CHECK PLAYED ATTACK ACTIONS FOR 'LIGHTNING' OR 'ELEMENTAL' - IF YES - ADD 3 ATTACK POWER - CONDITIONAL EXTRA EFFECT WHEN TRIGGERED - CHECK ATTACKING CARD FOR 'FUSION' AND CHECK LOG FOR WHETHER PLAYER REVEALED A CARD - IF YES - ADD 'GO AGAIN' TO THE ATTACK - ONCE TRIGGERED REMOVE MACRO AFTER"
+  "ruling": "CR: '[SUPERTYPES] Fusion' means 'as an additional cost to play this, you may reveal a [SUPERTYPES] card from your hand' — nothing moves zones (a reveal, not a spend), so unlike Charge there is no real strategic reason to decline, and the engine auto-fuses whenever a qualifying card (matched by type-line word, e.g. 'ice'/'lightning' in card.tt) is in hand. Read generically: the bare 'X Fusion' / 'X and Y Fusion' / 'X and/or Y Fusion' line hoists fx.fusionCost (paragraph-scanned, same layout rule as a standalone Go again line); riders read as cond 'fused' via classifyClause's if/when handler. A compound gate ('...was fused AND deals damage to a hero') is read as one unit and routes through the condOnHit dispatcher built for Charge, so it only fires when the attack actually connects. 6 cards now resolve: Aether Icevein (x3 pitches) and Polar Cap resolve via PRE-EXISTING ops (foeDiscard already ignores the 'unless they pay' escape, which is faithful because the dummy never pays optional costs anyway; frostbite-token creation was already a deliberate noop since the dummy has no action phase to tax) reached through the new fused/condOnHit gate; Entwine Lightning and Arcanic Shockwave are newly wired end to end (conditional go-again, conditional arcane damage). Two remain and need more than the fusion cost pattern itself: Brain Freeze's rider targets the OPPONENT's revealed hand for a pick-and-deck-top ('put an action card with cost 0 from their hand on top of their deck') which needs prompts.js's reveal/pick wired to the foe's hand as source; Ice Eternal's rider is a DYNAMIC arcane amount ('deal arcane damage equal to the number of Frostbites they control') which needs a new op that reads the target's frostbite counter at resolution rather than a fixed number."
  },
  "card-carrion-crown-0": {
   "at": "2026-07-25",

@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:13:45.259Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:28:39.783Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 290 / 437 (66%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 281/405
-(tiers: full 281, part 96, none 28)
+**Overall: 296 / 437 (68%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 287/405
+(tiers: full 287, part 92, none 26)
 
 ---
 
@@ -108,16 +108,16 @@ tokens 7/17 · pool cards 281/405
 
 ---
 
-## Pool cards (281/405)
+## Pool cards (287/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
 - [x] Achilles Accelerator _(dash)_
 - [ ] Act of Glory [pitch 1] — part, 1 clause(s) unread _(lyath)_
 - [x] Aether Hail [pitch 3] _(iyslander)_
-- [ ] Aether Icevein [pitch 1] — part, 2 clause(s) unread _(iyslander)_
-- [ ] Aether Icevein [pitch 2] — part, 2 clause(s) unread _(iyslander)_
-- [ ] Aether Icevein [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [x] Aether Icevein [pitch 1] _(iyslander)_
+- [x] Aether Icevein [pitch 2] _(iyslander)_
+- [x] Aether Icevein [pitch 3] _(iyslander)_
 - [x] Aether Quickening [pitch 3] _(blaze)_
 - [x] Aether Spindle [pitch 1] _(blaze)_
 - [x] Aether Spindle [pitch 3] _(blaze)_
@@ -129,7 +129,7 @@ tokens 7/17 · pool cards 281/405
 - [ ] Arcane Polarity [pitch 1] — part, 1 clause(s) unread _(blaze, briar, fai)_
 - [ ] Arcane Seeds // Life [pitch 1] — part, 2 clause(s) unread _(briar)_
 - [ ] Arcane Twining [pitch 3] — part, 1 clause(s) unread _(blaze, iyslander)_
-- [ ] Arcanic Shockwave [pitch 1] — none, 2 clause(s) unread _(briar)_
+- [x] Arcanic Shockwave [pitch 1] _(briar)_
 - [x] Art of Desire: Body [pitch 1] _(arakni)_
 - [x] Art of Desire: Mind [pitch 3] _(arakni)_
 - [x] Art of the Dragon: Fire [pitch 1] _(fai)_
@@ -164,7 +164,7 @@ tokens 7/17 · pool cards 281/405
 - [x] Booze! [pitch 3] _(lyath)_
 - [x] Boulder Drop [pitch 1] _(bravo)_
 - [x] Boulder Drop [pitch 3] _(bravo)_
-- [ ] Brain Freeze [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [ ] Brain Freeze [pitch 3] — part, 1 clause(s) unread _(iyslander)_
 - [x] Brand with Cinderclaw [pitch 1] _(fai)_
 - [x] Brand with Cinderclaw [pitch 2] _(fai)_
 - [x] Brand with Cinderclaw [pitch 3] _(fai)_
@@ -235,7 +235,7 @@ tokens 7/17 · pool cards 281/405
 - [x] Enigma Chimera [pitch 1] _(enigma)_
 - [x] Enigma Chimera [pitch 2] _(enigma)_
 - [ ] Entangling Shot [pitch 1] — none, 1 clause(s) unread _(azalea)_
-- [ ] Entwine Lightning [pitch 1] — none, 2 clause(s) unread _(briar)_
+- [x] Entwine Lightning [pitch 1] _(briar)_
 - [x] Fault Line [pitch 1] _(bravo)_
 - [x] Fender Bender [pitch 1] _(dash)_
 - [x] Fire Tenet: Strike First [pitch 1] _(fai)_
@@ -272,7 +272,7 @@ tokens 7/17 · pool cards 281/405
 - [x] Hyper Inflation [pitch 1] _(arakni)_
 - [x] Ice Bolt [pitch 1] _(iyslander)_
 - [x] Ice Bolt [pitch 3] _(iyslander)_
-- [ ] Ice Eternal [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [ ] Ice Eternal [pitch 3] — part, 1 clause(s) unread _(iyslander)_
 - [x] Illuminate [pitch 1] _(boltyn)_
 - [ ] Inertia Trap [pitch 1] — none, 1 clause(s) unread _(arakni)_
 - [x] Infect [pitch 1] _(arakni)_
@@ -353,7 +353,7 @@ tokens 7/17 · pool cards 281/405
 - [ ] Photon Splicing [pitch 3] — part, 1 clause(s) unread _(blaze, iyslander)_
 - [ ] Pick Up the Point [pitch 1] — part, 1 clause(s) unread _(arakni)_
 - [ ] Plasma Barrel Shot — part, 2 clause(s) unread _(dash)_
-- [ ] Polar Cap [pitch 1] — part, 1 clause(s) unread _(iyslander)_
+- [x] Polar Cap [pitch 1] _(iyslander)_
 - [ ] Portside Exchange [pitch 3] — part, 1 clause(s) unread _(gravy)_
 - [x] Pouncing Paws _(fai)_
 - [x] Power Play [pitch 3] _(lyath)_

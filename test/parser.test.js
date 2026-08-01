@@ -1194,3 +1194,42 @@ test("charge — all five real pool cards resolve to tier full", () => {
     assert.equal(fx.tier, "full", base);
   });
 });
+
+/* ---- FUSION — CR: an additional cost that REVEALS, never spends, v2.39 */
+test("fusion — the bare keyword line hoists fx.fusionCost and reads as a noop clause", () => {
+  const fx = P.fxParse({name:"Fusion Drill Hoist", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Ice Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(fx.fusionCost, {types:["ice"]});
+  assert.equal(fx.clauses[0].st, "noop");
+});
+
+test("fusion — a compound type line splits on 'and', 'and/or', and comma", () => {
+  const and_ = P.fxParse({name:"Fusion Drill And", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Earth and Lightning Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(and_.fusionCost, {types:["earth","lightning"]});
+  const andOr = P.fxParse({name:"Fusion Drill AndOr", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Ice and/or Lightning Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(andOr.fusionCost, {types:["ice","lightning"]});
+});
+
+test("fusion — 'if this was fused, it gains go again' reads as a plain conditional GA (Entwine Lightning)", () => {
+  const fx = P.fxParse({name:"Entwine Lightning", pitch:1, tt:"Elemental Action - Attack", power:3, kw:[],
+    tx:"Lightning Fusion\n\nIf Entwine Lightning was fused, it gains go again."});
+  assert.deepEqual(fx.fusionCost, {types:["lightning"]});
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["ga"], instead:false}]);
+  assert.equal(fx.tier, "full");
+});
+
+test("fusion — 'when you attack with this, if it was fused, deal N arcane' reads as an immediate conditional, not on-hit (Arcanic Shockwave)", () => {
+  const fx = P.fxParse({name:"Arcanic Shockwave", pitch:1, tt:"Elemental Runeblade Action - Attack", power:4, kw:[],
+    tx:"Lightning Fusion\n\nWhen you attack with Arcanic Shockwave, if it was fused, deal 1 arcane damage to target hero."});
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["arcane",1], instead:false}]);
+  assert.equal(fx.tier, "full");
+});
+
+test("fusion — the compound 'was fused and deals damage to a hero' gate is read as one unit", () => {
+  const r = P.classifyClause("if this was fused and deals damage to a hero, this gets +1{p}");
+  assert.equal(r.cond, "fused");
+  assert.equal(r.onHit, true);
+  assert.deepEqual(r.ops, [["self",1]]);
+});

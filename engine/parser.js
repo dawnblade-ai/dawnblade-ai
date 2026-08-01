@@ -193,6 +193,17 @@ function classifyClause(raw){
     if(/you'?(?:ve| have) charged this turn/.test(cond)) return Object.assign(rest,{cond:"charged"});
     if(m=cond.match(/^an? (red|yellow|blue) card (?:is|was) charged this way$/))
       return Object.assign(rest,{cond:"chargedPitch"+({red:1,yellow:2,blue:3}[m[1]])});
+    /* FUSION — CR: paying the additional cost (revealing a matching card
+       from hand) makes the played card "fused". Some cards gate their
+       rider on fusion ALONE ("if it was fused, …"); others gate on fusion
+       AND the attack actually connecting ("…was fused and deals damage to
+       a hero, …") — a compound condition read as one unit, same as the
+       Aether-Icevein shape, so it must be caught before the generic
+       comma-split below would otherwise misparse the "and". Both route
+       through condOnHit when combined with a hit. */
+    if(/^(?:this|it) was fused and deals damage to a hero$/.test(cond))
+      return Object.assign(rest,{cond:"fused", onHit:true});
+    if(/^(?:this|it) was fused$/.test(cond)) return Object.assign(rest,{cond:"fused"});
     return null;
   }
   /* "This/it gains '<ability text>'" — grants an entirely new ability
@@ -259,6 +270,11 @@ function classifyClause(raw){
     return Object.assign(sub,{cond:"surgeOver"+m[1]});
   }
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
+  /* FUSION — the bare "X Fusion" line is the additional cost itself
+     (hoisted into fx.fusionCost above, same layout rule as a standalone
+     "Go again" line); the riders that ask "if this was fused" are read
+     below via cond "fused". */
+  if(/^[a-z]+(?:(?:, ?| and\/or | and )[a-z]+)* fusion$/.test(c)) return NOOP("additional cost — enforced when played (Fusion)");
   /* RULING 2026-07-25: stealth, mark and aim counters "do nothing on their
      own" — they are qualifiers other cards test for. So the bare keyword
      line is genuinely a no-op; what matters is the state it leaves behind,
@@ -623,8 +639,19 @@ function fxParse(card){
      text never mentions it at all, trust the keyword list. */
   const gaStandalone = (card.tx||"").split(/\n+/).some(l => /^\**go again\**\.?$/i.test(clean(l)));
   const gaMentioned  = /\bgo again\b/i.test(card.tx||"");
+  /* FUSION — CR: "[SUPERTYPES] Fusion" means "As an additional cost to play
+     this, you may reveal a [SUPERTYPES] card from your hand." No card
+     changes zones — it's shown, not spent — so "fused" just means the
+     reveal happened. Printed as its own paragraph, same layout rule as a
+     standalone "Go again" line. */
+  const fusionLine = (card.tx||"").split(/\n+/).map(l=>clean(l))
+    .find(l => /^[a-z]+(?:(?:, ?| and\/or | and )[a-z]+)* fusion$/i.test(l));
+  const fusionTypes = fusionLine
+    ? fusionLine.replace(/\s*fusion$/i,"").split(/,\s*| and\/or | and /i).map(s=>s.trim().toLowerCase()).filter(Boolean)
+    : null;
   const fx = {ga: gaStandalone || (!gaMentioned && kw.some(k=>k==="go again")),
     self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+  if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";

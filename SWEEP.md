@@ -8,7 +8,7 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 124 cards | understood ≠ built |
+| Ruled but not built | 118 cards | understood ≠ built |
 | **Fail states** | 145 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
@@ -114,14 +114,12 @@ At the beginning of your end phase destroy Frailty.
 
 Cards whose ruling exists but which still do not resolve in full.
 
-- **Arcanic Shockwave** (none, 2/2 unread)
 - **Astral Etchings** (none, 2/2 unread)
 - **Brothers in Arms** (none, 2/2 unread)
 - **Concoct Disorder** (none, 2/2 unread)
 - **Cosmo, Scroll of Ancestral Tapestry** (none, 2/2 unread)
 - **Crash and Bash** (none, 2/2 unread)
 - **Drill Shot** (none, 2/2 unread)
-- **Entwine Lightning** (none, 2/2 unread)
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
 - **Agile Windup** (none, 1/1 unread)
@@ -142,13 +140,9 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Spire Sniping** (none, 1/1 unread)
 - **Thunder Quake** (none, 1/1 unread)
 - **Wax On** (none, 1/1 unread)
-- **Aether Icevein** (part, 2/3 unread)
-- **Aether Icevein** (part, 2/3 unread)
-- **Aether Icevein** (part, 2/3 unread)
 - **Arcane Seeds // Life** (part, 2/6 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
-- **Brain Freeze** (part, 2/3 unread)
 - **Burn Up // Shock** (part, 2/5 unread)
 - **Cold Snap** (part, 2/4 unread)
 - **Condemn to Slaughter** (part, 2/4 unread)
@@ -158,7 +152,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Dawnblade** (part, 2/3 unread)
 - **Edict of Steel** (part, 2/3 unread)
 - **Halo of Illumination** (part, 2/3 unread)
-- **Ice Eternal** (part, 2/4 unread)
 - **Loot the Arsenal** (part, 2/3 unread)
 - **Magmatic Carapace** (part, 2/3 unread)
 - **Malefic Incantation** (part, 2/5 unread)
@@ -174,7 +167,14 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Act of Glory** (part, 1/2 unread) · flagged approx
 - **Agile Engagement** (part, 1/2 unread)
 - **Arcane Polarity** (part, 1/2 unread)
-- … and 64 more (see the station)
+- **Arcane Twining** (part, 1/2 unread)
+- **Beckoning Haunt** (part, 1/2 unread)
+- **Big Bertha** (part, 1/2 unread)
+- **Bolt'n Boots** (part, 1/2 unread)
+- **Brain Freeze** (part, 1/3 unread)
+- **Call in the Big Guns** (part, 1/3 unread)
+- **Carrion Crown** (part, 1/3 unread)
+- … and 58 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -189,15 +189,15 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 53 |
-| Choice never offered | 44 |
-| Ability inert — cost not modelled | 43 |
+| Earned value denied | 52 |
+| Choice never offered | 43 |
+| Ability inert — cost not modelled | 40 |
 | No schedule to fire on | 33 |
-| Unread, effect unknown | 31 |
-| Displayed total is wrong | 28 |
-| Keyword filed as no-op — but the trainer names it (verify) | 11 |
+| Unread, effect unknown | 29 |
+| Displayed total is wrong | 27 |
+| Keyword filed as no-op — but the trainer names it (verify) | 13 |
+| Keyword filed as no-op, but it has meaning | 7 |
 | Drawback skipped | 2 |
-| Keyword filed as no-op, but it has meaning | 1 |
 
 ### UNFAIR — 2 entries
 
@@ -217,11 +217,20 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 69 entries
+### WRONG — 71 entries
 
 - **Act of Glory** (1) · tier `part` · lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Suspense
+- **Aether Icevein** (1) · tier `full` · iyslander
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
+- **Aether Icevein** (2) · tier `full` · iyslander
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
+- **Aether Icevein** (3) · tier `full` · iyslander
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
 - **Arcane Polarity** (1) · tier `part` · fai, blaze, briar
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > If you've been dealt arcane damage this turn, instead gain 4{h}.
@@ -231,11 +240,6 @@ worst thing a trainer can do: it teaches wrong play.
 - **Arcane Twining** (3) · tier `part` · iyslander, blaze
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Instant - Discard this: Amp 1
-- **Arcanic Shockwave** (1) · tier `none` · briar
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > When you attack with this, if it was fused, deal 1 arcane damage to target hero.
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When you attack with this, if it was fused, deal 1 arcane damage to target hero.
 - **Astral Etchings** (1) · tier `none` · enigma
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Put three +1{p} counters on target aura with ward you control.
@@ -256,7 +260,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > At the start of your turn, destroy this unless you remove a steam counter from it.
 - **Brain Freeze** (3) · tier `part` · iyslander
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
 - **Brothers in Arms** (3) · tier `none` · iyslander, lyath
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
@@ -325,46 +329,26 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > At the beginning of your end phase, remove all +1{p} counters from weapons you control.
 - **Ice Eternal** (3) · tier `part` · iyslander
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.
 - **Jack Be Quick** (1) · tier `part` · briar
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- **Loot the Arsenal** (3) · tier `part` · gravy
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Your next Pirate ally attack this turn gets "When this hits a hero, destroy a card in their arsenal
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > If you do, create a Gold token."
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you do, create a Gold token."
-- **Magmatic Carapace** · tier `part` · bravo
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Whenever you play an aura, you may {t} this and pay {r}
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Whenever you play an aura, you may {t} this and pay {r}
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Whenever you play an aura, you may {t} this and pay {r}
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you do, create a Seismic Surge token.
-- … and 44 more (see the station)
+- … and 46 more (see the station)
 
-### LOST VALUE — 66 entries
+### LOST VALUE — 64 entries
 
-- **Aether Icevein** (1) · tier `part` · iyslander
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
-- **Aether Icevein** (2) · tier `part` · iyslander
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
-- **Aether Icevein** (3) · tier `part` · iyslander
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.
 - **Agile Engagement** (1) · tier `part` · dorinthea
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If it's defended by an attack action card, create an Agility token.
 - **Agile Windup** (3) · tier `none` · kayo
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Instant - Discard this: Create an Agility token.
+- **Arcanic Shockwave** (1) · tier `full` · briar
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+    > Lightning Fusion
 - **Back Alley Breakline** (3) · tier `none` · gravy
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If an activated ability or action card effect puts this face up into a zone from your deck, gain 1 action point.
@@ -449,7 +433,13 @@ worst thing a trainer can do: it teaches wrong play.
     > When this is put face-up into your arsenal, you may {t} target hero.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > When this is put face-up into your arsenal, you may {t} target hero.
-- … and 41 more (see the station)
+- **Entwine Lightning** (1) · tier `full` · briar
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+    > Lightning Fusion
+- **Frailty Trap** (1) · tier `none` · arakni
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > When this defends an attack with go again, create a Frailty token under the attacking hero's control.
+- … and 39 more (see the station)
 
 ### INERT — 8 entries
 

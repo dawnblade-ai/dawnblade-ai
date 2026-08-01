@@ -2539,6 +2539,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
       n = L(n, `${card.name}: charged ${picked.name} into your hero's soul (Charge).`);
     }
+    /* FUSION — CR: "As an additional cost to play this, you may reveal a
+       [type] card from your hand." Nothing moves zones (a reveal, not a
+       cost paid away), so unlike Charge there is no real downside to
+       taking it — always fused when hand has a qualifying card. Type is
+       read off the printed type line (`tt`), same field attackQual reads
+       elsewhere; never guessed. */
+    let fused = false;
+    if(fx.fusionCost){
+      fused = act(n).hand.some(c2 => fx.fusionCost.types.some(ty => new RegExp("\\b"+ty+"\\b","i").test(c2.tt||"")));
+      n = L(n, fused
+        ? `${card.name}: revealed a ${fx.fusionCost.types.join("/")} card from hand — fused (Fusion).`
+        : `${card.name}: no ${fx.fusionCost.types.join("/")} card in hand to reveal — not fused.`);
+    }
     // conditional clauses evaluated against this turn's history (before this card)
     /* "INSTEAD" REPLACES. When a conditional payload says "instead" and its
        condition is MET, the unconditional base op of the same kind must NOT
@@ -2598,6 +2611,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
            (chargedPitch is computed above, before this loop runs). */
         : cond==="charged" ? (act(n).hist.charged||0)>0
         : /^chargedPitch\d$/.test(cond) ? chargedPitch === +cond.match(/\d+/)[0]
+        /* FUSION: `fused` is computed above, before this loop runs. */
+        : cond==="fused" ? fused
         : /^atkNamed:/.test(cond) ? (act(n).hist.atkNames||[]).includes(cond.slice(9))
         : /^hit\d+$/.test(cond) ? (n.chain||[]).filter(l=>l.dmg>0).length >= +cond.slice(3)
         /* HIGH TIDE: blue is pitch value 3 throughout this engine. */
@@ -2625,7 +2640,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         revBlue:"the revealed card isn't blue", isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
         lifeTie:"life totals aren't level",
-        charged:"you didn't charge your hero's soul this turn"}[cond]
+        charged:"you didn't charge your hero's soul this turn",
+        fused:"no qualifying card in hand to reveal for Fusion"}[cond]
         || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on your board` : null)
         || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in your pitch zone` : null)
         || (/^pitchBlue(\d+)$/.test(cond) ? `fewer than ${cond.match(/\d+/)[0]} blue cards in your pitch zone` : null)

@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-01T20:13:45.259Z",
+ "generated": "2026-08-01T20:28:39.783Z",
  "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 281,
-  "part": 96,
-  "none": 28
+  "full": 287,
+  "part": 92,
+  "none": 26
  },
  "heroes": {
   "kayo": {
@@ -1779,13 +1779,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 5 arcane damage to any target",
@@ -1793,13 +1793,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 5 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -1933,13 +1930,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 4 arcane damage to any target",
@@ -1950,9 +1947,7 @@
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Ice Fusion"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If Polar Cap was fused and deals damage to a hero, create a Frostbite token under their control.",
@@ -2006,13 +2001,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 4 arcane damage to any target",
@@ -2020,13 +2015,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -2077,13 +2069,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 3 arcane damage to any target",
@@ -2091,13 +2083,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 3 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -2159,7 +2148,7 @@
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Target opponent reveals their hand",
@@ -2171,7 +2160,6 @@
     }
    ],
    "skipped": [
-    "Ice Fusion",
     "If this was fused, put an action card with cost 0 from their hand on top of their deck."
    ],
    "weaponCost": null,
@@ -2404,7 +2392,7 @@
     },
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Create X Frostbite tokens under target hero's control",
@@ -2416,7 +2404,6 @@
     }
    ],
    "skipped": [
-    "Ice Fusion",
     "Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control."
    ],
    "weaponCost": null,
@@ -12112,23 +12099,20 @@
    "mentions": [
     "lightning fusion"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Lightning Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When you attack with this, if it was fused, deal 1 arcane damage to target hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Lightning Fusion",
-    "When you attack with this, if it was fused, deal 1 arcane damage to target hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nWhen you attack with Arcanic Shockwave, if it was fused, deal 1 arcane damage to target hero.",
@@ -12232,29 +12216,25 @@
     "go again",
     "lightning fusion"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Lightning Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If this was fused, it gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Lightning Fusion",
-    "If this was fused, it gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nIf Entwine Lightning was fused, it gains go again.",
    "flags": [
-    "unreviewed keyword: \"lightning fusion\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"lightning fusion\""
    ]
   },
   "fry|1": {
