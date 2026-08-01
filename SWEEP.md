@@ -1,15 +1,15 @@
 # The Sweep
 
-Generated 2026-07-26 from `tools/audit.json`.
+Generated 2026-08-01 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 13 heroes, 32 unread clauses | never charged by the stack |
+| Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 147 cards | understood ≠ built |
-| **Fail states** | 168 entries, 2 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 124 cards | understood ≠ built |
+| **Fail states** | 145 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -44,12 +44,6 @@ axes it never covered.
 - ❌ Attack action cards you own get +1{p} while they are in any zone other than the combat chain.
 - ❌ The first time you discard a card with 6 or more {p} during each of your action phases, create a Might token.
 
-### Lyath Goldmane — 3/4 unread
-- ❌ The base {p} and {d} of cards you control are halved, rounded up.
-- ✅ Instant - {r}{r}, {t}: The crowd boos you
-- ❌ Defending action cards you control get +1{d} this turn.
-- ❌ Whenever the crowd boos you, create a Might token.
-
 ### Arakni, Web of Deceit — 2/2 unread
 - ❌ Your attacks with stealth that are attacking a marked hero get +1{p} and "When this hits, this gets go again."
 - ❌ At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos.
@@ -62,12 +56,18 @@ axes it never covered.
 - ❌ Your first Spectral Shield attack each turn costs {r} less to activate.
 - ❌ Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 
-### Gravy Bones — 2/2 unread
-- ❌ Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.
-- ❌ If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.
+### Lyath Goldmane — 2/4 unread
+- ❌ The base {p} and {d} of cards you control are halved, rounded up.
+- ✅ Instant - {r}{r}, {t}: The crowd boos you
+- ❌ Defending action cards you control get +1{d} this turn.
+- ✅ Whenever the crowd boos you, create a Might token.
 
 ### Dorinthea — 1/1 unread
 - ❌ Once per turn Effect - When a weapon you control hits, you may attack an additional time with that weapon this turn.
+
+### Gravy Bones — 1/2 unread
+- ❌ Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.
+- ✅ If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.
 
 ### Iyslander — 1/3 unread
 - ❌ Essence of Ice
@@ -107,14 +107,13 @@ When this attacks a marked hero, the attack gets go again.
 > Your attack action cards played from arsenal and weapon attacks have -1{p}.
 At the beginning of your end phase destroy Frailty.
 
-### Runechant — fx `none`, 20 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
+### Runechant — fx `none`, 22 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
 > When you play an attack action card or activate a weapon attack, destroy this and deal 1 arcane damage to target opposing hero.
 
 ## 3. Ruled but not built
 
 Cards whose ruling exists but which still do not resolve in full.
 
-- **Jack Be Quick** (none, 3/3 unread)
 - **Arcanic Shockwave** (none, 2/2 unread)
 - **Astral Etchings** (none, 2/2 unread)
 - **Brothers in Arms** (none, 2/2 unread)
@@ -125,13 +124,10 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Entwine Lightning** (none, 2/2 unread)
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
-- **Runic Fellingsong** (none, 2/2 unread)
 - **Agile Windup** (none, 1/1 unread)
 - **Back Alley Breakline** (none, 1/1 unread)
 - **Bolt'n' Shot** (none, 1/1 unread)
-- **Courageous Steelhand** (none, 1/1 unread)
 - **Den of the Spider** (none, 1/1 unread)
-- **Dry Powder Shot** (none, 1/1 unread)
 - **Entangling Shot** (none, 1/1 unread)
 - **Frailty Trap** (none, 1/1 unread)
 - **Full of Bravado** (none, 1/1 unread)
@@ -142,12 +138,9 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Memorial Ground** (none, 1/1 unread)
 - **Night's Embrace** (none, 1/1 unread)
 - **Radiant Touch** (none, 1/1 unread)
-- **Ridge Rider Shot** (none, 1/1 unread)
 - **Shred** (none, 1/1 unread)
 - **Spire Sniping** (none, 1/1 unread)
-- **Swift Shot** (none, 1/1 unread)
 - **Thunder Quake** (none, 1/1 unread)
-- **Valiant Thrust** (none, 1/1 unread)
 - **Wax On** (none, 1/1 unread)
 - **Aether Icevein** (part, 2/3 unread)
 - **Aether Icevein** (part, 2/3 unread)
@@ -163,18 +156,25 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Crow's Nest** (part, 2/3 unread)
 - **Danger Digits** (part, 2/3 unread)
 - **Dawnblade** (part, 2/3 unread)
-- **Death Dealer** (part, 2/3 unread)
 - **Edict of Steel** (part, 2/3 unread)
-- **Fire that Burns Within** (part, 2/3 unread)
-- **Golden Tipple** (part, 2/3 unread)
-- **Golden Tipple** (part, 2/3 unread)
-- **Golden Tipple** (part, 2/3 unread)
 - **Halo of Illumination** (part, 2/3 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Loot the Arsenal** (part, 2/3 unread)
 - **Magmatic Carapace** (part, 2/3 unread)
 - **Malefic Incantation** (part, 2/5 unread)
-- … and 87 more (see the station)
+- **Malefic Incantation** (part, 2/5 unread)
+- **Mounting Anger** (part, 2/3 unread)
+- **Plasma Barrel Shot** (part, 2/4 unread)
+- **Refraction Bolters** (part, 2/3 unread)
+- **Rising Resentment** (part, 2/3 unread)
+- **Sigil of Silphidae** (part, 2/4 unread)
+- **Silent Stilettos** (part, 2/3 unread)
+- **Turn to Mindfire** (part, 2/3 unread)
+- **Washed Up Wave** (part, 2/3 unread)
+- **Act of Glory** (part, 1/2 unread) · flagged approx
+- **Agile Engagement** (part, 1/2 unread)
+- **Arcane Polarity** (part, 1/2 unread)
+- … and 64 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -189,12 +189,12 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 69 |
-| Choice never offered | 54 |
-| Ability inert — cost not modelled | 51 |
-| No schedule to fire on | 45 |
-| Displayed total is wrong | 37 |
-| Unread, effect unknown | 32 |
+| Earned value denied | 53 |
+| Choice never offered | 44 |
+| Ability inert — cost not modelled | 43 |
+| No schedule to fire on | 33 |
+| Unread, effect unknown | 31 |
+| Displayed total is wrong | 28 |
 | Keyword filed as no-op — but the trainer names it (verify) | 11 |
 | Drawback skipped | 2 |
 | Keyword filed as no-op, but it has meaning | 1 |
@@ -216,10 +216,8 @@ worst thing a trainer can do: it teaches wrong play.
     > Defending action cards you control get +1{d} this turn.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Whenever the crowd boos you, create a Might token.
 
-### WRONG — 85 entries
+### WRONG — 69 entries
 
 - **Act of Glory** (1) · tier `part` · lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
@@ -243,12 +241,6 @@ worst thing a trainer can do: it teaches wrong play.
     > Put three +1{p} counters on target aura with ward you control.
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > Put three +1{p} counters on target aura with ward you control.
-- **Beaming Bravado** (1) · tier `part` · boltyn
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > If a yellow card is charged this way, this gets +1{p}
-- **Beaming Bravado** (2) · tier `part` · boltyn
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > If a yellow card is charged this way, this gets +1{p}
 - **Beaten Trackers** · tier `part` · kayo
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Whenever you discard a random card with 6 or more {p}, you may destroy this
@@ -258,16 +250,6 @@ worst thing a trainer can do: it teaches wrong play.
     > Whenever you discard a random card with 6 or more {p}, you may destroy this
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If you do, gain 1 action point.
-- **Bolt of Courage** (1) · tier `part` · boltyn
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If you've charged this turn, this gains "If this hits, draw a card."
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you've charged this turn, this gains "If this hits, draw a card."
-- **Bolt of Courage** (2) · tier `part` · boltyn
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If you've charged this turn, this gains "If this hits, draw a card."
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you've charged this turn, this gains "If this hits, draw a card."
 - **Boom Grenade** (1) · tier `part` · dash
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > At the start of your turn, destroy this unless you remove a steam counter from it.
@@ -300,13 +282,6 @@ worst thing a trainer can do: it teaches wrong play.
     > During your turn, auras you control with ward are weapons with base {p} equal to their ward and Once per Turn Action - {r}: Attack
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Your aura attacks with one or more +1{p} counters get go again.
-- **Courageous Steelhand** (1) · tier `none` · boltyn
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > If you've charged this turn, target attack gains +3{p}.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If you've charged this turn, target attack gains +3{p}.
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > If you've charged this turn, target attack gains +3{p}.
 - **Crow's Nest** · tier `part`
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Whenever an arrow is put face up into your arsenal from your deck, you may pay {r}
@@ -324,13 +299,6 @@ worst thing a trainer can do: it teaches wrong play.
     > The second time this hits each turn, put a +1{p} counter on it.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > At the beginning of your end phase, if this hasn't hit this turn, remove all +1{p} counters from it.
-- **Dry Powder Shot** (1) · tier `none` · azalea
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > When this is put face-up into your arsenal, it gets +2{p} this turn.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > When this is put face-up into your arsenal, it gets +2{p} this turn.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this is put face-up into your arsenal, it gets +2{p} this turn.
 - **Edge of Their Seats** (3) · tier `part` · bravo, lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Suspense
@@ -344,9 +312,43 @@ worst thing a trainer can do: it teaches wrong play.
     > Sharpen target sword you control.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If it has 1 or more +1{p} counters, create a Flurry token.
-- … and 60 more (see the station)
+- **Flamecall Awakening** (1) · tier `part` · fai
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > When you attack with this, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > When you attack with this, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > When you attack with this, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
+- **Glisten** (1) · tier `none` · boltyn
+  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
+    > Distribute up to four +1{p} counters among any number of weapons you control.
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > At the beginning of your end phase, remove all +1{p} counters from weapons you control.
+- **Ice Eternal** (3) · tier `part` · iyslander
+  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
+    > Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.
+- **Jack Be Quick** (1) · tier `part` · briar
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
+- **Loot the Arsenal** (3) · tier `part` · gravy
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Your next Pirate ally attack this turn gets "When this hits a hero, destroy a card in their arsenal
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > If you do, create a Gold token."
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If you do, create a Gold token."
+- **Magmatic Carapace** · tier `part` · bravo
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If you do, create a Seismic Surge token.
+- … and 44 more (see the station)
 
-### LOST VALUE — 72 entries
+### LOST VALUE — 66 entries
 
 - **Aether Icevein** (1) · tier `part` · iyslander
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -367,7 +369,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If an activated ability or action card effect puts this face up into a zone from your deck, gain 1 action point.
 - **Barnacle** (2) · tier `full` · gravy
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 8 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 6 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
 - **Beckoning Haunt** · tier `part` · viserai
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -386,13 +388,6 @@ worst thing a trainer can do: it teaches wrong play.
 - **Bolt'n' Shot** (1) · tier `none`
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If this's {p} is greater than its base {p}, it has go again and "If this hits, reload."
-- **Bull's Eye Bracers** · tier `part`
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Action - Destroy this: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Action - Destroy this: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Action - Destroy this: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
 - **Call in the Big Guns** (1) · tier `part` · azalea
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > You may put an arrow from your hand face-up into your arsenal.
@@ -441,21 +436,22 @@ worst thing a trainer can do: it teaches wrong play.
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > Action - {r}, destroy this: Put target Runeblade attack action card and target Runeblade 'non-attack' action card from your graveyard on top of your deck in any order.
 - **Cutty Shark, Quick Clip** (2) · tier `full`
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 8 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 6 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
-- **Death Dealer** · tier `part` · azalea
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > If you do, draw a card
 - **Enigma Chimera** (1) · tier `full` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 6 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- … and 47 more (see the station)
+- **Enigma Chimera** (2) · tier `full` · enigma
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+    > Phantasm
+- **Entangling Shot** (1) · tier `none` · azalea
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > When this is put face-up into your arsenal, you may {t} target hero.
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > When this is put face-up into your arsenal, you may {t} target hero.
+- … and 41 more (see the station)
 
-### INERT — 9 entries
+### INERT — 8 entries
 
 - **Big Bertha** (3) · tier `part` · dash
   - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
@@ -475,9 +471,6 @@ worst thing a trainer can do: it teaches wrong play.
 - **Line Crossers** · tier `part` · lyath
   - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
     > If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.
-- **Ridge Rider Shot** (1) · tier `none` · azalea
-  - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
-    > If this is put into your arsenal face up, opt 1.
 - **Spire Sniping** (2) · tier `none` · azalea
   - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
     > When this is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.

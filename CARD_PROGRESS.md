@@ -1,0 +1,517 @@
+# CARD_PROGRESS — Phase 3 pool checklist
+
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:13:45.259Z, DATA_VER `sage-v10`,
+APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
+here do not change what the engine reads. Regenerate after any parser change:
+
+```
+npm run audit && npm run progress
+```
+
+A box is checked **only** when the audit says so: a pool card at tier `full`,
+a hero with every printed clause covered, a token whose lifecycle reads at
+`fx: full`. Nothing here is asserted by hand — that is what keeps this
+different from a todo list someone forgets to update. Cards below `full`
+carry their audit tier and unread-clause count; see `AUDIT.md` for the
+verbatim clause text, `STACK.md` for what mechanic a gap is waiting on, and
+`SWEEP.md` for hero/token/ruled-not-built axes the stack never charged.
+
+Per CLAUDE.md's golden rule, "done" here means the generic parser
+(`classifyClause`/`fxParse` in `engine/parser.js`) reads the card's own
+printed text — never that a card was special-cased by name. The guarded
+override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
+rare genuinely non-generalizable ability; any card resolved that way is
+noted inline below.
+
+**Overall: 290 / 437 (66%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 281/405
+(tiers: full 281, part 96, none 28)
+
+---
+
+## Heroes (2/15)
+
+- [ ] **Arakni, Web of Deceit** — 0/2 clauses read
+  - [ ] Your attacks with stealth that are attacking a marked hero get +1{p} and "When this hits, this gets go again."
+  - [ ] At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos.
+- [ ] **Azalea** — 0/4 clauses read
+  - [ ] Once per Turn Action - 0: Put a card from your arsenal on the bottom of your deck
+  - [ ] If you do, put the top card of your deck face up into your arsenal
+  - [ ] If it's an arrow card, it gains dominate until end of turn
+  - [ ] Go again
+- [ ] **Blaze, Firemind** — 0/3 clauses read
+  - [ ] Whenever you opt, put energy counters on Blaze equal to the number of cards looked at this way.
+  - [ ] Once per Turn Instant - Remove X energy counters from Blaze: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X
+  - [ ] You may play it this turn as though it were an instant.
+- [ ] **Boltyn** — 0/2 clauses read
+  - [ ] If you've charged this turn, your attacks get +1{p} while defended by an attack action card.
+  - [ ] Attack Reaction - Banish a card from Boltyn's soul: Target attack with {p} greater than its base {p} gains go again.
+- [ ] **Bravo, Flattering Showman** — 0/3 clauses read
+  - [ ] Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up
+  - [ ] If it has crush, it gets +2{p} and dominate this turn
+  - [ ] Go again
+- [ ] **Briar** — 0/3 clauses read
+  - [ ] Essence of Earth and Lightning
+  - [ ] The first time an attack action card you control deals damage to an opposing hero, create an Embodiment of Earth token.
+  - [ ] Whenever you play your second 'non-attack' action card each turn, create an Embodiment of Lightning token.
+- [x] **Dash** — 1/1 clauses read
+  - [x] You may start the game with a Mechanologist item with cost 2 or less in the arena.
+- [ ] **Dorinthea** — 0/1 clauses read
+  - [ ] Once per turn Effect - When a weapon you control hits, you may attack an additional time with that weapon this turn.
+- [ ] **Enigma** — 0/2 clauses read
+  - [ ] Your first Spectral Shield attack each turn costs {r} less to activate.
+  - [ ] Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
+- [ ] **Fai** — 0/3 clauses read
+  - [ ] You may start the game with a Phoenix Flame in your graveyard.
+  - [ ] Once per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand
+  - [ ] This ability costs {r} less for each Draconic chain link you control.
+- [ ] **Gravy Bones** — 1/2 clauses read
+  - [ ] Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.
+  - [x] If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.
+- [ ] **Iyslander** — 2/3 clauses read
+  - [ ] Essence of Ice
+  - [x] If it's not your turn, you may play blue 'non-attack' action cards from your arsenal as though they were an instant.
+  - [x] Whenever you play an Ice card during an opponents turn, create a Frostbite token under their control.
+- [ ] **Kayo** — 0/3 clauses read
+  - [ ] You have 1 weapon zone.
+  - [ ] Attack action cards you own get +1{p} while they are in any zone other than the combat chain.
+  - [ ] The first time you discard a card with 6 or more {p} during each of your action phases, create a Might token.
+- [ ] **Lyath Goldmane** — 2/4 clauses read
+  - [ ] The base {p} and {d} of cards you control are halved, rounded up.
+  - [x] Instant - {r}{r}, {t}: The crowd boos you
+  - [ ] Defending action cards you control get +1{d} this turn.
+  - [x] Whenever the crowd boos you, create a Might token.
+- [x] **Viserai** — 1/1 clauses read
+  - [x] Whenever you play a Runeblade card, if you have played another 'non-attack' action card this turn, create a Runechant token.
+
+---
+
+## Tokens (7/17)
+
+- [x] **Agility** — fx tier: full
+- [ ] **Bloodrot Pox** — fx tier: none
+- [ ] **Confidence** — fx tier: none
+- [ ] **Courage** — fx tier: none
+- [ ] **Fealty** — fx tier: none
+- [ ] **Flurry** — fx tier: none
+- [ ] **Frailty** — fx tier: none
+- [ ] **Frostbite** — fx tier: none
+- [x] **Gold** — fx tier: full
+- [ ] **Graphene Chelicera** — fx tier: part
+- [x] **Inertia** — fx tier: full
+- [x] **Might** — fx tier: full
+- [x] **Ponder** — fx tier: full
+- [ ] **Runechant** — fx tier: none
+- [ ] **Seismic Surge** — fx tier: none
+- [x] **Spectral Shield** — fx tier: full
+- [x] **Vigor** — fx tier: full
+
+---
+
+## Pool cards (281/405)
+
+- [x] A Drop in the Ocean [pitch 3] _(enigma)_
+- [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
+- [x] Achilles Accelerator _(dash)_
+- [ ] Act of Glory [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [x] Aether Hail [pitch 3] _(iyslander)_
+- [ ] Aether Icevein [pitch 1] — part, 2 clause(s) unread _(iyslander)_
+- [ ] Aether Icevein [pitch 2] — part, 2 clause(s) unread _(iyslander)_
+- [ ] Aether Icevein [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [x] Aether Quickening [pitch 3] _(blaze)_
+- [x] Aether Spindle [pitch 1] _(blaze)_
+- [x] Aether Spindle [pitch 3] _(blaze)_
+- [x] Aetherstorm Wellingtons _(blaze, iyslander)_
+- [ ] Agile Engagement [pitch 1] — part, 1 clause(s) unread _(dorinthea)_
+- [ ] Agile Windup [pitch 3] — none, 1 clause(s) unread _(kayo)_
+- [x] Amplify the Arknight [pitch 1] _(viserai)_
+- [x] Arcane Lantern _(lyath)_
+- [ ] Arcane Polarity [pitch 1] — part, 1 clause(s) unread _(blaze, briar, fai)_
+- [ ] Arcane Seeds // Life [pitch 1] — part, 2 clause(s) unread _(briar)_
+- [ ] Arcane Twining [pitch 3] — part, 1 clause(s) unread _(blaze, iyslander)_
+- [ ] Arcanic Shockwave [pitch 1] — none, 2 clause(s) unread _(briar)_
+- [x] Art of Desire: Body [pitch 1] _(arakni)_
+- [x] Art of Desire: Mind [pitch 3] _(arakni)_
+- [x] Art of the Dragon: Fire [pitch 1] _(fai)_
+- [ ] Astral Etchings [pitch 1] — none, 2 clause(s) unread _(enigma)_
+- [x] Avast Ye! [pitch 3] _(gravy)_
+- [ ] Back Alley Breakline [pitch 3] — none, 1 clause(s) unread _(gravy)_
+- [x] Banneret of Salvation [pitch 2] _(boltyn)_
+- [x] Bare Fangs [pitch 1] _(kayo)_
+- [x] Bare Fangs [pitch 2] _(kayo)_
+- [x] Barnacle [pitch 2] _(gravy)_
+- [x] Basalt Boots _(bravo)_
+- [x] Battalion Barque [pitch 1] _(gravy)_
+- [x] Beaming Bravado [pitch 1] _(boltyn)_
+- [x] Beaming Bravado [pitch 2] _(boltyn)_
+- [x] Bear Hug [pitch 3] _(kayo)_
+- [ ] Beaten Trackers — part, 2 clause(s) unread _(kayo)_
+- [ ] Beckoning Haunt — part, 1 clause(s) unread _(viserai)_
+- [ ] Big Bertha [pitch 3] — part, 1 clause(s) unread _(dash)_
+- [x] Big Blue Sky [pitch 3] _(enigma)_
+- [x] Blade Beckoner Boots _(arakni, blaze, briar, dash, enigma, iyslander, viserai)_
+- [x] Blade Beckoner Gauntlets _(blaze, bravo, briar, dash, iyslander, kayo)_
+- [x] Blade Beckoner Helm _(azalea, bravo, briar, dash, enigma, fai, iyslander, lyath, viserai)_
+- [x] Blade Beckoner Plating _(lyath)_
+- [x] Blaze Headlong [pitch 1] _(fai)_
+- [x] Blood Scent _(fai)_
+- [x] Blossom of Spring _(arakni, azalea, briar, dash, dorinthea, enigma, viserai)_
+- [x] Bolt of Courage [pitch 1] _(boltyn)_
+- [x] Bolt of Courage [pitch 2] _(boltyn)_
+- [ ] Bolt'n Boots — part, 1 clause(s) unread _(azalea)_
+- [ ] Bolt'n' Shot [pitch 1] — none, 1 clause(s) unread _(azalea)_
+- [ ] Boom Grenade [pitch 1] — part, 2 clause(s) unread _(dash)_
+- [x] Booze! [pitch 3] _(lyath)_
+- [x] Boulder Drop [pitch 1] _(bravo)_
+- [x] Boulder Drop [pitch 3] _(bravo)_
+- [ ] Brain Freeze [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [x] Brand with Cinderclaw [pitch 1] _(fai)_
+- [x] Brand with Cinderclaw [pitch 2] _(fai)_
+- [x] Brand with Cinderclaw [pitch 3] _(fai)_
+- [ ] Brothers in Arms [pitch 3] — none, 2 clause(s) unread _(iyslander, lyath)_
+- [x] Buckling Blow [pitch 1] _(bravo)_
+- [x] Buckling Blow [pitch 3] _(bravo)_
+- [x] Buckwild [pitch 1] _(kayo)_
+- [x] Buckwild [pitch 3] _(kayo)_
+- [x] Bull's Eye Bracers _(azalea)_
+- [ ] Burn Up // Shock [pitch 1] — part, 2 clause(s) unread _(briar)_
+- [ ] Call in the Big Guns [pitch 1] — part, 1 clause(s) unread _(azalea)_
+- [ ] Carrion Crown — part, 1 clause(s) unread _(gravy)_
+- [x] Cartilage Crush [pitch 1] _(bravo)_
+- [x] Chokeslam [pitch 1] _(bravo)_
+- [x] Chokeslam [pitch 3] _(bravo)_
+- [ ] Cindering Foresight [pitch 1] — part, 1 clause(s) unread _(blaze)_
+- [ ] Cindering Foresight [pitch 2] — part, 1 clause(s) unread _(blaze)_
+- [ ] Cindering Foresight [pitch 3] — part, 1 clause(s) unread _(blaze)_
+- [x] Cinderskin Devotion [pitch 3] _(fai)_
+- [x] Clash of Agility [pitch 1] _(kayo)_
+- [x] Clash of Might [pitch 1] _(kayo)_
+- [x] Clash of Might [pitch 2] _(kayo)_
+- [x] Clash of Vigor [pitch 3] _(bravo)_
+- [x] Cloud Cover [pitch 1] _(briar)_
+- [ ] Cold Snap [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [ ] Compass of Sunken Depths — part, 1 clause(s) unread _(gravy)_
+- [x] Concealed Object [pitch 3] _(lyath)_
+- [ ] Concoct Disorder [pitch 1] — none, 2 clause(s) unread _(arakni)_
+- [ ] Condemn to Slaughter [pitch 1] — part, 2 clause(s) unread _(viserai)_
+- [ ] Condemn to Slaughter [pitch 3] — part, 2 clause(s) unread _(viserai)_
+- [ ] Cosmo, Scroll of Ancestral Tapestry — none, 2 clause(s) unread _(enigma)_
+- [x] Courageous Steelhand [pitch 1] _(boltyn)_
+- [ ] Crankshaft [pitch 1] — part, 1 clause(s) unread _(dash)_
+- [ ] Crankshaft [pitch 3] — part, 1 clause(s) unread _(dash)_
+- [ ] Crash and Bash [pitch 1] — none, 2 clause(s) unread _(bravo)_
+- [ ] Crow's Nest — part, 2 clause(s) unread _(azalea)_
+- [ ] Crown of Dichotomy — part, 1 clause(s) unread _(briar, viserai)_
+- [x] Crucible of Aetherweave _(blaze, iyslander)_
+- [x] Crush the Weak [pitch 3] _(bravo)_
+- [x] Cutty Shark, Quick Clip [pitch 2] _(gravy)_
+- [ ] Danger Digits — part, 2 clause(s) unread _(arakni)_
+- [ ] Dawnblade — part, 2 clause(s) unread _(dorinthea)_
+- [x] Death Dealer _(azalea)_
+- [x] Debilitate [pitch 1] _(bravo)_
+- [x] Debilitate [pitch 3] _(bravo)_
+- [ ] Den of the Spider [pitch 1] — none, 1 clause(s) unread _(arakni)_
+- [x] Disable [pitch 3] _(bravo)_
+- [x] Display Loyalty [pitch 1] _(fai)_
+- [x] Double Cross Strap _(fai)_
+- [x] Drag Down [pitch 1] _(lyath)_
+- [x] Dragon Power [pitch 3] _(fai)_
+- [ ] Drill Shot [pitch 1] — none, 2 clause(s) unread _(azalea)_
+- [x] Drop the Anchor [pitch 1] _(azalea)_
+- [x] Dry Powder Shot [pitch 1] _(azalea)_
+- [x] Duty Bound Blitz [pitch 1] _(boltyn)_
+- [x] Duty Bound Blitz [pitch 2] _(boltyn)_
+- [ ] Edge of Their Seats [pitch 3] — part, 1 clause(s) unread _(bravo, lyath)_
+- [ ] Edge of Their Seats [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [ ] Edict of Steel [pitch 1] — part, 2 clause(s) unread _(boltyn)_
+- [x] Emeritus Scolding [pitch 3] _(blaze, iyslander)_
+- [x] Emeritus Scolding [pitch 1] _(blaze)_
+- [x] Emeritus Scolding [pitch 2] _(blaze)_
+- [x] Enclosed Firemind _(bravo)_
+- [x] Energy Potion [pitch 3] _(dorinthea, fai)_
+- [x] Enflame the Firebrand [pitch 1] _(fai)_
+- [x] Engulfing Light [pitch 1] _(boltyn)_
+- [x] Engulfing Light [pitch 2] _(boltyn)_
+- [x] Enigma Chimera [pitch 1] _(enigma)_
+- [x] Enigma Chimera [pitch 2] _(enigma)_
+- [ ] Entangling Shot [pitch 1] — none, 1 clause(s) unread _(azalea)_
+- [ ] Entwine Lightning [pitch 1] — none, 2 clause(s) unread _(briar)_
+- [x] Fault Line [pitch 1] _(bravo)_
+- [x] Fender Bender [pitch 1] _(dash)_
+- [x] Fire Tenet: Strike First [pitch 1] _(fai)_
+- [x] Fire that Burns Within [pitch 1] _(fai)_
+- [ ] Flamecall Awakening [pitch 1] — part, 1 clause(s) unread _(fai)_
+- [x] Flat Trackers _(boltyn)_
+- [x] Flatten the Field [pitch 3] _(bravo)_
+- [x] Fluid Motion [pitch 3] _(enigma)_
+- [x] Flying High [pitch 3] _(gravy, viserai)_
+- [ ] Frailty Trap [pitch 1] — none, 1 clause(s) unread _(arakni)_
+- [x] Frost Spike [pitch 3] _(iyslander)_
+- [x] Frosting [pitch 3] _(iyslander)_
+- [x] Fry [pitch 1] _(briar)_
+- [ ] Full of Bravado [pitch 3] — none, 1 clause(s) unread _(lyath)_
+- [x] Fyendal's Fighting Spirit [pitch 1] _(blaze, iyslander)_
+- [x] Garland of Spring _(boltyn)_
+- [x] Gauntlets of Unity _(boltyn, dorinthea)_
+- [ ] Glisten [pitch 1] — none, 2 clause(s) unread _(boltyn)_
+- [x] Goblet of Bloodrun Wine [pitch 3] _(dorinthea)_
+- [x] Golden Tipple [pitch 1] _(gravy)_
+- [x] Golden Tipple [pitch 2] _(gravy)_
+- [x] Golden Tipple [pitch 3] _(gravy)_
+- [x] Goon Beatdown [pitch 3] _(lyath)_
+- [x] Goon Tactics [pitch 3] _(lyath)_
+- [ ] Halo of Illumination — part, 2 clause(s) unread _(boltyn)_
+- [x] Helm of Unity _(boltyn, dorinthea)_
+- [x] High Pitched Howl [pitch 1] _(kayo)_
+- [x] Hit and Run [pitch 3] _(dorinthea)_
+- [x] Hit the High Notes [pitch 1] _(viserai)_
+- [x] Homage to Ancestors [pitch 3] _(enigma)_
+- [ ] Hope Merchant's Hood — none, 1 clause(s) unread _(dash, fai)_
+- [x] Hot on Their Heels [pitch 1] _(fai)_
+- [x] Hyper Driver [pitch 1] _(dash)_
+- [x] Hyper Inflation [pitch 1] _(arakni)_
+- [x] Ice Bolt [pitch 1] _(iyslander)_
+- [x] Ice Bolt [pitch 3] _(iyslander)_
+- [ ] Ice Eternal [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [x] Illuminate [pitch 1] _(boltyn)_
+- [ ] Inertia Trap [pitch 1] — none, 1 clause(s) unread _(arakni)_
+- [x] Infect [pitch 1] _(arakni)_
+- [x] Infecting Shot [pitch 1] _(azalea)_
+- [x] Infecting Shot [pitch 2] _(azalea)_
+- [x] Ironrot Gauntlet _(dummy)_
+- [x] Ironrot Helm _(dummy)_
+- [x] Ironrot Legs _(dummy)_
+- [x] Ironrot Plate _(dummy)_
+- [x] Ironsong Response [pitch 1] _(dorinthea)_
+- [x] Ironsong Response [pitch 3] _(dorinthea)_
+- [ ] Jack Be Quick [pitch 1] — part, 1 clause(s) unread _(briar)_
+- [ ] Jittery Bones [pitch 3] — none, 2 clause(s) unread _(gravy)_
+- [x] Jump Start [pitch 1] _(dash)_
+- [x] Jump Start [pitch 2] _(dash)_
+- [x] Jump Start [pitch 3] _(dash)_
+- [x] Knucklehead _(kayo)_
+- [x] Lace with Bloodrot [pitch 1] _(azalea)_
+- [x] Lace with Frailty [pitch 1] _(azalea)_
+- [x] Lace with Inertia [pitch 1] _(azalea)_
+- [ ] Lair of the Spider [pitch 1] — none, 1 clause(s) unread _(arakni)_
+- [x] Lava Burst [pitch 1] _(fai)_
+- [x] Lead with Speed [pitch 1] _(dorinthea)_
+- [x] Light the Way [pitch 1] _(boltyn)_
+- [x] Light the Way [pitch 2] _(boltyn)_
+- [x] Lightning Press [pitch 1] _(briar)_
+- [x] Lightning Surge [pitch 1] _(briar)_
+- [x] Limpit, Hop-a-long [pitch 2] _(gravy)_
+- [ ] Line Crossers — part, 1 clause(s) unread _(lyath)_
+- [ ] Look Tuff [pitch 1] — none, 1 clause(s) unread _(blaze, enigma, iyslander)_
+- [ ] Loot the Arsenal [pitch 3] — part, 2 clause(s) unread _(gravy)_
+- [ ] Loot the Hold [pitch 3] — part, 1 clause(s) unread _(gravy)_
+- [x] Macho Grande [pitch 3] _(bravo)_
+- [x] Mage Master Boots _(gravy)_
+- [ ] Magmatic Carapace — part, 2 clause(s) unread _(bravo)_
+- [ ] Malefic Incantation [pitch 1] — part, 2 clause(s) unread _(viserai)_
+- [ ] Malefic Incantation [pitch 2] — part, 2 clause(s) unread _(viserai)_
+- [x] Mandible Claw _(kayo)_
+- [x] Manifest Muscle [pitch 3] _(enigma)_
+- [ ] Mark of the Black Widow [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [ ] Mark of the Black Widow [pitch 3] — part, 1 clause(s) unread _(arakni)_
+- [ ] Mark of the Funnel Web [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [x] Mark of the Huntsman _(arakni)_
+- [x] Mark the Prey [pitch 1] _(arakni)_
+- [x] Mask of the Swarming Claw _(fai)_
+- [x] Mauvrion Skies [pitch 1] _(viserai)_
+- [x] Mauvrion Skies [pitch 3] _(viserai)_
+- [ ] Memorial Ground [pitch 2] — none, 1 clause(s) unread _(azalea)_
+- [x] Mocking Blow [pitch 1] _(lyath)_
+- [x] Mocking Blow [pitch 2] _(lyath)_
+- [x] Mocking Blow [pitch 3] _(lyath)_
+- [ ] Mounting Anger [pitch 1] — part, 2 clause(s) unread _(fai)_
+- [x] Mournful Casket _(gravy)_
+- [x] Murderous Rabble [pitch 3] _(gravy)_
+- [x] Murkmire Grapnel [pitch 1] _(azalea)_
+- [ ] Night's Embrace [pitch 3] — none, 1 clause(s) unread _(arakni)_
+- [x] Nimblism [pitch 1] _(azalea, briar)_
+- [x] Nimblism [pitch 2] _(briar)_
+- [x] Nip at the Heels [pitch 3] _(dorinthea, fai)_
+- [x] Nullrune Boots _(boltyn, bravo, viserai)_
+- [x] Nullrune Gloves _(bravo, dash, dorinthea, gravy, iyslander, kayo, viserai)_
+- [x] Nullrune Hood _(dash, dorinthea, enigma, iyslander, kayo, lyath)_
+- [x] Nullrune Robe _(arakni, boltyn, bravo, dorinthea, enigma, gravy, kayo, lyath)_
+- [ ] Oasis Respite [pitch 1] — part, 1 clause(s) unread _(dorinthea, enigma, lyath)_
+- [x] On the Horizon [pitch 1] _(enigma, iyslander)_
+- [x] Open the Flood Gates [pitch 3] _(blaze)_
+- [ ] Orb-Weaver Spinneret [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [x] Out for Blood [pitch 1] _(dorinthea)_
+- [x] Out Pace [pitch 1] _(dash)_
+- [x] Overblast [pitch 1] _(dash)_
+- [x] Overpower [pitch 1] _(dorinthea)_
+- [x] Overpower [pitch 3] _(dorinthea)_
+- [ ] Oysten, Heart of Gold [pitch 2] — part, 1 clause(s) unread _(gravy)_
+- [ ] Pass Over [pitch 3] — part, 1 clause(s) unread _(enigma)_
+- [ ] Path of Same Ends [pitch 1] — part, 1 clause(s) unread _(briar)_
+- [ ] Phantasmal Haze [pitch 3] — part, 1 clause(s) unread _(enigma)_
+- [x] Phoenix Flame [pitch 1] _(fai)_
+- [ ] Photon Splicing [pitch 3] — part, 1 clause(s) unread _(blaze, iyslander)_
+- [ ] Pick Up the Point [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [ ] Plasma Barrel Shot — part, 2 clause(s) unread _(dash)_
+- [ ] Polar Cap [pitch 1] — part, 1 clause(s) unread _(iyslander)_
+- [ ] Portside Exchange [pitch 3] — part, 1 clause(s) unread _(gravy)_
+- [x] Pouncing Paws _(fai)_
+- [x] Power Play [pitch 3] _(lyath)_
+- [x] Predatory Plating _(kayo)_
+- [ ] Preserve Tradition [pitch 3] — part, 1 clause(s) unread _(enigma)_
+- [x] Prey Spotters _(arakni)_
+- [x] Prime the Crowd [pitch 1] _(lyath)_
+- [ ] Pulping [pitch 1] — part, 1 clause(s) unread _(kayo)_
+- [ ] Pummel [pitch 1] — part, 1 clause(s) unread _(bravo)_
+- [x] Puncture [pitch 1] _(dorinthea)_
+- [x] Puncture [pitch 3] _(dorinthea)_
+- [x] Put in Context [pitch 3] _(dorinthea, enigma)_
+- [x] Pyroglyphic Protection [pitch 3] _(iyslander)_
+- [x] Quick Clicks _(azalea, briar)_
+- [ ] Radiant Touch — none, 1 clause(s) unread _(boltyn)_
+- [ ] Rally the Coast Guard [pitch 3] — part, 1 clause(s) unread _(kayo)_
+- [x] Ravenous Rabble [pitch 1] _(azalea, briar)_
+- [x] Raydn, Duskbane _(boltyn)_
+- [ ] Re-Charge! [pitch 1] — part, 1 clause(s) unread _(dash)_
+- [x] Read the Glide Path [pitch 1] _(azalea)_
+- [x] Read the Runes [pitch 1] _(viserai)_
+- [ ] Reaper's Call [pitch 3] — part, 1 clause(s) unread _(arakni)_
+- [x] Reaping Blade _(viserai)_
+- [x] Reduce to Runechant [pitch 1] _(viserai)_
+- [ ] Refraction Bolters — part, 2 clause(s) unread _(dorinthea)_
+- [x] Reincarnate [pitch 3] _(kayo)_
+- [x] Release the Tension [pitch 1] _(azalea)_
+- [x] Rev Up [pitch 1] _(dash)_
+- [x] Ridge Rider Shot [pitch 1] _(azalea)_
+- [x] Riggermortis [pitch 2] _(gravy)_
+- [ ] Rise from the Ashes [pitch 1] — part, 1 clause(s) unread _(fai)_
+- [ ] Rising Resentment [pitch 1] — part, 2 clause(s) unread _(fai)_
+- [x] Rising Sun, Setting Moon [pitch 3] _(enigma)_
+- [ ] Roaring Beam [pitch 2] — part, 1 clause(s) unread _(boltyn)_
+- [x] Ronin Renegade [pitch 1] _(fai)_
+- [x] Rough Up [pitch 1] _(kayo)_
+- [x] Run Roughshod [pitch 3] _(kayo)_
+- [x] Run Through [pitch 2] _(dorinthea)_
+- [x] Rune Flash [pitch 1] _(viserai)_
+- [x] Runebleed Robe _(viserai)_
+- [x] Runerager Swarm [pitch 1] _(viserai)_
+- [x] Runic Fellingsong [pitch 1] _(viserai)_
+- [x] Rush of Power [pitch 1] _(briar)_
+- [x] Sadistic Scowl [pitch 1] _(lyath)_
+- [x] Salt the Wound [pitch 2] _(fai)_
+- [ ] Saltwater Swell [pitch 1] — part, 1 clause(s) unread _(gravy)_
+- [ ] Saltwater Swell [pitch 3] — part, 1 clause(s) unread _(gravy)_
+- [x] Savage Feast [pitch 1] _(kayo)_
+- [x] Scar for a Scar [pitch 1] _(briar, dorinthea, fai)_
+- [x] Scar Tissue [pitch 1] _(arakni)_
+- [x] Scorpio, Comet Tail _(briar)_
+- [x] Scout the Periphery [pitch 1] _(azalea)_
+- [ ] Scuttle Toes — part, 1 clause(s) unread _(gravy)_
+- [ ] Searing Emberblade — part, 1 clause(s) unread _(fai)_
+- [x] Searing Shot [pitch 1] _(azalea)_
+- [x] Second Strike [pitch 1] _(briar)_
+- [x] Second Tenet of Chi: Wind [pitch 3] _(enigma)_
+- [x] Seeker's Mitts _(blaze)_
+- [x] Sharpen Steel [pitch 1] _(dorinthea)_
+- [x] Short Shrift [pitch 2] _(lyath)_
+- [ ] Shred [pitch 3] — none, 1 clause(s) unread _(arakni)_
+- [x] Shrill of Skullform [pitch 1] _(viserai)_
+- [x] Shrill of Skullform [pitch 2] _(viserai)_
+- [x] Shrill of Skullform [pitch 3] _(viserai)_
+- [ ] Sigil of Silphidae [pitch 3] — part, 2 clause(s) unread _(viserai)_
+- [x] Sigil of Suffering [pitch 1] _(briar, viserai)_
+- [ ] Silent Stilettos — part, 2 clause(s) unread _(enigma)_
+- [x] Sizzle [pitch 1] _(briar)_
+- [x] Sledge of Anvilheim _(bravo)_
+- [x] Smash Instinct [pitch 3] _(kayo)_
+- [ ] Snapback [pitch 1] — part, 1 clause(s) unread _(blaze)_
+- [x] Snatch [pitch 1] _(boltyn, briar, fai)_
+- [x] Spears of Surreality [pitch 3] _(enigma)_
+- [x] Spectral Manifestations [pitch 1] _(enigma)_
+- [ ] Spectral Rider [pitch 3] — part, 1 clause(s) unread _(enigma)_
+- [x] Spellblade Assault [pitch 1] _(viserai)_
+- [x] Spellblade Assault [pitch 3] _(viserai)_
+- [x] Spellfire Cloak _(blaze, iyslander)_
+- [x] Spike with Bloodrot [pitch 1] _(arakni)_
+- [ ] Spire Sniping [pitch 2] — none, 1 clause(s) unread _(azalea)_
+- [x] Springboard Somersault [pitch 2] _(boltyn, dorinthea, enigma)_
+- [x] Sprout Strength [pitch 1] _(briar)_
+- [ ] Stains of the Redback [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [ ] Stalker's Steps — part, 1 clause(s) unread _(arakni)_
+- [x] Stand Strong _(lyath)_
+- [ ] Star Fall — part, 1 clause(s) unread _(briar)_
+- [x] Static Shock [pitch 1] _(briar)_
+- [ ] Staunch Response [pitch 1] — part, 1 clause(s) unread _(bravo)_
+- [x] Steelbraid Buckler _(bravo)_
+- [x] Stir the Aetherwinds [pitch 3] _(iyslander)_
+- [x] Stonewall Impasse _(lyath)_
+- [x] Stroke of Foresight [pitch 1] _(dorinthea)_
+- [x] Strongest Survive [pitch 1] _(kayo)_
+- [x] Strongest Survive [pitch 2] _(kayo)_
+- [x] Strongest Survive [pitch 3] _(kayo)_
+- [x] Swabbie [pitch 2] _(gravy)_
+- [x] Swift Shot [pitch 1] _(azalea)_
+- [x] Swiftstrike Bracers _(briar)_
+- [x] Swiftwater Sloop [pitch 1] _(gravy)_
+- [x] Swiftwater Sloop [pitch 3] _(gravy)_
+- [ ] Take Aim [pitch 1] — part, 1 clause(s) unread _(azalea)_
+- [x] Take Flight [pitch 1] _(boltyn)_
+- [x] Take Flight [pitch 2] _(boltyn)_
+- [x] Talishar, the Lost Prince _(dash)_
+- [x] Talismanic Lens _(azalea, blaze)_
+- [x] Tearing Shuko _(fai)_
+- [x] Teklo Trebuchet 2000 [pitch 3] _(dash)_
+- [ ] Tension in the Air [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [x] Test of Might [pitch 1] _(kayo)_
+- [x] Test of Strength [pitch 1] _(enigma)_
+- [ ] The Suspense is Killing Me [pitch 3] — part, 1 clause(s) unread _(bravo, lyath)_
+- [x] Throttle [pitch 1] _(dash)_
+- [x] Throttle [pitch 3] _(dash)_
+- [ ] Throw Caution to the Wind [pitch 3] — part, 1 clause(s) unread _(gravy)_
+- [ ] Thunder Quake [pitch 3] — none, 1 clause(s) unread _(bravo)_
+- [x] Timesnap Potion [pitch 3] _(gravy)_
+- [x] Titan's Fist _(bravo, lyath)_
+- [ ] Toe the Line [pitch 1] — part, 1 clause(s) unread _(boltyn)_
+- [ ] Topsy Turvy — part, 1 clause(s) unread _(arakni)_
+- [x] Trot Along [pitch 3] _(dorinthea, viserai)_
+- [ ] Turn to Mindfire [pitch 1] — part, 2 clause(s) unread _(blaze)_
+- [ ] Two Sides to the Blade [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [x] Under Loop [pitch 1] _(dash)_
+- [x] Unexpected Backhand [pitch 3] _(kayo)_
+- [x] Unmovable [pitch 1] _(enigma)_
+- [x] Unmovable [pitch 3] _(enigma)_
+- [ ] Up Sticks and Run [pitch 1] — part, 1 clause(s) unread _(arakni)_
+- [ ] Uphold Tradition — part, 1 clause(s) unread _(enigma)_
+- [ ] V of the Vanguard [pitch 2] — part, 1 clause(s) unread _(boltyn)_
+- [x] Valiant Thrust [pitch 2] _(boltyn)_
+- [x] Vexing Malice [pitch 3] _(viserai)_
+- [x] Villainous Pose [pitch 1] _(lyath)_
+- [x] Voltic Bolt [pitch 3] _(blaze, iyslander)_
+- [x] Voltic Bolt [pitch 1] _(blaze)_
+- [x] Walk in My Shoes [pitch 2] _(lyath)_
+- [ ] Waning Vengeance [pitch 1] — part, 1 clause(s) unread _(enigma)_
+- [x] Warrior's Valor [pitch 1] _(dorinthea)_
+- [x] Warrior's Valor [pitch 2] _(dorinthea)_
+- [x] Warrior's Valor [pitch 3] _(dorinthea)_
+- [ ] Washed Up Wave — part, 2 clause(s) unread _(gravy)_
+- [ ] Wax On [pitch 1] — none, 1 clause(s) unread _(fai)_
+- [ ] Waxing Specter [pitch 1] — part, 1 clause(s) unread _(enigma)_
+- [ ] Weave Lightning [pitch 1] — part, 1 clause(s) unread _(briar)_
+- [x] Wee Wrecking Ball [pitch 2] _(lyath)_
+- [x] Whisper of the Oracle [pitch 1] _(blaze)_
+- [x] Whisper of the Oracle [pitch 2] _(blaze)_
+- [x] Whisper of the Oracle [pitch 3] _(blaze)_
+- [x] Widowmaker [pitch 2] _(azalea)_
+- [x] Wild Ride [pitch 1] _(kayo)_
+- [x] Wild Ride [pitch 2] _(kayo)_
+- [x] Winter's Bite [pitch 3] _(iyslander)_
+- [x] Wounded Bull [pitch 1] _(blaze, iyslander)_
+- [ ] Wreck Havoc [pitch 1] — part, 1 clause(s) unread _(dorinthea)_
+- [x] Yo Ho Ho! [pitch 3] _(gravy)_
+- [x] Zealous Belting [pitch 1] _(bravo)_
+- [x] Zero to Sixty [pitch 1] _(dash)_
+- [x] Zero to Sixty [pitch 2] _(dash)_
+- [x] Zero to Sixty [pitch 3] _(dash)_
+- [x] Zipper Hit [pitch 1] _(dash)_
+- [x] Zipper Hit [pitch 2] _(dash)_
+- [x] Zipper Hit [pitch 3] _(dash)_

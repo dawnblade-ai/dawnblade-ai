@@ -183,7 +183,28 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"atkNamed:"+m[1].trim()});
     if(m=cond.match(/^you'?(?:ve| have) hit (\d+) or more times this combat chain$/))
       return Object.assign(rest,{cond:"hit"+m[1]});
+    /* CHARGE (Boltyn) — "As an additional cost to play this, you may
+       charge your hero's soul." is a real additional cost (hoisted into
+       fx.chargeCost below), and these are the riders that ask about it:
+       a turn-scoped boolean ("if you've charged this turn") and a
+       card-property check on the SPECIFIC card charged as this card's own
+       cost ("if a yellow card is/was charged this way"). Blue is pitch 3,
+       yellow is pitch 2, red is pitch 1 throughout this engine. */
+    if(/you'?(?:ve| have) charged this turn/.test(cond)) return Object.assign(rest,{cond:"charged"});
+    if(m=cond.match(/^an? (red|yellow|blue) card (?:is|was) charged this way$/))
+      return Object.assign(rest,{cond:"chargedPitch"+({red:1,yellow:2,blue:3}[m[1]])});
     return null;
+  }
+  /* "This/it gains '<ability text>'" — grants an entirely new ability
+     rather than modifying the card's own stats (Bolt of Courage: "gains
+     'If this hits, draw a card.'"; Engulfing Light: "gains 'If this hits,
+     put it into your hero's soul.'"). Read the quoted text with the SAME
+     reader rather than inventing a second vocabulary for granted text —
+     an on-hit grant recurses back through the onHit branch above via the
+     inner clause's own "when this hits" wrapper. */
+  if(m=c.match(/^(?:this|it) gains? "(.+)"$/)){
+    const inner = classifyClause(m[1]);
+    return (inner && inner.status==="run") ? inner : null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
   /* ANCHORED at both ends. Unanchored, this matched the TAIL of a gated
@@ -212,6 +233,30 @@ function classifyClause(raw){
     const sub = classifyClause(m[1]);
     if(!sub || sub.status!=="run") return null;
     return Object.assign(sub,{cond:"reprise"});
+  }
+  /* HIGH TIDE — named-keyword-gated, same shape as Reprise above:
+     "High Tide - If there are 2 or more blue cards in your pitch zone,
+     this gets go again." (Swiftwater Sloop). Blue is pitch value 3
+     throughout this engine (see the "colour is pitch" comment in
+     execute()); the printed threshold rides in the cond name so a future
+     High Tide card with a different number is read correctly rather than
+     assumed to be 2. */
+  if(m=c.match(/^high tide\s*[-—]\s*if there are (\d+) or more blue cards in your pitch zone,\s*(.+)$/i)){
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status!=="run") return null;
+    return Object.assign(sub,{cond:"pitchBlue"+m[1]});
+  }
+  /* SURGE — "Surge - If this deals more than N damage, it gets go again"
+     (Aether Quickening). N is always this card's OWN printed arcane base
+     — the clause is comparing the card to itself — and Amp (parser's own
+     "amp" op) is the only mechanic in this pool that can push a non-attack
+     arcane effect above its printed value, so "will this deal more than
+     its base" reduces exactly to "is there a live Amp bonus queued right
+     now". Evaluated before the arcane op runs and consumes it. */
+  if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i)){
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status!=="run") return null;
+    return Object.assign(sub,{cond:"surgeOver"+m[1]});
   }
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
   /* RULING 2026-07-25: stealth, mark and aim counters "do nothing on their
@@ -491,6 +536,68 @@ function optFilter(phrase){
    below cannot drift apart on what counts as the stamp. */
 const ARS_PUT   = /put an? [a-z ]+?(?: card)? (?:from your hand )?face.?up into your arsenal/i;
 const ARS_STAMP = /^\s*it (?:gains?|gets?)\s*\+\d+\s*\{p\}\s*until end of turn/i;
+/* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ----------------
+   The golden rule stays the default: teach the parser to read text, never
+   special-case a card by name. But some printed abilities genuinely are
+   not expressible as a generic clause rule — multi-branch state-dependent
+   gates, or cross-references to concepts the clause reader has no
+   vocabulary for. For those, and ONLY those, a named entry may hand-write
+   the logic here — on two conditions that keep it from becoming the
+   silent-drift trap the golden rule exists to prevent:
+
+     1. every entry PINS the exact printed text it was written against
+        (`text`, whitespace/markdown-normalized the same way `clean` does);
+     2. `applyOverride` re-checks that text against the LIVE card every
+        single time it runs, and REFUSES ITSELF — leaving whatever the
+        generic reader already produced untouched — the instant the
+        database text no longer matches. A card whose wording changes
+        underneath a stale override must never keep running the old logic;
+        it falls back to `part`/`none` and waits to be re-taught, same as
+        any other unclaimed card.
+
+   Keyed by name|pitch, same as FXMEMO. `read(card, fx)` sees the fx object
+   the generic reader already built for this card — most overridden cards
+   still have some generically-readable parts — and returns a patch to
+   merge in, or null/falsy to decline (e.g. a sub-case the override does
+   not actually cover). `clausesRun` lets the patch mark specific printed
+   clauses (or `true` for all of them) as satisfied, so the coverage tiers
+   in AUDIT.md/tools/stack.js stay honest about what is actually running. */
+const CARD_OVERRIDES = {
+  /* populated as genuinely non-generalizable cards are found — see
+     CARD_PROGRESS.md for the running list of what has been routed here
+     and why the generic reader could not take it. */
+};
+function applyOverride(card, fx){
+  const key = norm(card.name)+"|"+(card.pitch||0);
+  const ov = CARD_OVERRIDES[key];
+  if(!ov) return;
+  const live = clean(card.tx||"");
+  const expect = clean(ov.text||"");
+  if(live !== expect){
+    fx.overrideRefused = key;
+    return;
+  }
+  const patch = ov.read(card, fx);
+  if(!patch) return;
+  if(patch.ops && patch.ops.length) fx.ops.push(...patch.ops);
+  if(patch.onHit && patch.onHit.length) fx.onHit.push(...patch.onHit);
+  if(patch.conds && patch.conds.length) fx.conds.push(...patch.conds);
+  if(patch.self) fx.self += patch.self;
+  if(patch.ga) fx.ga = true;
+  if(patch.perm) fx.perm = patch.perm;
+  ["arsenalPut","arsenalUp","addCost","playIf","activateIf","defLimit",
+   "noEquipDefend","fromGY","fromBan","optCost","bottomOnDiscard"].forEach(k=>{
+    if(patch[k]!==undefined) fx[k]=patch[k];
+  });
+  if(patch.clausesRun === true) fx.clauses.forEach(c=>{ c.st="run"; });
+  else if(Array.isArray(patch.clausesRun)){
+    patch.clausesRun.forEach(sub=>{
+      fx.clauses.forEach(c=>{ if(c.t.includes(sub)) c.st="run"; });
+    });
+  }
+  fx.overrideApplied = key;
+}
+
 function fxParse(card){
   const key = norm(card.name)+"|"+(card.pitch||0);
   if(FXMEMO.has(key)) return FXMEMO.get(key);
@@ -536,6 +643,16 @@ function fxParse(card){
     const esc = String(card.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const selfRe = new RegExp("\\b"+esc+"(?:'s)?\\b", "gi");
     clauses = clauses.map(s => s.replace(selfRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
+    /* A subtitled name ("Raydn, Duskbane") is often shortened to its first
+       part in the card's OWN text ("Raydn gains +3{p}"), which the full-name
+       regex above never sees. Still driven entirely by card.name — not a
+       per-card exception — so it works for any future subtitled card. */
+    const shortName = String(card.name).split(",")[0].trim();
+    if(shortName && shortName !== card.name){
+      const escS = shortName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const shortRe = new RegExp("\\b"+escS+"(?:'s)?\\b", "gi");
+      clauses = clauses.map(s => s.replace(shortRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
+    }
   }
   /* ---- OPTIONAL COST + "If you do, …"  (v2.28) ------------------------
      "When this attacks, you may banish an aura from your graveyard.
@@ -608,14 +725,30 @@ function fxParse(card){
          `arsenalPut.stamp`, which puts it on the card that was actually put. */
       if(op[0]==="self" && ARS_STAMP.test(raw) && ARS_PUT.test(clean(card.tx||""))) return;
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
+      /* A CONDITIONALLY GRANTED on-hit ability (Bolt of Courage: "if you've
+         charged this turn, gains 'If this hits, draw a card.'") is NOT the
+         same thing as a plain on-hit clause. Checking r.onHit first and
+         running the op unconditionally — as this dispatcher used to — would
+         grant the ability on every hit regardless of the gate, which is
+         exactly the VALUE-DOUBLED/KEYWORD-UNGATED shape `npm run fairness`
+         exists to catch: a printed condition decorating an op the engine
+         also runs for free. condOnHit keeps the gate attached so the trigger
+         site (resolveStack) can re-check it before the op fires. */
+      if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op}]; return; }
       if(r.onHit) fx.onHit.push(op);
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
     });
   });
+  applyOverride(card, fx);
   const tl = clean(card.tx||"").toLowerCase();
   const am = tl.match(/as an additional cost to play(?: this)?,? (you may )?discard (a|an|one|two|\d+) cards?/);
   if(am && !am[1]) fx.addCost = {discard: num(am[2])};
+  /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
+     because it may name the card instead of saying "this"; the pattern
+     therefore skips either rather than requiring one. */
+  const chgm = tl.match(/as an additional cost to play(?: this| [a-z' ]+)?,? you may charge your hero'?s? soul( any number of times)?/);
+  if(chgm) fx.chargeCost = {multi: !!chgm[1]};
   /* the blocker limit itself, hoisted so the declare step can read it */
   const dl = tl.match(/can only defend an attack with (\d+) or less base \{p\}/);
   if(dl) fx.defLimit = +dl[1];
@@ -838,5 +971,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isInstantT,
         isRunechant, runeCount, isAura, auraCount,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty};
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
+        CARD_OVERRIDES};
 });

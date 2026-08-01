@@ -1921,12 +1921,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        grave cards" — and his printed text names the condition exactly:
        a blue card must have hit your graveyard this turn. */
     const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
+    /* LYATH: "Whenever the crowd boos you, create a Might token." */
+    const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
     let startItem = null;
     if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
       const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
       if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
     }
-    return {deck,gear,dGear,dDeck,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok,runeCard,
+    return {deck,gear,dGear,dDeck,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok,runeCard,
       /* the stream AFTER both opening shuffles — Battle continues it */
       rng};
   },[h,db]);
@@ -2431,6 +2433,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       else if(k==="boo"){
         actMut(n).hist = {...act(n).hist, booed:(act(n).hist.booed||0)+1};
         n = L(n, "The crowd boos you — Reviled, and your Bravo cards know it.");
+        /* LYATH: "Whenever the crowd boos you, create a Might token." Reuses
+           the generic "token" op rather than duplicating the board-mint
+           logic — a token is a card, resolved once, in one place. */
+        if(built.lyathBoo) n = runOps(n, [["token","Might",1,"self"]], "Lyath");
       }
       else if(k==="mark"){
         foeMut(n).marked = true;
@@ -2506,6 +2512,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const attacking = isAttack(card) || from==="weapon";
     let ga = fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
+    /* CHARGE (Boltyn) — "As an additional cost to play this, you may charge
+       your hero's soul." A real additional cost paid BEFORE the rest of the
+       card resolves, so it has to happen here, ahead of the conds loop below
+       that reads it ("if a yellow card is charged this way"). Real play is a
+       genuine choice; the trainer has no prompt wired for a cost paid before
+       the card's own total is struck (prompts drain only after resolution —
+       see engine/prompts.js), so this follows the SAME honest approximation
+       already in place for fx.addCost.discard: auto-pick from hand, cheapest
+       card first. The pick prefers whatever pitch this card's OWN rider is
+       asking for (read off fx.conds — never guessed or special-cased by
+       name) so the "may" is worth taking when it would actually pay off. */
+    let chargedPitch = null;
+    if(fx.chargeCost && act(n).hand.length){
+      const wantCond = fx.conds.concat(fx.condOnHit||[]).map(x=>x.cond).find(c2=>/^chargedPitch\d$/.test(c2));
+      const wantPitch = wantCond ? +wantCond.match(/\d+/)[0] : null;
+      let idx = wantPitch!=null ? act(n).hand.findIndex(c2=>c2.pitch===wantPitch) : -1;
+      if(idx===-1){
+        const ranked = act(n).hand.map((c2,i2)=>({i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v);
+        idx = ranked[0].i2;
+      }
+      const picked = act(n).hand[idx];
+      chargedPitch = picked.pitch;
+      actMut(n).soul = [picked, ...act(n).soul];
+      actMut(n).hand = act(n).hand.filter((_,i2)=>i2!==idx);
+      actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
+      n = L(n, `${card.name}: charged ${picked.name} into your hero's soul (Charge).`);
+    }
     // conditional clauses evaluated against this turn's history (before this card)
     /* "INSTEAD" REPLACES. When a conditional payload says "instead" and its
        condition is MET, the unconditional base op of the same kind must NOT
@@ -2560,8 +2593,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext)
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
         : cond==="lifeTie" ? act(n).hp === foe(n).hp
+        /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
+           asks about the SPECIFIC card just charged as THIS card's own cost
+           (chargedPitch is computed above, before this loop runs). */
+        : cond==="charged" ? (act(n).hist.charged||0)>0
+        : /^chargedPitch\d$/.test(cond) ? chargedPitch === +cond.match(/\d+/)[0]
         : /^atkNamed:/.test(cond) ? (act(n).hist.atkNames||[]).includes(cond.slice(9))
         : /^hit\d+$/.test(cond) ? (n.chain||[]).filter(l=>l.dmg>0).length >= +cond.slice(3)
+        /* HIGH TIDE: blue is pitch value 3 throughout this engine. */
+        : /^pitchBlue\d+$/.test(cond) ? act(n).pitch.filter(c=>c.pitch===3).length >= +cond.match(/\d+/)[0]
+        /* SURGE: Amp is the only mechanic that can push a non-attack arcane
+           effect above its own printed base, so "will this deal more than
+           its base" reduces to "is an Amp bonus live right now" — checked
+           before the arcane op below consumes it. */
+        : /^surgeOver\d+$/.test(cond) ? act(n).amp>0
         : dracN!=null ? dracLinks >= dracN : false;
       const why = {atk:"no other attack yet", non:"no other non-attack yet",
         pitch6:"no 6+ power card in your pitch zone", arsenal:"not played from arsenal",
@@ -2579,9 +2624,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         dealtDmg:"you haven't dealt damage this turn",
         revBlue:"the revealed card isn't blue", isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
-        lifeTie:"life totals aren't level"}[cond]
+        lifeTie:"life totals aren't level",
+        charged:"you didn't charge your hero's soul this turn"}[cond]
         || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on your board` : null)
         || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in your pitch zone` : null)
+        || (/^pitchBlue(\d+)$/.test(cond) ? `fewer than ${cond.match(/\d+/)[0]} blue cards in your pitch zone` : null)
+        || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
+        || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
         || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
       if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
       if(instead){ insteadKinds.add(op[0]);
@@ -2672,7 +2721,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       if(card.pitch===3 && (from==="hand"||from==="arsenal")) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
-      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"), onHit:fx.onHit, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
@@ -2882,12 +2931,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          count of the non-equipment defenders already declared on the stack. */
       let condPump = 0;
       (fx.conds||[]).forEach(({cond,op})=>{
-        if(cond!=="reprise") return;
-        const fromHand = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
-        if(!fromHand){ n = L(n, `${c.name}: reprise needs the dummy to have blocked from hand — it didn't.`); return; }
-        if(op[0]==="self") condPump += op[1];
-        else n = runOps(n,[op],c.name);
-        n = L(n, `Reprise — ${fromHand} card${fromHand>1?"s":""} from the dummy's hand met the attack.`);
+        if(cond==="reprise"){
+          const fromHand = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
+          if(!fromHand){ n = L(n, `${c.name}: reprise needs the dummy to have blocked from hand — it didn't.`); return; }
+          if(op[0]==="self") condPump += op[1];
+          else n = runOps(n,[op],c.name);
+          n = L(n, `Reprise — ${fromHand} card${fromHand>1?"s":""} from the dummy's hand met the attack.`);
+          return;
+        }
+        /* CHARGE (Boltyn): "if you've charged this turn" is a plain turn-scoped
+           read, same check execute() uses — a reaction played from hand asks
+           the identical question. */
+        if(cond==="charged"){
+          if(!(act(n).hist.charged>0)){ n = L(n, `${c.name}: you haven't charged your hero's soul this turn.`); return; }
+          if(op[0]==="self") condPump += op[1];
+          else n = runOps(n,[op],c.name);
+          n = L(n, `${c.name}: charged this turn — the bonus is live.`);
+        }
       });
       const pump = (fx.self||0) + condPump + fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0);
       n = runOps(n, fx.ops.filter(o=>o[0]!=="buffNext"), c.name);
@@ -3027,6 +3087,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n = runOps(n, n.pend.ops, pc.name);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    /* CHARGE'S CONDITIONALLY GRANTED on-hit abilities (see fx.condOnHit in
+       parser.js) — re-checked here, at the actual trigger point, rather than
+       at declaration, because "if this hits" only fires on a connected
+       attack. Reuses the SAME cond names/checks as the declare-time loop in
+       execute() so the two can never silently disagree about what "charged"
+       means. */
+    if(total>0 && n.pend.condOnHit && n.pend.condOnHit.length){
+      n.pend.condOnHit.forEach(({cond,op})=>{
+        const met = cond==="charged" ? (act(n).hist.charged||0)>0
+          : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
+          : false;
+        if(met) n = runOps(n, [op], pc.name);
+        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":"a differently-coloured charge"} — condition not met.`);
+      });
+    }
     if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }
     if(hasKw(pc,"crush") && total>=4){
       /* the threshold is met and the dummy has a hand now — the payloads

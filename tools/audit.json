@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-01T01:22:54.151Z",
- "appVer": "2.34",
+ "generated": "2026-08-01T20:13:45.259Z",
+ "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 265,
-  "part": 108,
-  "none": 32
+  "full": 281,
+  "part": 96,
+  "none": 28
  },
  "heroes": {
   "kayo": {
@@ -325,7 +325,9 @@
    "int": 4,
    "tt": "Pirate Necromancer Hero - Young",
    "tx": "Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.\nIf a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.",
-   "statics": [],
+   "statics": [
+    "Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"
+   ],
    "power": null,
    "clauses": [
     {
@@ -334,11 +336,11 @@
     },
     {
      "t": "If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.",
-     "covered": false
+     "covered": true
     }
    ],
    "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader"
    ]
   },
   "lyath": {
@@ -347,7 +349,9 @@
    "int": 5,
    "tt": "Reviled Guardian Hero - Young",
    "tx": "The base {p} and {d} of cards you control are halved, rounded up.\nInstant - {r}{r}, {t}: The crowd boos you. Defending action cards you control get +1{d} this turn.\nWhenever the crowd boos you, create a Might token.",
-   "statics": [],
+   "statics": [
+    "Lyath — booed → Might token"
+   ],
    "power": "The crowd boos you [2r]",
    "clauses": [
     {
@@ -364,11 +368,11 @@
     },
     {
      "t": "Whenever the crowd boos you, create a Might token.",
-     "covered": false
+     "covered": true
     }
    ],
    "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
+    "2 hero-text clause(s) not recognized by any ability reader"
    ]
   }
  },
@@ -10830,7 +10834,7 @@
     "go again",
     "surge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10840,18 +10844,15 @@
     },
     {
      "t": "Surge - If this deals more than 2 damage, it gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Surge - If this deals more than 2 damage, it gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 2 arcane damage to target hero.\nSurge - If this deals more than 2 damage, it gets go again.",
    "flags": [
-    "unreviewed keyword: \"surge\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"surge\""
    ]
   },
   "aether spindle|3": {
@@ -11157,7 +11158,7 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11166,13 +11167,11 @@
      "st": "noop"
     },
     {
-     "t": "If you've charged this turn, Raydn gains +3{p}.",
-     "st": "skip"
+     "t": "If you've charged this turn, this gains +3{p}.",
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, Raydn gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 0,
     "addRust": false,
@@ -11199,7 +11198,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11209,12 +11208,10 @@
     },
     {
      "t": "If a yellow card is charged this way, this gets +1{p}",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If a yellow card is charged this way, this gets +1{p}"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nIf a yellow card is charged this way, this gets +1{p}",
@@ -11235,7 +11232,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11245,12 +11242,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, draw a card.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, draw a card.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Bolt of Courage, you may charge your hero's soul.\nIf you've charged this turn, Bolt of Courage gains \"If this hits, draw a card.\"",
@@ -11269,18 +11264,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If you've charged this turn, target attack gains +3{p}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, target attack gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you've charged this turn, target attack gains +3{p}.",
@@ -11382,7 +11375,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11392,12 +11385,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Engulfing Light, you may charge your hero's soul.\nIf you've charged this turn, Engulfing Light gains \"If this hits, put it into your hero's soul.\"",
@@ -11481,7 +11472,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11491,12 +11482,10 @@
     },
     {
      "t": "When this hits, if a yellow card was charged this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, if a yellow card was charged this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
@@ -11520,7 +11509,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11530,18 +11519,14 @@
     },
     {
      "t": "If you've charged this turn, this gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Take Flight, you may charge your hero's soul.\nIf you've charged this turn, Take Flight gains go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "toe the line|1": {
    "name": "Toe the Line",
@@ -11626,7 +11611,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11636,12 +11621,10 @@
     },
     {
      "t": "If a yellow card is charged this way, this gets +1{p}",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If a yellow card is charged this way, this gets +1{p}"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nIf a yellow card is charged this way, this gets +1{p}",
@@ -11662,7 +11645,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11672,12 +11655,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, draw a card.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, draw a card.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Bolt of Courage, you may charge your hero's soul.\nIf you've charged this turn, Bolt of Courage gains \"If this hits, draw a card.\"",
@@ -11732,7 +11713,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11742,12 +11723,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Engulfing Light, you may charge your hero's soul.\nIf you've charged this turn, Engulfing Light gains \"If this hits, put it into your hero's soul.\"",
@@ -11770,7 +11749,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11780,12 +11759,10 @@
     },
     {
      "t": "When this hits, if a yellow card was charged this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, if a yellow card was charged this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
@@ -11845,7 +11822,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11855,18 +11832,14 @@
     },
     {
      "t": "If you've charged this turn, this gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Take Flight, you may charge your hero's soul.\nIf you've charged this turn, Take Flight gains go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "v of the vanguard|2": {
    "name": "V of the Vanguard",
@@ -11925,18 +11898,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If you've charged this turn, this gains +3{p}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you've charged this turn, Valiant Thrust gains +3{p}.",
@@ -12997,7 +12968,7 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets +2{p}.",
@@ -13106,24 +13077,21 @@
     "go again",
     "high tide"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"high tide\""
    ]
   },
   "barnacle|2": {
@@ -13776,24 +13744,21 @@
     "go again",
     "high tide"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"high tide\""
    ]
   },
   "throw caution to the wind|3": {

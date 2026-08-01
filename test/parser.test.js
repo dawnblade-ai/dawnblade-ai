@@ -451,6 +451,28 @@ test("rulings — reprise reads the dummy's hand blockers (live since v2.05)", (
   assert.equal(cc("Inertia").status, "noop", "inertia still has no opponent turn to tax");
 });
 
+test("rulings — High Tide reads as a named-keyword-gated condition (Swiftwater Sloop)", () => {
+  /* Before this the anchored go-again regex couldn't see it (the clause
+     opens with "High Tide - If …", not "if"/"when"), so the card was
+     unclaimed. See the comment above the anchored regex in parser.js. */
+  const r = cc("High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.");
+  assert.equal(r.status, "run");
+  assert.equal(r.cond, "pitchBlue2");
+  assert.deepEqual(r.ops, [["ga"]]);
+});
+
+test("rulings — Surge reads as a named-keyword-gated condition (Aether Quickening)", () => {
+  const r = cc("Surge - If this deals more than 2 damage, it gets go again.");
+  assert.equal(r.status, "run");
+  assert.equal(r.cond, "surgeOver2");
+  assert.deepEqual(r.ops, [["ga"]]);
+});
+
+test("rulings — High Tide / Surge do not swallow an unparsed inner clause", () => {
+  assert.equal(cc("High Tide - If there are 2 or more blue cards in your pitch zone, transmogrify the fortress."), null);
+  assert.equal(cc("Surge - If this deals more than 2 damage, transmogrify the fortress."), null);
+});
+
 /* ---- v2.10: the late-July ruling batch --------------------------------- */
 
 test("rulings — runechant cost reduction reads the printed {r} pip", () => {
@@ -1052,4 +1074,123 @@ test("arsenal — an unreadable payload leaves the card unclaimed", () => {
   assert.equal(ars("ARS reorder",
     "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
     undefined);
+});
+
+/* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ---------------- */
+test("override — an entry matching the live text is applied and marks its clause run", () => {
+  const text = "This is a made-up drill ability that no generic rule reads.";
+  P.CARD_OVERRIDES["override drill match|1"] = {
+    text,
+    read(card, fx){ return {self:5, clausesRun:[text]}; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Match", pitch:1, tt:"Action", power:null, kw:[], tx:text});
+    assert.equal(fx.self, 5);
+    assert.equal(fx.overrideApplied, "override drill match|1");
+    assert.equal(fx.tier, "full", "the marked clause must count toward coverage");
+  } finally {
+    delete P.CARD_OVERRIDES["override drill match|1"];
+  }
+});
+
+test("override — REFUSES ITSELF the instant the live text drifts from the pinned text", () => {
+  P.CARD_OVERRIDES["override drill drift|1"] = {
+    text: "The pinned text this override was written against.",
+    read(card, fx){ return {self:99}; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Drift", pitch:1, tt:"Action", power:null, kw:[],
+      tx:"The database now prints something different."});
+    assert.equal(fx.self, 0, "a drifted override must never run its hardcoded logic");
+    assert.equal(fx.overrideRefused, "override drill drift|1");
+    assert.equal(fx.overrideApplied, undefined);
+  } finally {
+    delete P.CARD_OVERRIDES["override drill drift|1"];
+  }
+});
+
+test("override — a read() that declines (returns null) leaves the generic fx untouched", () => {
+  P.CARD_OVERRIDES["override drill decline|1"] = {
+    text: "Go again",
+    read(card, fx){ return null; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Decline", pitch:1, tt:"Action", power:null, kw:[], tx:"Go again"});
+    assert.equal(fx.ga, true, "the generic reader already read plain go again on its own");
+    assert.equal(fx.overrideApplied, undefined);
+  } finally {
+    delete P.CARD_OVERRIDES["override drill decline|1"];
+  }
+});
+
+/* ---- CHARGE (Boltyn) — the stack mechanic, v2.39 ---------------------- */
+test("charge — the additional cost is hoisted whether the card says 'this' or names itself", () => {
+  const a = P.fxParse({name:"Charge Drill A", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"});
+  assert.deepEqual(a.chargeCost, {multi:false});
+  const b = P.fxParse({name:"Charge Drill B", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play Charge Drill B, you may charge your hero's soul. If you've charged this turn, Charge Drill B gains go again."});
+  assert.deepEqual(b.chargeCost, {multi:false});
+});
+
+test("charge — 'if a yellow card is charged this way' reads as chargedPitch2 (Beaming Bravado)", () => {
+  const fx = P.fxParse({name:"Beaming Bravado Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"});
+  assert.deepEqual(fx.conds, [{cond:"chargedPitch2", op:["self",1], instead:false}]);
+});
+
+test("charge — 'if you've charged this turn, gains go again' reads as a plain conditional GA (Take Flight)", () => {
+  const fx = P.fxParse({name:"Take Flight Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains go again."});
+  assert.deepEqual(fx.conds, [{cond:"charged", op:["ga"], instead:false}]);
+  assert.equal(fx.condOnHit, undefined, "a plain (non on-hit) grant belongs in conds, not condOnHit");
+});
+
+test("charge — a CONDITIONALLY GRANTED on-hit ability lands in condOnHit, never in the unconditional onHit list (Bolt of Courage)", () => {
+  /* This is the regression the dispatcher fix exists for: checking r.onHit
+     before r.cond used to push the op into fx.onHit unconditionally, which
+     would have granted "draw a card" on every hit regardless of whether the
+     player charged — the exact VALUE-DOUBLED/KEYWORD-UNGATED shape
+     `npm run fairness` exists to catch. */
+  const fx = P.fxParse({name:"Bolt of Courage Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, draw a card.\""});
+  assert.deepEqual(fx.onHit, [], "must NOT be unconditional");
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["draw",1]}]);
+});
+
+test("charge — a conditionally granted on-hit ability with a colour gate (Light the Way)", () => {
+  const fx = P.fxParse({name:"Light the Way Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. When this hits, if a yellow card was charged this way, this gets go again."});
+  assert.deepEqual(fx.onHit, []);
+  assert.deepEqual(fx.condOnHit, [{cond:"chargedPitch2", op:["ga"]}]);
+});
+
+test("charge — a conditionally granted on-hit ability reuses the existing soulSelf op (Engulfing Light)", () => {
+  const fx = P.fxParse({name:"Engulfing Light Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""});
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["soulSelf"]}]);
+});
+
+test("charge — 'gains \"...\"' with an unparsed inner clause is refused, not guessed", () => {
+  assert.equal(P.classifyClause('this gains "transmogrify the fortress"'), null);
+});
+
+test("charge — all five real pool cards resolve to tier full", () => {
+  ["Beaming Bravado", "Bolt of Courage", "Engulfing Light", "Light the Way", "Take Flight"].forEach(base=>{
+    const name = base+" Tier Drill";
+    const tx = base === "Beaming Bravado"
+      ? "As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"
+      : base === "Light the Way"
+      ? "As an additional cost to play this, you may charge your hero's soul. When this hits, if a yellow card was charged this way, this gets go again."
+      : base === "Bolt of Courage"
+      ? `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains "If this hits, draw a card."`
+      : base === "Engulfing Light"
+      ? `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains "If this hits, put it into your hero's soul."`
+      : `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains go again.`;
+    const fx = P.fxParse({name, pitch:1, tt:"Action - Attack", power:4, kw:[], tx});
+    assert.equal(fx.tier, "full", base);
+  });
 });
