@@ -249,6 +249,12 @@ function classifyClause(raw){
     return (inner && inner.status==="run") ? inner : null;
   }
   if(/^go again$/.test(c)) return R([["ga"]]);
+  /* RELOAD — CR: "you may put a card from your hand face-down into your
+     arsenal, only if your arsenal is empty." No type filter (unlike the
+     arrow-only, face-UP arsenalPut shape above) — verified against the CR
+     text rather than the type-restricted wording the arsenalPut cards
+     print. */
+  if(/^reload$/.test(c)) return R([["reload"]]);
   /* ANCHORED at both ends. Unanchored, this matched the TAIL of a gated
      sentence that the if/when handler never saw because it does not START
      with if/when — "Surge - If this deals more than 2 damage, it gets go

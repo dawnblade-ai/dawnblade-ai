@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 106 cards | understood ≠ built |
-| **Fail states** | 138 entries, 2 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 105 cards | understood ≠ built |
+| **Fail states** | 137 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -174,7 +174,7 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Cindering Foresight** (part, 1/3 unread)
 - **Cindering Foresight** (part, 1/3 unread)
 - **Compass of Sunken Depths** (part, 1/2 unread)
-- … and 46 more (see the station)
+- … and 45 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -194,7 +194,7 @@ can be overruled. Same discipline as the mention count.
 | Ability inert — cost not modelled | 36 |
 | No schedule to fire on | 33 |
 | Displayed total is wrong | 27 |
-| Unread, effect unknown | 22 |
+| Unread, effect unknown | 21 |
 | Keyword filed as no-op — but the trainer names it (verify) | 18 |
 | Keyword filed as no-op, but it has meaning | 7 |
 | Drawback skipped | 2 |
@@ -217,7 +217,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 64 entries
+### WRONG — 63 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -352,7 +352,7 @@ worst thing a trainer can do: it teaches wrong play.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-- … and 39 more (see the station)
+- … and 38 more (see the station)
 
 ### LOST VALUE — 64 entries
 

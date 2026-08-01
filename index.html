@@ -2377,6 +2377,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
         n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:Math.min(v, act(n).deck.length), src:srcName}];
       }
+      /* RELOAD — CR: only legal while the arsenal is EMPTY, and no type
+         filter (any card in hand). A real choice, so it queues a `pick`
+         prompt like the other optional zone-moves rather than auto-picking
+         — nothing about which card to reload is implied by the rest of the
+         card's text the way Charge's colour preference was. */
+      else if(k==="reload"){
+        if(!arsEmpty(act(n))){ n = L(n, `${srcName}: your arsenal isn't empty — Reload needs it clear.`); return; }
+        if(!act(n).hand.length){ n = L(n, `${srcName}: your hand is empty — nothing to reload.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName,
+          zone:"hand", to:"arsenal", min:0, max:1,
+          title:"Reload — put a card face-down into your arsenal?",
+          hint:"Optional — choose none to decline."}];
+      }
       /* RULING: the card flips and BECOMES Inner Chi, returning to hand
          instead of the graveyard. Inner Chi is a real database card. */
       else if(k==="transcend"){

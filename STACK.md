@@ -1,6 +1,6 @@
 # THE STACK — rulings Dawnblade is waiting on
 
-Generated 2026-08-01T20:42:19.024Z from `tools/audit.json`.
+Generated 2026-08-01T20:48:33.873Z from `tools/audit.json`.
 
 Every gap below is charged to the *mechanic* that causes it, so one
 answer lights up every card in its list. Nothing here is guessed:

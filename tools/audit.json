@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-01T20:42:14.638Z",
+ "generated": "2026-08-01T20:48:11.015Z",
  "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 299,
-  "part": 81,
+  "full": 300,
+  "part": 80,
   "none": 25
  },
  "heroes": {
@@ -6362,7 +6362,7 @@
     "go again",
     "reload"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -6372,16 +6372,14 @@
     },
     {
      "t": "Reload",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Reload"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "The next Ranger attack action card you play this turn, gains +3{p}.\nReload\nGo again",

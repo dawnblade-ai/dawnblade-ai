@@ -306,8 +306,12 @@ test("classifyClause — engine-handled keyword lines are honest noops", () => {
 });
 
 test("classifyClause — pending keywords stay gaps, never papered over", () => {
-  for(const k of ["Charge","Reload","Combo"])
+  for(const k of ["Charge","Combo"])
     assert.equal(cc(k), null, k+" must keep surfacing as a coverage gap");
+  /* Reload was taught in v2.39 — CR-verified (put a card from hand
+     face-down into an empty arsenal, no type filter). Moved out of this
+     list deliberately, not silently. */
+  assert.deepEqual(cc("Reload"), {status:"run", ops:[["reload"]]});
 });
 
 /* ---- v2.06: the rulings of 2026-07-25 ----------------------------------
@@ -1308,5 +1312,13 @@ test("verse counters — the unwind clauses are noop-credited (handled by execut
 test("verse counters — Malefic Incantation resolves to tier full", () => {
   const fx = P.fxParse({name:"Malefic Incantation", pitch:1, tt:"Runeblade Action - Aura", power:null, kw:[],
     tx:"Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token."});
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- RELOAD — CR-verified: no type filter, empty-arsenal only, v2.39 -- */
+test("reload — Take Aim resolves to tier full", () => {
+  const fx = P.fxParse({name:"Take Aim", pitch:1, tt:"Ranger Action", power:null, kw:[],
+    tx:"The next Ranger attack action card you play this turn, gains +3{p}.\nReload\nGo again"});
+  assert.ok(fx.ops.some(o=>o[0]==="reload"));
   assert.equal(fx.tier, "full");
 });

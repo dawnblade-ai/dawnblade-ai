@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:42:14.638Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:48:11.015Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 308 / 437 (70%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 299/405
-(tiers: full 299, part 81, none 25)
+**Overall: 309 / 437 (71%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 300/405
+(tiers: full 300, part 80, none 25)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 299/405
 
 ---
 
-## Pool cards (299/405)
+## Pool cards (300/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -454,7 +454,7 @@ tokens 7/17 · pool cards 299/405
 - [x] Swiftstrike Bracers _(briar)_
 - [x] Swiftwater Sloop [pitch 1] _(gravy)_
 - [x] Swiftwater Sloop [pitch 3] _(gravy)_
-- [ ] Take Aim [pitch 1] — part, 1 clause(s) unread _(azalea)_
+- [x] Take Aim [pitch 1] _(azalea)_
 - [x] Take Flight [pitch 1] _(boltyn)_
 - [x] Take Flight [pitch 2] _(boltyn)_
 - [x] Talishar, the Lost Prince _(dash)_
