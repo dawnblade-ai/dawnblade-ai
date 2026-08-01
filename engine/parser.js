@@ -108,6 +108,13 @@ function classifyClause(raw){
          "this is put or turned face up in arsenal"  (Spire Sniping) */
     if(/\b(?:put|turned)\b/.test(cond) && /\barsenal\b/.test(cond) && /face.?up/.test(cond))
       return Object.assign(rest,{arsUp:true});
+    /* "this hits A MARKED HERO" is a COMPOUND gate — on-hit AND the target
+       being marked — and it must be caught before the generic /hits?/
+       catch-all just below, or the marked half is silently lost and the
+       payload (Mark of the Black Widow's forced banish) would fire on
+       every hit regardless of marking. Same family of bug as the fusion
+       compound gate: checking one half first drops the other. */
+    if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
@@ -339,6 +346,9 @@ function classifyClause(raw){
   if(m=c.match(/^cards cost \{r\} more to play this turn$/)) return R([["costTax",1]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("live since v2.05 — the dummy holds a hand to restrict and to lose cards from");
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) discards?/.test(c)) return R([["foeDiscard",1]]);
+  /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
+  if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))
+    return R([["foeBanish",1]]);
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
   if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
   /* RULING (Crucible of Aetherweave, Absorb in Aether): "the next card you

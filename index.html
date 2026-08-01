@@ -2308,6 +2308,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           n = L(n, `${srcName}: dummy discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
+      else if(k==="foeBanish"){
+        const take = foe(n).hand.slice(-Math.max(1,v));
+        if(!take.length) n = L(n, `${srcName}: the dummy's hand is already empty.`);
+        else {
+          foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
+          foeMut(n).banish = [...take, ...foe(n).banish];
+          n = L(n, `${srcName}: dummy banishes ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
+        }
+      }
       else if(k==="res"){ actMut(n).res+=v; n=L(n,`+${v} resource.`); }
       else if(k==="ap"){ actMut(n).ap+=v; n=L(n,`+${v} action point${v>1?"s":""} — the turn stretches.`); }
       else if(k==="life"){
@@ -3132,9 +3141,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       n.pend.condOnHit.forEach(({cond,op})=>{
         const met = cond==="charged" ? (act(n).hist.charged||0)>0
           : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
+          : cond==="marked" ? !!foe(n).marked
           : false;
         if(met) n = runOps(n, [op], pc.name);
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":"a differently-coloured charge"} — condition not met.`);
+        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":"a differently-coloured charge"} — condition not met.`);
       });
     }
     if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }

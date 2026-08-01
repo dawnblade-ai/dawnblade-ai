@@ -1275,3 +1275,26 @@ test("reveal+pitch — Saltwater Swell resolves to tier full", () => {
   assert.deepEqual(fx.ops, [["reveal",1],["revColorPitch",3]]);
   assert.equal(fx.tier, "full");
 });
+
+/* ---- Mark of the Black Widow — a compound on-hit+marked gate, v2.39 --- */
+test("marked — 'they banish a card from their hand' reads as a mandatory foeBanish op", () => {
+  assert.deepEqual(P.classifyClause("they banish a card from their hand"), {status:"run", ops:[["foeBanish",1]]});
+});
+
+test("marked — 'this hits a marked hero' is read as a COMPOUND onHit+marked gate, not unconditional onHit", () => {
+  /* The generic /hits?/ catch-all just below would otherwise match first
+     and silently drop the marked half, making the banish fire on every
+     hit — the same bug class as the fusion compound gate. */
+  const r = P.classifyClause("if this hits a marked hero, they banish a card from their hand");
+  assert.equal(r.cond, "marked");
+  assert.equal(r.onHit, true);
+  assert.deepEqual(r.ops, [["foeBanish",1]]);
+});
+
+test("marked — Mark of the Black Widow resolves to full, and its banish lands in condOnHit (never unconditional onHit)", () => {
+  const fx = P.fxParse({name:"Mark of the Black Widow", pitch:1, tt:"Assassin Action - Attack", power:4, kw:["Stealth"],
+    tx:"Stealth\nWhen this hits a marked hero, they banish a card from their hand."});
+  assert.deepEqual(fx.onHit, []);
+  assert.deepEqual(fx.condOnHit, [{cond:"marked", op:["foeBanish",1]}]);
+  assert.equal(fx.tier, "full");
+});

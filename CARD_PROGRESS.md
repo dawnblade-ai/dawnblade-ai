@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:36:12.245Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:39:35.173Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 304 / 437 (70%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 295/405
-(tiers: full 295, part 85, none 25)
+**Overall: 306 / 437 (70%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 297/405
+(tiers: full 297, part 83, none 25)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 295/405
 
 ---
 
-## Pool cards (295/405)
+## Pool cards (297/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -312,8 +312,8 @@ tokens 7/17 · pool cards 295/405
 - [ ] Malefic Incantation [pitch 2] — part, 2 clause(s) unread _(viserai)_
 - [x] Mandible Claw _(kayo)_
 - [x] Manifest Muscle [pitch 3] _(enigma)_
-- [ ] Mark of the Black Widow [pitch 1] — part, 1 clause(s) unread _(arakni)_
-- [ ] Mark of the Black Widow [pitch 3] — part, 1 clause(s) unread _(arakni)_
+- [x] Mark of the Black Widow [pitch 1] _(arakni)_
+- [x] Mark of the Black Widow [pitch 3] _(arakni)_
 - [ ] Mark of the Funnel Web [pitch 1] — part, 1 clause(s) unread _(arakni)_
 - [x] Mark of the Huntsman _(arakni)_
 - [x] Mark the Prey [pitch 1] _(arakni)_
