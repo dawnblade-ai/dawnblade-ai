@@ -461,6 +461,20 @@ function classifyClause(raw){
   if(m=c.match(/put an aim counter on it/)) return R([["aim",1]]);
   /* the dummy has a real deck now, so banishing off the top is a real cost */
   if(/^banish the top card of their deck$/.test(c)) return R([["foeBanishTop",1]]);
+  /* RETRIEVE (Memorial Ground): a MANDATORY target pick from the graveyard
+     back onto the deck — reads the subject the same way optFilter already
+     does for optional-cost riders, and refuses (returns null, leaving the
+     card unclaimed) on anything it cannot read honestly, same discipline.
+     min:1 makes the prompts.js `pick` mandatory rather than a decline-able
+     optional cost. Written generically (zone/to are data, not hardcoded to
+     this one card) so a future "put target X from your Y on top of your
+     deck" reuses it rather than growing its own op. */
+  if(m=c.match(/^put target (.+) from your graveyard on top of your deck$/)){
+    const filter = optFilter(m[1]);
+    if(!filter) return null;
+    return R([["pickPrompt", {zone:"grave", to:"deckTop", filter, min:1, max:1,
+      title:"Put a card from your graveyard on top of your deck"}]]);
+  }
   /* "Your first attack each turn gets +1{p}" — a standing buff while in play */
   if(/^your first attack each turn gets \+(\d+)\s*\{p\}$/.test(c))
     return R([["firstAtkBuff", +c.match(/\+(\d+)/)[1]]]);

@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:48:11.015Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:50:50.166Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 309 / 437 (71%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 300/405
-(tiers: full 300, part 80, none 25)
+**Overall: 310 / 437 (71%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 301/405
+(tiers: full 301, part 80, none 24)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 300/405
 
 ---
 
-## Pool cards (300/405)
+## Pool cards (301/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -320,7 +320,7 @@ tokens 7/17 · pool cards 300/405
 - [x] Mask of the Swarming Claw _(fai)_
 - [x] Mauvrion Skies [pitch 1] _(viserai)_
 - [x] Mauvrion Skies [pitch 3] _(viserai)_
-- [ ] Memorial Ground [pitch 2] — none, 1 clause(s) unread _(azalea)_
+- [x] Memorial Ground [pitch 2] _(azalea)_
 - [x] Mocking Blow [pitch 1] _(lyath)_
 - [x] Mocking Blow [pitch 2] _(lyath)_
 - [x] Mocking Blow [pitch 3] _(lyath)_

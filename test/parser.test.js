@@ -1322,3 +1322,26 @@ test("reload — Take Aim resolves to tier full", () => {
   assert.ok(fx.ops.some(o=>o[0]==="reload"));
   assert.equal(fx.tier, "full");
 });
+
+/* ---- pickPrompt — a generic mandatory targeted pick, v2.39 ------------ */
+test("pickPrompt — Memorial Ground reads a mandatory graveyard->deck-top pick with the subject's filter", () => {
+  const r = P.classifyClause("Put target attack action card with cost 1 or less from your graveyard on top of your deck");
+  assert.equal(r.status, "run");
+  assert.deepEqual(r.ops, [["pickPrompt", {zone:"grave", to:"deckTop",
+    filter:{costLe:1, type:"attack"}, min:1, max:1,
+    title:"Put a card from your graveyard on top of your deck"}]]);
+});
+
+test("pickPrompt — an unreadable subject leaves the card unclaimed, same discipline as optFilter elsewhere", () => {
+  /* A dynamic limit optFilter already refuses for the exact same reason
+     Mounting Anger does (see optFilter's own comment). */
+  assert.equal(P.classifyClause(
+    "Put target attack action card with cost less than the number of Draconic chain links you control from your graveyard on top of your deck"),
+    null);
+});
+
+test("pickPrompt — Memorial Ground resolves to tier full", () => {
+  const fx = P.fxParse({name:"Memorial Ground", pitch:2, tt:"Generic Instant", power:null, kw:[],
+    tx:"Put target attack action card with cost 1 or less from your graveyard on top of your deck."});
+  assert.equal(fx.tier, "full");
+});
