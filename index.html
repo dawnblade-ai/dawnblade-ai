@@ -616,6 +616,42 @@ img{display:block;max-width:100%}
   letter-spacing:.04em}
 .bugrow{display:flex;gap:7px;margin-top:10px}
 .bugrow .bigbtn{flex:1;font-size:12px;padding:11px 6px}
+/* ---- the table: find an opponent, and the networked board ------------ */
+.tblwrap{display:flex;flex-direction:column;gap:12px;padding:4px 0}
+.tblhead{font-family:'Big Shoulders Display';font-weight:800;font-size:26px;letter-spacing:.16em;text-transform:uppercase;color:var(--y)}
+.tblcard{background:var(--forge);border:1px solid var(--line);padding:14px 12px}
+.tblcode{font-family:'Spline Sans Mono',monospace;font-size:46px;letter-spacing:.28em;text-align:center;color:var(--y);padding:10px 0 4px;text-shadow:0 2px 0 rgba(20,16,14,.5)}
+.tblin{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);font-family:'Spline Sans Mono',monospace;font-size:34px;letter-spacing:.24em;text-align:center;text-transform:uppercase;padding:12px 6px}
+.tblin:focus{outline:none;border-color:var(--y)}
+.tblstat{font-size:12.5px;color:var(--bone-dim);text-align:center;min-height:18px}
+.tblstat.live{color:var(--y)}
+.tblerr{font-size:13px;color:var(--r);background:rgba(196,48,43,.12);border:1px solid var(--r);padding:9px 10px}
+.tblrow{display:flex;gap:8px}
+.tblrow .bigbtn{flex:1}
+.tbldot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px;animation:tblpulse 1.4s ease-in-out infinite}
+@keyframes tblpulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+.mboard{display:flex;flex-direction:column;gap:8px}
+.mseat{display:flex;align-items:center;justify-content:space-between;background:var(--forge);border:1px solid var(--line);padding:8px 10px}
+.mseat.me{border-color:var(--y)}
+.mseat .who{font-family:'Big Shoulders Display';font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:14px}
+.mseat .hp{font-family:'Spline Sans Mono',monospace;font-size:22px;color:var(--y)}
+.mseat .zn{font-size:11px;color:var(--bone-dim);font-family:'Spline Sans Mono',monospace}
+.mstep{display:flex;align-items:center;justify-content:space-between;background:var(--forge2);border:1px solid var(--line);padding:7px 10px;font-size:12px}
+.mstep .sv{font-family:'Spline Sans Mono',monospace;color:var(--y);text-transform:uppercase;letter-spacing:.06em}
+.mturn{font-family:'Big Shoulders Display';font-weight:800;font-size:15px;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:7px;border:1px solid var(--line)}
+.mturn.mine{background:var(--y);color:var(--ink)}
+.mturn.theirs{background:var(--forge);color:var(--bone-dim)}
+.mhand{display:flex;gap:5px;flex-wrap:wrap;padding:2px 0}
+.mcard{flex:0 0 auto;min-width:62px;background:var(--forge);border:1px solid var(--line);padding:6px 7px;text-align:center;font-family:'Spline Sans Mono',monospace;font-size:11px;color:var(--bone-dim)}
+.mcard .nm{display:block;color:var(--bone);font-size:12px}
+.mcard.on{border-color:var(--y);background:var(--forge2);color:var(--y)}
+.mcard.blk{border-color:var(--b)}
+.macts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.macts .a{padding:11px 4px;font-size:13px}
+.mfeed{background:var(--forge);border:1px solid var(--line);padding:8px 10px;font-size:12px;color:var(--bone-dim);min-height:56px;max-height:110px;overflow-y:auto}
+.mfeed div:last-child{color:var(--bone)}
+.mnote{font-size:11px;color:var(--bone-dim);line-height:1.5;border-left:2px solid var(--line);padding-left:8px}
 </style>
 </head>
 <body>
@@ -637,7 +673,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.37"; /* v2.37 — the card preview now sits above the hand instead of on top of it, and playRx is the first consumer off mode/bphase onto the priority machine. Full history in CHANGELOG.md. */
+window.APP_VER = "2.38"; /* v2.38 — two devices can now sit at a table: a room code, a WebRTC channel and the Phase B sync layer wired into the page. Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1212,6 +1248,18 @@ window.TROPHIES = [
 <script src="engine/invariants.js"></script>
 <script src="engine/cards.js"></script>
 <script src="engine/advisor.js"></script>
+<!-- THE SYNC LAYER (Phase B). Reached as DawnWire.* / DawnNet.* /
+     DawnActions.* / DawnRoom.*, deliberately NOT bridged into bare names
+     the way the parser is: `reduce`, `legal`, `hash`, `encode` and
+     `open` are far too generic to own as globals, and the module-
+     qualified form is the same call the trainer already makes for
+     DawnSides and DawnPriority. room.js is the only file in the engine
+     that knows a network exists, and it loads its transport lazily, so
+     these four cost a `file://` page nothing. -->
+<script src="engine/wire.js"></script>
+<script src="engine/net.js"></script>
+<script src="engine/actions.js"></script>
+<script src="engine/room.js"></script>
 <script>
 /* The bridge: lift the engine's exports into the bare names the two
    babel blocks already call. Every name here used to be a hand-mirrored
@@ -4339,6 +4387,235 @@ function Pregame({h, seed, onSeated, onBack}){
   );
 }
 
+/* ============================================================
+   THE TABLE — find an opponent, sit down, play across two phones.
+
+   Roadmap Phase B step 7, wired through to a screen. The rules layer
+   underneath is engine/actions.js's BLANK action set, not the card pool:
+   `foeSwing` still fabricates the dummy's swing as [3,4,5][(turn-1)%3],
+   so seat 1 has no action phase and two hero decks cannot yet cross the
+   wire. That is Phase A step 4 plus the judge.js reducer extraction, and
+   it is rules work rather than network work — see CLAUDE.md. What this
+   screen proves is the whole transport: two phones, a table code, real
+   priority handoffs, a real combat chain, and a state hash that agrees.
+
+   Everything below reaches the engine module-qualified (DawnRoom.*,
+   DawnNet.*, DawnActions.*) — none of it is bridged to a bare name,
+   because `open`, `reduce`, `legal` and `hash` are far too generic to
+   own as globals. test/sync.test.js pins that.
+   ============================================================ */
+function TableScreen({onBack, onSeated}){
+  const [mode,setMode] = uS(null);           /* null | "host" | "join" */
+  const [code,setCode] = uS("");
+  const [stat,setStat] = uS(null);
+  const [err,setErr]   = uS(null);
+  const [busy,setBusy] = uS(false);
+  const live = uR(true);
+  uE(()=>()=>{ live.current = false; },[]);
+
+  const PHRASE = {
+    loading:"Fetching the transport…", connecting:"Reaching the relay…",
+    waiting:"Table open — waiting for your opponent…",
+    dialling:"Knocking on the table…", connected:"Seated."
+  };
+
+  const sit = (host, c) => {
+    setErr(null); setBusy(true); setStat("loading");
+    DawnRoom.open({
+      code:c, host,
+      onStatus:s=>{ if(live.current) setStat(s); },
+      onClose:()=>{ if(live.current){ setErr("The other phone left the table."); setBusy(false); } }
+    }).then(table=>{
+      if(!live.current){ table.close(); return; }
+      onSeated({table, host, code:table.code});
+    }).catch(e=>{
+      if(!live.current) return;
+      setErr((e && e.message) || String(e)); setStat(null); setBusy(false);
+    });
+  };
+
+  const openTable = () => { const c = DawnRoom.makeCode(); setCode(c); setMode("host"); sit(true, c); };
+  const joinTable = () => {
+    if(!DawnRoom.isValid(code)) return setErr("A table code is "+DawnRoom.CODE_LEN+" characters.");
+    sit(false, code);
+  };
+
+  return (
+    <div className="tblwrap">
+      <div className="tblhead">Find an opponent</div>
+
+      {!mode && <>
+        <div className="tblcard">
+          <p className="note" style={{marginTop:0}}>
+            One of you opens a table and reads out the code; the other types it in.
+            No account, no server — the two phones talk directly once they have found
+            each other.
+          </p>
+        </div>
+        <div className="tblrow">
+          <button className="bigbtn" onClick={openTable}>Open a table</button>
+          <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
+        </div>
+        <p className="mnote">
+          Table play runs the <strong>drill decks</strong> — blank cards, real Flesh and
+          Blood turn structure. Hero decks need seat 1's action phase before they can
+          cross the wire.
+        </p>
+      </>}
+
+      {mode==="host" && <>
+        <div className="tblcard">
+          <div className="tblstat">Your table number</div>
+          <div className="tblcode">{code}</div>
+        </div>
+        <div className={"tblstat"+(stat==="waiting"?" live":"")}>
+          {stat==="waiting" && <span className="tbldot"></span>}
+          {PHRASE[stat]||"…"}
+        </div>
+      </>}
+
+      {mode==="join" && <>
+        <div className="tblcard">
+          <div className="tblstat">Table number</div>
+          <input className="tblin mono" value={code} maxLength={8} inputMode="text"
+            autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+            placeholder="····"
+            onChange={e=>{ setErr(null); setCode(DawnRoom.normalize(e.target.value)); }}/>
+        </div>
+        <button className="bigbtn" disabled={busy||!DawnRoom.isValid(code)} onClick={joinTable}>
+          {busy ? (PHRASE[stat]||"…") : "Sit down"}
+        </button>
+      </>}
+
+      {err && <div className="tblerr">{err}</div>}
+      <button className="a" onClick={onBack}>Back</button>
+    </div>
+  );
+}
+
+/* The networked board. Deliberately plain: this is the transport's
+   proving ground, not the trainer's UI. Every button is gated by
+   DawnActions.legal, which is the same predicate the sequencer applies
+   on the other phone — so a button that is live here is an action that
+   will be accepted there. */
+function TableMatch({table, host, code, onExit}){
+  /* `mySeat`, NOT `seat`. engine/priority.js already exports a `seat`
+     helper, and its meaning is "seat a game with this first player" —
+     a local `seat` meaning "which chair is this client in" is the
+     same-name-different-meaning trap test/sync.test.js pins for the
+     engine, and the one that made `tapTwice`'s `act` parameter shadow
+     the actor helper in v2.25. It is also the roadmap's own vocabulary:
+     perspective is what THIS CLIENT renders. */
+  const mySeat = host ? 0 : 1;
+  const [g,setG]     = uS(null);
+  const [sel,setSel] = uS(null);
+  const [note,setNote] = uS(null);
+  const [link,setLink] = uS("connected");
+  const sess = uR(null);
+
+  uE(()=>{
+    const s = DawnNet.createSession({
+      seat: mySeat, host,
+      reduce: DawnActions.reduce,
+      legal:  DawnActions.legal,
+      build:  DATA_VER,
+      /* THE TABLE CODE IS THE SEED. rng.js: both peers derive the same
+         seed from the same room code without exchanging it, so the game
+         is reproducible from the code alone. */
+      state:  host ? DawnActions.newMatch({seed: code, first: 0}) : null,
+      send:   m => table.send(m),
+      onState:st => { setG(st); setSel(null); },
+      onEvent:e => {
+        if(e.t==="refused")        setNote(e.reason);
+        else if(e.t==="desync")    setLink("repairing");
+        else if(e.t==="snapshot-applied" || e.t==="catchup-applied") setLink("connected");
+        else if(e.t==="refused-by-host") setNote("Refused: "+e.reason);
+      }
+    });
+    sess.current = s;
+    table.listen(m => s.receive(m));
+    if(!host) s.join(); else setG(s.state());
+    return () => { try { table.close(); } catch(_){} };
+  },[]);
+
+  if(!g) return (
+    <div className="tblwrap">
+      <div className="tblhead">Table {code}</div>
+      <div className="tblstat live"><span className="tbldot"></span>Dealing…</div>
+      <button className="a" onClick={onExit}>Leave the table</button>
+    </div>
+  );
+
+  const me = g.sides[mySeat], them = g.sides[1-mySeat];
+  const mine  = a => DawnActions.legal(g, a, mySeat) === null;
+  const fire  = a => { const why = sess.current.submit(a); setNote(why||null); };
+  const myPri = g.priority === mySeat;
+  const over  = g.over;
+
+  return (
+    <div className="mboard">
+      <div className="mseat">
+        <span className="who">Opponent</span>
+        <span className="zn">hand {them.hand.length} · deck {them.deck.length} · gy {them.grave.length}</span>
+        <span className="hp">{them.hp}</span>
+      </div>
+
+      <div className="mstep">
+        <span>Turn {g.turn} · table {code}{link!=="connected" ? " · resyncing" : ""}</span>
+        <span className="sv">{g.phase} / {g.step}</span>
+      </div>
+
+      <div className={"mturn "+(over ? "theirs" : myPri ? "mine" : "theirs")}>
+        {over ? (over.winner===mySeat ? "You win" : "You lose")
+              : myPri ? "Your call" : "Waiting on them"}
+        {!over && g.chainOpen && g.chain.length ? " · link "+g.chain.length+" ("+g.chain[g.chain.length-1].power+" power)" : ""}
+      </div>
+
+      <div className="mfeed">
+        {(g.feed||[]).slice(-6).map((f,i)=><div key={i}>{f}</div>)}
+      </div>
+
+      <div className="mseat me">
+        <span className="who">You (seat {mySeat})</span>
+        <span className="zn">res {me.res} · ap {me.ap} · deck {me.deck.length} · gy {me.grave.length}</span>
+        <span className="hp">{me.hp}</span>
+      </div>
+
+      <div className="mhand">
+        {me.hand.map(c=>{
+          const blocking = (me.blockH||[]).indexOf(c.uid) >= 0;
+          return (
+            <button key={c.uid}
+              className={"mcard"+(sel===c.uid?" on":"")+(blocking?" blk":"")}
+              onClick={()=>setSel(sel===c.uid?null:c.uid)}>
+              <span className="nm">{c.name.replace("Blank ","#")}</span>
+              {c.power}⚔ {c.def}🛡 {c.pitch}◈
+            </button>
+          );
+        })}
+        {!me.hand.length && <span className="zn">hand empty</span>}
+      </div>
+
+      <div className="macts">
+        <button className="a" disabled={!sel||!mine({t:"attack",uid:sel})} onClick={()=>fire({t:"attack",uid:sel})}>Attack</button>
+        <button className="a" disabled={!sel||!mine({t:"pitch",uid:sel})}  onClick={()=>fire({t:"pitch",uid:sel})}>Pitch</button>
+        <button className="a" disabled={!sel||!mine({t:"defend",uids:[sel]})} onClick={()=>fire({t:"defend",uids:[sel]})}>Defend</button>
+        <button className="a go" disabled={!mine({t:"pass"})}    onClick={()=>fire({t:"pass"})}>Pass</button>
+        <button className="a" disabled={!mine({t:"roll",sides:6})} onClick={()=>fire({t:"roll",sides:6})}>Roll d6</button>
+        <button className="a" disabled={!mine({t:"endTurn"})}    onClick={()=>fire({t:"endTurn"})}>End turn</button>
+      </div>
+
+      {note && <div className="tblerr">{note}</div>}
+      <p className="mnote">
+        Blank decks — no rules text, no keywords. The turn structure, priority and
+        combat chain are the real ones (CR 7.0.1), driven by engine/priority.js on
+        both phones. State hash: <span className="mono">{sess.current ? sess.current.hash() : "—"}</span>
+      </p>
+      <button className="a" onClick={onExit}>Leave the table</button>
+    </div>
+  );
+}
+
 function App(){
   const [db,reload] = useCardDB();
   const [tab,setTab]=uS("heroes");
@@ -4347,24 +4624,33 @@ function App(){
   const [loHero,setLoHero]=uS(null);
   /* seating is decided between the loadout and the first draw */
   const [seating,setSeating]=uS(null);
+  /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
+  const [table,setTable]=uS(null);
   const [best,setBest]=uS(()=>store.get("best",{}));
   const record=(k,score)=>setBest(b=>{
     const nb={...b,[k]: b[k]==null?score:Math.min(b[k],score)}; store.set("best",nb); return nb;
   });
+  /* One screen at a time. `idle` is the lobby: no match, no loadout, no
+     seating throw and nobody at a table. */
+  const idle = !fighting && !loHero && !seating && !table;
   return (
     <div className="shell">
-      {!fighting && <div className="topbar">
+      {!fighting && !table && <div className="topbar">
         <span className="brand">DAWN<em>BLADE</em></span>
         <span className="tag">v{APP_VER}{db.status==="ready" ? " · "+db.count+" cards" : ""}</span>
       </div>}
       <DbBanner db={db} reload={reload}/>
-      {tab==="heroes" && !fighting && !loHero && !seating && <>
+      {tab==="heroes" && idle && <>
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero(hero)}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
+        <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
         <VsStrip hero={hero} db={db}/>
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
+      {table==="find" && <TableScreen onBack={()=>setTable(null)} onSeated={s=>setTable(s)}/>}
+      {table && table!=="find" && <TableMatch table={table.table} host={table.host} code={table.code}
+        onExit={()=>setTable(null)}/>}
       {/* THE MATCH SEED is stamped once, here, when the match begins — and
           then everything random in the match derives from it: the pregame
           throw, both opening shuffles, the d6, intimidate, the dummy's
@@ -4377,9 +4663,9 @@ function App(){
         onBack={()=>{setLoHero(seating.h); setSeating(null);}}
         onSeated={first=>{setFighting({h:seating.h,cfg:seating.cfg,first}); setSeating(null);}}/>}
       {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
-      {tab==="judge" && !fighting && !loHero && !seating && <Judge/>}
-      {tab==="trophies" && !fighting && !loHero && !seating && <Trophies/>}
-      {!fighting && !loHero && !seating && <nav className="tabs">
+      {tab==="judge" && idle && <Judge/>}
+      {tab==="trophies" && idle && <Trophies/>}
+      {idle && <nav className="tabs">
         <button className={"tab"+(tab==="heroes"?" on":"")} onClick={()=>{setTab("heroes");}}>Heroes</button>
         <button className={"tab"+(tab==="judge"?" on":"")} onClick={()=>setTab("judge")}>Judge</button>
         <button className={"tab"+(tab==="trophies"?" on":"")} onClick={()=>setTab("trophies")}>Trophies</button>

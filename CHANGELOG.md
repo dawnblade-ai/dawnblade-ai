@@ -9,6 +9,74 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.38 — a table number, and two devices at it
+
+The sync layer is no longer headless. All four modules are in index.html's
+script tags and in `test/sync.test.js`'s `MODULES`; `wire.test.js`'s `HEADLESS`
+list is now empty.
+
+**`engine/room.js` — the only file in the engine that knows a network exists.**
+PeerJS rather than Trystero, for one reason: PeerJS ships a **UMD build** that
+loads with a plain `<script src>`, and Trystero is ESM-only, which would mean
+`type="module"` and no `file://`. It loads **lazily**, on the first tap of *Find
+an opponent*, so the solo trainer and a `file://` page pay nothing for it.
+
+The table number falls out of PeerJS's model instead of being bolted on: a peer
+may claim a chosen id, so the host claims the table's and the guest dials it.
+"That table is taken" and "nobody is sitting there" become real answers from the
+relay rather than states we invent.
+
+Three things that are not optional, each with a drill:
+
+- **The id is namespaced** (`dawnblade-v1-<CODE>`). The public relay is shared
+  with every other PeerJS app in the world; an unqualified "42" would collide
+  with a stranger's project and look like a Dawnblade bug.
+- **The channel is `{reliable:true}`.** PeerJS does not default to it, and
+  `net.js` treats a sequence gap as a dead channel rather than reassembling — an
+  unordered channel would resync in a loop.
+- **A third phone is turned away** before its channel opens. A second guest
+  would become a second actor whose intents the sequencer would interleave into
+  somebody else's match.
+
+The **table code is the match seed**, which is rng.js's own stated goal: both
+peers derive the same seed from the same room code without exchanging it. The
+code alphabet drops I, L, O, 0 and 1 — it is read off one phone and typed into
+another across a table, so legibility beats entropy.
+
+**The message sink buffers until somebody listens.** The channel opens before
+there is a session to feed it, because the session needs the `send` the channel
+provides. Anything arriving in that gap is held and flushed on `listen`; without
+it the handshake is dropped and the guest sits on "connecting" with no error.
+
+**`test/sync.test.js` caught a real collision on the first run.** `TableMatch`
+declared `const seat = host ? 0 : 1` — and `priority.js` exports a `seat` helper
+meaning "seat a game". Same name, different meaning: the exact trap that made
+`tapTwice`'s `act` shadow the actor helper in v2.25. Renamed to `mySeat` rather
+than pinned, per the standing rule.
+
+**Played across two clients over the real public relay**, not just drilled:
+table QZHF, both clients on hash `c048c95cd0709361` at the deal, an attack and a
+defender declaration crossing the wire, damage resolving 5 − 3 = 2, and both
+ending the chain on `5873c4d96a63e637` with clean consoles and both graveyards
+filed.
+
+### What the table cannot do yet, and why
+
+**Two hero decks still cannot cross the wire, and that is a rules gap rather
+than a network one.** `foeSwing` fabricates the opponent's attack as
+`[3,4,5][(turn-1)%3]` — seat 1 emits a *number*, not a played card, so there is
+nothing for a second human to occupy. `Battle` is also 22 `setG` closures rather
+than a `reduce(state, action)`, so there is no reducer for `net.js` to drive
+even once seat 1 can act. That is Phase A step 4 plus Phase B step 6, and it is
+the same work whether the opponent is across the table or across the internet.
+
+Until then the table runs the blank decks: a real two-player game of the CR turn
+structure, priority and combat chain, just not of Flesh and Blood cards.
+
+505 -> 522 drills.
+
+---
+
 ## (engine only, no APP_VER bump) — the sync layer: two phones, one game
 
 **`index.html` is untouched, so nothing ships to players and `APP_VER` stays

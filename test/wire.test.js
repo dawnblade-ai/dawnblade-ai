@@ -293,16 +293,15 @@ test("the encoder actually visits every declared zone", () => {
 });
 
 test("every engine module is loaded by index.html, or declared headless", () => {
-  /* wire.js, net.js and actions.js are deliberately NOT in index.html.
-     They are headless — nothing in the trainer calls them yet — and an
-     unused <script src> would put them under test/sync.test.js's bridge
-     guard with no bare-name calls for it to check.
+  /* The list is EMPTY as of the table build: wire, net, actions and room
+     are all loaded by index.html now and all four are in
+     test/sync.test.js's MODULES, so the bridge guard covers them.
 
-     When the hotseat or the network screen lands, each one goes into
-     index.html AND into sync.test.js's MODULES list in the same edit.
-     This drill is what makes that a deliberate move: wire one up without
-     updating the guard and it fails here, naming the file. */
-  const HEADLESS = ["wire", "net", "actions"];
+     It stays as the ledger's shape. A new engine module that nothing
+     loads yet belongs here, and moving one out of this list must be the
+     same edit that adds it to MODULES — otherwise a module can be wired
+     into the page with nothing watching for a shadowed export. */
+  const HEADLESS = [];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

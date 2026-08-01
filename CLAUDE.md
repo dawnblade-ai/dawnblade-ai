@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.37
+**Current version:** v2.38
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 505 drills:
+This is `node --test "test/*.test.js"` — currently 522 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -1079,6 +1079,74 @@ without checking `windowClosed`); the caller has to honour it.
 zones; a card in *none* just falls out of the census and is invisible to it.
 So the chain's cards are filed to the graveyard at close, turn-stamped, and
 a drill counts cards before and after.
+
+### The table — `engine/room.js` and the Find opponent screen
+
+**Wired and played across two clients over the real public relay.** The
+sync layer is no longer headless: all four modules are in index.html's
+script tags and in `test/sync.test.js`'s `MODULES`, and `wire.test.js`'s
+`HEADLESS` list is now empty.
+
+`room.js` is **the only file in the engine that knows a network exists.**
+It uses **PeerJS**, not Trystero, for one reason: PeerJS ships a UMD build
+that loads with a plain `<script src>`, and Trystero is ESM-only, which
+would mean `type="module"` and no `file://`. It is loaded **lazily**, on
+the first tap of *Find an opponent*, so a `file://` page and the solo
+trainer pay nothing for it.
+
+**The table number falls out of PeerJS's model rather than being bolted
+on.** A peer may claim a chosen id, so the host claims the table's id and
+the guest dials it — which makes "that table is taken" and "nobody is
+sitting there" real answers from the relay instead of states we invent.
+
+Two things that are not optional:
+
+- **The peer id is namespaced** (`dawnblade-v1-<CODE>`). The public relay
+  is shared with every other PeerJS app in the world; an unqualified "42"
+  would collide with a stranger's project and look like our bug.
+- **The channel is opened `{reliable:true}`.** PeerJS does not default to
+  it, and `net.js` treats a sequence gap as a dead channel rather than
+  reassembling — an unordered channel would resync in a loop.
+
+**The table code is the match seed** (`newMatch({seed: code})`), which is
+rng.js's own stated goal: both peers derive the same seed from the same
+room code without exchanging it.
+
+**The message sink is replaceable and it buffers.** The channel opens
+before there is a `net.js` session to feed, because the session needs the
+`send` the channel provides — the ordering is unavoidable. Anything
+arriving in that gap is held and flushed on `listen`, or the handshake is
+dropped and the guest sits on "connecting" with no error to show.
+
+**A third phone is turned away**, before its channel opens. A second guest
+would become a second actor whose intents the sequencer would happily
+interleave into somebody else's match.
+
+**`mySeat`, never `seat`, in the trainer.** `priority.js` exports a `seat`
+helper meaning "seat a game"; a local `seat` meaning "which chair is this
+client in" is the same-name-different-meaning trap — `test/sync.test.js`
+caught it on the first run of this build, exactly as it caught `tapTwice`'s
+`act` in v2.25.
+
+### What the table CANNOT do yet, and why
+
+**Two hero decks cannot cross the wire.** This is not a network gap, it is
+a rules gap, and it is worth stating precisely because the screen looks
+finished:
+
+`foeSwing` still fabricates the opponent's attack as
+`[3,4,5][(turn-1)%3]` — **seat 1 emits a number, not a played card.** It
+has no action phase, no hand it plays from, no costs. So there is nothing
+for a second human to *occupy*. `Battle` is also 22 `setG` closures rather
+than a `reduce(state, action)`, so there is no reducer for `net.js` to
+drive even once seat 1 can act.
+
+That is roadmap **Phase A step 4** (give seat 1 an action phase) plus
+**Phase B step 6** (extract `judge.js`), and it is the same work whether
+the opponent is across the table or across the internet. Until then the
+table runs `engine/actions.js`'s blank decks, which is a real two-player
+game of the CR turn structure and priority — just not of Flesh and Blood
+cards.
 
 ### Known limitation, stated honestly
 
