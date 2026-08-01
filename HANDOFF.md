@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.37
+# Handoff — Dawnblade, at v2.38
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,14 +16,42 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **413 drills, all green.** Never leave them red.
+- `npm test` → **522 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
 - Pool: **405 unique cards · 265 full / 108 part / 32 none**.
-- Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
-  remote, no `gh`, no credentials. Deploying is not this thread's job.
+- Under git, `main` at v2.38. **The user uploads to GitHub manually** — there is
+  no remote, no `gh`, no stored credential. Deploying is not this thread's job,
+  and do not try to route around it.
+- **Phase B of `ROADMAP-MULTIPLAYER.md` is BUILT and PROVEN** — see "The sync
+  layer" and "The table" in `CLAUDE.md`. Two devices can sit at a table code and
+  play in lockstep. What they cannot yet play is *Flesh and Blood*; read the
+  next section before assuming multiplayer is done.
 - `npm run stack` → **3 open** (`charge`, `high-tide`, `surge`); `charge`,
   `phantasm` and `arsenal-reorder` each carry a specific question in
   `tools/followups.json`.
+
+## READ THIS BEFORE TOUCHING MULTIPLAYER
+
+**The network is finished. The second player does not exist.** It is easy to
+look at the table screen, see two phones in sync, and conclude Phase 2 is done.
+It is not, and the gap is not in the transport:
+
+- `foeSwing` fabricates the opponent's attack as `[3,4,5][(turn-1)%3]`. **Seat 1
+  emits a number, not a played card.** It has no action phase, no hand it plays
+  from, and pays no costs — so there is nothing for a second human to occupy.
+- `Battle` is **22 `setG` closures**, not a `reduce(state, action)`. `net.js`
+  takes `reduce` as a parameter precisely so `judge.js` can drop in, but that
+  reducer does not exist yet.
+
+So the table runs `engine/actions.js`'s **blank decks**: real CR turn structure,
+real priority, a real combat chain, and no card text anywhere. That was
+deliberate — a transport failure and a card being read wrong must never be
+confusable — and there are drills that fail if a pool card ever appears there.
+
+**Both blockers are the same work as sunsetting the dummy.** Give seat 1 an
+action phase (`ROADMAP-OPPONENT.md` Phase 2) and extract the reducer
+(`ROADMAP-MULTIPLAYER.md` Phase B step 6), and the existing sync layer carries
+real decks with no changes to `wire.js`, `net.js` or `room.js`.
 
 ## Start here: `priority.js`, then the opponent
 
@@ -111,6 +139,8 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 ## What is left, ranked
 
 1. **Wire `priority.js` for real** — see above. Blocks the opponent work.
+   Then **seat 1's action phase** and **`judge.js`**, which together are the
+   only thing between the working sync layer and real two-player FaB.
 2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
    seam. Both encode the DUMMY, so they migrate together with giving seat 1 a
    real action phase (`ROADMAP-OPPONENT.md` Phase 2).
@@ -123,7 +153,7 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 ## Validation loop
 
 ```bash
-npm test                              # 413 drills — must stay green
+npm test                              # 522 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -157,7 +187,11 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 413 drills |
+| `engine/wire.js` | the game as one JSON object + the rules fingerprint (`hash`, `diffPaths`) |
+| `engine/net.js` | the session: handshake, sequencing, desync detection, resync |
+| `engine/actions.js` | six **blank** actions — the reference reducer, no cards in it |
+| `engine/room.js` | the transport: PeerJS, table codes, the only file that knows a network exists |
+| `test/*.js` | 522 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |

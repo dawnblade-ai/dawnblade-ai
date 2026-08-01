@@ -9,6 +9,169 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.38 — a table number, and two devices at it
+
+The sync layer is no longer headless. All four modules are in index.html's
+script tags and in `test/sync.test.js`'s `MODULES`; `wire.test.js`'s `HEADLESS`
+list is now empty.
+
+**`engine/room.js` — the only file in the engine that knows a network exists.**
+PeerJS rather than Trystero, for one reason: PeerJS ships a **UMD build** that
+loads with a plain `<script src>`, and Trystero is ESM-only, which would mean
+`type="module"` and no `file://`. It loads **lazily**, on the first tap of *Find
+an opponent*, so the solo trainer and a `file://` page pay nothing for it.
+
+The table number falls out of PeerJS's model instead of being bolted on: a peer
+may claim a chosen id, so the host claims the table's and the guest dials it.
+"That table is taken" and "nobody is sitting there" become real answers from the
+relay rather than states we invent.
+
+Three things that are not optional, each with a drill:
+
+- **The id is namespaced** (`dawnblade-v1-<CODE>`). The public relay is shared
+  with every other PeerJS app in the world; an unqualified "42" would collide
+  with a stranger's project and look like a Dawnblade bug.
+- **The channel is `{reliable:true}`.** PeerJS does not default to it, and
+  `net.js` treats a sequence gap as a dead channel rather than reassembling — an
+  unordered channel would resync in a loop.
+- **A third phone is turned away** before its channel opens. A second guest
+  would become a second actor whose intents the sequencer would interleave into
+  somebody else's match.
+
+The **table code is the match seed**, which is rng.js's own stated goal: both
+peers derive the same seed from the same room code without exchanging it. The
+code alphabet drops I, L, O, 0 and 1 — it is read off one phone and typed into
+another across a table, so legibility beats entropy.
+
+**The message sink buffers until somebody listens.** The channel opens before
+there is a session to feed it, because the session needs the `send` the channel
+provides. Anything arriving in that gap is held and flushed on `listen`; without
+it the handshake is dropped and the guest sits on "connecting" with no error.
+
+**`test/sync.test.js` caught a real collision on the first run.** `TableMatch`
+declared `const seat = host ? 0 : 1` — and `priority.js` exports a `seat` helper
+meaning "seat a game". Same name, different meaning: the exact trap that made
+`tapTwice`'s `act` shadow the actor helper in v2.25. Renamed to `mySeat` rather
+than pinned, per the standing rule.
+
+**Played across two clients over the real public relay**, not just drilled:
+table QZHF, both clients on hash `c048c95cd0709361` at the deal, an attack and a
+defender declaration crossing the wire, damage resolving 5 − 3 = 2, and both
+ending the chain on `5873c4d96a63e637` with clean consoles and both graveyards
+filed.
+
+### What the table cannot do yet, and why
+
+**Two hero decks still cannot cross the wire, and that is a rules gap rather
+than a network one.** `foeSwing` fabricates the opponent's attack as
+`[3,4,5][(turn-1)%3]` — seat 1 emits a *number*, not a played card, so there is
+nothing for a second human to occupy. `Battle` is also 22 `setG` closures rather
+than a `reduce(state, action)`, so there is no reducer for `net.js` to drive
+even once seat 1 can act. That is Phase A step 4 plus Phase B step 6, and it is
+the same work whether the opponent is across the table or across the internet.
+
+Until then the table runs the blank decks: a real two-player game of the CR turn
+structure, priority and combat chain, just not of Flesh and Blood cards.
+
+505 -> 522 drills.
+
+---
+
+## (engine only, no APP_VER bump) — the sync layer: two phones, one game
+
+**`index.html` is untouched, so nothing ships to players and `APP_VER` stays
+at v2.37.** This is `ROADMAP-MULTIPLAYER.md` Phase B steps 7 and 8 built
+headless: three modules, 72 drills, no UI. `test/wire.test.js` pins that they
+are *deliberately* not loaded — every `engine/*.js` file is either in
+index.html's script tags or in its `HEADLESS` list, so wiring one up without
+updating `test/sync.test.js`'s `MODULES` fails a drill by name.
+
+### `engine/wire.js` — the game as one JSON object
+
+Cards are interned as `[dictIndex, overrides, deletions?]`, the overrides
+found by **structural diff** rather than a hardcoded field list — so `uid`,
+`_gy`, gear's `curDef`/`destroyed` and the arsenal's `_faceUp`/`_arsPow`
+stamps all ride automatically, and a card that grows a field ships it without
+a code change. **Nothing here reads card text.** With a catalog (the loader's
+own cache) definitions stay off the wire entirely: 8818 -> 3705 bytes on a
+blank opening board, and far more on a real one where `name|pitch` repeats.
+
+`decode` refuses four ways rather than guessing — wrong `WIRE_V`, a catalog
+hash mismatch (**two clients on different `DATA_VER` are refused at the
+handshake, not discovered on turn six**), a bare key with no catalog, and a
+rebuild that does not match the sender's fingerprint.
+
+**The hash excludes `log` and `feed`, and that is not an oversight.** Taunts
+and trophy text are on `Math.random` by design, so two honest peers are
+*guaranteed* to differ there and hashing them would report a desync on every
+action. `inspect`/`boostOn` (per-client UI) and art URLs are out for the same
+class of reason. `rng` is in — `rng.n` is the canary rng.js already names.
+
+`JSON.stringify` could not be the fingerprint: it preserves insertion order,
+so a peer rebuilt from a snapshot would hash differently from one that
+reached the same game through the reducer, and **every reconnect would look
+like a desync**.
+
+`diffPaths` is the payoff — a mismatch arrives as `/sides/1/grave/0/uid`
+instead of two hex strings.
+
+### `engine/net.js` — the session
+
+Transport-agnostic on purpose: it takes `send`, exposes `receive`, and a
+drill scans it (comments stripped) for any transport name. **The
+recommendation is WebRTC DataChannel** — GitHub Pages has no server to
+terminate a WebSocket, so `ws://` is a backend to build, which is Phase C.
+`wsAdapter` is written anyway so the Phase C seam is proven; `loopback()`
+with `drop`/`delay` is what the drills run on.
+
+**Priority is the lock — except in the defend step.** CR 7.3.2 makes
+declaring defenders free and simultaneous while CR 7.3.3 gives the
+turn-player priority in the same step, so there and only there both seats can
+legally act at once. Hence a **sequencer**: one peer orders actions and
+nothing else. It is not authoritative over outcomes — both peers run the
+identical reducer and both verify — which keeps Phase C a relocation rather
+than a rewrite.
+
+**Two bugs found by the drills, not by eye:**
+
+1. **An infinite repair loop.** A diverged peer is level on `seq`, so every
+   cheap resync test concluded it needed nothing — or sent it a log replay,
+   which reproduced the same wrong answer over the same wrong state, so it
+   asked again. `force` is now checked *first* in the RESYNC handler.
+2. **The race drill proved nothing.** A guest applying optimistically
+   diverges, gets caught by the hash, and is snapped back — so the end states
+   agree and the test went green. It now pins `desyncs === 0 && resyncs === 0`:
+   ordering must make the divergence *impossible*, not survivable.
+
+Three mutations were reintroduced and each makes its drill fail: dropping
+`rng` from the hash, undoing the `force` ordering, and the optimistic apply.
+
+### `engine/actions.js` — six blank actions
+
+`pitch · pass · attack · defend · roll · endTurn` over cards with `tx: ""`
+and no keywords. **No card from the pool is touched** — one drill reads every
+card in a match and fails on any rules text, another fails if the module ever
+imports the parser. It is a real driver of `priority.js` (nothing about
+priority is restated) and explicitly *not* the game's rules; `judge.js`
+replaces it wholesale, which is why `net.js` takes `reduce` as a parameter.
+
+**The close step was a deadlock.** CR 7.7.1 gives nobody priority there, so
+no player action can drive it out and the game parked in a step neither seat
+could leave. `priority.js` already said so — `advance` is the one step it
+lets through without checking `windowClosed` — and the caller has to honour
+it. Also: chain cards are now filed to the graveyard at close, turn-stamped.
+A card in *two* zones is what `invariants.js` catches; a card in *none* falls
+out of the census entirely, so a drill counts cards before and after.
+
+**Still true, and stated rather than papered over:** both peers hold full
+state, including the opponent's hand. That is fact 4's deliberate Phase B
+position and it is not fixable by redaction — a peer that cannot see the
+state cannot run the reducer. Hidden information needs Phase C's server.
+
+432 -> 505 drills.
+
+---
+
 ## v2.37 — the preview gets out of the way, and priority gets its first consumer
 
 ### The preview sits above the hand now
