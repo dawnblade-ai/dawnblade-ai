@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:50:50.166Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:54:54.520Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 310 / 437 (71%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 301/405
-(tiers: full 301, part 80, none 24)
+**Overall: 311 / 437 (71%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 302/405
+(tiers: full 302, part 80, none 23)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 301/405
 
 ---
 
-## Pool cards (301/405)
+## Pool cards (302/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -302,7 +302,7 @@ tokens 7/17 · pool cards 301/405
 - [x] Lightning Surge [pitch 1] _(briar)_
 - [x] Limpit, Hop-a-long [pitch 2] _(gravy)_
 - [ ] Line Crossers — part, 1 clause(s) unread _(lyath)_
-- [ ] Look Tuff [pitch 1] — none, 1 clause(s) unread _(blaze, enigma, iyslander)_
+- [x] Look Tuff [pitch 1] _(blaze, enigma, iyslander)_
 - [ ] Loot the Arsenal [pitch 3] — part, 2 clause(s) unread _(gravy)_
 - [ ] Loot the Hold [pitch 3] — part, 1 clause(s) unread _(gravy)_
 - [x] Macho Grande [pitch 3] _(bravo)_

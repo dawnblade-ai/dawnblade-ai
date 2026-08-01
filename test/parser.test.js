@@ -1345,3 +1345,27 @@ test("pickPrompt — Memorial Ground resolves to tier full", () => {
     tx:"Put target attack action card with cost 1 or less from your graveyard on top of your deck."});
   assert.equal(fx.tier, "full");
 });
+
+/* ---- payOrLose — Look Tuff's "unless you pay", v2.39 ------------------ */
+test("payOrLose — reads the power penalty and the {r} cost as one op (Look Tuff)", () => {
+  const r = P.classifyClause("it gets -1{p} unless you pay {r}");
+  assert.deepEqual(r.ops, [["payOrLose", 1, 1]]);
+});
+
+test("payOrLose — a numeric cost is read too, not just {r} pips", () => {
+  assert.deepEqual(P.classifyClause("it gets -2{p} unless you pay 3").ops, [["payOrLose", 2, 3]]);
+});
+
+test("payOrLose — must not be confused with the plain 'it gets -N{p}' defend-side shave", () => {
+  /* atkMinus is a DIFFERENT op with different semantics (shaves an
+     INCOMING attack while blocking) — the anchored $ on the plain pattern
+     is what keeps "unless you pay" from falling into it by accident. */
+  assert.deepEqual(P.classifyClause("it gets -1{p}").ops, [["atkMinus", 1]]);
+});
+
+test("payOrLose — Look Tuff resolves to tier full", () => {
+  const fx = P.fxParse({name:"Look Tuff", pitch:1, tt:"Generic Action - Attack", power:5, kw:[],
+    tx:"When this attacks, it gets -1{p} unless you pay {r}."});
+  assert.deepEqual(fx.ops, [["payOrLose",1,1]]);
+  assert.equal(fx.tier, "full");
+});

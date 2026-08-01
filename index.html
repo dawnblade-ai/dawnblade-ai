@@ -2731,7 +2731,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
       const arsPow = (card._arsPow && card._upTurn === n.turn) ? card._arsPow : 0;
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow;
+      /* "it gets -N{p} unless you pay {cost}" (Look Tuff). This is a
+         declare-time decision, before the total below is struck — the same
+         timing wall Charge and Fusion hit, so it gets the same honest
+         approximation: auto-pay when it's affordable (a real prompt drains
+         only after resolution, too late to change THIS attack's own
+         total), else eat the penalty. */
+      const payOrLose = fx.ops.find(o=>o[0]==="payOrLose");
+      let payPenalty = 0;
+      if(payOrLose){
+        const [,penAmt,cost] = payOrLose;
+        if(act(n).res >= cost){ actMut(n).res -= cost; n = L(n, `${card.name}: paid ${cost} — the ${penAmt}{p} penalty is avoided.`); }
+        else { payPenalty = -penAmt; n = L(n, `${card.name}: can't pay ${cost} — takes -${penAmt}{p}.`); }
+      }
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty;
       const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0);
       let total = base + bonus;
       /* a qualified buff that did NOT match is not spent — it waits for an
@@ -2786,7 +2799,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       if(card.pitch===3 && (from==="hand"||from==="arsenal")) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
-      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate

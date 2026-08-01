@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 104 cards | understood ≠ built |
-| **Fail states** | 136 entries, 2 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 103 cards | understood ≠ built |
+| **Fail states** | 135 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -131,7 +131,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Inertia Trap** (none, 1/1 unread)
 - **Lair of the Spider** (none, 1/1 unread)
-- **Look Tuff** (none, 1/1 unread)
 - **Night's Embrace** (none, 1/1 unread)
 - **Radiant Touch** (none, 1/1 unread)
 - **Shred** (none, 1/1 unread)
@@ -174,7 +173,8 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Cindering Foresight** (part, 1/3 unread)
 - **Compass of Sunken Depths** (part, 1/2 unread)
 - **Crankshaft** (part, 1/2 unread)
-- … and 44 more (see the station)
+- **Crankshaft** (part, 1/2 unread)
+- … and 43 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -191,24 +191,19 @@ can be overruled. Same discipline as the mention count.
 |---|---|
 | Earned value denied | 49 |
 | Choice never offered | 42 |
-| Ability inert — cost not modelled | 36 |
+| Ability inert — cost not modelled | 35 |
 | No schedule to fire on | 33 |
 | Displayed total is wrong | 27 |
 | Unread, effect unknown | 21 |
 | Keyword filed as no-op — but the trainer names it (verify) | 18 |
 | Keyword filed as no-op, but it has meaning | 7 |
-| Drawback skipped | 2 |
+| Drawback skipped | 1 |
 
-### UNFAIR — 2 entries
+### UNFAIR — 1 entries
 
 **A rule is broken every time one of these is played.** This is the
 worst thing a trainer can do: it teaches wrong play.
 
-- **Look Tuff** (1) · tier `none` · iyslander, enigma, blaze
-  - *Drawback skipped* — The card's own downside never lands, so it plays as strictly better than printed.
-    > When this attacks, it gets -1{p} unless you pay {r}.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > When this attacks, it gets -1{p} unless you pay {r}.
 - **Lyath Goldmane** · tier `hero` · lyath-goldmane
   - *Drawback skipped* — The card's own downside never lands, so it plays as strictly better than printed.
     > The base {p} and {d} of cards you control are halved, rounded up.

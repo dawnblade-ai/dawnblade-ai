@@ -361,6 +361,15 @@ function classifyClause(raw){
   if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
   if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\}$/)) return R([["atkMinus",+m[1]]]);
+  /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — this REDUCES ITS
+     OWN power, unlike the atkMinus pattern above which shaves an INCOMING
+     attack while blocking. A genuine decision at declaration, before the
+     total is struck — read into a single op so execute() can resolve it
+     at the same point Charge/Fusion's declare-time reads already live. */
+  if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\} unless you pay ((?:\{r\})+|\d+)$/)){
+    const cost = /^\d+$/.test(m[2]) ? +m[2] : (m[2].match(/\{r\}/g)||[]).length;
+    return R([["payOrLose", +m[1], cost]]);
+  }
   /* the clash block reads this off the card and applies it to the block */
   /* spellvoid destroys itself to stop arcane; the dummy throws only fists */
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
