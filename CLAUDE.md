@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 413 drills:
+This is `node --test "test/*.test.js"` — currently 505 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -125,7 +125,11 @@ This is `node --test "test/*.test.js"` — currently 413 drills:
    **`test/actor.test.js`** is the actor/perspective ledger: it fails if a
    MIGRATED rules function still reaches for `you(`/`opp(`, and if a PENDING
    one has quietly stopped — see "ACTOR vs PERSPECTIVE" below.
-6. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
+6. **The sync layer** (`test/wire.test.js`, `test/net.test.js`,
+   `test/actions.test.js`) — serialization round-trips, the rules
+   fingerprint, and two sessions driven at each other over a loopback
+   with packet loss, desync and reconnect. See "The sync layer" below.
+7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
 or parser change:
@@ -932,6 +936,158 @@ first turn. Ties are replayed rather than counted. `Pregame` sits between the
 loadout and the first draw and passes `first` (0 = you, 1 = opponent) into
 `Battle` — the same indices `sides[]` uses, so the screen already speaks the
 two-player vocabulary.
+
+---
+
+## The sync layer — two phones, one game (Phase B)
+
+`ROADMAP-MULTIPLAYER.md` Phase B steps 7 and 8, built **headless**: three
+modules, 72 drills, and **not one line loaded by `index.html`**. Nothing in
+the trainer calls them yet and no UI exists for them. `test/wire.test.js`
+holds that as a ledger — every `engine/*.js` file is either in index.html's
+script tags or in its `HEADLESS` list, so wiring one up without also adding
+it to `test/sync.test.js`'s `MODULES` fails a drill by name.
+
+| module | job |
+|---|---|
+| `engine/wire.js` | the game as one JSON object, and the fingerprint that proves two phones agree |
+| `engine/net.js` | the session: handshake, sequencing, desync detection, resync, reconnect |
+| `engine/actions.js` | six **blank** actions — a reference reducer with no cards in it |
+
+### The transport: WebRTC, and why the module names neither
+
+**GitHub Pages serves static files. There is nothing there to terminate a
+WebSocket.** A `ws://` transport is not a different library, it is a backend
+to build, pay for and keep awake — which is Phase C's job. WebRTC
+DataChannel over a CDN-loaded P2P lib (Trystero, PeerJS) gets two phones
+talking with a room code and no backend at all. Configure it **reliable and
+ordered**: a turn-based game wants correctness, not latency, and `net.js`
+treats a sequence gap as a dead channel rather than reassembling.
+
+`net.js` mentions neither. It takes a `send` function and exposes `receive`;
+that is the whole transport contract. `loopback()` (in-memory, with `drop`
+and `delay` controls) is what the drills run on, and `wsAdapter` is Phase C's
+adapter written now so the seam is proven rather than promised. A drill
+scans the module — comments stripped — and fails if any transport name
+appears in the code.
+
+### Priority is the lock — except in exactly one step
+
+Both peers run the same reducer over the same ordered log from the same
+seed, which needs a **total order** on actions. The rules very nearly supply
+one for free: only the priority holder may act, so there is normally nothing
+to arbitrate.
+
+**Except the defend step.** CR 7.3.2 makes declaring defenders free and
+simultaneous, and CR 7.3.3 gives the *turn-player* a priority window in that
+same step. So there, and only there, both seats can legally act at the same
+instant. That is why one peer is the **sequencer**: it assigns the order and
+nothing else. It is deliberately **not** authoritative over outcomes — both
+peers run the identical reducer and both verify the result — which is what
+keeps Phase C's move to a real server a *relocation of the sequencer* rather
+than a client rewrite.
+
+**No client-side prediction.** The guest waits for the commit. Prediction
+buys ~100ms on a turn-based game and costs rollback.
+
+**The drill for this has to assert PREVENTION, not recovery**, and it did not
+at first. A guest that applies optimistically diverges in the defend race,
+gets caught by the hash on the next commit, and is snapped back into line —
+so the end states agree and a naive test goes green having proved nothing.
+It now pins `desyncs === 0 && resyncs === 0`, and reintroducing the
+optimistic apply makes it fail.
+
+### What goes on the wire
+
+Cards are **interned**, not repeated: `[dictIndex, overrides, deletions?]`,
+where the overrides are exactly the fields that differ from the dictionary
+entry — found by **structural diff**, not by a hardcoded field list. That is
+where `uid` lives, and `_gy`, and gear's `curDef`/`destroyed`, and the
+arsenal's `_faceUp`/`_arsPow` stamps. **`wire.js` reads no card text at
+all**, which is what makes it survive the next parser change: a card that
+grows a field ships it automatically.
+
+With a **catalog** (`name|pitch` -> definition, i.e. the loader's own cache)
+definitions do not travel and the payload drops by roughly 10x. That is also
+the hazard, so it is pinned: `catalogHash` rides in the payload and `decode`
+refuses a mismatch. **Two clients on different `DATA_VER` must be refused at
+the handshake, not discovered on turn six.**
+
+`decode` also refuses a wrong `WIRE_V`, a bare key with no catalog, and a
+payload whose rebuild does not match the sender's fingerprint. Four
+refusals, four silent desyncs that cannot happen.
+
+### THE HASH IGNORES THE LOG, AND THAT IS NOT AN OVERSIGHT
+
+`hash` fingerprints the **rules** state. The exclusions are load-bearing:
+
+| excluded | why |
+|---|---|
+| `log`, `feed` | **the taunts are `Math.random` on purpose.** Two honest peers are *guaranteed* to differ here, so hashing them reports a desync on every single action |
+| `inspect`, `boostOn` | per-client UI toggles — one player using inspect mode is not a divergence |
+| `img`, `dbImg`, `prs` | art URLs: presentation, and catalog-derived anyway |
+
+Everything else is in, `rng` included — `rng.n` is the desync canary rng.js
+already names.
+
+`JSON.stringify` cannot be the fingerprint: it preserves insertion order, so
+a peer that rebuilt from a snapshot would hash differently from one that
+reached the same game through the reducer, and **every reconnect would look
+like a desync**. Keys are sorted and strings are length-prefixed, so no
+amount of punctuation in a card's rules text can forge a structural boundary.
+
+### `diffPaths` is the reason a desync is a five-minute fix
+
+The roadmap: *"silent desync is the characteristic failure of lockstep
+netcode and it is miserable to debug after the fact."* So when the hash
+mismatches, the session keeps the state it no longer trusts, diffs it
+against the snapshot that repairs it, and reports **`/sides/1/grave/0/uid`**
+rather than two hex strings.
+
+### Repair: cheap first, and `force` beats cheap
+
+A peer that **missed** actions is sent those actions from the sequencer's
+journal (~100 bytes). A peer that has **diverged** cannot be: replaying the
+same log over the same wrong state reproduces the same wrong answer, and it
+is already level on `seq`, so every cheap test concludes it needs nothing.
+That was a real infinite repair loop — the diverged peer asked, got a
+replay, failed identically, asked again. **`force` is therefore checked
+first in the RESYNC handler**, before the journal branch, and a drill bites
+if that ordering is undone.
+
+### The blank actions
+
+`pitch · pass · attack · defend · roll · endTurn`, over cards with `tx: ""`
+and no keywords. **Not one card from the pool is touched**, and there is a
+drill that reads every card in a match and fails on any rules text, plus one
+that fails if `actions.js` ever imports the parser. A transport failure and
+a card being read wrong must never be confusable.
+
+It is a **real driver of `priority.js`** — every priority decision comes from
+calling that module, nothing is restated. It is **not** the game's rules:
+damage is `power - defence`, a pitch is free, and there is no cost payment.
+When `judge.js` lands (Phase B step 6) it replaces this reducer wholesale;
+`net.js` takes `reduce` as a parameter for exactly that reason.
+
+**The close step is not a deadlock, and it was.** CR 7.7.1 gives nobody
+priority in the close step, so **no player action can drive it** — a settle
+loop that waits for a pass parks the game in a step neither seat can leave.
+`priority.js` already says so (`advance` is the one step it lets through
+without checking `windowClosed`); the caller has to honour it.
+
+**Every card must land in a zone.** `invariants.js` catches a card in *two*
+zones; a card in *none* just falls out of the census and is invisible to it.
+So the chain's cards are filed to the graveyard at close, turn-stamped, and
+a drill counts cards before and after.
+
+### Known limitation, stated honestly
+
+**Both peers hold full state, including the opponent's hand.** That is
+`ROADMAP-MULTIPLAYER.md` fact 4's deliberate Phase B position — the social
+contract does the work between friends — and it is not fixable by redaction
+here, because a peer that cannot see the state cannot run the reducer.
+Hidden information needs Phase C's authoritative server. Do not present the
+current layer as cheat-resistant.
 
 ---
 
