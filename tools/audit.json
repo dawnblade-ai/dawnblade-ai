@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-01T20:54:54.520Z",
+ "generated": "2026-08-01T20:56:54.480Z",
  "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 302,
-  "part": 80,
+  "full": 303,
+  "part": 79,
   "none": 23
  },
  "heroes": {
@@ -2223,17 +2223,17 @@
     "freeze",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Target hero may pay {r}",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If this is played from arsenal, draw a card.",
@@ -2244,10 +2244,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Target hero may pay {r}",
-    "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again",

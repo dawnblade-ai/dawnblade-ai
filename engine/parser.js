@@ -60,6 +60,16 @@ function classifyClause(raw){
      silently claim clauses this exact wording was never written for. */
   if(/^if you do, create a runechant token$/.test(c))
     return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
+  /* COLD SNAP (RULING, per CR: Freeze prevents an object being played or its
+     activated abilities being activated until unfrozen): the dummy pays no
+     costs, so "target hero may pay" always resolves to declining — and
+     Freeze taxes a play/activation the dummy's scripted swing never makes,
+     same idle-against-the-dummy shape as Frostbite/Inertia. Read as a whole
+     unit before the if/when splitter for the same reason the verse-counter
+     rider above is: "if they don't" alone carries no information about
+     what preceded it. */
+  if(/^if they don'?t, freeze .+ until the start of your next turn$/.test(c))
+    return NOOP("Freeze taxes a play/activation — idle against the dummy's scripted swing, same as Frostbite/Inertia");
   /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
      it's blue, pitch it" are two SEPARATE printed clauses, but reading them
      apart breaks on an ATTACK card — the generic conds loop that would
@@ -320,6 +330,10 @@ function classifyClause(raw){
     return Object.assign(sub,{cond:"surgeOver"+m[1]});
   }
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
+  /* COLD SNAP: the cost-offer half. See the "if they don't, freeze" NOOP
+     above for why declining is the only outcome that matters in solo play. */
+  if(/^target hero may pay (?:\{r\}+|\d+)$/.test(c))
+    return NOOP("cost offer — the dummy pays no costs, so it always declines");
   /* FUSION — the bare "X Fusion" line is the additional cost itself
      (hoisted into fx.fusionCost above, same layout rule as a standalone
      "Go again" line); the riders that ask "if this was fused" are read

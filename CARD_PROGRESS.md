@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:54:54.520Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:56:54.480Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 311 / 437 (71%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 302/405
-(tiers: full 302, part 80, none 23)
+**Overall: 312 / 437 (71%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 303/405
+(tiers: full 303, part 79, none 23)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 302/405
 
 ---
 
-## Pool cards (302/405)
+## Pool cards (303/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -189,7 +189,7 @@ tokens 7/17 · pool cards 302/405
 - [x] Clash of Might [pitch 2] _(kayo)_
 - [x] Clash of Vigor [pitch 3] _(bravo)_
 - [x] Cloud Cover [pitch 1] _(briar)_
-- [ ] Cold Snap [pitch 3] — part, 2 clause(s) unread _(iyslander)_
+- [x] Cold Snap [pitch 3] _(iyslander)_
 - [ ] Compass of Sunken Depths — part, 1 clause(s) unread _(gravy)_
 - [x] Concealed Object [pitch 3] _(lyath)_
 - [ ] Concoct Disorder [pitch 1] — none, 2 clause(s) unread _(arakni)_

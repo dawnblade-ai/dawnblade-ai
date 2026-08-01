@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 103 cards | understood ≠ built |
-| **Fail states** | 135 entries, 1 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 102 cards | understood ≠ built |
+| **Fail states** | 134 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -141,7 +141,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
 - **Burn Up // Shock** (part, 2/5 unread)
-- **Cold Snap** (part, 2/4 unread)
 - **Condemn to Slaughter** (part, 2/4 unread)
 - **Condemn to Slaughter** (part, 2/4 unread)
 - **Crow's Nest** (part, 2/3 unread)
@@ -174,7 +173,8 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Compass of Sunken Depths** (part, 1/2 unread)
 - **Crankshaft** (part, 1/2 unread)
 - **Crankshaft** (part, 1/2 unread)
-- … and 43 more (see the station)
+- **Crown of Dichotomy** (part, 1/2 unread)
+- … and 42 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -190,9 +190,9 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Earned value denied | 49 |
-| Choice never offered | 42 |
-| Ability inert — cost not modelled | 35 |
-| No schedule to fire on | 33 |
+| Choice never offered | 41 |
+| Ability inert — cost not modelled | 34 |
+| No schedule to fire on | 32 |
 | Displayed total is wrong | 27 |
 | Unread, effect unknown | 21 |
 | Keyword filed as no-op — but the trainer names it (verify) | 18 |
@@ -212,7 +212,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 63 entries
+### WRONG — 62 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -264,13 +264,6 @@ worst thing a trainer can do: it teaches wrong play.
 - **Burn Up // Shock** (1) · tier `part`
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Meld
-- **Cold Snap** (3) · tier `part` · iyslander
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Target hero may pay {r}
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Target hero may pay {r}
 - **Cosmo, Scroll of Ancestral Tapestry** · tier `none`
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > During your turn, auras you control with ward are weapons with base {p} equal to their ward and Once per Turn Action - {r}: Attack
@@ -347,7 +340,12 @@ worst thing a trainer can do: it teaches wrong play.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-- … and 38 more (see the station)
+- **Night's Embrace** (3) · tier `none`
+  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
+    > Your attacks with stealth get +1{p} this turn.
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Your attacks with stealth get +1{p} this turn.
+- … and 37 more (see the station)
 
 ### LOST VALUE — 63 entries
 

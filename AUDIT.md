@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-01T20:54:54.520Z · app v2.38 · data sage-v10 · db 4862 records
+Generated 2026-08-01T20:56:54.480Z · app v2.38 · data sage-v10 · db 4862 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 302 |
-| Partially scripted | 80 |
+| Fully scripted | 303 |
+| Partially scripted | 79 |
 | Text-only (nothing parsed) | 23 |
 | Cards with audit flags | 67 |
 
@@ -317,14 +317,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — If it's not your turn, you may play this as though it were an instant.
 - ▶ The next card you play this turn with an effect that deals arcane damage, instead deals that much arcane damage plus 1.
 - ▶ Opt 1
-
-### Cold Snap (pitch 3) — part · [iyslander]
-- type: Ice Action · printed: Go again · granted: Freeze
-- — Target hero may pay {r}
-- — If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.
-- ▶ If this is played from arsenal, draw a card.
-- ▶ Go again
-- 🚩 unreviewed keyword: "freeze"
 
 ### Compass of Sunken Depths (pitch 0) — part · [gravy]
 - type: Pirate Necromancer Equipment - Off-Hand · granted: Go again
@@ -804,6 +796,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
+- **Cold Snap** (pitch 3): unreviewed keyword: "freeze"
 - **Concealed Object** (pitch 3): tap cost {t} — not enforced (see ledger)
 - **Cutty Shark, Quick Clip** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Display Loyalty** (pitch 1): text mentions go again but no clause parses it

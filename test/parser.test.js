@@ -1369,3 +1369,15 @@ test("payOrLose — Look Tuff resolves to tier full", () => {
   assert.deepEqual(fx.ops, [["payOrLose",1,1]]);
   assert.equal(fx.tier, "full");
 });
+
+/* ---- Cold Snap — Freeze is idle against the dummy, same as Frostbite -- */
+test("cold snap — both halves of the opponent's pay-or-freeze are noop, same shape as Frostbite/Inertia", () => {
+  assert.equal(cc("Target hero may pay {r}").status, "noop");
+  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.").status, "noop");
+});
+
+test("cold snap — resolves to tier full", () => {
+  const fx = P.fxParse({name:"Cold Snap", pitch:3, tt:"Ice Action", power:null, kw:[],
+    tx:"Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again"});
+  assert.equal(fx.tier, "full");
+});
