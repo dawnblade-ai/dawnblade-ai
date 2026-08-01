@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 118 cards | understood ≠ built |
-| **Fail states** | 145 entries, 2 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 110 cards | understood ≠ built |
+| **Fail states** | 142 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -128,7 +128,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Den of the Spider** (none, 1/1 unread)
 - **Entangling Shot** (none, 1/1 unread)
 - **Frailty Trap** (none, 1/1 unread)
-- **Full of Bravado** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Inertia Trap** (none, 1/1 unread)
 - **Lair of the Spider** (none, 1/1 unread)
@@ -164,7 +163,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Silent Stilettos** (part, 2/3 unread)
 - **Turn to Mindfire** (part, 2/3 unread)
 - **Washed Up Wave** (part, 2/3 unread)
-- **Act of Glory** (part, 1/2 unread) · flagged approx
 - **Agile Engagement** (part, 1/2 unread)
 - **Arcane Polarity** (part, 1/2 unread)
 - **Arcane Twining** (part, 1/2 unread)
@@ -174,7 +172,9 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Brain Freeze** (part, 1/3 unread)
 - **Call in the Big Guns** (part, 1/3 unread)
 - **Carrion Crown** (part, 1/3 unread)
-- … and 58 more (see the station)
+- **Cindering Foresight** (part, 1/3 unread)
+- **Cindering Foresight** (part, 1/3 unread)
+- … and 50 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -189,13 +189,13 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 52 |
+| Earned value denied | 51 |
 | Choice never offered | 43 |
 | Ability inert — cost not modelled | 40 |
 | No schedule to fire on | 33 |
-| Unread, effect unknown | 29 |
 | Displayed total is wrong | 27 |
-| Keyword filed as no-op — but the trainer names it (verify) | 13 |
+| Unread, effect unknown | 22 |
+| Keyword filed as no-op — but the trainer names it (verify) | 18 |
 | Keyword filed as no-op, but it has meaning | 7 |
 | Drawback skipped | 2 |
 
@@ -217,11 +217,8 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 71 entries
+### WRONG — 64 entries
 
-- **Act of Glory** (1) · tier `part` · lyath
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Suspense
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
@@ -303,12 +300,6 @@ worst thing a trainer can do: it teaches wrong play.
     > The second time this hits each turn, put a +1{p} counter on it.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > At the beginning of your end phase, if this hasn't hit this turn, remove all +1{p} counters from it.
-- **Edge of Their Seats** (3) · tier `part` · bravo, lyath
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Suspense
-- **Edge of Their Seats** (1) · tier `part` · lyath
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Suspense
 - **Edict of Steel** (1) · tier `part` · boltyn
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > If it has 1 or more +1{p} counters, create a Flurry token.
@@ -336,10 +327,38 @@ worst thing a trainer can do: it teaches wrong play.
 - **Jack Be Quick** (1) · tier `part` · briar
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- … and 46 more (see the station)
+- **Loot the Arsenal** (3) · tier `part` · gravy
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Your next Pirate ally attack this turn gets "When this hits a hero, destroy a card in their arsenal
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > If you do, create a Gold token."
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If you do, create a Gold token."
+- **Magmatic Carapace** · tier `part` · bravo
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > Whenever you play an aura, you may {t} this and pay {r}
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If you do, create a Seismic Surge token.
+- **Mounting Anger** (1) · tier `part` · fai
+  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
+    > If you do, it gains +1{p} and you may play it this turn.
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > If you do, it gains +1{p} and you may play it this turn.
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
+- … and 39 more (see the station)
 
-### LOST VALUE — 64 entries
+### LOST VALUE — 68 entries
 
+- **Act of Glory** (1) · tier `full` · lyath
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
+    > Suspense
 - **Agile Engagement** (1) · tier `part` · dorinthea
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If it's defended by an attack action card, create an Agility token.
@@ -422,24 +441,19 @@ worst thing a trainer can do: it teaches wrong play.
 - **Cutty Shark, Quick Clip** (2) · tier `full`
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 6 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
+- **Edge of Their Seats** (3) · tier `full` · bravo, lyath
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
+    > Suspense
+- **Edge of Their Seats** (1) · tier `full` · lyath
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
+    > Suspense
 - **Enigma Chimera** (1) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Enigma Chimera** (2) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- **Entangling Shot** (1) · tier `none` · azalea
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this is put face-up into your arsenal, you may {t} target hero.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this is put face-up into your arsenal, you may {t} target hero.
-- **Entwine Lightning** (1) · tier `full` · briar
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
-    > Lightning Fusion
-- **Frailty Trap** (1) · tier `none` · arakni
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this defends an attack with go again, create a Frailty token under the attacking hero's control.
-- … and 39 more (see the station)
+- … and 43 more (see the station)
 
 ### INERT — 8 entries
 

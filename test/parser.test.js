@@ -1233,3 +1233,45 @@ test("fusion — the compound 'was fused and deals damage to a hero' gate is rea
   assert.equal(r.onHit, true);
   assert.deepEqual(r.ops, [["self",1]]);
 });
+
+/* ---- SUSPENSE — a board qualifier tag, v2.39 -------------------------- */
+test("suspense — the bare keyword is a qualifier-only noop, same shape as stealth/mark", () => {
+  assert.equal(P.classifyClause("Suspense").status, "noop");
+});
+
+test("suspense — 'when this leaves the arena, next attack gets +N{p}' resolves to full once the bare keyword stops dragging the tier (Act of Glory)", () => {
+  const fx = P.fxParse({name:"Act of Glory", pitch:1, tt:"Guardian Instant - Aura", power:null, kw:["Suspense"],
+    tx:"Suspense\n\nWhen this leaves the arena, your next attack this turn gets +6{p}."});
+  assert.ok(fx.ops.some(o=>o[0]==="buffNext" && o[1]===6));
+  assert.equal(fx.tier, "full");
+});
+
+test("suspense — 'if you control an aura of suspense' reads as cond suspenseAura (Full of Bravado)", () => {
+  const r = P.classifyClause("if you control an aura of suspense, create a Confidence token");
+  assert.equal(r.cond, "suspenseAura");
+  assert.deepEqual(r.ops, [["token","confidence",1,"self"]]);
+});
+
+/* ---- Saltwater Swell — reveal-then-conditional-pitch, v2.39 ----------- */
+test("reveal+pitch — 'if it's blue, pitch it' is read as ONE atomic op, not a cond+op split", () => {
+  /* Splitting it (cond revBlue + a separate pitch op) would check the
+     condition in the EARLY conds loop, before the reveal that sets
+     n.revealed has even run at declaration — see the comment above the
+     pattern in parser.js. */
+  const r = P.classifyClause("if it's blue, pitch it");
+  assert.equal(r.status, "run");
+  assert.deepEqual(r.ops, [["revColorPitch", 3]]);
+  assert.equal(r.cond, undefined, "must not be split into a separate cond");
+});
+
+test("reveal+pitch — red and yellow read their own pitch values", () => {
+  assert.deepEqual(P.classifyClause("if it's red, pitch it").ops, [["revColorPitch", 1]]);
+  assert.deepEqual(P.classifyClause("if it's yellow, pitch it").ops, [["revColorPitch", 2]]);
+});
+
+test("reveal+pitch — Saltwater Swell resolves to tier full", () => {
+  const fx = P.fxParse({name:"Saltwater Swell", pitch:1, tt:"Pirate Action - Attack", power:4, kw:[],
+    tx:"When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again"});
+  assert.deepEqual(fx.ops, [["reveal",1],["revColorPitch",3]]);
+  assert.equal(fx.tier, "full");
+});

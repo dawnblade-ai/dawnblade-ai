@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-01T20:28:39.783Z",
+ "generated": "2026-08-01T20:36:12.245Z",
  "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 287,
-  "part": 92,
-  "none": 26
+  "full": 295,
+  "part": 85,
+  "none": 25
  },
  "heroes": {
   "kayo": {
@@ -5288,22 +5288,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +3{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +3{p}.",
@@ -5387,22 +5385,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Your first attack each turn gets +1{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nYour first attack each turn gets +1{p}.",
@@ -13016,7 +13012,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13026,16 +13022,14 @@
     },
     {
      "t": "If it's blue, pitch it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's blue, pitch it."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again",
@@ -13683,7 +13677,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13693,16 +13687,14 @@
     },
     {
      "t": "If it's blue, pitch it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's blue, pitch it."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again",
@@ -14044,22 +14036,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +6{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +6{p}.",
@@ -14110,22 +14100,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +5{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +5{p}.",
@@ -14275,22 +14263,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +4{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +4{p}.",
@@ -14580,18 +14566,16 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "none",
-   "approx": false,
-   "playable": false,
+   "tier": "full",
+   "approx": true,
+   "playable": true,
    "clauses": [
     {
      "t": "When this attacks or defends, if you control an aura of suspense, create a Confidence token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks or defends, if you control an aura of suspense, create a Confidence token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks or defends, if you control an aura of suspense, create a Confidence token.",

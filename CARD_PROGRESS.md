@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:28:39.783Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:36:12.245Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 296 / 437 (68%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 287/405
-(tiers: full 287, part 92, none 26)
+**Overall: 304 / 437 (70%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 295/405
+(tiers: full 295, part 85, none 25)
 
 ---
 
@@ -108,12 +108,12 @@ tokens 7/17 · pool cards 287/405
 
 ---
 
-## Pool cards (287/405)
+## Pool cards (295/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
 - [x] Achilles Accelerator _(dash)_
-- [ ] Act of Glory [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [x] Act of Glory [pitch 1] _(lyath)_
 - [x] Aether Hail [pitch 3] _(iyslander)_
 - [x] Aether Icevein [pitch 1] _(iyslander)_
 - [x] Aether Icevein [pitch 2] _(iyslander)_
@@ -221,8 +221,8 @@ tokens 7/17 · pool cards 287/405
 - [x] Dry Powder Shot [pitch 1] _(azalea)_
 - [x] Duty Bound Blitz [pitch 1] _(boltyn)_
 - [x] Duty Bound Blitz [pitch 2] _(boltyn)_
-- [ ] Edge of Their Seats [pitch 3] — part, 1 clause(s) unread _(bravo, lyath)_
-- [ ] Edge of Their Seats [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [x] Edge of Their Seats [pitch 3] _(bravo, lyath)_
+- [x] Edge of Their Seats [pitch 1] _(lyath)_
 - [ ] Edict of Steel [pitch 1] — part, 2 clause(s) unread _(boltyn)_
 - [x] Emeritus Scolding [pitch 3] _(blaze, iyslander)_
 - [x] Emeritus Scolding [pitch 1] _(blaze)_
@@ -249,7 +249,7 @@ tokens 7/17 · pool cards 287/405
 - [x] Frost Spike [pitch 3] _(iyslander)_
 - [x] Frosting [pitch 3] _(iyslander)_
 - [x] Fry [pitch 1] _(briar)_
-- [ ] Full of Bravado [pitch 3] — none, 1 clause(s) unread _(lyath)_
+- [x] Full of Bravado [pitch 3] _(lyath)_
 - [x] Fyendal's Fighting Spirit [pitch 1] _(blaze, iyslander)_
 - [x] Garland of Spring _(boltyn)_
 - [x] Gauntlets of Unity _(boltyn, dorinthea)_
@@ -399,8 +399,8 @@ tokens 7/17 · pool cards 287/405
 - [x] Rush of Power [pitch 1] _(briar)_
 - [x] Sadistic Scowl [pitch 1] _(lyath)_
 - [x] Salt the Wound [pitch 2] _(fai)_
-- [ ] Saltwater Swell [pitch 1] — part, 1 clause(s) unread _(gravy)_
-- [ ] Saltwater Swell [pitch 3] — part, 1 clause(s) unread _(gravy)_
+- [x] Saltwater Swell [pitch 1] _(gravy)_
+- [x] Saltwater Swell [pitch 3] _(gravy)_
 - [x] Savage Feast [pitch 1] _(kayo)_
 - [x] Scar for a Scar [pitch 1] _(briar, dorinthea, fai)_
 - [x] Scar Tissue [pitch 1] _(arakni)_
@@ -461,10 +461,10 @@ tokens 7/17 · pool cards 287/405
 - [x] Talismanic Lens _(azalea, blaze)_
 - [x] Tearing Shuko _(fai)_
 - [x] Teklo Trebuchet 2000 [pitch 3] _(dash)_
-- [ ] Tension in the Air [pitch 1] — part, 1 clause(s) unread _(lyath)_
+- [x] Tension in the Air [pitch 1] _(lyath)_
 - [x] Test of Might [pitch 1] _(kayo)_
 - [x] Test of Strength [pitch 1] _(enigma)_
-- [ ] The Suspense is Killing Me [pitch 3] — part, 1 clause(s) unread _(bravo, lyath)_
+- [x] The Suspense is Killing Me [pitch 3] _(bravo, lyath)_
 - [x] Throttle [pitch 1] _(dash)_
 - [x] Throttle [pitch 3] _(dash)_
 - [ ] Throw Caution to the Wind [pitch 3] — part, 1 clause(s) unread _(gravy)_

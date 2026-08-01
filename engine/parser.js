@@ -51,6 +51,17 @@ function classifyClause(raw){
     return NOOP("reveal payoff — fires if this is the card revealed on a winning clash");
   if(/^when it has none, destroy it$/.test(c))
     return NOOP("counter tick — destruction handled with the tick that empties it");
+  /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
+     it's blue, pitch it" are two SEPARATE printed clauses, but reading them
+     apart breaks on an ATTACK card — the generic conds loop that would
+     check "it's blue" runs BEFORE the reveal happens at declaration (see
+     the "Declaration-time ops" comment in execute()), so it would always
+     see last card's stale reveal, or none. One atomic op — read here as a
+     single unit, same rule that keeps other if/when patterns off the
+     generic splitter — checks the SAME n.revealed the reveal op just set,
+     in the same declOps pass. */
+  if(m=c.match(/^if it'?s (red|yellow|blue), pitch it$/))
+    return R([["revColorPitch", {red:1,yellow:2,blue:3}[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))
     return NOOP("clash payoff — the defence step applies this when you win");
   /* RULING (Reaping Blade): a static lock — the hero ahead on life can't gain
@@ -157,6 +168,10 @@ function classifyClause(raw){
     if(m=cond.match(/^you control (\d+) or more auras$/)) return Object.assign(rest,{cond:"auras"+m[1]});
     if(/^you have a card in your arsenal$/.test(cond)) return Object.assign(rest,{cond:"hasArsenal"});
     if(/^you control a seismic surge token$/.test(cond)) return Object.assign(rest,{cond:"seismic"});
+    /* "an aura of suspense" — the board qualifier the bare Suspense keyword
+       tags (see the NOOP above); reads the board the same way "seismic"
+       reads it for its own named token. */
+    if(/^you control an aura of suspense$/.test(cond)) return Object.assign(rest,{cond:"suspenseAura"});
     if(m=cond.match(/^there is a card with cost (\d+) or greater in your pitch zone$/))
       return Object.assign(rest,{cond:"pitchCost"+m[1]});
     if(/^an ally has been put into your graveyard this turn$/.test(cond))
@@ -280,6 +295,11 @@ function classifyClause(raw){
      line is genuinely a no-op; what matters is the state it leaves behind,
      which the mark/aim effect clauses below actually set. */
   if(/^(?:stealth|cloaked)$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  /* SUSPENSE — same shape as stealth/mark: a bare qualifier tag on certain
+     Guardian auras ("Aura of Suspense") that another card (Full of
+     Bravado) checks for generically via cond "suspenseAura" below. Does
+     nothing on its own. */
+  if(/^suspense$/.test(c)) return NOOP("qualifier only — tags this as an aura of Suspense for cards that check the board");
   /* RULING 2026-07-25: phantasm is a drawback, not an ability — a single
      blocker with 6+ printed POWER destroys the attack outright ("popping"
      it), and because it is destroyed its go again never resolves. Enforced
