@@ -98,6 +98,12 @@ function buildPrompt(game, spec){
          Paying nothing and getting the payload is the free-ability bug
          v2.04 fixed, and there is a drill named for it. */
       ops: spec.ops || [],
+      /* THE ARSENAL STAMP is deliberately NOT `ops` (v2.34). Bull's Eye
+         Bracers' "It gains +1{p} until end of turn" belongs to the card that
+         was PUT, and this module runs no effects — returning it as ops would
+         hand it to runOps, which would apply it to the source. It rides on
+         the prompt as data so the trainer can stamp the card that moved. */
+      arsStamp: spec.arsStamp || null,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }

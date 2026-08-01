@@ -9,6 +9,192 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.37 — the preview gets out of the way, and priority gets its first consumer
+
+### The preview sits above the hand now
+
+v2.36 stopped `.peekwrap` *eating* the tap. It was still **hiding** it: a flat
+`bottom:112px` cleared the action bar, but on a 393x852 phone the hand rail
+landed directly underneath the preview, so the two-tap asked you to choose
+between cards you could no longer see.
+
+The offset is now **measured** off the live rail rather than guessed — the
+rail's height depends on which screen is showing and on card size, so a
+hardcoded number would be wrong again at the next layout change. A `uE`
+measures `.phand`/`.chand`/`.hand`, sets `--peekbot` to the distance from the
+viewport bottom to the rail's **top** edge plus a small gap, and re-measures on
+resize so a rotation cannot strand it. The old flat 112px survives as the
+fallback for the first frame and for screens with no rail.
+
+Verified at 393x852: `--peekbot` resolves to 235px, the preview's bottom edge
+lands at y617 against a rail top of y626 — it clears. The whole hand stays
+visible under the preview with the tapped card highlighted, and the second tap
+commits (played Lace with Bloodrot end to end, zero invariant violations).
+
+### `playRx` is the first consumer off `mode`/`bphase`
+
+Roadmap item 1's last step starts here. `playRx` hand-rolled its window as
+`inAtk = s.mode==="stack"` plus an inline reaction test — and **that test
+cannot express the rule it stands in for**: the reaction split follows the
+ATTACKER, not the seat number. With one acting side those coincide, so it was
+right by accident. It now asks `DawnPriority.speedAllowed(s, 0)`.
+
+Behaviour-identical today, correct the moment seat 1 attacks. One deliberate
+change falls out: a finished game now opens no window at all, where the old
+`mode` test would still have let a reaction through with `mode:"stack"` after
+the game ended.
+
+Six drills pin the mapping per trainer state, and a seventh fails if `playRx`
+reads `s.mode` or `s.bphase` again — proven to bite by restoring the old test.
+
+**87 `mode`/`bphase` references remain.** The next consumer is the hand-dim
+logic in `handCell`, which duplicates `playRx`'s old expressions verbatim
+(`rxD`/`rxA`) — migrating it removes the duplication rather than moving it.
+
+**413 drills**, green.
+
+## v2.36 — hand cards were unplayable on a phone
+
+Found by testing at a real **393x852** phone viewport instead of a tall
+desktop window. It is invisible on a tall window, and it is a showstopper on
+the only device this game is built for.
+
+`.peekwrap` — the two-tap preview — is `position:fixed`, full width, and
+mostly empty space. With `pointer-events:auto` that empty space sat **on top of
+the hand rail**:
+
+1. first tap arms the peek;
+2. the peek panel renders over the rail;
+3. second tap hits the wrapper's own `onClick={()=>setPeek(null)}` instead of
+   the card — so it *dismisses* rather than commits.
+
+Tap, peek, tap, peek, forever. **No card in hand could be played.** On a tall
+window the rail sits below the panel and nothing overlaps, which is why every
+previous session's testing missed it.
+
+The CSS comment above the rule had said the right thing all along — *"the rail
+underneath stays visible and the second tap has somewhere to land"* — it just
+was not true. `.peekwrap` now takes no pointer events and `.peekwrap>*` takes
+them back, so the visible preview still dismisses on tap while the empty area
+falls through to the card.
+
+Verified at 393x852 with the peek open: `elementFromPoint` at the card's centre
+returns the card (was `DIV.peekwrap`), and the second tap reaches `tryPlay`.
+Pinned by a drill, proven to bite. `.peekwrap` was the only mostly-empty
+full-width overlay — `.modal`, `.psheet`, `.actbar` and `.bugwrap` are opaque
+or all-controls by design.
+
+**406 drills**, green.
+
+## v2.35 — printings, the turn structure, and the arena
+
+Three things the user asked for, none of which the drills could have found.
+
+### Every card wears its Silver Age face
+
+`resolveEntry` fell back to `pr._first` — whatever printing the card database
+happened to list first, which is arbitrary order rather than a choice. That is
+why an Azalea deck showed GEM, 1HP, PEN and DDD art side by side.
+
+The order is now: an explicit code on the deck entry, then this hero's own
+Silver Age set, then any Silver Age set, then `_first`. Measured across all
+503 deck entries: **467 resolve to their own hero's precon set** and 34 to
+another Silver Age set (deliberate explicit codes for cards not printed in
+their own). Nineteen codes pointing outside Silver Age were removed.
+
+**The Dawnblade is the only Marvel card in the pool**, and an explicit code now
+*wins* over the set preference — without that fix it silently reverted to
+SDO002, overriding the author's choice without a word. One honest exception
+remains: Enigma Chimera at pitch 2 has no Silver Age printing at all, so it
+falls through rather than being given a face that does not exist.
+
+`DATA_VER` → `sage-v10`: cards carry a new `prs` map (image per set), and a
+warm `sage-v9` cache has none of it.
+
+### The end phase follows CR 4.4.3, in the CR's order
+
+Grounded against `rules.fabtcg.com`. The procedure is **ordered**, and the
+trainer ran `e → c → b → f` with two steps missing entirely:
+
+| CR | step | before |
+|---|---|---|
+| a | allies reset to base life | **never happened anywhere** |
+| b | turn-player may arsenal | ran after (c) |
+| c | pitch to the bottom of the deck | ran before (b) |
+| d | turn-player untaps | folded into *next* turn's setup |
+| e | **all players** lose points | only the turn-player |
+| f | turn-player draws to intellect | ✓ |
+
+(d) and (e) are invisible while one seat acts and are real two-player bugs the
+moment a second seat has a turn between yours — a permanent would stay tapped
+through the opponent's turn, and a hero who banks a resource during your turn
+would keep it. The action point also moved to the beginning of the **action**
+phase where CR 4.3.2 puts it, behind a real start phase (CR 4.2).
+
+**The arsenal set is an end-phase step, not an action.** `fromTrainer` mapped
+`mode:"arsenal"` to the action phase with the player holding priority, which
+CR 4.4.1 forbids — and which `PRIORITY-IN-CLOSED-PHASE` could never catch while
+the mapping itself said otherwise.
+
+### More log, and the turn structure narrates itself
+
+Every CR 4.4.3 step now announces itself, including when it does nothing —
+in a *training* sim the sequence is the lesson. Declaring or withdrawing a
+defender used to be completely silent and now logs. The on-screen strip went
+from 4 lines to 8.
+
+### A permanent in the arena can be activated
+
+The board's `onClick` opened the zoom modal for anything that was not an ally,
+so **Energy Potion** and **Timesnap Potion** — both "Destroy this: …" — were
+decoration. Board permanents now build a `powCard` the way gear does, routed
+through the same pool-first-then-pitch-or-cancel flow, and `execute` pays the
+destroy cost into the turn-stamped graveyard.
+
+Allies keep `allySwing` for now: their attacks are costed (`{r}`, `{t}`) and
+belong with the attack-target wiring (CR 1.4.5), which is a bigger job.
+
+**403 → 405 drills**, fairness clean, pool unchanged at 265 full.
+
+## v2.34 — the arsenal cluster closes
+
+v2.33 built the face-up mechanism and one enabler. This finishes the other
+two, and each was inert for a *different* reason:
+
+- **Bull's Eye Bracers** — `parseHeroPower` refused any conditional effect, so
+  the whole ability was dropped and the equipment had no button at all.
+- **Death Dealer** — a Bow, so it took the weapon path; `weaponCost` requires
+  `": attack"` and this ability is a put, so nothing claimed it. Weapons can
+  now carry a non-attack activated ability, through a door deliberately narrow
+  enough that no other weapon grows a button nothing is wired to run.
+
+**Three bugs found on the way, none of which the coverage audit could see:**
+
+1. **The Bracers were pumping themselves.** "It gains +1{p} until end of turn"
+   — "it" is the **arrow that was just put**, not the equipment. Both the
+   clause router and the whole-text self-pump fallback read it as the source's
+   own pump. Same wrong-subject shape as v2.30's arrow buff landing on a sword.
+2. **The stamp was being dropped entirely.** `buildPrompt` carries only the
+   fields it knows, so `arsStamp` never reached `promptConfirm` and the +1
+   would have silently done nothing. Caught by a drill, not by eye.
+3. **Death Dealer's rider was filed unread**, holding it at `part` after it was
+   genuinely wired. The clause ledger is corrected only when the ops are
+   actually claimed.
+
+**Arsenal capacity is modelled, not assumed.** Two printed wordings that are
+not the same question: a plain put needs a **free slot**, while "if you have no
+cards in your arsenal" means **zero**. They coincide at capacity 1, which is
+exactly why hardcoding 1 would have hidden the difference. `arsCap` / `arsFree`
+/ `arsEmpty` live in `parser.js` beside `runeCount`; the storage is unchanged.
+
+**Measured:** 263 → **265 full**, 110 → 108 part. `npm run fairness` clean.
+381 → **391 drills**, and the two that matter are proven to bite by
+reintroducing the bug.
+
+**Still unclaimed on purpose:** Entangling Shot (taps a hero, not modelled) and
+Spire Sniping (a *reorder*, which `opt` is not — `opt` permits bottoming, which
+would be strictly more powerful than printed).
+
 ## v2.33
 
 THE ARSENAL GOES FACE UP — Azalea's engine, 3 cards none -> full. The trainer's

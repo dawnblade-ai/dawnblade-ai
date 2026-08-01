@@ -484,6 +484,13 @@ function optFilter(phrase){
   return null;
 }
 
+/* THE ARSENAL FACE-UP PUT (v2.34). Two shapes that must be read together,
+   because the second one's subject is defined by the first: a card that puts
+   an arrow face up into the arsenal, and a rider whose "it" is that ARROW.
+   Kept as named constants so the clause router and the whole-card reader
+   below cannot drift apart on what counts as the stamp. */
+const ARS_PUT   = /put an? [a-z ]+?(?: card)? (?:from your hand )?face.?up into your arsenal/i;
+const ARS_STAMP = /^\s*it (?:gains?|gets?)\s*\+\d+\s*\{p\}\s*until end of turn/i;
 function fxParse(card){
   const key = norm(card.name)+"|"+(card.pitch||0);
   if(FXMEMO.has(key)) return FXMEMO.get(key);
@@ -594,6 +601,12 @@ function fxParse(card){
          again this turn" would become the card's own printed go again. */
       if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op]; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
+      /* "It gains +1{p} until end of turn" on a card that also puts an arrow
+         face up into the arsenal — "it" is the ARROW, not this equipment.
+         Folding it into fx.self gave Bull's Eye Bracers the power its arrow
+         is printed to get. Held back here and re-read below as
+         `arsenalPut.stamp`, which puts it on the card that was actually put. */
+      if(op[0]==="self" && ARS_STAMP.test(raw) && ARS_PUT.test(clean(card.tx||""))) return;
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
       if(r.onHit) fx.onHit.push(op);
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
@@ -640,6 +653,53 @@ function fxParse(card){
     fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
+  /* the enabler half: "you may put an arrow from your hand face-up into
+     your arsenal". Read the SUBJECT so a card that says "an arrow" cannot
+     put a non-arrow; anything else is left unclaimed.
+
+     THIS MUST BE READ BEFORE THE SELF-PUMP FALLBACK BELOW. Bull's Eye
+     Bracers' rider is "It gains +1{p} until end of turn", where "it" is the
+     ARROW that was just put — not the equipment. The fallback scans the whole
+     text for "gains +N{p}" and was setting fx.self = 1, so the bracers
+     themselves gained the power the arrow is printed to get. That is exactly
+     the VALUE-DOUBLED/wrong-subject shape `npm run fairness` exists to catch. */
+  const apm = tl.match(/you may put an? ([a-z ]+?) (?:card )?from your hand face.?up into your arsenal/)
+           || tl.match(/you may put an? ([a-z ]+?) (?:card )?face.?up into your arsenal/);
+  if(apm){
+    const subj = apm[1].trim();
+    if(/^arrows?$/.test(subj)){
+      fx.arsenalPut = {filter:{tt:"arrow"}};
+      /* TWO DIFFERENT GATES, and they are not the same question. Call in the
+         Big Guns just puts, so it needs a FREE SLOT. Bull's Eye Bracers and
+         Death Dealer both print "if you have no cards in your arsenal", which
+         means ZERO — with a second slot (New Horizon, not in this pool) they
+         would need BOTH empty. Ruling, user 2026-07-28. */
+      if(/if you have no cards in your arsenal/.test(tl)) fx.arsenalPut.needEmpty = true;
+      /* Bull's Eye Bracers: "It gains +1{p} until end of turn." "It" is the
+         put card, so this is a second STAMP on the arrow on top of the
+         arrow's own arsenal trigger, not an effect on the source. "Until end
+         of turn" and "this turn" are the same duration in the CR. */
+      const stm = tl.match(/\bit (?:gains?|gets?)\s*\+(\d+)\s*\{p\}\s*until end of turn/);
+      if(stm) fx.arsenalPut.stamp = [["self", +stm[1]]];
+      /* Death Dealer: "If you do, draw a card." The rider hangs off the put
+         ACTUALLY HAPPENING — prompts.js only returns `ops` when cards moved,
+         which is the v2.04 rule that keeps a declined optional from paying. */
+      const rdm = tl.match(/into your arsenal\.\s*if you do,\s*([^.]+)\./);
+      if(rdm){
+        const rc = classifyClause(rdm[1]);
+        if(rc && rc.status === "run" && rc.ops && rc.ops.length && !rc.cond){
+          fx.arsenalPut.ops = rc.ops;
+          /* The clause ledger runs BEFORE this reader, so "If you do, draw a
+             card" was filed as skip and held Death Dealer at `part`. It is
+             genuinely wired — it rides on the prompt as the put's rider — so
+             the ledger is corrected here rather than left understating it.
+             Only ever flipped when the ops were actually claimed above. */
+          const ic = fx.clauses.find(c => c.st === "skip" && /if you do/i.test(c.t));
+          if(ic) ic.st = "run";
+        }
+      }
+    }
+  }
   /* Fallback self-pump: a non-attack whose "+N{p}" never became an op still
      queues that pump for your next attack.
 
@@ -649,19 +709,11 @@ function fxParse(card){
      both — Lace with Frailty granted +6 from a card that prints +3. Every
      "your next X attack gains +N{p}" card was doubled the same way; the
      phrasing "gets" vs "gains" is why some escaped and some did not. */
-  if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")){
+  if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")
+     && !(fx.arsenalPut && fx.arsenalPut.stamp)){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
     if(pm) fx.self = +pm[1];
     else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
-  }
-  /* the enabler half: "you may put an arrow from your hand face-up into
-     your arsenal". Read the SUBJECT so a card that says "an arrow" cannot
-     put a non-arrow; anything else is left unclaimed. */
-  const apm = tl.match(/you may put an? ([a-z ]+?) (?:card )?from your hand face.?up into your arsenal/)
-           || tl.match(/you may put an? ([a-z ]+?) (?:card )?face.?up into your arsenal/);
-  if(apm){
-    const subj = apm[1].trim();
-    if(/^arrows?$/.test(subj)) fx.arsenalPut = {filter:{tt:"arrow"}};
   }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
@@ -681,7 +733,20 @@ function parseHeroPower(tx, allowDestroy){
   const rsym = (costStr.match(/\{r\}/gi)||[]).length;
   const cost = dm ? +dm[1] : rsym;
   const eff = classifyClause(m[4]);
-  if(!eff || eff.status!=="run" || eff.cond || eff.onHit) return null;
+  /* THE ARSENAL PUT IS THE ONE CONDITIONAL SHAPE THIS READER ACCEPTS (v2.34).
+     Bull's Eye Bracers and Death Dealer both print "If you have no cards in
+     your arsenal, you may put an arrow card ... into your arsenal", so
+     classifyClause hands back a conditional (or nothing) and the guard below
+     dropped the whole ability — both were silently INERT.
+
+     It is safe to let exactly this through because the powCard carries the
+     ability's whole printed line and `execute` re-reads it with fxParse, which
+     DOES read the gate (`arsenalPut.needEmpty`) and the riders. The guard is
+     deliberately not loosened any further: a broad relaxation would raise the
+     tier of cards nothing wires, which is the "never parse ahead of wiring"
+     rule that has cost a real bug before. */
+  const arsPut = ARS_PUT.test(m[4]);
+  if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
   return {cost, ga, sd:!!sd, kind:m[2].toLowerCase(), eff:m[4].trim(),
@@ -734,6 +799,24 @@ const runeCount = sd => (sd && sd.board) ? sd.board.filter(isRunechant).length :
 const isAura = b => !!(b && (b.kind === "aura" || (b.card && /\baura\b/i.test(b.card.tt || ""))));
 const auraCount = sd => (sd && sd.board) ? sd.board.filter(isAura).length : 0;
 
+/* ---- ARSENAL CAPACITY (v2.34) ---------------------------------------
+   Two printed wordings that are NOT the same question, per the user's
+   ruling of 2026-07-28:
+
+     "you may put an arrow ... into your arsenal"        -> needs a FREE SLOT
+     "IF YOU HAVE NO CARDS IN YOUR ARSENAL, you may ..." -> needs ZERO cards
+
+   With the normal capacity of 1 those coincide, which is exactly why
+   hardcoding 1 would hide the difference until New Horizon (a second slot,
+   not in this pool) made Death Dealer and Bull's Eye Bracers wrong. The
+   storage stays a single card or null — `arsCap` is read off the side with a
+   default, so the seam exists without adding a field the migration ledger
+   would have to carry. */
+const arsCap   = sd => (sd && sd.arsCap) || 1;
+const arsCount = sd => (sd && sd.arsenal) ? 1 : 0;
+const arsFree  = sd => arsCap(sd) - arsCount(sd);
+const arsEmpty = sd => arsCount(sd) === 0;
+
 function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)); }
 function weaponCost(tx){
   const t = clean(tx||"");
@@ -754,5 +837,6 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isInstantT,
-        isRunechant, runeCount, isAura, auraCount};
+        isRunechant, runeCount, isAura, auraCount,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty};
 });

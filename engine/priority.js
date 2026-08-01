@@ -260,9 +260,16 @@ function fromTrainer(t, foeFirst){
        first without anybody passing. */
     return toReaction(toDefend(declareAttack(p, 0)));
   }
-  /* Everything else — act, pay, arsenal, boostpick — is the action phase
-     with an open window. The only question is whether a chain is already
-     running, which is `link` rather than `layer`. */
+  /* THE ARSENAL SET IS AN END-PHASE STEP, NOT AN ACTION (CR 4.4.3b), and
+     CR 4.4.1 says players do not get priority during the end phase. It used
+     to be lumped in with `act`/`pay`/`boostpick` as an open action-phase
+     window, which reported a player holding priority in a closed phase —
+     precisely what the PRIORITY-IN-CLOSED-PHASE invariant exists to catch,
+     and it could never fire while the mapping said otherwise. */
+  if(t.mode === "arsenal") return {...p, phase:"end", step:"layer", priority:null};
+  /* Everything else — act, pay, boostpick — is the action phase with an open
+     window. The only question is whether a chain is already running, which
+     is `link` rather than `layer`. */
   return t.chainOpen ? {...p, step:"link"} : p;
 }
 

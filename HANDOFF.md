@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.33
+# Handoff — Dawnblade, at v2.37
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,54 +16,65 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **381 drills, all green.** Never leave them red.
+- `npm test` → **413 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
-- Pool: **405 unique cards · 263 full / 110 part / 32 none**.
+- Pool: **405 unique cards · 265 full / 108 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
   remote, no `gh`, no credentials. Deploying is not this thread's job.
-- `npm run stack` → **4 open**, including `charge` and `arsenal-triggers`, each
-  carrying a specific question in `tools/followups.json`.
+- `npm run stack` → **3 open** (`charge`, `high-tide`, `surge`); `charge`,
+  `phantasm` and `arsenal-reorder` each carry a specific question in
+  `tools/followups.json`.
 
-## Start here: finish the arsenal cluster (2 enablers left)
+## Start here: `priority.js`, then the opponent
 
-**v2.33 built the mechanism and one enabler.** The face-up path works, the
-trigger fires, and Dry Powder Shot / Swift Shot / Ridge Rider Shot are live.
-What remains is in `tools/followups.json` under `arsenal-triggers`: **Bull's Eye
-Bracers** and **Death Dealer**, both activated abilities with costs rather than
-plain actions, and both gating on "no cards in your arsenal" (which means ZERO,
-not "a free slot"). Bull's Eye Bracers adds a second stamp of its own
-(`+1{p} until end of turn` on the arrow). Two payoffs stay unclaimed on purpose
-— see the followup for why, and for the one open reading.
+**The user's direction (2026-08-01): sunset the dummy.** It becomes an
+*opponent* — a fully playable side that picks a hero and is driven by very
+simple strategy. Everything from here is built multiplayer-first.
+**`ROADMAP-OPPONENT.md` is the plan**; read it before starting, it explains
+why the phases are in that order and what "simple strategy" is allowed to mean.
 
-## The original cluster brief (kept for context)
+### Scoped, so it can start immediately
 
-Everything needed is in `tools/followups.json` under `arsenal-triggers`. The
-short version:
+**88 `mode`/`bphase` references** in `index.html` (25 `s.mode`, 43 `g.mode`,
+7 `n.mode`, 22 `bphase`). Do **not** try to remove them in one pass. The safe
+order, each step behaviour-identical *today* and correct the moment seat 1
+acts:
 
-- The trainer's end-of-turn arsenal sets cards **face DOWN**. Every one of these
-  arrows triggers on **face UP**. They are different events — do not conflate
-  them. (An earlier note claimed otherwise and was wrong.)
-- The face-up path is a **hand → arsenal** move and it exists in the pool:
-  **3 enablers** (Bull's Eye Bracers, Death Dealer, Call in the Big Guns) feed
-  **5 payoffs** (Dry Powder Shot, Swift Shot, Entangling Shot, Ridge Rider Shot,
-  Spire Sniping).
-- **Sizing, verified:** `sd.arsenal` holds a card and is written in only 4
-  places, so the card can carry a `_faceUp` flag the way minted cards carry
-  `_playTurn`. `prompts.js`'s `moveCards` already supports `to:"arsenal"`. What
-  is missing is stamping the picked card and firing **its own** ops — a
-  `+2{p} this turn` has to live on the card until it is played.
-- Of the 5 payoffs, **3 are readable now** (Dry Powder Shot `self:2`, Swift Shot
-  `ga`, Ridge Rider Shot `opt 1`). Two are **not**, and should stay unclaimed:
-  Entangling Shot taps a hero (not modelled) and Spire Sniping's "put them back
-  in any order" is a **reorder**, which `opt` is not — `opt` lets you bottom
-  cards, which would be strictly more powerful.
+1. **`playRx`'s speed gate first — it is the smallest and the most wrong.**
+   It hand-rolls the window as `inAtk = s.mode==="stack"` and then an inline
+   `isAR(c) || (isInstantT(c) && …)` test. That is `speedAllowed(g, seat)`
+   stated once, and `speedAllowed` already knows the window follows the
+   ATTACKER rather than the seat number — which the hand-rolled version
+   cannot express at all.
+2. **The hand-dim / playability logic**, same substitution.
+3. **Then** retire `mode`/`bphase` as the source of truth, and only then.
 
-**The user has already ruled** (2026-07-28): Call in the Big Guns' first effect
-resolves regardless; only the arsenal put is skipped when a card is already
-there. Arsenal has a **capacity** (normally 1, two with New Horizon, which is
-not in the pool), and the wordings differ — "no cards in your arsenal" means
-**zero**, so Death Dealer and Bull's Eye Bracers need every slot empty, while
-Call in the Big Guns needs only a free one. Model capacity; do not hardcode 1.
+`fromTrainer` is already proven against live play and v2.35 corrected its
+one wrong mapping (arsenal is an end-phase step). Trust it.
+
+The blocking item is unchanged and is now the *only* thing in the way:
+**wire `priority.js` for real.** The opponent cannot take an action phase while
+`mode`/`bphase` encode "the player is acting" as an invariant. v2.27 put the
+machine in shadow and proved the mapping; v2.35 corrected the arsenal mapping
+(it is an end-phase step, not an action). What is left is moving the consumers:
+`playRx`'s hand-rolled speed gates and the hand-dim logic become
+`speedAllowed`/`canAct`, then `mode`/`bphase` retire.
+
+**Mind the clock.** `priority.js` counts player-turns and ticks on every
+handoff; the trainer's `turn` counts only *your* turns and feeds both the
+escalation table and the score. Reconciling them is part of giving seat 1 a
+turn, not a separate job.
+
+## What v2.35 changed that you should know about
+
+- **Printings.** Every card resolves to its Silver Age face; the Dawnblade is
+  the only Marvel card and a drill enforces it. `mapDbCard` and the loader in
+  `index.html` both build `prs` — **change both**, and bump `DATA_VER`.
+- **The end phase runs CR 4.4.3 in order**, each step marked `CR 4.4.3<letter>`
+  and pinned by a drill. Reordering them is a rules change.
+- **Pitching is on demand, never proactive** (user ruling) — see CLAUDE.md.
+- **Arena abilities activate.** `boardPow` + `peekables` + `execute`'s
+  `from==="board"` branch. Allies still use `allySwing`.
 
 ## The two rules that caught every bug this stretch
 
@@ -99,26 +110,20 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 
 ## What is left, ranked
 
-1. **`arsenal-triggers`** — mechanism + 1 of 3 enablers shipped in v2.33;
-   Bull's Eye Bracers and Death Dealer remain. See above.
-2. **Brothers in Arms** — needs somewhere for a buff to an already-declared
+1. **Wire `priority.js` for real** — see above. Blocks the opponent work.
+2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
+   seam. Both encode the DUMMY, so they migrate together with giving seat 1 a
+   real action phase (`ROADMAP-OPPONENT.md` Phase 2).
+3. **Brothers in Arms** — needs somewhere for a buff to an already-declared
    defender to live. `blockH` holds bare uids; `defBuff` exists but `runOps`
    only *logs* it (it is really applied by `playRx`, for cards played as
    reactions). Design options are in the followup.
-3. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
-   seam. Both encode the DUMMY specifically, so they migrate together with
-   giving seat 1 a real action phase; doing them separately is wasted work.
-4. **Wire `priority.js` for real** — v2.27 put it in shadow and proved the
-   mapping. Replace `playRx`'s hand-rolled speed gates and the hand-dim logic
-   with `speedAllowed`/`canAct`, then retire `mode`/`bphase`. **Mind the clock:**
-   `priority.js` counts player-turns; the trainer's `turn` counts only your own
-   and feeds both the escalation table and the score.
-5. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
+4. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
 
 ## Validation loop
 
 ```bash
-npm test                              # 381 drills — must stay green
+npm test                              # 413 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -152,13 +157,14 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 377 drills |
+| `test/*.js` | 413 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |
 | `tools/stack.js` · `sweep.js` | what the pool is still waiting on |
 | `CLAUDE.md` | conventions, golden rule, known approximations |
 | `ROADMAP-MULTIPLAYER.md` | the road to online play |
+| `ROADMAP-OPPONENT.md` | sunsetting the dummy into a real opponent |
 | `CHANGELOG.md` | what each version changed |
 | `TORCH.md` | the world, the rules codex, licensing posture |
 

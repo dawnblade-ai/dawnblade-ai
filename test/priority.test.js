@@ -246,11 +246,25 @@ test("bridge — an open chain is the link step, not layer", () => {
 });
 
 test("bridge — the trainer's UI sub-modes are all still the action phase", () => {
-  for(const m of ["act","pay","arsenal","boostpick"]){
+  /* `arsenal` LEFT THIS LIST in v2.35 — see the drill below. It is an end
+     phase step, not a UI sub-mode of the action phase. */
+  for(const m of ["act","pay","boostpick"]){
     const p = P.fromTrainer(T(m), false);
     assert.equal(p.phase, "action", m + " must stay in the action phase");
     assert.equal(p.priority, 0, m + " must leave priority with the player");
   }
+});
+
+test("bridge — the arsenal set is the END phase, and nobody holds priority", () => {
+  /* CR 4.4.3b puts the arsenal set inside the end-phase procedure, and
+     CR 4.4.1 says "Players do not get priority during the End Phase."
+     Mapping it to the action phase reported a player holding priority in a
+     closed phase — exactly what PRIORITY-IN-CLOSED-PHASE exists to catch,
+     which could never fire while the mapping itself said otherwise. */
+  const p = P.fromTrainer(T("arsenal"), false);
+  assert.equal(p.phase, "end");
+  assert.equal(p.priority, null, "no priority in the end phase (CR 4.4.1)");
+  assert.equal(P.canAct(p, 0), false, "and therefore nobody may act");
 });
 
 test("bridge — YOUR attack: the reaction step gives YOU priority first", () => {
@@ -343,4 +357,193 @@ test("bridge — PRI_FIELDS names exactly what fromTrainer returns", () => {
      invents beyond them would be silently dropped */
   for(const k of ["phase","step","priority","passed","turnPlayer","firstPlayer","attacker"])
     assert.ok(P.PRI_FIELDS.indexOf(k) >= 0, `${k} must be in PRI_FIELDS or it never reaches the trainer`);
+});
+
+/* ===================================================================
+   THE END PHASE PROCEDURE (CR 4.4.3) — order, and who it applies to.
+
+   These pin the SHAPE the trainer's endTurn/afterArsenal must follow.
+   The procedure is ordered and the order is load-bearing; before v2.35
+   the trainer ran e -> c -> b -> f, never did (a) or (d) in the end
+   phase at all, and lost only the turn-player's resources.
+   =================================================================== */
+const fs = require("node:fs");
+const path = require("node:path");
+const HTML = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+
+test("end phase — the CR 4.4.3 steps appear in the trainer in the CR's order", () => {
+  const body = HTML.slice(HTML.indexOf("const endTurn = () => setG"),
+                          HTML.indexOf("function foeSwing"));
+  const at = tag => body.indexOf("CR 4.4.3" + tag + " —");
+  const a = at("a"), b = at("b"), c = at("c"), d = at("d"), e = at("e"), f = at("f");
+  for(const [nm,v] of [["a",a],["b",b],["c",c],["d",d],["e",e],["f",f]])
+    assert.ok(v > -1, "step " + nm + " must be present and marked");
+  assert.ok(a < b && b < c && c < d && d < e && e < f,
+    "CR 4.4.3 is an ORDERED procedure — a,b,c,d,e,f. Reordering these is a rules change.");
+});
+
+test("end phase — losing resources is ALL players, not the turn-player", () => {
+  /* CR 4.4.3e: "All players lose all action points and resource points."
+     Invisible today because the dummy floats nothing, and a real bug the
+     moment a second hero can bank a resource during your turn. */
+  const body = HTML.slice(HTML.indexOf("CR 4.4.3e"), HTML.indexOf("CR 4.4.3f"));
+  assert.match(body, /for\(const si of \[0,1\]\)/,
+    "the fizzle must loop over both seats, not reach for youMut alone");
+});
+
+test("end phase — the untap happens HERE, not in next turn's setup", () => {
+  /* CR 4.4.3d. It used to be folded into newTurn, which is the same thing
+     while one seat acts and is NOT once a second seat has a turn between
+     yours: the permanents would stay tapped through the opponent's turn. */
+  const nt = HTML.slice(HTML.indexOf("function newTurn"), HTML.indexOf("uE(()=>{ if(g.over"));
+  assert.ok(!/weaponUsed\s*=\s*\{\}/.test(nt),
+    "newTurn must no longer untap — CR 4.4.3d puts it in the end phase");
+  const et = HTML.slice(HTML.indexOf("CR 4.4.3d"), HTML.indexOf("CR 4.4.3e"));
+  assert.match(et, /weaponUsed\s*=\s*\{\}/, "and the end phase must actually do it");
+});
+
+test("action phase — the action point is issued there, not at turn setup", () => {
+  /* CR 4.3.2: "the turn-player has 1 action point" at the beginning of the
+     ACTION phase, after the start phase (CR 4.2) has run its triggers. */
+  const nt = HTML.slice(HTML.indexOf("function newTurn"), HTML.indexOf("uE(()=>{ if(g.over"));
+  assert.match(nt, /Start phase \(CR 4\.2\)/, "the start phase must be announced");
+  assert.match(nt, /Action phase \(CR 4\.3\)/, "and so must the action phase");
+  assert.ok(nt.indexOf("Start phase (CR 4.2)") < nt.indexOf("Action phase (CR 4.3)"),
+    "start phase precedes action phase");
+  assert.ok(nt.indexOf("Action phase (CR 4.3)") < nt.indexOf("ap = 1"),
+    "the action point is issued AT the action phase, not before it");
+});
+
+/* ===================================================================
+   ACTIVATING A CARD IN THE ARENA (v2.35).
+
+   Gear has carried a `powCard` for a long time; a permanent on the
+   board never did, so an item reading "Action - Destroy this: …" was
+   decoration — the board's onClick only ever opened the zoom modal for
+   anything that was not an ally. Two pool cards were fully inert.
+   =================================================================== */
+test("arena — the two destroy-cost items parse as real activated abilities", () => {
+  const P2 = require("../engine/parser.js");
+  const ep = P2.parseHeroPower("Instant - Destroy this: Gain {r}{r}", true);
+  assert.ok(ep, "Energy Potion has an ability");
+  assert.equal(ep.sd, true, "its cost is destroying itself");
+  assert.equal(ep.kind, "instant");
+  assert.deepEqual(P2.classifyClause(ep.eff).ops, [["res",2]]);
+
+  const tp = P2.parseHeroPower("Action - Destroy this: Gain 2 action points", true);
+  assert.ok(tp, "Timesnap Potion has an ability");
+  assert.equal(tp.sd, true);
+  assert.deepEqual(P2.classifyClause(tp.eff).ops, [["ap",2]]);
+});
+
+test("arena — the trainer offers board abilities and pays their destroy cost", () => {
+  /* The wiring itself is inside a React component, so this is a textual
+     guard the way the CR-order drills above are: it fails if the path is
+     removed, which is what would silently make these cards decoration again. */
+  assert.match(HTML, /const boardPow = b => \{/, "the board powCard builder must exist");
+  assert.match(HTML, /tapTwice\(bp, "activate", \(\)=>tryPlay\(bp,"board",i\)\)/,
+    "the board must offer its ability through the two-tap commit");
+  assert.match(HTML, /if\(from==="board" && card\.sd\)\{/,
+    "and execute must actually pay the destroy cost");
+  /* peekables must span every zone a tap can originate in, or the preview
+     silently fails to render while the tap still arms. */
+  const pk = HTML.slice(HTML.indexOf("const peekables = () =>"), HTML.indexOf("First tap previews"));
+  assert.match(pk, /boardPow\(b\)/, "peekables must include board abilities");
+});
+
+/* ===================================================================
+   THE PEEK OVERLAY MUST NOT EAT THE TAP (v2.36).
+
+   Found on a 393x852 phone viewport, invisible on a tall window.
+   `.peekwrap` is position:fixed, full width, and mostly empty space.
+   With pointer-events:auto that empty space sat on top of the hand rail:
+   the first tap armed the peek, the peek covered the rail, and the
+   second tap hit the wrapper's own dismiss handler instead of the card.
+   Tap, peek, tap, peek — hand cards were UNPLAYABLE on a phone, which is
+   the only device this game is built for.
+   =================================================================== */
+test("peek — the overlay lets taps through to the rail underneath", () => {
+  const css = HTML.slice(HTML.indexOf(".peekwrap{"), HTML.indexOf(".peekcard{"));
+  assert.match(css, /pointer-events:\s*none/,
+    ".peekwrap must not take pointer events — it covers the hand rail on a phone");
+  assert.match(HTML, /\.peekwrap>\*\{pointer-events:auto\}/,
+    "but the visible preview itself must stay tappable, so its dismiss still works");
+});
+
+/* ===================================================================
+   THE FIRST CONSUMER MOVES OFF mode/bphase (v2.37).
+
+   `playRx` hand-rolled its window as `inAtk = s.mode==="stack"` plus an
+   inline reaction test. That cannot express the rule it stood in for —
+   the reaction split follows the ATTACKER, not the seat number — so it
+   was right only by accident, because one side ever attacks. These pin
+   the mapping playRx now depends on, per trainer state.
+   =================================================================== */
+test("playRx window — YOUR attack gives you the ATTACK-reaction window", () => {
+  const g = P.fromTrainer(T("stack"), false);
+  assert.deepEqual(P.speedAllowed(g, 0), ["attack-reaction","instant"]);
+});
+
+test("playRx window — the dummy's swing, reaction step, gives you DEFENSE reactions", () => {
+  const t = T("block"); t.bphase = "react";
+  const g = P.fromTrainer(t, false);
+  assert.deepEqual(P.speedAllowed(g, 0), ["defense-reaction","instant"]);
+});
+
+test("playRx window — the DEFEND step allows nothing to be played (CR 7.3.2)", () => {
+  const t = T("block"); t.bphase = "defend";
+  const g = P.fromTrainer(t, false);
+  assert.deepEqual(P.speedAllowed(g, 0), [], "declaring defenders is not a priority action");
+  assert.equal(g.step, "defend", "and playRx keys its refusal message off this");
+});
+
+test("playRx window — the action phase is not a reaction window", () => {
+  for(const m of ["act","pay","boostpick"]){
+    const w = P.speedAllowed(P.fromTrainer(T(m), false), 0);
+    assert.ok(!w.includes("attack-reaction") && !w.includes("defense-reaction"),
+      m + " must not open a reaction window");
+  }
+});
+
+test("playRx window — a finished game opens no window at all", () => {
+  /* A behaviour CHANGE, and a correct one: the old mode test would still
+     have let a reaction through with mode:"stack" after the game ended. */
+  const t = T("stack"); t.over = {win:true};
+  assert.deepEqual(P.speedAllowed(P.fromTrainer(t, false), 0), []);
+});
+
+test("playRx — the trainer no longer decides the window from mode/bphase", () => {
+  /* Slice playRx's OWN body only: from its declaration to the next
+     same-indent `const` that follows it. A wider slice picks up the
+     arsenal-instant handlers, which legitimately still read mode/bphase
+     until their own turn to migrate comes. Comments are stripped because
+     this file documents the old test in prose right above the new one. */
+  const start = HTML.indexOf("const playRx = i => setG");
+  const end = HTML.indexOf("\n  const ", start + 10);
+  const body = HTML.slice(start, end).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(body, /DawnPriority\.speedAllowed\(s, 0\)/,
+    "the window must come from the priority machine");
+  assert.ok(!/s\.mode/.test(body), "playRx must not read s.mode at all any more");
+  assert.ok(!/s\.bphase/.test(body), "nor s.bphase");
+});
+
+test("peek — the preview is positioned ABOVE the hand, measured not guessed", () => {
+  /* v2.36 stopped the overlay eating the tap; v2.37 stops it HIDING the hand.
+     A flat `bottom:112px` cleared the action bar but landed the preview right
+     on top of the rail at 393x852 — you could not see the cards you were
+     choosing between. The offset is measured off the live rail because its
+     height depends on which screen is showing; a hardcoded number would be
+     wrong again on the next layout change. */
+  const css = HTML.slice(HTML.indexOf(".peekwrap{"), HTML.indexOf(".peekwrap>*"));
+  assert.match(css, /bottom:var\(--peekbot,\s*112px\)/,
+    "the offset must come from the measured custom property, with the old flat value as fallback");
+  assert.match(HTML, /--peekbot/, "and something must set it");
+  const eff = HTML.slice(HTML.indexOf("THE PREVIEW SITS ABOVE THE HAND"),
+                         HTML.indexOf("const toks = ["));
+  assert.match(eff, /querySelector\("\.phand, \.chand, \.hand"\)/,
+    "it must measure whichever hand rail is on screen");
+  assert.match(eff, /window\.innerHeight - top/,
+    "the offset is the distance from the viewport bottom to the rail's TOP edge");
+  assert.match(eff, /addEventListener\("resize"/,
+    "and it must re-measure on resize so a rotation does not strand it");
 });
