@@ -973,6 +973,76 @@ test("arsenal — the enabler reads its SUBJECT, so it cannot put a non-arrow", 
     "the +3 arrow buff still resolves, and keeps its qualifier");
 });
 
+/* ===================================================================
+   THE TWO REMAINING ENABLERS (v2.34) — Bull's Eye Bracers and Death
+   Dealer. Both are ACTIVATED abilities with a cost, and both gate on
+   "if you have no cards in your arsenal", which is a different question
+   from Call in the Big Guns' "a free slot".
+   =================================================================== */
+const pow = (name, tx) => P.fxParse({name, pitch:0, tt:"Equipment Ability", tx, kw:[]});
+
+test("arsenal — 'no cards in your arsenal' is ZERO, not a free slot", () => {
+  const b = pow("BEB pow", "If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. It gains +1{p} until end of turn. Go again");
+  assert.equal(b.arsenalPut.needEmpty, true);
+  /* Call in the Big Guns prints no such condition, so it needs only a slot */
+  const g = P.fxParse({name:"BG pow", pitch:1, tt:"Ranger Action",
+    tx:"Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again", kw:[]});
+  assert.ok(!g.arsenalPut.needEmpty, "an unconditional put must not demand an EMPTY arsenal");
+});
+
+test("arsenal capacity — free slot and empty are separate questions", () => {
+  /* They coincide at the normal capacity of 1, which is exactly why
+     hardcoding 1 would have hidden Death Dealer's stricter gate. */
+  assert.equal(P.arsFree({arsenal:null}), 1);
+  assert.equal(P.arsEmpty({arsenal:null}), true);
+  assert.equal(P.arsFree({arsenal:{name:"x"}}), 0);
+  assert.equal(P.arsEmpty({arsenal:{name:"x"}}), false);
+  /* with a second slot they come apart: one card means a free slot but NOT empty */
+  assert.equal(P.arsFree({arsenal:{name:"x"}, arsCap:2}), 1);
+  assert.equal(P.arsEmpty({arsenal:{name:"x"}, arsCap:2}), false,
+    "'no cards in your arsenal' must still refuse with one card and a spare slot");
+});
+
+test("arsenal — the Bracers' +1 lands on the ARROW, never on the equipment", () => {
+  /* REGRESSION. "It gains +1{p} until end of turn" — "it" is the card that
+     was just put. The whole-text self-pump fallback read it as the source's
+     own pump, so the BRACERS gained the power the arrow is printed to get.
+     Coverage cannot see this: the clause is consumed either way. */
+  const b = pow("BEB subj", "If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. It gains +1{p} until end of turn. Go again");
+  assert.equal(b.self, 0, "the equipment must not pump itself");
+  assert.deepEqual(b.arsenalPut.stamp, [["self",1]], "the +1 is stamped onto the put arrow");
+});
+
+test("arsenal — Death Dealer's 'if you do' rider hangs off the put", () => {
+  const d = pow("DD pow", "If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. If you do, draw a card. Go again");
+  assert.deepEqual(d.arsenalPut.ops, [["draw",1]]);
+  assert.ok(!d.arsenalPut.stamp, "Death Dealer prints no power rider");
+  /* the draw must NOT be an unconditional on-play op — declining the put
+     would then draw for free, which is the v2.04 bug */
+  assert.ok(!d.ops.some(o=>o[0]==="draw"),
+    "the draw is the prompt's rider, not an on-play effect");
+});
+
+test("arsenal — both activated abilities are read by the equipment reader", () => {
+  /* Before v2.34 parseHeroPower rejected any conditional effect, so both of
+     these returned null and the abilities were silently INERT. */
+  const beb = P.parseHeroPower("Action - Destroy Bull's Eye Bracers: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. It gains +1{p} until end of turn. Go again", true);
+  assert.ok(beb, "Bull's Eye Bracers has an ability");
+  assert.equal(beb.sd, true, "its cost is destroying itself");
+  assert.equal(beb.cost, 0);
+  const dd = P.parseHeroPower("Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. If you do, draw a card. Go again", true);
+  assert.ok(dd, "Death Dealer has an ability even though it is a weapon");
+  assert.equal(dd.cost, 1, "it costs one resource");
+  assert.equal(dd.sd, false);
+});
+
+test("arsenal — the reader is NOT loosened for other conditional abilities", () => {
+  /* The relaxation is keyed to the arsenal-put shape only. A conditional
+     ability nothing wires must still be refused, or its tier would rise
+     while the trainer does nothing with it. */
+  assert.equal(P.parseHeroPower("Action - {r}: If you control a Runechant, deal 3 damage to target hero", true), null);
+});
+
 test("arsenal — an unreadable payload leaves the card unclaimed", () => {
   /* Entangling Shot taps a hero (not modelled) and Spire Sniping's "put
      them back in any order" is a REORDER, which opt is not — opt lets you

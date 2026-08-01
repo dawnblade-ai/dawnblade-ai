@@ -9,6 +9,45 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.34 — the arsenal cluster closes
+
+v2.33 built the face-up mechanism and one enabler. This finishes the other
+two, and each was inert for a *different* reason:
+
+- **Bull's Eye Bracers** — `parseHeroPower` refused any conditional effect, so
+  the whole ability was dropped and the equipment had no button at all.
+- **Death Dealer** — a Bow, so it took the weapon path; `weaponCost` requires
+  `": attack"` and this ability is a put, so nothing claimed it. Weapons can
+  now carry a non-attack activated ability, through a door deliberately narrow
+  enough that no other weapon grows a button nothing is wired to run.
+
+**Three bugs found on the way, none of which the coverage audit could see:**
+
+1. **The Bracers were pumping themselves.** "It gains +1{p} until end of turn"
+   — "it" is the **arrow that was just put**, not the equipment. Both the
+   clause router and the whole-text self-pump fallback read it as the source's
+   own pump. Same wrong-subject shape as v2.30's arrow buff landing on a sword.
+2. **The stamp was being dropped entirely.** `buildPrompt` carries only the
+   fields it knows, so `arsStamp` never reached `promptConfirm` and the +1
+   would have silently done nothing. Caught by a drill, not by eye.
+3. **Death Dealer's rider was filed unread**, holding it at `part` after it was
+   genuinely wired. The clause ledger is corrected only when the ops are
+   actually claimed.
+
+**Arsenal capacity is modelled, not assumed.** Two printed wordings that are
+not the same question: a plain put needs a **free slot**, while "if you have no
+cards in your arsenal" means **zero**. They coincide at capacity 1, which is
+exactly why hardcoding 1 would have hidden the difference. `arsCap` / `arsFree`
+/ `arsEmpty` live in `parser.js` beside `runeCount`; the storage is unchanged.
+
+**Measured:** 263 → **265 full**, 110 → 108 part. `npm run fairness` clean.
+381 → **391 drills**, and the two that matter are proven to bite by
+reintroducing the bug.
+
+**Still unclaimed on purpose:** Entangling Shot (taps a hero, not modelled) and
+Spire Sniping (a *reorder*, which `opt` is not — `opt` permits bottoming, which
+would be strictly more powerful than printed).
+
 ## v2.33
 
 THE ARSENAL GOES FACE UP — Azalea's engine, 3 cards none -> full. The trainer's

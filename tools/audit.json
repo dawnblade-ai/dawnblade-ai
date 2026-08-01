@@ -1,12 +1,12 @@
 {
- "generated": "2026-07-29T16:05:32.400Z",
- "appVer": "2.32",
+ "generated": "2026-08-01T00:45:31.332Z",
+ "appVer": "2.34",
  "dataVer": "sage-v9",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 263,
-  "part": 110,
+  "full": 265,
+  "part": 108,
   "none": 32
  },
  "heroes": {
@@ -5514,13 +5514,13 @@
     "arcane barrier",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Action - Destroy this: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "It gains +1{p} until end of turn",
@@ -5535,11 +5535,9 @@
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Action - Destroy this: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal"
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal",
    "tx": "Action - Destroy Bull's Eye Bracers: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. It gains +1{p} until end of turn. Go again\nArcane Barrier 1",
    "flags": []
   },
@@ -5601,27 +5599,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If you do, draw a card",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal",
-    "If you do, draw a card"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: If you have no cards in your arsenal, you may put an arrow card from your hand face up into your arsenal. If you do, draw a card. Go again",

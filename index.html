@@ -623,7 +623,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.33"; /* v2.33 — the arsenal goes FACE UP: Azalea's arrows fire when put face up, which is a different event from the end-of-turn arsenal (that sets face down). Full history in CHANGELOG.md. */
+window.APP_VER = "2.34"; /* v2.34 — the arsenal cluster closes: Bull's Eye Bracers and Death Dealer come online, and arsenal capacity is modelled rather than assumed. Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v9"; /* v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1212,7 +1212,9 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     isInstantT = DawnParser.isInstantT,
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
-    isAura = DawnParser.isAura, auraCount = DawnParser.auraCount;
+    isAura = DawnParser.isAura, auraCount = DawnParser.auraCount,
+    arsCap = DawnParser.arsCap, arsCount = DawnParser.arsCount,
+    arsFree = DawnParser.arsFree, arsEmpty = DawnParser.arsEmpty;
 /* The SEEDED source. `rngShuffle` is deliberately NOT named `shuffle`:
    DawnGame.shuffle is the unseeded Math.random one, and two functions
    with the same name and different determinism is exactly the
@@ -1787,7 +1789,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
         if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
       }
-      if(!isWeapon(gr) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+      /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
+         Dealer is a Bow whose printed ability puts an arrow face up into your
+         arsenal — it is not a weapon attack, so `weaponCost` (which requires
+         ": attack") never claimed it and the `!isWeapon` gate below skipped
+         it, leaving the ability inert. The extra door is deliberately narrow:
+         only an ability the arsenal reader actually recognises, so no other
+         weapon quietly grows a second button nothing is wired to run. */
+      const _armed = isWeapon(gr) && gr.tx && DawnParser.ARS_PUT.test(gr.tx);
+      if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
       if(pw){ gr.pow=pw;
       /* The ability's WHOLE printed line, not just its first sentence.
          Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
@@ -2135,8 +2145,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             n = L(n, `${put.name} goes face up — it will go again this turn.`); }
           else n = runOps(n, [op], put.name);
         }
+        /* THE SOURCE'S OWN STAMP, on top of the arrow's trigger (v2.34).
+           Bull's Eye Bracers prints "It gains +1{p} until end of turn", where
+           "it" is the arrow that was just put. That is a SECOND stamp, and it
+           stacks with the arrow's own: an arrow set with the Bracers gets
+           both. "Until end of turn" and "this turn" are the same duration, so
+           both ride on _upTurn and expire together if the arrow is not
+           played. The parser holds this back from fx.self precisely so it
+           lands on the arrow instead of on the equipment. */
+        for(const op of (p.arsStamp||[])){
+          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+            n = L(n, `${p.src}: ${put.name} also gains +${op[1]} power this turn.`); }
+        }
         actMut(n).arsenal = up;
-        if(!(pfx.arsenalUp||[]).length) n = L(n, `${put.name} set face up in arsenal.`);
+        if(!(pfx.arsenalUp||[]).length && !(p.arsStamp||[]).length)
+          n = L(n, `${put.name} set face up in arsenal.`);
       }
     }
     return openPrompt(winCheck(n));
@@ -2626,14 +2649,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          in this pool; ARS_CAP is the seam rather than a hardcoded 1.
          `min:0` keeps it optional, and buildPrompt returns null on an empty
          hand so a put with nothing to put skips itself. */
-      if(fx.arsenalPut && !act(n).arsenal){
+      if(fx.arsenalPut && (fx.arsenalPut.needEmpty ? arsEmpty(act(n)) : arsFree(act(n)) > 0)){
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:card.name,
           zone:"hand", to:"arsenal", filter:fx.arsenalPut.filter, min:0, max:1,
+          ops:fx.arsenalPut.ops, arsStamp:fx.arsenalPut.stamp,
           title:"Put an arrow face up in your arsenal?",
           hint:"Optional — it goes FACE UP, so its arsenal trigger fires."}];
       } else if(fx.arsenalPut){
-        n = L(n, `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
+        n = L(n, fx.arsenalPut.needEmpty
+          ? `${card.name}: it needs an empty arsenal — the rest of the card still resolves.`
+          : `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
       }
       if(fx.optCost && fx.optCost.trigger === "attacks"){
         const oc = fx.optCost;

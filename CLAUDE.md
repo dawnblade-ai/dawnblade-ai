@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.32
+**Current version:** v2.34
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 377 drills:
+This is `node --test "test/*.test.js"` — currently 391 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -478,6 +478,54 @@ because deleting it outright would break a different set of cards.
 
 **Both regressions are pinned, and both drills are proven to bite** by
 reintroducing the bug and watching them fail.
+
+### The arsenal, face up (v2.33–v2.34) — and whose "it" is it?
+
+The trainer's end-of-turn arsenal sets cards **face DOWN**. Azalea's arrows
+trigger on **face UP**, which is a different event reached only by an enabler
+that says so. All three enablers are live; the face-up card carries
+`_faceUp`/`_upTurn` and the payload is **stamped** onto it (`_arsPow`,
+`_arsGA`) so "+2{p} this turn" survives until the arrow is actually played.
+
+**Arsenal capacity is modelled, not assumed.** Two wordings, two questions:
+
+| printed | needs |
+|---|---|
+| "you may put an arrow ... into your arsenal" | a **free slot** — `arsFree(sd) > 0` |
+| "**if you have no cards in your arsenal**, you may ..." | **zero** — `arsEmpty(sd)` |
+
+They coincide at the normal capacity of 1, which is exactly why hardcoding 1
+would hide the difference until a second slot existed. `arsCap`/`arsFree`/
+`arsEmpty` live in `parser.js` beside `runeCount`; storage is still one card
+or null, and `arsCap` is read off the side with a default so the seam costs
+the migration ledger nothing.
+
+**"IT" IS THE CARD THAT WAS PUT, NOT THE SOURCE.** Bull's Eye Bracers reads
+"…into your arsenal. **It** gains +1{p} until end of turn." Both the clause
+router and the whole-text self-pump fallback read that as the *equipment's*
+own pump, so the bracers gained the power the arrow is printed to get — the
+same wrong-subject shape as v2.30's arrow buff landing on a sword, and equally
+invisible to the coverage audit, which counts the clause as consumed either
+way. It is held back from `fx.self` and re-read as `arsenalPut.stamp`.
+
+**A prompt spec only carries fields `buildPrompt` knows about.** `arsStamp`
+had to be added there explicitly; until it was, the Bracers' +1 was silently
+dropped. It is deliberately **not** `ops` — `prompts.js` runs no effects, and
+returning it as ops would hand it to `runOps`, which applies to the *source*.
+When adding a spec field, add it to `buildPrompt` or it vanishes.
+
+**`parseHeroPower` accepts exactly one conditional shape**, the arsenal put.
+It is safe because the powCard carries the ability's whole printed line and
+`execute` re-reads it with `fxParse`, which does read the gate and the riders.
+Do **not** loosen it further: a broad relaxation would raise the tier of cards
+nothing wires, which is the "never parse ahead of wiring" rule that has already
+cost a real bug. A drill pins that an unrelated conditional ability is still
+refused.
+
+**A weapon can carry a non-attack activated ability.** Death Dealer is a Bow
+whose ability is a put, so `weaponCost` (which requires `": attack"`) never
+claimed it and the `!isWeapon` gate skipped it. The extra door is narrow on
+purpose — only an ability the arsenal reader recognises.
 
 ### Optional costs — "you may X. If you do, Y" (v2.28)
 

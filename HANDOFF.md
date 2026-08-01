@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.33
+# Handoff — Dawnblade, at v2.34
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,54 +16,37 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **381 drills, all green.** Never leave them red.
+- `npm test` → **391 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
-- Pool: **405 unique cards · 263 full / 110 part / 32 none**.
+- Pool: **405 unique cards · 265 full / 108 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
   remote, no `gh`, no credentials. Deploying is not this thread's job.
-- `npm run stack` → **4 open**, including `charge` and `arsenal-triggers`, each
-  carrying a specific question in `tools/followups.json`.
+- `npm run stack` → **3 open** (`charge`, `high-tide`, `surge`); `charge`,
+  `phantasm` and `arsenal-reorder` each carry a specific question in
+  `tools/followups.json`.
 
-## Start here: finish the arsenal cluster (2 enablers left)
+## Start here: pick from "what is left", below
 
-**v2.33 built the mechanism and one enabler.** The face-up path works, the
-trigger fires, and Dry Powder Shot / Swift Shot / Ridge Rider Shot are live.
-What remains is in `tools/followups.json` under `arsenal-triggers`: **Bull's Eye
-Bracers** and **Death Dealer**, both activated abilities with costs rather than
-plain actions, and both gating on "no cards in your arsenal" (which means ZERO,
-not "a free slot"). Bull's Eye Bracers adds a second stamp of its own
-(`+1{p} until end of turn` on the arrow). Two payoffs stay unclaimed on purpose
-— see the followup for why, and for the one open reading.
+**The arsenal cluster is CLOSED as of v2.34.** All three enablers and three of
+five payoffs are live, and arsenal capacity is modelled rather than assumed
+(`arsCap`/`arsFree`/`arsEmpty` in `parser.js`). Two payoffs stay unclaimed on
+purpose — Entangling Shot taps a hero (not modelled) and Spire Sniping needs a
+**reorder**, which `opt` is not: `opt` permits bottoming, which is strictly
+more powerful than printed. Building it with `opt` would be a fairness bug.
+See `arsenal-reorder` in `tools/followups.json`.
 
-## The original cluster brief (kept for context)
+**Three lessons from that cluster worth carrying forward**, all written up in
+CLAUDE.md under "The arsenal, face up":
 
-Everything needed is in `tools/followups.json` under `arsenal-triggers`. The
-short version:
-
-- The trainer's end-of-turn arsenal sets cards **face DOWN**. Every one of these
-  arrows triggers on **face UP**. They are different events — do not conflate
-  them. (An earlier note claimed otherwise and was wrong.)
-- The face-up path is a **hand → arsenal** move and it exists in the pool:
-  **3 enablers** (Bull's Eye Bracers, Death Dealer, Call in the Big Guns) feed
-  **5 payoffs** (Dry Powder Shot, Swift Shot, Entangling Shot, Ridge Rider Shot,
-  Spire Sniping).
-- **Sizing, verified:** `sd.arsenal` holds a card and is written in only 4
-  places, so the card can carry a `_faceUp` flag the way minted cards carry
-  `_playTurn`. `prompts.js`'s `moveCards` already supports `to:"arsenal"`. What
-  is missing is stamping the picked card and firing **its own** ops — a
-  `+2{p} this turn` has to live on the card until it is played.
-- Of the 5 payoffs, **3 are readable now** (Dry Powder Shot `self:2`, Swift Shot
-  `ga`, Ridge Rider Shot `opt 1`). Two are **not**, and should stay unclaimed:
-  Entangling Shot taps a hero (not modelled) and Spire Sniping's "put them back
-  in any order" is a **reorder**, which `opt` is not — `opt` lets you bottom
-  cards, which would be strictly more powerful.
-
-**The user has already ruled** (2026-07-28): Call in the Big Guns' first effect
-resolves regardless; only the arsenal put is skipped when a card is already
-there. Arsenal has a **capacity** (normally 1, two with New Horizon, which is
-not in the pool), and the wordings differ — "no cards in your arsenal" means
-**zero**, so Death Dealer and Bull's Eye Bracers need every slot empty, while
-Call in the Big Guns needs only a free one. Model capacity; do not hardcode 1.
+1. **Whose "it" is it?** "…into your arsenal. **It** gains +1{p}" — "it" is the
+   card that was PUT, not the source. Both the clause router and the self-pump
+   fallback read it as the equipment's own pump. The audit cannot see this: the
+   clause is consumed either way.
+2. **A prompt spec only carries fields `buildPrompt` knows.** `arsStamp` was
+   silently dropped until it was added there. Adding a spec field is two edits.
+3. **Two printed wordings, two questions.** A plain put needs a free slot;
+   "if you have no cards in your arsenal" means zero. They coincide at capacity
+   1, which is precisely why hardcoding 1 hides the bug.
 
 ## The two rules that caught every bug this stretch
 
@@ -99,26 +82,24 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 
 ## What is left, ranked
 
-1. **`arsenal-triggers`** — mechanism + 1 of 3 enablers shipped in v2.33;
-   Bull's Eye Bracers and Death Dealer remain. See above.
-2. **Brothers in Arms** — needs somewhere for a buff to an already-declared
+1. **Brothers in Arms** — needs somewhere for a buff to an already-declared
    defender to live. `blockH` holds bare uids; `defBuff` exists but `runOps`
    only *logs* it (it is really applied by `playRx`, for cards played as
    reactions). Design options are in the followup.
-3. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
+2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
    seam. Both encode the DUMMY specifically, so they migrate together with
    giving seat 1 a real action phase; doing them separately is wasted work.
-4. **Wire `priority.js` for real** — v2.27 put it in shadow and proved the
+3. **Wire `priority.js` for real** — v2.27 put it in shadow and proved the
    mapping. Replace `playRx`'s hand-rolled speed gates and the hand-dim logic
    with `speedAllowed`/`canAct`, then retire `mode`/`bphase`. **Mind the clock:**
    `priority.js` counts player-turns; the trainer's `turn` counts only your own
    and feeds both the escalation table and the score.
-5. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
+4. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
 
 ## Validation loop
 
 ```bash
-npm test                              # 381 drills — must stay green
+npm test                              # 391 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -152,7 +133,7 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 377 drills |
+| `test/*.js` | 391 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |

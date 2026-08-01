@@ -312,3 +312,62 @@ test("pick rider — an empty zone yields no prompt, so the cost cannot be paid"
   assert.equal(p, null,
     "nothing to banish means the prompt skips itself — and a skipped prompt fires no rider");
 });
+
+/* ===================================================================
+   THE ARSENAL PUT, as a prompt (v2.34).
+
+   Death Dealer's "If you do, draw a card" and Bull's Eye Bracers'
+   "It gains +1{p} until end of turn" both hang off the put ACTUALLY
+   HAPPENING. `ops` is already enforced that way; `arsStamp` is carried
+   through untouched so the trainer can stamp the card that moved.
+   =================================================================== */
+const arrowGame = () => {
+  const g = S.makeGame({seed: 11});
+  g.sides[0].hand = [
+    {name:"Dry Powder Shot", uid:81, tt:"Ranger Action - Arrow Attack", pitch:1},
+    {name:"Sharpen Steel",   uid:82, tt:"Warrior Action",              pitch:1}
+  ];
+  return g;
+};
+
+test("arsenal put — the prompt offers only arrows, and the put fills the arsenal", () => {
+  const g = arrowGame();
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, src:"Death Dealer",
+    zone:"hand", to:"arsenal", filter:{tt:"arrow"}, min:0, max:1, ops:[["draw",1]]});
+  assert.ok(p);
+  assert.equal(p.cards.length, 1, "the filter reads the printed type line, so only the arrow matches");
+  const out = Q.applyPrompt(g, Q.promptToggleSel(p, 0));
+  assert.deepEqual(out.ops, [["draw",1]], "the draw rides on the put actually happening");
+  assert.equal(out.game.sides[0].arsenal.name, "Dry Powder Shot");
+  assert.equal(out.game.sides[0].hand.length, 1, "and it left the hand");
+});
+
+test("arsenal put — declining draws nothing and puts nothing", () => {
+  const g = arrowGame();
+  const p = Q.buildPrompt(g, {tag:"pick", side:0, src:"Death Dealer",
+    zone:"hand", to:"arsenal", filter:{tt:"arrow"}, min:0, max:1, ops:[["draw",1]]});
+  const out = Q.applyPrompt(g, p);
+  assert.deepEqual(out.ops, [], "a declined put must not draw — the v2.04 rule");
+  assert.equal(out.game.sides[0].arsenal, null);
+  assert.equal(out.game.sides[0].hand.length, 2);
+});
+
+test("arsenal put — no arrow in hand means no prompt at all", () => {
+  const g = S.makeGame({seed: 11});
+  g.sides[0].hand = [{name:"Sharpen Steel", uid:82, tt:"Warrior Action", pitch:1}];
+  assert.equal(Q.buildPrompt(g, {tag:"pick", side:0, zone:"hand", to:"arsenal",
+    filter:{tt:"arrow"}, min:0, max:1}), null,
+    "an enabler with nothing to put skips itself rather than showing an empty sheet");
+});
+
+test("arsenal put — the Bracers' stamp rides on the spec, it is not an op", () => {
+  /* The stamp must NOT be returned as ops: runOps would apply it to the
+     SOURCE. It is carried so the trainer can put it on the card that moved. */
+  const g = arrowGame();
+  const spec = {tag:"pick", side:0, src:"Bull's Eye Bracers", zone:"hand",
+    to:"arsenal", filter:{tt:"arrow"}, min:0, max:1, arsStamp:[["self",1]]};
+  const p = Q.buildPrompt(g, spec);
+  assert.deepEqual(p.arsStamp, [["self",1]], "buildPrompt carries the stamp through");
+  const out = Q.applyPrompt(g, Q.promptToggleSel(p, 0));
+  assert.deepEqual(out.ops, [], "the stamp is never run as an effect on the source");
+});
