@@ -9,6 +9,50 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.37 — the preview gets out of the way, and priority gets its first consumer
+
+### The preview sits above the hand now
+
+v2.36 stopped `.peekwrap` *eating* the tap. It was still **hiding** it: a flat
+`bottom:112px` cleared the action bar, but on a 393x852 phone the hand rail
+landed directly underneath the preview, so the two-tap asked you to choose
+between cards you could no longer see.
+
+The offset is now **measured** off the live rail rather than guessed — the
+rail's height depends on which screen is showing and on card size, so a
+hardcoded number would be wrong again at the next layout change. A `uE`
+measures `.phand`/`.chand`/`.hand`, sets `--peekbot` to the distance from the
+viewport bottom to the rail's **top** edge plus a small gap, and re-measures on
+resize so a rotation cannot strand it. The old flat 112px survives as the
+fallback for the first frame and for screens with no rail.
+
+Verified at 393x852: `--peekbot` resolves to 235px, the preview's bottom edge
+lands at y617 against a rail top of y626 — it clears. The whole hand stays
+visible under the preview with the tapped card highlighted, and the second tap
+commits (played Lace with Bloodrot end to end, zero invariant violations).
+
+### `playRx` is the first consumer off `mode`/`bphase`
+
+Roadmap item 1's last step starts here. `playRx` hand-rolled its window as
+`inAtk = s.mode==="stack"` plus an inline reaction test — and **that test
+cannot express the rule it stands in for**: the reaction split follows the
+ATTACKER, not the seat number. With one acting side those coincide, so it was
+right by accident. It now asks `DawnPriority.speedAllowed(s, 0)`.
+
+Behaviour-identical today, correct the moment seat 1 attacks. One deliberate
+change falls out: a finished game now opens no window at all, where the old
+`mode` test would still have let a reaction through with `mode:"stack"` after
+the game ended.
+
+Six drills pin the mapping per trainer state, and a seventh fails if `playRx`
+reads `s.mode` or `s.bphase` again — proven to bite by restoring the old test.
+
+**87 `mode`/`bphase` references remain.** The next consumer is the hand-dim
+logic in `handCell`, which duplicates `playRx`'s old expressions verbatim
+(`rxD`/`rxA`) — migrating it removes the duplication rather than moving it.
+
+**413 drills**, green.
+
 ## v2.36 — hand cards were unplayable on a phone
 
 Found by testing at a real **393x852** phone viewport instead of a tall

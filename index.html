@@ -535,7 +535,11 @@ img{display:block;max-width:100%}
    peek, forever. The comment above always said the rail underneath had to
    stay tappable; this is what makes that true. Only the visible preview
    takes pointer events, so tapping the card art still dismisses. */
-.peekwrap{position:fixed;left:0;right:0;bottom:112px;z-index:55;display:flex;
+/* `--peekbot` is MEASURED off the live hand rail (see the uE in Battle) so the
+   preview always sits ABOVE the hand rather than on top of it. The 112px
+   fallback is the old flat value — the action-bar clearance — used only
+   before the first measurement or when no rail is on screen. */
+.peekwrap{position:fixed;left:0;right:0;bottom:var(--peekbot,112px);z-index:55;display:flex;
   flex-direction:column;align-items:center;gap:0;pointer-events:none;
   animation:pkin .14s ease-out}
 .peekwrap>*{pointer-events:auto}
@@ -633,7 +637,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.36"; /* v2.36 — the peek overlay was eating taps on a phone-sized screen, which made hand cards unplayable on the only device this game is built for. Full history in CHANGELOG.md. */
+window.APP_VER = "2.37"; /* v2.37 — the card preview now sits above the hand instead of on top of it, and playRx is the first consumer off mode/bphase onto the priority machine. Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -2790,11 +2794,30 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   };
 
   const playRx = i => setG(s=>{
-    if(s.mode!=="stack" && s.mode!=="block") return s;
-    if(s.mode==="block" && s.bphase!=="react") return L(s, "Declare defenders first, then move to reactions.");
+    /* THE WINDOW IS `speedAllowed`'S QUESTION NOW (v2.37) — the first consumer
+       moved off `mode`/`bphase`, which is roadmap item 1's last step.
+
+       This used to hand-roll it as `inAtk = s.mode==="stack"`, and that test
+       cannot express the rule it is standing in for: the reaction split
+       follows the ATTACKER, not the seat number. With one acting side those
+       coincide, so the hand-rolled version was right by accident. It is
+       behaviour-identical today and correct the moment seat 1 attacks.
+
+       `withPriority` has merged phase/step/priority/attacker into every state
+       that passes through setG since v2.27, so this reads real fields rather
+       than deriving anything here. */
+    const win = DawnPriority.speedAllowed(s, 0);
+    const inAtk = win.includes("attack-reaction");
+    const inDef = win.includes("defense-reaction");
+    if(!inAtk && !inDef){
+      /* CR 7.3.2 — declaring defenders is free and simultaneous, and is not a
+         priority action, so the defend step allows no plays at all. Naming it
+         is the difference between a refusal and a dead tap. */
+      if(s.step === "defend") return L(s, "Declare defenders first, then move to reactions.");
+      return s;
+    }
     const c = act(s).hand[i]; if(!c) return s;
     const fx = fxParse(c);
-    const inAtk = s.mode==="stack";
     const ok = inAtk ? (isAR(c) || (isInstantT(c)&&fx.ops.length>0) || (!isAttack(c)&&(fx.self||0)>0)) : (fx.dr || (isInstantT(c)&&fx.ops.length>0));
     if(!ok) return s;
     const cost = c.cost||0;
@@ -3406,6 +3429,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      a stale preview never survives into a step where its verb is wrong */
   uE(()=>{ setPeek(null); },[g.mode, g.bphase, g.turn]);
   uE(()=>{ if(peek && !peekables().some(c=>c.uid===peek.uid)) setPeek(null); },[g.sides]);
+  /* THE PREVIEW SITS ABOVE THE HAND, ALWAYS (v2.37).
+     `.peekwrap` was pinned at a flat `bottom:112px`, chosen to clear the
+     action bar. On a tall window the hand rail sits below that and nothing
+     overlaps; on a 393x852 phone the rail lands right underneath the preview,
+     which covered the very cards you are choosing between. v2.36 stopped it
+     eating the tap; this stops it hiding the hand at all.
+
+     The offset is MEASURED rather than guessed, because the rail's height
+     depends on which screen is showing and on the card size — a hardcoded
+     number would be wrong again on the next layout change. Re-measured
+     whenever the preview opens or the window changes, and on resize so a
+     rotation does not strand it. */
+  uE(()=>{
+    const place = () => {
+      const rail = document.querySelector(".phand, .chand, .hand");
+      const root = document.documentElement;
+      if(!rail){ root.style.setProperty("--peekbot", "112px"); return; }
+      const top = rail.getBoundingClientRect().top;
+      /* distance from the viewport bottom to the rail's TOP edge, plus a
+         small gap — never less than the action-bar clearance it had before */
+      const bot = Math.max(112, Math.round(window.innerHeight - top) + 8);
+      root.style.setProperty("--peekbot", bot + "px");
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  },[peek, g.mode, g.bphase, g.turn]);
 
   const toks = [
     /* No Runechant chip any more — they are real auras on the board below

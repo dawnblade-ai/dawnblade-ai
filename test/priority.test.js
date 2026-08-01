@@ -469,3 +469,81 @@ test("peek — the overlay lets taps through to the rail underneath", () => {
   assert.match(HTML, /\.peekwrap>\*\{pointer-events:auto\}/,
     "but the visible preview itself must stay tappable, so its dismiss still works");
 });
+
+/* ===================================================================
+   THE FIRST CONSUMER MOVES OFF mode/bphase (v2.37).
+
+   `playRx` hand-rolled its window as `inAtk = s.mode==="stack"` plus an
+   inline reaction test. That cannot express the rule it stood in for —
+   the reaction split follows the ATTACKER, not the seat number — so it
+   was right only by accident, because one side ever attacks. These pin
+   the mapping playRx now depends on, per trainer state.
+   =================================================================== */
+test("playRx window — YOUR attack gives you the ATTACK-reaction window", () => {
+  const g = P.fromTrainer(T("stack"), false);
+  assert.deepEqual(P.speedAllowed(g, 0), ["attack-reaction","instant"]);
+});
+
+test("playRx window — the dummy's swing, reaction step, gives you DEFENSE reactions", () => {
+  const t = T("block"); t.bphase = "react";
+  const g = P.fromTrainer(t, false);
+  assert.deepEqual(P.speedAllowed(g, 0), ["defense-reaction","instant"]);
+});
+
+test("playRx window — the DEFEND step allows nothing to be played (CR 7.3.2)", () => {
+  const t = T("block"); t.bphase = "defend";
+  const g = P.fromTrainer(t, false);
+  assert.deepEqual(P.speedAllowed(g, 0), [], "declaring defenders is not a priority action");
+  assert.equal(g.step, "defend", "and playRx keys its refusal message off this");
+});
+
+test("playRx window — the action phase is not a reaction window", () => {
+  for(const m of ["act","pay","boostpick"]){
+    const w = P.speedAllowed(P.fromTrainer(T(m), false), 0);
+    assert.ok(!w.includes("attack-reaction") && !w.includes("defense-reaction"),
+      m + " must not open a reaction window");
+  }
+});
+
+test("playRx window — a finished game opens no window at all", () => {
+  /* A behaviour CHANGE, and a correct one: the old mode test would still
+     have let a reaction through with mode:"stack" after the game ended. */
+  const t = T("stack"); t.over = {win:true};
+  assert.deepEqual(P.speedAllowed(P.fromTrainer(t, false), 0), []);
+});
+
+test("playRx — the trainer no longer decides the window from mode/bphase", () => {
+  /* Slice playRx's OWN body only: from its declaration to the next
+     same-indent `const` that follows it. A wider slice picks up the
+     arsenal-instant handlers, which legitimately still read mode/bphase
+     until their own turn to migrate comes. Comments are stripped because
+     this file documents the old test in prose right above the new one. */
+  const start = HTML.indexOf("const playRx = i => setG");
+  const end = HTML.indexOf("\n  const ", start + 10);
+  const body = HTML.slice(start, end).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(body, /DawnPriority\.speedAllowed\(s, 0\)/,
+    "the window must come from the priority machine");
+  assert.ok(!/s\.mode/.test(body), "playRx must not read s.mode at all any more");
+  assert.ok(!/s\.bphase/.test(body), "nor s.bphase");
+});
+
+test("peek — the preview is positioned ABOVE the hand, measured not guessed", () => {
+  /* v2.36 stopped the overlay eating the tap; v2.37 stops it HIDING the hand.
+     A flat `bottom:112px` cleared the action bar but landed the preview right
+     on top of the rail at 393x852 — you could not see the cards you were
+     choosing between. The offset is measured off the live rail because its
+     height depends on which screen is showing; a hardcoded number would be
+     wrong again on the next layout change. */
+  const css = HTML.slice(HTML.indexOf(".peekwrap{"), HTML.indexOf(".peekwrap>*"));
+  assert.match(css, /bottom:var\(--peekbot,\s*112px\)/,
+    "the offset must come from the measured custom property, with the old flat value as fallback");
+  assert.match(HTML, /--peekbot/, "and something must set it");
+  const eff = HTML.slice(HTML.indexOf("THE PREVIEW SITS ABOVE THE HAND"),
+                         HTML.indexOf("const toks = ["));
+  assert.match(eff, /querySelector\("\.phand, \.chand, \.hand"\)/,
+    "it must measure whichever hand rail is on screen");
+  assert.match(eff, /window\.innerHeight - top/,
+    "the offset is the distance from the viewport bottom to the rail's TOP edge");
+  assert.match(eff, /addEventListener\("resize"/,
+    "and it must re-measure on resize so a rotation does not strand it");
+});

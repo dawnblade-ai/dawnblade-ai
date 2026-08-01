@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.36
+# Handoff — Dawnblade, at v2.37
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,7 +16,7 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **406 drills, all green.** Never leave them red.
+- `npm test` → **413 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
 - Pool: **405 unique cards · 265 full / 108 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
@@ -123,7 +123,7 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 ## Validation loop
 
 ```bash
-npm test                              # 406 drills — must stay green
+npm test                              # 413 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -157,7 +157,7 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 406 drills |
+| `test/*.js` | 413 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |

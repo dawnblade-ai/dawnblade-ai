@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.36
+**Current version:** v2.37
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 406 drills:
+This is `node --test "test/*.test.js"` — currently 413 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -943,6 +943,10 @@ covered the hand rail on a **393x852 phone**, so the second tap hit the
 wrapper's dismiss handler instead of the card and **no card in hand could be
 played**. It is invisible on a tall window, which is why it survived so long.
 The rule is `pointer-events:none` on the wrapper and `auto` on its children.
+**And it must sit ABOVE the rail, not over it (v2.37)** — not eating the tap is
+not the same as not hiding the cards. `--peekbot` is measured off the live rail
+in a `uE` and re-measured on resize; a hardcoded offset was wrong the moment
+the layout changed, which is exactly how this shipped.
 **Test at phone dimensions, not a tall desktop window** — this class of bug
 only exists there.
 
