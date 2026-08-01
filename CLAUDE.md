@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.35
+**Current version:** v2.36
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 405 drills:
+This is `node --test "test/*.test.js"` — currently 406 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -936,6 +936,15 @@ Verbs in use: *play · pitch · unpitch · defend · react · set in arsenal ·
 swing · activate · use the hero power · play from the graveyard · play from
 banish · full card*. Peeking is allowed on cards you cannot legally play —
 looking is free — the second tap simply does nothing.
+
+**A FULL-WIDTH OVERLAY MUST NOT TAKE POINTER EVENTS (v2.36).** `.peekwrap` is
+fixed, full width and mostly empty; with `pointer-events:auto` that empty space
+covered the hand rail on a **393x852 phone**, so the second tap hit the
+wrapper's dismiss handler instead of the card and **no card in hand could be
+played**. It is invisible on a tall window, which is why it survived so long.
+The rule is `pointer-events:none` on the wrapper and `auto` on its children.
+**Test at phone dimensions, not a tall desktop window** — this class of bug
+only exists there.
 
 Two deliberate exceptions: with **inspect** on, one tap opens the full modal
 (that is what inspect is for); and the **opponent's** gear opens its card on a

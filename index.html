@@ -526,9 +526,19 @@ img{display:block;max-width:100%}
    second tap commits. The peek docks above the action bar rather than
    covering the screen, so the rail underneath stays visible and the second
    tap has somewhere to land. */
+/* THE WRAPPER MUST NOT EAT THE TAP (v2.36). It spans the full width and is
+   mostly empty space, and with pointer-events:auto that empty space sat on
+   top of the hand rail and swallowed every tap aimed at a card. On a tall
+   window nothing overlapped and it looked fine; on a 393x852 phone the rail
+   lands underneath it, the second tap hit the wrapper's dismiss handler
+   instead of the card, and hand cards became UNPLAYABLE — tap, peek, tap,
+   peek, forever. The comment above always said the rail underneath had to
+   stay tappable; this is what makes that true. Only the visible preview
+   takes pointer events, so tapping the card art still dismisses. */
 .peekwrap{position:fixed;left:0;right:0;bottom:112px;z-index:55;display:flex;
-  flex-direction:column;align-items:center;gap:0;pointer-events:auto;
+  flex-direction:column;align-items:center;gap:0;pointer-events:none;
   animation:pkin .14s ease-out}
+.peekwrap>*{pointer-events:auto}
 @keyframes pkin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .peekcard{width:172px;max-width:52vw;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
 .peekcard .cfw{border:1px solid var(--y);border-radius:4px;overflow:hidden}
@@ -623,7 +633,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.35"; /* v2.35 — Silver Age printings everywhere (the Dawnblade alone stays Marvel), the end phase runs CR 4.4.3's ordered procedure and narrates every step, and a permanent in the arena can finally be activated. Full history in CHANGELOG.md. */
+window.APP_VER = "2.36"; /* v2.36 — the peek overlay was eating taps on a phone-sized screen, which made hand cards unplayable on the only device this game is built for. Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real

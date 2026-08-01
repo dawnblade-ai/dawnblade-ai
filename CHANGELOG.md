@@ -9,6 +9,39 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.36 — hand cards were unplayable on a phone
+
+Found by testing at a real **393x852** phone viewport instead of a tall
+desktop window. It is invisible on a tall window, and it is a showstopper on
+the only device this game is built for.
+
+`.peekwrap` — the two-tap preview — is `position:fixed`, full width, and
+mostly empty space. With `pointer-events:auto` that empty space sat **on top of
+the hand rail**:
+
+1. first tap arms the peek;
+2. the peek panel renders over the rail;
+3. second tap hits the wrapper's own `onClick={()=>setPeek(null)}` instead of
+   the card — so it *dismisses* rather than commits.
+
+Tap, peek, tap, peek, forever. **No card in hand could be played.** On a tall
+window the rail sits below the panel and nothing overlaps, which is why every
+previous session's testing missed it.
+
+The CSS comment above the rule had said the right thing all along — *"the rail
+underneath stays visible and the second tap has somewhere to land"* — it just
+was not true. `.peekwrap` now takes no pointer events and `.peekwrap>*` takes
+them back, so the visible preview still dismisses on tap while the empty area
+falls through to the card.
+
+Verified at 393x852 with the peek open: `elementFromPoint` at the card's centre
+returns the card (was `DIV.peekwrap`), and the second tap reaches `tryPlay`.
+Pinned by a drill, proven to bite. `.peekwrap` was the only mostly-empty
+full-width overlay — `.modal`, `.psheet`, `.actbar` and `.bugwrap` are opaque
+or all-controls by design.
+
+**406 drills**, green.
+
 ## v2.35 — printings, the turn structure, and the arena
 
 Three things the user asked for, none of which the drills could have found.

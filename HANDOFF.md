@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.35
+# Handoff — Dawnblade, at v2.36
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,7 +16,7 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **405 drills, all green.** Never leave them red.
+- `npm test` → **406 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
 - Pool: **405 unique cards · 265 full / 108 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
@@ -32,6 +32,25 @@ entries in them exist because breaking the rule already cost a real bug.
 simple strategy. Everything from here is built multiplayer-first.
 **`ROADMAP-OPPONENT.md` is the plan**; read it before starting, it explains
 why the phases are in that order and what "simple strategy" is allowed to mean.
+
+### Scoped, so it can start immediately
+
+**88 `mode`/`bphase` references** in `index.html` (25 `s.mode`, 43 `g.mode`,
+7 `n.mode`, 22 `bphase`). Do **not** try to remove them in one pass. The safe
+order, each step behaviour-identical *today* and correct the moment seat 1
+acts:
+
+1. **`playRx`'s speed gate first — it is the smallest and the most wrong.**
+   It hand-rolls the window as `inAtk = s.mode==="stack"` and then an inline
+   `isAR(c) || (isInstantT(c) && …)` test. That is `speedAllowed(g, seat)`
+   stated once, and `speedAllowed` already knows the window follows the
+   ATTACKER rather than the seat number — which the hand-rolled version
+   cannot express at all.
+2. **The hand-dim / playability logic**, same substitution.
+3. **Then** retire `mode`/`bphase` as the source of truth, and only then.
+
+`fromTrainer` is already proven against live play and v2.35 corrected its
+one wrong mapping (arsenal is an end-phase step). Trust it.
 
 The blocking item is unchanged and is now the *only* thing in the way:
 **wire `priority.js` for real.** The opponent cannot take an action phase while
@@ -104,7 +123,7 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 ## Validation loop
 
 ```bash
-npm test                              # 405 drills — must stay green
+npm test                              # 406 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -138,7 +157,7 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 405 drills |
+| `test/*.js` | 406 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |

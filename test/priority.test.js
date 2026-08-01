@@ -450,3 +450,22 @@ test("arena — the trainer offers board abilities and pays their destroy cost",
   const pk = HTML.slice(HTML.indexOf("const peekables = () =>"), HTML.indexOf("First tap previews"));
   assert.match(pk, /boardPow\(b\)/, "peekables must include board abilities");
 });
+
+/* ===================================================================
+   THE PEEK OVERLAY MUST NOT EAT THE TAP (v2.36).
+
+   Found on a 393x852 phone viewport, invisible on a tall window.
+   `.peekwrap` is position:fixed, full width, and mostly empty space.
+   With pointer-events:auto that empty space sat on top of the hand rail:
+   the first tap armed the peek, the peek covered the rail, and the
+   second tap hit the wrapper's own dismiss handler instead of the card.
+   Tap, peek, tap, peek — hand cards were UNPLAYABLE on a phone, which is
+   the only device this game is built for.
+   =================================================================== */
+test("peek — the overlay lets taps through to the rail underneath", () => {
+  const css = HTML.slice(HTML.indexOf(".peekwrap{"), HTML.indexOf(".peekcard{"));
+  assert.match(css, /pointer-events:\s*none/,
+    ".peekwrap must not take pointer events — it covers the hand rail on a phone");
+  assert.match(HTML, /\.peekwrap>\*\{pointer-events:auto\}/,
+    "but the visible preview itself must stay tappable, so its dismiss still works");
+});
