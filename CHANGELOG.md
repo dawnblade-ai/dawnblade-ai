@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.35 — printings, the turn structure, and the arena
+
+Three things the user asked for, none of which the drills could have found.
+
+### Every card wears its Silver Age face
+
+`resolveEntry` fell back to `pr._first` — whatever printing the card database
+happened to list first, which is arbitrary order rather than a choice. That is
+why an Azalea deck showed GEM, 1HP, PEN and DDD art side by side.
+
+The order is now: an explicit code on the deck entry, then this hero's own
+Silver Age set, then any Silver Age set, then `_first`. Measured across all
+503 deck entries: **467 resolve to their own hero's precon set** and 34 to
+another Silver Age set (deliberate explicit codes for cards not printed in
+their own). Nineteen codes pointing outside Silver Age were removed.
+
+**The Dawnblade is the only Marvel card in the pool**, and an explicit code now
+*wins* over the set preference — without that fix it silently reverted to
+SDO002, overriding the author's choice without a word. One honest exception
+remains: Enigma Chimera at pitch 2 has no Silver Age printing at all, so it
+falls through rather than being given a face that does not exist.
+
+`DATA_VER` → `sage-v10`: cards carry a new `prs` map (image per set), and a
+warm `sage-v9` cache has none of it.
+
+### The end phase follows CR 4.4.3, in the CR's order
+
+Grounded against `rules.fabtcg.com`. The procedure is **ordered**, and the
+trainer ran `e → c → b → f` with two steps missing entirely:
+
+| CR | step | before |
+|---|---|---|
+| a | allies reset to base life | **never happened anywhere** |
+| b | turn-player may arsenal | ran after (c) |
+| c | pitch to the bottom of the deck | ran before (b) |
+| d | turn-player untaps | folded into *next* turn's setup |
+| e | **all players** lose points | only the turn-player |
+| f | turn-player draws to intellect | ✓ |
+
+(d) and (e) are invisible while one seat acts and are real two-player bugs the
+moment a second seat has a turn between yours — a permanent would stay tapped
+through the opponent's turn, and a hero who banks a resource during your turn
+would keep it. The action point also moved to the beginning of the **action**
+phase where CR 4.3.2 puts it, behind a real start phase (CR 4.2).
+
+**The arsenal set is an end-phase step, not an action.** `fromTrainer` mapped
+`mode:"arsenal"` to the action phase with the player holding priority, which
+CR 4.4.1 forbids — and which `PRIORITY-IN-CLOSED-PHASE` could never catch while
+the mapping itself said otherwise.
+
+### More log, and the turn structure narrates itself
+
+Every CR 4.4.3 step now announces itself, including when it does nothing —
+in a *training* sim the sequence is the lesson. Declaring or withdrawing a
+defender used to be completely silent and now logs. The on-screen strip went
+from 4 lines to 8.
+
+### A permanent in the arena can be activated
+
+The board's `onClick` opened the zoom modal for anything that was not an ally,
+so **Energy Potion** and **Timesnap Potion** — both "Destroy this: …" — were
+decoration. Board permanents now build a `powCard` the way gear does, routed
+through the same pool-first-then-pitch-or-cancel flow, and `execute` pays the
+destroy cost into the turn-stamped graveyard.
+
+Allies keep `allySwing` for now: their attacks are costed (`{r}`, `{t}`) and
+belong with the attack-target wiring (CR 1.4.5), which is a bigger job.
+
+**403 → 405 drills**, fairness clean, pool unchanged at 265 full.
+
 ## v2.34 — the arsenal cluster closes
 
 v2.33 built the face-up mechanism and one enabler. This finishes the other

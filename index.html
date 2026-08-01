@@ -623,8 +623,8 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.34"; /* v2.34 — the arsenal cluster closes: Bull's Eye Bracers and Death Dealer come online, and arsenal capacity is modelled rather than assumed. Full history in CHANGELOG.md. */
-window.DATA_VER = "sage-v9"; /* v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.APP_VER = "2.35"; /* v2.35 — Silver Age printings everywhere (the Dawnblade alone stays Marvel), the end phase runs CR 4.4.3's ordered procedure and narrates every step, and a permanent in the arena can finally be activated. Full history in CHANGELOG.md. */
+window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -663,8 +663,8 @@ G|Beaten Trackers|0|
 G|Blade Beckoner Gauntlets|0|
 G|Knucklehead|0|
 G|Mandible Claw|0|
-G|Nullrune Gloves|0|SGB006
-G|Nullrune Hood|0|SLY006
+G|Nullrune Gloves|0|
+G|Nullrune Hood|0|
 G|Nullrune Robe|0|
 G|Predatory Plating|0|
 2|Bare Fangs|1|
@@ -697,8 +697,8 @@ G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Gauntlets|0|SBZ005
 G|Blade Beckoner Helm|0|SBA004
 G|Crucible of Aetherweave|0|
-G|Nullrune Gloves|0|SGB006
-G|Nullrune Hood|0|SLY006
+G|Nullrune Gloves|0|
+G|Nullrune Hood|0|
 G|Spellfire Cloak|0|
 2|Absorb in Aether|1|
 2|Aether Icevein|1|
@@ -729,10 +729,10 @@ viserai:`H|Viserai|0|SVI001
 G|Beckoning Haunt|0|
 G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Helm|0|SBA004
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Crown of Dichotomy|0|
 G|Nullrune Boots|0|
-G|Nullrune Gloves|0|SGB006
+G|Nullrune Gloves|0|
 G|Reaping Blade|0|
 G|Runebleed Robe|0|
 2|Amplify the Arknight|1|
@@ -756,17 +756,17 @@ G|Runebleed Robe|0|
 2|Shrill of Skullform|3|
 2|Sigil of Silphidae|0|
 2|Spellblade Assault|3|
-2|Trot Along|0|DDD016
+2|Trot Along|0|
 2|Vexing Malice|3|`,
 dash:`H|Dash|0|SDA001
 G|Achilles Accelerator|0|SDA010
 G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Gauntlets|0|SBZ005
 G|Blade Beckoner Helm|0|SBA004
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Hope Merchant's Hood|0|SFA004
-G|Nullrune Gloves|0|SGB006
-G|Nullrune Hood|0|SLY006
+G|Nullrune Gloves|0|
+G|Nullrune Hood|0|
 G|Plasma Barrel Shot|0|SDA002
 G|Talishar, the Lost Prince|0|SDA003
 2|Boom Grenade|1|SDA023
@@ -788,7 +788,7 @@ G|Talishar, the Lost Prince|0|SDA003
 2|Big Bertha|3|SDA028
 2|Crankshaft|3|SDA029
 2|Jump Start|3|SDA030
-2|Teklo Trebuchet 2000|3|PEN066
+2|Teklo Trebuchet 2000|3|
 2|Throttle|3|SDA032
 2|Zero to Sixty|3|SDA033
 2|Zipper Hit|3|SDA034`,
@@ -799,7 +799,7 @@ G|Blade Beckoner Helm|0|SBA004
 G|Enclosed Firemind|0|
 G|Magmatic Carapace|0|
 G|Nullrune Boots|0|
-G|Nullrune Gloves|0|SGB006
+G|Nullrune Gloves|0|
 G|Nullrune Robe|0|
 G|Sledge of Anvilheim|0|
 G|Steelbraid Buckler|0|
@@ -828,7 +828,7 @@ G|Titan's Fist|0|
 2|Thunder Quake|3|`,
 azalea:`H|Azalea|0|SAZ001
 G|Blade Beckoner Helm|0|SBA004
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Bolt'n Boots|0|
 G|Bull's Eye Bracers|0|
 G|Crow's Nest|0|
@@ -860,12 +860,12 @@ G|Talismanic Lens|0|SBZ003
 2|Spire Sniping|2|
 2|Widowmaker|2|`,
 dorinthea:`H|Dorinthea|0|SDO001
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Dawnblade|0|MPW156-MV
 G|Gauntlets of Unity|0|SBL007
 G|Helm of Unity|0|SBL004
-G|Nullrune Gloves|0|SGB006
-G|Nullrune Hood|0|SLY006
+G|Nullrune Gloves|0|
+G|Nullrune Hood|0|
 G|Nullrune Robe|0|SBL006
 G|Refraction Bolters|0|SDO009
 2|Agile Engagement|1|SDO012
@@ -875,13 +875,13 @@ G|Refraction Bolters|0|SDO009
 2|Out for Blood|1|SDO014
 2|Overpower|1|SDO015
 2|Puncture|1|SDO016
-2|Scar for a Scar|1|I-WTR191
+2|Scar for a Scar|1|
 2|Sharpen Steel|1|SDO019
 2|Stroke of Foresight|1|SDO017
-2|Warrior's Valor|1|DDD010
+2|Warrior's Valor|1|
 2|Wreck Havoc|1|SDO010
-1|Run Through|2|MPW049
-2|Springboard Somersault|2|I-CRU187
+1|Run Through|2|
+2|Springboard Somersault|2|
 2|Warrior's Valor|2|SDO024
 1|Energy Potion|3|SDO030
 2|Goblet of Bloodrun Wine|3|SDO031
@@ -891,7 +891,7 @@ G|Refraction Bolters|0|SDO009
 2|Overpower|3|SDO027
 1|Puncture|3|SDO028
 2|Put in Context|3|SEN029
-2|Trot Along|3|DDD016
+2|Trot Along|3|
 2|Warrior's Valor|3|SDO034`,
 fai:`H|Fai|0|SFA001
 G|Blade Beckoner Helm|0|SBA004
@@ -918,7 +918,7 @@ G|Tearing Shuko|0|
 2|Rise from the Ashes|1|
 2|Rising Resentment|1|
 2|Ronin Renegade|1|
-2|Scar for a Scar|1|I-WTR191
+2|Scar for a Scar|1|
 2|Snatch|1|
 1|Wax On|1|
 2|Brand with Cinderclaw|2|
@@ -931,9 +931,9 @@ G|Tearing Shuko|0|
 enigma:`H|Enigma|0|SEN001
 G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Helm|0|SBA004
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Cosmo, Scroll of Ancestral Tapestry|0|
-G|Nullrune Hood|0|SLY006
+G|Nullrune Hood|0|
 G|Nullrune Robe|0|SBL006
 G|Silent Stilettos|0|
 G|Uphold Tradition|0|
@@ -948,7 +948,7 @@ G|Uphold Tradition|0|
 2|Waning Vengeance|1|
 2|Waxing Specter|1|
 2|Enigma Chimera|2|
-2|Springboard Somersault|2|I-CRU187
+2|Springboard Somersault|2|
 1|A Drop in the Ocean|0|
 2|Big Blue Sky|0|
 2|Fluid Motion|0|
@@ -965,7 +965,7 @@ G|Uphold Tradition|0|
 2|Unmovable|3|`,
 arakni:`H|Arakni, Web of Deceit|0|SAR001
 G|Blade Beckoner Boots|0|SBZ008
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Danger Digits|0|
 G|Mark of the Huntsman|0|
 G|Mark of the Huntsman|0|
@@ -1001,7 +1001,7 @@ G|Aetherstorm Wellingtons|0|SBZ007
 G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Gauntlets|0|SBZ005
 G|Crucible of Aetherweave|0|SBZ002
-G|Seeker's Mitts|0|OMN207
+G|Seeker's Mitts|0|
 G|Spellfire Cloak|0|SBZ004
 G|Talismanic Lens|0|SBZ003
 2|Absorb in Aether|1|SBZ012
@@ -1057,7 +1057,7 @@ G|Raydn, Duskbane|0|
 2|Engulfing Light|2|
 2|Light the Way|2|
 2|Roaring Beam|0|
-2|Springboard Somersault|2|I-CRU187
+2|Springboard Somersault|2|
 2|Take Flight|2|
 2|V of the Vanguard|0|
 2|Valiant Thrust|2|`,
@@ -1065,7 +1065,7 @@ briar:`H|Briar|0|SBA001
 G|Blade Beckoner Boots|0|SBZ008
 G|Blade Beckoner Gauntlets|0|SBZ005
 G|Blade Beckoner Helm|0|SBA004
-G|Blossom of Spring|0|DDD004
+G|Blossom of Spring|0|
 G|Crown of Dichotomy|0|SBA005
 G|Quick Clicks|0|
 G|Scorpio, Comet Tail|0|
@@ -1085,7 +1085,7 @@ G|Swiftstrike Bracers|0|
 2|Path of Same Ends|1|
 2|Ravenous Rabble|1|
 2|Rush of Power|1|
-2|Scar for a Scar|1|I-WTR191
+2|Scar for a Scar|1|
 2|Second Strike|1|
 2|Sigil of Suffering|0|
 2|Sizzle|1|
@@ -1099,7 +1099,7 @@ G|Carrion Crown|0|SGB003
 G|Compass of Sunken Depths|0|SGB002
 G|Mage Master Boots|0|SGB008
 G|Mournful Casket|0|SGB004
-G|Nullrune Gloves|0|SGB006
+G|Nullrune Gloves|0|
 G|Nullrune Robe|0|SBL006
 G|Scuttle Toes|0|
 G|Washed Up Wave|0|
@@ -1133,7 +1133,7 @@ G|Arcane Lantern|0|
 G|Blade Beckoner Helm|0|SBA004
 G|Blade Beckoner Plating|0|
 G|Line Crossers|0|
-G|Nullrune Hood|0|SLY006
+G|Nullrune Hood|0|
 G|Nullrune Robe|0|SBL006
 G|Stand Strong|0|
 G|Stonewall Impasse|0|
@@ -1304,11 +1304,19 @@ function useCardDB(){
           if(!c || !c.name) return;
           const nm = norm(c.name);
           const isTok = /token/i.test(c.type_text||"") || /token/i.test((c.types||[]).join(" "));
-          const prints={};
+          /* MIRRORS cards.js mapDbCard — see its header note. `bySet` is what
+             lets a card wear its Silver Age face instead of whatever printing
+             the database listed first; first printing per set wins, which is
+             stable because foiling and art variations share one image_url. */
+          const prints={}, bySet={};
           (c.printings||[]).forEach(pr=>{
             const id = pr.id || pr.identifier || pr.set_printing_unique_id || null;
             const url = pr.image_url || pr.image || null;
-            if(url){ if(id) prints[id]=url; if(!prints._first) prints._first=url; }
+            if(url){
+              if(id) prints[id]=url;
+              if(pr.set_id && !bySet[pr.set_id]) bySet[pr.set_id]=url;
+              if(!prints._first) prints._first=url;
+            }
           });
           const isHero = /hero/i.test(c.type_text||"") && HERO_STEMS.some(st=>nm.includes(st));
           const hasCode = Object.keys(prints).some(id=>id!=="_first" && CODES.has(id));
@@ -1317,7 +1325,7 @@ function useCardDB(){
             n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
             d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
             tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
-            tx:c.functional_text_plain||c.functional_text||"", pr:prints
+            tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
           });
         });
         store.set("dbcache_"+DATA_VER, cards);
@@ -1477,7 +1485,8 @@ function HeroSheet({h,db,onBack,onFight,best}){
 function DeckView({h,db,onZoom}){
   const d = PARSED[h.k];
   const ready = db.status==="ready";
-  const R = e => ready ? resolveEntry(db,e) : {name:e.name,q:e.q||1,pitch:e.p,img:cdnImg(e.code),dbImg:null,tt:"",tx:"",kw:[]};
+  const saSet = (d.hero.code||"").slice(0,3) || null;
+  const R = e => ready ? resolveEntry(db,e,saSet) : {name:e.name,q:e.q||1,pitch:e.p,img:cdnImg(e.code),dbImg:null,tt:"",tx:"",kw:[]};
   const gear = [Object.assign({},d.hero,{q:1})].concat(d.gear).map(R);
   const secs = [[1,"Pitch 1 — Red"],[2,"Pitch 2 — Yellow"],[3,"Pitch 3 — Blue"]];
   const byPitch = p => d.deck.map(R).filter(c=>c.pitch===p);
@@ -1772,16 +1781,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        it; otherwise the clock. `rng` is threaded through both shuffles and
        handed to Battle's initial state, so play continues the SAME stream
        rather than starting a second one. */
+    /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
+       SAZ). Passed to every resolveEntry so a card wears the face it has in
+       this deck's own precon rather than whatever printing the database
+       happened to list first. See cards.js `pickPrinting`. */
+    const saSet = (h.code||"").slice(0,3) || null;
     let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
     const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
       const q = Math.max(0, e.q - (cuts[ei]||0));
       if(!q) return [];
-      const c = resolveEntry(db,e);
+      const c = resolveEntry(db,e,saSet);
       return Array.from({length:q},()=>({...c,uid:++uid}));
     }));
     rng = _pd.rng;
     const deck = _pd.arr;
-    const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e),gi,uid:++uid,used:false}));
+    const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++uid,used:false}));
     const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
     gear.forEach(gr=>{
       if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
@@ -1858,7 +1872,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   /* L is declared ahead of the state so the opening-swing initializer below
      can reach it — it is a pure (state, message) function with no dependency
      on `g`, so hoisting it costs nothing. */
-  const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,4), feed:[...(s.feed||[]), msg]});
+  /* The on-screen strip keeps the last LOG_KEEP lines; `feed` keeps the whole
+     game and is what the Ticker and the JUDGE!! report read. Four was too few
+     to see a whole end phase go by now that each CR step announces itself. */
+  const LOG_KEEP = 8;
+  const L = (s,msg)=>({...s, log:[msg, ...s.log].slice(0,LOG_KEEP), feed:[...(s.feed||[]), msg]});
   const [g,setGRaw] = uS(()=>{
    /* named `initial` rather than `base` so the drill that scans this literal
       out of the file has an unambiguous marker — engine/prompts.js mirrors a
@@ -2726,6 +2744,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ actMut(n).gear = act(n).gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
+      /* A BOARD PERMANENT PAYING ITS OWN DESTROY COST (v2.35). Energy Potion
+         and Timesnap Potion both read "Destroy this: …" and both sat inert on
+         the board with no way to activate them at all — the board's onClick
+         only ever opened the zoom modal for anything that was not an ally.
+         The card goes to the graveyard through gy() so it is turn-stamped
+         like every other path in. */
+      if(from==="board" && card.sd){
+        const ent = act(n).board.find(x=>("bp"+x.uid)===card.uid);
+        if(ent){
+          actMut(n).board = act(n).board.filter(x=>x!==ent);
+          actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
+          n = L(n, `${ent.card.name} is destroyed — cost paid.`);
+        }
+      }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
       /* RULING: a transcended card returns to hand as Inner Chi instead of
          going to the graveyard — undo the grave push made above. */
@@ -2988,7 +3020,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(from==="weapon" && card.needSteam && !((act(s).counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
     const cost = effCost(card, act(s));
     if(act(s).res>=cost) return maybeBoost(s,card,from,idx);
-    const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,4)};
+    const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
     return pn;
   });
@@ -3010,6 +3042,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   });
   const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; return n; });
 
+  /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA (v2.35).
+     Gear has carried a `powCard` since v2.x; a permanent on the board never
+     did, so an item with "Action - Destroy this: …" was decoration. Built
+     lazily rather than stamped on at play time so nothing new has to be
+     carried through every board write, and keyed "bp"+uid so it cannot
+     collide with gear's "gp"+uid. Allies keep allySwing for now — their
+     attacks are costed ({r}, {t}) and belong with the attack-target wiring
+     (CR 1.4.5), which is a bigger job than this one. */
+  const boardPow = b => {
+    if(!b || !b.card || b.kind==="ally" || !b.card.tx) return null;
+    const pw = parseHeroPower(b.card.tx, true);
+    if(!pw) return null;
+    return {name:b.card.name+" — ability", pitch:0, cost:pw.cost, power:null, def:null,
+      tt:"Arena Ability", kw:pw.ga?["Go again"]:[], tx:pw.eff, sd:pw.sd,
+      _instant:pw.kind==="instant", img:b.card.img, dbImg:b.card.dbImg,
+      _gearArt:true, uid:"bp"+b.uid};
+  };
   const allySwing = bi => setG(s=>{
     if(s.over||s.mode!=="act") return s;
     const b = you(s).board[bi];
@@ -3030,13 +3079,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const hEntry = s.chain.length ? [{turn:s.turn, links:s.chain}, ...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
     return L({...s, chain:[], chainHist:hEntry, chainOpen:false, boostChain:0, featured:null}, `Chain closed — ${s.chain.length} link${s.chain.length!==1?"s":""} banked. Non-attacks free to play.`);
   });
+  /* ===================================================================
+     THE END PHASE — CR 4.4, in the CR's own fixed order.
+
+     CR 4.4.1: "Players do not get priority during the End Phase."
+     CR 4.4.3 is an ORDERED procedure and the order is load-bearing:
+
+       a  all allies' life totals reset to base
+       b  the turn-player may put a card face-down into an empty arsenal
+       c  pitch zones go to the bottom of their owners' decks
+       d  the turn-player untaps all permanents they control
+       e  ALL PLAYERS lose all action points and resource points
+       f  the turn-player draws to intellect (others on turn one only)
+
+     What was here before ran e -> c -> b -> f, and (a) and (d) did not
+     happen in the end phase at all: ally life was never reset anywhere,
+     and the untap was folded into the next turn's setup. It also lost
+     only the TURN-PLAYER's resources, where the CR says all players —
+     invisible today because the dummy floats nothing, and a real bug the
+     moment a second hero can bank a resource during your turn.
+     =================================================================== */
   const endTurn = () => setG(s=>{
     if(s.over||s.mode!=="act") return s;
-    let n = {...s};
-    const etSide = youMut(n);
-    etSide.wasted = you(s).wasted + you(s).res; etSide.res = 0; etSide.buffNext = 0; etSide.buffQ = [];
-    /* RULING: intimidate returns the banished card at the beginning of the
-       end phase — a one-turn tempo tax, not a permanent loss. */
+    let n = L({...s}, "— End phase (CR 4.4). No priority. —");
+
+    /* CR 4.4.2: the beginning-of-end-phase event, before the procedure.
+       RULING: intimidate returns the banished card here — a one-turn tempo
+       tax, not a permanent loss. */
     if((opp(n).intimidated||[]).length){
       oppMut(n).hand = [...opp(n).hand, ...opp(n).intimidated];
       n = L(n, `The dummy takes back ${opp(n).intimidated.length} intimidated card${opp(n).intimidated.length>1?"s":""} — the tax expires.`);
@@ -3044,11 +3113,40 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     const rusted = you(n).gear.filter(gr=>((you(n).counters[gr.uid]||{}).rust||0)>=3 && !gr.destroyed);
     if(rusted.length){ youMut(n).gear = you(n).gear.map(gr=> rusted.includes(gr) ? {...gr,destroyed:true} : gr); rusted.forEach(gr=> { n=L(n,`${gr.name} rusts through — 3 rust counters, it shatters.`); }); }
-    if(you(s).res>0) n = L(n, `${you(s).res} resource${you(s).res>1?"s":""} fizzled — wasted.`);
-    youMut(n).deck = [...you(n).deck, ...you(n).pitch]; youMut(n).pitch=[];
-    if(!you(n).arsenal && you(n).hand.length) return {...n, mode:"arsenal", log:["Set one card into arsenal, or skip.",...n.log].slice(0,4)};
+
+    /* (a) CR 4.4.3a — ally life resets to base. Allies heal every turn, so
+       ally damage is a per-turn RACE rather than attrition, which is what
+       makes attacking one a real decision (CR 1.4.5). */
+    n = endPhaseAllies(n);
+
+    /* (b) CR 4.4.3b — the arsenal set. It is the turn-player's CHOICE, so
+       it pauses here; steps c-f resume in afterArsenal. */
+    if(!you(n).arsenal && you(n).hand.length)
+      return L({...n, mode:"arsenal"}, "(b) Arsenal — set one card face down, or skip.");
+    if(you(n).arsenal) n = L(n, `(b) Arsenal already holds ${you(n).arsenal.name} — nothing to set.`);
+    else n = L(n, "(b) No cards in hand — nothing to arsenal.");
     return afterArsenal(n);
   });
+  /* CR 4.4.3a. Runs over BOTH seats: an ally the opponent controls heals on
+     their controller's schedule too, and building it one-sided now would be
+     a bug to find later rather than a line to write now. */
+  function endPhaseAllies(s){
+    let n = s, healed = 0;
+    for(const si of [0,1]){
+      const sd = n.sides[si]; if(!sd || !sd.board) continue;
+      /* count BEFORE, from the same predicate resetAllyLife uses: an ally
+         carrying less than its printed life. `life` is the current total and
+         `card.life` the base — the reset is the engine's, not a second copy. */
+      const hurt = sd.board.filter(b => b && b.kind==="ally" && b.card &&
+                                        b.card.life!=null && b.life!=null && b.life < b.card.life).length;
+      if(!hurt) continue;
+      n = resetAllyLife(n, si);
+      healed += hurt;
+    }
+    n = L(n, healed ? `(a) ${healed} all${healed>1?"ies":"y"} heal to base life.`
+                    : "(a) No allies to heal.");
+    return n;
+  }
   const pickArsenal = idx => setG(s=>{
     if(s.mode!=="arsenal") return s;
     let n = {...s};
@@ -3057,12 +3155,54 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     arSide.hand = you(s).hand.filter((_,i)=>i!==idx);
     return afterArsenal(L(n,`${you(n).arsenal.name} set face down in arsenal.`));
   });
-  const skipArsenal = () => setG(s=> s.mode==="arsenal" ? afterArsenal(s) : s);
+  const skipArsenal = () => setG(s=> s.mode==="arsenal" ? afterArsenal(L(s,"(b) Arsenal left empty — nothing set.")) : s);
+  /* Steps (c) through (f). Split from endTurn only because (b) is a choice
+     that has to pause for the player; this is the same procedure continuing. */
   function afterArsenal(s){
     let n={...s};
+
+    /* (c) CR 4.4.3c — pitch zones to the BOTTOM of their owners' decks.
+       Both seats: it says "their pitch zone", not the turn-player's. */
+    let pitched = 0;
+    for(const si of [0,1]){
+      const sd = n.sides[si]; if(!sd || !sd.pitch || !sd.pitch.length) continue;
+      pitched += sd.pitch.length;
+      n = {...n, sides: n.sides.map((x,i)=> i!==si ? x : {...x, deck:[...x.deck, ...x.pitch], pitch:[]})};
+    }
+    n = L(n, pitched
+      ? `(c) ${pitched} pitched card${pitched>1?"s":""} to the bottom of the deck.`
+      : "(c) Pitch zones are empty.");
+
+    /* (d) CR 4.4.3d — the turn-player untaps all permanents they control.
+       `weaponUsed` is what "tapped" means here: a weapon that has swung and
+       an equipment ability that has been activated. It used to happen at the
+       top of the next turn, which is the same thing today and is NOT once a
+       second seat has a turn between yours. */
+    const tapped = Object.keys(you(n).weaponUsed||{}).length;
+    youMut(n).weaponUsed = {};
+    n = L(n, tapped ? `(d) You untap ${tapped} permanent${tapped>1?"s":""}.`
+                    : "(d) Nothing of yours is tapped.");
+
+    /* (e) CR 4.4.3e — "All players lose all action points and resource
+       points." ALL, not just the turn-player. Score counts wasted resources,
+       so the fizzle is tallied as it happens. */
+    let fizzled = 0;
+    for(const si of [0,1]){
+      const sd = n.sides[si]; if(!sd) continue;
+      const lost = sd.res||0; fizzled += lost;
+      n = {...n, sides: n.sides.map((x,i)=> i!==si ? x : {...x, res:0, ap:0, wasted:(x.wasted||0)+lost})};
+    }
+    n = L(n, fizzled
+      ? `(e) All players lose their points — ${fizzled} floating resource${fizzled>1?"s":""} wasted.`
+      : "(e) All players lose their points — nothing was floating.");
+    youMut(n).buffNext = 0; youMut(n).buffQ = [];
+
+    /* (f) CR 4.4.3f — the turn-player draws up to intellect. */
     const need = Math.max(0, you(n).int - you(n).hand.length);
     const drawn = you(n).deck.slice(0,need);
     youMut(n).hand=[...you(n).hand,...drawn]; youMut(n).deck=you(n).deck.slice(need);
+    n = L(n, drawn.length ? `(f) You draw ${drawn.length} back up to intellect ${you(n).int}.`
+                          : `(f) Hand is already at intellect ${you(n).int} — no draw.`);
     /* RULING (Knucklehead): the rolled intellect governs THIS draw, then the
        lingering macro clears — restore the printed value once cards are in. */
     if(you(n).intWas!=null){ n = L(n, `Intellect settles back to ${you(n).intWas}.`); youMut(n).int = you(n).intWas; youMut(n).intWas = null; }
@@ -3096,13 +3236,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          dummy's swing is the attack's power here, so compare against that. */
       if(cfx.defLimit!=null && s.incoming > cfx.defLimit)
         return L(s, `${c.name} can only defend an attack with ${cfx.defLimit} or less base power — this swing is ${s.incoming}.`);
-      const arr = you(s).blockH.includes(v)?you(s).blockH.filter(x=>x!==v):[...you(s).blockH,v];
-      const n = {...s}; youMut(n).blockH = arr; return n;
+      /* Declaring a defender is a free, simultaneous game-state action
+         (CR 7.3.2) rather than a priority action — but it is still a real
+         change to the board, and it used to happen in total silence. */
+      const on = !you(s).blockH.includes(v);
+      const arr = on ? [...you(s).blockH,v] : you(s).blockH.filter(x=>x!==v);
+      const n = {...s}; youMut(n).blockH = arr;
+      return L(n, `${c.name} ${on?"declared as a defender":"withdrawn"} — ${c.def} defence.`);
     }
     const gr = you(s).gear[v];
     if(!gr || gearDef(gr)<=0) return s;
-    const arr = you(s).blockG.includes(v)?you(s).blockG.filter(x=>x!==v):[...you(s).blockG,v];
-    const n = {...s}; youMut(n).blockG = arr; return n;
+    const on = !you(s).blockG.includes(v);
+    const arr = on ? [...you(s).blockG,v] : you(s).blockG.filter(x=>x!==v);
+    const n = {...s}; youMut(n).blockG = arr;
+    return L(n, `${gr.name} ${on?"raised":"lowered"} — ${gearDef(gr)} defence.`);
   });
   const moveToReact = () => setG(s=>{
     if(s.mode!=="block" || s.bphase!=="defend") return s;
@@ -3227,9 +3374,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let fresh = {...n, turn:s.turn+1,
       chain:[], chainHist:hEntry, chainOpen:false, featured:null, boostChain:0, mode:"act"};
     const nt = youMut(fresh);
-    nt.ap = 1; nt.weaponUsed = {}; nt.hist = freshHist();
+    /* THE ACTION POINT IS ISSUED AT THE BEGINNING OF THE ACTION PHASE
+       (CR 4.3.2), not as part of turn setup — and the untap it used to do
+       here now happens in the previous end phase where CR 4.4.3d puts it.
+       Both were invisible while one seat acted and both are real the moment
+       a second seat has a turn between yours. */
+    nt.hist = freshHist();
     nt.board = you(n).board.map(b=>({...b,spent:false}));
-    return L(fresh, `— Turn ${s.turn+1}. Action point refreshed.`);
+    /* CR 4.2: the start phase. No priority is held here (CR 4.2.1); it exists
+       so turn-start triggers have somewhere to happen. The crumbling auras
+       above ARE those triggers. */
+    let out = L(fresh, `— Turn ${s.turn+1}. Start phase (CR 4.2) — no priority. —`);
+    /* CR 4.3.1-4.3.3: the action phase begins, the turn-player has 1 action
+       point, and then gains priority. */
+    out = L(out, "— Action phase (CR 4.3). You have 1 action point and priority. —");
+    youMut(out).ap = 1;
+    return out;
   }
   uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
   /* a peek is about one card in one window — drop it when either changes, so
@@ -3311,7 +3471,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const out = y.hand.slice();
     if(y.arsenal) out.push(y.arsenal);
     y.gear.forEach(gr => { out.push(gr); if(gr.powCard) out.push(gr.powCard); });
-    (y.board||[]).forEach(b => { if(b && b.card) out.push(b.card); });
+    /* A board permanent's ABILITY is peeked as its powCard, the same way an
+       equipment ability is — the ability's text is what you are deciding
+       about, not the permanent. peekables must span every zone a tap can
+       originate in or the preview silently fails while the tap still arms. */
+    (y.board||[]).forEach(b => { if(b && b.card){ out.push(b.card); const bp = boardPow(b); if(bp) out.push(bp); } });
     return out;
   };
   /* First tap previews, second commits. `verb` is captured at tap time and
@@ -3536,7 +3700,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 {toks.map((t,i)=><span key={"t"+i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}
                 {you(g).board.map((b,i)=>(
                   <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
-                    onClick={()=> (g.inspect || b.kind!=="ally") ? setZoom(b.card) : allySwing(i)}>
+                    onClick={()=>{
+                      if(g.inspect) return setZoom(b.card);
+                      if(b.kind==="ally") return allySwing(i);
+                      const bp = boardPow(b);
+                      if(bp) return tapTwice(bp, "activate", ()=>tryPlay(bp,"board",i));
+                      return setZoom(b.card);
+                    }}>
                     <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
                     {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
                   </button>))}
@@ -3849,7 +4019,8 @@ function defaultPicks(list){
 }
 function Loadout({h,db,onBack,onStart}){
   const d = PARSED[h.k];
-  const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e); return {i, c, s:slotOf(c)}; }),[h,db]);
+  const saSet = (d.hero.code||"").slice(0,3) || null;
+  const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e,saSet); return {i, c, s:slotOf(c)}; }),[h,db]);
   const handL = gearR.filter(x=>HAND_Z.includes(x.s.z));
   const armorL = gearR.filter(x=>!HAND_Z.includes(x.s.z));
   const saved = store.get("loadout."+h.k, null);
@@ -3872,7 +4043,7 @@ function Loadout({h,db,onBack,onStart}){
     const n={...c}; delete n[ei]; return n;
   });
   const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts}); };
-  const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e)}));
+  const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
     const on = sel.includes(x.i);

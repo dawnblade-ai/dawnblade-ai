@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.34
+**Current version:** v2.35
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 391 drills:
+This is `node --test "test/*.test.js"` — currently 405 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -989,10 +989,94 @@ misses is a false negative, which is worse than no guard at all.
 
 ---
 
+## Printings — every card wears its Silver Age face (v2.35)
+
+`resolveEntry` used to fall back to `pr._first`, which is whatever printing the
+card database listed first — arbitrary order, not a choice. An Azalea deck
+showed GEM, 1HP, PEN and DDD art side by side.
+
+`cards.js pickPrinting` resolves in this order, and each step earns its place:
+
+1. **an explicit code on the deck entry** — the author's deliberate choice, and
+   it wins even when the database has no record of that printing (the
+   constructed CDN path is then the answer). This is what keeps the
+   **Dawnblade** on `MPW156-MV`. Before the precedence fix it silently reverted
+   to SDO002 — the choice overridden without a word.
+2. **this hero's own Silver Age set**, read off its printed code (`SAZ001` →
+   `SAZ`). 467 of 503 deck entries land here.
+3. **any Silver Age set** — shared cards not printed in this hero's precon.
+4. **`_first`** — the honest last resort. Exactly one card reaches it: Enigma
+   Chimera at pitch 2 has no Silver Age printing at all, and inventing one
+   would be inventing a card face that does not exist.
+
+**The Dawnblade is the only Marvel card in the pool, and a drill enforces it.**
+`mapDbCard` carries `prs` (one image per set, first printing per set wins since
+foiling and art variations share a URL) — and the loader in `index.html`
+mirrors it, so **change both**. Bump `DATA_VER` when you do.
+
 ## Rules fidelity
 
 This is a rules-accurate sim, judged to pro-tour standards. Combat follows the
 Comprehensive Rules: Attack → Defend → Reaction → Damage → Resolution.
+
+### The turn structure, against the CR (v2.35)
+
+Grounded against `rules.fabtcg.com/en/cr/04-game-structure/`. **CR 4.4.3 is an
+ORDERED procedure and the order is load-bearing.** The trainer ran `e → c → b
+→ f` with two steps missing entirely:
+
+| CR 4.4.3 | step | before v2.35 |
+|---|---|---|
+| a | all allies' life resets to base | **never happened anywhere** — `resetAllyLife` was exported, bridged, and called by nothing |
+| b | turn-player may arsenal | ran *after* (c) |
+| c | pitch zones to the bottom of their decks | ran *before* (b) |
+| d | turn-player untaps all permanents | folded into the *next* turn's setup |
+| e | **ALL players** lose action and resource points | only the turn-player |
+| f | turn-player draws to intellect | ✓ |
+
+(d) and (e) are invisible while one seat acts and are **real two-player bugs**
+the moment a second seat has a turn between yours: a permanent would stay
+tapped through the opponent's turn, and a hero who banks a resource during your
+turn would keep it.
+
+Each step is marked `CR 4.4.3<letter> —` in `endTurn`/`afterArsenal` and a
+drill asserts they appear **in that order**. Reordering them is a rules change,
+so it must be a deliberate edit to that drill.
+
+**The action point is issued at the beginning of the ACTION phase** (CR 4.3.2),
+behind a real start phase (CR 4.2) where nobody holds priority (CR 4.2.1).
+
+**The arsenal set is an END-PHASE step, not an action.** `fromTrainer` mapped
+`mode:"arsenal"` to the action phase with the player holding priority, which
+CR 4.4.1 forbids — and which `PRIORITY-IN-CLOSED-PHASE` could never catch while
+the mapping itself said otherwise. A guard cannot fire against a derivation
+that disagrees with it.
+
+**Every end-phase step announces itself in the log, including when it does
+nothing.** In a training sim the sequence *is* the lesson.
+
+### Activating a card in the arena (v2.35)
+
+Gear has carried a `powCard` for a long time; a permanent on the board never
+did, so the board's `onClick` opened the zoom modal for anything that was not
+an ally and **Energy Potion** and **Timesnap Potion** (both "Destroy this: …")
+were decoration. `boardPow(b)` builds one lazily, keyed `"bp"+uid` so it cannot
+collide with gear's `"gp"+uid`, and `execute` pays the destroy cost into the
+turn-stamped graveyard. **`peekables()` must include it** or the preview
+silently fails while the tap still arms.
+
+Allies keep `allySwing`: their attacks are costed (`{r}`, `{t}`) and belong
+with the attack-target wiring (CR 1.4.5), which is a bigger job.
+
+### Pitching is on demand, never proactive
+
+**Ruling (user, 2026-08-01):** you cannot pitch to bank resources. The pool is
+filled only when an activation costs more than you hold — and then you are
+given the chance to pitch **or to cancel the activation**. Resources in the
+pool are spent first, and whatever is left clears in the end phase (CR 4.4.3e).
+`tryPlay` → `mode:"pay"` → `confirmPay`/`cancelPay` is that flow, and every
+activation route must go through it: cards, weapon swings, equipment abilities
+and now arena abilities.
 
 ### Four CR violations fixed in v2.21 — read these before touching `priority.js`
 

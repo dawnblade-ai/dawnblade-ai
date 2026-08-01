@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.34
+# Handoff — Dawnblade, at v2.35
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -16,7 +16,7 @@ entries in them exist because breaking the rule already cost a real bug.
 
 ## Where things stand
 
-- `npm test` → **391 drills, all green.** Never leave them red.
+- `npm test` → **405 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way; see below.
 - Pool: **405 unique cards · 265 full / 108 part / 32 none**.
 - Under git, `main`. **The user pushes to GitHub Pages manually** — there is no
@@ -25,28 +25,37 @@ entries in them exist because breaking the rule already cost a real bug.
   `phantasm` and `arsenal-reorder` each carry a specific question in
   `tools/followups.json`.
 
-## Start here: pick from "what is left", below
+## Start here: `priority.js`, then the opponent
 
-**The arsenal cluster is CLOSED as of v2.34.** All three enablers and three of
-five payoffs are live, and arsenal capacity is modelled rather than assumed
-(`arsCap`/`arsFree`/`arsEmpty` in `parser.js`). Two payoffs stay unclaimed on
-purpose — Entangling Shot taps a hero (not modelled) and Spire Sniping needs a
-**reorder**, which `opt` is not: `opt` permits bottoming, which is strictly
-more powerful than printed. Building it with `opt` would be a fairness bug.
-See `arsenal-reorder` in `tools/followups.json`.
+**The user's direction (2026-08-01): sunset the dummy.** It becomes an
+*opponent* — a fully playable side that picks a hero and is driven by very
+simple strategy. Everything from here is built multiplayer-first.
+**`ROADMAP-OPPONENT.md` is the plan**; read it before starting, it explains
+why the phases are in that order and what "simple strategy" is allowed to mean.
 
-**Three lessons from that cluster worth carrying forward**, all written up in
-CLAUDE.md under "The arsenal, face up":
+The blocking item is unchanged and is now the *only* thing in the way:
+**wire `priority.js` for real.** The opponent cannot take an action phase while
+`mode`/`bphase` encode "the player is acting" as an invariant. v2.27 put the
+machine in shadow and proved the mapping; v2.35 corrected the arsenal mapping
+(it is an end-phase step, not an action). What is left is moving the consumers:
+`playRx`'s hand-rolled speed gates and the hand-dim logic become
+`speedAllowed`/`canAct`, then `mode`/`bphase` retire.
 
-1. **Whose "it" is it?** "…into your arsenal. **It** gains +1{p}" — "it" is the
-   card that was PUT, not the source. Both the clause router and the self-pump
-   fallback read it as the equipment's own pump. The audit cannot see this: the
-   clause is consumed either way.
-2. **A prompt spec only carries fields `buildPrompt` knows.** `arsStamp` was
-   silently dropped until it was added there. Adding a spec field is two edits.
-3. **Two printed wordings, two questions.** A plain put needs a free slot;
-   "if you have no cards in your arsenal" means zero. They coincide at capacity
-   1, which is precisely why hardcoding 1 hides the bug.
+**Mind the clock.** `priority.js` counts player-turns and ticks on every
+handoff; the trainer's `turn` counts only *your* turns and feeds both the
+escalation table and the score. Reconciling them is part of giving seat 1 a
+turn, not a separate job.
+
+## What v2.35 changed that you should know about
+
+- **Printings.** Every card resolves to its Silver Age face; the Dawnblade is
+  the only Marvel card and a drill enforces it. `mapDbCard` and the loader in
+  `index.html` both build `prs` — **change both**, and bump `DATA_VER`.
+- **The end phase runs CR 4.4.3 in order**, each step marked `CR 4.4.3<letter>`
+  and pinned by a drill. Reordering them is a rules change.
+- **Pitching is on demand, never proactive** (user ruling) — see CLAUDE.md.
+- **Arena abilities activate.** `boardPow` + `peekables` + `execute`'s
+  `from==="board"` branch. Allies still use `allySwing`.
 
 ## The two rules that caught every bug this stretch
 
@@ -82,24 +91,20 @@ ground. `test/fairness.test.js` pins that it stays quiet.
 
 ## What is left, ranked
 
-1. **Brothers in Arms** — needs somewhere for a buff to an already-declared
+1. **Wire `priority.js` for real** — see above. Blocks the opponent work.
+2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
+   seam. Both encode the DUMMY, so they migrate together with giving seat 1 a
+   real action phase (`ROADMAP-OPPONENT.md` Phase 2).
+3. **Brothers in Arms** — needs somewhere for a buff to an already-declared
    defender to live. `blockH` holds bare uids; `defBuff` exists but `runOps`
    only *logs* it (it is really applied by `playRx`, for cards played as
    reactions). Design options are in the followup.
-2. **`newTurn` + `foeSwing`** — the last 2 of 7 rules functions on the actor
-   seam. Both encode the DUMMY specifically, so they migrate together with
-   giving seat 1 a real action phase; doing them separately is wasted work.
-3. **Wire `priority.js` for real** — v2.27 put it in shadow and proved the
-   mapping. Replace `playRx`'s hand-rolled speed gates and the hand-dim logic
-   with `speedAllowed`/`canAct`, then retire `mode`/`bphase`. **Mind the clock:**
-   `priority.js` counts player-turns; the trainer's `turn` counts only your own
-   and feeds both the escalation table and the score.
 4. **Hero abilities** — 13 of 15 heroes, 32 unread clauses. `npm run sweep`.
 
 ## Validation loop
 
 ```bash
-npm test                              # 391 drills — must stay green
+npm test                              # 405 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
@@ -133,13 +138,14 @@ re-eval the module if a change seems not to have landed.
 |---|---|
 | `index.html` | the trainer (UI + `Battle`, the reducer) |
 | `engine/*.js` | the pure rules engine — parser, sides, priority, prompts, rng, invariants |
-| `test/*.js` | 391 drills |
+| `test/*.js` | 405 drills |
 | `tools/audit.js` | coverage — how much text is read |
 | `tools/fairness.js` | faithfulness — is anything stronger than printed |
 | `tools/failstates.js` | how cards go wrong at the table |
 | `tools/stack.js` · `sweep.js` | what the pool is still waiting on |
 | `CLAUDE.md` | conventions, golden rule, known approximations |
 | `ROADMAP-MULTIPLAYER.md` | the road to online play |
+| `ROADMAP-OPPONENT.md` | sunsetting the dummy into a real opponent |
 | `CHANGELOG.md` | what each version changed |
 | `TORCH.md` | the world, the rules codex, licensing posture |
 

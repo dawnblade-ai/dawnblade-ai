@@ -20,7 +20,42 @@ const setCDN = url => { CDN = url || ""; };
 const cdnImg = code => code ? (CDN + code + ".webp") : null;
 const toNum = v => { const n = parseInt(v,10); return isNaN(n) ? null : n; };
 
-function resolveEntry(db, e){
+/* ---- THE PRINTING THIS GAME SHOWS (v2.35) ---------------------------
+   Every card is printed in many sets, and `_first` is whatever the card
+   database happened to list first — arbitrary order, not a choice. That is
+   why an Azalea deck was showing GEM, 1HP, PEN and DDD art side by side.
+
+   This is a Silver Age trainer, so a card should wear its Silver Age face.
+   Measured over all 503 deck entries: every one but a single card has a
+   printing in its OWN hero's Silver Age set (SAZ for Azalea, SDO for
+   Dorinthea, …). So the order is:
+
+     1. an explicit code on the deck entry  — an author's deliberate choice
+     2. this hero's own Silver Age set      — the default, and it covers 502
+     3. any other Silver Age set            — shared cards printed elsewhere
+     4. `_first`                            — the honest last resort
+
+   Step 1 is what keeps the Dawnblade on its Marvel printing (MPW156-MV),
+   which is the one card that is meant to be Marvel. Step 4 is reached by
+   exactly one card in the pool today: Enigma Chimera at pitch 2 has no
+   Silver Age printing at all (MON and PSM only), and pretending otherwise
+   would be inventing a printing that does not exist. */
+const SA_SETS = ["SKA","SIY","SVI","SDA","SBR","SAZ","SDO","SFA","SEN","SAR","SBZ","SBL","SBA","SGB","SLY"];
+function pickPrinting(card, code, prefer){
+  /* AN EXPLICIT CODE ALWAYS WINS, even when the database has no record of
+     that printing — the constructed CDN path is then the answer. Returning
+     the set preference instead silently overrode the author's choice, which
+     put the Dawnblade back on its Silver Age face (SDO002) when the whole
+     point of the code is that this one card wears its Marvel printing. */
+  if(code) return (card && card.pr[code]) || cdnImg(code);
+  if(!card) return null;
+  if(prefer && card.prs && card.prs[prefer]) return card.prs[prefer];
+  if(card.prs){
+    for(const s of SA_SETS) if(card.prs[s]) return card.prs[s];
+  }
+  return card.pr._first || null;
+}
+function resolveEntry(db, e, prefer){
   const k = norm(e.name);
   let cands = db.byName[k];
   if(!cands && e.name.includes("//")) cands = db.byName[norm(e.name.split("//")[0])];
@@ -31,8 +66,12 @@ function resolveEntry(db, e){
     if(!card && e.code) card = cands.find(c=>c.pr[e.code]) || null;
     if(!card) card = cands.slice().sort((a,b)=>(a.p??9)-(b.p??9))[0];
   }
-  const img = cdnImg(e.code) || (card ? (card.pr[e.code]||card.pr._first) : null);
-  const dbImg = card ? (card.pr._first||null) : null;
+  /* The chosen printing is the image. An explicit code that the database
+     does not carry still falls back to the constructed CDN path, so a
+     hand-written code keeps working even for a printing we have no record
+     of — that is how MPW156-MV resolves. */
+  const img = pickPrinting(card, e.code, prefer) || cdnImg(e.code) || null;
+  const dbImg = card ? (pickPrinting(card, null, prefer) || card.pr._first || null) : null;
   return {
     name:e.name, q:e.q||1, code:e.code,
     pitch: card&&card.p!=null ? card.p : (e.p||0),
@@ -69,17 +108,24 @@ function resolveHero(db, e){
 
 /* --- mirrors of useCardDB's load loop (see header note) --- */
 function mapDbCard(c){
-  const prints = {};
+  const prints = {}, bySet = {};
   (c.printings||[]).forEach(pr=>{
     const id = pr.id || pr.identifier || pr.set_printing_unique_id || null;
     const url = pr.image_url || pr.image || null;
-    if(url){ if(id) prints[id]=url; if(!prints._first) prints._first=url; }
+    if(url){
+      if(id) prints[id]=url;
+      /* FIRST printing per set wins. A set lists the same card several times
+         for foiling and art variations; they share one image_url, so this is
+         a stable pick rather than an arbitrary one. */
+      if(pr.set_id && !bySet[pr.set_id]) bySet[pr.set_id]=url;
+      if(!prints._first) prints._first=url;
+    }
   });
   return {
     n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
     d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
     tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
-    tx:c.functional_text_plain||c.functional_text||"", pr:prints
+    tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
   };
 }
 function buildMaps(cards){
@@ -93,5 +139,6 @@ function buildMaps(cards){
   return {status:"ready", byNP, byName, byCode, count:cards.length};
 }
 
-return {setCDN, cdnImg, toNum, resolveEntry, resolveHero, mapDbCard, buildMaps};
+return {setCDN, cdnImg, toNum, resolveEntry, resolveHero, mapDbCard, buildMaps,
+        SA_SETS, pickPrinting};
 });
