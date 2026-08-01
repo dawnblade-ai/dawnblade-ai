@@ -180,6 +180,13 @@ function check(game){
     err("PRIORITY-IN-CLOSED-PHASE",
         "someone holds priority during the " + game.phase + " phase — CR 4.2.1/4.4.1 say players do not get priority there",
         "priority");
+  /* CR 7.7.1 — "Players do not get priority during the Close Step." The
+     phase check above cannot see this: the close step happens inside the
+     ACTION phase, which is wide open. */
+  if(game.step === "close" && game.priority != null)
+    err("PRIORITY-IN-CLOSE-STEP",
+        "someone holds priority during the close step — CR 7.7.1 says players do not get priority there",
+        "priority");
   if(game.priority != null && game.priority !== 0 && game.priority !== 1)
     err("BAD-PRIORITY", "priority is " + game.priority + " — must be seat 0 or 1", "priority");
   if(game.turnPlayer != null && game.turnPlayer !== 0 && game.turnPlayer !== 1)

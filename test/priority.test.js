@@ -110,10 +110,22 @@ test("window: the reaction split follows the ATTACKER, not the seat number", () 
   assert.deepEqual(P.speedAllowed(g, 0), ["defense-reaction","instant"]);
 });
 
-test("window: nothing is played during the defend step — declaration is free and simultaneous", () => {
+/* CHANGED DELIBERATELY — this drill used to assert speedAllowed was [] in
+   the defend step, reasoning that declaring defenders is free and
+   simultaneous. That is true about DECLARING (CR 7.3.2) and is not a
+   statement that the step has no priority window. CR 7.3.3 is explicit:
+   "the turn-player gains priority", and CR 7.3.4 ends the step only "when
+   the stack is empty and all players pass in succession" — there is
+   nothing to pass if nobody may act. Instants are legal here. */
+test("window: the defend step DOES have a priority window, and it is instants only (CR 7.3.3)", () => {
   const g = P.toDefend(P.declareAttack(P.toPhase(fresh(0), "action"), 0));
-  assert.deepEqual(P.speedAllowed(g, 0), []);
-  assert.deepEqual(P.speedAllowed(g, 1), []);
+  assert.deepEqual(P.speedAllowed(g, 0), ["instant"],
+    "the turn-player holds priority in the defend step and may play an instant");
+  assert.deepEqual(P.speedAllowed(g, 1), [], "the defender holds no priority here");
+  /* reaction cards are NOT legal yet — those belong to the reaction step */
+  assert.ok(!P.speedAllowed(g, 0).includes("defense-reaction"));
+  assert.ok(!P.speedAllowed(g, 0).includes("attack-reaction"));
+  /* ...and declaring defenders remains a separate, non-priority question */
   assert.equal(P.canDeclareDefenders(g, 1), true, "the defender declares");
   assert.equal(P.canDeclareDefenders(g, 0), false, "the attacker does not");
 });
@@ -125,26 +137,56 @@ test("chain: the defending player is the other side, stated once", () => {
   assert.equal(P.defendingPlayer(g), 1);
 });
 
-test("chain: a link walks attack -> defend -> reaction -> damage -> resolution -> link", () => {
+/* Pass twice — the CR's "all players pass in succession" — then advance. */
+const bothPass = g => P.pass(P.pass(g));
+
+test("chain: a link walks attack -> defend -> reaction -> damage -> resolution -> close (CR 7.0.1)", () => {
   let g = P.declareAttack(P.toPhase(fresh(0), "action"), 0);
   assert.equal(g.step, "attack");
-  g = P.advance(g); assert.equal(g.step, "defend");
-  /* CR 7.3 — the DEFENDING player declares the defending cards, but the
+
+  /* EVERY step waits for its own window now, not just the reaction step.
+     CR 7.3.4 / 7.6.4 word it identically for each: "when the stack is
+     empty and all players pass in succession, the X Step ends". Four of
+     these six windows used to be granted and then advanced straight past. */
+  assert.equal(P.advance(g).step, "attack", "the attack step holds its window (CR 7.2)");
+  g = P.advance(bothPass(g)); assert.equal(g.step, "defend");
+
+  /* CR 7.3.3 — the DEFENDING player declares the defending cards, but the
      TURN-PLAYER gains priority in the defend step. Declaring is not
      playing (CR 7.3.2): it is a free, simultaneous game-state action, not
-     a priority action. This drill used to assert the defender held
-     priority here, which reads naturally and is not the rule. */
+     a priority action. */
   assert.equal(g.priority, 0, "the turn-player holds priority in the defend step");
   assert.equal(P.canDeclareDefenders(g, 1), true, "but the defender is who declares");
   assert.equal(P.canDeclareDefenders(g, 0), false);
-  g = P.advance(g); assert.equal(g.step, "reaction");
+  assert.equal(P.advance(g).step, "defend", "the defend step holds its window (CR 7.3.4)");
+  g = P.advance(bothPass(g)); assert.equal(g.step, "reaction");
+
+  assert.equal(g.priority, 0, "CR 7.4 — the turn-player, not the attacker");
+  assert.equal(P.advance(g).step, "reaction", "reactions wait for both to pass");
+  g = P.advance(bothPass(g)); assert.equal(g.step, "damage");
+
+  assert.equal(P.advance(g).step, "damage", "the damage step holds its window (CR 7.5)");
+  g = P.advance(bothPass(g)); assert.equal(g.step, "resolution");
+
+  assert.equal(P.advance(g).step, "resolution", "the resolution step holds its window (CR 7.6.4)");
+  g = P.advance(bothPass(g)); assert.equal(g.step, "close");
+  /* CR 7.7.1 — "Players do not get priority during the Close Step." */
+  assert.equal(g.priority, null, "nobody holds priority in the close step");
+  assert.equal(g.chainOpen, true, "the chain has not closed yet — that is CR 7.7.7");
+
+  /* CR 7.7.7 — the close step ends and the action phase continues. */
+  g = P.advance(g);
+  assert.equal(g.step, "layer");
+  assert.equal(g.chainOpen, false, "now it is closed");
+  assert.equal(g.priority, 0, "and the turn-player has their action window back");
+});
+
+test("chain: a queued attack sends the resolution step back to attack, not to close (CR 7.6.3b)", () => {
+  let g = P.declareAttack(P.toPhase(fresh(0), "action"), 0);
+  g = {...g, step:"resolution", queue:[{n:"Head Jab"}]};
+  g = P.advance(bothPass(g));
+  assert.equal(g.step, "attack", "CR 7.6.4 requires the stack AND queue to be empty to close");
   assert.equal(g.priority, 0);
-  g = P.advance(g); assert.equal(g.step, "reaction", "reactions wait for both to pass");
-  g = P.advance(P.pass(P.pass(g)));
-  assert.equal(g.step, "damage");
-  g = P.advance(g); assert.equal(g.step, "resolution");
-  g = P.advance(g); assert.equal(g.step, "link");
-  assert.equal(g.chainOpen, true, "the chain stays open after a link resolves");
 });
 
 test("chain: breaking it banks the links and reopens the action window", () => {
@@ -163,6 +205,224 @@ test("chain: breaking it banks the links and reopens the action window", () => {
 test("chain: breaking an empty chain banks no history", () => {
   const g = P.breakChain(P.declareAttack(P.toPhase(fresh(0), "action"), 0));
   assert.deepEqual(g.chainHist, []);
+});
+
+/* ===================================================================
+   PASSING ON AN EMPTY STACK vs A POPULATED ONE.
+
+   The edge case this machine could not see at all. Every "the step ends"
+   rule in the CR is a CONJUNCTION and both halves matter:
+
+     CR 7.3.4 — "when the stack is empty and all players pass in
+                 succession, the Defend Step ends"
+     CR 7.6.4 — "when the stack and queue are empty and all players pass
+                 in succession, the Resolution Step ends"
+     CR 4.3.4 — "when the stack is empty, the combat chain is closed, and
+                 both players pass priority in succession, the action
+                 phase ends"
+
+   With a layer on the stack, all-passing resolves the top layer and the
+   turn-player gets priority again (CR 4.2.2 / 7.7.4) — the window
+   reopens. Treating the two alike skips a whole reaction window whenever
+   anything is on the stack, which is the worst kind of priority bug: the
+   defending player never gets asked.
+   =================================================================== */
+const withStack = (g, n) =>
+  ({...g, stack: Array.from({length:n}, (_,i)=>({layer:i}))});
+
+test("stack: all passing on an EMPTY stack ends the window", () => {
+  const g = bothPass(P.toReaction(P.declareAttack(active(0), 0)));
+  assert.equal(P.stackEmpty(g), true);
+  assert.equal(P.allPassed(g), true);
+  assert.equal(P.windowClosed(g), true);
+  assert.equal(P.passOutcome(g), "advance");
+});
+
+test("stack: all passing on a POPULATED stack resolves a layer instead (CR 4.2.2)", () => {
+  const g = bothPass(withStack(P.toReaction(P.declareAttack(active(0), 0)), 1));
+  assert.equal(P.allPassed(g), true, "everyone has passed...");
+  assert.equal(P.windowClosed(g), false, "...but the window is NOT closed");
+  assert.equal(P.passOutcome(g), "resolve-layer");
+});
+
+test("stack: a populated stack does not let the step advance", () => {
+  const g = bothPass(withStack(P.toReaction(P.declareAttack(active(0), 0)), 1));
+  assert.equal(P.advance(g).step, "reaction",
+    "CR 7.3.4/7.6.4 gate the step end on an EMPTY stack — a layer must resolve first");
+});
+
+test("stack: once the layer is gone, the same all-passed state advances", () => {
+  /* The caller resolves the layer (zone work this module deliberately does
+     not do) and hands priority back per CR 4.2.2; then the window closes
+     normally. This is the whole reason the two outcomes are named. */
+  let g = bothPass(withStack(P.toReaction(P.declareAttack(active(0), 0)), 1));
+  g = bothPass(P.reset({...g, stack: []}));
+  assert.equal(P.passOutcome(g), "advance");
+  assert.equal(P.advance(g).step, "damage");
+});
+
+test("stack: nobody may act in a window that has already closed", () => {
+  /* `pass` leaves priority resting with the last passer so it does not
+     bounce forever. Without this, that player still read as able to act
+     while `windowClosed` said the step was over — a contradiction, and
+     the kind that makes a state machine non-deterministic to drive. */
+  const g = bothPass(active(0));
+  assert.equal(P.windowClosed(g), true);
+  assert.deepEqual(P.speedAllowed(g, g.priority), []);
+  assert.equal(P.canAct(g, 0), false);
+  assert.equal(P.canAct(g, 1), false);
+});
+
+test("stack: canAct never contradicts windowClosed, in any step", () => {
+  for(const step of P.STEPS){
+    const g = bothPass({...active(0), step, attacker:0, chainOpen:true});
+    for(const i of [0,1])
+      assert.ok(!(P.canAct(g, i) && P.windowClosed(g)),
+        "a closed window opened a play in step " + step);
+  }
+});
+
+test("action phase: it ends on an empty stack with the chain closed (CR 4.3.4)", () => {
+  const open = active(0);
+  assert.equal(P.actionPhaseEnds(open), false, "nobody has passed yet");
+  assert.equal(P.actionPhaseEnds(bothPass(open)), true);
+  assert.equal(P.actionPhaseEnds(bothPass(withStack(open, 1))), false,
+    "a layer on the stack keeps the phase alive");
+  assert.equal(P.actionPhaseEnds(bothPass({...open, chainOpen:true})), false,
+    "so does an open combat chain");
+});
+
+/* ===================================================================
+   WHO HOLDS THE WINDOW: the turn-player, in every combat step.
+
+   CR 7.1.x/7.2.x/7.3.3/7.4.x/7.5.x/7.6.3 all say "the turn-player gains
+   priority". This module used to hand it to the ATTACKING player in the
+   reaction, damage, resolution and link steps. Those coincide while one
+   side ever attacks, so the bug was invisible — the same shape as act()
+   vs you() in ROADMAP-MULTIPLAYER.md Phase A step 1.
+   =================================================================== */
+test("holder: every combat step gives priority to the turn-player (CR 7.1-7.6)", () => {
+  /* Seat 1 is the turn-player and the attacker throughout. */
+  let g = P.declareAttack(active(1), 1);
+  const seen = [];
+  for(let i = 0; i < 6 && g.step !== "close"; i++){
+    seen.push([g.step, g.priority]);
+    assert.equal(g.priority, g.turnPlayer, "step " + g.step + " must hand it to the turn-player");
+    g = P.advance(bothPass(g));
+  }
+  assert.deepEqual(seen.map(s => s[0]),
+    ["attack","defend","reaction","damage","resolution"]);
+});
+
+test("holder: the turn-player keeps the window even when the ATTACKER is the other seat", () => {
+  /* Divergent by construction — the trainer cannot produce it today, and
+     that is exactly why it needs a drill rather than a play session. A
+     card that lets a non-turn-player control an attack must not move the
+     priority window with it. */
+  let g = {...active(0), attacker: 1, chainOpen: true};
+  for(const step of ["reaction","damage","resolution"]){
+    const to = {reaction:P.toReaction, damage:P.toDamage, resolution:P.toResolution}[step];
+    const n = to(g);
+    assert.equal(n.step, step);
+    assert.equal(n.turnPlayer, 0);
+    assert.equal(P.attackingPlayer(n), 1, "the attacker is still seat 1");
+    assert.equal(n.priority, 0,
+      step + " must give priority to the TURN-PLAYER (0), not the attacker (1)");
+  }
+});
+
+test("holder: the reaction SPLIT still follows the attacker, not the turn-player", () => {
+  /* The two questions come apart here, and both must stay right: the
+     turn-player holds the window, and the attacker decides which KIND of
+     reaction each seat may play. */
+  const g = P.toReaction({...active(0), attacker: 1, chainOpen: true});
+  assert.equal(g.priority, 0, "turn-player holds it");
+  assert.deepEqual(P.speedAllowed(g, 0), ["defense-reaction","instant"],
+    "seat 0 is the turn-player but is DEFENDING, so it gets defense reactions");
+  assert.deepEqual(P.speedAllowed(P.pass(g), 1), ["attack-reaction","instant"],
+    "seat 1 is attacking, so it gets attack reactions");
+});
+
+/* ===================================================================
+   THE CLOSE STEP (CR 7.7) — and that the link step is gone.
+   =================================================================== */
+test("close: nobody may be handed priority in the close step (CR 7.7.1)", () => {
+  const g = P.toClose(P.toResolution(P.declareAttack(active(0), 0)));
+  assert.equal(g.step, "close");
+  assert.equal(g.priority, null);
+  /* and it must be structurally impossible, not merely unasked-for */
+  assert.equal(P.give(g, 0).priority, null, "give() must refuse in the close step");
+  assert.equal(P.give(g, 1).priority, null);
+  assert.equal(P.reset(g).priority, null, "and so must reset()");
+});
+
+test("close: the invariant judge rejects priority held in the close step", () => {
+  const I = require("../engine/invariants.js");
+  const g = Object.assign(S.makeGame({seed:1}), {phase:"action", step:"close", priority:0});
+  const codes = I.errors(g).map(v => v.code);
+  assert.ok(codes.includes("PRIORITY-IN-CLOSE-STEP"),
+    "CR 7.7.1 must be guarded — the phase check cannot see it, the close step sits inside the action phase");
+  /* the clean case must stay quiet */
+  const ok = Object.assign(S.makeGame({seed:1}), {phase:"action", step:"close", priority:null});
+  assert.ok(!I.errors(ok).map(v => v.code).includes("PRIORITY-IN-CLOSE-STEP"));
+});
+
+test("close: leaving the close step restores the action window (CR 7.7.7)", () => {
+  const g = P.breakChain(P.toClose(P.toResolution(P.declareAttack(active(0), 0))));
+  assert.equal(g.step, "layer");
+  assert.equal(g.priority, 0,
+    "the step must be set before priority is asked for, or give() refuses and the window is silently lost");
+  assert.equal(g.chainOpen, false);
+});
+
+test("close: the retired link-step API is gone, not aliased", () => {
+  assert.equal(P.closeLink, undefined,
+    "the CR has no link step; an alias would keep the retired concept reachable");
+  assert.equal(typeof P.toClose, "function");
+});
+
+/* ===================================================================
+   DETERMINISM. The machine is a pure function of its state: same input,
+   same output, and no transition mutates what it was handed.
+   =================================================================== */
+test("determinism: transitions are pure — nothing mutates its input", () => {
+  const base = P.declareAttack(active(0), 0);
+  const snap = JSON.stringify(base);
+  const fns = [g=>P.pass(g), g=>P.reset(g), g=>P.give(g,1), g=>P.advance(g),
+               g=>P.toDefend(g), g=>P.toReaction(g), g=>P.toDamage(g),
+               g=>P.toResolution(g), g=>P.toClose(g), g=>P.breakChain(g),
+               g=>P.endTurn(g), g=>P.toPhase(g,"end")];
+  for(const f of fns){
+    f(base);
+    assert.equal(JSON.stringify(base), snap, "a transition mutated the state it was given");
+  }
+});
+
+test("determinism: the same state always produces the same next state", () => {
+  const walk = () => {
+    let g = P.toPhase(P.seat(S.makeGame({seed:7}), 0), "action");
+    const trace = [];
+    g = P.declareAttack(g, 0);
+    for(let i = 0; i < 8; i++){
+      trace.push(g.step + ":" + g.priority + ":" + g.passed.join(","));
+      g = P.advance(bothPass(g));
+    }
+    return trace.join(" | ");
+  };
+  assert.equal(walk(), walk(), "two identical walks must produce identical traces");
+});
+
+test("determinism: every reachable state is one the judge accepts", () => {
+  const I = require("../engine/invariants.js");
+  let g = Object.assign(S.makeGame({seed:3}), P.seat(S.makeGame({seed:3}), 0));
+  g = P.toPhase(g, "action");
+  g = P.declareAttack(g, 0);
+  for(let i = 0; i < 10; i++){
+    const bad = I.errors(g).filter(v => /PHASE|STEP|PRIORITY/.test(v.code));
+    assert.deepEqual(bad, [], "judge rejected step " + g.step + ": " + JSON.stringify(bad));
+    assert.ok(P.STEPS.indexOf(g.step) >= 0, "unknown step " + g.step);
+    g = P.advance(bothPass(g));
+  }
 });
 
 /* ---- the clock ------------------------------------------------------- */
@@ -240,9 +500,26 @@ test("bridge — the action phase opens with the turn player holding priority (C
   assert.equal(p.attacker, null, "nothing is attacking yet");
 });
 
-test("bridge — an open chain is the link step, not layer", () => {
-  assert.equal(P.fromTrainer(T("act", {chainOpen:true}), false).step, "link");
+/* CHANGED DELIBERATELY — there is no link step. CR 7.0.1 lists Layer,
+   Attack, Defend, Reaction, Damage, Resolution; the link step was removed
+   and the go again check moved into the Resolution Step (CR 7.6.2). An
+   open chain is therefore `resolution`: the link has resolved, the
+   turn-player holds priority (CR 7.6.3), and playing another attack
+   starts a new link (CR 7.6.3a). */
+test("bridge — an open chain is the RESOLUTION step (CR 7.6.3), not the deleted link step", () => {
+  assert.equal(P.fromTrainer(T("act", {chainOpen:true}), false).step, "resolution");
   assert.equal(P.fromTrainer(T("act", {chainOpen:false}), false).step, "layer");
+  assert.ok(P.STEPS.indexOf("link") < 0, "the link step must not come back");
+});
+
+test("bridge — the open-chain window still lets the player act (CR 7.6.3a)", () => {
+  /* The regression this guards: mapping an open chain to `close` would be
+     CR-shaped and would silently make every hand card unplayable mid-chain,
+     because nobody holds priority in the close step. */
+  const g = P.fromTrainer(T("act", {chainOpen:true}), false);
+  assert.equal(g.priority, 0);
+  assert.deepEqual(P.speedAllowed(g, 0), ["action","instant"],
+    "an open chain is where the second attack of a chain gets played");
 });
 
 test("bridge — the trainer's UI sub-modes are all still the action phase", () => {
@@ -342,6 +619,15 @@ test("bridge — the mapping is TOTAL and never yields an invalid state", () => 
             /* the exact rule the judge enforces */
             if(p.phase === "start" || p.phase === "end")
               assert.equal(p.priority, null, "priority in a closed phase for " + where);
+            /* THE TRAINER MUST NEVER DERIVE A CLOSED WINDOW. `speedAllowed`
+               now returns [] once everyone has passed on an empty stack,
+               and playRx reads it for every reaction — so if any trainer
+               state mapped to passed:[true,true], reactions would go dead
+               in the live game. fromTrainer only ever passes once (the
+               dummy sliding its reaction window over), and this pins it. */
+            assert.ok(!(p.passed[0] && p.passed[1]),
+              "fromTrainer derived a CLOSED priority window for " + where +
+              " — playRx would refuse every reaction");
             /* and it must survive the real judge, wired to real sides */
             const g = Object.assign(S.makeGame({seed:1}), p);
             const bad = I.errors(g).filter(v => /PHASE|STEP|PRIORITY/.test(v.code));

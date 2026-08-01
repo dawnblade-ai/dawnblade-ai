@@ -637,7 +637,7 @@ The mapping, verified in live play:
 | trainer | machine | why |
 |---|---|---|
 | `act`, no chain | action / **layer**, priority you | your open window |
-| `act`, chain open | action / **link** | the chain stays open after resolution |
+| `act`, chain open | action / **resolution** | CR 7.6.3 — the link resolved, you may play another attack |
 | `pay`,`arsenal`,`boostpick` | action / layer | UI sub-modes, still your window |
 | `stack` | **reaction**, attacker you, priority you | you attacked → `attack-reaction` |
 | `block`+`defend` | **defend**, turnPlayer **1**, priority **1** | CR 7.3 — see below |
@@ -881,15 +881,42 @@ priority" are the same thing and both are implied by `mode`. They are separate
 fields here because in a two-player game the *defending* player holds priority
 during the *attacking* player's turn on every link of every chain.
 
-- Phases `start → action → end`; chain steps
-  `layer → attack → defend → reaction → damage → resolution → link`.
-- `pass()` slides priority; `allPassed()` reports the window closing. It never
+- Phases `start → action → end`; chain steps (CR 7.0.1)
+  `layer → attack → defend → reaction → damage → resolution → close`.
+  **There is no `link` step** — the CR removed it; the go again check moved
+  into the resolution step (CR 7.6.2) and `close` (CR 7.7) is where the chain
+  actually closes and nobody holds priority.
+- `pass()` slides priority; `allPassed()` reports that everyone passed. It never
   advances on its own, because what "advance" means depends on the step.
+- **`allPassed` is not the same question as "the window closed".** Every CR
+  step-end rule is a conjunction — "when the stack is empty **and** all players
+  pass in succession" (CR 7.3.4, 7.6.4, 4.3.4). Passing on a *populated* stack
+  resolves the top layer and hands priority back (CR 4.2.2); it does not end the
+  step. `windowClosed(g)` is the conjunction and `passOutcome(g)` names which of
+  `hold` / `resolve-layer` / `advance` is happening. A machine that cannot tell
+  the last two apart skips a whole reaction window whenever anything is on the
+  stack — the defending player never gets asked.
 - `speedAllowed(g,i)` names the window (`action` / `attack-reaction` /
   `defense-reaction` / `instant`) — the rule the player's hand-dim logic and
   `playRx` currently enforce by hand, stated once so both sides share it.
 - Defenders are declared free and simultaneously, so `canDeclareDefenders` is
   deliberately a *separate* question from `canAct`.
+- **EVERY combat step hands priority to the TURN-PLAYER** (CR 7.1.x, 7.2.x,
+  7.3.3, 7.4.x, 7.5.x, 7.6.3), never to the attacking player. The module used to
+  give it to the attacker in the reaction, damage and resolution steps; those
+  coincide while one side ever attacks, so it was invisible — the same shape as
+  `act()` vs `you()`. The **attacker** decides only *which kind* of reaction is
+  legal (`speedAllowed`'s split), which is a genuinely different question from
+  who holds the window.
+- **The defend step has a priority window** (CR 7.3.3) and it is instants only.
+  `speedAllowed` used to return `[]` there, reasoning that declaring defenders is
+  free and simultaneous — true about *declaring* (CR 7.3.2), and not a statement
+  that the step has no window. CR 7.3.4 ends the step only when players pass,
+  and there is nothing to pass if nobody may act.
+- **A closed window opens nothing.** Once `windowClosed` is true, `speedAllowed`
+  returns `[]` for everyone, so `canAct` can never contradict it. `fromTrainer`
+  is pinned to never derive a closed window, because `playRx` reads
+  `speedAllowed` for every reaction.
 - **Clock caution:** `turn` here counts player-turns (it ticks on every
   handoff, per the CR) and `round` ticks when seating wraps. The trainer's flat
   `turn` counts only the player's own turns, so it maps to `round`. The
