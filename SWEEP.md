@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 13 heroes, 30 unread clauses | never charged by the stack |
 | Tokens | 10 | 7 barely named in the trainer |
-| Ruled but not built | 108 cards | understood ≠ built |
-| **Fail states** | 140 entries, 2 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 106 cards | understood ≠ built |
+| **Fail states** | 138 entries, 2 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -153,8 +153,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Halo of Illumination** (part, 2/3 unread)
 - **Loot the Arsenal** (part, 2/3 unread)
 - **Magmatic Carapace** (part, 2/3 unread)
-- **Malefic Incantation** (part, 2/5 unread)
-- **Malefic Incantation** (part, 2/5 unread)
 - **Mounting Anger** (part, 2/3 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
 - **Refraction Bolters** (part, 2/3 unread)
@@ -174,7 +172,9 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Carrion Crown** (part, 1/3 unread)
 - **Cindering Foresight** (part, 1/3 unread)
 - **Cindering Foresight** (part, 1/3 unread)
-- … and 48 more (see the station)
+- **Cindering Foresight** (part, 1/3 unread)
+- **Compass of Sunken Depths** (part, 1/2 unread)
+- … and 46 more (see the station)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -189,9 +189,9 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 51 |
+| Earned value denied | 49 |
 | Choice never offered | 43 |
-| Ability inert — cost not modelled | 38 |
+| Ability inert — cost not modelled | 36 |
 | No schedule to fire on | 33 |
 | Displayed total is wrong | 27 |
 | Unread, effect unknown | 22 |
@@ -354,7 +354,7 @@ worst thing a trainer can do: it teaches wrong play.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
 - … and 39 more (see the station)
 
-### LOST VALUE — 66 entries
+### LOST VALUE — 64 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -453,7 +453,7 @@ worst thing a trainer can do: it teaches wrong play.
 - **Enigma Chimera** (2) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- … and 41 more (see the station)
+- … and 39 more (see the station)
 
 ### INERT — 8 entries
 

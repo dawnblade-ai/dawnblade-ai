@@ -1,6 +1,6 @@
 # CARD_PROGRESS — Phase 3 pool checklist
 
-**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:39:35.173Z, DATA_VER `sage-v10`,
+**Generated from `tools/audit.json`** (audit run: 2026-08-01T20:42:14.638Z, DATA_VER `sage-v10`,
 APP_VER 2.38). This file is a **build artifact, not a source file** — hand edits
 here do not change what the engine reads. Regenerate after any parser change:
 
@@ -23,9 +23,9 @@ override registry (`CARD_OVERRIDES` in `engine/parser.js`) exists for the
 rare genuinely non-generalizable ability; any card resolved that way is
 noted inline below.
 
-**Overall: 306 / 437 (70%)** — heroes 2/15 ·
-tokens 7/17 · pool cards 297/405
-(tiers: full 297, part 83, none 25)
+**Overall: 308 / 437 (70%)** — heroes 2/15 ·
+tokens 7/17 · pool cards 299/405
+(tiers: full 299, part 81, none 25)
 
 ---
 
@@ -108,7 +108,7 @@ tokens 7/17 · pool cards 297/405
 
 ---
 
-## Pool cards (297/405)
+## Pool cards (299/405)
 
 - [x] A Drop in the Ocean [pitch 3] _(enigma)_
 - [x] Absorb in Aether [pitch 1] _(blaze, iyslander)_
@@ -308,8 +308,8 @@ tokens 7/17 · pool cards 297/405
 - [x] Macho Grande [pitch 3] _(bravo)_
 - [x] Mage Master Boots _(gravy)_
 - [ ] Magmatic Carapace — part, 2 clause(s) unread _(bravo)_
-- [ ] Malefic Incantation [pitch 1] — part, 2 clause(s) unread _(viserai)_
-- [ ] Malefic Incantation [pitch 2] — part, 2 clause(s) unread _(viserai)_
+- [x] Malefic Incantation [pitch 1] _(viserai)_
+- [x] Malefic Incantation [pitch 2] _(viserai)_
 - [x] Mandible Claw _(kayo)_
 - [x] Manifest Muscle [pitch 3] _(enigma)_
 - [x] Mark of the Black Widow [pitch 1] _(arakni)_

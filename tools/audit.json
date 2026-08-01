@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-01T20:39:35.173Z",
+ "generated": "2026-08-01T20:42:14.638Z",
  "appVer": "2.38",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 297,
-  "part": 83,
+  "full": 299,
+  "part": 81,
   "none": 25
  },
  "heroes": {
@@ -2893,7 +2893,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2911,17 +2911,14 @@
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Once per turn, when you play an attack action card, remove a verse counter from this",
-    "If you do, create a Runechant token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token.",
@@ -3218,7 +3215,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3236,17 +3233,14 @@
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Once per turn, when you play an attack action card, remove a verse counter from this",
-    "If you do, create a Runechant token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Go again\nThis enters the arena with 2 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token.",

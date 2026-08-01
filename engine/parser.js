@@ -51,6 +51,15 @@ function classifyClause(raw){
     return NOOP("reveal payoff — fires if this is the card revealed on a winning clash");
   if(/^when it has none, destroy it$/.test(c))
     return NOOP("counter tick — destruction handled with the tick that empties it");
+  /* VERSE COUNTERS (Malefic Incantation): this exact rider is the OTHER
+     half of the verse-counter unwind read directly off the board in
+     execute() — see the matching NOOP for its "remove a verse counter"
+     clause further down. Read as a whole-clause match, before the generic
+     if/when splitter, because "if you do" alone is shared by every
+     optional-cost rider in the pool; matching just the cond string would
+     silently claim clauses this exact wording was never written for. */
+  if(/^if you do, create a runechant token$/.test(c))
+    return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
   /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
      it's blue, pitch it" are two SEPARATE printed clauses, but reading them
      apart breaks on an ATTACK card — the generic conds loop that would
@@ -255,6 +264,19 @@ function classifyClause(raw){
   if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("stops arcane damage — the dummy throws only fists");
   if(/^inertia$/.test(c)) return NOOP("taxes the opponent's action phase — the dummy has none");
   if(/^watery grave$/.test(c)) return NOOP("live — Gravy Bones' ability enables it once a blue card has hit your graveyard");
+  /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
+     read directly off the board in execute() at declaration (it scans
+     every board permanent's own text for this exact shape on every attack
+     played), not through this per-clause reader — so this clause is
+     genuinely handled, just not by this function. Marking it noop here is
+     what lets the coverage audit see that, the same way "watery grave"
+     above credits Gravy Bones' ability for a different card's keyword.
+     Its "if you do, create a Runechant token" rider is caught separately,
+     up in the whole-clause patterns — it has to be, since a bare "if you
+     do" cond string is shared by every optional-cost rider in the pool and
+     would over-match if read as a generic condition here. */
+  if(/^once per turn, when you play an attack action card, remove a verse counter from this$/.test(c))
+    return NOOP("live — the verse-counter unwind is read directly off the board at declaration (execute()'s verse scan)");
   /* Ephemeral, per its own printed reminder text: if it would be put into a
      graveyard from anywhere, instead it ceases to exist. Enforced in gy(). */
   if(/^ephemeral$/.test(c)) return NOOP("live — it ceases to exist instead of reaching a graveyard");

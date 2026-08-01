@@ -1298,3 +1298,15 @@ test("marked — Mark of the Black Widow resolves to full, and its banish lands 
   assert.deepEqual(fx.condOnHit, [{cond:"marked", op:["foeBanish",1]}]);
   assert.equal(fx.tier, "full");
 });
+
+/* ---- Malefic Incantation — verse counters, credited not re-read, v2.39 */
+test("verse counters — the unwind clauses are noop-credited (handled by execute()'s board scan, not this reader)", () => {
+  assert.equal(P.classifyClause("Once per turn, when you play an attack action card, remove a verse counter from this").status, "noop");
+  assert.equal(P.classifyClause("If you do, create a Runechant token").status, "noop");
+});
+
+test("verse counters — Malefic Incantation resolves to tier full", () => {
+  const fx = P.fxParse({name:"Malefic Incantation", pitch:1, tt:"Runeblade Action - Aura", power:null, kw:[],
+    tx:"Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token."});
+  assert.equal(fx.tier, "full");
+});
