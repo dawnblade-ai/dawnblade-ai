@@ -9,6 +9,181 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.45 — Phase 1: the turn structure, against the CR itself
+
+A review pass over the core structure — card types, the numbers, the
+turn, and the priority windows — grounded against the published
+Comprehensive Rules rather than against the code's own memory of them.
+**Nine bugs, and not one of them was a card being read wrong.** Every
+affected card parsed perfectly; what was wrong was the machine the cards
+run inside, which is exactly the half Phase 1 exists to rebuild.
+
+Eight of the nine were invisible to every tool this project has. The
+audit measures coverage, the fairness sweep looks for cards stronger than
+printed, and `failstates.js` asks what goes wrong at the table — none of
+them asks *whose* hand refills at the end of a turn.
+
+### THE ONE THAT MATTERED MOST — the wrong hero drew (CR 4.4.3f)
+
+> "The turn-player draws cards until the number of cards in their hand is
+> equal to their hero's intellect."
+
+Step (e) calls `priority.js`'s `endTurn`, which performs CR 4.4.4's
+handoff as well as 4.4.3e's fizzle — so by the time (f) ran,
+`n.turnPlayer` was already the **incoming** player. Every turn after the
+first refilled the wrong hero, and turn one hid it because there both
+seats draw anyway.
+
+**It inverts the decision the whole game is built on.** You refill at the
+end of *your* turn so that you have cards to block with during *theirs*.
+Drawing for the incoming player instead means every hero walks into the
+opponent's turn on whatever survived, and opens their own turn with a
+full grip — block-or-hold stops being a choice.
+
+The existing CR 4.4.3f drill read the **log line**, not the hands, so it
+was green throughout. The new one counts cards.
+
+### (a) ANNOUNCED ITSELF AND DID NOTHING (CR 4.4.3a)
+
+`resetAllyLife` returns **the game**, not `{game, msgs}`. `judge.js` read
+`out.game`, got `undefined`, fell through the `||` to the unchanged state
+and threw the reset away — while logging *"(a) Allies recover."* on every
+turn of every game. A wounded ally never healed.
+
+The drill that checks the end phase runs a–f **in the CR's order** reads
+the log, so it could never see this. A step that announces itself and
+does nothing is worse than a missing one.
+
+### AN INVENTED LOSS CONDITION (CR 4.5.3)
+
+CR 4.5.3 lists every way a player loses and there are exactly three:
+their hero's life reaches zero or they control no hero (a), an effect
+says they lose (b), or they concede (c). **An empty deck is not one of
+them.** `drawTo` ended the game by "fatigue" — handing a win to a player
+whose opponent was still alive and still holding cards.
+
+A hero who runs their deck out keeps playing, keeps blocking with what is
+in hand, and loses on life like anyone. A drill now pins that the only
+`how` values the reducer can produce are `life` and `concession`.
+
+**`index.html` carries the same invented rule** (a "Deck empty —
+fatigued" loss). Left alone deliberately: the trainer's dummy already
+reshuffles its graveyard so it never decks out, so changing it is a
+gameplay decision about solo play rather than a rules fix.
+
+### TWO PRIORITY WINDOWS THAT NEVER OPENED
+
+**1. "In succession" is half of every step-end rule.** CR 7.3.4, 7.4.3,
+7.5.4, 7.6.4 and 4.3.4 are all worded *"when the stack is empty and all
+players pass **in succession**"*. A card resolving between two passes
+breaks that succession, and the turn-player gains priority again
+(CR 4.2.2 / 7.7.4).
+
+The pass record survived a play, and the shape that produced is the
+expensive kind:
+
+```
+attacker passes            passed = [true, false]
+defender plays a defence reaction     passed = [true, false]   <-- still
+defender passes            passed = [true, true]  -> DAMAGE STEP
+```
+
+**The attacker never got a window to answer the card just played at
+them.** Declaring a defender had the same hole: a turn-player who passed
+early never saw the wall they were about to be measured against.
+
+**2. The action phase never ended (CR 4.3.4).** `advance` has no
+transition out of the layer step — that step belongs to `declareAttack` —
+so a mutual pass left the game in a window **nobody could act in**:
+`speedAllowed` correctly returned `[]` for both seats, the turn-player
+was refused with "you do not hold priority", and the only way out was an
+explicit `endTurn` the CR does not require. `actionPhaseEnds` was right
+all along and nothing called it.
+
+### AN UNAFFORDABLE PLAY WAS DECLARED LEGAL
+
+`playableWhy` checked the action point and never asked whether the cost
+could be raised at all. `legal` said yes, `doPlay` opened a payment that
+could never be completed, and the only move left was to cancel back into
+the identical state — **a live-lock for any driver that trusts `legal`**,
+which is the reducer's contract and is how both the guest client and the
+sequencer decide what to send. It is also a dead tap for a human.
+
+`payCeiling` is the honest maximum: the floating pool plus every pitch
+value left in hand.
+
+### ALLIES COULD NOT BE ATTACKED (CR 1.4.5)
+
+An ally is a **living object** (CR 1.4.5a) — it has life, so it is
+attackable, and CR 1.4.5 makes declaring an attack-target mandatory.
+Allies had been reaching the arena since v2.43 (19 of them across a
+15-pairing sweep) and **nothing could touch them**: a body that blocks
+nothing, dies to nothing and costs the opponent nothing to ignore.
+
+Every helper already existed in `game.js`, drilled, and called by nobody.
+The target now rides on the **action** (`{t:"play", uid, target}`) rather
+than in a prompt, so the reducer stays pure and serializable — the same
+action drives a tap, a replay and a peer.
+
+**CR 7.3.2a is what makes it a decision.** Only a hero attack-target may
+have defending cards declared for it, so an attack on an ally always
+connects and it kills. Omitting `target` still means the hero, which is
+always a legal choice; offering the choice is the caller's half.
+
+### AND TWO SMALLER ONES
+
+- **CR 4.4.4** — the per-turn ledger (`hist`) cleared only for the
+  incoming seat, so a card asking "have you pitched a blue this turn"
+  during the opponent's turn read *your* turn's answer.
+- **A `Resource` card reported playable with no window to play it in.**
+  `Inner Chi` is a `Mystic Resource - Chi`: no cost, no rules text, pitch
+  3. It was refused two steps later with "cannot be played in the action
+  phase", which reads like a timing problem rather than what it is.
+  `isPlayable` now asks the window table instead of a second list, so the
+  two cannot disagree. The drill that would have caught it never looked
+  at the card — `pool()` in `types.test.js` covered the fifteen decks and
+  not the dummy's pile or the two runtime-minted records.
+
+### WHAT WAS CHECKED AND FOUND CORRECT
+
+Worth recording, because a review that only lists faults is not a review:
+
+- **Lyath Goldmane's intellect is 5**, every other hero's is 4, and that
+  number flows correctly from the database through `buildSide` to a
+  five-card opening hand.
+- **The type census is a true partition** — 434 unique cards over nine
+  card types, none typed twice, nothing untyped.
+- **A chain link walks all six CR windows** in order with the right seat
+  holding each: attack (7.2.4), defend (7.3.3 — the *turn-player*, while
+  the defender declares), reaction (7.4.2, split by attacker), damage
+  (7.5.3, dealt on **entering**), resolution (7.6.3, action speed for a
+  second link), close (7.7.1, nobody holds priority).
+- **Equipment wear**: battleworn, temper, guardwell and blade break all
+  apply, `chainBlocked` stops a piece re-blocking the same chain, and a
+  0-defence piece is refused as a defender.
+- **The damage arithmetic is CR 7.5.2** — power minus the summed printed
+  defence of the declared cards, floored at zero.
+
+### MEASURED
+
+A greedy policy driving all fifteen precons at each other, before and
+after:
+
+| | games finished | actions | invariant violations |
+|---|---|---|---|
+| before | 8 / 15 | 29,463 | 0 |
+| after | **15 / 15** | 3,198 | 0 |
+
+The 10× drop in actions is the draw fix: hands now deplete the way they
+do at a table, so a greedy bot runs out of things to do instead of
+playing forever off a hand that silently refilled. Every game ends on
+life, which is CR 4.5.3a and now the only way a game can end.
+
+679 drills. Each of the nine fixes has a drill, and **each was verified
+to bite** by reintroducing the bug and watching it fail by name.
+
+---
+
 ## v2.44 — a reaction cannot be an action
 
 **Reported by the user, who reads cards for a living, and they were

@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 580 drills:
+This is `node --test "test/*.test.js"` — currently 679 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -637,6 +637,61 @@ them.
 
 `test/wire.test.js`'s `HEADLESS` list is the ledger. Coming off it must
 be the same edit that adds `judge` to `test/sync.test.js`'s `MODULES`.
+
+### THE CR REVIEW (v2.45) — nine bugs, none of them a card
+
+A pass over the turn structure and the priority windows, grounded against
+the **published CR** rather than against the code's own memory of it.
+Every affected card parsed perfectly; what was wrong was the machine the
+cards run inside. **No tool in this project could see eight of the nine**
+— the audit measures coverage, the fairness sweep looks for cards
+stronger than printed, and neither asks whose hand refills at end of turn.
+
+Read these before touching `judge.js`, because each is a shape that can
+come back:
+
+| CR | what was wrong |
+|---|---|
+| 4.4.3f | **the wrong hero drew.** (e) calls `priority.endTurn`, which does CR 4.4.4's *handoff* as well as 4.4.3e's fizzle — so `n.turnPlayer` at (f) is the INCOMING player. Use the `seat` argument. |
+| 4.4.3a | ally life reset **ran only in the log**: `resetAllyLife` returns THE GAME, not `{game,msgs}`, so `out.game` was undefined and the `\|\|` fell back to the unchanged state |
+| 4.5.3 | an **invented** deck-out loss. Three ways to lose and no more: life to zero / no hero, an effect says so, concede |
+| 4.3.4 | the action phase **never ended** on a mutual pass — `advance` has no transition out of the layer step, so the window closed and nobody could act |
+| 7.3.4 etc | **"in succession"** — a play or a declaration did not reset the pass record, so the attacker never got a window to answer a defence reaction |
+| 1.4.5 / 7.3.2a | **allies could not be attacked** — they had reached the arena since v2.43 and nothing could touch them |
+| 4.4.4 | `hist` cleared for the incoming seat only, so "…this turn" read the wrong turn during the opponent's |
+| 8.x | an **unaffordable play was declared legal**, opening a payment whose only exit was cancel — a live-lock for anything that trusts `legal` |
+
+**THE DRILL THAT READS THE LOG CANNOT SEE THE BUG.** Two of these lived
+under green drills that asserted on `feed` messages: the end phase really
+did print (a) through (f) in the CR's order, and it really did say
+"draws to intellect". Assert on **hands, life and zones**, not on prose.
+
+**A DRAW IS NOT COSMETIC.** You refill at the end of *your* turn so you
+have cards to block with during *theirs*. Refilling the incoming player
+instead means every hero opens their turn with a full grip and blocks
+with nothing — block-or-hold stops being a decision, which is the game.
+
+**Attack-targets ride on the ACTION**, not in a prompt:
+`{t:"play", uid, from, target}` where `target` is an ally's uid or
+`"hero"`. That keeps `reduce` pure and serializable — one action drives a
+tap, a replay and a peer. `J.targets(g, defSeat)` is the list to offer.
+Omitting it means the hero, always a legal choice; **making the choice
+mandatory (CR 1.4.5) is the caller's half and is not built.**
+
+Still deliberately not modelled, and each is honest rather than hidden:
+
+- **the layer-step window (CR 7.1.2)**. An attack goes straight onto the
+  chain; in the CR it sits on the stack first and both seats may respond
+  before it becomes a chain link. Needs the stack/queue, which
+  `priority.js` already has hooks for (`queueEmpty`).
+- **`endTurn` skips the opponent's last window.** CR 4.3.4 ends the phase
+  on a mutual pass — now implemented — but the explicit `endTurn` action
+  remains and does not wait for the other seat to pass.
+- **allies do not attack.** They are attackABLE; swinging one needs the
+  activation cost and a target of its own.
+- **`index.html` still carries the invented fatigue loss.** Left alone on
+  purpose: the dummy reshuffles its graveyard rather than decking out, so
+  changing it is a decision about solo play, not a rules fix.
 
 ### The remaining order
 
@@ -1845,7 +1900,13 @@ card ever asks.
 
 ---
 
-## Attack targets (CR 1.4.5) — engine done, trainer NOT wired (v2.23)
+## Attack targets (CR 1.4.5) — wired in `judge.js` (v2.45), trainer NOT (v2.23)
+
+> **`engine/judge.js` now declares, validates and resolves attack-targets**
+> — see "THE CR REVIEW" above. The section below describes the original
+> `game.js` groundwork and the TRAINER's remaining wiring, which is still
+> outstanding: `execute` declares the attack and calls `dummyDefence` in
+> one pass, so a target choice has to land before that.
 
 **With an ally in the arena, declaring an attack is a choice, and it is
 mandatory.** CR 1.4.5: "If a player plays, activates, or triggers an attack or

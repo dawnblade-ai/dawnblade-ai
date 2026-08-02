@@ -35,7 +35,7 @@
       an action point, or in the defence window for none. A reader that
       matches one type and stops refuses the card half the time.
 
-   2. **`Block` is a type, and it has no play.** Five cards — Test of
+   2. **`Block` is a type, and it has no play.** Four cards — Test of
       Might, Test of Strength, On the Horizon, Crash and Bash. They print
       no cost, print 4 defence, and every one of them reads "When this
       defends, …". They may be pitched or declared as defenders. Treating
@@ -241,7 +241,21 @@ const NO_PLAY = ["Equipment", "Weapon", "Block", "Hero", "Token"];
 const isPlayable = c => {
   const t = T(c);
   if(!t.types.length) return false;
-  return !t.types.every(x => NO_PLAY.indexOf(x) >= 0);
+  if(t.types.every(x => NO_PLAY.indexOf(x) >= 0)) return false;
+  /* AND A TYPE WITH NO PLAY *WINDOW* HAS NO PLAY EITHER, whatever else
+     it is. `Inner Chi` is a `Mystic Resource - Chi`: no printed cost, no
+     rules text, a pitch value of 3, and no entry in `playWindows` — the
+     only thing a player can do with it is pitch it. It reported playable
+     here while `playWindows` returned [], so it was refused two steps
+     later with "cannot be played in the action phase", which reads like
+     a timing problem rather than what it is.
+
+     Deciding this from the window table instead of lengthening NO_PLAY is
+     what stops the two from disagreeing — a type added to one list and
+     forgotten in the other is precisely the drift this module exists to
+     end, and it is how `rxAllowed`'s five hand-rolled copies got out of
+     step with each other. */
+  return playWindows(t).length > 0;
 };
 
 /* Why a type has no play, in words a player can act on. Returning the
@@ -254,6 +268,8 @@ function noPlayReason(c){
   if(t.types.includes("Equipment")) return "equipment is worn, not played";
   if(t.types.includes("Block")) return "a block card can only be pitched or declared as a defender";
   if(!t.types.length) return "no printed card type";
+  /* No play window at all — a Resource card is the pool's one example. */
+  if(!playWindows(t).length) return "a " + t.types[0].toLowerCase() + " card can only be pitched";
   return t.types[0] + " cards are not played from hand";
 }
 

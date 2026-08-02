@@ -52,8 +52,8 @@
    Modelled: the CR turn structure (4.2-4.4), the combat chain (7.x),
    resource payment on demand, defenders from hand and equipment, printed
    power against printed defence, go again as a GAIN (CR 5.3.5), instants
-   costing no action point (CR 8.1.6), the arsenal step, fatigue, and the
-   ordered end phase (CR 4.4.3a-f).
+   costing no action point (CR 8.1.6), the arsenal step, attack-targets
+   (CR 1.4.5), and the ordered end phase (CR 4.4.3a-f).
 
    NOT YET: card EFFECTS. `runOps`/`execute` — the parser's 700 lines of
    card semantics — are still in the trainer and are ported in the next
@@ -263,6 +263,15 @@ function legal(g, a, seat){
      seats can legally act at once. That is why net.js needs a sequencer. */
   if(a.t === "defend"){
     if(!P.canDeclareDefenders(g, seat)) return "not your defend step";
+    /* CR 7.3.2a — only a HERO attack-target may have cards declared for
+       it: "the hero being attacked may declare any number of
+       non-defense-reaction cards … Otherwise, a player may only declare
+       cards for an attack-target if a rule or effect specifies it."
+       Nothing in this pool specifies it, so an attack on an ally cannot
+       be blocked — which is the whole reason targeting one is a decision
+       rather than a worse way to hit the hero. */
+    if(!GM.targetCanBeDefended(g.pend && g.pend.target))
+      return "an attack on an ally cannot be blocked (CR 7.3.2a)";
     const sd = at(g, seat);
     const gi = find(sd.gear, a.uid);
     if(gi >= 0){
@@ -316,7 +325,7 @@ function legal(g, a, seat){
     }
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
-    return playableWhy(g, seat, c, win);
+    return playableWhy(g, seat, c, win) || targetWhy(g, seat, c, a.target);
   }
 
   if(a.t === "activate"){
@@ -341,6 +350,10 @@ function legal(g, a, seat){
     const win = P.speedAllowed(g, seat);
     if(win.indexOf("action") < 0) return "no action-speed window — a weapon cannot swing here";
     if(!(sd.ap > 0)) return "no action point left";
+    /* Same rule as a card: an activation the seat cannot fund is not
+       legal, and offering it opens a payment with no way out but cancel. */
+    if((wc.cost || 0) > sd.res + payCeiling(sd, null))
+      return piece.name + " costs " + wc.cost + " to swing and you cannot raise it";
     return null;
   }
   return "unhandled action: " + a.t;
@@ -398,8 +411,56 @@ function playableWhy(g, seat, c, win){
   const free = open.some(w => !TY.typeCostsAP(c, w));
   if(!free && !(sd.ap > 0)) return "no action point left";
 
+  /* A PLAY YOU CANNOT PAY FOR IS NOT A LEGAL PLAY. Resources come from
+     the pool plus whatever the rest of the hand can pitch, so `payCeiling`
+     is the most this seat could possibly raise.
+
+     Leaving it out is not harmless: `legal` said yes, `doPlay` opened a
+     payment that could never be completed, and the only move left was to
+     cancel back into the identical state — a live-lock for any driver
+     that trusts `legal` (which is the contract), and a dead tap for a
+     human, which is the failure mode this codebase cares most about. */
+  const cost = effCost(c, sd);
+  if(cost > sd.res + payCeiling(sd, c))
+    return c.name + " costs " + cost + " and you cannot raise it";
+
   return null;
 }
+
+/* ---- attack-targets (CR 1.4.5) ----------------------------------------
+   "If a player plays, activates, or triggers an attack … the player MUST
+   declare an attackable object controlled by an opponent as the
+   attack-target", and CR 1.4.5a makes an ally attackable because an ally
+   is a living object — it has life.
+
+   The target rides on the ACTION (`{t:"play", uid, target}`), not in a
+   prompt, so the reducer stays pure and serializable: the same action
+   drives a tap, a replay and a peer. `targets()` is the list a UI or a
+   policy offers; omitting `target` falls back to the hero, which is
+   always a legal choice. Making the CHOICE mandatory is the caller's
+   half — offering it — and is noted in the module header.
+
+   With no ally in the arena there is exactly one target and nothing to
+   ask, which is why solo play against the dummy never sees this. */
+const targets = (g, defIdx, heroCard) => GM.attackTargets(g, defIdx, heroCard);
+const targetOf = (g, seat, spec) => {
+  const def = P.other(seat);
+  if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
+  const list = GM.attackTargets(g, def);
+  const hit = list.find(t => t._target.kind === "ally" && t._target.uid === spec);
+  return hit ? hit._target : null;
+};
+function targetWhy(g, seat, c, spec){
+  if(spec == null || !isAttack(c)) return null;
+  return targetOf(g, seat, spec) ? null : "no such attack-target";
+}
+
+/* The most this seat could put into the pool right now: what is already
+   floating plus every pitch value left in hand. A card never pitches for
+   itself (`legal` refuses that too), and the arsenal is face down — only
+   the hand pitches. */
+const payCeiling = (sd, self) => (sd.hand || [])
+  .reduce((t, c) => t + (self && c.uid === self.uid ? 0 : (c.pitch || 0)), 0);
 
 /* What the selected pitch is worth. */
 const paySum = sd => (sd.paySel || []).reduce((t, uid) => {
@@ -430,6 +491,18 @@ function settle(g){
       g = closeChain(nx);
       continue;
     }
+
+    /* CR 4.3.4 — "when the stack is empty, the combat chain is closed,
+       and both players pass priority in succession, the action phase ends
+       and the game proceeds to the End Phase."
+
+       Nothing else can move here. `advance` has no transition out of the
+       layer step — that step is left to `declareAttack` — so without this
+       a mutual pass left the game in a closed window that no seat could
+       act in: `speedAllowed` correctly returned [] for both, the
+       turn-player was refused with "you do not hold priority", and the
+       only way out was an explicit endTurn the CR does not require. */
+    if(P.actionPhaseEnds(g)) return doEndTurn(g, g.turnPlayer);
 
     const out = P.passOutcome(g);
 
@@ -515,7 +588,25 @@ function strike(g){
   if(spentHand.length) n = toGrave(n, def, spentHand);
 
   const total = Math.max(0, (link.total || 0) - wall);
-  n = put(n, def, s => ({...s, hp: s.hp - total}));
+
+  /* CR 1.4.5 — THE ATTACK-TARGET DECIDES WHERE THE DAMAGE LANDS. An
+     attack on an ally never touches the hero: CR 7.3.2a lets no cards be
+     declared for it, so it always connects, and it kills. That is what
+     makes fielding an ally a real decision rather than a free body. */
+  if(link.target && link.target.kind === "ally"){
+    const out = GM.damageAlly(n, link.target.side, link.target.uid, total);
+    n = out.game;
+    (out.msgs || []).forEach(m => { n = say(n, m); });
+    /* A NEW PATH INTO A GRAVEYARD MUST STAMP THE TURN. `damageAlly` files
+       the dead ally itself rather than going through `toGrave`, so `_gy`
+       arrives unset — and `_gy` is the single characteristic that answers
+       the whole "…a card put into a graveyard this turn" family. An
+       unstamped card does not go wrong loudly; it goes wrong quietly. */
+    if(out.killed) n = put(n, link.target.side, s => ({...s,
+      grave: (s.grave || []).map(c => c._gy == null ? {...c, _gy: n.turn} : c)}));
+  } else {
+    n = put(n, def, s => ({...s, hp: s.hp - total}));
+  }
 
   n = {...n, chain: [...(n.chain || []).slice(0, -1),
         {...(n.chain || [])[n.chain.length - 1], dmg: total}],
@@ -602,6 +693,10 @@ function reduce(g, a, seat){
 /* ---- play ------------------------------------------------------------- */
 function doPlay(g, a, seat){
   const zone = a.from || "hand";
+  /* CR 1.4.5 — the attack-target, resolved now and carried through the
+     payment, exactly like `window`: the board must not be allowed to
+     change under a choice already made while the player pitches. */
+  const target = targetOf(g, seat, a.target);
   const sd = at(g, seat);
   const card = zone === "arsenal" ? sd.arsenal : sd[zone][find(sd[zone], a.uid)];
   const cost = effCost(card, sd);
@@ -615,10 +710,10 @@ function doPlay(g, a, seat){
      cannot pitch to bank resources. The pool is filled only when a cost
      exceeds what you hold, and then you may pitch OR cancel. */
   if(cost > sd.res){
-    return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window}},
+    return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window, target}},
       card.name + " costs " + cost + " and you hold " + sd.res + " — pitch, or cancel.");
   }
-  return commitPlay(g, card, zone, seat, window);
+  return commitPlay(g, card, zone, seat, window, target);
 }
 
 /* The window a card is actually being played in: the intersection of
@@ -643,11 +738,12 @@ function doActivate(g, a, seat){
   const piece = sd.gear[find(sd.gear, a.uid)];
   const wc = PR.weaponCost(piece.tx || "");
   const cost = wc.cost || 0;
+  const target = targetOf(g, seat, a.target);
   if(cost > sd.res){
-    return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost}},
+    return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost, target}},
       piece.name + " costs " + cost + " to swing and you hold " + sd.res + " — pitch, or cancel.");
   }
-  return commitPlay(g, piece, "weapon", seat);
+  return commitPlay(g, piece, "weapon", seat, null, target);
 }
 
 function doPaySel(g, a, seat){
@@ -679,12 +775,12 @@ function doPayConfirm(g, seat){
     paySel: []}));
   n = say(n, "Pitched " + pitched.map(c => c.name).join(", ") + " for " + gained + ".");
   n = {...n, pending: null};
-  return commitPlay(n, p.card, p.from, seat, p.window);
+  return commitPlay(n, p.card, p.from, seat, p.window, p.target);
 }
 
 /* The card is paid for and leaves its zone. An attack opens a chain link;
    anything else resolves and is filed. */
-function commitPlay(g, card, zone, seat, window){
+function commitPlay(g, card, zone, seat, window, target){
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
      says Weapon, not Attack. The trainer says the same thing as
      `isAttack(card) || from==="weapon"`. */
@@ -708,7 +804,7 @@ function commitPlay(g, card, zone, seat, window){
       blue: (s.hist.blue || 0) + (card.pitch === 3 ? 1 : 0),
       red:  (s.hist.red  || 0) + (card.pitch === 1 ? 1 : 0)}}));
 
-  if(attacking) return declareAttack(n, card, seat, fromWeapon);
+  if(attacking) return declareAttack(n, card, seat, fromWeapon, target);
 
   /* WHERE A RESOLVED CARD GOES IS A PROPERTY OF ITS SUBTYPE, and getting
      it wrong is not subtle: an Aura, an Item or an Ally that resolves to
@@ -717,6 +813,21 @@ function commitPlay(g, card, zone, seat, window){
   const ga = fxParse(card).ga;
   if(ga) n = put(n, seat, s => ({...s, ap: (s.ap || 0) + 1}));
 
+  /* SOMETHING HAPPENED, SO NOBODY HAS PASSED IN SUCCESSION ANY MORE.
+     Every step-end rule in the CR is worded "when the stack is empty and
+     all players pass IN SUCCESSION" (CR 7.3.4, 7.4.3, 7.5.4, 7.6.4,
+     4.3.4), and a card resolving in between breaks that succession. The
+     turn-player then gains priority, which is what CR 4.2.2 / 7.7.4
+     describe for a resolved layer.
+
+     Without it the pass record survived the play, and the shape that
+     produced is not subtle: the attacker passes in the reaction step, the
+     defender answers with a defence reaction, and one further pass from
+     the defender ends the step — so the attacker never gets a window to
+     respond to the card that was just played at them.
+
+     `reset` is a no-op in a closed phase (`give` refuses priority there),
+     so it cannot hand out a window the phase does not have. */
   if(TY.destination(card) === "arena"){
     const kind = TY.permanentKind(card);
     /* An ALLY is a living object and is attackable (CR 1.4.5a), so it
@@ -730,20 +841,21 @@ function commitPlay(g, card, zone, seat, window){
     n = say(n, at(n, seat).name + " plays " + card.name + " — it enters the arena as "
       + (kind === "ally" ? "an ally" : "a" + (kind === "aura" ? "n aura" : " " + kind))
       + (ga ? ". Go again." : "."));
-    return n;
+    return P.reset(n);
   }
 
   n = toGrave(n, seat, [card]);
   n = say(n, at(n, seat).name + " plays " + card.name + (ga ? " — go again." : "."));
-  return n;
+  return P.reset(n);
 }
 
-function declareAttack(g, card, seat, fromWeapon){
+function declareAttack(g, card, seat, fromWeapon, target){
   const total = card.power || 0;
+  const tgt = target || {kind: "hero", side: P.other(seat), uid: null};
   let n = {...g,
     chain: [...(g.chain || []), {n: card.name, img: card.img, dbImg: card.dbImg,
                                  dmg: null, ga: fxParse(card).ga, kind: "atk"}],
-    pend: {name: card.name, card, by: seat, total, ga: fxParse(card).ga},
+    pend: {name: card.name, card, by: seat, total, ga: fxParse(card).ga, target: tgt},
     /* THE COMBAT CHAIN IS A ZONE, and `chainCards` is it.
        A card mid-chain is in no side zone at all, which `invariants.js`
        cannot see: it catches a card in TWO zones, and a card in NONE just
@@ -770,7 +882,15 @@ function doDefend(g, a, seat){
   const name = (isGear ? sd.gear.find(x => x.uid === a.uid) : sd.hand.find(x => x.uid === a.uid)).name;
   let n = put(g, seat, s => ({...s,
     [key]: on ? [...cur, a.uid] : cur.filter(u => u !== a.uid)}));
-  return say(n, at(n, seat).name + (on ? " declares " : " withdraws ") + name + ".");
+  n = say(n, at(n, seat).name + (on ? " declares " : " withdraws ") + name + ".");
+  /* The wall just changed, so an earlier pass no longer stands (CR 7.3.4
+     — "all players pass IN SUCCESSION"). In the CR the declaration
+     happens at the start of the step and the priority window opens after
+     it (CR 7.3.2 then 7.3.3); here it is a toggle the defender may work
+     at, so the window is reopened each time the set of defenders moves.
+     Otherwise a turn-player who passed early never sees the final block
+     they are about to be measured against. */
+  return P.reset(n);
 }
 
 /* ---- the arsenal step (CR 4.4.3b) -------------------------------------
@@ -804,12 +924,16 @@ function doEndTurn(g, seat){
   let n = say({...g}, "— End phase —");
   n = P.toPhase(n, "end");
 
-  /* (a) all allies' life resets to base. */
-  for(let i = 0; i < 2; i++){
-    const out = GM.resetAllyLife(n, i);
-    n = out.game || n;
-    (out.msgs || []).forEach(m => { n = say(n, m); });
-  }
+  /* (a) all allies' life resets to base.
+
+     `resetAllyLife` returns THE GAME, not `{game, msgs}`. This read
+     `out.game`, got undefined, fell back to the unchanged state through
+     the `||` and threw the reset away — while still logging "(a) Allies
+     recover." every turn. A wounded ally never healed and the drill that
+     checks the end phase runs a-f in order could not tell, because it
+     reads the LOG. A step that announces itself and does nothing is worse
+     than one that is missing. */
+  for(let i = 0; i < 2; i++) n = GM.resetAllyLife(n, i);
   n = say(n, "(a) Allies recover.");
 
   /* (b) the turn-player may arsenal. Ask, then continue in doArsenal. */
@@ -846,39 +970,61 @@ function endPhaseAfterArsenal(g, seat){
 
   /* (f) the turn-player draws to intellect — and on the FIRST turn of the
      game, so does everyone else (CR 4.4.3f). That is what pays the second
-     player back for blocking the opening swing. */
+     player back for blocking the opening swing.
+
+     `seat`, NOT `n.turnPlayer`. (e) above calls priority.js's `endTurn`,
+     which performs CR 4.4.4's handoff as well as 4.4.3e's fizzle, so by
+     this line `n.turnPlayer` is already the INCOMING player. Reading it
+     here refilled the wrong hero every turn after the first, and turn one
+     hid it because both seats draw there anyway.
+
+     It is not a cosmetic mix-up: you refill at the end of YOUR turn so
+     that you have cards to block with during THEIRS. Drawing for the
+     incoming player instead means every hero walks into the opponent's
+     turn with whatever blocking they had left and then starts their own
+     turn with a full grip — which inverts the block-or-hold decision the
+     whole game is built on. */
   const first = g.turn === 1;
-  const seats = first ? [n.turnPlayer, P.other(n.turnPlayer)] : [n.turnPlayer];
-  for(const i of seats){
-    n = drawTo(n, i);
-    if(n.over) return n;
-  }
+  const seats = first ? [seat, P.other(seat)] : [seat];
+  for(const i of seats) n = drawTo(n, i);
   n = say(n, "(f) " + seats.map(i => at(n, i).name).join(" and ") + " draw" + (seats.length > 1 ? "" : "s") + " to intellect."
     + (first && seats.length > 1 ? " (CR 4.4.3f — first turn only.)" : ""));
 
-  n = put(n, n.turnPlayer, s => ({...s, hist: S.freshHist()}));
+  /* CR 4.4.4 — "effects that last until end of turn end". `hist` is the
+     per-turn ledger ("attacks played", "blues pitched"), so BOTH seats'
+     clear, not only the incoming one: a card asking "have you pitched a
+     blue this turn" during the opponent's turn must not read yours. */
+  for(let i = 0; i < 2; i++) n = put(n, i, s => ({...s, hist: S.freshHist()}));
   n = P.toPhase(n, "action");                       /* CR 4.3.2 issues the AP */
   return say(n, "— " + at(n, n.turnPlayer).name + "'s turn " + n.turn + " —");
 }
 
-/* Draw to intellect, and lose to fatigue rather than drawing from nothing.
-   An empty deck with an empty hand is a lost game; an empty deck with
-   cards still in hand is merely a short hand. */
+/* Draw to intellect, taking whatever the deck still holds.
+
+   THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD. CR 4.5.3 lists every way
+   a player loses and there are exactly three: their hero's life is
+   reduced to zero or they control no hero (4.5.3a), an effect says they
+   lose (4.5.3b), or they concede (4.5.3c). An empty deck is not on that
+   list, and a draw that cannot be filled simply draws what it can.
+
+   This used to end the game by "fatigue" — an invented loss condition,
+   and the direction that matters: it hands a win to someone who did not
+   earn it while their opponent is still alive and still holding cards.
+   A hero who runs their deck out keeps playing, keeps blocking with what
+   is in hand, and loses only when their life reaches 0 like anyone. */
 function drawTo(g, i){
   const sd = at(g, i);
   const need = Math.max(0, (sd.int || 0) - sd.hand.length);
   if(!need) return g;
   const drawn = sd.deck.slice(0, need);
   let n = put(g, i, s => ({...s, hand: [...s.hand, ...drawn], deck: s.deck.slice(drawn.length)}));
-  if(drawn.length < need && at(n, i).hand.length === 0){
-    n = {...n, over: {winner: P.other(i), how: "fatigue"}, priority: null};
-    n = say(n, at(n, i).name + " has nothing left to draw — fatigued. "
-              + at(n, P.other(i)).name + " wins by attrition.");
-  }
+  if(drawn.length < need)
+    n = say(n, at(n, i).name + " draws " + drawn.length + " of " + need
+              + " — the deck is empty. (CR 4.5.3: that is not a loss.)");
   return n;
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck,
+        playableWhy, drawTo, winCheck, targets, targetOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf};
 });

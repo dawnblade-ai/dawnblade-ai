@@ -48,6 +48,27 @@ function pool(){
   return (_pool = out);
 }
 
+/* THE POOL IS NOT ONLY THE FIFTEEN DECKS. Cards reach a hand three other
+   ways — the dummy's pile, its iron, and the two records an effect mints
+   at runtime (Crouching Tiger, Inner Chi) — and `pool()` above sees none
+   of them, so every drill that reads it was quietly asking a smaller
+   question than its name suggests. `Inner Chi` is why this exists: a
+   `Mystic Resource - Chi` reported PLAYABLE with no window to play it in,
+   and the drill that would have caught it never looked at the card. */
+let _extra = null;
+function offDeck(){
+  if(_extra) return _extra;
+  const db = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+    .filter(c => c && c.name).map(C.mapDbCard));
+  const out = [];
+  const take = e => { const c = C.resolveEntry(db, e, null); if(c.resolved) out.push(c); };
+  for(const nm of (W.DUMMY_GEAR || [])) take({name: nm, p: 0, code: null, q: 1});
+  for(const [nm, p, q] of (W.DUMMY_DECK || [])) take({name: nm, p, code: null, q});
+  for(const nm of ["Crouching Tiger", "Inner Chi"]) take({name: nm, p: 0, code: null});
+  return (_extra = out);
+}
+const everything = () => [...pool(), ...offDeck()];
+
 /* ---- the parse holds across the pool ----------------------------------- */
 
 test("every card in the pool parses to at least one printed type", {skip}, () => {
@@ -75,9 +96,35 @@ test("no card is stranded: it is playable, or it says why not", {skip}, () => {
 });
 
 test("a playable card has at least one window it can be played in", {skip}, () => {
-  const bad = pool().filter(c => TY.isPlayable(c) && !TY.playWindows(c).length)
-                    .map(c => `${c.name} [${c.tt}]`);
+  /* EVERYTHING, not just the fifteen decks: the dummy's pile and the two
+     runtime-minted records reach a hand too, and `Inner Chi` failed this
+     exact assertion while sitting outside the denominator. */
+  const bad = everything().filter(c => TY.isPlayable(c) && !TY.playWindows(c).length)
+                          .map(c => `${c.name} [${c.tt}]`);
   assert.deepEqual(bad, []);
+});
+
+test("no card is stranded, off-deck cards included", {skip}, () => {
+  const bad = everything().filter(c => !TY.isPlayable(c) && !TY.noPlayReason(c))
+                          .map(c => `${c.name} [${c.tt}]`);
+  assert.deepEqual(bad, []);
+});
+
+/* A RESOURCE CARD HAS NO PLAY — it is pitched, and that is all. `Inner
+   Chi` prints no cost, no rules text and a pitch of 3, and `playWindows`
+   has no entry for its type. It reported playable anyway, so the refusal
+   came two steps later as "cannot be played in the action phase", which
+   reads like a timing problem rather than what it is. */
+test("a Resource card is pitch-only", {skip}, () => {
+  const res = everything().filter(c => TY.hasType(c, "Resource"));
+  assert.deepEqual(res.map(c => c.name), ["Inner Chi"],
+    "the pool's Resource cards changed — check this drill still says what it means");
+  for(const c of res){
+    assert.deepEqual(TY.playWindows(c), [], `${c.name} claims a play window`);
+    assert.equal(TY.isPlayable(c), false, `${c.name} reads as playable with nowhere to play it`);
+    assert.match(TY.noPlayReason(c), /can only be pitched/);
+    assert.ok(c.pitch > 0, `${c.name} cannot even be pitched`);
+  }
 });
 
 test("every card has exactly one destination, and it is a real zone", {skip}, () => {

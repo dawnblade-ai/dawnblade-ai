@@ -58,7 +58,14 @@ function match(o){
    actions the judge itself has declared legal. */
 function drive(g, o){
   o = o || {};
-  const limit = o.limit || 500;
+  /* A whole game costs 580-760 actions. Most of them are passes, and that
+     is the CR's own shape rather than waste: a chain link opens SIX
+     priority windows (7.2.4, 7.3.3, 7.4.2, 7.5.3, 7.6.3 and the layer
+     step) and each closes only when both seats pass in succession — so a
+     declared blocker, which reopens the defend window, costs two more.
+     The limit was 500 and games were being cut off mid-fight; the drill
+     then read that as "the game never ended". */
+  const limit = o.limit || 1200;
   const trace = [];
   const errs = [];
   const send = (a, seat) => {
@@ -268,6 +275,88 @@ test("CR 4.4.3f — on turn one only, the NON-turn player also draws to intellec
     "a later turn refilled both seats — CR 4.4.3f is turn-one only");
 });
 
+/* THE DRILL THAT SHOULD HAVE CAUGHT THE WRONG-PLAYER DRAW, and did not,
+   because it read the LOG LINE instead of the hands. (e) calls
+   priority.js's `endTurn`, which performs CR 4.4.4's handoff as well as
+   4.4.3e's fizzle, so `n.turnPlayer` is already the INCOMING player by
+   the time (f) runs — and the refill went to the wrong hero every turn
+   after the first. Turn one hid it, because there both seats draw.
+
+   It matters because it inverts the decision the game is built on: you
+   refill at the end of YOUR turn so you have cards to block with during
+   THEIRS. Drawing for the incoming player instead means every hero walks
+   into the opponent's turn on fumes and opens their own with a full grip. */
+test("CR 4.4.3f — the OUTGOING turn player draws, not the incoming one", {skip}, () => {
+  let g = match({seed: "who-draws"});
+  /* get past turn one, where 4.4.3f refills both seats anyway */
+  const endTurn = n => {
+    let o = J.reduce(n, {t: "endTurn"}, n.turnPlayer).state;
+    while(o.arsenalFor != null) o = J.reduce(o, {t: "arsenal", uid: null}, o.arsenalFor).state;
+    return o;
+  };
+  g = endTurn(g); g = endTurn(g);
+  assert.ok(g.turn > 2, "did not get past the first turn");
+
+  /* strip BOTH hands so a refill is unmistakable whoever gets it */
+  const tp = g.turnPlayer, off = P.other(tp);
+  g = J.put(J.put(g, 0, s => ({...s, hand: []})), 1, s => ({...s, hand: []}));
+  const n = endTurn(g);
+
+  assert.equal(n.sides[tp].hand.length, n.sides[tp].int,
+    "the turn player did not refill at the end of their own turn — CR 4.4.3f");
+  assert.equal(n.sides[off].hand.length, 0,
+    "the NON-turn player drew on a turn that is not turn one — CR 4.4.3f is turn-one only");
+  assert.ok(n.feed.some(m => /^\(f\)/.test(m) && m.includes(g.sides[tp].name)),
+    "the log names the wrong hero at (f)");
+});
+
+test("CR 4.5.3 / 4.4.3f — a hero whose deck runs out keeps playing", {skip}, () => {
+  let g = match({seed: "dry"});
+  const seat = g.turnPlayer;
+  g = J.put(g, seat, s => ({...s, deck: [], hand: s.hand.slice(0, 1)}));
+  let n = J.reduce(g, {t: "endTurn"}, seat).state;
+  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  assert.ok(!n.over, "an empty deck ended the game");
+  assert.equal(n.sides[seat].hand.length, 1, "cards appeared from an empty deck");
+  /* and the game keeps running — the seat can still be attacked and can still block */
+  assert.equal(J.legal(n, {t: "endTurn"}, n.turnPlayer), null, "the game stopped accepting turns");
+});
+
+/* A STEP THAT ANNOUNCES ITSELF AND DOES NOTHING is worse than a missing
+   one. `resetAllyLife` returns the GAME, not `{game, msgs}`; judge.js
+   read `out.game`, got undefined, fell through the `||` to the unchanged
+   state and threw the reset away — while logging "(a) Allies recover."
+   on every turn of every game. The drill that checks the end phase runs
+   a-f in the CR's order reads the LOG, so it stayed green throughout. */
+test("CR 4.4.3a — a wounded ally really does heal, not just in the log", {skip}, () => {
+  let g = match({seed: "allies", h0: heroBy(/gravy/i)});
+  const seat = g.turnPlayer;
+  const ally = g.sides[seat].deck.find(c => TY.isAllyCard(c) && (c.life || 0) >= 2);
+  assert.ok(ally, "no ally with more than one life in this precon");
+  g = J.put(g, seat, s => ({...s,
+    board: [{card: ally, kind: "ally", spent: false, uid: ally.uid, life: 1}]}));
+
+  let n = J.reduce(g, {t: "endTurn"}, seat).state;
+  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+
+  assert.equal(n.sides[seat].board[0].life, ally.life,
+    "the ally did not heal to its base life — CR 4.4.3a ran only in the log");
+  assert.ok(n.feed.some(m => /^\(a\)/.test(m)), "(a) was not announced");
+});
+
+test("CR 4.4.4 — the per-turn ledger clears for BOTH seats", {skip}, () => {
+  let g = match({seed: "hist"});
+  const seat = g.turnPlayer, off = P.other(seat);
+  g = J.put(J.put(g, seat, s => ({...s, hist: {...s.hist, atk: 3, blue: 2}})),
+                     off, s => ({...s, hist: {...s.hist, atk: 5, blue: 4}}));
+  let n = J.reduce(g, {t: "endTurn"}, seat).state;
+  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  for(const i of [0, 1]){
+    assert.equal(n.sides[i].hist.atk || 0, 0, "seat " + i + " carried 'attacks this turn' into the next turn");
+    assert.equal(n.sides[i].hist.blue || 0, 0, "seat " + i + " carried 'blues pitched this turn' over");
+  }
+});
+
 test("CR 4.4.3e — BOTH seats lose floating resources, not just the turn player", {skip}, () => {
   let g = match({seed: "fizzle"});
   const off = P.other(g.turnPlayer);
@@ -277,6 +366,159 @@ test("CR 4.4.3e — BOTH seats lose floating resources, not just the turn player
   while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
   assert.equal(n.sides[off].res, 0,
     "the non-turn player kept a banked resource through the end phase");
+});
+
+/* ---- ATTACK-TARGETS (CR 1.4.5) ----------------------------------------
+   An ALLY is a living object (CR 1.4.5a) — it has life, so it is
+   attackable. Allies were reaching the arena and could not be attacked at
+   all, which is the direction that steals games: a body that blocks
+   nothing, dies to nothing and costs the opponent nothing to ignore.
+
+   The rule that makes targeting one a real decision rather than a worse
+   way to hit the hero is CR 7.3.2a: only a HERO attack-target may have
+   defending cards declared for it. An attack on an ally always connects. */
+function withAlly(seedName){
+  let g = match({seed: seedName, h1: heroBy(/gravy/i)});
+  const def = P.other(g.turnPlayer);
+  const ally = g.sides[def].deck.find(c => TY.isAllyCard(c) && (c.life || 0) >= 2);
+  assert.ok(ally, "no multi-life ally in this precon");
+  g = J.put(g, def, s => ({...s,
+    board: [{card: ally, kind: "ally", spent: false, uid: ally.uid, life: ally.life}],
+    deck: s.deck.filter(c => c.uid !== ally.uid)}));
+  const seat = g.turnPlayer;
+  const atk = g.sides[seat].hand.find(c => PR.isAttack(c)) || g.sides[seat].deck.find(c => PR.isAttack(c));
+  g = J.put(g, seat, s => ({...s, res: 9,
+    hand: [atk, ...s.hand.filter(c => c.uid !== atk.uid)],
+    deck: s.deck.filter(c => c.uid !== atk.uid)}));
+  return {g, ally, atk, seat, def};
+}
+
+test("CR 1.4.5 — an ally in the arena is an attack-target, and a bogus one is refused", {skip}, () => {
+  const {g, ally, atk, seat, def} = withAlly("targets");
+  const list = J.targets(g, def);
+  assert.equal(list.length, 2, "the ally is not offered as a target");
+  assert.deepEqual(list.map(t => t._target.kind), ["hero", "ally"], "the hero must come first");
+  assert.equal(list[1]._target.uid, ally.uid);
+  assert.equal(J.legal(g, {t: "play", uid: atk.uid, from: "hand", target: 999999}, seat),
+    "no such attack-target", "any number was accepted as a target");
+  /* omitting the target is still legal and means the hero — always a legal choice */
+  assert.equal(J.legal(g, {t: "play", uid: atk.uid, from: "hand"}, seat), null);
+});
+
+test("CR 7.3.2a — an attack on an ally cannot be blocked, and never touches the hero", {skip}, () => {
+  const {g, ally, atk, seat, def} = withAlly("ally-hit");
+  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state;
+  assert.equal(n.pend.target.kind, "ally", "the target was not carried onto the chain link");
+
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.equal(n.step, "defend");
+  const gr = n.sides[def].gear.find(x => G.gearDef(x) > 0);
+  assert.match(J.legal(n, {t: "defend", uid: gr.uid}, def), /cannot be blocked/,
+    "an ally attack was blockable — it would be strictly worse than hitting the hero");
+
+  const hpBefore = n.sides[def].hp;
+  for(let i = 0; i < 8 && n.step !== "resolution"; i++) n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.equal(n.sides[def].hp, hpBefore, "ally damage spilled onto the hero");
+  assert.ok(atk.power >= ally.life, "pick a bigger attack for this drill");
+  assert.deepEqual(n.sides[def].board, [], "the dead ally is still in the arena");
+  const dead = n.sides[def].grave.find(c => c.uid === ally.uid);
+  assert.ok(dead, "the dead ally reached no graveyard");
+  /* Every path into a graveyard stamps the turn — `_gy` is what answers
+     the whole "a card put into a graveyard this turn" family, and
+     `damageAlly` files the body itself rather than through `toGrave`. */
+  assert.equal(dead._gy, n.turn, "the dead ally reached the graveyard unstamped");
+});
+
+test("targeting the hero with an ally on the board still works normally", {skip}, () => {
+  const {g, atk, seat, def} = withAlly("hero-hit");
+  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: "hero"}, seat).state;
+  assert.equal(n.pend.target.kind, "hero");
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.equal(J.legal(n, {t: "defend", uid: n.sides[def].gear.find(x => G.gearDef(x) > 0).uid}, def), null,
+    "a hero attack became unblockable");
+  const hp = n.sides[def].hp, allies = n.sides[def].board.length;
+  for(let i = 0; i < 8 && n.step !== "resolution"; i++) n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.ok(n.sides[def].hp < hp, "the hero took no damage");
+  assert.equal(n.sides[def].board.length, allies, "the ally took damage meant for the hero");
+});
+
+/* ---- "IN SUCCESSION" IS HALF OF EVERY STEP-END RULE -------------------- */
+
+/* CR 7.3.4 / 7.4.3 / 7.5.4 / 7.6.4 / 4.3.4 are all worded "when the stack
+   is empty and all players pass IN SUCCESSION". A card resolving between
+   two passes breaks the succession, and the turn-player gains priority
+   again (CR 4.2.2 / 7.7.4).
+
+   The pass record used to survive a play, and the shape that produced is
+   the expensive kind: the attacker passes, the defender answers with a
+   defence reaction, one further pass from the defender ends the step —
+   so the attacker never gets a window to answer the card just played at
+   them. A priority window that silently never opens. */
+test("a card played mid-window reopens it — the attacker answers a defence reaction", {skip}, () => {
+  let g = match({seed: "succession"});
+  const atkSeat = g.turnPlayer, defSeat = P.other(atkSeat);
+
+  /* seat the defender with a real defence reaction and the fuel to cast it */
+  const dr = g.sides[defSeat].deck.find(c => PR.isDR(c));
+  assert.ok(dr, "no defence reaction in this precon — pick another seed");
+  g = J.put(g, defSeat, s => ({...s, hand: [dr, ...s.hand], deck: s.deck.filter(c => c.uid !== dr.uid), res: 9}));
+  g = J.put(g, atkSeat, s => ({...s, res: 9}));
+
+  let n = toDefendStep(g);
+  n = J.reduce(n, {t: "pass"}, n.priority).state;      /* out of the defend step */
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.equal(n.step, "reaction", "never reached the reaction step");
+
+  /* the attacker declines first (CR 7.4.2 gives the turn-player priority) */
+  n = J.reduce(n, {t: "pass"}, atkSeat).state;
+  assert.ok((n.passed || [])[atkSeat], "the attacker's pass was not recorded");
+
+  const why = J.legal(n, {t: "play", uid: dr.uid, from: "hand"}, defSeat);
+  assert.equal(why, null, "the defender could not play a defence reaction in the reaction step: " + why);
+  n = J.reduce(n, {t: "play", uid: dr.uid, from: "hand"}, defSeat).state;
+
+  assert.equal(n.step, "reaction", "the defence reaction advanced the step by itself");
+  assert.deepEqual(n.passed, [false, false],
+    "the pass record survived a play — 'in succession' was broken and nobody noticed");
+  assert.ok(P.canAct(n, atkSeat),
+    "the attacker got no window to answer the defence reaction played at them");
+  assert.equal(n.priority, n.turnPlayer, "priority did not return to the turn player (CR 4.2.2)");
+});
+
+test("declaring a defender reopens the window too — CR 7.3.4", {skip}, () => {
+  let g = match({seed: "succession2"});
+  let n = toDefendStep(g);
+  const d = P.defendingPlayer(n);
+  n = J.reduce(n, {t: "pass"}, n.priority).state;        /* turn-player declines */
+  assert.ok((n.passed || []).some(Boolean), "nobody had passed");
+
+  const gr = (n.sides[d].gear || []).find(x => G.gearDef(x) > 0);
+  assert.ok(gr, "the defender has no equipment to raise");
+  n = J.reduce(n, {t: "defend", uid: gr.uid}, d).state;
+  assert.deepEqual(n.passed, [false, false],
+    "a blocker was declared after the turn-player passed and the pass still stood — "
+    + "they never see the wall they are about to be measured against");
+  assert.equal(n.step, "defend", "declaring a defender advanced the step");
+});
+
+/* CR 4.3.4 — "when the stack is empty, the combat chain is closed, and
+   both players pass priority in succession, the action phase ends and the
+   game proceeds to the End Phase." `advance` has no transition out of the
+   layer step, so without this the mutual pass left a window nobody could
+   act in and the game waited for an endTurn the CR does not require. */
+test("CR 4.3.4 — both players passing ends the action phase", {skip}, () => {
+  let g = match({seed: "phase-end"});
+  const tp = g.turnPlayer;
+  assert.equal(g.phase, "action");
+  let n = J.reduce(g, {t: "pass"}, g.priority).state;
+  n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.notEqual(n.phase + n.turn, "action" + g.turn,
+    "both seats passed in the action phase and the game stayed in it — a window nobody can act in");
+  /* it went to the end phase, which on turn one offers the arsenal step */
+  assert.ok(n.phase === "end" || n.turnPlayer !== tp,
+    "the action phase did not proceed to the end phase");
 });
 
 test("CR 4.3.2 — the action point is issued on entering the action phase, to the turn player", {skip}, () => {
@@ -742,14 +984,35 @@ test("a seat at 0 life loses, and the game stops accepting actions", {skip}, () 
   assert.equal(J.legal(end, {t: "pass"}, end.turnPlayer), "the game is over");
 });
 
-test("an empty deck and an empty hand is a loss by fatigue", {skip}, () => {
+/* CR 4.5.3 lists EVERY way a player loses and there are three: their
+   hero's life reaches zero or they control no hero (a), an effect says
+   they lose (b), or they concede (c). An empty deck is not one of them,
+   and this used to end the game by "fatigue" — an invented condition, in
+   the direction that matters: it handed a win to a player whose opponent
+   was still alive and still holding cards. */
+test("CR 4.5.3 — an empty deck is NOT a loss; the draw just takes what is there", {skip}, () => {
   let g = match({seed: "fatigue"});
   const seat = g.turnPlayer;
   g = J.put(g, seat, s => ({...s, deck: [], hand: []}));
   const n = J.drawTo(g, seat);
-  assert.ok(n.over, "drawing from an empty deck with an empty hand did not end the game");
-  assert.equal(n.over.how, "fatigue");
-  assert.equal(n.over.winner, P.other(seat));
+  assert.ok(!n.over, "an empty deck ended the game — CR 4.5.3 has no deck-out loss");
+  assert.deepEqual(n.sides[seat].hand, [], "cards came from nowhere");
+  assert.ok(n.feed.some(m => /deck is empty/.test(m)), "the empty deck was not reported at all");
+
+  /* and a partial draw takes what is left rather than failing whole */
+  let h = match({seed: "fatigue2"});
+  const s2 = h.turnPlayer, one = h.sides[s2].deck[0];
+  h = J.put(h, s2, s => ({...s, deck: [one], hand: []}));
+  const m = J.drawTo(h, s2);
+  assert.equal(m.sides[s2].hand.length, 1, "a short deck did not give up the card it had");
+  assert.ok(!m.over);
+});
+
+test("the only ways the reducer ends a game are CR 4.5.3's", {skip}, () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
+  const hows = [...src.matchAll(/how:\s*"([a-z]+)"/g)].map(m => m[1]).sort();
+  assert.deepEqual([...new Set(hows)], ["concession", "life"],
+    "judge.js ends a game some way CR 4.5.3 does not name");
 });
 
 test("conceding is always legal and hands the win over", {skip}, () => {
@@ -761,6 +1024,40 @@ test("conceding is always legal and hands the win over", {skip}, () => {
 });
 
 /* ---- LEGALITY IS TOTAL --------------------------------------------------- */
+
+/* A PLAY YOU CANNOT PAY FOR IS NOT A LEGAL PLAY, and leaving that out is
+   not harmless. `legal` said yes, `doPlay` opened a payment that could
+   never be completed, and the only move left was to cancel back into the
+   identical state. That is a live-lock for any driver that trusts `legal`
+   — which is the reducer's contract, and is how the guest client and the
+   sequencer both decide what to send — and a dead tap for a human. */
+test("a card the seat cannot possibly fund is refused, not offered", {skip}, () => {
+  let g = match({seed: "afford"});
+  const seat = g.turnPlayer;
+  const sd = g.sides[seat];
+  const dear = sd.hand.slice().sort((a, b) => (b.cost || 0) - (a.cost || 0))[0];
+  assert.ok((dear.cost || 0) > 0, "no card with a cost in this opening hand");
+
+  /* no pool, and every other card in hand pitches for nothing */
+  g = J.put(g, seat, s => ({...s, res: 0,
+    hand: s.hand.map(c => c.uid === dear.uid ? c : {...c, pitch: 0})}));
+
+  const why = J.legal(g, {t: "play", uid: dear.uid, from: "hand"}, seat);
+  assert.ok(why, "a card costing " + dear.cost + " with 0 resources and nothing to pitch was declared legal");
+  assert.match(why, /cannot raise/, "refused for the wrong reason: " + why);
+
+  /* and it opens no payment the seat would then have to cancel out of */
+  const out = J.reduce(g, {t: "play", uid: dear.uid, from: "hand"}, seat);
+  assert.ok(out.error);
+  assert.equal(out.state, g, "an unaffordable play still changed the state");
+
+  /* give it exactly enough to pitch for and it becomes legal again */
+  const other = g.sides[seat].hand.find(c => c.uid !== dear.uid);
+  let h = J.put(g, seat, s => ({...s,
+    hand: s.hand.map(c => c.uid === other.uid ? {...c, pitch: dear.cost} : c)}));
+  assert.equal(J.legal(h, {t: "play", uid: dear.uid, from: "hand"}, seat), null,
+    "a card that CAN be paid for by pitching was refused");
+});
 
 test("legal() gives a reason or null for every action, and never throws", {skip}, () => {
   /* EVERY ZONE, not just `hand`. This drill passed while `legal` threw a

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.44
+# Handoff — Dawnblade, at v2.45
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -36,15 +36,15 @@ not port them as part of Phase 1.
 
 ## WHERE THINGS STAND
 
-- `npm test` → **665 drills, all green.** Never leave them red.
+- `npm test` → **679 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way.
-- Branch `multiplayer-hero-select`, at **v2.44**. `main` is at v2.38.
+- Branch `multiplayer-hero-select`, at **v2.45**. `main` is at v2.38.
 - **Unpushed.** The user uploads to GitHub Pages manually — no remote, no
   `gh`, no stored credential. Deploying is not your job.
 - `node` is at `~/node/bin`, **not on PATH** —
   `export PATH="$HOME/node/bin:$PATH"`.
 
-### What Phase 1 has landed (v2.42–v2.44)
+### What Phase 1 has landed (v2.42–v2.45)
 
 | module | what | status |
 |---|---|---|
@@ -65,6 +65,32 @@ actions, zero invariant violations, every dealt card in exactly one zone.
 
 **It does not model card EFFECTS, and must not until Phase 3.**
 
+### v2.45 — the CR review, and what it cost
+
+A pass over the turn structure and priority windows grounded against the
+**published CR** rather than the code's memory of it. **Nine bugs, and
+not one was a card being read wrong** — every affected card parsed
+perfectly. See CHANGELOG.md for the full list; the ones worth carrying:
+
+- **CR 4.4.3f drew for the wrong hero.** (e) calls `priority.endTurn`,
+  which does CR 4.4.4's *handoff* as well as 4.4.3e's fizzle, so
+  `n.turnPlayer` at (f) is the INCOMING player. It inverts block-or-hold:
+  you refill at the end of YOUR turn so you can block during THEIRS.
+- **CR 4.4.3a ran only in the log.** `resetAllyLife` returns the GAME,
+  not `{game,msgs}` — a wounded ally never healed while "(a) Allies
+  recover." printed every turn.
+- **An invented deck-out loss.** CR 4.5.3 has exactly three: life to
+  zero / no hero, an effect says so, concede.
+- **Two priority windows never opened**: a play or a declaration did not
+  break the pass "succession", so the attacker never got to answer a
+  defence reaction; and CR 4.3.4's mutual pass never ended the action
+  phase, leaving a window nobody could act in.
+- **Allies could not be attacked** (CR 1.4.5) — now wired, with the
+  target riding on the ACTION rather than a prompt.
+
+**TWO OF THESE LIVED UNDER GREEN DRILLS THAT READ THE LOG.** Assert on
+hands, life and zones, never on `feed` prose.
+
 ---
 
 ## THE REMAINING PHASE 1 WORK
@@ -81,6 +107,15 @@ actions, zero invariant violations, every dealt card in exactly one zone.
    funnel**, or the guard rails go dark.
 3. **Seat 1 takes a real action phase.** This is where the difficulty
    curve retunes — do it with a play session, not with drills.
+
+Known and deliberately unbuilt, each honest rather than hidden:
+the **layer-step window** (CR 7.1.2 — an attack goes straight onto the
+chain instead of sitting on the stack first); **`endTurn` skips the
+opponent's last window** even though CR 4.3.4 now works; **allies do not
+attack** (they are attackABLE); the **mandatory half of CR 1.4.5** (the
+caller must offer the target choice); and **`index.html` still carries
+the invented fatigue loss**, left alone because the dummy reshuffles its
+graveyard, making it a solo-play decision rather than a rules fix.
 
 Mind the clock throughout: `priority.js` counts player-turns in `turn`
 and rounds in `round`; the trainer's `turn` counts only *your* turns and
@@ -138,7 +173,7 @@ at a type line, a keyword, or a ruling.
 ## VALIDATION LOOP
 
 ```bash
-npm test                              # 665 drills — must stay green
+npm test                              # 679 drills — must stay green
 npm run fairness                      # must stay clean
 npm run audit                         # regenerate AUDIT.md, READ the tier diff
 node tools/audit.js --write-baseline  # ONLY after reviewing that diff
