@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.40
+**Current version:** v2.41
 
 ---
 
@@ -487,6 +487,48 @@ because deleting it outright would break a different set of cards.
 
 **Both regressions are pinned, and both drills are proven to bite** by
 reintroducing the bug and watching them fail.
+
+### The hero BUILD is per-side too (v2.41)
+
+The actor/perspective split (v2.24) fixed this for **zones**. It was still
+wrong one layer up: `built.viseraiPassive` meant *the player's* Viserai,
+because `built` was seat 0's build captured in closure.
+
+```js
+built.both[i]     // the ledger: [seat 0's build, seat 1's build]
+bAct(s)           // RULES — the build of whoever is resolving
+built.X           // UI ONLY — seat 0, because the UI renders seat 0
+```
+
+Five rules sites moved onto `bAct`: `viseraiPassive`, `lyathBoo`,
+`iceFrostbite`, `arsenalInstant` (and `wateryGrave`/`HPOW` remain UI-side
+in `playables()`). **A passive read as `built.X` inside a rules function
+is the bug this fixed** — it fires for the wrong hero the moment seat 1
+acts.
+
+There is deliberately **no `bFoe`**. Nothing needs one — a passive fires
+for its own hero — and a dead helper beside a live one is how `sides.js`'s
+seat-hardcoded `you`/`foe` came to be deleted in v2.24. Add it when a rule
+actually asks about the other hero.
+
+`DUMMY_BUILD(deck, gear)` gives the dummy the same shape, with every
+passive written out as `false` rather than defaulted — so a passive added
+to `buildSide` and forgotten there reads `undefined` at the call site
+instead of silently reading as false on a real hero's turn.
+
+**Both seats equip through `defaultPicks`.** Passing `{}` for the
+opponent's loadout handed Azalea all *eight* printed pieces where the slot
+rules allow ~5 — and since `chainBlocked` only stops a piece re-blocking
+the **same** chain, every extra piece was another free block later in the
+turn. One set of slot rules governs both seats, or the opponent is
+quietly stronger than printed.
+
+**`DUMMY_INT` is gone from `newTurn`** — the refill reads `opp(s).int`
+and is still the **only** refill site. When seat 1 gets a real end phase
+that draw moves there and becomes turn-1-only for both seats (CR 4.4.3f);
+adding it without removing this one draws twice. The **graveyard recycle
+stays a dummy affordance**: a real opponent runs its deck down and has
+fewer blockers, and does not yet lose for it.
 
 ### The arsenal, face up (v2.33–v2.34) — and whose "it" is it?
 
