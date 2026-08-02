@@ -1804,6 +1804,134 @@ function ZoneStrip({label,none,hand,arsenal,pitch}){
    opponent. Player-as-side-0 / opponent-as-side-1 is the same indexing
    engine/sides.js uses, so this prop already speaks the two-player
    vocabulary the state migration is moving toward. */
+/* ============================================================
+   buildSide — ONE HERO, ONE BUILD, CALLED ONCE PER SEAT.
+
+   ROADMAP-OPPONENT.md Phase 1: "Battle builds BOTH sides through the same
+   `built` path. Today `built.*` is the player's hero build captured in
+   closure — this is the real work of Phase 1."
+
+   Until now this body ran once, for seat 0, and the opponent got two
+   stubs off the end of it (`dDeck`, `dGear`). That shape is why every
+   hero passive in the trainer reads `built.viseraiPassive` and silently
+   means *the player's* Viserai — the same seat-0-means-the-actor
+   confusion the actor/perspective split (v2.24) fixed for zones, one
+   layer up. A second hero cannot occupy seat 1 while its build does not
+   exist.
+
+   Pure and module-level on purpose: the table screen has to be able to
+   build a side for a hero the local player did not choose.
+
+   TWO THINGS THE SPLIT MUST NOT BREAK, both of which would be silent:
+
+   1. **UIDs stay globally unique across BOTH seats.** They were unique
+      only because one counter ran through all four collections. Two
+      independent calls would each start at 1 and hand the two seats the
+      same uids — which is `CARD-IN-TWO-ZONES` in the invariant judge and
+      exactly the bug the runechant `tokSeq` prefix was added for
+      (CLAUDE.md, "Token uids must be namespaced"). So the counter is
+      passed IN and shared, rather than being a local.
+   2. **The rng threads through in a fixed order.** One seeded stream
+      feeds seat 0's shuffle, then seat 1's, then the game. Both peers
+      must walk it in the same order or they deal different decks from
+      the same table code — which is the whole reason rng.js exists.
+      Every call returns the advanced stream beside the build; store it
+      back (`rng = out.rng`) or the next shuffle repeats the last one.
+   ============================================================ */
+function buildSide(h, db, opts, rng, ctr){
+  const o = opts || {};
+  const d = PARSED[h.k];
+  const heroRec = resolveHero(db, d.hero) || {};
+  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
+  const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
+    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
+  const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
+    tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
+  const cuts = o.cuts||{};
+  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
+     SAZ). Passed to every resolveEntry so a card wears the face it has in
+     this deck's own precon rather than whatever printing the database
+     happened to list first. See cards.js `pickPrinting`. */
+  const saSet = (h.code||"").slice(0,3) || null;
+  const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
+    const q = Math.max(0, e.q - (cuts[ei]||0));
+    if(!q) return [];
+    const c = resolveEntry(db,e,saSet);
+    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
+  }));
+  rng = _pd.rng;
+  const deck = _pd.arr;
+  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
+  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
+  gear.forEach(gr=>{
+    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
+      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
+      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
+      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
+    }
+    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
+       Dealer is a Bow whose printed ability puts an arrow face up into your
+       arsenal — it is not a weapon attack, so `weaponCost` (which requires
+       ": attack") never claimed it and the `!isWeapon` gate below skipped
+       it, leaving the ability inert. The extra door is deliberately narrow:
+       only an ability the arsenal reader actually recognises, so no other
+       weapon quietly grows a second button nothing is wired to run. */
+    const _armed = isWeapon(gr) && gr.tx && DawnParser.ARS_PUT.test(gr.tx);
+    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+    if(pw){ gr.pow=pw;
+    /* The ability's WHOLE printed line, not just its first sentence.
+       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
+       end of turn, your base {i} is the number rolled." — parseHeroPower
+       stops at the period, which orphaned the rider so it never fired.
+       Strip the cost prefix off the line and keep the rest. */
+    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
+      .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
+    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
+      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
+  const _atk = deck.filter(isAttack);
+  const _ga = deck.filter(c=>fxParse(c).ga).length;
+  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
+  const _blue = deck.filter(c=>c.pitch===3).length;
+  const _perm = deck.filter(c=>fxParse(c).perm).length;
+  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
+  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
+    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
+      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
+      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
+      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
+      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
+        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
+        soul:"Line: land hits to charge the soul, then spend it to break through.",
+        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
+        arcane:"Line: amp first, spell second — arcane ignores the iron.",
+        ally:"Line: crew up early — every ally is free damage each turn after."};
+      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
+    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
+  const hasBoost = deck.some(c=>hasKw(c,"boost"));
+  /* THE HERO PASSIVES ARE PER-SIDE, and that is the point of this whole
+     function. Read off THIS hero's printed text, so seat 1's Viserai
+     conjures seat 1's runechants. */
+  const _htx = clean(heroRec.tx||"").toLowerCase();
+  const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
+  const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
+  const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
+  /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
+     grave cards" — and his printed text names the condition exactly:
+     a blue card must have hit your graveyard this turn. */
+  const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
+  /* LYATH: "Whenever the crowd boos you, create a Might token." */
+  const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
+  let startItem = null;
+  if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
+    const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
+    if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
+  }
+  return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
+    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
+    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
+}
+
 function Battle({h,cfg,first,db,onExit,onRecord}){
   const foeFirst = first === 1;
   /* tokens are minted during play, so they need uids the loadout never issued */
@@ -1813,21 +1941,31 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth",block:"start"});
   uE(()=>{ if(midRef.current) midRef.current.scrollLeft = midRef.current.clientWidth; },[]);
   const built = uM(()=>{
-    const d = PARSED[h.k];
-    const heroRec = resolveHero(db, d.hero) || {};
-    const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
-    const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-      tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
-    const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
-      tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
+    /* ONE COUNTER AND ONE STREAM, SHARED BY BOTH SEATS.
+
+       The uid counter is passed into every buildSide call rather than
+       being a local, so the two seats can never mint the same uid — see
+       buildSide's header for why that would be CARD-IN-TWO-ZONES rather
+       than a cosmetic clash.
+
+       The rng is threaded seat 0 -> seat 1 -> Battle in that fixed
+       order. Two peers dealing from the same table code walk the stream
+       identically, which is the whole reason engine/rng.js exists. */
+    const ctr = {n:0};
+    let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
+    const _s0 = buildSide(h, db, cfg||{}, rng, ctr);
+    rng = _s0.rng;
+
+    /* THE RUNECHANT TOKEN IS SHARED, NOT PER-SIDE. It is one printed card
+       read out of the database; which hero conjures it is decided at the
+       point of minting, not here. Built from the database record so
+       nothing about it is invented — the board renders board entries with
+       CardFrame, which is what puts real token art on the table instead
+       of the text "Runechant x2". `runeApprox` still reports when the
+       token is missing from the pool, in which case damage falls back
+       to 1. */
     const runeTok = (db.byName["runechant"]||[])[0];
     const runeDmg = runeTok && (clean(runeTok.tx).toLowerCase().match(/deal (\d+) arcane damage/)||[])[1];
-    /* The Runechant token as a real CARD, built from the database record so
-       nothing about it is invented. Runechants are auras in the arena (see
-       engine/game.js) and the board renders its entries with CardFrame, so
-       this is what puts actual card art on the table instead of the text
-       "Runechant ×2". `runeApprox` still reports when the token is missing
-       from the pool, in which case damage falls back to 1. */
     const runeCard = runeTok ? {
       name:"Runechant", pitch:0, cost:null, power:null, def:null,
       tt:runeTok.tt || "Runeblade Token - Aura", kw:runeTok.kw || [], tx:runeTok.tx || "",
@@ -1835,101 +1973,30 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       dbImg:runeTok.pr ? runeTok.pr._first : null,
       _token:true
     } : null;
-    let uid=0;
-    const cuts = (cfg&&cfg.cuts)||{};
-    /* THE SEED. Both opening shuffles are drawn from one seeded source, so
-       the whole game is reproducible from `seed` alone — that is what makes
-       a bug report replayable and what will let two peers deal the same
-       decks from a shared room code. `cfg.seed` lets a drill or a replay pin
-       it; otherwise the clock. `rng` is threaded through both shuffles and
-       handed to Battle's initial state, so play continues the SAME stream
-       rather than starting a second one. */
-    /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
-       SAZ). Passed to every resolveEntry so a card wears the face it has in
-       this deck's own precon rather than whatever printing the database
-       happened to list first. See cards.js `pickPrinting`. */
-    const saSet = (h.code||"").slice(0,3) || null;
-    let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
-    const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
-      const q = Math.max(0, e.q - (cuts[ei]||0));
-      if(!q) return [];
-      const c = resolveEntry(db,e,saSet);
-      return Array.from({length:q},()=>({...c,uid:++uid}));
-    }));
-    rng = _pd.rng;
-    const deck = _pd.arr;
-    const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++uid,used:false}));
-    const gear = (cfg&&cfg.gearIdx) ? gearAll.filter(x=>cfg.gearIdx.includes(x.gi)) : gearAll;
-    gear.forEach(gr=>{
-      if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
-        if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
-        if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
-        if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
-      }
-      /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
-         Dealer is a Bow whose printed ability puts an arrow face up into your
-         arsenal — it is not a weapon attack, so `weaponCost` (which requires
-         ": attack") never claimed it and the `!isWeapon` gate below skipped
-         it, leaving the ability inert. The extra door is deliberately narrow:
-         only an ability the arsenal reader actually recognises, so no other
-         weapon quietly grows a second button nothing is wired to run. */
-      const _armed = isWeapon(gr) && gr.tx && DawnParser.ARS_PUT.test(gr.tx);
-      if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
-      if(pw){ gr.pow=pw;
-      /* The ability's WHOLE printed line, not just its first sentence.
-         Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
-         end of turn, your base {i} is the number rolled." — parseHeroPower
-         stops at the period, which orphaned the rider so it never fired.
-         Strip the cost prefix off the line and keep the rest. */
-      const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-        .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
-      const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
-      gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-        tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
-    const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++uid,used:false}));
-    /* the dummy's pile, resolved through the same reader as the player's */
+
+    /* SEAT 1 IS STILL THE DUMMY, and deliberately so until it can resolve
+       the cards in a real deck. ROADMAP-OPPONENT.md: "Do not replace it
+       with a real deck until the opponent can actually resolve the cards
+       in that deck. Trading an honest approximation for a dishonest one
+       is a step backwards even if it looks like progress."
+
+       What changed is that the seat it occupies is now built by the same
+       function a hero would use, so swapping it for `buildSide(oppHero,
+       ...)` is a call site rather than a refactor. It draws from the same
+       shared counter and the same stream, in seat order. */
+    const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++ctr.n,used:false}));
     const _dd = rngShuffle(rng, DUMMY_DECK.reduce((acc,[nm,p,q])=>{
-      for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++uid});
+      for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++ctr.n});
       return acc;
     },[]).filter(c=>c.resolved));
     rng = _dd.rng;
     const dDeck = _dd.arr;
-    const _atk = deck.filter(isAttack);
-    const _ga = deck.filter(c=>fxParse(c).ga).length;
-    const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o=>o[0]==="arcane")).length;
-    const _blue = deck.filter(c=>c.pitch===3).length;
-    const _perm = deck.filter(c=>fxParse(c).perm).length;
-    const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
-    const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-      +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
-        const cnt = k => deck.filter(c=>hasKw(c,k)).length;
-        const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
-        const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
-        const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
-          clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
-          soul:"Line: land hits to charge the soul, then spend it to break through.",
-          rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
-          arcane:"Line: amp first, spell second — arcane ignores the iron.",
-          ally:"Line: crew up early — every ally is free damage each turn after."};
-        return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
-      })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
-    const hasBoost = deck.some(c=>hasKw(c,"boost"));
-    const _htx = clean(heroRec.tx||"").toLowerCase();
-    const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
-    const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
-    const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
-    /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
-       grave cards" — and his printed text names the condition exactly:
-       a blue card must have hit your graveyard this turn. */
-    const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
-    /* LYATH: "Whenever the crowd boos you, create a Might token." */
-    const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
-    let startItem = null;
-    if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
-      const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
-      if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
-    }
-    return {deck,gear,dGear,dDeck,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,myHP:heroRec.hp!=null?heroRec.hp:20,myInt:heroRec.int!=null?heroRec.int:4,runeDmg:runeDmg?+runeDmg:1,runeApprox:!runeTok,runeCard,
+
+    /* `myHP`/`myInt` keep their names: they are seat 0's, they are read at
+       a dozen call sites, and renaming them is a separate pass from
+       giving seat 1 a build. `sides` below is the ledger that matters. */
+    return {..._s0.b, dGear, dDeck, myHP:_s0.b.hp, myInt:_s0.b.int,
+      runeDmg:runeDmg?+runeDmg:1, runeApprox:!runeTok, runeCard,
       /* the stream AFTER both opening shuffles — Battle continues it */
       rng};
   },[h,db]);
