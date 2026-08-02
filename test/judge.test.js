@@ -23,6 +23,7 @@ const C = require("../engine/cards");
 const G = require("../engine/game");
 const P = require("../engine/priority");
 const PR = require("../engine/parser");
+const TY = require("../engine/types");
 const RNG = require("../engine/rng");
 const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
@@ -322,6 +323,120 @@ test("one combat path: the same code resolves an attack whichever seat swings", 
     "a scripted swing reached the reducer");
 });
 
+/* ---- CARD TYPES, END TO END ---------------------------------------------
+   types.js decides these in the abstract; these drills prove the reducer
+   actually honours them with a real card, in a real game, from a real
+   hand. Put a card in hand, play it, and look at where it went. */
+
+/* Find a pool card matching `pick`, put it in `seat`'s hand with the
+   resources to pay for it, and return the state. */
+function withCard(g, seat, pick){
+  const db = DB();
+  for(const h of W.HEROES){
+    const d = G.parseDeck(W.DECKS[h.k]), sa = (h.code || "").slice(0, 3);
+    for(const e of d.deck){
+      const c = C.resolveEntry(db, e, sa);
+      if(!c.resolved || !pick(c)) continue;
+      const card = {...c, uid: "probe-" + (c.name || "").replace(/\W/g, "")};
+      return {g: J.put(g, seat, s => ({...s, hand: [card, ...s.hand], res: 9, ap: 1})), card};
+    }
+  }
+  return {g, card: null};
+}
+
+test("an AURA played from hand enters the arena, not the graveyard", {skip}, () => {
+  let g = match({seed: "aura"});
+  const seat = g.turnPlayer;
+  const {g: g2, card} = withCard(g, seat, c => TY.isAura(c) && !TY.isAttack(c));
+  assert.ok(card, "no aura in the pool — the drill cannot bite");
+  const out = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat);
+  assert.equal(out.error, null, "a legal aura was refused: " + out.error);
+  const n = out.state;
+  assert.ok((n.sides[seat].board || []).some(b => b.uid === card.uid),
+    `${card.name} did not enter the arena — the player paid for it and never received it`);
+  assert.ok(!(n.sides[seat].grave || []).some(c => c.uid === card.uid),
+    `${card.name} went to the graveyard instead of staying on the board`);
+  assert.equal((n.sides[seat].board.find(b => b.uid === card.uid) || {}).kind, "aura");
+});
+
+test("an ALLY enters the arena carrying its printed life", {skip}, () => {
+  let g = match({seed: "ally"});
+  const seat = g.turnPlayer;
+  const {g: g2, card} = withCard(g, seat, c => TY.isAllyCard(c));
+  assert.ok(card, "no ally in the pool");
+  const n = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat).state;
+  const entry = (n.sides[seat].board || []).find(b => b.uid === card.uid);
+  assert.ok(entry, `${card.name} did not enter the arena`);
+  assert.equal(entry.kind, "ally");
+  /* CR 1.4.5a — an ally is a living object, so it must be attackable. */
+  assert.ok(G.isAttackable(entry), `${card.name} is on the board but cannot be attacked`);
+  assert.equal(G.allyLife(entry), card.life);
+});
+
+test("an ITEM enters the arena", {skip}, () => {
+  let g = match({seed: "item"});
+  const seat = g.turnPlayer;
+  const {g: g2, card} = withCard(g, seat, c => TY.isItem(c) && !TY.isAttack(c));
+  assert.ok(card, "no item in the pool");
+  const n = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat).state;
+  assert.ok((n.sides[seat].board || []).some(b => b.uid === card.uid), `${card.name} did not enter the arena`);
+});
+
+test("a BLOCK card cannot be played, but can be pitched and declared", {skip}, () => {
+  let g = match({seed: "block"});
+  const seat = g.turnPlayer;
+  const {g: g2, card} = withCard(g, seat, c => TY.isBlock(c));
+  assert.ok(card, "no Block card in the pool");
+  const why = J.legal(g2, {t: "play", uid: card.uid, from: "hand"}, seat);
+  assert.ok(why, `${card.name} was playable — a free 0-cost no-op`);
+  assert.match(why, /pitched or declared as a defender/);
+
+  /* But it must still be usable both other ways, or it is a dead card. */
+  const dg = toDefendStep(match({seed: "block2"}));
+  const def = P.defendingPlayer(dg);
+  const withBlock = J.put(dg, def, s => ({...s, hand: [card, ...s.hand]}));
+  assert.equal(J.legal(withBlock, {t: "defend", uid: card.uid}, def), null,
+    `${card.name} could not be declared as a defender either — it would be unusable`);
+});
+
+test("EQUIPMENT cannot be played from hand", {skip}, () => {
+  let g = match({seed: "equip"});
+  const seat = g.turnPlayer;
+  const piece = g.sides[seat].gear.find(x => !TY.isWeaponType(x));
+  assert.ok(piece, "the hero is wearing no armour");
+  const g2 = J.put(g, seat, s => ({...s, hand: [piece, ...s.hand], res: 9}));
+  const why = J.legal(g2, {t: "play", uid: piece.uid, from: "hand"}, seat);
+  assert.ok(why && /worn, not played/.test(why), `${piece.name} was playable from hand`);
+  /* and activating a non-weapon as a weapon is refused by name */
+  const act = J.legal(g, {t: "activate", uid: piece.uid}, seat);
+  assert.ok(act && /equipment, not a weapon|prints no weapon attack/.test(act));
+});
+
+test("a DUAL-TYPED card is legal in both its windows, and costs AP in only one", {skip}, () => {
+  /* Den of the Spider / Lair of the Spider are `Action Defense Reaction`. */
+  let g = match({seed: "dual"});
+  const seat = g.turnPlayer;
+  const {g: g2, card} = withCard(g, seat, c => TY.cardType(c).types.length > 1);
+  assert.ok(card, "no dual-typed card in the pool");
+
+  /* as an ACTION, on its controller's turn */
+  assert.equal(J.legal(g2, {t: "play", uid: card.uid, from: "hand"}, seat), null,
+    `${card.name} is an Action and was refused in the action phase`);
+  const played = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat).state;
+  assert.equal(played.sides[seat].ap, 0, "an Action was played without spending the action point");
+
+  /* as a DEFENCE REACTION, in the defence window, for no action point */
+  let d = toDefendStep(match({seed: "dual2"}));
+  for(let i = 0; i < 4 && d.step !== "reaction" && d.priority != null; i++)
+    d = J.reduce(d, {t: "pass"}, d.priority).state;
+  const def = P.defendingPlayer(d);
+  if(d.step === "reaction" && d.priority === def){
+    const dd = J.put(d, def, s => ({...s, hand: [card, ...s.hand], res: 9, ap: 0}));
+    assert.equal(J.legal(dd, {t: "play", uid: card.uid, from: "hand"}, def), null,
+      `${card.name} is a Defense Reaction and was refused in the defence window at 0 action points`);
+  }
+});
+
 /* ---- COSTS, KEYWORDS, WINDOWS ------------------------------------------- */
 
 test("CR 8.1.6 — an instant costs no action point", {skip}, () => {
@@ -374,6 +489,33 @@ test("once per turn is PRINTED, not universal", {skip}, () => {
   g2 = J.put(g2, s2, s => ({...s, res: 20, ap: 5, weaponUsed: {[blade.uid]: true}}));
   assert.ok(J.legal(g2, {t: "activate", uid: blade.uid}, s2),
     "Dawnblade swung twice — it prints once per turn");
+});
+
+test("a {t} weapon is limited by the TAP, not by 'once per turn'", {skip}, () => {
+  /* Scorpio, Comet Tail reads "Action - {t}: Attack". It does NOT print
+     "Once per Turn", so reading only that field would let it swing all
+     turn — stronger than printed, the direction that steals games. It is
+     limited anyway, because {t} taps it and a tapped permanent does not
+     untap until CR 4.4.3d in the end phase.
+
+     Two limits, two different reasons, and honouring one without the
+     other gets a card wrong in a different direction each time. */
+  const briar = heroBy(/briar/i);
+  let g = match({seed: "scorpio", h0: briar, h1: heroBy(/kayo/i)});
+  const seat = g.turnPlayer;
+  const scorpio = g.sides[seat].gear.find(x => /scorpio/i.test(x.name || ""));
+  assert.ok(scorpio, "Briar is not wearing Scorpio — check defaultPicks");
+  const wc = PR.weaponCost(scorpio.tx);
+  assert.equal(wc.oncePerTurn, false, "Scorpio started printing 'Once per Turn'");
+  assert.equal(wc.taps, true, "Scorpio's {t} cost is no longer read");
+
+  g = J.put(g, seat, s => ({...s, res: 20, ap: 5}));
+  assert.equal(J.legal(g, {t: "activate", uid: scorpio.uid}, seat), null,
+    "Scorpio could not swing at all");
+  const swung = J.put(g, seat, s => ({...s, weaponUsed: {[scorpio.uid]: true}}));
+  const why = J.legal(swung, {t: "activate", uid: scorpio.uid}, seat);
+  assert.ok(why && /tapped/.test(why),
+    "Scorpio swung twice in one turn — {t} taps it until the end phase");
 });
 
 test("CR 8.1.2a — a reaction cannot be played in the action phase", {skip}, () => {
@@ -467,6 +609,85 @@ test("a card cannot pitch for itself", {skip}, () => {
   assert.ok(J.legal(n, {t: "paySel", uid: c.uid}, seat));
 });
 
+/* ---- THE FULL JOURNEY: PITCH TO PLAY ------------------------------------
+   A card's life is hand -> (pitch | arsenal | chain | arena | grave), and
+   the pitch zone's own life is pitch -> the BOTTOM of the deck. These
+   drills follow real cards all the way round rather than checking one
+   transition at a time. */
+
+test("CR 4.4.3c — a pitched card goes to the BOTTOM of its owner's deck", {skip}, () => {
+  let g = match({seed: "pitchzone"});
+  const seat = g.turnPlayer;
+  const c = g.sides[seat].hand.find(x => PR.effCost(x, g.sides[seat]) > 0);
+  let n = J.reduce(g, {t: "play", uid: c.uid, from: "hand"}, seat).state;
+  const p = J.pendingOf(n);
+  const fuel = n.sides[seat].hand.find(x => x.uid !== c.uid && x.pitch > 0);
+  n = J.reduce(n, {t: "paySel", uid: fuel.uid}, seat).state;
+  n = J.reduce(n, {t: "payConfirm"}, seat).state;
+
+  /* it is in the pitch zone now, and nowhere else */
+  assert.ok((n.sides[seat].pitch || []).some(x => x.uid === fuel.uid), "the pitched card is not in the pitch zone");
+  assert.ok(!(n.sides[seat].hand || []).some(x => x.uid === fuel.uid), "the pitched card is still in hand");
+
+  /* end the turn and it should be the LAST card of the deck, not the first */
+  const deckBefore = n.sides[seat].deck.length;
+  while(n.chainOpen && n.priority != null) n = J.reduce(n, {t: "pass"}, n.priority).state;
+  n = J.reduce(n, {t: "endTurn"}, seat).state;
+  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+
+  const deck = n.sides[seat].deck;
+  assert.deepEqual(n.sides[seat].pitch, [], "the pitch zone was not emptied");
+  assert.equal(deck[deck.length - 1].uid, fuel.uid,
+    "the pitched card did not go to the BOTTOM of the deck — it would be redrawn immediately");
+  /* Not `deckBefore + 1`: CR 4.4.3f draws the turn player back up to
+     intellect out of the same deck in the same end phase, so the net
+     movement is +1 pitched −N drawn. What matters is that the card
+     arrived exactly once and nothing was duplicated. */
+  assert.equal(deck.filter(x => x.uid === fuel.uid).length, 1,
+    "the pitched card landed in the deck more than once");
+});
+
+test("the arsenal round trip: set it at end of turn, play it the next", {skip}, () => {
+  let g = match({seed: "arsenal-trip"});
+  const seat = g.turnPlayer;
+  /* end the turn and set a specific card in the arsenal */
+  let n = J.reduce(g, {t: "endTurn"}, seat).state;
+  assert.equal(n.arsenalFor, seat, "the turn player was not offered the arsenal step");
+  const pick = n.sides[seat].hand.find(x => TY.isAttack(x)) || n.sides[seat].hand[0];
+  n = J.reduce(n, {t: "arsenal", uid: pick.uid}, seat).state;
+  assert.equal(n.sides[seat].arsenal.uid, pick.uid, "the card did not reach the arsenal");
+  assert.ok(!n.sides[seat].hand.some(x => x.uid === pick.uid), "the card is in the arsenal AND in hand");
+
+  /* the OTHER seat takes its turn, then ours comes round again */
+  const other = P.other(seat);
+  while(n.turnPlayer !== seat && !n.over){
+    if(n.arsenalFor != null){ n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state; continue; }
+    if(n.phase === "action" && n.priority === n.turnPlayer && !n.chainOpen && n.step === "layer"){
+      const out = J.reduce(n, {t: "endTurn"}, n.turnPlayer);
+      if(!out.error){ n = out.state; continue; }
+    }
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  }
+  assert.equal(n.sides[seat].arsenal.uid, pick.uid, "the arsenal did not survive the opponent's turn");
+
+  /* and it is playable from there */
+  n = J.put(n, seat, s => ({...s, res: 9}));
+  const why = J.legal(n, {t: "play", uid: pick.uid, from: "arsenal"}, seat);
+  assert.equal(why, null, "the arsenalled card could not be played: " + why);
+  const played = J.reduce(n, {t: "play", uid: pick.uid, from: "arsenal"}, seat).state;
+  assert.equal(played.sides[seat].arsenal, null, "the arsenal was not emptied by playing from it");
+});
+
+test("a card is never in two zones on the way through", {skip}, () => {
+  /* Walk a whole game asserting the census after EVERY action rather
+     than only at the end. The crumbling-aura bug (v2.16) was a card in
+     two zones for exactly one state transition. */
+  let g = match({seed: "walk"});
+  const {errs} = drive(g);
+  const dirty = errs.filter(e => /INVARIANT/.test(e.why || ""));
+  assert.deepEqual(dirty, []);
+});
+
 /* ---- PURITY AND DETERMINISM --------------------------------------------- */
 
 test("reduce never mutates the state it is given", {skip}, () => {
@@ -540,13 +761,35 @@ test("conceding is always legal and hands the win over", {skip}, () => {
 /* ---- LEGALITY IS TOTAL --------------------------------------------------- */
 
 test("legal() gives a reason or null for every action, and never throws", {skip}, () => {
+  /* EVERY ZONE, not just `hand`. This drill passed while `legal` threw a
+     TypeError on `from:"arsenal"` — the arsenal holds one card, not a
+     list, and the list path ran straight into it. A legality check that
+     throws is worse than one that says no: the reducer's contract is
+     that an illegal action leaves the state untouched, and an exception
+     breaks it in the caller rather than returning a reason. */
+  const ZONES = ["hand", "arsenal", "grave", "banish", "deck", "pitch", "soul", "board", "gear", "nonsense"];
   const g = match({seed: "total"});
-  for(const t of J.ACTIONS){
-    for(const seat of [0, 1]){
-      const why = J.legal(g, {t, uid: "nope", from: "hand"}, seat);
-      assert.ok(why === null || typeof why === "string", `${t}/${seat} returned ${why}`);
+  const states = [g, J.put(g, 0, s => ({...s, arsenal: s.hand[0], hand: s.hand.slice(1)}))];
+  for(const st of states){
+    for(const t of J.ACTIONS){
+      for(const seat of [0, 1]){
+        for(const from of ZONES){
+          const why = J.legal(st, {t, uid: "nope", from}, seat);
+          assert.ok(why === null || typeof why === "string",
+            `${t}/${seat}/${from} returned ${why}`);
+        }
+      }
     }
   }
+  /* and with a real uid in the arsenal, the play must be ALLOWED — a
+     refusal for the wrong reason would hide the same bug */
+  const armed = states[1];
+  const held = armed.sides[0].arsenal;
+  const why = J.legal(J.put(armed, 0, s => ({...s, res: 9})),
+                      {t: "play", uid: held.uid, from: "arsenal"}, 0);
+  assert.ok(why === null || /window|action point|reaction/.test(why),
+    `playing from the arsenal was refused as "${why}"`);
+
   assert.equal(J.legal(g, {t: "wat"}, 0), "unknown action: wat");
   assert.equal(J.legal(g, {t: "pass"}, 7), "no such seat");
   assert.equal(J.legal(null, {t: "pass"}, 0), "no action");

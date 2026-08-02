@@ -81,17 +81,25 @@
 (function(root, factory){
   if(typeof module==="object" && module.exports)
     module.exports = factory(require("./priority.js"), require("./sides.js"), require("./rng.js"),
-                             require("./parser.js"), require("./game.js"));
+                             require("./parser.js"), require("./game.js"), require("./types.js"));
   else root.DawnJudge = factory(root.DawnPriority, root.DawnSides, root.DawnRNG,
-                                root.DawnParser, root.DawnGame);
-})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM){
+                                root.DawnParser, root.DawnGame, root.DawnTypes);
+})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM, TY){
 
-const {effCost, costsAP, isAttack, isInstantT, rxAllowed, fxParse} = PR;
-/* `isInstantT` reads the printed type line; `_instant` is how a powCard
-   carries "Instant - …" off an equipment ability. `costsAP` already
-   accounts for both, so ask the same question the same way here. */
-const instantSpeed = c => isInstantT(c) || !!(c && c._instant);
+const {effCost, fxParse} = PR;
 const {gearDef, gearBlockApply} = GM;
+
+/* EVERY TYPE QUESTION GOES TO types.js. The trainer asks them with a
+   scatter of ad-hoc regexes that have drifted from each other before —
+   `rxAllowed` exists because five hand-rolled copies of "may this be
+   played here" disagreed, and the drift showed up as a card that looked
+   playable and did nothing when tapped. One parse, one answer.
+
+   `_instant` is not a printed type: it is how build.js marks a powCard
+   carrying an equipment's "Instant - …" ability, so it is asked
+   separately rather than smuggled into the type line. */
+const isAttack = c => TY.isAttack(c);
+const instantSpeed = c => TY.isInstant(c) || !!(c && c._instant);
 
 /* Every action a seat can take. Serializable by construction: a uid, a
    zone name, an index — never a card object and never a closure. That is
@@ -130,7 +138,13 @@ const say = (g, msg) => msg == null ? g : ({...g,
   log:  [msg, ...(g.log || [])].slice(0, LOG_KEEP),
   feed: [...(g.feed || []), msg]});
 
-const find = (zone, uid) => (zone || []).findIndex(c => c && c.uid === uid);
+/* -1 for anything that is not an array, so a caller that reaches for a
+   non-list zone gets a refusal rather than a TypeError. `arsenal` holds
+   ONE card or null, not a list, and `legal` threw on `from:"arsenal"`
+   until this was defensive — a legality check that throws is worse than
+   one that says no, because the reducer's contract is that an illegal
+   action leaves the state untouched and never crashes the caller. */
+const find = (zone, uid) => Array.isArray(zone) ? zone.findIndex(c => c && c.uid === uid) : -1;
 
 /* A uid that cannot collide with a dealt card. `tokSeq` counts from 1 and
    so does the loadout's card numbering, so a raw counter shares a uid with
@@ -288,11 +302,18 @@ function legal(g, a, seat){
   if(a.t === "play"){
     const sd = at(g, seat);
     const zone = a.from || "hand";
-    const i = find(sd[zone], a.uid);
+    /* THE ARSENAL IS ONE CARD, NOT A LIST — check it before reaching for
+       an index, or the list path runs against an object. */
+    let c;
     if(zone === "arsenal"){
       if(!sd.arsenal || sd.arsenal.uid !== a.uid) return "nothing of yours in the arsenal";
-    } else if(i < 0) return "card is not in your " + zone;
-    const c = zone === "arsenal" ? sd.arsenal : sd[zone][i];
+      c = sd.arsenal;
+    } else {
+      if(!Array.isArray(sd[zone])) return "there is no " + zone + " to play from";
+      const i = find(sd[zone], a.uid);
+      if(i < 0) return "card is not in your " + zone;
+      c = sd[zone][i];
+    }
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
     return playableWhy(g, seat, c, win);
@@ -304,12 +325,19 @@ function legal(g, a, seat){
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
     if(piece.destroyed) return piece.name + " is destroyed";
+    if(!TY.isWeaponType(piece)) return piece.name + " is equipment, not a weapon";
     const wc = PR.weaponCost(piece.tx || "");
-    if(!wc) return piece.name + " has no weapon attack to activate";
-    /* ONCE PER TURN IS PRINTED, NOT UNIVERSAL — see parser.js weaponCost.
-       Sledge of Anvilheim and Scorpio, Comet Tail do not print it and may
-       swing again for anyone who can pay again. */
-    if(wc.oncePerTurn && (sd.weaponUsed || {})[a.uid]) return piece.name + " has already swung this turn";
+    if(!wc) return piece.name + " prints no weapon attack";
+    /* TWO SEPARATE LIMITS, and honouring only one gets a card wrong in a
+       different direction each time (see parser.js weaponCost):
+
+         `oncePerTurn`  printed on nine of the eleven swinging weapons
+         `taps` ({t})   Scorpio, Comet Tail — a tapped permanent does not
+                        untap until CR 4.4.3d in the end phase
+
+       Sledge of Anvilheim has neither and is genuinely repeatable. */
+    if((wc.oncePerTurn || wc.taps) && (sd.weaponUsed || {})[a.uid])
+      return piece.name + (wc.taps ? " is tapped until your end phase" : " has already swung this turn");
     const win = P.speedAllowed(g, seat);
     if(win.indexOf("action") < 0) return "no action-speed window — a weapon cannot swing here";
     if(!(sd.ap > 0)) return "no action point left";
@@ -327,32 +355,48 @@ function playableWhy(g, seat, c, win){
   win = win || P.speedAllowed(g, seat);
   const sd = at(g, seat);
 
-  /* CR 8.1.1 / 8.1.6 — an ACTION costs an action point; an instant does
-     not. The trainer refused any play at 0 action points, which made
-     every instant in the pool cost a turn's action it does not print. */
-  if(costsAP(c) && !(sd.ap > 0)) return "no action point left";
+  /* SOME CARDS HAVE NO PLAY AT ALL, and it is a property of their TYPE.
+     Equipment is worn, a weapon is activated from the gear zone, and a
+     Block card (Test of Might, Test of Strength, On the Horizon, Crash
+     and Bash) may only be pitched or declared as a defender. All of them
+     print no cost, so a cost-based test would let every one through as a
+     free 0-cost play that does nothing. */
+  const noPlay = TY.noPlayReason(c);
+  if(noPlay && !c._instant) return c.name + ": " + noPlay;
 
-  const rx = win.filter(w => w === "attack-reaction" || w === "defense-reaction")[0];
-  if(rx){
-    /* CR 8.1.2a / 8.1.3a — a reaction belongs to the reaction step and to
-       ONE SEAT within it. `speedAllowed` picks the window by attacker;
-       `rxAllowed` asks whether this card belongs in that window. */
-    if(!rxAllowed(c, rx)) return c.name + " cannot be played in the " + rx + " window";
-  } else if(win.indexOf("action") < 0){
-    /* An instants-only window. */
-    if(!instantSpeed(c)) return c.name + " is not an instant — this window is instant speed only";
-  } else {
-    /* The open action window. A reaction is NOT legal here (CR 8.1.2a) —
-       23 pool cards were playable on your own turn before this. */
-    if(PR.isAR(c)) return c.name + " is an attack reaction — it belongs to the reaction step";
-    if(PR.isDR(c)) return c.name + " is a defence reaction — it belongs to the reaction step";
+  /* WHICH WINDOW IS THIS CARD BEING PLAYED IN?
+     A card can print TWO types — `Assassin / Warrior Action Defense
+     Reaction - Trap` is both — so this is an intersection, not a match.
+     Den of the Spider is legal in the action phase AND in the defence
+     window, and a reader that picks one type and stops refuses it half
+     the time. */
+  const mine = c._instant ? ["instant"] : TY.playWindows(c);
+  const open = win.filter(w => mine.indexOf(w) >= 0);
+
+  if(!open.length){
+    /* Name the window in BOTH directions rather than dead-tapping: a
+       refusal a player cannot read is indistinguishable from a bug. */
+    const here = win.indexOf("action") >= 0 ? "the action phase"
+               : win.indexOf("attack-reaction") >= 0 ? "the attack-reaction window"
+               : win.indexOf("defense-reaction") >= 0 ? "the defence-reaction window"
+               : "an instant-speed window";
+    if(mine.length === 1 && mine[0] === "action")
+      return c.name + " is an action — it cannot be played during " + here;
+    if(mine.indexOf("attack-reaction") >= 0)
+      return c.name + " is an attack reaction — it belongs to the reaction step, not " + here;
+    if(mine.indexOf("defense-reaction") >= 0)
+      return c.name + " is a defence reaction — it belongs to the reaction step, not " + here;
+    return c.name + " cannot be played in " + here;
   }
 
-  /* Playing an attack requires an action-speed window: the layer step or
-     the resolution step, which is how a chain grows a second link
-     (CR 7.6.3a). */
-  if(isAttack(c) && win.indexOf("action") < 0)
-    return "no action-speed window — an attack cannot start here";
+  /* CR 8.1.1 / 8.1.6 — an ACTION card costs an action point to play; an
+     instant and a reaction do not. For a dual-typed card the cost
+     depends on WHICH window it is being played in, which is why the
+     window is an argument: Den of the Spider costs an action point in
+     the action phase and none as a defence reaction. If any open window
+     is free, the play is affordable. */
+  const free = open.some(w => !TY.typeCostsAP(c, w));
+  if(!free && !(sd.ap > 0)) return "no action point left";
 
   return null;
 }
@@ -559,17 +603,34 @@ function reduce(g, a, seat){
 function doPlay(g, a, seat){
   const zone = a.from || "hand";
   const sd = at(g, seat);
-  const card = sd[zone][find(sd[zone], a.uid)];
+  const card = zone === "arsenal" ? sd.arsenal : sd[zone][find(sd[zone], a.uid)];
   const cost = effCost(card, sd);
+  /* WHICH WINDOW this card is being played in, decided now and carried
+     through the payment. It matters for a dual-typed card: Den of the
+     Spider costs an action point as an Action and none as a Defense
+     Reaction, and the answer must not change while the player pitches. */
+  const window = playWindowFor(g, seat, card);
 
   /* PITCHING IS ON DEMAND, NEVER PROACTIVE (ruling, 2026-08-01): you
      cannot pitch to bank resources. The pool is filled only when a cost
      exceeds what you hold, and then you may pitch OR cancel. */
   if(cost > sd.res){
-    return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost}},
+    return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window}},
       card.name + " costs " + cost + " and you hold " + sd.res + " — pitch, or cancel.");
   }
-  return commitPlay(g, card, zone, seat);
+  return commitPlay(g, card, zone, seat, window);
+}
+
+/* The window a card is actually being played in: the intersection of
+   what priority.js has open and what the card's types allow. When a
+   dual-typed card fits both, prefer the FREE one — a player who could
+   have played it as a reaction should not be charged an action point for
+   the engine's choice of label. */
+function playWindowFor(g, seat, card){
+  if(card && card._instant) return "instant";
+  const open = P.speedAllowed(g, seat).filter(w => TY.playWindows(card).indexOf(w) >= 0);
+  if(!open.length) return null;
+  return open.find(w => !TY.typeCostsAP(card, w)) || open[0];
 }
 
 /* A WEAPON SWING IS AN ATTACK THAT COMES FROM THE GEAR ZONE.
@@ -618,15 +679,14 @@ function doPayConfirm(g, seat){
     paySel: []}));
   n = say(n, "Pitched " + pitched.map(c => c.name).join(", ") + " for " + gained + ".");
   n = {...n, pending: null};
-  return commitPlay(n, p.card, p.from, seat);
+  return commitPlay(n, p.card, p.from, seat, p.window);
 }
 
 /* The card is paid for and leaves its zone. An attack opens a chain link;
    anything else resolves and is filed. */
-function commitPlay(g, card, zone, seat){
+function commitPlay(g, card, zone, seat, window){
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
-     is not an attack action — `isAttack` reads the type line and a Sword
-     is a Sword. The trainer says the same thing as
+     says Weapon, not Attack. The trainer says the same thing as
      `isAttack(card) || from==="weapon"`. */
   const fromWeapon = zone === "weapon";
   const attacking = isAttack(card) || fromWeapon;
@@ -634,8 +694,9 @@ function commitPlay(g, card, zone, seat){
                           : effCost(card, at(g, seat));
   /* CR 8.1.1 / 8.1.6 — the action point is an ACTION's cost. An instant
      pays none, which is 24 pool cards and 26 "Instant - …" abilities that
-     used to eat the turn's action. */
-  const apCost = costsAP(card) ? 1 : 0;
+     used to eat the turn's action. A weapon swing is an activated
+     ability with the action-point cost (CR 8.1.1). */
+  const apCost = fromWeapon ? 1 : (card._instant ? 0 : (TY.typeCostsAP(card, window) ? 1 : 0));
   let n = put(g, seat, s => ({...s,
     /* the piece stays equipped; it is spent, not moved */
     ...(fromWeapon ? {weaponUsed: {...(s.weaponUsed || {}), [card.uid]: true}}
@@ -649,12 +710,29 @@ function commitPlay(g, card, zone, seat){
 
   if(attacking) return declareAttack(n, card, seat, fromWeapon);
 
-  /* A non-attack resolves and is filed. Its EFFECTS are the next pass —
-     see the header. Go again is still honoured, because it is a printed
-     keyword rather than a parsed effect and getting it wrong changes the
-     turn (CR 5.3.5: a GAIN, not a refund). */
+  /* WHERE A RESOLVED CARD GOES IS A PROPERTY OF ITS SUBTYPE, and getting
+     it wrong is not subtle: an Aura, an Item or an Ally that resolves to
+     the graveyard is a card the player paid for and never receives.
+     Twelve Ally cards, ten Auras and five Items are in the pool. */
   const ga = fxParse(card).ga;
   if(ga) n = put(n, seat, s => ({...s, ap: (s.ap || 0) + 1}));
+
+  if(TY.destination(card) === "arena"){
+    const kind = TY.permanentKind(card);
+    /* An ALLY is a living object and is attackable (CR 1.4.5a), so it
+       carries its printed life onto the board. game.js's ally helpers
+       read `kind === "ally"` and `card.life`, so the names must agree. */
+    n = put(n, seat, s => ({...s,
+      board: [...(s.board || []), {card, kind, spent: false, uid: card.uid,
+                                   life: kind === "ally" ? card.life : undefined}],
+      hist: {...s.hist, aura: (s.hist.aura || 0) + (kind === "aura" ? 1 : 0),
+                        made: (s.hist.made || 0) + 1}}));
+    n = say(n, at(n, seat).name + " plays " + card.name + " — it enters the arena as "
+      + (kind === "ally" ? "an ally" : "a" + (kind === "aura" ? "n aura" : " " + kind))
+      + (ga ? ". Go again." : "."));
+    return n;
+  }
+
   n = toGrave(n, seat, [card]);
   n = say(n, at(n, seat).name + " plays " + card.name + (ga ? " — go again." : "."));
   return n;

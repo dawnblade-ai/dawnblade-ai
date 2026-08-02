@@ -206,11 +206,11 @@ test("fxParse — THE MEMO GOTCHA: same name|pitch silently returns the cached p
 
 test("weaponCost — resource costs in numeral and {r} symbol form", () => {
   assert.deepEqual(P.weaponCost("Once per Turn Action - [2 Resources]: Attack"),
-    {cost:2, addRust:false, needSteam:false, oncePerTurn:true});
+    {cost:2, addRust:false, needSteam:false, taps:false, oncePerTurn:true});
   assert.deepEqual(P.weaponCost("Action - {r}{r}: Attack"),
-    {cost:2, addRust:false, needSteam:false, oncePerTurn:false});
+    {cost:2, addRust:false, needSteam:false, taps:false, oncePerTurn:false});
   assert.deepEqual(P.weaponCost("Action - 0: Attack"),
-    {cost:0, addRust:false, needSteam:false, oncePerTurn:false});
+    {cost:0, addRust:false, needSteam:false, taps:false, oncePerTurn:false});
 });
 
 /* ONCE PER TURN IS PRINTED, NOT UNIVERSAL (Phase 1). Eleven of the pool's
@@ -228,6 +228,34 @@ test("weaponCost — 'once per turn' is read off the line, not assumed", () => {
   /* the real pair, verbatim in shape */
   assert.equal(P.weaponCost("Once per Turn Action - {r}: Attack\nGo again").oncePerTurn, true);
   assert.equal(P.weaponCost("Action - {r}{r}{r}{r}: Attack").oncePerTurn, false);
+});
+
+/* TWO LIMITS, TWO REASONS, and honouring one without the other gets a
+   card wrong in a different direction each time.
+
+     Sledge of Anvilheim  "Action - {r}{r}{r}{r}: Attack"
+       neither limit — genuinely repeatable. A blanket "already swung"
+       flag makes it WEAKER than printed.
+     Scorpio, Comet Tail  "Action - {t}: Attack. ..."
+       no "Once per Turn", but {t} taps it and a tapped permanent does
+       not untap until CR 4.4.3d. Reading only `oncePerTurn` would make
+       it STRONGER than printed.
+
+   Neither sweep can see either one: fairness is deliberately one-sided
+   towards too-strong, and coverage reads both cards as `full` because
+   the text was read correctly and then CHARGED wrongly. */
+test("weaponCost — the {t} tap cost is read separately from 'once per turn'", () => {
+  const scorpio = P.weaponCost("Action - {t}: Attack. Activate this only if you control a Lightning attack.");
+  assert.equal(scorpio.taps, true, "the {t} cost was not read");
+  assert.equal(scorpio.oncePerTurn, false, "Scorpio does not print 'Once per Turn'");
+
+  const sledge = P.weaponCost("Action - {r}{r}{r}{r}: Attack");
+  assert.equal(sledge.taps, false);
+  assert.equal(sledge.oncePerTurn, false, "Sledge does not print 'Once per Turn' either");
+  assert.equal(sledge.cost, 4);
+
+  /* the tap is a COST, so it must not be counted as a resource */
+  assert.equal(scorpio.cost, 0, "{t} was counted as a resource cost");
 });
 
 test("weaponCost — Talishar rust and steam-spend riders", () => {

@@ -449,6 +449,106 @@ is an argument:
 declare -> ATTACK -> DEFEND -> REACTION -> DAMAGE -> RESOLUTION -> CLOSE
 ```
 
+### `engine/types.js` — what a card IS, off its printed type line
+
+The pool prints **138 distinct type lines** over 401 unique cards, and
+they are regular: `[classes and talents] <TYPE>… [ - <SUBTYPE>… ]`. Where
+a card may be played from, in which window, what it costs and where it
+goes afterwards all fall out of the TYPE. **That is the half of Flesh and
+Blood that needs no text box**, which is why it lands in Phase 1 and the
+effects port does not.
+
+`cardType(c)` returns `{classes, classGroups, types, subtypes, slot,
+shape, hands}` and every question is asked of that — one parse, one
+answer. The trainer asks type questions from five or six places with
+ad-hoc regexes; `rxAllowed` exists precisely because five copies of "may
+this be played here" had drifted apart, and the drift showed up as a card
+that looked playable and did nothing when tapped.
+
+**Three things the pool prints that a naive reader gets wrong:**
+
+1. **A card can have TWO types.** `Assassin / Warrior Action Defense
+   Reaction - Trap` — Den of the Spider and Lair of the Spider are an
+   Action *and* a Defense Reaction. Playable in the action phase for an
+   action point, or in the defence window for none. A reader that matches
+   one type and stops refuses the card half the time. `playWindows`
+   returns a list for this reason, and `typeCostsAP(card, window)` takes
+   the window because the cost depends on which one it is played in.
+2. **`Block` is a type and it has no play.** Test of Might, Test of
+   Strength, On the Horizon, Crash and Bash — no printed cost, 4 defence,
+   all reading "When this defends, …". They may be pitched or declared as
+   defenders, nothing else. Treated as ordinary non-attacks they are free
+   0-cost plays that do nothing.
+3. **`Reaction` contains the substring `action`.** Any type scan that is
+   not word-boundary-anchored and longest-first reads `Warrior Attack
+   Reaction` as an Action.
+
+**And one that looks like a rule and is not: a null cost does NOT mean
+unplayable.** Equipment, Weapons and Blocks print no cost, so "no cost
+means no play" is tempting and wrong — `Ice Eternal` and `Night's
+Embrace` carry `cost: null` because their cost is X or absent from the
+record, and refusing them kills two real cards. **Playability is decided
+by TYPE, always.**
+
+**Permanents go to the ARENA.** An Aura, an Item or an Ally that resolves
+to the graveyard is a card the player paid for and never receives. 12
+auras, 5 items and 6 allies are in the pool; `destination()` routes them
+and `permanentKind()` names them so `game.js`'s ally helpers agree.
+
+**The census is a partition, and a drill proves it**: the seven card-type
+counts sum to 403, minus the 2 dual-typed cards, equals the 401 unique
+cards exactly. Every card is typed once, and `attack` (175) is a *subset*
+of `action` (269) rather than a peer.
+
+#### `types.isWeaponType` vs `parser.isWeapon` — pinned, not fixed
+
+`parser.isWeapon` is `/weapon/i.test(tt) && power != null`, so four
+weapons that print no power do not answer to it: Death Dealer (Bow),
+Plasma Barrel Shot (Gun), Cosmo (Scroll), Crucible of Aetherweave
+(Staff). That looks exactly like the bow bug and **it is not the same
+thing** — in `build.js` the predicate decides whether a piece is routed
+as a swinging weapon or as an activated ability, and the powerless four
+need the ability route. Crucible's "Once per Turn Instant - {r}: …" is
+reached *only because* `isWeapon` says false; making it type-accurate
+would take that ability away to fix nothing.
+
+So two names mean two things, and both are right for their job:
+
+```
+types.isWeaponType(c)   is this card's TYPE Weapon
+parser.isWeapon(c)      is this a weapon with a printed power
+```
+
+`test/types.test.js` pins the split at exactly those four cards. A fifth
+means something changed that nobody decided. Renaming parser's belongs
+with the Phase 3 pass over equipment abilities.
+
+**`types.js` is NOT bridged**, and that is deliberate: its natural names
+sit beside parser.js's and game.js's, and two pairs mean different things
+(`game.isAlly` takes a board *entry*, not a card). Bridging both sets
+into one bare namespace is the same-name-different-meaning trap
+`KNOWN_COLLISIONS` polices. It is headless with `judge.js` and the names
+get resolved when both are wired, not silently now.
+
+### Two limits on a weapon swing, and they are different rules
+
+Of the pool's eleven swinging weapons, nine print `Once per Turn`. **Two
+do not, and they are not the same case:**
+
+| | printed | why it is limited |
+|---|---|---|
+| Sledge of Anvilheim | `Action - {r}{r}{r}{r}: Attack` | **it isn't.** Pay four again, swing again. |
+| Scorpio, Comet Tail | `Action - {t}: Attack. …` | the **tap** — a tapped permanent does not untap until CR 4.4.3d. |
+
+A blanket "already swung" flag makes the Sledge **weaker** than printed.
+Reading only `oncePerTurn` makes Scorpio **stronger** than printed.
+`weaponCost` returns both `oncePerTurn` and `taps`; honour both.
+
+Neither sweep can see either: fairness is deliberately one-sided towards
+too-strong, and coverage reads both as `full` because the text was read
+correctly and then **charged** wrongly — the same shape as v2.39's
+instant.
+
 ### It restates no priority rule
 
 Every question about who may act comes from `engine/priority.js` —

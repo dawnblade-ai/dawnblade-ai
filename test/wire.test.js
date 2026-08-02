@@ -307,7 +307,15 @@ test("every engine module is loaded by index.html, or declared headless", () => 
      one out must be the same edit that adds it to MODULES — otherwise a
      module can be wired into the page with nothing watching for a
      shadowed export. */
-  const HEADLESS = ["judge"];
+  /* `types` is headless with `judge`, and deliberately NOT bridged: its
+     natural names (`isAttack`, `isWeaponType`, `isAllyCard`) sit next to
+     parser.js's and game.js's, and two of those pairs mean genuinely
+     different things — `parser.isWeapon` is "a weapon with printed
+     power" and `game.isAlly` takes a board entry, not a card. Bridging
+     both sets into one bare namespace is the same-name-different-meaning
+     trap that KNOWN_COLLISIONS exists to police. It comes off this list
+     with judge.js, and the names get resolved then, not silently now. */
+  const HEADLESS = ["judge", "types"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

@@ -9,6 +9,78 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.43 — Phase 1: card types, and the numbers
+
+The half of Flesh and Blood that needs no text box. Phase 3 takes the
+text boxes; this pass makes every card *type* behave correctly from
+pitch to play, in a two-player game, under the CR's turn structure.
+
+### `engine/types.js`
+
+The pool prints **138 distinct type lines** over 401 unique cards, and
+they are regular: `[classes and talents] <TYPE>… [ - <SUBTYPE>… ]`.
+`cardType()` parses one into a structure and every question is asked of
+that — one parse, one answer, instead of the six ad-hoc regexes the
+trainer spreads the same question across.
+
+Validated against the whole pool: it agrees with `parser.js` on attack,
+reaction and instant for **all 401 cards**, and with `game.js` on every
+equipment slot.
+
+**Three things the pool prints that a naive reader gets wrong:**
+
+1. **A card can have TWO types.** Den of the Spider and Lair of the
+   Spider are `Action Defense Reaction` — playable in the action phase
+   for an action point, or in the defence window for none. A reader that
+   matches one type and stops refuses them half the time.
+2. **`Block` is a type with no play.** Test of Might, Test of Strength,
+   On the Horizon, Crash and Bash. No printed cost, 4 defence, all
+   reading "When this defends, …". Treated as ordinary non-attacks they
+   were free 0-cost plays that did nothing.
+3. **`Reaction` contains `action`.** A scan that is not word-boundary
+   anchored and longest-first reads every reaction as an Action.
+
+**Permanents now reach the arena.** An Aura, Item or Ally that resolves
+to the graveyard is a card the player paid for and never receives — 12
+auras, 5 items and 6 allies in the pool. Allies carry printed life onto
+the board, which is what makes them attackable (CR 1.4.5a). Verified in
+a real game: Gravy Bones fielding three allies against Viserai's sigils,
+zero invariant violations.
+
+**A null cost does not mean unplayable.** `Ice Eternal` and `Night's
+Embrace` carry `cost: null` because their cost is X or absent from the
+record. Playability is decided by TYPE, always.
+
+**The type census is a partition, and a drill proves it**: seven card
+types summing to 403, minus 2 dual-typed, equals 401 cards exactly —
+with `attack` (175) a *subset* of `action` (269) rather than a peer.
+
+### A correction to v2.42
+
+v2.42 claimed Sledge of Anvilheim and Scorpio, Comet Tail were both
+repeatable because neither prints "Once per Turn". **Half wrong.**
+Scorpio pays `{t}` — it taps, and a tapped permanent does not untap
+until CR 4.4.3d. It is limited to one swing per turn for a completely
+different reason. Only the Sledge is genuinely repeatable.
+
+Reading only `oncePerTurn` would have made Scorpio **stronger** than
+printed, which is the direction that steals games. `weaponCost` now
+returns `taps` as well, and `judge.js` honours both.
+
+### `legal()` threw instead of refusing
+
+Playing from the arsenal crashed the reducer: the arsenal holds one card
+or null, not a list, and the list path ran straight into it. A legality
+check that throws breaks the reducer's contract in the caller rather
+than returning a reason.
+
+The "never throws" drill missed it because it only ever probed
+`from:"hand"`. It now sweeps every zone, on two states, and both it and
+the arsenal round-trip drill are verified to fail when the bug is put
+back.
+
+---
+
 ## v2.42 — Phase 1: the rules leave the component
 
 The first landing of the engine rebuild. Two new modules, 46 new drills,
@@ -85,20 +157,28 @@ yet card *effects*; those are still `runOps`/`execute` in the trainer.
 Loading it now would put a second, quieter rules engine on the page next
 to the real one.
 
-### "Once per turn" is printed, not universal
+### "Once per turn" is printed, not universal — and it is not the only limit
 
-Found while giving `judge.js` a weapon swing. Eleven of the pool's
-thirteen weapons print `Once per Turn`; **Sledge of Anvilheim and
-Scorpio, Comet Tail do not**, and may swing again for anyone who can pay
-again. Gating every weapon on a blanket "already swung" flag — which is
-what the trainer does — makes those two strictly **weaker than printed**.
+Found while giving `judge.js` a weapon swing. Of the pool's eleven
+swinging weapons, nine print `Once per Turn`. **Two do not, and they are
+not the same case as each other:**
 
-Neither sweep can see it. `npm run fairness` is deliberately one-sided
-towards cards that are too *strong*; coverage says `full`, because the
-text was read correctly and then **charged** wrongly. Same shape as the
-instant that ate an action point in v2.39.
+| | printed | why it is limited |
+|---|---|---|
+| Sledge of Anvilheim | `Action - {r}{r}{r}{r}: Attack` | **it isn't.** Pay four again, swing again. |
+| Scorpio, Comet Tail | `Action - {t}: Attack. …` | the **tap**. A tapped permanent does not untap until CR 4.4.3d. |
 
-`weaponCost` now returns `oncePerTurn` and `judge.js` reads it.
+Gating every weapon on a blanket "already swung" flag — which is what
+the trainer does — makes the Sledge strictly **weaker than printed**.
+Reading only `oncePerTurn` and ignoring `{t}` would make Scorpio
+**stronger** than printed, which is the direction that steals games.
+`weaponCost` now returns both `oncePerTurn` and `taps`, and `judge.js`
+honours both.
+
+Neither sweep can see either one. `npm run fairness` is deliberately
+one-sided towards cards that are too *strong*; coverage says `full` for
+both, because the text was read correctly and then **charged** wrongly.
+Same shape as the instant that ate an action point in v2.39.
 
 ---
 
