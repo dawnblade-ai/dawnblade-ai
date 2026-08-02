@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-01T20:56:54.480Z",
- "appVer": "2.38",
+ "generated": "2026-08-02T01:42:10.877Z",
+ "appVer": "2.40",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 303,
+  "full": 304,
   "part": 79,
-  "none": 23
+  "none": 22
  },
  "heroes": {
   "kayo": {
@@ -2181,23 +2181,20 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this defends, you may pay {r}",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, it gets +2{d}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends, you may pay {r}",
-    "If you do, it gets +2{d}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends, you may pay {r}. If you do, it gets +2{d}.",
