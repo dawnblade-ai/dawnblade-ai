@@ -673,7 +673,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.38"; /* v2.38 — two devices can now sit at a table: a room code, a WebRTC channel and the Phase B sync layer wired into the page. Full history in CHANGELOG.md. */
+window.APP_VER = "2.40"; /* v2.40 — a reaction belongs to the reaction step, and to one seat in it (CR 8.1.2a/8.1.3a). Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1271,7 +1271,8 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     fxParse = DawnParser.fxParse, parseHeroPower = DawnParser.parseHeroPower,
     runeRed = DawnParser.runeRed, boardRed = DawnParser.boardRed, effCost = DawnParser.effCost,
     weaponCost = DawnParser.weaponCost, hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
-    isInstantT = DawnParser.isInstantT,
+    isDR = DawnParser.isDR, isRx = DawnParser.isRx, rxAllowed = DawnParser.rxAllowed,
+    isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
     isAura = DawnParser.isAura, auraCount = DawnParser.auraCount,
@@ -2963,8 +2964,25 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     const delta = preHP - foe(n).hp;
     if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
-    actMut(n).ap = ga ? act(n).ap : act(n).ap-1;
-    if(ga) n = L(n,"Go again — action point kept.");
+    /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).
+       This used to read `ga ? keep : -1`, which charges every non-attack
+       that resolves here — and an instant has no such cost, so playing one
+       silently ate the turn's action. Energy Potion's "Instant - Destroy
+       this: Gain {r}{r}" cost you your action to gain two resources, and
+       Achilles Accelerator's "Instant - Destroy this: Gain 1 action point"
+       netted to exactly nothing.
+
+       Three rules, spelled out rather than folded into a ternary:
+         8.1.1 an action card/ability has the asset-cost of 1 action point;
+         8.1.6 an instant has none — it needs only priority;
+         5.3.5 go again GAINS 1 action point. That is a gain, not a refund,
+               so for an action it is spend-then-gain (the familiar "kept")
+               and for an instant it is a genuine +1.
+       For every action card this is the identical arithmetic to before. */
+    const apCost = costsAP(card) ? 1 : 0;
+    actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
+    if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
+    else if(!apCost) n = L(n, `${card.name} plays at instant speed — no action point spent.`);
     return openPrompt(winCheck(n));
   };
 
@@ -2993,8 +3011,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     const c = act(s).hand[i]; if(!c) return s;
     const fx = fxParse(c);
-    const ok = inAtk ? (isAR(c) || (isInstantT(c)&&fx.ops.length>0) || (!isAttack(c)&&(fx.self||0)>0)) : (fx.dr || (isInstantT(c)&&fx.ops.length>0));
-    if(!ok) return s;
+    /* THE REACTION STEP IS TWO WINDOWS, NOT ONE (CR 8.1.2a / 8.1.3a). The
+       attacking player may play attack reactions, the defending player
+       defense reactions, and neither may play the other's. `speedAllowed`
+       has already split them by attacker; `rxAllowed` answers the card half
+       of the same question, so no site here restates it.
+
+       The attack window used to also admit `!isAttack(c) && fx.self>0` — any
+       non-attack card carrying a pump. That let three plain ACTION cards
+       (Flying High, Hit and Run, Cutty Shark) be played in the reaction step,
+       where no action card is legal. */
+    const rxWin = inAtk ? "attack-reaction" : "defense-reaction";
+    if(!rxAllowed(c, rxWin)){
+      /* naming the refusal, not a dead tap — the hand dims these, but a tap
+         that lands on one should still say why */
+      if(isRx(c)) return L(s, `${c.name} is ${isAR(c)?"an attack":"a defense"} reaction — this is the ${inAtk?"attacking":"defending"} player's window.`);
+      return L(s, `${c.name} isn't a reaction or an instant — it can't be played in the reaction step.`);
+    }
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
     let n = {...s};
@@ -3041,7 +3074,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const playRxA = () => setG(s=>{
     if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
-    if(!(fx.dr || (isInstantT(c)&&fx.ops.length>0))) return L(s, `${c.name} isn't a reaction.`);
+    if(!rxAllowed(c, "defense-reaction")) return L(s, isAR(c)
+      ? `${c.name} is an attack reaction — only the attacking player may play one.`
+      : `${c.name} isn't a defense reaction or an instant.`);
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
     const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
@@ -3216,7 +3251,25 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const sel = act(s).paySel.includes(idx) ? act(s).paySel.filter(i=>i!==idx) : [...act(s).paySel,idx];
       const n = {...s}; actMut(n).paySel = sel; return n;
     }
-    if(act(s).ap<1) return L(s,"No action point left — end your turn.");
+    /* A REACTION BELONGS TO THE REACTION STEP, AND TO ONE SEAT IN IT.
+       CR 8.1.2a — an attack reaction "can only be played/activated by a
+       player who controls the attack during the Reaction Step of combat";
+       CR 8.1.3a says the same for a defense reaction and the player whose
+       hero is the attack-target. tryPlay is only ever reached in the action
+       phase (block/stack return above), which is neither, so the card is
+       refused here and told which window it belongs to. 23 pool cards used
+       to be playable straight out of the action phase — Reduce to Runechant
+       minting a runechant on your own turn, the Warrior reprise reactions
+       swinging with no attack to react to. playRx/playRxA are the legal
+       doors, and they ask rxAllowed the same question. */
+    if(isRx(card))
+      return L(s, `${card.name} is ${isAR(card)?"an attack":"a defense"} reaction — it can only be played in the reaction step`
+                + `${isAR(card)?", by the player who controls the attack":", by the player being attacked"}.`);
+    /* CR 8.1.6 — an instant "can be played/activated any time the player has
+       priority", so being out of action points is not a reason to refuse one.
+       The gate asks costsAP, the same question execute's arithmetic asks; two
+       hand-rolled answers to one rule is how they drift apart. */
+    if(costsAP(card) && act(s).ap<1) return L(s,"No action point left — end your turn.");
     /* RULING 2026-07-25: "Play this only if …" gates the card being played at
        all. Bear Hug reads the pitch zone; Run Roughshod reads the graveyard
        for a 6+ power card stamped with this turn. Refuse and say why. */
@@ -3760,8 +3813,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const handAct = (c,i) => {
     if(g.mode==="block"){
       const fx = fxParse(c);
-      const rxD = fx.dr || (isInstantT(c)&&fx.ops.length>0);
-      if(g.bphase==="react"){ if(rxD && (c.cost||0)<=you(g).res) playRx(i); }
+      /* the react branch hands EVERY tap to playRx rather than pre-screening
+         it: playRx names both of its refusals — wrong window (CR 8.1.2a /
+         8.1.3a) and not enough floating — and a tap that silently does
+         nothing is the one outcome this UI never wants. */
+      if(g.bphase==="react") playRx(i);
       else if(c.def!=null && !fx.dr) toggleBlock("h",c.uid);
     }
     else if(g.mode==="stack") playRx(i);
@@ -3809,8 +3865,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   };
   const handCell = (c,i) => {
     const fx = fxParse(c);
-    const rxD = fx.dr || (isInstantT(c)&&fx.ops.length>0);
-    const rxA = isAR(c) || (isInstantT(c)&&fx.ops.length>0) || (!isAttack(c)&&(fx.self||0)>0);
+    /* the dim must ask exactly what playRx asks, or a card looks playable
+       and refuses when tapped (CR 8.1.2a / 8.1.3a live in rxAllowed) */
+    const rxD = rxAllowed(c, "defense-reaction");
+    const rxA = rxAllowed(c, "attack-reaction");
     const canDefend = c.def!=null;
     const sel = g.mode==="pay" ? you(g).paySel.includes(i) : g.mode==="block" ? you(g).blockH.includes(c.uid) : false;
     const dim = (g.mode==="block" && (g.bphase==="defend" ? (!(canDefend && !fx.dr) && !sel) : !rxD)) || (g.mode==="stack" && !rxA);
@@ -3828,7 +3886,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(g.bphase==="defend"){
         you(g).gear.forEach((gr,i)=>{ if(gearDef(gr)>0 && !gr.destroyed) out.push({card:{...gr,def:gearDef(gr)}, zone:"equip", sel:you(g).blockG.includes(i), verb:"tap again to defend", fn:()=>toggleBlock("g",i)}); });
       } else if(g.bphase==="react" && you(g).arsenal){ const fx=fxParse(you(g).arsenal);
-        if(fx.dr||(isInstantT(you(g).arsenal)&&fx.ops.length>0)) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to react", fn:playRxA});
+        if(rxAllowed(you(g).arsenal, "defense-reaction")) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to react", fn:playRxA});
         else if(built.arsenalInstant && !isAttack(you(g).arsenal) && (you(g).arsenal.pitch||0)>=3 && fx.ops.length>0) out.push({card:you(g).arsenal, zone:"arsenal", verb:"tap again to react", fn:playArsenalInstant});
       }
       return out;

@@ -1408,3 +1408,129 @@ test("payCost — does not collide with optCost's banish/discard pairing on the 
   assert.equal(fx.payCost, undefined);
   assert.ok(fx.optCost);
 });
+
+/* ===================================================================
+   THE ACTION POINT IS AN *ACTION'S* COST — CR 8.1.1 / 8.1.6.
+
+   Reported from the table (2026-08-01): instants were eating the
+   turn's action point. `execute` charged every non-attack that
+   resolved through it, so Energy Potion's "Instant - Destroy this:
+   Gain {r}{r}" cost you your action, and Achilles Accelerator's
+   "Instant - Destroy this: Gain 1 action point" netted to zero — the
+   equipment did nothing at all.
+
+   Coverage cannot see this: every one of these cards reads as tier
+   `full`. The text was read correctly and then charged wrongly.
+   =================================================================== */
+
+test("costsAP — an action card carries the action point cost (CR 8.1.1)", () => {
+  assert.equal(P.costsAP({name:"apCost Drill Action", tt:"Generic Action", pitch:1}), true);
+  assert.equal(P.costsAP({name:"apCost Drill Attack", tt:"Generic Action - Attack", pitch:1}), true);
+  /* a weapon swing is an "Action - …: Attack" ability, so it pays too */
+  assert.equal(P.costsAP({name:"apCost Drill Weapon", tt:"Warrior Weapon - Sword (1H)", pitch:0}), true);
+});
+
+test("costsAP — an instant does not (CR 8.1.6)", () => {
+  /* real pool cards, verbatim type lines */
+  assert.equal(P.costsAP({name:"Frost Spike", tt:"Ice Wizard Instant", pitch:1}), false);
+  assert.equal(P.costsAP({name:"Concealed Object", tt:"Reviled Instant - Item", pitch:2}), false);
+  assert.equal(P.costsAP({name:"Memorial Ground", tt:"Generic Instant", pitch:3}), false);
+});
+
+test("costsAP — an 'Instant - …' ACTIVATED ability is free too, and its powCard says so", () => {
+  /* Achilles Accelerator. parseHeroPower stamps kind:"instant" on the
+     ability; index.html turns that into the powCard's `_instant`. Charging
+     an action point here is what made this equipment a no-op: it gains
+     exactly the one point it was being charged. */
+  const pw = P.parseHeroPower("Instant - Destroy Achilles Accelerator: Gain 1 action point.", true);
+  assert.ok(pw, "the ability must parse at all");
+  assert.equal(pw.kind, "instant");
+  assert.deepEqual(P.classifyClause(pw.eff).ops, [["ap",1]]);
+  assert.equal(P.costsAP({name:"Achilles Accelerator ability", tt:"Equipment Ability", _instant:true}), false);
+  /* and the "Action - …" sibling still pays (Timesnap Potion: gain 2, spend
+     1, net +1 — it must not silently become +2) */
+  const act = P.parseHeroPower("Action - Destroy this: Gain 2 action points.", true);
+  assert.equal(act.kind, "action");
+  assert.equal(P.costsAP({name:"Timesnap ability", tt:"Equipment Ability", _instant:false}), true);
+});
+
+test("isInstantT reads the FRONT face of a double-faced type line", () => {
+  /* Both pool DFCs print "Action // … Instant". You play the front face;
+     the back is reachable only by melding. Reading the whole line made
+     them instants, which would have let two real action cards skip their
+     action point — strictly stronger than printed. */
+  const seeds = {name:"Arcane Seeds // Life", tt:"Runeblade Action // Earth Instant", pitch:3};
+  const burn  = {name:"Burn Up // Shock",     tt:"Runeblade Action // Lightning Instant", pitch:1};
+  assert.equal(P.isInstantT(seeds), false);
+  assert.equal(P.isInstantT(burn), false);
+  assert.equal(P.costsAP(seeds), true, "Arcane Seeds is played as an ACTION and pays for it");
+  assert.equal(P.costsAP(burn), true, "Burn Up is played as an ACTION and pays for it");
+  /* the genuine instants are unaffected */
+  assert.equal(P.isInstantT({name:"Frost Spike", tt:"Ice Wizard Instant"}), true);
+  /* and a reaction is never an instant, front face or not */
+  assert.equal(P.isInstantT({name:"Sink Below drill", tt:"Generic Defense Reaction"}), false);
+  assert.equal(P.isAR({name:"AR drill", tt:"Generic Attack Reaction"}), true);
+});
+
+/* ===================================================================
+   A REACTION BELONGS TO THE REACTION STEP — CR 8.1.2a / 8.1.3a.
+
+   The reaction step is TWO windows, not one: the attacking player may
+   play attack reactions, the defending player defense reactions, and
+   neither may play the other's. Before v2.40 `tryPlay` accepted a
+   reaction straight out of the ACTION phase (23 pool cards — Reduce to
+   Runechant minting a runechant on your own turn), and the attack
+   window also admitted any non-attack carrying a pump, which let three
+   plain action cards in.
+
+   `speedAllowed` splits the windows by attacker; `rxAllowed` answers
+   the card half. These pin the card half.
+   =================================================================== */
+
+test("rxAllowed — the attacking player's window takes attack reactions, not defense ones", () => {
+  const ar = {name:"Ironsong Response", pitch:1, tt:"Warrior Attack Reaction", kw:["Reprise"],
+    tx:"Reprise - If the defending hero has defended with a card from their hand this chain link, target weapon attack gains +3{p}."};
+  const dr = {name:"Reduce to Runechant", pitch:1, tt:"Runeblade Defense Reaction", kw:[],
+    tx:"Reduce to Runechant costs {r} less to play for each Runechant you control.\nCreate a Runechant token."};
+  assert.equal(P.rxAllowed(ar, "attack-reaction"), true);
+  assert.equal(P.rxAllowed(dr, "attack-reaction"), false, "CR 8.1.3a — a defense reaction belongs to the defending player");
+  assert.equal(P.rxAllowed(dr, "defense-reaction"), true);
+  assert.equal(P.rxAllowed(ar, "defense-reaction"), false, "CR 8.1.2a — an attack reaction belongs to the attacking player");
+});
+
+test("rxAllowed — an instant is legal in either window (CR 8.1.6), an action in neither", () => {
+  const inst = {name:"Frost Spike", pitch:3, tt:"Ice Wizard Instant", kw:[],
+    tx:"Create a Frostbite token in an exposed head, chest, arms, or legs zone."};
+  assert.equal(P.rxAllowed(inst, "attack-reaction"), true);
+  assert.equal(P.rxAllowed(inst, "defense-reaction"), true);
+  /* Flying High is a plain Generic Action that pumps. The old attack-window
+     test was `!isAttack(c) && fx.self>0`, which admitted it — no action card
+     is legal in the reaction step. Hit and Run and Cutty Shark were the
+     other two. */
+  const act = {name:"Flying High", pitch:1, tt:"Generic Action", kw:["Go again"],
+    tx:"Your next attack this turn gets go again. If it's red, it gets +1{p}.\nGo again"};
+  assert.equal(P.rxAllowed(act, "attack-reaction"), false, "a plain action card is not an attack reaction");
+  assert.equal(P.rxAllowed(act, "defense-reaction"), false);
+});
+
+test("rxAllowed — an instant the parser reads nothing from is a dead tap, not an offer", () => {
+  /* the one non-citation in the rule: an unscripted instant would arm the
+     tap and then do nothing. Refusing it is a trainer decision, not a CR one. */
+  const blank = {name:"rxAllowed Drill Blank Instant", pitch:2, tt:"Generic Instant", kw:[], tx:"Transmogrify the fortress."};
+  assert.equal(P.fxParse(blank).ops.length, 0);
+  assert.equal(P.rxAllowed(blank, "attack-reaction"), false);
+});
+
+test("isDR / isRx read the printed type, and fx.dr is the same answer", () => {
+  const dr = {name:"isDR Drill Defense", pitch:3, tt:"Generic Defense Reaction", kw:[], tx:"Go again"};
+  const ar = {name:"isDR Drill Attack", pitch:1, tt:"Warrior Attack Reaction", kw:[], tx:"Target attack gains +2{p}."};
+  assert.equal(P.isDR(dr), true);   assert.equal(P.isAR(dr), false);
+  assert.equal(P.isAR(ar), true);   assert.equal(P.isDR(ar), false);
+  assert.equal(P.isRx(dr) && P.isRx(ar), true);
+  assert.equal(P.isRx({name:"isDR Drill Plain", tt:"Generic Action"}), false);
+  /* fx.dr must not be a second copy of the regex — it drifts from isDR the
+     moment one of them learns something the other does not (the DFC front
+     face was exactly that lesson). */
+  assert.equal(P.fxParse(dr).dr, P.isDR(dr));
+  assert.equal(P.fxParse(ar).dr, P.isDR(ar));
+});

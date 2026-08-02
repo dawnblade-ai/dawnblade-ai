@@ -745,7 +745,10 @@ function fxParse(card){
     ? fusionLine.replace(/\s*fusion$/i,"").split(/,\s*| and\/or | and /i).map(s=>s.trim().toLowerCase()).filter(Boolean)
     : null;
   const fx = {ga: gaStandalone || (!gaMentioned && kw.some(k=>k==="go again")),
-    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+    /* `dr` is isDR's answer, not a second copy of the regex: the type
+       question is asked in one place so a DFC's front face is read the
+       same way here as everywhere else. */
+    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -1109,15 +1112,64 @@ function weaponCost(tx){
   return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs), needSteam:/remove a steam counter/i.test(cs)};
 }
 const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) || new RegExp("\\b"+k+"\\b","i").test(c.tx||"");
-const isAR = c => /attack reaction/i.test(c.tt||"");
-const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt||"");
+/* A DOUBLE-FACED CARD'S TYPE LINE CARRIES BOTH FACES — "Runeblade Action //
+   Earth Instant". The card you PLAY is the front face; the back is reachable
+   only by melding, so every type question is asked of the front. Reading the
+   whole line called Arcane Seeds // Life and Burn Up // Shock instants, which
+   is exactly how an action card would slip past its action point below. */
+const frontFace = c => String((c && c.tt) || "").split("//")[0];
+const isAR = c => /attack reaction/i.test(frontFace(c));
+const isDR = c => /defense reaction/i.test(frontFace(c));
+const isRx = c => isAR(c) || isDR(c);
+const isInstantT = c => /\binstant\b/i.test(frontFace(c)) && !/reaction/i.test(frontFace(c));
+
+/* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
+   CR 8.1.2a — an attack reaction "can only be played/activated by a
+   player who controls the attack during the Reaction Step of combat."
+   CR 8.1.3a — a defense reaction "can only be played/activated by a
+   player who controls a hero as an attack-target during the Reaction
+   Step of combat."
+   CR 8.1.6 — an instant is legal in any window where you hold priority.
+
+   So the reaction step is TWO windows, not one: the attacking player may
+   play attack reactions, the defending player defense reactions, and
+   neither may play the other's. `win` is a window name straight out of
+   priority.js's `speedAllowed`, which already splits them by attacker —
+   this answers the card half of the same question.
+
+   The `fx.ops.length` test on an instant is a TRAINER concern, not a
+   rules one: an instant the parser reads nothing from would arm the tap
+   and then do nothing, which is a dead tap rather than a refusal. It is
+   the one thing here that is not a citation. */
+function rxAllowed(c, win){
+  if(!c) return false;
+  const inst = isInstantT(c) && fxParse(c).ops.length > 0;
+  if(win === "attack-reaction")  return isAR(c) || inst;
+  if(win === "defense-reaction") return isDR(c) || inst;
+  return inst;
+}
+
+/* ---- WHAT COSTS AN ACTION POINT (CR 8.1.1 / 8.1.6) ------------------
+   CR 8.1.1 — "An action card/activated ability has the additional
+   asset-cost of one action point to play/activate."
+   CR 8.1.6 — "A card/activated ability with the type instant can be
+   played/activated any time the player has priority." No such cost.
+
+   One question, asked in ONE place: the trainer's play gate and its
+   resolution arithmetic must not answer it separately, or they drift.
+   `_instant` is the flag parseHeroPower stamps on the powCard of an
+   "Instant - …" activated ability, so a piece of equipment answers this
+   the same way a card does — which matters, because "Instant - Destroy
+   this: Gain 1 action point" (Achilles Accelerator) nets to nothing at
+   all if activating it silently spends one. */
+const costsAP = c => !isInstantT(c) && !(c && c._instant);
 
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
-        weaponCost, hasKw, isAR, isInstantT,
+        weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
         isRunechant, runeCount, isAura, auraCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};

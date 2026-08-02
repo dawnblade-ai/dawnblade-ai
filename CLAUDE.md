@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.38
+**Current version:** v2.40
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 522 drills:
+This is `node --test "test/*.test.js"` — currently 580 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -120,6 +120,11 @@ This is `node --test "test/*.test.js"` — currently 522 drills:
    inside `index.html`**, which would silently shadow the module. It also pins
    the engine/trainer **name collisions** (`endTurn`, `other` — `you` was
    retired in v2.24); see "The no-mirror rule" below.
+   **It scans raw source, comments included**, so English prose that reads
+   like a call trips it: a comment saying "both refusals it can give (…"
+   made the guard report `give` as an unbridged bare call. Reword the prose
+   rather than weakening the scan — same discipline as
+   `html-balance.test.js`'s pre-neutralize list.
 5. **Multiplayer groundwork** (`test/sides.test.js`, `test/priority.test.js`,
    `test/rps.test.js`) — see "The two-player migration" below.
    **`test/actor.test.js`** is the actor/perspective ledger: it fails if a
@@ -1331,6 +1336,97 @@ silently fails while the tap still arms.
 
 Allies keep `allySwing`: their attacks are costed (`{r}`, `{t}`) and belong
 with the attack-target wiring (CR 1.4.5), which is a bigger job.
+
+### A reaction belongs to the reaction step, and to ONE SEAT in it (v2.40)
+
+| CR | |
+|---|---|
+| 8.1.2a | an attack reaction "can only be played/activated by a player who **controls the attack** during the Reaction Step of combat" |
+| 8.1.3a | a defense reaction "can only be played/activated by a player who **controls a hero as an attack-target** during the Reaction Step" |
+
+**The reaction step is TWO windows, not one.** `engine/priority.js`'s
+`speedAllowed` has split them by attacker since v2.27 — that is the *seat* half
+of the rule and it was already right. `DawnParser.rxAllowed(card, window)` is
+the *card* half, and it did not exist:
+
+```js
+rxAllowed(c, "attack-reaction")   // isAR(c) || a scripted instant
+rxAllowed(c, "defense-reaction")  // isDR(c) || a scripted instant
+```
+
+Three things were wrong before it:
+
+1. **`tryPlay` accepted a reaction in the ACTION phase — 23 pool cards.** It
+   only asked whether `fxParse` found something playable and never read the
+   printed type. Reduce to Runechant minted a runechant on your own turn; the
+   Warrior reprise attack reactions fired with no attack to react to. Sev-3
+   *illegal play allowed* — the player wins games they should lose.
+2. **The attack window admitted any non-attack with a pump**
+   (`!isAttack(c) && fx.self>0`), which let three plain **Action** cards —
+   Flying High, Hit and Run, Cutty Shark — into the reaction step.
+3. **Five hand-rolled copies of the same test** (`playRx`, `playRxA`,
+   `handAct`, `handCell`'s dim, `playables`' arsenal row). **The dim drifting
+   from `playRx` is a card that looks playable and does nothing when tapped**,
+   which is the failure mode this codebase cares most about. All five now ask
+   `rxAllowed`, and `fx.dr` is `isDR`'s answer rather than a second regex.
+
+**The one line in `rxAllowed` that is not a citation** is `fx.ops.length > 0` on
+the instant branch: an instant the parser reads nothing from would arm the tap
+and then do nothing. That is a trainer decision about dead taps, not a rule, and
+it is commented as such.
+
+Refusals **name the window** in both directions rather than dead-tapping, and
+`advisor.js` no longer offers a reaction as an action-phase candidate — coaching
+a play the game then refuses is worse than not coaching it.
+
+### The action point is an ACTION's cost, not a per-play tax (v2.39)
+
+**An instant costs no action point, and until v2.39 every one of them ate the
+turn's action.** Reported from the table. Three CR rules, and the engine now
+states them in exactly one place — `DawnParser.costsAP`:
+
+| CR | |
+|---|---|
+| 8.1.1 | "An action card/activated ability has the additional asset-cost of one action point to play/activate." |
+| 8.1.6 | an instant "can be played/activated any time the player has priority" — **no such cost** |
+| 5.3.5 | "If the layer has go again, the controlling player **gains** 1 action point." |
+
+Two sites were hand-rolling the answer: `tryPlay` refused *any* play at 0
+action points, and `execute` settled every non-attack with `ga ? keep : -1`.
+Energy Potion ("Instant - Destroy this: Gain {r}{r}") therefore spent your
+action to gain two resources, and Achilles Accelerator ("Instant - Destroy
+this: **Gain 1 action point**") netted to zero — the equipment did nothing at
+all. 24 instant cards and 26 "Instant - …" abilities are in the pool.
+
+**Coverage cannot see this class of bug and neither can the fairness sweep.**
+Every affected card reads tier `full`: the text was read correctly and then
+*charged* wrongly. The sweep is deliberately one-sided (stronger-than-printed
+only), and this was a card being **weaker** than printed.
+
+The arithmetic is deliberately spelled out rather than folded back into a
+ternary, because **go again is a GAIN, not a refund**:
+
+```js
+const apCost = costsAP(card) ? 1 : 0;
+actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
+```
+
+For an action that is spend-then-gain — the familiar "kept", identical
+arithmetic to before. For an instant it is a genuine **+1** (CR 5.3.5), which
+no `keep`-shaped expression can say.
+
+**THE DOUBLE-FACED TYPE LINE IS WHAT KEPT THE FIX HONEST.** `isInstantT` tested
+the whole printed line, and both pool DFCs print *"Runeblade Action // Earth
+Instant"* — so `Arcane Seeds // Life` and `Burn Up // Shock` read as instants.
+You play the **front** face; the back is reachable only by melding. Exempting
+them would have handed two real action cards a free action point: strictly
+stronger than printed, which is the direction that steals games. `frontFace`
+splits on `//` and `isAR` reads it too, for the same reason. When a helper
+answers a question about *the card you are playing*, ask it of the front face.
+
+`advisor.js` no longer returns "End turn — action point spent." the moment the
+point is gone; it filters its candidates to what is still legal (instants, plus
+the ally swing the trainer models as free and says so in the log).
 
 ### Pitching is on demand, never proactive
 

@@ -9,6 +9,105 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.40 — a reaction belongs to the reaction step, and to one seat in it
+
+Found while fixing v2.39 and fixed on the user's call. Two rules, and the
+trainer honoured neither:
+
+| CR | |
+|---|---|
+| 8.1.2a | an attack reaction "can only be played/activated by a player who **controls the attack** during the Reaction Step of combat" |
+| 8.1.3a | a defense reaction "can only be played/activated by a player who **controls a hero as an attack-target** during the Reaction Step" |
+
+**1. `tryPlay` accepted a reaction straight out of the action phase — 23 pool
+cards.** The gate only asked whether `fxParse` had found something playable and
+never looked at the printed type, so Reduce to Runechant minted a runechant on
+your own turn and the four Warrior reprise attack reactions fired with no
+attack to react to. That is the sev-3 "illegal play allowed" category: the
+player wins games they should lose, and the sim teaches wrong play. It now
+refuses and names the window the card belongs to.
+
+**2. The attack-reaction window admitted any non-attack carrying a pump.** The
+test was `isAR(c) || instant || (!isAttack(c) && fx.self > 0)`, and that third
+disjunct let three plain **Action** cards — Flying High, Hit and Run, and Cutty
+Shark, Quick Clip — be played in the reaction step, where no action card is
+legal.
+
+**3. Five hand-rolled copies of one question.** `playRx`, `playRxA`, `handAct`,
+`handCell`'s dim and the arsenal row in `playables` each spelled out
+`fx.dr || (isInstantT(c) && fx.ops.length > 0)` for themselves. Five chances to
+drift, and the dim drifting from `playRx` is precisely a card that looks
+playable and does nothing when tapped. `DawnParser.rxAllowed(card, window)` is
+now the single statement and all five ask it; `fx.dr` is `isDR`'s answer rather
+than a second copy of the regex.
+
+`speedAllowed` already split the reaction step into two windows by attacker
+(v2.27) — the gap was only ever the card half of the question. The seat half
+needed no change, which is what made this small.
+
+The refusals **say why** rather than dead-tapping, in both directions: an
+attack reaction tapped in the defending player's window is told whose window it
+is. `advisor.js` no longer offers a reaction as an action-phase candidate —
+coaching a play the game then refuses is worse than not coaching it.
+
+Seven drills, each verified to bite by reintroducing the bug it names.
+
+---
+
+## v2.39 — the action point is an ACTION's cost, not a per-play tax
+
+Reported from the table: **instants were consuming the action point.** They
+were, at two sites, and both were hand-rolled answers to one rule:
+
+| CR | |
+|---|---|
+| 8.1.1 | "An action card/activated ability has the additional asset-cost of one action point to play/activate." |
+| 8.1.6 | "A card/activated ability with the type instant can be played/activated any time the player has priority." — no such cost |
+| 5.3.5 | "If the layer has go again, the controlling player gains 1 action point." |
+
+`tryPlay` refused *any* play at 0 action points, and `execute` settled every
+non-attack with `ga ? keep : -1`. So an instant cost a card **and** the turn's
+action:
+
+| card | printed | what it did |
+|---|---|---|
+| Energy Potion | Instant - Destroy this: Gain {r}{r} | spent your action to gain 2 resources |
+| Achilles Accelerator | Instant - Destroy this: **Gain 1 action point** | netted to **zero** — the equipment did nothing at all |
+| Frost Spike, Memorial Ground, Act of Glory … | 24 instant cards in the pool | each one ended your action phase |
+
+**Coverage could not see any of it.** Every card above reads as tier `full` —
+the text was read correctly and then *charged* wrongly, the same blind spot
+the fairness sweep exists for (and the sweep is one-sided by design: this is a
+card being weaker than printed, not stronger).
+
+`DawnParser.costsAP` states the rule once and both trainer sites ask it.
+The arithmetic is now spelled out rather than folded into a ternary —
+`ap - apCost + (ga ? 1 : 0)` — because CR 5.3.5 is a **gain**, not a refund:
+for an action that is spend-then-gain (the familiar "kept"), and for an instant
+it is a genuine +1. Identical arithmetic to before for every action card.
+
+**26 pool cards also carry an "Instant - …" activated ability** — Spellfire
+Cloak, Talismanic Lens, Pouncing Paws, Seeker's Mitts and the rest. They answer
+through the same helper via the `_instant` flag `parseHeroPower` already
+stamped on their powCard, so equipment did not need its own branch.
+
+**The double-faced type line is read front-face-first, and that guard is what
+keeps the fix honest.** `isInstantT` tested the whole printed line, so
+`Arcane Seeds // Life` and `Burn Up // Shock` — "Runeblade Action // Earth
+Instant" — read as instants. You play the *front* face; the back is reachable
+only by melding. Left alone, the fix would have handed two real action cards a
+free action point: strictly stronger than printed, the direction that steals
+games. `isAR` reads the front face for the same reason.
+
+`advisor.js` returned "End turn — action point spent." the moment the point was
+gone, which now coaches past a live instant. It builds its candidates either
+way and filters to what is still legal (instants, plus the ally swing the
+trainer models as free and says so).
+
+Seven drills, each verified to bite by reintroducing the bug it names.
+
+---
+
 ## v2.38 — a table number, and two devices at it
 
 The sync layer is no longer headless. All four modules are in index.html's

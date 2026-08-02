@@ -833,3 +833,104 @@ test("peek — the preview is positioned ABOVE the hand, measured not guessed", 
   assert.match(eff, /addEventListener\("resize"/,
     "and it must re-measure on resize so a rotation does not strand it");
 });
+
+/* ===================================================================
+   THE ACTION POINT IS AN *ACTION'S* COST — CR 8.1.1 / 8.1.6 / 5.3.5.
+
+   Reported from the table (2026-08-01): instants consumed the turn's
+   action point. Two sites, one rule, and both were hand-rolled:
+   `tryPlay` refused any play at 0 action points, and `execute` charged
+   every non-attack that resolved through it. Energy Potion's "Instant -
+   Destroy this: Gain {r}{r}" therefore cost you your action, and
+   Achilles Accelerator's "Instant - Destroy this: Gain 1 action point"
+   netted to exactly nothing.
+
+   The engine answers it once, in costsAP; these pin that both trainer
+   sites ask it rather than answering it again themselves.
+   =================================================================== */
+
+test("action point — the play gate exempts instants (CR 8.1.6)", () => {
+  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx)"),
+                          HTML.indexOf("const confirmPay = () => setG"));
+  const gate = body.match(/^.*ap<1.*$/m);
+  assert.ok(gate, "tryPlay must still refuse an ACTION with no action point");
+  assert.match(gate[0], /costsAP\(card\)\s*&&/,
+    "CR 8.1.6 — an instant may be played any time the player has priority, "
+  + "so the 0-action-point refusal must ask costsAP first");
+});
+
+test("action point — resolution charges an action, not an instant (CR 8.1.1)", () => {
+  const body = HTML.slice(HTML.indexOf("const execute = (s,card,from,idx)"),
+                          HTML.indexOf("const playRx = i => setG"));
+  /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
+     again GAINS an action point; it is not a refund. For an action that is
+     spend-then-gain (the familiar "kept"); for an instant it is a genuine
+     +1, and only the spelled-out arithmetic gets both right. */
+  assert.match(body, /const apCost = costsAP\(card\) \? 1 : 0;/,
+    "the charge must be gated on costsAP — `ga ? keep : -1` charges instants too");
+  assert.match(body, /actMut\(n\)\.ap = act\(n\)\.ap - apCost \+ \(ga \? 1 : 0\);/,
+    "CR 5.3.5 — go again gains 1 action point, so the two rules compose "
+  + "rather than being folded into a ternary");
+  assert.ok(!/ga \? act\(n\)\.ap : act\(n\)\.ap-1/.test(body),
+    "the old ternary charged every non-attack, instants included");
+  /* the ONE bare -1 left in execute is the phantasm teardown, and it is an
+     ATTACK being popped: the point was spent on play and its go again never
+     resolves, so there is nothing to gain back. */
+  const bare = body.match(/actMut\(n\)\.ap = act\(n\)\.ap - 1;/g) || [];
+  assert.equal(bare.length, 1, "only phantasm's attack teardown may charge bare");
+  assert.ok(body.indexOf("hasKw(card,\"phantasm\")") < body.indexOf("actMut(n).ap = act(n).ap - 1;"),
+    "and it must be the one inside the phantasm branch");
+});
+
+test("action point — an attack still pays for itself", () => {
+  /* attacks are action cards (CR 8.1.1) and settle in resolveStack, which
+     the fix deliberately did not touch. A regression here would be an
+     attack going free. */
+  const body = HTML.slice(HTML.indexOf("const resolveStack = () => setG"),
+                          HTML.indexOf("const maybeBoost = "));
+  assert.match(body, /actMut\(n\)\.ap = n\.pend\.ga \? act\(n\)\.ap : act\(n\)\.ap-1;/,
+    "an attack costs an action point whether or not it is an instant-typed card");
+});
+
+/* ===================================================================
+   A REACTION BELONGS TO THE REACTION STEP, AND TO ONE SEAT IN IT.
+   CR 8.1.2a / 8.1.3a. The trainer had five hand-rolled copies of "does
+   this card fit this window"; `rxAllowed` is the one statement, and
+   these pin that every site asks it.
+   =================================================================== */
+
+test("reactions — tryPlay refuses one in the action phase (CR 8.1.2a / 8.1.3a)", () => {
+  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx)"),
+                          HTML.indexOf("const confirmPay = () => setG"));
+  assert.match(body, /if\(isRx\(card\)\)/,
+    "tryPlay is only reached in the action phase, which is not the reaction step");
+  /* and it must name the window, not dead-tap: the trainer's own rule is
+     that a refusal says why */
+  assert.match(body, /reaction step/, "the refusal must name where the card does belong");
+  assert.ok(body.indexOf("if(isRx(card))") < body.indexOf("costsAP(card) && act(s).ap<1"),
+    "refuse the card before charging or gating on resources");
+});
+
+test("reactions — playRx splits the window by seat and asks rxAllowed", () => {
+  const body = HTML.slice(HTML.indexOf("const playRx = i => setG"),
+                          HTML.indexOf("const playRxA = () => setG"));
+  assert.match(body, /rxAllowed\(c, rxWin\)/, "the card half of the rule comes from the engine");
+  assert.match(body, /inAtk \? "attack-reaction" : "defense-reaction"/,
+    "CR 8.1.2a/8.1.3a — the attacking player's window is not the defending player's");
+  /* the disjunct that let three plain action cards into the reaction step */
+  assert.ok(!/!isAttack\(c\)&&\(fx\.self\|\|0\)>0/.test(body),
+    "a non-attack carrying a pump is still an ACTION card — illegal in the reaction step");
+});
+
+test("reactions — no site in the trainer hand-rolls the window test any more", () => {
+  /* Five copies of `fx.dr || (isInstantT(c) && fx.ops.length>0)` is five
+     chances to drift, and the dim in handCell drifting from playRx is a card
+     that looks playable and refuses when tapped. */
+  const babel = HTML.slice(HTML.indexOf("const playRx = i => setG"));
+  assert.ok(!/isInstantT\([a-z()g.]*\)\s*&&\s*fx\.ops\.length/.test(babel),
+    "rxAllowed owns this test — do not restate it in the trainer");
+  const cell = HTML.slice(HTML.indexOf("const handCell = (c,i)"), HTML.indexOf("const playables = "));
+  assert.match(cell, /rxAllowed\(c, "defense-reaction"\)/);
+  assert.match(cell, /rxAllowed\(c, "attack-reaction"\)/,
+    "the hand dim must ask exactly what playRx asks");
+});
