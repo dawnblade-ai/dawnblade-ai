@@ -9,6 +9,91 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.41 — the opponent picks a hero
+
+`ROADMAP-OPPONENT.md` Phase 1, and step 2 of the honest order in
+`HANDOFF.md`. Seat 1 is built by `buildSide` like any hero: real life
+total, real intellect, real equipment, real 55-card deck. It still takes
+**no action phase**, so it blocks with printed defence and nothing more —
+which is why a real deck is safe here. The roadmap's standing warning
+("do not give it a real deck until the opponent can resolve the cards in
+that deck") is about *playing* cards, and blocking with printed defence
+works for any card without the parser reading a word.
+
+**The Dummy stays selectable and stays the default.** It is the
+regression harness for every phase above this one, and its vanilla pile
+is the one deck where nothing can be faked.
+
+### The hero passives were seat 0's, silently
+
+`built.viseraiPassive` meant *the player's* Viserai — the same
+seat-0-means-the-actor confusion the actor/perspective split fixed for
+zones in v2.24, one layer up. `built.both[i]` is the ledger and `bAct(s)`
+is its reader; five rules sites moved onto it (`viseraiPassive`,
+`lyathBoo`, `iceFrostbite`, `arsenalInstant`). Only the UI still reaches
+`built.*` directly, because the UI renders seat 0 by definition.
+
+There is deliberately **no `bFoe`** — nothing needs one, and a dead
+helper beside a live one is how `sides.js`'s `you`/`foe` came to be
+deleted in v2.24.
+
+### The landmine, defused
+
+`DUMMY_INT` is gone from `newTurn`; the refill reads `opp(s).int`, a
+property of whoever is sitting there. It is still the stand-in for the
+turn seat 1 never takes, and it is still the **only** refill site — which
+is exactly what the roadmap warned about. When seat 1 gets a real end
+phase the draw moves there and becomes turn-1-only for both seats (CR
+4.4.3f); adding that without removing this draws twice.
+
+**The graveyard recycle stays a dummy affordance.** "A sparring partner
+that decked out would stop sparring" is true of the prop and false of a
+hero, so a real opponent runs its deck down and simply has fewer blockers.
+It does not yet *lose* for it — what decking out costs is a win condition
+the player cannot currently reach, and the roadmap says to decide that
+once, at Phase 2. Both approximations are logged rather than silent.
+
+### Caught in play: the opponent was wearing eight pieces of iron
+
+Passing `{}` for the opponent's loadout handed Azalea all **eight**
+printed pieces — two helms, two legs, the lot — where the slot rules
+allow about five. Not cosmetic: `dummyDefence` raises one piece per
+attack and `chainBlocked` only stops a piece re-blocking the *same*
+chain, so every extra piece is another free block later in the turn.
+Strictly stronger than printed, which is the direction that steals games.
+Both seats now go through `defaultPicks`, the same function the loadout
+screen uses, so one set of slot rules governs both.
+
+Found by opening the game and reading the dealt state, not by a drill —
+as usual.
+
+### Where it is chosen
+
+The **scout panel**, not the throw: you see the opponent's hero and *then*
+you sideboard. Putting the pick after the loadout would show you the
+matchup too late to use it, which is the one thing that panel exists to
+prevent. It rides in `cfg`, which already flows Loadout → Pregame →
+Battle. Deliberately **not** saved per hero the way the loadout is — the
+opponent is a property of the match, not of your deck.
+
+The scripted swing now announces itself every time (*"Azalea swings for 3
+— scripted escalation, not a card from hand"*), per Phase 0's rule that
+the sequence is the lesson. Roughly two dozen log and UI strings that said
+"the dummy" now read the seat's own name, via `foe(n).name` / `opp(g).name`
+so they stay correct once seat 1 acts.
+
+### Known, and pre-existing
+
+- `CHAIN-CLOSED-WITH-LINKS` fires on the opponent-first opening —
+  `foeSwing` pushes a link without opening the chain. Confirmed present
+  before this change; not introduced here.
+- `defaultPicks` gates 2H selection on `power != null`, and **bows print
+  no power**, so Azalea defaults to no weapon and no quiver. Affects the
+  player's own loadout too. Harmless while seat 1 never attacks; it
+  matters at Phase 2.
+
+---
+
 ## v2.40 — a reaction belongs to the reaction step, and to one seat in it
 
 Found while fixing v2.39 and fixed on the user's call. Two rules, and the
