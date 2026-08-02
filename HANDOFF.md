@@ -1,6 +1,64 @@
-# Handoff — Dawnblade, at v2.38
+# Handoff — Dawnblade, at v2.40
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
+
+---
+
+## IN FLIGHT — branch `multiplayer-hero-select`
+
+**Goal (user, 2026-08-02):** the *Find an opponent* screen should let each
+player pick a hero and start a real game.
+
+**Landed:** `buildSide(h, db, opts, rng, ctr)` — module-level in `index.html`,
+just above `Battle`. One hero, one build, called once per seat. `built` now
+calls it for seat 0 and keeps the dummy's two stubs. Verified in a live Kayo
+game: 86 cards, 86 distinct uids, invariant judge clean, 580 drills green.
+Two things it deliberately guards, both of which would have failed silently —
+the uid counter is **passed in and shared** (two independent calls would hand
+both seats uid 1..N, i.e. `CARD-IN-TWO-ZONES`), and the rng threads
+seat 0 → seat 1 → Battle in a **fixed order** so two peers dealing from the
+same table code deal the same decks.
+
+### DO NOT PUT THE HERO PICKER ON THE TABLE SCREEN FIRST
+
+It would build a screen that lies. The table runs `engine/actions.js`'s
+**blank drill decks** — two players would pick Kayo and Iyslander and then
+play vanilla cards with no rules text. That is precisely what
+`ROADMAP-OPPONENT.md` warns against: *"Trading an honest approximation for a
+dishonest one is a step backwards even if it looks like progress."*
+
+The honest order, each step leaving the game playable:
+
+1. ✅ `buildSide` — done, committed.
+2. **Opponent picks a hero in the SOLO game** (`ROADMAP-OPPONENT.md` Phase 1).
+   Real hero, real deck, real equipment; it **blocks** with printed defence and
+   still takes no action phase. Safe today — the roadmap's "do not give it a
+   real deck" warning is about *playing* cards, and blocking with printed
+   defence works for any card. Landmine: `DUMMY_INT` goes here and `newTurn`'s
+   every-turn refill must go **at the same moment** or the opponent draws twice.
+3. **Seat 1 takes an action phase** (Phase 2) — needs `priority.js` wired for
+   real. **97** `mode`/`bphase` refs in `index.html` (45 `g.mode`, 23 `s.mode`,
+   23 `bphase`, 6 `n.mode`). The hard one; own thread.
+4. **Then** the table, and only then the picker.
+
+### The table's architecture fork — decide at step 4, not before
+
+Both peers currently must run the same reducer, and `Battle` is 22 `setG`
+closures rather than a `reduce(state, action)`. Two ways out:
+
+| | cost | trade |
+|---|---|---|
+| **A — lockstep** (the documented design) | extract `judge.js`: the whole rules core into a pure reducer | what `net.js` was built for; Phase C's server move is a relocation of the sequencer |
+| **B — host-authoritative** | far smaller: `net.js` **already has a `SNAPSHOT` message** ("host → guest: the whole game, one JSON object") and the guest already `adopt`s it | host runs all rules, guest is a thin client; host dropping ends the match |
+
+B is much cheaper and the machinery is already built and drilled. It departs
+from `ROADMAP-MULTIPLAYER.md`'s stated design, so it is the user's call.
+**Steps 2 and 3 are required either way** — do them first and decide later.
+
+If B: the hero exchange fits the existing handshake. HELLO carries an opaque
+`setup` payload, the host builds the real state from it before its existing
+`WELCOME` + `SNAPSHOT`, and the guest adopts. `net.js` never learns what a
+hero is.
 
 ---
 
