@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.45
+# Handoff — Dawnblade, at v2.46
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -36,9 +36,9 @@ not port them as part of Phase 1.
 
 ## WHERE THINGS STAND
 
-- `npm test` → **679 drills, all green.** Never leave them red.
+- `npm test` → **694 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way.
-- Branch `multiplayer-hero-select`, at **v2.45**. `main` is at v2.38.
+- Branch `multiplayer-hero-select`, at **v2.46**. `main` is at v2.38.
 - **Unpushed.** The user uploads to GitHub Pages manually — no remote, no
   `gh`, no stored credential. Deploying is not your job.
 - `node` is at `~/node/bin`, **not on PATH** —
@@ -51,10 +51,11 @@ not port them as part of Phase 1.
 | `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, slot rules | **live** — loaded, bridged, in `MODULES` |
 | `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **headless** |
 | `engine/types.js` | what a card IS, off its structured type array | **headless** |
+| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** |
 
-Both headless modules are declared in `test/wire.test.js`'s `HEADLESS`
-list. **Coming off that list must be the same edit that adds them to
-`test/sync.test.js`'s `MODULES`.**
+All three headless modules are declared in `test/wire.test.js`'s
+`HEADLESS` list. **Coming off that list must be the same edit that adds
+them to `test/sync.test.js`'s `MODULES`.**
 
 `judge.js` models the CR turn structure (4.2–4.4), the combat chain
 (7.x), resource payment on demand, defenders from hand and equipment,
@@ -93,29 +94,58 @@ hands, life and zones, never on `feed` prose.
 
 ---
 
+### v2.46 — a seat becomes a policy, and three more CR fixes
+
+`engine/sparring.js` is `act(game, seat) -> action | null`. The rules no
+longer know who is driving a seat, so solo / hotseat / network are the
+same game with a policy, a tap, or a packet calling `reduce`. It
+**proposes and `judge.legal` disposes** (a refusal is always a bug in the
+policy), it **reads no card text** (printed numbers only — drilled), and
+it is **deterministic and never touches `game.rng`**. Driven at each
+other across six matchups and both seatings: 144 games, zero refusals,
+zero invariant violations. **The winner follows the hero, not the chair.**
+
+Porting `dummyDefence` unchanged made the game degenerate — both seats
+blocked 41 of 41 attacks and one finished on full life — because that
+heuristic was written for a seat with no action phase, where a card in
+hand had no use but to block. `takeUpTo` is the fix, with lethal
+overriding it.
+
+Three CR fixes found while proving it:
+
+- **A wall defends ONE chain link.** `blockG` stood until the chain
+  closed, so link 2 got the same iron for free. Nearly invisible: Silver
+  Age equipment is almost all battleworn and wears to 0 after one block.
+- **`endTurn` skipped the opponent's last priority window (CR 4.3.4).**
+  It is now a pass carrying intent; ending a turn takes two actions.
+- **CR 4.4.3d untapped only the gear zone**, and `weaponUsed` conflated a
+  TAP (lifts at the controller's untap step) with a per-turn ALLOWANCE
+  (renews for both seats every turn).
+
+---
+
 ## THE REMAINING PHASE 1 WORK
 
-1. **The dummy becomes a POLICY** (`engine/sparring.js`): given a game
-   and a seat, return a legal ACTION. `foeSwing`'s `[3,4,5][(turn-1)%3]`
-   escalation and `dummyDefence`'s auto-blocking are the two places the
-   rules currently know a dummy exists. Once they emit actions instead,
-   the rules never know who is driving a seat, and solo / hotseat /
-   network all run one reducer. Keep the dummy — the roadmap wants it as
-   the regression harness.
-2. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
+1. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
    references. Whatever replaces `setG` **must keep the invariant-judge
-   funnel**, or the guard rails go dark.
-3. **Seat 1 takes a real action phase.** This is where the difficulty
-   curve retunes — do it with a play session, not with drills.
+   funnel**, or the guard rails go dark. `foeSwing` and `dummyDefence`
+   die here — `sparring.js` is what replaces them, so this is now a
+   deletion rather than a rewrite.
+2. **Retune with a play session.** Seat 1 has a real action phase in
+   `judge.js` and plays real cards, so the `[3,4,5]` escalation's
+   difficulty curve no longer applies. This is a play question, not a
+   drill question.
 
 Known and deliberately unbuilt, each honest rather than hidden:
 the **layer-step window** (CR 7.1.2 — an attack goes straight onto the
-chain instead of sitting on the stack first); **`endTurn` skips the
-opponent's last window** even though CR 4.3.4 now works; **allies do not
-attack** (they are attackABLE); the **mandatory half of CR 1.4.5** (the
-caller must offer the target choice); and **`index.html` still carries
-the invented fatigue loss**, left alone because the dummy reshuffles its
-graveyard, making it a solo-play decision rather than a rules fix.
+chain instead of sitting on the stack first; the equivalent instant
+window still exists in the ATTACK step, so what is missing is the
+stack/chain distinction, which no Phase 1 rule asks about); **allies do
+not attack** (they are attackABLE, and CR 4.4.3d's arena untap is now
+built ahead of it); the **mandatory half of CR 1.4.5** (the caller must
+offer the target choice); and **`index.html` still carries the invented
+fatigue loss**, left alone because the dummy reshuffles its graveyard,
+making it a solo-play decision rather than a rules fix.
 
 Mind the clock throughout: `priority.js` counts player-turns in `turn`
 and rounds in `round`; the trainer's `turn` counts only *your* turns and

@@ -9,6 +9,136 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.46 — Phase 1: a seat becomes a policy
+
+`engine/sparring.js`, and the three CR fixes found while proving it works.
+
+### THE MODULE — the rules stop knowing who is driving
+
+The trainer's opponent is not a seat somebody occupies, it is a **branch
+inside the rules**: `foeSwing` fabricates the swing as
+`[3,4,5][(turn-1)%3]` and `dummyDefence` picks the blocks itself. That is
+why there is nowhere for a second human to sit, and why the same CR
+procedure is written twice — one body of code for when you swing, another
+for when it swings.
+
+`sparring.js` is one function, `act(game, seat) -> action | null`. A seat
+is now just something that answers *what do you do*, and solo, hotseat and
+network are the same game with different things calling `reduce`: a
+policy, a tap, or a packet. None of them is a special case in the rules.
+
+Three properties, each drilled and each proven to bite:
+
+- **It proposes; the judge disposes.** Every action is offered to
+  `judge.legal` before it is returned, so a refusal is always a bug in
+  the policy. That is what lets the heuristics stay simple — the policy
+  never restates a rule in order to avoid breaking one, and a rule that
+  changes in `judge.js` changes here for free. **144 games across six
+  matchups and both seatings: zero refusals, zero invariant violations,
+  every dealt card in exactly one zone.**
+- **It reads no card text.** It ranks on printed NUMBERS — power, pitch,
+  defence, cost — and asks `legal` for everything else. Same discipline
+  that kept `actions.js` free of card text: a sparring partner playing
+  badly and a card being read wrong must never be confusable, and they
+  would be the moment this started interpreting rules boxes. A drill
+  fails on `require("./parser")`, on `fxParse`/`effCost`/`weaponCost`,
+  and on reading `.tx` or `.kw`.
+- **It is deterministic and never touches the rng.** No `Math.random`,
+  and every ranking is a TOTAL order with ties broken on uid, so two
+  peers choose the same card from the same state. A policy that consumed
+  the seeded stream would shift every later shuffle, so replaying a seed
+  would diverge the moment a human took over a seat it used to drive.
+
+**The winner follows the HERO, not the chair.** Kayo's precon beats
+Dorinthea's from seat 0 and from seat 1, which is the property that says
+seat 1 is genuinely occupiable rather than a weaker shape wearing a deck.
+
+#### The heuristic that had to change, and why it is not tuning
+
+Ported unchanged, the trainer's blocking rule made the game degenerate:
+both seats blocked **41 of 41 attacks** and one of them finished a
+21-turn game on **full life**. A regression harness that never deals
+damage never exercises the damage step.
+
+The cause is not the numbers, it is that the rule was written for a seat
+with **no action phase**, where a card in hand had no use except to
+block, so spending two on every swing cost nothing. Both seats have an
+action phase now: a card in hand is an attack or a pitch, and a hero who
+blocks with everything never threatens anyone. `takeUpTo` is the damage a
+seat will simply take rather than spend a card on — with lethal
+overriding it, because nothing in hand is worth more than being alive.
+Games went from 20-life blowouts to finishing at 1 and 2 life.
+
+**Iron stays greedy**: equipment wears rather than leaving, so raising it
+costs no card.
+
+It is deliberately **not** an AI opponent — the standing decision
+(2026-07-25) is that the goal is two humans. It is a handful of legible
+heuristics and it should stay legible rather than become good. It is also
+**not a difficulty curve**: the `[3,4,5]` escalation it replaces was
+*tuned*, and real cards from a real hand are not.
+
+### THREE MORE CR FIXES, ALL FOUND BY PROBING STATE
+
+**A wall defends ONE chain link (CR 7.3.2).** `chainBlocked` correctly
+stopped a spent piece being re-*declared* (CR 7.3.2b), but the
+declaration itself stood until the chain **closed** — so `strike` re-read
+`blockG` on link 2 and counted the same iron again, with nothing declared
+and nothing paid.
+
+The pool hides this almost perfectly: Silver Age equipment is nearly all
+battleworn, so it wears to 0 defence after one block and the second
+helping is worth nothing. Against a piece that does **not** wear, a
+3-defence plate blocked every link of the chain for free. Hand blockers
+escaped by accident rather than by rule — they leave the hand at the
+strike, so the link-2 lookup finds nothing.
+
+**`endTurn` skipped the opponent's last priority window (CR 4.3.4).** The
+rule ends the action phase "when the stack is empty, the combat chain is
+closed, and **both** players pass priority in succession". The explicit
+`endTurn` action ran the whole end phase on the spot — the turn player
+deciding, alone, that the opponent had nothing to say. Invisible in a
+solo trainer, because the dummy never had anything to say; with a human
+in seat 1 it silently deletes their last instant window on **every turn
+of the game**.
+
+`endTurn` is now a **pass carrying the turn-player's intent**: identical
+machinery to `pass`, refused where "end my turn" would be a lie (out of
+turn, mid-chain, without priority), and the phase ends on the mutual
+pass like the CR says.
+
+**The untap step reached only the gear zone (CR 4.4.3d).** "The turn
+player untaps all permanents they control" is the whole arena, not just
+the gear zone; a board permanent's `spent` flag never reset. Nothing taps
+an ally yet, so this is the step being *complete* rather than a bug being
+fixed — and it is the half that has to exist before allies can attack.
+
+And `weaponUsed` conflated **two limits that expire under different
+rules**. A TAP is a state the permanent is in and only its controller's
+untap step lifts it; `Once per Turn` is a per-turn **allowance** that
+comes back for both seats at every turn boundary. They coincide for a
+weapon swing — action speed, so a seat only reaches it on its own turn —
+which is exactly the kind of coincidence this project keeps getting
+bitten by. They stop coinciding at the first `Instant - Once per Turn`
+equipment ability, which would otherwise be spent until the end of its
+user's *next* turn, having been used once across two.
+
+### Notes
+
+- **694 drills** (was 679), all green; fairness clean.
+- Four new judge drills and eleven sparring drills, **every one proven to
+  bite** by reintroducing the bug and watching it fail.
+- Two drills had to be edited deliberately: they sent one `endTurn` and
+  expected the turn to be over, which is the shortcut this removed.
+  `passTurn` in `judge.test.js` now ends a turn the way a table does.
+- `instantSpeed` deleted from `judge.js` — defined, never called, and
+  sitting under a shorter name than the right question
+  (`playWindowFor` / `typeCostsAP`). Same reasoning as `DawnGame.shuffle`.
+- `sparring.js` is **headless**, in `wire.test.js`'s `HEADLESS` list with
+  `judge` and `types`.
+
+---
+
 ## v2.45 — Phase 1: the turn structure, against the CR itself
 
 A review pass over the core structure — card types, the numbers, the

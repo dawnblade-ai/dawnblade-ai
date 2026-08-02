@@ -97,9 +97,14 @@ const {gearDef, gearBlockApply} = GM;
 
    `_instant` is not a printed type: it is how build.js marks a powCard
    carrying an equipment's "Instant - …" ability, so it is asked
-   separately rather than smuggled into the type line. */
+   separately rather than smuggled into the type line.
+
+   There is deliberately no `instantSpeed` helper beside these. One was
+   defined here and never called, which is the shape that gets reached
+   for later by somebody who wanted `playWindowFor` or `typeCostsAP` —
+   the same reasoning that deleted `DawnGame.shuffle` in v2.26 rather
+   than leaving a shorter name next to the right one. */
 const isAttack = c => TY.isAttack(c);
-const instantSpeed = c => TY.isInstant(c) || !!(c && c._instant);
 
 /* Every action a seat can take. Serializable by construction: a uid, a
    zone name, an index — never a card object and never a closure. That is
@@ -113,7 +118,7 @@ const ACTIONS = [
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
-  "endTurn",
+  "endTurn",     /*              a PASS carrying the turn-player's intent */
   "concede"
 ];
 
@@ -298,10 +303,22 @@ function legal(g, a, seat){
     return find(at(g, seat).hand, a.uid) < 0 ? "card is not in hand" : null;
   }
 
+  /* THE TURN PLAYER CANNOT END THE TURN OVER THE OPPONENT'S HEAD.
+     CR 4.3.4 ends the action phase "when the stack is empty, the combat
+     chain is closed, and both players pass priority in succession" — the
+     opponent's last window is part of the rule, not a courtesy.
+
+     So `endTurn` is not a separate transition; it is a PASS that carries
+     the turn-player's intent, and it needs priority like any other pass.
+     It stays a distinct action because a UI button and a replay log both
+     read better for it, and because it is refused in exactly the places
+     "end my turn" is not what the player means — mid-chain, or when it is
+     not their turn. */
   if(a.t === "endTurn"){
     if(seat !== g.turnPlayer) return "not your turn";
     if(g.phase !== "action") return "not in the action phase";
     if(g.chainOpen) return "the combat chain is still open";
+    if(!P.hasPriority(g, seat)) return "you do not hold priority";
     return null;
   }
 
@@ -579,11 +596,32 @@ function strike(g){
     spentHand.push(c);
   }
 
-  /* Equipment WEARS rather than leaving; a card GOES to the graveyard. */
+  /* Equipment WEARS rather than leaving; a card GOES to the graveyard.
+
+     AND THE DECLARATION IS SPENT WITH IT. A wall defends ONE chain link
+     (CR 7.3.2 — defenders are declared in the defend step of the link
+     they defend), so `blockH`/`blockG` are cleared here, at the moment
+     the wall has done its job. `chainBlocked` is the one that outlives
+     the link: CR 7.3.2b keeps a spent piece out of every LATER link of
+     the same chain, and it clears when the chain breaks.
+
+     Clearing only at the close step, as this used to, let a declaration
+     stand for the rest of the chain: `strike` re-read `blockG` on link 2
+     and added the same piece's defence again, with nothing declared and
+     nothing paid. The pool hides it almost perfectly — Silver Age
+     equipment is nearly all battleworn, so it wears to 0 defence after
+     one block and the second helping is worth nothing. A piece that does
+     NOT wear blocks every link of the chain for free.
+
+     Hand blockers escaped by accident rather than by rule: they leave the
+     hand here, so the lookup on link 2 finds nothing. Cards being gone is
+     not the same as the declaration being over, and only one of those
+     survives a card that defends from somewhere other than hand. */
   n = put(n, def, s => ({...s,
     gear: (s.gear || []).map(x => spentGear.indexOf(x.uid) >= 0 ? gearBlockApply(x) : x),
     chainBlocked: [...(s.chainBlocked || []), ...spentGear],
     hand: (s.hand || []).filter(c => spentHand.indexOf(c) < 0),
+    blockH: [], blockG: [], blockRx: [],
     blockedHand: handBlockers}));
   if(spentHand.length) n = toGrave(n, def, spentHand);
 
@@ -685,7 +723,15 @@ function reduce(g, a, seat){
     case "defend":    n = doDefend(n, a, seat); break;
     case "arsenal":   n = doArsenal(n, a, seat); break;
     case "pass":      n = settle(P.pass(n)); break;
-    case "endTurn":   n = doEndTurn(n, seat); break;
+    /* Identical machinery to `pass`, deliberately. If the opponent has
+       already passed this succession the phase ends here (CR 4.3.4, via
+       `settle`); if they have not, priority slides to them and they get
+       the instant window the CR owes them. The only difference is that
+       the log says what the player meant. */
+    case "endTurn":
+      n = say(n, at(n, seat).name + " passes the turn.");
+      n = settle(P.pass(n));
+      break;
   }
   return {state: n, error: null};
 }
@@ -953,10 +999,21 @@ function endPhaseAfterArsenal(g, seat){
   }
   n = say(n, "(c) Pitch zones go to the bottom of their decks.");
 
-  /* (d) the turn-player untaps all permanents. Folding this into the NEXT
-     turn's setup is invisible with one acting seat and wrong with two: a
-     permanent would stay tapped through the opponent's whole turn. */
-  n = put(n, seat, s => ({...s, weaponUsed: {}}));
+  /* (d) the turn-player untaps ALL permanents THEY control. Folding this
+     into the NEXT turn's setup is invisible with one acting seat and
+     wrong with two: a permanent would stay tapped through the opponent's
+     whole turn.
+
+     "All permanents" is the whole arena, not just the gear zone. An ally
+     that taps to swing is a permanent in the arena, and it untaps here
+     like anything else; leaving `spent` set would retire it after one
+     use. Nothing taps an ally yet — allies are attackABLE and do not
+     attack (see the module header) — so this is the step being complete
+     rather than a bug being fixed, and it is the half that has to exist
+     before the other half can be built. */
+  n = put(n, seat, s => ({...s,
+    weaponUsed: {},
+    board: (s.board || []).map(b => b.spent ? {...b, spent: false} : b)}));
   n = say(n, "(d) " + at(n, seat).name + " untaps.");
 
   /* (e) ALL players lose action and resource points (CR 4.4.3e). Only the
@@ -993,10 +1050,56 @@ function endPhaseAfterArsenal(g, seat){
   /* CR 4.4.4 — "effects that last until end of turn end". `hist` is the
      per-turn ledger ("attacks played", "blues pitched"), so BOTH seats'
      clear, not only the incoming one: a card asking "have you pitched a
-     blue this turn" during the opponent's turn must not read yours. */
-  for(let i = 0; i < 2; i++) n = put(n, i, s => ({...s, hist: S.freshHist()}));
+     blue this turn" during the opponent's turn must not read yours.
+
+     A PER-TURN ALLOWANCE ENDS WITH THE TURN, and it is a different rule
+     from untapping. `Once per Turn` means once during each turn, so it
+     comes back for BOTH seats at every turn boundary; a TAP is a state
+     the permanent is in, and it only lifts when its controller untaps at
+     (d) above. `weaponUsed` records both, which is why they are unpicked
+     here rather than cleared together.
+
+     They coincide for a weapon swing, because a swing is action speed and
+     a seat only reaches its own action phase on its own turn — which is
+     exactly the kind of coincidence this project has been bitten by
+     before. It stops coinciding the moment an "Instant - Once per Turn"
+     equipment ability is activated on the opponent's turn: cleared with
+     the tap, that ability would be spent until the end of the user's NEXT
+     turn, having been used once across two. */
+  for(let i = 0; i < 2; i++) n = put(n, i, s => ({...s,
+    hist: S.freshHist(), weaponUsed: perTurnCleared(s)}));
+
+  /* THE START PHASE IS PASSED THROUGH, NOT SKIPPED. `P.endTurn` leaves
+     the incoming seat in `phase:"start"` and this line moves them on in
+     the same breath, so no state ever RESTS there — which is the correct
+     behaviour rather than a shortcut. CR 4.2.1 gives nobody priority in
+     the start phase, so the only thing that can happen in it is a
+     start-of-turn triggered effect going on the stack, and this reducer
+     models no card effects at all. It becomes a real pause the moment one
+     of them exists, and that is Phase 3's problem, not a missing step. */
   n = P.toPhase(n, "action");                       /* CR 4.3.2 issues the AP */
   return say(n, "— " + at(n, n.turnPlayer).name + "'s turn " + n.turn + " —");
+}
+
+/* TWO LIMITS LIVE IN `weaponUsed` AND THEY EXPIRE DIFFERENTLY.
+   Drop every entry whose limit is a per-turn ALLOWANCE, and keep every
+   entry that records a TAPPED permanent — the tap lifts at CR 4.4.3d,
+   for the controller only, and a permanent that is both tapped and
+   once-per-turn is still tapped.
+
+   Reading the limit off the piece's own printed text rather than storing
+   a kind on the flag is what keeps this from drifting: `weaponCost` is
+   already the one reader of that line, and it answers both questions. */
+function perTurnCleared(sd){
+  const used = sd.weaponUsed || {};
+  const out = {};
+  for(const uid of Object.keys(used)){
+    if(!used[uid]) continue;
+    const piece = (sd.gear || []).find(x => x && x.uid === uid);
+    const wc = piece ? PR.weaponCost(piece.tx || "") : null;
+    if(wc && wc.taps) out[uid] = true;      /* still tapped — only (d) lifts it */
+  }
+  return out;
 }
 
 /* Draw to intellect, taking whatever the deck still holds.

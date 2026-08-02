@@ -315,7 +315,7 @@ test("every engine module is loaded by index.html, or declared headless", () => 
      both sets into one bare namespace is the same-name-different-meaning
      trap that KNOWN_COLLISIONS exists to police. It comes off this list
      with judge.js, and the names get resolved then, not silently now. */
-  const HEADLESS = ["judge", "types"];
+  const HEADLESS = ["judge", "types", "sparring"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

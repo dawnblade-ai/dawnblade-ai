@@ -133,6 +133,26 @@ function drive(g, o){
 /* The driver only ever sends legal actions, so any refusal is a bug. */
 const realErrs = errs => errs;
 
+/* END A TURN THE WAY THE CR ENDS ONE.
+
+   CR 4.3.4 ends the action phase "when the stack is empty, the combat
+   chain is closed, and BOTH players pass priority in succession", so an
+   `endTurn` from the turn player is only the first half of it — the
+   opponent still holds the instant window the rule owes them, and the
+   phase does not end until they decline it too.
+
+   Every drill below used to send one `endTurn` and expect the turn to be
+   over. That worked because the action ran the whole end phase on the
+   spot, which is the shortcut this replaced: it is the turn player
+   deciding, alone, that the opponent had nothing to say. */
+function passTurn(g){
+  let n = J.reduce(g, {t: "endTurn"}, g.turnPlayer).state;
+  if(n.phase === "action" && n.priority != null)
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  return n;
+}
+
 /* Play the turn-player's first attack and walk the chain to the defend
    step, settling any payment on the way. Several drills need to stand
    inside that step, and it is the one place in the CR where two seats can
@@ -289,18 +309,13 @@ test("CR 4.4.3f — on turn one only, the NON-turn player also draws to intellec
 test("CR 4.4.3f — the OUTGOING turn player draws, not the incoming one", {skip}, () => {
   let g = match({seed: "who-draws"});
   /* get past turn one, where 4.4.3f refills both seats anyway */
-  const endTurn = n => {
-    let o = J.reduce(n, {t: "endTurn"}, n.turnPlayer).state;
-    while(o.arsenalFor != null) o = J.reduce(o, {t: "arsenal", uid: null}, o.arsenalFor).state;
-    return o;
-  };
-  g = endTurn(g); g = endTurn(g);
+  g = passTurn(g); g = passTurn(g);
   assert.ok(g.turn > 2, "did not get past the first turn");
 
   /* strip BOTH hands so a refill is unmistakable whoever gets it */
   const tp = g.turnPlayer, off = P.other(tp);
   g = J.put(J.put(g, 0, s => ({...s, hand: []})), 1, s => ({...s, hand: []}));
-  const n = endTurn(g);
+  const n = passTurn(g);
 
   assert.equal(n.sides[tp].hand.length, n.sides[tp].int,
     "the turn player did not refill at the end of their own turn — CR 4.4.3f");
@@ -314,8 +329,7 @@ test("CR 4.5.3 / 4.4.3f — a hero whose deck runs out keeps playing", {skip}, (
   let g = match({seed: "dry"});
   const seat = g.turnPlayer;
   g = J.put(g, seat, s => ({...s, deck: [], hand: s.hand.slice(0, 1)}));
-  let n = J.reduce(g, {t: "endTurn"}, seat).state;
-  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  let n = passTurn(g);
   assert.ok(!n.over, "an empty deck ended the game");
   assert.equal(n.sides[seat].hand.length, 1, "cards appeared from an empty deck");
   /* and the game keeps running — the seat can still be attacked and can still block */
@@ -336,8 +350,7 @@ test("CR 4.4.3a — a wounded ally really does heal, not just in the log", {skip
   g = J.put(g, seat, s => ({...s,
     board: [{card: ally, kind: "ally", spent: false, uid: ally.uid, life: 1}]}));
 
-  let n = J.reduce(g, {t: "endTurn"}, seat).state;
-  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  const n = passTurn(g);
 
   assert.equal(n.sides[seat].board[0].life, ally.life,
     "the ally did not heal to its base life — CR 4.4.3a ran only in the log");
@@ -349,21 +362,80 @@ test("CR 4.4.4 — the per-turn ledger clears for BOTH seats", {skip}, () => {
   const seat = g.turnPlayer, off = P.other(seat);
   g = J.put(J.put(g, seat, s => ({...s, hist: {...s.hist, atk: 3, blue: 2}})),
                      off, s => ({...s, hist: {...s.hist, atk: 5, blue: 4}}));
-  let n = J.reduce(g, {t: "endTurn"}, seat).state;
-  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  const n = passTurn(g);
   for(const i of [0, 1]){
     assert.equal(n.sides[i].hist.atk || 0, 0, "seat " + i + " carried 'attacks this turn' into the next turn");
     assert.equal(n.sides[i].hist.blue || 0, 0, "seat " + i + " carried 'blues pitched this turn' over");
   }
 });
 
+/* CR 4.4.3d — "the turn player untaps all permanents they control." ALL
+   permanents, which is the whole arena and not just the gear zone. Nothing
+   taps an ally yet (allies are attackABLE and do not attack), so this is
+   the step being complete rather than a bug being fixed — and it is the
+   half that has to exist before the other half can be built. */
+test("CR 4.4.3d — the turn player untaps the arena too, not just the gear zone", {skip}, () => {
+  let g = match({seed: "untap"});
+  const seat = g.turnPlayer, off = P.other(seat);
+  const mk = (uid, life) => ({card: {name: "Body " + uid, uid, life, pitch: 0, tx: "",
+                                     tt: "Generic Action - Ally", ty: ["Generic", "Action", "Ally"]},
+                              kind: "ally", spent: true, uid, life});
+  g = J.put(J.put(g, seat, s => ({...s, board: [mk("mine", 3)]})),
+                      off,  s => ({...s, board: [mk("theirs", 3)]}));
+
+  const n = passTurn(g);
+  assert.equal(n.sides[seat].board[0].spent, false,
+    "the turn player's permanent stayed tapped through their own untap step");
+  assert.equal(n.sides[off].board[0].spent, true,
+    "CR 4.4.3d untaps the TURN PLAYER's permanents — the opponent's must stay as they are");
+});
+
+/* TWO LIMITS LIVE IN `weaponUsed` AND THEY EXPIRE UNDER DIFFERENT RULES.
+   A TAP is a state the permanent is in and only its controller's untap
+   step (CR 4.4.3d) lifts it. `Once per Turn` is a per-turn ALLOWANCE, so
+   it comes back for both seats at every turn boundary.
+
+   They coincide for a weapon swing — action speed, so a seat only reaches
+   it on its own turn — which is exactly the kind of coincidence this
+   project keeps getting bitten by. Asserting on the opponent's seat is
+   what makes the difference visible before an "Instant - Once per Turn"
+   equipment ability arrives to depend on it. */
+test("CR 4.4.3d — a tap outlives the opponent's turn; a per-turn allowance does not", {skip}, () => {
+  let g = match({seed: "limits"});
+  const seat = g.turnPlayer, off = P.other(seat);
+  const ONCE = {name: "Once Blade", uid: "once-1", def: 0, pitch: 0, power: 3,
+                tt: "Generic Weapon - Sword (1H)", ty: ["Generic", "Weapon", "Sword", "1H"],
+                tx: "Once per Turn Action - {r}: Attack.", kw: []};
+  const TAPS = {name: "Tap Blade", uid: "tap-1", def: 0, pitch: 0, power: 3,
+                tt: "Generic Weapon - Sword (1H)", ty: ["Generic", "Weapon", "Sword", "1H"],
+                tx: "Action - {t}: Attack.", kw: []};
+  /* the parser has to agree these are the two different limits, or the
+     drill is asserting about cards that do not exist */
+  assert.equal(PR.weaponCost(ONCE.tx).oncePerTurn, true, "the once-per-turn fixture does not print one");
+  assert.ok(!PR.weaponCost(ONCE.tx).taps, "the once-per-turn fixture also taps");
+  assert.equal(PR.weaponCost(TAPS.tx).taps, true, "the tap fixture does not print a tap");
+  assert.ok(!PR.weaponCost(TAPS.tx).oncePerTurn, "the tap fixture is also once per turn");
+
+  /* both seats hold both pieces, and both have used both */
+  for(const i of [0, 1]) g = J.put(g, i, s => ({...s,
+    gear: [ONCE, TAPS], weaponUsed: {"once-1": true, "tap-1": true}}));
+
+  const n = passTurn(g);
+  /* the turn player untapped at (d): everything of theirs is available */
+  assert.deepEqual(n.sides[seat].weaponUsed, {},
+    "the turn player's own untap step did not clear their permanents");
+  /* the opponent did not untap — but their per-turn allowance still renews */
+  assert.equal(!!n.sides[off].weaponUsed["tap-1"], true,
+    "the opponent's TAPPED permanent untapped on somebody else's turn (CR 4.4.3d)");
+  assert.equal(!!n.sides[off].weaponUsed["once-1"], false,
+    "a per-turn allowance was held over into the next turn — 'once per Turn' is once per TURN");
+});
+
 test("CR 4.4.3e — BOTH seats lose floating resources, not just the turn player", {skip}, () => {
   let g = match({seed: "fizzle"});
   const off = P.other(g.turnPlayer);
   g = J.put(g, off, s => ({...s, res: 3}));
-  const out = J.reduce(g, {t: "endTurn"}, g.turnPlayer);
-  let n = out.state;
-  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  const n = passTurn(g);
   assert.equal(n.sides[off].res, 0,
     "the non-turn player kept a banked resource through the end phase");
 });
@@ -519,6 +591,37 @@ test("CR 4.3.4 — both players passing ends the action phase", {skip}, () => {
   /* it went to the end phase, which on turn one offers the arsenal step */
   assert.ok(n.phase === "end" || n.turnPlayer !== tp,
     "the action phase did not proceed to the end phase");
+});
+
+/* AND THE TURN PLAYER CANNOT SKIP THE OTHER HALF OF THAT RULE.
+   CR 4.3.4 needs BOTH players to pass in succession, so "end my turn" is
+   a pass, not a transition. It used to run the whole end phase on the
+   spot — the turn player deciding, alone, that the opponent had nothing
+   to say. In a solo trainer that is invisible, because the dummy never
+   had anything to say; with a human in seat 1 it silently deletes their
+   last instant window on every turn of the game. */
+test("CR 4.3.4 — endTurn does not skip the opponent's last priority window", {skip}, () => {
+  let g = match({seed: "endturn-window"});
+  const tp = g.turnPlayer, op = P.other(tp);
+  assert.equal(g.priority, tp);
+  assert.ok(!P.canAct(g, op), "the opponent already holds a window before the turn player acts");
+
+  const n = J.reduce(g, {t: "endTurn"}, tp).state;
+  assert.equal(n.phase, "action", "the turn ended without the opponent ever holding priority");
+  assert.equal(n.turnPlayer, tp, "the seat changed hands on one seat's say-so");
+  assert.equal(n.priority, op, "priority did not slide to the opponent");
+  assert.ok(P.canAct(n, op), "the opponent still cannot act — the window is a formality");
+  assert.deepEqual(P.speedAllowed(n, op), ["instant"],
+    "CR 4.3.4 gives the non-turn player an instant-speed window here");
+
+  /* and it really is theirs to spend: declining it is what ends the phase */
+  const done = J.reduce(n, {t: "pass"}, op).state;
+  assert.ok(done.phase === "end" || done.turnPlayer !== tp,
+    "both seats passed in succession and the action phase did not end");
+
+  /* the refusals that keep it from becoming a general-purpose pass */
+  assert.match(J.reduce(g, {t: "endTurn"}, op).error, /not your turn/);
+  assert.match(J.reduce(n, {t: "endTurn"}, tp).error, /priority/);
 });
 
 test("CR 4.3.2 — the action point is issued on entering the action phase, to the turn player", {skip}, () => {
@@ -806,6 +909,74 @@ test("CR 7.3.2b — a piece that already blocked cannot block again on the same 
     "a spent piece was raised again on the same chain");
 });
 
+/* A WALL DEFENDS ONE CHAIN LINK, AND THE POOL ALMOST PERFECTLY HIDES IT.
+   `chainBlocked` stops a spent piece being re-DECLARED (CR 7.3.2b above),
+   but the declaration itself used to stand until the chain closed — so
+   `strike` re-read `blockG` on link 2 and counted the same iron again,
+   with nothing declared and nothing paid.
+
+   Silver Age equipment is nearly all battleworn, so it wears to 0 defence
+   after one block and the second helping is worth exactly nothing. That
+   is why this needs a plain piece that does not wear: the bug is real for
+   any such card and invisible against the precons.
+
+   Hand blockers escaped by accident, not by rule — they leave the hand at
+   the strike, so the link-2 lookup finds nothing. Two different reasons
+   for the same clean answer, and only one of them is a rule. */
+test("a defender declared on chain link 1 does not defend link 2", {skip}, () => {
+  const PLATE = {name: "Test Plate", uid: "plate-1", def: 3, pitch: 0, tx: "",
+                 tt: "Generic Equipment - Chest", ty: ["Generic", "Equipment", "Chest"], kw: []};
+  let g = match({seed: "per-link"});
+  const A = g.turnPlayer, D = P.other(A);
+  /* a piece that does NOT wear, and an attacker who can afford two links */
+  g = J.put(g, D, s => ({...s, gear: [PLATE]}));
+  g = J.put(g, A, s => ({...s, ap: 5, res: 9}));
+
+  const swing = st => {
+    const c = st.sides[A].hand.find(x => TY.isAttack(x) && (x.power || 0) > 0);
+    assert.ok(c, "no attack left in hand");
+    let n = J.reduce(st, {t: "play", uid: c.uid, from: "hand"}, A).state;
+    while(J.pendingOf(n)){
+      const p = J.pendingOf(n), sd = n.sides[p.seat];
+      if(p.need - sd.res - J.paySum(sd) > 0){
+        const pc = sd.hand.find(x => x.uid !== p.card.uid && !(sd.paySel || []).includes(x.uid));
+        n = J.reduce(n, {t: "paySel", uid: pc.uid}, p.seat).state;
+      } else n = J.reduce(n, {t: "payConfirm"}, p.seat).state;
+    }
+    for(let i = 0; i < 8 && n.step !== "defend"; i++) n = J.reduce(n, {t: "pass"}, n.priority).state;
+    return n;
+  };
+  const toResolution = st => {
+    let n = st;
+    for(let i = 0; i < 14 && n.step !== "resolution" && !n.over; i++)
+      n = J.reduce(n, {t: "pass"}, n.priority).state;
+    return n;
+  };
+
+  /* link 1: the plate is declared and does its job */
+  let n = swing(g);
+  n = J.reduce(n, {t: "defend", uid: PLATE.uid}, D).state;
+  n = toResolution(n);
+  assert.equal(n.pend.wall, 3, "the declared plate did not defend link 1");
+  assert.deepEqual(n.sides[D].blockG, [],
+    "the declaration outlived the link it was made for");
+  assert.deepEqual(n.sides[D].chainBlocked, [PLATE.uid],
+    "CR 7.3.2b — the spent piece must stay barred for the rest of the chain");
+  assert.ok(n.chainOpen, "the chain closed early — link 2 would be a new chain");
+
+  /* link 2 on the SAME chain, with nothing declared */
+  n = J.put(n, A, s => ({...s, ap: 5, res: 9}));
+  n = swing(n);
+  assert.deepEqual(n.sides[D].blockG, [], "a stale declaration is standing in the defend step");
+  const hpBefore = n.sides[D].hp;
+  const power = n.pend.total;
+  n = toResolution(n);
+  assert.equal(n.pend.wall, 0,
+    "link 1's gear defended link 2 for free — the wall outlived its chain link");
+  assert.equal(hpBefore - n.sides[D].hp, power,
+    "the second link was softened by a piece nobody declared");
+});
+
 /* ---- PAYMENT ------------------------------------------------------------ */
 
 test("pitching is on demand: a play that costs nothing opens no payment", {skip}, () => {
@@ -876,8 +1047,7 @@ test("CR 4.4.3c — a pitched card goes to the BOTTOM of its owner's deck", {ski
   /* end the turn and it should be the LAST card of the deck, not the first */
   const deckBefore = n.sides[seat].deck.length;
   while(n.chainOpen && n.priority != null) n = J.reduce(n, {t: "pass"}, n.priority).state;
-  n = J.reduce(n, {t: "endTurn"}, seat).state;
-  while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
+  n = passTurn(n);
 
   const deck = n.sides[seat].deck;
   assert.deepEqual(n.sides[seat].pitch, [], "the pitch zone was not emptied");
@@ -894,8 +1064,10 @@ test("CR 4.4.3c — a pitched card goes to the BOTTOM of its owner's deck", {ski
 test("the arsenal round trip: set it at end of turn, play it the next", {skip}, () => {
   let g = match({seed: "arsenal-trip"});
   const seat = g.turnPlayer;
-  /* end the turn and set a specific card in the arsenal */
+  /* end the turn and set a specific card in the arsenal. Two actions, not
+     one: CR 4.3.4 wants the opponent's pass before the phase ends. */
   let n = J.reduce(g, {t: "endTurn"}, seat).state;
+  n = J.reduce(n, {t: "pass"}, P.other(seat)).state;
   assert.equal(n.arsenalFor, seat, "the turn player was not offered the arsenal step");
   const pick = n.sides[seat].hand.find(x => TY.isAttack(x)) || n.sides[seat].hand[0];
   n = J.reduce(n, {t: "arsenal", uid: pick.uid}, seat).state;

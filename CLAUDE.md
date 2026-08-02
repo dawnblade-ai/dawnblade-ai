@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.41
+**Current version:** v2.46
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 679 drills:
+This is `node --test "test/*.test.js"` — currently 694 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -134,12 +134,20 @@ This is `node --test "test/*.test.js"` — currently 679 drills:
    `test/actions.test.js`) — serialization round-trips, the rules
    fingerprint, and two sessions driven at each other over a loopback
    with packet loss, desync and reconnect. See "The sync layer" below.
-6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`).
+6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`,
+   `test/types.test.js`, `test/sparring.test.js`).
    `build.test.js` asks the two questions the eight-gear bug proved
    nobody was asking: is the loadout LEGAL, and is the build SYMMETRIC.
    `judge.test.js` drives **two real precons at each other** and watches
    a whole game — the first drills here that see a game rather than a
-   clause. Both skip cleanly without the cached DB.
+   clause. `sparring.test.js` holds the seat policy to its contract:
+   every action legal, no card text, deterministic, and the winner
+   following the hero rather than the chair. All skip cleanly without
+   the cached DB.
+   **ASSERT ON HANDS, LIFE AND ZONES — NEVER ON `feed` PROSE.** Two of
+   v2.45's nine bugs lived under green drills that read the log: the end
+   phase really did print (a) through (f) in order, and it really did
+   say "draws to intellect". It was drawing for the wrong hero.
 7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -427,6 +435,8 @@ roadmap was being written.
 |---|---|---|
 | `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, the equipment slot rules | **live** — loaded, bridged, in `MODULES` |
 | `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **headless** — in `wire.test.js`'s `HEADLESS` list |
+| `engine/types.js` | what a card IS, off its structured type array | **headless** |
+| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** |
 
 ### ONE COMBAT PATH, NOT TWO — the thing this replaces
 
@@ -683,15 +693,111 @@ Still deliberately not modelled, and each is honest rather than hidden:
 - **the layer-step window (CR 7.1.2)**. An attack goes straight onto the
   chain; in the CR it sits on the stack first and both seats may respond
   before it becomes a chain link. Needs the stack/queue, which
-  `priority.js` already has hooks for (`queueEmpty`).
-- **`endTurn` skips the opponent's last window.** CR 4.3.4 ends the phase
-  on a mutual pass — now implemented — but the explicit `endTurn` action
-  remains and does not wait for the other seat to pass.
+  `priority.js` already has hooks for (`queueEmpty`). **The window itself
+  is not lost** — the ATTACK step immediately after opens an equivalent
+  instant window for both seats, verified in a driven game, so what is
+  missing is the distinction between "on the stack" and "on the chain",
+  which no Phase 1 rule asks about.
+- **the START phase is passed through, not skipped.** `P.endTurn` leaves
+  the incoming seat in `phase:"start"` and `endPhaseAfterArsenal` moves
+  them on in the same breath, so no state ever RESTS there. That is
+  correct rather than a shortcut: CR 4.2.1 gives nobody priority in the
+  start phase, so the only thing that can happen in it is a start-of-turn
+  trigger, and this reducer models no card effects. It becomes a real
+  pause when one exists.
 - **allies do not attack.** They are attackABLE; swinging one needs the
-  activation cost and a target of its own.
+  activation cost and a target of its own. **CR 4.4.3d's arena untap is
+  built ahead of it** (a board permanent's `spent` clears at the turn
+  player's untap step), because the untap has to exist before the tap.
 - **`index.html` still carries the invented fatigue loss.** Left alone on
   purpose: the dummy reshuffles its graveyard rather than decking out, so
   changing it is a decision about solo play, not a rules fix.
+
+### `engine/sparring.js` (v2.46) — A SEAT IS A POLICY
+
+`act(game, seat) -> action | null`. The trainer's opponent is not a seat
+somebody occupies, it is a **branch inside the rules** — `foeSwing`
+fabricates the swing, `dummyDefence` picks the blocks. That is why a
+second human has nowhere to sit. Here a seat is just something that
+answers *what do you do*, and solo / hotseat / network are the same game
+with different things calling `reduce`.
+
+Three properties, all drilled and all proven to bite:
+
+1. **It proposes; the judge disposes.** Every action goes to
+   `judge.legal` before it is returned, so **a refusal is always a bug in
+   the policy** — which is why `run` records refusals rather than
+   swallowing them. The heuristics can then stay simple: the policy never
+   restates a rule in order to avoid breaking one.
+2. **It reads NO card text.** Ranks on printed numbers (power, pitch,
+   defence, cost) and asks `legal` for everything else. A drill fails on
+   `require("./parser")`, on `fxParse`/`effCost`/`weaponCost`, and on
+   reading `.tx` or `.kw`. Same discipline that kept `actions.js` free of
+   card text: **a sparring partner playing badly and a card being read
+   wrong must never be confusable.**
+3. **Deterministic, and it never touches `game.rng`.** Every ranking is a
+   TOTAL order with ties broken on uid — a ranking that leaves ties
+   unbroken is a desync waiting for two equal blockers. Consuming the
+   seeded stream would shift every later shuffle, so replaying a seed
+   would diverge the moment a human took over a seat it used to drive.
+
+**The winner follows the HERO, not the chair** — Kayo beats Dorinthea
+from seat 0 and from seat 1. That is the property that says seat 1 is
+genuinely occupiable rather than a weaker shape wearing a deck.
+
+**PORTING `dummyDefence` UNCHANGED MADE THE GAME DEGENERATE.** Both seats
+blocked **41 of 41 attacks** and one finished a 21-turn game on **full
+life**. Not a tuning complaint — a regression run that never deals damage
+never exercises the damage step. The cause is that the heuristic was
+written for a seat with **no action phase**, where a card in hand had no
+use but to block, so spending two on every swing cost nothing. Both seats
+have an action phase now. `takeUpTo` is the damage a seat will simply
+take rather than spend a card on; **lethal overrides it**, because
+nothing in hand is worth more than being alive. Iron stays greedy —
+equipment wears rather than leaving, so raising it costs no card.
+
+It is **not an AI opponent** (standing decision, 2026-07-25: the goal is
+two humans) and **not a difficulty curve** — the `[3,4,5]` escalation it
+replaces was *tuned* and real cards from a real hand are not. Retuning is
+a play session, not a drill.
+
+### Two more rules the CR review missed (v2.46)
+
+**A WALL DEFENDS ONE CHAIN LINK, NOT THE CHAIN.** `chainBlocked` stopped
+a spent piece being re-*declared* (CR 7.3.2b), but the declaration itself
+stood until the chain **closed** — so `strike` re-read `blockG` on link 2
+and counted the same iron again, with nothing declared and nothing paid.
+`blockH`/`blockG` now clear in `strike`, where the wall has done its job;
+`chainBlocked` is the one that outlives the link.
+
+The pool hides this almost perfectly: **Silver Age equipment is nearly
+all battleworn**, so it wears to 0 after one block and the second helping
+is worth nothing. It takes a piece that does not wear to see it. Hand
+blockers escaped by accident rather than by rule — they leave the hand at
+the strike, so the link-2 lookup finds nothing. Two different reasons for
+the same clean answer, and only one of them is a rule.
+
+**`endTurn` SKIPPED THE OPPONENT'S LAST WINDOW (CR 4.3.4).** The action
+ran the whole end phase on the spot — the turn player deciding, alone,
+that the opponent had nothing to say. Invisible in a solo trainer,
+because the dummy never had anything to say; with a human in seat 1 it
+deletes their last instant window on **every turn of the game**.
+
+`endTurn` is now a **PASS carrying intent** — identical machinery to
+`pass`, refused where "end my turn" would be a lie (out of turn,
+mid-chain, without priority). Ending a turn takes two actions, which is
+what the CR says and what a table does. Drills that sent one `endTurn`
+and expected the turn to be over were edited deliberately; `passTurn` in
+`judge.test.js` is the shared helper.
+
+**AND `weaponUsed` HELD TWO LIMITS THAT EXPIRE DIFFERENTLY.** A TAP is a
+state the permanent is in and only its controller's untap step (CR
+4.4.3d) lifts it; `Once per Turn` is a per-turn **allowance** that comes
+back for both seats at every turn boundary. `perTurnCleared` unpicks them
+by re-reading the piece's printed line rather than storing a kind on the
+flag. They coincide for a weapon swing — action speed, so a seat reaches
+it only on its own turn — and stop coinciding at the first `Instant -
+Once per Turn` equipment ability.
 
 ### The remaining order
 
@@ -704,10 +810,9 @@ Still deliberately not modelled, and each is honest rather than hidden:
    `advValue`, `dummyDefence`.
    **`execute` calling `dummyDefence` inline is the seam**: in `judge.js`
    it must hand control back and let the defend step run.
-2. **The dummy becomes a policy** (`engine/sparring.js`): given a game
-   and a seat, return a legal ACTION. The rules then never know who is
-   driving a seat, and solo / hotseat / network all run one reducer.
-   Keep it — the roadmap wants it as the regression harness.
+2. ~~**The dummy becomes a policy**~~ **Done in v2.46** —
+   `engine/sparring.js`, above. `foeSwing` and `dummyDefence` remain in
+   the trainer until step 3 retires them with everything else.
 3. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
    references. Whatever replaces `setG` must keep the invariant-judge
    funnel, or the guard rails go dark.
