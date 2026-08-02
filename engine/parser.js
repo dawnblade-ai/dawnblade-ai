@@ -826,6 +826,32 @@ function fxParse(card){
     handled.add(i); handled.add(i+1);
     break;                                       /* one optional cost per card in the pool */
   }
+  /* PAY-COST RIDER (Brothers in Arms): "When this defends, you may pay
+     {r}. If you do, it gets +2{d}." Same two-clause pairing as optCost
+     just above — paired here where the whole card is visible, never in
+     classifyClause, which sees one clause at a time — but the verb is PAY,
+     a resource cost, not a card leaving a zone, so it needs its own field
+     rather than overloading optCost's zone/filter shape. Generalized on
+     `trigger` the same way optCost is, even though "defends" is the only
+     one wired today — see execute()/takeIt() for where each trigger is
+     actually consumed. */
+  for(let i = 0; i < clauses.length - 1; i++){
+    if(handled.has(i) || handled.has(i+1)) continue;
+    const rider = clauses[i+1];
+    if(!/^if you do\b/i.test(rider)) continue;
+    const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may pay ((?:\{r\})+|\d+)$/i);
+    if(!cm) continue;
+    const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+    if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — do not claim the card */
+    const cost = /^\d+$/.test(cm[2]) ? +cm[2] : (cm[2].match(/\{r\}/g)||[]).length;
+    fx.payCost = {
+      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
+      cost,
+      ops: rr.ops
+    };
+    handled.add(i); handled.add(i+1);
+    break;                                       /* one pay-cost rider per card in the pool */
+  }
 
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }

@@ -1381,3 +1381,30 @@ test("cold snap — resolves to tier full", () => {
     tx:"Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again"});
   assert.equal(fx.tier, "full");
 });
+
+/* ---- fx.payCost — Brothers in Arms, a real mid-block pay window, v2.39 */
+test("payCost — pairs 'you may pay X' with its 'if you do' rider, same as optCost", () => {
+  const fx = P.fxParse({name:"Brothers in Arms", pitch:3, tt:"Generic Action - Attack", power:4, def:2, kw:[],
+    tx:"When this defends, you may pay {r}. If you do, it gets +2{d}."});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:1, ops:[["defBuff",2]]});
+  assert.equal(fx.tier, "full");
+});
+
+test("payCost — a numeric cost is read too, not just {r} pips", () => {
+  const fx = P.fxParse({name:"payCost Drill Numeric", pitch:1, tt:"Action - Attack", power:4, def:1, kw:[],
+    tx:"When this defends, you may pay 2. If you do, it gets +1{d}."});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:2, ops:[["defBuff",1]]});
+});
+
+test("payCost — an unreadable rider leaves the card unclaimed rather than guessed", () => {
+  const fx = P.fxParse({name:"payCost Drill Unreadable", pitch:1, tt:"Action - Attack", power:4, def:1, kw:[],
+    tx:"When this defends, you may pay {r}. If you do, transmogrify the fortress."});
+  assert.equal(fx.payCost, undefined);
+});
+
+test("payCost — does not collide with optCost's banish/discard pairing on the same card shape", () => {
+  const fx = P.fxParse({name:"payCost Drill NoClash", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"When this attacks, you may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero."});
+  assert.equal(fx.payCost, undefined);
+  assert.ok(fx.optCost);
+});

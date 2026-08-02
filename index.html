@@ -3209,7 +3209,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     : execute({...s,_doBoost:false},card,from,idx);
   const confirmBoost = (doBoost) => setG(s=>{ if(s.mode!=="boostpick"||!s.pending) return s; const {card,from,idx}=s.pending; return execute({...s,mode:"act",pending:null,_doBoost:doBoost},card,from,idx); });
   const tryPlay = (card,from,idx) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3492,39 +3492,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const dg = you(s).blockG.reduce((a,i)=>a+gearDef(you(s).gear[i]),0);
     return L({...s, bphase:"react"}, `Defense locked at ${dh+dg}. Reaction step — priority to you.`);
   });
-  const takeIt = () => setG(s=>{
-    if(s.mode!=="block") return s;
+  /* Split out of takeIt (v2.39) so a pay-cost defender (Brothers in Arms)
+     can PAUSE the block after clash but before damage, then resume into
+     the exact same finish every other block already used. Takes the
+     clash bonus and any paid defBuff bonuses (by uid) as parameters
+     because both are already-settled facts by the time this runs — this
+     function itself makes no further decisions. */
+  const finishBlock = (s, clashDef, defBonus) => {
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
-    /* CLASH RESOLVES ON DEFENCE. Every clash card in the pool reads "When this
-       defends, clash with the attacking hero" — it fires when the card blocks,
-       not when it is played as an attack, which is where it used to live. Both
-       sides reveal for real (the dummy has a deck), greatest POWER wins, and a
-       tie is no winner — all three settled by ruling and printed reminder. */
-    let clashDef = 0, clashState = s;
-    for(const cc of [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])].filter(x=>x && hasKw(x,"clash"))){
-      const myTop = act(clashState).deck[0], foeTop = foe(clashState).deck[0];
-      const mine = myTop ? (myTop.power||0) : 0, foe = foeTop ? (foeTop.power||0) : 0;
-      const win = mine > foe, tie = mine === foe;
-      clashState = L(clashState, `${cc.name} clashes — you reveal ${myTop?myTop.name+" ("+mine+")":"nothing (0)"}`
-        + ` vs the dummy's ${foeTop?foeTop.name+" ("+foe+")":"empty deck (0)"} — `
-        + (tie ? "a tie, no winner." : win ? "you win!" : "the dummy wins."));
-      if(tie) continue;
-      const tl = clean(cc.tx||"").toLowerCase();
-      const tm = tl.match(/the winner creates? (?:a|an|\d+) ([a-z' -]+) tokens?/);
-      if(tm) clashState = runOps(clashState, [["token", tm[1].trim(), 1, win?"self":"foe"]], cc.name);
-      const wm = tl.match(/if you win, this gets \+(\d+)\s*\{d\}/);
-      if(win && wm){ clashDef += +wm[1]; clashState = L(clashState, `${cc.name} braces — +${wm[1]} defence from the clash.`); }
-      /* the REVEALED card may itself pay off on a win (Unexpected Backhand) */
-      if(win && myTop && /when you win a clash revealing this, deal (\d+) damage/i.test(myTop.tx||"")){
-        const dmg = +(myTop.tx.match(/deal (\d+) damage/i)[1]);
-        clashState = {...clashState};
-        foeMut(clashState).hp -= dmg;
-        clashState = L(clashState, `${myTop.name} was the card revealed — it lashes out for ${dmg}.`);
-      }
-    }
-    s = clashState;
-    const dh = bcards.reduce((a,c)=>a+(c.def||0),0);
-    const dg = act(s).blockG.reduce((a,i)=>a+gearDef(act(s).gear[i]),0);
+    const bonus = defBonus || {};
+    const dh = bcards.reduce((a,c)=>a+(c.def||0)+(bonus[c.uid]||0),0);
+    const dg = act(s).blockG.reduce((a,i)=>a+gearDef(act(s).gear[i])+(bonus[act(s).gear[i].uid]||0),0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     let through = Math.max(0, s.incoming-dh-dg-drx-clashDef);
     let wardNote = "";
@@ -3569,6 +3547,79 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return L(o, "— Turn 1. The floor is yours.");
     }
     return newTurn(n);
+  };
+  const takeIt = () => setG(s=>{
+    if(s.mode!=="block") return s;
+    const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
+    /* CLASH RESOLVES ON DEFENCE. Every clash card in the pool reads "When this
+       defends, clash with the attacking hero" — it fires when the card blocks,
+       not when it is played as an attack, which is where it used to live. Both
+       sides reveal for real (the dummy has a deck), greatest POWER wins, and a
+       tie is no winner — all three settled by ruling and printed reminder. */
+    let clashDef = 0, clashState = s;
+    for(const cc of [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])].filter(x=>x && hasKw(x,"clash"))){
+      const myTop = act(clashState).deck[0], foeTop = foe(clashState).deck[0];
+      const mine = myTop ? (myTop.power||0) : 0, foe = foeTop ? (foeTop.power||0) : 0;
+      const win = mine > foe, tie = mine === foe;
+      clashState = L(clashState, `${cc.name} clashes — you reveal ${myTop?myTop.name+" ("+mine+")":"nothing (0)"}`
+        + ` vs the dummy's ${foeTop?foeTop.name+" ("+foe+")":"empty deck (0)"} — `
+        + (tie ? "a tie, no winner." : win ? "you win!" : "the dummy wins."));
+      if(tie) continue;
+      const tl = clean(cc.tx||"").toLowerCase();
+      const tm = tl.match(/the winner creates? (?:a|an|\d+) ([a-z' -]+) tokens?/);
+      if(tm) clashState = runOps(clashState, [["token", tm[1].trim(), 1, win?"self":"foe"]], cc.name);
+      const wm = tl.match(/if you win, this gets \+(\d+)\s*\{d\}/);
+      if(win && wm){ clashDef += +wm[1]; clashState = L(clashState, `${cc.name} braces — +${wm[1]} defence from the clash.`); }
+      /* the REVEALED card may itself pay off on a win (Unexpected Backhand) */
+      if(win && myTop && /when you win a clash revealing this, deal (\d+) damage/i.test(myTop.tx||"")){
+        const dmg = +(myTop.tx.match(/deal (\d+) damage/i)[1]);
+        clashState = {...clashState};
+        foeMut(clashState).hp -= dmg;
+        clashState = L(clashState, `${myTop.name} was the card revealed — it lashes out for ${dmg}.`);
+      }
+    }
+    s = clashState;
+    /* PAY-COST DEFENDERS (Brothers in Arms) — "when this defends, you may
+       pay {cost}. If you do, +N{d}" has to be decided BEFORE damage is
+       struck, which is exactly why it cannot be a queued prompt (those
+       only drain after resolution — the wall Charge/Fusion/Look Tuff hit
+       earlier this session). Unlike those, this one gets the real thing:
+       pause into mode "defpay", ask for each declared defender that has
+       the ability, then finishBlock() picks up exactly where the no-pause
+       path always has. */
+    const declared = [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])].filter(Boolean);
+    const payable = declared
+      .map(c=>({c, px:fxParse(c).payCost}))
+      .filter(({px})=>px && px.trigger==="defends");
+    if(payable.length){
+      return {...s, mode:"defpay", _clashDef:clashDef,
+        defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops})),
+        defBonus:{}};
+    }
+    return finishBlock(s, clashDef, {});
+  });
+  const confirmDefPay = pay => setG(s=>{
+    if(s.mode!=="defpay" || !(s.defPayQueue||[]).length) return s;
+    const [cur, ...rest] = s.defPayQueue;
+    let n = {...s};
+    const bonus = {...(n.defBonus||{})};
+    if(pay && act(n).res >= cur.cost){
+      const ps = actMut(n);
+      ps.res = ps.res - cur.cost;
+      const dbAdd = cur.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
+      if(dbAdd) bonus[cur.uid] = (bonus[cur.uid]||0) + dbAdd;
+      const otherOps = cur.ops.filter(o=>o[0]!=="defBuff");
+      if(otherOps.length) n = runOps(n, otherOps, cur.name);
+      n = L(n, `${cur.name}: paid ${cur.cost}${dbAdd?` — +${dbAdd}{d}`:""}.`);
+    } else if(pay){
+      n = L(n, `${cur.name}: not enough floating to pay ${cur.cost}.`);
+    } else {
+      n = L(n, `${cur.name}: declined.`);
+    }
+    n.defPayQueue = rest;
+    n.defBonus = bonus;
+    if(rest.length) return {...n, mode:"defpay"};
+    return finishBlock({...n, mode:"block"}, n._clashDef||0, bonus);
   });
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
@@ -3670,7 +3721,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g))-you(g).res)+" MORE"} : g.featured;
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g))-you(g).res)+" MORE"}
+    : (g.mode==="defpay" && (g.defPayQueue||[]).length) ? {card:[...you(g).hand, ...you(g).gear].find(c=>c.uid===g.defPayQueue[0].uid), chip:"PAY "+g.defPayQueue[0].cost+"? — "+g.defPayQueue[0].name}
+    : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st) => {
     const w = isWeapon(gr), blockable = g.mode==="block" && gearDef(gr)>0;
@@ -3907,6 +3960,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{you(g).res}</b> or pass</div>}
               {g.mode==="arsenal" && <div className="statusline">Tap a card below for <b>arsenal</b><button onClick={skipArsenal}>skip</button></div>}
               {g.mode==="boostpick" && <div className="statusline">Boost <b>{g.pending.card.name}</b>? Banish the top card of your deck — a Mechanologist card grants go again.</div>}
+              {g.mode==="defpay" && (g.defPayQueue||[]).length>0 && <div className="statusline">
+                <b>{g.defPayQueue[0].name}</b> is defending — pay <b>{g.defPayQueue[0].cost}</b> for +{g.defPayQueue[0].ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0)}{"{d}"}? You have {you(g).res} floating.
+                {g.defPayQueue.length>1 && <span> ({g.defPayQueue.length-1} more waiting.)</span>}
+              </div>}
               {(()=>{ /* v2.07: the engine tracks all of this; the board never showed it */
                 const pips = [];
                 if(you(g).amp>0)       pips.push(["amp "+you(g).amp, "on"]);
@@ -4053,6 +4110,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         )) : g.mode==="boostpick" ? (<>
           <button className="a go" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
           <button className="a" onClick={()=>confirmBoost(false)}>No boost</button>
+        </>) : g.mode==="defpay" ? (<>
+          <button className="a go" disabled={you(g).res < ((g.defPayQueue||[])[0]?.cost||0)} onClick={()=>confirmDefPay(true)}>
+            Pay {(g.defPayQueue||[])[0]?.cost||0}
+          </button>
+          <button className="a" onClick={()=>confirmDefPay(false)}>Decline</button>
         </>) : (<>
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
         </>)}
