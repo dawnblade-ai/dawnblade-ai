@@ -481,6 +481,15 @@ and Lair of the Spider — both in the pool — playable in the **action
 phase for an action point**: sev-3 "illegal play allowed", and invisible
 to every card-level tool, because the card's TEXT parsed perfectly.
 
+**RULING (user, 2026-08-02): where the two fields conflict, the
+structured array wins — always.** All five conflicts in the database are
+`type_text` errors. The third one, Comet Collision (`type_text` says
+`Instant`, array says `Action`), was confirmed the same way: it is a
+**Lightning Wizard Action**, an ordinary non-attack action whose Starfall
+ability merely checks whether an instant reached the graveyard this turn.
+Not in the Silver Age pool, so nothing depended on it — but the policy
+does, and it is now settled rather than guessed.
+
 **Class words say who may DECK a card, and how other cards refer to it.
 They are not types.** `Assassin / Warrior` is deck legality, not a
 statement that the card is two things.
