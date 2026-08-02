@@ -101,6 +101,27 @@ test("types.js agrees with parser.js on attack, reaction and instant — every c
   assert.deepEqual(dis, []);
 });
 
+test("a class word is never filed as a type, slot, shape or hands", {skip}, () => {
+  /* "Assassin / Warrior" says who may DECK the card and how other cards
+     refer to it. It is not what the card IS — reading it as a type is
+     what started this. Equally, an equipment slot or a weapon shape must
+     never end up in `classes`: `Necromancer Equipment - Head` once
+     produced classes ["Necromancer","Head"]. */
+  const RESERVED = /^(head|chest|arms|legs|quiver|off-hand|1h|2h|sword|bow|hammer|dagger|staff|gun|claw|scroll)$/i;
+  const bad = [];
+  for(const c of pool()){
+    const t = TY.cardType(c);
+    for(const cl of t.classes){
+      if(TY.CARD_TYPES.includes(cl)) bad.push(`${c.name}: type "${cl}" filed as a class`);
+      if(TY.SUBTYPES.includes(cl))   bad.push(`${c.name}: subtype "${cl}" filed as a class`);
+      if(RESERVED.test(cl))          bad.push(`${c.name}: slot/shape "${cl}" filed as a class`);
+    }
+    if(TY.isEquipment(t) || TY.isWeaponType(t))
+      assert.ok(t.classes.length > 0, `${c.name} [${c.tt}] lost every class word`);
+  }
+  assert.deepEqual(bad, []);
+});
+
 test("types.js agrees with game.js on every equipment slot", {skip}, () => {
   const dis = [];
   for(const c of pool()){
@@ -145,20 +166,74 @@ test("the parser/types weapon split is exactly the four powerless weapons", {ski
 
 /* ---- the three shapes a naive reader gets wrong -------------------------- */
 
-test("a card can print TWO types, and gets both windows", {skip}, () => {
-  const dual = pool().filter(c => TY.cardType(c).types.length > 1);
-  assert.ok(dual.length > 0, "no dual-typed card found — the drill cannot bite");
-  for(const c of dual){
+/* A REACTION IS NOT AN ACTION, AND THE DISPLAY STRING SAYS OTHERWISE.
+
+   The database carries two type fields and they disagree on 5 of its
+   4,862 records:
+
+     Den of the Spider  ty: ["Assassin","Warrior","Defense Reaction","Trap"]
+                        tt: "Assassin / Warrior Action Defense Reaction - Trap"
+
+   The structured array is right; `type_text` carries a stray "Action".
+   Reading the string made a defence reaction playable in the action
+   phase for an action point — sev-3 "illegal play allowed", and
+   invisible to every card-level tool because the card's TEXT parsed
+   perfectly. The class words say who may DECK a card, not what it is. */
+test("a reaction is never an action — no card in the pool is both", {skip}, () => {
+  const both = pool().filter(c => {
     const t = TY.cardType(c);
-    const w = TY.playWindows(c);
-    assert.ok(w.length > 1, `${c.name} [${c.tt}] parses as ${t.types.length} types but ${w.length} window(s)`);
-    /* and the action-point cost depends on WHICH window it is played in */
-    if(t.types.includes("Action") && t.types.includes("Defense Reaction")){
-      assert.equal(TY.typeCostsAP(c, "action"), true, `${c.name} as an action should cost an action point`);
-      assert.equal(TY.typeCostsAP(c, "defense-reaction"), false, `${c.name} as a defence reaction should cost none`);
-    }
+    return t.types.includes("Action") && (t.types.includes("Defense Reaction") || t.types.includes("Attack Reaction"));
+  }).map(c => `${c.name} [${c.tt}]`);
+  assert.deepEqual(both, []);
+});
+
+test("the two Spiders are Defense Reactions, and their classes are only classes", {skip}, () => {
+  for(const nm of ["Den of the Spider", "Lair of the Spider"]){
+    const c = pool().find(x => x.name === nm);
+    assert.ok(c, `${nm} is not in the pool`);
+    const t = TY.cardType(c);
+    assert.deepEqual(t.types, ["Defense Reaction"], `${nm} parsed as ${JSON.stringify(t.types)}`);
+    assert.deepEqual(t.subtypes, ["Trap"]);
+    assert.deepEqual(TY.playWindows(c), ["defense-reaction"],
+      `${nm} is playable outside the defence window`);
+    assert.equal(TY.typeCostsAP(c, "defense-reaction"), false,
+      `${nm} charged an action point for a defence reaction`);
+    /* the class words are CLASSES — deck legality and how other cards
+       refer to it — never types */
+    assert.ok(t.classes.length >= 2, `${nm} lost its class words: ${JSON.stringify(t.classes)}`);
+    assert.ok(t.classes.every(x => !TY.CARD_TYPES.includes(x)),
+      `${nm} filed a card type as a class: ${JSON.stringify(t.classes)}`);
   }
-  assert.deepEqual(dual.map(c => c.name).sort(), ["Den of the Spider", "Lair of the Spider"]);
+});
+
+test("the structured array beats the display string where they disagree", {skip}, () => {
+  /* Proven at the source, not just at the parse: the two records really
+     do carry conflicting fields, so the drill above is testing a real
+     conflict rather than a hypothetical. */
+  const den = pool().find(c => c.name === "Den of the Spider");
+  assert.ok(/\bAction\b/i.test(den.tt), "the display string stopped carrying its stray 'Action'");
+  assert.ok(!den.ty.some(x => /^Action$/i.test(x)), "the structured array grew an 'Action'");
+  assert.ok(!TY.isAction(den), "types.js followed the display string over the array");
+});
+
+test("a DOUBLE-FACED card is read by its FRONT face", {skip}, () => {
+  /* The one place the display string knows more than the array: a DFC
+     flattens both faces into `ty` — ["Runeblade","Action","Earth",
+     "Instant"] — and only `type_text` keeps the "//" boundary. You play
+     the front face; the back is reachable only by melding. Reading the
+     flat array calls two real action cards instants and hands each a
+     free action point, which is the v2.39 bug exactly. */
+  const dfcs = pool().filter(c => String(c.tt || "").includes("//"));
+  assert.ok(dfcs.length > 0, "no DFC in the pool — the drill cannot bite");
+  for(const c of dfcs){
+    assert.ok(c.ty.some(x => /^Instant$/i.test(x)),
+      `${c.name}'s array should still carry the back face's Instant`);
+    assert.equal(TY.isInstant(c), false,
+      `${c.name} was read as an instant — that is the back face`);
+    assert.equal(TY.isAction(c), true, `${c.name}'s front face is an Action`);
+    assert.equal(TY.typeCostsAP(c, "action"), true,
+      `${c.name} would get a free action point — v2.39's bug, back again`);
+  }
 });
 
 test("Block cards have no play — only pitch and defend", {skip}, () => {
@@ -298,7 +373,7 @@ test("the pool's type census is what we think it is", {skip}, () => {
     permanent:  n(TY.isPermanent)
   };
   assert.deepEqual(census, {
-    cards: 401, action: 269, instant: 22, attackRx: 20, defenseRx: 15,
+    cards: 401, action: 267, instant: 22, attackRx: 20, defenseRx: 15,
     equipment: 58, weapon: 15, block: 4, attack: 175, permanent: 23
   }, "the pool's type census moved — check DATA_VER and the deck lists");
 });

@@ -465,23 +465,51 @@ ad-hoc regexes; `rxAllowed` exists precisely because five copies of "may
 this be played here" had drifted apart, and the drift showed up as a card
 that looked playable and did nothing when tapped.
 
-**Three things the pool prints that a naive reader gets wrong:**
+#### THE STRUCTURED ARRAY IS THE AUTHORITY — `ty`, not `tt`
 
-1. **A card can have TWO types.** `Assassin / Warrior Action Defense
-   Reaction - Trap` — Den of the Spider and Lair of the Spider are an
-   Action *and* a Defense Reaction. Playable in the action phase for an
-   action point, or in the defence window for none. A reader that matches
-   one type and stops refuses the card half the time. `playWindows`
-   returns a list for this reason, and `typeCostsAP(card, window)` takes
-   the window because the cost depends on which one it is played in.
-2. **`Block` is a type and it has no play.** Test of Might, Test of
+The database carries the card's types **twice**, and the two disagree on
+**5 of its 4,862 records**:
+
+| | |
+|---|---|
+| `types` (→ `card.ty`) | `["Assassin","Warrior","Defense Reaction","Trap"]` |
+| `type_text` (→ `card.tt`) | `"Assassin / Warrior Action Defense Reaction - Trap"` |
+
+**A reaction cannot be an action.** The structured array is right and the
+printed line carries a stray word. Reading `tt` made Den of the Spider
+and Lair of the Spider — both in the pool — playable in the **action
+phase for an action point**: sev-3 "illegal play allowed", and invisible
+to every card-level tool, because the card's TEXT parsed perfectly.
+
+**Class words say who may DECK a card, and how other cards refer to it.
+They are not types.** `Assassin / Warrior` is deck legality, not a
+statement that the card is two things.
+
+`mapDbCard` and `resolveEntry` now carry `ty`, and **the loader in
+`index.html` mirrors both — change all three, and bump `DATA_VER`**
+(done: `sage-v11`; a warm `sage-v10` cache has no `ty` on any card).
+
+**The one place the display string knows more: a DOUBLE-FACED card.**
+`Arcane Seeds // Life` flattens to `["Runeblade","Action","Earth",
+"Instant"]` — only `tt` keeps the `//` boundary. You play the FRONT
+face, so a DFC falls back to parsing the front of the string. Reading
+the flat array calls two real action cards instants and hands each a
+free action point, which is v2.39's bug returning by another door.
+
+**Three more things the pool prints that a naive reader gets wrong:**
+
+1. **`Block` is a type and it has no play.** Test of Might, Test of
    Strength, On the Horizon, Crash and Bash — no printed cost, 4 defence,
    all reading "When this defends, …". They may be pitched or declared as
    defenders, nothing else. Treated as ordinary non-attacks they are free
    0-cost plays that do nothing.
-3. **`Reaction` contains the substring `action`.** Any type scan that is
+2. **`Reaction` contains the substring `action`.** Any type scan that is
    not word-boundary-anchored and longest-first reads `Warrior Attack
-   Reaction` as an Action.
+   Reaction` as an Action. Only the fallback string path can hit this —
+   one more reason the array is the authority.
+3. **An ALLY prints power AND life**, because an ally swings and can be
+   swung at. Six in the pool. A "power belongs to attacks and weapons"
+   check reports all six as broken.
 
 **And one that looks like a rule and is not: a null cost does NOT mean
 unplayable.** Equipment, Weapons and Blocks print no cost, so "no cost
@@ -496,9 +524,10 @@ auras, 5 items and 6 allies are in the pool; `destination()` routes them
 and `permanentKind()` names them so `game.js`'s ally helpers agree.
 
 **The census is a partition, and a drill proves it**: the seven card-type
-counts sum to 403, minus the 2 dual-typed cards, equals the 401 unique
-cards exactly. Every card is typed once, and `attack` (175) is a *subset*
-of `action` (269) rather than a peer.
+counts sum to **exactly** the 401 unique cards, with no card typed twice
+— which is how the "Action Defense Reaction" misread would be caught
+again. `attack` (175) is a *subset* of `action` (267) rather than a peer,
+so it is deliberately outside the sum.
 
 #### `types.isWeaponType` vs `parser.isWeapon` — pinned, not fixed
 

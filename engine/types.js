@@ -98,60 +98,107 @@ const clean = s => String(s == null ? "" : s).replace(/\s+/g, " ").trim();
 const frontFace = line => clean(line).split("//")[0];
 
 /* ---- the parse --------------------------------------------------------
-   Returns a structure, never a boolean. Callers ask it questions. */
+   Returns a structure, never a boolean. Callers ask it questions.
+
+   THE STRUCTURED ARRAY WINS. `card.ty` is the database's own `types`
+   field — a clean list like ["Assassin","Warrior","Defense Reaction",
+   "Trap"] — and `card.tt` is `type_text`, a string for humans to read.
+   They disagree on 5 of 4,862 database records, and reading the string
+   got a live rule wrong:
+
+     Den of the Spider  tt: "Assassin / Warrior Action Defense Reaction - Trap"
+                        ty: ["Assassin","Warrior","Defense Reaction","Trap"]
+
+   A REACTION CANNOT BE AN ACTION. The stray word in the printed line
+   made a defence reaction playable in the action phase for an action
+   point — sev-3 "illegal play allowed", and invisible to every
+   card-level tool because the card's TEXT was read perfectly. The class
+   words ("Assassin / Warrior") say who may DECK the card, not what it is.
+
+   Parsing `tt` is kept only as the fallback for a record with no `ty`:
+   a warm cache from before DATA_VER sage-v11, or a hand-built fixture. */
 function cardType(c){
-  const raw = typeof c === "string" ? c : (c && c.tt) || "";
+  const obj  = typeof c === "object" && c ? c : null;
+  const raw  = typeof c === "string" ? c : (obj && obj.tt) || "";
   const line = frontFace(raw);
   const dash = line.split(/\s+[-—]\s+/);
-  let left = dash[0] || "";
+  const left = dash[0] || "";
   const right = dash.slice(1).join(" ");
 
-  /* TYPES, greedily and longest-first, off the left side. */
-  const types = [];
+  /* A DOUBLE-FACED CARD FLATTENS ITS FACES IN THE ARRAY, and that is the
+     one place the display string knows more than the structured field:
+
+       Arcane Seeds // Life   tt ["Runeblade Action" // "Earth Instant"]
+                              ty ["Runeblade","Action","Earth","Instant"]
+
+     Only the string keeps the "//" boundary. You play the FRONT face —
+     the back is reachable only by melding — so reading the flat array
+     would call two real action cards instants and hand each of them a
+     free action point (the v2.39 bug, exactly). Eleven DFCs are in the
+     database and two are in the pool. For those, parse the front face. */
+  const dfc = raw.indexOf("//") >= 0;
+  const arr = (!dfc && obj && Array.isArray(obj.ty) && obj.ty.length) ? obj.ty.map(String) : null;
+
+  const has  = w => arr.some(a => a.toLowerCase() === w.toLowerCase());
+  const hasS = w => new RegExp("\\b" + w.replace(/[-\s]/g, "[-\\s]") + "\\b", "i");
+
+  /* TYPES and SUBTYPES. From the array when there is one; otherwise
+     greedily and longest-first off the display string, which is what
+     makes "Reaction" stop being read as "Action". */
+  const types = [], subtypes = [];
+  let scan = left;
   for(const t of CARD_TYPES){
-    const re = new RegExp("\\b" + t.replace(/[-\s]/g, "[-\\s]") + "\\b", "i");
-    if(re.test(left)){ types.push(t); left = left.replace(re, " "); }
+    if(arr ? has(t) : hasS(t).test(scan)){ types.push(t); if(!arr) scan = scan.replace(hasS(t), " "); }
   }
+  for(const s of SUBTYPES) if(arr ? has(s) : hasS(s).test(right)) subtypes.push(s);
 
-  /* Whatever is left of the left side is classes and talents. Split on
-     BOTH "/" and whitespace: "Brute / Warrior" is an either-or (the card
-     is playable by either), "Pirate Necromancer" is a talent plus a
-     class (the card needs both). Deck legality cares which; nothing in a
-     game already dealt from a legal deck does, so the flat word list is
-     what filters actually want. `classGroups` keeps the distinction for
-     whoever needs it later. */
-  const classGroups = clean(left).split("/").map(s => clean(s)).filter(Boolean)
-    .map(s => s.split(" ").filter(Boolean));
-  const classes = [...new Set([].concat(...classGroups))];
-
-  /* SUBTYPES, plus the equipment slot and weapon shape, off the right. */
-  const subtypes = [];
-  for(const s of SUBTYPES){
-    const re = new RegExp("\\b" + s.replace(/-/g, "[-\\s]") + "\\b", "i");
-    if(re.test(right)) subtypes.push(s);
-  }
-
+  /* SLOT, SHAPE and HANDS. The array carries all three as plain entries
+     ("Warrior","Weapon","Sword","2H"); the string carries them after the
+     dash. Hands come from the 1H/2H marker either way — NOT from a shape
+     list, which varies by set and would mis-slot the first new shape a
+     future set prints. */
   let slot = null;
-  const slotKey = clean(right).toLowerCase().replace(/\s*\(.*$/, "");
-  if(SLOT_WORDS[slotKey]) slot = SLOT_WORDS[slotKey];
+  if(arr){
+    for(const k of Object.keys(SLOT_WORDS)) if(has(k)){ slot = SLOT_WORDS[k]; break; }
+  } else {
+    const key = clean(right).toLowerCase().replace(/\s*\(.*$/, "");
+    if(SLOT_WORDS[key]) slot = SLOT_WORDS[key];
+  }
 
-  /* HANDS COME FROM THE PARENTHETICAL, NOT FROM THE SHAPE.
-     "(2H)" is printed and authoritative; the shape word is decoration
-     that varies by set (Sword, Hammer, Dagger, Bow, Staff, Gun, Claw,
-     Scroll here, and more elsewhere). Keying off a shape LIST would
-     silently mis-slot the first weapon shape a future set prints. */
-  const hm = right.match(/\((\d)H\)/i);
-  const shape = clean(right.replace(/\(.*$/, "")) || null;
+  const hm = arr ? (arr.find(a => /^\dH$/i.test(a)) || "").match(/(\d)/)
+                 : right.match(/\((\d)H\)/i);
   let hands = hm ? +hm[1] : 0;
-  if(types.includes("Weapon") && !hm) hands = 1;      /* an unmarked weapon is one-handed */
+  if(types.indexOf("Weapon") >= 0 && !hm) hands = 1;   /* an unmarked weapon is one-handed */
   if(slot === "off") hands = 1;
   if(slot === "qvr") hands = 0;
+  if(types.indexOf("Weapon") >= 0 && !slot) slot = hands === 2 ? "2h" : "1h";
 
-  /* A weapon's slot is its hands; equipment's is its printed word. */
-  if(types.includes("Weapon") && !slot) slot = hands === 2 ? "2h" : "1h";
+  /* CLASSES AND TALENTS — whatever is left once every word the rules use
+     has been accounted for. "Assassin / Warrior" says who may DECK the
+     card and how other cards refer to it; it says nothing about what the
+     card IS, which is the mistake that started this. */
+  const known = new Set(CARD_TYPES.concat(SUBTYPES, Object.keys(SLOT_WORDS)).map(x => x.toLowerCase()));
+  const isMeta = w => known.has(String(w).toLowerCase()) || /^\dH$/i.test(w);
 
-  return {line, classes, classGroups, types, subtypes, slot,
-          shape: types.includes("Weapon") ? shape : null, hands};
+  /* The weapon SHAPE and the hero CLASS are both plain words in the array
+     ("Warrior","Weapon","Sword","2H") and nothing in the array tells them
+     apart. The display string does: the shape is printed after the dash,
+     the classes before it. So the shape is read off the string in both
+     paths and the matching array entry is then excluded from the classes.
+     No shape LIST is involved, which is what stops the first new shape a
+     future set prints from being filed as a hero class. */
+  const shapeWord = types.indexOf("Weapon") >= 0
+    ? (clean(right.replace(/\(.*$/, "")) || null)
+    : null;
+  const isShape = w => shapeWord != null && String(w).toLowerCase() === shapeWord.toLowerCase();
+
+  const classGroups = clean(left).split("/").map(x => clean(x)).filter(Boolean)
+    .map(x => x.split(" ").filter(w => w && !isMeta(w) && !isShape(w)));
+  const classes = arr
+    ? arr.filter(a => !isMeta(a) && !isShape(a))
+    : [...new Set([].concat(...classGroups))];
+
+  return {line, classes, classGroups, types, subtypes, slot, shape: shapeWord, hands};
 }
 
 /* ---- the questions ----------------------------------------------------

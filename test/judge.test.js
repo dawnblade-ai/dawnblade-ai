@@ -412,29 +412,31 @@ test("EQUIPMENT cannot be played from hand", {skip}, () => {
   assert.ok(act && /equipment, not a weapon|prints no weapon attack/.test(act));
 });
 
-test("a DUAL-TYPED card is legal in both its windows, and costs AP in only one", {skip}, () => {
-  /* Den of the Spider / Lair of the Spider are `Action Defense Reaction`. */
-  let g = match({seed: "dual"});
+test("a TRAP defence reaction is refused in the action phase", {skip}, () => {
+  /* Den of the Spider and Lair of the Spider. The database's display
+     string calls them "Action Defense Reaction"; the structured array
+     says Defense Reaction, and a reaction cannot be an action. Reading
+     the string made them playable on their controller's own turn for an
+     action point — sev-3 "illegal play allowed". The class words
+     ("Assassin / Warrior") govern deck legality, not card type. */
+  let g = match({seed: "trap"});
   const seat = g.turnPlayer;
-  const {g: g2, card} = withCard(g, seat, c => TY.cardType(c).types.length > 1);
-  assert.ok(card, "no dual-typed card in the pool");
+  const {g: g2, card} = withCard(g, seat, c => TY.hasSubtype(c, "Trap") && TY.isDR(c));
+  assert.ok(card, "no Trap defence reaction in the pool — the drill cannot bite");
+  assert.deepEqual(TY.cardType(card).types, ["Defense Reaction"],
+    `${card.name} parsed as ${JSON.stringify(TY.cardType(card).types)}`);
 
-  /* as an ACTION, on its controller's turn */
-  assert.equal(J.legal(g2, {t: "play", uid: card.uid, from: "hand"}, seat), null,
-    `${card.name} is an Action and was refused in the action phase`);
-  const played = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat).state;
-  assert.equal(played.sides[seat].ap, 0, "an Action was played without spending the action point");
+  const why = J.legal(g2, {t: "play", uid: card.uid, from: "hand"}, seat);
+  assert.ok(why, `${card.name} was playable in the action phase`);
+  assert.match(why, /defence reaction|reaction step/);
 
-  /* as a DEFENCE REACTION, in the defence window, for no action point */
-  let d = toDefendStep(match({seed: "dual2"}));
-  for(let i = 0; i < 4 && d.step !== "reaction" && d.priority != null; i++)
-    d = J.reduce(d, {t: "pass"}, d.priority).state;
+  /* and it is still not DECLARABLE as a defender (CR 8.1.3a) — a
+     reaction is played in the reaction step, never declared */
+  const d = toDefendStep(match({seed: "trap2"}));
   const def = P.defendingPlayer(d);
-  if(d.step === "reaction" && d.priority === def){
-    const dd = J.put(d, def, s => ({...s, hand: [card, ...s.hand], res: 9, ap: 0}));
-    assert.equal(J.legal(dd, {t: "play", uid: card.uid, from: "hand"}, def), null,
-      `${card.name} is a Defense Reaction and was refused in the defence window at 0 action points`);
-  }
+  const dd = J.put(d, def, s => ({...s, hand: [card, ...s.hand]}));
+  const dwhy = J.legal(dd, {t: "defend", uid: card.uid}, def);
+  assert.ok(dwhy && /reaction step/.test(dwhy), `${card.name} was declared as a defending card`);
 });
 
 /* ---- COSTS, KEYWORDS, WINDOWS ------------------------------------------- */

@@ -679,8 +679,8 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.43"; /* v2.43 — Phase 1: card types and the numbers. engine/types.js reads all 138 printed type lines; permanents reach the arena. Full history in CHANGELOG.md. */
-window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.APP_VER = "2.44"; /* v2.44 — the STRUCTURED type array is the authority: a reaction cannot be an action, and `type_text` said otherwise on two pool cards. Full history in CHANGELOG.md. */
+window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1397,7 +1397,15 @@ function useCardDB(){
           cards.push({
             n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
             d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
-            tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
+            tt:c.type_text||((c.types||[]).join(" ")),
+            /* mirrors engine/cards.js mapDbCard — the STRUCTURED type array,
+               which is the authority where `tt` is only a display string.
+               They disagree on 5 records and it is not cosmetic: `tt` calls
+               Den of the Spider an "Action Defense Reaction", which would
+               make a defence reaction playable on your own turn. Change
+               both, and bump DATA_VER when you do. */
+            ty:(c.types||[]).slice(),
+            kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
             tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
           });
         });

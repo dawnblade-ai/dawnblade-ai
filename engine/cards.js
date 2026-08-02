@@ -83,7 +83,15 @@ function resolveEntry(db, e, prefer){
        own health via resolveHero; this is what makes an ally a *living
        object* (CR 1.4.5a) and therefore attackable. */
     life: card&&card.hp!=null ? card.hp : null,
-    tt: card?card.tt:"", kw: card?card.kw:[], gkw: card?(card.gkw||[]):[], tx: card?card.tx:"",
+    tt: card?card.tt:"",
+    /* THE STRUCTURED TYPE ARRAY, carried through beside the display
+       string. Dropping it here is what let `tt`'s stray "Action" word
+       reach the rules and make Den of the Spider — a Defense Reaction —
+       playable on its controller's own turn. Same failure shape as the
+       ally `life` note above: the resolver quietly narrowed the record
+       and the rules could not see a field the database had all along. */
+    ty: card?(card.ty||[]).slice():[],
+    kw: card?card.kw:[], gkw: card?(card.gkw||[]):[], tx: card?card.tx:"",
     img, dbImg, resolved: !!card
   };
 }
@@ -124,7 +132,27 @@ function mapDbCard(c){
   return {
     n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
     d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
-    tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
+    tt:c.type_text||((c.types||[]).join(" ")),
+    /* THE STRUCTURED TYPE ARRAY IS THE AUTHORITY; `tt` IS A DISPLAY STRING.
+       They disagree on 5 of the database's 4,862 records, and the
+       disagreement is not cosmetic:
+
+         Den of the Spider   tt "Assassin / Warrior Action Defense Reaction - Trap"
+                             ty ["Assassin","Warrior","Defense Reaction","Trap"]
+         Lair of the Spider  same shape
+         Comet Collision     tt "Lightning Wizard Instant"
+                             ty ["Lightning","Wizard","Action"]
+
+       A reaction cannot be an action, so the array is right about the two
+       Spiders and the printed line carries a stray word. Reading `tt`
+       made both of them playable in the action phase for an action point
+       — a sev-3 illegal play, and one no card-level tool can see because
+       the card's TEXT was read perfectly.
+
+       Carried as `ty` so a type question can ask the structured field and
+       fall back to parsing `tt` only when a record has none. */
+    ty:(c.types||[]).slice(),
+    kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
     tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
   };
 }

@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.44 — a reaction cannot be an action
+
+**Reported by the user, who reads cards for a living, and they were
+right.** v2.43 claimed Den of the Spider and Lair of the Spider were
+dual-typed `Action Defense Reaction` cards. They are not. They are
+Defense Reactions, and `Assassin / Warrior` is **deck legality** — who
+may include the card, and how other cards refer to it — not a claim
+about what the card is.
+
+### The database says it twice, and the two disagree
+
+| field | Den of the Spider |
+|---|---|
+| `types` (structured) | `["Assassin","Warrior","Defense Reaction","Trap"]` |
+| `type_text` (display) | `"Assassin / Warrior Action Defense Reaction - Trap"` |
+
+`mapDbCard` read `type_text` and threw the structured array away. A
+sweep of all **4,862** database records found the two fields disagree on
+exactly **5**: the two Spiders (display adds a stray `Action`) and Comet
+Collision ×3 (display says `Instant`, array says `Action` — not in the
+Silver Age pool).
+
+**The consequence was a sev-3 illegal play.** Both Spiders were playable
+in the action phase for an action point. No card-level tool could see
+it: the card's *text* parsed perfectly, coverage said `full`, and the
+fairness sweep looks for over-granted effects, not for a card being the
+wrong type.
+
+### The fix, and the one exception
+
+`mapDbCard` and `resolveEntry` now carry `ty` alongside `tt`, the loader
+in `index.html` mirrors both, and **`DATA_VER` is `sage-v11`** — a warm
+`sage-v10` cache has no `ty` on any card and would silently fall back to
+parsing the display string.
+
+**A double-faced card is the one place the display string knows more.**
+`Arcane Seeds // Life` flattens to `["Runeblade","Action","Earth",
+"Instant"]`; only `type_text` keeps the `//` boundary. You play the
+FRONT face, so DFCs parse the front of the string. Reading the flat
+array calls two real action cards instants and hands each of them a free
+action point — v2.39's bug returning through another door, now drilled.
+
+Also fixed on the way: an equipment slot word was landing in `classes`
+(`Necromancer Equipment - Head` → `["Necromancer","Head"]`).
+
+### The census is now an exact partition
+
+Seven card-type counts summing to **exactly** 401 unique cards, none
+typed twice. That is the shape that catches this class of misread, and
+it did not hold in v2.43 — the two Spiders were double-counted and the
+drill absorbed it as "2 dual-typed". Five drills now fail if the display
+string is trusted again, verified by reintroducing the bug.
+
+---
+
 ## v2.43 — Phase 1: card types, and the numbers
 
 The half of Flesh and Blood that needs no text box. Phase 3 takes the
