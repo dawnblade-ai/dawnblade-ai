@@ -293,17 +293,14 @@
   "ruling": "these 'trancend' cards are the cornerstone of the mystic talent identity. on the back there is a card called inner-chi - we'll have to pull it from fabrary.net - the inner chi can be used to activate the hero's hero ability\n\nupdate - the inner chi is printed literally on the back of the card in real life - when you transcend via one of these cards abilities the card is flipped over and becomes inner chi and is returned to your hand instead of going to the graveyard as it normally would upon resolution."
  },
  "soul-charge": {
-  "at": "2026-07-25",
+  "at": "2026-08-01",
   "mechanic": "soul charge",
   "status": "unmodelled",
   "cards": [
    "Halo of Illumination (0)",
-   "Radiant Touch (0)",
-   "Raydn, Duskbane (0)",
-   "Courageous Steelhand (1)",
-   "Valiant Thrust (2)"
+   "Radiant Touch (0)"
   ],
-  "ruling": "we will have to make room for boltyn's soul on the player's board - the soul cards can be stacked up - they could also be spread out on the graveyard screen - once in soul - they are used as amo for his hero ability, weapon and other card effects."
+  "ruling": "3 of 5 now resolve generically once the soul zone + 'charged this turn' cond existed (built for the 'charge' mechanic): Raydn Duskbane, Courageous Steelhand and Valiant Thrust all just read 'if you've charged this turn, gains +3{p}' against the same hist.charged flag charge-cost cards set — no new machinery needed once that flag existed, plus a fix to the self-reference rewrite so a subtitled name ('Raydn, Duskbane') printed short ('Raydn') in its own text still normalizes to 'this'. Two remain and need genuinely new machinery, not the charge cost pattern: Halo of Illumination is an equipment ability ('Instant - {r}, destroy this: Put a card from your hand into your hero's soul. If it's a Light card, draw a card') needing a 'put a card from hand into soul' EFFECT (not an additional cost — this fires as the ability's own payload, likely a prompts.js pick with to:'soul'). Radiant Touch spends soul as part of an ACTIVATION COST ('Instant - Banish this and a card from your hero's soul: Prevent the next 2 damage...') which is the reverse direction — soul as a resource paid, not a destination — and the existing 'soulSpend' op (engine op kind already wired for spending N soul cards) may already cover the payment half; the gap is wiring destroy/banish-plus-soul as a COMBINED cost the equipment reader recognizes."
  },
  "graveyard": {
   "at": "2026-07-25",
@@ -1139,13 +1136,13 @@
   "ruling": "EXTRA EFFECT ON ATTACK - DEAL 1 ARCANE DAMAGE TO OPPONENT - CONDITIONAL ADDITIONAL EFFECT - CHECK LOG IF ARCANE DAMAGE FROM PATH OF SAME ENDS WAS PREVENTED - IF NO - ADD 'GO AGAIN'"
  },
  "fusion": {
-  "at": "2026-07-25",
+  "at": "2026-08-01",
   "mechanic": "fusion",
   "status": "unmodelled",
   "cards": [
    "Weave Lightning (1)"
   ],
-  "ruling": "CREATES MACRO - TRIGGER - CHECK PLAYED ATTACK ACTIONS FOR 'LIGHTNING' OR 'ELEMENTAL' - IF YES - ADD 3 ATTACK POWER - CONDITIONAL EXTRA EFFECT WHEN TRIGGERED - CHECK ATTACKING CARD FOR 'FUSION' AND CHECK LOG FOR WHETHER PLAYER REVEALED A CARD - IF YES - ADD 'GO AGAIN' TO THE ATTACK - ONCE TRIGGERED REMOVE MACRO AFTER"
+  "ruling": "CR: '[SUPERTYPES] Fusion' means 'as an additional cost to play this, you may reveal a [SUPERTYPES] card from your hand' — nothing moves zones (a reveal, not a spend), so unlike Charge there is no real strategic reason to decline, and the engine auto-fuses whenever a qualifying card (matched by type-line word, e.g. 'ice'/'lightning' in card.tt) is in hand. Read generically: the bare 'X Fusion' / 'X and Y Fusion' / 'X and/or Y Fusion' line hoists fx.fusionCost (paragraph-scanned, same layout rule as a standalone Go again line); riders read as cond 'fused' via classifyClause's if/when handler. A compound gate ('...was fused AND deals damage to a hero') is read as one unit and routes through the condOnHit dispatcher built for Charge, so it only fires when the attack actually connects. 6 cards now resolve: Aether Icevein (x3 pitches) and Polar Cap resolve via PRE-EXISTING ops (foeDiscard already ignores the 'unless they pay' escape, which is faithful because the dummy never pays optional costs anyway; frostbite-token creation was already a deliberate noop since the dummy has no action phase to tax) reached through the new fused/condOnHit gate; Entwine Lightning and Arcanic Shockwave are newly wired end to end (conditional go-again, conditional arcane damage). Two remain and need more than the fusion cost pattern itself: Brain Freeze's rider targets the OPPONENT's revealed hand for a pick-and-deck-top ('put an action card with cost 0 from their hand on top of their deck') which needs prompts.js's reveal/pick wired to the foe's hand as source; Ice Eternal's rider is a DYNAMIC arcane amount ('deal arcane damage equal to the number of Frostbites they control') which needs a new op that reads the target's frostbite counter at resolution rather than a fixed number."
  },
  "card-carrion-crown-0": {
   "at": "2026-07-25",
@@ -1218,5 +1215,24 @@
    "Line Crossers (0)"
   ],
   "ruling": "EXTRA EFFECT - CHAOS! - CARDS THAT COMPARE LIFE NEED TO BE FLAGGED TO CHECK IF THIS IS IN PLAY - IF IT IS - AND THE RESULTING COMPARISON IS A TIE - THE ABILITY WILL STILL TRIGGER AS THOUGH THE REQUIRED OUTCOME HAD BEEN MET"
+ },
+ "high-tide": {
+  "at": "2026-08-01",
+  "mechanic": "high tide",
+  "status": "unreviewed",
+  "cards": [
+   "Swiftwater Sloop (1)",
+   "Swiftwater Sloop (3)"
+  ],
+  "ruling": "If there are 2 or more blue (pitch-3) cards in your pitch zone, the attack gains go again. Read generically as a named-keyword-gated condition, same shape as Reprise: classifyClause matches 'High Tide - If there are N or more blue cards in your pitch zone, <effect>' and stores the threshold N in the cond name (pitchBlueN) so a future card with a different N reads correctly. Wired in index.html's execute() cond switch against act(n).pitch.filter(c=>c.pitch===3).length."
+ },
+ "surge": {
+  "at": "2026-08-01",
+  "mechanic": "surge",
+  "status": "unreviewed",
+  "cards": [
+   "Aether Quickening (3)"
+  ],
+  "ruling": "If this deals more than its own printed damage, it gains go again. Amp (the parser's own 'amp' op / bonus-arcane-pool mechanic) is the only thing in this pool that can push a non-attack arcane effect above its printed base, so 'did this deal more than base' reduces to 'is an Amp bonus live right now', checked before the arcane op consumes it. classifyClause captures the printed N into cond surgeOverN for future cards; wired in index.html's execute() cond switch as act(n).amp>0."
  }
 }

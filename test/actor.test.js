@@ -40,7 +40,14 @@ const ANCHORS = [
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],
   ["foeSwing",     "  function foeSwing(s){"],
+  /* finishBlock/confirmDefPay (v2.39) are new, not in RULES_FNS — the
+     ledger covers exactly the seven the roadmap names, deliberately not
+     grown here — but they still need their own anchors or their bodies
+     would be silently swallowed into takeIt's slice (finishBlock, defined
+     just before it) or newTurn's (confirmDefPay, defined just after). */
+  ["finishBlock",  "  const finishBlock = (s, clashDef, defBonus) => {"],
   ["takeIt",       "  const takeIt = () => setG(s=>{"],
+  ["confirmDefPay","  const confirmDefPay = pay => setG(s=>{"],
   ["newTurn",      "  function newTurn(s){"],
   ["__end",        "  const toks = ["]
 ];

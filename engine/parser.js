@@ -51,6 +51,36 @@ function classifyClause(raw){
     return NOOP("reveal payoff — fires if this is the card revealed on a winning clash");
   if(/^when it has none, destroy it$/.test(c))
     return NOOP("counter tick — destruction handled with the tick that empties it");
+  /* VERSE COUNTERS (Malefic Incantation): this exact rider is the OTHER
+     half of the verse-counter unwind read directly off the board in
+     execute() — see the matching NOOP for its "remove a verse counter"
+     clause further down. Read as a whole-clause match, before the generic
+     if/when splitter, because "if you do" alone is shared by every
+     optional-cost rider in the pool; matching just the cond string would
+     silently claim clauses this exact wording was never written for. */
+  if(/^if you do, create a runechant token$/.test(c))
+    return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
+  /* COLD SNAP (RULING, per CR: Freeze prevents an object being played or its
+     activated abilities being activated until unfrozen): the dummy pays no
+     costs, so "target hero may pay" always resolves to declining — and
+     Freeze taxes a play/activation the dummy's scripted swing never makes,
+     same idle-against-the-dummy shape as Frostbite/Inertia. Read as a whole
+     unit before the if/when splitter for the same reason the verse-counter
+     rider above is: "if they don't" alone carries no information about
+     what preceded it. */
+  if(/^if they don'?t, freeze .+ until the start of your next turn$/.test(c))
+    return NOOP("Freeze taxes a play/activation — idle against the dummy's scripted swing, same as Frostbite/Inertia");
+  /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
+     it's blue, pitch it" are two SEPARATE printed clauses, but reading them
+     apart breaks on an ATTACK card — the generic conds loop that would
+     check "it's blue" runs BEFORE the reveal happens at declaration (see
+     the "Declaration-time ops" comment in execute()), so it would always
+     see last card's stale reveal, or none. One atomic op — read here as a
+     single unit, same rule that keeps other if/when patterns off the
+     generic splitter — checks the SAME n.revealed the reveal op just set,
+     in the same declOps pass. */
+  if(m=c.match(/^if it'?s (red|yellow|blue), pitch it$/))
+    return R([["revColorPitch", {red:1,yellow:2,blue:3}[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))
     return NOOP("clash payoff — the defence step applies this when you win");
   /* RULING (Reaping Blade): a static lock — the hero ahead on life can't gain
@@ -97,6 +127,13 @@ function classifyClause(raw){
          "this is put or turned face up in arsenal"  (Spire Sniping) */
     if(/\b(?:put|turned)\b/.test(cond) && /\barsenal\b/.test(cond) && /face.?up/.test(cond))
       return Object.assign(rest,{arsUp:true});
+    /* "this hits A MARKED HERO" is a COMPOUND gate — on-hit AND the target
+       being marked — and it must be caught before the generic /hits?/
+       catch-all just below, or the marked half is silently lost and the
+       payload (Mark of the Black Widow's forced banish) would fire on
+       every hit regardless of marking. Same family of bug as the fusion
+       compound gate: checking one half first drops the other. */
+    if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
@@ -157,6 +194,10 @@ function classifyClause(raw){
     if(m=cond.match(/^you control (\d+) or more auras$/)) return Object.assign(rest,{cond:"auras"+m[1]});
     if(/^you have a card in your arsenal$/.test(cond)) return Object.assign(rest,{cond:"hasArsenal"});
     if(/^you control a seismic surge token$/.test(cond)) return Object.assign(rest,{cond:"seismic"});
+    /* "an aura of suspense" — the board qualifier the bare Suspense keyword
+       tags (see the NOOP above); reads the board the same way "seismic"
+       reads it for its own named token. */
+    if(/^you control an aura of suspense$/.test(cond)) return Object.assign(rest,{cond:"suspenseAura"});
     if(m=cond.match(/^there is a card with cost (\d+) or greater in your pitch zone$/))
       return Object.assign(rest,{cond:"pitchCost"+m[1]});
     if(/^an ally has been put into your graveyard this turn$/.test(cond))
@@ -183,9 +224,47 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"atkNamed:"+m[1].trim()});
     if(m=cond.match(/^you'?(?:ve| have) hit (\d+) or more times this combat chain$/))
       return Object.assign(rest,{cond:"hit"+m[1]});
+    /* CHARGE (Boltyn) — "As an additional cost to play this, you may
+       charge your hero's soul." is a real additional cost (hoisted into
+       fx.chargeCost below), and these are the riders that ask about it:
+       a turn-scoped boolean ("if you've charged this turn") and a
+       card-property check on the SPECIFIC card charged as this card's own
+       cost ("if a yellow card is/was charged this way"). Blue is pitch 3,
+       yellow is pitch 2, red is pitch 1 throughout this engine. */
+    if(/you'?(?:ve| have) charged this turn/.test(cond)) return Object.assign(rest,{cond:"charged"});
+    if(m=cond.match(/^an? (red|yellow|blue) card (?:is|was) charged this way$/))
+      return Object.assign(rest,{cond:"chargedPitch"+({red:1,yellow:2,blue:3}[m[1]])});
+    /* FUSION — CR: paying the additional cost (revealing a matching card
+       from hand) makes the played card "fused". Some cards gate their
+       rider on fusion ALONE ("if it was fused, …"); others gate on fusion
+       AND the attack actually connecting ("…was fused and deals damage to
+       a hero, …") — a compound condition read as one unit, same as the
+       Aether-Icevein shape, so it must be caught before the generic
+       comma-split below would otherwise misparse the "and". Both route
+       through condOnHit when combined with a hit. */
+    if(/^(?:this|it) was fused and deals damage to a hero$/.test(cond))
+      return Object.assign(rest,{cond:"fused", onHit:true});
+    if(/^(?:this|it) was fused$/.test(cond)) return Object.assign(rest,{cond:"fused"});
     return null;
   }
+  /* "This/it gains '<ability text>'" — grants an entirely new ability
+     rather than modifying the card's own stats (Bolt of Courage: "gains
+     'If this hits, draw a card.'"; Engulfing Light: "gains 'If this hits,
+     put it into your hero's soul.'"). Read the quoted text with the SAME
+     reader rather than inventing a second vocabulary for granted text —
+     an on-hit grant recurses back through the onHit branch above via the
+     inner clause's own "when this hits" wrapper. */
+  if(m=c.match(/^(?:this|it) gains? "(.+)"$/)){
+    const inner = classifyClause(m[1]);
+    return (inner && inner.status==="run") ? inner : null;
+  }
   if(/^go again$/.test(c)) return R([["ga"]]);
+  /* RELOAD — CR: "you may put a card from your hand face-down into your
+     arsenal, only if your arsenal is empty." No type filter (unlike the
+     arrow-only, face-UP arsenalPut shape above) — verified against the CR
+     text rather than the type-restricted wording the arsenalPut cards
+     print. */
+  if(/^reload$/.test(c)) return R([["reload"]]);
   /* ANCHORED at both ends. Unanchored, this matched the TAIL of a gated
      sentence that the if/when handler never saw because it does not START
      with if/when — "Surge - If this deals more than 2 damage, it gets go
@@ -201,6 +280,19 @@ function classifyClause(raw){
   if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("stops arcane damage — the dummy throws only fists");
   if(/^inertia$/.test(c)) return NOOP("taxes the opponent's action phase — the dummy has none");
   if(/^watery grave$/.test(c)) return NOOP("live — Gravy Bones' ability enables it once a blue card has hit your graveyard");
+  /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
+     read directly off the board in execute() at declaration (it scans
+     every board permanent's own text for this exact shape on every attack
+     played), not through this per-clause reader — so this clause is
+     genuinely handled, just not by this function. Marking it noop here is
+     what lets the coverage audit see that, the same way "watery grave"
+     above credits Gravy Bones' ability for a different card's keyword.
+     Its "if you do, create a Runechant token" rider is caught separately,
+     up in the whole-clause patterns — it has to be, since a bare "if you
+     do" cond string is shared by every optional-cost rider in the pool and
+     would over-match if read as a generic condition here. */
+  if(/^once per turn, when you play an attack action card, remove a verse counter from this$/.test(c))
+    return NOOP("live — the verse-counter unwind is read directly off the board at declaration (execute()'s verse scan)");
   /* Ephemeral, per its own printed reminder text: if it would be put into a
      graveyard from anywhere, instead it ceases to exist. Enforced in gy(). */
   if(/^ephemeral$/.test(c)) return NOOP("live — it ceases to exist instead of reaching a graveyard");
@@ -213,12 +305,50 @@ function classifyClause(raw){
     if(!sub || sub.status!=="run") return null;
     return Object.assign(sub,{cond:"reprise"});
   }
+  /* HIGH TIDE — named-keyword-gated, same shape as Reprise above:
+     "High Tide - If there are 2 or more blue cards in your pitch zone,
+     this gets go again." (Swiftwater Sloop). Blue is pitch value 3
+     throughout this engine (see the "colour is pitch" comment in
+     execute()); the printed threshold rides in the cond name so a future
+     High Tide card with a different number is read correctly rather than
+     assumed to be 2. */
+  if(m=c.match(/^high tide\s*[-—]\s*if there are (\d+) or more blue cards in your pitch zone,\s*(.+)$/i)){
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status!=="run") return null;
+    return Object.assign(sub,{cond:"pitchBlue"+m[1]});
+  }
+  /* SURGE — "Surge - If this deals more than N damage, it gets go again"
+     (Aether Quickening). N is always this card's OWN printed arcane base
+     — the clause is comparing the card to itself — and Amp (parser's own
+     "amp" op) is the only mechanic in this pool that can push a non-attack
+     arcane effect above its printed value, so "will this deal more than
+     its base" reduces exactly to "is there a live Amp bonus queued right
+     now". Evaluated before the arcane op runs and consumes it. */
+  if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i)){
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status!=="run") return null;
+    return Object.assign(sub,{cond:"surgeOver"+m[1]});
+  }
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
+  /* COLD SNAP: the cost-offer half. See the "if they don't, freeze" NOOP
+     above for why declining is the only outcome that matters in solo play. */
+  if(/^target hero may pay (?:\{r\}+|\d+)$/.test(c))
+    return NOOP("cost offer — the dummy pays no costs, so it always declines");
+  /* FUSION — the bare "X Fusion" line is the additional cost itself
+     (hoisted into fx.fusionCost above, same layout rule as a standalone
+     "Go again" line); the riders that ask "if this was fused" are read
+     below via cond "fused". */
+  if(/^[a-z]+(?:(?:, ?| and\/or | and )[a-z]+)* fusion$/.test(c)) return NOOP("additional cost — enforced when played (Fusion)");
   /* RULING 2026-07-25: stealth, mark and aim counters "do nothing on their
      own" — they are qualifiers other cards test for. So the bare keyword
      line is genuinely a no-op; what matters is the state it leaves behind,
      which the mark/aim effect clauses below actually set. */
   if(/^(?:stealth|cloaked)$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  /* SUSPENSE — same shape as stealth/mark: a bare qualifier tag on certain
+     Guardian auras ("Aura of Suspense") that another card (Full of
+     Bravado) checks for generically via cond "suspenseAura" below. Does
+     nothing on its own. */
+  if(/^suspense$/.test(c)) return NOOP("qualifier only — tags this as an aura of Suspense for cards that check the board");
   /* RULING 2026-07-25: phantasm is a drawback, not an ability — a single
      blocker with 6+ printed POWER destroys the attack outright ("popping"
      it), and because it is destroyed its go again never resolves. Enforced
@@ -245,6 +375,15 @@ function classifyClause(raw){
   if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
   if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\}$/)) return R([["atkMinus",+m[1]]]);
+  /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — this REDUCES ITS
+     OWN power, unlike the atkMinus pattern above which shaves an INCOMING
+     attack while blocking. A genuine decision at declaration, before the
+     total is struck — read into a single op so execute() can resolve it
+     at the same point Charge/Fusion's declare-time reads already live. */
+  if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\} unless you pay ((?:\{r\})+|\d+)$/)){
+    const cost = /^\d+$/.test(m[2]) ? +m[2] : (m[2].match(/\{r\}/g)||[]).length;
+    return R([["payOrLose", +m[1], cost]]);
+  }
   /* the clash block reads this off the card and applies it to the block */
   /* spellvoid destroys itself to stop arcane; the dummy throws only fists */
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
@@ -258,6 +397,9 @@ function classifyClause(raw){
   if(m=c.match(/^cards cost \{r\} more to play this turn$/)) return R([["costTax",1]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("live since v2.05 — the dummy holds a hand to restrict and to lose cards from");
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) discards?/.test(c)) return R([["foeDiscard",1]]);
+  /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
+  if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))
+    return R([["foeBanish",1]]);
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
   if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
   /* RULING (Crucible of Aetherweave, Absorb in Aether): "the next card you
@@ -342,6 +484,20 @@ function classifyClause(raw){
   if(m=c.match(/put an aim counter on it/)) return R([["aim",1]]);
   /* the dummy has a real deck now, so banishing off the top is a real cost */
   if(/^banish the top card of their deck$/.test(c)) return R([["foeBanishTop",1]]);
+  /* RETRIEVE (Memorial Ground): a MANDATORY target pick from the graveyard
+     back onto the deck — reads the subject the same way optFilter already
+     does for optional-cost riders, and refuses (returns null, leaving the
+     card unclaimed) on anything it cannot read honestly, same discipline.
+     min:1 makes the prompts.js `pick` mandatory rather than a decline-able
+     optional cost. Written generically (zone/to are data, not hardcoded to
+     this one card) so a future "put target X from your Y on top of your
+     deck" reuses it rather than growing its own op. */
+  if(m=c.match(/^put target (.+) from your graveyard on top of your deck$/)){
+    const filter = optFilter(m[1]);
+    if(!filter) return null;
+    return R([["pickPrompt", {zone:"grave", to:"deckTop", filter, min:1, max:1,
+      title:"Put a card from your graveyard on top of your deck"}]]);
+  }
   /* "Your first attack each turn gets +1{p}" — a standing buff while in play */
   if(/^your first attack each turn gets \+(\d+)\s*\{p\}$/.test(c))
     return R([["firstAtkBuff", +c.match(/\+(\d+)/)[1]]]);
@@ -491,6 +647,68 @@ function optFilter(phrase){
    below cannot drift apart on what counts as the stamp. */
 const ARS_PUT   = /put an? [a-z ]+?(?: card)? (?:from your hand )?face.?up into your arsenal/i;
 const ARS_STAMP = /^\s*it (?:gains?|gets?)\s*\+\d+\s*\{p\}\s*until end of turn/i;
+/* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ----------------
+   The golden rule stays the default: teach the parser to read text, never
+   special-case a card by name. But some printed abilities genuinely are
+   not expressible as a generic clause rule — multi-branch state-dependent
+   gates, or cross-references to concepts the clause reader has no
+   vocabulary for. For those, and ONLY those, a named entry may hand-write
+   the logic here — on two conditions that keep it from becoming the
+   silent-drift trap the golden rule exists to prevent:
+
+     1. every entry PINS the exact printed text it was written against
+        (`text`, whitespace/markdown-normalized the same way `clean` does);
+     2. `applyOverride` re-checks that text against the LIVE card every
+        single time it runs, and REFUSES ITSELF — leaving whatever the
+        generic reader already produced untouched — the instant the
+        database text no longer matches. A card whose wording changes
+        underneath a stale override must never keep running the old logic;
+        it falls back to `part`/`none` and waits to be re-taught, same as
+        any other unclaimed card.
+
+   Keyed by name|pitch, same as FXMEMO. `read(card, fx)` sees the fx object
+   the generic reader already built for this card — most overridden cards
+   still have some generically-readable parts — and returns a patch to
+   merge in, or null/falsy to decline (e.g. a sub-case the override does
+   not actually cover). `clausesRun` lets the patch mark specific printed
+   clauses (or `true` for all of them) as satisfied, so the coverage tiers
+   in AUDIT.md/tools/stack.js stay honest about what is actually running. */
+const CARD_OVERRIDES = {
+  /* populated as genuinely non-generalizable cards are found — see
+     CARD_PROGRESS.md for the running list of what has been routed here
+     and why the generic reader could not take it. */
+};
+function applyOverride(card, fx){
+  const key = norm(card.name)+"|"+(card.pitch||0);
+  const ov = CARD_OVERRIDES[key];
+  if(!ov) return;
+  const live = clean(card.tx||"");
+  const expect = clean(ov.text||"");
+  if(live !== expect){
+    fx.overrideRefused = key;
+    return;
+  }
+  const patch = ov.read(card, fx);
+  if(!patch) return;
+  if(patch.ops && patch.ops.length) fx.ops.push(...patch.ops);
+  if(patch.onHit && patch.onHit.length) fx.onHit.push(...patch.onHit);
+  if(patch.conds && patch.conds.length) fx.conds.push(...patch.conds);
+  if(patch.self) fx.self += patch.self;
+  if(patch.ga) fx.ga = true;
+  if(patch.perm) fx.perm = patch.perm;
+  ["arsenalPut","arsenalUp","addCost","playIf","activateIf","defLimit",
+   "noEquipDefend","fromGY","fromBan","optCost","bottomOnDiscard"].forEach(k=>{
+    if(patch[k]!==undefined) fx[k]=patch[k];
+  });
+  if(patch.clausesRun === true) fx.clauses.forEach(c=>{ c.st="run"; });
+  else if(Array.isArray(patch.clausesRun)){
+    patch.clausesRun.forEach(sub=>{
+      fx.clauses.forEach(c=>{ if(c.t.includes(sub)) c.st="run"; });
+    });
+  }
+  fx.overrideApplied = key;
+}
+
 function fxParse(card){
   const key = norm(card.name)+"|"+(card.pitch||0);
   if(FXMEMO.has(key)) return FXMEMO.get(key);
@@ -516,8 +734,22 @@ function fxParse(card){
      text never mentions it at all, trust the keyword list. */
   const gaStandalone = (card.tx||"").split(/\n+/).some(l => /^\**go again\**\.?$/i.test(clean(l)));
   const gaMentioned  = /\bgo again\b/i.test(card.tx||"");
+  /* FUSION — CR: "[SUPERTYPES] Fusion" means "As an additional cost to play
+     this, you may reveal a [SUPERTYPES] card from your hand." No card
+     changes zones — it's shown, not spent — so "fused" just means the
+     reveal happened. Printed as its own paragraph, same layout rule as a
+     standalone "Go again" line. */
+  const fusionLine = (card.tx||"").split(/\n+/).map(l=>clean(l))
+    .find(l => /^[a-z]+(?:(?:, ?| and\/or | and )[a-z]+)* fusion$/i.test(l));
+  const fusionTypes = fusionLine
+    ? fusionLine.replace(/\s*fusion$/i,"").split(/,\s*| and\/or | and /i).map(s=>s.trim().toLowerCase()).filter(Boolean)
+    : null;
   const fx = {ga: gaStandalone || (!gaMentioned && kw.some(k=>k==="go again")),
-    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:/defense reaction/.test(tt), approx:false};
+    /* `dr` is isDR's answer, not a second copy of the regex: the type
+       question is asked in one place so a DFC's front face is read the
+       same way here as everywhere else. */
+    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
+  if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";
@@ -536,6 +768,16 @@ function fxParse(card){
     const esc = String(card.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const selfRe = new RegExp("\\b"+esc+"(?:'s)?\\b", "gi");
     clauses = clauses.map(s => s.replace(selfRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
+    /* A subtitled name ("Raydn, Duskbane") is often shortened to its first
+       part in the card's OWN text ("Raydn gains +3{p}"), which the full-name
+       regex above never sees. Still driven entirely by card.name — not a
+       per-card exception — so it works for any future subtitled card. */
+    const shortName = String(card.name).split(",")[0].trim();
+    if(shortName && shortName !== card.name){
+      const escS = shortName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const shortRe = new RegExp("\\b"+escS+"(?:'s)?\\b", "gi");
+      clauses = clauses.map(s => s.replace(shortRe, mm => /'s$/i.test(mm) ? "this's" : "this"));
+    }
   }
   /* ---- OPTIONAL COST + "If you do, …"  (v2.28) ------------------------
      "When this attacks, you may banish an aura from your graveyard.
@@ -587,6 +829,32 @@ function fxParse(card){
     handled.add(i); handled.add(i+1);
     break;                                       /* one optional cost per card in the pool */
   }
+  /* PAY-COST RIDER (Brothers in Arms): "When this defends, you may pay
+     {r}. If you do, it gets +2{d}." Same two-clause pairing as optCost
+     just above — paired here where the whole card is visible, never in
+     classifyClause, which sees one clause at a time — but the verb is PAY,
+     a resource cost, not a card leaving a zone, so it needs its own field
+     rather than overloading optCost's zone/filter shape. Generalized on
+     `trigger` the same way optCost is, even though "defends" is the only
+     one wired today — see execute()/takeIt() for where each trigger is
+     actually consumed. */
+  for(let i = 0; i < clauses.length - 1; i++){
+    if(handled.has(i) || handled.has(i+1)) continue;
+    const rider = clauses[i+1];
+    if(!/^if you do\b/i.test(rider)) continue;
+    const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may pay ((?:\{r\})+|\d+)$/i);
+    if(!cm) continue;
+    const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+    if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — do not claim the card */
+    const cost = /^\d+$/.test(cm[2]) ? +cm[2] : (cm[2].match(/\{r\}/g)||[]).length;
+    fx.payCost = {
+      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
+      cost,
+      ops: rr.ops
+    };
+    handled.add(i); handled.add(i+1);
+    break;                                       /* one pay-cost rider per card in the pool */
+  }
 
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
@@ -608,14 +876,30 @@ function fxParse(card){
          `arsenalPut.stamp`, which puts it on the card that was actually put. */
       if(op[0]==="self" && ARS_STAMP.test(raw) && ARS_PUT.test(clean(card.tx||""))) return;
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
+      /* A CONDITIONALLY GRANTED on-hit ability (Bolt of Courage: "if you've
+         charged this turn, gains 'If this hits, draw a card.'") is NOT the
+         same thing as a plain on-hit clause. Checking r.onHit first and
+         running the op unconditionally — as this dispatcher used to — would
+         grant the ability on every hit regardless of the gate, which is
+         exactly the VALUE-DOUBLED/KEYWORD-UNGATED shape `npm run fairness`
+         exists to catch: a printed condition decorating an op the engine
+         also runs for free. condOnHit keeps the gate attached so the trigger
+         site (resolveStack) can re-check it before the op fires. */
+      if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op}]; return; }
       if(r.onHit) fx.onHit.push(op);
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
     });
   });
+  applyOverride(card, fx);
   const tl = clean(card.tx||"").toLowerCase();
   const am = tl.match(/as an additional cost to play(?: this)?,? (you may )?discard (a|an|one|two|\d+) cards?/);
   if(am && !am[1]) fx.addCost = {discard: num(am[2])};
+  /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
+     because it may name the card instead of saying "this"; the pattern
+     therefore skips either rather than requiring one. */
+  const chgm = tl.match(/as an additional cost to play(?: this| [a-z' ]+)?,? you may charge your hero'?s? soul( any number of times)?/);
+  if(chgm) fx.chargeCost = {multi: !!chgm[1]};
   /* the blocker limit itself, hoisted so the declare step can read it */
   const dl = tl.match(/can only defend an attack with (\d+) or less base \{p\}/);
   if(dl) fx.defLimit = +dl[1];
@@ -828,15 +1112,65 @@ function weaponCost(tx){
   return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs), needSteam:/remove a steam counter/i.test(cs)};
 }
 const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) || new RegExp("\\b"+k+"\\b","i").test(c.tx||"");
-const isAR = c => /attack reaction/i.test(c.tt||"");
-const isInstantT = c => /\binstant\b/i.test(c.tt||"") && !/reaction/i.test(c.tt||"");
+/* A DOUBLE-FACED CARD'S TYPE LINE CARRIES BOTH FACES — "Runeblade Action //
+   Earth Instant". The card you PLAY is the front face; the back is reachable
+   only by melding, so every type question is asked of the front. Reading the
+   whole line called Arcane Seeds // Life and Burn Up // Shock instants, which
+   is exactly how an action card would slip past its action point below. */
+const frontFace = c => String((c && c.tt) || "").split("//")[0];
+const isAR = c => /attack reaction/i.test(frontFace(c));
+const isDR = c => /defense reaction/i.test(frontFace(c));
+const isRx = c => isAR(c) || isDR(c);
+const isInstantT = c => /\binstant\b/i.test(frontFace(c)) && !/reaction/i.test(frontFace(c));
+
+/* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
+   CR 8.1.2a — an attack reaction "can only be played/activated by a
+   player who controls the attack during the Reaction Step of combat."
+   CR 8.1.3a — a defense reaction "can only be played/activated by a
+   player who controls a hero as an attack-target during the Reaction
+   Step of combat."
+   CR 8.1.6 — an instant is legal in any window where you hold priority.
+
+   So the reaction step is TWO windows, not one: the attacking player may
+   play attack reactions, the defending player defense reactions, and
+   neither may play the other's. `win` is a window name straight out of
+   priority.js's `speedAllowed`, which already splits them by attacker —
+   this answers the card half of the same question.
+
+   The `fx.ops.length` test on an instant is a TRAINER concern, not a
+   rules one: an instant the parser reads nothing from would arm the tap
+   and then do nothing, which is a dead tap rather than a refusal. It is
+   the one thing here that is not a citation. */
+function rxAllowed(c, win){
+  if(!c) return false;
+  const inst = isInstantT(c) && fxParse(c).ops.length > 0;
+  if(win === "attack-reaction")  return isAR(c) || inst;
+  if(win === "defense-reaction") return isDR(c) || inst;
+  return inst;
+}
+
+/* ---- WHAT COSTS AN ACTION POINT (CR 8.1.1 / 8.1.6) ------------------
+   CR 8.1.1 — "An action card/activated ability has the additional
+   asset-cost of one action point to play/activate."
+   CR 8.1.6 — "A card/activated ability with the type instant can be
+   played/activated any time the player has priority." No such cost.
+
+   One question, asked in ONE place: the trainer's play gate and its
+   resolution arithmetic must not answer it separately, or they drift.
+   `_instant` is the flag parseHeroPower stamps on the powCard of an
+   "Instant - …" activated ability, so a piece of equipment answers this
+   the same way a card does — which matters, because "Instant - Destroy
+   this: Gain 1 action point" (Achilles Accelerator) nets to nothing at
+   all if activating it silently spends one. */
+const costsAP = c => !isInstantT(c) && !(c && c._instant);
 
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
-        weaponCost, hasKw, isAR, isInstantT,
+        weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
         isRunechant, runeCount, isAura, auraCount,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty};
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
+        CARD_OVERRIDES};
 });

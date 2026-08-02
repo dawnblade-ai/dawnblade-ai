@@ -8,7 +8,7 @@
   else root.DawnAdvisor = factory(root.DawnParser);
 })(typeof self!=="undefined" ? self : this, function(P){
 
-const {fxParse, effCost, isAttack, isArrow, isWeapon, isAR, isInstantT, hasKw, runeCount} = P;
+const {fxParse, effCost, isAttack, isArrow, isWeapon, isAR, isRx, isInstantT, costsAP, hasKw, runeCount} = P;
 
 /* Side accessors, declared locally so this module keeps its own dependencies.
    The trainer defines the same two names globally, which is what lets the
@@ -104,11 +104,19 @@ function advise(g, ctx){
             why: hp<=8 ? "You're deep in the red — armor up, survive the round." : `Race math: ~${myTTK} turns to kill, ~${dTTK} to die. Shed the cheap defense, keep the damage.`};
   }
   // act mode
-  if(you(g).ap<1) return {line:"End turn — action point spent.", why:"Set your arsenal on the way out and draw back up."};
+  /* CR 8.1.6 — an instant may be played "any time the player has priority",
+     so an empty action point pool ends your ACTIONS, not your turn. This used
+     to return here unconditionally and coach "end turn" over a live instant.
+     The candidates are still built; `live` below is what survives. */
+  const apOut = you(g).ap<1;
   const cands=[];
   you(g).hand.forEach((c,i)=>{
     const fx=fxParse(c); const atk=isAttack(c);
     if(atk&&isArrow(c)) return;
+    /* CR 8.1.2a / 8.1.3a — a reaction belongs to the reaction step, so it is
+       not a candidate in the action phase. tryPlay refuses one; coaching a
+       play the game then refuses is worse than not coaching it. */
+    if(isRx(c)) return;
     if(!atk&&!fx.playable) return;
     if(effCost(c, you(g)) > you(g).res + advPitchPotential(you(g).hand,i)) return;
     cands.push({c,from:"hand",idx:i,excl:i});
@@ -119,12 +127,16 @@ function advise(g, ctx){
   if(ctx.hpow && !you(g).weaponUsed["hpow"] && (ctx.hpow.cost||0)<=you(g).res+advPitchPotential(you(g).hand,null))
     cands.push({c:ctx.hpow,from:"hero",idx:0,excl:null});
   you(g).board.forEach((b,i)=>{ if(b.kind==="ally"&&!b.spent&&b.card.power>0) cands.push({c:b.card,from:"ally",idx:i,excl:null,free:true}); });
-  if(!cands.length){
+  /* With the action point gone, only the instants are still legal — plus the
+     ally swing, which the trainer models as free and says so in the log. */
+  const live = apOut ? cands.filter(cd => cd.free || !costsAP(cd.c)) : cands;
+  if(!live.length){
+    if(apOut) return {line:"End turn — action point spent.", why:"Set your arsenal on the way out and draw back up."};
     return {line: you(g).res>0 ? `End turn — but ${you(g).res} will fizzle. If anything costs ≤${you(g).res}, squeeze it in.` : "End turn. Nothing profitable left — don't force it.",
             why:"Wasted resources scar your score; empty swings scar your hand."};
   }
   let best=null;
-  cands.forEach(cd=>{
+  live.forEach(cd=>{
     const fx=fxParse(cd.c);
     const need=Math.max(0,(cd.c.cost||0)-you(g).res);
     const set = need>0 ? advBestPitch(you(g).hand,need,cd.excl,PV) : {idxs:[],gain:0,waste:0,loss:0};

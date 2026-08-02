@@ -306,8 +306,12 @@ test("classifyClause — engine-handled keyword lines are honest noops", () => {
 });
 
 test("classifyClause — pending keywords stay gaps, never papered over", () => {
-  for(const k of ["Charge","Reload","Combo"])
+  for(const k of ["Charge","Combo"])
     assert.equal(cc(k), null, k+" must keep surfacing as a coverage gap");
+  /* Reload was taught in v2.39 — CR-verified (put a card from hand
+     face-down into an empty arsenal, no type filter). Moved out of this
+     list deliberately, not silently. */
+  assert.deepEqual(cc("Reload"), {status:"run", ops:[["reload"]]});
 });
 
 /* ---- v2.06: the rulings of 2026-07-25 ----------------------------------
@@ -449,6 +453,28 @@ test("rulings — reprise reads the dummy's hand blockers (live since v2.05)", (
   assert.deepEqual(r2.ops, [["self",6]]);
   assert.equal(cc("Reprise").status, "noop", "the bare keyword is a qualifier");
   assert.equal(cc("Inertia").status, "noop", "inertia still has no opponent turn to tax");
+});
+
+test("rulings — High Tide reads as a named-keyword-gated condition (Swiftwater Sloop)", () => {
+  /* Before this the anchored go-again regex couldn't see it (the clause
+     opens with "High Tide - If …", not "if"/"when"), so the card was
+     unclaimed. See the comment above the anchored regex in parser.js. */
+  const r = cc("High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.");
+  assert.equal(r.status, "run");
+  assert.equal(r.cond, "pitchBlue2");
+  assert.deepEqual(r.ops, [["ga"]]);
+});
+
+test("rulings — Surge reads as a named-keyword-gated condition (Aether Quickening)", () => {
+  const r = cc("Surge - If this deals more than 2 damage, it gets go again.");
+  assert.equal(r.status, "run");
+  assert.equal(r.cond, "surgeOver2");
+  assert.deepEqual(r.ops, [["ga"]]);
+});
+
+test("rulings — High Tide / Surge do not swallow an unparsed inner clause", () => {
+  assert.equal(cc("High Tide - If there are 2 or more blue cards in your pitch zone, transmogrify the fortress."), null);
+  assert.equal(cc("Surge - If this deals more than 2 damage, transmogrify the fortress."), null);
 });
 
 /* ---- v2.10: the late-July ruling batch --------------------------------- */
@@ -1052,4 +1078,459 @@ test("arsenal — an unreadable payload leaves the card unclaimed", () => {
   assert.equal(ars("ARS reorder",
     "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
     undefined);
+});
+
+/* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ---------------- */
+test("override — an entry matching the live text is applied and marks its clause run", () => {
+  const text = "This is a made-up drill ability that no generic rule reads.";
+  P.CARD_OVERRIDES["override drill match|1"] = {
+    text,
+    read(card, fx){ return {self:5, clausesRun:[text]}; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Match", pitch:1, tt:"Action", power:null, kw:[], tx:text});
+    assert.equal(fx.self, 5);
+    assert.equal(fx.overrideApplied, "override drill match|1");
+    assert.equal(fx.tier, "full", "the marked clause must count toward coverage");
+  } finally {
+    delete P.CARD_OVERRIDES["override drill match|1"];
+  }
+});
+
+test("override — REFUSES ITSELF the instant the live text drifts from the pinned text", () => {
+  P.CARD_OVERRIDES["override drill drift|1"] = {
+    text: "The pinned text this override was written against.",
+    read(card, fx){ return {self:99}; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Drift", pitch:1, tt:"Action", power:null, kw:[],
+      tx:"The database now prints something different."});
+    assert.equal(fx.self, 0, "a drifted override must never run its hardcoded logic");
+    assert.equal(fx.overrideRefused, "override drill drift|1");
+    assert.equal(fx.overrideApplied, undefined);
+  } finally {
+    delete P.CARD_OVERRIDES["override drill drift|1"];
+  }
+});
+
+test("override — a read() that declines (returns null) leaves the generic fx untouched", () => {
+  P.CARD_OVERRIDES["override drill decline|1"] = {
+    text: "Go again",
+    read(card, fx){ return null; }
+  };
+  try {
+    P.fxReset();
+    const fx = P.fxParse({name:"Override Drill Decline", pitch:1, tt:"Action", power:null, kw:[], tx:"Go again"});
+    assert.equal(fx.ga, true, "the generic reader already read plain go again on its own");
+    assert.equal(fx.overrideApplied, undefined);
+  } finally {
+    delete P.CARD_OVERRIDES["override drill decline|1"];
+  }
+});
+
+/* ---- CHARGE (Boltyn) — the stack mechanic, v2.39 ---------------------- */
+test("charge — the additional cost is hoisted whether the card says 'this' or names itself", () => {
+  const a = P.fxParse({name:"Charge Drill A", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"});
+  assert.deepEqual(a.chargeCost, {multi:false});
+  const b = P.fxParse({name:"Charge Drill B", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play Charge Drill B, you may charge your hero's soul. If you've charged this turn, Charge Drill B gains go again."});
+  assert.deepEqual(b.chargeCost, {multi:false});
+});
+
+test("charge — 'if a yellow card is charged this way' reads as chargedPitch2 (Beaming Bravado)", () => {
+  const fx = P.fxParse({name:"Beaming Bravado Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"});
+  assert.deepEqual(fx.conds, [{cond:"chargedPitch2", op:["self",1], instead:false}]);
+});
+
+test("charge — 'if you've charged this turn, gains go again' reads as a plain conditional GA (Take Flight)", () => {
+  const fx = P.fxParse({name:"Take Flight Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains go again."});
+  assert.deepEqual(fx.conds, [{cond:"charged", op:["ga"], instead:false}]);
+  assert.equal(fx.condOnHit, undefined, "a plain (non on-hit) grant belongs in conds, not condOnHit");
+});
+
+test("charge — a CONDITIONALLY GRANTED on-hit ability lands in condOnHit, never in the unconditional onHit list (Bolt of Courage)", () => {
+  /* This is the regression the dispatcher fix exists for: checking r.onHit
+     before r.cond used to push the op into fx.onHit unconditionally, which
+     would have granted "draw a card" on every hit regardless of whether the
+     player charged — the exact VALUE-DOUBLED/KEYWORD-UNGATED shape
+     `npm run fairness` exists to catch. */
+  const fx = P.fxParse({name:"Bolt of Courage Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, draw a card.\""});
+  assert.deepEqual(fx.onHit, [], "must NOT be unconditional");
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["draw",1]}]);
+});
+
+test("charge — a conditionally granted on-hit ability with a colour gate (Light the Way)", () => {
+  const fx = P.fxParse({name:"Light the Way Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. When this hits, if a yellow card was charged this way, this gets go again."});
+  assert.deepEqual(fx.onHit, []);
+  assert.deepEqual(fx.condOnHit, [{cond:"chargedPitch2", op:["ga"]}]);
+});
+
+test("charge — a conditionally granted on-hit ability reuses the existing soulSelf op (Engulfing Light)", () => {
+  const fx = P.fxParse({name:"Engulfing Light Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
+    tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""});
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["soulSelf"]}]);
+});
+
+test("charge — 'gains \"...\"' with an unparsed inner clause is refused, not guessed", () => {
+  assert.equal(P.classifyClause('this gains "transmogrify the fortress"'), null);
+});
+
+test("charge — all five real pool cards resolve to tier full", () => {
+  ["Beaming Bravado", "Bolt of Courage", "Engulfing Light", "Light the Way", "Take Flight"].forEach(base=>{
+    const name = base+" Tier Drill";
+    const tx = base === "Beaming Bravado"
+      ? "As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"
+      : base === "Light the Way"
+      ? "As an additional cost to play this, you may charge your hero's soul. When this hits, if a yellow card was charged this way, this gets go again."
+      : base === "Bolt of Courage"
+      ? `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains "If this hits, draw a card."`
+      : base === "Engulfing Light"
+      ? `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains "If this hits, put it into your hero's soul."`
+      : `As an additional cost to play ${name}, you may charge your hero's soul. If you've charged this turn, ${name} gains go again.`;
+    const fx = P.fxParse({name, pitch:1, tt:"Action - Attack", power:4, kw:[], tx});
+    assert.equal(fx.tier, "full", base);
+  });
+});
+
+/* ---- FUSION — CR: an additional cost that REVEALS, never spends, v2.39 */
+test("fusion — the bare keyword line hoists fx.fusionCost and reads as a noop clause", () => {
+  const fx = P.fxParse({name:"Fusion Drill Hoist", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Ice Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(fx.fusionCost, {types:["ice"]});
+  assert.equal(fx.clauses[0].st, "noop");
+});
+
+test("fusion — a compound type line splits on 'and', 'and/or', and comma", () => {
+  const and_ = P.fxParse({name:"Fusion Drill And", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Earth and Lightning Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(and_.fusionCost, {types:["earth","lightning"]});
+  const andOr = P.fxParse({name:"Fusion Drill AndOr", pitch:1, tt:"Action", power:null, kw:[],
+    tx:"Ice and/or Lightning Fusion\n\nDeal 2 arcane damage to any target."});
+  assert.deepEqual(andOr.fusionCost, {types:["ice","lightning"]});
+});
+
+test("fusion — 'if this was fused, it gains go again' reads as a plain conditional GA (Entwine Lightning)", () => {
+  const fx = P.fxParse({name:"Entwine Lightning", pitch:1, tt:"Elemental Action - Attack", power:3, kw:[],
+    tx:"Lightning Fusion\n\nIf Entwine Lightning was fused, it gains go again."});
+  assert.deepEqual(fx.fusionCost, {types:["lightning"]});
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["ga"], instead:false}]);
+  assert.equal(fx.tier, "full");
+});
+
+test("fusion — 'when you attack with this, if it was fused, deal N arcane' reads as an immediate conditional, not on-hit (Arcanic Shockwave)", () => {
+  const fx = P.fxParse({name:"Arcanic Shockwave", pitch:1, tt:"Elemental Runeblade Action - Attack", power:4, kw:[],
+    tx:"Lightning Fusion\n\nWhen you attack with Arcanic Shockwave, if it was fused, deal 1 arcane damage to target hero."});
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["arcane",1], instead:false}]);
+  assert.equal(fx.tier, "full");
+});
+
+test("fusion — the compound 'was fused and deals damage to a hero' gate is read as one unit", () => {
+  const r = P.classifyClause("if this was fused and deals damage to a hero, this gets +1{p}");
+  assert.equal(r.cond, "fused");
+  assert.equal(r.onHit, true);
+  assert.deepEqual(r.ops, [["self",1]]);
+});
+
+/* ---- SUSPENSE — a board qualifier tag, v2.39 -------------------------- */
+test("suspense — the bare keyword is a qualifier-only noop, same shape as stealth/mark", () => {
+  assert.equal(P.classifyClause("Suspense").status, "noop");
+});
+
+test("suspense — 'when this leaves the arena, next attack gets +N{p}' resolves to full once the bare keyword stops dragging the tier (Act of Glory)", () => {
+  const fx = P.fxParse({name:"Act of Glory", pitch:1, tt:"Guardian Instant - Aura", power:null, kw:["Suspense"],
+    tx:"Suspense\n\nWhen this leaves the arena, your next attack this turn gets +6{p}."});
+  assert.ok(fx.ops.some(o=>o[0]==="buffNext" && o[1]===6));
+  assert.equal(fx.tier, "full");
+});
+
+test("suspense — 'if you control an aura of suspense' reads as cond suspenseAura (Full of Bravado)", () => {
+  const r = P.classifyClause("if you control an aura of suspense, create a Confidence token");
+  assert.equal(r.cond, "suspenseAura");
+  assert.deepEqual(r.ops, [["token","confidence",1,"self"]]);
+});
+
+/* ---- Saltwater Swell — reveal-then-conditional-pitch, v2.39 ----------- */
+test("reveal+pitch — 'if it's blue, pitch it' is read as ONE atomic op, not a cond+op split", () => {
+  /* Splitting it (cond revBlue + a separate pitch op) would check the
+     condition in the EARLY conds loop, before the reveal that sets
+     n.revealed has even run at declaration — see the comment above the
+     pattern in parser.js. */
+  const r = P.classifyClause("if it's blue, pitch it");
+  assert.equal(r.status, "run");
+  assert.deepEqual(r.ops, [["revColorPitch", 3]]);
+  assert.equal(r.cond, undefined, "must not be split into a separate cond");
+});
+
+test("reveal+pitch — red and yellow read their own pitch values", () => {
+  assert.deepEqual(P.classifyClause("if it's red, pitch it").ops, [["revColorPitch", 1]]);
+  assert.deepEqual(P.classifyClause("if it's yellow, pitch it").ops, [["revColorPitch", 2]]);
+});
+
+test("reveal+pitch — Saltwater Swell resolves to tier full", () => {
+  const fx = P.fxParse({name:"Saltwater Swell", pitch:1, tt:"Pirate Action - Attack", power:4, kw:[],
+    tx:"When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again"});
+  assert.deepEqual(fx.ops, [["reveal",1],["revColorPitch",3]]);
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- Mark of the Black Widow — a compound on-hit+marked gate, v2.39 --- */
+test("marked — 'they banish a card from their hand' reads as a mandatory foeBanish op", () => {
+  assert.deepEqual(P.classifyClause("they banish a card from their hand"), {status:"run", ops:[["foeBanish",1]]});
+});
+
+test("marked — 'this hits a marked hero' is read as a COMPOUND onHit+marked gate, not unconditional onHit", () => {
+  /* The generic /hits?/ catch-all just below would otherwise match first
+     and silently drop the marked half, making the banish fire on every
+     hit — the same bug class as the fusion compound gate. */
+  const r = P.classifyClause("if this hits a marked hero, they banish a card from their hand");
+  assert.equal(r.cond, "marked");
+  assert.equal(r.onHit, true);
+  assert.deepEqual(r.ops, [["foeBanish",1]]);
+});
+
+test("marked — Mark of the Black Widow resolves to full, and its banish lands in condOnHit (never unconditional onHit)", () => {
+  const fx = P.fxParse({name:"Mark of the Black Widow", pitch:1, tt:"Assassin Action - Attack", power:4, kw:["Stealth"],
+    tx:"Stealth\nWhen this hits a marked hero, they banish a card from their hand."});
+  assert.deepEqual(fx.onHit, []);
+  assert.deepEqual(fx.condOnHit, [{cond:"marked", op:["foeBanish",1]}]);
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- Malefic Incantation — verse counters, credited not re-read, v2.39 */
+test("verse counters — the unwind clauses are noop-credited (handled by execute()'s board scan, not this reader)", () => {
+  assert.equal(P.classifyClause("Once per turn, when you play an attack action card, remove a verse counter from this").status, "noop");
+  assert.equal(P.classifyClause("If you do, create a Runechant token").status, "noop");
+});
+
+test("verse counters — Malefic Incantation resolves to tier full", () => {
+  const fx = P.fxParse({name:"Malefic Incantation", pitch:1, tt:"Runeblade Action - Aura", power:null, kw:[],
+    tx:"Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token."});
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- RELOAD — CR-verified: no type filter, empty-arsenal only, v2.39 -- */
+test("reload — Take Aim resolves to tier full", () => {
+  const fx = P.fxParse({name:"Take Aim", pitch:1, tt:"Ranger Action", power:null, kw:[],
+    tx:"The next Ranger attack action card you play this turn, gains +3{p}.\nReload\nGo again"});
+  assert.ok(fx.ops.some(o=>o[0]==="reload"));
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- pickPrompt — a generic mandatory targeted pick, v2.39 ------------ */
+test("pickPrompt — Memorial Ground reads a mandatory graveyard->deck-top pick with the subject's filter", () => {
+  const r = P.classifyClause("Put target attack action card with cost 1 or less from your graveyard on top of your deck");
+  assert.equal(r.status, "run");
+  assert.deepEqual(r.ops, [["pickPrompt", {zone:"grave", to:"deckTop",
+    filter:{costLe:1, type:"attack"}, min:1, max:1,
+    title:"Put a card from your graveyard on top of your deck"}]]);
+});
+
+test("pickPrompt — an unreadable subject leaves the card unclaimed, same discipline as optFilter elsewhere", () => {
+  /* A dynamic limit optFilter already refuses for the exact same reason
+     Mounting Anger does (see optFilter's own comment). */
+  assert.equal(P.classifyClause(
+    "Put target attack action card with cost less than the number of Draconic chain links you control from your graveyard on top of your deck"),
+    null);
+});
+
+test("pickPrompt — Memorial Ground resolves to tier full", () => {
+  const fx = P.fxParse({name:"Memorial Ground", pitch:2, tt:"Generic Instant", power:null, kw:[],
+    tx:"Put target attack action card with cost 1 or less from your graveyard on top of your deck."});
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- payOrLose — Look Tuff's "unless you pay", v2.39 ------------------ */
+test("payOrLose — reads the power penalty and the {r} cost as one op (Look Tuff)", () => {
+  const r = P.classifyClause("it gets -1{p} unless you pay {r}");
+  assert.deepEqual(r.ops, [["payOrLose", 1, 1]]);
+});
+
+test("payOrLose — a numeric cost is read too, not just {r} pips", () => {
+  assert.deepEqual(P.classifyClause("it gets -2{p} unless you pay 3").ops, [["payOrLose", 2, 3]]);
+});
+
+test("payOrLose — must not be confused with the plain 'it gets -N{p}' defend-side shave", () => {
+  /* atkMinus is a DIFFERENT op with different semantics (shaves an
+     INCOMING attack while blocking) — the anchored $ on the plain pattern
+     is what keeps "unless you pay" from falling into it by accident. */
+  assert.deepEqual(P.classifyClause("it gets -1{p}").ops, [["atkMinus", 1]]);
+});
+
+test("payOrLose — Look Tuff resolves to tier full", () => {
+  const fx = P.fxParse({name:"Look Tuff", pitch:1, tt:"Generic Action - Attack", power:5, kw:[],
+    tx:"When this attacks, it gets -1{p} unless you pay {r}."});
+  assert.deepEqual(fx.ops, [["payOrLose",1,1]]);
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- Cold Snap — Freeze is idle against the dummy, same as Frostbite -- */
+test("cold snap — both halves of the opponent's pay-or-freeze are noop, same shape as Frostbite/Inertia", () => {
+  assert.equal(cc("Target hero may pay {r}").status, "noop");
+  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.").status, "noop");
+});
+
+test("cold snap — resolves to tier full", () => {
+  const fx = P.fxParse({name:"Cold Snap", pitch:3, tt:"Ice Action", power:null, kw:[],
+    tx:"Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again"});
+  assert.equal(fx.tier, "full");
+});
+
+/* ---- fx.payCost — Brothers in Arms, a real mid-block pay window, v2.39 */
+test("payCost — pairs 'you may pay X' with its 'if you do' rider, same as optCost", () => {
+  const fx = P.fxParse({name:"Brothers in Arms", pitch:3, tt:"Generic Action - Attack", power:4, def:2, kw:[],
+    tx:"When this defends, you may pay {r}. If you do, it gets +2{d}."});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:1, ops:[["defBuff",2]]});
+  assert.equal(fx.tier, "full");
+});
+
+test("payCost — a numeric cost is read too, not just {r} pips", () => {
+  const fx = P.fxParse({name:"payCost Drill Numeric", pitch:1, tt:"Action - Attack", power:4, def:1, kw:[],
+    tx:"When this defends, you may pay 2. If you do, it gets +1{d}."});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:2, ops:[["defBuff",1]]});
+});
+
+test("payCost — an unreadable rider leaves the card unclaimed rather than guessed", () => {
+  const fx = P.fxParse({name:"payCost Drill Unreadable", pitch:1, tt:"Action - Attack", power:4, def:1, kw:[],
+    tx:"When this defends, you may pay {r}. If you do, transmogrify the fortress."});
+  assert.equal(fx.payCost, undefined);
+});
+
+test("payCost — does not collide with optCost's banish/discard pairing on the same card shape", () => {
+  const fx = P.fxParse({name:"payCost Drill NoClash", pitch:1, tt:"Action - Attack", power:4, kw:[],
+    tx:"When this attacks, you may banish an aura from your graveyard. If you do, deal 1 arcane damage to target hero."});
+  assert.equal(fx.payCost, undefined);
+  assert.ok(fx.optCost);
+});
+
+/* ===================================================================
+   THE ACTION POINT IS AN *ACTION'S* COST — CR 8.1.1 / 8.1.6.
+
+   Reported from the table (2026-08-01): instants were eating the
+   turn's action point. `execute` charged every non-attack that
+   resolved through it, so Energy Potion's "Instant - Destroy this:
+   Gain {r}{r}" cost you your action, and Achilles Accelerator's
+   "Instant - Destroy this: Gain 1 action point" netted to zero — the
+   equipment did nothing at all.
+
+   Coverage cannot see this: every one of these cards reads as tier
+   `full`. The text was read correctly and then charged wrongly.
+   =================================================================== */
+
+test("costsAP — an action card carries the action point cost (CR 8.1.1)", () => {
+  assert.equal(P.costsAP({name:"apCost Drill Action", tt:"Generic Action", pitch:1}), true);
+  assert.equal(P.costsAP({name:"apCost Drill Attack", tt:"Generic Action - Attack", pitch:1}), true);
+  /* a weapon swing is an "Action - …: Attack" ability, so it pays too */
+  assert.equal(P.costsAP({name:"apCost Drill Weapon", tt:"Warrior Weapon - Sword (1H)", pitch:0}), true);
+});
+
+test("costsAP — an instant does not (CR 8.1.6)", () => {
+  /* real pool cards, verbatim type lines */
+  assert.equal(P.costsAP({name:"Frost Spike", tt:"Ice Wizard Instant", pitch:1}), false);
+  assert.equal(P.costsAP({name:"Concealed Object", tt:"Reviled Instant - Item", pitch:2}), false);
+  assert.equal(P.costsAP({name:"Memorial Ground", tt:"Generic Instant", pitch:3}), false);
+});
+
+test("costsAP — an 'Instant - …' ACTIVATED ability is free too, and its powCard says so", () => {
+  /* Achilles Accelerator. parseHeroPower stamps kind:"instant" on the
+     ability; index.html turns that into the powCard's `_instant`. Charging
+     an action point here is what made this equipment a no-op: it gains
+     exactly the one point it was being charged. */
+  const pw = P.parseHeroPower("Instant - Destroy Achilles Accelerator: Gain 1 action point.", true);
+  assert.ok(pw, "the ability must parse at all");
+  assert.equal(pw.kind, "instant");
+  assert.deepEqual(P.classifyClause(pw.eff).ops, [["ap",1]]);
+  assert.equal(P.costsAP({name:"Achilles Accelerator ability", tt:"Equipment Ability", _instant:true}), false);
+  /* and the "Action - …" sibling still pays (Timesnap Potion: gain 2, spend
+     1, net +1 — it must not silently become +2) */
+  const act = P.parseHeroPower("Action - Destroy this: Gain 2 action points.", true);
+  assert.equal(act.kind, "action");
+  assert.equal(P.costsAP({name:"Timesnap ability", tt:"Equipment Ability", _instant:false}), true);
+});
+
+test("isInstantT reads the FRONT face of a double-faced type line", () => {
+  /* Both pool DFCs print "Action // … Instant". You play the front face;
+     the back is reachable only by melding. Reading the whole line made
+     them instants, which would have let two real action cards skip their
+     action point — strictly stronger than printed. */
+  const seeds = {name:"Arcane Seeds // Life", tt:"Runeblade Action // Earth Instant", pitch:3};
+  const burn  = {name:"Burn Up // Shock",     tt:"Runeblade Action // Lightning Instant", pitch:1};
+  assert.equal(P.isInstantT(seeds), false);
+  assert.equal(P.isInstantT(burn), false);
+  assert.equal(P.costsAP(seeds), true, "Arcane Seeds is played as an ACTION and pays for it");
+  assert.equal(P.costsAP(burn), true, "Burn Up is played as an ACTION and pays for it");
+  /* the genuine instants are unaffected */
+  assert.equal(P.isInstantT({name:"Frost Spike", tt:"Ice Wizard Instant"}), true);
+  /* and a reaction is never an instant, front face or not */
+  assert.equal(P.isInstantT({name:"Sink Below drill", tt:"Generic Defense Reaction"}), false);
+  assert.equal(P.isAR({name:"AR drill", tt:"Generic Attack Reaction"}), true);
+});
+
+/* ===================================================================
+   A REACTION BELONGS TO THE REACTION STEP — CR 8.1.2a / 8.1.3a.
+
+   The reaction step is TWO windows, not one: the attacking player may
+   play attack reactions, the defending player defense reactions, and
+   neither may play the other's. Before v2.40 `tryPlay` accepted a
+   reaction straight out of the ACTION phase (23 pool cards — Reduce to
+   Runechant minting a runechant on your own turn), and the attack
+   window also admitted any non-attack carrying a pump, which let three
+   plain action cards in.
+
+   `speedAllowed` splits the windows by attacker; `rxAllowed` answers
+   the card half. These pin the card half.
+   =================================================================== */
+
+test("rxAllowed — the attacking player's window takes attack reactions, not defense ones", () => {
+  const ar = {name:"Ironsong Response", pitch:1, tt:"Warrior Attack Reaction", kw:["Reprise"],
+    tx:"Reprise - If the defending hero has defended with a card from their hand this chain link, target weapon attack gains +3{p}."};
+  const dr = {name:"Reduce to Runechant", pitch:1, tt:"Runeblade Defense Reaction", kw:[],
+    tx:"Reduce to Runechant costs {r} less to play for each Runechant you control.\nCreate a Runechant token."};
+  assert.equal(P.rxAllowed(ar, "attack-reaction"), true);
+  assert.equal(P.rxAllowed(dr, "attack-reaction"), false, "CR 8.1.3a — a defense reaction belongs to the defending player");
+  assert.equal(P.rxAllowed(dr, "defense-reaction"), true);
+  assert.equal(P.rxAllowed(ar, "defense-reaction"), false, "CR 8.1.2a — an attack reaction belongs to the attacking player");
+});
+
+test("rxAllowed — an instant is legal in either window (CR 8.1.6), an action in neither", () => {
+  const inst = {name:"Frost Spike", pitch:3, tt:"Ice Wizard Instant", kw:[],
+    tx:"Create a Frostbite token in an exposed head, chest, arms, or legs zone."};
+  assert.equal(P.rxAllowed(inst, "attack-reaction"), true);
+  assert.equal(P.rxAllowed(inst, "defense-reaction"), true);
+  /* Flying High is a plain Generic Action that pumps. The old attack-window
+     test was `!isAttack(c) && fx.self>0`, which admitted it — no action card
+     is legal in the reaction step. Hit and Run and Cutty Shark were the
+     other two. */
+  const act = {name:"Flying High", pitch:1, tt:"Generic Action", kw:["Go again"],
+    tx:"Your next attack this turn gets go again. If it's red, it gets +1{p}.\nGo again"};
+  assert.equal(P.rxAllowed(act, "attack-reaction"), false, "a plain action card is not an attack reaction");
+  assert.equal(P.rxAllowed(act, "defense-reaction"), false);
+});
+
+test("rxAllowed — an instant the parser reads nothing from is a dead tap, not an offer", () => {
+  /* the one non-citation in the rule: an unscripted instant would arm the
+     tap and then do nothing. Refusing it is a trainer decision, not a CR one. */
+  const blank = {name:"rxAllowed Drill Blank Instant", pitch:2, tt:"Generic Instant", kw:[], tx:"Transmogrify the fortress."};
+  assert.equal(P.fxParse(blank).ops.length, 0);
+  assert.equal(P.rxAllowed(blank, "attack-reaction"), false);
+});
+
+test("isDR / isRx read the printed type, and fx.dr is the same answer", () => {
+  const dr = {name:"isDR Drill Defense", pitch:3, tt:"Generic Defense Reaction", kw:[], tx:"Go again"};
+  const ar = {name:"isDR Drill Attack", pitch:1, tt:"Warrior Attack Reaction", kw:[], tx:"Target attack gains +2{p}."};
+  assert.equal(P.isDR(dr), true);   assert.equal(P.isAR(dr), false);
+  assert.equal(P.isAR(ar), true);   assert.equal(P.isDR(ar), false);
+  assert.equal(P.isRx(dr) && P.isRx(ar), true);
+  assert.equal(P.isRx({name:"isDR Drill Plain", tt:"Generic Action"}), false);
+  /* fx.dr must not be a second copy of the regex — it drifts from isDR the
+     moment one of them learns something the other does not (the DFC front
+     face was exactly that lesson). */
+  assert.equal(P.fxParse(dr).dr, P.isDR(dr));
+  assert.equal(P.fxParse(ar).dr, P.isDR(ar));
 });

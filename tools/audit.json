@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-01T01:22:54.151Z",
- "appVer": "2.34",
+ "generated": "2026-08-02T01:42:10.877Z",
+ "appVer": "2.40",
  "dataVer": "sage-v10",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 265,
-  "part": 108,
-  "none": 32
+  "full": 304,
+  "part": 79,
+  "none": 22
  },
  "heroes": {
   "kayo": {
@@ -325,7 +325,9 @@
    "int": 4,
    "tt": "Pirate Necromancer Hero - Young",
    "tx": "Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.\nIf a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.",
-   "statics": [],
+   "statics": [
+    "Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"
+   ],
    "power": null,
    "clauses": [
     {
@@ -334,11 +336,11 @@
     },
     {
      "t": "If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.",
-     "covered": false
+     "covered": true
     }
    ],
    "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader"
    ]
   },
   "lyath": {
@@ -347,7 +349,9 @@
    "int": 5,
    "tt": "Reviled Guardian Hero - Young",
    "tx": "The base {p} and {d} of cards you control are halved, rounded up.\nInstant - {r}{r}, {t}: The crowd boos you. Defending action cards you control get +1{d} this turn.\nWhenever the crowd boos you, create a Might token.",
-   "statics": [],
+   "statics": [
+    "Lyath — booed → Might token"
+   ],
    "power": "The crowd boos you [2r]",
    "clauses": [
     {
@@ -364,11 +368,11 @@
     },
     {
      "t": "Whenever the crowd boos you, create a Might token.",
-     "covered": false
+     "covered": true
     }
    ],
    "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
+    "2 hero-text clause(s) not recognized by any ability reader"
    ]
   }
  },
@@ -1775,13 +1779,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 5 arcane damage to any target",
@@ -1789,13 +1793,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 5 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -1871,18 +1872,16 @@
     "{r}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "When this attacks, it gets -1{p} unless you pay {r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, it gets -1{p} unless you pay {r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, it gets -1{p} unless you pay {r}.",
@@ -1929,13 +1928,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 4 arcane damage to any target",
@@ -1946,9 +1945,7 @@
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Ice Fusion"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If Polar Cap was fused and deals damage to a hero, create a Frostbite token under their control.",
@@ -2002,13 +1999,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 4 arcane damage to any target",
@@ -2016,13 +2013,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -2073,13 +2067,13 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 3 arcane damage to any target",
@@ -2087,13 +2081,10 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Ice Fusion",
-    "If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 3 arcane damage to any target. If Aether Icevein was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
@@ -2155,7 +2146,7 @@
    "clauses": [
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Target opponent reveals their hand",
@@ -2167,7 +2158,6 @@
     }
    ],
    "skipped": [
-    "Ice Fusion",
     "If this was fused, put an action card with cost 0 from their hand on top of their deck."
    ],
    "weaponCost": null,
@@ -2191,23 +2181,20 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this defends, you may pay {r}",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, it gets +2{d}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends, you may pay {r}",
-    "If you do, it gets +2{d}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends, you may pay {r}. If you do, it gets +2{d}.",
@@ -2233,17 +2220,17 @@
     "freeze",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Target hero may pay {r}",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If this is played from arsenal, draw a card.",
@@ -2254,10 +2241,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Target hero may pay {r}",
-    "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again",
@@ -2400,7 +2384,7 @@
     },
     {
      "t": "Ice Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Create X Frostbite tokens under target hero's control",
@@ -2412,7 +2396,6 @@
     }
    ],
    "skipped": [
-    "Ice Fusion",
     "Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control."
    ],
    "weaponCost": null,
@@ -2902,7 +2885,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2920,17 +2903,14 @@
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Once per turn, when you play an attack action card, remove a verse counter from this",
-    "If you do, create a Runechant token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token.",
@@ -3227,7 +3207,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3245,17 +3225,14 @@
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Once per turn, when you play an attack action card, remove a verse counter from this",
-    "If you do, create a Runechant token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Go again\nThis enters the arena with 2 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token.",
@@ -5297,22 +5274,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +3{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +3{p}.",
@@ -5396,22 +5371,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Your first attack each turn gets +1{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nYour first attack each turn gets +1{p}.",
@@ -6381,7 +6354,7 @@
     "go again",
     "reload"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -6391,16 +6364,14 @@
     },
     {
      "t": "Reload",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Reload"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "The next Ranger attack action card you play this turn, gains +3{p}.\nReload\nGo again",
@@ -6449,18 +6420,16 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Put target attack action card with cost 1 or less from your graveyard on top of your deck.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Put target attack action card with cost 1 or less from your graveyard on top of your deck."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Put target attack action card with cost 1 or less from your graveyard on top of your deck.",
@@ -9889,7 +9858,7 @@
    "mentions": [
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -9899,12 +9868,10 @@
     },
     {
      "t": "When this hits a marked hero, they banish a card from their hand.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits a marked hero, they banish a card from their hand."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Stealth\nWhen this hits a marked hero, they banish a card from their hand.",
@@ -10314,7 +10281,7 @@
    "mentions": [
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10324,12 +10291,10 @@
     },
     {
      "t": "When this hits a marked hero, they banish a card from their hand.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits a marked hero, they banish a card from their hand."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Stealth\nWhen this hits a marked hero, they banish a card from their hand.",
@@ -10830,7 +10795,7 @@
     "go again",
     "surge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10840,18 +10805,15 @@
     },
     {
      "t": "Surge - If this deals more than 2 damage, it gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Surge - If this deals more than 2 damage, it gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 2 arcane damage to target hero.\nSurge - If this deals more than 2 damage, it gets go again.",
    "flags": [
-    "unreviewed keyword: \"surge\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"surge\""
    ]
   },
   "aether spindle|3": {
@@ -11157,7 +11119,7 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11166,13 +11128,11 @@
      "st": "noop"
     },
     {
-     "t": "If you've charged this turn, Raydn gains +3{p}.",
-     "st": "skip"
+     "t": "If you've charged this turn, this gains +3{p}.",
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, Raydn gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 0,
     "addRust": false,
@@ -11199,7 +11159,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11209,12 +11169,10 @@
     },
     {
      "t": "If a yellow card is charged this way, this gets +1{p}",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If a yellow card is charged this way, this gets +1{p}"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nIf a yellow card is charged this way, this gets +1{p}",
@@ -11235,7 +11193,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11245,12 +11203,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, draw a card.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, draw a card.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Bolt of Courage, you may charge your hero's soul.\nIf you've charged this turn, Bolt of Courage gains \"If this hits, draw a card.\"",
@@ -11269,18 +11225,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If you've charged this turn, target attack gains +3{p}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, target attack gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you've charged this turn, target attack gains +3{p}.",
@@ -11382,7 +11336,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11392,12 +11346,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Engulfing Light, you may charge your hero's soul.\nIf you've charged this turn, Engulfing Light gains \"If this hits, put it into your hero's soul.\"",
@@ -11481,7 +11433,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11491,12 +11443,10 @@
     },
     {
      "t": "When this hits, if a yellow card was charged this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, if a yellow card was charged this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
@@ -11520,7 +11470,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11530,18 +11480,14 @@
     },
     {
      "t": "If you've charged this turn, this gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Take Flight, you may charge your hero's soul.\nIf you've charged this turn, Take Flight gains go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "toe the line|1": {
    "name": "Toe the Line",
@@ -11626,7 +11572,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11636,12 +11582,10 @@
     },
     {
      "t": "If a yellow card is charged this way, this gets +1{p}",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If a yellow card is charged this way, this gets +1{p}"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nIf a yellow card is charged this way, this gets +1{p}",
@@ -11662,7 +11606,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11672,12 +11616,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, draw a card.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, draw a card.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Bolt of Courage, you may charge your hero's soul.\nIf you've charged this turn, Bolt of Courage gains \"If this hits, draw a card.\"",
@@ -11732,7 +11674,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11742,12 +11684,10 @@
     },
     {
      "t": "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Engulfing Light, you may charge your hero's soul.\nIf you've charged this turn, Engulfing Light gains \"If this hits, put it into your hero's soul.\"",
@@ -11770,7 +11710,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11780,12 +11720,10 @@
     },
     {
      "t": "When this hits, if a yellow card was charged this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, if a yellow card was charged this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may charge your hero's soul.\nWhen this hits, if a yellow card was charged this way, this gets go again.",
@@ -11845,7 +11783,7 @@
     "charge",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11855,18 +11793,14 @@
     },
     {
      "t": "If you've charged this turn, this gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play Take Flight, you may charge your hero's soul.\nIf you've charged this turn, Take Flight gains go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "v of the vanguard|2": {
    "name": "V of the Vanguard",
@@ -11925,18 +11859,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If you've charged this turn, this gains +3{p}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've charged this turn, this gains +3{p}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you've charged this turn, Valiant Thrust gains +3{p}.",
@@ -12141,23 +12073,20 @@
    "mentions": [
     "lightning fusion"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Lightning Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When you attack with this, if it was fused, deal 1 arcane damage to target hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Lightning Fusion",
-    "When you attack with this, if it was fused, deal 1 arcane damage to target hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nWhen you attack with Arcanic Shockwave, if it was fused, deal 1 arcane damage to target hero.",
@@ -12261,29 +12190,25 @@
     "go again",
     "lightning fusion"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Lightning Fusion",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If this was fused, it gains go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Lightning Fusion",
-    "If this was fused, it gains go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nIf Entwine Lightning was fused, it gains go again.",
    "flags": [
-    "unreviewed keyword: \"lightning fusion\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"lightning fusion\""
    ]
   },
   "fry|1": {
@@ -12997,7 +12922,7 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets +2{p}.",
@@ -13065,7 +12990,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13075,16 +13000,14 @@
     },
     {
      "t": "If it's blue, pitch it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's blue, pitch it."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again",
@@ -13106,24 +13029,21 @@
     "go again",
     "high tide"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"high tide\""
    ]
   },
   "barnacle|2": {
@@ -13735,7 +13655,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13745,16 +13665,14 @@
     },
     {
      "t": "If it's blue, pitch it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's blue, pitch it."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, reveal the top card of your deck. If it's blue, pitch it.\nGo again",
@@ -13776,24 +13694,21 @@
     "go again",
     "high tide"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "High Tide - If there are 2 or more blue cards in your pitch zone, this gets go again.",
    "flags": [
-    "unreviewed keyword: \"high tide\"",
-    "text mentions go again but no clause parses it"
+    "unreviewed keyword: \"high tide\""
    ]
   },
   "throw caution to the wind|3": {
@@ -14099,22 +14014,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +6{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +6{p}.",
@@ -14165,22 +14078,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +5{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +5{p}.",
@@ -14330,22 +14241,20 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "Suspense",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "When this leaves the arena, your next attack this turn gets +4{p}.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Suspense"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Suspense\nWhen this leaves the arena, your next attack this turn gets +4{p}.",
@@ -14635,18 +14544,16 @@
    "mentions": [
     "suspense"
    ],
-   "tier": "none",
-   "approx": false,
-   "playable": false,
+   "tier": "full",
+   "approx": true,
+   "playable": true,
    "clauses": [
     {
      "t": "When this attacks or defends, if you control an aura of suspense, create a Confidence token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks or defends, if you control an aura of suspense, create a Confidence token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks or defends, if you control an aura of suspense, create a Confidence token.",

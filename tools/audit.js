@@ -33,7 +33,11 @@ const HERO_STATICS = [
   {key:"viseraiPassive", re:/whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/,
    note:"Viserai — Runeblade after a non-attack → Runechant"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
-   note:"Dash — pregame item (auto-picked; pick UI pending)"}
+   note:"Dash — pregame item (auto-picked; pick UI pending)"},
+  {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,
+   note:"Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"},
+  {key:"lyathBoo", re:/whenever the crowd boos you, create a might token/,
+   note:"Lyath — booed → Might token"}
 ];
 /* Tokens are read out of the pool's own text rather than listed by hand —
    a hardcoded list silently rots (it carried 6 of the 17 real tokens, and
