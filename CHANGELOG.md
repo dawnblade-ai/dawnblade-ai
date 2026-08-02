@@ -9,6 +9,79 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.47 — Phase 1: the journey census
+
+`test/journey.test.js` — **all 401 pool cards, every journey their
+printed type promises and every one it forbids**, driven through the real
+reducer.
+
+The Phase 1 brief was "the function of each different card type and their
+full usability from pitch to play". Every other drill in the suite asks
+about one card or one clause; this asks four questions of all of them,
+and every expectation comes from the printed TYPE rather than from a
+rules box.
+
+| journey | count |
+|---|---|
+| pitched for its printed pitch value | 328 |
+| played → **chain** | 175 |
+| played → **arena** | 23 |
+| played → **graveyard** | 91 |
+| declared as a defender | 332 |
+| **refused**, with a reason naming the card | 112 |
+
+Every count is **asserted, not reported** — a census that quietly stopped
+driving anything would otherwise pass by finding nothing. The 112 is a
+partition and it is pinned: Equipment 58, Weapon 15, Block 4, Attack
+Reaction 20, Defense Reaction 15.
+
+That 15 reconciles with CLAUDE.md's independently-derived "eleven
+swinging weapons": four Weapon-typed cards print no power (Death Dealer,
+Plasma Barrel Shot, Cosmo, Crucible of Aetherweave) and are activated for
+a non-attack ability instead. It is the pinned `types.isWeaponType` vs
+`parser.isWeapon` split, counted from the other end.
+
+### THE FINDING: A ONE-SIDED CENSUS IS A COVERAGE TOOL IN A JUDGE'S COAT
+
+Written asking only *can this card do what its type promises*, the census
+reported a clean **401 out of 401** — while a Block card was a free
+0-cost play and a defence reaction could be declared as a defending card.
+Both are sev-3 *illegal play allowed*, the direction that steals games.
+
+It could not see either, **by construction**: a card doing MORE than its
+type allows still does everything its type promises. Same shape as the
+audit measuring consumption rather than faithfulness, and as
+`fairness.js` being deliberately one-sided towards too-strong.
+
+With the refusals written, making a Block playable trips **three** drills
+instead of none, and a declarable defence reaction trips one. All four
+sabotages verified: Block playable, defence reaction declarable,
+permanents resolving to the graveyard, and a card pitching for itself.
+
+### Also checked, and clean
+
+A pass over whether the **live trainer** still misreads any card's type,
+now that `types.js` reads the structured `ty` array and `parser.js` still
+reads the `tt` display string. Across all 401 pool cards, `isAttack`,
+`isAR`, `isDR` and `isInstant` **agree exactly** — so the `tt`/`ty`
+conflict on 5 of the database's 4,862 records is a latent hazard rather
+than a live bug. Den of the Spider is refused in the action phase either
+way, because `tryPlay` asks `isRx` before anything else and "Defense
+Reaction" is a substring of the display line.
+
+`isWeapon`'s four disagreements are the deliberately pinned split.
+
+### Notes
+
+- **701 drills** (was 694), all green; fairness clean.
+- The census reads **no card text**: expectations from `types.js`,
+  answers from `judge.legal`. A failure is always the machine getting a
+  type wrong, never a card being read wrong.
+- It runs in under a second — one seated match is dealt and forked 401
+  times rather than reshuffled.
+
+---
+
 ## v2.46 — Phase 1: a seat becomes a policy
 
 `engine/sparring.js`, and the three CR fixes found while proving it works.

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.46
+# Handoff — Dawnblade, at v2.47
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -36,9 +36,9 @@ not port them as part of Phase 1.
 
 ## WHERE THINGS STAND
 
-- `npm test` → **694 drills, all green.** Never leave them red.
+- `npm test` → **701 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way.
-- Branch `multiplayer-hero-select`, at **v2.46**. `main` is at v2.38.
+- Branch `multiplayer-hero-select`, at **v2.47**. `main` is at v2.38.
 - **Unpushed.** The user uploads to GitHub Pages manually — no remote, no
   `gh`, no stored credential. Deploying is not your job.
 - `node` is at `~/node/bin`, **not on PATH** —

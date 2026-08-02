@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.46
+**Current version:** v2.47
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 694 drills:
+This is `node --test "test/*.test.js"` — currently 701 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -135,7 +135,7 @@ This is `node --test "test/*.test.js"` — currently 694 drills:
    fingerprint, and two sessions driven at each other over a loopback
    with packet loss, desync and reconnect. See "The sync layer" below.
 6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`,
-   `test/types.test.js`, `test/sparring.test.js`).
+   `test/types.test.js`, `test/sparring.test.js`, `test/journey.test.js`).
    `build.test.js` asks the two questions the eight-gear bug proved
    nobody was asking: is the loadout LEGAL, and is the build SYMMETRIC.
    `judge.test.js` drives **two real precons at each other** and watches
@@ -760,6 +760,48 @@ It is **not an AI opponent** (standing decision, 2026-07-25: the goal is
 two humans) and **not a difficulty curve** — the `[3,4,5]` escalation it
 replaces was *tuned* and real cards from a real hand are not. Retuning is
 a play session, not a drill.
+
+### THE JOURNEY CENSUS (v2.47) — `test/journey.test.js`
+
+**All 401 pool cards, every journey their type promises and every one it
+forbids, driven through the real reducer.** The user's Phase 1 brief was
+"the function of each different card type and their full usability from
+pitch to play", and every other drill here asks about one card or one
+clause. This asks four questions of all of them, off the printed TYPE:
+
+| journey | count |
+|---|---|
+| pitched for its printed pitch value | 328 |
+| played → **chain** / **arena** / **grave** | 175 / 23 / 91 |
+| declared as a defender | 332 |
+| **refused**, with a reason naming the card | 112 |
+
+The 112 is a partition and it is pinned: Equipment 58, Weapon 15, Block
+4, Attack Reaction 20, Defense Reaction 15. **The 15 weapons reconcile
+with "eleven swinging weapons"** — four print no power and are activated
+for a non-attack ability instead, which is the pinned
+`types.isWeaponType` vs `parser.isWeapon` split counted from the other
+end.
+
+**A ONE-SIDED CENSUS IS A COVERAGE TOOL WEARING A JUDGE'S COAT.** Written
+asking only "can this card do what its type promises", it reported a
+clean **401 out of 401** while a Block card was a free 0-cost play and a
+defence reaction could be declared as a defender — both sev-3 *illegal
+play allowed*, the direction that steals games. It could not see either,
+by construction, because a card doing MORE than its type allows still
+does everything its type promises.
+
+That is the same shape as the audit measuring consumption rather than
+faithfulness, and as `fairness.js` being deliberately one-sided. **When
+you write a census, write the refusals too.** Making a Block playable now
+trips three drills instead of none.
+
+It reads **no card text**: every expectation comes from `types.js` and
+every answer from `judge.legal`, so a failure here is always the machine
+getting a type wrong, never a card being read wrong.
+
+**The counts are asserted, not reported.** A census that quietly stopped
+driving anything would otherwise pass by finding nothing.
 
 ### Two more rules the CR review missed (v2.46)
 
