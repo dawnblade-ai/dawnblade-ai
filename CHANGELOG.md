@@ -9,6 +9,99 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.42 — Phase 1: the rules leave the component
+
+The first landing of the engine rebuild. Two new modules, 46 new drills,
+and three real bugs that only became findable once the code was somewhere
+a drill could reach it.
+
+### `engine/build.js` — how a seat becomes a hero
+
+`buildSide` and the equipment slot rules moved out of `index.html`. Both
+are rules: a build reads a hero's printed passives off its own text and
+deals from the seeded stream, and `defaultPicks` decides how much iron a
+hero may legally wear. Neither had a drill, which is precisely why the
+v2.41 eight-gear bug shipped — every card was read correctly and the
+*quantity* was illegal, a question no card-level tool asks.
+
+`buildSide` takes no seat argument and branches on no seat; a drill
+enforces that. `buildSideDefault` equips and builds in one call, so both
+seats reach one set of slot rules rather than two.
+
+**A BOW PRINTS NO POWER, AND THAT DISQUALIFIED IT.** `defaultPicks` gated
+the two-hander on `twoH.c.power != null`. Azalea's Death Dealer is a
+`Ranger Weapon - Bow (2H)` with `power: null`, so she defaulted to **no
+weapon and no quiver** — for the player's own loadout as much as the
+opponent's, and her whole deck is arrows. The check never did any work:
+`slotOf` only returns `z:"2h"` for a printed `2H` type line. Gone, and
+two drills fail if it comes back.
+
+Not "every hero gets a weapon", though — Gravy Bones's precon prints none
+at all (four armour slots and an off-hand compass), so the drill asks the
+honest question: is a *printed* weapon ever left in the box.
+
+### `engine/judge.js` — the rules as a pure function
+
+`reduce(state, action, seat) -> state`, and **the one thing it replaces
+is that the trainer resolves the same CR procedure through two unrelated
+bodies of code**:
+
+```
+you attack   tryPlay -> execute -> dummyDefence -> mode:"stack" -> resolveStack
+they attack  foeSwing -> mode:"block" -> toggleBlock -> finishBlock -> takeIt
+```
+
+One fabricates the attack as `[3,4,5][(turn-1)%3]`; the other auto-picks
+the blocks. Neither can serve a second human, and a rule fixed in one
+stays broken in the other — which is how clash fired on the wrong trigger
+for five versions. Here there is one path and the swinging seat is an
+argument.
+
+It restates **no** priority rule: `canAct`, `speedAllowed`,
+`canDeclareDefenders`, `passOutcome`, `advance` and `endTurn` all come
+from `priority.js`. There is no `mode` and no `bphase`, and a drill fails
+if either appears.
+
+Two corrections to `actions.js`'s reference shape, both real:
+
+- **Damage lands on ENTERING the damage step, not on leaving it** (CR
+  7.5). A blank game has nothing hanging off a hit; a real one has a
+  window in which the hit has already happened.
+- **The combat chain is a ZONE.** A declared attack has left its hand and
+  not reached a graveyard. Held in a private field it is in no zone at
+  all — and `invariants.js` catches a card in *two* zones while a card in
+  *none* falls out of the census silently. `chainCards` is now censused,
+  and a drill duplicates a chain card into a graveyard to prove the judge
+  names it.
+
+Verified by driving two real precons at each other: a 17-turn game, 261
+actions, zero invariant violations, every dealt card in exactly one zone,
+and both seats attacking, defending, drawing and ending turns through the
+same code.
+
+**It is deliberately HEADLESS** — declared so in `test/wire.test.js`'s
+ledger. It models the turn structure, the chain and the costs, but not
+yet card *effects*; those are still `runOps`/`execute` in the trainer.
+Loading it now would put a second, quieter rules engine on the page next
+to the real one.
+
+### "Once per turn" is printed, not universal
+
+Found while giving `judge.js` a weapon swing. Eleven of the pool's
+thirteen weapons print `Once per Turn`; **Sledge of Anvilheim and
+Scorpio, Comet Tail do not**, and may swing again for anyone who can pay
+again. Gating every weapon on a blanket "already swung" flag — which is
+what the trainer does — makes those two strictly **weaker than printed**.
+
+Neither sweep can see it. `npm run fairness` is deliberately one-sided
+towards cards that are too *strong*; coverage says `full`, because the
+text was read correctly and then **charged** wrongly. Same shape as the
+instant that ate an action point in v2.39.
+
+`weaponCost` now returns `oncePerTurn` and `judge.js` reads it.
+
+---
+
 ## v2.41 — the opponent picks a hero
 
 `ROADMAP-OPPONENT.md` Phase 1, and step 2 of the honest order in

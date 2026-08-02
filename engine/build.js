@@ -1,0 +1,246 @@
+/* ============================================================
+   Dawnblade engine — build.js (Phase 1)
+
+   HOW A SEAT BECOMES A HERO.
+
+   Everything here used to live in index.html: `buildSide` at 1847, the
+   equipment slot rules at 4527. Both are RULES — `buildSide` reads a
+   hero's printed passives off its own text, resolves every printing, and
+   deals the opening deck from the seeded stream; `defaultPicks` decides
+   how many pieces of iron a hero may legally wear. Neither had a drill,
+   because inside the trainer no drill could reach them.
+
+   That cost a real bug in v2.41. The opponent was equipped by passing
+   `{}` for its loadout, which handed Azalea all EIGHT printed pieces
+   where the slot rules allow about five — and since `chainBlocked` only
+   stops a piece re-blocking the SAME chain, every extra piece was another
+   free block later in the turn. Every card was read correctly; the
+   QUANTITY was illegal, which is a question neither `npm run audit` nor
+   `npm run fairness` asks. Only opening the game and reading the dealt
+   state found it.
+
+   One set of slot rules, in one file, reachable by a drill, applied to
+   both seats. That is the whole point of moving it.
+
+   ---- SYMMETRY IS THE CONTRACT ----------------------------------------
+
+   `buildSide` takes a hero and returns a build. It has no idea which seat
+   it is filling and there is no seat argument. Seat 0 and seat 1 are the
+   same call with different arguments, which is what makes a second human
+   — or a second hero — cost nothing at all.
+
+   PURITY: the only randomness is the `rng` handed in, and the shuffled
+   stream is returned beside the build so the caller can thread it on
+   (rng.js's rule: store it back, or the next draw repeats).
+   ============================================================ */
+(function(root, factory){
+  if(typeof module==="object" && module.exports)
+    module.exports = factory(require("./parser.js"), require("./cards.js"),
+                             require("./game.js"), require("./rng.js"));
+  else root.DawnBuild = factory(root.DawnParser, root.DawnCards, root.DawnGame, root.DawnRNG);
+})(typeof self!=="undefined" ? self : this, function(PR, CD, GM, RNG){
+
+const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, ARS_PUT} = PR;
+const {resolveEntry, resolveHero, cdnImg} = CD;
+const {slotOf} = GM;
+
+/* ---- the equipment slots (official zones) -----------------------------
+   Four armour slots and two hands. A quiver is free but needs a bow in
+   those hands to hang arrows on. */
+const ARMOR_Z = ["head","chest","arms","legs"];
+const HAND_Z  = ["1h","2h","off","qvr"];
+
+/* `list` is [{i, c, s}] — an index, the resolved card, and its slot.
+   `gearSlots` builds it so no caller has to remember the shape. */
+const gearSlots = cards => (cards||[]).map((c,i)=>({i, c, s:slotOf(c)}));
+
+/* Toggle piece `i` in `sel`, evicting whatever it displaces. This is the
+   legality of a loadout expressed as a transition rather than a checker,
+   which is what lets the loadout screen and the auto-equipper share it. */
+function applyPick(list, sel, i){
+  const item = idx => list.find(x=>x.i===idx);
+  if(sel.includes(i)){
+    let out = sel.filter(x=>x!==i);
+    /* dropping the two-hander drops the quiver with it — a quiver with no
+       bow to hang on is not a legal board */
+    if(item(i).s.z==="2h") out = out.filter(x=>item(x).s.z!=="qvr");
+    return out;
+  }
+  const s = item(i).s;
+  let out = sel.slice();
+  if(ARMOR_Z.includes(s.z) || s.z==="misc"){
+    if(ARMOR_Z.includes(s.z)) out = out.filter(x=>item(x).s.z!==s.z);
+    const armorN = out.filter(x=>ARMOR_Z.includes(item(x).s.z)||item(x).s.z==="misc").length;
+    if(armorN>=4) return sel;
+    return [...out,i];
+  }
+  if(s.z==="qvr"){
+    out = out.filter(x=>item(x).s.z!=="qvr");
+    if(!out.some(x=>item(x).s.z==="2h")) return sel;
+    return [...out,i];
+  }
+  if(s.z==="2h"){
+    out = out.filter(x=>!["1h","off"].includes(item(x).s.z));
+    return [...out,i];
+  }
+  out = out.filter(x=>item(x).s.z!=="2h" && item(x).s.z!=="qvr");
+  if(s.z==="off") out = out.filter(x=>item(x).s.z!=="off");
+  let hands = out.filter(x=>["1h","off"].includes(item(x).s.z));
+  hands.sort((a,b)=>(item(a).s.z==="off"?0:1)-(item(b).s.z==="off"?0:1));
+  while(hands.reduce((a,x)=>a+item(x).s.h,0) + s.h > 2){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
+  return [...out,i];
+}
+
+/* A sensible legal loadout: the best armour in each slot, then the best
+   weapon configuration the hands allow.
+
+   ---- A BOW PRINTS NO POWER, AND THAT USED TO DISQUALIFY IT ------------
+
+   This gated the two-hander on `twoH.c.power != null`. Azalea's Death
+   Dealer is a `Ranger Weapon - Bow (2H)` with `power: null`, so she
+   defaulted to NO WEAPON AND NO QUIVER — for the player's own loadout as
+   much as the opponent's. The check was never doing any work: `slotOf`
+   only returns `z:"2h"` for a printed `2H` type line, so anything in that
+   list is already a two-handed weapon. It is gone.
+
+   The sort is unchanged and still correct with bows in it: `power||0`
+   ranks a printed sword above a powerless bow when a hero owns both, and
+   picks the bow when it is the only two-hander on offer. */
+function defaultPicks(list){
+  let sel = [];
+  ARMOR_Z.forEach(z=>{
+    const best = list.filter(x=>x.s.z===z).sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
+    if(best) sel = applyPick(list, sel, best.i);
+  });
+  const twoH = list.filter(x=>x.s.z==="2h").sort((a,b)=>(b.c.power||0)-(a.c.power||0))[0];
+  if(twoH){
+    sel = applyPick(list, sel, twoH.i);
+    const q = list.find(x=>x.s.z==="qvr"); if(q) sel = applyPick(list, sel, q.i);
+  } else {
+    list.filter(x=>x.s.z==="1h").sort((a,b)=>(b.c.power||0)-(a.c.power||0)).slice(0,2).forEach(x=>{ sel = applyPick(list, sel, x.i); });
+    const off = list.filter(x=>x.s.z==="off").sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
+    if(off) sel = applyPick(list, sel, off.i);
+  }
+  return sel;
+}
+
+/* ---- the build --------------------------------------------------------
+   `h` is the hero entry (name, key, printed code), `d` is its parsed deck
+   definition, `db` the card database, `opts` the loadout choices, `rng`
+   the seeded stream and `ctr` the shared uid counter.
+
+   `d` is a PARAMETER rather than a lookup because that is the difference
+   between a pure function and one that reads the trainer's module scope.
+   Two seats, two decks, one function. */
+function buildSide(h, d, db, opts, rng, ctr){
+  const o = opts || {};
+  const heroRec = resolveHero(db, d.hero) || {};
+  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
+  const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
+    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
+  const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
+    tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
+  const cuts = o.cuts||{};
+  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
+     SAZ). Passed to every resolveEntry so a card wears the face it has in
+     this deck's own precon rather than whatever printing the database
+     happened to list first. See cards.js `pickPrinting`. */
+  const saSet = (h.code||"").slice(0,3) || null;
+  const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
+    const q = Math.max(0, e.q - (cuts[ei]||0));
+    if(!q) return [];
+    const c = resolveEntry(db,e,saSet);
+    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
+  }));
+  rng = _pd.rng;
+  const deck = _pd.arr;
+  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
+  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
+  gear.forEach(gr=>{
+    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
+      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
+      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
+      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
+    }
+    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
+       Dealer is a Bow whose printed ability puts an arrow face up into your
+       arsenal — it is not a weapon attack, so `weaponCost` (which requires
+       ": attack") never claimed it and the `!isWeapon` gate below skipped
+       it, leaving the ability inert. The extra door is deliberately narrow:
+       only an ability the arsenal reader actually recognises, so no other
+       weapon quietly grows a second button nothing is wired to run. */
+    const _armed = isWeapon(gr) && gr.tx && ARS_PUT.test(gr.tx);
+    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+    if(pw){ gr.pow=pw;
+    /* The ability's WHOLE printed line, not just its first sentence.
+       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
+       end of turn, your base {i} is the number rolled." — parseHeroPower
+       stops at the period, which orphaned the rider so it never fired.
+       Strip the cost prefix off the line and keep the rest. */
+    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
+      .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
+    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
+      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
+  const _atk = deck.filter(isAttack);
+  const _ga = deck.filter(c=>fxParse(c).ga).length;
+  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
+  const _blue = deck.filter(c=>c.pitch===3).length;
+  const _perm = deck.filter(c=>fxParse(c).perm).length;
+  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
+  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
+    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
+      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
+      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
+      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
+      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
+        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
+        soul:"Line: land hits to charge the soul, then spend it to break through.",
+        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
+        arcane:"Line: amp first, spell second — arcane ignores the iron.",
+        ally:"Line: crew up early — every ally is free damage each turn after."};
+      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
+    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
+  const hasBoost = deck.some(c=>hasKw(c,"boost"));
+  /* THE HERO PASSIVES ARE PER-SIDE, and that is the point of this whole
+     function. Read off THIS hero's printed text, so seat 1's Viserai
+     conjures seat 1's runechants. */
+  const _htx = clean(heroRec.tx||"").toLowerCase();
+  const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
+  const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
+  const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
+  /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
+     grave cards" — and his printed text names the condition exactly:
+     a blue card must have hit your graveyard this turn. */
+  const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
+  /* LYATH: "Whenever the crowd boos you, create a Might token." */
+  const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
+  let startItem = null;
+  if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
+    const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
+    if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
+  }
+  return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
+    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
+    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
+}
+
+/* Equip a hero to a legal default loadout and build it. The two seats
+   differ only in their arguments — there is deliberately no seat index
+   here, and no branch for "the opponent". */
+function buildSideDefault(h, d, db, rng, ctr){
+  const saSet = (h.code||"").slice(0,3) || null;
+  const slots = gearSlots(d.gear.map(e => resolveEntry(db, e, saSet)));
+  return buildSide(h, d, db, {gearIdx: defaultPicks(slots)}, rng, ctr);
+}
+
+/* The passives a build is expected to answer for. A rules site reads
+   these through `bAct` — the build of whoever is RESOLVING — never off a
+   captured seat-0 build, which is the bug v2.41 fixed. Listed here so a
+   drill can assert every build answers all of them: a passive added to
+   `buildSide` and forgotten elsewhere then fails loudly instead of
+   reading as a silent `false` on a real hero's turn. */
+const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo"];
+
+return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault, PASSIVES};
+});

@@ -132,6 +132,17 @@ function check(game){
      PRE-filter copy, so they sat in both zones at once. Nothing caught
      it for a whole version. */
   const all = sides.flatMap((sd, si) => census(sd, si));
+  /* THE COMBAT CHAIN IS A ZONE TOO. An attack that has been declared has
+     left its owner's hand and has not reached a graveyard — it is held on
+     the chain until the close step (CR 7.7). Without this it is in NO
+     zone, and a card in no zone is invisible to a census that only knows
+     how to catch a card in two. `chainCards` is judge.js's name for it;
+     a state that does not carry one simply contributes nothing here. */
+  (game.chainCards || []).forEach((entry, i) => {
+    const card = entry && (entry.card || entry);
+    const uid = uidOf(card);
+    if(uid != null) all.push({uid, zone: "chain", idx: i, name: nameOf(card)});
+  });
   const byUid = new Map();
   for(const rec of all){
     if(!byUid.has(rec.uid)) byUid.set(rec.uid, []);

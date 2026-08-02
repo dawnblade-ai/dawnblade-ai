@@ -293,15 +293,21 @@ test("the encoder actually visits every declared zone", () => {
 });
 
 test("every engine module is loaded by index.html, or declared headless", () => {
-  /* The list is EMPTY as of the table build: wire, net, actions and room
-     are all loaded by index.html now and all four are in
-     test/sync.test.js's MODULES, so the bridge guard covers them.
+  /* wire, net, actions and room are all loaded by index.html and all four
+     are in test/sync.test.js's MODULES, so the bridge guard covers them.
 
-     It stays as the ledger's shape. A new engine module that nothing
-     loads yet belongs here, and moving one out of this list must be the
-     same edit that adds it to MODULES — otherwise a module can be wired
-     into the page with nothing watching for a shadowed export. */
-  const HEADLESS = [];
+     `judge` is headless ON PURPOSE. It is the Phase 1 reducer and it
+     models the turn structure, the combat chain and the costs — but not
+     yet card EFFECTS, which are still `runOps`/`execute` in the trainer.
+     Loading it before that port lands would put a second, quieter rules
+     engine on the page next to the real one. It comes off this list in
+     the same edit that adds it to MODULES and wires `Battle` to dispatch.
+
+     A new engine module that nothing loads yet belongs here, and moving
+     one out must be the same edit that adds it to MODULES — otherwise a
+     module can be wired into the page with nothing watching for a
+     shadowed export. */
+  const HEADLESS = ["judge"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

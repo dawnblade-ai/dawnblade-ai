@@ -1104,12 +1104,22 @@ const arsEmpty = sd => arsCount(sd) === 0;
 function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)); }
 function weaponCost(tx){
   const t = clean(tx||"");
-  const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
+  const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
   if(!m) return null;
-  const cs = (m[1]||"").trim();
+  const cs = (m[2]||"").trim();
   const dm = cs.match(/(\d+)\s*(?:resource|\{r\})/i) || cs.match(/(\d+)/);
   const rs = (cs.match(/\{r\}/gi)||[]).length;
-  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs), needSteam:/remove a steam counter/i.test(cs)};
+  /* "ONCE PER TURN" IS PRINTED, NOT UNIVERSAL. Eleven of the pool's
+     thirteen weapons print it; Sledge of Anvilheim and Scorpio, Comet
+     Tail do not, and may swing again for anyone who can pay the cost
+     again. Gating every weapon on a blanket "already swung" flag makes
+     those two strictly WEAKER than printed — a direction `npm run
+     fairness` is deliberately one-sided against and cannot see, and one
+     coverage cannot see either, because the text was read correctly and
+     then charged wrongly. Read it off the line the cost came from. */
+  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs),
+          needSteam:/remove a steam counter/i.test(cs),
+          oncePerTurn: !!m[1]};
 }
 const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) || new RegExp("\\b"+k+"\\b","i").test(c.tx||"");
 /* A DOUBLE-FACED CARD'S TYPE LINE CARRIES BOTH FACES — "Runeblade Action //

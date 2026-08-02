@@ -134,6 +134,12 @@ This is `node --test "test/*.test.js"` — currently 580 drills:
    `test/actions.test.js`) — serialization round-trips, the rules
    fingerprint, and two sessions driven at each other over a loopback
    with packet loss, desync and reconnect. See "The sync layer" below.
+6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`).
+   `build.test.js` asks the two questions the eight-gear bug proved
+   nobody was asking: is the loadout LEGAL, and is the build SYMMETRIC.
+   `judge.test.js` drives **two real precons at each other** and watches
+   a whole game — the first drills here that see a game rather than a
+   clause. Both skip cleanly without the cached DB.
 7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -404,6 +410,122 @@ migrate onto `sides[]` (the counters pass).
 `nonAttack`), `tt` (regex on the type line), `pitch`, `costLe`/`costGe`,
 `powerGe`/`powerLe`, `defGe`, `name` (regex). Every key present must match, so
 `{pitch:3, type:"attack"}` means "a blue attack".
+
+---
+
+## THE PHASE 1 REBUILD — `engine/judge.js` (v2.42, in progress)
+
+**The plan is three phases: engine → multiplayer → card rulings.** Phase 2
+made real progress and was deliberately stopped, because every remaining
+multiplayer step is blocked on the same thing: `Battle` is 2,505 lines of
+React closures rather than a pure reducer, and it grew 60% while the
+roadmap was being written.
+
+### What landed
+
+| module | what | status |
+|---|---|---|
+| `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, the equipment slot rules | **live** — loaded, bridged, in `MODULES` |
+| `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **headless** — in `wire.test.js`'s `HEADLESS` list |
+
+### ONE COMBAT PATH, NOT TWO — the thing this replaces
+
+The trainer resolves the same CR procedure through two unrelated bodies
+of code, and this is the single biggest reason a second human cannot sit
+down:
+
+```
+you attack   tryPlay -> execute -> dummyDefence -> mode:"stack" -> resolveStack
+they attack  foeSwing -> mode:"block" -> toggleBlock -> finishBlock -> takeIt
+```
+
+One **fabricates** the attack as `[3,4,5][(turn-1)%3]`; the other
+**auto-picks** the blocks. A rule fixed in one silently stays broken in
+the other — which is exactly how clash came to fire on the wrong trigger
+for five versions. In `judge.js` there is one path and the swinging seat
+is an argument:
+
+```
+declare -> ATTACK -> DEFEND -> REACTION -> DAMAGE -> RESOLUTION -> CLOSE
+```
+
+### It restates no priority rule
+
+Every question about who may act comes from `engine/priority.js` —
+`canAct`, `speedAllowed`, `canDeclareDefenders`, `passOutcome`,
+`advance`, `endTurn`. **There is no `mode` and no `bphase`**, and a drill
+fails if either appears in the file. That module is CR-grounded and
+counter-intuitive where the CR is: in the defend step the TURN-PLAYER
+holds priority (CR 7.3.3) while the DEFENDER declares (CR 7.3.2), which
+is why "can I act" and "can I declare defenders" are separate questions.
+
+### Phase and interaction are different things
+
+The trainer's eight `mode` strings conflate them. Here:
+
+- `phase`/`step`/`priority` — the CR machine, owned by `priority.js`
+- `pending` — a half-finished **interaction** belonging to ONE seat (a
+  payment being assembled). While it is set that seat may only finish or
+  abandon it, and the other seat may do nothing. The CR has no "pay
+  step", so it is not modelled as a phase.
+
+### Two corrections to `actions.js`'s reference shape
+
+1. **Damage lands on ENTERING the damage step, not on leaving it**
+   (CR 7.5). `actions.js` strikes on the way out, which is fine for a
+   blank game with nothing hanging off a hit and wrong for a real one:
+   the step exists so there is a window in which the hit has *already
+   happened*.
+2. **THE COMBAT CHAIN IS A ZONE.** A declared attack has left its hand
+   and not reached a graveyard. Held in a private `_` field it is in no
+   zone at all — and `invariants.js` catches a card in *two* zones while
+   a card in *none* falls silently out of the census. `g.chainCards` is
+   now censused by `invariants.js`, and a drill duplicates a chain card
+   into a graveyard to prove the judge names it. **When you add a zone,
+   check the census still sees it.**
+
+### It is HEADLESS on purpose — do not load it yet
+
+`judge.js` models the turn structure, the combat chain and the costs. It
+does **not** yet model card EFFECTS: `runOps`/`execute`/`resolveStack`
+are still in the trainer. Loading it now would put a second, quieter
+rules engine on the page beside the real one.
+
+That limit is load-bearing and it is the same discipline that kept
+`actions.js` free of card text: **a control-flow bug must never be
+confusable with a card being read wrong.** The orchestration is the part
+that did not exist; the card semantics already work and 628 drills cover
+them.
+
+`test/wire.test.js`'s `HEADLESS` list is the ledger. Coming off it must
+be the same edit that adds `judge` to `test/sync.test.js`'s `MODULES`.
+
+### The remaining order
+
+1. **Port the effects.** `runOps` (234 lines), `execute` (455) and
+   `resolveStack` (124) move to a shared `engine/effects.js` that BOTH
+   the trainer and `judge.js` call — one copy, no-mirror rule, and the
+   live trainer stays a regression harness the whole way. Their closure
+   dependencies are small and known: `L`, `tokSeq`, `mkRune`, `gy`,
+   `had6ThisTurn`, `winCheck`, `openPrompt`, `bAct`, `built`, `db`,
+   `advValue`, `dummyDefence`.
+   **`execute` calling `dummyDefence` inline is the seam**: in `judge.js`
+   it must hand control back and let the defend step run.
+2. **The dummy becomes a policy** (`engine/sparring.js`): given a game
+   and a seat, return a legal ACTION. The rules then never know who is
+   driving a seat, and solo / hotseat / network all run one reducer.
+   Keep it — the roadmap wants it as the regression harness.
+3. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
+   references. Whatever replaces `setG` must keep the invariant-judge
+   funnel, or the guard rails go dark.
+
+### What must survive the rebuild
+
+Each one cost a real bug. No build step, ever. Never invent card effects.
+`you()`/`opp()` read and `youMut()`/`oppMut()` write, rules use
+`act()`/`foe()`, builds use `bAct()`; **never write a side field as a
+top-level game key**. Store the rng back. `instead` REPLACES, go again is
+a **GAIN**, an instant costs **no** action point.
 
 ---
 

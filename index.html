@@ -679,7 +679,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.41"; /* v2.41 — the opponent picks a hero: seat 1 is a real build, and the hero passives come off seat 0. Full history in CHANGELOG.md. */
+window.APP_VER = "2.42"; /* v2.42 — Phase 1: the rules leave the component. engine/build.js and a headless engine/judge.js. Full history in CHANGELOG.md. */
 window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1254,6 +1254,7 @@ window.TROPHIES = [
 <script src="engine/invariants.js"></script>
 <script src="engine/cards.js"></script>
 <script src="engine/advisor.js"></script>
+<script src="engine/build.js"></script>
 <!-- THE SYNC LAYER (Phase B). Reached as DawnWire.* / DawnNet.* /
      DawnActions.* / DawnRoom.*, deliberately NOT bridged into bare names
      the way the parser is: `reduce`, `legal`, `hash`, `encode` and
@@ -1311,6 +1312,9 @@ var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
 var advPitchPotential = DawnAdvisor.advPitchPotential, advCardOut = DawnAdvisor.advCardOut,
     advValue = DawnAdvisor.advValue, advBestPitch = DawnAdvisor.advBestPitch,
     advise = DawnAdvisor.advise;
+var ARMOR_Z = DawnBuild.ARMOR_Z, HAND_Z = DawnBuild.HAND_Z, gearSlots = DawnBuild.gearSlots,
+    applyPick = DawnBuild.applyPick, defaultPicks = DawnBuild.defaultPicks,
+    buildSide = DawnBuild.buildSide, buildSideDefault = DawnBuild.buildSideDefault;
 </script>
 <script type="text/babel" data-presets="env,react">
 const {useState,useEffect,useMemo,useCallback} = React;
@@ -1811,132 +1815,14 @@ function ZoneStrip({label,none,hand,arsenal,pitch}){
    engine/sides.js uses, so this prop already speaks the two-player
    vocabulary the state migration is moving toward. */
 /* ============================================================
-   buildSide — ONE HERO, ONE BUILD, CALLED ONCE PER SEAT.
-
-   ROADMAP-OPPONENT.md Phase 1: "Battle builds BOTH sides through the same
-   `built` path. Today `built.*` is the player's hero build captured in
-   closure — this is the real work of Phase 1."
-
-   Until now this body ran once, for seat 0, and the opponent got two
-   stubs off the end of it (`dDeck`, `dGear`). That shape is why every
-   hero passive in the trainer reads `built.viseraiPassive` and silently
-   means *the player's* Viserai — the same seat-0-means-the-actor
-   confusion the actor/perspective split (v2.24) fixed for zones, one
-   layer up. A second hero cannot occupy seat 1 while its build does not
-   exist.
-
-   Pure and module-level on purpose: the table screen has to be able to
-   build a side for a hero the local player did not choose.
-
-   TWO THINGS THE SPLIT MUST NOT BREAK, both of which would be silent:
-
-   1. **UIDs stay globally unique across BOTH seats.** They were unique
-      only because one counter ran through all four collections. Two
-      independent calls would each start at 1 and hand the two seats the
-      same uids — which is `CARD-IN-TWO-ZONES` in the invariant judge and
-      exactly the bug the runechant `tokSeq` prefix was added for
-      (CLAUDE.md, "Token uids must be namespaced"). So the counter is
-      passed IN and shared, rather than being a local.
-   2. **The rng threads through in a fixed order.** One seeded stream
-      feeds seat 0's shuffle, then seat 1's, then the game. Both peers
-      must walk it in the same order or they deal different decks from
-      the same table code — which is the whole reason rng.js exists.
-      Every call returns the advanced stream beside the build; store it
-      back (`rng = out.rng`) or the next shuffle repeats the last one.
+   buildSide and the equipment slot rules now live in
+   **engine/build.js** (Phase 1). They are RULES — a hero build reads
+   printed passives off its own text and deals from the seeded stream;
+   defaultPicks decides how much iron a hero may legally wear — and
+   neither had a drill while they sat in here. That cost the v2.41
+   eight-gear bug, which every card-level tool passed straight over
+   because no card was misread: the QUANTITY was illegal.
    ============================================================ */
-function buildSide(h, db, opts, rng, ctr){
-  const o = opts || {};
-  const d = PARSED[h.k];
-  const heroRec = resolveHero(db, d.hero) || {};
-  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
-  const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
-  const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
-    tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
-  const cuts = o.cuts||{};
-  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
-     SAZ). Passed to every resolveEntry so a card wears the face it has in
-     this deck's own precon rather than whatever printing the database
-     happened to list first. See cards.js `pickPrinting`. */
-  const saSet = (h.code||"").slice(0,3) || null;
-  const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
-    const q = Math.max(0, e.q - (cuts[ei]||0));
-    if(!q) return [];
-    const c = resolveEntry(db,e,saSet);
-    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
-  }));
-  rng = _pd.rng;
-  const deck = _pd.arr;
-  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
-  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
-  gear.forEach(gr=>{
-    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
-      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
-      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
-      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
-    }
-    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
-       Dealer is a Bow whose printed ability puts an arrow face up into your
-       arsenal — it is not a weapon attack, so `weaponCost` (which requires
-       ": attack") never claimed it and the `!isWeapon` gate below skipped
-       it, leaving the ability inert. The extra door is deliberately narrow:
-       only an ability the arsenal reader actually recognises, so no other
-       weapon quietly grows a second button nothing is wired to run. */
-    const _armed = isWeapon(gr) && gr.tx && DawnParser.ARS_PUT.test(gr.tx);
-    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
-    if(pw){ gr.pow=pw;
-    /* The ability's WHOLE printed line, not just its first sentence.
-       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
-       end of turn, your base {i} is the number rolled." — parseHeroPower
-       stops at the period, which orphaned the rider so it never fired.
-       Strip the cost prefix off the line and keep the rest. */
-    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-      .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
-    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
-    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
-  const _atk = deck.filter(isAttack);
-  const _ga = deck.filter(c=>fxParse(c).ga).length;
-  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
-  const _blue = deck.filter(c=>c.pitch===3).length;
-  const _perm = deck.filter(c=>fxParse(c).perm).length;
-  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
-  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
-      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
-      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
-      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
-      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
-        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
-        soul:"Line: land hits to charge the soul, then spend it to break through.",
-        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
-        arcane:"Line: amp first, spell second — arcane ignores the iron.",
-        ally:"Line: crew up early — every ally is free damage each turn after."};
-      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
-    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
-  const hasBoost = deck.some(c=>hasKw(c,"boost"));
-  /* THE HERO PASSIVES ARE PER-SIDE, and that is the point of this whole
-     function. Read off THIS hero's printed text, so seat 1's Viserai
-     conjures seat 1's runechants. */
-  const _htx = clean(heroRec.tx||"").toLowerCase();
-  const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
-  const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
-  const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
-  /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
-     grave cards" — and his printed text names the condition exactly:
-     a blue card must have hit your graveyard this turn. */
-  const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
-  /* LYATH: "Whenever the crowd boos you, create a Might token." */
-  const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
-  let startItem = null;
-  if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
-    const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
-    if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
-  }
-  return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
-    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
-    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
-}
 
 /* THE DUMMY, IN BUILD SHAPE (v2.41). Seat 1 is now read through the same
    `built.both[i]` ledger whichever occupies it, so the dummy has to answer
@@ -1976,7 +1862,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        identically, which is the whole reason engine/rng.js exists. */
     const ctr = {n:0};
     let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
-    const _s0 = buildSide(h, db, cfg||{}, rng, ctr);
+    const _s0 = buildSide(h, PARSED[h.k], db, cfg||{}, rng, ctr);
     rng = _s0.rng;
 
     /* THE RUNECHANT TOKEN IS SHARED, NOT PER-SIDE. It is one printed card
@@ -2021,14 +1907,11 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
          turn. Strictly stronger than printed, which is the direction that
          steals games (see `npm run fairness`).
 
-         `defaultPicks` is the same function the loadout screen uses for
-         your own default equipment, so both seats are held to one set of
-         slot rules rather than two. */
-      const oSet = (oppH.code||"").slice(0,3) || null;
-      const oGearR = PARSED[oppH.k].gear.map((e,i)=>{
-        const c = resolveEntry(db, e, oSet); return {i, c, s:slotOf(c)};
-      });
-      const _s1 = buildSide(oppH, db, {gearIdx: defaultPicks(oGearR)}, rng, ctr);
+         `buildSideDefault` is that one set of slot rules: it equips a hero
+         to a legal default loadout and builds it, with no seat argument
+         and no branch for "the opponent". The loadout screen reaches the
+         same `defaultPicks` for your own iron. */
+      const _s1 = buildSideDefault(oppH, PARSED[oppH.k], db, rng, ctr);
       rng = _s1.rng;
       s1 = _s1.b;
     } else {
@@ -4523,57 +4406,10 @@ function Trophies(){
   );
 }
 
-/* ---------- LOADOUT — official zones: 4 armor slots, 2 hands ---------- */
-const ARMOR_Z = ["head","chest","arms","legs"];
-const HAND_Z = ["1h","2h","off","qvr"];
-function applyPick(list, sel, i){
-  const item = idx => list.find(x=>x.i===idx);
-  if(sel.includes(i)){
-    let out = sel.filter(x=>x!==i);
-    if(item(i).s.z==="2h") out = out.filter(x=>item(x).s.z!=="qvr");
-    return out;
-  }
-  const s = item(i).s;
-  let out = sel.slice();
-  if(ARMOR_Z.includes(s.z) || s.z==="misc"){
-    if(ARMOR_Z.includes(s.z)) out = out.filter(x=>item(x).s.z!==s.z);
-    const armorN = out.filter(x=>ARMOR_Z.includes(item(x).s.z)||item(x).s.z==="misc").length;
-    if(armorN>=4) return sel;
-    return [...out,i];
-  }
-  if(s.z==="qvr"){
-    out = out.filter(x=>item(x).s.z!=="qvr");
-    if(!out.some(x=>item(x).s.z==="2h")) return sel;
-    return [...out,i];
-  }
-  if(s.z==="2h"){
-    out = out.filter(x=>!["1h","off"].includes(item(x).s.z));
-    return [...out,i];
-  }
-  out = out.filter(x=>item(x).s.z!=="2h" && item(x).s.z!=="qvr");
-  if(s.z==="off") out = out.filter(x=>item(x).s.z!=="off");
-  let hands = out.filter(x=>["1h","off"].includes(item(x).s.z));
-  hands.sort((a,b)=>(item(a).s.z==="off"?0:1)-(item(b).s.z==="off"?0:1));
-  while(hands.reduce((a,x)=>a+item(x).s.h,0) + s.h > 2){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
-  return [...out,i];
-}
-function defaultPicks(list){
-  let sel = [];
-  ARMOR_Z.forEach(z=>{
-    const best = list.filter(x=>x.s.z===z).sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
-    if(best) sel = applyPick(list, sel, best.i);
-  });
-  const twoH = list.filter(x=>x.s.z==="2h").sort((a,b)=>(b.c.power||0)-(a.c.power||0))[0];
-  if(twoH && twoH.c.power!=null){
-    sel = applyPick(list, sel, twoH.i);
-    const q = list.find(x=>x.s.z==="qvr"); if(q) sel = applyPick(list, sel, q.i);
-  } else {
-    list.filter(x=>x.s.z==="1h").sort((a,b)=>(b.c.power||0)-(a.c.power||0)).slice(0,2).forEach(x=>{ sel = applyPick(list, sel, x.i); });
-    const off = list.filter(x=>x.s.z==="off").sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
-    if(off) sel = applyPick(list, sel, off.i);
-  }
-  return sel;
-}
+/* ---------- LOADOUT — the official zones (4 armour slots, 2 hands) live
+     in engine/build.js: ARMOR_Z, HAND_Z, applyPick, defaultPicks. One set
+     of slot rules governs both seats, or the opponent is quietly stronger
+     than printed. ---------- */
 function Loadout({h,db,onBack,onStart}){
   const d = PARSED[h.k];
   const saSet = (d.hero.code||"").slice(0,3) || null;

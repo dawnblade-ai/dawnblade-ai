@@ -206,11 +206,28 @@ test("fxParse — THE MEMO GOTCHA: same name|pitch silently returns the cached p
 
 test("weaponCost — resource costs in numeral and {r} symbol form", () => {
   assert.deepEqual(P.weaponCost("Once per Turn Action - [2 Resources]: Attack"),
-    {cost:2, addRust:false, needSteam:false});
+    {cost:2, addRust:false, needSteam:false, oncePerTurn:true});
   assert.deepEqual(P.weaponCost("Action - {r}{r}: Attack"),
-    {cost:2, addRust:false, needSteam:false});
+    {cost:2, addRust:false, needSteam:false, oncePerTurn:false});
   assert.deepEqual(P.weaponCost("Action - 0: Attack"),
-    {cost:0, addRust:false, needSteam:false});
+    {cost:0, addRust:false, needSteam:false, oncePerTurn:false});
+});
+
+/* ONCE PER TURN IS PRINTED, NOT UNIVERSAL (Phase 1). Eleven of the pool's
+   thirteen weapons print it and two do not — Sledge of Anvilheim and
+   Scorpio, Comet Tail may swing again for anyone who can pay again.
+   Gating every weapon on a blanket "already swung" flag, which is what
+   the trainer does, makes those two strictly WEAKER than printed. That is
+   a direction `npm run fairness` is deliberately one-sided against and
+   cannot report, and coverage cannot see it either: the text was read
+   correctly and then charged wrongly — the same shape as the instant that
+   ate an action point. */
+test("weaponCost — 'once per turn' is read off the line, not assumed", () => {
+  assert.equal(P.weaponCost("Once per Turn Action - {r}: Attack").oncePerTurn, true);
+  assert.equal(P.weaponCost("Action - {r}: Attack").oncePerTurn, false);
+  /* the real pair, verbatim in shape */
+  assert.equal(P.weaponCost("Once per Turn Action - {r}: Attack\nGo again").oncePerTurn, true);
+  assert.equal(P.weaponCost("Action - {r}{r}{r}{r}: Attack").oncePerTurn, false);
 });
 
 test("weaponCost — Talishar rust and steam-spend riders", () => {
