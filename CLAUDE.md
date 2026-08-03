@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** dawnblade-ai.github.io (GitHub Pages)
-**Current version:** v2.47
+**Current version:** v2.48
 
 ---
 
@@ -97,7 +97,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 701 drills:
+This is `node --test "test/*.test.js"` — currently 713 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -135,7 +135,8 @@ This is `node --test "test/*.test.js"` — currently 701 drills:
    fingerprint, and two sessions driven at each other over a loopback
    with packet loss, desync and reconnect. See "The sync layer" below.
 6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`,
-   `test/types.test.js`, `test/sparring.test.js`, `test/journey.test.js`).
+   `test/types.test.js`, `test/sparring.test.js`, `test/journey.test.js`, `test/loader.test.js`,
+   `test/fuzz.test.js`).
    `build.test.js` asks the two questions the eight-gear bug proved
    nobody was asking: is the loadout LEGAL, and is the build SYMMETRIC.
    `judge.test.js` drives **two real precons at each other** and watches
@@ -760,6 +761,74 @@ It is **not an AI opponent** (standing decision, 2026-07-25: the goal is
 two humans) and **not a difficulty curve** — the `[3,4,5]` escalation it
 replaces was *tuned* and real cards from a real hand are not. Retuning is
 a play session, not a drill.
+
+### THE POOL COMES IN FAITHFULLY (v2.48) — `test/loader.test.js`
+
+Everything in this repo reasons about a card **after** two steps:
+`mapDbCard` turns a database record into the engine's shape, and
+`resolveEntry` turns a deck entry into the card actually played. If
+either drops or mistypes a printed value, nothing above can notice — the
+card is simply a different card, consistently, and it agrees with itself.
+
+**`mapDbCard` IS THE ONE MIRROR v2.20 COULD NOT DELETE**, and not by
+choice: the live copy lives inside `useCardDB`, a React hook, so it
+cannot be loaded from `engine/`. "Change both" was a note to a human, and
+notes to humans are what the sync guard exists because we stopped
+trusting. Drift means the Node tools audit one pool while the phone plays
+another, **both internally consistent**.
+
+It is guarded as a **field map** (key → expression), not as text, since
+the two blocks sit in different surroundings. The printing loop is
+guarded too — drift there is fifteen decks showing four art treatments
+side by side, only on the phone. The field list is pinned, so adding one
+is a deliberate edit: **that is where the reminder to bump `DATA_VER`
+lives.**
+
+`resolveEntry` has silently narrowed the record **twice** — `life` (so
+allies were not living objects and could not be attacked) and `ty` (so a
+defence reaction was playable on its own turn). Both are now pinned, with
+every hero's **printed** life and intellect: Iyslander 18, Blaze 17,
+Lyath intellect 5 are named explicitly, because a defaulting bug looks
+fine on the other twelve.
+
+**Pitch is the one normalised value** — no printed pitch arrives as 0 —
+and that is stated as a rule (*a card resolves to pitch 0 iff it is
+Equipment or a Weapon*) rather than excused, so a real action card losing
+its pitch cannot hide among the 73.
+
+Checked and clean, no change needed: all **488 deck entries resolve**,
+all 15 decks total exactly 55, every card has art, and the live parser's
+`tt`-reading agrees with `types.js`'s `ty`-reading on `isAttack`, `isAR`,
+`isDR` and `isInstant` across all 401 cards — so the `tt`/`ty` conflict is
+a **latent hazard, not a live bug**.
+
+### THE REDUCER IS A PUBLIC SURFACE (v2.48) — `test/fuzz.test.js`
+
+`net.js` asks `legal` twice: once on the guest before sending, once on
+the sequencer before committing. That makes `reduce` a surface fed by
+**JSON off a wire** — a stale action from before a resync, a guest on an
+older build, a crafted packet. Four properties, each a way a real session
+dies:
+
+| property | what breaks without it |
+|---|---|
+| never THROWS | an exception kills the session instead of refusing one move |
+| never MUTATES on refusal | a bad packet costs the caller its state |
+| `legal` and `reduce` AGREE | a guest sends what the sequencer refuses — the peers diverge |
+| a seat cannot use the other's cards | seats are decoration |
+
+**Two of these drills were written wrong first, and sabotage is what
+found it.** A drill that accepts *any* refusal passes on a broken engine:
+the non-priority seat is refused by "you do not hold priority" long
+before ownership or the zone is ever read. Both now **give priority to
+the seat under test and assert the REASON**, plus a control that the
+seat's own hand is still reachable — without which the drill passes just
+as well when nothing can be found at all.
+
+`__proto__`, `constructor` and `toString` are all truthy on any object,
+so a zone check that asks "is it there" walks into a function. `legal`
+asks `Array.isArray`, and the drill pins the *zone* refusal specifically
+rather than settling for a refusal.
 
 ### THE JOURNEY CENSUS (v2.47) — `test/journey.test.js`
 

@@ -9,6 +9,113 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.48 — Phase 1: the foundation guarded
+
+Two new drill files, and both are about surfaces nothing was watching.
+
+### `test/loader.test.js` — the pool comes in faithfully
+
+Everything in this repo reasons about a card **after** two steps:
+`mapDbCard` turns a raw database record into the engine's shape, and
+`resolveEntry` turns a deck entry into the card actually played. If
+either drops or mistypes a printed value, nothing above it can notice.
+The card is simply a different card — consistently, everywhere, and it
+agrees with itself.
+
+**`mapDbCard` is the one mirror the no-mirror rule could not delete.**
+v2.20 made `engine/` the only copy of every shared function; this is the
+exception, and not by choice — the live version lives inside `useCardDB`,
+a React hook, so it is not extractable and cannot be loaded from
+`engine/`. CLAUDE.md said "change both, and bump DATA_VER", which is a
+note to a human, and notes to humans are what the sync guard exists
+because we stopped trusting.
+
+Drift would be worse than an ordinary bug: the Node tools would audit one
+pool and the phone would play another, **both internally consistent**, so
+every finding either made would be about a game the other was not
+playing.
+
+Guarded as a **field map** — key to expression — rather than as text,
+since the two blocks sit in different surroundings and carry different
+comments. The printing loop is guarded the same way: it decides which
+face a card wears, and drift there is fifteen decks showing four art
+treatments side by side, only on the phone. The field list is pinned, so
+adding one is a deliberate edit — which is where the reminder to bump
+`DATA_VER` belongs, because a warm cache written under the old schema
+will not carry it.
+
+Also pinned:
+
+- **Every printed value survives resolution.** `resolveEntry` has
+  silently narrowed the record twice — `life`, so an ally was not a
+  living object (CR 1.4.5a) and could not be attacked at all; then `ty`,
+  so `tt`'s stray word made a defence reaction playable on its own turn.
+- **Every hero is seated at its printed life and intellect** — thirty
+  numbers, three of which are the point. Iyslander 18, Blaze 17 and
+  Lyath's intellect 5 are named explicitly, because a defaulting bug
+  would look perfectly normal on the other twelve.
+- **Pitch is the one normalised value.** A record with no printed pitch
+  arrives as 0, which is deliberate — no card prints a pitch of 0. Stated
+  as a rule (*resolves to pitch 0 iff Equipment or Weapon*) rather than
+  excused, so a real action card losing its pitch cannot hide among the
+  73 that legitimately have none.
+
+Verified by drift: defence read from the wrong field, `ty` silently
+dropped, the printing loop taking the last printing per set, and
+`resolveEntry` dropping ally life. All four caught.
+
+**Checked and clean, no change needed:** all 488 deck entries resolve,
+all 15 decks total exactly 55 cards, every card has art, and the live
+parser's `tt`-reading agrees with `types.js`'s `ty`-reading on
+`isAttack`, `isAR`, `isDR` and `isInstant` across all 401 pool cards — so
+the `tt`/`ty` conflict on 5 of 4,862 records is a **latent hazard, not a
+live bug**. `isWeapon`'s four disagreements are the pinned split.
+
+### `test/fuzz.test.js` — the reducer is a public surface
+
+`net.js`'s contract is that `legal` is asked twice: on the guest before
+sending, and on the sequencer before committing. That makes `reduce` a
+surface fed by **JSON off a wire** — a stale action from before a resync,
+a guest on an older build, a crafted packet, or simply somebody's bug.
+
+Four properties, each a way a real session dies:
+
+| property | what breaks without it |
+|---|---|
+| never THROWS | an exception kills the session instead of refusing one move |
+| never MUTATES on refusal | a bad packet costs the caller its state |
+| `legal` and `reduce` AGREE | a guest sends what the sequencer refuses — the two peers diverge |
+| a seat cannot use the other's cards | seats are decoration |
+
+Driven over states sampled from real games (mid-payment, mid-chain, in
+the defend step, waiting on an arsenal) rather than the opening position,
+against 45 malformed action shapes and 13 seat values — 5,000+
+combinations.
+
+**TWO OF THESE DRILLS WERE WRITTEN WRONG, AND SABOTAGE IS WHAT FOUND
+IT.** A drill that accepts *any* refusal passes on a broken engine: the
+non-priority seat is refused by "you do not hold priority" long before
+ownership or the zone is ever read, so making every lookup read seat 0
+changed nothing either drill could see. Both now **give priority to the
+seat under test and assert the reason**, with a control that the seat's
+own hand is still reachable — without which the drill passes just as
+happily when nothing can be found at all.
+
+`__proto__`, `constructor` and `toString` resolve to something truthy on
+any object, so a zone check that asks "is it there" walks into a
+function. `legal` asks `Array.isArray`; the drill pins the *zone*
+refusal specifically rather than settling for a refusal.
+
+### Notes
+
+- **713 drills** (was 701), all green; fairness clean.
+- Every drill in both files proven to bite.
+- `find`'s own `Array.isArray` guard is now redundant belt-and-braces —
+  `legal` guards first — and is kept anyway. Removing a defensive guard
+  because a drill cannot detect its absence is backwards.
+
+---
+
 ## v2.47 — Phase 1: the journey census
 
 `test/journey.test.js` — **all 401 pool cards, every journey their
