@@ -4,7 +4,7 @@ A single-file browser game: a Flesh and Blood sparring simulator where the playe
 pilots a real hero deck against an iron-armored training dummy, with an AI advisor
 ("Claude's call") reading the board.
 
-**Live at:** dawnblade-ai.github.io (GitHub Pages)
+**Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
 **Current version:** v2.48
 
 ---
@@ -80,9 +80,15 @@ text — never to special-case the card by name.
 - **v2.0x line starts at v2.01** (2026-07-22): marks the engine/ extraction +
   pool audit system. Below 2.0 = single-file-only history; 2.0+ = engine/ and
   index.html co-exist under the sync-guard rule (see below).
-- After any change: validate (below), then the file is uploaded/pushed to the Pages repo
-  **by the user, manually** — there is no git remote here and deploying is not
-  this thread's job.
+- After any change: validate (below), then **`git push origin main` — that IS the
+  deploy.** `origin` is `git@github.com:dawnblade-ai/dawnblade-ai.git` over SSH,
+  and GitHub Pages serves `main` at the root of the repo, so a push is live in
+  about a minute. There is no build and no upload step.
+  **Verify the push, not just the tests:** a Pages site can serve `index.html`
+  and 404 every script, which looks fine until a tap does nothing. Check the
+  URL returns 200 *and* that all 15 `engine/*.js` files do.
+  (Until 2026-08-03 this repo had no remote and the file was hand-uploaded
+  through GitHub's web UI, which is why 55 commits read "Add files via upload".)
 - **The per-version summary lives in `CHANGELOG.md`, not in `index.html`.** Until
   v2.32 it accumulated inside the `APP_VER` comment, which reached 14,723
   characters on one line and shipped to every player on every page load. Add a

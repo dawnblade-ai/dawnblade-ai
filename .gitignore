@@ -7,3 +7,8 @@ tools/.cache/
 # together they were 476K of churn in every diff.
 tools/review.html
 tools/sweep.html
+
+# Per-machine Claude Code permissions — the ".local." is the convention for
+# personal config. .claude/launch.json stays versioned: it is the shared dev
+# server definition, not a personal setting.
+.claude/settings.local.json
