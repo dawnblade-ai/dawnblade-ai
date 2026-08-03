@@ -595,6 +595,12 @@ img{display:block;max-width:100%}
   background:var(--forge);border:1px solid var(--line);border-radius:3px;padding:7px 9px;max-height:88px;overflow-y:auto}
 .rps .rback{align-self:center;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--bone-dim);background:none;border:none;padding:6px}
+/* who is across the table — chosen at the scout panel (v2.41) */
+.foepick{display:flex;flex-direction:column;gap:5px;margin:10px 0 0}
+.foepick label{font-family:'Spline Sans Mono';font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--bone-dim)}
+.foepick select{width:100%;background:var(--ink);color:var(--bone);border:1px solid var(--line);
+  border-radius:2px;padding:9px;font-family:inherit;font-size:12.5px;min-height:42px}
 /* ---- JUDGE!! — the in-game bug report (v2.22) ---- */
 .judgebtn{flex:none;background:var(--r);color:var(--bone);border:none;border-radius:2px;
   font-family:'Spline Sans Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.1em;
@@ -673,8 +679,8 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.40"; /* v2.40 — a reaction belongs to the reaction step, and to one seat in it (CR 8.1.2a/8.1.3a). Full history in CHANGELOG.md. */
-window.DATA_VER = "sage-v10"; /* v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.APP_VER = "2.48"; /* v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1248,6 +1254,7 @@ window.TROPHIES = [
 <script src="engine/invariants.js"></script>
 <script src="engine/cards.js"></script>
 <script src="engine/advisor.js"></script>
+<script src="engine/build.js"></script>
 <!-- THE SYNC LAYER (Phase B). Reached as DawnWire.* / DawnNet.* /
      DawnActions.* / DawnRoom.*, deliberately NOT bridged into bare names
      the way the parser is: `reduce`, `legal`, `hash`, `encode` and
@@ -1305,6 +1312,9 @@ var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
 var advPitchPotential = DawnAdvisor.advPitchPotential, advCardOut = DawnAdvisor.advCardOut,
     advValue = DawnAdvisor.advValue, advBestPitch = DawnAdvisor.advBestPitch,
     advise = DawnAdvisor.advise;
+var ARMOR_Z = DawnBuild.ARMOR_Z, HAND_Z = DawnBuild.HAND_Z, gearSlots = DawnBuild.gearSlots,
+    applyPick = DawnBuild.applyPick, defaultPicks = DawnBuild.defaultPicks,
+    buildSide = DawnBuild.buildSide, buildSideDefault = DawnBuild.buildSideDefault;
 </script>
 <script type="text/babel" data-presets="env,react">
 const {useState,useEffect,useMemo,useCallback} = React;
@@ -1387,7 +1397,15 @@ function useCardDB(){
           cards.push({
             n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
             d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
-            tt:c.type_text||((c.types||[]).join(" ")), kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
+            tt:c.type_text||((c.types||[]).join(" ")),
+            /* mirrors engine/cards.js mapDbCard — the STRUCTURED type array,
+               which is the authority where `tt` is only a display string.
+               They disagree on 5 records and it is not cosmetic: `tt` calls
+               Den of the Spider an "Action Defense Reaction", which would
+               make a defence reaction playable on your own turn. Change
+               both, and bump DATA_VER when you do. */
+            ty:(c.types||[]).slice(),
+            kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
             tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
           });
         });
@@ -1805,135 +1823,34 @@ function ZoneStrip({label,none,hand,arsenal,pitch}){
    engine/sides.js uses, so this prop already speaks the two-player
    vocabulary the state migration is moving toward. */
 /* ============================================================
-   buildSide — ONE HERO, ONE BUILD, CALLED ONCE PER SEAT.
-
-   ROADMAP-OPPONENT.md Phase 1: "Battle builds BOTH sides through the same
-   `built` path. Today `built.*` is the player's hero build captured in
-   closure — this is the real work of Phase 1."
-
-   Until now this body ran once, for seat 0, and the opponent got two
-   stubs off the end of it (`dDeck`, `dGear`). That shape is why every
-   hero passive in the trainer reads `built.viseraiPassive` and silently
-   means *the player's* Viserai — the same seat-0-means-the-actor
-   confusion the actor/perspective split (v2.24) fixed for zones, one
-   layer up. A second hero cannot occupy seat 1 while its build does not
-   exist.
-
-   Pure and module-level on purpose: the table screen has to be able to
-   build a side for a hero the local player did not choose.
-
-   TWO THINGS THE SPLIT MUST NOT BREAK, both of which would be silent:
-
-   1. **UIDs stay globally unique across BOTH seats.** They were unique
-      only because one counter ran through all four collections. Two
-      independent calls would each start at 1 and hand the two seats the
-      same uids — which is `CARD-IN-TWO-ZONES` in the invariant judge and
-      exactly the bug the runechant `tokSeq` prefix was added for
-      (CLAUDE.md, "Token uids must be namespaced"). So the counter is
-      passed IN and shared, rather than being a local.
-   2. **The rng threads through in a fixed order.** One seeded stream
-      feeds seat 0's shuffle, then seat 1's, then the game. Both peers
-      must walk it in the same order or they deal different decks from
-      the same table code — which is the whole reason rng.js exists.
-      Every call returns the advanced stream beside the build; store it
-      back (`rng = out.rng`) or the next shuffle repeats the last one.
+   buildSide and the equipment slot rules now live in
+   **engine/build.js** (Phase 1). They are RULES — a hero build reads
+   printed passives off its own text and deals from the seeded stream;
+   defaultPicks decides how much iron a hero may legally wear — and
+   neither had a drill while they sat in here. That cost the v2.41
+   eight-gear bug, which every card-level tool passed straight over
+   because no card was misread: the QUANTITY was illegal.
    ============================================================ */
-function buildSide(h, db, opts, rng, ctr){
-  const o = opts || {};
-  const d = PARSED[h.k];
-  const heroRec = resolveHero(db, d.hero) || {};
-  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
-  const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
-  const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
-    tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
-  const cuts = o.cuts||{};
-  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
-     SAZ). Passed to every resolveEntry so a card wears the face it has in
-     this deck's own precon rather than whatever printing the database
-     happened to list first. See cards.js `pickPrinting`. */
-  const saSet = (h.code||"").slice(0,3) || null;
-  const _pd = rngShuffle(rng, d.deck.flatMap((e,ei)=>{
-    const q = Math.max(0, e.q - (cuts[ei]||0));
-    if(!q) return [];
-    const c = resolveEntry(db,e,saSet);
-    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
-  }));
-  rng = _pd.rng;
-  const deck = _pd.arr;
-  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
-  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
-  gear.forEach(gr=>{
-    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
-      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
-      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
-      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
-    }
-    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
-       Dealer is a Bow whose printed ability puts an arrow face up into your
-       arsenal — it is not a weapon attack, so `weaponCost` (which requires
-       ": attack") never claimed it and the `!isWeapon` gate below skipped
-       it, leaving the ability inert. The extra door is deliberately narrow:
-       only an ability the arsenal reader actually recognises, so no other
-       weapon quietly grows a second button nothing is wired to run. */
-    const _armed = isWeapon(gr) && gr.tx && DawnParser.ARS_PUT.test(gr.tx);
-    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
-    if(pw){ gr.pow=pw;
-    /* The ability's WHOLE printed line, not just its first sentence.
-       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
-       end of turn, your base {i} is the number rolled." — parseHeroPower
-       stops at the period, which orphaned the rider so it never fired.
-       Strip the cost prefix off the line and keep the rest. */
-    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-      .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
-    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
-    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
-  const _atk = deck.filter(isAttack);
-  const _ga = deck.filter(c=>fxParse(c).ga).length;
-  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
-  const _blue = deck.filter(c=>c.pitch===3).length;
-  const _perm = deck.filter(c=>fxParse(c).perm).length;
-  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
-  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
-      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
-      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
-      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
-      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
-        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
-        soul:"Line: land hits to charge the soul, then spend it to break through.",
-        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
-        arcane:"Line: amp first, spell second — arcane ignores the iron.",
-        ally:"Line: crew up early — every ally is free damage each turn after."};
-      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
-    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
-  const hasBoost = deck.some(c=>hasKw(c,"boost"));
-  /* THE HERO PASSIVES ARE PER-SIDE, and that is the point of this whole
-     function. Read off THIS hero's printed text, so seat 1's Viserai
-     conjures seat 1's runechants. */
-  const _htx = clean(heroRec.tx||"").toLowerCase();
-  const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
-  const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
-  const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
-  /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
-     grave cards" — and his printed text names the condition exactly:
-     a blue card must have hit your graveyard this turn. */
-  const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
-  /* LYATH: "Whenever the crowd boos you, create a Might token." */
-  const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
-  let startItem = null;
-  if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
-    const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
-    if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
-  }
-  return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
-    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
-    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
-}
 
-function Battle({h,cfg,first,db,onExit,onRecord}){
+/* THE DUMMY, IN BUILD SHAPE (v2.41). Seat 1 is now read through the same
+   `built.both[i]` ledger whichever occupies it, so the dummy has to answer
+   the same questions a hero's build answers — and its answers are all
+   "no". Written out rather than defaulted so that a passive added to
+   buildSide and forgotten here shows up as `undefined` at the call site
+   instead of silently reading as false on a real hero's turn. */
+const DUMMY_BUILD = (deck, gear) => ({
+  deck, gear, hasBoost:false, read:"", heroPow:null, HPOW:null, HZOOM:null, heroRec:{},
+  arsenalInstant:false, iceFrostbite:false, viseraiPassive:false, wateryGrave:false,
+  lyathBoo:false, startItem:null, hp:42, int:DUMMY_INT, _dummy:true
+});
+
+function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   const foeFirst = first === 1;
+  /* Every log line that used to say "the dummy" now says who is actually
+     across the table. One name, read from the seat, so a rename cannot
+     drift between the twenty-odd strings that mention it. */
+  const foeName = oppH ? oppH.n : "the dummy";
+  const FoeName = oppH ? oppH.n : "The dummy";
   /* tokens are minted during play, so they need uids the loadout never issued */
   const tokRef = uR(0);
   const tokSeq = () => ++tokRef.current;
@@ -1953,7 +1870,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        identically, which is the whole reason engine/rng.js exists. */
     const ctr = {n:0};
     let rng = rngMake((cfg && cfg.seed != null) ? cfg.seed : Date.now());
-    const _s0 = buildSide(h, db, cfg||{}, rng, ctr);
+    const _s0 = buildSide(h, PARSED[h.k], db, cfg||{}, rng, ctr);
     rng = _s0.rng;
 
     /* THE RUNECHANT TOKEN IS SHARED, NOT PER-SIDE. It is one printed card
@@ -1974,32 +1891,79 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       _token:true
     } : null;
 
-    /* SEAT 1 IS STILL THE DUMMY, and deliberately so until it can resolve
-       the cards in a real deck. ROADMAP-OPPONENT.md: "Do not replace it
-       with a real deck until the opponent can actually resolve the cards
-       in that deck. Trading an honest approximation for a dishonest one
-       is a step backwards even if it looks like progress."
+    /* SEAT 1 IS A HERO NOW, when one was chosen (v2.41).
 
-       What changed is that the seat it occupies is now built by the same
-       function a hero would use, so swapping it for `buildSide(oppHero,
-       ...)` is a call site rather than a refactor. It draws from the same
-       shared counter and the same stream, in seat order. */
-    const dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++ctr.n,used:false}));
-    const _dd = rngShuffle(rng, DUMMY_DECK.reduce((acc,[nm,p,q])=>{
-      for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++ctr.n});
-      return acc;
-    },[]).filter(c=>c.resolved));
-    rng = _dd.rng;
-    const dDeck = _dd.arr;
+       ROADMAP-OPPONENT.md Phase 1. The roadmap's standing warning — "do
+       not give it a real deck until the opponent can actually resolve the
+       cards in that deck" — is about *playing* cards, and this seat still
+       plays none. It blocks, and blocking with printed defence works for
+       any card in the game without the parser reading a word of it. So a
+       real hero here is strictly more honest than the dummy: real life
+       total, real intellect, real equipment, real defence values.
+
+       The dummy stays selectable and is still the default. It is the
+       regression harness for every phase above this one, and its vanilla
+       pile is the one deck where nothing at all can be faked. */
+    let s1, dGear = null, dDeck = null;
+    if(oppH){
+      /* THE OPPONENT EQUIPS A LEGAL LOADOUT, not its whole gear pool.
+         Passing `{}` here handed Azalea all EIGHT printed pieces — two
+         helms, a spare weapon, the lot — where the slot rules allow about
+         five. That is not cosmetic: `dummyDefence` raises one piece per
+         attack and `chainBlocked` only stops a piece re-blocking the SAME
+         chain, so every extra piece is another free block later in the
+         turn. Strictly stronger than printed, which is the direction that
+         steals games (see `npm run fairness`).
+
+         `buildSideDefault` is that one set of slot rules: it equips a hero
+         to a legal default loadout and builds it, with no seat argument
+         and no branch for "the opponent". The loadout screen reaches the
+         same `defaultPicks` for your own iron. */
+      const _s1 = buildSideDefault(oppH, PARSED[oppH.k], db, rng, ctr);
+      rng = _s1.rng;
+      s1 = _s1.b;
+    } else {
+      dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++ctr.n,used:false}));
+      const _dd = rngShuffle(rng, DUMMY_DECK.reduce((acc,[nm,p,q])=>{
+        for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++ctr.n});
+        return acc;
+      },[]).filter(c=>c.resolved));
+      rng = _dd.rng;
+      dDeck = _dd.arr;
+      s1 = DUMMY_BUILD(dDeck, dGear);
+    }
 
     /* `myHP`/`myInt` keep their names: they are seat 0's, they are read at
        a dozen call sites, and renaming them is a separate pass from
-       giving seat 1 a build. `sides` below is the ledger that matters. */
-    return {..._s0.b, dGear, dDeck, myHP:_s0.b.hp, myInt:_s0.b.int,
+       giving seat 1 a build.
+
+       `both` IS THE LEDGER THAT MATTERS. Seat 0's build is also spread at
+       the top level, because the UI renders seat 0 by definition and
+       `built.HPOW` reads better than `built.both[0].HPOW` at a hero-portrait
+       call site. The RULES must not read it that way — they go through
+       `bAct`/`bFoe` below, which is the same actor-vs-perspective split
+       v2.24 made for zones, one layer up. */
+    return {..._s0.b, both:[_s0.b, s1], dGear, dDeck, myHP:_s0.b.hp, myInt:_s0.b.int,
       runeDmg:runeDmg?+runeDmg:1, runeApprox:!runeTok, runeCard,
       /* the stream AFTER both opening shuffles — Battle continues it */
       rng};
-  },[h,db]);
+  },[h,oppH,db]);
+
+  /* THE HERO PASSIVES ARE ACTOR-RELATIVE, NOT SEAT-0'S (v2.41).
+
+     `built.viseraiPassive` silently meant *the player's* Viserai — the
+     exact seat-0-means-the-actor confusion the actor/perspective split
+     fixed for zones in v2.24. These are its one-layer-up counterpart, so
+     they read the same way: `bAct(s)` is the build of whoever is
+     resolving. Every rules site uses it; only the UI may reach `built.*`
+     directly.
+
+     There is deliberately no `bFoe` yet. Nothing needs one — a passive
+     fires for its own hero — and a dead helper sitting next to a live one
+     is how `sides.js`'s seat-hardcoded `you`/`foe` came to be deleted in
+     v2.24. Add it when a rule actually asks about the other hero. */
+  const bOf  = i => built.both[i];
+  const bAct = s => built.both[actorOf(s)];
 
   /* L is declared ahead of the state so the opening-swing initializer below
      can reach it — it is a pure (state, message) function with no dependency
@@ -2015,10 +1979,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       `const base = {` of its own into this file, higher up. */
    const initial = {
     turn:1, actor:0, rng:built.rng, mode:"act", bphase:"defend", pending:null, incoming:0,
-    log:[foeFirst ? "It won the throw and took the first turn. Iron up." : "The dummy creaks to life. 42 to carve away — go."],
-    feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read,
-      foeFirst ? "The dummy won the throw and elected to swing first." : "You won the seating and took the first turn.",
-      foeFirst ? "It won the throw and took the first turn. Iron up." : "The dummy creaks to life. 42 to carve away — go."],
+    log:[foeFirst ? "It won the throw and took the first turn. Iron up." : `${FoeName} stirs. ${built.both[1].hp} to carve away — go.`],
+    feed:["Tonight in the hall: "+h.n+" versus "+(oppH?oppH.n:"the Dummy")+".", built.read,
+      foeFirst ? `${FoeName} won the throw and elected to swing first.` : "You won the seating and took the first turn.",
+      foeFirst ? "It won the throw and took the first turn. Iron up." : `${FoeName} stirs. ${built.both[1].hp} to carve away — go.`],
     /* BOTH SEATS ARE WHOLE HEROES NOW. Every zone, every counter, every
        per-turn status lives on its own side — nothing about the player is
        privileged and nothing about the dummy is a stub. The dummy's
@@ -2031,9 +1995,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
       gear:built.gear, board:built.startItem?[built.startItem]:[]
     }), makeSide({
-      id:1, name:"The Dummy", hp:42, maxHp:42, int:DUMMY_INT,
-      deck:built.dDeck.slice(DUMMY_INT), hand:built.dDeck.slice(0,DUMMY_INT),
-      gear:built.dGear
+      /* SEAT 1 IS BUILT FROM ITS OWN BUILD, not from constants. `int` in
+         particular: the opponent draws to ITS hero's intellect, which is
+         where DUMMY_INT stops being a number the trainer knows and starts
+         being a property of whoever is sitting there. newTurn's refill
+         reads the same field — see the landmine note there. */
+      id:1, name: oppH ? oppH.n : "The Dummy",
+      hp:built.both[1].hp, maxHp:built.both[1].hp, int:built.both[1].int,
+      deck:built.both[1].deck.slice(built.both[1].int),
+      hand:built.both[1].deck.slice(0,built.both[1].int),
+      gear:built.both[1].gear,
+      board:built.both[1].startItem?[built.both[1].startItem]:[]
     })],
     prompt:null, promptQ:[], revealed:null, lastRoll:null,
     boostOn:true, chainOpen:false, featured:null, boostChain:0, stack:[], pend:null, chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false,
@@ -2237,8 +2209,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   };
   const winCheck = s => {
     let n = s;
-    if(opp(n).hp<=15 && opp(n).hp>0 && !n.flags.d15) n = L({...n, flags:{...n.flags, d15:true}}, "The dummy is wobbling — you can smell the sawdust.");
-    if(opp(n).hp<=0 && !n.over) n = L({...n, over:{win:true, score:n.turn+you(n).wasted}}, `Dummy down on turn ${n.turn}. Score ${n.turn+you(n).wasted} (turns + wasted).`);
+    if(opp(n).hp<=15 && opp(n).hp>0 && !n.flags.d15) n = L({...n, flags:{...n.flags, d15:true}}, `${foe(n).name} is wobbling — you can smell the sawdust.`);
+    if(opp(n).hp<=0 && !n.over) n = L({...n, over:{win:true, score:n.turn+you(n).wasted}}, `${foe(n).name} down on turn ${n.turn}. Score ${n.turn+you(n).wasted} (turns + wasted).`);
     return n;
   };
 
@@ -2343,7 +2315,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       : opp(n).gear.findIndex(x=>gearDef(x)>0 && !usedThisChain.has(x.uid));
     if(cfx.noEquipDefend) n = L(n, `${card.name} can't be defended by equipment — the iron stays down.`);
     if(total>=4 && gi>=0){
-      links.push({k:"def", label:`Dummy: ${opp(n).gear[gi].name} — defend ${gearDef(opp(n).gear[gi])}`, gi});
+      links.push({k:"def", label:`${opp(n).name}: ${opp(n).gear[gi].name} — defend ${gearDef(opp(n).gear[gi])}`, gi});
       soak += gearDef(opp(n).gear[gi]);
     }
     const cap = hasKw(card,"dominate") ? 1 : 2;
@@ -2354,12 +2326,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(chosen.length>=cap || total-soak<=0) break;
       chosen.push(x); soak += (x.c.def||0);
     }
-    chosen.forEach(x=>links.push({k:"def", label:`Dummy: ${x.c.name} — defend ${x.c.def}`, uid:x.c.uid}));
+    chosen.forEach(x=>links.push({k:"def", label:`${opp(n).name}: ${x.c.name} — defend ${x.c.def}`, uid:x.c.uid}));
     n.stack = [...n.stack, ...links];
-    if(!links.length) return {n, note:"Dummy passes — it eats this one."};
+    if(!links.length) return {n, note:`${opp(n).name} passes — it eats this one.`};
     const dnote = hasKw(card,"dominate") && chosen.length
       ? " Dominate holds it to a single card." : "";
-    return {n, note:`Dummy defends with ${links.map(l=>l.label.replace("Dummy: ","")).join(" + ")}.${dnote}`};
+    return {n, note:`${opp(n).name} defends with ${links.map(l=>l.label.replace(opp(n).name+": ","")).join(" + ")}.${dnote}`};
   };
 
   const runOps = (s, ops, srcName) => {
@@ -2369,20 +2341,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(k==="draw"){ const take=act(n).deck.slice(0,v); actMut(n).hand=[...act(n).hand,...take]; actMut(n).deck=act(n).deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
-        if(!take.length) n = L(n, `${srcName}: the dummy's hand is already empty.`);
+        if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).grave = [...take, ...foe(n).grave];
-          n = L(n, `${srcName}: dummy discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
+          n = L(n, `${srcName}: ${foe(n).name} discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
       else if(k==="foeBanish"){
         const take = foe(n).hand.slice(-Math.max(1,v));
-        if(!take.length) n = L(n, `${srcName}: the dummy's hand is already empty.`);
+        if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).banish = [...take, ...foe(n).banish];
-          n = L(n, `${srcName}: dummy banishes ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
+          n = L(n, `${srcName}: ${foe(n).name} banishes ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
       else if(k==="res"){ actMut(n).res+=v; n=L(n,`+${v} resource.`); }
@@ -2433,9 +2405,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         }
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
-        const who = side==="foe" ? "the dummy's" : "your";
+        const who = side==="foe" ? foe(n).name+"'s" : "your";
         n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
-        if(side==="foe") n = L(n, "The dummy pays no costs and takes no action phase, so anything that taxes those sits idle.");
+        if(side==="foe") n = L(n, `${foe(n).name} pays no costs and takes no action phase, so anything that taxes those sits idle.`);
       }
       else if(k==="opt"){
         /* RULING: look at the top X, then put them back on top or bottom in
@@ -2494,9 +2466,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       /* the dummy has a real deck, so banishing off its top is a real cost */
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
-        if(!take.length){ n = L(n, `${srcName}: the dummy's deck is empty.`); return; }
+        if(!take.length){ n = L(n, `${srcName}: ${foe(n).name}'s deck is empty.`); return; }
         foeMut(n).deck = foe(n).deck.slice(take.length);
-        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of the dummy's deck (${foe(n).deck.length} left).`);
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of ${foe(n).name}'s deck (${foe(n).deck.length} left).`);
       }
       else if(k==="firstAtkBuff"){
         /* a standing buff on the turn's FIRST attack only */
@@ -2521,8 +2493,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       /* the dummy holds a hand now, so showing it is real information */
       else if(k==="foeReveal"){
         n = L(n, foe(n).hand.length
-          ? `The dummy shows its hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
-          : "The dummy's hand is empty — nothing to show.");
+          ? `${foe(n).name} shows a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
+          : `${foe(n).name}'s hand is empty — nothing to show.`);
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
@@ -2534,11 +2506,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         /* LYATH: "Whenever the crowd boos you, create a Might token." Reuses
            the generic "token" op rather than duplicating the board-mint
            logic — a token is a card, resolved once, in one place. */
-        if(built.lyathBoo) n = runOps(n, [["token","Might",1,"self"]], "Lyath");
+        if(bAct(n).lyathBoo) n = runOps(n, [["token","Might",1,"self"]], "Lyath");
       }
       else if(k==="mark"){
         foeMut(n).marked = true;
-        n = L(n, "The dummy is marked — a qualifier your Assassin cards can read.");
+        n = L(n, `${foe(n).name} is marked — a qualifier your Assassin cards can read.`);
       }
       /* RULING (Ravenous Rabble): both players see the reveal, and the attack
          shifts by the revealed card's PITCH. The card stays on top. */
@@ -2590,7 +2562,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         if(tgt){ const cur=(act(n).counters[tgt]||{}); actMut(n).counters={...act(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
         n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
       }
-      else if(k==="rot"){ actMut(n).rot+=v; n=L(n,`Bloodrot on the dummy (ticks ${v}/turn).`); }
+      else if(k==="rot"){ actMut(n).rot+=v; n=L(n,`Bloodrot on ${act(n).name} (ticks ${v}/turn).`); }
       else if(k==="fra"){ actMut(n).fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
       else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
     });
@@ -2618,7 +2590,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(from==="grave"){ actMut(n).grave = act(n).grave.filter((_,i)=>i!==idx); }
     if(from==="banish"){ actMut(n).banish = act(n).banish.filter((_,i)=>i!==idx); }
     if(from==="weapon"||from==="hero"){ actMut(n).weaponUsed = {...act(n).weaponUsed,[card.uid]:true}; }
-    if(built.viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
+    if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;
     /* colour is pitch: red 1, yellow 2, blue 3 — several rulings key off
        "another blue/red card this turn" */
@@ -3111,7 +3083,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       (fx.conds||[]).forEach(({cond,op})=>{
         if(cond==="reprise"){
           const fromHand = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
-          if(!fromHand){ n = L(n, `${c.name}: reprise needs the dummy to have blocked from hand — it didn't.`); return; }
+          if(!fromHand){ n = L(n, `${c.name}: reprise needs ${foe(n).name} to have blocked from hand — it didn't.`); return; }
           if(op[0]==="self") condPump += op[1];
           else n = runOps(n,[op],c.name);
           n = L(n, `Reprise — ${fromHand} card${fromHand>1?"s":""} from the dummy's hand met the attack.`);
@@ -3130,7 +3102,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const pump = (fx.self||0) + condPump + fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0);
       n = runOps(n, fx.ops.filter(o=>o[0]!=="buffNext"), c.name);
       n.stack = [...n.stack, {k:"rx", label:`${c.name} — +${pump}`, pump}];
-      return L(n, `${c.name} on the stack (+${pump}). Dummy passes back.`);
+      return L(n, `${c.name} on the stack (+${pump}). ${foe(n).name} passes back.`);
     }
     const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
     const dv = (c.def||0) + dbuff;
@@ -3158,7 +3130,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return L(n, `${c.name} fired from arsenal — +${c.def||0} defense.`);
   });
   const playArsenalInstant = () => setG(s=>{
-    if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal || !built.arsenalInstant) return s;
+    if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal || !bAct(s).arsenalInstant) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
     if(isAttack(c)) return L(s, `${c.name} is an attack — her ability frees blue non-attacks only.`);
     if((c.pitch||0) < 3) return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
@@ -3178,7 +3150,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     arsRxSide.grave = [...gy(n.turn, c),...act(n).grave];
     arsRxSide.arsenal = null;
     n = runOps(n, fx.ops, c.name);
-    if(built.iceFrostbite && /ice/i.test(c.tt||"")){ foeMut(n).frost=(foe(n).frost||0)+1; n=L(n,`Ice card on the opponent's turn — Frostbite token created (now ${foe(n).frost}).`); }
+    if(bAct(n).iceFrostbite && /ice/i.test(c.tt||"")){ foeMut(n).frost=(foe(n).frost||0)+1; n=L(n,`Ice card on the opponent's turn — Frostbite token created (now ${foe(n).frost}).`); }
     n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter mid-defense.`);
     return winCheck(n);
   });
@@ -3562,8 +3534,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        lingering macro clears — restore the printed value once cards are in. */
     if(you(n).intWas!=null){ n = L(n, `Intellect settles back to ${you(n).intWas}.`); youMut(n).int = you(n).intWas; youMut(n).intWas = null; }
     n.lastRoll = null; n.revealed = null;
-    if(drawn.length<need && you(n).hand.length===0){ n.over={win:false}; return L(n,"Deck empty — fatigued. The dummy wins by attrition."); }
-    if(you(n).rot>0){ oppMut(n).hp-=you(n).rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:you(n).rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=you(n).rot; n=L(n,`Bloodrot ticks the dummy for ${you(n).rot}.`); n=winCheck(n); if(n.over) return n; }
+    if(drawn.length<need && you(n).hand.length===0){ n.over={win:false}; return L(n,`Deck empty — fatigued. ${foe(n).name} wins by attrition.`); }
+    if(you(n).rot>0){ oppMut(n).hp-=you(n).rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:you(n).rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=you(n).rot; n=L(n,`Bloodrot ticks ${opp(n).name} for ${you(n).rot}.`); n=winCheck(n); if(n.over) return n; }
     return foeSwing(n);
   }
   /* The dummy's swing, split out of afterArsenal so the opponent-goes-first
@@ -3575,10 +3547,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
     n.incoming = Math.max(0, base - you(n).fra);
     if(you(n).fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); youMut(n).fra=0; }
-    n.chain=[...n.chain,{n:"Dummy",img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
-    n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — DUMMY ATTACK`};
+    n.chain=[...n.chain,{n:opp(n).name,img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
+    n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — ${opp(n).name.toUpperCase()} ATTACKS`};
     n.mode="block"; n.bphase="defend"; youMut(n).blockH=[]; youMut(n).blockG=[]; youMut(n).blockRx=[];
-    return L(n, `Dummy swings for ${n.incoming}. Priority to you — reactions, blocks, or take it.`);
+    /* SAY THAT IT IS SCRIPTED (ROADMAP-OPPONENT.md Phase 0). This is not a
+       card played from a hand — it is the [3,4,5] escalation, and with a
+       real hero sitting in seat 1 the difference is no longer obvious from
+       the screen. "In a training sim the sequence IS the lesson", and a
+       swing that comes from nowhere should say so out loud until Phase 2
+       replaces it with a real played card. */
+    return L(n, `${opp(n).name} swings for ${n.incoming} — scripted escalation, not a card from hand.`
+      + ` Priority to you — reactions, blocks, or take it.`);
   }
   const toggleBlock = (kind,v) => setG(s=>{
     if(s.mode!=="block" || s.bphase!=="defend") return s;
@@ -3640,7 +3619,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     defSide.gear = act(s).gear.map((gr,i)=>act(s).blockG.includes(i)?gearBlockApply(gr):gr);
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
-    if(act(n).hp<=0){ n.over={win:false}; return L(n,"You hit the boards. The dummy remains undefeated."); }
+    if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
     /* Opponent-goes-first opening: that swing happened BEFORE your first
        action phase, so the clock has not started. Hand the turn over
        without ticking it, or going second would silently cost a point of
@@ -3743,20 +3722,37 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   });
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
-    /* the dummy refills to intellect at the end of its turn. A sparring
-       partner that decked out would stop sparring, so its graveyard
-       recycles instead of fatiguing — an approximation, logged as one. */
-    let oHand = opp(s).hand||[], oDeck = opp(s).deck||[], oGrave = opp(s).grave||[], recycled = false;
-    /* SEEDED: the recycle shuffle decides every card the dummy draws for the
-       rest of the game, so it has to come from the game's own stream or the
-       game stops being replayable exactly when it gets interesting. */
+    /* THE OPPONENT REFILLS TO ITS OWN INTELLECT — the landmine
+       ROADMAP-OPPONENT.md Phase 1 names. `DUMMY_INT` was a constant the
+       trainer knew; intellect is a property of whoever is sitting in seat
+       1, and it is already on the side (makeSide carries it), so this
+       reads the seat rather than a global.
+
+       THIS IS STILL THE STAND-IN FOR THE TURN IT NEVER TAKES, and it is
+       the ONLY refill site — which is exactly what the roadmap's warning
+       is about. The moment seat 1 gets a real end phase (Phase 2) this
+       draw moves there and becomes turn-1-only for both seats, per CR
+       4.4.3f. Adding that one without removing this one draws twice. */
+    let oHand = opp(s).hand||[], oDeck = opp(s).deck||[], oGrave = opp(s).grave||[], recycled = false, fatigued = false;
+    /* SEEDED: the recycle shuffle decides every card the opponent draws for
+       the rest of the game, so it has to come from the game's own stream or
+       the game stops being replayable exactly when it gets interesting. */
     let rng = s.rng;
-    const need = Math.max(0, DUMMY_INT - oHand.length);
+    const need = Math.max(0, opp(s).int - oHand.length);
     if(need>0){
-      if(oDeck.length < need && oGrave.length){
+      /* THE RECYCLE IS A DUMMY AFFORDANCE AND STAYS ONE. "A sparring
+         partner that decked out would stop sparring" — true of the
+         training prop, and false of a hero. A real opponent runs its deck
+         down and simply has fewer cards to block with; it does not yet
+         LOSE for it, because what decking out costs is a win condition
+         the player currently has no way to reach and the roadmap says to
+         decide that once, at Phase 2, rather than twice. Logged either
+         way, so neither approximation is silent. */
+      if(oDeck.length < need && oGrave.length && bOf(1)._dummy){
         const _gs = rngShuffle(rng, oGrave); rng = _gs.rng;
         oDeck = [...oDeck, ..._gs.arr]; oGrave = []; recycled = true;
       }
+      if(oDeck.length < need) fatigued = true;
       oHand = [...oHand, ...oDeck.slice(0,need)]; oDeck = oDeck.slice(need);
     }
     let n = {...s, rng};
@@ -3777,6 +3773,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(!stillLocked && you(n).lifeLock) youMut(n).lifeLock = false;
     }
     if(recycled) n = L(n, "The dummy gathers its spent cards and shuffles them back — it never tires.");
+    if(fatigued) n = L(n, `${FoeName} is running dry — ${oDeck.length} left in deck, not enough for a full hand of ${opp(s).int}.`);
     let fresh = {...n, turn:s.turn+1,
       chain:[], chainHist:hEntry, chainOpen:false, featured:null, boostChain:0, mode:"act"};
     const nt = youMut(fresh);
@@ -4005,8 +4002,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               <div className="heror">
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>
                 <div className="heromid clip-sm">
-                  <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>
-                  <span className="hname">The Dummy</span>
+                  {oppH
+                    ? <div className="hport2"><HeroArt h={oppH} db={db}/></div>
+                    : <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>}
+                  <span className="hname">{opp(g).name}</span>
                   <b className="hlife2">{Math.max(0,opp(g).hp)}</b>
                   <span className="hlbl">{g.mode==="block"?"INCOMING "+g.incoming:"next swing "+([3,4,5][(g.turn-1)%3]+(g.turn>6?1:0))}</span>
                   {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
@@ -4021,12 +4020,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   </button>))}
                 {opp(g).marked && <span className="tk">marked</span>}
                 {!(opp(g).board||[]).length && !opp(g).marked &&
-                  <span className="zempty">nothing yet — tokens you hand the dummy land here</span>}
+                  <span className="zempty">nothing yet — tokens you hand {opp(g).name} land here</span>}
               </div>
             </div>
             <div className="hpane">
               <div className="paneflag"><span>Opponent graveyard / banish</span><span>swipe ← back</span></div>
-              <div className="gyempty">The dummy discards nothing — wired and waiting for a real opponent.</div>
+              <div className="gyempty">{opp(g).name} has discarded nothing yet.</div>
             </div>
           </div>
         </div>
@@ -4048,7 +4047,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               </div>
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{you(g).hp}</span> you · R<b>{you(g).res}</b> A<b>{you(g).ap}</b></span>
-                <span className="sside r">dummy <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{opp(g).frost>0?` · ❄${opp(g).frost}`:""}</span>
+                <span className="sside r">{opp(g).name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{opp(g).frost>0?` · ❄${opp(g).frost}`:""}</span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
@@ -4415,57 +4414,10 @@ function Trophies(){
   );
 }
 
-/* ---------- LOADOUT — official zones: 4 armor slots, 2 hands ---------- */
-const ARMOR_Z = ["head","chest","arms","legs"];
-const HAND_Z = ["1h","2h","off","qvr"];
-function applyPick(list, sel, i){
-  const item = idx => list.find(x=>x.i===idx);
-  if(sel.includes(i)){
-    let out = sel.filter(x=>x!==i);
-    if(item(i).s.z==="2h") out = out.filter(x=>item(x).s.z!=="qvr");
-    return out;
-  }
-  const s = item(i).s;
-  let out = sel.slice();
-  if(ARMOR_Z.includes(s.z) || s.z==="misc"){
-    if(ARMOR_Z.includes(s.z)) out = out.filter(x=>item(x).s.z!==s.z);
-    const armorN = out.filter(x=>ARMOR_Z.includes(item(x).s.z)||item(x).s.z==="misc").length;
-    if(armorN>=4) return sel;
-    return [...out,i];
-  }
-  if(s.z==="qvr"){
-    out = out.filter(x=>item(x).s.z!=="qvr");
-    if(!out.some(x=>item(x).s.z==="2h")) return sel;
-    return [...out,i];
-  }
-  if(s.z==="2h"){
-    out = out.filter(x=>!["1h","off"].includes(item(x).s.z));
-    return [...out,i];
-  }
-  out = out.filter(x=>item(x).s.z!=="2h" && item(x).s.z!=="qvr");
-  if(s.z==="off") out = out.filter(x=>item(x).s.z!=="off");
-  let hands = out.filter(x=>["1h","off"].includes(item(x).s.z));
-  hands.sort((a,b)=>(item(a).s.z==="off"?0:1)-(item(b).s.z==="off"?0:1));
-  while(hands.reduce((a,x)=>a+item(x).s.h,0) + s.h > 2){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
-  return [...out,i];
-}
-function defaultPicks(list){
-  let sel = [];
-  ARMOR_Z.forEach(z=>{
-    const best = list.filter(x=>x.s.z===z).sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
-    if(best) sel = applyPick(list, sel, best.i);
-  });
-  const twoH = list.filter(x=>x.s.z==="2h").sort((a,b)=>(b.c.power||0)-(a.c.power||0))[0];
-  if(twoH && twoH.c.power!=null){
-    sel = applyPick(list, sel, twoH.i);
-    const q = list.find(x=>x.s.z==="qvr"); if(q) sel = applyPick(list, sel, q.i);
-  } else {
-    list.filter(x=>x.s.z==="1h").sort((a,b)=>(b.c.power||0)-(a.c.power||0)).slice(0,2).forEach(x=>{ sel = applyPick(list, sel, x.i); });
-    const off = list.filter(x=>x.s.z==="off").sort((a,b)=>(b.c.def||0)-(a.c.def||0))[0];
-    if(off) sel = applyPick(list, sel, off.i);
-  }
-  return sel;
-}
+/* ---------- LOADOUT — the official zones (4 armour slots, 2 hands) live
+     in engine/build.js: ARMOR_Z, HAND_Z, applyPick, defaultPicks. One set
+     of slot rules governs both seats, or the opponent is quietly stronger
+     than printed. ---------- */
 function Loadout({h,db,onBack,onStart}){
   const d = PARSED[h.k];
   const saSet = (d.hero.code||"").slice(0,3) || null;
@@ -4479,6 +4431,13 @@ function Loadout({h,db,onBack,onStart}){
   });
   const [cuts,setCuts] = uS(()=> (saved&&saved.cuts)||{});
   const [zoom,setZoom] = uS(null);
+  /* WHO IS ACROSS THE TABLE. `null` is the Dummy and stays the default:
+     it is the regression harness for every phase of the opponent work,
+     and its vanilla pile is the one deck where nothing can be faked
+     (ROADMAP-OPPONENT.md). Deliberately NOT saved per hero the way the
+     loadout is — the opponent is a property of the match, not of your
+     deck, and a remembered one would silently change a later game. */
+  const [oppH,setOppH] = uS(null);
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -4491,7 +4450,7 @@ function Loadout({h,db,onBack,onStart}){
     if(cur<q && size>40) return {...c,[ei]:cur+1};
     const n={...c}; delete n[ei]; return n;
   });
-  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts}); };
+  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, oppH}); };
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -4512,6 +4471,13 @@ function Loadout({h,db,onBack,onStart}){
   const p2h = selHand[0] && selHand[0].s.z==="2h";
   const hcv = resolveHero(db, d.hero);
   const hHP = hcv && hcv.hp!=null ? hcv.hp : 20;
+  /* Read off the opponent's own hero record, the same way yours is — so
+     the scout panel shows the life total the game will actually deal. */
+  const oppHP = uM(()=>{
+    if(!oppH) return 42;
+    const oc = resolveHero(db, PARSED[oppH.k].hero);
+    return oc && oc.hp!=null ? oc.hp : 20;
+  },[oppH,db]);
   const prevTile = x => (
     <button key={x.i} className="g clip-sm" style={{width:"100%",maxWidth:118}} onClick={()=>setSel(s=>applyPick(gearR,s,x.i))}>
       <CardFrame card={x.c} className="sm"/>
@@ -4532,13 +4498,36 @@ function Loadout({h,db,onBack,onStart}){
             <div className="vfillsp"/>
             <div className="featwrap">
               <div className="featfoe">
-                <div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
-                <b>{"42"}</b><span>The Dummy · Life</span>
+                {oppH
+                  ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={oppH} db={db}/></div>
+                      <b>{oppHP}</b><span>{oppH.n.split(",")[0]} · Life</span></>
+                  : <><div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
+                      <b>{"42"}</b><span>The Dummy · Life</span></>}
               </div>
               <span className="linkchip">Opponent hero</span>
             </div>
+            {/* THE PICK BELONGS HERE, NOT AT THE THROW. You scout the
+                opponent's hero and THEN you sideboard — putting it after
+                the loadout would show you the matchup too late to use it,
+                which is the one thing this panel exists to prevent. */}
+            <div className="foepick">
+              <label htmlFor="foesel">Who are you facing?</label>
+              <select id="foesel" value={oppH ? oppH.k : ""}
+                onChange={e=>{
+                  const v = e.target.value;
+                  setOppH(v==="" ? null
+                    : v==="?" ? HEROES[Math.floor(Math.random()*HEROES.length)]
+                    : HEROES.find(x=>x.k===v) || null);
+                }}>
+                <option value="">The Dummy — 42 life, vanilla pile</option>
+                <option value="?">Random hero</option>
+                {HEROES.map(x=><option key={x.k} value={x.k}>{x.n} — {x.cls}</option>)}
+              </select>
+            </div>
             <div className="vfillsp"/>
-            <p className="note">Real sideboarding shows you only the enemy hero. Their iron, their habits — you learn those in the pit.</p>
+            <p className="note">{oppH
+              ? `${oppH.n.split(",")[0]} brings a real deck, real equipment and a real life total — and blocks with printed defence. It still takes no action phase, so its swing is the scripted escalation and the log says so every time.`
+              : "Real sideboarding shows you only the enemy hero. Their iron, their habits — you learn those in the pit."}</p>
           </div>
         </div>
         {/* ---- LOADOUT: live playmat preview + picks ---- */}
@@ -4623,10 +4612,14 @@ function Loadout({h,db,onBack,onStart}){
 const RPS_GLYPH = {rock:"✊", paper:"✋", scissors:"✌"};
 const RPS_LOSS = {rock:"Paper smothers it.", paper:"Scissors cut through.", scissors:"Rock shatters them."};
 
-function Pregame({h, seed, onSeated, onBack}){
+function Pregame({h, oppH, seed, onSeated, onBack}){
   const [rounds,setRounds] = uS([]);
   const [live,setLive] = uS(null);
   const [phase,setPhase] = uS("throw");
+  /* Who is across the table was decided at the scout panel, which is where
+     it belongs: you see the opponent's hero and THEN you sideboard. By the
+     throw it is settled, so this screen only reads it. */
+  const foeLabel = oppH ? oppH.n.split(",")[0] : "The Dummy";
   const [log,setLog] = uS(["Two hands over the table. Winner calls the seating."]);
   const timer = uR(null);
   const say = m => setLog(l=>[...l,m].slice(-7));
@@ -4659,7 +4652,7 @@ function Pregame({h, seed, onSeated, onBack}){
         say(`${RPS_GLYPH[mine]} beats ${RPS_GLYPH[theirs]}. ${RPS_LOSS[theirs]} The call is yours.`);
         setPhase("decide");
       } else {
-        say(`${RPS_GLYPH[theirs]} beats ${RPS_GLYPH[mine]}. ${RPS_LOSS[mine]} The dummy calls it.`);
+        say(`${RPS_GLYPH[theirs]} beats ${RPS_GLYPH[mine]}. ${RPS_LOSS[mine]} ${foeLabel} calls it.`);
         setPhase("decide");
       }
     }, 620);
@@ -4671,9 +4664,9 @@ function Pregame({h, seed, onSeated, onBack}){
   uE(()=>{
     if(phase!=="decide" || winner!==1) return;
     timer.current = setTimeout(()=>{
-      say("The dummy takes the first turn — it always does. Brace up.");
+      say(`${foeLabel} takes the first turn — it always does. Brace up.`);
       setPhase("done");
-      timer.current = setTimeout(()=>onSeated(1), 900);
+      timer.current = setTimeout(()=>onSeated(1, oppH), 900);
     }, 500);
   },[phase,winner]);
 
@@ -4681,7 +4674,7 @@ function Pregame({h, seed, onSeated, onBack}){
     const first = rpsSeat(0, choice);
     say(first===0 ? "You take the first turn. Initiative is yours." : "You hand it the first turn — you keep the extra card.");
     setPhase("done");
-    timer.current = setTimeout(()=>onSeated(first), 800);
+    timer.current = setTimeout(()=>onSeated(first, oppH), 800);
   };
 
   const shaking = phase==="shaking";
@@ -4698,7 +4691,7 @@ function Pregame({h, seed, onSeated, onBack}){
         </div>
         <span className="rvs">VS</span>
         <div className={"rseat"+(winner===1?" win":"")}>
-          <span className="rwho">The Dummy</span>
+          <span className="rwho">{foeLabel}</span>
           <span className="rglyph">{shaking || !live || live.theirs===null ? "✊" : RPS_GLYPH[live.theirs]}</span>
           <span className="rname">{shaking || !live || live.theirs===null ? "shaking" : live.theirs}</span>
           <span className="rscore">{series.b}</span>
@@ -4708,7 +4701,7 @@ function Pregame({h, seed, onSeated, onBack}){
         {phase==="throw" && <span>{rounds.length ? <span>Tied <b>{series.ties}</b> — throw again.</span> : "Pick your throw."}</span>}
         {shaking && <span>Rock… paper… scissors…</span>}
         {phase==="decide" && winner===0 && <span>You won the throw. <b>Your call.</b></span>}
-        {phase==="decide" && winner===1 && <span>The dummy won the throw. It is deciding…</span>}
+        {phase==="decide" && winner===1 && <span>{foeLabel} won the throw. It is deciding…</span>}
         {phase==="done" && <span>Seated. Stepping to the table…</span>}
       </div>
       {(phase==="throw"||shaking) && <div className="rthrows">
@@ -5000,10 +4993,10 @@ function App(){
           clock. It rides in `cfg`, which already flows Loadout → Pregame →
           Battle, so nothing new has to be plumbed. */}
       {loHero && !fighting && <Loadout h={loHero} db={db} onBack={()=>setLoHero(null)} onStart={cfg=>{setSeating({h:loHero,cfg:{...cfg, seed:(cfg&&cfg.seed!=null)?cfg.seed:Date.now()}}); setLoHero(null);}}/>}
-      {seating && !fighting && <Pregame h={seating.h} seed={seating.cfg.seed}
+      {seating && !fighting && <Pregame h={seating.h} oppH={seating.cfg.oppH} seed={seating.cfg.seed}
         onBack={()=>{setLoHero(seating.h); setSeating(null);}}
         onSeated={first=>{setFighting({h:seating.h,cfg:seating.cfg,first}); setSeating(null);}}/>}
-      {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
+      {fighting && <Battle h={fighting.h} oppH={fighting.cfg.oppH} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && idle && <Judge/>}
       {tab==="trophies" && idle && <Trophies/>}
       {idle && <nav className="tabs">

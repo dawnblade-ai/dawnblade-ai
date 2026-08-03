@@ -9,6 +9,804 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.48 — Phase 1: the foundation guarded
+
+Two new drill files, and both are about surfaces nothing was watching.
+
+### `test/loader.test.js` — the pool comes in faithfully
+
+Everything in this repo reasons about a card **after** two steps:
+`mapDbCard` turns a raw database record into the engine's shape, and
+`resolveEntry` turns a deck entry into the card actually played. If
+either drops or mistypes a printed value, nothing above it can notice.
+The card is simply a different card — consistently, everywhere, and it
+agrees with itself.
+
+**`mapDbCard` is the one mirror the no-mirror rule could not delete.**
+v2.20 made `engine/` the only copy of every shared function; this is the
+exception, and not by choice — the live version lives inside `useCardDB`,
+a React hook, so it is not extractable and cannot be loaded from
+`engine/`. CLAUDE.md said "change both, and bump DATA_VER", which is a
+note to a human, and notes to humans are what the sync guard exists
+because we stopped trusting.
+
+Drift would be worse than an ordinary bug: the Node tools would audit one
+pool and the phone would play another, **both internally consistent**, so
+every finding either made would be about a game the other was not
+playing.
+
+Guarded as a **field map** — key to expression — rather than as text,
+since the two blocks sit in different surroundings and carry different
+comments. The printing loop is guarded the same way: it decides which
+face a card wears, and drift there is fifteen decks showing four art
+treatments side by side, only on the phone. The field list is pinned, so
+adding one is a deliberate edit — which is where the reminder to bump
+`DATA_VER` belongs, because a warm cache written under the old schema
+will not carry it.
+
+Also pinned:
+
+- **Every printed value survives resolution.** `resolveEntry` has
+  silently narrowed the record twice — `life`, so an ally was not a
+  living object (CR 1.4.5a) and could not be attacked at all; then `ty`,
+  so `tt`'s stray word made a defence reaction playable on its own turn.
+- **Every hero is seated at its printed life and intellect** — thirty
+  numbers, three of which are the point. Iyslander 18, Blaze 17 and
+  Lyath's intellect 5 are named explicitly, because a defaulting bug
+  would look perfectly normal on the other twelve.
+- **Pitch is the one normalised value.** A record with no printed pitch
+  arrives as 0, which is deliberate — no card prints a pitch of 0. Stated
+  as a rule (*resolves to pitch 0 iff Equipment or Weapon*) rather than
+  excused, so a real action card losing its pitch cannot hide among the
+  73 that legitimately have none.
+
+Verified by drift: defence read from the wrong field, `ty` silently
+dropped, the printing loop taking the last printing per set, and
+`resolveEntry` dropping ally life. All four caught.
+
+**Checked and clean, no change needed:** all 488 deck entries resolve,
+all 15 decks total exactly 55 cards, every card has art, and the live
+parser's `tt`-reading agrees with `types.js`'s `ty`-reading on
+`isAttack`, `isAR`, `isDR` and `isInstant` across all 401 pool cards — so
+the `tt`/`ty` conflict on 5 of 4,862 records is a **latent hazard, not a
+live bug**. `isWeapon`'s four disagreements are the pinned split.
+
+### `test/fuzz.test.js` — the reducer is a public surface
+
+`net.js`'s contract is that `legal` is asked twice: on the guest before
+sending, and on the sequencer before committing. That makes `reduce` a
+surface fed by **JSON off a wire** — a stale action from before a resync,
+a guest on an older build, a crafted packet, or simply somebody's bug.
+
+Four properties, each a way a real session dies:
+
+| property | what breaks without it |
+|---|---|
+| never THROWS | an exception kills the session instead of refusing one move |
+| never MUTATES on refusal | a bad packet costs the caller its state |
+| `legal` and `reduce` AGREE | a guest sends what the sequencer refuses — the two peers diverge |
+| a seat cannot use the other's cards | seats are decoration |
+
+Driven over states sampled from real games (mid-payment, mid-chain, in
+the defend step, waiting on an arsenal) rather than the opening position,
+against 45 malformed action shapes and 13 seat values — 5,000+
+combinations.
+
+**TWO OF THESE DRILLS WERE WRITTEN WRONG, AND SABOTAGE IS WHAT FOUND
+IT.** A drill that accepts *any* refusal passes on a broken engine: the
+non-priority seat is refused by "you do not hold priority" long before
+ownership or the zone is ever read, so making every lookup read seat 0
+changed nothing either drill could see. Both now **give priority to the
+seat under test and assert the reason**, with a control that the seat's
+own hand is still reachable — without which the drill passes just as
+happily when nothing can be found at all.
+
+`__proto__`, `constructor` and `toString` resolve to something truthy on
+any object, so a zone check that asks "is it there" walks into a
+function. `legal` asks `Array.isArray`; the drill pins the *zone*
+refusal specifically rather than settling for a refusal.
+
+### Notes
+
+- **713 drills** (was 701), all green; fairness clean.
+- Every drill in both files proven to bite.
+- `find`'s own `Array.isArray` guard is now redundant belt-and-braces —
+  `legal` guards first — and is kept anyway. Removing a defensive guard
+  because a drill cannot detect its absence is backwards.
+
+---
+
+## v2.47 — Phase 1: the journey census
+
+`test/journey.test.js` — **all 401 pool cards, every journey their
+printed type promises and every one it forbids**, driven through the real
+reducer.
+
+The Phase 1 brief was "the function of each different card type and their
+full usability from pitch to play". Every other drill in the suite asks
+about one card or one clause; this asks four questions of all of them,
+and every expectation comes from the printed TYPE rather than from a
+rules box.
+
+| journey | count |
+|---|---|
+| pitched for its printed pitch value | 328 |
+| played → **chain** | 175 |
+| played → **arena** | 23 |
+| played → **graveyard** | 91 |
+| declared as a defender | 332 |
+| **refused**, with a reason naming the card | 112 |
+
+Every count is **asserted, not reported** — a census that quietly stopped
+driving anything would otherwise pass by finding nothing. The 112 is a
+partition and it is pinned: Equipment 58, Weapon 15, Block 4, Attack
+Reaction 20, Defense Reaction 15.
+
+That 15 reconciles with CLAUDE.md's independently-derived "eleven
+swinging weapons": four Weapon-typed cards print no power (Death Dealer,
+Plasma Barrel Shot, Cosmo, Crucible of Aetherweave) and are activated for
+a non-attack ability instead. It is the pinned `types.isWeaponType` vs
+`parser.isWeapon` split, counted from the other end.
+
+### THE FINDING: A ONE-SIDED CENSUS IS A COVERAGE TOOL IN A JUDGE'S COAT
+
+Written asking only *can this card do what its type promises*, the census
+reported a clean **401 out of 401** — while a Block card was a free
+0-cost play and a defence reaction could be declared as a defending card.
+Both are sev-3 *illegal play allowed*, the direction that steals games.
+
+It could not see either, **by construction**: a card doing MORE than its
+type allows still does everything its type promises. Same shape as the
+audit measuring consumption rather than faithfulness, and as
+`fairness.js` being deliberately one-sided towards too-strong.
+
+With the refusals written, making a Block playable trips **three** drills
+instead of none, and a declarable defence reaction trips one. All four
+sabotages verified: Block playable, defence reaction declarable,
+permanents resolving to the graveyard, and a card pitching for itself.
+
+### Also checked, and clean
+
+A pass over whether the **live trainer** still misreads any card's type,
+now that `types.js` reads the structured `ty` array and `parser.js` still
+reads the `tt` display string. Across all 401 pool cards, `isAttack`,
+`isAR`, `isDR` and `isInstant` **agree exactly** — so the `tt`/`ty`
+conflict on 5 of the database's 4,862 records is a latent hazard rather
+than a live bug. Den of the Spider is refused in the action phase either
+way, because `tryPlay` asks `isRx` before anything else and "Defense
+Reaction" is a substring of the display line.
+
+`isWeapon`'s four disagreements are the deliberately pinned split.
+
+### Notes
+
+- **701 drills** (was 694), all green; fairness clean.
+- The census reads **no card text**: expectations from `types.js`,
+  answers from `judge.legal`. A failure is always the machine getting a
+  type wrong, never a card being read wrong.
+- It runs in under a second — one seated match is dealt and forked 401
+  times rather than reshuffled.
+
+---
+
+## v2.46 — Phase 1: a seat becomes a policy
+
+`engine/sparring.js`, and the three CR fixes found while proving it works.
+
+### THE MODULE — the rules stop knowing who is driving
+
+The trainer's opponent is not a seat somebody occupies, it is a **branch
+inside the rules**: `foeSwing` fabricates the swing as
+`[3,4,5][(turn-1)%3]` and `dummyDefence` picks the blocks itself. That is
+why there is nowhere for a second human to sit, and why the same CR
+procedure is written twice — one body of code for when you swing, another
+for when it swings.
+
+`sparring.js` is one function, `act(game, seat) -> action | null`. A seat
+is now just something that answers *what do you do*, and solo, hotseat and
+network are the same game with different things calling `reduce`: a
+policy, a tap, or a packet. None of them is a special case in the rules.
+
+Three properties, each drilled and each proven to bite:
+
+- **It proposes; the judge disposes.** Every action is offered to
+  `judge.legal` before it is returned, so a refusal is always a bug in
+  the policy. That is what lets the heuristics stay simple — the policy
+  never restates a rule in order to avoid breaking one, and a rule that
+  changes in `judge.js` changes here for free. **144 games across six
+  matchups and both seatings: zero refusals, zero invariant violations,
+  every dealt card in exactly one zone.**
+- **It reads no card text.** It ranks on printed NUMBERS — power, pitch,
+  defence, cost — and asks `legal` for everything else. Same discipline
+  that kept `actions.js` free of card text: a sparring partner playing
+  badly and a card being read wrong must never be confusable, and they
+  would be the moment this started interpreting rules boxes. A drill
+  fails on `require("./parser")`, on `fxParse`/`effCost`/`weaponCost`,
+  and on reading `.tx` or `.kw`.
+- **It is deterministic and never touches the rng.** No `Math.random`,
+  and every ranking is a TOTAL order with ties broken on uid, so two
+  peers choose the same card from the same state. A policy that consumed
+  the seeded stream would shift every later shuffle, so replaying a seed
+  would diverge the moment a human took over a seat it used to drive.
+
+**The winner follows the HERO, not the chair.** Kayo's precon beats
+Dorinthea's from seat 0 and from seat 1, which is the property that says
+seat 1 is genuinely occupiable rather than a weaker shape wearing a deck.
+
+#### The heuristic that had to change, and why it is not tuning
+
+Ported unchanged, the trainer's blocking rule made the game degenerate:
+both seats blocked **41 of 41 attacks** and one of them finished a
+21-turn game on **full life**. A regression harness that never deals
+damage never exercises the damage step.
+
+The cause is not the numbers, it is that the rule was written for a seat
+with **no action phase**, where a card in hand had no use except to
+block, so spending two on every swing cost nothing. Both seats have an
+action phase now: a card in hand is an attack or a pitch, and a hero who
+blocks with everything never threatens anyone. `takeUpTo` is the damage a
+seat will simply take rather than spend a card on — with lethal
+overriding it, because nothing in hand is worth more than being alive.
+Games went from 20-life blowouts to finishing at 1 and 2 life.
+
+**Iron stays greedy**: equipment wears rather than leaving, so raising it
+costs no card.
+
+It is deliberately **not** an AI opponent — the standing decision
+(2026-07-25) is that the goal is two humans. It is a handful of legible
+heuristics and it should stay legible rather than become good. It is also
+**not a difficulty curve**: the `[3,4,5]` escalation it replaces was
+*tuned*, and real cards from a real hand are not.
+
+### THREE MORE CR FIXES, ALL FOUND BY PROBING STATE
+
+**A wall defends ONE chain link (CR 7.3.2).** `chainBlocked` correctly
+stopped a spent piece being re-*declared* (CR 7.3.2b), but the
+declaration itself stood until the chain **closed** — so `strike` re-read
+`blockG` on link 2 and counted the same iron again, with nothing declared
+and nothing paid.
+
+The pool hides this almost perfectly: Silver Age equipment is nearly all
+battleworn, so it wears to 0 defence after one block and the second
+helping is worth nothing. Against a piece that does **not** wear, a
+3-defence plate blocked every link of the chain for free. Hand blockers
+escaped by accident rather than by rule — they leave the hand at the
+strike, so the link-2 lookup finds nothing.
+
+**`endTurn` skipped the opponent's last priority window (CR 4.3.4).** The
+rule ends the action phase "when the stack is empty, the combat chain is
+closed, and **both** players pass priority in succession". The explicit
+`endTurn` action ran the whole end phase on the spot — the turn player
+deciding, alone, that the opponent had nothing to say. Invisible in a
+solo trainer, because the dummy never had anything to say; with a human
+in seat 1 it silently deletes their last instant window on **every turn
+of the game**.
+
+`endTurn` is now a **pass carrying the turn-player's intent**: identical
+machinery to `pass`, refused where "end my turn" would be a lie (out of
+turn, mid-chain, without priority), and the phase ends on the mutual
+pass like the CR says.
+
+**The untap step reached only the gear zone (CR 4.4.3d).** "The turn
+player untaps all permanents they control" is the whole arena, not just
+the gear zone; a board permanent's `spent` flag never reset. Nothing taps
+an ally yet, so this is the step being *complete* rather than a bug being
+fixed — and it is the half that has to exist before allies can attack.
+
+And `weaponUsed` conflated **two limits that expire under different
+rules**. A TAP is a state the permanent is in and only its controller's
+untap step lifts it; `Once per Turn` is a per-turn **allowance** that
+comes back for both seats at every turn boundary. They coincide for a
+weapon swing — action speed, so a seat only reaches it on its own turn —
+which is exactly the kind of coincidence this project keeps getting
+bitten by. They stop coinciding at the first `Instant - Once per Turn`
+equipment ability, which would otherwise be spent until the end of its
+user's *next* turn, having been used once across two.
+
+### Notes
+
+- **694 drills** (was 679), all green; fairness clean.
+- Four new judge drills and eleven sparring drills, **every one proven to
+  bite** by reintroducing the bug and watching it fail.
+- Two drills had to be edited deliberately: they sent one `endTurn` and
+  expected the turn to be over, which is the shortcut this removed.
+  `passTurn` in `judge.test.js` now ends a turn the way a table does.
+- `instantSpeed` deleted from `judge.js` — defined, never called, and
+  sitting under a shorter name than the right question
+  (`playWindowFor` / `typeCostsAP`). Same reasoning as `DawnGame.shuffle`.
+- `sparring.js` is **headless**, in `wire.test.js`'s `HEADLESS` list with
+  `judge` and `types`.
+
+---
+
+## v2.45 — Phase 1: the turn structure, against the CR itself
+
+A review pass over the core structure — card types, the numbers, the
+turn, and the priority windows — grounded against the published
+Comprehensive Rules rather than against the code's own memory of them.
+**Nine bugs, and not one of them was a card being read wrong.** Every
+affected card parsed perfectly; what was wrong was the machine the cards
+run inside, which is exactly the half Phase 1 exists to rebuild.
+
+Eight of the nine were invisible to every tool this project has. The
+audit measures coverage, the fairness sweep looks for cards stronger than
+printed, and `failstates.js` asks what goes wrong at the table — none of
+them asks *whose* hand refills at the end of a turn.
+
+### THE ONE THAT MATTERED MOST — the wrong hero drew (CR 4.4.3f)
+
+> "The turn-player draws cards until the number of cards in their hand is
+> equal to their hero's intellect."
+
+Step (e) calls `priority.js`'s `endTurn`, which performs CR 4.4.4's
+handoff as well as 4.4.3e's fizzle — so by the time (f) ran,
+`n.turnPlayer` was already the **incoming** player. Every turn after the
+first refilled the wrong hero, and turn one hid it because there both
+seats draw anyway.
+
+**It inverts the decision the whole game is built on.** You refill at the
+end of *your* turn so that you have cards to block with during *theirs*.
+Drawing for the incoming player instead means every hero walks into the
+opponent's turn on whatever survived, and opens their own turn with a
+full grip — block-or-hold stops being a choice.
+
+The existing CR 4.4.3f drill read the **log line**, not the hands, so it
+was green throughout. The new one counts cards.
+
+### (a) ANNOUNCED ITSELF AND DID NOTHING (CR 4.4.3a)
+
+`resetAllyLife` returns **the game**, not `{game, msgs}`. `judge.js` read
+`out.game`, got `undefined`, fell through the `||` to the unchanged state
+and threw the reset away — while logging *"(a) Allies recover."* on every
+turn of every game. A wounded ally never healed.
+
+The drill that checks the end phase runs a–f **in the CR's order** reads
+the log, so it could never see this. A step that announces itself and
+does nothing is worse than a missing one.
+
+### AN INVENTED LOSS CONDITION (CR 4.5.3)
+
+CR 4.5.3 lists every way a player loses and there are exactly three:
+their hero's life reaches zero or they control no hero (a), an effect
+says they lose (b), or they concede (c). **An empty deck is not one of
+them.** `drawTo` ended the game by "fatigue" — handing a win to a player
+whose opponent was still alive and still holding cards.
+
+A hero who runs their deck out keeps playing, keeps blocking with what is
+in hand, and loses on life like anyone. A drill now pins that the only
+`how` values the reducer can produce are `life` and `concession`.
+
+**`index.html` carries the same invented rule** (a "Deck empty —
+fatigued" loss). Left alone deliberately: the trainer's dummy already
+reshuffles its graveyard so it never decks out, so changing it is a
+gameplay decision about solo play rather than a rules fix.
+
+### TWO PRIORITY WINDOWS THAT NEVER OPENED
+
+**1. "In succession" is half of every step-end rule.** CR 7.3.4, 7.4.3,
+7.5.4, 7.6.4 and 4.3.4 are all worded *"when the stack is empty and all
+players pass **in succession**"*. A card resolving between two passes
+breaks that succession, and the turn-player gains priority again
+(CR 4.2.2 / 7.7.4).
+
+The pass record survived a play, and the shape that produced is the
+expensive kind:
+
+```
+attacker passes            passed = [true, false]
+defender plays a defence reaction     passed = [true, false]   <-- still
+defender passes            passed = [true, true]  -> DAMAGE STEP
+```
+
+**The attacker never got a window to answer the card just played at
+them.** Declaring a defender had the same hole: a turn-player who passed
+early never saw the wall they were about to be measured against.
+
+**2. The action phase never ended (CR 4.3.4).** `advance` has no
+transition out of the layer step — that step belongs to `declareAttack` —
+so a mutual pass left the game in a window **nobody could act in**:
+`speedAllowed` correctly returned `[]` for both seats, the turn-player
+was refused with "you do not hold priority", and the only way out was an
+explicit `endTurn` the CR does not require. `actionPhaseEnds` was right
+all along and nothing called it.
+
+### AN UNAFFORDABLE PLAY WAS DECLARED LEGAL
+
+`playableWhy` checked the action point and never asked whether the cost
+could be raised at all. `legal` said yes, `doPlay` opened a payment that
+could never be completed, and the only move left was to cancel back into
+the identical state — **a live-lock for any driver that trusts `legal`**,
+which is the reducer's contract and is how both the guest client and the
+sequencer decide what to send. It is also a dead tap for a human.
+
+`payCeiling` is the honest maximum: the floating pool plus every pitch
+value left in hand.
+
+### ALLIES COULD NOT BE ATTACKED (CR 1.4.5)
+
+An ally is a **living object** (CR 1.4.5a) — it has life, so it is
+attackable, and CR 1.4.5 makes declaring an attack-target mandatory.
+Allies had been reaching the arena since v2.43 (19 of them across a
+15-pairing sweep) and **nothing could touch them**: a body that blocks
+nothing, dies to nothing and costs the opponent nothing to ignore.
+
+Every helper already existed in `game.js`, drilled, and called by nobody.
+The target now rides on the **action** (`{t:"play", uid, target}`) rather
+than in a prompt, so the reducer stays pure and serializable — the same
+action drives a tap, a replay and a peer.
+
+**CR 7.3.2a is what makes it a decision.** Only a hero attack-target may
+have defending cards declared for it, so an attack on an ally always
+connects and it kills. Omitting `target` still means the hero, which is
+always a legal choice; offering the choice is the caller's half.
+
+### AND TWO SMALLER ONES
+
+- **CR 4.4.4** — the per-turn ledger (`hist`) cleared only for the
+  incoming seat, so a card asking "have you pitched a blue this turn"
+  during the opponent's turn read *your* turn's answer.
+- **A `Resource` card reported playable with no window to play it in.**
+  `Inner Chi` is a `Mystic Resource - Chi`: no cost, no rules text, pitch
+  3. It was refused two steps later with "cannot be played in the action
+  phase", which reads like a timing problem rather than what it is.
+  `isPlayable` now asks the window table instead of a second list, so the
+  two cannot disagree. The drill that would have caught it never looked
+  at the card — `pool()` in `types.test.js` covered the fifteen decks and
+  not the dummy's pile or the two runtime-minted records.
+
+### WHAT WAS CHECKED AND FOUND CORRECT
+
+Worth recording, because a review that only lists faults is not a review:
+
+- **Lyath Goldmane's intellect is 5**, every other hero's is 4, and that
+  number flows correctly from the database through `buildSide` to a
+  five-card opening hand.
+- **The type census is a true partition** — 434 unique cards over nine
+  card types, none typed twice, nothing untyped.
+- **A chain link walks all six CR windows** in order with the right seat
+  holding each: attack (7.2.4), defend (7.3.3 — the *turn-player*, while
+  the defender declares), reaction (7.4.2, split by attacker), damage
+  (7.5.3, dealt on **entering**), resolution (7.6.3, action speed for a
+  second link), close (7.7.1, nobody holds priority).
+- **Equipment wear**: battleworn, temper, guardwell and blade break all
+  apply, `chainBlocked` stops a piece re-blocking the same chain, and a
+  0-defence piece is refused as a defender.
+- **The damage arithmetic is CR 7.5.2** — power minus the summed printed
+  defence of the declared cards, floored at zero.
+
+### MEASURED
+
+A greedy policy driving all fifteen precons at each other, before and
+after:
+
+| | games finished | actions | invariant violations |
+|---|---|---|---|
+| before | 8 / 15 | 29,463 | 0 |
+| after | **15 / 15** | 3,198 | 0 |
+
+The 10× drop in actions is the draw fix: hands now deplete the way they
+do at a table, so a greedy bot runs out of things to do instead of
+playing forever off a hand that silently refilled. Every game ends on
+life, which is CR 4.5.3a and now the only way a game can end.
+
+679 drills. Each of the nine fixes has a drill, and **each was verified
+to bite** by reintroducing the bug and watching it fail by name.
+
+---
+
+## v2.44 — a reaction cannot be an action
+
+**Reported by the user, who reads cards for a living, and they were
+right.** v2.43 claimed Den of the Spider and Lair of the Spider were
+dual-typed `Action Defense Reaction` cards. They are not. They are
+Defense Reactions, and `Assassin / Warrior` is **deck legality** — who
+may include the card, and how other cards refer to it — not a claim
+about what the card is.
+
+### The database says it twice, and the two disagree
+
+| field | Den of the Spider |
+|---|---|
+| `types` (structured) | `["Assassin","Warrior","Defense Reaction","Trap"]` |
+| `type_text` (display) | `"Assassin / Warrior Action Defense Reaction - Trap"` |
+
+`mapDbCard` read `type_text` and threw the structured array away. A
+sweep of all **4,862** database records found the two fields disagree on
+exactly **5**: the two Spiders (display adds a stray `Action`) and Comet
+Collision ×3 (display says `Instant`, array says `Action` — not in the
+Silver Age pool).
+
+**The consequence was a sev-3 illegal play.** Both Spiders were playable
+in the action phase for an action point. No card-level tool could see
+it: the card's *text* parsed perfectly, coverage said `full`, and the
+fairness sweep looks for over-granted effects, not for a card being the
+wrong type.
+
+### The fix, and the one exception
+
+`mapDbCard` and `resolveEntry` now carry `ty` alongside `tt`, the loader
+in `index.html` mirrors both, and **`DATA_VER` is `sage-v11`** — a warm
+`sage-v10` cache has no `ty` on any card and would silently fall back to
+parsing the display string.
+
+**A double-faced card is the one place the display string knows more.**
+`Arcane Seeds // Life` flattens to `["Runeblade","Action","Earth",
+"Instant"]`; only `type_text` keeps the `//` boundary. You play the
+FRONT face, so DFCs parse the front of the string. Reading the flat
+array calls two real action cards instants and hands each of them a free
+action point — v2.39's bug returning through another door, now drilled.
+
+Also fixed on the way: an equipment slot word was landing in `classes`
+(`Necromancer Equipment - Head` → `["Necromancer","Head"]`).
+
+### The census is now an exact partition
+
+Seven card-type counts summing to **exactly** 401 unique cards, none
+typed twice. That is the shape that catches this class of misread, and
+it did not hold in v2.43 — the two Spiders were double-counted and the
+drill absorbed it as "2 dual-typed". Five drills now fail if the display
+string is trusted again, verified by reintroducing the bug.
+
+---
+
+## v2.43 — Phase 1: card types, and the numbers
+
+The half of Flesh and Blood that needs no text box. Phase 3 takes the
+text boxes; this pass makes every card *type* behave correctly from
+pitch to play, in a two-player game, under the CR's turn structure.
+
+### `engine/types.js`
+
+The pool prints **138 distinct type lines** over 401 unique cards, and
+they are regular: `[classes and talents] <TYPE>… [ - <SUBTYPE>… ]`.
+`cardType()` parses one into a structure and every question is asked of
+that — one parse, one answer, instead of the six ad-hoc regexes the
+trainer spreads the same question across.
+
+Validated against the whole pool: it agrees with `parser.js` on attack,
+reaction and instant for **all 401 cards**, and with `game.js` on every
+equipment slot.
+
+**Three things the pool prints that a naive reader gets wrong:**
+
+1. **A card can have TWO types.** Den of the Spider and Lair of the
+   Spider are `Action Defense Reaction` — playable in the action phase
+   for an action point, or in the defence window for none. A reader that
+   matches one type and stops refuses them half the time.
+2. **`Block` is a type with no play.** Test of Might, Test of Strength,
+   On the Horizon, Crash and Bash. No printed cost, 4 defence, all
+   reading "When this defends, …". Treated as ordinary non-attacks they
+   were free 0-cost plays that did nothing.
+3. **`Reaction` contains `action`.** A scan that is not word-boundary
+   anchored and longest-first reads every reaction as an Action.
+
+**Permanents now reach the arena.** An Aura, Item or Ally that resolves
+to the graveyard is a card the player paid for and never receives — 12
+auras, 5 items and 6 allies in the pool. Allies carry printed life onto
+the board, which is what makes them attackable (CR 1.4.5a). Verified in
+a real game: Gravy Bones fielding three allies against Viserai's sigils,
+zero invariant violations.
+
+**A null cost does not mean unplayable.** `Ice Eternal` and `Night's
+Embrace` carry `cost: null` because their cost is X or absent from the
+record. Playability is decided by TYPE, always.
+
+**The type census is a partition, and a drill proves it**: seven card
+types summing to 403, minus 2 dual-typed, equals 401 cards exactly —
+with `attack` (175) a *subset* of `action` (269) rather than a peer.
+
+### A correction to v2.42
+
+v2.42 claimed Sledge of Anvilheim and Scorpio, Comet Tail were both
+repeatable because neither prints "Once per Turn". **Half wrong.**
+Scorpio pays `{t}` — it taps, and a tapped permanent does not untap
+until CR 4.4.3d. It is limited to one swing per turn for a completely
+different reason. Only the Sledge is genuinely repeatable.
+
+Reading only `oncePerTurn` would have made Scorpio **stronger** than
+printed, which is the direction that steals games. `weaponCost` now
+returns `taps` as well, and `judge.js` honours both.
+
+### `legal()` threw instead of refusing
+
+Playing from the arsenal crashed the reducer: the arsenal holds one card
+or null, not a list, and the list path ran straight into it. A legality
+check that throws breaks the reducer's contract in the caller rather
+than returning a reason.
+
+The "never throws" drill missed it because it only ever probed
+`from:"hand"`. It now sweeps every zone, on two states, and both it and
+the arsenal round-trip drill are verified to fail when the bug is put
+back.
+
+---
+
+## v2.42 — Phase 1: the rules leave the component
+
+The first landing of the engine rebuild. Two new modules, 46 new drills,
+and three real bugs that only became findable once the code was somewhere
+a drill could reach it.
+
+### `engine/build.js` — how a seat becomes a hero
+
+`buildSide` and the equipment slot rules moved out of `index.html`. Both
+are rules: a build reads a hero's printed passives off its own text and
+deals from the seeded stream, and `defaultPicks` decides how much iron a
+hero may legally wear. Neither had a drill, which is precisely why the
+v2.41 eight-gear bug shipped — every card was read correctly and the
+*quantity* was illegal, a question no card-level tool asks.
+
+`buildSide` takes no seat argument and branches on no seat; a drill
+enforces that. `buildSideDefault` equips and builds in one call, so both
+seats reach one set of slot rules rather than two.
+
+**A BOW PRINTS NO POWER, AND THAT DISQUALIFIED IT.** `defaultPicks` gated
+the two-hander on `twoH.c.power != null`. Azalea's Death Dealer is a
+`Ranger Weapon - Bow (2H)` with `power: null`, so she defaulted to **no
+weapon and no quiver** — for the player's own loadout as much as the
+opponent's, and her whole deck is arrows. The check never did any work:
+`slotOf` only returns `z:"2h"` for a printed `2H` type line. Gone, and
+two drills fail if it comes back.
+
+Not "every hero gets a weapon", though — Gravy Bones's precon prints none
+at all (four armour slots and an off-hand compass), so the drill asks the
+honest question: is a *printed* weapon ever left in the box.
+
+### `engine/judge.js` — the rules as a pure function
+
+`reduce(state, action, seat) -> state`, and **the one thing it replaces
+is that the trainer resolves the same CR procedure through two unrelated
+bodies of code**:
+
+```
+you attack   tryPlay -> execute -> dummyDefence -> mode:"stack" -> resolveStack
+they attack  foeSwing -> mode:"block" -> toggleBlock -> finishBlock -> takeIt
+```
+
+One fabricates the attack as `[3,4,5][(turn-1)%3]`; the other auto-picks
+the blocks. Neither can serve a second human, and a rule fixed in one
+stays broken in the other — which is how clash fired on the wrong trigger
+for five versions. Here there is one path and the swinging seat is an
+argument.
+
+It restates **no** priority rule: `canAct`, `speedAllowed`,
+`canDeclareDefenders`, `passOutcome`, `advance` and `endTurn` all come
+from `priority.js`. There is no `mode` and no `bphase`, and a drill fails
+if either appears.
+
+Two corrections to `actions.js`'s reference shape, both real:
+
+- **Damage lands on ENTERING the damage step, not on leaving it** (CR
+  7.5). A blank game has nothing hanging off a hit; a real one has a
+  window in which the hit has already happened.
+- **The combat chain is a ZONE.** A declared attack has left its hand and
+  not reached a graveyard. Held in a private field it is in no zone at
+  all — and `invariants.js` catches a card in *two* zones while a card in
+  *none* falls out of the census silently. `chainCards` is now censused,
+  and a drill duplicates a chain card into a graveyard to prove the judge
+  names it.
+
+Verified by driving two real precons at each other: a 17-turn game, 261
+actions, zero invariant violations, every dealt card in exactly one zone,
+and both seats attacking, defending, drawing and ending turns through the
+same code.
+
+**It is deliberately HEADLESS** — declared so in `test/wire.test.js`'s
+ledger. It models the turn structure, the chain and the costs, but not
+yet card *effects*; those are still `runOps`/`execute` in the trainer.
+Loading it now would put a second, quieter rules engine on the page next
+to the real one.
+
+### "Once per turn" is printed, not universal — and it is not the only limit
+
+Found while giving `judge.js` a weapon swing. Of the pool's eleven
+swinging weapons, nine print `Once per Turn`. **Two do not, and they are
+not the same case as each other:**
+
+| | printed | why it is limited |
+|---|---|---|
+| Sledge of Anvilheim | `Action - {r}{r}{r}{r}: Attack` | **it isn't.** Pay four again, swing again. |
+| Scorpio, Comet Tail | `Action - {t}: Attack. …` | the **tap**. A tapped permanent does not untap until CR 4.4.3d. |
+
+Gating every weapon on a blanket "already swung" flag — which is what
+the trainer does — makes the Sledge strictly **weaker than printed**.
+Reading only `oncePerTurn` and ignoring `{t}` would make Scorpio
+**stronger** than printed, which is the direction that steals games.
+`weaponCost` now returns both `oncePerTurn` and `taps`, and `judge.js`
+honours both.
+
+Neither sweep can see either one. `npm run fairness` is deliberately
+one-sided towards cards that are too *strong*; coverage says `full` for
+both, because the text was read correctly and then **charged** wrongly.
+Same shape as the instant that ate an action point in v2.39.
+
+---
+
+## v2.41 — the opponent picks a hero
+
+`ROADMAP-OPPONENT.md` Phase 1, and step 2 of the honest order in
+`HANDOFF.md`. Seat 1 is built by `buildSide` like any hero: real life
+total, real intellect, real equipment, real 55-card deck. It still takes
+**no action phase**, so it blocks with printed defence and nothing more —
+which is why a real deck is safe here. The roadmap's standing warning
+("do not give it a real deck until the opponent can resolve the cards in
+that deck") is about *playing* cards, and blocking with printed defence
+works for any card without the parser reading a word.
+
+**The Dummy stays selectable and stays the default.** It is the
+regression harness for every phase above this one, and its vanilla pile
+is the one deck where nothing can be faked.
+
+### The hero passives were seat 0's, silently
+
+`built.viseraiPassive` meant *the player's* Viserai — the same
+seat-0-means-the-actor confusion the actor/perspective split fixed for
+zones in v2.24, one layer up. `built.both[i]` is the ledger and `bAct(s)`
+is its reader; five rules sites moved onto it (`viseraiPassive`,
+`lyathBoo`, `iceFrostbite`, `arsenalInstant`). Only the UI still reaches
+`built.*` directly, because the UI renders seat 0 by definition.
+
+There is deliberately **no `bFoe`** — nothing needs one, and a dead
+helper beside a live one is how `sides.js`'s `you`/`foe` came to be
+deleted in v2.24.
+
+### The landmine, defused
+
+`DUMMY_INT` is gone from `newTurn`; the refill reads `opp(s).int`, a
+property of whoever is sitting there. It is still the stand-in for the
+turn seat 1 never takes, and it is still the **only** refill site — which
+is exactly what the roadmap warned about. When seat 1 gets a real end
+phase the draw moves there and becomes turn-1-only for both seats (CR
+4.4.3f); adding that without removing this draws twice.
+
+**The graveyard recycle stays a dummy affordance.** "A sparring partner
+that decked out would stop sparring" is true of the prop and false of a
+hero, so a real opponent runs its deck down and simply has fewer blockers.
+It does not yet *lose* for it — what decking out costs is a win condition
+the player cannot currently reach, and the roadmap says to decide that
+once, at Phase 2. Both approximations are logged rather than silent.
+
+### Caught in play: the opponent was wearing eight pieces of iron
+
+Passing `{}` for the opponent's loadout handed Azalea all **eight**
+printed pieces — two helms, two legs, the lot — where the slot rules
+allow about five. Not cosmetic: `dummyDefence` raises one piece per
+attack and `chainBlocked` only stops a piece re-blocking the *same*
+chain, so every extra piece is another free block later in the turn.
+Strictly stronger than printed, which is the direction that steals games.
+Both seats now go through `defaultPicks`, the same function the loadout
+screen uses, so one set of slot rules governs both.
+
+Found by opening the game and reading the dealt state, not by a drill —
+as usual.
+
+### Where it is chosen
+
+The **scout panel**, not the throw: you see the opponent's hero and *then*
+you sideboard. Putting the pick after the loadout would show you the
+matchup too late to use it, which is the one thing that panel exists to
+prevent. It rides in `cfg`, which already flows Loadout → Pregame →
+Battle. Deliberately **not** saved per hero the way the loadout is — the
+opponent is a property of the match, not of your deck.
+
+The scripted swing now announces itself every time (*"Azalea swings for 3
+— scripted escalation, not a card from hand"*), per Phase 0's rule that
+the sequence is the lesson. Roughly two dozen log and UI strings that said
+"the dummy" now read the seat's own name, via `foe(n).name` / `opp(g).name`
+so they stay correct once seat 1 acts.
+
+### Known, and pre-existing
+
+- `CHAIN-CLOSED-WITH-LINKS` fires on the opponent-first opening —
+  `foeSwing` pushes a link without opening the chain. Confirmed present
+  before this change; not introduced here.
+- `defaultPicks` gates 2H selection on `power != null`, and **bows print
+  no power**, so Azalea defaults to no weapon and no quiver. Affects the
+  player's own loadout too. Harmless while seat 1 never attacks; it
+  matters at Phase 2.
+
+---
+
 ## v2.40 — a reaction belongs to the reaction step, and to one seat in it
 
 Found while fixing v2.39 and fixed on the user's call. Two rules, and the

@@ -1104,12 +1104,36 @@ const arsEmpty = sd => arsCount(sd) === 0;
 function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)); }
 function weaponCost(tx){
   const t = clean(tx||"");
-  const m = t.match(/(?:once per turn )?action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
+  const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
   if(!m) return null;
-  const cs = (m[1]||"").trim();
+  const cs = (m[2]||"").trim();
   const dm = cs.match(/(\d+)\s*(?:resource|\{r\})/i) || cs.match(/(\d+)/);
   const rs = (cs.match(/\{r\}/gi)||[]).length;
-  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs), needSteam:/remove a steam counter/i.test(cs)};
+  /* "ONCE PER TURN" IS PRINTED, NOT UNIVERSAL — and it is not the only
+     thing that limits a weapon to one swing.
+
+     Of the pool's eleven swinging weapons, nine print "Once per Turn".
+     TWO DO NOT, and they are not the same case as each other:
+
+       Sledge of Anvilheim   "Action - {r}{r}{r}{r}: Attack"
+         genuinely repeatable. Pay four again, swing again.
+
+       Scorpio, Comet Tail   "Action - {t}: Attack. ..."
+         limited to one swing per turn ANYWAY, because {t} taps it and a
+         tapped permanent does not untap until CR 4.4.3d in the end
+         phase. Same outcome, completely different reason.
+
+     A blanket "already swung" flag makes Sledge strictly WEAKER than
+     printed — a direction `npm run fairness` is deliberately one-sided
+     against and cannot report, and one coverage reads as `full` because
+     the text was read correctly and then CHARGED wrongly. Reading only
+     `oncePerTurn` and ignoring `{t}` would make Scorpio stronger than
+     printed, which is the direction that steals games. Both are read,
+     and the caller must honour both. */
+  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs),
+          needSteam:/remove a steam counter/i.test(cs),
+          taps: /\{t\}/i.test(cs),
+          oncePerTurn: !!m[1]};
 }
 const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) || new RegExp("\\b"+k+"\\b","i").test(c.tx||"");
 /* A DOUBLE-FACED CARD'S TYPE LINE CARRIES BOTH FACES — "Runeblade Action //
