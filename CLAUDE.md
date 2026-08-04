@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.49
+**Current version:** v2.50
 
 ---
 
@@ -1832,6 +1832,53 @@ invisible precisely because every visible thing was right, so the
 session's status is polled onto the board and `window.__dawnTable.report()`
 gives status, seq, hash and counters on either phone — the same reasoning
 as JUDGE!! in the trainer.
+
+### THE TABLE IS THE TRAINER'S BOARD (v2.50)
+
+The table renders the same three flick screens, armour grid, hero row,
+hand rail, two-tap peek and action bar as solo play. That is not polish:
+**in a training sim the layout is the lesson**, and a player who learns
+on one board and then sits at a debug panel learns the game twice.
+
+**Drawing a seat twice is the no-mirror rule one layer up.** These are
+pure, props-only, and BOTH boards render them — the trainer was migrated
+onto them in the same pass and verified byte-identical against the
+deployed build:
+
+| component | what |
+|---|---|
+| `ArmorGrid({gear, cell})` | four slots, the empty-slot skeleton and the grid areas; `cell` supplies the occupied tile so each board keeps its own tap |
+| `DeckPitchCol({deck, pitch, title, hidden})` | deck back + pitch list; `hidden` shows a pile's SIZE and not its contents |
+| `InPlayRow({entries, chips, cell, empty})` | the arena |
+| `GravePane({sd, who})` | graveyard / banish / soul |
+| `usePeek(resetKey, inspect, onInspect)` | the two-tap peek, with the stale-peek drop |
+| `PeekDock({card, verb, onClose})` | the docked preview, `pointer-events:none` wrapper included |
+
+**WHAT IS NOT SHARED IS THE STATE LANGUAGE.** The trainer speaks
+`mode`/`bphase`; the table speaks `phase`/`step`/`priority` out of
+`priority.js`. Those are the two things the Phase 1 rebuild exists to
+separate — sharing a few more lines of JSX by folding them back together
+would undo it.
+
+**Three things the trainer shows that the table cannot**, each stated
+rather than faked: no **Advisor** (it reads the trainer's `built` and
+would coach card text that does not resolve here), no **boost toggle**,
+and no **next-swing prediction** — seat 1 is a person.
+
+**A DEAD BUTTON READS AS A BROKEN SCREEN, NOT AS A RULE.** CR 7.3.3 gives
+the turn-player priority in the defend step while the defender declares,
+so the defender genuinely cannot pass until the attacker has. A greyed
+"Done defending" looks like a bug; the bar says *"declare your blockers —
+{them} still holds priority"* instead. Same reasoning as naming a refusal
+rather than dead-tapping.
+
+**`gearDef` returns 0 for a piece that prints no defence**, so passing it
+straight to `CardFrame` paints a blue `0` on every sword. Ask whether the
+piece has a printed or current defence at all — `gearBtn` always did.
+
+**`WinPanel` is deliberately NOT reused at the table.** It says "DUMMY
+DESTROYED" and pulls a random trophy; a trophy handed out for beating a
+person would quietly devalue the case.
 
 ### What the table does NOT do yet, and why
 

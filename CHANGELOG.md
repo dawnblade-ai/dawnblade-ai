@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.50 — Phase 2: the table IS the trainer's board
+
+v2.49 put two real hero decks across the wire and drew them on a plain
+diagnostic board — a list of zone counts and six buttons. It proved the
+transport and it looked nothing like the game. **In a training sim that is
+a real defect, not a cosmetic one: the layout is the lesson.** A player
+who learns the game on the three-screen board and then sits at a table
+that looks like a debug panel has to learn it twice.
+
+So the table now renders the trainer's board with a person in seat 1:
+the three vertical flick screens and their `screennav`, the armour grid,
+the hero row with weapons, the arsenal / deck / pitch columns, the arena,
+the graveyard pane, the log pane with its `Ticker` and scorebar, the play
+pane with chain / featured / defend columns, the hand rail of real
+readable cards, the status line, the status pips, the two-tap peek and
+the docked action bar.
+
+**THE SHARED PIECES ARE SHARED FOR REAL.** Drawing the same seat twice is
+the no-mirror rule one layer up from the functions it was written for, so
+`ArmorGrid`, `DeckPitchCol`, `InPlayRow`, `GravePane`, `usePeek` and
+`PeekDock` are extracted as pure props-only components and **both** boards
+render them. The trainer was migrated onto them in the same pass and
+verified byte-identical against the deployed build — the opponent screen
+pixel-for-pixel, the whole "You" screen text-for-text. A divergence here
+would not crash anything; it would just quietly stop looking like the
+game, which is exactly what this pass exists to prevent.
+
+**What is deliberately NOT shared is the state language.** The trainer
+speaks `mode`/`bphase`; the table speaks the CR machine —
+`phase`/`step`/`priority` out of `priority.js`. Those are the two things
+the Phase 1 rebuild exists to separate, and folding them back together to
+share a few more lines of JSX would undo it.
+
+Three things the trainer shows that the table cannot, each stated rather
+than faked: **no Advisor** (it reads the trainer's `built` and would coach
+card text that does not resolve here), **no boost toggle**, and **no
+next-swing prediction** — seat 1 is a person, so there is nothing to
+predict.
+
+Two fixes the browser found:
+
+- **A permanently dead "Done defending" button.** CR 7.3.3 gives the
+  TURN-PLAYER priority in the defend step while the DEFENDER declares, so
+  the defender genuinely cannot pass until the attacker has. A greyed-out
+  button reads as a broken screen rather than as the rule it is; the bar
+  now says *"declare your blockers — Kayo still holds priority"*.
+- **A weapon was painting a blue `0` defence badge.** `gearDef` returns 0
+  for a piece that prints no defence, and passing that straight to
+  `CardFrame` put a defence value on every sword. The trainer's `gearBtn`
+  asks whether the piece has a printed or current defence at all; so does
+  the table's now.
+
+**`WinPanel` is deliberately not reused.** It says "DUMMY DESTROYED" and
+pulls a random trophy — right for the solo loop, wrong for beating a
+person, and a trophy handed out for a real match would quietly devalue
+the case. Same visual language, honest words, no reward.
+
+Verified by driving two browsers over the public relay through a full
+exchange: Kayo pitching two cards to pay for Agile Windup, swinging for
+5, Bravo declaring Blade Beckoner Helm off the armour grid, and 4 landing
+— eleven sequenced actions, identical state hashes throughout, zero
+desyncs and zero refusals.
+
+**Still outstanding at the table:** card text does not resolve (unchanged
+— `runOps`/`execute`/`resolveStack` are still closures inside `Battle`),
+and there is no JUDGE!! panel yet. `window.__dawnTable.report()` covers
+the same ground from the console in the meantime.
+
+---
+
 ## v2.49 — Phase 2: two humans, two hero decks, one game state
 
 The table screen has connected two phones since v2.44. What it dealt them

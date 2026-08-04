@@ -123,6 +123,10 @@ img{display:block;max-width:100%}
 .actrow .a.go,.actbar .a.go{background:var(--r)}
 .actrow .a.pay,.actbar .a.pay{background:var(--y);color:var(--ink)}
 .actrow .a:disabled,.actbar .a:disabled{opacity:.4}
+/* A NON-BUTTON in the action bar: the table uses it to say whose window
+   is open, because a permanently dead "Done defending" reads as a broken
+   screen rather than as CR 7.3.3. Same box, plainly not pressable. */
+.actbar .a.dis,.actrow .a.dis{opacity:.55;font-style:italic;text-transform:none;letter-spacing:.02em;font-size:11.5px;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.25}
 .paymode{border:1px solid var(--y);background:rgba(232,179,60,.07);padding:8px 10px;font-size:12.5px}
 .blockmode{border:1px solid var(--b);background:rgba(59,111,176,.08);padding:8px 10px;font-size:12.5px}
 
@@ -731,7 +735,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.49"; /* v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.50"; /* v2.50 — Phase 2: the table IS the trainer's board, with a person in seat 1. Same three flick screens, same armour grid and hero row, same hand rail, same two-tap peek, same action bar — the plain diagnostic board it replaces proved the transport and looked nothing like the game, which is a real defect in a training sim because the layout IS the lesson. The shared pieces (ArmorGrid, DeckPitchCol, InPlayRow, GravePane, usePeek, PeekDock) are extracted and used by BOTH boards, so they cannot drift; what stays separate is the state language, trainer `mode`/`bphase` versus the CR machine, which is the thing the rebuild exists to separate. Previously: v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1838,6 +1842,143 @@ function CardFrame({card,className,noType,zone}){
     </div>
   );
 }
+/* ============================================================
+   THE SEAT, DRAWN ONCE (v2.50)
+
+   Both boards draw the same seat: four armour slots, a pitch zone, an
+   arena row, a graveyard. The trainer drew them inline, and the table
+   board would have had to draw them again — two copies of a layout that
+   must not drift, which is the no-mirror rule applied one layer up from
+   the functions it was written for. A divergence here is not a crash,
+   it is the table quietly not looking like the game, which is exactly
+   what this pass exists to fix.
+
+   Each is PURE and props-only, so neither board's closures leak into the
+   other. Where the two boards genuinely differ — whose gear is tappable,
+   what a tap does — the difference arrives as a `cell` render function
+   rather than as a second copy of the markup. The empty-slot skeleton,
+   the grid areas and the class names are the part that must be shared,
+   and they are.
+   ============================================================ */
+const ARMOR_SLOTS = ["head","chest","arms","legs"];
+
+/* `cell(piece, zone)` draws an occupied slot; an empty one is drawn here
+   so both boards show the same four holes in the same places. */
+function ArmorGrid({gear, cell}){
+  const worn = z => (gear||[]).find(d=>slotOf(d).z===z);
+  return (
+    <div className="armorgrid">
+      {ARMOR_SLOTS.map(z=>{
+        const x = worn(z);
+        return x ? cell(x, z)
+          : <div key={z} className="aslot clip-sm" style={{gridArea:z}}><span className="wempty">{z}</span></div>;
+      })}
+      {(gear||[]).filter(d=>!ARMOR_SLOTS.includes(slotOf(d).z) && slotOf(d).z==="misc").map(x=>cell(x,"misc"))}
+    </div>
+  );
+}
+
+/* The deck back and the pitch zone. `pitch` is listed newest-first with
+   its printed colour, which is how a player reads their own resources —
+   pass `hidden` for a seat whose pitch you may see the size of but not
+   the contents (nobody, today: both peers hold full state). */
+function DeckPitchCol({deck, pitch, title, hidden}){
+  const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
+  const pz = pitch||[];
+  return (
+    <div className="rightcol">
+      <div className="deckback clip-sm"><span className="dcnt">{(deck||[]).length}</span></div>
+      <div className="pitchbox clip-sm">
+        {/* A hidden pile shows its SIZE and not its contents, and the
+            label drops the count so it does not say the number twice. */}
+        <div className="zlbl">{hidden ? title : (title||"Pitch")+" · "+pz.length}</div>
+        {hidden ? <div className="zempty">{pz.length} card{pz.length===1?"":"s"}</div>
+          : !pz.length ? <div className="zempty">empty</div>
+          : <div className="pitchlist">{[...pz].reverse().map((c,i)=>(
+              <div key={i} className="pc"><i style={{background:PD[c.pitch]||"var(--line)"}}/>{c.name}</div>))}
+            </div>}
+      </div>
+    </div>
+  );
+}
+
+/* The arena. Auras, items, allies and tokens all land here, and a
+   permanent that resolved anywhere else is a card the player paid for
+   and never received. */
+function InPlayRow({entries, chips, cell, empty}){
+  const es = entries||[], cs = chips||[];
+  return (
+    <div className="prow"><span className="plbl">In play</span>
+      {cs.map((t,i)=><span key={"t"+i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}
+      {es.map((b,i)=>cell(b,i))}
+      {!es.length && !cs.length && <span className="zempty">{empty||"allies, items and tokens live here"}</span>}
+    </div>
+  );
+}
+
+/* Graveyard, banish and soul — the three face-up piles a player is
+   entitled to read. `soul` is the one zone never exercised in live solo
+   play (the on-hit trigger needs an attack to connect), so drawing it
+   from one place is worth something on its own. */
+function GravePane({sd, who, back}){
+  const pile = (label, cards) => !cards.length ? null : (
+    <><div className="zone" style={{marginTop:10}}>{label} · {cards.length}</div>
+      <div className="gyrow">{cards.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div></>
+  );
+  return (
+    <div className="hpane">
+      <div className="paneflag"><span>{who} graveyard / banish</span><span>{back||"swipe ← back"}</span></div>
+      {!sd.grave.length
+        ? <div className="gyempty">Empty — the first card {who==="Your"?"you play or block with":"they discard"} lands here.</div>
+        : <div className="gyrow">{sd.grave.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div>}
+      {pile("Banished", sd.banish||[])}
+      {pile("Soul (face up)", sd.soul||[])}
+    </div>
+  );
+}
+
+/* THE TWO-TAP PEEK, AS A HOOK (v2.50).
+
+   A card in the rail is 80px wide and unreadable on the phone this is
+   played on, so every tappable card peeks first and commits second. The
+   trainer owns this as a closure; the table needs the identical
+   behaviour, and a second hand-rolled copy is how the verb and the
+   dismiss rule drift apart.
+
+   `resetKey` drops a stale peek whenever the thing it was armed against
+   changes — the trainer passes its mode/phase/turn, the table passes the
+   priority state. A peek that survives the state it was armed in commits
+   the wrong action on the second tap. */
+function usePeek(resetKey, inspect, onInspect){
+  const [peek,setPeek] = uS(null);
+  uE(()=>{ setPeek(null); },[resetKey]);
+  const tapTwice = (card, verb, commit) => () => {
+    if(inspect){ onInspect && onInspect(card); return; }
+    if(!peek || peek.uid !== card.uid){ setPeek({uid:card.uid, verb}); return; }
+    setPeek(null);
+    commit();
+  };
+  return {peek, setPeek, tapTwice};
+}
+
+/* The peeked card, docked ABOVE the action bar so the hand stays visible
+   underneath. Two rules, both of which shipped broken once:
+   the wrapper takes NO pointer events (full width and mostly empty, it
+   covered the hand rail on a 393x852 phone and no card could be played),
+   and it sits above the rail rather than over it. */
+function PeekDock({card, verb, onClose}){
+  if(!card) return null;
+  return (
+    <div className="peekwrap" onClick={onClose}>
+      <div className="peekcard"><CardFrame card={card}/></div>
+      <div className="peekbar">
+        <span className="pknm">{card.name}</span>
+        <span className="pkhint">{verb}</span>
+      </div>
+    </div>
+  );
+}
+
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -4055,21 +4196,12 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
             <div className="hpane vfill">
               <div className="paneflag"><span>Opponent board</span><span>swipe → graveyard</span></div>
               <div className="midrow">
-                <div className="armorgrid">
-                  {["head","chest","arms","legs"].map(z=>{
-                    const x = opp(g).gear.find(d=>slotOf(d).z===z);
-                    return x ? (
-                      <button key={x.uid} className={"g clip-sm"+(gearDef(x)===0?" used":"")} style={{gridArea:z}} onClick={()=>setZoom(x)}>
-                        <CardFrame card={{...x, def:gearDef(x)}} className="sm"/>
-                      </button>)
-                      : <div key={z} className="aslot clip-sm" style={{gridArea:z}}><span className="wempty">{z}</span></div>;
-                  })}
-                </div>
+                <ArmorGrid gear={opp(g).gear} cell={(x,z)=>(
+                  <button key={x.uid} className={"g clip-sm"+(gearDef(x)===0?" used":"")} style={{gridArea:z}} onClick={()=>setZoom(x)}>
+                    <CardFrame card={{...x, def:gearDef(x)}} className="sm"/>
+                  </button>)}/>
                 <div className="arscol"><div className="slot clip-sm">arsenal —</div><span className="zlbl">holds {opp(g).hand.length} · blocks from hand</span></div>
-                <div className="rightcol">
-                  <div className="deckback clip-sm"><span className="dcnt">{opp(g).deck.length}</span></div>
-                  <div className="pitchbox clip-sm"><div className="zlbl">Hand</div><div className="zempty">{opp(g).hand.length} card{opp(g).hand.length===1?"":"s"}</div></div>
-                </div>
+                <DeckPitchCol deck={opp(g).deck} pitch={opp(g).hand} title="Hand" hidden/>
               </div>
               <div className="heror">
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>
@@ -4085,14 +4217,13 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>
               </div>
               <div className="vfillsp"/>
-              <div className="prow" style={{marginTop:8}}><span className="plbl">In play</span>
-                {(opp(g).board||[]).map(b=>(
-                  <button key={b.uid} className="b clip-sm" style={{width:52,flex:"none"}} onClick={()=>setZoom(b.card)}>
-                    <CardFrame card={b.card} className="sm"/>
-                  </button>))}
-                {opp(g).marked && <span className="tk">marked</span>}
-                {!(opp(g).board||[]).length && !opp(g).marked &&
-                  <span className="zempty">nothing yet — tokens you hand {opp(g).name} land here</span>}
+              <div style={{marginTop:8}}>
+                <InPlayRow entries={opp(g).board||[]} chips={opp(g).marked?[["marked",""]]:[]}
+                  empty={"nothing yet — tokens you hand "+opp(g).name+" land here"}
+                  cell={b=>(
+                    <button key={b.uid} className="b clip-sm" style={{width:52,flex:"none"}} onClick={()=>setZoom(b.card)}>
+                      <CardFrame card={b.card} className="sm"/>
+                    </button>)}/>
               </div>
             </div>
             <div className="hpane">
@@ -4211,22 +4342,18 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
             <div className="hpane vfill">
               <div className="paneflag"><span>Your board</span><span>swipe → graveyard</span></div>
               {g.mode!=="act" && <div className="modehint">Action needed — flick up to the chain screen</div>}
-              <div className="prow"><span className="plbl">In play</span>
-                {toks.map((t,i)=><span key={"t"+i} className={"tk"+(t[1]?" "+t[1]:"")}>{t[0]}</span>)}
-                {you(g).board.map((b,i)=>(
-                  <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
-                    onClick={()=>{
-                      if(g.inspect) return setZoom(b.card);
-                      if(b.kind==="ally") return allySwing(i);
-                      const bp = boardPow(b);
-                      if(bp) return tapTwice(bp, "activate", ()=>tryPlay(bp,"board",i));
-                      return setZoom(b.card);
-                    }}>
-                    <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
-                    {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
-                  </button>))}
-                {toks.length===0 && you(g).board.length===0 && <span className="zempty">allies, items and tokens live here</span>}
-              </div>
+              <InPlayRow entries={you(g).board} chips={toks} cell={(b,i)=>(
+                <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
+                  onClick={()=>{
+                    if(g.inspect) return setZoom(b.card);
+                    if(b.kind==="ally") return allySwing(i);
+                    const bp = boardPow(b);
+                    if(bp) return tapTwice(bp, "activate", ()=>tryPlay(bp,"board",i));
+                    return setZoom(b.card);
+                  }}>
+                  <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}><CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
+                  {b.kind==="ally" && b.card.power>0 && <span className="sw">{b.spent?"spent":"⚔ "+b.card.power}</span>}
+                </button>)}/>
               <div className="heror">
                 <div className={"wslot clip-sm"+(handGear[0]?" filled":"")}>
                   {handGear[0] ? gearBtn(handGear[0].gr, handGear[0].i) : <span className="wempty">weapon 1</span>}
@@ -4245,30 +4372,21 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                 </div>
               </div>
               <div className="midrow">
-                <div className="armorgrid">
-                  {["head","chest","arms","legs"].map(z=>{
-                    const it = armor.find(x=>slotOf(x.gr).z===z);
-                    return it ? gearBtn(it.gr,it.i,"",{gridArea:z})
-                      : <div key={z} className="aslot clip-sm" style={{gridArea:z}}><span className="wempty">{z}</span></div>;
-                  })}
-                  {armor.filter(x=>!["head","chest","arms","legs"].includes(slotOf(x.gr).z)).map(x=>gearBtn(x.gr,x.i))}
-                </div>
+                {/* `armor` carries the gear's INDEX, which gearBtn needs, so
+                    the lookup goes through it rather than through the piece.
+                    ArmorGrid still owns the empty slots and the grid areas —
+                    the half that must match the opponent's side of the table. */}
+                <ArmorGrid gear={armor.map(x=>x.gr)} cell={(gr,z)=>{
+                  const it = armor.find(x=>x.gr.uid===gr.uid);
+                  return gearBtn(it.gr, it.i, "", z==="misc"?undefined:{gridArea:z});
+                }}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
                     ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal):tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
                     : "arsenal"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
-                <div className="rightcol">
-                  <div className="deckback clip-sm"><span className="dcnt">{you(g).deck.length}</span></div>
-                  <div className="pitchbox clip-sm">
-                    <div className="zlbl">Pitch · {you(g).pitch.length}</div>
-                    {you(g).pitch.length===0 ? <div className="zempty">empty</div> :
-                      <div className="pitchlist">{[...you(g).pitch].reverse().map((c,i)=>(
-                        <div key={i} className="pc"><i style={{background:{1:"var(--r)",2:"var(--y)",3:"var(--b)"}[c.pitch]||"var(--line)"}}/>{c.name}</div>))}
-                      </div>}
-                  </div>
-                </div>
+                <DeckPitchCol deck={you(g).deck} pitch={you(g).pitch}/>
               </div>
               <div className="vfillsp"/>
               <div className="mystat" style={{marginTop:8}}>
@@ -4278,16 +4396,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                 <button className={"pill"+(g.inspect?" hp":"")} onClick={()=>setG(s=>({...s,inspect:!s.inspect}))}>ℹ {g.inspect?"inspecting":"inspect"}</button>
               </div>
             </div>
-            <div className="hpane">
-              <div className="paneflag"><span>Your graveyard / banish</span><span>swipe ← back</span></div>
-              {you(g).grave.length===0
-                ? <div className="gyempty">Empty — the first card you play or block with lands here.</div>
-                : <div className="gyrow">{you(g).grave.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div>}
-              {you(g).banish.length>0 && <><div className="zone" style={{marginTop:10}}>Banished · {you(g).banish.length}</div>
-                <div className="gyrow">{you(g).banish.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div></>}
-              {you(g).soul.length>0 && <><div className="zone" style={{marginTop:10}}>Soul · {you(g).soul.length} (face up)</div>
-                <div className="gyrow">{you(g).soul.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div></>}
-            </div>
+            <GravePane sd={you(g)} who="Your"/>
           </div>
         </div>
       </div>
@@ -5196,22 +5305,45 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
 }
 
 /* ============================================================
-   THE BOARD — two hero decks, one game state, two phones.
+   THE BOARD — two hero decks, one game state, two phones. (v2.50)
 
-   Every control is gated by `DawnJudge.legal`, which is the SAME
-   predicate the sequencer applies on the other phone: a button that is
-   live here is an action that will be accepted there. That is what makes
-   the hand-dim honest, and it is the failure mode this project cares
-   most about — a card that looks playable and does nothing when tapped.
-   There is one copy of the test and neither side hand-rolls it.
+   IT IS THE TRAINER'S BOARD, WITH A PERSON IN SEAT 1. Same three flick
+   screens, same armour grid, same hero row, same hand rail, same two-tap
+   peek, same action bar. The plain diagnostic board this replaces proved
+   the transport and looked nothing like the game — and "looks nothing
+   like the game" is a real defect in a training sim, because the layout
+   IS the lesson.
+
+   The shared pieces are shared for real (ArmorGrid, DeckPitchCol,
+   InPlayRow, GravePane, usePeek, CardFrame, ChainLink, Ticker), so the
+   two boards cannot drift apart. What is deliberately NOT shared is the
+   state language: the trainer speaks `mode`/`bphase`, this speaks the CR
+   machine — `phase`/`step`/`priority` out of priority.js. Those are the
+   two things the rebuild exists to separate, and folding them back
+   together here would undo it.
+
+   Every control is gated by `DawnJudge.legal`, the SAME predicate the
+   sequencer applies on the other phone: a button that is live here is an
+   action that will be accepted there. That is what makes the hand-dim
+   honest, and a card that looks playable and does nothing when tapped is
+   the failure mode this codebase cares most about.
+
+   THREE THINGS THE TRAINER SHOWS THAT THIS CANNOT, and each is honest
+   rather than hidden: no Advisor (it reads the trainer's `built` and
+   coaches card text that does not resolve here), no boost toggle, and no
+   next-swing prediction — seat 1 is a person, so there is nothing to
+   predict.
    ============================================================ */
 function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}){
   const [g,setG]     = uS(match.g);
-  const [sel,setSel] = uS(null);          /* {uid, from} */
-  const [tgt,setTgt] = uS(null);          /* a chosen attack-target */
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
+  const [zoom,setZoom] = uS(null);
+  const [inspect,setInspect] = uS(false);
   const sess = uR(null);
+
+  const oppRef = uR(null), chainRef = uR(null), youRef = uR(null);
+  const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth", block:"start"});
 
   /* THE CATALOG IS NOT AN OPTIMISATION HERE, IT IS WHAT MAKES THE
      HANDSHAKE FIT DOWN THE PIPE. Without it the opening snapshot ships
@@ -5223,13 +5355,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
      and the payload falls by roughly 10x.
 
      Built from the MATCH's own cards rather than the whole 807-card
-     database — every card either seat can hold is in one of these four
-     zones, and a card the catalog misses still ships its own definition
+     database — every card either seat can hold is in one of these zones,
+     and a card the catalog misses still ships its own definition
      (wire.js's per-entry fallback), so a miss costs bytes and never
      correctness. Both peers build identical builds from the lobby spec,
      so both derive an identical catalog; `catalogHash` rides in the
-     payload and `decode` refuses a mismatch rather than rehydrating one
-     phone's cards into another's. */
+     payload and `decode` refuses a mismatch. */
   const catalog = uM(()=>DawnWire.makeCatalog(
     match.builds.flatMap(b=>[...(b.deck||[]), ...(b.gear||[]),
                              ...(b.startItem?[b.startItem.card]:[])])),[match]);
@@ -5245,7 +5376,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
       build:  DATA_VER,
       state:  host ? match.g : null,
       send:   m => table.send({ch:CH_NET, m}),
-      onState: st => { setG(st); setSel(null); setTgt(null); setNote(null); },
+      onState: st => { setG(st); setNote(null); },
       onEvent: e => {
         if(e.t==="refused")             setNote(e.reason);
         else if(e.t==="desync")         setLink("repairing");
@@ -5254,48 +5385,56 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
         else if(e.t==="snapshot-failed")setNote("The other phone sent a game this build cannot read.");
       }
     });
-    /* A HANDSHAKE THAT NEVER COMPLETES MUST NOT LOOK LIKE A QUIET TABLE.
-       When the 97KB snapshot was being dropped, every visible thing was
-       right — the board was dealt, the feed read correctly, it simply
-       said "waiting on them" forever, because the guest had built the
-       same opening itself and had nothing to compare against. The status
-       is the only thing that knew, so it goes on the screen. */
-    const watch = setInterval(()=>{
-      const st = s.status();
-      setLink(st === "ready" ? l => l==="repairing" ? l : "connected" : st);
-    }, 1200);
     sess.current = s; netRef.current = s;
     /* THE INTERNAL TESTING HOOK. Same reasoning as JUDGE!! in the
        trainer: the expensive part of a two-phone bug is never noticing
        it, it is reconstructing what each side thought was true. One
-       console read on either phone gives the session's status, sequence,
-       hash and counters — and a hash that differs across two phones at
-       the same `seq` is a desync, stated in one line. */
+       console read on either phone gives status, sequence, hash and
+       counters — and two phones on different hashes at the same `seq`
+       is a desync, stated in one line. */
     window.__dawnTable = {session: s, seat: mySeat, host, code,
       report: () => ({seat: mySeat, host, status: s.status(), seq: s.seq(),
                       hash: s.hash(), stats: s.stats(),
                       phase: (s.state()||{}).phase, step: (s.state()||{}).step,
                       priority: (s.state()||{}).priority})};
-    /* Anything that arrived before the session existed. */
     const q = netQ.current; netQ.current = [];
     q.forEach(m => s.receive(m));
     if(!host) s.join();
+    /* A HANDSHAKE THAT NEVER COMPLETES MUST NOT LOOK LIKE A QUIET TABLE.
+       When the 97KB snapshot was being dropped, every visible thing was
+       right — the board was dealt, the feed read correctly, it simply
+       said "waiting on them" forever. The status was the only thing that
+       knew, so it goes on the screen. */
+    const watch = setInterval(()=>{
+      const st = s.status();
+      setLink(st === "ready" ? l => l==="repairing" ? l : "connected" : st);
+    }, 1200);
     return ()=>{ clearInterval(watch); netRef.current = null; };
   },[]);
 
   const me = g.sides[mySeat], them = g.sides[1-mySeat];
+  const myH  = HEROES.find(x=>x.k===me.heroKey);
+  const foeH = HEROES.find(x=>x.k===them.heroKey);
+  const myBuild = match.builds[mySeat] || {};
   const mine = a => DawnJudge.legal(g, a, mySeat) === null;
   const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
   const over = g.over;
-  const pend = g.pending && g.pending.seat === mySeat ? g.pending : null;
-  const theirPend = g.pending && g.pending.seat !== mySeat;
+  const pay  = g.pending && g.pending.seat === mySeat ? g.pending : null;
+  const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
+  const defending = DawnPriority.canDeclareDefenders(g, mySeat);
+  const myTurn = g.priority === mySeat;
+
+  /* A stale peek commits the wrong action on its second tap, so it is
+     dropped whenever the window it was armed in closes. */
+  const {peek, setPeek, tapTwice} = usePeek(
+    g.phase+"/"+g.step+"/"+g.priority+"/"+g.turn+"/"+(pay?"pay":""), inspect, setZoom);
 
   /* CR 1.4.5 — with an ally in the arena, declaring an attack is a
-     choice and it is mandatory. `targets` is the engine's list; with one
-     candidate the picker does not appear, which is every game until
-     somebody actually lands an ally. */
+     mandatory choice. With one candidate the picker never appears, which
+     is every game until somebody lands an ally. */
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
+  const [tgt,setTgt] = uS(null);
   const needTarget = targets.length > 1;
   const playAct = (c, from) => {
     const a = {t:"play", uid:c.uid, from};
@@ -5303,189 +5442,343 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
     return a;
   };
 
-  const zone = (label, n) => <span className="mz"><b>{n}</b>{label}</span>;
+  const peekables = () => [...me.hand, ...me.gear, ...(me.arsenal?[me.arsenal]:[]),
+                           ...me.board.map(b=>b.card)];
+
+  /* One gear tile, for either seat. Yours is tappable — swing it or
+     raise it — theirs opens the card, because it is not actionable and
+     there is nothing to commit to (the trainer's own rule). */
+  const gearTile = (own) => (gr, z) => {
+    const spent = (own?me:them).weaponUsed && (own?me:them).weaponUsed[gr.uid];
+    const blocking = own && (me.blockG||[]).indexOf(gr.uid) >= 0;
+    /* A PIECE THAT PRINTS NO DEFENCE SHOWS NO DEFENCE BADGE. `gearDef`
+       returns 0 for a weapon, and passing that through paints a blue "0"
+       on every sword — the trainer's gearBtn asks whether the piece has
+       a printed or current defence at all, and so does this. */
+    const dshow = gr => (gr.def!=null||gr.curDef!=null) ? gearDef(gr) : null;
+    const def = dshow(gr);
+    const worn = gearDef(gr)===0 && gr.def!=null;
+    const style = z && z!=="misc" ? {gridArea:z} : undefined;
+    if(!own) return (
+      <button key={gr.uid} className={"g clip-sm"+(worn?" used":"")
+        +((them.blockG||[]).indexOf(gr.uid)>=0?" sel":"")} style={style}
+        onClick={()=>setZoom(gr)}>
+        <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
+          <CardFrame card={{...gr, def}} className="sm"/></span>
+      </button>);
+    const swing  = {t:"activate", uid:gr.uid};
+    const defend = {t:"defend", uid:gr.uid};
+    const act = mine(swing) ? swing : mine(defend) ? defend : null;
+    const verb = act ? (act.t==="activate" ? "swing" : blocking ? "stop defending" : "defend") : null;
+    return (
+      <button key={gr.uid} className={"g clip-sm"+(worn?" used":"")+(blocking?" sel":"")
+        +(peek&&peek.uid===gr.uid?" peek":"")+(act?"":" dis")} style={style}
+        onClick={act ? tapTwice(gr, verb, ()=>fire(act)) : ()=>setZoom(gr)}>
+        {blocking && <span className="defsel">⛨ DEF</span>}
+        <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
+          <CardFrame card={{...gr, def}} className="sm"/></span>
+      </button>);
+  };
+
+  /* Weapons sit in the hero row, armour in the grid — the same split the
+     trainer draws, read off the printed slot. */
+  const handsOf = sd => (sd.gear||[]).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x).z));
+  const armorOf = sd => (sd.gear||[]).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x).z));
+  const myHands = handsOf(me), foeHands = handsOf(them);
+
+  const handCell = c => {
+    const play   = playAct(c, "hand");
+    const defend = {t:"defend", uid:c.uid};
+    const ars    = {t:"arsenal", uid:c.uid};
+    const paySel = {t:"paySel", uid:c.uid};
+    const pitched = pay && (me.paySel||[]).indexOf(c.uid) >= 0;
+    const blocking = (me.blockH||[]).indexOf(c.uid) >= 0;
+    /* THE DIM MUST ASK EXACTLY WHAT THE TAP ASKS, or a card looks
+       playable and refuses when tapped. Both come from `legal`. */
+    const act = pay ? (mine(paySel) ? paySel : null)
+      : myArsStep ? (mine(ars) ? ars : null)
+      : mine(play) ? play
+      : mine(defend) ? defend : null;
+    const verb = !act ? null
+      : act.t==="paySel" ? (pitched ? "unpitch" : "pitch")
+      : act.t==="arsenal" ? "set in arsenal"
+      : act.t==="defend" ? (blocking ? "stop defending" : "defend")
+      : DawnParser.isAttack(c) ? "attack" : "play";
+    return (
+      <button key={c.uid}
+        className={"hc clip-sm"+((pitched||blocking)?" sel":"")+(act?"":" dis")
+          +(peek&&peek.uid===c.uid?" peek":"")}
+        onClick={act ? tapTwice(c, verb, ()=>fire(act)) : ()=>setZoom(c)}>
+        {blocking && <span className="defsel">⛨ DEF</span>}
+        {pitched && <span className="defsel">◈ {c.pitch}</span>}
+        <CardFrame card={c}/>
+      </button>);
+  };
+
+  /* The defending wall, as the trainer draws it: whatever each seat has
+     actually declared against the open link. */
+  const declared = sd => [...(sd.blockH||[]).map(u=>(sd.hand||[]).find(c=>c.uid===u)),
+                          ...(sd.blockG||[]).map(u=>(sd.gear||[]).find(c=>c.uid===u))].filter(Boolean);
+
+  const pips = [];
+  if(me.res>0)             pips.push(["floating "+me.res, "on"]);
+  if(me.ap>0)              pips.push(["action point", "on"]);
+  if(runeCount(me)>0)      pips.push(["runechant ×"+runeCount(me), "on"]);
+  if(me.ward>0)            pips.push(["ward "+me.ward, "on"]);
+  if(them.frost>0)         pips.push(["they are frostbitten "+them.frost, ""]);
+  if(g.chain.length)       pips.push(["chain link "+g.chain.length, ""]);
+  if(link!=="connected")   pips.push([link, "warn"]);
+
+  const featured = g.featured;
 
   return (
-    <div className="mboard">
-
-      {/* ---- across the table ---- */}
-      <div className="mseat">
-        <span className="who">{them.name}</span>
-        <span className="zn">{zone("hand",them.hand.length)}{zone("deck",them.deck.length)}
-          {zone("gy",them.grave.length)}{zone("pitch",(them.pitch||[]).length)}</span>
-        <span className="hp">{them.hp}</span>
-      </div>
-      <div className="mgear">
-        {them.gear.map(p=>(
-          <span key={p.uid} className={"mpiece"+((them.blockG||[]).indexOf(p.uid)>=0?" blk":"")
-            +(p.destroyed?" dead":"")}>{p.name}<b>{DawnGame.gearDef(p)}</b></span>))}
-        {(them.board||[]).map(b=>(
-          <span key={b.uid} className="mpiece arena">{b.card.name}
-            {b.life!=null && <b>{b.life}</b>}</span>))}
+    <div className="board">
+      <div className="screennav">
+        <button onClick={onExit} style={{flex:.7}}>✕ leave</button>
+        <button onClick={()=>jump(oppRef)}>▲ {foeH?foeH.n.split(",")[0]:"Opp"}</button>
+        <button onClick={()=>jump(chainRef)}>Chain</button>
+        <button onClick={()=>jump(youRef)}>You ▼</button>
       </div>
 
-      {/* ---- the machine ---- */}
-      <div className="mstep">
-        <span>Turn {g.turn} · table {code}</span>
-        <span className="sv">{link!=="connected"
-          ? <em className="mlink">{link}</em>
-          : g.phase+" / "+g.step}</span>
-      </div>
-
-      <div className={"mturn "+(over ? "theirs" : (g.priority===mySeat || myArsStep) ? "mine" : "theirs")}>
-        {over ? (over.winner===mySeat ? "You win" : "You lose")
-          : pend ? "Pitch, or cancel"
-          : theirPend ? "They are paying…"
-          : myArsStep ? "Your arsenal — set a card, or skip"
-          : g.priority===mySeat ? "Your call"
-          : DawnPriority.canDeclareDefenders(g, mySeat) ? "Declare your defenders"
-          : "Waiting on them"}
-      </div>
-
-      {/* ---- the chain ---- */}
-      {g.chainOpen && g.pend && <div className="mchain">
-        <span className="cl">LINK {g.chain.length}</span>
-        <span className="cn">{g.pend.name}</span>
-        <span className="cp">{g.pend.total}⚔</span>
-        {g.pend.target && g.pend.target.kind!=="hero" && <span className="ct">→ ally</span>}
-      </div>}
-
-      <div className="mfeed">
-        {(g.feed||[]).slice(-7).map((f,i)=><div key={i}>{f}</div>)}
-      </div>
-
-      {/* ---- my seat ---- */}
-      <div className="mseat me">
-        <span className="who">{me.name}</span>
-        <span className="zn">{zone("res",me.res)}{zone("ap",me.ap)}
-          {zone("deck",me.deck.length)}{zone("gy",me.grave.length)}</span>
-        <span className="hp">{me.hp}</span>
-      </div>
-
-      {/* ---- my iron: swing it, or raise it ---- */}
-      <div className="mgear">
-        {me.gear.map(p=>{
-          const on = (me.blockG||[]).indexOf(p.uid)>=0;
-          const can = mine({t:"activate",uid:p.uid}) || mine({t:"defend",uid:p.uid});
-          return (
-            <button key={p.uid} className={"mpiece"+(on?" blk":"")+(p.destroyed?" dead":"")
-              +(sel&&sel.uid===p.uid?" on":"")+(can?"":" dim")}
-              onClick={()=>setSel(sel&&sel.uid===p.uid?null:{uid:p.uid,from:"gear"})}>
-              {p.name}<b>{DawnGame.gearDef(p)}</b></button>);
-        })}
-        {me.arsenal && <button className={"mpiece ars"+(sel&&sel.uid===me.arsenal.uid?" on":"")}
-          onClick={()=>setSel(sel&&sel.uid===me.arsenal.uid?null:{uid:me.arsenal.uid,from:"arsenal"})}>
-          arsenal: {me.arsenal.name}</button>}
-        {(me.board||[]).map(b=>(
-          <span key={b.uid} className="mpiece arena">{b.card.name}
-            {b.life!=null && <b>{b.life}</b>}</span>))}
-      </div>
-
-      {/* ---- the payment ---- */}
-      {pend && <div className="mpay">
-        <div className="payhead">{pend.card.name} needs <b>{pend.need}</b> ·
-          you hold <b>{me.res}</b> · pitched <b>{DawnJudge.paySum(me)}</b></div>
-        <div className="mhand">
-          {me.hand.map(c=>{
-            const on = (me.paySel||[]).indexOf(c.uid)>=0;
-            return (
-              <button key={c.uid} className={"mcard pitchable"+(on?" on":"")}
-                disabled={!mine({t:"paySel",uid:c.uid})}
-                onClick={()=>fire({t:"paySel",uid:c.uid})}>
-                <CardFrame card={c} className="sm"/>
-                <span className="pv">+{c.pitch}</span>
-              </button>);
-          })}
+      <div className="tablewrap">
+        {/* ---- SCREEN 1: their board ---- */}
+        <div className="vscreen" ref={oppRef}>
+          <div className="hscroll">
+            <div className="hpane vfill">
+              <div className="paneflag"><span>{them.name} · seat {1-mySeat}</span><span>swipe → graveyard</span></div>
+              <div className="midrow">
+                <ArmorGrid gear={armorOf(them)} cell={gearTile(false)}/>
+                <div className="arscol">
+                  <div className="slot clip-sm" style={{width:"100%"}}>{them.arsenal
+                    ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(them.arsenal)}>
+                        <CardFrame card={them.arsenal} className="sm"/></button>
+                    : "arsenal —"}</div>
+                  <span className="zlbl">holds {them.hand.length} · blocks from hand</span>
+                </div>
+                <DeckPitchCol deck={them.deck} pitch={them.pitch} title="Pitch"/>
+              </div>
+              <div className="heror">
+                <div className={"wslot clip-sm"+(foeHands[0]?" filled":"")}>
+                  {foeHands[0] ? gearTile(false)(foeHands[0]) : <span className="wempty">weapon —</span>}
+                </div>
+                <div className="heromid clip-sm">
+                  {foeH ? <div className="hport2"><HeroArt h={foeH} db={db}/></div> : null}
+                  <span className="hname">{them.name}</span>
+                  <b className="hlife2">{Math.max(0,them.hp)}</b>
+                  <span className="hlbl">{g.turnPlayer===1-mySeat ? "their turn" : "life"}</span>
+                </div>
+                <div className={"wslot clip-sm"+(foeHands[1]?" filled":"")}>
+                  {foeHands[1] ? gearTile(false)(foeHands[1]) : <span className="wempty">weapon —</span>}
+                </div>
+              </div>
+              <div className="vfillsp"/>
+              <div style={{marginTop:8}}>
+                <InPlayRow entries={them.board||[]} empty={"nothing yet — "+them.name+"'s auras, items and allies land here"}
+                  cell={b=>(
+                    <button key={b.uid} className="b clip-sm" style={{width:52,flex:"none"}} onClick={()=>setZoom(b.card)}>
+                      <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/>
+                      {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
+                    </button>)}/>
+              </div>
+            </div>
+            <GravePane sd={them} who={them.name+"'s"}/>
+          </div>
         </div>
-        <div className="macts">
-          <button className="a go" disabled={!mine({t:"payConfirm"})}
-            onClick={()=>fire({t:"payConfirm"})}>Pay</button>
-          <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
+
+        {/* ---- SCREEN 2: the chain ---- */}
+        <div className="vscreen" ref={chainRef}>
+          <div className="hscroll">
+            <div className="hpane logpane">
+              <div className="paneflag"><span>log</span><span>table {code}</span><span>play →</span></div>
+              <div className="scorebar clip-sm">
+                <span className="sside"><span className="hpme">{me.hp}</span> you · R<b>{me.res}</b> A<b>{me.ap}</b></span>
+                <span className="sside r">{them.name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,them.hp)}</span></span>
+              </div>
+              <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
+              <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
+            </div>
+
+            <div className="hpane playpane">
+              <div className="dhand"><span className="hlbl">{them.name.split(",")[0]}</span>
+                {them.hand.map(c=><div key={c.uid} className="dcardph"/>)}</div>
+              <div className="playmid">
+                <div className="sidecol stack">
+                  <div className="scol-lbl">Chain</div>
+                  <div className="scol-cards">
+                    {g.chainOpen && g.pend
+                      ? <div className="stackcard"><CardImg card={g.pend.card}/></div>
+                      : <div className="dash">—</div>}
+                  </div>
+                </div>
+                <div className="centerslot">
+                  {featured
+                    ? <div className="featured"><CardFrame card={featured.card}/></div>
+                    : <div className="featempty">Most recently played lands here</div>}
+                </div>
+                <div className="sidecol defend">
+                  <div className="scol-lbl">Defend</div>
+                  <div className="scol-cards">
+                    {(()=>{ const cs = [...declared(me), ...declared(them)];
+                      return cs.length ? cs.map((c,i)=><div key={i} className="stackcard"><CardImg card={c}/></div>)
+                                       : <div className="dash">—</div>; })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* The status line says what the CR machine is asking of
+                  THIS seat, in the trainer's voice. */}
+              {over ? <div className="statusline">{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</div>
+                : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); return short>0?<span>need <b>{short}</b> more</span>:<span>covered ✓</span>;})()}
+                    <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
+                : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
+                : myArsStep ? <div className="statusline">Tap a card below for <b>arsenal</b>
+                    <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
+                : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
+                : defending ? <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>
+                : myTurn ? <div className="statusline">{g.step==="layer" ? <span>Your window — play, or pass</span>
+                    : <span>{g.step} step — react from floating <b>{me.res}</b> or pass</span>}</div>
+                : <div className="statusline">Waiting on {them.name} — {g.phase} / {g.step}</div>}
+
+              {pips.length ? <div className="rail">{pips.map(([t,cl],i)=>
+                <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null}
+
+              {needTarget && <div className="rail">
+                <span className="rp">attack:</span>
+                {targets.map((t,i)=>(
+                  <button key={i} className={"rp"+((tgt||targets[0])===t?" on":"")}
+                    onClick={()=>setTgt(t)}>{t.kind==="hero"?them.name.split(",")[0]:"ally"}</button>))}
+              </div>}
+
+              <div className="phand"><span className="hlbl">Hand</span>
+                {me.hand.map(handCell)}
+                {me.arsenal && (()=>{
+                  const a = {t:"play", uid:me.arsenal.uid, from:"arsenal"};
+                  const ok = mine(a);
+                  return <button key={me.arsenal.uid}
+                    className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===me.arsenal.uid?" peek":"")}
+                    onClick={ok ? tapTwice(me.arsenal,"play from arsenal",()=>fire(a)) : ()=>setZoom(me.arsenal)}>
+                    <CardFrame card={me.arsenal} zone="arsenal"/></button>;
+                })()}
+              </div>
+            </div>
+
+            <div className="hpane">
+              <div className="paneflag"><span>← play</span><span>the chain</span></div>
+              {!g.chain.length && <p className="note">No links yet — play an attack to start the chain.</p>}
+              {!!g.chain.length && <div className="histturn"><div className="htlabel">This chain</div>
+                <div className="chain">{g.chain.map((l,j)=><ChainLink key={j} l={l}/>)}</div></div>}
+            </div>
+          </div>
         </div>
-      </div>}
 
-      {/* ---- my hand ---- */}
-      {!pend && <div className="mhand">
-        {me.hand.map(c=>{
-          const on = sel && sel.uid===c.uid;
-          const blocking = (me.blockH||[]).indexOf(c.uid)>=0;
-          const live = mine(playAct(c,"hand")) || mine({t:"defend",uid:c.uid})
-            || (myArsStep && mine({t:"arsenal",uid:c.uid}));
-          return (
-            <button key={c.uid} className={"mcard"+(on?" on":"")+(blocking?" blk":"")+(live?"":" dim")}
-              onClick={()=>setSel(on?null:{uid:c.uid,from:"hand"})}>
-              <CardFrame card={c} className="sm"/>
-            </button>);
-        })}
-        {!me.hand.length && <span className="zn">hand empty</span>}
-      </div>}
+        {/* ---- SCREEN 3: your board ---- */}
+        <div className="vscreen" ref={youRef}>
+          <div className="hscroll">
+            <div className="hpane vfill">
+              <div className="paneflag"><span>Your board · seat {mySeat}</span><span>swipe → graveyard</span></div>
+              {!myTurn && !defending && !myArsStep && !over &&
+                <div className="modehint">Waiting on {them.name} — flick up to the chain screen</div>}
+              <InPlayRow entries={me.board} cell={(b,i)=>(
+                <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
+                  onClick={()=>setZoom(b.card)}>
+                  <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}>
+                    <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
+                  {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
+                </button>)}/>
+              <div className="heror">
+                <div className={"wslot clip-sm"+(myHands[0]?" filled":"")}>
+                  {myHands[0] ? gearTile(true)(myHands[0]) : <span className="wempty">weapon 1</span>}
+                </div>
+                <div className="heromid clip-sm">
+                  <button className="hport2" onClick={()=>setZoom(myBuild.HZOOM)}>
+                    {myH ? <HeroArt h={myH} db={db}/> : null}</button>
+                  <span className="hname">{me.name.split(",")[0]}</span>
+                  <b className="hlife2">{Math.max(0,me.hp)}</b>
+                  <span className="hlbl">life</span>
+                </div>
+                <div className={"wslot clip-sm"+(myHands[1]?" filled":"")}>
+                  {myHands[1] ? gearTile(true)(myHands[1])
+                    : <span className="wempty">{myHands[0]&&slotOf(myHands[0]).z==="2h" ? "2H occupies both hands" : "weapon 2 / off-hand"}</span>}
+                </div>
+              </div>
+              <div className="midrow">
+                <ArmorGrid gear={armorOf(me)} cell={gearTile(true)}/>
+                <div className="arscol">
+                  <div className="slot clip-sm" style={{width:"100%"}}>{me.arsenal
+                    ? <button style={{padding:0,width:"100%"}} onClick={()=>setZoom(me.arsenal)}>
+                        <CardFrame card={me.arsenal} className="sm"/></button>
+                    : "arsenal"}</div>
+                  <span className="zlbl">Arsenal</span>
+                </div>
+                <DeckPitchCol deck={me.deck} pitch={me.pitch}/>
+              </div>
+              <div className="vfillsp"/>
+              <div className="mystat" style={{marginTop:8}}>
+                <span className="pill">TURN <b>{g.turn}</b></span>
+                <span className="pill">SEAT <b>{mySeat}</b></span>
+                <span className="pill">{host?"HOST":"GUEST"}</span>
+                <button className={"pill"+(inspect?" hp":"")} onClick={()=>setInspect(v=>!v)}>ℹ {inspect?"inspecting":"inspect"}</button>
+              </div>
+            </div>
+            <GravePane sd={me} who="Your"/>
+          </div>
+        </div>
+      </div>
 
-      {/* ---- the attack-target, when there is a choice to make ---- */}
-      {!pend && needTarget && sel && sel.from==="hand" && <div className="mtgt">
-        <span>Attack:</span>
-        {targets.map((t,i)=>(
-          <button key={i} className={"a"+((tgt||targets[0])===t?" go":"")}
-            onClick={()=>setTgt(t)}>{t.kind==="hero"?them.name:"ally"}</button>))}
-      </div>}
-
-      {/* ---- what I can do with what I picked ---- */}
-      {!pend && <div className="macts">
-        {(() => {
-          const c = sel && (sel.from==="hand" ? me.hand.find(x=>x.uid===sel.uid)
-            : sel.from==="arsenal" ? me.arsenal
-            : me.gear.find(x=>x.uid===sel.uid));
-          const play = c && sel.from!=="gear" ? playAct(c, sel.from) : null;
-          return <>
-            <button className="a" disabled={!play||!mine(play)} onClick={()=>fire(play)}>Play</button>
-            <button className="a" disabled={!sel||!mine({t:"activate",uid:sel.uid})}
-              onClick={()=>fire({t:"activate",uid:sel.uid})}>Swing</button>
-            <button className="a" disabled={!sel||!mine({t:"defend",uid:sel.uid})}
-              onClick={()=>fire({t:"defend",uid:sel.uid})}>Defend</button>
-          </>;
-        })()}
-        {myArsStep
-          ? <>
-              <button className="a" disabled={!sel||!mine({t:"arsenal",uid:sel.uid})}
-                onClick={()=>fire({t:"arsenal",uid:sel.uid})}>Set in arsenal</button>
-              <button className="a go" onClick={()=>fire({t:"arsenal",uid:null})}>Leave it empty</button>
+      {/* The action bar speaks the CR machine, not the trainer's modes.
+          CR 4.3.4: ending a turn is a PASS carrying intent, so it takes
+          one from each seat — which is what a table does. */}
+      <div className="actbar">
+        {over ? <button className="a go" onClick={onExit}>Leave the table</button>
+          : pay ? <>
+              <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
+              <button className="a pay" disabled={!mine({t:"payConfirm"})} onClick={()=>fire({t:"payConfirm"})}>Pitch &amp; play</button>
+            </>
+          : myArsStep ? <>
+              <button className="a" onClick={()=>fire({t:"arsenal",uid:null})}>Leave it empty</button>
+              <span className="a dis">tap a card to set it</span>
+            </>
+          /* CR 7.3.3 — IN THE DEFEND STEP THE TURN-PLAYER HOLDS PRIORITY
+             while the DEFENDER declares. So the defender really cannot
+             pass until the attacker has, and a button reading "Done
+             defending" that is permanently dead reads as a broken screen
+             rather than as the rule it is. Say which it is. */
+          : defending ? <>
+              {mine({t:"pass"})
+                ? <button className="a go" onClick={()=>fire({t:"pass"})}>Done defending</button>
+                : <span className="a dis">declare your blockers — {them.name.split(",")[0]} still holds priority</span>}
+              <button className="a" onClick={()=>fire({t:"concede"})}>Concede</button>
             </>
           : <>
-              <button className="a go" disabled={!mine({t:"pass"})}
-                onClick={()=>fire({t:"pass"})}>Pass</button>
-              {/* CR 4.3.4 — ending a turn is a PASS carrying intent, so it
-                  takes two actions between the seats, exactly as it does at
-                  a table. The opponent's last window is part of the rule. */}
-              <button className="a" disabled={!mine({t:"endTurn"})}
-                onClick={()=>fire({t:"endTurn"})}>End turn</button>
+              {mine({t:"pass"})
+                ? <button className="a" onClick={()=>fire({t:"pass"})}>Pass</button>
+                : <span className="a dis">waiting on {them.name.split(",")[0]}</span>}
+              <button className="a go" disabled={!mine({t:"endTurn"})} onClick={()=>fire({t:"endTurn"})}>End turn</button>
             </>}
+      </div>
+
+      {/* NOT `WinPanel`. That one says "DUMMY DESTROYED" and pulls a
+          random trophy — right for the solo trainer's loop, wrong for
+          beating a person, and a trophy handed out for a real match
+          would quietly devalue the case. Same visual language, honest
+          words, no reward. */}
+      {over && <div className={"reveal"+(over.winner===mySeat?"":" lose")} onClick={onExit}>
+        <h2 className="disp" style={{marginBottom:14}}>
+          {over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}</h2>
+        <div className="card clip">
+          <div className="rar">turn {g.turn} · table {code}</div>
+          <h3>{g.sides[over.winner].name} over {g.sides[1-over.winner].name}</h3>
+        </div>
+        <p style={{marginTop:14,fontSize:13}}>
+          {over.how==="life" ? "Life to zero." : "The game ended on "+over.how+"."}
+          {" "}{me.hp>0 ? <>You finished on <b className="mono">{me.hp}</b>.</> : null} Tap anywhere.
+        </p>
       </div>}
 
       {note && <div className="tblerr">{note}</div>}
-
-      {/* The hash below is taken off the STATE, not off the session: the
-          session ref is still null on the first render, so reading it
-          there showed a dash exactly when the opening board is what you
-          most want to compare across two phones. It is the same function
-          net.js fingerprints with, so the two numbers are one number.
-
-          Kept out of the paragraph deliberately — a JSX expression
-          container between two lines of text suppresses the whitespace
-          that would otherwise join them, and this comment sitting
-          mid-sentence rendered "solotrainer" on the phone. */}
-      {over && <div className="mover">
-        <b>{over.winner===mySeat ? "You win" : "You lose"}</b>
-        <span>{g.sides[over.winner].name} takes it on {over.how}.</span>
-      </div>}
-
-      <p className="mnote">
-        Two real decks, real costs, the real combat chain. <strong>Card text does
-        not resolve yet</strong> — the parser's effects still live in the solo
-        trainer. Seat {mySeat} · hash <span className="mono">{DawnWire.hash(g).slice(0,8)}</span>
-      </p>
-      <div className="macts">
-        <button className="a" disabled={!!over} onClick={()=>fire({t:"concede"})}>Concede</button>
-        <button className="a" onClick={onExit}>Leave the table</button>
-      </div>
+      <CardModal card={zoom} onClose={()=>setZoom(null)}/>
+      {!over && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
+        verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
     </div>
   );
 }
