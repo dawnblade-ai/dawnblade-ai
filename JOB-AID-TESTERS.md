@@ -5,16 +5,32 @@ online. Read this once, in full. It is the whole procedure; you should not need
 to re-read `CLAUDE.md` end to end (it auto-loads — skim the sections this aid
 names and no more).
 
-**Baseline at the time of writing (v2.40, 2026-08-02):**
+**Baseline (v2.51, 2026-08-04 — the start of Phase 3):**
 
 | | |
 |---|---|
-| `npm test` | **580 drills, all green** |
+| `npm test` | **790 drills, all green** |
 | `npm run fairness` | **clean** |
 | Pool | 405 unique cards — **304 full · 79 part · 22 none** |
 | Heroes | 2 / 15 fully read · Tokens 7 / 17 |
 
 Your job is to move those numbers **without ever moving the first two.**
+
+**The pool numbers have not moved since v2.40, and that is correct** —
+everything between was the engine and the multiplayer layer, which touch no
+card text. Phase 3 is where they start moving.
+
+**Two things changed under you since this aid was written**, and both matter
+to the card pass:
+
+- **JUDGE!!** is now `engine/report.js` and works on both boards. It captures
+  every zone by `name#uid`, both hands, the chain, the feed and the RNG replay
+  key, so *"Look Tuff attacked for 4, should have been 3"* plus one saved
+  report is a reproducible game rather than a screenshot to squint at.
+- **Card effects still only resolve in the SOLO trainer.** `runOps`/`execute`/
+  `resolveStack` live in `Battle`; the table runs `judge.js`, which moves cards
+  and charges costs but does not read text. **So verify card behaviour in solo
+  play**, not at a table, until the effects port lands.
 
 ---
 

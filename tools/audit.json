@@ -1,7 +1,7 @@
 {
- "generated": "2026-08-02T01:42:10.877Z",
- "appVer": "2.40",
- "dataVer": "sage-v10",
+ "generated": "2026-08-04T02:46:32.157Z",
+ "appVer": "2.51",
+ "dataVer": "sage-v11",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
@@ -673,7 +673,9 @@
    "weaponCost": {
     "cost": 2,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}: Attack\nIf you have discarded a card with 6 or more {p} this turn, this card's attacks go again.",
@@ -2727,7 +2729,9 @@
    "weaponCost": {
     "cost": 1,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: Attack\nIf a hero has more {h} than any other hero, they can't gain {h}.",
@@ -3695,7 +3699,9 @@
    "weaponCost": {
     "cost": 2,
     "addRust": true,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}, put a rust counter on Talishar, the Lost Prince: Attack\nAt the beginning of your end phase, if Talishar, the Lost Prince has 3 or more rust counters on it, destroy it.",
@@ -4627,7 +4633,9 @@
    "weaponCost": {
     "cost": 4,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": false
    },
    "eqAbility": null,
    "tx": "Action - {r}{r}{r}{r}: Attack",
@@ -4694,7 +4702,9 @@
    "weaponCost": {
     "cost": 3,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}{r}: Attack\nIf there is a card with cost 3 or greater in your pitch zone, Titan's Fist has +1{p}.",
@@ -6533,7 +6543,9 @@
    "weaponCost": {
     "cost": 1,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: Attack\nThe second time this hits each turn, put a +1{p} counter on it.\nAt the beginning of your end phase, if this hasn't hit this turn, remove all +1{p} counters from it.",
@@ -7676,7 +7688,9 @@
    "weaponCost": {
     "cost": 2,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}: Attack\nIf you control 2 or more Draconic chain links, this card's attacks get go again.",
@@ -9443,7 +9457,9 @@
    "weaponCost": {
     "cost": 2,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}: Attack. Go again\nWhen this hits a hero, you may choose to destroy this and mark them.\nIf this is attacking a marked hero, this gets +1{p}.",
@@ -11136,7 +11152,9 @@
    "weaponCost": {
     "cost": 0,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - 0: Attack\nIf you've charged this turn, Raydn gains +3{p}.",
@@ -11908,7 +11926,9 @@
    "weaponCost": {
     "cost": 0,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": true,
+    "oncePerTurn": false
    },
    "eqAbility": null,
    "tx": "Action - {t}: Attack. Activate this only if you control a Lightning attack.\nWhen this hits a hero, deal 1 arcane damage to them.",
@@ -11953,7 +11973,9 @@
    "weaponCost": {
     "cost": 1,
     "addRust": false,
-    "needSteam": false
+    "needSteam": false,
+    "taps": false,
+    "oncePerTurn": true
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: Attack\nIf you've played a Lightning card this turn, this card's attacks get +1{p} and go again.",
