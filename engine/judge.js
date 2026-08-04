@@ -196,8 +196,22 @@ function newMatch(o){
     });
   });
 
+  /* THE BUILD'S `deck` AND `gear` ARE CONSTRUCTION INPUTS, NOT STATE.
+     They have just been dealt into `sides[i]`, so retaining them puts
+     the same 43 cards in the game object TWICE — dead to every rule
+     (nothing reads a build's deck; `bAct` exists for the passives) and
+     ruinous on a wire: they were 62KB of a 67KB opening snapshot, which
+     a WebRTC data channel drops without an error. The guest then sat in
+     `handshaking` forever holding a board that looked perfectly correct,
+     because it had built the same opening itself.
+
+     What a build is kept FOR is the printed passives a rules site reads
+     through `bAct` — Viserai's rite, Gravy Bones's watery grave — plus
+     the hero records the effects port will want. Those are small. */
+  const rulesBuild = b => { const {deck, gear, ...rest} = b || {}; return rest; };
+
   let g = S.makeGame({sides, firstPlayer: first, rng: o.rng, seed: o.seed});
-  g = {...g, builds, tokSeq: o.tokSeq || 0, actor: first};
+  g = {...g, builds: builds.map(rulesBuild), tokSeq: o.tokSeq || 0, actor: first};
   g = say(g, at(g, first).name + " takes the first turn.");
   /* CR 4.3.2 — the action point is issued on ENTERING the action phase,
      and toPhase is the only place that ever happens. */

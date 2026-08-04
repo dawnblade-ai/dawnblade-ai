@@ -234,6 +234,56 @@ function buildSideDefault(h, d, db, rng, ctr){
   return buildSide(h, d, db, {gearIdx: defaultPicks(slots)}, rng, ctr);
 }
 
+/* ---- BOTH SEATS, FROM A SPEC AND A SEED (Phase 2) ---------------------
+
+   The lobby agrees on four small values — two hero keys, two loadouts, a
+   seating call and the table code. This is what turns them into two real
+   hero decks, and the property that matters is that it does so
+   IDENTICALLY ON BOTH PHONES. Nothing about a card crosses the wire: each
+   peer runs this over its own card database and arrives at the same
+   state, which is rng.js's own stated goal ("both peers derive the same
+   seed from the same room code without exchanging it") applied to the
+   whole opening rather than to one shuffle.
+
+   Three things make it deterministic, and each is a real way to break it:
+
+   1. THE STREAM IS SEAT-SPECIFIC. One stream for both seats deals seat 1
+      the continuation of seat 0's shuffle — reproducible, but it means a
+      change to seat 0's cuts silently reshuffles seat 1's deck.
+   2. THE UID COUNTER IS SHARED AND THREADED IN SEAT ORDER, so no card in
+      the match repeats a uid. `invariants.js` reports a repeat as
+      CARD-IN-TWO-ZONES, which is how the runechant collision was caught
+      in live play — the same hazard, one layer up.
+   3. THE SEATS ARE BUILT IN INDEX ORDER, always. `map` over [0,1] rather
+      than over anything derived from who is hosting: a build order that
+      depends on the local seat produces two different games from one
+      spec, and it would only show up as a hash mismatch on turn one.
+
+   It has no idea which seat this client occupies, and it must not: that
+   is `buildSide`'s contract kept one level up. */
+const buildSeed = (code, i) => String(code == null ? 0 : code) + ":build:" + i;
+
+/* `spec` is the lobby's matchSpec; `o` supplies the data the engine has
+   no opinion about — the hero entries, the parsed decks and the card
+   database, all passed in for the same reason `buildSide` takes `d` as a
+   parameter rather than looking it up. */
+function buildMatch(spec, o){
+  o = o || {};
+  const ctr = {n: o.ctr0 || 0};
+  const builds = [0, 1].map(i => {
+    const key = spec.heroes[i];
+    const h = o.heroes[key], d = o.decks[key];
+    if(!h) throw new Error("buildMatch: no hero entry for " + key);
+    if(!d) throw new Error("buildMatch: no deck for " + key);
+    const rng = RNG.make(RNG.seedFrom(buildSeed(spec.seed, i)));
+    return buildSide(h, d, o.db, spec.boards[i] || {}, rng, ctr).b;
+  });
+  return {builds, first: spec.first, seed: spec.seed,
+          heroKeys: spec.heroes.slice(),
+          names: spec.heroes.map(k => (o.heroes[k] && o.heroes[k].n) || k),
+          tokSeq: 0, uidHigh: ctr.n};
+}
+
 /* The passives a build is expected to answer for. A rules site reads
    these through `bAct` — the build of whoever is RESOLVING — never off a
    captured seat-0 build, which is the bug v2.41 fixed. Listed here so a
@@ -242,5 +292,6 @@ function buildSideDefault(h, d, db, rng, ctr){
    reading as a silent `false` on a real hero's turn. */
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo"];
 
-return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault, PASSIVES};
+return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
+        buildSeed, buildMatch, PASSIVES};
 });

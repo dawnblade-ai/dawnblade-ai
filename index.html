@@ -645,6 +645,7 @@ img{display:block;max-width:100%}
 .mseat .zn{font-size:11px;color:var(--bone-dim);font-family:'Spline Sans Mono',monospace}
 .mstep{display:flex;align-items:center;justify-content:space-between;background:var(--forge2);border:1px solid var(--line);padding:7px 10px;font-size:12px}
 .mstep .sv{font-family:'Spline Sans Mono',monospace;color:var(--y);text-transform:uppercase;letter-spacing:.06em}
+.mlink{font-style:normal;color:var(--r);animation:tblpulse 1.4s ease-in-out infinite}
 .mturn{font-family:'Big Shoulders Display';font-weight:800;font-size:15px;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:7px;border:1px solid var(--line)}
 .mturn.mine{background:var(--y);color:var(--ink)}
 .mturn.theirs{background:var(--forge);color:var(--bone-dim)}
@@ -658,6 +659,57 @@ img{display:block;max-width:100%}
 .mfeed{background:var(--forge);border:1px solid var(--line);padding:8px 10px;font-size:12px;color:var(--bone-dim);min-height:56px;max-height:110px;overflow-y:auto}
 .mfeed div:last-child{color:var(--bone)}
 .mnote{font-size:11px;color:var(--bone-dim);line-height:1.5;border-left:2px solid var(--line);padding-left:8px}
+
+/* ---- the lobby: hero, throw, seating (v2.49) ---- */
+.tblhead .tblseat{float:right;font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--bone-dim);text-transform:none;padding-top:10px}
+.lobsteps{display:flex;gap:6px}
+.lobstep{flex:1;text-align:center;font-family:'Big Shoulders Display';font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:6px 2px;border:1px solid var(--line);color:var(--bone-dim)}
+.lobstep.on{border-color:var(--y);color:var(--y);background:var(--forge2)}
+.lobstep.done{color:var(--ok);border-color:var(--ok)}
+.lobheroes{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+.lobhero{background:var(--forge);border:1px solid var(--line);padding:5px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.lobhero.on{border-color:var(--y);background:var(--forge2)}
+.lobhero:disabled{opacity:.4}
+.lobhero .lhport{width:100%;aspect-ratio:1;overflow:hidden;border:1px solid var(--line)}
+.lobhero .lhn{font-family:'Big Shoulders Display';font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--bone)}
+.lobhero.on .lhn{color:var(--y)}
+.lobhero .lhc{font-size:9.5px;color:var(--bone-dim);text-align:center;line-height:1.2}
+.lobseat{display:flex;flex-direction:column;gap:10px;align-items:center}
+.foefixed{background:var(--ink);border:1px solid var(--y);color:var(--y);padding:9px 10px;font-size:14px;text-align:center}
+
+/* ---- the networked board ---- */
+.mseat .zn{display:flex;gap:9px}
+.mz{display:inline-flex;gap:3px;align-items:baseline}
+.mz b{color:var(--bone);font-size:13px}
+.mgear{display:flex;gap:4px;flex-wrap:wrap;min-height:24px}
+.mpiece{flex:0 0 auto;background:var(--forge);border:1px solid var(--line);padding:4px 7px;font-size:10.5px;color:var(--bone-dim);display:inline-flex;gap:5px;align-items:center}
+.mpiece b{font-family:'Spline Sans Mono',monospace;color:var(--b);font-size:12px}
+.mpiece.on{border-color:var(--y);color:var(--y)}
+.mpiece.blk{border-color:var(--b);color:var(--b)}
+.mpiece.dead{opacity:.35;text-decoration:line-through}
+.mpiece.dim{opacity:.45}
+.mpiece.arena{border-color:var(--ok);color:var(--ok)}
+.mpiece.ars{border-color:var(--y)}
+.mchain{display:flex;gap:8px;align-items:center;background:var(--forge2);border:1px solid var(--r);padding:6px 9px;font-size:12px}
+.mchain .cl{font-family:'Big Shoulders Display';font-weight:800;letter-spacing:.1em;color:var(--r);font-size:12px}
+.mchain .cn{flex:1;color:var(--bone)}
+.mchain .cp{font-family:'Spline Sans Mono',monospace;color:var(--y);font-size:15px}
+.mchain .ct{font-size:11px;color:var(--bone-dim)}
+.mhand{align-items:flex-start}
+.mhand .mcard{min-width:0;padding:2px;border:1px solid transparent;background:none;position:relative}
+.mhand .mcard .cfw{width:66px}
+.mhand .mcard.on{border-color:var(--y)}
+.mhand .mcard.blk{border-color:var(--b)}
+.mhand .mcard.dim{opacity:.42}
+.mcard .pv{position:absolute;right:3px;bottom:3px;background:var(--ink);border:1px solid var(--y);color:var(--y);font-family:'Spline Sans Mono',monospace;font-size:10px;padding:0 3px}
+.mpay{border:1px solid var(--y);background:var(--forge);padding:8px}
+.mpay .payhead{font-size:12px;color:var(--bone-dim);margin-bottom:6px}
+.mpay .payhead b{color:var(--y);font-family:'Spline Sans Mono',monospace;font-size:14px}
+.mtgt{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--bone-dim)}
+.mtgt .a{padding:6px 10px;font-size:12px}
+.mover{border:1px solid var(--y);background:var(--forge2);padding:12px;text-align:center;display:flex;flex-direction:column;gap:4px}
+.mover b{font-family:'Big Shoulders Display';font-weight:800;font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:var(--y)}
+.mover span{font-size:12px;color:var(--bone-dim)}
 </style>
 </head>
 <body>
@@ -679,7 +731,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.48"; /* v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.49"; /* v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1247,6 +1299,14 @@ window.TROPHIES = [
 <script src="engine/rng.js"></script>
 <script src="engine/parser.js"></script>
 <script src="engine/game.js"></script>
+<!-- types.js reads a card's STRUCTURED type array and is deliberately NOT
+     bridged: its natural names (isAttack, isAura, isInstant) sit beside
+     parser.js's and game.js's, and two of those pairs mean different
+     things — game.isAlly takes a board ENTRY, types.isAllyCard takes a
+     card. Bridging both sets into one bare namespace is precisely the
+     same-name-different-meaning trap KNOWN_COLLISIONS polices, so it is
+     reached as DawnTypes.* and judge.js takes it as a factory argument. -->
+<script src="engine/types.js"></script>
 <script src="engine/rps.js"></script>
 <script src="engine/sides.js"></script>
 <script src="engine/priority.js"></script>
@@ -1256,16 +1316,28 @@ window.TROPHIES = [
 <script src="engine/advisor.js"></script>
 <script src="engine/build.js"></script>
 <!-- THE SYNC LAYER (Phase B). Reached as DawnWire.* / DawnNet.* /
-     DawnActions.* / DawnRoom.*, deliberately NOT bridged into bare names
-     the way the parser is: `reduce`, `legal`, `hash`, `encode` and
-     `open` are far too generic to own as globals, and the module-
-     qualified form is the same call the trainer already makes for
-     DawnSides and DawnPriority. room.js is the only file in the engine
-     that knows a network exists, and it loads its transport lazily, so
-     these four cost a `file://` page nothing. -->
+     DawnActions.* / DawnRoom.* / DawnLobby.* / DawnJudge.*, deliberately
+     NOT bridged into bare names the way the parser is: `reduce`, `legal`,
+     `hash`, `encode` and `open` are far too generic to own as globals,
+     and the module-qualified form is the same call the trainer already
+     makes for DawnSides and DawnPriority. room.js is the only file in the
+     engine that knows a network exists, and it loads its transport
+     lazily, so these cost a `file://` page nothing.
+
+     JUDGE.JS IS LOADED, AND IT DRIVES THE TABLE ONLY (v2.49). It was
+     held headless through Phase 1 on the grounds that loading it would
+     put a second, quieter rules engine on the page beside the trainer's.
+     That reasoning still stands and is why the two never meet: SOLO PLAY
+     IS `Battle` AND TABLE PLAY IS `judge.js`, with no path between them.
+     The trainer keeps every card effect and stays the regression harness;
+     the table gets the one thing `Battle` cannot give — a pure reducer
+     two seats can both drive. They converge when `runOps`/`execute`
+     become a shared engine/effects.js, which is the next pass. -->
 <script src="engine/wire.js"></script>
 <script src="engine/net.js"></script>
 <script src="engine/actions.js"></script>
+<script src="engine/judge.js"></script>
+<script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
 <script>
 /* The bridge: lift the engine's exports into the bare names the two
@@ -4418,7 +4490,22 @@ function Trophies(){
      in engine/build.js: ARMOR_Z, HAND_Z, applyPick, defaultPicks. One set
      of slot rules governs both seats, or the opponent is quietly stronger
      than printed. ---------- */
-function Loadout({h,db,onBack,onStart}){
+/* `netFoe` turns this screen into the TABLE's sideboard step (v2.49).
+   The loadout is the same rules problem across the wire as it is against
+   the dummy — the printed slot rules, the same 40-card floor — so it is
+   the same screen rather than a second one that would drift from it.
+   What changes is only that the opponent is already SETTLED: it was
+   negotiated in the lobby, so the picker is replaced by the hero across
+   the table. Reusing the screen is also what keeps the cut map honest —
+   `cuts` is exactly the shape engine/lobby.js normalises and
+   build.js rebuilds the deck from, on both phones. */
+/* `netOnPlay` is a BOOLEAN — "is this client on the play" — and not the
+   seat index that opens the game. Passing the index and reading it as the
+   answer told BOTH seats they were on the draw, which is the same
+   actor-versus-perspective slip that `you()` meaning seat 0 caused all
+   through the migration: a seat INDEX is not an answer to a question
+   about THIS client. Named so it cannot be read the other way. */
+function Loadout({h,db,onBack,onStart,netFoe,netOnPlay}){
   const d = PARSED[h.k];
   const saSet = (d.hero.code||"").slice(0,3) || null;
   const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e,saSet); return {i, c, s:slotOf(c)}; }),[h,db]);
@@ -4437,7 +4524,7 @@ function Loadout({h,db,onBack,onStart}){
      (ROADMAP-OPPONENT.md). Deliberately NOT saved per hero the way the
      loadout is — the opponent is a property of the match, not of your
      deck, and a remembered one would silently change a later game. */
-  const [oppH,setOppH] = uS(null);
+  const [oppH,setOppH] = uS(netFoe||null);
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -4510,22 +4597,29 @@ function Loadout({h,db,onBack,onStart}){
                 opponent's hero and THEN you sideboard — putting it after
                 the loadout would show you the matchup too late to use it,
                 which is the one thing this panel exists to prevent. */}
-            <div className="foepick">
-              <label htmlFor="foesel">Who are you facing?</label>
-              <select id="foesel" value={oppH ? oppH.k : ""}
-                onChange={e=>{
-                  const v = e.target.value;
-                  setOppH(v==="" ? null
-                    : v==="?" ? HEROES[Math.floor(Math.random()*HEROES.length)]
-                    : HEROES.find(x=>x.k===v) || null);
-                }}>
-                <option value="">The Dummy — 42 life, vanilla pile</option>
-                <option value="?">Random hero</option>
-                {HEROES.map(x=><option key={x.k} value={x.k}>{x.n} — {x.cls}</option>)}
-              </select>
-            </div>
+            {netFoe
+              ? <div className="foepick"><label>Across the table</label>
+                  <div className="foefixed mono">{netFoe.n} — {netFoe.cls}</div></div>
+              : <div className="foepick">
+                  <label htmlFor="foesel">Who are you facing?</label>
+                  <select id="foesel" value={oppH ? oppH.k : ""}
+                    onChange={e=>{
+                      const v = e.target.value;
+                      setOppH(v==="" ? null
+                        : v==="?" ? HEROES[Math.floor(Math.random()*HEROES.length)]
+                        : HEROES.find(x=>x.k===v) || null);
+                    }}>
+                    <option value="">The Dummy — 42 life, vanilla pile</option>
+                    <option value="?">Random hero</option>
+                    {HEROES.map(x=><option key={x.k} value={x.k}>{x.n} — {x.cls}</option>)}
+                  </select>
+                </div>}
             <div className="vfillsp"/>
-            <p className="note">{oppH
+            <p className="note">{netFoe
+              ? `${netFoe.n.split(",")[0]} is a person, sitting somewhere else, holding a real hand. `
+                + (netOnPlay ? "You are on the play — you take the first turn and spend a card of tempo for it."
+                             : "You are on the draw — they swing first, and you keep the extra card.")
+              : oppH
               ? `${oppH.n.split(",")[0]} brings a real deck, real equipment and a real life total — and blocks with printed defence. It still takes no action phase, so its swing is the scripted escalation and the log says so every time.`
               : "Real sideboarding shows you only the enemy hero. Their iron, their habits — you learn those in the pit."}</p>
           </div>
@@ -4827,129 +4921,574 @@ function TableScreen({onBack, onSeated}){
   );
 }
 
-/* The networked board. Deliberately plain: this is the transport's
-   proving ground, not the trainer's UI. Every button is gated by
-   DawnActions.legal, which is the same predicate the sequencer applies
-   on the other phone — so a button that is live here is an action that
-   will be accepted there. */
-function TableMatch({table, host, code, onExit}){
-  /* `mySeat`, NOT `seat`. engine/priority.js already exports a `seat`
-     helper, and its meaning is "seat a game with this first player" —
-     a local `seat` meaning "which chair is this client in" is the
-     same-name-different-meaning trap test/sync.test.js pins for the
-     engine, and the one that made `tapTwice`'s `act` parameter shadow
-     the actor helper in v2.25. It is also the roadmap's own vocabulary:
-     perspective is what THIS CLIENT renders. */
+/* ============================================================
+   THE ROOM — connect, agree, deal, play. (v2.49)
+
+   Until now this screen connected two phones and dropped them straight
+   into engine/actions.js's BLANK decks, because `net.js` needs a
+   a pure reducer over state and action, and the trainer has none:
+   `Battle` is 2,500
+   lines of React closures, not a reducer, and its opponent is a branch
+   inside the rules rather than a seat. That is the whole reason a second
+   human had nowhere to sit.
+
+   Both halves now exist. `engine/lobby.js` negotiates the four things
+   two players must agree on, and `engine/judge.js` is the rules as a
+   pure function that either seat can drive.
+
+     TableScreen  find a table          (unchanged)
+     TableRoom    the negotiation, and then the game
+       - hero     both seats choose a hero
+       - throw    rock-paper-scissors; the winner CHOOSES the seating
+       - board    both seats sideboard, knowing the matchup and the seat
+       - ready    buildMatch -> judge.newMatch -> net.js drives both
+
+   ---- ONE CHANNEL, TWO PROTOCOLS ---------------------------------------
+
+   The lobby and net.js both name a message `hello`. An undemuxed channel
+   would hand net.js's handshake to the lobby and the lobby's to net.js,
+   and the failure would look like a transport bug rather than a naming
+   one. Every frame is therefore tagged with the protocol that owns it.
+
+   ---- WHAT IS AND IS NOT REAL HERE -------------------------------------
+
+   Real: two hero decks off the actual card database, printed life and
+   intellect, the CR turn structure, priority, the combat chain, costs
+   paid by pitching on demand, defenders from hand and iron, printed
+   power against printed defence, the ordered end phase.
+
+   NOT real yet: CARD EFFECTS. `runOps`/`execute`/`resolveStack` — the
+   parser's card semantics — are still closures inside `Battle`, so a
+   card here moves zones and costs what it prints, and its text box does
+   nothing. That limit is judge.js's, stated in its own header, and it is
+   the next pass: those three functions become a shared engine/effects.js
+   that the trainer and the judge both call.
+
+   SO THE TWO ENGINES DO NOT MEET. Solo play is `Battle` and keeps every
+   card effect; table play is `judge.js` and keeps the second seat.
+   Nothing routes between them, which is the discipline that kept
+   actions.js free of card text: a control-flow bug and a card being read
+   wrong must never be confusable.
+   ============================================================ */
+
+/* Tagged frames. `ch` names the protocol; `m` is that protocol's own
+   message, untouched, so neither module has to know the other exists. */
+const CH_LOBBY = "lobby", CH_NET = "net";
+
+function TableRoom({table, host, code, db, onExit}){
+  /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
+     meaning "seat a game with this first player"; a local `seat` meaning
+     "which chair is this client in" is the same-name-different-meaning
+     trap test/sync.test.js pins, and it caught exactly this name on the
+     first build of the table screen. */
   const mySeat = host ? 0 : 1;
-  const [g,setG]     = uS(null);
-  const [sel,setSel] = uS(null);
-  const [note,setNote] = uS(null);
-  const [link,setLink] = uS("connected");
-  const sess = uR(null);
+  const [lob,setLob] = uS(()=>DawnLobby.newLobby({code}));
+  const [pick,setPick] = uS(null);        /* an UNSENT hero choice */
+  const [err,setErr] = uS(null);
+  const [match,setMatch] = uS(null);      /* the built game, once ready */
+  const lobRef = uR(null); lobRef.current = lob;
+  const netRef = uR(null);
+  const netQ   = uR([]);                  /* net frames that beat the session */
+
+  /* Apply locally and put it on the wire. BOTH peers run the same
+     reducer over the same messages — the lobby is order-independent and
+     write-once, so there is no sequencer and none is needed. */
+  const say = m => {
+    const r = DawnLobby.reduce(lobRef.current, m);
+    if(r.error && !r.error.dup) setErr(r.error.why);
+    lobRef.current = r.state; setLob(r.state);
+    try { table.send({ch:CH_LOBBY, m}); } catch(e){ setErr(String(e.message||e)); }
+  };
 
   uE(()=>{
-    const s = DawnNet.createSession({
-      seat: mySeat, host,
-      reduce: DawnActions.reduce,
-      legal:  DawnActions.legal,
-      build:  DATA_VER,
-      /* THE TABLE CODE IS THE SEED. rng.js: both peers derive the same
-         seed from the same room code without exchanging it, so the game
-         is reproducible from the code alone. */
-      state:  host ? DawnActions.newMatch({seed: code, first: 0}) : null,
-      send:   m => table.send(m),
-      onState:st => { setG(st); setSel(null); },
-      onEvent:e => {
-        if(e.t==="refused")        setNote(e.reason);
-        else if(e.t==="desync")    setLink("repairing");
-        else if(e.t==="snapshot-applied" || e.t==="catchup-applied") setLink("connected");
-        else if(e.t==="refused-by-host") setNote("Refused: "+e.reason);
+    table.listen(f=>{
+      if(!f || typeof f !== "object") return;
+      if(f.ch === CH_LOBBY){
+        const r = DawnLobby.reduce(lobRef.current, f.m);
+        /* A duplicate is the write-once rule working, not an error —
+           only a real refusal is worth showing a player. */
+        if(r.error && !r.error.dup) setErr(r.error.why);
+        lobRef.current = r.state; setLob(r.state);
+      } else if(f.ch === CH_NET){
+        /* THE SESSION IS CREATED WHEN THE LOBBY READIES, AND THE GUEST'S
+           HELLO CAN BEAT IT. Both peers reach `ready` from the same
+           message, but one phone's React effect runs first — so the
+           guest's handshake can arrive before the host has a session to
+           answer it. Held and flushed rather than dropped, which is the
+           same fix room.js already makes one layer down. */
+        if(netRef.current) netRef.current.receive(f.m);
+        else netQ.current.push(f.m);
       }
     });
-    sess.current = s;
-    table.listen(m => s.receive(m));
-    if(!host) s.join(); else setG(s.state());
-    return () => { try { table.close(); } catch(_){} };
+    /* Say hello immediately. The card-data check has to settle before a
+       hero is chosen, because a skew means the two phones would resolve
+       the same deck list into different cards — silently, and
+       consistently enough that a state hash cannot describe it usefully. */
+    say(DawnLobby.hello(mySeat, DATA_VER));
+    return ()=>{ try{ table.close(); }catch(_){} };
   },[]);
 
-  if(!g) return (
-    <div className="tblwrap">
-      <div className="tblhead">Table {code}</div>
-      <div className="tblstat live"><span className="tbldot"></span>Dealing…</div>
+  const step = DawnLobby.stepOf(lob);
+
+  /* ---- ready: build the match, identically on both phones ------------ */
+  uE(()=>{
+    if(step !== "ready" || match) return;
+    const spec = DawnLobby.matchSpec(lob);
+    try {
+      const m = DawnBuild.buildMatch(spec, {
+        db,
+        heroes: Object.fromEntries(HEROES.map(h=>[h.k,h])),
+        decks:  Object.fromEntries(HEROES.map(h=>[h.k,PARSED[h.k]]))
+      });
+      setMatch({...m, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
+        heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
+    } catch(e){ setErr("Could not deal the match: " + (e.message||e)); }
+  },[step, match]);
+
+  const foeKey = lob.heroes[1-mySeat];
+  const foeH   = foeKey ? HEROES.find(h=>h.k===foeKey) : null;
+  const myKey  = lob.heroes[mySeat];
+  const myH    = myKey ? HEROES.find(h=>h.k===myKey) : null;
+  const waiting = DawnLobby.waitingOn(lob).indexOf(mySeat) < 0
+                  && DawnLobby.waitingOn(lob).length > 0;
+
+  const head = (
+    <div className="tblhead">Table {code}
+      <span className="tblseat">seat {mySeat} · {host ? "host" : "guest"}</span></div>
+  );
+
+  if(step === "fault") return (
+    <div className="tblwrap">{head}
+      <div className="tblerr">{lob.fault}</div>
+      <p className="mnote">Both phones must hold the same card data. Reload the
+        page on the older one — the database is cached under its version key,
+        so a reload re-fetches it.</p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
   );
 
-  const me = g.sides[mySeat], them = g.sides[1-mySeat];
-  const mine  = a => DawnActions.legal(g, a, mySeat) === null;
-  const fire  = a => { const why = sess.current.submit(a); setNote(why||null); };
-  const myPri = g.priority === mySeat;
-  const over  = g.over;
+  if(match) return <TableBoard match={match} mySeat={mySeat} host={host} code={code} db={db}
+    table={table} netRef={netRef} netQ={netQ} onExit={onExit}/>;
+
+  /* ---- the sideboard: the trainer's own loadout screen ---------------- */
+  if(step === "board" && myH){
+    if(lob.boards[mySeat]) return (
+      <div className="tblwrap">{head}
+        <div className="tblstat live"><span className="tbldot"></span>
+          Sideboard locked — waiting on {foeH ? foeH.n.split(",")[0] : "them"}…</div>
+        <button className="a" onClick={onExit}>Leave the table</button>
+      </div>
+    );
+    return <Loadout h={myH} db={db} netFoe={foeH} netOnPlay={lob.first === mySeat}
+      onBack={onExit}
+      onStart={cfg=>say(DawnLobby.sideboard(mySeat, cfg.gearIdx, cfg.cuts))}/>;
+  }
 
   return (
-    <div className="mboard">
-      <div className="mseat">
-        <span className="who">Opponent</span>
-        <span className="zn">hand {them.hand.length} · deck {them.deck.length} · gy {them.grave.length}</span>
-        <span className="hp">{them.hp}</span>
+    <div className="tblwrap">{head}
+
+      <div className="lobsteps">
+        {["hero","throw","board"].map(s=>(
+          <span key={s} className={"lobstep"+(s===step?" on":"")
+            +(DawnLobby.STEPS.indexOf(s) < DawnLobby.STEPS.indexOf(step)?" done":"")}>{s}</span>
+        ))}
       </div>
 
-      <div className="mstep">
-        <span>Turn {g.turn} · table {code}{link!=="connected" ? " · resyncing" : ""}</span>
-        <span className="sv">{g.phase} / {g.step}</span>
-      </div>
-
-      <div className={"mturn "+(over ? "theirs" : myPri ? "mine" : "theirs")}>
-        {over ? (over.winner===mySeat ? "You win" : "You lose")
-              : myPri ? "Your call" : "Waiting on them"}
-        {!over && g.chainOpen && g.chain.length ? " · link "+g.chain.length+" ("+g.chain[g.chain.length-1].power+" power)" : ""}
-      </div>
-
-      <div className="mfeed">
-        {(g.feed||[]).slice(-6).map((f,i)=><div key={i}>{f}</div>)}
-      </div>
-
-      <div className="mseat me">
-        <span className="who">You (seat {mySeat})</span>
-        <span className="zn">res {me.res} · ap {me.ap} · deck {me.deck.length} · gy {me.grave.length}</span>
-        <span className="hp">{me.hp}</span>
-      </div>
-
-      <div className="mhand">
-        {me.hand.map(c=>{
-          const blocking = (me.blockH||[]).indexOf(c.uid) >= 0;
-          return (
-            <button key={c.uid}
-              className={"mcard"+(sel===c.uid?" on":"")+(blocking?" blk":"")}
-              onClick={()=>setSel(sel===c.uid?null:c.uid)}>
-              <span className="nm">{c.name.replace("Blank ","#")}</span>
-              {c.power}⚔ {c.def}🛡 {c.pitch}◈
+      {/* ---- 1. the hero ---- */}
+      {step === "hero" && <>
+        <p className="note" style={{marginTop:0}}>
+          Choose your fighter. Neither of you sees the other's pick until both are in.
+        </p>
+        <div className="lobheroes">
+          {HEROES.map(x=>(
+            <button key={x.k} className={"lobhero"+(pick===x.k?" on":"")}
+              disabled={lob.heroes[mySeat]!=null}
+              onClick={()=>setPick(x.k)}>
+              <div className="lhport"><HeroArt h={x} db={db}/></div>
+              <span className="lhn">{x.n.split(",")[0]}</span>
+              <span className="lhc">{x.cls}</span>
             </button>
-          );
-        })}
-        {!me.hand.length && <span className="zn">hand empty</span>}
-      </div>
+          ))}
+        </div>
+        {lob.heroes[mySeat]==null
+          ? <button className="bigbtn" disabled={!pick}
+              onClick={()=>say(DawnLobby.hero(mySeat, pick))}>
+              {pick ? "Lock in "+HEROES.find(h=>h.k===pick).n.split(",")[0] : "Pick a hero"}
+            </button>
+          : <div className="tblstat live"><span className="tbldot"></span>
+              Locked. Waiting on the other seat…</div>}
+      </>}
 
-      <div className="macts">
-        <button className="a" disabled={!sel||!mine({t:"attack",uid:sel})} onClick={()=>fire({t:"attack",uid:sel})}>Attack</button>
-        <button className="a" disabled={!sel||!mine({t:"pitch",uid:sel})}  onClick={()=>fire({t:"pitch",uid:sel})}>Pitch</button>
-        <button className="a" disabled={!sel||!mine({t:"defend",uids:[sel]})} onClick={()=>fire({t:"defend",uids:[sel]})}>Defend</button>
-        <button className="a go" disabled={!mine({t:"pass"})}    onClick={()=>fire({t:"pass"})}>Pass</button>
-        <button className="a" disabled={!mine({t:"roll",sides:6})} onClick={()=>fire({t:"roll",sides:6})}>Roll d6</button>
-        <button className="a" disabled={!mine({t:"endTurn"})}    onClick={()=>fire({t:"endTurn"})}>End turn</button>
-      </div>
+      {/* ---- 2. the throw ---- */}
+      {step === "throw" && <TableThrow lob={lob} mySeat={mySeat} myH={myH} foeH={foeH}
+        onThrow={t=>say(DawnLobby.throwIt(mySeat, lob.round, t))}/>}
 
-      {note && <div className="tblerr">{note}</div>}
+      {/* ---- 3. the seating call ---- */}
+      {step === "seat" && <div className="lobseat">
+        <div className="rtitle">{lob.winner===mySeat ? "You won the throw" : "They won the throw"}</div>
+        {lob.winner===mySeat
+          ? <>
+              <p className="rsub">The winner does not go first — the winner <b>chooses</b>.<br/>
+                Going first buys initiative; going second keeps a card.</p>
+              <div className="rseatpick">
+                <button className="go" onClick={()=>say(DawnLobby.seating(mySeat,"first"))}>
+                  I go first<span className="sub">take the initiative</span></button>
+                <button onClick={()=>say(DawnLobby.seating(mySeat,"second"))}>
+                  They go first<span className="sub">keep the extra card</span></button>
+              </div>
+            </>
+          : <div className="tblstat live"><span className="tbldot"></span>
+              {(foeH?foeH.n.split(",")[0]:"They")} is deciding the seating…</div>}
+      </div>}
+
+      {step === "board" && !myH && <div className="tblstat">Waiting…</div>}
+
+      {err && <div className="tblerr">{err}</div>}
       <p className="mnote">
-        Blank decks — no rules text, no keywords. The turn structure, priority and
-        combat chain are the real ones (CR 7.0.1), driven by engine/priority.js on
-        both phones. State hash: <span className="mono">{sess.current ? sess.current.hash() : "—"}</span>
+        Table play runs <strong>two real hero decks</strong> through
+        engine/judge.js — the CR turn structure, priority, the combat chain and
+        printed costs. Card <em>text</em> does not resolve yet: the parser's
+        effects still live in the solo trainer and are the next thing to move.
       </p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
   );
 }
 
+/* The throw. Both seats commit before either reveals — cheap, and the
+   alternative is a screen that shows you the answer before it asks the
+   question. Ties replay rather than counting, which is rps.js's rule. */
+function TableThrow({lob, mySeat, myH, foeH, onThrow}){
+  const mine = lob.throws[mySeat], theirs = lob.throws[1-mySeat];
+  const both = mine != null && theirs != null;
+  const last = lob.rounds[lob.rounds.length-1] || null;
+  return (
+    <div className="rps">
+      <div className="rtitle">The Throw</div>
+      <p className="rsub">Winner decides who takes the first turn.<br/>
+        {lob.ties>0 ? <>Tied <b>{lob.ties}</b> — throw again.</> : "Both throws land at once."}</p>
+      <div className="rtable">
+        <div className="rseat">
+          <span className="rwho">You · {myH?myH.n.split(",")[0]:"—"}</span>
+          <span className="rglyph">{mine ? (both?RPS_GLYPH[mine]:"🔒") : "✊"}</span>
+          <span className="rname">{mine ? (both?mine:"locked") : "choose"}</span>
+        </div>
+        <span className="rvs">VS</span>
+        <div className="rseat">
+          <span className="rwho">{foeH?foeH.n.split(",")[0]:"Them"}</span>
+          <span className="rglyph">{theirs ? (both?RPS_GLYPH[theirs]:"🔒") : "✊"}</span>
+          <span className="rname">{theirs ? (both?theirs:"locked") : "shaking"}</span>
+        </div>
+      </div>
+      <div className="rcall">
+        {mine==null && <span>Pick your throw.</span>}
+        {mine!=null && !both && <span>Locked in. Waiting on them…</span>}
+        {last && <span>{RPS_GLYPH[last[0]]} vs {RPS_GLYPH[last[1]]}</span>}
+      </div>
+      {mine==null && <div className="rthrows">
+        {RPS_THROWS.map(t=>(
+          <button key={t} onClick={()=>onThrow(t)}>
+            <span className="g">{RPS_GLYPH[t]}</span><span className="l">{t}</span>
+          </button>))}
+      </div>}
+    </div>
+  );
+}
+
+/* ============================================================
+   THE BOARD — two hero decks, one game state, two phones.
+
+   Every control is gated by `DawnJudge.legal`, which is the SAME
+   predicate the sequencer applies on the other phone: a button that is
+   live here is an action that will be accepted there. That is what makes
+   the hand-dim honest, and it is the failure mode this project cares
+   most about — a card that looks playable and does nothing when tapped.
+   There is one copy of the test and neither side hand-rolls it.
+   ============================================================ */
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}){
+  const [g,setG]     = uS(match.g);
+  const [sel,setSel] = uS(null);          /* {uid, from} */
+  const [tgt,setTgt] = uS(null);          /* a chosen attack-target */
+  const [note,setNote] = uS(null);
+  const [link,setLink] = uS("connected");
+  const sess = uR(null);
+
+  /* THE CATALOG IS NOT AN OPTIMISATION HERE, IT IS WHAT MAKES THE
+     HANDSHAKE FIT DOWN THE PIPE. Without it the opening snapshot ships
+     every card's full definition and measured **97KB**, which a WebRTC
+     data channel drops on the floor without an error — the guest sat in
+     `handshaking` forever, holding a board that looked perfectly correct
+     because it had built the same game itself. wire.js already had the
+     answer: with a catalog the dictionary ships bare `name|pitch` keys
+     and the payload falls by roughly 10x.
+
+     Built from the MATCH's own cards rather than the whole 807-card
+     database — every card either seat can hold is in one of these four
+     zones, and a card the catalog misses still ships its own definition
+     (wire.js's per-entry fallback), so a miss costs bytes and never
+     correctness. Both peers build identical builds from the lobby spec,
+     so both derive an identical catalog; `catalogHash` rides in the
+     payload and `decode` refuses a mismatch rather than rehydrating one
+     phone's cards into another's. */
+  const catalog = uM(()=>DawnWire.makeCatalog(
+    match.builds.flatMap(b=>[...(b.deck||[]), ...(b.gear||[]),
+                             ...(b.startItem?[b.startItem.card]:[])])),[match]);
+
+  uE(()=>{
+    const s = DawnNet.createSession({
+      seat: mySeat, host,
+      reduce: DawnJudge.reduce,
+      legal:  DawnJudge.legal,
+      catalog,
+      /* Pins what "the same game" means at the handshake. The lobby has
+         already checked it, so this is the belt to that braces. */
+      build:  DATA_VER,
+      state:  host ? match.g : null,
+      send:   m => table.send({ch:CH_NET, m}),
+      onState: st => { setG(st); setSel(null); setTgt(null); setNote(null); },
+      onEvent: e => {
+        if(e.t==="refused")             setNote(e.reason);
+        else if(e.t==="desync")         setLink("repairing");
+        else if(e.t==="snapshot-applied"||e.t==="catchup-applied") setLink("connected");
+        else if(e.t==="refused-by-host")setNote("Refused: "+e.reason);
+        else if(e.t==="snapshot-failed")setNote("The other phone sent a game this build cannot read.");
+      }
+    });
+    /* A HANDSHAKE THAT NEVER COMPLETES MUST NOT LOOK LIKE A QUIET TABLE.
+       When the 97KB snapshot was being dropped, every visible thing was
+       right — the board was dealt, the feed read correctly, it simply
+       said "waiting on them" forever, because the guest had built the
+       same opening itself and had nothing to compare against. The status
+       is the only thing that knew, so it goes on the screen. */
+    const watch = setInterval(()=>{
+      const st = s.status();
+      setLink(st === "ready" ? l => l==="repairing" ? l : "connected" : st);
+    }, 1200);
+    sess.current = s; netRef.current = s;
+    /* THE INTERNAL TESTING HOOK. Same reasoning as JUDGE!! in the
+       trainer: the expensive part of a two-phone bug is never noticing
+       it, it is reconstructing what each side thought was true. One
+       console read on either phone gives the session's status, sequence,
+       hash and counters — and a hash that differs across two phones at
+       the same `seq` is a desync, stated in one line. */
+    window.__dawnTable = {session: s, seat: mySeat, host, code,
+      report: () => ({seat: mySeat, host, status: s.status(), seq: s.seq(),
+                      hash: s.hash(), stats: s.stats(),
+                      phase: (s.state()||{}).phase, step: (s.state()||{}).step,
+                      priority: (s.state()||{}).priority})};
+    /* Anything that arrived before the session existed. */
+    const q = netQ.current; netQ.current = [];
+    q.forEach(m => s.receive(m));
+    if(!host) s.join();
+    return ()=>{ clearInterval(watch); netRef.current = null; };
+  },[]);
+
+  const me = g.sides[mySeat], them = g.sides[1-mySeat];
+  const mine = a => DawnJudge.legal(g, a, mySeat) === null;
+  const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
+  const over = g.over;
+  const pend = g.pending && g.pending.seat === mySeat ? g.pending : null;
+  const theirPend = g.pending && g.pending.seat !== mySeat;
+  const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
+
+  /* CR 1.4.5 — with an ally in the arena, declaring an attack is a
+     choice and it is mandatory. `targets` is the engine's list; with one
+     candidate the picker does not appear, which is every game until
+     somebody actually lands an ally. */
+  const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
+  const needTarget = targets.length > 1;
+  const playAct = (c, from) => {
+    const a = {t:"play", uid:c.uid, from};
+    if(needTarget && DawnParser.isAttack(c)) a.target = tgt || targets[0];
+    return a;
+  };
+
+  const zone = (label, n) => <span className="mz"><b>{n}</b>{label}</span>;
+
+  return (
+    <div className="mboard">
+
+      {/* ---- across the table ---- */}
+      <div className="mseat">
+        <span className="who">{them.name}</span>
+        <span className="zn">{zone("hand",them.hand.length)}{zone("deck",them.deck.length)}
+          {zone("gy",them.grave.length)}{zone("pitch",(them.pitch||[]).length)}</span>
+        <span className="hp">{them.hp}</span>
+      </div>
+      <div className="mgear">
+        {them.gear.map(p=>(
+          <span key={p.uid} className={"mpiece"+((them.blockG||[]).indexOf(p.uid)>=0?" blk":"")
+            +(p.destroyed?" dead":"")}>{p.name}<b>{DawnGame.gearDef(p)}</b></span>))}
+        {(them.board||[]).map(b=>(
+          <span key={b.uid} className="mpiece arena">{b.card.name}
+            {b.life!=null && <b>{b.life}</b>}</span>))}
+      </div>
+
+      {/* ---- the machine ---- */}
+      <div className="mstep">
+        <span>Turn {g.turn} · table {code}</span>
+        <span className="sv">{link!=="connected"
+          ? <em className="mlink">{link}</em>
+          : g.phase+" / "+g.step}</span>
+      </div>
+
+      <div className={"mturn "+(over ? "theirs" : (g.priority===mySeat || myArsStep) ? "mine" : "theirs")}>
+        {over ? (over.winner===mySeat ? "You win" : "You lose")
+          : pend ? "Pitch, or cancel"
+          : theirPend ? "They are paying…"
+          : myArsStep ? "Your arsenal — set a card, or skip"
+          : g.priority===mySeat ? "Your call"
+          : DawnPriority.canDeclareDefenders(g, mySeat) ? "Declare your defenders"
+          : "Waiting on them"}
+      </div>
+
+      {/* ---- the chain ---- */}
+      {g.chainOpen && g.pend && <div className="mchain">
+        <span className="cl">LINK {g.chain.length}</span>
+        <span className="cn">{g.pend.name}</span>
+        <span className="cp">{g.pend.total}⚔</span>
+        {g.pend.target && g.pend.target.kind!=="hero" && <span className="ct">→ ally</span>}
+      </div>}
+
+      <div className="mfeed">
+        {(g.feed||[]).slice(-7).map((f,i)=><div key={i}>{f}</div>)}
+      </div>
+
+      {/* ---- my seat ---- */}
+      <div className="mseat me">
+        <span className="who">{me.name}</span>
+        <span className="zn">{zone("res",me.res)}{zone("ap",me.ap)}
+          {zone("deck",me.deck.length)}{zone("gy",me.grave.length)}</span>
+        <span className="hp">{me.hp}</span>
+      </div>
+
+      {/* ---- my iron: swing it, or raise it ---- */}
+      <div className="mgear">
+        {me.gear.map(p=>{
+          const on = (me.blockG||[]).indexOf(p.uid)>=0;
+          const can = mine({t:"activate",uid:p.uid}) || mine({t:"defend",uid:p.uid});
+          return (
+            <button key={p.uid} className={"mpiece"+(on?" blk":"")+(p.destroyed?" dead":"")
+              +(sel&&sel.uid===p.uid?" on":"")+(can?"":" dim")}
+              onClick={()=>setSel(sel&&sel.uid===p.uid?null:{uid:p.uid,from:"gear"})}>
+              {p.name}<b>{DawnGame.gearDef(p)}</b></button>);
+        })}
+        {me.arsenal && <button className={"mpiece ars"+(sel&&sel.uid===me.arsenal.uid?" on":"")}
+          onClick={()=>setSel(sel&&sel.uid===me.arsenal.uid?null:{uid:me.arsenal.uid,from:"arsenal"})}>
+          arsenal: {me.arsenal.name}</button>}
+        {(me.board||[]).map(b=>(
+          <span key={b.uid} className="mpiece arena">{b.card.name}
+            {b.life!=null && <b>{b.life}</b>}</span>))}
+      </div>
+
+      {/* ---- the payment ---- */}
+      {pend && <div className="mpay">
+        <div className="payhead">{pend.card.name} needs <b>{pend.need}</b> ·
+          you hold <b>{me.res}</b> · pitched <b>{DawnJudge.paySum(me)}</b></div>
+        <div className="mhand">
+          {me.hand.map(c=>{
+            const on = (me.paySel||[]).indexOf(c.uid)>=0;
+            return (
+              <button key={c.uid} className={"mcard pitchable"+(on?" on":"")}
+                disabled={!mine({t:"paySel",uid:c.uid})}
+                onClick={()=>fire({t:"paySel",uid:c.uid})}>
+                <CardFrame card={c} className="sm"/>
+                <span className="pv">+{c.pitch}</span>
+              </button>);
+          })}
+        </div>
+        <div className="macts">
+          <button className="a go" disabled={!mine({t:"payConfirm"})}
+            onClick={()=>fire({t:"payConfirm"})}>Pay</button>
+          <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
+        </div>
+      </div>}
+
+      {/* ---- my hand ---- */}
+      {!pend && <div className="mhand">
+        {me.hand.map(c=>{
+          const on = sel && sel.uid===c.uid;
+          const blocking = (me.blockH||[]).indexOf(c.uid)>=0;
+          const live = mine(playAct(c,"hand")) || mine({t:"defend",uid:c.uid})
+            || (myArsStep && mine({t:"arsenal",uid:c.uid}));
+          return (
+            <button key={c.uid} className={"mcard"+(on?" on":"")+(blocking?" blk":"")+(live?"":" dim")}
+              onClick={()=>setSel(on?null:{uid:c.uid,from:"hand"})}>
+              <CardFrame card={c} className="sm"/>
+            </button>);
+        })}
+        {!me.hand.length && <span className="zn">hand empty</span>}
+      </div>}
+
+      {/* ---- the attack-target, when there is a choice to make ---- */}
+      {!pend && needTarget && sel && sel.from==="hand" && <div className="mtgt">
+        <span>Attack:</span>
+        {targets.map((t,i)=>(
+          <button key={i} className={"a"+((tgt||targets[0])===t?" go":"")}
+            onClick={()=>setTgt(t)}>{t.kind==="hero"?them.name:"ally"}</button>))}
+      </div>}
+
+      {/* ---- what I can do with what I picked ---- */}
+      {!pend && <div className="macts">
+        {(() => {
+          const c = sel && (sel.from==="hand" ? me.hand.find(x=>x.uid===sel.uid)
+            : sel.from==="arsenal" ? me.arsenal
+            : me.gear.find(x=>x.uid===sel.uid));
+          const play = c && sel.from!=="gear" ? playAct(c, sel.from) : null;
+          return <>
+            <button className="a" disabled={!play||!mine(play)} onClick={()=>fire(play)}>Play</button>
+            <button className="a" disabled={!sel||!mine({t:"activate",uid:sel.uid})}
+              onClick={()=>fire({t:"activate",uid:sel.uid})}>Swing</button>
+            <button className="a" disabled={!sel||!mine({t:"defend",uid:sel.uid})}
+              onClick={()=>fire({t:"defend",uid:sel.uid})}>Defend</button>
+          </>;
+        })()}
+        {myArsStep
+          ? <>
+              <button className="a" disabled={!sel||!mine({t:"arsenal",uid:sel.uid})}
+                onClick={()=>fire({t:"arsenal",uid:sel.uid})}>Set in arsenal</button>
+              <button className="a go" onClick={()=>fire({t:"arsenal",uid:null})}>Leave it empty</button>
+            </>
+          : <>
+              <button className="a go" disabled={!mine({t:"pass"})}
+                onClick={()=>fire({t:"pass"})}>Pass</button>
+              {/* CR 4.3.4 — ending a turn is a PASS carrying intent, so it
+                  takes two actions between the seats, exactly as it does at
+                  a table. The opponent's last window is part of the rule. */}
+              <button className="a" disabled={!mine({t:"endTurn"})}
+                onClick={()=>fire({t:"endTurn"})}>End turn</button>
+            </>}
+      </div>}
+
+      {note && <div className="tblerr">{note}</div>}
+
+      {/* The hash below is taken off the STATE, not off the session: the
+          session ref is still null on the first render, so reading it
+          there showed a dash exactly when the opening board is what you
+          most want to compare across two phones. It is the same function
+          net.js fingerprints with, so the two numbers are one number.
+
+          Kept out of the paragraph deliberately — a JSX expression
+          container between two lines of text suppresses the whitespace
+          that would otherwise join them, and this comment sitting
+          mid-sentence rendered "solotrainer" on the phone. */}
+      {over && <div className="mover">
+        <b>{over.winner===mySeat ? "You win" : "You lose"}</b>
+        <span>{g.sides[over.winner].name} takes it on {over.how}.</span>
+      </div>}
+
+      <p className="mnote">
+        Two real decks, real costs, the real combat chain. <strong>Card text does
+        not resolve yet</strong> — the parser's effects still live in the solo
+        trainer. Seat {mySeat} · hash <span className="mono">{DawnWire.hash(g).slice(0,8)}</span>
+      </p>
+      <div className="macts">
+        <button className="a" disabled={!!over} onClick={()=>fire({t:"concede"})}>Concede</button>
+        <button className="a" onClick={onExit}>Leave the table</button>
+      </div>
+    </div>
+  );
+}
 function App(){
   const [db,reload] = useCardDB();
   const [tab,setTab]=uS("heroes");
@@ -4983,8 +5522,19 @@ function App(){
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
       {table==="find" && <TableScreen onBack={()=>setTable(null)} onSeated={s=>setTable(s)}/>}
-      {table && table!=="find" && <TableMatch table={table.table} host={table.host} code={table.code}
-        onExit={()=>setTable(null)}/>}
+      {/* The card database has to be READY before a table is dealt: both
+          phones build the same two decks out of it, so a client that is
+          still fetching would deal from a half-built map. The lobby's
+          DATA_VER check catches a version skew; this catches a client
+          that has not finished loading its own. */}
+      {table && table!=="find" && (db.status==="ready"
+        ? <TableRoom table={table.table} host={table.host} code={table.code} db={db}
+            onExit={()=>setTable(null)}/>
+        : <div className="tblwrap">
+            <div className="tblhead">Table {table.code}</div>
+            <div className="tblstat live"><span className="tbldot"></span>Forging the card pool…</div>
+            <button className="a" onClick={()=>setTable(null)}>Leave the table</button>
+          </div>)}
       {/* THE MATCH SEED is stamped once, here, when the match begins — and
           then everything random in the match derives from it: the pregame
           throw, both opening shuffles, the d6, intimidate, the dummy's

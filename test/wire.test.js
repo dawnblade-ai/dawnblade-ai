@@ -315,7 +315,13 @@ test("every engine module is loaded by index.html, or declared headless", () => 
      both sets into one bare namespace is the same-name-different-meaning
      trap that KNOWN_COLLISIONS exists to police. It comes off this list
      with judge.js, and the names get resolved then, not silently now. */
-  const HEADLESS = ["judge", "types", "sparring"];
+  /* judge.js and types.js came off this list in v2.49, when the table
+     screen stopped playing actions.js's blank decks and started playing
+     two real hero decks. sparring.js stays headless: nothing on the page
+     calls it, and loading a policy that proposes actions next to a
+     trainer that has its own dummy is exactly the second-quiet-engine
+     hazard this list exists to name. */
+  const HEADLESS = ["sparring"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

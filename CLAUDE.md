@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.48
+**Current version:** v2.49
 
 ---
 
@@ -103,7 +103,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 713 drills:
+This is `node --test "test/*.test.js"` — currently 769 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -440,10 +440,11 @@ roadmap was being written.
 
 | module | what | status |
 |---|---|---|
-| `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, the equipment slot rules | **live** — loaded, bridged, in `MODULES` |
-| `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **headless** — in `wire.test.js`'s `HEADLESS` list |
-| `engine/types.js` | what a card IS, off its structured type array | **headless** |
-| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** |
+| `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, the equipment slot rules, and `buildMatch` (both seats from one spec, v2.49) | **live** — loaded, bridged, in `MODULES` |
+| `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **live at the TABLE only** (v2.49) — loaded, module-qualified, in `MODULES` |
+| `engine/types.js` | what a card IS, off its structured type array | **live**, loaded but deliberately not bridged |
+| `engine/lobby.js` | the pre-game negotiation: hero, throw, sideboard (v2.49) | **live** — module-qualified, in `MODULES` |
+| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** — the only one left |
 
 ### ONE COMBAT PATH, NOT TWO — the thing this replaces
 
@@ -578,12 +579,13 @@ parser.isWeapon(c)      is this a weapon with a printed power
 means something changed that nobody decided. Renaming parser's belongs
 with the Phase 3 pass over equipment abilities.
 
-**`types.js` is NOT bridged**, and that is deliberate: its natural names
-sit beside parser.js's and game.js's, and two pairs mean different things
-(`game.isAlly` takes a board *entry*, not a card). Bridging both sets
-into one bare namespace is the same-name-different-meaning trap
-`KNOWN_COLLISIONS` polices. It is headless with `judge.js` and the names
-get resolved when both are wired, not silently now.
+**`types.js` is LOADED but NOT bridged** (v2.49), and the second half is
+deliberate: its natural names sit beside parser.js's and game.js's, and
+two pairs mean different things (`game.isAlly` takes a board *entry*, not
+a card). Bridging both sets into one bare namespace is the
+same-name-different-meaning trap `KNOWN_COLLISIONS` polices. So it is
+reached as `DawnTypes.*` and `judge.js` takes it as a factory argument —
+the same treatment `DawnSides` and `DawnPriority` already get.
 
 ### Two limits on a weapon swing, and they are different rules
 
@@ -639,21 +641,33 @@ The trainer's eight `mode` strings conflate them. Here:
    into a graveyard to prove the judge names it. **When you add a zone,
    check the census still sees it.**
 
-### It is HEADLESS on purpose — do not load it yet
+### It was HEADLESS on purpose. It is now LOADED — for the table only (v2.49)
 
 `judge.js` models the turn structure, the combat chain and the costs. It
-does **not** yet model card EFFECTS: `runOps`/`execute`/`resolveStack`
-are still in the trainer. Loading it now would put a second, quieter
-rules engine on the page beside the real one.
+still does **not** model card EFFECTS: `runOps`/`execute`/`resolveStack`
+are in the trainer. The original rule was that loading it would put a
+second, quieter rules engine on the page beside the real one.
 
-That limit is load-bearing and it is the same discipline that kept
-`actions.js` free of card text: **a control-flow bug must never be
-confusable with a card being read wrong.** The orchestration is the part
-that did not exist; the card semantics already work and 628 drills cover
-them.
+**That reasoning still stands, and it is exactly why the two never
+meet:**
 
-`test/wire.test.js`'s `HEADLESS` list is the ledger. Coming off it must
-be the same edit that adds `judge` to `test/sync.test.js`'s `MODULES`.
+```
+SOLO  play  ->  Battle     (every card effect, the regression harness)
+TABLE play  ->  judge.js   (the second seat, no card text)
+```
+
+Nothing routes between them. The trainer is untouched by v2.49 and keeps
+the `[3,4,5]` dummy; the table gets the one thing `Battle` cannot give,
+which is a pure reducer two seats can both drive. It is the same
+discipline that kept `actions.js` free of card text: **a control-flow bug
+must never be confusable with a card being read wrong** — so keep the
+split until the effects port makes one copy of the semantics that both
+callers share.
+
+`test/wire.test.js`'s `HEADLESS` list is the ledger and is now
+`["sparring"]`. Coming off it must be the same edit that adds the module
+to `test/sync.test.js`'s `MODULES` — `judge`, `types` and `lobby` moved
+that way.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 
@@ -1668,8 +1682,24 @@ a drill counts cards before and after.
 
 **Wired and played across two clients over the real public relay.** The
 sync layer is no longer headless: all four modules are in index.html's
-script tags and in `test/sync.test.js`'s `MODULES`, and `wire.test.js`'s
-`HEADLESS` list is now empty.
+script tags and in `test/sync.test.js`'s `MODULES`. As of v2.49
+`judge.js`, `types.js` and `lobby.js` join them, so `wire.test.js`'s
+`HEADLESS` list is **`["sparring"]`** — the policy stays off the page
+because nothing calls it, and a thing that proposes actions sitting next
+to a trainer with its own dummy is the second-quiet-engine hazard that
+list exists to name.
+
+**ONE CHANNEL, TWO PROTOCOLS.** The lobby and `net.js` both name a
+message `hello`, so every frame is tagged `{ch:"lobby"|"net", m}` and
+demuxed in `TableRoom`. An undemuxed channel hands each module the
+other's handshake, and the failure reads as a transport bug rather than a
+naming one.
+
+**The net session cannot exist until the lobby readies, and the guest's
+HELLO can beat it.** Both peers reach `ready` off the same message, but
+one phone's React effect runs first — so `TableRoom` holds net frames in
+a queue and `TableBoard` flushes them when it creates the session. Same
+fix `room.js` already makes one layer down for its own sink.
 
 `room.js` is **the only file in the engine that knows a network exists.**
 It uses **PeerJS**, not Trystero, for one reason: PeerJS ships a UMD build
@@ -1712,25 +1742,117 @@ client in" is the same-name-different-meaning trap — `test/sync.test.js`
 caught it on the first run of this build, exactly as it caught `tapTwice`'s
 `act` in v2.25.
 
-### What the table CANNOT do yet, and why
+### THE LOBBY — `engine/lobby.js` and the four agreements (v2.49)
 
-**Two hero decks cannot cross the wire.** This is not a network gap, it is
-a rules gap, and it is worth stating precisely because the screen looks
-finished:
+Between "two phones have a channel" and "two phones have a game" there
+are four things to agree on, and until v2.49 there were none: the screen
+connected and dropped straight into `actions.js`'s blank decks.
 
-`foeSwing` still fabricates the opponent's attack as
-`[3,4,5][(turn-1)%3]` — **seat 1 emits a number, not a played card.** It
-has no action phase, no hand it plays from, no costs. So there is nothing
-for a second human to *occupy*. `Battle` is also 22 `setG` closures rather
-than a `reduce(state, action)`, so there is no reducer for `net.js` to
-drive even once seat 1 can act.
+```
+connect -> hero -> throw -> sideboard -> game
+```
 
-That is roadmap **Phase A step 4** (give seat 1 an action phase) plus
-**Phase B step 6** (extract `judge.js`), and it is the same work whether
-the opponent is across the table or across the internet. Until then the
-table runs `engine/actions.js`'s blank decks, which is a real two-player
-game of the CR turn structure and priority — just not of Flesh and Blood
-cards.
+**IT IS NOT `net.js`, AND THE REASON IS THE WHOLE DESIGN.** `net.js`
+needs a sequencer because CR 7.3.2 makes declaring defenders free and
+simultaneous, so in the defend step both seats can legally act at the
+same instant and somebody must assign an order. **Nothing in a lobby has
+that problem.** Every message writes only its own seat's slot, and every
+slot is **WRITE-ONCE** — so the reducer is a monotone accumulator: the
+writes commute, a replay is refused, and two peers applying the same
+messages in different orders land in the same state. No sequencer, no
+journal, no sequence number. `test/lobby.test.js` enumerates all 16
+interleavings and asserts one outcome rather than trusting the argument.
+
+**Write-once is load-bearing, not fussiness.** Make a hero pick
+overwritable and this diverges: seat 0 changes its mind at the same
+moment seat 1 confirms, so seat 0 applies the change locally while it is
+still choosing and seat 1 refuses it for arriving after the step closed.
+Two phones, two heroes, **no error anywhere**. The UI holds the
+unconfirmed pick in local state and sends nothing until a seat commits.
+
+**The step is DERIVED (`stepOf`), never stored.** A stored step is a
+transition, a transition has an order, and an order is the thing this
+module is built not to need.
+
+**The card-data check belongs HERE, before a hero is chosen.** `net.js`
+compares builds at its handshake too, but by then both peers have already
+dealt two decks from the same spec — and if the databases differ those
+decks differ *silently and consistently*, which is the one failure a
+state hash cannot describe usefully. A skew faults the lobby, identically
+on both phones.
+
+It **reads no card text and resolves no card**, drilled — same discipline
+that keeps `actions.js` free of the parser and `sparring.js` free of
+`fxParse`. A negotiation bug and a card being read wrong must never be
+confusable. The caller builds the decks.
+
+### `build.buildMatch` — two seats, one spec, two phones
+
+Nothing about a card crosses the wire. The lobby ships two hero keys, two
+loadouts, a seating call and the table code; each peer runs `build.js`
+over its **own** database and arrives at an identical state. Three things
+make that deterministic, and each is a real way to break it:
+
+1. **the stream is SEAT-SPECIFIC** (`buildSeed(code, i)`). One stream for
+   both seats is reproducible and still wrong — it makes seat 1's deck
+   the continuation of seat 0's, so a change to seat 0's cuts reshuffles
+   seat 1.
+2. **the uid counter is SHARED and threaded in seat order**, so no card
+   in the match repeats a uid. A repeat is `CARD-IN-TWO-ZONES` wearing a
+   disguise — the census works by uid. The cost is that a cut on one seat
+   renumbers the other's; that is invisible to both peers and pinned in
+   both directions so neither half can be "fixed" without a decision.
+3. **the seats are built in INDEX order, never the local client's.** A
+   build order derived from who is hosting produces two different games
+   from one spec, visible only as a turn-one hash mismatch. Drilled by
+   reading the source for `host`/`mySeat`.
+
+### THE SNAPSHOT HAS TO FIT DOWN THE PIPE (v2.49)
+
+**The bug no drill in this project could see, found by opening two
+browsers.** The opening snapshot measured **97KB**; a WebRTC data channel
+drops a message that size **with no error at either end**; and the guest
+then sat in `handshaking` forever holding a board that looked perfectly
+correct — because it had built the same opening itself from the lobby
+spec. All 765 drills passed. "Correct but too big to send" is not a shape
+any of them ask about.
+
+| what was wrong | cost |
+|---|---|
+| `newMatch` retained the build's `deck`/`gear` — **construction inputs**, already dealt into `sides`, so the same 43 cards were in the game twice | 62KB of 67KB |
+| the session was given no **catalog**, so every card shipped its full definition rather than a bare `name\|pitch` key | the rest |
+
+Worst case over all 225 matchups is now **13.7KB**, and
+`test/table.test.js` pins a **16KB budget**. What a build is kept *for*
+is the printed passives a rules site reads through `bAct`; those stay,
+and a drill asserts they survived the strip.
+
+**A handshake that stalls now says so on screen.** The failure was
+invisible precisely because every visible thing was right, so the
+session's status is polled onto the board and `window.__dawnTable.report()`
+gives status, seq, hash and counters on either phone — the same reasoning
+as JUDGE!! in the trainer.
+
+### What the table does NOT do yet, and why
+
+**CARD TEXT DOES NOT RESOLVE.** Worth stating plainly because the screen
+looks finished:
+
+| real | not real |
+|---|---|
+| two hero decks off the actual database, printed life and intellect, the CR turn structure, priority, the combat chain, costs paid by pitching on demand, defenders from hand and iron, printed power against printed defence, the ordered end phase | `runOps` / `execute` / `resolveStack` — the parser's card semantics, still closures inside `Battle` |
+
+That is `judge.js`'s own stated limit, not a new one. **SOLO PLAY IS
+`Battle` AND TABLE PLAY IS `judge.js`, and nothing routes between them** —
+the trainer keeps every card effect and stays the regression harness.
+That separation is why loading `judge.js` does not violate the Phase 1
+rule against a second quiet rules engine: the two never meet. They
+converge when those three functions become a shared `engine/effects.js`
+both callers use, which is the next pass and the last big one.
+
+`foeSwing`'s `[3,4,5][(turn-1)%3]` escalation still drives the **solo**
+dummy. It is untouched here and is retired by step 3 of the remaining
+order, together with the rest of `Battle`'s combat closures.
 
 ### Known limitation, stated honestly
 

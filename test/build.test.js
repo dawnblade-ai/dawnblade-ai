@@ -242,3 +242,127 @@ test("a quiver will not go on without a bow", {skip}, () => {
   const q = list.find(x => x.s.z === "qvr");
   assert.deepEqual(B.applyPick(list, [], q.i), [], "a quiver went on with no bow equipped");
 });
+
+/* ============================================================
+   buildMatch — TWO SEATS, ONE SPEC, TWO PHONES (Phase 2)
+
+   The lobby ships four small values (two hero keys, two loadouts, a
+   seating call, the table code) and each peer builds the decks itself.
+   That only works if the build is a pure function of the spec, and "it
+   only shows up as a state-hash mismatch on turn one" is exactly the
+   silent desync ROADMAP-MULTIPLAYER.md calls miserable to debug after
+   the fact. So determinism is drilled head-on rather than inferred from
+   the seeded shuffle underneath it.
+   ============================================================ */
+
+const mopts = () => ({db: DB(),
+  heroes: Object.fromEntries(heroes().map(h => [h.k, h])),
+  decks:  Object.fromEntries(heroes().map(h => [h.k, deckOf(h)]))});
+
+/* A real spec, with each hero on its own legal default loadout — an
+   empty gearIdx would build a match nobody could have sat down to. */
+const spec = (over) => {
+  const o = mopts();
+  const keys = (over && over.heroes) || ["kayo", "dorinthea"];
+  return {heroes: keys, first: 0, seed: "K7QM",
+          boards: keys.map(k => ({gearIdx: B.defaultPicks(slotsOf(o.heroes[k])), cuts: {}})),
+          ...over};
+};
+
+test("TWO PEERS BUILD THE SAME MATCH from the same spec", {skip}, () => {
+  const s = spec();
+  const a = B.buildMatch(s, mopts());
+  const b = B.buildMatch(s, mopts());
+  assert.equal(JSON.stringify(a.builds), JSON.stringify(b.builds),
+    "two peers built different decks from one spec — this is the silent desync, at turn zero");
+  assert.deepEqual(a.names, b.names);
+  assert.equal(a.first, b.first);
+  assert.ok(a.builds[0].deck.length > 30, "the build drove almost nothing");
+});
+
+test("a different table code deals a different game", {skip}, () => {
+  const a = B.buildMatch(spec({seed: "K7QM"}), mopts());
+  const b = B.buildMatch(spec({seed: "P44R"}), mopts());
+  assert.notEqual(a.builds[0].deck.map(c => c.name).join("|"),
+                  b.builds[0].deck.map(c => c.name).join("|"),
+                  "the table code is the match seed — two codes must not deal one deck");
+});
+
+/* THE STREAM IS SEAT-SPECIFIC. One stream for both seats is reproducible
+   and still wrong: it makes seat 1's deck the continuation of seat 0's. */
+test("each seat draws from its OWN sub-stream", {skip}, () => {
+  assert.notEqual(B.buildSeed("K7QM", 0), B.buildSeed("K7QM", 1));
+  const m = B.buildMatch(spec({heroes: ["kayo", "kayo"]}), mopts());
+  assert.notEqual(m.builds[0].deck.map(c => c.name).join("|"),
+                  m.builds[1].deck.map(c => c.name).join("|"),
+                  "the mirror match dealt both seats the identical shuffle");
+});
+
+/* THE SHUFFLES ARE INDEPENDENT; THE UID NUMBERING IS DELIBERATELY NOT.
+   Cutting a card from seat 0 leaves seat 1's deck in the same ORDER —
+   that is what the separate streams buy — but shifts every uid in it,
+   because one counter is threaded through both seats so that no card in
+   the match can repeat a uid. That trade is worth making: a renumbering
+   is invisible to both peers (they compute it identically), whereas a
+   repeated uid is a card the census cannot see. Pinned in both
+   directions so neither half can be "fixed" without a decision. */
+test("a cut leaves the other seat's shuffle alone, and renumbers it", {skip}, () => {
+  const base = spec();
+  const a = B.buildMatch(base, mopts());
+  const b = B.buildMatch({...base, boards: [{...base.boards[0], cuts: {0: 1}}, base.boards[1]]}, mopts());
+  assert.equal(b.builds[0].deck.length, a.builds[0].deck.length - 1, "the cut did not land");
+  assert.equal(a.builds[1].deck.map(c => c.name).join("|"),
+               b.builds[1].deck.map(c => c.name).join("|"),
+               "seat 0 sideboarded and seat 1's SHUFFLE moved — the streams are entangled");
+  assert.notEqual(a.builds[1].deck.map(c => c.uid).join("|"),
+                  b.builds[1].deck.map(c => c.uid).join("|"),
+                  "the uid counter is shared on purpose; if this stops shifting, it was made per-seat "
+                  + "and the no-repeat drill below is now the only thing holding uniqueness");
+});
+
+/* A REPEATED UID IS CARD-IN-TWO-ZONES WEARING A DISGUISE. invariants.js
+   censuses by uid, so two cards sharing one make a real card invisible
+   and a phantom appear — which is how the runechant collision surfaced
+   in live play in v2.23. Here the two seats are the new way to collide. */
+test("no uid repeats across BOTH seats' decks, gear and start items", {skip}, () => {
+  const m = B.buildMatch(spec(), mopts());
+  const uids = [];
+  m.builds.forEach(b => {
+    (b.deck || []).forEach(c => uids.push(c.uid));
+    (b.gear || []).forEach(c => uids.push(c.uid));
+    if(b.startItem) uids.push(b.startItem.uid);
+  });
+  assert.ok(uids.length > 100, "the census drove almost nothing");
+  assert.equal(new Set(uids).size, uids.length,
+    "a uid repeats across the two seats — invariants.js would call it CARD-IN-TWO-ZONES");
+});
+
+test("every hero can be seated against every other", {skip}, () => {
+  const o = mopts();
+  const keys = heroes().map(h => h.k);
+  for(const k of keys){
+    const m = B.buildMatch(spec({heroes: [k, "kayo"]}), o);
+    assert.ok(m.builds[0].deck.length > 30, k + " dealt no deck");
+    assert.ok(m.builds[0].hp > 0 && m.builds[0].int > 0, k + " is seated with no life or intellect");
+    assert.ok(m.builds[0].deck.length > m.builds[0].int, k + " cannot draw an opening hand");
+  }
+});
+
+test("the build order is seat order, never the local client's seat", {skip}, () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "build.js"), "utf8");
+  const body = src.slice(src.indexOf("function buildMatch"), src.indexOf("const PASSIVES"));
+  assert.ok(/\[0,\s*1\]\.map/.test(body),
+    "buildMatch must iterate [0,1] literally — a build order derived from who is hosting "
+    + "produces two different games from one spec, visible only as a turn-one hash mismatch");
+  assert.ok(!/\bhost\b|mySeat|isHost/.test(body),
+    "buildMatch must not know which seat this client occupies");
+});
+
+/* Built by hand rather than through `spec()`, which would resolve the
+   hero's slots and throw first — a drill that passes because the helper
+   died proves nothing about the function under test. */
+test("buildMatch names a missing hero rather than dealing an empty deck", {skip}, () => {
+  const bad = {heroes: ["kayo", "nosuchhero"], first: 0, seed: "K7QM",
+               boards: [{gearIdx: [], cuts: {}}, {gearIdx: [], cuts: {}}]};
+  assert.throws(() => B.buildMatch(bad, mopts()), /nosuchhero/);
+});

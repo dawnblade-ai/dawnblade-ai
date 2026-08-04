@@ -9,6 +9,99 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.49 — Phase 2: two humans, two hero decks, one game state
+
+The table screen has connected two phones since v2.44. What it dealt them
+was `engine/actions.js`'s **blank decks** — real CR turn structure over
+cards with no text and no names — because `net.js` needs a pure reducer to
+drive and the trainer has none. Both halves now exist, so the table plays
+Flesh and Blood.
+
+**The flow the screen was missing.** Connect → **hero** → **throw** →
+**sideboard** → game. `engine/lobby.js` is the negotiation, and it is a
+new module rather than a branch inside `net.js` for a reason worth
+stating: `net.js` needs a sequencer because CR 7.3.2 lets both seats act
+in the same instant, and **nothing in a lobby has that problem.** Every
+message writes only its own seat's slot and every slot is WRITE-ONCE, so
+the reducer is a monotone accumulator — the writes commute, replays are
+refused, and two phones applying the same messages in different orders
+land in the same place. `test/lobby.test.js` walks all 16 interleavings
+and asserts one outcome rather than trusting the argument.
+
+**Write-once is the load-bearing part.** Make a hero pick overwritable
+and the lobby diverges: seat 0 changes its mind at the moment seat 1
+confirms, so seat 0 applies the change locally while it is still
+choosing and seat 1 refuses it for arriving after the step closed. Two
+phones, two heroes, no error anywhere. The step is **derived** from the
+slots (`stepOf`) rather than stored, because a stored step is a
+transition and a transition has an order.
+
+**Nothing about a card crosses the wire.** The lobby ships four small
+values — two hero keys, two loadouts, a seating call — and each peer runs
+`build.js` over its own database to arrive at an identical state.
+`buildMatch` is that, and three things make it deterministic, each a real
+way to break it: the rng stream is **seat-specific** (one stream makes
+seat 1's deck a continuation of seat 0's), the uid counter is **shared
+and threaded in seat order** (a repeat is `CARD-IN-TWO-ZONES` wearing a
+disguise), and the seats are built in **index order, never the local
+client's**. The table code is the seed, so the whole opening is
+reproducible from the code alone.
+
+**The bug that cost the most, and that no drill here could see.** The
+opening snapshot measured **97KB**. A WebRTC data channel drops a message
+that size *with no error at either end*, so the guest sat in
+`handshaking` forever holding a board that looked perfectly correct —
+because it had built the same opening itself. Every one of the 765 drills
+passed. Two things were wrong:
+
+1. `judge.newMatch` retained the build's `deck` and `gear`. They are
+   **construction inputs**, already dealt into `sides`, so the same 43
+   cards were in the game object twice — **62KB of the 67KB**, dead to
+   every rule (`bAct` exists for the printed passives, which stay).
+2. the session was given no **catalog**, so every card shipped its full
+   definition instead of a bare `name|pitch` key.
+
+Worst case across all 225 matchups is now **13.7KB**, and
+`test/table.test.js` pins a 16KB budget with the reason written next to
+it. A handshake that stalls also now says so on screen: the failure was
+invisible precisely because every visible thing was right.
+
+**`judge.js` and `types.js` come off the headless list — for the table
+only.** The Phase 1 rule was that loading judge would put a second,
+quieter rules engine beside the trainer's. That reasoning still stands
+and is exactly why the two never meet: **solo play is `Battle` and keeps
+every card effect; table play is `judge.js` and keeps the second seat.**
+No path routes between them. `wire.test.js`'s `HEADLESS` is down to
+`sparring` alone.
+
+**Stated plainly, because the screen looks finished: card TEXT does not
+resolve at the table.** Real: two hero decks off the actual database,
+printed life and intellect, the CR turn structure, priority, the combat
+chain, costs paid by pitching on demand, defenders from hand and iron,
+printed power against printed defence, the ordered end phase. Not real:
+`runOps`/`execute`/`resolveStack`, which are still closures inside
+`Battle`. Moving them to a shared `engine/effects.js` both callers use is
+the next pass and the last big one.
+
+Three smaller things the browser found that the drills could not:
+
+- **`netFirst` was a seat INDEX read as an answer**, so both seats were
+  told they were on the draw. Renamed `netOnPlay` and made a boolean —
+  the same actor-versus-perspective slip as `you()` meaning seat 0.
+- **`board` as a lobby export collided** with the arena zone every other
+  file means by that name; `test/sync.test.js` caught it on the first
+  run. Renamed `sideboard`.
+- a **JSX comment mid-sentence** suppressed the whitespace join and
+  rendered "solotrainer" on the phone.
+
+Verified by driving two real browsers at each other over the public
+relay: hero select, a tied throw replayed, the seating call, both
+sideboards, then Kayo pitching Bare Fangs to pay for Pulping, swinging
+for 6, Dorinthea blocking with Gauntlets of Unity, and 5 landing — with
+both phones on an identical state hash at every step.
+
+---
+
 ## v2.48 — Phase 1: the foundation guarded
 
 Two new drill files, and both are about surfaces nothing was watching.
