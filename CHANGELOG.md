@@ -9,6 +9,56 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.52 — the preview that ate the tap, at the table
+
+**Reported from a real table (2026-08-04):** during a payment, the two-tap
+commit worked for the leftmost hand cards and silently failed for the ones
+nearer the middle — the card un-peeked and nothing was pitched, with no
+refusal shown. The reporter named the failure class correctly: it is
+v2.36/v2.37's pointer-events bug, reached by a different door.
+
+**`--peekbot` was measured in a `uE` inside `Battle`.** The table renders
+the same `PeekDock` and had no such effect, so its dock fell back to the
+CSS's flat `112px`. Measured on the hand screen at 393×852 the rail spans
+y 628..754 and the correct offset is **233px**; at 112px the preview lands
+*inside* the rail, and since `.peekwrap>*` takes pointer events (v2.36's
+own fix) a tap on a covered card bubbles to the wrapper's dismiss handler.
+Verified by hit-testing the live board: at 233px every hand card resolves
+to itself, at the fallback cards 2 and 3 resolve to the overlay.
+
+**The mirror is the actual defect.** `Battle` was rendering a hand-copied
+duplicate of the dock's markup instead of the shared component, so the
+positioning could live in one and not the other with nothing watching —
+exactly what the no-mirror rule exists to stop, one layer up from the
+engine. There is one `.peekwrap` in the file now, both boards render
+`PeekDock`, and the measurement lives with the thing it positions.
+
+**And it is TRACKED, not sampled.** Measuring once is not enough: the rail
+is still moving when the tap that opens the preview lands, which put the
+offset at 146px against a rail that came to rest at 628 — the same overlap
+at a different instant. A scroll listener does not cover it either, and
+this was tried: the rail slid **86px with `scrollTop` unchanged**, moved by
+content above it settling rather than by a scroll. Between snap, image and
+font loads, rotation and React's own re-layout there is no provably complete
+list of events, so while the preview is open it re-measures every frame and
+writes only on change. A rail that has flicked off screen returns to the
+flat clearance rather than being chased off the top of the viewport.
+
+`test/priority.test.js` slices `PeekDock` rather than a board, and pins the
+mirror directly: exactly one `.peekwrap`, exactly two `<PeekDock` renders.
+Both sabotages were verified to bite — stripping the effect, and restoring
+`Battle`'s inline copy.
+
+**Also:** the *Find an opponent* screen still told players table play "runs
+the drill decks — blank cards". True before v2.49, wrong since; the lobby's
+own note already said otherwise. Stale copy that under-sells is still stale.
+
+**Not fixed, and not claimed:** the first bug report in the same batch was
+retracted by its reporter — Buckwild's "costs 3" is correct, the pips were
+misread. Nothing in the cost machinery changed.
+
+---
+
 ## v2.51 — JUDGE!! is a module, and its Copy button was broken
 
 Housekeeping before Phase 3, and one of the items turned out to be a real

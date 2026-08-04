@@ -539,10 +539,13 @@ img{display:block;max-width:100%}
    peek, forever. The comment above always said the rail underneath had to
    stay tappable; this is what makes that true. Only the visible preview
    takes pointer events, so tapping the card art still dismisses. */
-/* `--peekbot` is MEASURED off the live hand rail (see the uE in Battle) so the
-   preview always sits ABOVE the hand rather than on top of it. The 112px
-   fallback is the old flat value — the action-bar clearance — used only
-   before the first measurement or when no rail is on screen. */
+/* `--peekbot` is MEASURED off the live hand rail (see the uE in PeekDock, which
+   BOTH boards render) so the preview always sits ABOVE the hand rather than on
+   top of it. The 112px fallback is the old flat value — the action-bar
+   clearance — used only before the first measurement or when no rail is on
+   screen. It is NOT a safe resting value: at 393x852 the rail spans y 628..754
+   and 112px puts the preview inside it, where it eats the tap it is supposed to
+   be explaining (v2.36 / v2.52). */
 .peekwrap{position:fixed;left:0;right:0;bottom:var(--peekbot,112px);z-index:55;display:flex;
   flex-direction:column;align-items:center;gap:0;pointer-events:none;
   animation:pkin .14s ease-out}
@@ -737,7 +740,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.51"; /* v2.51 — JUDGE!! is engine/report.js, and BOTH boards produce one. It was a closure inside Battle, so the table could not report at all — the screen where a bug is hardest to reconstruct, because there are two boards and the first question is which is wrong. A table report carries the seat, the table code and net.js's counters. The Copy button was also genuinely broken: navigator.clipboard rejects with NotAllowedError even on a real tap in a secure context, there was no fallback, and its else-branch claimed success when the API was absent. Phase 3 is the card-text pass and this is the tool it runs on. Previously: v2.50 — Phase 2: the table IS the trainer's board, with a person in seat 1. Same three flick screens, same armour grid and hero row, same hand rail, same two-tap peek, same action bar — the plain diagnostic board it replaces proved the transport and looked nothing like the game, which is a real defect in a training sim because the layout IS the lesson. The shared pieces (ArmorGrid, DeckPitchCol, InPlayRow, GravePane, usePeek, PeekDock) are extracted and used by BOTH boards, so they cannot drift; what stays separate is the state language, trainer `mode`/`bphase` versus the CR machine, which is the thing the rebuild exists to separate. Previously: v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.52"; /* v2.52 — the preview that ate the tap, at the table. PeekDock is rendered by both boards but the uE that measures where it sits lived inside Battle, so the table fell back to the CSS flat 112px, the preview landed inside the hand rail, and because .peekwrap>* takes pointer events a tap on a covered card bubbled to the wrapper and silently dismissed the peek — reported as "pitching from the 3rd/4th card does nothing". Battle was rendering a hand-copied duplicate of the dock rather than the shared component, which is how the two came apart; there is one .peekwrap now and the measurement lives with the thing it positions. It is also TRACKED per frame rather than sampled once, because the rail slid 86px with scrollTop unchanged. Previously: v2.51 — JUDGE!! is engine/report.js, and BOTH boards produce one. It was a closure inside Battle, so the table could not report at all — the screen where a bug is hardest to reconstruct, because there are two boards and the first question is which is wrong. A table report carries the seat, the table code and net.js's counters. The Copy button was also genuinely broken: navigator.clipboard rejects with NotAllowedError even on a real tap in a secure context, there was no fallback, and its else-branch claimed success when the API was absent. Phase 3 is the card-text pass and this is the tool it runs on. Previously: v2.50 — Phase 2: the table IS the trainer's board, with a person in seat 1. Same three flick screens, same armour grid and hero row, same hand rail, same two-tap peek, same action bar — the plain diagnostic board it replaces proved the transport and looked nothing like the game, which is a real defect in a training sim because the layout IS the lesson. The shared pieces (ArmorGrid, DeckPitchCol, InPlayRow, GravePane, usePeek, PeekDock) are extracted and used by BOTH boards, so they cannot drift; what stays separate is the state language, trainer `mode`/`bphase` versus the CR machine, which is the thing the rebuild exists to separate. Previously: v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1973,8 +1976,61 @@ function usePeek(resetKey, inspect, onInspect){
    underneath. Two rules, both of which shipped broken once:
    the wrapper takes NO pointer events (full width and mostly empty, it
    covered the hand rail on a 393x852 phone and no card could be played),
-   and it sits above the rail rather than over it. */
+   and it sits above the rail rather than over it.
+
+   THE MEASUREMENT LIVES HERE, WITH THE THING IT POSITIONS (v2.52).
+   It used to be a `uE` inside `Battle`, so the table — which renders this
+   same component — never measured at all and fell back to the CSS's flat
+   `112px`. On the hand screen at 393x852 the rail spans y 628..754 and the
+   measured offset is 233px; at 112px the preview lands INSIDE the rail,
+   and because `.peekwrap>*` takes pointer events the tap bubbles to the
+   wrapper's dismiss handler. The card silently un-peeks and nothing is
+   pitched — v2.36's bug exactly, reached by a different door, and reported
+   from a real table (2026-08-04). Position is part of what this component
+   IS; a board cannot forget to do it if the board never does it.
+
+   The offset is MEASURED rather than guessed, because the rail's height
+   depends on which screen is showing and on the card size — a hardcoded
+   number was wrong the moment the layout changed, which is how it shipped
+   the first time.
+
+   AND MEASURING ONCE IS NOT ENOUGH — IT IS TRACKED, NOT SAMPLED. The rail
+   is still moving when the tap that opens the preview lands: measured in
+   that tick at 393x852 the offset came out 146px against a rail that came
+   to rest at 628, leaving the preview 44px INSIDE it. Same bug, different
+   instant.
+
+   Listening for the events that move it does not work, and this was tried:
+   the rail slid 86px with `scrollTop` UNCHANGED, because what moved it was
+   content above it settling, not a scroll. Between snap, image and font
+   loads, rotation and React's own re-layout there is no list of events to
+   subscribe to that is provably complete — so while the preview is open it
+   simply re-measures every frame and writes only when the number changes.
+   A peek lasts until the second tap, so the loop is short-lived and costs
+   one `getBoundingClientRect` a frame.
+
+   When no rail is on screen it returns to the flat clearance rather than
+   chasing a rail that has flicked away. */
 function PeekDock({card, verb, onClose}){
+  uE(()=>{
+    if(!(card && card.uid)) return;
+    const root = document.documentElement;
+    let last = null, raf = 0;
+    const place = () => {
+      raf = requestAnimationFrame(place);
+      const rail = document.querySelector(".phand, .chand, .hand");
+      const r = rail && rail.getBoundingClientRect();
+      /* nothing on screen to sit above: the old flat action-bar clearance is
+         both right and safe, because there is no rail for it to cover.
+         Otherwise the distance from the viewport bottom to the rail's TOP
+         edge, plus a small gap — never less than that clearance. */
+      const bot = (!r || r.bottom <= 0 || r.top >= window.innerHeight)
+        ? 112 : Math.max(112, Math.round(window.innerHeight - r.top) + 8);
+      if(bot !== last){ last = bot; root.style.setProperty("--peekbot", bot + "px"); }
+    };
+    place();
+    return () => cancelAnimationFrame(raf);
+  },[card && card.uid]);
   if(!card) return null;
   return (
     <div className="peekwrap" onClick={onClose}>
@@ -4044,33 +4100,10 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      a stale preview never survives into a step where its verb is wrong */
   uE(()=>{ setPeek(null); },[g.mode, g.bphase, g.turn]);
   uE(()=>{ if(peek && !peekables().some(c=>c.uid===peek.uid)) setPeek(null); },[g.sides]);
-  /* THE PREVIEW SITS ABOVE THE HAND, ALWAYS (v2.37).
-     `.peekwrap` was pinned at a flat `bottom:112px`, chosen to clear the
-     action bar. On a tall window the hand rail sits below that and nothing
-     overlaps; on a 393x852 phone the rail lands right underneath the preview,
-     which covered the very cards you are choosing between. v2.36 stopped it
-     eating the tap; this stops it hiding the hand at all.
-
-     The offset is MEASURED rather than guessed, because the rail's height
-     depends on which screen is showing and on the card size — a hardcoded
-     number would be wrong again on the next layout change. Re-measured
-     whenever the preview opens or the window changes, and on resize so a
-     rotation does not strand it. */
-  uE(()=>{
-    const place = () => {
-      const rail = document.querySelector(".phand, .chand, .hand");
-      const root = document.documentElement;
-      if(!rail){ root.style.setProperty("--peekbot", "112px"); return; }
-      const top = rail.getBoundingClientRect().top;
-      /* distance from the viewport bottom to the rail's TOP edge, plus a
-         small gap — never less than the action-bar clearance it had before */
-      const bot = Math.max(112, Math.round(window.innerHeight - top) + 8);
-      root.style.setProperty("--peekbot", bot + "px");
-    };
-    place();
-    window.addEventListener("resize", place);
-    return () => window.removeEventListener("resize", place);
-  },[peek, g.mode, g.bphase, g.turn]);
+  /* THE PREVIEW SITS ABOVE THE HAND, ALWAYS (v2.37) — and the measurement
+     that makes that true now lives in `PeekDock` with the thing it
+     positions, because a second board renders that component and this copy
+     never ran for it. See the comment there. */
 
   const toks = [
     /* No Runechant chip any more — they are real auras on the board below
@@ -4467,18 +4500,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       <JudgeSheet open={!!bug} onClose={()=>setBug(null)} report={judgeCtx} warn={judgeN}
         meta={`v${window.APP_VER} · ${h.n} · turn ${g.turn} · ${g.mode}`}/>
       {/* the peeked card, big enough to actually read, docked above the
-          action bar so the hand rail stays visible underneath it */}
-      {(()=>{
-        const pc = peek && peekables().find(c=>c.uid===peek.uid);
-        if(!pc || g.over || g.prompt) return null;
-        return <div className="peekwrap" onClick={()=>setPeek(null)}>
-          <div className="peekcard"><CardFrame card={pc}/></div>
-          <div className="peekbar">
-            <span className="pknm">{pc.name}</span>
-            <span className="pkhint">{peek.verb}</span>
-          </div>
-        </div>;
-      })()}
+          action bar so the hand rail stays visible underneath it. THE SAME
+          COMPONENT THE TABLE RENDERS (v2.52) — this was a hand-copied
+          duplicate of its markup, which is how the table came to be missing
+          the `--peekbot` measurement that keeps the preview off the rail.
+          Hidden while a prompt sheet is open, because `.psheet` docks in
+          exactly this spot. */}
+      {!g.over && !g.prompt &&
+        <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
+          verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
       {g.prompt && !g.over && (()=>{
         const p = g.prompt;
         /* One sheet, every variant. The side badge is shown whenever the
@@ -5008,10 +5038,15 @@ function TableScreen({onBack, onSeated}){
           <button className="bigbtn" onClick={openTable}>Open a table</button>
           <button className="bigbtn alt" onClick={()=>setMode("join")}>Join a table</button>
         </div>
+        {/* This said "the drill decks — blank cards" until v2.52, which was
+            true before v2.49 and has been wrong since: the table negotiates a
+            hero, a throw and a sideboard and runs two real decks. Stale copy
+            that UNDER-sells is still stale copy — it tells a player not to
+            bother with the screen. The lobby's own note already said this. */}
         <p className="mnote">
-          Table play runs the <strong>drill decks</strong> — blank cards, real Flesh and
-          Blood turn structure. Hero decks need seat 1's action phase before they can
-          cross the wire.
+          Table play runs <strong>two real hero decks</strong> — the CR turn structure,
+          priority, the combat chain and printed costs. Card text does not resolve
+          yet: the parser's effects still live in the solo trainer.
         </p>
       </>}
 

@@ -1851,8 +1851,17 @@ deployed build:
 | `DeckPitchCol({deck, pitch, title, hidden})` | deck back + pitch list; `hidden` shows a pile's SIZE and not its contents |
 | `InPlayRow({entries, chips, cell, empty})` | the arena |
 | `GravePane({sd, who})` | graveyard / banish / soul |
-| `usePeek(resetKey, inspect, onInspect)` | the two-tap peek, with the stale-peek drop |
-| `PeekDock({card, verb, onClose})` | the docked preview, `pointer-events:none` wrapper included |
+| `usePeek(resetKey, inspect, onInspect)` | the two-tap peek, with the stale-peek drop. **TABLE ONLY — `Battle` still has its own `peek` state and its own `tapTwice`** |
+| `PeekDock({card, verb, onClose})` | the docked preview: the `pointer-events:none` wrapper AND the `--peekbot` measurement that keeps it off the rail |
+
+**THIS TABLE WAS PARTLY FICTION UNTIL v2.52, AND IT COST A BUG.** `PeekDock`
+was listed as shared while `Battle` rendered a hand-copied duplicate of its
+markup — so the measurement that positions it was added to one board and not
+the other, and the table's preview sat on top of its own hand rail. `Battle`
+now renders the component. **`usePeek` is still not shared**, and it is written
+down as not shared rather than aspired to: `Battle` keeps its own `peek` state
+and its own `tapTwice` (which reads `g.inspect` and zooms differently). A row
+in this table is a claim about the source; check it before trusting it.
 
 **WHAT IS NOT SHARED IS THE STATE LANGUAGE.** The trainer speaks
 `mode`/`bphase`; the table speaks `phase`/`step`/`priority` out of
@@ -1948,11 +1957,37 @@ wrapper's dismiss handler instead of the card and **no card in hand could be
 played**. It is invisible on a tall window, which is why it survived so long.
 The rule is `pointer-events:none` on the wrapper and `auto` on its children.
 **And it must sit ABOVE the rail, not over it (v2.37)** — not eating the tap is
-not the same as not hiding the cards. `--peekbot` is measured off the live rail
-in a `uE` and re-measured on resize; a hardcoded offset was wrong the moment
-the layout changed, which is exactly how this shipped.
+not the same as not hiding the cards. `--peekbot` is measured off the live rail;
+a hardcoded offset was wrong the moment the layout changed, which is exactly how
+this shipped.
 **Test at phone dimensions, not a tall desktop window** — this class of bug
 only exists there.
+
+**THE MEASUREMENT BELONGS TO `PeekDock`, NOT TO A BOARD (v2.52).** It sat in a
+`uE` inside `Battle`, and the table — which renders the same component — never
+ran it, so its dock fell back to the CSS's flat `112px`. On the hand screen at
+393x852 the rail spans y 628..754 and the right offset is **233px**; at 112px
+the preview lands *inside* the rail, and `.peekwrap>*`'s pointer events (v2.36's
+own fix) then hand the tap to the wrapper's dismiss handler. The card un-peeks
+and nothing happens — reported from a real table as *"pitching from the 3rd/4th
+card silently does nothing"*.
+
+**The mirror was the defect.** `Battle` rendered a hand-copied duplicate of the
+dock's markup rather than the shared component, which is how the positioning
+came to exist in one and not the other with nothing watching. Same rule as the
+engine's, one layer up: **one `.peekwrap` in the file, both boards render
+`PeekDock`**, and a drill pins both counts.
+
+**It is TRACKED per frame, not sampled once.** The rail is still moving when the
+tap that opens the preview lands — measured in that tick the offset came out
+146px against a rail that settled at 628. A scroll listener does not cover it
+and this was tried: **the rail slid 86px with `scrollTop` unchanged**, moved by
+content above it settling. There is no provably complete list of events that
+move it, so while the preview is open it re-measures every frame and writes only
+on change; a rail that has flicked off screen returns to the flat clearance
+rather than being chased off the top of the viewport. (`requestAnimationFrame`
+does not run in a hidden tab, so verifying this in a background browser pane
+needs a forced frame — a screenshot will do it.)
 
 Two deliberate exceptions: with **inspect** on, one tap opens the full modal
 (that is what inspect is for); and the **opponent's** gear opens its card on a

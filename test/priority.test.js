@@ -819,19 +819,58 @@ test("peek — the preview is positioned ABOVE the hand, measured not guessed", 
      on top of the rail at 393x852 — you could not see the cards you were
      choosing between. The offset is measured off the live rail because its
      height depends on which screen is showing; a hardcoded number would be
-     wrong again on the next layout change. */
+     wrong again on the next layout change.
+
+     THE MEASUREMENT MUST LIVE IN `PeekDock` (v2.52). While it sat in a `uE`
+     inside `Battle` this drill passed and the TABLE was broken anyway: that
+     board renders the same component and never ran the effect, so it fell
+     back to the flat 112px, the preview landed inside the rail, and — since
+     `.peekwrap>*` takes pointer events — a tap on a covered card bubbled to
+     the wrapper's dismiss handler. Reported from a real table (2026-08-04)
+     as "pitching from the 3rd/4th card silently does nothing". Slicing the
+     component rather than a board is what makes this drill cover both. */
   const css = HTML.slice(HTML.indexOf(".peekwrap{"), HTML.indexOf(".peekwrap>*"));
   assert.match(css, /bottom:var\(--peekbot,\s*112px\)/,
     "the offset must come from the measured custom property, with the old flat value as fallback");
-  assert.match(HTML, /--peekbot/, "and something must set it");
-  const eff = HTML.slice(HTML.indexOf("THE PREVIEW SITS ABOVE THE HAND"),
-                         HTML.indexOf("const toks = ["));
-  assert.match(eff, /querySelector\("\.phand, \.chand, \.hand"\)/,
+  const dock = HTML.slice(HTML.indexOf("function PeekDock("),
+                          HTML.indexOf("function ", HTML.indexOf("function PeekDock(") + 10));
+  assert.match(dock, /--peekbot/,
+    "the component that IS positioned must be the one that measures — a board "
+  + "cannot forget a step it does not own");
+  assert.match(dock, /querySelector\("\.phand, \.chand, \.hand"\)/,
     "it must measure whichever hand rail is on screen");
-  assert.match(eff, /window\.innerHeight - top/,
+  assert.match(dock, /window\.innerHeight - r\.top/,
     "the offset is the distance from the viewport bottom to the rail's TOP edge");
-  assert.match(eff, /addEventListener\("resize"/,
-    "and it must re-measure on resize so a rotation does not strand it");
+  /* MEASURING ONCE IS NOT ENOUGH, AND NEITHER IS LISTENING. The rail is
+     still moving when the tap that opens the preview lands — measured in
+     that tick the offset came out 146px against a rail that settled at 628,
+     44px of overlap, the same bug at a different instant. A scroll listener
+     did not cover it either: the rail slid 86px with `scrollTop` UNCHANGED,
+     moved by content above it settling rather than by a scroll. So it is
+     tracked per frame while the preview is open. */
+  assert.match(dock, /raf = requestAnimationFrame\(place\)/,
+    "the offset must be TRACKED per frame while the preview is open — there is "
+  + "no complete list of events that move the rail, and this was tried");
+  assert.match(dock, /cancelAnimationFrame\(raf\)/,
+    "and the loop must stop when the preview closes");
+  assert.match(dock, /if\(bot !== last\)/,
+    "writing only on change, so a per-frame loop costs a rect and nothing else");
+  assert.match(dock, /r\.bottom <= 0 \|\| r\.top >= window\.innerHeight/,
+    "a rail that has flicked off screen must fall back to the flat clearance, "
+  + "not be chased off the top of the viewport");
+
+  /* THE MIRROR IS THE BUG, NOT THE MISSING LINE. The table lost the
+     measurement because `Battle` hand-copied the dock's markup instead of
+     rendering the component, so the two drifted with nothing watching —
+     exactly what the no-mirror rule exists to stop. One `.peekwrap` in the
+     file, and every board reaches it through `<PeekDock`. */
+  const wrappers = HTML.match(/className="peekwrap"/g) || [];
+  assert.equal(wrappers.length, 1,
+    "`.peekwrap` markup must exist exactly once, inside PeekDock — a second "
+  + "copy is how the measurement went missing from the table");
+  const renders = HTML.match(/<PeekDock\b/g) || [];
+  assert.equal(renders.length, 2,
+    "both boards must render the shared dock: the trainer and the table");
 });
 
 /* ===================================================================
