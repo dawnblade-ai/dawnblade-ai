@@ -624,6 +624,8 @@ img{display:block;max-width:100%}
   border-radius:3px;padding:9px 10px;font:13px/1.5 inherit;resize:vertical}
 .bugok{margin-top:8px;font-size:11.5px;color:var(--y);font-family:'Spline Sans Mono',monospace;
   letter-spacing:.04em}
+/* A blocked clipboard is not a success. Never dressed as one. */
+.bugok.warn{color:var(--r)}
 .bugrow{display:flex;gap:7px;margin-top:10px}
 .bugrow .bigbtn{flex:1;font-size:12px;padding:11px 6px}
 /* ---- the table: find an opponent, and the networked board ------------ */
@@ -735,7 +737,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.50"; /* v2.50 — Phase 2: the table IS the trainer's board, with a person in seat 1. Same three flick screens, same armour grid and hero row, same hand rail, same two-tap peek, same action bar — the plain diagnostic board it replaces proved the transport and looked nothing like the game, which is a real defect in a training sim because the layout IS the lesson. The shared pieces (ArmorGrid, DeckPitchCol, InPlayRow, GravePane, usePeek, PeekDock) are extracted and used by BOTH boards, so they cannot drift; what stays separate is the state language, trainer `mode`/`bphase` versus the CR machine, which is the thing the rebuild exists to separate. Previously: v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.51"; /* v2.51 — JUDGE!! is engine/report.js, and BOTH boards produce one. It was a closure inside Battle, so the table could not report at all — the screen where a bug is hardest to reconstruct, because there are two boards and the first question is which is wrong. A table report carries the seat, the table code and net.js's counters. The Copy button was also genuinely broken: navigator.clipboard rejects with NotAllowedError even on a real tap in a secure context, there was no fallback, and its else-branch claimed success when the API was absent. Phase 3 is the card-text pass and this is the tool it runs on. Previously: v2.50 — Phase 2: the table IS the trainer's board, with a person in seat 1. Same three flick screens, same armour grid and hero row, same hand rail, same two-tap peek, same action bar — the plain diagnostic board it replaces proved the transport and looked nothing like the game, which is a real defect in a training sim because the layout IS the lesson. The shared pieces (ArmorGrid, DeckPitchCol, InPlayRow, GravePane, usePeek, PeekDock) are extracted and used by BOTH boards, so they cannot drift; what stays separate is the state language, trainer `mode`/`bphase` versus the CR machine, which is the thing the rebuild exists to separate. Previously: v2.49 — Phase 2: two humans, two hero decks, one game state. The table screen used to connect two phones and drop them into blank drill decks; it now negotiates a hero, a seating throw and a sideboard through engine/lobby.js, builds the same two decks on both phones from the table code alone, and plays them through engine/judge.js. Card TEXT still does not resolve — the parser's effects remain in the solo trainer, which keeps every card effect and is untouched. The bug that cost the most: the opening snapshot was 97KB, a WebRTC channel dropped it silently, and the guest hung on a board that looked perfectly correct because it had built the same one itself. Previously: v2.48 — Phase 1: the foundation guarded. mapDbCard is the one function still hand-mirrored into index.html's loader and nothing was watching it; it is now compared field by field, so the Node tools and the phone can never resolve different cards. Plus every printed value pinned through resolution, every hero seated at its printed life and intellect, and the reducer fuzzed against the malformed JSON a peer will eventually send it. Previously: v2.47 — Phase 1: the journey census. All 401 pool cards, every journey their printed type promises and every one it forbids, driven through the real reducer — pitched, played to chain/arena/graveyard, declared as a defender, or refused with a reason. Written one-sided it reported a clean 401 while a Block card was a free play; the refusals are the half that matters. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1319,6 +1321,12 @@ window.TROPHIES = [
 <script src="engine/cards.js"></script>
 <script src="engine/advisor.js"></script>
 <script src="engine/build.js"></script>
+<!-- JUDGE!! — the board written down, for BOTH boards. It was a closure
+     inside Battle, so the table could not produce a report at all and no
+     drill could reach the one artefact a bug report depends on. Phase 3
+     is the card-text pass and this is the tool it runs on. Reached as
+     DawnReport.* — `build` and `text` are far too generic to bridge. -->
+<script src="engine/report.js"></script>
 <!-- THE SYNC LAYER (Phase B). Reached as DawnWire.* / DawnNet.* /
      DawnActions.* / DawnRoom.* / DawnLobby.* / DawnJudge.*, deliberately
      NOT bridged into bare names the way the parser is: `reduce`, `legal`,
@@ -1979,6 +1987,87 @@ function PeekDock({card, verb, onClose}){
   );
 }
 
+/* ============================================================
+   JUDGE!! — THE SHEET, FOR BOTH BOARDS (v2.51)
+
+   `navigator.clipboard.writeText` REJECTS WITH NotAllowedError even on a
+   real tap, in a secure context, with the document focused. Verified on
+   the deployed site: clipboard-write is a permission, and where it is not
+   granted the async API simply refuses. The old code had no fallback and
+   told the player "copy failed — use Download", so the fastest path from
+   noticing a bug to reporting it was broken. Worse, its `else` branch
+   claimed SUCCESS when the API was absent entirely — a report that was
+   never copied, reported as copied.
+
+   So: try the async API, fall back to the legacy execCommand path (which
+   needs no permission), and if BOTH fail select the text so it can be
+   copied by hand and SAY so. Never claim a copy that did not happen.
+   ============================================================ */
+function copyText(txt){
+  const legacy = () => {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      /* Off-screen but focusable, and readOnly so a phone keyboard does
+         not slide up over the sheet on the way past. */
+      ta.setAttribute("readonly","");
+      ta.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, txt.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok ? "copied" : "manual";
+    } catch(e){ return "manual"; }
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    return navigator.clipboard.writeText(txt).then(()=>"copied", legacy);
+  return Promise.resolve(legacy());
+}
+
+const COPY_MSG = {copied:"Copied to clipboard.",
+  manual:"This browser blocked the clipboard — use Save report instead.",
+  downloaded:"Saved to your downloads."};
+
+/* One sheet, both boards. `report` is a thunk so the state is read at the
+   moment the player presses the button, not when the sheet opened. */
+function JudgeSheet({open, onClose, report, meta, warn}){
+  const [note,setNote] = uS("");
+  const [said,setSaid] = uS(null);
+  if(!open) return null;
+  const run = fn => { setSaid(null); fn(); };
+  const doCopy = () => run(()=>copyText(DawnReport.text(...report(note))).then(setSaid));
+  const doSave = () => run(()=>{
+    const [g,ctx] = report(note);
+    const blob = new Blob([DawnReport.text(g,ctx)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = DawnReport.filename(g,ctx);
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    setSaid("downloaded");
+  });
+  return (
+    <div className="bugwrap" onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="bugsheet clip">
+        <div className="bugh">
+          <span className="bugt">Judge!!</span>
+          <span className="bugmeta">{meta}{warn>0 ? ` · ⚠ ${warn} invariant${warn>1?"s":""}` : " · state clean"}</span>
+        </div>
+        <p className="bughint">What looked wrong? The whole board — zones, counters, chain,
+          the feed and any invariant violations — is captured with it, so one line is plenty.</p>
+        <textarea className="bugta" autoFocus placeholder="e.g. Look Tuff attacked for 4, should have been 3 — I never got asked to pay"
+          value={note} onChange={e=>{ setNote(e.target.value); setSaid(null); }}/>
+        {said && <div className={"bugok"+(said==="manual"?" warn":"")}>{COPY_MSG[said]||said}</div>}
+        <div className="bugrow">
+          <button className="bigbtn alt" onClick={onClose}>Close</button>
+          <button className="bigbtn alt" onClick={doCopy}>Copy</button>
+          <button className="bigbtn" onClick={doSave}>Save report</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Ticker({feed}){
   const [idx,setIdx]=uS(0);
   uE(()=>{
@@ -2319,71 +2408,14 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      looked wrong": the zones, counters, chain, prompt, the whole feed and
      any invariant violations travel with it. Card lists are names + uids,
      not the resolved records, so a report stays readable and small. */
-  const judgeReport = note => {
-    const side = sd => ({
-      name:sd.name, hp:sd.hp, maxHp:sd.maxHp, int:sd.int,
-      res:sd.res, ap:sd.ap, wasted:sd.wasted,
-      counts:{deck:(sd.deck||[]).length, hand:(sd.hand||[]).length, grave:(sd.grave||[]).length,
-        pitch:(sd.pitch||[]).length, banish:(sd.banish||[]).length, soul:(sd.soul||[]).length,
-        board:(sd.board||[]).length, gear:(sd.gear||[]).length, arsenal:sd.arsenal?1:0},
-      hand:(sd.hand||[]).map(c=>c.name+"#"+c.uid),
-      arsenal:sd.arsenal ? sd.arsenal.name+"#"+sd.arsenal.uid : null,
-      board:(sd.board||[]).map(b=>((b.card&&b.card.name)||b.name||"?")+(b.sd?" [dies:"+b.sd+"]":"")),
-      gear:(sd.gear||[]).map(gr=>gr.name+(gr.destroyed?" (destroyed)":"")+" d"+gearDef(gr)),
-      grave:(sd.grave||[]).map(c=>c.name+(c._gy!=null?" _gy"+c._gy:"")),
-      pitch:(sd.pitch||[]).map(c=>c.name+" p"+(c.pitch||0)),
-      soul:(sd.soul||[]).map(c=>c.name),
-      banish:(sd.banish||[]).map(c=>c.name),
-      counters:sd.counters, blockH:(sd.blockH||[]).length, blockG:(sd.blockG||[]).length,
-      chainBlocked:sd.chainBlocked, intimidated:(sd.intimidated||[]).map(c=>c.name),
-      status:{amp:sd.amp, ward:sd.ward, awd:sd.awd, rune:runeCount(sd), auras:auraCount(sd), rot:sd.rot, fra:sd.fra,
-        frost:sd.frost, arcShield:sd.arcShield, lifeLock:sd.lifeLock, marked:sd.marked,
-        buffNext:sd.buffNext, gaNext:sd.gaNext, weaponUsed:sd.weaponUsed},
-      hist:sd.hist
-    });
-    return {
-      _what:"Dawnblade bug report — open an issue or paste this to Claude.",
-      note, at:new Date().toISOString(),
-      appVer:window.APP_VER, dataVer:window.DATA_VER,
-      /* THE REPLAY KEY. `seed` deals the same decks and rolls the same dice;
-         `s`/`n` say exactly how far the stream had advanced when this went
-         wrong. Together they turn "this looked wrong" into a reproducible
-         game rather than a screenshot to squint at. */
-      rng:g.rng ? {seed:g.rng.seed, s:g.rng.s, draws:g.rng.n} : null,
-      hero:h.k, heroName:h.n, seating:foeFirst?"opponent first":"you first",
-      turn:g.turn, mode:g.mode, bphase:g.bphase, incoming:g.incoming,
-      chainOpen:g.chainOpen,
-      chain:(g.chain||[]).map(l=>l.label||l.k||"link"),
-      stack:(g.stack||[]).map(l=>l.label||l.k),
-      pending:g.pending?{card:g.pending.card&&g.pending.card.name, from:g.pending.from}:null,
-      pend:g.pend?{card:g.pend.card&&g.pend.card.name, total:g.pend.total}:null,
-      prompt:g.prompt?{tag:g.prompt.tag, side:g.prompt.side, src:g.prompt.src,
-        cards:(g.prompt.cards||[]).map(c=>c.name), sel:g.prompt.sel, choice:g.prompt.choice}:null,
-      promptQ:(g.promptQ||[]).map(p=>p.tag+":"+(p.src||"")),
-      lastRoll:g.lastRoll, lastDmg:g.lastDmg, flags:g.flags, over:g.over,
-      you:side(you(g)), opponent:side(opp(g)),
-      /* what the invariant judge has flagged this game, if anything */
-      invariantsNow:DawnInvariants.check(g).map(v=>v.severity+" "+v.code+": "+v.msg),
-      invariantsSeen:judgeRef.current,
-      feed:g.feed
-    };
-  };
-  const judgeDownload = () => {
-    const rep = judgeReport(bug && bug.note || "");
-    const blob = new Blob([JSON.stringify(rep,null,2)], {type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "dawnblade-bug-" + h.k + "-t" + g.turn + "-" + Date.now() + ".json";
-    a.click();
-    setBug(b=>({...b, saved:"downloaded"}));
-  };
-  const judgeCopy = () => {
-    const txt = JSON.stringify(judgeReport(bug && bug.note || ""), null, 2);
-    const done = () => setBug(b=>({...b, saved:"copied"}));
-    if(navigator.clipboard && navigator.clipboard.writeText)
-      navigator.clipboard.writeText(txt).then(done, ()=>setBug(b=>({...b, saved:"copy failed — use Download"})));
-    else done();
-  };
+  /* JUDGE!! — the report itself now lives in engine/report.js, so the
+     TABLE can produce one too and so a drill can reach it. What stays
+     here is the CONTEXT the state does not know about itself. */
+  const judgeCtx = note => [g, {
+    note, source:"trainer", appVer:window.APP_VER, dataVer:window.DATA_VER,
+    hero:h.k, heroName:h.n, seating:foeFirst?"opponent first":"you first",
+    mySeat:0, invariantsSeen:judgeRef.current
+  }];
   /* RULING 2026-07-25: "cards in grave will have to have a 'turn added to
      grave' characteristic". Stamp it on the way in, and every "discarded a
      card with 6 or more {p} this turn" question becomes answerable — for
@@ -4242,7 +4274,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                 <span>log & advisor</span>
                 {/* Bug reports from the phone, where the bugs actually show up.
                     Captures the whole board so the note can just be "this
-                    looked wrong" — see judgeReport(). */}
+                    looked wrong" — see engine/report.js. */}
                 <button className="judgebtn" onClick={()=>setBug({note:"", saved:false})}>
                   JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
                 </button>
@@ -4429,28 +4461,11 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
         : <div className="lose clip"><h3 className="disp">Down — but wiser</h3><p style={{fontSize:13}}>Fewer wasted pitches and tighter blocks next run.</p>
             <button className="bigbtn alt" onClick={onExit}>Back to heroes</button></div>)}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
-      {/* JUDGE!! — write down what looked wrong while it is still on screen.
-          The board travels with the note, so the note can be one line. */}
-      {bug && <div className="bugwrap" onClick={e=>{ if(e.target===e.currentTarget) setBug(null); }}>
-        <div className="bugsheet clip">
-          <div className="bugh">
-            <span className="bugt">Judge!!</span>
-            <span className="bugmeta">v{window.APP_VER} · {h.n} · turn {g.turn} · {g.mode}
-              {judgeN>0 ? ` · ⚠ ${judgeN} invariant${judgeN>1?"s":""}` : " · state clean"}</span>
-          </div>
-          <p className="bughint">What looked wrong? The whole board — zones, counters, chain,
-            the feed and any invariant violations — is captured with it, so one line is plenty.</p>
-          <textarea className="bugta" autoFocus placeholder="e.g. Look Tuff attacked for 4, should have been 3 — I never got asked to pay"
-            value={bug.note} onChange={e=>setBug({...bug, note:e.target.value, saved:false})}/>
-          {bug.saved && <div className="bugok">{bug.saved === "copied" ? "Copied to clipboard."
-            : bug.saved === "downloaded" ? "Saved to your downloads." : bug.saved}</div>}
-          <div className="bugrow">
-            <button className="bigbtn alt" onClick={()=>setBug(null)}>Close</button>
-            <button className="bigbtn alt" onClick={judgeCopy}>Copy</button>
-            <button className="bigbtn" onClick={judgeDownload}>Save report</button>
-          </div>
-        </div>
-      </div>}
+      {/* JUDGE!! — write down what looked wrong while it is still on
+          screen. The board travels with the note, so the note can be one
+          line. One sheet, shared with the table board. */}
+      <JudgeSheet open={!!bug} onClose={()=>setBug(null)} report={judgeCtx} warn={judgeN}
+        meta={`v${window.APP_VER} · ${h.n} · turn ${g.turn} · ${g.mode}`}/>
       {/* the peeked card, big enough to actually read, docked above the
           action bar so the hand rail stays visible underneath it */}
       {(()=>{
@@ -5340,7 +5355,32 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
   const [link,setLink] = uS("connected");
   const [zoom,setZoom] = uS(null);
   const [inspect,setInspect] = uS(false);
+  const [bug,setBug] = uS(false);
   const sess = uR(null);
+
+  /* THE INVARIANT JUDGE, ON THE TABLE'S OWN FUNNEL. In the trainer every
+     state change passes through `setG`, which is where the judge is
+     wired. Here the funnel is net.js's `onState` — it fires for local
+     submits, remote commits and snapshot adoptions alike, which is the
+     same "exactly one description of how an action becomes a state" the
+     session already guarantees. Without this the guard rails are dark on
+     precisely the board where a bad state is hardest to reconstruct. */
+  const judgeRef = uR([]);
+  const [judgeN,setJudgeN] = uS(0);
+  const audit = st => {
+    try {
+      const bad = DawnInvariants.errors(st);
+      if(!bad.length) return;
+      const seen = judgeRef.current;
+      for(const v of bad){
+        if(seen.some(x=>x.code===v.code && x.msg===v.msg)) continue;
+        seen.push({turn:st.turn, phase:st.phase, step:st.step, code:v.code, msg:v.msg});
+        console.error("[dawnblade judge · table] "+v.code+" — "+v.msg);
+      }
+      window.__dawnJudge = seen;
+      setJudgeN(seen.length);
+    } catch(e){ /* the judge must never be the thing that breaks play */ }
+  };
 
   const oppRef = uR(null), chainRef = uR(null), youRef = uR(null);
   const jump = r => r.current && r.current.scrollIntoView({behavior:"smooth", block:"start"});
@@ -5376,7 +5416,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
       build:  DATA_VER,
       state:  host ? match.g : null,
       send:   m => table.send({ch:CH_NET, m}),
-      onState: st => { setG(st); setNote(null); },
+      onState: st => { setG(st); setNote(null); audit(st); },
       onEvent: e => {
         if(e.t==="refused")             setNote(e.reason);
         else if(e.t==="desync")         setLink("repairing");
@@ -5589,7 +5629,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
         <div className="vscreen" ref={chainRef}>
           <div className="hscroll">
             <div className="hpane logpane">
-              <div className="paneflag"><span>log</span><span>table {code}</span><span>play →</span></div>
+              <div className="paneflag">
+                <span>log</span>
+                {/* Same button, same sheet, same report shape as the
+                    trainer — and here it carries the seat, the table code
+                    and net.js's counters, because the first question
+                    about a two-phone bug is which phone saw it. */}
+                <button className="judgebtn" onClick={()=>setBug(true)}>
+                  JUDGE!!{judgeN>0?` ⚠${judgeN}`:""}
+                </button>
+                <span>play →</span></div>
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{me.hp}</span> you · R<b>{me.res}</b> A<b>{me.ap}</b></span>
                 <span className="sside r">{them.name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,them.hp)}</span></span>
@@ -5777,6 +5826,20 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
 
       {note && <div className="tblerr">{note}</div>}
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
+      <JudgeSheet open={bug} onClose={()=>setBug(false)} warn={judgeN}
+        meta={`v${window.APP_VER} · table ${code} · seat ${mySeat} · turn ${g.turn} · ${g.phase}/${g.step}`}
+        report={note2 => [g, {
+          note: note2, source:"table", appVer:window.APP_VER, dataVer:window.DATA_VER,
+          hero: me.heroKey, heroName: me.name, mySeat, table: code,
+          seating: g.turnPlayer===mySeat ? "you first" : "opponent first",
+          invariantsSeen: judgeRef.current,
+          /* WHICH PHONE SAW IT. Two peers on different hashes at the same
+             `seq` is a desync stated in one line, and it is the first
+             thing to check on any table bug. */
+          net: sess.current ? {seat:mySeat, host, status:sess.current.status(),
+            seq:sess.current.seq(), hash:sess.current.hash(),
+            link, ...sess.current.stats()} : null
+        }]}/>
       {!over && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
         verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
     </div>

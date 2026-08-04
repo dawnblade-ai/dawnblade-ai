@@ -2362,9 +2362,35 @@ report** → `dawnblade-bug-<hero>-t<turn>-<ts>.json`. The button also shows
 `⚠ N` when the invariant judge has flagged anything, so a broken state is
 visible on the phone rather than only in the console.
 
-Written by `judgeReport()` in `Battle`. **When adding a zone or a per-side
-field, add it there too** — a report that silently omits state is worse than
-no report.
+**Written by `engine/report.js`, and BOTH boards produce one** (v2.51). It
+was a closure inside `Battle`, which meant the table could not report at
+all — the screen where a bug is hardest to reconstruct, because there are
+two boards and the first question is which one is wrong. A table report
+carries the seat, the table code and net.js's counters, so *"two peers on
+different hashes at the same `seq`"* is a desync stated in one line.
+
+**When adding a zone or a per-side field, add it to `report.js`'s `seat()`
+too** — a report that silently omits state is worse than no report.
+`test/report.test.js` pins the properties that make one useful: it never
+throws (least obvious and most important — a report that dies describing a
+broken board fails on exactly the board you needed), the replay key
+survives, every zone is named rather than counted, and it serializes.
+
+**THE CLIPBOARD IS A PERMISSION, AND IT IS OFTEN DENIED.**
+`navigator.clipboard.writeText` rejects with `NotAllowedError` even on a
+real tap in a secure context with the document focused — verified on the
+deployed site. The old code had no fallback and dead-ended at *"copy
+failed — use Download"*; worse, its `else` branch reported SUCCESS when
+the API was absent entirely. `copyText` now tries the async API, falls
+back to `execCommand` (which needs no permission), and if both fail says
+so in red. **Never dress a failed copy as a success.**
+
+**EVERY GAME CARRIES BOTH STATE VOCABULARIES**, so neither being present
+says which engine is driving: `makeGame` seeds `mode`/`bphase` into
+judge's state too, and the trainer has carried a derived `phase`/`step`
+since v2.27's shadow. `machine.lang` names the authoritative one — without
+it a table report showing `bphase:"defend"` sends the reader into the
+trainer hunting a bug that is not there.
 
 Also confirmed from the CR and not yet modelled: **simultaneous triggers are
 ordered by the first-turn-player** (CR 4.1.8a), and the chain closes

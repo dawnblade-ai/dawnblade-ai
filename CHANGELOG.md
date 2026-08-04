@@ -9,6 +9,63 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.51 — JUDGE!! is a module, and its Copy button was broken
+
+Housekeeping before Phase 3, and one of the items turned out to be a real
+defect in the tool Phase 3 depends on most.
+
+**THE COPY BUTTON DID NOT WORK.** `navigator.clipboard.writeText` rejects
+with `NotAllowedError — Write permission denied` even on a genuine tap, in
+a secure context, with the document focused — verified on the deployed
+site, not inferred. There was no fallback, so the fastest path from
+noticing a bug to reporting it dead-ended at *"copy failed — use
+Download"*. Worse, the `else` branch reported **success** when
+`navigator.clipboard` was absent entirely: a report that was never copied,
+announced as copied.
+
+`copyText` now tries the async API, falls back to the legacy
+`execCommand` path (which needs no permission), and if both fail says so
+**in red** and points at Save report. Never dress a failed copy as a
+success.
+
+**The report is now `engine/report.js`.** It was a closure inside
+`Battle`, which meant two things: the table board could not produce a
+report at all — the screen where a bug is hardest to reconstruct, because
+there are *two* boards and the first question is which one is wrong — and
+no drill could reach the one artefact a bug report depends on.
+
+Both boards now share it, and the table's carries the seat, the table code
+and net.js's counters, so *"two peers on different hashes at the same
+`seq`"* is a desync stated in one line. The table also gets the **invariant
+judge** wired to its own funnel (`net.js`'s `onState`, which fires for
+local submits, remote commits and snapshot adoptions alike) — the guard
+rails had been dark there.
+
+`test/report.test.js` pins the properties that make a report useful, and
+the first is the least obvious: **it never throws.** A report that dies
+while describing a broken board fails on exactly the board you most needed
+described, so a state the invariant judge cannot read is captured as a
+field rather than propagated. Also pinned: the replay key survives
+(`seed` + stream position + draw count), every zone is named rather than
+counted, the graveyard keeps its `_gy` stamps, `you`/`opponent` follow
+`mySeat`, and the whole thing serializes even holding a cyclic card.
+
+**`machine.lang` names which state vocabulary is authoritative.** Every
+game carries both — `makeGame` seeds `mode`/`bphase` into judge's state
+too, and the trainer has carried a derived `phase`/`step` since v2.27's
+shadow pass — so neither being present says which engine is driving. A
+table report showing `bphase:"defend"` would send a reader into the
+trainer hunting a bug that is not there. Nothing is hidden; the
+authoritative one is labelled.
+
+Housekeeping alongside: `HANDOFF.md` rewritten for Phase 3 (it still said
+Phase 1, v2.48, and "unpushed — no remote"), the `README` replaced (it was
+GitHub's profile-repo boilerplate, and this repo's README is the public
+face of the project), and the stale `judgeReport()` references cleaned out
+of `index.html` and `CLAUDE.md`.
+
+---
+
 ## v2.50 — Phase 2: the table IS the trainer's board
 
 v2.49 put two real hero decks across the wire and drew them on a plain
