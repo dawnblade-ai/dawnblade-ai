@@ -12,6 +12,14 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..", "..");
 const html = () => fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 
+/* THE CARD SEMANTICS MOVED (v2.53, the effects port). Several drills pin
+   a line of `runOps`/`execute` by reading the source, because those were
+   closures inside a React component and no drill could CALL them. They
+   are reachable now, so those guards can become behavioural over time —
+   but a source guard pointed at the wrong file passes by finding nothing,
+   so they are repointed here rather than left to rot. */
+const effects = () => fs.readFileSync(path.join(ROOT, "engine", "effects.js"), "utf8");
+
 /* The plain data <script> (window.CDN ... DECKS ... TROPHIES), evaluated
    with a bare window stub so tests can read the real deck lists. */
 function loadData(){
@@ -24,4 +32,4 @@ function loadData(){
   return w;
 }
 
-module.exports = { ROOT, html, loadData };
+module.exports = { ROOT, html, effects, loadData };

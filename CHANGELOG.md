@@ -9,6 +9,65 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.53 — the effects port, part one
+
+**Phase 3 begins, and it begins structurally.** Card rules text resolved in
+solo play and nowhere else, for one reason: `runOps`, `execute` and
+`resolveStack` were closures inside the `Battle` component, so `judge.js` —
+which runs the two-seat table — had no way to reach them. That split was
+deliberate while it lasted (*a control-flow bug and a card being read wrong
+must never be confusable*) and it ends the way the v2.20 no-mirror rule
+ended the last one: by there being exactly **one copy**.
+
+**`engine/effects.js` now holds `runOps` (234 lines) and `execute` (455).**
+
+**THE BODIES WERE MOVED, NOT REWRITTEN.** They were extracted by script and
+were byte-identical at the commit that moved them — verified, not asserted.
+That is the whole safety property: the live trainer plays every card effect
+today, so it is the regression harness for its own port, and any port that
+*changes* its behaviour is wrong by definition. Fixes come afterwards, as
+their own commits with their own drills, never smuggled into a move where no
+diff can tell the two apart.
+
+**What the move is guarded by**, since a port is exactly the kind of change
+that rots quietly:
+
+- `makeEffects(ctx)` **throws on a missing context key** rather than letting
+  a moved body silently capture a browser global. All 17 are named.
+- `test/effects.test.js` fails if the trainer's context literal and the
+  module's `CTX_KEYS` **drift apart** — adding a dependency and forgetting
+  the call site is the failure this port could otherwise hide for weeks.
+- the **no-mirror rule** is pinned per moved function: re-declaring `runOps`
+  or `execute` back inside `index.html` fails a drill by name.
+- **all three sabotages were run and all three bite**, then restored.
+
+**`test/actor.test.js` FOLLOWS the functions rather than losing them.** The
+actor ledger slices bodies out of `index.html` by anchor pairs; two of its
+anchors just left the file. A ledger that stops scanning a body keeps
+reporting it green, which is worse than never having scanned it — so anchors
+now name their source file, and `runOps`/`execute` are still held to the
+actor rule in their new home. Three other drills that pinned a line of
+`execute` by reading the source were repointed for the same reason: **a
+source guard aimed at the wrong file passes by finding nothing.**
+
+**Verified in a real game, not just by drills.** Kayo vs. the dummy at phone
+dimensions: pitch → pay → play → the dummy's defence → resolution → back to
+the action phase, with zero console errors and zero invariant violations.
+The port is only true if the trainer still plays.
+
+**What is NOT done, stated plainly:** `resolveStack` is still in `Battle` —
+it is `() => setG(...)`, React-coupled, so it is a small refactor rather than
+a move. And **the table still does not run card text**: reaching that needs
+`judge.js` wired to call this module, and `execute`'s inline `dummyDefence`
+call turned into a hand-back so the defend step can run. Both seams are named
+in the module header rather than left to be rediscovered.
+
+Also: the `APP_VER` comment had grown back to 3,711 characters shipped on
+every page load. It is one sentence again, per the rule that created this
+file.
+
+---
+
 ## v2.52 — the preview that ate the tap, at the table
 
 **Reported from a real table (2026-08-04):** during a payment, the two-tap

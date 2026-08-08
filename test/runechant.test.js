@@ -27,7 +27,7 @@ const P = require("../engine/parser.js");
 const G = require("../engine/game.js");
 const S = require("../engine/sides.js");
 const I = require("../engine/invariants.js");
-const { html } = require("./helpers/extract.js");
+const { html, effects } = require("./helpers/extract.js");
 
 /* the real token record, shaped as the loader hands it over */
 const TOKEN = {name:"Runechant", pitch:0, cost:null, power:null, def:null,
@@ -203,7 +203,7 @@ test("a null cap pops everything — the plain 'all of them' case", () => {
    the call site by reading it, the way the actor ledger does — a source
    check is worth more than no check when the alternative is unreachable. */
 const popBlock = (() => {
-  const src = html();
+  const src = effects();   /* the pop block moved with `execute` (v2.53) */;
   const at = src.indexOf("if(runeAtPlay > 0){");
   if(at < 0) throw new Error("the runechant pop block moved — re-anchor this drill");
   const end = src.indexOf("\n      }", at);

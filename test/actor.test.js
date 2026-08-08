@@ -19,9 +19,22 @@
    Moving a name between the two lists must be a DELIBERATE edit. */
 const test = require("node:test");
 const assert = require("node:assert");
+const fs = require("fs");
+const path = require("path");
 const { html } = require("./helpers/extract.js");
 
 const src = html();
+
+/* THE RULES CORE IS MOVING OUT OF index.html (v2.53, the effects port), so
+   the ledger has to FOLLOW a function to its new home rather than lose
+   sight of it. A migrated body that stops being scanned is worse than one
+   that was never scanned: the ledger keeps reporting it green.
+   Each anchor therefore names its source file, and adding a source here is
+   the deliberate edit that admits a rules function has left the trainer. */
+const SOURCES = {
+  html: src,
+  effects: fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8")
+};
 
 /* ---- slice one function body out of index.html ----------------------
    Brace-matching is the obvious approach and the WRONG one here: `execute`
@@ -32,9 +45,17 @@ const src = html();
    is ever reordered. ANCHORS must stay in true file order; the self-check
    drill below enforces exactly that. */
 const ANCHORS = [
+  /* --- engine/effects.js: the ported card semantics -------------------- */
+  ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
+  ["execute",      "  const execute = (s,card,from,idx) => {", "effects"],
+  ["__endEffects", "  return {runOps, execute};",              "effects"],
+  /* --- index.html: what is still a closure inside Battle ---------------
+     playRx is a BOUNDARY, not a rules function: with runOps and execute
+     gone from this file, dummyDefence would otherwise slice all the way
+     to resolveStack and swallow three unrelated handlers. An anchor list
+     that stops bounding things stops being a guard. */
   ["dummyDefence", "  const dummyDefence = (s, total, card) => {"],
-  ["runOps",       "  const runOps = (s, ops, srcName) => {"],
-  ["execute",      "  const execute = (s,card,from,idx) => {"],
+  ["playRx",       "  const playRx = i => setG(s=>{"],
   ["resolveStack", "  const resolveStack = () => setG(s=>{"],
   ["tryPlay",      "  const tryPlay = (card,from,idx) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
@@ -52,23 +73,30 @@ const ANCHORS = [
   ["__end",        "  const toks = ["]
 ];
 
+const srcOf = a => SOURCES[a[2] || "html"];
+
 const OFFSETS = (() => {
   const out = {};
-  for(const [name, decl] of ANCHORS){
-    const at = src.indexOf(decl);
+  for(const a of ANCHORS){
+    const [name, decl] = a;
+    const text = srcOf(a);
+    const at = text.indexOf(decl);
     if(at < 0) throw new Error("anchor not found (did the declaration change?): " + name);
-    if(src.indexOf(decl, at + 1) >= 0) throw new Error("anchor is not unique: " + name);
+    if(text.indexOf(decl, at + 1) >= 0) throw new Error("anchor is not unique: " + name);
     out[name] = at;
   }
   return out;
 })();
 
+/* A body is bounded by the next anchor IN THE SAME SOURCE — bounding it by
+   the next anchor in the list would slice one file with another's offset. */
 function bodyOf(name){
   const i = ANCHORS.findIndex(a => a[0] === name);
   if(i < 0) throw new Error("not an anchored function: " + name);
-  const start = OFFSETS[name];
-  const next = ANCHORS[i+1];
-  return src.slice(start, next ? OFFSETS[next[0]] : src.length);
+  const text = srcOf(ANCHORS[i]);
+  const here = ANCHORS[i][2] || "html";
+  const next = ANCHORS.slice(i + 1).find(a => (a[2] || "html") === here);
+  return text.slice(OFFSETS[name], next ? OFFSETS[next[0]] : text.length);
 }
 
 /* THE RULES CORE — exactly the seven functions ROADMAP-MULTIPLAYER.md names
@@ -95,10 +123,19 @@ const hits = s => (s.match(PERSPECTIVE) || []);
 
 /* ---- the extractor must be trustworthy before it can be a guard ------ */
 test("the anchors are unique and in true file order", () => {
-  const order = ANCHORS.map(a => OFFSETS[a[0]]);
-  for(let i = 1; i < order.length; i++)
-    assert.ok(order[i] > order[i-1],
-      `ANCHORS are out of file order at ${ANCHORS[i][0]} — reorder the list to match index.html`);
+  /* Order is only meaningful WITHIN a source, and the grouping matters:
+     interleaving two files' anchors would make a body run to an offset
+     taken from the other file — a slice that is silently too long or
+     empty, which is a guard that reports green while scanning nothing. */
+  for(const key of Object.keys(SOURCES)){
+    const inSrc = ANCHORS.filter(a => (a[2] || "html") === key);
+    for(let i = 1; i < inSrc.length; i++)
+      assert.ok(OFFSETS[inSrc[i][0]] > OFFSETS[inSrc[i-1][0]],
+        `ANCHORS are out of file order at ${inSrc[i][0]} — reorder the list to match ${key}`);
+  }
+  const seen = ANCHORS.map(a => (a[2] || "html"));
+  assert.deepEqual(seen, [...new Set(seen)].flatMap(k => seen.filter(x => x === k)),
+    "ANCHORS must be grouped by source, not interleaved");
 });
 
 test("bodyOf extracts a real, complete function body", () => {

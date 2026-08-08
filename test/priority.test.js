@@ -729,7 +729,9 @@ test("arena — the trainer offers board abilities and pays their destroy cost",
   assert.match(HTML, /const boardPow = b => \{/, "the board powCard builder must exist");
   assert.match(HTML, /tapTwice\(bp, "activate", \(\)=>tryPlay\(bp,"board",i\)\)/,
     "the board must offer its ability through the two-tap commit");
-  assert.match(HTML, /if\(from==="board" && card\.sd\)\{/,
+  /* the destroy-cost payment lives in `execute`, which moved to
+     engine/effects.js in v2.53 — the other two anchors are still UI. */
+  assert.match(require("./helpers/extract.js").effects(), /if\(from==="board" && card\.sd\)\{/,
     "and execute must actually pay the destroy cost");
   /* peekables must span every zone a tap can originate in, or the preview
      silently fails to render while the tap still arms. */
@@ -899,8 +901,14 @@ test("action point — the play gate exempts instants (CR 8.1.6)", () => {
 });
 
 test("action point — resolution charges an action, not an instant (CR 8.1.1)", () => {
-  const body = HTML.slice(HTML.indexOf("const execute = (s,card,from,idx)"),
-                          HTML.indexOf("const playRx = i => setG"));
+  /* `execute` moved to engine/effects.js in v2.53. Reading it out of
+     index.html now finds NOTHING, and a source guard that finds nothing
+     passes — so this is repointed rather than left to quietly stop
+     asserting. (It could become a behavioural drill now that execute is
+     callable; that is a bigger change than repointing it.) */
+  const EFFECTS = require("./helpers/extract.js").effects();
+  const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx)"),
+                             EFFECTS.indexOf("\n  return {runOps, execute};"));
   /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
