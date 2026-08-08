@@ -9,6 +9,53 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.54 — the clash that crashed the trainer
+
+**Blocking with any clash card threw and took the game down.** In
+`takeIt`'s clash loop:
+
+```js
+const myTop = act(clashState).deck[0], foeTop = foe(clashState).deck[0];
+const mine  = myTop ? (myTop.power||0) : 0, foe = foeTop ? (foeTop.power||0) : 0;
+```
+
+The `const foe` on the second line is **block-scoped**, so it puts the
+global `foe()` helper into the temporal dead zone for the *whole* block —
+including the line above it. `foe(clashState)` therefore binds to the
+number, not the function. Native ES throws *"Cannot access 'foe' before
+initialization"*; Babel rewrites the const to a hoisted `var _foe`, which
+is why what actually shipped was **`TypeError: _foe is not a function`**.
+
+**Seven of Kayo's 55 cards are clash cards.** Clash is his mechanic.
+
+**Why nothing caught it.** Clash resolves on **defence** (v2.12 moved it
+there, correctly), so it only fires when you *block* — and every
+attack-side drill and play session goes straight past it. It is invisible
+to the audit and to the fairness sweep by construction: the card parses
+perfectly and is granted exactly what it prints. Nothing here is a rules
+question at all. It was found by reading a browser console after two
+testing sessions died without reporting, one of them stopping on the
+words *"A crash."*
+
+**`test/shadow.test.js` is the guard**, and it is the generalisation
+rather than a patch: **no local binding may shadow `act`/`foe`/`you`/
+`opp`/their Mut forms/`actorOf`**, as a declaration *or* as a parameter.
+CLAUDE.md has warned about this class since v2.25, when `tapTwice`'s
+third parameter was renamed from `act` to `commit` — but a warning in
+prose is not a guard, and the same shape was sitting in `takeIt` the
+whole time. Both sabotages were run and both bite.
+
+Two further shadows were found and renamed to `cellAct` while they were
+still harmless: the table board's gear and hand cells each declared a
+local `act` meaning "the action this cell fires". Neither reaches for the
+acting side today, which is precisely how the crashing one survived.
+
+Verified in play, not just by drills: Kayo blocks a swing with Test of
+Might, the clash reveals Buckwild (7) against Critical Strike (4), the
+Might token is created, and the trainer does not fall over.
+
+---
+
 ## v2.53 — the effects port, part one
 
 **Phase 3 begins, and it begins structurally.** Card rules text resolved in
