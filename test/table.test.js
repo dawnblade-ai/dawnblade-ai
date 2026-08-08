@@ -321,7 +321,8 @@ test("a build's deck and gear are construction inputs, not state", {skip}, () =>
      passives through `bAct`, so dropping those would silently turn every
      hero ability off. */
   for(const p of B.PASSIVES)
-    assert.equal(typeof g.builds[0][p], "boolean", "the " + p + " passive was stripped with the deck");
+    assert.equal(typeof g.builds[0][p], B.PASSIVE_TYPE[p],
+      "the " + p + " passive was stripped with the deck");
   assert.ok(g.builds[0].hp > 0 && g.builds[0].int > 0);
 });
 

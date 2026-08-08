@@ -9,6 +9,93 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.55 — Kayo learns to read
+
+Phase 3 proper: the first hero taken card by card. Three things were
+wrong, and **the coverage audit reported `full` on every affected card**
+— they were read, and read wrong.
+
+### Clause 2 — the hero ability that was doing nothing
+
+> "Attack action cards you own get +1{p} while they are in any zone other
+> than the combat chain."
+
+**The combat chain is where an attack strikes, so this is not a damage
+buff — it is a THRESHOLD rule.** A printed-5 attack action is a 6 in
+hand, in the pitch zone, in the graveyard, in the arsenal and in the
+deck, and reverts to 5 the instant it is declared.
+
+That distinction is the whole hero. Kayo's 47-card deck holds 22 cards
+printing 6 or more and **23 attack actions printing exactly 5** — and
+those 23 are precisely the pitch-2 and pitch-3 cards you pitch for
+resources. So *"if there is a card with 6 or more {p} in your pitch
+zone"* (Buckwild, High Pitched Howl, Rough Up) almost never fired: you
+pitch blues, and blues print 5. **22 of 47 → 45 of 47**, and the two
+that stay out are the Test of Might copies, which are `Block` cards and
+not attack actions at all.
+
+RULING (user, 2026-08-08): every 6+ check reads the buffed value; the
+strike reads the printed one. Verified in play — a Wild Ride resolving
+with `total: 6` against a printed 6 while the same engine called a
+discarded Strongest Survive a 7.
+
+**One question, asked in one place.** `(c.power||0)>=6` was written out
+five separate times across `index.html` and `effects.js`. That is the
+shape `rxAllowed` replaced in v2.40 and it drifts the same way, so it is
+now `parser.pow6(card, build)`. The +1 is read off the hero's printed
+text rather than hardcoded — the clause names its own number, and
+inventing it in the engine would be inventing card text.
+
+`atkPowOffChain` is a **number**, which broke two drills asserting every
+passive is a boolean. Rather than force it into a boolean and hide the 1
+somewhere else, `PASSIVE_TYPE` now records what each passive answers in,
+and a drill holds every build to it.
+
+### The discard that was silently deleted
+
+> "When this attacks, draw a card then discard a random card."
+
+`classifyClause` matched `draw (a|an|...) cards?` **unanchored**, so it
+returned `[["draw",1]]`, filed the clause `run`, and the discard ceased
+to exist. There was no "discard a random card" pattern in the parser at
+all. Bare Fangs, Wild Ride and Pulping drew for free and never paid.
+
+### "This way" is not "this turn", and neither is "the graveyard"
+
+The riders hanging off that discard read *"if a card with 6 or more {p}
+is discarded **this way**"* — the discard the card itself just made. It
+was implemented as `had6ThisTurn`, which asked whether **any** 6+ card
+had reached the graveyard this turn. **An attack card is put into the
+graveyard at DECLARATION**, so the condition was satisfiable by any
+6-power attack already played that turn — including, at some points in
+the resolution, by the attacking card itself.
+
+Three separate things now:
+
+| | |
+|---|---|
+| `discard6way` | what THIS resolution discarded (`_discWay`, cleared per resolution) |
+| `discard6` | a real discard **this turn** — `_disc`, stamped only by an actual discard |
+| the graveyard | no longer answers either question |
+
+`discardRandom` is a real op: seeded (two peers and a replay must discard
+the same card), and it honours Reincarnate, which prints *"When this is
+discarded at random, put it on the bottom of its owner's deck"* — so it
+is discarded (and still answers "this way") without ever reaching the
+graveyard.
+
+`had6ThisTurn` also read `you(` rather than `act(` — a rules question
+answered from seat 0's perspective, the v2.24 bug class. Fixed in the
+same line.
+
+**`test/kayo.test.js` pins all of it**, and four sabotages were run and
+all four bite: deleting clause 2, letting it lift a `Block`, dropping the
+discard half again, and counting the whole graveyard again. One drill
+guards the direction that steals games — `zonePow` may never appear on a
+line that computes damage.
+
+---
+
 ## v2.54 — the clash that crashed the trainer
 
 **Blocking with any clash card threw and took the game down.** In

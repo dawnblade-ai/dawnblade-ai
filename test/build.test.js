@@ -156,8 +156,19 @@ test("both seats build to the same shape, from the same function", {skip}, () =>
     "the two seats' builds declare different fields");
   for(const p of B.PASSIVES){
     for(const [nm, x] of [[hs[0].n, a.b], [hs[1].n, b.b]])
-      assert.equal(typeof x[p], "boolean", `${nm}: passive ${p} is not a boolean — a build must answer all of them`);
+      assert.equal(typeof x[p], B.PASSIVE_TYPE[p],
+        `${nm}: passive ${p} answers ${typeof x[p]}, ledger says ${B.PASSIVE_TYPE[p]} — a build must answer all of them`);
   }
+});
+
+/* The ledger must cover exactly the passives, or a new one can be added to
+   PASSIVES with no declared type and `typeof x !== undefined` quietly
+   becomes the whole check. */
+test("PASSIVE_TYPE covers exactly PASSIVES", () => {
+  assert.deepEqual(Object.keys(B.PASSIVE_TYPE).sort(), [...B.PASSIVES].sort(),
+    "every passive needs a declared type, and every declared type a passive");
+  for(const [p, t] of Object.entries(B.PASSIVE_TYPE))
+    assert.ok(t === "boolean" || t === "number", `${p}: a passive answers a boolean or a number, not ${t}`);
 });
 
 test("every hero's build answers every passive, and its deck is 60 cards of hero", {skip}, () => {
@@ -166,7 +177,7 @@ test("every hero's build answers every passive, and its deck is 60 cards of hero
     const ctr = {n: 0};
     const out = B.buildSideDefault(h, deckOf(h), DB(), RNG.make("per-hero"), ctr);
     for(const p of B.PASSIVES)
-      if(typeof out.b[p] !== "boolean") bad.push(`${h.n}: ${p} is ${out.b[p]}`);
+      if(typeof out.b[p] !== B.PASSIVE_TYPE[p]) bad.push(`${h.n}: ${p} is ${out.b[p]} (${typeof out.b[p]}, want ${B.PASSIVE_TYPE[p]})`);
     if(!(out.b.hp > 0)) bad.push(`${h.n}: no life total`);
     if(!(out.b.int > 0)) bad.push(`${h.n}: no intellect`);
     if(!out.b.deck.length) bad.push(`${h.n}: empty deck`);

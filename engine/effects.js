@@ -47,7 +47,8 @@
 /* Engine-side dependencies, taken as factory arguments — the same
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
-       fxParse, hasKw, isAttack, norm, qualMatches, runeCount} = P;
+       fxParse, hasKw, isAttack, norm, qualMatches, runeCount,
+       pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
 const {popRunechants} = G;
 const {advValue} = A;
@@ -62,19 +63,49 @@ const rngRoll = R.roll, rngInt = R.int;
    collision KNOWN_COLLISIONS polices. Passing them guarantees the moved
    bodies keep calling exactly the functions they called inside Battle. */
 const CTX_KEYS = ["L","act","actMut","actorOf","bAct","built","db","dummyDefence","foe","foeMut",
-                  "gy","had6ThisTurn","mkRune","openPrompt","tokSeq","typeAbbr","winCheck"];
+                  "gy","gyDisc","had6ThisTurn","mkRune","openPrompt","tokSeq","typeAbbr","winCheck"];
 
 function makeEffects(ctx){
   const missing = CTX_KEYS.filter(k => ctx[k] === undefined);
   if(missing.length) throw new Error("effects.js: missing context — " + missing.join(", "));
   const {L, act, actMut, actorOf, bAct, built, db, dummyDefence, foe, foeMut,
-         gy, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
+         gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
 
   const runOps = (s, ops, srcName) => {
     let n = {...s};
     ops.forEach(op=>{
       const [k,v] = op;
       if(k==="draw"){ const take=act(n).deck.slice(0,v); actMut(n).hand=[...act(n).hand,...take]; actMut(n).deck=act(n).deck.slice(v); if(take.length) n=L(n,`Drew ${take.length}.`); }
+      /* AT RANDOM, AND SEEDED. Two peers and a replay must discard the SAME
+         card, so this consumes the seeded stream and stores it back — the
+         one rule rng.js states outright. `_discWay` records what this
+         resolution discarded, which is what "discarded this way" reads;
+         `gyDisc` stamps the graveyard copy so "discarded this TURN" can
+         tell a discard from a card that was merely played. */
+      else if(k==="discardRandom"){
+        const taken=[];
+        for(let i=0;i<Math.max(1,v);i++){
+          const h=act(n).hand;
+          if(!h.length) break;
+          const r=rngInt(n.rng, h.length); n.rng=r.rng;
+          taken.push(h[r.v]);
+          actMut(n).hand = h.filter((_,ix)=>ix!==r.v);
+        }
+        if(!taken.length){ n=L(n,`${srcName}: your hand is empty — nothing to discard.`); return; }
+        /* Reincarnate prints "When this is discarded at random, put it on
+           the bottom of its owner's deck" — it IS discarded (so it still
+           answers "discarded this way"), it just never lands in the
+           graveyard. */
+        const bottom=taken.filter(c=>fxParse(c).bottomOnDiscard);
+        const toGrave=taken.filter(c=>!fxParse(c).bottomOnDiscard);
+        if(toGrave.length) actMut(n).grave=[...gyDisc(n.turn,...toGrave),...act(n).grave];
+        if(bottom.length){
+          actMut(n).deck=[...act(n).deck,...bottom];
+          n=L(n,`${bottom.map(c=>c.name).join(", ")} was discarded at random — it goes to the bottom of the deck instead.`);
+        }
+        n._discWay=[...(n._discWay||[]),...taken];
+        n=L(n,`${srcName}: discarded ${taken.map(c=>c.name+" ("+zonePow(c,bAct(n))+"{p})").join(", ")} at random.`);
+      }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
@@ -381,6 +412,24 @@ function makeEffects(ctx){
        dealt 6 on the opponent's turn — 50% over, and in a game of margins
        that decides races. Collected here, filtered out of fx.ops below. */
     const insteadKinds = new Set();
+    /* "DRAW A CARD THEN DISCARD A RANDOM CARD. If a card with 6 or more {p}
+       is discarded THIS WAY, ..." — the discard decides the rider, so it
+       must happen BEFORE the conditions are read and before the attack's
+       total is struck. Same reasoning as declOps' reveal (which changes the
+       power it is about to strike with); this one is earlier still, because
+       a CONDITION reads its result rather than an op.
+       `_discWay` is cleared per resolution: leaving it to accumulate would
+       silently turn "this way" back into "this turn", which is the bug this
+       whole distinction exists to fix. The pre-run ops are filtered out of
+       both the immediate and the deferred op lists so they cannot fire a
+       second time on resolution. */
+    n._discWay = [];
+    const preRan = new Set();
+    if(fx.ops.some(o=>o[0]==="discardRandom")){
+      const pre = fx.ops.filter(o=>o[0]==="draw"||o[0]==="discardRandom");
+      n = runOps(n, pre, card.name);
+      pre.forEach(o=>preRan.add(o));
+    }
     fx.conds.forEach(({cond,op,instead})=>{
       if(cond==="defLt2") return; // resolved after blocks
       if(cond==="discard6"){
@@ -402,7 +451,9 @@ function makeEffects(ctx){
          (kind "foe") must not be counted. */
       const dracLinks = n.chain.filter(l=>l.drac && l.kind==="atk").length;
       const met = cond==="atk" ? act(n).hist.atk>0 : cond==="non" ? act(n).hist.non>0
-        : cond==="pitch6" ? act(n).pitch.some(c=>(c.power||0)>=6)
+        /* what THIS resolution discarded, not what the turn did */
+        : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))
+        : cond==="pitch6" ? act(n).pitch.some(c=>pow6(c, bAct(n)))
         : cond==="arsenal" ? from==="arsenal"
         : cond==="lifeLt" ? act(n).hp < foe(n).hp
         : cond==="lifeGt" ? act(n).hp > foe(n).hp
@@ -548,7 +599,7 @@ function makeEffects(ctx){
           n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
-        const bigDiscard = pool.some(p=>(p.c2.power||0)>=6);
+        const bigDiscard = pool.some(p=>pow6(p.c2, bAct(n)));
         fx.conds.filter(x=>x.cond==="discard6").forEach(({op})=>{
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
           else n=L(n,`${card.name}: nothing 6+ power discarded — bonus skips.`);
@@ -574,7 +625,7 @@ function makeEffects(ctx){
       if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       if(card.pitch===3 && (from==="hand"||from==="arsenal")) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
-      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
@@ -675,6 +726,11 @@ function makeEffects(ctx){
       if(hasKw(card,"phantasm")){
         const popper = n.stack.filter(l=>l.k==="def" && l.gi==null)
           .map(l=>foe(n).hand.find(c=>c.uid===l.uid)).filter(Boolean)
+          /* PRINTED power, deliberately — not zonePow. This is phantasm
+             reading the DEFENDING card, which is (a) the opponent's, and
+             Kayo's clause 2 reads "attack action cards YOU OWN", and
+             (b) already declared, so it is ON THE COMBAT CHAIN, the one
+             zone the clause excludes. Both reasons say printed. */
           .find(c=>(c.power||0) >= 6);
         if(popper){
           n.pend = null; n.stack = []; n.mode = "act";
@@ -703,7 +759,7 @@ function makeEffects(ctx){
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
       }
-      n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0])), card.name);
+      n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
       if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};

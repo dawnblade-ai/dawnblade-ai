@@ -38,6 +38,7 @@ function stubCtx(over){
     foe: s => s.sides[1 - (s.actor || 0)],
     foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     gy: (turn, ...cards) => cards.map(c => ({...c, _gy: turn})),
+    gyDisc: (turn, ...cards) => cards.map(c => ({...c, _gy: turn, _disc: true})),
     had6ThisTurn: () => false,
     mkRune: s => s,
     openPrompt: s => s,

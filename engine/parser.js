@@ -139,6 +139,16 @@ function classifyClause(raw){
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
     if(/defended by fewer than 2 non-equipment/.test(cond)) return Object.assign(rest,{cond:"defLt2"});
+    /* "DISCARDED THIS WAY" IS NOT "DISCARDED THIS TURN". Bare Fangs reads
+       "draw a card then discard a random card. If a card with 6 or more
+       {p} is discarded THIS WAY, ..." — it asks about the discard the card
+       itself just made, not about the turn. Collapsing both to one
+       condition let any earlier discard satisfy it, and because an attack
+       reaches the graveyard at DECLARATION it could even be satisfied by
+       the attacking card itself. Savage Feast says "as that cost", which
+       is the same scoping in different words. */
+    if(/6 or more \{p\}[^.]*discard/.test(cond) && /this way|that cost/.test(cond))
+      return Object.assign(rest,{cond:"discard6way"});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
     if(/^you attack with /.test(cond)) return rest;
     /* Arena triggers: the trainer has no leaves/enters-the-arena schedule,
@@ -417,6 +427,18 @@ function classifyClause(raw){
   /* plain (non-arcane) damage from an effect — "deal 2 damage to any target" */
   if(m=c.match(/deals? (\d+) damage to (?:any target|target hero|them|the other hero|the defending hero)/))
     return R([["dmg",+m[1]]]);
+  /* "DRAW A CARD THEN DISCARD A RANDOM CARD" IS TWO OPS, AND ONLY THE
+     FIRST WAS READ. The match below is unanchored, so it consumed the
+     clause, returned [["draw",1]] and filed it `run` — tier `full`, with
+     the cost silently deleted. Five Kayo rows drew for free and never
+     paid, and the "if a 6+ card is discarded this way" riders hanging off
+     that discard then read an unrelated graveyard instead. Ordered BEFORE
+     the plain draw so the compound form is claimed by the compound rule. */
+  if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) (?:cards? at )?random(?: cards?)?/))
+    return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
+  if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) random cards?/))
+    return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
+  if(m=c.match(/^discards? (a|an|one|two|three|\d+) random cards?$/)) return R([["discardRandom",num(m[1])]]);
   if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
   if(m=c.match(/gains? (\d+)\s*(?:\{r\}|resource)/)) return R([["res",+m[1]]]);
   /* Bare pip costs: "Gain {r}{r}" is two resources — count the symbols. */
@@ -1147,6 +1169,48 @@ const isDR = c => /defense reaction/i.test(frontFace(c));
 const isRx = c => isAR(c) || isDR(c);
 const isInstantT = c => /\binstant\b/i.test(frontFace(c)) && !/reaction/i.test(frontFace(c));
 
+/* ---- WHAT COUNTS AS "A CARD WITH 6 OR MORE {p}" ---------------------
+   ONE QUESTION, ASKED IN ONE PLACE. It was spelled `(c.power||0)>=6` in
+   five separate spots across index.html and effects.js — the pitch-zone
+   check, the graveyard check, the play-gate, the discard pool and an
+   inline find. That is the same shape as the five hand-rolled copies of
+   "may this be played here" that `rxAllowed` replaced in v2.40, and it
+   drifts the same way.
+
+   It is not a constant, because a hero can change it. KAYO prints:
+
+     "Attack action cards you own get +1{p} while they are in any zone
+      other than the combat chain."
+
+   The combat chain is where an attack STRIKES, so this is deliberately
+   NOT a damage buff — it is a THRESHOLD rule. A printed-5 attack action
+   is a 6 in hand, in the pitch zone, in the graveyard, in the arsenal
+   and in the deck, and reverts to 5 the moment it is declared. Kayo's
+   deck is 22 cards that print 6+ and 23 attack actions that print
+   exactly 5 — all of them the pitch-2 and pitch-3 cards you actually
+   pitch — so without this rule the deck's own engine never fires.
+   RULING (user, 2026-08-08): every 6+ check sees the buffed value; the
+   strike sees the printed one.
+
+   `zonePow` is therefore the value a THRESHOLD reads. Nothing in the
+   damage path may call it, and no caller passes a build for a card on
+   the chain. */
+const isAtkActionCard = c => {
+  if(!c) return false;
+  /* THE STRUCTURED ARRAY IS THE AUTHORITY (v2.44) — type_text carries
+     errors on 5 of the database's records. The one thing the display
+     string knows better is a DOUBLE-FACED card, whose `ty` flattens
+     both faces, so fall back to the FRONT of `tt` when there is no
+     array to read. */
+  if(Array.isArray(c.ty) && c.ty.length && !/\/\//.test(c.tt || ""))
+    return c.ty.indexOf("Action") >= 0 && c.ty.indexOf("Attack") >= 0;
+  const ff = frontFace(c);
+  return /attack/i.test(ff) && /action/i.test(ff) && !/reaction/i.test(ff);
+};
+const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
+  + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
+const pow6 = (c, b) => zonePow(c, b) >= 6;
+
 /* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
    CR 8.1.2a — an attack reaction "can only be played/activated by a
    player who controls the attack during the Reaction Step of combat."
@@ -1194,6 +1258,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
+        isAtkActionCard, zonePow, pow6,
         isRunechant, runeCount, isAura, auraCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};

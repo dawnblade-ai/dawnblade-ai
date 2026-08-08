@@ -215,6 +215,19 @@ function buildSide(h, d, db, opts, rng, ctr){
   const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
   /* LYATH: "Whenever the crowd boos you, create a Might token." */
   const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
+  /* KAYO: "Attack action cards you own get +1{p} while they are in any zone
+     other than the combat chain." Read the NUMBER off the text rather than
+     hardcoding 1 — the clause names its own value, and inventing it here
+     would be inventing card text. The combat-chain exclusion is what makes
+     this a THRESHOLD rule and not a damage buff: see parser.zonePow, which
+     is the only thing that consumes it. */
+  const _offChain = _htx.match(/attack action cards you own get \+(\d+)\{p\} while they are in any zone other than the combat chain/);
+  const atkPowOffChain = _offChain ? +_offChain[1] : 0;
+  /* KAYO clause 3: "The first time you discard a card with 6 or more {p}
+     during each of your action phases, create a Might token." A per-action-
+     phase latch, not a per-turn one — RULING (user, 2026-08-08): a discard
+     in the end phase or on the opponent's turn does NOT make Might. */
+  const mightOnFirst6Discard = /the first time you discard a card with 6 or more \{p\} during each of your action phases, create a might token/.test(_htx);
   let startItem = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
@@ -222,6 +235,7 @@ function buildSide(h, d, db, opts, rng, ctr){
   }
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
     arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
+    atkPowOffChain,mightOnFirst6Discard,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
 }
 
@@ -290,8 +304,22 @@ function buildMatch(spec, o){
    drill can assert every build answers all of them: a passive added to
    `buildSide` and forgotten elsewhere then fails loudly instead of
    reading as a silent `false` on a real hero's turn. */
-const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo"];
+const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
+                  "atkPowOffChain","mightOnFirst6Discard"];
+
+/* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
+   or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
+   and storing that as `true` would mean hardcoding the 1 somewhere else,
+   which is inventing card text one level up. So the ledger records the
+   TYPE each passive answers in, and a drill holds every build to it: a
+   hero that answers `undefined` still fails, which is the property the
+   original boolean check was actually protecting. */
+const PASSIVE_TYPE = {
+  arsenalInstant: "boolean", iceFrostbite: "boolean", viseraiPassive: "boolean",
+  wateryGrave: "boolean", lyathBoo: "boolean", mightOnFirst6Discard: "boolean",
+  atkPowOffChain: "number"
+};
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
-        buildSeed, buildMatch, PASSIVES};
+        buildSeed, buildMatch, PASSIVES, PASSIVE_TYPE};
 });
