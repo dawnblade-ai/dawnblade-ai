@@ -9,6 +9,58 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.56 — the tokens fire, and clash learns to count
+
+**Might, Agility and Vigor parsed perfectly and could never happen.** All
+three print *"At the start of your turn, destroy this, then …"*, all three
+resolve to exactly the right ops — `buffNext 1`, `gaNext`, `res 1` — and
+all three were **inert**, because nothing in the engine had a start-of-turn
+schedule for them to fire on. They accumulated on the board forever.
+
+That silently made **seven of Kayo's cards decoration**: Clash of Agility,
+both Clash of Mights, Test of Might and High Pitched Howl all exist to
+create one. A coverage tool cannot see this — every card reads `full`.
+
+The trigger goes in the start phase, which is where CR 4.2 puts turn-start
+triggers and where the code's own comment already said they belonged; the
+crumbling auras were the only ones there. It matches on the **printed
+text**, never on a token's name, and runs the token's own parsed ops.
+
+*Stated rather than hidden:* a token that leaves the arena strictly ceases
+to exist, and these go to the graveyard like the crumbling auras above
+them. Nothing reads them there — Kayo's discard checks require the `_disc`
+stamp — so it is a display difference, not a rules one.
+
+### Clause 3
+
+> "The first time you discard a card with 6 or more {p} during each of your
+> action phases, create a Might token."
+
+Three things in that sentence do work: a **latch** (only the first), the
+shared **6+** test (so clause 2 applies to it), and **"during each of your
+action phases"** — RULING (user, 2026-08-08): a discard in the end phase,
+or on the opponent's turn, makes no Might. So it asks the CR phase, not
+merely whose turn it is. The additional-cost discard is the one path not
+yet wired to it, which is a gap rather than a decision.
+
+### Clash was comparing the wrong numbers
+
+Clash compares the power of the top card of each deck — and **a deck is a
+zone other than the combat chain**, so Kayo's clause 2 reaches it. Watching
+a real clash resolve showed `Wild Ride (6)` where the card is a 7.
+
+This is the first rule that asks about **the other hero's build**, which is
+the condition CLAUDE.md set for `bFoe` existing at all. Each revealed card
+is read against its own owner's build; one shared helper would apply the
+revealer's buff to both cards, and a drill bites on exactly that mistake.
+
+Also noticed, not yet chased: the dummy's pregame throw tied four times in
+a row while cycling rock → paper → scissors in lockstep. It may be the
+seeded stream for that seed, or the throw may not be drawing randomly.
+Recorded here rather than asserted either way.
+
+---
+
 ## v2.55 — Kayo learns to read
 
 Phase 3 proper: the first hero taken card by card. Three things were

@@ -71,6 +71,33 @@ function makeEffects(ctx){
   const {L, act, actMut, actorOf, bAct, built, db, dummyDefence, foe, foeMut,
          gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
 
+  /* WHAT A DISCARD TRIGGERS. Kayo prints: "The first time you discard a
+     card with 6 or more {p} during EACH OF YOUR ACTION PHASES, create a
+     Might token." Three things in that sentence do work and all three are
+     modelled here rather than approximated:
+
+       "the first time"   — a latch, on hist, which resets every turn
+       "6 or more {p}"    — pow6, so his own clause 2 applies to it
+       "during each of your ACTION PHASES" — RULING (user, 2026-08-08):
+                            a discard in the end phase, or on the
+                            opponent's turn, makes no Might. So it asks
+                            the CR phase, not merely whose turn it is.
+
+     Every discard path should call this. Today that is `discardRandom`;
+     an additional-cost discard is the other one and is not wired yet,
+     which is a gap rather than a decision. */
+  const afterDiscard = (s, taken) => {
+    let n = s;
+    const b = bAct(n);
+    if(!b || !b.mightOnFirst6Discard) return n;
+    if(n.phase !== "action") return n;
+    if(act(n).hist && act(n).hist.might6) return n;
+    if(!taken.some(c => pow6(c, b))) return n;
+    actMut(n).hist = {...act(n).hist, might6:1};
+    n = L(n, "The first card with 6 or more {p} you have discarded this action phase — Kayo makes Might.");
+    return runOps(n, [["token","Might",1,"self"]], "Kayo");
+  };
+
   const runOps = (s, ops, srcName) => {
     let n = {...s};
     ops.forEach(op=>{
@@ -105,6 +132,7 @@ function makeEffects(ctx){
         }
         n._discWay=[...(n._discWay||[]),...taken];
         n=L(n,`${srcName}: discarded ${taken.map(c=>c.name+" ("+zonePow(c,bAct(n))+"{p})").join(", ")} at random.`);
+        n = afterDiscard(n, taken);
       }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));

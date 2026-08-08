@@ -213,6 +213,59 @@ test("Reincarnate discarded at random goes to the DECK BOTTOM, not the graveyard
   assert.equal(out.sides[0].deck[0].name, "Reincarnate");
 });
 
+/* ---- THE TOKENS, AND CLAUSE 3 ----------------------------------------- */
+
+test("Might / Agility / Vigor each parse to a real payload", {skip}, () => {
+  const want = {Might: [["buffNext", 1]], Agility: [["gaNext"]], Vigor: [["res", 1]]};
+  for(const [nm, ops] of Object.entries(want)){
+    const tok = C.resolveEntry(DB(), {name: nm, p: 0, code: null, q: 1});
+    assert.ok(tok.resolved, `${nm} must resolve from the database — never invent a token`);
+    assert.deepEqual(P.fxParse(tok).ops, ops, `${nm}`);
+    assert.match(P.clean(tok.tx || ""), /at the start of your turn, destroy this/i);
+  }
+});
+
+/* The schedule is in `newTurn`, a closure inside Battle, so pin the call
+   site by reading it — the alternative is no check at all, and these three
+   tokens were inert for their whole existence precisely because nothing
+   asked. */
+test("the trainer fires start-of-turn triggers, off printed text", {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const start = html.indexOf("Start phase (CR 4.2)");
+  const body = html.slice(start, start + 2200);
+  assert.match(body, /at the start of your turn, destroy this/i,
+    "newTurn must look for the printed trigger line");
+  assert.match(body, /fxParse\(b\.card\)\.ops/,
+    "and run the token's OWN parsed ops — never a payload hardcoded per token name");
+  assert.ok(!/"Might"|'Might'/.test(body),
+    "matched on printed text, not on a token's name");
+});
+
+test("clause 3 is gated on the ACTION phase and latches once", {skip}, () => {
+  const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  const i = efx.indexOf("const afterDiscard");
+  assert.ok(i > 0, "afterDiscard moved — re-anchor this drill");
+  const body = efx.slice(i, i + 900);
+  assert.match(body, /phase !== "action"/,
+    'RULING: "during each of your action phases" — an end-phase discard makes no Might');
+  assert.match(body, /hist\.might6/, "and it must latch, so only the FIRST one fires");
+  assert.match(body, /pow6\(/, "the 6+ test is the shared one, so clause 2 applies to it");
+});
+
+/* CLASH compares the power of the top card of each deck, and the deck is a
+   zone other than the combat chain — so clause 2 reaches it, and each card
+   must be read with ITS OWN owner's build. Seven of Kayo's cards clash. */
+test("clash reads effective power, each side with its own build", {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const i = html.indexOf("const myTop = act(clashState).deck[0]");
+  assert.ok(i > 0, "the clash loop moved — re-anchor this drill");
+  const body = html.slice(i, i + 500);
+  assert.match(body, /zonePow\(myTop, bAct\(/, "your revealed card uses YOUR build");
+  assert.match(body, /zonePow\(foeTop, bFoe\(/,
+    "and theirs uses THEIRS — one shared build would apply the revealer's buff to both cards");
+  assert.ok(!/\(myTop\.power\|\|0\)/.test(body), "printed power must not decide a clash any more");
+});
+
 /* ---- THE BUG THIS WHOLE DISTINCTION EXISTS FOR ------------------------ */
 
 test("a PLAYED attack in the graveyard does not count as a discard", {skip}, () => {

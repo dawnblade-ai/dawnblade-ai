@@ -740,7 +740,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.55"; /* v2.55 — Kayo learns to read: clause 2 makes a printed-5 attack action count as 6 everywhere but the combat chain, and "draw then discard a random card" is finally two ops instead of one. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.56"; /* v2.56 — the tokens fire: Might, Agility and Vigor parsed perfectly and had no schedule to fire on, so every clash payoff in Kayo deck was decoration. Plus his clause 3, and clash now compares effective power with each side read against its own build. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -2333,6 +2333,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      v2.24. Add it when a rule actually asks about the other hero. */
   const bOf  = i => built.both[i];
   const bAct = s => built.both[actorOf(s)];
+  /* THE FIRST RULE THAT ASKS ABOUT THE OTHER HERO'S BUILD (v2.56), which is
+     the condition CLAUDE.md set for this helper existing at all. CLASH
+     compares the power of the top card of BOTH decks, and a hero's static
+     buff applies to its OWN cards: Kayo's "attack action cards you own get
+     +1{p} while they are in any zone other than the combat chain" covers
+     the top of his deck, so his 6 reveals as a 7 — against an opponent
+     whose card is read with the opponent's own build. One shared helper
+     would silently apply the revealer's buff to both cards. */
+  const bFoe = s => built.both[1-actorOf(s)];
 
   /* L is declared ahead of the state so the opening-swing initializer below
      can reach it — it is a pure (state, message) function with no dependency
@@ -3321,7 +3330,11 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
          shadowing trap as tapTwice's `act` parameter (v2.25) — and clash
          fires on BLOCK, so it never showed up in any attack-side testing. */
       const myTop = act(clashState).deck[0], foeTop = foe(clashState).deck[0];
-      const mine = myTop ? (myTop.power||0) : 0, theirs = foeTop ? (foeTop.power||0) : 0;
+      /* zonePow, not printed power: the top of a DECK is a zone other than
+         the combat chain, so Kayo's clause 2 reaches it. Each card is read
+         with its OWN owner's build — that is what bFoe is for. */
+      const mine = myTop ? zonePow(myTop, bAct(clashState)) : 0,
+            theirs = foeTop ? zonePow(foeTop, bFoe(clashState)) : 0;
       const win = mine > theirs, tie = mine === theirs;
       clashState = L(clashState, `${cc.name} clashes — you reveal ${myTop?myTop.name+" ("+mine+")":"nothing (0)"}`
         + ` vs the dummy's ${foeTop?foeTop.name+" ("+theirs+")":"empty deck (0)"} — `
@@ -3451,6 +3464,34 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        so turn-start triggers have somewhere to happen. The crumbling auras
        above ARE those triggers. */
     let out = L(fresh, `— Turn ${s.turn+1}. Start phase (CR 4.2) — no priority. —`);
+    /* START-OF-TURN TRIGGERS (v2.56). Might, Agility and Vigor all print
+       "At the start of your turn, destroy this, then …", all three parse
+       PERFECTLY — `buffNext 1`, `gaNext`, `res 1` — and until now all three
+       were inert, because nothing in the engine had a schedule for them to
+       fire on. They piled up on the board forever, which quietly made every
+       clash payoff in Kayo's deck decoration: seven of his cards create one.
+       A coverage tool cannot see this at all — the card reads `full`.
+
+       Matched on the PRINTED TEXT, never on a token's name, so anything that
+       prints the same line gets the same treatment. This is the start phase
+       CR 4.2 describes, which is where the comment above already said
+       turn-start triggers belong; the crumbling auras were the only ones.
+
+       Simplification, stated rather than hidden: a token that leaves the
+       arena strictly ceases to exist, but these go to the graveyard like the
+       crumbling auras two blocks up. Nothing reads them there — Kayo's
+       discard checks require the `_disc` stamp — so it is a display
+       difference, not a rules one. */
+    const fired = (you(out).board||[]).filter(b=>/at the start of your turn, destroy this/i.test(clean(b.card.tx||"")));
+    if(fired.length){
+      youMut(out).board = you(out).board.filter(b=>fired.indexOf(b)<0);
+      youMut(out).grave = [...gy(out.turn, ...fired.map(b=>b.card)), ...you(out).grave];
+      for(const b of fired){
+        out = L(out, `${b.card.name} resolves at the top of your turn and is destroyed.`);
+        const ops = fxParse(b.card).ops || [];
+        if(ops.length) out = runOps(out, ops, b.card.name);
+      }
+    }
     /* CR 4.3.1-4.3.3: the action phase begins, the turn-player has 1 action
        point, and then gains priority. */
     out = L(out, "— Action phase (CR 4.3). You have 1 action point and priority. —");
