@@ -156,14 +156,32 @@ for(const c of Object.values(audit.cards)){
      The generalisation of the v2.31 discriminator to every keyword the
      engine acts on: listed in card_keywords, mentioned in the text ONLY
      inside a sentence, never on a line of its own. */
+  /* THIS LIST WAS DECORATION FOR FOUR VERSIONS. The loop enumerated all six
+     keywords, computed both discriminators, and then ended with
+     `&& k === "go again" && fx.ga` — so five of the six were discarded and
+     the check only ever asked about go again. That is exactly why the sweep
+     stayed silent while Pulping had unconditional dominate: `fx.ga` is the
+     engine's answer for ONE keyword, and nobody wrote down the engine's
+     answer for the others.
+
+     It is `hasKwNow` now — the same predicate the trainer asks — so this
+     check is no longer a restatement of the parser's opinion but a
+     comparison between what the card PRINTS and what the engine GRANTS.
+     Reintroduce the bare-`hasKw` reading and this reports Pulping and
+     Spectral Rider; `test/fairness.test.js` pins that it bites.
+
+     `kwGated` is imported rather than re-derived. The old local
+     `gatedInText` treated a bare "when this attacks" TRIGGER as a
+     condition, which would have reported Smash Instinct — a card that
+     grants intimidate on every single swing — as too strong. Two
+     definitions of "gated" is how that happens. */
   const ACTED = ["go again","dominate","intimidate","crush","phantasm","overpower"];
   for(const kwName of (c.kw||[])){
     const k = String(kwName).toLowerCase();
     if(!ACTED.includes(k)) continue;
-    if(!new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(tx)) continue;
-    const standalone = tx.split(/\n+/).some(l => new RegExp("^\\**"+k+"\\**\\.?$","i").test(l.trim()));
-    const gatedInText = new RegExp("(?:if|when|while|unless)[^.]*\\b"+k+"\\b","i").test(tx);
-    if(!standalone && gatedInText && k === "go again" && fx.ga)
+    if(!P.kwGated(c, k)) continue;
+    const engineGrants = k === "go again" ? !!fx.ga : P.hasKwNow(c, k);
+    if(engineGrants)
       flag(3, "KEYWORD-UNGATED", c,
         `"${kwName}" is only granted conditionally in the text but the engine treats it as printed`,
         "card_keywords is an INDEX, not a claim of unconditional possession");

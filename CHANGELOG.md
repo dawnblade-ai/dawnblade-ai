@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.57 — the keyword that was never earned, and a coin
+
+### Pulping had dominate on every swing
+
+> "If a card with 6 or more {p} is discarded this way, this gets dominate."
+
+`hasKw` answers from **either** `card_keywords` **or** the raw text, and
+dominate appears in both — inside its own conditional sentence. So the
+defender was held to one card on every Pulping swing and the printed gate
+was decoration.
+
+**This is v2.31's lesson, four versions late.** That release established
+that `card_keywords` is an INDEX, not a claim of unconditional possession,
+and fixed it for `fx.ga`. It was never applied to `hasKw`, which is what
+the trainer asks for every *other* keyword.
+
+`kwGated` generalises the discriminator, and **a trigger is not a gate**:
+*"When this attacks, intimidate"* (Smash Instinct) fires every swing, so
+treating it as conditional would turn the card off — the opposite error.
+`if`/`unless` gate; a bare `when`/`whenever` does not, unless the
+when-clause carries a nested `if` (Spectral Rider). Across the whole pool
+exactly three keywords are gated this way, and the third is Smash
+Instinct's, which this correctly does **not** flag.
+
+**Refusing the grant is only half a fix** — it would leave the card doing
+nothing. `this gets dominate` now parses to `gainKw`, so the keyword
+arrives when the condition actually fires.
+
+### The sweep that should have caught it
+
+`tools/fairness.js` listed six keywords, computed both discriminators, and
+ended with `&& k === "go again" && fx.ga`. **Five of the six were
+discarded** — the list was decoration, which is exactly why the sweep sat
+clean over a live sev-3. It compares the printed text against
+`hasKwNow` now, the same predicate the trainer asks, so it is a real
+comparison rather than a restatement of the parser's own opinion.
+
+Reintroducing the bare-`hasKw` reading makes it report Pulping and
+Spectral Rider, and nothing else — verified.
+
+**It also caught my own bug on the way in.** A first cut ran the
+standalone-line check against `clean()`ed text, which collapses the
+newlines that rule depends on, and reported Loot the Arsenal and Loot the
+Hold — both of which print "Go again" on its own final line and happen to
+carry an "If you do, …" inside a *quoted* ability granted to another card.
+The layout rule reads raw text now.
+
+### A Block has no play
+
+Test of Might prints no cost, 4 defence and *"When this defends, …"*. Read
+as an ordinary non-attack it was a **free 0-cost play** that spent your
+action point and did nothing — sev-3 "illegal play allowed". `judge.js`
+has refused this since v2.47 through `types.js`; the trainer never did, and
+Kayo runs two copies. It now asks `DawnTypes.isBlock` and says why.
+
+### The coin (a testing affordance)
+
+`window.THROW_MODE = "coin"` replaces rock-paper-scissors, whose ties
+replay and can cost half a dozen taps before a game starts. **`rps.js` and
+every line of the throw UI are untouched and still drilled** — set the flag
+to `"rps"` and it returns exactly as it was, which is the plan for launch.
+
+Two things deliberately unchanged: the flip is drawn from the **same seeded
+sub-stream**, so a match is still reproducible from its seed; and the
+**winner still chooses** the seating, because "the winner decides who goes
+first" is the rule, not a feature of throwing hands. A coin that seated you
+directly would be a rules change wearing a convenience hat.
+
+---
+
 ## v2.56 — the tokens fire, and clash learns to count
 
 **Might, Agility and Vigor parsed perfectly and could never happen.** All

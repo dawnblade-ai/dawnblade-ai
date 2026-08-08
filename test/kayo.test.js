@@ -266,6 +266,53 @@ test("clash reads effective power, each side with its own build", {skip}, () => 
   assert.ok(!/\(myTop\.power\|\|0\)/.test(body), "printed power must not decide a clash any more");
 });
 
+/* ---- A KEYWORD THE CARD ONLY GRANTS CONDITIONALLY --------------------- */
+
+test("Pulping's dominate is GATED, and Smash Instinct's intimidate is not", {skip}, () => {
+  const pulping = card("Pulping"), smash = card("Smash Instinct");
+  assert.equal(P.hasKw(pulping, "dominate"), true, "it is on the card somewhere");
+  assert.equal(P.kwGated(pulping, "dominate"), true,
+    'but only inside "IF a card with 6 or more {p} is discarded this way"');
+  assert.equal(P.hasKwNow(pulping, "dominate"), false,
+    "so the engine must not hand it over unconditionally — that is v2.31's lesson, " +
+    "applied to fx.ga in 2.31 and never to hasKw");
+
+  /* A TRIGGER IS NOT A GATE. "When this attacks, intimidate" fires on every
+     swing; treating it as conditional would turn the card off instead. */
+  assert.equal(P.kwGated(smash, "intimidate"), false);
+  assert.equal(P.hasKwNow(smash, "intimidate"), true);
+});
+
+test("the gate can still fire — the clause grants the keyword", {skip}, () => {
+  const cl = P.classifyClause("If a card with 6 or more {p} is discarded this way, this gets dominate");
+  assert.equal(cl.cond, "discard6way");
+  assert.deepEqual(cl.ops, [["gainKw", "dominate"]],
+    "refusing the unconditional grant without building the conditional one would " +
+    "just turn the card off, which is the opposite error");
+});
+
+test("the trainer asks whether dominate is ACTIVE, not whether it is mentioned", {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /const dominating = hasKwNow\(card,"dominate"\) \|\| \(n\._kwGrant\|\|\[\]\)/,
+    "dummyDefence must read hasKwNow plus this resolution's granted keywords");
+  assert.ok(!/hasKw\(card,"dominate"\)/.test(html),
+    "the bare hasKw reading is what held the defender to one card on every Pulping swing");
+});
+
+/* ---- A BLOCK HAS NO PLAY ---------------------------------------------- */
+
+test("Test of Might cannot be played as an action", {skip}, () => {
+  const tom = card("Test of Might");
+  const T = require("../engine/types.js");
+  assert.equal(T.isBlock(tom), true, "Test of Might is a Block");
+  assert.equal(T.isPlayable(tom), false, "and a Block has no play at all");
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /DawnTypes\.isBlock\(card\)/,
+    "tryPlay must refuse a Block — otherwise it is a free 0-cost play that spends " +
+    "an action point and does nothing. judge.js has refused it since v2.47; the " +
+    "trainer never did, and Kayo runs two copies.");
+});
+
 /* ---- THE BUG THIS WHOLE DISTINCTION EXISTS FOR ------------------------ */
 
 test("a PLAYED attack in the graveyard does not count as a discard", {skip}, () => {

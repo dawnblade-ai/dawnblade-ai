@@ -423,6 +423,14 @@ function classifyClause(raw){
     return R([["selfDestruct","turn"]]);
   if(/^at the beginning of your end phase, destroy this$/.test(c))
     return R([["selfDestruct","end"]]);
+  /* A KEYWORD GRANTED BY A CLAUSE, e.g. Pulping's "this gets dominate".
+     Without this the gated half of `kwGated` has nothing to grant when its
+     condition DOES fire, and refusing the unconditional grant would simply
+     turn the card off instead of correcting it. "go again" is deliberately
+     absent: it has its own `ga` path and two readers of one value is the
+     v2.30 double-count. */
+  if(m=c.match(/^(?:this|it) (?:gets|gains|has) (dominate|intimidate|overpower|crush|phantasm)$/))
+    return R([["gainKw",m[1]]]);
   if(m=c.match(/deals? (\d+) arcane damage/)) return R([["arcane",+m[1]]]);
   /* plain (non-arcane) damage from an effect — "deal 2 damage to any target" */
   if(m=c.match(/deals? (\d+) damage to (?:any target|target hero|them|the other hero|the defending hero)/))
@@ -1211,6 +1219,60 @@ const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
   + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
 const pow6 = (c, b) => zonePow(c, b) >= 6;
 
+/* ---- A KEYWORD THE CARD ONLY GRANTS CONDITIONALLY -------------------
+   v2.31 established that `card_keywords` is an INDEX — it lists every
+   keyword APPEARING on the card, including ones the text grants only
+   under a condition — and applied the fix to `fx.ga`. It was never
+   applied to `hasKw`, which is what the trainer asks for every OTHER
+   keyword, and `hasKw` matches the raw text as well as the list. So:
+
+     Pulping — "If a card with 6 or more {p} is discarded this way,
+                this gets dominate."
+
+   was held to one blocker on EVERY swing, its printed gate pure
+   decoration. Same shape, same card family, four versions later.
+
+   THE DISCRIMINATOR IS THE GATE WORD, AND A TRIGGER IS NOT A GATE.
+   "When this attacks, intimidate" (Smash Instinct) fires every time the
+   card attacks — treating that as conditional would make the card do
+   nothing. "If X, this gets dominate" may not fire at all. So `if` and
+   `unless` gate; a bare `when`/`whenever` does not, unless the when-
+   clause itself carries a nested `if` (Spectral Rider: "When you play
+   this, IF you control a Spectral Shield, this gains overpower").
+
+   Across the whole pool exactly three keywords are non-standalone and
+   gated this way: Pulping's dominate, Spectral Rider's overpower, and
+   Smash Instinct's intimidate — which this correctly does NOT flag. */
+const kwGated = (c, k) => {
+  if(!c || !k) return false;
+  const raw = String(c.tx || "");
+  const tx = clean(raw);
+  if(!tx) return false;
+  const kw = String(k).toLowerCase();
+  const rx = new RegExp("\\b" + kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+  if(!rx.test(tx)) return false;
+  /* A KEYWORD PRINTED ON A LINE OF ITS OWN IS UNCONDITIONAL, whatever else
+     the card says — v2.31's layout rule, and the database really does put
+     real keyword lines in their own paragraph.
+     READ THE RAW TEXT HERE, NOT THE CLEANED ONE: `clean` collapses the
+     newlines this rule depends on. Getting that wrong reported Loot the
+     Arsenal and Loot the Hold as too strong — both print "Go again" on its
+     own final line, and both happen to carry an "If you do, …" inside a
+     QUOTED ability granted to another card, which the sentence scan below
+     then read as the gate. */
+  if(raw.split(/\n+/).some(l => new RegExp("^\\**" + kw + "\\**\\.?$", "i").test(l.trim()))) return false;
+  /* otherwise: is EVERY sentence mentioning it gated? */
+  const sentences = tx.split(/(?<=\.)\s+|\n+/).filter(s => rx.test(s));
+  if(!sentences.length) return false;
+  return sentences.every(s => {
+    const before = s.slice(0, s.search(rx)).toLowerCase();
+    if(/\b(if|unless)\b/.test(before)) return true;          // a real condition
+    return false;                                             // a bare when/whenever trigger, or plain text
+  });
+};
+/* what the card actually HAS right now, before any conditional grant */
+const hasKwNow = (c, k) => hasKw(c, k) && !kwGated(c, k);
+
 /* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
    CR 8.1.2a — an attack reaction "can only be played/activated by a
    player who controls the attack during the Reaction Step of combat."
@@ -1258,7 +1320,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
-        isAtkActionCard, zonePow, pow6,
+        isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};

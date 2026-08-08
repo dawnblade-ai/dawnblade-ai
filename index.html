@@ -740,7 +740,23 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.56"; /* v2.56 — the tokens fire: Might, Agility and Vigor parsed perfectly and had no schedule to fire on, so every clash payoff in Kayo deck was decoration. Plus his clause 3, and clash now compares effective power with each side read against its own build. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.57"; /* v2.57 — Pulping stops dominating for free, a Block stops being a free play, and the coin replaces the throw while we test. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+/* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
+   the rock-paper-scissors throw is fine at a table and slow when you are
+   starting your ninth Kayo game of the afternoon, and its ties replay, so a
+   run of them can cost half a dozen taps before a game begins.
+
+   `engine/rps.js` IS UNTOUCHED AND STILL DRILLED, and so is every line of
+   the throw UI below — this is a flag, not a deletion, because it is going
+   back in for launch. Set it to "rps" and the throw returns exactly as it
+   was.
+
+   WHAT DOES NOT CHANGE: the flip is drawn from the SAME seeded sub-stream
+   the throw used, so a match is still reproducible from its seed; and the
+   WINNER STILL CHOOSES, because "the winner decides who goes first" is the
+   rule, not a feature of throwing hands. A coin that seated you directly
+   would be a rules change wearing a convenience hat. */
+window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
 window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
@@ -1381,7 +1397,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     arsCap = DawnParser.arsCap, arsCount = DawnParser.arsCount,
     arsFree = DawnParser.arsFree, arsEmpty = DawnParser.arsEmpty,
     isAtkActionCard = DawnParser.isAtkActionCard, zonePow = DawnParser.zonePow,
-    pow6 = DawnParser.pow6;
+    pow6 = DawnParser.pow6, kwGated = DawnParser.kwGated, hasKwNow = DawnParser.hasKwNow;
 /* The SEEDED source. `rngShuffle` is deliberately NOT named `shuffle`:
    DawnGame.shuffle is the unseeded Math.random one, and two functions
    with the same name and different determinism is exactly the
@@ -2653,7 +2669,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       links.push({k:"def", label:`${opp(n).name}: ${opp(n).gear[gi].name} — defend ${gearDef(opp(n).gear[gi])}`, gi});
       soak += gearDef(opp(n).gear[gi]);
     }
-    const cap = hasKw(card,"dominate") ? 1 : 2;
+    /* DOMINATE MUST BE ACTIVE, NOT MERELY MENTIONED. `hasKw` matches the raw
+       text as well as card_keywords, so Pulping — "IF a card with 6 or more
+       {p} is discarded this way, this gets dominate" — held the defender to
+       one card on every swing, its printed gate pure decoration. That is
+       v2.31's lesson, which was applied to fx.ga and never to hasKw.
+       `hasKwNow` drops a keyword the text only grants under an if/unless;
+       `_kwGrant` is how the clause hands it over when the gate DOES fire. */
+    const dominating = hasKwNow(card,"dominate") || (n._kwGrant||[]).indexOf("dominate")>=0;
+    const cap = dominating ? 1 : 2;
     const pick = opp(n).hand.map((c,i)=>({c,i})).filter(x=>(x.c.def||0)>0)
       .sort((a,b)=>((b.c.def||0)-(a.c.def||0)) || ((a.c.power||0)-(b.c.power||0)));
     const chosen = [];
@@ -2664,7 +2688,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     chosen.forEach(x=>links.push({k:"def", label:`${opp(n).name}: ${x.c.name} — defend ${x.c.def}`, uid:x.c.uid}));
     n.stack = [...n.stack, ...links];
     if(!links.length) return {n, note:`${opp(n).name} passes — it eats this one.`};
-    const dnote = hasKw(card,"dominate") && chosen.length
+    const dnote = dominating && chosen.length
       ? " Dominate holds it to a single card." : "";
     return {n, note:`${opp(n).name} defends with ${links.map(l=>l.label.replace(opp(n).name+": ","")).join(" + ")}.${dnote}`};
   };
@@ -2967,6 +2991,17 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     if(isRx(card))
       return L(s, `${card.name} is ${isAR(card)?"an attack":"a defense"} reaction — it can only be played in the reaction step`
                 + `${isAR(card)?", by the player who controls the attack":", by the player being attacked"}.`);
+    /* A BLOCK HAS NO PLAY. Test of Might, Test of Strength, On the Horizon
+       and Crash and Bash print no cost, 4 defence and "When this defends,
+       …": they may be pitched or declared as a defender, and nothing else.
+       Read as an ordinary non-attack, a Block is a FREE 0-cost play that
+       spends your action point and does nothing — sev-3 "illegal play
+       allowed". `judge.js` has refused this since v2.47 via types.js; the
+       trainer never did, and Kayo runs two copies. The STRUCTURED array is
+       the authority (v2.44), so ask DawnTypes rather than the display
+       string. */
+    if(DawnTypes.isBlock(card))
+      return L(s, `${card.name} is a Block — it has no play. Pitch it, or declare it as a defender.`);
     /* CR 8.1.6 — an instant "can be played/activated any time the player has
        priority", so being out of action points is not a reason to refuse one.
        The gate asks costsAP, the same question execute's arithmetic asks; two
@@ -4282,8 +4317,24 @@ function Pregame({h, oppH, seed, onSeated, onBack}){
      and ties replay by drawing again rather than by re-rendering. */
   const rps = uR(rngMake(rngSeedFrom(String(seed==null?0:seed) + ":rps")));
 
+  /* THE COIN (v2.57) — a testing affordance, see window.THROW_MODE. It draws
+     from the same seeded sub-stream the throw uses, so a match is still
+     reproducible from its seed, and it cannot tie, which is the whole point.
+     The winner still CHOOSES the seating below: that is the rule. */
+  const coinMode = window.THROW_MODE !== "rps";
+  const [coinWin, setCoinWin] = uS(null);
   const series = rpsSeries(rounds);
-  const winner = series.winner;
+  const winner = coinMode ? coinWin : series.winner;
+
+  uE(()=>{
+    if(!coinMode || coinWin !== null) return;
+    const _c = rngInt(rps.current, 2); rps.current = _c.rng;
+    timer.current = setTimeout(()=>{
+      setCoinWin(_c.v);
+      say(_c.v===0 ? "The coin lands your side of the table." : `The coin lands ${foeLabel}'s way.`);
+      setPhase("decide");
+    }, 500);
+  },[coinMode]);
 
   const throwIt = mine => {
     if(phase!=="throw") return;
@@ -4331,31 +4382,36 @@ function Pregame({h, oppH, seed, onSeated, onBack}){
   const shaking = phase==="shaking";
   return (
     <div className="rps">
-      <div className="rtitle">The Throw</div>
-      <p className="rsub">Winner decides who takes the first turn.<br/>Going first buys initiative; going second keeps a card.</p>
+      <div className="rtitle">{coinMode ? "The Coin" : "The Throw"}</div>
+      <p className="rsub">Winner decides who takes the first turn.<br/>Going first buys initiative; going second keeps a card.
+        {coinMode && <><br/><span style={{opacity:.65}}>Coin for speed while testing — the throw returns for launch.</span></>}</p>
       <div className="rtable">
         <div className={"rseat"+(winner===0?" win":"")}>
           <span className="rwho">You · {h.n}</span>
-          <span className="rglyph">{shaking ? "✊" : live ? RPS_GLYPH[live.mine] : "·"}</span>
-          <span className="rname">{shaking ? "shaking" : live ? live.mine : "ready"}</span>
-          <span className="rscore">{series.a}</span>
+          <span className="rglyph">{coinMode ? (winner===0?"🪙":"·") : shaking ? "✊" : live ? RPS_GLYPH[live.mine] : "·"}</span>
+          <span className="rname">{coinMode ? (winner===null?"flipping":winner===0?"wins the flip":"loses the flip")
+                                            : shaking ? "shaking" : live ? live.mine : "ready"}</span>
+          {!coinMode && <span className="rscore">{series.a}</span>}
         </div>
         <span className="rvs">VS</span>
         <div className={"rseat"+(winner===1?" win":"")}>
           <span className="rwho">{foeLabel}</span>
-          <span className="rglyph">{shaking || !live || live.theirs===null ? "✊" : RPS_GLYPH[live.theirs]}</span>
-          <span className="rname">{shaking || !live || live.theirs===null ? "shaking" : live.theirs}</span>
-          <span className="rscore">{series.b}</span>
+          <span className="rglyph">{coinMode ? (winner===1?"🪙":"·")
+                                             : shaking || !live || live.theirs===null ? "✊" : RPS_GLYPH[live.theirs]}</span>
+          <span className="rname">{coinMode ? (winner===null?"flipping":winner===1?"wins the flip":"loses the flip")
+                                            : shaking || !live || live.theirs===null ? "shaking" : live.theirs}</span>
+          {!coinMode && <span className="rscore">{series.b}</span>}
         </div>
       </div>
       <div className="rcall">
-        {phase==="throw" && <span>{rounds.length ? <span>Tied <b>{series.ties}</b> — throw again.</span> : "Pick your throw."}</span>}
+        {phase==="throw" && coinMode && <span>Flipping for the seating…</span>}
+        {phase==="throw" && !coinMode && <span>{rounds.length ? <span>Tied <b>{series.ties}</b> — throw again.</span> : "Pick your throw."}</span>}
         {shaking && <span>Rock… paper… scissors…</span>}
-        {phase==="decide" && winner===0 && <span>You won the throw. <b>Your call.</b></span>}
-        {phase==="decide" && winner===1 && <span>{foeLabel} won the throw. It is deciding…</span>}
+        {phase==="decide" && winner===0 && <span>You won the {coinMode?"flip":"throw"}. <b>Your call.</b></span>}
+        {phase==="decide" && winner===1 && <span>{foeLabel} won the {coinMode?"flip":"throw"}. It is deciding…</span>}
         {phase==="done" && <span>Seated. Stepping to the table…</span>}
       </div>
-      {(phase==="throw"||shaking) && <div className="rthrows">
+      {!coinMode && (phase==="throw"||shaking) && <div className="rthrows">
         {RPS_THROWS.map(t=>(
           <button key={t} disabled={shaking} onClick={()=>throwIt(t)}>
             <span className="g">{RPS_GLYPH[t]}</span><span className="l">{t}</span>

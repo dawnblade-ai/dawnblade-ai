@@ -169,6 +169,10 @@ function makeEffects(ctx){
           n=L(n,`Next ${op[2].map(g=>g.join(" ")).join(" or ")} attack +${v}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
+      /* a keyword this resolution has GRANTED — read beside the printed
+         ones, so a gated keyword works when its condition actually fires */
+      else if(k==="gainKw"){ n._kwGrant=[...(n._kwGrant||[]), String(v).toLowerCase()];
+        n=L(n,`${srcName} gains ${v}.`); }
       else if(k==="gaNext"){ actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
       else if(k==="runeHitNext"){ actMut(n).runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
@@ -452,6 +456,7 @@ function makeEffects(ctx){
        both the immediate and the deferred op lists so they cannot fire a
        second time on resolution. */
     n._discWay = [];
+    n._kwGrant = [];        // cleared with _discWay, and for the same reason
     const preRan = new Set();
     if(fx.ops.some(o=>o[0]==="discardRandom")){
       const pre = fx.ops.filter(o=>o[0]==="draw"||o[0]==="discardRandom");
