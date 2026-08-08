@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.50
+**Current version:** v2.53
 
 ---
 
@@ -103,7 +103,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 769 drills:
+This is `node --test "test/*.test.js"` — currently 796 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -444,6 +444,7 @@ roadmap was being written.
 | `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **live at the TABLE only** (v2.49) — loaded, module-qualified, in `MODULES` |
 | `engine/types.js` | what a card IS, off its structured type array | **live**, loaded but deliberately not bridged |
 | `engine/lobby.js` | the pre-game negotiation: hero, throw, sideboard (v2.49) | **live** — module-qualified, in `MODULES` |
+| `engine/effects.js` | `runOps` + `execute` — the card semantics, moved verbatim out of `Battle` (v2.53) | **live in the TRAINER only** — the table calls none of it yet |
 | `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** — the only one left |
 
 ### ONE COMBAT PATH, NOT TWO — the thing this replaces
@@ -932,15 +933,42 @@ Once per Turn` equipment ability.
 
 ### The remaining order
 
-1. **Port the effects.** `runOps` (234 lines), `execute` (455) and
-   `resolveStack` (124) move to a shared `engine/effects.js` that BOTH
-   the trainer and `judge.js` call — one copy, no-mirror rule, and the
-   live trainer stays a regression harness the whole way. Their closure
-   dependencies are small and known: `L`, `tokSeq`, `mkRune`, `gy`,
-   `had6ThisTurn`, `winCheck`, `openPrompt`, `bAct`, `built`, `db`,
-   `advValue`, `dummyDefence`.
-   **`execute` calling `dummyDefence` inline is the seam**: in `judge.js`
-   it must hand control back and let the defend step run.
+1. **Port the effects — `engine/effects.js`. PART ONE LANDED (v2.53):
+   `runOps` (234 lines) and `execute` (455) are out of `Battle`.**
+   `resolveStack` (124) is still there, and it is the awkward one: it is
+   `() => setG(...)`, so it is a small refactor rather than a move.
+
+   **THE BODIES WERE MOVED, NOT REWRITTEN**, extracted by script and
+   verified byte-identical at the commit that moved them. That is the
+   whole safety property of this port: the live trainer plays every card
+   effect today, so it is the regression harness for its own extraction,
+   and a port that CHANGES behaviour is wrong by definition. **Fixes go
+   in their own commits** — smuggled into a move, no diff can tell a fix
+   from the move, which is the one review a port actually gets.
+
+   `makeEffects(ctx)` takes the trainer closures explicitly and **throws
+   on a missing key** rather than letting a moved body capture a browser
+   global. `test/effects.test.js` fails if the trainer's context literal
+   and the module's `CTX_KEYS` drift apart, and pins the no-mirror rule
+   per moved function.
+
+   **When a rules function leaves `index.html`, the LEDGERS have to
+   follow it.** `test/actor.test.js` slices bodies by anchor pairs out of
+   a source file; two of its anchors left the file in v2.53, and a ledger
+   that stops scanning a body **keeps reporting it green** — worse than
+   never having scanned it. Anchors now name their source. Three other
+   drills pinned a line of `execute` by reading `index.html`; a source
+   guard aimed at the wrong file **passes by finding nothing**, so they
+   were repointed rather than left to rot.
+
+   **Two seams remain, and both are named in the module header:**
+   - **`execute` calls `dummyDefence` INLINE.** In `judge.js` it must
+     hand control back and let the defend step run. Until then the
+     table still resolves no card text.
+   - **`execute` reads `built.runeDmg` at four sites.** Per v2.41 a
+     passive read as `built.X` inside a RULES function is a bug —
+     `built` is seat 0's build, captured for the UI — and `bAct` is
+     already in context beside it. Moved as-is on purpose.
 2. ~~**The dummy becomes a policy**~~ **Done in v2.46** —
    `engine/sparring.js`, above. `foeSwing` and `dummyDefence` remain in
    the trainer until step 3 retires them with everything else.
@@ -1896,7 +1924,7 @@ looks finished:
 
 | real | not real |
 |---|---|
-| two hero decks off the actual database, printed life and intellect, the CR turn structure, priority, the combat chain, costs paid by pitching on demand, defenders from hand and iron, printed power against printed defence, the ordered end phase | `runOps` / `execute` / `resolveStack` — the parser's card semantics, still closures inside `Battle` |
+| two hero decks off the actual database, printed life and intellect, the CR turn structure, priority, the combat chain, costs paid by pitching on demand, defenders from hand and iron, printed power against printed defence, the ordered end phase | the parser's card semantics. `runOps`/`execute` moved to `engine/effects.js` in v2.53 and `resolveStack` is still a closure in `Battle` — but **the table calls none of them yet**, so nothing here has changed for a player |
 
 That is `judge.js`'s own stated limit, not a new one. **SOLO PLAY IS
 `Battle` AND TABLE PLAY IS `judge.js`, and nothing routes between them** —
