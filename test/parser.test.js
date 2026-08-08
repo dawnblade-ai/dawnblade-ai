@@ -161,10 +161,35 @@ test("fxParse — additional cost: mandatory discard is captured, optional is no
   P.fxReset();
   const must = P.fxParse({name:"feast-drill-must", pitch:1, tt:"Attack Action", power:6, kw:[],
     tx:"As an additional cost to play this, discard a card."});
-  assert.deepEqual(must.addCost, {discard:1});
+  assert.deepEqual(must.addCost, {discard:1, random:false});
   const may = P.fxParse({name:"feast-drill-may", pitch:1, tt:"Attack Action", power:6, kw:[],
     tx:"As an additional cost to play this, you may discard a card."});
   assert.equal(may.addCost, undefined);
+});
+
+/* THE TWO THINGS THAT MADE THIS MISS SAVAGE FEAST, pinned separately so a
+   future tightening of the pattern cannot quietly drop either again.
+   Missing them meant `fx.addCost` was never set on ANY Kayo card: the cost
+   went unpaid and the rider that asks about it read an unrelated event —
+   cost skipped, payload collected. */
+test("fxParse — an additional cost may NAME the card instead of saying 'this'", () => {
+  P.fxReset();
+  const fx = P.fxParse({name:"feast-drill-named", pitch:1, tt:"Attack Action", power:6, kw:[],
+    tx:"As an additional cost to play Savage Feast discard a random card."});
+  assert.ok(fx.addCost, "the card names itself, and there is no comma after the name");
+  assert.equal(fx.addCost.discard, 1);
+});
+
+test("fxParse — a RANDOM discard is a different cost from a chosen one", () => {
+  P.fxReset();
+  const rnd = P.fxParse({name:"feast-drill-rand", pitch:1, tt:"Attack Action", power:6, kw:[],
+    tx:"As an additional cost to play this, discard a random card."});
+  assert.equal(rnd.addCost.random, true,
+    "the engine's auto-discard picks your LOWEST-VALUE card, which is strictly " +
+    "better than a card that prints 'random'");
+  const chosen = P.fxParse({name:"feast-drill-chosen", pitch:1, tt:"Attack Action", power:6, kw:[],
+    tx:"As an additional cost to play this, discard a card."});
+  assert.equal(chosen.addCost.random, false);
 });
 
 test("fxParse — graveyard/banish play flags", () => {

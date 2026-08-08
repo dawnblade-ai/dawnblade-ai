@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.58 — a cost that was never paid, and a chest piece that was never live
+
+### Savage Feast
+
+> "As an additional cost to play **Savage Feast** discard a **random** card.
+> When you attack with Savage Feast, if a card with 6 or more {p} was
+> discarded as that cost, draw a card."
+
+**Two things in one printed line defeated the pattern**, and `fx.addCost`
+was therefore never set on any card in Kayo's deck:
+
+1. the card **names itself** instead of saying "this", with no comma after
+   the name. `chargeCost` on the very next line already allows that
+   alternative and explains why; `addCost` never got it;
+2. `discard (a|…) cards?` cannot span the word **random**.
+
+So the cost went unpaid and the rider asking about it read an unrelated
+event — cost skipped, payload collected, the exact shape v2.04 fixed
+elsewhere.
+
+**`random` is captured, not merely tolerated.** The engine's auto-discard
+picks your **lowest-value** card, which is strictly better than a card that
+prints "random". It is a seeded random draw now, so a replay and a peer
+feed the cost the same card.
+
+The cost discard also stamps `gyDisc` and records `_discWay` — without
+either it is indistinguishable from a card that was merely played, and
+neither the card's own rider nor Kayo's clause 3 can see it. And a third
+wording joins the resolution-scoped condition: *"discarded as an additional
+cost to play it"* means the same as "this way".
+
+### Predatory Plating
+
+> "Instant - Destroy this: Gain {r}. Only if you control a card with 6 or
+> more {p}."
+
+`controlPow` read the arena and equipment only. Kayo's highest-power object
+in either is Mandible Claw at **3**, so the ability was unactivatable in his
+deck and read as a dead card.
+
+RULING (user, 2026-08-08): **arena + equipment + an attack on the combat
+chain** — which is what makes a chest piece that pays you for committing to
+a big swing reachable at all.
+
+*Limit, stated rather than hidden:* only the LIVE attack is counted, not
+links that have already resolved. The trainer's chain history keeps a name
+and an image rather than the card object, and widening it would put a full
+card on every link — which is what the 16KB table-snapshot budget exists to
+prevent. The live attack is the window this is used in.
+
+`zonePow` is deliberately not used here: the chain is the one zone clause 2
+excludes, and gear is not an attack action card.
+
+---
+
 ## v2.57 — the keyword that was never earned, and a coin
 
 ### Pulping had dominate on every swing

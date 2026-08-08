@@ -621,23 +621,42 @@ function makeEffects(ctx){
             if(e.verse>0) nb.push(e); else n=L(n,`${b.card.name} spends its last verse and fades.`);
           } else nb.push(b); }); actMut(n).board=nb; if(verseRunes) n = mkRune(n, verseRunes); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        const pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        /* AT RANDOM WHEN THE CARD SAYS RANDOM. Savage Feast prints "discard a
+           RANDOM card"; letting the engine pick the player's lowest-value
+           card instead is strictly better than printed, which is the
+           direction that steals games. Seeded, so a replay and a peer feed
+           the cost the same card. */
+        let pool;
+        if(fx.addCost.random){
+          pool = [];
+          let _h = act(n).hand.map((c2,i2)=>({c2,i2}));
+          for(let q=0; q<fx.addCost.discard && _h.length; q++){
+            const r = rngInt(n.rng, _h.length); n.rng = r.rng;
+            pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
+          }
+        } else {
+          pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        }
         const ids = new Set(pool.map(p=>p.i2));
         /* RULING (Reincarnate): a card discarded at random can redirect itself
            to the bottom of the deck instead of the graveyard. */
         const _bottom = pool.filter(p=>fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
         const _toGrave = pool.filter(p=>!fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        actMut(n).grave = [...gy(n.turn, ..._toGrave), ...act(n).grave];
+        /* gyDisc, not gy — this IS a discard, and it is the only way "you've
+           discarded a card with 6 or more {p} this turn" can ever see it. */
+        actMut(n).grave = [...gyDisc(n.turn, ..._toGrave), ...act(n).grave];
         if(_bottom.length){ actMut(n).deck = [...act(n).deck, ..._bottom];
           n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
-        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
+        n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
+        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
+        n = afterDiscard(n, pool.map(p=>p.c2));
         const bigDiscard = pool.some(p=>pow6(p.c2, bAct(n)));
-        fx.conds.filter(x=>x.cond==="discard6").forEach(({op})=>{
+        fx.conds.filter(x=>x.cond==="discard6"||x.cond==="discard6way").forEach(({op})=>{
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
           else n=L(n,`${card.name}: nothing 6+ power discarded — bonus skips.`);
         });
-      } else if(fx.conds.some(x=>x.cond==="discard6")){
+      } else if(fx.conds.some(x=>x.cond==="discard6"||x.cond==="discard6way")){
         n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
       }
       let declNote = "";
@@ -780,17 +799,36 @@ function makeEffects(ctx){
     } else {
       if(card._buildSteam){ const tgt=card._steamFor, cur=(act(n).counters[tgt]||{}); if((cur.steam||0)===0){ actMut(n).counters={...act(n).counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        const pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        /* AT RANDOM WHEN THE CARD SAYS RANDOM. Savage Feast prints "discard a
+           RANDOM card"; letting the engine pick the player's lowest-value
+           card instead is strictly better than printed, which is the
+           direction that steals games. Seeded, so a replay and a peer feed
+           the cost the same card. */
+        let pool;
+        if(fx.addCost.random){
+          pool = [];
+          let _h = act(n).hand.map((c2,i2)=>({c2,i2}));
+          for(let q=0; q<fx.addCost.discard && _h.length; q++){
+            const r = rngInt(n.rng, _h.length); n.rng = r.rng;
+            pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
+          }
+        } else {
+          pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+        }
         const ids = new Set(pool.map(p=>p.i2));
         /* RULING (Reincarnate): a card discarded at random can redirect itself
            to the bottom of the deck instead of the graveyard. */
         const _bottom = pool.filter(p=>fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
         const _toGrave = pool.filter(p=>!fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        actMut(n).grave = [...gy(n.turn, ..._toGrave), ...act(n).grave];
+        /* gyDisc, not gy — this IS a discard, and it is the only way "you've
+           discarded a card with 6 or more {p} this turn" can ever see it. */
+        actMut(n).grave = [...gyDisc(n.turn, ..._toGrave), ...act(n).grave];
         if(_bottom.length){ actMut(n).deck = [...act(n).deck, ..._bottom];
           n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
-        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")} (lowest value).`);
+        n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
+        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
+        n = afterDiscard(n, pool.map(p=>p.c2));
       }
       n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }

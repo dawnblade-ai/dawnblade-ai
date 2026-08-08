@@ -313,6 +313,44 @@ test("Test of Might cannot be played as an action", {skip}, () => {
     "trainer never did, and Kayo runs two copies.");
 });
 
+/* ---- SAVAGE FEAST: a cost that was never paid ------------------------- */
+
+test("Savage Feast's additional cost is read, and it is RANDOM", {skip}, () => {
+  const fx = P.fxParse(card("Savage Feast"));
+  assert.ok(fx.addCost, "the card NAMES ITSELF rather than saying 'this', and there is no comma after the name");
+  assert.equal(fx.addCost.discard, 1);
+  assert.equal(fx.addCost.random, true,
+    "printed 'a random card' — the engine's auto-discard picks your lowest-value card, " +
+    "which is strictly better than printed");
+  assert.ok((fx.conds || []).some(c => c.cond === "discard6way"),
+    '"discarded as an additional cost to play it" is the same scoping as "this way" — ' +
+    "the discard this card just made, not the turn's history");
+});
+
+test("the additional-cost discard is stamped and counts as this way", {skip}, () => {
+  const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  assert.ok(!/actMut\(n\)\.grave = \[\.\.\.gy\(n\.turn, \.\.\._toGrave\)/.test(efx),
+    "the additional-cost discard must use gyDisc — with plain gy it is indistinguishable " +
+    "from a card that was merely played, and no discard check can see it");
+  assert.match(efx, /actMut\(n\)\.grave = \[\.\.\.gyDisc\(n\.turn, \.\.\._toGrave\)/);
+  assert.match(efx, /n\._discWay = \[\.\.\.\(n\._discWay\|\|\[\]\), \.\.\.pool\.map/,
+    "and record it, or the card's own rider cannot see the card it just fed the cost");
+});
+
+/* ---- PREDATORY PLATING ------------------------------------------------ */
+
+test('"control a card with 6 or more {p}" includes the live attack', {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const i = html.indexOf('g2.kind==="controlPow"');
+  assert.ok(i > 0, "the controlPow gate moved — re-anchor this drill");
+  const body = html.slice(i, i + 300);
+  assert.match(body, /s\.pend&&s\.pend\.card/,
+    "RULING: arena + equipment + the attack on the combat chain. Board and gear alone " +
+    "left Kayo with nothing over 3 power, so Predatory Plating was unactivatable.");
+  assert.ok(!/zonePow/.test(body),
+    "and NOT zonePow — the chain is the one zone clause 2 excludes, and gear is not an attack action");
+});
+
 /* ---- THE BUG THIS WHOLE DISTINCTION EXISTS FOR ------------------------ */
 
 test("a PLAYED attack in the graveyard does not count as a discard", {skip}, () => {

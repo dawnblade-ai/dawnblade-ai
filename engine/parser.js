@@ -147,7 +147,10 @@ function classifyClause(raw){
        reaches the graveyard at DECLARATION it could even be satisfied by
        the attacking card itself. Savage Feast says "as that cost", which
        is the same scoping in different words. */
-    if(/6 or more \{p\}[^.]*discard/.test(cond) && /this way|that cost/.test(cond))
+    /* Savage Feast says it a third way — "was discarded AS AN ADDITIONAL
+       COST TO PLAY IT" — which is the same scoping as "this way": the
+       discard this card itself just made, not the turn's history. */
+    if(/6 or more \{p\}[^.]*discard/.test(cond) && /this way|that cost|as an additional cost/.test(cond))
       return Object.assign(rest,{cond:"discard6way"});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
     if(/^you attack with /.test(cond)) return rest;
@@ -923,8 +926,23 @@ function fxParse(card){
   });
   applyOverride(card, fx);
   const tl = clean(card.tx||"").toLowerCase();
-  const am = tl.match(/as an additional cost to play(?: this)?,? (you may )?discard (a|an|one|two|\d+) cards?/);
-  if(am && !am[1]) fx.addCost = {discard: num(am[2])};
+  /* TWO THINGS MADE THIS MISS SAVAGE FEAST, and both are in one line of
+     printed text: "As an additional cost to play SAVAGE FEAST discard a
+     RANDOM card."
+       1. `(?: this)?` — the card NAMES ITSELF rather than saying "this".
+          `chargeCost` on the line below already allows that alternative
+          and says why; addCost never got it.
+       2. `discard (a|…) cards?` cannot span the word "random".
+     Net effect: `fx.addCost` was never set on any Kayo card, so the cost
+     was not paid and the rider that asks about it ("if a card with 6 or
+     more {p} was discarded as that cost") read an unrelated event. Cost
+     skipped, payload collected — the exact shape v2.04 fixed elsewhere.
+
+     `random` is captured, not merely tolerated: a random discard and a
+     chosen one are different costs. The engine's auto-discard picks your
+     LOWEST-VALUE card, which is strictly better than the card prints. */
+  const am = tl.match(/as an additional cost to play(?: this| [a-z',\-! ]{2,30}?)?,? (you may )?discard (a|an|one|two|\d+) (random )?cards?/);
+  if(am && !am[1]) fx.addCost = {discard: num(am[2]), random: !!am[3]};
   /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
      because it may name the card instead of saying "this"; the pattern
      therefore skips either rather than requiring one. */
