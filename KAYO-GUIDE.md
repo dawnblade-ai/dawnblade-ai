@@ -99,7 +99,22 @@ only the **hero ability** that makes Might in the first place.
 
 ---
 
-## 3. The hero ability — 0 of 3 clauses, and where the trap is
+## 3. The hero ability — BUILT in v2.55–v2.56 (was 0 of 3)
+
+> **STATUS (2026-08-08): all three clauses are live.** Clause 1 was already
+> covered by the generic equipment slot rules. Clause 2 is
+> `parser.zonePow`/`pow6`, fed by the `atkPowOffChain` passive that
+> `build.js` reads off the printed text. Clause 3 is `afterDiscard` in
+> `effects.js`, latched per action phase. `test/kayo.test.js` pins all of
+> it and four sabotages were proven to bite.
+>
+> **The measured effect of clause 2: 22 of 47 deck cards satisfied a
+> "6 or more {p}" check before, 45 of 47 after.** The two left out are the
+> Test of Might copies, which are `Block` cards and not attack actions.
+> The section below is the original analysis and is still the right way to
+> think about the clause — read it before touching any of it.
+
+### The original analysis
 
 ```
 You have 1 weapon zone.
