@@ -104,13 +104,28 @@ test("clause 2 turns 22 of Kayo's 47 deck cards into 45", {skip}, () => {
    that steals games. */
 test("clause 2 never reaches the damage path", {skip}, () => {
   const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const dmgish = efx.split("\n")
-    .filter(l => /zonePow\(/.test(l))
-    .filter(l => /total|strike|dealt|hp *-|damage/i.test(l));
-  assert.deepEqual(dmgish, [],
-    "zonePow appears on a line that also computes damage. It is a THRESHOLD value: " +
-    "the combat chain is exactly the zone the clause excludes, so an attack strikes " +
-    "for its PRINTED power.");
+  /* Keyword-matching the LINE was too blunt: it flagged a log string that
+     happens to contain the word "dealt", and a `zonePow` reading a card in
+     the defender's HAND — a perfectly legal threshold. What actually
+     matters is narrower and checkable: zonePow must never feed a value that
+     BECOMES damage. So look for it on the left of an assignment to one of
+     the quantities that do. */
+    const offenders = efx.split("\n").filter(l => {
+    if(!/zonePow\(/.test(l)) return false;
+    const code = l.replace(/`[^`]*`/g, '""');        // drop template strings
+    if(!/zonePow\(/.test(code)) return false;         // it was only in a log line
+    return /(?:total|_condSelf|lastDmg|\.hp)\s*[-+]?=/.test(code)
+        || /\bdmg\s*=/.test(code);
+  });
+  assert.deepEqual(offenders, [],
+    "zonePow feeds a damage quantity. It is a THRESHOLD value: the combat chain is " +
+    "exactly the zone Kayo's clause 2 excludes, so an attack strikes for its PRINTED " +
+    "power. A 6 that hits for 7 is the direction that steals games.");
+
+  /* And the positive half, so the drill cannot pass by finding nothing:
+     the strike total must still be built from the card's printed power. */
+  assert.match(efx, /let total = base \+ bonus;/,
+    "execute still builds the strike from the card's printed base plus its bonuses");
 });
 
 /* ---- THE DISCARD ------------------------------------------------------ */
@@ -165,6 +180,7 @@ function ctx(build){
     actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     actorOf: s => s.actor || 0,
     bAct: () => build,
+    bFoe: () => build,
     built: build, db: DB(), dummyDefence: s => s,
     foe: s => s.sides[1 - (s.actor || 0)],
     foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
@@ -311,6 +327,64 @@ test("Test of Might cannot be played as an action", {skip}, () => {
     "tryPlay must refuse a Block — otherwise it is a free 0-cost play that spends " +
     "an action point and does nothing. judge.js has refused it since v2.47; the " +
     "trainer never did, and Kayo runs two copies.");
+});
+
+/* ---- STRONGEST SURVIVE: the defender's escape hatch -------------------- */
+
+test("Strongest Survive reads its 'unless they reveal' half", {skip}, () => {
+  for(const p of [1, 2, 3]){
+    const c = C.resolveEntry(DB(), {name: "Strongest Survive", p, code: null, q: 1}, "SKA");
+    const fx = P.fxParse(c);
+    assert.deepEqual(fx.onHit, [["foeDiscardUnlessReveal", 1]],
+      `pitch ${p}: classifyClause returned BYTE-IDENTICAL output with and without the ` +
+      `"unless they reveal…" clause, so all six copies discarded unconditionally — ` +
+      `stronger than printed`);
+  }
+  /* the plain wording must be untouched — other heroes rely on it */
+  assert.deepEqual(P.classifyClause("they discard a card").ops, [["foeDiscard", 1]]);
+});
+
+test("the reveal beats the DAMAGE DEALT, not the printed power", {skip}, () => {
+  const b = kayoBuild();
+  const { runOps } = E.makeEffects(ctx(b));
+  const mk = (nm, pow) => ({name: nm, uid: nm, pitch: 1, power: pow, cost: 0,
+    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []});
+
+  /* a 7-power swing stopped to 3 is beaten by a 4 */
+  const g = game([]);
+  g.sides[1].hand = [mk("spare", 4)];
+  g.lastDmg = 3;
+  const dodged = runOps(g, [["foeDiscardUnlessReveal", 1]], "Strongest Survive");
+  assert.equal(dodged.sides[1].hand.length, 1, "they revealed and kept the card");
+  assert.equal(dodged.sides[1].grave.length, 0, "nothing was discarded");
+
+  /* and when nothing in hand beats it, the discard lands */
+  const g2 = game([]);
+  g2.sides[1].hand = [mk("small", 2)];
+  g2.lastDmg = 5;
+  const hit = runOps(g2, [["foeDiscardUnlessReveal", 1]], "Strongest Survive");
+  assert.equal(hit.sides[1].hand.length, 0, "nothing beat 5, so a card goes");
+  assert.equal(hit.sides[1].grave.length, 1);
+  assert.equal(hit.sides[1].grave[0]._disc, true, "and it is stamped as a discard");
+});
+
+test("the revealed card is read with the DEFENDER's own build", {skip}, () => {
+  /* In a Kayo mirror their clause 2 lifts their hand exactly as yours lifts
+     yours: a printed 5 attack action in their hand reveals as a 6. Using
+     the attacker's build for both sides is the same class of mistake bFoe
+     was created to prevent in the clash. */
+  const kayo = kayoBuild();
+  const { runOps } = E.makeEffects(ctx(kayo));   // ctx gives bFoe the same build
+  const g = game([]);
+  g.sides[1].hand = [card("Unexpected Backhand")];   // printed 5 -> 6 for a Kayo
+  g.lastDmg = 5;
+  const out = runOps(g, [["foeDiscardUnlessReveal", 1]], "Strongest Survive");
+  assert.equal(out.sides[1].hand.length, 1,
+    "printed 5 is not greater than 5, but their clause 2 makes it a 6 — they escape");
+
+  const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  assert.match(efx, /zonePow\(c, bFoe\(n\)\) > dmg/,
+    "the defender's hand must be read with bFoe, never bAct");
 });
 
 /* ---- SAVAGE FEAST: a cost that was never paid ------------------------- */

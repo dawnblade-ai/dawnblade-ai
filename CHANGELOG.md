@@ -9,6 +9,45 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.59 — the escape hatch Strongest Survive prints
+
+> "When this hits a hero, they discard a card **unless they reveal a card
+> from their hand with {p} greater than the damage dealt this way**."
+
+`classifyClause` returned **byte-identical output with and without that
+second half** — `[["foeDiscard",1]]` either way. The defender's escape did
+not exist, so all six copies in Kayo's deck discarded unconditionally:
+stronger than printed, which is the direction that steals games.
+
+Three things the fix has to get right, each drilled and each sabotaged:
+
+| | |
+|---|---|
+| **the damage DEALT** | what actually landed, after blocks (`lastDmg`) — not the attack's printed power. A 7-power swing stopped to 3 is beaten by a 4. |
+| **whose build** | the revealed card is read with the DEFENDER'S own build, so in a Kayo mirror their clause 2 lifts their hand exactly as yours lifts yours. `bFoe`, never `bAct` — the same mistake that helper was created to prevent in the clash. |
+| **who decides** | RULING (user, 2026-08-08): the dummy reveals whenever it legally can, so the card plays at full printed strength against you rather than being quietly better than printed. |
+
+Ordered **above** the bare `foeDiscard` rule so the qualified sentence is
+claimed by the qualified reader — the same hazard as the unanchored draw
+that swallowed a discard in v2.55.
+
+**The sabotage pass earned its keep here.** The first run of it showed the
+strike-total guard biting and the reveal guard *not* — because I had
+written the fix without writing a drill for it at all. Dropping the escape
+produced zero failures. Three drills now cover it and all three bite:
+removing the escape, reading the defender's hand with the attacker's build,
+and comparing against printed power instead of damage dealt.
+
+That same pass caught a **false positive in my own earlier drill**: the
+"clause 2 never reaches the damage path" check keyword-matched whole lines,
+and flagged a log string containing the word "dealt" plus a `zonePow`
+reading a card in the defender's *hand* — a perfectly legal threshold. It
+strips template strings and looks for assignment into a damage quantity
+now, with a positive assertion beside it so it cannot pass by finding
+nothing.
+
+---
+
 ## v2.58 — a cost that was never paid, and a chest piece that was never live
 
 ### Savage Feast

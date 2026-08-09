@@ -62,13 +62,13 @@ const rngRoll = R.roll, rngInt = R.int;
    different meaning, and a second definition under the same name is the
    collision KNOWN_COLLISIONS polices. Passing them guarantees the moved
    bodies keep calling exactly the functions they called inside Battle. */
-const CTX_KEYS = ["L","act","actMut","actorOf","bAct","built","db","dummyDefence","foe","foeMut",
+const CTX_KEYS = ["L","act","actMut","actorOf","bAct","bFoe","built","db","dummyDefence","foe","foeMut",
                   "gy","gyDisc","had6ThisTurn","mkRune","openPrompt","tokSeq","typeAbbr","winCheck"];
 
 function makeEffects(ctx){
   const missing = CTX_KEYS.filter(k => ctx[k] === undefined);
   if(missing.length) throw new Error("effects.js: missing context — " + missing.join(", "));
-  const {L, act, actMut, actorOf, bAct, built, db, dummyDefence, foe, foeMut,
+  const {L, act, actMut, actorOf, bAct, bFoe, built, db, dummyDefence, foe, foeMut,
          gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
 
   /* WHAT A DISCARD TRIGGERS. Kayo prints: "The first time you discard a
@@ -142,6 +142,34 @@ function makeEffects(ctx){
           foeMut(n).grave = [...take, ...foe(n).grave];
           n = L(n, `${srcName}: ${foe(n).name} discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
+      }
+      /* THE DEFENDER'S ESCAPE HATCH (Strongest Survive). "…unless they
+         reveal a card from their hand with {p} greater than the damage
+         dealt this way."
+
+         Three things this has to get right:
+           - "the damage DEALT" is what actually landed, after blocks
+             (`lastDmg`), not the attack's printed power. A 7-power swing
+             stopped to 3 is beaten by a 4.
+           - the revealed card is read with the DEFENDER'S OWN build, so in
+             a Kayo mirror their clause 2 lifts their hand exactly as yours
+             lifts yours. That is what `bFoe` is for.
+           - RULING (user, 2026-08-08): the dummy reveals whenever it
+             legally can, so the card plays at full printed strength
+             against you rather than being quietly better than printed.
+         Revealing is free and public — nothing leaves their hand. */
+      else if(k==="foeDiscardUnlessReveal"){
+        const dmg = n.lastDmg || 0;
+        const esc = foe(n).hand.find(c => zonePow(c, bFoe(n)) > dmg);
+        if(esc){
+          n = L(n, `${srcName}: ${foe(n).name} reveals ${esc.name} (${zonePow(esc, bFoe(n))}{p}, more than the ${dmg} dealt) — no discard.`);
+          return;
+        }
+        const take = foe(n).hand.slice(-Math.max(1,v));
+        if(!take.length){ n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`); return; }
+        foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
+        foeMut(n).grave = [...gyDisc(n.turn, ...take), ...foe(n).grave];
+        n = L(n, `${srcName}: nothing in ${foe(n).name}'s hand beats the ${dmg} dealt — discards ${take.map(c=>c.name).join(", ")}.`);
       }
       else if(k==="foeBanish"){
         const take = foe(n).hand.slice(-Math.max(1,v));

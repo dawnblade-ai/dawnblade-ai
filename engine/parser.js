@@ -409,6 +409,16 @@ function classifyClause(raw){
   /* a self-imposed cost tax for the rest of the turn */
   if(m=c.match(/^cards cost \{r\} more to play this turn$/)) return R([["costTax",1]]);
   if(/^(dominate|intimidate)$/.test(c)) return NOOP("live since v2.05 — the dummy holds a hand to restrict and to lose cards from");
+  /* "…UNLESS THEY REVEAL A CARD FROM THEIR HAND WITH {p} GREATER THAN THE
+     DAMAGE DEALT" — the defender's escape hatch, and it did not exist.
+     `classifyClause` returned BYTE-IDENTICAL output with and without this
+     half of the sentence, so Strongest Survive (three printings, six copies
+     in Kayo's deck) discarded unconditionally: stronger than printed, which
+     is the direction that steals games. Ordered ABOVE the bare foeDiscard
+     so the qualified sentence is claimed by the qualified rule — the same
+     hazard as the unanchored draw that swallowed the discard in v2.55. */
+  if(/(?:they|the defending hero|target hero|defending hero|opponent) discards? a card unless (?:they|he|she) reveals? a card from (?:their|his|her) hand with \{p\} greater than the damage dealt/.test(c))
+    return R([["foeDiscardUnlessReveal",1]]);
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) discards?/.test(c)) return R([["foeDiscard",1]]);
   /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))

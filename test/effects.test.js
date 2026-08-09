@@ -32,6 +32,7 @@ function stubCtx(over){
     actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     actorOf: s => s.actor || 0,
     bAct: () => ({lyathBoo: false, runeDmg: 1}),
+    bFoe: () => ({lyathBoo: false, runeDmg: 1}),
     built: {runeDmg: 1},
     db: {},
     dummyDefence: s => s,
