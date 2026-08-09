@@ -9,6 +9,70 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.63 — the opponent plays real cards
+
+**A true Kayo mirror, in single player.** With a hero in seat 1 the
+opponent already had a real deck, real gear and real printed passives —
+everything except a turn. Roadmap item 3 gives it one:
+
+```
+Kayo pitches Strongest Survive for 2.
+Kayo plays High Pitched Howl — 6 power. Priority to you — react, block, or take it.
+```
+
+It picks the biggest attack it can pay for, pitches cheapest-first to cover
+the cost, and swings for printed power. The `[3,4,5]` escalation remains
+only for the **vanilla dummy**, whose whole job is to be the one deck where
+nothing can be faked, and whose curve the difficulty is tuned to.
+
+### Why the actor stays 0 for the swing
+
+The obvious move is `actor:1` through `execute`, and it does not work:
+`execute` calls `dummyDefence`, which picks blocks for seat 1, and the
+entire block path (`toggleBlock`, `finishBlock`, `takeIt`) reads
+`act(s).blockH` — with the actor flipped, the attacker would be asked to
+block its own attack. That is the same actor work `foeSwing` is still
+PENDING for.
+
+So the swing is assembled directly and the actor is borrowed **only**
+around the card's own effects, where `runOps` is fully actor-relative and
+drilled to be. Everything the player then does runs on the unchanged path.
+
+*Limit, stated:* only the card's **unconditional** effects fire for the
+opponent. A conditional attack trigger (High Pitched Howl's "if there is a
+card with 6+{p} in your pitch zone") lives in `fx.conds`, which only
+`execute` evaluates — and replicating that here would be a second copy of
+the card semantics, which is the one thing this codebase does not do. It
+comes free once the defence hand-back lets the opponent's attack go
+through `execute`.
+
+### The temporal dead zone, again
+
+The opening swing used to happen inside the `useState` initializer, which
+is safe for a hoisted `function` — but what `foeSwing` *does* changed. A
+real card play reaches for `gy` and `_EFX`, both `const`s declared further
+down the component, and during the first render those are still in their
+TDZ: `gy is not a function`, and the match died on load.
+
+**Exactly the shape of the v2.54 clash crash** — a name that looks
+available and is not yet initialised. The opening swing moved to a mount
+effect. The cost is one frame in the action phase before the block step
+appears, which the initializer existed to avoid; a visible flicker is a
+fair trade for a match that starts.
+
+### Housekeeping: the log names the card you played
+
+Reported from play. The feed showed the pitch that paid for an attack and
+then the opponent's defence, with **no line naming the attack itself** — so
+the one thing the player actually did was the one thing the sequence never
+mentioned. In a training sim the sequence is the lesson.
+
+Attacks and non-attacks both announce themselves now, and the printed value
+is shown alongside whenever the total differs, because "6 → 8" is exactly
+what the player is trying to learn.
+
+---
+
 ## v2.62 — one copy of the card semantics
 
 `resolveStack` (122 lines) joins `runOps` and `execute` in

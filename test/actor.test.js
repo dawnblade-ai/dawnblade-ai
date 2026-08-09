@@ -60,6 +60,12 @@ const ANCHORS = [
   ["tryPlay",      "  const tryPlay = (card,from,idx) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],
+  /* foePick/foePlay (v2.63) are the opponent's action phase. They are
+     seat-1-specific in the trainer for the same reason foeSwing is — the
+     block path reads act(s).blockH, so the actor stays 0 for the swing and
+     is borrowed only around the card's own effects — and they are anchored
+     so they are not silently swallowed into allySwing's slice. */
+  ["foePick",      "  function foePick(n){"],
   ["foeSwing",     "  function foeSwing(s){"],
   /* finishBlock/confirmDefPay (v2.39) are new, not in RULES_FNS — the
      ledger covers exactly the seven the roadmap names, deliberately not

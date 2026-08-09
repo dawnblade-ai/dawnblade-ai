@@ -835,6 +835,20 @@ function makeEffects(ctx){
         declNote += ` Intimidate — a card is pulled at random from the dummy's hand`
           + ` and banished face-down (${foe(n).hand.length} left); it comes back at the end phase.`;
       }
+      /* NAME THE ATTACK YOU JUST DECLARED (v2.63). Reported from play: the
+         feed showed the pitch that paid for a card and then the opponent's
+         defence, with no line naming the attack itself — so the one thing
+         the player actually DID was the one thing the sequence never
+         mentioned. In a training sim the sequence is the lesson.
+         The printed value is shown alongside whenever the total differs,
+         because "6 → 8" is exactly what the player is trying to learn. */
+      const _printed = card.power || 0;
+      /* seat 0 is called "You", so the verb has to agree with it */
+      const _s = /^you$/i.test(act(n).name || "") ? "" : "s";
+      n = L(n, `${act(n).name} ${from==="weapon" ? "swing"+_s : "play"+_s} ${card.name}`
+             + ` — ${total} power on the chain`
+             + (total !== _printed ? ` (printed ${_printed})` : "")
+             + (ga ? ", and it goes again" : "") + ".");
       const dd = dummyDefence(n, total, card);
       n = dd.n;
       n = L(n, `${dd.note}${declNote} Priority to you — react or pass.`);
@@ -897,6 +911,10 @@ function makeEffects(ctx){
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
         n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
       }
+      /* the same gap on the non-attack side: the effects were logged, the
+         PLAY was not, so a card that resolved to nothing visible left no
+         trace of having been played at all */
+      n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
       n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
       if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
