@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.51
+# Handoff — Dawnblade, at v2.64
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -6,210 +6,189 @@ Paste everything below the line into a fresh Claude Code thread in this repo.
 
 ## THE PLAN, AND WHERE WE ARE IN IT
 
-**Three phases, in this order (user, 2026-08-02):**
-
 ```
 1. ENGINE       ✔ done
 2. MULTIPLAYER  ✔ done — two humans, two hero decks, one game state
 3. CARD RULING TESTING (the text boxes)   ← YOU ARE HERE
+     KAYO ✔ complete — every card in his deck and gear is built
+     next hero: see "WHICH HERO NEXT" below
 ```
 
-Phases 1 and 2 landed. The rules are a pure reducer, two people can sit
-at a table over a room code and play real hero decks at each other, and
-the board they play on is the trainer's board.
-
-**Phase 3 is the text boxes.** The user's original scoping instruction
-deferred them deliberately:
-
-> "focus on the card types and the numbers rather than the text boxes —
-> we will tackle the text boxes in phase 3."
-
-That deferral is now the whole remaining job.
-
----
-
-## THE ONE THING THAT MATTERS MOST RIGHT NOW
-
-**Card TEXT does not resolve at the table.** `runOps` (234 lines),
-`execute` (455) and `resolveStack` (124) — the parser's card semantics —
-are still closures inside `Battle`. So:
-
-```
-SOLO  play  ->  Battle     every card effect, the regression harness
-TABLE play  ->  judge.js   the second seat, cards move zones and cost
-                           what they print, and their text does nothing
-```
-
-Nothing routes between the two, and that separation is deliberate: a
-control-flow bug and a card being read wrong must never be confusable.
-**They converge when those three functions become a shared
-`engine/effects.js` that BOTH callers use.** That is the next big piece
-and the last structural one.
-
-Their closure dependencies are small and known: `L`, `tokSeq`, `mkRune`,
-`gy`, `had6ThisTurn`, `winCheck`, `openPrompt`, `bAct`, `built`, `db`,
-`advValue`, `dummyDefence`. **`execute` calling `dummyDefence` inline is
-the seam** — in `judge.js` it must hand control back and let the defend
-step run.
-
-Do it with the live trainer as a regression harness the whole way: it
-plays every card effect today, so any port that changes its behaviour is
-wrong.
+**Phase 3 is being done ONE HERO AT A TIME.** Kayo was the pilot and is
+finished. The method that worked is written down under "HOW A HERO GETS
+DONE"; follow it rather than inventing a new one.
 
 ---
 
 ## WHERE THINGS STAND
 
-- `npm test` → **790 drills, all green.** Never leave them red.
+- `npm test` → **834 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way.
-- **v2.51 on `main`, pushed and live.** `origin` is
+- `npm run audit` → 405 unique pool cards, **305 full / 78 part / 22 none**.
+  The coverage baseline was repinned at v2.64 after review.
+- **v2.64 on `main`, pushed and live.** `origin` is
   `git@github.com:dawnblade-ai/dawnblade-ai.git` over SSH and **a push IS
-  the deploy** — GitHub Pages serves `main` at the repo root, live in
-  about a minute. The user has given standing authorization to push
-  without asking (2026-08-03).
-- **Verify the deploy, not just the tests.** Pages can serve
-  `index.html` and 404 every script, which looks fine until a tap does
-  nothing. Check the URL returns 200 *and* that all **19** `engine/*.js`
-  files do.
+  the deploy** — Pages serves `main` at the repo root. The user has given
+  standing authorization to push without asking (2026-08-03).
+- **Verify the deploy, not just the tests.** Check the URL returns 200 *and*
+  that all **21** `engine/*.js` files do. Pages sometimes takes several
+  minutes and a few polls to rebuild; poll until `APP_VER` matches.
 - `node` is at `~/node/bin`, **not on PATH** —
   `export PATH="$HOME/node/bin:$PATH"`.
 
-### The engine, as it stands
+### THE EFFECTS PORT IS DONE (v2.53 + v2.62)
 
-| module | what |
-|---|---|
-| `parser.js` | card text — **Phase 3 territory** |
-| `judge.js` | `reduce(state, action, seat)` — the rules as a pure function |
-| `types.js` | what a card IS, off its structured type array |
-| `priority.js` | the CR turn/priority machine — the spine |
-| `build.js` | hero builds, slot rules, `buildMatch` (both seats from one spec) |
-| `lobby.js` | the pre-game negotiation: hero → throw → sideboard |
-| `wire/net/room/actions.js` | the sync layer |
-| `report.js` | JUDGE!! — the board written down, for both boards |
-| `invariants.js` | the guard rails, wired into both boards' funnels |
-| `sparring.js` | `act(game, seat)` — a seat as a policy. **The only headless module left** |
+`runOps`, `execute` and `resolveStack` all live in **`engine/effects.js`**.
+There is exactly **one copy of the card semantics** in the project. The
+first two moved byte-identically by script; the third was
+`() => setG(s=>{…})`, so its BODY moved and the wrapper stayed behind.
 
-`sparring.js` stays off the page on purpose: nothing calls it, and a
-thing that proposes actions sitting next to a trainer with its own dummy
-is the second-quiet-engine hazard `wire.test.js`'s `HEADLESS` list names.
-It is the regression driver for `judge.js` in the drills.
+`makeEffects(ctx)` takes the trainer closures explicitly and **throws on a
+missing key**. `test/effects.test.js` fails if the trainer's context literal
+and the module's `CTX_KEYS` drift apart.
+
+### WHAT THE NETWORKED TABLE STILL NEEDS
+
+**Not location.** It is that `execute` does two jobs at once: it applies the
+card's effect *and* **advances the turn structure** (it calls
+`dummyDefence` inline and sets `mode:"stack"`), while `judge.js` drives
+combat through `phase`/`step`/`chainCards`.
+
+Separating *"what the card does"* from *"what happens next"* is the
+remaining structural job, and the inline `dummyDefence` call is the first
+knot in it. Until then:
+
+```
+SOLO  play  ->  Battle     every card effect, the regression harness
+TABLE play  ->  judge.js   real decks, real costs, real CR turn structure,
+                           and NO card text
+```
+
+### THE SOLO MIRROR IS REAL (v2.63)
+
+Pick a hero, then set the **opponent dropdown on the loadout screen**
+(`#foesel`) to the same hero. Seat 1 plays actual cards: `foePick` takes the
+biggest attack it can pay for, `foePlay` pitches cheapest-first and swings
+for printed power. The `[3,4,5]` escalation survives only for the **vanilla
+dummy**, whose job is to be the one deck where nothing can be faked.
+
+**The actor stays 0 for the swing.** `execute` calls `dummyDefence`, and the
+whole block path (`toggleBlock`/`finishBlock`/`takeIt`) reads
+`act(s).blockH` — flipping the actor would ask the attacker to block its own
+attack. The actor is borrowed **only** around `runOps` for the card's own
+effects.
+
+*Limit:* only the opponent's **unconditional** effects fire. Conditional
+attack triggers live in `fx.conds`, which only `execute` evaluates, and
+copying that logic would be a second copy of the semantics.
+
+`window.THROW_MODE = "coin"` replaces rock-paper-scissors while testing.
+`rps.js` and the whole throw UI are untouched — set it to `"rps"` to restore
+it, which is the plan before launch.
 
 ---
 
-## THE TOOL PHASE 3 RUNS ON
+## HOW A HERO GETS DONE (the Kayo method)
 
-**JUDGE!!** — the button on the log pane, on **both** boards. It captures
-every zone by `name#uid`, both hands, every counter, the chain, the feed,
-the invariant violations, and the **RNG replay key** (`seed` plus stream
-position), so a bug note can be one line and still be reproducible.
-
-- `engine/report.js`, drilled in `test/report.test.js`.
-- **When you add a zone or a per-side field, add it to `report.js`'s
-  `seat()`** — a report that silently omits state is worse than none.
-- A table report also carries the seat, the table code and net.js's
-  counters: two peers on different hashes at the same `seq` is a desync
-  stated in one line.
-- `machine.lang` names which state vocabulary is authoritative, because
-  every game carries both.
+1. **Find the hero's ONE mechanic.** Kayo's whole deck is "a card with 6 or
+   more {p}" wearing three different sets of words. Read the deck list and
+   the hero's printed text together before touching code.
+2. **Read the hero ability first.** Kayo's clause 2 was worth *half the
+   deck* — 22 of 47 cards satisfied his own threshold before it, 45 after.
+   A hero ability that looks like bookkeeping can be the engine.
+3. **Diff what the card PRINTS against what the engine GRANTS**, card by
+   card. Every real bug this cycle looked like this, and **every affected
+   card reported tier `full`** — they were read, and read *wrong*.
+4. **Fix the RULE, not the card.** Five separate spellings of
+   `(c.power||0)>=6` became `parser.pow6`. Never special-case a card by
+   name; a drill should fail if a card's name appears in the wiring.
+5. **Write the drill, then SABOTAGE it.** Non-negotiable — see below.
+6. **Play it.** Several bugs this cycle were invisible to every tool.
 
 ---
 
-## THE FIVE RULES THAT CAUGHT EVERY BUG SO FAR
+## THE RULES THAT CAUGHT EVERY BUG
 
-**1. NEVER INVENT CARD EFFECTS.** Card text streams from the public
-database and is parsed. If a card does something new, teach the parser to
-read its text — never special-case the card by name. This is the golden
-rule and Phase 3 is where it is under most pressure.
+**1. NEVER INVENT CARD EFFECTS.** Teach the parser to read the text; never
+special-case by name.
 
 **2. NEVER PARSE AHEAD OF WIRING.** Reading a clause marks it consumed,
-which raises the card's tier. Parse a card the trainer does not act on
-and the audit starts claiming it works.
+which raises the card's tier and makes the audit claim it works.
+(`fx.handAbility` deliberately does *not* touch `tier` for this reason.)
 
-**3. READ THE WHOLE PHRASE OR REFUSE.** A loose substring match silently
-drops printed restrictions. Look-alike cards are the hazard, not exotic
-ones — Mounting Anger and Rising Resentment share a cost clause verbatim.
+**3. READ THE WHOLE PHRASE OR REFUSE.** A loose substring silently drops
+printed restrictions.
 
-**4. COVERAGE AND FAIRNESS BOTH MISS WHOLE CLASSES OF BUG.** Neither can
-see "too many of a legal thing" (the eight-gear bug), a card *weaker*
-than printed (fairness is deliberately one-sided towards too-strong), a
-card of the **wrong type** (the text parses perfectly), or a bug in the
-machine rather than in a card. Only opening the game, or reading the
-card, finds those. **A drill that asserts on the log cannot see the bug**
-— assert on hands, life and zones.
+**4. SABOTAGE EVERY NEW DRILL.** Reintroduce the bug, watch it fail,
+restore. **This caught three drills that proved nothing in one session** —
+Strongest Survive shipped with no drill at all, Beaten Trackers' drill
+grepped for a variable that survives deleting the gate, and a "never
+reaches damage" guard keyword-matched a log string. **Pin the gate, not the
+identifier.**
 
-**5. THE USER READS CARDS FOR A LIVING. ASK THEM.** v2.44 exists because
-they looked at one line of output and said "that's wrong". They have
-explicitly invited questions — take them up on it rather than guessing at
-a type line, a keyword or a ruling.
+**5. ASSERT ON STATE, NEVER ON LOG PROSE.** Hands, life, zones, counters.
+
+**6. THE USER READS CARDS FOR A LIVING. ASK THEM.** Every ruling this cycle
+came from asking. They have explicitly invited it.
 
 ---
 
 ## THE TRAPS, IN ONE PLACE
 
-- **The database states the type twice and the two disagree** on 5 of
-  4,862 records. `card.ty` (structured) is the authority; `card.tt`
-  (`type_text`) is a display string. **Exception: a double-faced card
-  flattens both faces into `ty`**, so DFCs parse the front face of `tt`.
-- **A hardcoded seat index is the same bug as `you()`.** Rules code uses
-  `act()`/`foe()`; `you()`/`opp()` are UI perspective only.
-- **A per-side field written as a top-level game key** silently does
-  nothing. `youMut()`/`oppMut()` to write, always.
-- **Store the rng back** (`n.rng = rng`) or the next draw repeats.
-- **When you add a zone, check the census still sees it.**
-  `invariants.js` catches a card in *two* zones; a card in *none* falls
-  out silently. That is why the combat chain is `g.chainCards`.
-- **A loader schema change means bumping `DATA_VER` and editing the
-  mirror in `index.html`** — `mapDbCard` exists in both, guarded field by
-  field by `test/loader.test.js`.
-- **Shared UI components are shared for real.** `ArmorGrid`,
-  `DeckPitchCol`, `InPlayRow`, `GravePane`, `usePeek`, `PeekDock` and
-  `JudgeSheet` are rendered by both boards. A change to one changes both,
-  which is the point.
-- **Driving this UI from JS needs one click per tool call.** Two
-  `.click()`s in one tick batch into a single React render, so the
-  two-tap card interaction re-arms instead of committing.
-- **The browser caches `engine/*.js` aggressively** and a plain reload
-  does not revalidate them. Re-fetch with `cache:"reload"` then reload,
-  or you will debug the previous build.
-- **Test at phone dimensions (393×852)**, not a tall desktop window — two
-  shipped layout bugs existed only there.
-- **Comments are scanned by the guards.** `test/sync.test.js` reads raw
-  source, so English prose that reads like a call trips it; reword the
-  prose rather than weakening the scan.
+- **A LOCAL MAY NEVER SHADOW `act`/`foe`/`you`/`opp`.** Block-scoped, it
+  puts the global in the temporal dead zone for the *whole block including
+  lines above it*. This shipped a crash (v2.54). `test/shadow.test.js`
+  guards it.
+- **THE TDZ BITES TWICE.** v2.63: `foeSwing` was called from a `useState`
+  initializer — safe for a hoisted `function`, fatal once it reached for
+  `gy` and `_EFX`, which are `const`s declared further down the component.
+- **"YOUR ACTION PHASE" IS NOT `phase === "action"`.** In FaB the combat
+  chain lives inside the TURN PLAYER's action phase, so defending on their
+  turn is still "action". Gate on `turnPlayer === actorOf(n)` too.
+- **WHEN A RULES FUNCTION MOVES, THE LEDGERS MUST FOLLOW IT.** A source
+  guard aimed at the wrong file **passes by finding nothing**;
+  `test/actor.test.js`'s anchors name their source file.
+- **The database states the type twice** and they disagree on 5 records.
+  `card.ty` is the authority; DFCs parse the front face of `tt`.
+- **`youMut()`/`oppMut()` to write, always.** A per-side field written as a
+  top-level game key silently does nothing.
+- **Store the rng back** (`n.rng = rng`).
+- **The browser caches `engine/*.js` hard.** Re-fetch with `cache:"reload"`
+  then navigate with a fresh `?v=` before believing anything.
+- **Driving the UI from JS needs one click per tool call** — two in a tick
+  batch into one React render and the two-tap interaction re-arms.
+- **Test at phone dimensions (393×852).**
 
 ---
 
-## VALIDATION LOOP
+## WHICH HERO NEXT
 
-```bash
-export PATH="$HOME/node/bin:$PATH"
-npm test                              # 790 drills — must stay green
-npm run fairness                      # must stay clean
-npm run audit                         # regenerate AUDIT.md, READ the tier diff
-node tools/audit.js --write-baseline  # ONLY after reviewing that diff
-```
+Ranked live by how much of each deck the parser reads (regenerate with the
+snippet in `KAYO-GUIDE.md` §1). The best-covered heroes are the cheapest to
+finish; the interesting question is which *axis* they test.
 
-A tier drop is **not automatically a regression** — several times it has
-been a correction, because the previous number was an over-claim.
+**Recommended: DORINTHEA (Warrior, chapter 2).** 22 full / 3 part / **0
+unreadable**, and a **single** hero clause. She is the project's namesake —
+the Dawnblade is the one Marvel-printing card pinned in `cards.js`. Above
+all she tests the **weapon** path, which Kayo barely touched: her deck is
+built on swinging one weapon repeatedly, and `CLAUDE.md` already flags "two
+limits on a weapon swing, and they are different rules" (`oncePerTurn` vs
+the tap) as a hazard nobody has exercised.
 
-Then **open it and play**. `.claude/launch.json` serves it on 8099. For
-two-player work, open two browser tabs and have one host and one join —
-the public relay works fine between them.
+Alternatives, both reasonable:
+- **Viserai** (Runeblade, ch1) — 20 full / 3 part / 0 none, hero ability
+  already built. Tests runechants and arcane, a different axis again, and
+  chapter 1 is the gentler curve.
+- **Lyath Goldmane** — technically the best-covered deck (22/23) but
+  chapter 3, and its crowd/boo mechanic is the least conventional.
 
-**Prove a new drill bites.** The convention here is to reintroduce the
-bug and watch the drill fail, then restore. Several drills in this repo
-were written, passed, and proved nothing until that was done.
+**Leave Arakni for last** — 9 full / 7 part / 7 none is by far the least
+built, and traps/marks are their own subsystem.
 
 ---
 
 ## THE JOB
 
-**Build carefully, one piece at a time, and never claim more than is
-true.** Phase 3 is hundreds of small semantic changes to how printed text
-is read, found by playing. The tools are the audit (coverage), the
-fairness sweep (faithfulness), the sweep (hero abilities, tokens, rulings
-understood but not built), `tools/rulings.json` (119 recorded rulings) and
-JUDGE!!.
-
-**Read `CLAUDE.md` first, in full.** Most entries exist because breaking
-the rule already cost a real bug.
+**Build carefully, one piece at a time, and never claim more than is true.**
+Read `CLAUDE.md` first, in full. Most entries exist because breaking the
+rule already cost a real bug.

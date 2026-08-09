@@ -740,7 +740,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.63"; /* v2.63 — the opponent plays REAL CARDS: pick, pitch to pay, swing for printed power. A true Kayo mirror in single player. Plus the log finally names the card you played. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.64"; /* v2.64 — housekeeping: Round 1s two table findings fixed, and a defence bonus raised before the block now actually reaches the wall. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2044,13 +2044,27 @@ function PeekDock({card, verb, onClose}){
     let last = null, raf = 0;
     const place = () => {
       raf = requestAnimationFrame(place);
-      const rail = document.querySelector(".phand, .chand, .hand");
-      const r = rail && rail.getBoundingClientRect();
+      /* THE RAIL ON *THIS* SCREEN, not the first one in the document. The
+         table stacks three scrolling screens, so `querySelector` returned
+         the CHAIN screen's rail while you were peeking from your board —
+         and because that rail sits mostly-but-not-quite off the top, it
+         cleared the old "is it off screen" guard and produced a ~893px
+         offset. The preview rendered at y ≈ -365: entirely above the
+         viewport, invisible, on every card interaction on that screen.
+
+         Most-visible-wins needs no refs and no knowledge of which board is
+         rendering, which is what keeps one component serving both. */
+      let r = null, seen = -1;
+      for(const el of document.querySelectorAll(".phand, .chand, .hand")){
+        const b = el.getBoundingClientRect();
+        const vis = Math.min(b.bottom, window.innerHeight) - Math.max(b.top, 0);
+        if(vis > seen){ seen = vis; r = b; }
+      }
       /* nothing on screen to sit above: the old flat action-bar clearance is
          both right and safe, because there is no rail for it to cover.
          Otherwise the distance from the viewport bottom to the rail's TOP
          edge, plus a small gap — never less than that clearance. */
-      const bot = (!r || r.bottom <= 0 || r.top >= window.innerHeight)
+      const bot = (!r || seen <= 0)
         ? 112 : Math.max(112, Math.round(window.innerHeight - r.top) + 8);
       if(bot !== last){ last = bot; root.style.setProperty("--peekbot", bot + "px"); }
     };
@@ -3374,6 +3388,10 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     defSide.ward = ward;
     defSide.hist = {...act(s).hist, blueGY:(act(s).hist.blueGY||0)+bcards.filter(c=>c.pitch===3).length};
     defSide.blockH = []; defSide.blockG = []; defSide.blockRx = [];
+    /* the wall has done its job, so the bonuses raised onto it go with the
+       declarations — same rule and same place blockH/blockG clear (v2.46),
+       or a defender would carry its +{d} into the next link for free */
+    n.defBonus = {};
     defSide.hp = act(s).hp - through;
     defSide.hand = act(s).hand.filter(c=>!act(s).blockH.includes(c.uid));
     defSide.grave = [...gy(s.turn, ...bcards),...act(s).grave];
@@ -3467,9 +3485,18 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     if(payable.length){
       return {...s, mode:"defpay", _clashDef:clashDef,
         defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops})),
-        defBonus:{}};
+        /* CARRY WHAT IS ALREADY ON THE WALL. `defBonus` used to exist only
+           inside a defpay cycle, so starting it empty was harmless; an
+           activated ability can now raise a defender before this point
+           (Rally the Coast Guard), and wiping it here would silently
+           discard a cost the player already paid. */
+        defBonus:{...(s.defBonus||{})}};
     }
-    return finishBlock(s, clashDef, {});
+    /* …and the no-pause path must pass it too. It passed `{}`, so Rally's
+       +3{d} was written to the state and then thrown away one line before
+       the wall was totalled: "Defense locked at 3" for a 2 + 3 defender.
+       Found by playing the mirror, not by a drill. */
+    return finishBlock(s, clashDef, s.defBonus || {});
   });
   const confirmDefPay = pay => setG(s=>{
     if(s.mode!=="defpay" || !(s.defPayQueue||[]).length) return s;
@@ -4830,7 +4857,13 @@ function TableRoom({table, host, code, db, onExit}){
         onThrow={t=>say(DawnLobby.throwIt(mySeat, lob.round, t))}/>}
 
       {/* ---- 3. the seating call ---- */}
-      {step === "seat" && <div className="lobseat">
+      {/* `rps` as well as `lobseat`: .rtitle/.rsub/.rseatpick are all scoped
+          under `.rps` in the stylesheet, so without it this screen rendered
+          as unspaced run-on text —
+          "I go firsttake the initiativeThey go firstkeep the extra card".
+          Clickable, and illegible. The solo Pregame wraps in `.rps` and
+          always looked right, which is how the table's copy drifted. */}
+      {step === "seat" && <div className="lobseat rps">
         <div className="rtitle">{lob.winner===mySeat ? "You won the throw" : "They won the throw"}</div>
         {lob.winner===mySeat
           ? <>

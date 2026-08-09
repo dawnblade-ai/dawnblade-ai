@@ -5,6 +5,47 @@ short, a handoff not a report.
 
 ---
 
+## Round 2 — BUILDER pass, Kayo end to end · 2026-08-08/09 (v2.53 → v2.64)
+
+**Round 1's two findings are both fixed** (v2.64), four days after they were
+filed and root-caused. Both were exactly where Round 1 said they were:
+
+- **Finding 1 — unstyled seat screen.** The table's `step==="seat"` block
+  rendered `className="lobseat"` while every rule is scoped `.rps .rtitle`
+  / `.rps .rsub` / `.rps .rseatpick`. Fixed by adding `rps` to the
+  className, which is the smaller change Round 1 recommended.
+- **Finding 2 — preview off-screen from the board panel.** `PeekDock`'s
+  `querySelector(".phand, .chand, .hand")` took the FIRST rail in document
+  order, which on the table's three stacked screens was the chain screen's.
+  It now considers every rail and picks by **visible height**, which needs
+  no refs and no knowledge of which board is rendering — so one component
+  still serves both.
+
+**A JUDGE finding is worth filing even when nobody fixes it that day.**
+Both were reproduced from the write-up alone, with no re-investigation.
+
+**Kayo is complete.** Nine hero/card defects built or corrected across
+v2.55–v2.63 — see CHANGELOG. Every one of them reported tier `full` before
+the fix. The three that no tool in this repo could have found:
+
+- **clause 2 doing nothing** (22 of 47 cards satisfied his own threshold;
+  45 after) — found by reading the hero's printed text against the deck list
+- **`_foe is not a function`**, a crash on every clash resolved on defence
+  — found by reading a browser console after two testing agents died
+- **Might minted on the opponent's turn** — found by watching a card work
+
+**Two more found by playing after the drills were green:** Rally the Coast
+Guard's `+3{d}` was written to state and thrown away one line before the
+wall was totalled (`finishBlock(s, clashDef, {})`), and the log never named
+the card you played.
+
+**Left unclaimed:** the networked table still runs no card text. That is not
+a location problem any more — `engine/effects.js` holds all three semantics
+functions — it is that `execute` advances the turn structure as well as
+applying effects. See `HANDOFF.md`.
+
+---
+
 ## Round 1 — JUDGE pass (live table + headless engine) · 2026-08-04
 
 **Role:** JUDGE only — no engine code written this round. Three testers: me

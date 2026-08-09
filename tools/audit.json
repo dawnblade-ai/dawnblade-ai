@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-04T02:46:32.157Z",
- "appVer": "2.51",
+ "generated": "2026-08-09T13:44:23.942Z",
+ "appVer": "2.63",
  "dataVer": "sage-v11",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 304,
-  "part": 79,
+  "full": 305,
+  "part": 78,
   "none": 22
  },
  "heroes": {
@@ -993,7 +993,7 @@
     "dominate",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -1003,16 +1003,14 @@
     },
     {
      "t": "If a card with 6 or more {p} is discarded this way, this gets dominate.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If this is defended by fewer than 2 non-equipment cards, it gets go again.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If a card with 6 or more {p} is discarded this way, this gets dominate."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, draw a card then discard a random card. If a card with 6 or more {p} is discarded this way, this gets dominate.\nIf this is defended by fewer than 2 non-equipment cards, it gets go again.",

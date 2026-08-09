@@ -839,8 +839,19 @@ test("peek — the preview is positioned ABOVE the hand, measured not guessed", 
   assert.match(dock, /--peekbot/,
     "the component that IS positioned must be the one that measures — a board "
   + "cannot forget a step it does not own");
-  assert.match(dock, /querySelector\("\.phand, \.chand, \.hand"\)/,
-    "it must measure whichever hand rail is on screen");
+  /* AND IT MUST BE THE RAIL ON *THIS* SCREEN (v2.64). `querySelector`
+     returns the first match in DOCUMENT order, which on the table's three
+     stacked screens was the chain screen's rail while you peeked from your
+     board — mostly-but-not-quite off the top, so it cleared the old
+     "off screen" guard and produced a ~893px offset. The preview rendered
+     at y ≈ -365: above the viewport, invisible, for every card interaction
+     on that screen. Most-visible-wins needs no refs and no knowledge of
+     which board is rendering, which is what keeps ONE component serving
+     both — so the drill pins the property, not a particular call. */
+  assert.match(dock, /querySelectorAll\("\.phand, \.chand, \.hand"\)/,
+    "it must consider EVERY hand rail, not just the first in document order");
+  assert.match(dock, /Math\.min\(b\.bottom, window\.innerHeight\) - Math\.max\(b\.top, 0\)/,
+    "and pick by visible height, so a rail scrolled off the top cannot win");
   assert.match(dock, /window\.innerHeight - r\.top/,
     "the offset is the distance from the viewport bottom to the rail's TOP edge");
   /* MEASURING ONCE IS NOT ENOUGH, AND NEITHER IS LISTENING. The rail is
@@ -857,7 +868,11 @@ test("peek — the preview is positioned ABOVE the hand, measured not guessed", 
     "and the loop must stop when the preview closes");
   assert.match(dock, /if\(bot !== last\)/,
     "writing only on change, so a per-frame loop costs a rect and nothing else");
-  assert.match(dock, /r\.bottom <= 0 \|\| r\.top >= window\.innerHeight/,
+  /* The off-screen guard is now expressed as "the most visible rail has no
+     visible height", which is the same property stated once instead of as
+     two edge comparisons — and unlike the old pair it cannot be fooled by a
+     rail hanging a few pixels into view from another screen. */
+  assert.match(dock, /!r \|\| seen <= 0/,
     "a rail that has flicked off screen must fall back to the flat clearance, "
   + "not be chased off the top of the viewport");
 

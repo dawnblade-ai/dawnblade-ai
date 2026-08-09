@@ -420,6 +420,26 @@ test("Agile Windup and Rally the Coast Guard both read their ability", {skip}, (
     "and it may only be activated while it is defending");
 });
 
+/* FOUND BY PLAYING THE MIRROR (v2.64). Rally's +3{d} was written to
+   `s.defBonus` and then thrown away one line before the wall was totalled:
+   `takeIt`'s no-pause path called `finishBlock(s, clashDef, {})`. A 2+3
+   defender locked the defence at 3, and the whole suite was green — the
+   bonus map had only ever been produced and consumed inside a single
+   defpay cycle, so nothing had reason to check the other path. */
+test("a defence bonus raised before the block reaches the wall", {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /return finishBlock\(s, clashDef, s\.defBonus \|\| \{\}\);/,
+    "the no-pause path must pass the accrued bonus, not an empty object — an " +
+    "activated ability can raise a defender before takeIt is ever reached");
+  assert.match(html, /defBonus:\{\.\.\.\(s\.defBonus\|\|\{\}\)\}/,
+    "and entering the defpay pause must carry it rather than wiping a cost already paid");
+  /* and it must not outlive the wall it was raised on */
+  const fb = html.slice(html.indexOf("const finishBlock = (s, clashDef, defBonus) => {"),
+                        html.indexOf("const takeIt = () => setG"));
+  assert.match(fb, /n\.defBonus = \{\};/,
+    "cleared where blockH/blockG clear, or a defender carries its +{d} into the next link");
+});
+
 test("the hand-ability route is wired, and nothing is named", {skip}, () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   assert.match(html, /const handPow = c =>/, "the synthetic ability card");

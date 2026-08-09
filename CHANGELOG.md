@@ -9,6 +9,58 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.64 — housekeeping, and a bonus that never reached the wall
+
+### The bug the mirror found
+
+Rally the Coast Guard's `+3{d}` was written to `s.defBonus` and then
+**thrown away one line before the wall was totalled**: `takeIt`'s no-pause
+path called `finishBlock(s, clashDef, {})`. A 2+3 defender locked the
+defence at 3.
+
+The whole suite was green, and reasonably so — `defBonus` had only ever
+been *produced and consumed inside a single defpay cycle*, so nothing had
+cause to check the other path. An activated ability that raises a defender
+before `takeIt` is ever reached is new as of v2.61.
+
+Both call sites carry it now, and it is **cleared in `finishBlock`** where
+`blockH`/`blockG` clear (v2.46's rule) — otherwise a defender would carry
+its `+{d}` into the next link for free. Both directions sabotaged.
+
+### Round 1's findings, closed
+
+Filed 2026-08-04 by a JUDGE pass, fixed now, both exactly where the
+write-up said they were — reproduced from the report alone:
+
+- **the table's seat-choice screen was unstyled.** It rendered
+  `className="lobseat"` while every rule is scoped `.rps .rtitle` /
+  `.rps .rsub` / `.rps .rseatpick`, so the winner's call arrived as
+  unspaced run-on text: *"I go firsttake the initiativeThey go firstkeep
+  the extra card"*. Clickable, and illegible. The solo `Pregame` wraps in
+  `.rps` and always looked right, which is how the copy drifted.
+- **the card preview rendered off-screen from the board panel.**
+  `PeekDock` used `querySelector(".phand, .chand, .hand")`, which returns
+  the first match in DOCUMENT order — on the table's three stacked screens
+  that was the chain screen's rail, sitting mostly-but-not-quite off the
+  top, which cleared the old "is it off screen" guard and produced a
+  ~893px offset. The preview landed at y ≈ -365, invisible, for every card
+  interaction on that screen.
+
+  It now considers **every** rail and picks by **visible height**. That
+  needs no refs and no knowledge of which board is rendering, which is what
+  keeps one component serving both.
+
+### Documentation
+
+`HANDOFF.md` rewritten for the current state — it was two phases stale.
+`CLAUDE.md` gains a Phase 3 section recording the **method** Kayo produced,
+not just the cards: find the hero's one mechanic, read the hero ability
+first, diff printed against granted, fix the rule rather than the card,
+and sabotage every drill. The audit was regenerated and the coverage
+baseline repinned after review — **40 tiers up, zero down**.
+
+---
+
 ## v2.63 — the opponent plays real cards
 
 **A true Kayo mirror, in single player.** With a hero in seat 1 the

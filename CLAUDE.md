@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.53
+**Current version:** v2.64
 
 ---
 
@@ -103,7 +103,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 796 drills:
+This is `node --test "test/*.test.js"` — currently 834 drills:
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -444,7 +444,7 @@ roadmap was being written.
 | `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **live at the TABLE only** (v2.49) — loaded, module-qualified, in `MODULES` |
 | `engine/types.js` | what a card IS, off its structured type array | **live**, loaded but deliberately not bridged |
 | `engine/lobby.js` | the pre-game negotiation: hero, throw, sideboard (v2.49) | **live** — module-qualified, in `MODULES` |
-| `engine/effects.js` | `runOps` + `execute` — the card semantics, moved verbatim out of `Battle` (v2.53) | **live in the TRAINER only** — the table calls none of it yet |
+| `engine/effects.js` | `runOps` + `execute` + `resolveStack` — ALL the card semantics, out of `Battle` (v2.53, v2.62). One copy exists. | **live in the TRAINER only** — the table calls none of it yet |
 | `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** — the only one left |
 
 ### ONE COMBAT PATH, NOT TWO — the thing this replaces
@@ -933,10 +933,25 @@ Once per Turn` equipment ability.
 
 ### The remaining order
 
-1. **Port the effects — `engine/effects.js`. PART ONE LANDED (v2.53):
-   `runOps` (234 lines) and `execute` (455) are out of `Battle`.**
-   `resolveStack` (124) is still there, and it is the awkward one: it is
-   `() => setG(...)`, so it is a small refactor rather than a move.
+1. ~~**Port the effects**~~ **DONE (v2.53 + v2.62).** `runOps` (234),
+   `execute` (455) and `resolveStack` (122) all live in
+   `engine/effects.js`. **There is exactly ONE copy of the card semantics
+   in the project.** The first two moved byte-identically by script; the
+   third was `() => setG(s=>{…})`, so its BODY moved and the React wrapper
+   stayed behind as `() => setG(_EFX.resolveStack)`.
+
+   **WHAT THE TABLE STILL NEEDS IS NOT LOCATION.** `execute` does two jobs
+   at once: it applies the card's effect *and* **advances the turn
+   structure** — it calls `dummyDefence` inline and sets `mode:"stack"` —
+   while `judge.js` drives combat through `phase`/`step`/`chainCards`.
+   Separating *what the card does* from *what happens next* is the
+   remaining structural job, and the inline `dummyDefence` call is the
+   first knot in it.
+
+   Historic note, because the shape matters: the port was safe because the
+   live trainer plays every card effect and was therefore the regression
+   harness for its own extraction. **Fixes went in their own commits** —
+   smuggled into a move, no diff can tell a fix from the move.
 
    **THE BODIES WERE MOVED, NOT REWRITTEN**, extracted by script and
    verified byte-identical at the commit that moved them. That is the
@@ -975,6 +990,64 @@ Once per Turn` equipment ability.
 3. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
    references. Whatever replaces `setG` must keep the invariant-judge
    funnel, or the guard rails go dark.
+
+---
+
+## PHASE 3 — the text boxes, one hero at a time
+
+**Kayo is complete (v2.55–v2.63): every card in his deck and gear is
+built.** He was the pilot, and the method is the deliverable as much as the
+cards are. See `HANDOFF.md` for the short form and `KAYO-GUIDE.md` for the
+field notes.
+
+**FIND THE HERO'S ONE MECHANIC FIRST.** Kayo's entire deck is *"a card with
+6 or more {p}"* wearing three sets of words. And **read the hero ability
+before the cards**: his clause 2 (*"attack action cards you own get +1{p}
+while they are in any zone other than the combat chain"*) was worth **half
+the deck** — 22 of 47 cards satisfied his own threshold before it, **45
+after**. A hero ability that reads like bookkeeping can be the engine.
+
+**EVERY BUG THIS PHASE FOUND REPORTED TIER `full`.** They were read, and
+read wrong. The audit measures consumption, not faithfulness; the fairness
+sweep is one-sided; neither asks whose turn it is. The bug classes:
+
+| shape | example |
+|---|---|
+| a clause **silently dropped** by an unanchored match | "draw a card **then discard a random card**" parsed to `[["draw",1]]` |
+| **one event mistaken for another** | "discarded THIS WAY" ≠ "this turn" ≠ "in the graveyard" — and an attack reaches the graveyard AT DECLARATION |
+| a **keyword granted off raw text** | `hasKw` gave Pulping dominate every swing from inside its own `if` sentence |
+| a **printed escape hatch** that does not exist | Strongest Survive's "unless they reveal…" — byte-identical parse with and without it |
+| **parsed perfectly, no schedule to fire on** | Might/Agility/Vigor were inert; seven clash payoffs were decoration |
+| **no route at all** | `Instant - Discard this:` on a card in HAND — only gear and arena permanents ever got a `powCard` |
+
+**A TRIGGER IS NOT A GATE.** *"When this attacks, intimidate"* fires every
+swing; *"If X, this gets dominate"* may never fire. `if`/`unless` gate; a
+bare `when`/`whenever` does not, unless the when-clause carries a nested
+`if`. Getting this backwards turns a working card off, which is the
+opposite error and just as wrong.
+
+**"YOUR ACTION PHASE" IS NOT `phase === "action"`.** In Flesh and Blood the
+combat chain lives inside the TURN PLAYER's action phase, so while you
+defend against their swing the phase is still "action" — it is just not
+yours. Gate on `turnPlayer === actorOf(n)` as well.
+
+**SABOTAGE EVERY NEW DRILL.** Three drills in one session proved nothing
+until they were sabotaged: a fix shipped with **no drill at all**, another
+grepped for a variable that survives deleting the gate it lives in, and a
+third keyword-matched a log string. **Pin the GATE, not the identifier.**
+
+### The solo mirror (v2.63)
+
+Set the opponent dropdown on the loadout screen to the same hero and seat 1
+plays real cards. **The actor stays 0 for the swing** — the block path
+reads `act(s).blockH`, so flipping it would ask the attacker to block its
+own attack; the actor is borrowed only around `runOps`. Only the
+opponent's **unconditional** effects fire, because `fx.conds` is
+`execute`'s to evaluate and copying that would be a second copy of the
+semantics.
+
+`window.THROW_MODE = "coin"` is a testing affordance. `rps.js` and the
+throw UI are untouched; set it to `"rps"` to restore the throw for launch.
 
 ### What must survive the rebuild
 
