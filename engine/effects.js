@@ -130,6 +130,61 @@ function makeEffects(ctx){
     return runOps(n, [["token","Might",1,"self"]], "Kayo");
   };
 
+  /* ---- ONE COPY OF THE ADDITIONAL-COST DISCARD (v2.65) ----------------
+     "As an additional cost to play this, discard a random card." The body
+     below existed TWICE, verbatim, in `execute`'s attack and non-attack
+     branches — and a third caller was needed, which is what surfaced it:
+     the solo mirror's `foePlay` charged the cost on NEITHER path, so seat
+     1 played Savage Feast and simply never discarded. A printed drawback
+     skipped is sev-3, and it is the one place the mirror was STRONGER
+     than printed.
+
+     It is a pure MOVE — the body is byte-faithful to what was inlined, so
+     a diff can tell the extraction from a behaviour change. Everything it
+     touches is actor-relative (`act`/`actMut`/`bAct`), so the borrowing
+     caller pays it out of the borrowing seat's hand.
+
+     What it deliberately does NOT carry is the conditional PAYOFF that
+     follows it in the attack branch (`fx.conds` / discard6): that is
+     `execute`'s to evaluate, and the mirror not firing it is the
+     documented limit, not an oversight. Paying a cost and declining to
+     collect the bonus is the safe direction — weaker than printed, never
+     stronger. Returns the discarded cards so the caller can ask its own
+     question of them. */
+  const payAddCost = (n, card, fx) => {
+    /* AT RANDOM WHEN THE CARD SAYS RANDOM. Savage Feast prints "discard a
+       RANDOM card"; letting the engine pick the player's lowest-value
+       card instead is strictly better than printed, which is the
+       direction that steals games. Seeded, so a replay and a peer feed
+       the cost the same card. */
+    let pool;
+    if(fx.addCost.random){
+      pool = [];
+      let _h = act(n).hand.map((c2,i2)=>({c2,i2}));
+      for(let q=0; q<fx.addCost.discard && _h.length; q++){
+        const r = rngInt(n.rng, _h.length); n.rng = r.rng;
+        pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
+      }
+    } else {
+      pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+    }
+    const ids = new Set(pool.map(p=>p.i2));
+    /* RULING (Reincarnate): a card discarded at random can redirect itself
+       to the bottom of the deck instead of the graveyard. */
+    const _bottom = pool.filter(p=>fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
+    const _toGrave = pool.filter(p=>!fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
+    /* gyDisc, not gy — this IS a discard, and it is the only way "you've
+       discarded a card with 6 or more {p} this turn" can ever see it. */
+    actMut(n).grave = [...gyDisc(n.turn, ..._toGrave), ...act(n).grave];
+    if(_bottom.length){ actMut(n).deck = [...act(n).deck, ..._bottom];
+      n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
+    actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
+    n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
+    n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
+    n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
+    return {game:n, discarded: pool.map(p=>p.c2)};
+  };
+
   const runOps = (s, ops, srcName) => {
     let n = {...s};
     ops.forEach(op=>{
@@ -688,37 +743,8 @@ function makeEffects(ctx){
             if(e.verse>0) nb.push(e); else n=L(n,`${b.card.name} spends its last verse and fades.`);
           } else nb.push(b); }); actMut(n).board=nb; if(verseRunes) n = mkRune(n, verseRunes); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        /* AT RANDOM WHEN THE CARD SAYS RANDOM. Savage Feast prints "discard a
-           RANDOM card"; letting the engine pick the player's lowest-value
-           card instead is strictly better than printed, which is the
-           direction that steals games. Seeded, so a replay and a peer feed
-           the cost the same card. */
-        let pool;
-        if(fx.addCost.random){
-          pool = [];
-          let _h = act(n).hand.map((c2,i2)=>({c2,i2}));
-          for(let q=0; q<fx.addCost.discard && _h.length; q++){
-            const r = rngInt(n.rng, _h.length); n.rng = r.rng;
-            pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
-          }
-        } else {
-          pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
-        }
-        const ids = new Set(pool.map(p=>p.i2));
-        /* RULING (Reincarnate): a card discarded at random can redirect itself
-           to the bottom of the deck instead of the graveyard. */
-        const _bottom = pool.filter(p=>fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        const _toGrave = pool.filter(p=>!fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        /* gyDisc, not gy — this IS a discard, and it is the only way "you've
-           discarded a card with 6 or more {p} this turn" can ever see it. */
-        actMut(n).grave = [...gyDisc(n.turn, ..._toGrave), ...act(n).grave];
-        if(_bottom.length){ actMut(n).deck = [...act(n).deck, ..._bottom];
-          n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
-        actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
-        n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
-        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
-        n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
-        const bigDiscard = pool.some(p=>pow6(p.c2, bAct(n)));
+        const _pc = payAddCost(n, card, fx); n = _pc.game;
+        const bigDiscard = _pc.discarded.some(c2=>pow6(c2, bAct(n)));
         fx.conds.filter(x=>x.cond==="discard6"||x.cond==="discard6way").forEach(({op})=>{
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
           else n=L(n,`${card.name}: nothing 6+ power discarded — bonus skips.`);
@@ -880,36 +906,7 @@ function makeEffects(ctx){
     } else {
       if(card._buildSteam){ const tgt=card._steamFor, cur=(act(n).counters[tgt]||{}); if((cur.steam||0)===0){ actMut(n).counters={...act(n).counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
-        /* AT RANDOM WHEN THE CARD SAYS RANDOM. Savage Feast prints "discard a
-           RANDOM card"; letting the engine pick the player's lowest-value
-           card instead is strictly better than printed, which is the
-           direction that steals games. Seeded, so a replay and a peer feed
-           the cost the same card. */
-        let pool;
-        if(fx.addCost.random){
-          pool = [];
-          let _h = act(n).hand.map((c2,i2)=>({c2,i2}));
-          for(let q=0; q<fx.addCost.discard && _h.length; q++){
-            const r = rngInt(n.rng, _h.length); n.rng = r.rng;
-            pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
-          }
-        } else {
-          pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
-        }
-        const ids = new Set(pool.map(p=>p.i2));
-        /* RULING (Reincarnate): a card discarded at random can redirect itself
-           to the bottom of the deck instead of the graveyard. */
-        const _bottom = pool.filter(p=>fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        const _toGrave = pool.filter(p=>!fxParse(p.c2).bottomOnDiscard).map(p=>p.c2);
-        /* gyDisc, not gy — this IS a discard, and it is the only way "you've
-           discarded a card with 6 or more {p} this turn" can ever see it. */
-        actMut(n).grave = [...gyDisc(n.turn, ..._toGrave), ...act(n).grave];
-        if(_bottom.length){ actMut(n).deck = [...act(n).deck, ..._bottom];
-          n = L(n, `${_bottom.map(c=>c.name).join(", ")} reincarnates — bottom of the deck instead of the graveyard.`); }
-        actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
-        n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
-        n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
-        n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
+        n = payAddCost(n, card, fx).game;
       }
       /* the same gap on the non-attack side: the effects were logged, the
          PLAY was not, so a card that resolved to nothing visible left no
@@ -1109,7 +1106,7 @@ function makeEffects(ctx){
     return openPrompt(winCheck(n));
   };
 
-  return {runOps, execute, resolveStack, afterDiscard};
+  return {runOps, execute, resolveStack, afterDiscard, payAddCost};
 }
 
 return {makeEffects, CTX_KEYS};

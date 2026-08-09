@@ -5,6 +5,92 @@ short, a handoff not a report.
 
 ---
 
+## Round 3 — three testers on the mirror · 2026-08-09 (v2.64 → v2.65)
+
+**Three testers, three axes, run in parallel:** the `declOps` whitelist and
+the borrowed actor (headless); the hero ability across the seats (headless);
+and play at 393×852 (browser, exclusive). Baseline verified before dispatch —
+834 green, fairness clean, tree clean at `ce35a58`.
+
+**The split was the finding.** The two headless testers found four value
+leaks; the one that PLAYED it found a soft-lock that makes the mirror
+unable to finish a game — and no tool here could have found that one.
+`invariants.js` stayed silent throughout, correctly, because a control-flow
+dead end is not an illegal state.
+
+**Fixed and shipped in v2.65** (see CHANGELOG for the detail):
+
+| sev | what | where |
+|---|---|---|
+| 3+ | `foeSwing`'s no-play branch never reached `newTurn` — the game froze where it stood, permanently | index.html `foeSwing` |
+| 3 | a prompt addressed to seat 1 was answered by, and paid out to, seat 0 | `promptConfirm` |
+| 3 | `foePick` ignored `fx.playIf` — Bear Hug and Run Roughshod swung with the printed gate unmet | `foePick` |
+| 3 | Savage Feast's additional cost was never paid by seat 1 | `foePlay` |
+| 2 | the `[3,4,5]` table was displayed as a prediction while a real hero played real cards | hero row |
+
+**Drills:** `test/mirror.test.js`, 10 new (834 → 844). **12 sabotages run,
+12 caught** — one only after a fix: the `_opening` guard matched its own
+COMMENT and passed with the gate deleted.
+
+**Verified in play, not only drilled.** Opponent-first mirror at 393×852:
+the soft-lock condition arose on the first opportunity (opponent opened
+Buckwild, pitched two, went to one card), and the game carried through it —
+turn advanced, action point returned, seat 1's hand refilled 1 → 4, judge
+clean.
+
+**Filed, NOT fixed — deliberately out of the scope agreed for this round.**
+These are real and each has a location; they are the next round's queue:
+
+- sev-1 `fx.onHit` is never read on the opponent's swing (Strongest Survive
+  ×6 — the player never discards)
+- sev-1 seat 1's Might/Agility tokens never crumble (the start-of-turn sweep
+  reads `you(out).board` only, `index.html:3610`) — and seat 1 CAN own one
+  today, via losing a clash (`index.html:3461`)
+- sev-1 seat 1's declared defenders fire no "when this defends" trigger, so
+  all 7 of Kayo's clash cards are plain blockers in its hands
+- sev-1 seat 1's blockers enter the graveyard **unstamped** (`effects.js`
+  `resolveStack`) where the player's are stamped — latent, no live
+  consequence for Kayo, but the documented invariant is broken
+- sev-1 a spurious *"no additional-cost discard to feed — bonus skips"*
+  prints on every Bare Fangs / Wild Ride / Pulping attack **and then the
+  bonus applies** — the log teaches the opposite of the rule
+  (`engine/effects.js`, the `else if` after the addCost block)
+- sev-1 END TURN dead-taps during the arsenal step
+- sev-1 the loadout still tells the player seat 1 "takes no action phase, so
+  its swing is the scripted escalation" — untrue since v2.63
+  (`index.html:4330`)
+- sev-1/2 the opponent's graveyard pane is a hardcoded empty state; its
+  pitch zone is never rendered; its weapon slot shows empty with Mandible
+  Claw equipped
+- sev-2 four user-facing strings still say "the dummy" though `foeName`
+  exists for exactly this (`index.html:2251`): the clash log (×2), reprise,
+  and `WinPanel`'s "DUMMY DESTROYED". The VS splash (`index.html:1632`) is
+  unconditional in source but sits on the hero-select screen *before* an
+  opponent is chosen, so it reads as a default — check it after selection
+  before changing it.
+
+**Clause 2 — RULING (user, 2026-08-09):** the +1{p} is a **display rule as
+well as a threshold rule**, and the display should be **visually flagged**
+so a player can tell a clause-2 value from a printed one. The threshold half
+is built and verified correct; **the display half is not built.** That is
+the largest single item in the queue above.
+
+**Ruled out, not filed** — checked and correct: clause 2 is genuinely
+per-side (all 11 call sites pass the owner's build via `bAct`/`bFoe`);
+`symmetryGap()` 42/42 both seats, `flatRemaining` 0; `invariants.check`
+clean on a real mirrored opening; equipment legal and symmetric (identical
+5 pieces, no repeat of the v2.41 eight-gear bug); the `declOps` whitelist
+drops nothing that matters for Kayo; the borrowed actor is correct on all
+11 ops including direction-sensitive `mark`/`dmg`; `foePick`'s printed-power
+sort is a fair heuristic, not a wrong number; `foePlay`'s raw `card.power`
+on the chain is right, and right for the stated reason.
+
+**Coverage this round:** the opponent-first opening was driven end to end.
+A full multi-turn game still has not been played — the soft-lock is why it
+could not be, and that cause is now removed rather than outstanding.
+
+---
+
 ## Round 2 — BUILDER pass, Kayo end to end · 2026-08-08/09 (v2.53 → v2.64)
 
 **Round 1's two findings are both fixed** (v2.64), four days after they were

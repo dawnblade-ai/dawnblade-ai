@@ -9,6 +9,86 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.65 — the turn that never ended
+
+**A three-tester round on the Kayo mirror, and the mirror could not finish
+a game.** Two testers drove the engine headlessly; one played it at
+393×852. The one that played it found the game-breaker, and that split is
+the story of the round: **no tool in this project could have found it.**
+
+### The soft-lock
+
+`foeSwing`'s no-play branch — reached when seat 1 holds nothing it can pay
+for — handed the turn back with a bare `mode:"act"`. `newTurn` is the ONLY
+site that refills seat 1's hand, ticks the clock, closes the chain and
+issues the player's action point, and the branch reached none of it.
+
+**It is self-perpetuating by construction:** `foePick` needs cards in hand,
+the hand only refills in `newTurn`, and `newTurn` is exactly what the
+branch skipped. Once it fired it could never un-fire. The turn counter
+froze, END TURN reproduced the position byte-for-byte, and the whole hand
+stayed lit in the rail — the "looks playable, does nothing when tapped"
+failure mode, on every card at once.
+
+It hit on the **first opportunity** in a normal line: the opponent opened
+with Buckwild, pitching two cards for three, and went to one card in hand.
+
+`invariants.js` reported **zero violations** throughout, and correctly: a
+control-flow dead end is not an illegal STATE. All 834 drills were green.
+It is also **not Kayo-specific** — every real hero in seat 1 takes that
+branch, and the vanilla dummy never does, which is why a year of solo play
+never saw it.
+
+### Three ways the mirror leaked value to the player
+
+Each found independently, each confirmed against printed text:
+
+- **the opponent's prompt was answered by the player.** `afterDiscard`
+  queues Beaten Trackers' modal with `side: actorOf(n)`, but `promptConfirm`
+  charged `youMut` and ran the ops at the ambient actor — so the sheet was
+  drained on the player's next `execute`. `destroyGear` looked for seat 1's
+  uid in seat 0's gear and skipped (its `return` exits one op, not the
+  option), and the `["ap",1]` still fired. **A free action point every game,
+  and the opponent kept the iron it was printed to destroy.** `spec.side`
+  has meant "whose call is this" since v2.17; now the payout honours it.
+- **`foePick` never read `fx.playIf`.** Bear Hug ("Play this only if you've
+  pitched a card with 6 or more {p} this turn") and Run Roughshod swung with
+  their gate unmet — sev-3 *illegal play allowed*, 4 deck copies. The gate is
+  now one `playIfOk` both seats ask, borrowed as seat 1 so it reads seat 1's
+  board rather than the player's.
+- **Savage Feast's additional cost was never paid.** "As an additional cost
+  to play Savage Feast discard a random card" — the opponent simply did not
+  discard. The one place the mirror ran *stronger* than printed.
+
+### One printed value the board was inventing
+
+The hero row read the `[3,4,5]` escalation table **unconditionally**, so it
+announced "NEXT SWING 3" while a real hero held real cards and swung for 7.
+That is the "the player *trusts* the number on screen" category, and the
+advisor's race maths sits beside it. A real opponent's next card is not
+knowable, so it now reports what IS known — how many cards the hand holds.
+
+### `payAddCost` — one copy, and it was already two
+
+The additional-cost discard existed **twice, verbatim**, in `execute`'s
+attack and non-attack branches; the mirror needed a third caller, which is
+what surfaced it. Extracted to `engine/effects.js` as a **pure move** — the
+body is byte-faithful, so a diff can tell the extraction from a behaviour
+change. It deliberately does **not** carry the conditional payoff that
+follows it in the attack branch: that is `execute`'s to evaluate, and the
+mirror not firing it is the documented limit. Paying a cost without
+collecting the bonus is the safe direction.
+
+### The drill that proved nothing until it was sabotaged
+
+`test/mirror.test.js` adds 10 drills, and **all 12 sabotages were run**.
+One came back BLIND: the guard for `_opening` was written `/_opening/` and
+passed with the entire gate deleted, because the **comment above it says
+the word**. Pin the gate, not the identifier — the same lesson three drills
+learned in v2.60–2.63, learned again.
+
+---
+
 ## v2.64 — housekeeping, and a bonus that never reached the wall
 
 ### The bug the mirror found

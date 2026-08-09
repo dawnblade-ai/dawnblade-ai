@@ -740,7 +740,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.64"; /* v2.64 — housekeeping: Round 1s two table findings fixed, and a defence bonus raised before the block now actually reaches the wall. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.65"; /* v2.65 — the mirror could not finish a game: an opponent with nothing it could pay for handed the turn back without ending it, and the game froze where it stood. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2557,6 +2557,25 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      itself. `act`, not `you` — this is a rules question, so it belongs to
      whoever is resolving (v2.24). `pow6` carries Kayo's clause 2. */
   const had6ThisTurn = st => (act(st).grave||[]).some(c=>c._gy===st.turn && c._disc && pow6(c, bAct(st)));
+  /* ONE READING OF "PLAY THIS ONLY IF …" (v2.65). `fx.playIf` is a GATE,
+     not an effect, and `tryPlay` has refused the player on it since v2.12.
+     `foePick` never asked — it filtered on type and affordability alone —
+     so seat 1 swung Bear Hug with an empty pitch zone and Run Roughshod
+     with an empty graveyard, both against their own printed first line.
+     Sev-3 "illegal play allowed", and in the mirror it is 4 deck copies.
+
+     Actor-relative like its neighbour above, so ONE predicate answers for
+     either seat: `act`/`bAct` read whoever is resolving, and the opponent
+     is asked by borrowing the actor (`{...n, actor:1}`) exactly as
+     `foePlay` borrows it around `runOps`. */
+  const playIfOk = (st, card) => {
+    const pif = fxParse(card).playIf;
+    if(!pif) return true;
+    return pif.kind==="pitch6"     ? act(st).pitch.some(c=>pow6(c, bAct(st)))
+         : pif.kind==="discard6"   ? had6ThisTurn(st)
+         : pif.kind==="soulYellow" ? (act(st).soul||[]).some(c=>c.pitch===2)
+         : true;
+  };
   /* ---- runechants are AURAS on the board ------------------------------
      Not a counter. The printed token is a "Runeblade Token - Aura", and
      seven pool cards ask about auras generically ("3 or more auras",
@@ -2617,7 +2636,28 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     let n = r.game;
     n.prompt = null;
     r.msgs.forEach(m => { n = L(n, m); });
-    if(r.pay > 0){ const ps = youMut(n); ps.res = Math.max(0, ps.res - r.pay); }
+    /* A PROMPT IS ADDRESSED TO A SIDE, AND SO IS ITS PAYOUT (v2.65).
+       `spec.side` has meant "whose call is this" since v2.17 — Cold Snap's
+       ruling has the OPPONENT choosing whether to pay — but this function
+       charged `youMut` and ran the ops at the ambient actor, so every
+       consequence landed on seat 0 whoever was asked.
+
+       It went live the moment seat 1 played real cards: `afterDiscard`
+       queues Beaten Trackers' modal with `side: actorOf(n)`, `foePlay`
+       hands the actor back without draining the queue, and the sheet was
+       then answered by the PLAYER — who paid nothing, because
+       `destroyGear` looked for seat 1's uid in seat 0's gear and skipped
+       (its `return` exits one op, not the option), and still collected the
+       `["ap",1]`. A free action point every game, and the opponent kept
+       the iron it was printed to destroy.
+
+       Borrowing the actor for the whole body is what `foePlay` already
+       does around `runOps`; it also makes the arsenal tail below, which is
+       written on `act`/`actMut`, correct for seat 1 rather than only for
+       seat 0. Handed back before `winCheck`/`openPrompt`. */
+    const pSide = p.side || 0, pWasActor = n.actor || 0;
+    n = {...n, actor: pSide};
+    if(r.pay > 0){ const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay); }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
@@ -2658,6 +2698,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
           n = L(n, `${put.name} set face up in arsenal.`);
       }
     }
+    n = {...n, actor: pWasActor};
     return openPrompt(winCheck(n));
   });
   /* Declining is a real choice for optional prompts, not a cancel. */
@@ -2947,13 +2988,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
         if(!ok) return L(s, `${card.name} can't be activated — ${g2.why}.`);
       }
       const pif = afx.playIf;
-      if(pif){
-        const ok = pif.kind==="pitch6"    ? act(s).pitch.some(c=>pow6(c, bAct(s)))
-                 : pif.kind==="discard6"  ? had6ThisTurn(s)
-                 : pif.kind==="soulYellow"? (act(s).soul||[]).some(c=>c.pitch===2)
-                 : true;
-        if(!ok) return L(s, `${card.name} can't be played — ${pif.why}.`);
-      }
+      if(pif && !playIfOk(s, card)) return L(s, `${card.name} can't be played — ${pif.why}.`);
     }
     const fx = fxParse(card);
     if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
@@ -3266,8 +3301,14 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   function foePick(n){
     const hand = opp(n).hand || [];
     const bank = c => hand.filter(x=>x.uid!==c.uid).reduce((a,x)=>a+(x.pitch||0), 0) + (opp(n).res||0);
+    /* THE PRINTED GATE IS PART OF LEGALITY, NOT PART OF THE HEURISTIC
+       (v2.65). Borrow the actor so `playIfOk` reads seat 1's pitch zone
+       and seat 1's graveyard — asked with the ambient actor it would gate
+       the opponent's card on the PLAYER's board. */
+    const asFoe = {...n, actor:1};
     return hand
       .filter(c => isAttack(c) && !isRx(c) && !DawnTypes.isBlock(c))
+      .filter(c => playIfOk(asFoe, c))
       .filter(c => effCost(c, opp(n)) <= bank(c))
       .sort((a,b) => (b.power||0)-(a.power||0) || a.uid-b.uid)[0] || null;
   }
@@ -3292,6 +3333,24 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        runOps reads s.actor, so this is the supported way to resolve one
        side's effect while the rest of the turn belongs to the other. */
     const fx = fxParse(card);
+    /* AN ADDITIONAL COST IS A COST, NOT AN EFFECT (v2.65). It is paid to
+       play the card at all, so it is not subject to the `declOps`
+       whitelist below and it is not optional. Seat 1 was paying it on
+       neither path: Savage Feast prints "As an additional cost to play
+       Savage Feast discard a random card" and the opponent simply never
+       discarded — a printed drawback skipped, and the one place the
+       mirror ran STRONGER than printed.
+
+       `payAddCost` is the same body `execute` pays through, borrowed the
+       same way as the effects below: it is actor-relative throughout, so
+       it discards out of seat 1's hand and stamps seat 1's graveyard with
+       `gyDisc`. The conditional payoff that follows it in `execute` is
+       deliberately not taken here — that is the documented limit, and
+       paying a cost without collecting the bonus is the safe direction. */
+    if(fx.addCost && fx.addCost.discard && opp(n).hand.length){
+      const paid = _EFX.payAddCost({...n, actor:1}, card, fx);
+      n = {...paid.game, actor:0};
+    }
     const declOps = (fx.ops||[]).filter(o=>["draw","discardRandom","token","rune","res","buffNext","gaNext","amp","ward","mark","dmg"].includes(o[0]));
     if(declOps.length){
       const borrowed = _EFX.runOps({...n, actor:1}, declOps, card.name);
@@ -3315,8 +3374,32 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     if(oppH){
       const pick = foePick(s);
       if(pick) return foePlay(s, pick);
-      let q = {...s, mode:"act"};
-      return L(q, `${opp(q).name} has nothing it can pay for — the turn passes back to you.`);
+      /* NOTHING IT CAN PAY FOR — AND THE TURN STILL HAS TO END (v2.65).
+         `newTurn` is the ONLY site that refills seat 1's hand, ticks the
+         clock, closes the chain and issues your action point. Handing back
+         a bare `mode:"act"` stranded the game outright: seat 1's hand only
+         refills in `newTurn`, and `foePick` needs a hand to pick from — so
+         once this branch fired it could never un-fire. The turn counter
+         froze, the action point never came back, and END TURN reproduced
+         the identical position forever.
+
+         Found in play, and it could only be found there: a control-flow
+         dead end is not an illegal STATE, so `invariants.js` cannot see it
+         by construction and `__dawnJudge` stayed empty throughout. It is
+         also not Kayo-specific — every real hero in seat 1 takes this
+         branch, the vanilla dummy never does (`oppH` is null, so the
+         escalation always attacks and always reaches `newTurn`). */
+      let q = L(s, `${opp(s).name} has nothing it can pay for — the turn passes back to you.`);
+      /* The opponent-goes-first opening never reaches `takeIt`, which is
+         where `_opening` is consumed — so clear it here or the NEXT swing
+         would take the opening branch and skip a real turn tick. Ticking
+         now would instead tax a point of score for going second, exactly
+         as `takeIt`'s opening branch explains. No CR 4.4.3f refill is owed
+         on this path: with no swing to block, the player has spent
+         nothing and is still at intellect. */
+      if(q._opening) return {...q, _opening:false, mode:"act", chain:[],
+        chainOpen:false, featured:null, boostChain:0};
+      return newTurn(q);
     }
     let n = {...s};
     const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
@@ -3829,7 +3912,17 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                     : <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>}
                   <span className="hname">{opp(g).name}</span>
                   <b className="hlife2">{Math.max(0,opp(g).hp)}</b>
-                  <span className="hlbl">{g.mode==="block"?"INCOMING "+g.incoming:"next swing "+([3,4,5][(g.turn-1)%3]+(g.turn>6?1:0))}</span>
+                  {/* THE PREDICTION BELONGS TO THE SCRIPTED DUMMY ONLY (v2.65).
+                      Read unconditionally, the escalation table announced
+                      "NEXT SWING 3" while a real hero held real cards and
+                      swung Buckwild for 7. That is the "displayed total is
+                      wrong" category — the player TRUSTS this number, and the
+                      advisor's race maths sits beside it. A real opponent's
+                      next card is not knowable, so say nothing rather than
+                      something false. */}
+                  <span className="hlbl">{g.mode==="block" ? "INCOMING "+g.incoming
+                    : oppH ? "holds "+(opp(g).hand||[]).length+" in hand"
+                    : "next swing "+([3,4,5][(g.turn-1)%3]+(g.turn>6?1:0))}</span>
                   {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
                 </div>
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>

@@ -49,7 +49,7 @@ const ANCHORS = [
   ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
   ["execute",      "  const execute = (s,card,from,idx) => {", "effects"],
   ["resolveStack", "  const resolveStack = (s) => {",              "effects"],
-  ["__endEffects", "  return {runOps, execute, resolveStack, afterDiscard};", "effects"],
+  ["__endEffects", "  return {runOps, execute, resolveStack, afterDiscard, payAddCost};", "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way
