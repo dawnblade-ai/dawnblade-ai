@@ -48,7 +48,7 @@ const ANCHORS = [
   /* --- engine/effects.js: the ported card semantics -------------------- */
   ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
   ["execute",      "  const execute = (s,card,from,idx) => {", "effects"],
-  ["__endEffects", "  return {runOps, execute};",              "effects"],
+  ["__endEffects", "  return {runOps, execute, afterDiscard};",  "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way

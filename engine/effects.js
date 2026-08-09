@@ -114,6 +114,14 @@ function makeEffects(ctx){
     }
 
     if(!b || !b.mightOnFirst6Discard) return n;
+    /* "DURING EACH OF **YOUR** ACTION PHASES" — and `phase === "action"` on
+       its own does NOT mean that. In Flesh and Blood the combat chain lives
+       inside the TURN PLAYER's action phase, so while you are defending
+       against their swing the phase is still "action" — it is just not
+       yours. Caught in play: paying Rally the Coast Guard's discard cost to
+       block on the opponent's turn minted a Might token.
+       The turn has to be the actor's own. */
+    if(n.turnPlayer != null && n.turnPlayer !== actorOf(n)) return n;
     if(n.phase !== "action") return n;
     if(act(n).hist && act(n).hist.might6) return n;
     if(!big) return n;
@@ -946,7 +954,7 @@ function makeEffects(ctx){
     return openPrompt(winCheck(n));
   };
 
-  return {runOps, execute};
+  return {runOps, execute, afterDiscard};
 }
 
 return {makeEffects, CTX_KEYS};

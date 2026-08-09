@@ -1057,6 +1057,12 @@ function fxParse(card){
     if(pm) fx.self = +pm[1];
     else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
   }
+  /* An activated ability on a card in HAND. Deliberately does NOT touch
+     `tier`: the clause accounting stays as it was, so the audit keeps
+     reporting Agile Windup as unread until its clause is properly
+     consumed. Under-claiming is the safe direction — over-claiming is the
+     failure mode "never parse ahead of wiring" exists to prevent. */
+  fx.handAbility = parseHandAbility(card);
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
   fx.playable = fx.ops.length>0 || fx.onHit.length>0 || fx.conds.length>0 || !!fx.perm || fx.ga;
@@ -1094,6 +1100,39 @@ function parseHeroPower(tx, allowDestroy){
   return {cost, ga, sd:!!sd, kind:m[2].toLowerCase(), eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
+/* ---- A CARD IN YOUR HAND WITH AN ACTIVATED ABILITY -------------------
+   `parseHeroPower` deliberately REFUSES a discard/banish/sacrifice cost —
+   see its comment: letting one through would raise the tier of cards
+   nothing wires, which is the "never parse ahead of wiring" rule that has
+   already cost a real bug. So this is a separate reader rather than a
+   relaxation of that one, and it exists because the trainer now wires it.
+
+   Two pool cards need it, and NEITHER had any route at all: only gear
+   (build.js) and arena permanents (`boardPow`) ever got a powCard, so
+   "Instant - Discard this: …" on a card in hand was unreachable even
+   though the effect itself parses perfectly.
+
+     Agile Windup          "Instant - Discard this: Create an Agility token."
+     Rally the Coast Guard "Once per Turn Instant - Discard a card: This
+                            gets +3{d}." (+ a separate "Activate this only
+                            while this card is defending", already read as
+                            fx.activateIf)
+
+   The cost is the DISTINCTION that matters: "discard THIS" spends the card
+   itself, "discard A CARD" spends another one and is therefore a choice.
+   They are different costs and the caller must be able to tell them apart. */
+function parseHandAbility(c){
+  const t = clean((c && c.tx) || "");
+  const m = t.match(/(once per turn )?instant\s*[-—]*\s*discard (this|a card)\s*:\s*([^.]+)/i);
+  if(!m) return null;
+  const eff = classifyClause(m[3]);
+  /* Same guard as parseHeroPower: an ability whose payload the parser
+     cannot read in full would arm a tap that then does nothing. */
+  if(!eff || eff.status !== "run" || eff.cond || eff.onHit) return null;
+  return {oncePerTurn: !!m[1], cost: /this/i.test(m[2]) ? "self" : "card",
+          kind: "instant", eff: m[3].trim(), ops: eff.ops};
+}
+
 /* "costs {r} less to play for each Runechant you control" — the printed form
    is the resource PIP, not a digit, so the old digit-or-word pattern never
    matched and the discount silently never applied. */
@@ -1346,7 +1385,7 @@ const costsAP = c => !isInstantT(c) && !(c && c._instant);
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        classifyClause, fxParse, fxReset, parseHeroPower, runeRed, boardRed, effCost,
+        classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount,

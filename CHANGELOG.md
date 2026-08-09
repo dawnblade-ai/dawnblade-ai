@@ -9,6 +9,66 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.61 — a card in your hand can have an activated ability
+
+The last two unbuilt Kayo cards were blocked on the same missing thing, and
+it was not a parser gap — it was that **there was no route**. Only gear
+(`build.js`) and arena permanents (`boardPow`) ever got a `powCard`, so an
+`Instant - Discard this: …` printed on a card in HAND was unreachable even
+though its effect parses perfectly.
+
+| | |
+|---|---|
+| Agile Windup | `Instant - Discard this: Create an Agility token` |
+| Rally the Coast Guard | `Once per Turn Instant - Discard a card: This gets +3{d}` + *"Activate this only while this card is defending"* |
+
+`parseHandAbility` is a **separate reader**, not a relaxation of
+`parseHeroPower` — that one deliberately refuses a discard cost, and its
+comment explains why (loosening it would raise the tier of cards nothing
+wires). This exists because the trainer now wires it.
+
+**The cost is the distinction that matters.** "Discard THIS" spends the
+card itself; "discard A CARD" spends another one. Different costs, and the
+caller has to tell them apart — the second also has to skip cards already
+committed to the block.
+
+**The ability is its own cell in the hand rail**, appearing only while it
+can actually be activated. That is not decoration: Agile Windup is both a
+playable attack action *and* a discard-for-a-token instant, and both are
+legal in your own action phase — discarding it is a real Kayo line, since
+a printed 5 is a 6 to him and the discard makes Might. One tap target
+cannot mean two things.
+
+**Rally's +3{d} does not go through `runOps`.** `finishBlock` reads a
+per-uid bonus map, which is how `confirmDefPay` already routes a defence
+buff onto one specific defender; `runOps` has no way to raise one.
+
+**Three more pool cards come online for free** — Arcane Twining, Photon
+Splicing and Reaper's Call all print the same shape. Nothing is
+special-cased by name, and a drill fails if either Kayo card's name appears
+in the wiring at all.
+
+### And a bug found by watching it work
+
+Activating Rally to block on the **opponent's** turn minted a **Might
+token**. Clause 3 says *"during each of **your** action phases"*, and the
+gate only checked `phase === "action"` — which is true there, because **in
+Flesh and Blood the combat chain lives inside the TURN PLAYER's action
+phase**. Defending against their swing is still an action phase; it is just
+not yours. The turn now has to be the actor's own.
+
+Confirmed live in exactly the state that produced it: `phase: "action"`
+with `turnPlayer: 1`. No drill in this repo asked that question, and no
+tool could — the card parses perfectly and the phase really was "action".
+
+*Known limit, stated:* "discard a card" is the player's choice, and the
+trainer auto-picks the lowest advisor value rather than prompting — the
+standing approximation `CLAUDE.md` already records for every other cost. A
+`pick` prompt is the upgrade, and it needs a uid-exclusion the spec does
+not carry yet.
+
+---
+
 ## v2.60 — Beaten Trackers, and the word the hero ability doesn't have
 
 > "Whenever you discard a **random** card with 6 or more {p}, you may

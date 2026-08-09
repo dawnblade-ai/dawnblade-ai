@@ -277,6 +277,32 @@ test("clause 3 is gated on the ACTION phase and latches once", {skip}, () => {
   assert.match(body, /pow6\(/, "the 6+ test is the shared one, so clause 2 applies to it");
 });
 
+/* FOUND IN PLAY (v2.61): paying Rally the Coast Guard's discard cost to
+   block on the OPPONENT'S turn minted a Might token. `phase === "action"`
+   does not mean "your action phase" — in FaB the combat chain lives inside
+   the TURN PLAYER's action phase, so while you defend against their swing
+   the phase is still "action", just not yours. */
+test("clause 3 requires YOUR OWN turn, not merely the action phase", {skip}, () => {
+  const body = afterDiscardBody();
+  assert.match(body, /turnPlayer !== actorOf\(n\)/,
+    "a discard made while DEFENDING on the opponent's turn is still in an action phase — " +
+    "the turn has to be the actor's own");
+
+  /* and behaviourally, both ways round */
+  const b = kayoBuild();
+  const { runOps } = E.makeEffects(ctx(b));
+  const mine = game([card("Buckwild")]);
+  mine.phase = "action"; mine.turnPlayer = 0;          // my turn
+  const a = runOps(mine, [["discardRandom", 1]], "probe");
+  assert.equal(a.sides[0].board.length, 1, "my own action phase makes Might");
+
+  const theirs = game([card("Buckwild")]);
+  theirs.phase = "action"; theirs.turnPlayer = 1;      // defending on their turn
+  const c2 = runOps(theirs, [["discardRandom", 1]], "probe");
+  assert.equal(c2.sides[0].board.length, 0,
+    "blocking on their turn is still the action phase — but not YOUR action phase");
+});
+
 /* ---- BEATEN TRACKERS --------------------------------------------------- */
 
 test("Beaten Trackers triggers only on a RANDOM discard", {skip}, () => {
@@ -375,6 +401,56 @@ test("Test of Might cannot be played as an action", {skip}, () => {
     "tryPlay must refuse a Block — otherwise it is a free 0-cost play that spends " +
     "an action point and does nothing. judge.js has refused it since v2.47; the " +
     "trainer never did, and Kayo runs two copies.");
+});
+
+/* ---- A CARD IN HAND WITH AN ACTIVATED ABILITY -------------------------- */
+
+test("Agile Windup and Rally the Coast Guard both read their ability", {skip}, () => {
+  const aw = P.fxParse(card("Agile Windup")).handAbility;
+  assert.ok(aw, "Instant - Discard this: Create an Agility token");
+  assert.equal(aw.cost, "self", "it spends ITSELF");
+  assert.deepEqual(aw.ops, [["token", "agility", 1, "self"]]);
+
+  const rc = P.fxParse(card("Rally the Coast Guard")).handAbility;
+  assert.ok(rc, "Once per Turn Instant - Discard a card: This gets +3{d}");
+  assert.equal(rc.cost, "card", "it spends ANOTHER card — a different cost, and a choice");
+  assert.equal(rc.oncePerTurn, true);
+  assert.deepEqual(rc.ops, [["defBuff", 3]]);
+  assert.equal(P.fxParse(card("Rally the Coast Guard")).activateIf.kind, "defending",
+    "and it may only be activated while it is defending");
+});
+
+test("the hand-ability route is wired, and nothing is named", {skip}, () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /const handPow = c =>/, "the synthetic ability card");
+  assert.match(html, /const handAbilityOK = \(s, c\) =>/, "and the question of whether it is live now");
+  assert.match(html, /const activateHand = c => setG/, "and the reducer");
+  assert.match(html, /y\.hand\.forEach\(c => \{ const hp = handPow\(c\)/,
+    "peekables must span it, or the preview fails silently while the tap still arms");
+  assert.match(html, /hand\.flatMap\(handCell\)/,
+    "the ability is its own cell — one tap target cannot mean two things");
+  /* the defence buff must NOT go through runOps: finishBlock reads a
+     per-uid bonus map, and runOps cannot raise one specific defender */
+  assert.match(html, /n\.defBonus = \{\.\.\.\(n\.defBonus\|\|\{\}\), \[c\.uid\]/,
+    "Rally's +3{d} reaches the wall through defBonus, the way confirmDefPay already routes one");
+  for(const nm of ["Agile Windup", "Rally the Coast Guard"])
+    assert.ok(!new RegExp('"' + nm + '"').test(html), `${nm} must not be special-cased by name`);
+});
+
+test("the ability reader claims exactly the cards that print one", {skip}, () => {
+  /* Five pool cards, found by reading text — three of them nothing to do
+     with Kayo, which is the golden rule working rather than a coincidence. */
+  const hits = [];
+  for(const h of W.HEROES){
+    const d = GM.parseDeck(W.DECKS[h.k]), sa = (h.code || "").slice(0, 3);
+    for(const e of [...d.gear, ...d.deck]){
+      const c = C.resolveEntry(DB(), e, sa);
+      if(c.resolved && P.fxParse(c).handAbility) hits.push(c.name + "|" + c.pitch);
+    }
+  }
+  assert.deepEqual([...new Set(hits)].sort(),
+    ["Agile Windup|3", "Arcane Twining|3", "Photon Splicing|3",
+     "Rally the Coast Guard|3", "Reaper's Call|3"]);
 });
 
 /* ---- STRONGEST SURVIVE: the defender's escape hatch -------------------- */

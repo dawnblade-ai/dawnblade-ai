@@ -908,7 +908,7 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
      callable; that is a bigger change than repointing it.) */
   const EFFECTS = require("./helpers/extract.js").effects();
   const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx)"),
-                             EFFECTS.indexOf("\n  return {runOps, execute};"));
+                             EFFECTS.indexOf("\n  return {runOps, execute, afterDiscard};"));
   /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
