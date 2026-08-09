@@ -92,15 +92,49 @@ for(const c of Object.values(audit.cards)){
      A "+N{p}" that appears once in the text but is applied by two
      different paths — the v2.30 double-count. Only fires when the text
      mentions that exact magnitude ONCE, so a card that genuinely pumps
-     twice is not accused. */
+     twice is not accused.
+
+     IT USED TO LOOK ONLY AT `uncondOps`, AND THAT IS WHY THIS SWEEP WAS
+     CLEAN THROUGH SEVEN DOUBLED CARDS (v2.66). `fx.self` is a
+     first-class grant that does not live in `fx.ops`, so a pump the
+     parser had routed to `fx.conds` and then read AGAIN into `fx.self`
+     was invisible to the one check built for exactly that shape —
+     Ironsong Response, Hit and Run, Flying High, Mark of the Huntsman,
+     Raydn Duskbane and Courageous Steelhand all reported clean.
+     A doubled value is a doubled value wherever the second copy sits. */
   const pumps = [...tl.matchAll(/\+\s*(\d+)\s*\{p\}/g)].map(m => +m[1]);
+  const pumpOpsAnywhere = [...(fx.ops||[]), ...(fx.onHit||[]),
+                           ...(fx.conds||[]).map(x => x.op),
+                           ...(fx.condOnHit||[]).map(x => x.op)]
+    .filter(o => o && (o[0]==="buffNext" || o[0]==="self"));
   if(fx.self > 0){
-    const opSame = uncondOps(fx).filter(o => (o[0]==="buffNext"||o[0]==="self") && o[1]===fx.self);
+    const opSame = pumpOpsAnywhere.filter(o => o[1] === fx.self);
     const timesInText = pumps.filter(n => n === fx.self).length;
     if(opSame.length && timesInText === 1)
       flag(3, "VALUE-DOUBLED", c,
         `+${fx.self}{p} appears once in the text but is applied twice`,
         `fx.self=${fx.self} AND op ${JSON.stringify(opSame[0])} — the card grants +${fx.self*2}`);
+  }
+
+  /* ---- 2b. A PRINTED "INSTEAD" APPLIED AS AN ADDITION ----------------
+     "instead" REPLACES (v2.32). `classifyClause` marks a conditional
+     payload that contains the word, `fx.conds[].instead` carries it, and
+     the resolution sites suppress the base op of the same kind. A cond
+     whose printed payload says "instead" and which parsed WITHOUT the
+     flag is therefore a replacement being summed.
+
+     This is how Overpower granted +10 where it prints +6: the generic
+     if/when/while handler had read `instead` since v2.32, but Reprise,
+     High Tide and Surge each hand-rolled their own gate and none of the
+     three did. Check 1 could never catch it — it `continue`s on exactly
+     the flag that was missing. */
+  for(const {cond, op, instead} of (fx.conds||[])){
+    if(instead) continue;
+    const clause = (fx.clauses||[]).find(cl => /\binstead\b/i.test(cl.t||""));
+    if(clause && (fx.self > 0 || uncondOps(fx).some(o => kindOf(o) === kindOf(op))))
+      flag(3, "INSTEAD-ADDED", c,
+        `"${cond}" prints "instead" but parsed as an ADDITION`,
+        `${JSON.stringify(op)} should REPLACE the printed base, not stack with it`);
   }
 
   /* ---- 3. A DROPPED RESTRICTION -------------------------------------

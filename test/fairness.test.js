@@ -77,3 +77,54 @@ test("'instead' REPLACES rather than adds — the v2.32 class", () => {
   assert.equal(fx.conds[0].instead, true,
     "the conditional payload must be marked as REPLACING, so execute suppresses the base");
 });
+
+/* ---- v2.66: THE TWO SHAPES THE SWEEP ITSELF COULD NOT SEE -------------
+   Both checks above read `uncondOps(fx)`, i.e. `fx.ops`. `fx.self` is a
+   first-class grant that lives nowhere near it, so the sweep reported
+   CLEAN through seven doubled cards and two summed replacements. Adding
+   a check is only worth it if the check would have shouted, so each of
+   these keeps a real card behind it and was verified by reintroducing
+   the bug rather than assumed. */
+
+test("a gated pump is not ALSO granted unconditionally — the v2.66 class", () => {
+  /* Ironsong Response is ONE conditional clause. The whole-text fallback
+     read the same words a second time into `fx.self`, which both doubles
+     the pump and deletes its gate: +3 with the reprise unmet, where the
+     card prints nothing at all. */
+  const fx = P.fxParse({name:"FS gated pump", pitch:1, tt:"Warrior Attack Reaction",
+    def:3, cost:0, tx:"Reprise - If the defending hero has defended with a card " +
+    "from their hand this chain link, target weapon attack gains +3{p}."});
+  assert.equal(fx.self, 0, "the pump belongs to the condition, and only to it");
+  assert.equal(fx.conds.length, 1);
+  assert.deepEqual(fx.conds[0].op, ["self", 3]);
+});
+
+test("'instead' is read inside a KEYWORD gate too — the v2.66 class", () => {
+  /* Overpower prints "Target weapon attack gains +4{p}. Reprise - ...
+     INSTEAD it gains +6{p}" and granted +10. Reprise, High Tide and Surge
+     each hand-rolled their own gate; the generic handler had read
+     `instead` since v2.32 and none of the three did. */
+  for(const [tx, cond] of [
+    ["Reprise - If the defending hero has defended with a card from their hand " +
+     "this chain link, instead it gains +6{p}.", "reprise"],
+    ["High Tide - If there are 2 or more blue cards in your pitch zone, " +
+     "instead it gains +6{p}.", "pitchBlue2"],
+    ["Surge - If this deals more than 3 damage, instead it gains +6{p}.", "surgeOver3"]
+  ]){
+    const fx = P.fxParse({name:"FS kwgate "+cond, pitch:1, tt:"Warrior Attack Reaction",
+      def:3, cost:1, tx:"Target weapon attack gains +4{p}.\n"+tx});
+    const g = fx.conds.find(x => x.cond === cond);
+    assert.ok(g, cond + " must be read");
+    assert.equal(g.instead, true, cond + " must mark the payload as REPLACING");
+  }
+});
+
+test("the reaction pump REPLACES on instead and ADDS otherwise", () => {
+  /* the arithmetic that consumes the flag. It was one hand-rolled line
+     inside a React closure until v2.66, which is why nothing could pin it. */
+  const rep = {self:4, ops:[], conds:[{cond:"reprise", op:["self",6], instead:true}]};
+  assert.equal(P.rxPump(rep, []).pump, 4, "unmet — the printed base");
+  assert.equal(P.rxPump(rep, ["reprise"]).pump, 6, "met — 6 REPLACES 4, it is not 10");
+  const add = {self:3, ops:[], conds:[{cond:"reprise", op:["self",2], instead:false}]};
+  assert.equal(P.rxPump(add, ["reprise"]).pump, 5, "no 'instead' printed, so it stacks");
+});

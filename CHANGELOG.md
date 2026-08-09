@@ -9,6 +9,74 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.66 — the reaction that paid twice
+
+**Phase 3, hero 2: Dorinthea.** The first pass over her deck found two
+bugs in the *reaction* family, each affecting cards across several heroes,
+and `npm run fairness` was **clean through both** — which turned out to be
+structural rather than luck.
+
+### The fallback read the same words twice
+
+`fxParse` ends with a whole-text fallback: a non-attack whose "+N{p}" never
+became an op still queues that pump. Its guard named **one** place an op can
+live (`fx.ops`, and only a `buffNext`). A pump the parser had already routed
+to `fx.conds` was therefore read a *second* time into `fx.self` — which both
+**doubles it and deletes its gate**.
+
+Ironsong Response is a single conditional clause:
+
+> Reprise - If the defending hero has defended with a card from their hand
+> this chain link, target weapon attack gains +3{p}.
+
+It granted **+3 with the reprise unmet** (printed: nothing) and **+6 with it
+met** (printed: +3). Seven cards across four heroes were doubled the same
+way — Ironsong Response ×2 pitches, Hit and Run, Flying High, Mark of the
+Huntsman, Raydn Duskbane, Courageous Steelhand — and **every one reported
+tier `full`.** The guard now matches the pump's magnitude against all four
+places an op can sit, so a card printing two different pumps still gets its
+genuinely unread one.
+
+### "Instead" was not read inside a keyword gate
+
+v2.32 established that **`instead` REPLACES**. The generic if/when/while
+handler has marked it ever since; **Reprise, High Tide and Surge each
+hand-rolled their own two lines and none of the three did.** Overpower:
+
+> Target weapon attack gains +4{p}.
+> Reprise - ... instead it gains +6{p}.
+
+Parsed as an addition, and `playRx` summed them: **+10 where the card prints
++6.** That is v2.32's Emeritus Scolding bug returning through a door the
+original fix never covered. The three gates now share one helper, so a
+fourth cannot reintroduce it.
+
+### Why the sweep was blind, and what it reads now
+
+`COND-BYPASSED` and `VALUE-DOUBLED` both read `uncondOps(fx)` — that is,
+`fx.ops`. **`fx.self` is a first-class grant that does not live there**, so
+the sweep built for exactly this bug class could not see it in the one field
+it never read. `VALUE-DOUBLED` now scans conditional and on-hit ops too, and
+a new **`INSTEAD-ADDED`** check catches a printed replacement being summed.
+
+Verified rather than assumed: reintroducing the two bugs makes the sweep
+report **7** and **2** findings respectively, naming the right cards.
+
+### The arithmetic moved somewhere it can be drilled
+
+The reaction pump was one hand-rolled line inside `playRx`, a React closure
+no drill could reach — which is why a plain sum survived there long after
+v2.32 settled the rule. It is now `parser.rxPump(fx, fired)`: pure, with
+*which* conditions fired left to the caller, since that is the half that
+needs the board.
+
+**17 new drills, each proven to bite by sabotage.** One of them caught its
+own comment — a code example of the bug reads exactly like the bug — and the
+prose was reworded rather than the scan weakened, same discipline as
+`sync.test.js`'s.
+
+---
+
 ## v2.65 — the turn that never ended
 
 **A three-tester round on the Kayo mirror, and the mirror could not finish

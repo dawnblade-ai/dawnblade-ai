@@ -31,6 +31,22 @@ function classifyClause(raw){
   if(!c) return null;
   const R = (ops,extra) => Object.assign({status:"run",ops},extra||{});
   const NOOP = why => ({status:"noop",ops:[["noop",why]]});
+  /* A NAMED-KEYWORD GATE IS STILL A GATE, and "instead" still REPLACES
+     inside one. The generic if/when/while handler below marks a conditional
+     payload containing "instead" so `execute` suppresses the unconditional
+     base op of the same kind — that is v2.32's Emeritus Scolding fix. The
+     keyword-gated handlers (Reprise, High Tide, Surge) are the same shape
+     wearing a keyword's name and each hand-rolled its own two lines, so not
+     one of them read it. Overpower prints "Target weapon attack gains
+     +4{p}. Reprise - ... INSTEAD it gains +6{p}" and the replacement parsed
+     as an ADDITION: +10 where the card prints +6.
+     One helper, so a fourth keyword gate cannot reintroduce the gap. */
+  const GATED = (payload, cond) => {
+    const sub = classifyClause(payload);
+    if(!sub || sub.status!=="run") return null;
+    if(/\binstead\b/i.test(payload)) sub.instead = true;
+    return Object.assign(sub, {cond});
+  };
   let m;
   /* Activated abilities first. "Instant - Destroy this: Gain {r}" is a cost
      you pay, not an effect that fires on its own — matching it against the
@@ -313,11 +329,8 @@ function classifyClause(raw){
      with a card from their hand this chain link" is a real count of the
      non-equipment defenders currently declared. */
   if(/^reprise$/.test(c)) return NOOP("qualifier — the payload clause below carries the condition");
-  if(m=c.match(/^reprise\s*[-—]\s*if the defending hero has defended with a card from their hand this chain link, (.+)$/)){
-    const sub = classifyClause(m[1]);
-    if(!sub || sub.status!=="run") return null;
-    return Object.assign(sub,{cond:"reprise"});
-  }
+  if(m=c.match(/^reprise\s*[-—]\s*if the defending hero has defended with a card from their hand this chain link, (.+)$/))
+    return GATED(m[1], "reprise");
   /* HIGH TIDE — named-keyword-gated, same shape as Reprise above:
      "High Tide - If there are 2 or more blue cards in your pitch zone,
      this gets go again." (Swiftwater Sloop). Blue is pitch value 3
@@ -325,11 +338,8 @@ function classifyClause(raw){
      execute()); the printed threshold rides in the cond name so a future
      High Tide card with a different number is read correctly rather than
      assumed to be 2. */
-  if(m=c.match(/^high tide\s*[-—]\s*if there are (\d+) or more blue cards in your pitch zone,\s*(.+)$/i)){
-    const sub = classifyClause(m[2]);
-    if(!sub || sub.status!=="run") return null;
-    return Object.assign(sub,{cond:"pitchBlue"+m[1]});
-  }
+  if(m=c.match(/^high tide\s*[-—]\s*if there are (\d+) or more blue cards in your pitch zone,\s*(.+)$/i))
+    return GATED(m[2], "pitchBlue"+m[1]);
   /* SURGE — "Surge - If this deals more than N damage, it gets go again"
      (Aether Quickening). N is always this card's OWN printed arcane base
      — the clause is comparing the card to itself — and Amp (parser's own
@@ -337,11 +347,8 @@ function classifyClause(raw){
      arcane effect above its printed value, so "will this deal more than
      its base" reduces exactly to "is there a live Amp bonus queued right
      now". Evaluated before the arcane op runs and consumes it. */
-  if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i)){
-    const sub = classifyClause(m[2]);
-    if(!sub || sub.status!=="run") return null;
-    return Object.assign(sub,{cond:"surgeOver"+m[1]});
-  }
+  if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i))
+    return GATED(m[2], "surgeOver"+m[1]);
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
   /* COLD SNAP: the cost-offer half. See the "if they don't, freeze" NOOP
      above for why declining is the only outcome that matters in solo play. */
@@ -1045,17 +1052,41 @@ function fxParse(card){
   /* Fallback self-pump: a non-attack whose "+N{p}" never became an op still
      queues that pump for your next attack.
 
-     IT MUST NOT FIRE WHEN A buffNext OP ALREADY READ THAT SAME "+N{p}".
+     IT MUST NOT FIRE WHEN AN OP ALREADY READ THAT SAME "+N{p}".
      This scans the WHOLE text, so "Your next arrow attack this turn GAINS
      +3{p}" matched here as well as in the buffNext rule, and `execute` added
      both — Lace with Frailty granted +6 from a card that prints +3. Every
      "your next X attack gains +N{p}" card was doubled the same way; the
-     phrasing "gets" vs "gains" is why some escaped and some did not. */
+     phrasing "gets" vs "gains" is why some escaped and some did not.
+
+     AND AN OP THAT READ IT CAN BE SITTING IN ANY OF FOUR PLACES, not just
+     `fx.ops`. The original guard named one, so a pump the parser had already
+     routed to `fx.conds` was read a second time here and granted with no
+     condition at all — which is worse than the doubling, because it also
+     deletes the gate. Ironsong Response is one printed clause, "Reprise -
+     if the defending hero has defended from hand, target weapon attack
+     gains +3{p}": the reprise handler read it into `fx.conds`, this
+     fallback then read the same words again into `fx.self`, and playRx adds
+     the two. It granted +3 with the reprise UNMET (printed: nothing) and +6
+     with it met (printed: +3). Seven cards across four heroes were doubled
+     this way, every one of them reporting tier `full`.
+
+     The magnitude is matched rather than the mere presence of an op, so a
+     card that genuinely prints two different pumps still gets its unread
+     one. `fx.self` is 0 here by the guard above, so `fx.ops` can carry no
+     `self` op (line ~921 routes those into `fx.self`) — it is scanned
+     anyway rather than reasoned about. */
+  const pumpRead = v => [...fx.ops, ...(fx.onHit||[]),
+                         ...(fx.conds||[]).map(x=>x.op),
+                         ...(fx.condOnHit||[]).map(x=>x.op)]
+    .some(o => o && (o[0]==="self" || o[0]==="buffNext") && o[1]===v);
   if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")
      && !(fx.arsenalPut && fx.arsenalPut.stamp)){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
-    if(pm) fx.self = +pm[1];
-    else if(/\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl)) fx.self = card.pitch||0;
+    const v = pm ? +pm[1]
+            : /\+\s*1\s*\/\s*2\s*\/\s*3\s*\{p\}/.test(tl) ? (card.pitch||0)
+            : null;
+    if(v != null && !pumpRead(v)) fx.self = v;
   }
   /* An activated ability on a card in HAND. Deliberately does NOT touch
      `tier`: the clause accounting stays as it was, so the audit keeps
@@ -1381,12 +1412,46 @@ function rxAllowed(c, win){
    all if activating it silently spends one. */
 const costsAP = c => !isInstantT(c) && !(c && c._instant);
 
+/* ---- THE REACTION PUMP (v2.66) --------------------------------------
+   How much an attack reaction adds to the attack it targets. THREE
+   printed things fold into one number and each has been wrong:
+
+     fx.self    the reaction's own unconditional "+N{p}"
+     fx.conds   a GATED pump — and "instead" REPLACES the base (v2.32)
+     buffNext   a "your next attack" pump on the same card
+
+   It lived as one hand-rolled line inside `playRx`, a React closure no
+   drill could reach, and it read `(fx.self||0) + condPump + …` — a plain
+   sum. Overpower prints "Target weapon attack gains +4{p}. Reprise - …
+   INSTEAD it gains +6{p}" and that line granted **+10**, the same shape
+   as v2.32's Emeritus Scolding bug in the one place the fairness sweep
+   does not look.
+
+   Pure on purpose: deciding WHICH conditions fired needs the board and
+   stays with the caller, which passes in the names of the ones that did.
+   That is what makes the arithmetic drillable rather than pinned by
+   grepping the trainer's source. */
+function rxPump(fx, fired){
+  const on = new Set(fired||[]);
+  let cond = 0, replaced = false;
+  (fx.conds||[]).forEach(c => {
+    if(!on.has(c.cond) || c.op[0] !== "self") return;
+    cond += c.op[1];
+    /* only a pump may replace the pump — an `instead` cond running some
+       other kind of op has no business deleting the printed base */
+    if(c.instead) replaced = true;
+  });
+  const base = replaced ? 0 : (fx.self||0);
+  const buff = (fx.ops||[]).filter(o => o[0]==="buffNext").reduce((a,o)=>a+o[1], 0);
+  return {pump: base + cond + buff, base, cond, buff, replaced};
+}
+
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed,
+        weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
