@@ -257,15 +257,63 @@ test("the trainer fires start-of-turn triggers, off printed text", {skip}, () =>
     "matched on printed text, not on a token's name");
 });
 
-test("clause 3 is gated on the ACTION phase and latches once", {skip}, () => {
+/* Slice to the END of the function, not a fixed byte count: adding the
+   Beaten Trackers trigger pushed clause 3 past a hardcoded 900 and the
+   drill started reporting a bug that was not there. */
+const afterDiscardBody = () => {
   const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   const i = efx.indexOf("const afterDiscard");
   assert.ok(i > 0, "afterDiscard moved — re-anchor this drill");
-  const body = efx.slice(i, i + 900);
+  const j = efx.indexOf("\n  const runOps", i);
+  assert.ok(j > i, "afterDiscard's end anchor moved");
+  return efx.slice(i, j);
+};
+
+test("clause 3 is gated on the ACTION phase and latches once", {skip}, () => {
+  const body = afterDiscardBody();
   assert.match(body, /phase !== "action"/,
     'RULING: "during each of your action phases" — an end-phase discard makes no Might');
   assert.match(body, /hist\.might6/, "and it must latch, so only the FIRST one fires");
   assert.match(body, /pow6\(/, "the 6+ test is the shared one, so clause 2 applies to it");
+});
+
+/* ---- BEATEN TRACKERS --------------------------------------------------- */
+
+test("Beaten Trackers triggers only on a RANDOM discard", {skip}, () => {
+  const bt = card("Beaten Trackers");
+  assert.match(P.clean(bt.tx || ""), /whenever you discard a random card with 6 or more \{p\}/i,
+    "the card says RANDOM, and the hero ability does not");
+  const body = afterDiscardBody();
+  /* Pin the GATE, not merely the presence of the variable: deleting
+     `&& atRandom` from the condition leaves the declaration behind, and a
+     drill that only greps the name passes over exactly that edit. */
+  assert.match(body, /if\(big && atRandom\)/,
+    "clause 3 fires on ANY discard; Beaten Trackers only on a random one. Reading the two " +
+    "as the same event hands out a free action point every time a cost is paid by choice.");
+  assert.match(body, /whenever you discard a random card with/,
+    "matched on the piece's PRINTED TEXT, not by name");
+  assert.match(body, /tag:"modal"/,
+    'RULING: "you may destroy this" is a real decision — prompt every time it triggers');
+  assert.ok(!/"Beaten Trackers"/.test(body), "no card is special-cased by name");
+});
+
+test("the trigger only fires when a random 6+ is actually discarded", {skip}, () => {
+  const b = kayoBuild();
+  const { runOps } = E.makeEffects(ctx(b));
+  const gear = [card("Beaten Trackers")];
+  const withGear = hand => { const g = game(hand); g.sides[0].gear = gear; g.phase = "action"; return g; };
+
+  /* a printed-3 card is under the bar even for Kayo — nothing should queue */
+  const small = {name:"tiny", uid:"t1", pitch:1, power:3, cost:0,
+    tt:"Generic Action - Attack", ty:["Generic","Action","Attack"], tx:"", kw:[]};
+  const quiet = runOps(withGear([small]), [["discardRandom", 1]], "probe");
+  assert.equal((quiet.promptQ || []).length, 0, "3 power is not 6 — no offer");
+
+  /* a real 6+ discard offers the choice */
+  const loud = runOps(withGear([card("Buckwild")]), [["discardRandom", 1]], "probe");
+  assert.equal((loud.promptQ || []).length, 1, "a 6+ random discard offers the action point");
+  assert.equal(loud.promptQ[0].tag, "modal");
+  assert.equal(loud.promptQ[0].options.length, 2, "destroy, or keep the iron");
 });
 
 /* CLASH compares the power of the top card of each deck, and the deck is a

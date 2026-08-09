@@ -86,13 +86,37 @@ function makeEffects(ctx){
      Every discard path should call this. Today that is `discardRandom`;
      an additional-cost discard is the other one and is not wired yet,
      which is a gap rather than a decision. */
-  const afterDiscard = (s, taken) => {
+  const afterDiscard = (s, taken, opts) => {
     let n = s;
     const b = bAct(n);
+    const big = taken.some(c => pow6(c, b));
+    const atRandom = !!(opts && opts.random);
+
+    /* BEATEN TRACKERS: "Whenever you discard a RANDOM card with 6 or more
+       {p}, you may destroy this. If you do, gain 1 action point."
+
+       Note the word the hero ability does NOT have: this triggers only on a
+       RANDOM discard, where clause 3 fires on any discard at all. Reading
+       the two as the same event would hand out a free action point every
+       time a cost was paid by choice.
+
+       "You may" — RULING (user, 2026-08-08): prompt every time it triggers.
+       It is a real decision, an action point against a block, and the piece
+       is matched on its PRINTED TEXT rather than by name. */
+    if(big && atRandom){
+      const bt = (act(n).gear||[]).find(x => x && !x.destroyed &&
+        /whenever you discard a random card with \d+ or more \{p\}, you may destroy this/i.test(clean(x.tx||"")));
+      if(bt) n.promptQ = [...(n.promptQ||[]), {tag:"modal", side:actorOf(n), src:bt.name,
+        title:`${bt.name} — destroy it for an action point?`,
+        hint:"It triggers on every random discard of a 6 or more.",
+        options:[{label:`Destroy ${bt.name} — gain 1 action point`, ops:[["destroyGear",bt.uid],["ap",1]]},
+                 {label:"Keep the iron", ops:[]}]}];
+    }
+
     if(!b || !b.mightOnFirst6Discard) return n;
     if(n.phase !== "action") return n;
     if(act(n).hist && act(n).hist.might6) return n;
-    if(!taken.some(c => pow6(c, b))) return n;
+    if(!big) return n;
     actMut(n).hist = {...act(n).hist, might6:1};
     n = L(n, "The first card with 6 or more {p} you have discarded this action phase — Kayo makes Might.");
     return runOps(n, [["token","Might",1,"self"]], "Kayo");
@@ -132,7 +156,7 @@ function makeEffects(ctx){
         }
         n._discWay=[...(n._discWay||[]),...taken];
         n=L(n,`${srcName}: discarded ${taken.map(c=>c.name+" ("+zonePow(c,bAct(n))+"{p})").join(", ")} at random.`);
-        n = afterDiscard(n, taken);
+        n = afterDiscard(n, taken, {random:true});
       }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
@@ -201,6 +225,13 @@ function makeEffects(ctx){
          ones, so a gated keyword works when its condition actually fires */
       else if(k==="gainKw"){ n._kwGrant=[...(n._kwGrant||[]), String(v).toLowerCase()];
         n=L(n,`${srcName} gains ${v}.`); }
+      /* a named piece of the actor's iron pays with itself */
+      else if(k==="destroyGear"){
+        const g2 = (act(n).gear||[]).find(x=>x && x.uid===v);
+        if(!g2){ n=L(n,`${srcName}: that piece is no longer on the board.`); return; }
+        actMut(n).gear = act(n).gear.map(x => x.uid===v ? {...x, destroyed:true} : x);
+        n=L(n,`${g2.name} is destroyed — the cost is paid.`);
+      }
       else if(k==="gaNext"){ actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
       else if(k==="runeHitNext"){ actMut(n).runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
@@ -678,7 +709,7 @@ function makeEffects(ctx){
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
         n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
-        n = afterDiscard(n, pool.map(p=>p.c2));
+        n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
         const bigDiscard = pool.some(p=>pow6(p.c2, bAct(n)));
         fx.conds.filter(x=>x.cond==="discard6"||x.cond==="discard6way").forEach(({op})=>{
           if(bigDiscard){ if(op[0]==="ga") ga=true; else n=runOps(n,[op],card.name); n=L(n,`${card.name}: a 6+ power card was fed to the cost — bonus triggers.`); }
@@ -856,7 +887,7 @@ function makeEffects(ctx){
         actMut(n).hand = act(n).hand.filter((_,i2)=>!ids.has(i2));
         n._discWay = [...(n._discWay||[]), ...pool.map(p=>p.c2)];
         n = L(n, `Additional cost — discarded ${pool.map(p=>p.c2.name).join(", ")}${fx.addCost.random?" (at random)":" (lowest value)"}.`);
-        n = afterDiscard(n, pool.map(p=>p.c2));
+        n = afterDiscard(n, pool.map(p=>p.c2), {random: !!fx.addCost.random});
       }
       n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }

@@ -9,6 +9,41 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.60 — Beaten Trackers, and the word the hero ability doesn't have
+
+> "Whenever you discard a **random** card with 6 or more {p}, you may
+> destroy this. If you do, gain 1 action point. Battleworn."
+
+Both clauses were unread. It now hangs off the same `afterDiscard` hook
+clause 3 uses — **but not on the same event**, and that is the whole care
+in this change:
+
+| | triggers on |
+|---|---|
+| Kayo clause 3 | **any** discard of a 6 or more, first per action phase |
+| Beaten Trackers | only a **random** one |
+
+Reading the two as the same event would hand out a free action point every
+time a cost was paid by choice. The two discard call sites now say which
+kind they are, and Savage Feast reports itself as random because its own
+text says so.
+
+**"You may" is a real decision**, so — RULING (user, 2026-08-08) — it
+prompts every time it triggers, as a `modal` with the piece named and the
+alternative spelled out. An action point against a block is a genuine
+trade, and Kayo triggers this often enough that taking it silently would
+be making the choice for the player.
+
+Matched on the piece's **printed text**, never by name; a drill fails if
+the string "Beaten Trackers" appears in the trigger at all.
+
+**Two sabotages, and the first one caught a weak drill.** Removing the
+`&& atRandom` gate produced **zero** failures, because the check merely
+grepped for the variable — and deleting it from the condition leaves the
+declaration behind. It pins the gate itself now, and bites.
+
+---
+
 ## v2.59 — the escape hatch Strongest Survive prints
 
 > "When this hits a hero, they discard a card **unless they reveal a card
