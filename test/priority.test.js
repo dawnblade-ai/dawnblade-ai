@@ -908,7 +908,7 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
      callable; that is a bigger change than repointing it.) */
   const EFFECTS = require("./helpers/extract.js").effects();
   const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx)"),
-                             EFFECTS.indexOf("\n  return {runOps, execute, afterDiscard};"));
+                             EFFECTS.indexOf("\n  /* THE LAST OF THE THREE"));
   /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
@@ -933,8 +933,13 @@ test("action point — an attack still pays for itself", () => {
   /* attacks are action cards (CR 8.1.1) and settle in resolveStack, which
      the fix deliberately did not touch. A regression here would be an
      attack going free. */
-  const body = HTML.slice(HTML.indexOf("const resolveStack = () => setG"),
-                          HTML.indexOf("const maybeBoost = "));
+  /* resolveStack moved to engine/effects.js in v2.62 — reading it out of
+     index.html now finds only the one-line setG wrapper, and a source
+     guard aimed at the wrong file passes by finding nothing. */
+  const EFFECTS = require("./helpers/extract.js").effects();
+  const body = EFFECTS.slice(EFFECTS.indexOf("const resolveStack = (s) => {"),
+                             EFFECTS.indexOf("\n  return {runOps, execute, resolveStack, afterDiscard};"));
+  assert.ok(body.length > 500, "the slice must actually contain resolveStack's body");
   assert.match(body, /actMut\(n\)\.ap = n\.pend\.ga \? act\(n\)\.ap : act\(n\)\.ap-1;/,
     "an attack costs an action point whether or not it is an instant-typed card");
 });

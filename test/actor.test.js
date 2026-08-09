@@ -48,7 +48,8 @@ const ANCHORS = [
   /* --- engine/effects.js: the ported card semantics -------------------- */
   ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
   ["execute",      "  const execute = (s,card,from,idx) => {", "effects"],
-  ["__endEffects", "  return {runOps, execute, afterDiscard};",  "effects"],
+  ["resolveStack", "  const resolveStack = (s) => {",              "effects"],
+  ["__endEffects", "  return {runOps, execute, resolveStack, afterDiscard};", "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way
@@ -56,7 +57,6 @@ const ANCHORS = [
      that stops bounding things stops being a guard. */
   ["dummyDefence", "  const dummyDefence = (s, total, card) => {"],
   ["playRx",       "  const playRx = i => setG(s=>{"],
-  ["resolveStack", "  const resolveStack = () => setG(s=>{"],
   ["tryPlay",      "  const tryPlay = (card,from,idx) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],

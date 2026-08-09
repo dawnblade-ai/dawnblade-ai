@@ -9,6 +9,51 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.62 — one copy of the card semantics
+
+`resolveStack` (122 lines) joins `runOps` and `execute` in
+`engine/effects.js`. **All three are now in one place, and there is exactly
+one copy of the card semantics in the project.**
+
+It was the awkward one. The other two were plain closures and moved
+verbatim; this was `() => setG(s => {…})`, so what moved is its **body** —
+which was already a pure `s => s'` — leaving the React wrapper behind as
+`() => setG(_EFX.resolveStack)`. The body itself is unchanged, and it
+needed **no new context keys**: only `gearDef` and `gearBlockApply`, which
+are `game.js` exports the module can import directly.
+
+Verified in play, because `resolveStack` is the damage path and a drill
+that reads source cannot see a wrong number: Agile Windup's ability
+discarded it, created an Agility token, minted Might off clause 3 and left
+the action point untouched — with the attack resolution path intact
+underneath.
+
+Two more drills had to follow the code, the same lesson as v2.53: one in
+`priority.test.js` sliced `resolveStack` out of `index.html`, where it now
+finds only the one-line wrapper. **A source guard aimed at the wrong file
+passes by finding nothing**, so it is repointed and now also asserts the
+slice is non-empty.
+
+### What this does NOT do, stated plainly
+
+**The table still runs no card text**, and location is no longer the
+reason. The remaining obstacle is that the two engines speak different
+state languages:
+
+| | drives combat through |
+|---|---|
+| `execute` / `resolveStack` | the trainer's `mode` / `pend` / `stack` |
+| `judge.js` | the CR machine's `phase` / `step` / `chainCards` |
+
+`execute` does not merely apply a card's effect — it also **advances the
+turn structure**, calling `dummyDefence` inline and setting `mode:"stack"`.
+Separating *what the card does* from *what happens next* is the real
+remaining work, and that inline `dummyDefence` call is the first knot in
+it. Both are named in the module header rather than left to be
+rediscovered.
+
+---
+
 ## v2.61 — a card in your hand can have an activated ability
 
 The last two unbuilt Kayo cards were blocked on the same missing thing, and

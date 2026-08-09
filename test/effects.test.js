@@ -87,6 +87,14 @@ test("no moved body is re-declared inside index.html", () => {
     assert.ok(new RegExp("const " + fn + " = _EFX\\." + fn + ";").test(HTML),
       `the trainer must take ${fn} from the module`);
   }
+  /* resolveStack keeps a React wrapper in the trainer — it is a reducer the
+     UI calls, so `setG` stays behind while the BODY lives in the module. */
+  assert.ok(!/const resolveStack = \(\) => setG\(s=>\{/.test(HTML),
+    "resolveStack's body is back in index.html — that is two copies again");
+  assert.match(HTML, /const resolveStack = \(\) => setG\(_EFX\.resolveStack\);/,
+    "the trainer must hand setG the module's pure body");
+  assert.match(E.makeEffects(stubCtx()).resolveStack.toString(), /^\(?s\)? *=>|^function/,
+    "and the module's resolveStack must be a plain state function, not a reducer");
 });
 
 /* A behavioural smoke test: the moved body still runs, still returns a NEW

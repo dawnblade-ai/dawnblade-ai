@@ -740,7 +740,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.61"; /* v2.61 — a card in your hand can have an activated ability: Agile Windup and Rally the Coast Guard had no route to theirs at all. Plus the clause-3 gate that fired on the opponent turn. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.62"; /* v2.62 — resolveStack joins the other two: there is now exactly ONE copy of the card semantics, in engine/effects.js. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2841,130 +2841,11 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter mid-defense.`);
     return winCheck(n);
   });
-  const resolveStack = () => setG(s=>{
-    if(s.mode!=="stack" || !s.pend) return s;
-    let n = {...s};
-    const pumps = n.stack.filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
-    const defLs = n.stack.filter(l=>l.k==="def");
-    let total = n.pend.total + pumps;
-    let blkNote = "";
-    /* non-equipment defenders are what dominate, reprise and "defended by
-       fewer than 2" all actually care about — count them for real */
-    let handBlockers = 0;
-    /* RULING (Fender Bender): +1 per separate equipment the opponent defended
-       with — only knowable once defenders are declared, so it lands here. */
-    for(const op of (n.pend.lateOps||[])){
-      if(op[0]!=="perEquipDef") continue;
-      const eq = defLs.filter(l=>l.gi!=null).length;
-      total += op[1]*eq;
-      n = L(n, `${n.pend.card.name}: ${eq} equipment defending — +${op[1]*eq} power.`);
-    }
-    if(defLs.length){
-      /* CR: every defender's printed defence sums, and the total reduces the
-         attack once — so report each card's real defence, not a running
-         remainder that makes the last blocker look weaker than it is. */
-      const parts = [];
-      let wall = 0;
-      for(const dl of defLs){
-        if(dl.gi != null){
-          const piece = foe(n).gear[dl.gi];
-          wall += gearDef(piece);
-          foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
-          /* an equipment that has blocked is spent for the rest of this chain */
-          foeMut(n).chainBlocked = [...(foe(n).chainBlocked||[]), piece.uid];
-          parts.push(`${piece.name} ${gearDef(piece)}`);
-        } else {
-          const c = foe(n).hand.find(x=>x.uid===dl.uid);
-          if(!c) continue;
-          wall += (c.def||0);
-          foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
-          foeMut(n).grave = [c, ...foe(n).grave];
-          handBlockers++;
-          parts.push(`${c.name} ${c.def||0}`);
-        }
-      }
-      const stopped = Math.min(wall, total);
-      total = Math.max(0, total - wall);
-      blkNote = ` Wall of ${wall} — ${parts.join(", ")} — stops ${stopped}.`;
-    }
-    foeMut(n).blockedHand = handBlockers;
-    foeMut(n).hp -= total;
-    /* Runechants no longer pop here. They trigger on PLAY and resolve above
-       the attack on the stack, so they are dealt with at declaration in
-       `execute`. `rd` stays 0 so the messages and hitSeq maths below read
-       the same shape. */
-    let rd = 0, runeMsg = "";
-    (n.pend.lateConds||[]).forEach(({cond,op})=>{
-      /* "defended by fewer than 2 CARDS" counts every defender, equipment
-         included — distinct from defLt2, which counts non-equipment only. */
-      if(cond==="defLt2any"){
-        if(defLs.length >= 2){ n = L(n, `${n.pend.card.name}: two defenders met it — no bonus.`); return; }
-        if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — go again!`); }
-        else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — +${op[1]} power.`); }
-        else n = runOps(n,[op],n.pend.card.name);
-        return;
-      }
-      /* "{p} greater than its base" — true once anything has pumped it */
-      if(cond==="pumped"){
-        const base = n.pend.card.power||0;
-        if(total <= base){ n = L(n, `${n.pend.card.name}: not pumped above its base ${base} — no bonus.`); return; }
-        if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: pumped above base — go again!`); }
-        else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: pumped above base — +${op[1]} power.`); }
-        else n = runOps(n,[op],n.pend.card.name);
-        return;
-      }
-      if(cond==="defLt2"){ // a real count now that the dummy blocks from hand
-        if(handBlockers >= 2){ n = L(n, `${n.pend.card.name}: two cards from hand met it — the bonus is denied.`); return; }
-        if(op[0]==="ga"){ n.pend = {...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: defended by fewer than 2 non-equipment cards — go again!`); }
-        else n = runOps(n,[op],n.pend.card.name);
-      }
-    });
-    const pc = n.pend.card;
-    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!act(n).dracNext, kind:"atk"}];
-    if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
-    n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} reactions)`:""}.${blkNote}${runeMsg}`);
-    n = runOps(n, n.pend.ops, pc.name);
-    if(total>0) n = runOps(n, n.pend.onHit, pc.name);
-    else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
-    /* CHARGE'S CONDITIONALLY GRANTED on-hit abilities (see fx.condOnHit in
-       parser.js) — re-checked here, at the actual trigger point, rather than
-       at declaration, because "if this hits" only fires on a connected
-       attack. Reuses the SAME cond names/checks as the declare-time loop in
-       execute() so the two can never silently disagree about what "charged"
-       means. */
-    if(total>0 && n.pend.condOnHit && n.pend.condOnHit.length){
-      n.pend.condOnHit.forEach(({cond,op})=>{
-        const met = cond==="charged" ? (act(n).hist.charged||0)>0
-          : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
-          : cond==="marked" ? !!foe(n).marked
-          : false;
-        if(met) n = runOps(n, [op], pc.name);
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":"a differently-coloured charge"} — condition not met.`);
-      });
-    }
-    if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }
-    if(hasKw(pc,"crush") && total>=4){
-      /* the threshold is met and the dummy has a hand now — the payloads
-         that reach for an arsenal or its action phase are still inert */
-      if(foe(n).hand.length){
-        const top = foe(n).hand[foe(n).hand.length-1];
-        foeMut(n).hand = foe(n).hand.slice(0,-1);
-        foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `Crush — ${top.name} is forced from the dummy's hand back on top of its deck.`);
-      } else n = L(n, "Crush lands, but the dummy's hand is empty.");
-    }
-    if(n._soulSelf){ delete n._soulSelf;
-      if(total>0){ actMut(n).grave = act(n).grave.filter(x=>x!==pc); actMut(n).soul = [...act(n).soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
-    }
-    n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
-    if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
-    actMut(n).hist = {...act(n).hist, atk:act(n).hist.atk+1};
-    actMut(n).ap = n.pend.ga ? act(n).ap : act(n).ap-1;
-    if(n.pend.ga) n = L(n, "Go again — action point kept.");
-    n.chainOpen = true;
-    n.stack = []; n.pend = null; n.mode = "act";
-    return openPrompt(winCheck(n));
-  });
+  /* resolveStack lives in engine/effects.js (v2.62) — the last of the
+     three. It was `() => setG(s=>{…})`, so unlike runOps and execute it
+     needed its React wrapper peeled off: the BODY was already a pure
+     s => s', and that body is what moved, unchanged. */
+  const resolveStack = () => setG(_EFX.resolveStack);
   const maybeBoost = (s,card,from,idx) => (s.boostOn!==false && isAttack(card) && hasKw(card,"boost") && act(s).deck.length>0)
     ? {...s, mode:"boostpick", pending:{card,from,idx}}
     : execute({...s,_doBoost:false},card,from,idx);
