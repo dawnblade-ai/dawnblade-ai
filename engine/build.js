@@ -228,6 +228,23 @@ function buildSide(h, d, db, opts, rng, ctr){
      phase latch, not a per-turn one — RULING (user, 2026-08-08): a discard
      in the end phase or on the opponent's turn does NOT make Might. */
   const mightOnFirst6Discard = /the first time you discard a card with 6 or more \{p\} during each of your action phases, create a might token/.test(_htx);
+  /* DORINTHEA: "Once per turn Effect - When a weapon you control hits, you
+     may attack an additional time with that weapon this turn."
+
+     This is her deck's engine the way Kayo's clause 2 was his: nearly every
+     card in it either pumps a WEAPON attack or pays off a Reprise, and both
+     want the blade swinging more than once.
+
+     RULING (user, 2026-08-09): the ability waives the weapon's own "Once per
+     Turn" limit and NOTHING ELSE. The additional activation is an ordinary
+     action — it pays the weapon's printed {r} again and it spends an action
+     point again. That is why the deck is dense with go again (Sharpen Steel,
+     Warrior's Valor ×3, Hit and Run, Trot Along, Goblet of Bloodrun Wine):
+     without one, the second swing has no action to spend.
+
+     "That weapon" is literal — only the piece that hit is refreshed, so a
+     hero holding two weapons does not get a free swing with the other. */
+  const weaponRefresh = /when a weapon you control hits, you may attack an additional time with that weapon this turn/.test(_htx);
   let startItem = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
@@ -235,7 +252,7 @@ function buildSide(h, d, db, opts, rng, ctr){
   }
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
     arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
-    atkPowOffChain,mightOnFirst6Discard,
+    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
 }
 
@@ -305,7 +322,7 @@ function buildMatch(spec, o){
    `buildSide` and forgotten elsewhere then fails loudly instead of
    reading as a silent `false` on a real hero's turn. */
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
-                  "atkPowOffChain","mightOnFirst6Discard"];
+                  "atkPowOffChain","mightOnFirst6Discard","weaponRefresh"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -317,7 +334,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
 const PASSIVE_TYPE = {
   arsenalInstant: "boolean", iceFrostbite: "boolean", viseraiPassive: "boolean",
   wateryGrave: "boolean", lyathBoo: "boolean", mightOnFirst6Discard: "boolean",
-  atkPowOffChain: "number"
+  weaponRefresh: "boolean", atkPowOffChain: "number"
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,

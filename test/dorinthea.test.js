@@ -205,3 +205,196 @@ test("rxPump is bridged into the trainer's bare namespace", () => {
      the trainer throws a ReferenceError no other drill would catch */
   assert.ok(/rxPump\s*=\s*DawnParser\.rxPump/.test(HTML));
 });
+
+/* ============================================================
+   THE HERO ABILITY — "Once per turn Effect - When a weapon you
+   control hits, you may attack an additional time with that weapon
+   this turn."
+
+   This is Dorinthea's deck the way clause 2 was Kayo's: almost every
+   card in it either pumps a WEAPON attack or pays off a Reprise, and
+   both want the blade swinging more than once. It read as ZERO of one
+   clause before v2.66 — the audit's own flag said so, and nothing else
+   in the project could have.
+
+   RULING (user, 2026-08-09): the ability waives the weapon's own "Once
+   per Turn" limit and NOTHING else. The extra activation pays the
+   printed {r} again and spends an action point again — which is why
+   the deck carries go again on Sharpen Steel, all three Warrior's
+   Valor, Hit and Run, Trot Along and the Goblet. Granting a free
+   action point here would make the hero strictly stronger than
+   printed, the direction that steals games.
+
+   Assertions are on weaponUsed, hist, ap and res — never on the log.
+   ============================================================ */
+const C = require("../engine/cards.js");
+const B = require("../engine/build.js");
+const GM = require("../engine/game.js");
+const RNG = require("../engine/rng.js");
+const E = require("../engine/effects.js");
+const S = require("../engine/sides.js");
+const { loadData } = require("./helpers/extract.js");
+
+const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const skip = !fs.existsSync(CACHE) && "no cached card database";
+let _db = null;
+const DB = () => _db || (_db = C.buildMaps(
+  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+const W = loadData();
+const buildOf = k => B.buildSideDefault(
+  W.HEROES.find(x => x.k === k), GM.parseDeck(W.DECKS[k]), DB(), RNG.make(k), {n: 0}).b;
+
+function ctx(build){
+  return {
+    L: (s, m) => ({...s, log: [m, ...(s.log||[])], feed: [...(s.feed||[]), m]}),
+    act: s => s.sides[s.actor||0],
+    actMut: n => { n.sides = n.sides.slice(); const i = n.actor||0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
+    actorOf: s => s.actor||0, bAct: () => build, bFoe: () => build,
+    built: build, db: DB(), dummyDefence: s => s,
+    foe: s => s.sides[1-(s.actor||0)],
+    foeMut: n => { n.sides = n.sides.slice(); const i = 1-(n.actor||0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
+    gy: (t, ...cs) => cs.map(c => ({...c, _gy:t})),
+    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy:t, _disc:true})),
+    had6ThisTurn: () => false, mkRune: s => s, openPrompt: s => s,
+    tokSeq: (() => { let i = 0; return () => ++i; })(),
+    typeAbbr: () => "attack", winCheck: s => s
+  };
+}
+const seat = o => Object.assign({
+  name:"x", hp:20, res:2, ap:1, amp:0, ward:0, awd:0, buffNext:0, buffQ:[],
+  hand:[], deck:[], grave:[], banish:[], pitch:[], board:[], soul:[], gear:[],
+  counters:{}, hist:S.freshHist(), weaponUsed:{}, blockedHand:0, chainBlocked:[]}, o||{});
+
+/* one swing, already declared: `weaponUsed` is set at declaration, which is
+   the state resolveStack actually sees */
+const swung = (blade, from, total, hist, extraTapped) => ({
+  sides:[seat({weaponUsed: Object.assign({[blade.uid]:true}, extraTapped||{}),
+               hist: Object.assign(S.freshHist(), hist||{})}), seat({})],
+  actor:0, turn:2, mode:"stack", log:[], feed:[], chain:[], stack:[], hitSeq:0,
+  rng: RNG.make("r"),
+  pend:{card:blade, from, total, ga:false, ops:[], onHit:[], condOnHit:[], lateConds:[], lateOps:[]}
+});
+const bladeOf = b => b.gear.find(g => g.name === "Dawnblade");
+
+test("the ability is read off Dorinthea's PRINTED text, and only hers", {skip}, () => {
+  assert.strictEqual(buildOf("dorinthea").weaponRefresh, true);
+  for(const k of ["kayo", "viserai", "azalea"])
+    assert.strictEqual(buildOf(k).weaponRefresh, false, k + " must not gain it");
+});
+
+test("a weapon that HITS is freed to swing again, and the latch is set", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const out = resolveStack(swung(blade, "weapon", 3));
+  assert.ok(!out.sides[0].weaponUsed[blade.uid],
+    "the weapon that hit must come untapped — that IS the whole ability");
+  assert.strictEqual(out.sides[0].hist.wpnAgain, 1, "once per turn, latched on hist");
+});
+
+test("the extra swing is NOT free — no action point and no resources are given", {skip}, () => {
+  /* the ruling, and the direction that would steal games if got wrong */
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const before = swung(blade, "weapon", 3);
+  const out = resolveStack(before);
+  assert.strictEqual(out.sides[0].res, before.sides[0].res,
+    "the ability waives the once-per-turn limit, not the weapon's {r}");
+  assert.strictEqual(out.sides[0].ap, before.sides[0].ap - 1,
+    "the swing that hit still spent its own action point; the ability adds none");
+});
+
+test("an attack blocked to nothing does NOT refresh — CR 7.5.5", {skip}, () => {
+  /* "hit" is damage actually DEALT. A swing walled to 0 never hit, so the
+     ability never triggered and the latch is untouched. */
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const out = resolveStack(swung(blade, "weapon", 0));
+  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true, "it stays tapped");
+  assert.ok(!out.sides[0].hist.wpnAgain, "and the once-per-turn is still unspent");
+});
+
+test("an attack ACTION CARD that hits refreshes nothing — it says 'a weapon'", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const out = resolveStack(swung(blade, "hand", 6));
+  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true);
+  assert.ok(!out.sides[0].hist.wpnAgain);
+});
+
+test("ONCE per turn — a second hit does not free the weapon again", {skip}, () => {
+  /* spent by TRIGGERING, not by being useful. This is exactly why the
+     Dawnblade is printed to reward its SECOND hit each turn: two swings is
+     the ceiling the ability sets. */
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const out = resolveStack(swung(blade, "weapon", 3, {wpnAgain: 1}));
+  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true,
+    "the ability is spent for the turn — the second hit frees nothing");
+});
+
+test("'THAT weapon' is literal — another tapped weapon stays tapped", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const out = resolveStack(swung(blade, "weapon", 3, null, {"other-weapon": true}));
+  assert.ok(!out.sides[0].weaponUsed[blade.uid], "the one that hit is freed");
+  assert.strictEqual(out.sides[0].weaponUsed["other-weapon"], true,
+    "and nothing else is — a hero holding two weapons gets one extra swing, with the one that hit");
+});
+
+test("a hero WITHOUT the ability never refreshes on a weapon hit", {skip}, () => {
+  /* the gate is the passive, not the zone the attack came from */
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(Object.assign({}, b, {weaponRefresh: false})));
+  const out = resolveStack(swung(blade, "weapon", 3));
+  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true);
+});
+
+test("the passive is declared in the build ledger, so no hero answers undefined", {skip}, () => {
+  assert.ok(B.PASSIVES.includes("weaponRefresh"),
+    "a passive missing from PASSIVES reads as a silent false on a real hero's turn");
+  assert.strictEqual(B.PASSIVE_TYPE.weaponRefresh, "boolean");
+  assert.match(HTML, /weaponRefresh:\s*false/, "DUMMY_BUILD must answer for it too");
+});
+
+/* ---- THE LEDGER AND THE BUILD MUST AGREE -----------------------------
+   `tools/audit.js`'s HERO_STATICS decides whether a hero clause reports
+   as "recognized by an ability reader", and `build.js` decides whether
+   the passive actually EXISTS. They are two hand-written copies of the
+   same question and nothing compared them, so Kayo's three clauses
+   reported unrecognized for eleven versions AFTER they were built — the
+   handoff said the hero was complete and the audit quietly said the
+   opposite. Under-reporting is the safe direction, but only if somebody
+   is looking, and nobody was. */
+
+test("every HERO_STATICS recognizer agrees with the build it names", {skip}, () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "tools", "audit.js"), "utf8");
+  const STATICS = eval(src.match(/const HERO_STATICS = (\[[\s\S]*?\n\]);/)[1]);
+
+  for(const s of STATICS){
+    if(s.build === false) continue;          // recognized, but carried by other machinery
+    if(!B.PASSIVES.includes(s.key)) continue; // not a build passive at all
+    for(const h of W.HEROES){
+      const b = buildOf(h.k);
+      const printed = s.re.test(P.clean(b.heroRec.tx || "").toLowerCase());
+      assert.strictEqual(printed, !!b[s.key],
+        `${h.k}: the audit ledger says ${s.key}=${printed} but the build says ${!!b[s.key]}. ` +
+        `These are two copies of one question — fix the one that is wrong, don't let them drift.`);
+    }
+  }
+});
+
+test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
+  /* the two heroes Phase 3 has finished. A regression here means either a
+     recognizer or a passive was lost. */
+  const src = fs.readFileSync(path.join(__dirname, "..", "tools", "audit.js"), "utf8");
+  const STATICS = eval(src.match(/const HERO_STATICS = (\[[\s\S]*?\n\]);/)[1]);
+  const uncovered = k => {
+    const tx = buildOf(k).heroRec.tx || "";
+    return tx.split(/\n+/).map(x => P.clean(x)).filter(Boolean)
+      .reduce((a, x) => a.concat(x.split(/\.\s+/)), []).map(x => x.trim()).filter(Boolean)
+      .filter(cl => !(STATICS.some(s => s.re.test(cl.toLowerCase()))
+                      || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl))));
+  };
+  for(const k of ["kayo", "dorinthea"])
+    assert.deepStrictEqual(uncovered(k), [], k + " is a finished hero — every clause must be recognized");
+});

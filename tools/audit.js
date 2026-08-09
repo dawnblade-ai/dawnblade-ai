@@ -37,7 +37,20 @@ const HERO_STATICS = [
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,
    note:"Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"},
   {key:"lyathBoo", re:/whenever the crowd boos you, create a might token/,
-   note:"Lyath — booed → Might token"}
+   note:"Lyath — booed → Might token"},
+  /* KAYO's three clauses were BUILT in v2.55–v2.56 and this ledger was
+     never told, so the audit reported all three as "not recognized by any
+     ability reader" for eleven versions while the handoff called the hero
+     complete. Nothing cross-checked the two, which is why the drill below
+     `test/dorinthea.test.js` now does. */
+  {key:"gearSlots", re:/you have 1 weapon zone/, build:false,
+   note:"Kayo — one weapon zone (no passive: the generic equipment slot rules already model this)"},
+  {key:"atkPowOffChain", re:/attack action cards you own get \+(\d+)\{p\} while they are in any zone other than the combat chain/,
+   note:"Kayo — attack actions get +N{p} off the combat chain (a THRESHOLD rule, not a damage buff)"},
+  {key:"mightOnFirst6Discard", re:/the first time you discard a card with 6 or more \{p\} during each of your action phases, create a might token/,
+   note:"Kayo — first 6+{p} discard per action phase → Might token"},
+  {key:"weaponRefresh", re:/when a weapon you control hits, you may attack an additional time with that weapon this turn/,
+   note:"Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)"}
 ];
 /* Tokens are read out of the pool's own text rather than listed by hand —
    a hardcoded list silently rots (it carried 6 of the 17 real tokens, and

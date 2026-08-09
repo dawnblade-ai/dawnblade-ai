@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.67 — the blade swings twice
+
+**Dorinthea's hero ability, built.** It read as **zero of one clause** — the
+audit's own flag said so, and it is the whole reason her deck looks the way
+it does:
+
+> Once per turn Effect - When a weapon you control hits, you may attack an
+> additional time with that weapon this turn.
+
+Nearly every card in the deck either pumps a **weapon** attack or pays off a
+**Reprise**, and both want the blade swinging more than once. Same role
+Kayo's clause 2 played for him: a hero ability that reads like bookkeeping
+and is actually the engine.
+
+**RULING (user, 2026-08-09): it waives the weapon's own "Once per Turn"
+limit and nothing else.** The extra activation pays the printed {r} again
+and spends an action point again — which is exactly why the deck carries go
+again on Sharpen Steel, all three Warrior's Valor, Hit and Run, Trot Along
+and the Goblet. Handing it a free action point would have made the hero
+strictly stronger than printed.
+
+`weaponUsed[uid]` **is** the once-per-turn limit in this trainer, so the
+ability is modelled by clearing that one key. The latch rides on `hist`,
+which CR 4.4.4 already clears at the turn boundary.
+
+Four things it deliberately does not do, each drilled:
+
+| | |
+|---|---|
+| a swing **blocked to nothing** never refreshes | CR 7.5.5 — a hit is damage actually dealt |
+| an attack **action card** never refreshes | the text says "a weapon" |
+| a **second** hit never refreshes again | spent by triggering, not by being useful — which is why the Dawnblade rewards its *second* hit each turn and not its third |
+| **another** weapon stays tapped | "that weapon" is literal |
+
+`pend` now records the zone the attack was declared from. Inferring it at
+resolution would mean re-deciding a question already answered.
+
+### The audit ledger had drifted, silently, for eleven versions
+
+`tools/audit.js`'s `HERO_STATICS` decides whether a hero clause reports as
+recognized; `build.js` decides whether the passive exists. Two hand-written
+copies of one question, and **nothing compared them** — so **Kayo's three
+clauses reported "not recognized by any ability reader" ever since they were
+built in v2.55**, while `HANDOFF.md` called the hero complete. Under-reporting
+is the safe direction, but only if somebody is looking.
+
+Both heroes now report **zero** uncovered clauses, and a drill fails if a
+recognizer and the build it names ever disagree again — in either direction.
+
+**14 new drills, every one proven to bite.** One sabotage looked like it
+passed and turned out not to have matched the file at all; checking that the
+sabotage actually changed something is part of the sabotage.
+
+---
+
 ## v2.66 — the reaction that paid twice
 
 **Phase 3, hero 2: Dorinthea.** The first pass over her deck found two

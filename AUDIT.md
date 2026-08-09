@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-09T13:44:23.942Z · app v2.63 · data sage-v11 · db 4862 records
+Generated 2026-08-09T22:05:37.081Z · app v2.66 · data sage-v11 · db 4862 records
 
 ## Summary
 
@@ -87,10 +87,9 @@ Generated 2026-08-09T13:44:23.942Z · app v2.63 · data sage-v11 · db 4862 reco
 ## Heroes
 
 ### Kayo (Brute)
-- ⚠ unrecognized: "You have 1 weapon zone."
-- ⚠ unrecognized: "Attack action cards you own get +1{p} while they are in any zone other than the combat chain."
-- ⚠ unrecognized: "The first time you discard a card with 6 or more {p} during each of your action phases, create a Might token."
-- 🚩 3 hero-text clause(s) not recognized by any ability reader
+- static: Kayo — one weapon zone (no passive: the generic equipment slot rules already model this)
+- static: Kayo — attack actions get +N{p} off the combat chain (a THRESHOLD rule, not a damage buff)
+- static: Kayo — first 6+{p} discard per action phase → Might token
 
 ### Iyslander (Elemental Wizard)
 - static: Iyslander — blue non-attacks from arsenal at instant speed
@@ -118,8 +117,7 @@ Generated 2026-08-09T13:44:23.942Z · app v2.63 · data sage-v11 · db 4862 reco
 - 🚩 4 hero-text clause(s) not recognized by any ability reader
 
 ### Dorinthea (Warrior)
-- ⚠ unrecognized: "Once per turn Effect - When a weapon you control hits, you may attack an additional time with that weapon this turn."
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
+- static: Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)
 
 ### Fai (Draconic Ninja)
 - ⚠ unrecognized: "You may start the game with a Phoenix Flame in your graveyard."

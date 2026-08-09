@@ -770,7 +770,12 @@ function makeEffects(ctx){
       if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       if(card.pitch===3 && (from==="hand"||from==="arsenal")) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
-      n.pend = {card, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      /* `from` rides on the pend because "when a WEAPON you control hits" is
+         a question only the resolution can ask, and by then the zone the
+         attack was declared from is the only thing that distinguishes a
+         weapon swing from an attack action card. Inferring it from the card
+         at resolution would mean re-deciding a question already answered. */
+      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
@@ -1083,6 +1088,37 @@ function makeEffects(ctx){
       });
     }
     if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }
+    /* ---- A WEAPON THAT HITS MAY SWING AGAIN (Dorinthea) --------------
+       "Once per turn Effect - When a weapon you control hits, you may
+       attack an additional time with that weapon this turn."
+
+       CR 7.5.5 defines a hit as damage actually DEALT, so `total>0` is
+       the whole test: an attack prevented or blocked down to nothing
+       never hit, and refreshes nothing.
+
+       The permission is exactly ONE thing — the weapon's own "Once per
+       Turn" limit is lifted for one more activation. `weaponUsed[uid]`
+       IS that limit in this trainer, so the ability is modelled by
+       clearing that one key and nothing else: the extra swing then walks
+       the ordinary tryPlay path and pays the printed {r} and an action
+       point like any other activation (RULING, user 2026-08-09). Handing
+       it a free action point here would make the hero strictly stronger
+       than printed, which is the direction that steals games.
+
+       "That weapon" is literal — only the piece that hit is untapped.
+
+       The latch rides on `hist`, which CR 4.4.4 clears at the turn
+       boundary, so "Once per turn" needs no separate bookkeeping. It is
+       spent by TRIGGERING rather than by being used, so a second hit in
+       the same turn does not refresh again — which is exactly why the
+       Dawnblade is printed to reward its SECOND hit each turn and not
+       its third. */
+    if(total>0 && n.pend.from==="weapon" && bAct(n).weaponRefresh && !act(n).hist.wpnAgain){
+      actMut(n).hist = {...act(n).hist, wpnAgain:1};
+      const wu = {...(act(n).weaponUsed||{})}; delete wu[pc.uid];
+      actMut(n).weaponUsed = wu;
+      n = L(n, `${pc.name} connects — your hero ability frees it for one more swing this turn.`);
+    }
     if(hasKw(pc,"crush") && total>=4){
       /* the threshold is met and the dummy has a hand now — the payloads
          that reach for an arsenal or its action phase are still inert */

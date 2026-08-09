@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-09T13:44:23.942Z",
- "appVer": "2.63",
+ "generated": "2026-08-09T22:05:37.081Z",
+ "appVer": "2.66",
  "dataVer": "sage-v11",
  "dbCount": 4862,
  "poolUnique": 405,
@@ -16,25 +16,27 @@
    "int": 4,
    "tt": "Brute Hero - Young",
    "tx": "You have 1 weapon zone.\nAttack action cards you own get +1{p} while they are in any zone other than the combat chain.\nThe first time you discard a card with 6 or more {p} during each of your action phases, create a Might token.",
-   "statics": [],
+   "statics": [
+    "Kayo — one weapon zone (no passive: the generic equipment slot rules already model this)",
+    "Kayo — attack actions get +N{p} off the combat chain (a THRESHOLD rule, not a damage buff)",
+    "Kayo — first 6+{p} discard per action phase → Might token"
+   ],
    "power": null,
    "clauses": [
     {
      "t": "You have 1 weapon zone.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Attack action cards you own get +1{p} while they are in any zone other than the combat chain.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "The first time you discard a card with 6 or more {p} during each of your action phases, create a Might token.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "iyslander": {
    "name": "Iyslander",
@@ -163,17 +165,17 @@
    "int": 4,
    "tt": "Warrior Hero - Young",
    "tx": "Once per turn Effect - When a weapon you control hits, you may attack an additional time with that weapon this turn.",
-   "statics": [],
+   "statics": [
+    "Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)"
+   ],
    "power": null,
    "clauses": [
     {
      "t": "Once per turn Effect - When a weapon you control hits, you may attack an additional time with that weapon this turn.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "1 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "fai": {
    "name": "Fai",
