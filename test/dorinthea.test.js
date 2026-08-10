@@ -62,7 +62,8 @@ test("a pump the parser routed to fx.conds is NOT read again into fx.self", () =
   assert.strictEqual(fx.self, 0,
     "the entire clause is gated; an unconditional +3 means the fallback read it twice");
   assert.deepStrictEqual((fx.conds || []).map(c => [c.cond, c.op]),
-    [["reprise", ["self", 3]]]);
+    [["reprise", ["self", 3, [["weapon"]]]]],
+    "and the printed 'weapon' restriction rides with it (v2.69)");
 });
 
 test("the guard covers onHit and condOnHit too, not just conds", () => {
@@ -565,4 +566,98 @@ test("the schedule is read off each piece's OWN text, never a card name", {skip}
 test("the trainer drives the shared decision rather than its own copy", {skip}, () => {
   assert.match(HTML, /idleCounterWipes\(you\(n\)\.gear, you\(n\)\.counters, you\(n\)\.hist\.wpnHits\)/,
     "one copy of the rule, called with this turn's tally");
+});
+
+/* ============================================================
+   THE PRINTED TARGET RESTRICTION.
+
+   "Target sword or dagger attack gains +3{p} and piercing 1."
+
+   `buffNext` has carried its qualifier in `op[2]` since v2.30 — that was
+   the arrow-buff-landing-on-a-sword fix. `self`, the op every REACTION
+   uses, never got it: the clause reader swallowed the words between
+   "target" and "attack" in a `[^.]*`, so ELEVEN pool cards granted their
+   pump to whatever happened to be swinging. Puncture's +3 landed on a
+   bow, Pummel's +8 for a "club or hammer weapon" landed on anything, and
+   Agile Engagement's "Warrior" restricted nothing at all.
+
+   A restriction is a LEGALITY, not a modifier: with no legal target the
+   card cannot be played, which is why the qualifier rides on the card
+   (`fx.selfQ` / `fx.gaQ`) rather than on one op.
+   ============================================================ */
+
+/* strip block and line comments before scanning the trainer's source.
+   v2.68 shipped a drill that passed because the string it grepped for was
+   sitting in the COMMENT above the gate it was meant to pin. */
+const codeOf = s => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+
+test("the printed restriction is captured, not swallowed", {skip}, () => {
+  const want = {
+    "Puncture|1": [["sword"], ["dagger"]],
+    "Overpower|1": [["weapon"]],
+    "Ironsong Response|1": [["weapon"]],
+    "Agile Engagement|1": [["warrior"]],
+    "Out for Blood|1": [["weapon"]],
+    "Stroke of Foresight|1": [["weapon"]]
+  };
+  const b = buildOf("dorinthea");
+  for(const [key, q] of Object.entries(want)){
+    const nm = key.split("|")[0];
+    const c = b.deck.find(x => x.name === nm);
+    assert.ok(c, nm + " must be in the deck");
+    assert.deepStrictEqual(P.fxParse(c).selfQ, q, nm + " keeps its printed target restriction");
+  }
+});
+
+test("an unqualified 'target attack' really is unqualified", {skip}, () => {
+  /* the opposite error would refuse a card that legally targets anything */
+  const fx = P.fxParse(mk("Target attack gets +1{p}.", {name: "UnqualProbe"}));
+  assert.ok(!fx.selfQ, "no printed restriction means no restriction");
+});
+
+test("qualMatches reads the printed TYPE LINE, and answers for real cards", {skip}, () => {
+  const blade = bladeOf(buildOf("dorinthea"));          // Warrior Weapon - Sword (2H)
+  const bow = buildOf("azalea").gear.find(g => /bow/i.test(g.tt || ""));
+  assert.ok(bow, "Azalea's bow is the control — without it this proves nothing");
+
+  const puncture = [["sword"], ["dagger"]];
+  assert.strictEqual(P.qualMatches(puncture, blade), true, "a sword is a sword");
+  assert.strictEqual(P.qualMatches(puncture, bow), false,
+    "THE BUG: Puncture's +3 and piercing used to land on a bow");
+  assert.strictEqual(P.qualMatches([["weapon"]], blade), true);
+  assert.strictEqual(P.qualMatches(null, bow), true, "an unqualified buff hits everything");
+});
+
+test("the go-again twin carries its restriction too", {skip}, () => {
+  const rt = buildOf("dorinthea").deck.find(x => x.name === "Run Through");
+  const fx = P.fxParse(rt);
+  assert.deepStrictEqual(fx.gaQ, [["sword"]],
+    "'Target sword attack gains go again' is restricted to swords");
+  assert.strictEqual(fx.ga, true);
+});
+
+test("playRx refuses a reaction whose target does not match", {skip}, () => {
+  /* playRx is a Battle closure, so this is pinned by reading the source —
+     with comments stripped, because prose satisfying a grep is a false
+     pass (v2.68). The GATE is the call itself: deleting it removes the
+     expression, not merely a word. */
+  const body = codeOf(HTML.slice(HTML.indexOf("const playRx = i => setG"),
+                                HTML.indexOf("const playRxA")));
+  assert.match(body, /qualMatches\(fx\.selfQ,\s*s\.pend/,
+    "the printed restriction must be checked against the attack being reacted to");
+  assert.match(body, /return L\(s,[^;]*isn't one/,
+    "and refused by NAME rather than dead-tapped");
+});
+
+test("a reaction's go again reaches the attack it targets", {skip}, () => {
+  /* Run Through resolved as half a card: its +2{p} rider landed and the
+     go again it is printed for did nothing, because the attack branch
+     never read `fx.ga`. Weaker than printed — the direction the fairness
+     sweep deliberately does not look in. */
+  const body = codeOf(HTML.slice(HTML.indexOf("const playRx = i => setG"),
+                                 HTML.indexOf("const playRxA")));
+  assert.match(body, /n\.pend\s*=\s*\{\.\.\.n\.pend,\s*ga:true\}/,
+    "the targeted attack must actually gain go again");
+  assert.match(body, /qualMatches\(fx\.gaQ,\s*n\.pend\.card\)/,
+    "and only when the printed restriction is satisfied");
 });

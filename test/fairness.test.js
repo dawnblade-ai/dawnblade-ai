@@ -96,7 +96,8 @@ test("a gated pump is not ALSO granted unconditionally — the v2.66 class", () 
     "from their hand this chain link, target weapon attack gains +3{p}."});
   assert.equal(fx.self, 0, "the pump belongs to the condition, and only to it");
   assert.equal(fx.conds.length, 1);
-  assert.deepEqual(fx.conds[0].op, ["self", 3]);
+  assert.deepEqual(fx.conds[0].op, ["self", 3, [["weapon"]]],
+    "and it keeps the printed 'weapon' target restriction (v2.69)");
 });
 
 test("'instead' is read inside a KEYWORD gate too — the v2.66 class", () => {

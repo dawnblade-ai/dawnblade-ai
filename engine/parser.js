@@ -419,10 +419,26 @@ function classifyClause(raw){
   if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/)) return R([["atkMinus",+m[1]]]);
   /* "Target <weapon/sword/dagger/…> attack gains +N{p}" — the pump a
      reaction hands the attack it is targeting. playRx folds fx.self into
-     the chain link, so self is the faithful op here. */
-  if(m=c.match(/^target [^.]*\battack\b[^.]* (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
-  /* the go-again twin of the target-attack pump */
-  if(/^target [^.]*\battack\b[^.]* (?:gets?|gains?) go again$/.test(c)) return R([["ga"]]);
+     the chain link, so self is the faithful op here.
+
+     THE QUALIFIER USED TO BE SWALLOWED BY `[^.]*` — v2.30's arrow-buff-
+     on-a-sword bug, in the one op that never got that fix. `buffNext`
+     has carried its restriction in `op[2]` since v2.30; `self` had
+     nowhere to put one, so ELEVEN pool cards granted their pump to any
+     attack at all: Puncture (+3 and piercing to a "sword or dagger")
+     landed on a bow, Pummel's +8 for a "club or hammer weapon" landed
+     on anything, and Agile Engagement's "Warrior" restricted nothing.
+     Sev-2 "an effect reaches illegal targets".
+
+     The capture is LAZY so it takes the words between "target" and
+     "attack" and no more. `attackQual` is the same reader buffNext uses,
+     so "sword or dagger" is an OR of two groups and "Pirate ally" is one
+     group of two words. */
+  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/))
+    return R([["self", +m[2], attackQual(m[1])]]);
+  /* the go-again twin of the target-attack pump, restriction and all */
+  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?) go again$/))
+    return R([["ga", 1, attackQual(m[1])]]);
   /* "they lose N{h}" is damage to the opposing hero */
   if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
@@ -957,13 +973,20 @@ function fxParse(card){
          counter before the swing had connected with anything. */
       if(op[0]==="hitCounter"){ fx.hitCounter = {nth:op[1], amt:op[2]}; return; }
       if(op[0]==="wipePowIfIdle"){ fx.wipePowIfIdle = true; return; }
-      if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
+      if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; if(op[2]) fx.gaQ = op[2]; return; }
       /* "It gains +1{p} until end of turn" on a card that also puts an arrow
          face up into the arsenal — "it" is the ARROW, not this equipment.
          Folding it into fx.self gave Bull's Eye Bracers the power its arrow
          is printed to get. Held back here and re-read below as
          `arsenalPut.stamp`, which puts it on the card that was actually put. */
       if(op[0]==="self" && ARS_STAMP.test(raw) && ARS_PUT.test(clean(card.tx||""))) return;
+      /* THE RESTRICTION RIDES WITH THE CARD, not with the op, because a
+         reaction has exactly one target and its qualifier decides whether
+         the card may be played at all. Collected from a conditional self
+         too — Ironsong Response's whole "target WEAPON attack" clause sits
+         inside its reprise gate, and the restriction is printed either
+         way. */
+      if(op[0]==="self" && op[2] && !fx.selfQ) fx.selfQ = op[2];
       if(op[0]==="self" && !r.cond && !r.onHit){ fx.self+=op[1]; return; }
       /* A CONDITIONALLY GRANTED on-hit ability (Bolt of Courage: "if you've
          charged this turn, gains 'If this hits, draw a card.'") is NOT the

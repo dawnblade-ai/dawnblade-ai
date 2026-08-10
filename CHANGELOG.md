@@ -9,6 +9,64 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.69 — the restriction the reactions never had
+
+**`buffNext` has carried its target restriction in `op[2]` since v2.30 —
+that was the arrow-buff-landing-on-a-sword fix. `self`, the op every
+REACTION uses, never got it.** The clause reader swallowed the words
+between "target" and "attack" in a `[^.]*`, so **eleven pool cards granted
+their pump to whatever happened to be swinging**:
+
+| card | prints | granted it to |
+|---|---|---|
+| Puncture ×2 | "target **sword or dagger** attack gains +3{p} and piercing 1" | a bow |
+| Pummel | "target **club or hammer weapon** attack gets +8{p}" | anything |
+| Agile Engagement | "target **Warrior** attack gets +3{p}" | anything |
+| Overpower ×2 · Ironsong Response ×2 · Out for Blood · Stroke of Foresight | "target **weapon** attack" | any attack action card |
+| Scar Tissue · Two Sides to the Blade | "target **dagger** attack" | anything |
+
+Sev-2, *an effect reaches illegal targets*. A restriction is a **legality**,
+not a modifier — with no legal target the card cannot be played at all — so
+the qualifier rides on the card (`fx.selfQ` / `fx.gaQ`) rather than on one
+op, and `playRx` refuses by name instead of dead-tapping.
+
+**And Run Through was half a card.** "Target sword attack gains go again"
+parsed fine and the attack branch never read `fx.ga`, so its +2{p} rider
+landed and the go again it is printed for did nothing. Weaker than printed —
+the direction the sweep deliberately does not look in. No attack reaction in
+the pool prints the keyword for itself, so on a reaction `fx.ga` can only
+mean the target's.
+
+### The sweep's third blind spot in one hero
+
+`RESTRICTION-DROPPED` matched only the "your/the **next** … attack" wording
+and only `fx.ops`, so it never looked at the reaction family at all. It now
+reads the "**target** … attack" phrasing, and asks the CARD rather than an
+op — `fx.self` and `fx.ga` are folded out of `fx.ops` by the dispatcher, so
+an op-only check finds nothing to look at and then accuses a card that was
+read correctly. The first version of this check did exactly that to Overpower
+and Ironsong Response.
+
+Reintroducing the bug reports **13 findings**, naming every card above.
+
+### Two process failures worth writing down
+
+**A backup chained behind a grep is not a backup.** The verification ran
+`fairness | grep -E "…findings" && cp parser.js /tmp/bak`. The summary line
+reads `4 finding(s)`, the grep matched nothing, the `&&` short-circuited, the
+copy never happened — and the "restore" afterwards reverted `parser.js` to a
+snapshot from an earlier round, silently deleting the whole fix. Take backups
+unconditionally.
+
+**A sabotage must be verified to have changed the file.** Three this cycle
+matched nothing (a `==` for a `===`, a note that did not match the note in
+the file, a regex against text that was never there). A sabotage that edits
+nothing looks exactly like a drill that does not bite.
+
+**6 new drills.** 890 total.
+
+---
+
 ## v2.68 — the blade remembers
 
 **The Dawnblade earns its own counters.** The project's namesake card sat at

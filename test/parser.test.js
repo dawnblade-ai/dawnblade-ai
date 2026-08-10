@@ -440,9 +440,17 @@ test("classifyClause — crush riders are honest noops vs a hand-less dummy", ()
 });
 
 test("classifyClause — target-attack pump folds into self (the reaction pump)", () => {
-  assert.deepEqual(cc("Target weapon attack gains +4{p}"), {status:"run", ops:[["self",4]]});
+  /* op[2] IS THE PRINTED TARGET RESTRICTION (v2.69). `self` had nowhere to
+     carry one, so `[^.]*` swallowed it and eleven cards pumped whatever was
+     swinging — Puncture's "sword or dagger" landing on a bow. Same shape
+     v2.30 fixed for buffNext, in the op that never got it. Asserted rather
+     than tolerated: a bare ["self",N] here means the restriction is gone. */
+  assert.deepEqual(cc("Target weapon attack gains +4{p}"),
+    {status:"run", ops:[["self",4,[["weapon"]]]]});
   assert.deepEqual(cc("Target sword or dagger attack gains +3{p} and piercing 1."),
-    {status:"run", ops:[["self",3]]});
+    {status:"run", ops:[["self",3,[["sword"],["dagger"]]]]});
+  assert.deepEqual(cc("Target attack gains +2{p}"),
+    {status:"run", ops:[["self",2,null]]}, "an unqualified target really is unqualified");
 });
 
 test("classifyClause — 'the next ... attack' buffs, not just 'your next'", () => {
@@ -518,9 +526,11 @@ test("rulings — transcend flips the card to Inner Chi", () => {
 test("rulings — reprise reads the dummy's hand blockers (live since v2.05)", () => {
   const r = cc("Reprise - If the defending hero has defended with a card from their hand this chain link, target weapon attack gains +3{p}.");
   assert.equal(r.cond, "reprise");
-  assert.deepEqual(r.ops, [["self",3]]);
+  assert.deepEqual(r.ops, [["self",3,[["weapon"]]]],
+    "the reprise payload keeps its printed 'weapon' restriction (v2.69)");
   const r2 = cc("Reprise - If the defending hero has defended with a card from their hand this chain link, instead it gains +6{p}.");
   assert.deepEqual(r2.ops, [["self",6]]);
+  assert.equal(r2.instead, true, "and 'instead' REPLACES inside a keyword gate (v2.66)");
   assert.equal(cc("Reprise").status, "noop", "the bare keyword is a qualifier");
   assert.equal(cc("Inertia").status, "noop", "inertia still has no opponent turn to tax");
 });

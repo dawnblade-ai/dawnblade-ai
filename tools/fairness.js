@@ -150,6 +150,34 @@ for(const c of Object.values(audit.cards)){
         "it will apply to any attack at all");
   }
 
+  /* ---- 3b. THE SAME BUG IN THE OTHER WORDING ------------------------
+     "TARGET <x> attack gains +N{p}" is the reaction family's phrasing and
+     this check never looked at it — it matched only "your/the NEXT ...
+     attack", and then only in `fx.ops`. So ELEVEN cards dropped a printed
+     restriction with the sweep reporting clean: Puncture's "sword or
+     dagger" landed on a bow, Pummel's +8 for a "club or hammer weapon"
+     landed on anything, and Agile Engagement's "Warrior" restricted
+     nothing at all.
+
+     THE QUALIFIER IS ASKED OF THE CARD, not of an op. `fx.self` and
+     `fx.ga` are folded out of `fx.ops` by the dispatcher, so an op-only
+     check finds nothing to look at for the unconditional half and then
+     accuses a correctly-read card — which is exactly what the first
+     version of this check did to Overpower and Ironsong Response. The
+     parser parks the restriction on `fx.selfQ` / `fx.gaQ` precisely
+     because a reaction has ONE target and its qualifier is a legality. */
+  const tgtAtk = tl.match(/target ([a-z][a-z0-9' -]{0,40}?) attack[^.]{0,40}?(?:gets?|gains?|has) (?:\+\d+\s*(?:\{p\}|power)|go again)/);
+  if(tgtAtk){
+    const qual = (tgtAtk[1]||"").replace(/\b(a|an|the|this|turn)\b/g,"").trim();
+    const grantsSomething = fx.self > 0 || fx.ga
+      || [...(fx.ops||[]), ...(fx.conds||[]).map(x=>x.op)]
+           .some(o => o && (o[0]==="self" || o[0]==="ga"));
+    if(qual && grantsSomething && !fx.selfQ && !fx.gaQ)
+      flag(2, "RESTRICTION-DROPPED", c,
+        `it targets a "${qual}" attack but nothing carries that restriction`,
+        "it will apply to any attack at all");
+  }
+
   /* An optional-cost filter that silently lost a printed limit. */
   if(fx.optCost && fx.optCost.filter){
     const f = fx.optCost.filter;
