@@ -560,6 +560,43 @@ test("bridge — the DUMMY's swing is the dummy's turn, and it is the attacker",
   assert.equal(p.step, "defend");
 });
 
+/* ===================================================================
+   THE OPPONENT'S ACTION PHASE (v2.71) — the window that did not exist.
+
+   Until now the only window on the opponent's turn was the reaction step
+   of an incoming swing, which is a window that exists only if they
+   attack. Everything printed "during an opponent's turn" was therefore
+   unreachable on a turn they played a non-attack or had nothing to play,
+   and `parser.js` filed five separate mechanics `noop` with the reason
+   written out as a fact about the dummy rather than about the rules.
+   =================================================================== */
+test("bridge — foeturn is the OPPONENT's action phase, with the window yours", () => {
+  const p = P.fromTrainer(T("foeturn"), false);
+  assert.equal(p.phase, "action");
+  assert.equal(p.turnPlayer, 1, "it is their action phase, not yours");
+  assert.equal(p.priority, 0, "and they have passed, so the window is yours (CR 4.3.4)");
+  assert.equal(p.attacker, null, "nothing is on the chain — this is not a combat window");
+});
+
+test("bridge — the foeturn window is INSTANTS ONLY (CR 8.1.6)", () => {
+  const p = P.fromTrainer(T("foeturn"), false);
+  assert.deepEqual(P.speedAllowed(p, 0), ["instant"],
+    "an ACTION card is confined to its own controller's action phase — this is not yours");
+  assert.ok(P.canAct(p, 0), "but you can act, or the window would be a dead screen");
+  /* The other half of the same rule: the window is NOT closed, because
+     only one player has passed. A closed window opens nothing, so getting
+     this wrong would silently return [] above and read as "no plays". */
+  assert.ok(!P.windowClosed(p), "one pass is not two — CR 4.3.4 wants them IN SUCCESSION");
+});
+
+test("bridge — foeturn never lets you play at ACTION speed on their turn", () => {
+  /* Sev-3 if it did: "your action phase" is not `phase === "action"`, and
+     an action card played on their turn is an illegal play allowed. */
+  const p = P.fromTrainer(T("foeturn"), false);
+  assert.ok(!P.speedAllowed(p, 0).includes("action"),
+    "the combat chain lives inside the TURN PLAYER's action phase — this one is theirs");
+});
+
 test("bridge — CR 7.3: the DEFEND step gives priority to the TURN-PLAYER, not the defender", () => {
   const p = P.fromTrainer(T("block", {bphase:"defend"}), false);
   assert.equal(p.priority, 1,
@@ -658,8 +695,15 @@ const path = require("node:path");
 const HTML = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 
 test("end phase — the CR 4.4.3 steps appear in the trainer in the CR's order", () => {
-  const body = HTML.slice(HTML.indexOf("const endTurn = () => setG"),
-                          HTML.indexOf("function foeSwing"));
+  /* The end anchor moved with the code (v2.71): `foeSwing` no longer
+     exists, and `indexOf` returning -1 would have sliced to the last
+     character of the file — a guard that passes by finding TOO MUCH,
+     which reads exactly like a guard that works. `foeBegin` is the first
+     declaration after the procedure, and seat 1's own (a)/(b) markers
+     live past it in `foeEnd`, deliberately outside this slice. */
+  const endAt = HTML.indexOf("function foeBegin");
+  assert.ok(endAt > -1, "the slice anchor must exist, or this drill checks the whole file");
+  const body = HTML.slice(HTML.indexOf("const endTurn = () => setG"), endAt);
   const at = tag => body.indexOf("CR 4.4.3" + tag + " —");
   const a = at("a"), b = at("b"), c = at("c"), d = at("d"), e = at("e"), f = at("f");
   for(const [nm,v] of [["a",a],["b",b],["c",c],["d",d],["e",e],["f",f]])
@@ -672,7 +716,14 @@ test("end phase — losing resources is ALL players, not the turn-player", () =>
   /* CR 4.4.3e: "All players lose all action points and resource points."
      Invisible today because the dummy floats nothing, and a real bug the
      moment a second hero can bank a resource during your turn. */
-  const body = HTML.slice(HTML.indexOf("CR 4.4.3e"), HTML.indexOf("CR 4.4.3f"));
+  /* ANCHOR ON THE MARKER FORM, as its sibling above already does. The bare
+     string matched the first PROSE mention of a step letter anywhere in the
+     file, so a comment that named (f) before (e) inverted the slice and
+     emptied it — and an empty slice fails loudly here only because the
+     assertion is a match. Tightened rather than reworded: the em-dash
+     marker is what the procedure is actually labelled with. */
+  const body = HTML.slice(HTML.indexOf("CR 4.4.3e —"), HTML.indexOf("CR 4.4.3f —"));
+  assert.ok(body.length > 0, "the (e) marker must precede the (f) marker");
   assert.match(body, /for\(const si of \[0,1\]\)/,
     "the fizzle must loop over both seats, not reach for youMut alone");
 });

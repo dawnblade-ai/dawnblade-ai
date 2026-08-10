@@ -247,8 +247,18 @@ test("Might / Agility / Vigor each parse to a real payload", {skip}, () => {
    asked. */
 test("the trainer fires start-of-turn triggers, off printed text", {skip}, () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const start = html.indexOf("Start phase (CR 4.2)");
-  const body = html.slice(start, start + 2200);
+  /* ANCHOR ON THE FUNCTION, NOT ON THE LOG LINE (v2.71). This used to find
+     the first "Start phase (CR 4.2)" in the file — which was newTurn's only
+     while seat 1 had no turn to start. `foeBegin` now announces one too and
+     is declared earlier, so the slice silently moved to a function that has
+     no triggers in it and the drill reported a bug that was not there.
+     Slice to the END of the function rather than a byte count, for the same
+     reason the neighbouring drill already does. */
+  const start = html.indexOf("  function newTurn(s){");
+  assert.ok(start > 0, "newTurn moved — re-anchor this drill");
+  const stop = html.indexOf("  const toks = [", start);
+  assert.ok(stop > start, "newTurn's end anchor moved");
+  const body = html.slice(start, stop);
   assert.match(body, /at the start of your turn, destroy this/i,
     "newTurn must look for the printed trigger line");
   assert.match(body, /fxParse\(b\.card\)\.ops/,

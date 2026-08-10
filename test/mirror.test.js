@@ -144,19 +144,34 @@ function slice(from, to){
   return HTML.slice(a, b);
 }
 
-test("foeSwing's no-play branch hands off through newTurn — the soft-lock", () => {
-  const body = slice("  function foeSwing(s){", "  const toggleBlock = ");
-  /* THE BUG: it returned a bare `mode:"act"`. `newTurn` is the ONLY site
-     that refills seat 1's hand, and `foePick` needs a hand — so the branch
-     could fire once and never un-fire. The turn counter froze and END TURN
-     reproduced the position forever. Pin the handoff, not the message. */
-  assert.ok(/newTurn\(/.test(body),
-    "the branch where the opponent cannot pay must still END THE TURN");
+test("the no-play branch still ends the turn — the soft-lock (v2.65, v2.71)", () => {
+  /* THE BUG: the branch returned a bare `mode:"act"`. Seat 1's hand only
+     refilled in `newTurn` and `foePick` needs a hand — so once it fired it
+     could never un-fire. The turn counter froze and END TURN reproduced the
+     identical position forever. Found in play and only findable there: a
+     control-flow dead end is not an illegal STATE, so invariants.js cannot
+     see it by construction.
+
+     v2.71 moved the branch into `foeWindowOrEnd`, which either opens the
+     player's window or ends the turn — so the property is now that BOTH
+     exits reach `foeEnd`, and that `foeEnd` reaches `newTurn`. Every exit
+     is pinned; a new `return` that reaches neither is the bug returning. */
+  const win = slice("  function foeWindowOrEnd(s, why){", "  function foeEnd(s){");
+  assert.ok(/foeEnd\(/.test(win),
+    "the branch where the opponent cannot pay must still be able to END THE TURN");
+  assert.ok(/mode\s*:\s*"foeturn"/.test(win),
+    "and its other exit is the player's window, which foePassWindow closes into foeEnd");
+  const end = slice("  function foeEnd(s){", "  const toggleBlock = ");
+  assert.ok(/newTurn\(/.test(end), "foeEnd must hand back through newTurn");
   /* PIN THE GATE, NOT THE IDENTIFIER. Written as /_opening/ this passed
      with the whole guard deleted, because the COMMENT above it says the
      word — the scan reads raw source, prose included. Proven by sabotage. */
-  assert.ok(/if\(q\._opening\)\s*return/.test(body) && /_opening\s*:\s*false/.test(body),
+  assert.ok(/if\(n\._opening\)\s*\{/.test(end) && /_opening\s*:\s*false/.test(end),
     "and must CONSUME _opening on that path: takeIt never runs here, so nothing else clears it");
+  /* The window must be able to skip ITSELF, or the vanilla dummy costs the
+     player a dead tap on every turn of every game. */
+  assert.ok(/foeTurnHasPlay\(/.test(win),
+    "a window with nothing in it must not open — buildPrompt's own rule");
 });
 
 test("foePick asks the printed gate, not just type and affordability", () => {
@@ -169,7 +184,7 @@ test("foePick asks the printed gate, not just type and affordability", () => {
 });
 
 test("foePlay pays an additional cost before it resolves the card", () => {
-  const body = slice("  function foePlay(s, card){", "  function foeSwing(s){");
+  const body = slice("  function foePlay(s, card){", "  function autoPitch(s, cost, keepUid){");
   assert.ok(/payAddCost\(/.test(body),
     "an additional cost is a COST — Savage Feast's discard was never paid");
   assert.ok(/addCost/.test(body) && /actor\s*:\s*1/.test(body),
@@ -196,4 +211,85 @@ test("the next-swing prediction is gated on there being no real hero", () => {
      opponent's next card is not knowable — say nothing rather than a lie. */
   assert.ok(/oppH/.test(body),
     "the scripted escalation must not be shown for a hero that plays real cards");
+});
+
+/* ===================================================================
+   SEAT 1 TAKES A TURN (v2.71)
+
+   The five mechanics `parser.js` filed `noop` — arcane barrier, frostbite,
+   inertia, freeze, and "target hero may pay" — all carried the SAME
+   justification, and it was a fact about the prop rather than about the
+   rules: the dummy has no action phase, the dummy pays no costs. These
+   pin the phase they were waiting for.
+
+   Source scans, because foeBegin/foeStep/foeEnd are closures inside
+   Battle and Node cannot reach them. So: pin the GATE, never a bare
+   identifier, and every one of these was sabotaged.
+   =================================================================== */
+
+test("seat 1's turn is a TURN — start phase, action point, end phase", () => {
+  const begin = slice("  function foeBegin(s){", "  function foeStep(s){");
+  /* CR 4.3.2 — the action point is issued at the beginning of the action
+     phase, for whoever's phase it is. Without one, foeStep can never let
+     it act and Inertia has nothing to tax. */
+  assert.ok(/oppMut\(n\)\.ap\s*=\s*1/.test(begin),
+    "seat 1 must receive an action point at the start of its action phase");
+  /* CR 4.4.4 — hist is per-turn AND per-seat. Cleared for the incoming
+     seat only, "…this turn" reads the wrong turn all through theirs. */
+  assert.ok(/oppMut\(n\)\.hist\s*=\s*freshHist\(\)/.test(begin),
+    "and a fresh hist, or '…this turn' reads seat 1's PREVIOUS turn");
+});
+
+test("the vanilla escalation spends the action point — one swing per turn", () => {
+  /* THE REGRESSION THIS EXISTS FOR: finishBlock now returns to foeStep so
+     go again can chain a second link. Without the escalation spending its
+     point, foeStep would call it again and the tuned [3,4,5] curve would
+     swing forever. Verified in play: 3 swings across 3 turns. */
+  const van = slice("  function foeVanilla(s){", "  function foeWindowOrEnd(s, why){");
+  assert.ok(/oppMut\(n\)\.ap\s*=\s*opp\(n\)\.ap\s*-\s*1/.test(van),
+    "the scripted swing must spend the action point or it repeats forever");
+  assert.ok(/\[3,4,5\]\[\(n\.turn-1\)%3\]/.test(van),
+    "and the tuned curve itself is untouched — it is what difficulty is built on");
+});
+
+test("a go again attack lets seat 1 chain a second link (CR 5.3.5)", () => {
+  const play = slice("  function foePlay(s, card){", "  function autoPitch(s, cost, keepUid){");
+  /* GO AGAIN IS A GAIN, NOT A REFUND — `ga ? keep : -1` cannot say +1, and
+     spelling it out is what makes an instant cost nothing (CR 8.1.6). */
+  assert.ok(/opp\(n\)\.ap\s*-\s*1\s*\+\s*\(_fga\s*\?\s*1\s*:\s*0\)/.test(play),
+    "the action point is spent and go again GAINS one back");
+  /* hasKwNow, not raw text: a conditionally-granted go again must not hand
+     seat 1 a free action it has not earned (the v2.31 shape). */
+  assert.ok(/hasKwNow\(card,\s*"go again"\)/.test(play),
+    "read through the keyword gate, never off raw printed text");
+});
+
+test("seat 1's end phase is the SAME procedure, not a second copy", () => {
+  const end = slice("  function foeEnd(s){", "  const toggleBlock = ");
+  assert.ok(/endPhaseCF\(n,\s*1\)/.test(end),
+    "foeEnd must drive the shared CR 4.4.3 (c)-(f), or a rule fixed in one stays broken in the other");
+  assert.ok(/endPhaseAllies\(n\)/.test(end), "(a) is shared too");
+  assert.ok(/arsFree\(opp\(n\)\)/.test(end),
+    "(b) must ask arsenal CAPACITY, not assume the slot count is 1");
+});
+
+test("the stand-in refill is GONE from newTurn — or seat 1 draws twice", () => {
+  /* ROADMAP-OPPONENT.md's own warning: "the moment seat 1 gets a real end
+     phase this draw MOVES there. Adding that one without removing this one
+     draws twice." This is the removal half, and it is the half that is
+     invisible in play — two draws just looks like a generous opponent. */
+  const nt = slice("  function newTurn(s){", "  const toks = [");
+  assert.ok(!/opp\(s\)\.int\s*-\s*oHand\.length/.test(nt) && !/refilled\.hand/.test(nt),
+    "newTurn must no longer refill seat 1 — endPhaseCF's (f) does");
+  const cf = slice("  function endPhaseCF(s, si){", "  function afterArsenal(s){");
+  assert.ok(/act\(n\)\.int\s*-\s*act\(n\)\.hand\.length/.test(cf),
+    "and the end phase must actually draw the ending seat to ITS intellect");
+});
+
+test("the end phase is actor-relative, so neither seat is hardcoded", () => {
+  const cf = slice("  function endPhaseCF(s, si){", "  function afterArsenal(s){");
+  assert.ok(!/youMut\(|oppMut\(/.test(cf),
+    "a perspective helper here means the procedure only ever runs for one seat");
+  assert.ok(/\{\.\.\.s,\s*actor:si\}/.test(cf) && /actor:_prevActor/.test(cf),
+    "the actor is borrowed for the procedure and handed straight back");
 });

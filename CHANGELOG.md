@@ -9,6 +9,86 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.71 — the turn the opponent never took
+
+**Five mechanics were filed `noop` in `parser.js`, and every one gave a
+reason about the PROP rather than about the rules:**
+
+| parser.js | the reason it gave |
+|---|---|
+| arcane barrier | "stops arcane damage — the dummy throws only fists" |
+| frostbite | "frostbite — dummy pays no costs" |
+| inertia | "taxes the opponent's action phase — the dummy has none" |
+| freeze (Cold Snap) | "idle against the dummy's scripted swing" |
+| "target hero may pay" | "the dummy pays no costs, so it always declines" |
+
+Those are statements about a training dummy, not about Flesh and Blood —
+and a `noop` counts as ACCOUNTED FOR, so all of it reports tier `full`
+and no coverage tool can see any of it. **Iyslander's entire deck is built
+on top of those five**, which is why she was the hero that forced this.
+
+### Seat 1 takes a turn
+
+`foeSwing` was one fabricated swing between two of your turns. It is now
+a turn: `foeBegin` (start phase, CR 4.3.2's action point, a fresh
+`hist`), `foeStep` (one action, called again after every chain link
+closes), `foeWindowOrEnd` and `foeEnd`.
+
+**`finishBlock` returns to `foeStep` instead of `newTurn`**, so go again
+chains a second link for seat 1 the way it does for you — the escalation
+could only ever swing once. Go again is a GAIN (CR 5.3.5), spelled out
+rather than folded into a ternary, and read through `hasKwNow` so a
+conditional grant does not hand out a free action.
+
+### ONE END PHASE, NOT TWO
+
+CR 4.4.3 (c)-(f) existed for seat 0 alone; seat 1's "end phase" was a
+stand-in refill buried in `newTurn`. That is the same two-unrelated-bodies
+shape that let clash fire on the wrong trigger for five versions.
+`endPhaseCF(s, si)` is one copy, actor-relative throughout, and
+`test/actor.test.js` moves it into MIGRATED — **6 of 7 now, was 5.**
+
+ROADMAP-OPPONENT.md's warning was explicit: *"adding that one without
+removing this one draws twice"*. Both halves landed together, and there is
+a drill for the removal — because a double draw just looks like a generous
+opponent.
+
+### The window that did not exist
+
+The only window on the opponent's turn was the reaction step of an
+incoming swing — a window that exists **only if they attack**. `foeturn`
+is the rest of it: their action phase with priority passed to you, mapped
+in `priority.js` so `speedAllowed` returns instants only (CR 8.1.6) and
+`canAct` cannot contradict it.
+
+**RULING (user, 2026-08-10):** *"as though it were an instant"* is more
+than dropping the action point — an instant may be played **any time the
+player has priority**, where an action is confined to its own action
+phase. So Iyslander's clause 1 is gated on "not your turn and you hold
+priority", not on one combat step.
+
+**A window with nothing in it does not open** — the rule `buildPrompt`
+already follows — so solo play against the vanilla dummy gains no dead
+tap. Verified: 0 windows opened across a Kayo-vs-Dummy game.
+
+Iyslander's clause 2 moved out of `playArsenalInstant` into
+`foeTurnIce`: it is an EVENT ("whenever you play an Ice card during an
+opponent's turn"), and as a property of one route an Ice instant from
+hand triggered nothing.
+
+### Driven, not just drilled
+
+Iyslander mirror: played Voltic Bolt from arsenal at instant speed during
+their action phase — 18 → 15, a window that did not exist before. Kayo vs
+the vanilla dummy: **3 swings across 3 turns**, the tuned [3,4,5] curve
+untouched, end phases alternating, no doubled draw. **0 invariant
+violations in both.**
+
+**12 new drills, all sabotaged with the file hash checked (rule 4a).** 907
+total.
+
+---
+
 ## v2.70 — the half of the card that was thrown away
 
 **Warrior's Valor prints two things and the engine kept one.**

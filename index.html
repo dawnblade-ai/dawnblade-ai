@@ -743,7 +743,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.70"; /* v2.70 — a quoted granted ability riding on a "your next attack" buff is read instead of dropped: Warrior's Valor gets its go again back, and six other cards across three heroes with it. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.71"; /* v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2929,19 +2929,26 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     return L(n, `${c.name} fired from arsenal — +${c.def||0} defense.`);
   });
   const playArsenalInstant = () => setG(s=>{
-    if(s.mode!=="block" || s.bphase!=="react" || !act(s).arsenal || !bAct(s).arsenalInstant) return s;
+    /* "IF IT'S NOT YOUR TURN" IS THE WHOLE CLAUSE, NOT ONE STEP OF IT
+       (v2.71). This was gated on the reaction step of an incoming swing,
+       which is a window that exists only if the opponent attacks — so on
+       a turn they played a non-attack, or had nothing to play, her hero
+       ability simply was not there. `foeturn` is the rest of the window:
+       seat 1's action phase with priority passed to you.
+
+       RULING (user, 2026-08-10): "as though they were an instant" is more
+       than dropping the action point — an instant may be played ANY TIME
+       the player has priority, where an action is confined to its own
+       action phase. So the gate is "not your turn and you hold priority",
+       and the action point is deliberately never charged (CR 8.1.6). */
+    const onFoeTurn = (s.mode==="block" && s.bphase==="react") || s.mode==="foeturn";
+    if(!onFoeTurn || !act(s).arsenal || !bAct(s).arsenalInstant) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
     if(isAttack(c)) return L(s, `${c.name} is an attack — her ability frees blue non-attacks only.`);
     if((c.pitch||0) < 3) return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
-    let n = {...s};
     const cost = c.cost||0;
-    while(act(n).res < cost && act(n).hand.length){
-      const idx = act(n).hand.map((h,i)=>({i,v:advValue(h,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v)[0].i;
-      const p = act(n).hand[idx];
-      actMut(n).res += (p.pitch||0); actMut(n).pitch = [...act(n).pitch, p]; actMut(n).hand = act(n).hand.filter((_,i)=>i!==idx);
-      n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
-    }
-    if(act(n).res < cost) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it.`);
+    let n = autoPitch(s, cost);
+    if(!n) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it.`);
     const prevRes = act(n).res;
     n = {...n};
     const arsRxSide = actMut(n);
@@ -2949,10 +2956,49 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     arsRxSide.grave = [...gy(n.turn, c),...act(n).grave];
     arsRxSide.arsenal = null;
     n = runOps(n, fx.ops, c.name);
-    if(bAct(n).iceFrostbite && /ice/i.test(c.tt||"")){ foeMut(n).frost=(foe(n).frost||0)+1; n=L(n,`Ice card on the opponent's turn — Frostbite token created (now ${foe(n).frost}).`); }
-    n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter mid-defense.`);
+    n = foeTurnIce(n, c);
+    n = L(n, `${c.name} struck from arsenal at instant speed — Iyslander bends winter on their turn.`);
     return winCheck(n);
   });
+  /* Iyslander clause 2: "Whenever you play an Ice card during an opponent's
+     turn, create a Frostbite token under their control." It lived INSIDE
+     playArsenalInstant, which made it a property of one route rather than
+     of the event — an Ice instant played from hand triggered nothing at
+     all. The event is what the card prints, so every route that plays a
+     card on their turn asks here. */
+  function foeTurnIce(n, c){
+    if(!bAct(n).iceFrostbite || !/ice/i.test(c.tt||"")) return n;
+    foeMut(n).frost = (foe(n).frost||0) + 1;
+    return L(n, `Ice card on the opponent's turn — Frostbite token created (now ${foe(n).frost}).`);
+  }
+  /* THE PLAYER'S WINDOW ON THE OPPONENT'S TURN (v2.71). Instants only, and
+     `speedAllowed` is asked rather than restated — five hand-rolled copies
+     of "may this be played here" is exactly what `rxAllowed` was extracted
+     to end. Pitching is on demand, the same rule as the arsenal instant
+     beside it, because there is no room to pause for a payment sheet in an
+     instant window. */
+  const playFoeTurnRx = i => setG(s=>{
+    if(s.mode!=="foeturn") return s;
+    if(!DawnPriority.speedAllowed(s,0).includes("instant")) return s;
+    const c = act(s).hand[i]; if(!c) return s;
+    if(!isInstantT(c.tt||""))
+      return L(s, `${c.name} isn't an instant — only instants may be played during ${foe(s).name}'s turn.`);
+    const fx = fxParse(c);
+    if(!fx.ops.length) return L(s, `${c.name} has nothing the engine can resolve in this window.`);
+    const cost = c.cost||0;
+    let n = autoPitch(s, cost, c.uid);
+    if(!n) return L(s, `${c.name} costs ${cost} — not enough left in hand to pitch for it.`);
+    const rx = actMut(n);
+    rx.res  = act(n).res - cost;
+    rx.hand = act(n).hand.filter(h=>h.uid!==c.uid);
+    rx.grave = [...gy(n.turn, c), ...act(n).grave];
+    n = runOps(n, fx.ops, c.name);
+    n = foeTurnIce(n, c);
+    return winCheck(L(n, `${c.name} played at instant speed on ${foe(n).name}'s turn.`));
+  });
+  /* CR 4.3.4 — both players pass in succession and the phase ends. */
+  const foePassWindow = () => setG(s => s.mode!=="foeturn" ? s
+    : foeEnd(L(s, `You pass — ${opp(s).name} may end their turn.`)));
   /* resolveStack lives in engine/effects.js (v2.62) — the last of the
      three. It was `() => setG(s=>{…})`, so unlike runOps and execute it
      needed its React wrapper peeled off: the BODY was already a pure
@@ -2963,7 +3009,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     : execute({...s,_doBoost:false},card,from,idx);
   const confirmBoost = (doBoost) => setG(s=>{ if(s.mode!=="boostpick"||!s.pending) return s; const {card,from,idx}=s.pending; return execute({...s,mode:"act",pending:null,_doBoost:doBoost},card,from,idx); });
   const tryPlay = (card,from,idx) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3285,10 +3331,27 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     return afterArsenal(L(n,`${you(n).arsenal.name} set face down in arsenal.`));
   });
   const skipArsenal = () => setG(s=> s.mode==="arsenal" ? afterArsenal(L(s,"(b) Arsenal left empty — nothing set.")) : s);
-  /* Steps (c) through (f). Split from endTurn only because (b) is a choice
-     that has to pause for the player; this is the same procedure continuing. */
-  function afterArsenal(s){
-    let n={...s};
+  /* Steps (c) through (f), for WHICHEVER SEAT is ending its turn. Split
+     from endTurn only because (b) is a choice that has to pause for the
+     player; this is the same procedure continuing.
+
+     ONE END PHASE, NOT TWO (v2.71). Until now this procedure existed for
+     seat 0 alone, and seat 1's "end phase" was a stand-in refill buried
+     in newTurn — the same two-unrelated-bodies shape that let clash fire
+     on the wrong trigger for five versions, and the reason effects keyed
+     to the opponent's turn had nothing to expire on. It is actor-relative
+     throughout and `foeEnd` runs it with the actor borrowed to seat 1,
+     exactly the way foePlay borrows it for a card's own effects.
+
+     Everything that genuinely DIFFERS by seat is named as a difference
+     rather than as a second copy: the invented fatigue loss stays seat
+     0's (the dummy reshuffles instead, which is a training affordance and
+     is logged), and CR 4.4.3f's second sentence — the first-turn refill
+     for all OTHER players — is asked of whichever seat is not ending. */
+  function endPhaseCF(s, si){
+    const _prevActor = s.actor||0;
+    let n = {...s, actor:si};
+    const _me = () => act(n).name, _you = () => /^you$/i.test(act(n).name||"");
 
     /* (c) CR 4.4.3c — pitch zones to the BOTTOM of their owners' decks.
        Both seats: it says "their pitch zone", not the turn-player's. */
@@ -3307,10 +3370,10 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        an equipment ability that has been activated. It used to happen at the
        top of the next turn, which is the same thing today and is NOT once a
        second seat has a turn between yours. */
-    const tapped = Object.keys(you(n).weaponUsed||{}).length;
-    youMut(n).weaponUsed = {};
-    n = L(n, tapped ? `(d) You untap ${tapped} permanent${tapped>1?"s":""}.`
-                    : "(d) Nothing of yours is tapped.");
+    const tapped = Object.keys(act(n).weaponUsed||{}).length;
+    actMut(n).weaponUsed = {};
+    n = L(n, tapped ? `(d) ${_me()} untap${_you()?"":"s"} ${tapped} permanent${tapped>1?"s":""}.`
+                    : `(d) Nothing of ${_you()?"yours":_me()+"'s"} is tapped.`);
 
     /* (e) CR 4.4.3e — "All players lose all action points and resource
        points." ALL, not just the turn-player. Score counts wasted resources,
@@ -3324,21 +3387,63 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     n = L(n, fizzled
       ? `(e) All players lose their points — ${fizzled} floating resource${fizzled>1?"s":""} wasted.`
       : "(e) All players lose their points — nothing was floating.");
-    youMut(n).buffNext = 0; youMut(n).buffQ = [];
+    actMut(n).buffNext = 0; actMut(n).buffQ = [];
 
-    /* (f) CR 4.4.3f — the turn-player draws up to intellect. */
-    const need = Math.max(0, you(n).int - you(n).hand.length);
-    const drawn = you(n).deck.slice(0,need);
-    youMut(n).hand=[...you(n).hand,...drawn]; youMut(n).deck=you(n).deck.slice(need);
-    n = L(n, drawn.length ? `(f) You draw ${drawn.length} back up to intellect ${you(n).int}.`
-                          : `(f) Hand is already at intellect ${you(n).int} — no draw.`);
+    /* (f) CR 4.4.3f — the turn-player draws up to intellect.
+
+       THE RESHUFFLE IS SEAT 1'S ONLY, AND IT IS A TRAINING AFFORDANCE.
+       "A sparring partner that decked out would stop sparring" — true of
+       the prop, false of a hero, so it is gated on `_dummy` and logged.
+       SEEDED, because the recycle decides every card the opponent draws
+       for the rest of the game and an unseeded shuffle there breaks
+       replay exactly when the game gets interesting. */
+    let need = Math.max(0, act(n).int - act(n).hand.length);
+    if(need > 0 && act(n).deck.length < need && (act(n).grave||[]).length && bOf(si)._dummy){
+      const _gs = rngShuffle(n.rng, act(n).grave); n.rng = _gs.rng;
+      const rc = actMut(n); rc.deck = [...act(n).deck, ..._gs.arr]; rc.grave = [];
+      n = L(n, "The dummy gathers its spent cards and shuffles them back — it never tires.");
+    }
+    const drawn = act(n).deck.slice(0,need);
+    actMut(n).hand=[...act(n).hand,...drawn]; actMut(n).deck=act(n).deck.slice(need);
+    n = L(n, drawn.length ? `(f) ${_me()} draw${_you()?"":"s"} ${drawn.length} back up to intellect ${act(n).int}.`
+                          : `(f) Hand is already at intellect ${act(n).int} — no draw.`);
     /* RULING (Knucklehead): the rolled intellect governs THIS draw, then the
        lingering macro clears — restore the printed value once cards are in. */
-    if(you(n).intWas!=null){ n = L(n, `Intellect settles back to ${you(n).intWas}.`); youMut(n).int = you(n).intWas; youMut(n).intWas = null; }
+    if(act(n).intWas!=null){ n = L(n, `Intellect settles back to ${act(n).intWas}.`); actMut(n).int = act(n).intWas; actMut(n).intWas = null; }
     n.lastRoll = null; n.revealed = null;
-    if(drawn.length<need && you(n).hand.length===0){ n.over={win:false}; return L(n,`Deck empty — fatigued. ${foe(n).name} wins by attrition.`); }
-    if(you(n).rot>0){ oppMut(n).hp-=you(n).rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:you(n).rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=you(n).rot; n=L(n,`Bloodrot ticks ${opp(n).name} for ${you(n).rot}.`); n=winCheck(n); if(n.over) return n; }
-    return foeSwing(n);
+
+    /* CR 4.4.3f, second sentence — "If it is the first turn of the game,
+       ALL OTHER PLAYERS draw cards until the number of cards in their
+       hand is equal to their hero's intellect." This is what pays the
+       second player back for blocking the opening swing. It used to live
+       in finishBlock's `_opening` branch, which could only ever say it
+       for seat 0; asked of whichever seat is NOT ending, it covers both
+       seatings with one rule. */
+    const firstTurn = si===0 ? n.turn===1 : !!n._opening;
+    if(firstTurn){
+      const oNeed = Math.max(0, foe(n).int - foe(n).hand.length);
+      if(oNeed > 0){
+        const os = foeMut(n); const take = foe(n).deck.slice(0,oNeed);
+        os.hand = [...foe(n).hand, ...take]; os.deck = foe(n).deck.slice(take.length);
+        if(take.length) n = L(n, `${foe(n).name} draws back up to ${foe(n).int} — first turn of the game (CR 4.4.3f).`);
+      }
+    }
+
+    /* THE INVENTED FATIGUE LOSS IS SEAT 0'S, deliberately (CR 4.5.3 lists
+       three ways to lose and this is not one of them). Left alone rather
+       than generalised: seat 1 reshuffles above, so changing it is a
+       decision about solo play, not a rules fix. */
+    if(si===0 && drawn.length<need && act(n).hand.length===0){
+      n.over={win:false}; return {...L(n,`Deck empty — fatigued. ${foe(n).name} wins by attrition.`), actor:_prevActor};
+    }
+    if(act(n).rot>0){ foeMut(n).hp-=act(n).rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:act(n).rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=act(n).rot; n=L(n,`Bloodrot ticks ${foe(n).name} for ${act(n).rot}.`); n=winCheck(n); if(n.over) return {...n, actor:_prevActor}; }
+    return {...n, actor:_prevActor};
+  }
+  /* The player's end phase continues here after the arsenal choice, then
+     hands the turn to seat 1. */
+  function afterArsenal(s){
+    const n = endPhaseCF(s, 0);
+    return n.over ? n : foeBegin(n);
   }
   /* The dummy's swing, split out of afterArsenal so the opponent-goes-first
      opening can take the same path. This is also the seam a real card slots
@@ -3428,47 +3533,101 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     n.incoming = Math.max(0, power - you(n).fra);
     if(you(n).fra>0){ n=L(n,`Frailty saps the swing: ${power} → ${n.incoming}.`); youMut(n).fra=0; }
     oppMut(n).grave = [...gy(n.turn, card), ...opp(n).grave];
-    n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:n.incoming,ga:false,kind:"foe"}];
+    /* THE ACTION POINT IS AN ACTION'S COST, AND GO AGAIN IS A GAIN (CR
+       8.1.1 / 5.3.5) — the same arithmetic `execute` spells out for you,
+       and for the same reason: `ga ? keep : -1` cannot say "+1" and this
+       is what lets seat 1 chain a second link off a go again attack
+       instead of getting exactly one swing a turn forever. `hasKwNow`
+       rather than raw text, so a conditionally-granted go again does not
+       hand it a free action it has not earned. */
+    const _fga = hasKwNow(card, "go again");
+    oppMut(n).ap = opp(n).ap - 1 + (_fga ? 1 : 0);
+    n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:n.incoming,ga:_fga,kind:"foe"}];
     n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — ${opp(n).name.toUpperCase()} ATTACKS`};
     n.mode="block"; n.bphase="defend"; youMut(n).blockH=[]; youMut(n).blockG=[]; youMut(n).blockRx=[];
-    return L(n, `${opp(n).name} plays ${card.name} — ${n.incoming} power.`
+    return L(n, `${opp(n).name} plays ${card.name} — ${n.incoming} power${_fga?", and it goes again":""}.`
       + ` Priority to you — reactions, blocks, or take it.`);
   }
-  function foeSwing(s){
-    /* a real hero plays a real card; the vanilla dummy keeps the scripted
-       escalation, because its whole job is to be the one deck where nothing
-       can be faked and the [3,4,5] curve is what the difficulty is tuned to */
-    if(oppH){
-      const pick = foePick(s);
-      if(pick) return foePlay(s, pick);
-      /* NOTHING IT CAN PAY FOR — AND THE TURN STILL HAS TO END (v2.65).
-         `newTurn` is the ONLY site that refills seat 1's hand, ticks the
-         clock, closes the chain and issues your action point. Handing back
-         a bare `mode:"act"` stranded the game outright: seat 1's hand only
-         refills in `newTurn`, and `foePick` needs a hand to pick from — so
-         once this branch fired it could never un-fire. The turn counter
-         froze, the action point never came back, and END TURN reproduced
-         the identical position forever.
-
-         Found in play, and it could only be found there: a control-flow
-         dead end is not an illegal STATE, so `invariants.js` cannot see it
-         by construction and `__dawnJudge` stayed empty throughout. It is
-         also not Kayo-specific — every real hero in seat 1 takes this
-         branch, the vanilla dummy never does (`oppH` is null, so the
-         escalation always attacks and always reaches `newTurn`). */
-      let q = L(s, `${opp(s).name} has nothing it can pay for — the turn passes back to you.`);
-      /* The opponent-goes-first opening never reaches `takeIt`, which is
-         where `_opening` is consumed — so clear it here or the NEXT swing
-         would take the opening branch and skip a real turn tick. Ticking
-         now would instead tax a point of score for going second, exactly
-         as `takeIt`'s opening branch explains. No CR 4.4.3f refill is owed
-         on this path: with no swing to block, the player has spent
-         nothing and is still at intellect. */
-      if(q._opening) return {...q, _opening:false, mode:"act", chain:[],
-        chainOpen:false, featured:null, boostChain:0};
-      return newTurn(q);
-    }
+  /* PITCH ON DEMAND, AT INSTANT SPEED. Pitching is never proactive (ruling,
+     2026-08-01): the pool is filled only when something costs more than you
+     hold. On your own turn `mode:"pay"` asks with a sheet; in an instant
+     window there is no room to pause for one, so the lowest advisor-valued
+     cards go first — the rule auto-pitch has always followed for the
+     arsenal instant, stated once here instead of twice. Returns null when
+     the cost cannot be reached, so the caller refuses rather than half-
+     pitching a card away for nothing. */
+  function autoPitch(s, cost, keepUid){
     let n = {...s};
+    const spendable = () => act(n).hand.filter(h=>h.uid!==keepUid);
+    while(act(n).res < cost && spendable().length){
+      const pool = spendable();
+      const p = pool.map(h=>({h,v:advValue(h,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v || a.h.uid-b.h.uid)[0].h;
+      actMut(n).res += (p.pitch||0);
+      actMut(n).pitch = [...act(n).pitch, p];
+      actMut(n).hand = act(n).hand.filter(h=>h.uid!==p.uid);
+      n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+    }
+    return act(n).res < cost ? null : n;
+  }
+  /* Everything the player could reach in an instant-speed window, counting
+     what they could pitch for. Used BOTH to decide whether the window is
+     worth opening and to enable the cards in it, so the pause and the tap
+     can never disagree — the same reason buildPrompt returns null rather
+     than showing an empty sheet. */
+  const instantBank = s => you(s).res + you(s).hand.reduce((a,c)=>a+(c.pitch||0),0);
+  function foeTurnHasPlay(s){
+    const bank = instantBank(s);
+    const ars = you(s).arsenal;
+    if(ars && bAct(s).arsenalInstant && !isAttack(ars) && (ars.pitch||0)>=3
+       && (ars.cost||0) <= bank) return true;
+    return you(s).hand.some(c => isInstantT(c.tt||"") && fxParse(c).ops.length>0
+       && (c.cost||0) <= bank - (c.pitch||0));
+  }
+  /* ---- SEAT 1'S TURN (v2.71) --------------------------------------------
+     It used to be one fabricated swing between two of your turns. It is now
+     a turn: a start phase, an action phase with an action point it spends,
+     a window in which YOU hold priority, and an end phase that runs the
+     same CR 4.4.3 procedure yours does.
+
+     That is not tidiness. "During an opponent's turn", Frostbite's tax,
+     Inertia and Freeze were all filed `noop` in parser.js with the same
+     justification written out — the dummy has no action phase, the dummy
+     pays no costs — and those are statements about the prop, not about the
+     rules. This is the phase they were waiting for. */
+  function foeBegin(s){
+    if(s.over) return s;
+    let n = L({...s}, `— ${opp(s).name}'s turn. Start phase (CR 4.2) — no priority. —`);
+    /* `hist` is per-turn and per-seat: without this, "…this turn" read
+       seat 1's PREVIOUS turn all the way through its current one — CR
+       4.4.4's clearing, which the CR review found missing for the
+       incoming seat. */
+    oppMut(n).hist = freshHist();
+    oppMut(n).board = (opp(n).board||[]).map(b=>({...b, spent:false}));
+    /* CR 4.3.2 — the action point is issued at the beginning of the action
+       phase, for whoever's phase it is. */
+    oppMut(n).ap = 1;
+    n = L(n, `— ${opp(n).name}'s action phase (CR 4.3) — 1 action point, priority theirs. —`);
+    return foeStep(n);
+  }
+  /* One seat-1 action, or the hand-over. Called again after every attack
+     resolves, which is what lets go again chain a second link the way it
+     does for you — the escalation could only ever swing once. */
+  function foeStep(s){
+    if(s.over) return s;
+    if(opp(s).ap <= 0) return foeWindowOrEnd(s, "no action points left");
+    if(!oppH) return foeVanilla(s);
+    const pick = foePick(s);
+    if(!pick) return foeWindowOrEnd(s, "nothing it can pay for");
+    return foePlay(s, pick);
+  }
+  /* THE VANILLA DUMMY KEEPS THE SCRIPTED ESCALATION — its whole job is to
+     be the one deck where nothing can be faked, and the [3,4,5] curve is
+     what the difficulty is tuned to. It spends the action point like any
+     other play, which is what stops it swinging twice now that foeStep
+     runs again after the chain closes. */
+  function foeVanilla(s){
+    let n = {...s};
+    oppMut(n).ap = opp(n).ap - 1;
     const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
     n.incoming = Math.max(0, base - you(n).fra);
     if(you(n).fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); youMut(n).fra=0; }
@@ -3479,10 +3638,53 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        card played from a hand — it is the [3,4,5] escalation, and with a
        real hero sitting in seat 1 the difference is no longer obvious from
        the screen. "In a training sim the sequence IS the lesson", and a
-       swing that comes from nowhere should say so out loud until Phase 2
-       replaces it with a real played card. */
+       swing that comes from nowhere should say so out loud. */
     return L(n, `${opp(n).name} swings for ${n.incoming} — scripted escalation, not a card from hand.`
       + ` Priority to you — reactions, blocks, or take it.`);
+  }
+  /* CR 4.3.4 — the action phase ends when the stack is empty and both
+     players pass IN SUCCESSION. Seat 1 has passed, so the window is yours
+     before the phase can end. A WINDOW WITH NOTHING IN IT IS A DEAD BUTTON,
+     so it skips itself rather than asking you to tap past an empty screen
+     every turn — the same rule buildPrompt follows for an empty spec. */
+  function foeWindowOrEnd(s, why){
+    let n = L({...s}, `${opp(s).name} passes — ${why}.`);
+    if(!foeTurnHasPlay(n)) return foeEnd(n);
+    return L({...n, mode:"foeturn", bphase:null},
+      `Your window (CR 4.3.4) — instants only. Pass to let ${opp(n).name} end their turn.`);
+  }
+  function foeEnd(s){
+    if(s.over) return s;
+    let n = L({...s, mode:"act"}, `— ${opp(s).name}'s end phase (CR 4.4). No priority. —`);
+    /* (a) CR 4.4.3a — ally life resets. Already runs over BOTH seats. */
+    n = endPhaseAllies(n);
+    /* (b) CR 4.4.3b — the arsenal set. Yours pauses for a choice; seat 1's
+       is a policy, and a deliberately plain one per the standing decision
+       that this is not an AI: the fattest attack it is holding, so that
+       "freeze a card in their arsenal" and "an opponent's arsenal" have a
+       real card to reach for. `arsFree` rather than a hardcoded 1 — the
+       two wordings differ the moment a second slot exists. */
+    if(arsFree(opp(n)) > 0 && opp(n).hand.length){
+      const set = opp(n).hand.slice().sort((a,b)=>(b.power||0)-(a.power||0) || a.uid-b.uid)[0];
+      const os = oppMut(n);
+      os.arsenal = set; os.hand = opp(n).hand.filter(c=>c.uid!==set.uid);
+      n = L(n, `(b) ${opp(n).name} sets a card face down in arsenal.`);
+    } else n = L(n, `(b) ${opp(n).name} sets nothing in arsenal.`);
+    /* (c)-(f), the same procedure yours runs. */
+    n = endPhaseCF(n, 1);
+    if(n.over) return n;
+    /* The opponent-goes-first opening: that turn happened BEFORE your first
+       action phase, so the clock has not started. Hand over without ticking
+       it, or going second would silently cost a point of score (score is
+       turns + wasted) and skew the escalation table. CR 4.4.3f's first-turn
+       refill for you already happened inside endPhaseCF. */
+    if(n._opening){
+      let o = {...n, _opening:false, mode:"act", chain:[],
+        chainOpen:false, featured:null, boostChain:0};
+      const os = oppMut(o); os.blockedHand = 0; os.chainBlocked = [];
+      return L(o, "— Turn 1. The floor is yours.");
+    }
+    return newTurn(n);
   }
   const toggleBlock = (kind,v) => setG(s=>{
     if(s.mode!=="block" || s.bphase!=="defend") return s;
@@ -3549,32 +3751,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
     if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
-    /* Opponent-goes-first opening: that swing happened BEFORE your first
-       action phase, so the clock has not started. Hand the turn over
-       without ticking it, or going second would silently cost a point of
-       score (score is turns + wasted) and skew the escalation table. */
-    if(n._opening){
-      let o = {...n, _opening:false, mode:"act", chain:[], chainOpen:false,
-        featured:null, boostChain:0};
-      const os = foeMut(o); os.blockedHand = 0; os.chainBlocked = [];
-      /* CR 4.4.3f — "If it is the first turn of the game, ALL OTHER PLAYERS
-         draw cards until the number of cards in their hand is equal to their
-         hero's intellect." On turn one only, the non-turn player refills too.
-         That is precisely what pays you back for blocking the opening swing,
-         and it was missing: going second cost an extra swing AND left you
-         short-handed for your first action phase, which is a large part of
-         why opponent-first played harder than it should. */
-      const need = Math.max(0, act(o).int - act(o).hand.length);
-      if(need > 0){
-        const ps = actMut(o);
-        const take = ps.deck.slice(0, need);
-        ps.hand = [...ps.hand, ...take];
-        ps.deck = ps.deck.slice(take.length);
-        if(take.length) o = L(o, `You draw back up to ${act(o).int} — first turn of the game (CR 4.4.3f).`);
-      }
-      return L(o, "— Turn 1. The floor is yours.");
-    }
-    return newTurn(n);
+    /* THE CHAIN LINK IS OVER, NOT THE TURN (v2.71). This used to go
+       straight to `newTurn`, which is what made seat 1's turn exactly one
+       attack long: go again could never chain a second link, and an
+       action point it had not spent simply evaporated. Control goes back
+       to seat 1's action phase, and `foeStep` is what decides whether
+       there is anything left to do — including the `_opening` handoff and
+       CR 4.4.3f's first-turn refill, which are now seat 1's end phase's
+       job rather than two special cases wired into the block path. */
+    return foeStep(n);
   };
   const takeIt = () => setG(s=>{
     if(s.mode!=="block") return s;
@@ -3673,44 +3858,18 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   });
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
-    /* THE OPPONENT REFILLS TO ITS OWN INTELLECT — the landmine
-       ROADMAP-OPPONENT.md Phase 1 names. `DUMMY_INT` was a constant the
-       trainer knew; intellect is a property of whoever is sitting in seat
-       1, and it is already on the side (makeSide carries it), so this
-       reads the seat rather than a global.
-
-       THIS IS STILL THE STAND-IN FOR THE TURN IT NEVER TAKES, and it is
-       the ONLY refill site — which is exactly what the roadmap's warning
-       is about. The moment seat 1 gets a real end phase (Phase 2) this
-       draw moves there and becomes turn-1-only for both seats, per CR
-       4.4.3f. Adding that one without removing this one draws twice. */
-    let oHand = opp(s).hand||[], oDeck = opp(s).deck||[], oGrave = opp(s).grave||[], recycled = false, fatigued = false;
-    /* SEEDED: the recycle shuffle decides every card the opponent draws for
-       the rest of the game, so it has to come from the game's own stream or
-       the game stops being replayable exactly when it gets interesting. */
-    let rng = s.rng;
-    const need = Math.max(0, opp(s).int - oHand.length);
-    if(need>0){
-      /* THE RECYCLE IS A DUMMY AFFORDANCE AND STAYS ONE. "A sparring
-         partner that decked out would stop sparring" — true of the
-         training prop, and false of a hero. A real opponent runs its deck
-         down and simply has fewer cards to block with; it does not yet
-         LOSE for it, because what decking out costs is a win condition
-         the player currently has no way to reach and the roadmap says to
-         decide that once, at Phase 2, rather than twice. Logged either
-         way, so neither approximation is silent. */
-      if(oDeck.length < need && oGrave.length && bOf(1)._dummy){
-        const _gs = rngShuffle(rng, oGrave); rng = _gs.rng;
-        oDeck = [...oDeck, ..._gs.arr]; oGrave = []; recycled = true;
-      }
-      if(oDeck.length < need) fatigued = true;
-      oHand = [...oHand, ...oDeck.slice(0,need)]; oDeck = oDeck.slice(need);
-    }
-    let n = {...s, rng};
+    /* THE STAND-IN REFILL IS GONE (v2.71), and its removal is the whole
+       point of seat 1 having an end phase. It used to top the opponent's
+       hand up here, every turn, to stand in for the turn it never took —
+       and ROADMAP-OPPONENT.md's warning was explicit that the moment seat
+       1 gets a real end phase this draw MOVES there and becomes
+       turn-1-only for both seats per CR 4.4.3f. It has moved: `foeEnd`
+       runs the same `endPhaseCF` your turn does, and (f) draws seat 1 to
+       its own intellect there. Adding that one without removing this one
+       draws twice — so this is the removal half. */
+    let n = {...s};
     youMut(n).dracNext = false;
     const oSide = oppMut(n); oSide.blockedHand = 0; oSide.chainBlocked = [];
-    const refilled = oppMut(n);
-    refilled.hand = oHand; refilled.deck = oDeck; refilled.grave = oGrave;
     /* auras scheduled to die at the top of your turn go now, and anything
        they were holding up (the arcane shield, the life lock) goes with them */
     const dying = (you(n).board||[]).filter(b=>b.sd==="turn");
@@ -3723,8 +3882,11 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       const stillLocked = you(n).board.some(b=>/can'?t gain \{h\}/i.test(b.card.tx||""));
       if(!stillLocked && you(n).lifeLock) youMut(n).lifeLock = false;
     }
-    if(recycled) n = L(n, "The dummy gathers its spent cards and shuffles them back — it never tires.");
-    if(fatigued) n = L(n, `${FoeName} is running dry — ${oDeck.length} left in deck, not enough for a full hand of ${opp(s).int}.`);
+    /* The recycle log moved with the recycle, into endPhaseCF's (f). What
+       stays is the running-dry notice, which is about the board you are
+       looking at now rather than about the draw that caused it. */
+    if(opp(n).deck.length < opp(n).int)
+      n = L(n, `${opp(n).name} is running dry — ${opp(n).deck.length} left in deck, short of a full hand of ${opp(n).int}.`);
     let fresh = {...n, turn:s.turn+1,
       chain:[], chainHist:hEntry, chainOpen:false, featured:null, boostChain:0, mode:"act"};
     const nt = youMut(fresh);
@@ -3780,7 +3942,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   uE(()=>{
     if(!foeFirst || openedRef.current) return;
     openedRef.current = true;
-    setG(s => foeSwing(s));
+    setG(s => foeBegin(s));
   },[]);
   uE(()=>{ if(g.over&&g.over.win) onRecord(h.k, g.over.score); },[g.over]);
   /* a peek is about one card in one window — drop it when either changes, so
@@ -3850,6 +4012,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       else if(c.def!=null && !fx.dr) toggleBlock("h",c.uid);
     }
     else if(g.mode==="stack") playRx(i);
+    else if(g.mode==="foeturn") playFoeTurnRx(i);
     else if(g.mode==="arsenal") pickArsenal(i);
     else tryPlay(c,"hand",i);
   };
@@ -3859,6 +4022,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     if(g.mode==="arsenal") return "tap again to set in arsenal";
     if(g.mode==="stack") return "tap again to react";
     if(g.mode==="block") return g.bphase==="react" ? "tap again to react" : "tap again to defend";
+    if(g.mode==="foeturn") return "tap again to play at instant speed";
     return "tap again to play";
   };
   /* Everything tappable peeks the same way — hand cards, iron, and the
@@ -3904,7 +4068,13 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     const rxA = rxAllowed(c, "attack-reaction");
     const canDefend = c.def!=null;
     const sel = g.mode==="pay" ? you(g).paySel.includes(i) : g.mode==="block" ? you(g).blockH.includes(c.uid) : false;
-    const dim = (g.mode==="block" && (g.bphase==="defend" ? (!(canDefend && !fx.dr) && !sel) : !rxD)) || (g.mode==="stack" && !rxA);
+    /* the foeturn dim asks exactly what playFoeTurnRx asks (CR 8.1.6 —
+       instants only, and one the engine can actually resolve), because a
+       card that looks playable and does nothing when tapped is the failure
+       mode this UI cares most about */
+    const rxF = isInstantT(c.tt||"") && fx.ops.length>0;
+    const dim = (g.mode==="block" && (g.bphase==="defend" ? (!(canDefend && !fx.dr) && !sel) : !rxD))
+             || (g.mode==="stack" && !rxA) || (g.mode==="foeturn" && !rxF);
     /* THE ABILITY IS ITS OWN CELL, and only while it can actually be
        activated. Agile Windup is both a playable attack action AND a
        discard-for-a-token instant, and both are legal in your own action
@@ -4160,7 +4330,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
                 }}/>
                 <div className="arscol">
                   <div className="slot clip-sm" style={{width:"100%"}}>{you(g).arsenal
-                    ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal):tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
+                    ? <button style={{padding:0,width:"100%"}} onClick={()=> g.mode==="foeturn" ? playArsenalInstant() : g.mode==="block" ? (g.bphase==="react"&&playRxA()) : g.inspect?setZoom(you(g).arsenal):tryPlay(you(g).arsenal,"arsenal",0)}><CardFrame card={you(g).arsenal} className="sm"/></button>
                     : "arsenal"}</div>
                   <span className="zlbl">Arsenal</span>
                 </div>
@@ -4198,6 +4368,12 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
             Pay {(g.defPayQueue||[])[0]?.cost||0}
           </button>
           <button className="a" onClick={()=>confirmDefPay(false)}>Decline</button>
+        </>) : g.mode==="foeturn" ? (<>
+          {/* NAME WHOSE WINDOW THIS IS. The board looks like your turn and
+              it is not — CR 4.3.4 gives you a window before their action
+              phase can end, and a bar that still said "End turn" would be
+              telling you the wrong thing about whose clock is running. */}
+          <button className="a go" onClick={foePassWindow}>Pass — let {opp(g).name.split(",")[0]} end</button>
         </>) : (<>
           <button className="a go" disabled={g.mode!=="act"||!!g.over} onClick={endTurn}>End turn</button>
         </>)}
@@ -4487,8 +4663,8 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay}){
                 + (netOnPlay ? "You are on the play — you take the first turn and spend a card of tempo for it."
                              : "You are on the draw — they swing first, and you keep the extra card.")
               : oppH
-              ? `${oppH.n.split(",")[0]} brings a real deck, real equipment and a real life total — and blocks with printed defence. It still takes no action phase, so its swing is the scripted escalation and the log says so every time.`
-              : "Real sideboarding shows you only the enemy hero. Their iron, their habits — you learn those in the pit."}</p>
+              ? `${oppH.n.split(",")[0]} brings a real deck, real equipment and a real life total — blocks with printed defence, and takes a real turn: an action point it spends, a card played from hand, and an end phase of its own. It attacks, so a turn where its hand holds only non-attacks is a turn it passes.`
+              : "The Dummy swings the scripted escalation rather than a card from hand — the one deck where nothing can be faked. Real sideboarding shows you only the enemy hero; their iron and their habits you learn in the pit."}</p>
           </div>
         </div>
         {/* ---- LOADOUT: live playmat preview + picks ---- */}

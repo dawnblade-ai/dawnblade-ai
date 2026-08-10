@@ -388,6 +388,22 @@ function fromTrainer(t, foeFirst){
     return t.bphase === "react" ? pass(toReaction(p)) : p;
   }
 
+  /* THE OPPONENT'S ACTION PHASE, WITH THE WINDOW HANDED OVER (v2.71).
+     Seat 1 has taken its actions and passed. CR 4.3.4 ends the action
+     phase only when the stack is empty and players pass IN SUCCESSION —
+     so the non-turn player holds a window before the phase can end, and
+     until now the trainer had none: the only window on the opponent's
+     turn was the reaction step of an incoming swing, which is a window
+     that exists only if they attack.
+
+     `turnPlayer` is 1 and the pass slides priority to you, so
+     `speedAllowed` falls through to instants only. That is exactly the
+     window Iyslander's arsenal clause, Spellfire Cloak's "activate only
+     during an opponent's turn" and Emeritus Scolding's opponent-turn
+     branch are printed for. */
+  if(t.mode === "foeturn")
+    return pass(toPhase({...p, turnPlayer:1}, "action"));
+
   p = toPhase({...p, turnPlayer:0}, "action");
   if(t.mode === "stack"){
     /* You attacked, the dummy has declared its defenders, and this is

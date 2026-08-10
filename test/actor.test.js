@@ -60,13 +60,24 @@ const ANCHORS = [
   ["tryPlay",      "  const tryPlay = (card,from,idx) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],
-  /* foePick/foePlay (v2.63) are the opponent's action phase. They are
-     seat-1-specific in the trainer for the same reason foeSwing is — the
-     block path reads act(s).blockH, so the actor stays 0 for the swing and
-     is borrowed only around the card's own effects — and they are anchored
-     so they are not silently swallowed into allySwing's slice. */
+  /* THE END PHASE IS A RULES FUNCTION AND IT IS MIGRATED (v2.71). It runs
+     CR 4.4.3 (c)-(f) for WHICHEVER seat is ending, so it is actor-relative
+     throughout and `foeEnd` drives it with the actor borrowed to seat 1.
+     It is anchored before afterArsenal, which is now a two-line caller. */
+  ["endPhaseCF",   "  function endPhaseCF(s, si){"],
+  /* foePick/foePlay (v2.63) and the seat-1 turn machinery (v2.71) are the
+     opponent's turn. They stay seat-1-specific for the reason foeSwing did
+     — the block path reads act(s).blockH, so the actor stays 0 for the
+     swing and is borrowed only around the card's own effects — and each is
+     anchored so its body is not silently swallowed by a neighbour's slice.
+     `foeSwing` itself is GONE: v2.71 decomposed it into a start, a step, a
+     window and an end phase, and an anchor left pointing at a declaration
+     that no longer exists throws rather than passing by finding nothing. */
   ["foePick",      "  function foePick(n){"],
-  ["foeSwing",     "  function foeSwing(s){"],
+  ["foeBegin",     "  function foeBegin(s){"],
+  ["foeStep",      "  function foeStep(s){"],
+  ["foeVanilla",   "  function foeVanilla(s){"],
+  ["foeEnd",       "  function foeEnd(s){"],
   /* finishBlock/confirmDefPay (v2.39) are new, not in RULES_FNS — the
      ledger covers exactly the seven the roadmap names, deliberately not
      grown here — but they still need their own anchors or their bodies
@@ -110,19 +121,26 @@ function bodyOf(name){
    foeSwing — the entire rules core"). All seven resolve game effects and so
    must speak in ACTOR terms. Keeping the denominator honest matters: a
    ledger that quietly omits two functions makes the remaining work look
-   smaller than it is. */
+   smaller than it is.
+
+   `foeSwing` left the file in v2.71 and `endPhaseCF` takes its place in
+   this list rather than the count quietly dropping to six. That is the
+   honest substitution: half of what foeSwing did was "end seat 1's turn",
+   and that half is now a real, shared, actor-relative rules function. The
+   other half — the scripted escalation — is `foeVanilla`, which is seat-1
+   specific by construction and is anchored above rather than counted here,
+   exactly as foePick/foePlay are. */
 const RULES_FNS = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt",
-                   "newTurn", "foeSwing"];
+                   "newTurn", "endPhaseCF"];
 
 /* Migrated to act()/foe(). Add a name here ONLY together with its edit. */
-const MIGRATED = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt"];
-/* Still on perspective helpers — the remaining Phase A step-1 work.
-   Both are entangled with the DUMMY specifically rather than with a generic
-   opponent (`foeSwing` is the scripted [3,4,5] escalation; `newTurn` refills
-   the dummy to DUMMY_INT every turn to stand in for the turn it never
-   takes). Migrating them is best done together with giving seat 1 a real
-   action phase, which is what replaces both behaviours. */
-const PENDING  = ["newTurn", "foeSwing"];
+const MIGRATED = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt",
+                  "endPhaseCF"];
+/* Still on perspective helpers — the last of the Phase A step-1 work.
+   `newTurn` is the player's turn setup and reads `you` throughout; it is
+   the natural pair to giving seat 1 a start phase of its own, which
+   `foeBegin` now has and this does not yet share. */
+const PENDING  = ["newTurn"];
 
 const PERSPECTIVE = /\b(you|opp|youMut|oppMut)\(/g;
 const hits = s => (s.match(PERSPECTIVE) || []);
