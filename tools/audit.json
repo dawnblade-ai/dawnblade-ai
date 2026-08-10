@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-09T22:05:37.081Z",
- "appVer": "2.66",
+ "generated": "2026-08-10T12:18:31.888Z",
+ "appVer": "2.67",
  "dataVer": "sage-v11",
  "dbCount": 4862,
  "poolUnique": 405,
  "tiers": {
-  "full": 305,
-  "part": 78,
+  "full": 306,
+  "part": 77,
   "none": 22
  },
  "heroes": {
@@ -6519,7 +6519,7 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -6529,17 +6529,14 @@
     },
     {
      "t": "The second time this hits each turn, put a +1{p} counter on it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "At the beginning of your end phase, if this hasn't hit this turn, remove all +1{p} counters from it.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "The second time this hits each turn, put a +1{p} counter on it.",
-    "At the beginning of your end phase, if this hasn't hit this turn, remove all +1{p} counters from it."
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 1,
     "addRust": false,

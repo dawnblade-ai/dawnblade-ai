@@ -726,8 +726,15 @@ function makeEffects(ctx){
         else { payPenalty = -penAmt; n = L(n, `${card.name}: can't pay ${cost} — takes -${penAmt}{p}.`); }
       }
       const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty;
-      const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0);
+      /* +1{p} COUNTERS ARE PART OF THE WEAPON'S POWER, not a bonus on the
+         swing. They sit on the piece and travel between turns, so a
+         counter-bearing blade is simply a bigger weapon — which is what
+         makes "base {p}" checks elsewhere read it too. Counters only ever
+         land on a permanent, so this is asked of the weapon route alone. */
+      const powCtr = from==="weapon" ? ((act(n).counters[card.uid]||{}).pow||0) : 0;
+      const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0) + powCtr;
       let total = base + bonus;
+      if(powCtr) n = L(n, `${card.name} carries +${powCtr}{p} in counters — it swings at ${base}.`);
       /* a qualified buff that did NOT match is not spent — it waits for an
          attack it actually applies to */
       actMut(n).buffNext = 0; actMut(n).buffQ = qKept; delete n._condSelf;
@@ -1088,6 +1095,30 @@ function makeEffects(ctx){
       });
     }
     if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }
+    /* ---- A WEAPON THAT HITS EARNS ITS COUNTERS -----------------------
+       "The second time this hits each turn, put a +1{p} counter on it."
+
+       The per-turn hit tally lives on `hist`, keyed by the piece's uid,
+       for one reason: CR 4.4.4 already clears `hist` at the turn
+       boundary, so "each turn" needs no reset site of its own. Put on
+       `counters` beside the rust it would then never be cleared, and the
+       blade would reach its second hit once and count every swing after
+       that as a second one.
+
+       The counters themselves DO live on `counters[uid].pow`, because
+       they persist across turns by ruling — see the end-phase wipe in
+       `endTurn`, which is the only thing that removes them. */
+    if(total>0 && n.pend.from==="weapon"){
+      const hits = ((act(n).hist.wpnHits||{})[pc.uid]||0) + 1;
+      actMut(n).hist = {...act(n).hist, wpnHits:{...(act(n).hist.wpnHits||{}), [pc.uid]:hits}};
+      const hc = fxParse(pc).hitCounter;
+      if(hc && hits === hc.nth){
+        const cur = act(n).counters[pc.uid]||{};
+        const now = (cur.pow||0) + hc.amt;
+        actMut(n).counters = {...act(n).counters, [pc.uid]:{...cur, pow:now}};
+        n = L(n, `${pc.name} connects again — a +${hc.amt}{p} counter is forged onto it (now +${now}{p}, and it keeps them while it keeps hitting).`);
+      }
+    }
     /* ---- A WEAPON THAT HITS MAY SWING AGAIN (Dorinthea) --------------
        "Once per turn Effect - When a weapon you control hits, you may
        attack an additional time with that weapon this turn."

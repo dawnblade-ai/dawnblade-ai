@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.68 — the blade remembers
+
+**The Dawnblade earns its own counters.** The project's namesake card sat at
+tier `part` with both of its real clauses unread:
+
+> The second time this hits each turn, put a +1{p} counter on it.
+> At the beginning of your end phase, if this hasn't hit this turn, remove
+> all +1{p} counters from it.
+
+**RULING (user, 2026-08-09): the counters PERSIST and accumulate across
+turns.** The removal clause only makes sense under that reading — it exists
+precisely to punish a turn where the blade never connected. So the blade
+grows while you keep hitting with it and falls back to printed the first turn
+you do not. Driven end to end: it swings at 3, then 4, then 5.
+
+Two swings is also exactly what the hero ability allows in a turn, which is
+why the card rewards its **second** hit and not its third. That is the
+design, and it is why the **ordinal is read off the clause** rather than
+assumed — a fixture printing "the third time" reads as three.
+
+Both clauses are **schedules, not on-play effects**, so `fxParse` hoists them
+out of `fx.ops`. Left there, `runOps` would hand over the counter the moment
+the weapon was activated, before it had hit anything.
+
+The per-turn hit tally rides on `hist`, keyed by uid, for one reason: CR
+4.4.4 already clears `hist` at the turn boundary, so "each turn" needs no
+reset site of its own. Put beside the rust on `counters` it would never be
+cleared, and every swing after the second would count as a second one. The
+counters themselves *do* live on `counters`, because they outlive the turn.
+
+The gear tile shows them in gold, distinct from steam and rust: a permanent
+gain reads differently from a status.
+
+### A drill that proved nothing, and the tell
+
+The end-phase wipe lived inside `endTurn`, a Battle closure, so the only way
+to check it was to grep the trainer's source for `hist.wpnHits` — **and that
+string was sitting in the comment above the gate.** Replacing the whole
+condition with `if(false)` left the drill green.
+
+A grep satisfied by prose is a false **pass**, which is worse than no drill:
+v2.66 hit the mirror image of this when a comment containing an example of a
+bug tripped a scan that was working correctly. So the decision moved into
+`parser.idleCounterWipes`, pure and driven with real gear, and the four
+drills over it bite on the gate, on the printed-text read, and on the caller.
+
+**Sabotage must be verified to have changed the file.** Two of this cycle's
+sabotages silently matched nothing — one a `==` for a `===`, one a note that
+did not match the note in the file — and a sabotage that edits nothing looks
+exactly like a drill that does not bite.
+
+**11 new drills.** Dorinthea's deck: **29 full / 4 part / 0 unreadable.**
+
+---
+
 ## v2.67 — the blade swings twice
 
 **Dorinthea's hero ability, built.** It read as **zero of one clause** — the

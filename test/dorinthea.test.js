@@ -250,7 +250,10 @@ function ctx(build){
     act: s => s.sides[s.actor||0],
     actMut: n => { n.sides = n.sides.slice(); const i = n.actor||0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     actorOf: s => s.actor||0, bAct: () => build, bFoe: () => build,
-    built: build, db: DB(), dummyDefence: s => s,
+    /* `execute` destructures this as `{n, note}` — a stub returning the
+       bare state makes it read `undefined.log` and die. The Kayo ctx has
+       the short version because those drills only ever drive `runOps`. */
+    built: build, db: DB(), dummyDefence: s => ({n: s, note: "No defenders."}),
     foe: s => s.sides[1-(s.actor||0)],
     foeMut: n => { n.sides = n.sides.slice(); const i = 1-(n.actor||0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     gy: (t, ...cs) => cs.map(c => ({...c, _gy:t})),
@@ -397,4 +400,169 @@ test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
   };
   for(const k of ["kayo", "dorinthea"])
     assert.deepStrictEqual(uncovered(k), [], k + " is a finished hero — every clause must be recognized");
+});
+
+/* ============================================================
+   THE DAWNBLADE — the counters it earns for itself.
+
+     "The second time this hits each turn, put a +1{p} counter on it."
+     "At the beginning of your end phase, if this hasn't hit this turn,
+      remove all +1{p} counters from it."
+
+   Both clauses read `skip` before v2.68, which held the project's
+   NAMESAKE CARD at tier `part`.
+
+   RULING (user, 2026-08-09): the counters PERSIST and accumulate across
+   turns. The removal clause only makes sense under that reading — it is
+   there precisely to punish a turn where the blade never connected. So
+   the blade grows while you keep hitting and falls back to printed the
+   first turn you do not.
+
+   Two swings is also exactly what the hero ability allows in a turn,
+   which is why the blade rewards its SECOND hit and not its third. That
+   is the card's design and the reason the ordinal is read off the text
+   rather than assumed.
+   ============================================================ */
+
+test("the Dawnblade's two schedules are read off its own printed text", {skip}, () => {
+  const blade = bladeOf(buildOf("dorinthea"));
+  const fx = P.fxParse(blade);
+  assert.deepStrictEqual(fx.hitCounter, {nth: 2, amt: 1},
+    "the ordinal and the magnitude both come from the clause, never assumed");
+  assert.strictEqual(fx.wipePowIfIdle, true);
+});
+
+test("the ordinal is READ, not hardcoded to 'second'", {skip}, () => {
+  /* a card printing a different occurrence must read as that occurrence,
+     or the number in the engine is invented card text */
+  const third = P.fxParse(mk("The third time this hits each turn, put a +2{p} counter on it.",
+    {tt: "Warrior Weapon - Sword (2H)", power: 3, name: "OrdinalProbe"}));
+  assert.deepStrictEqual(third.hitCounter, {nth: 3, amt: 2});
+});
+
+test("the schedules are NOT on-play ops — runOps must never see them", {skip}, () => {
+  /* THE GATE. Left in fx.ops these run at declaration, so the weapon
+     collects the counter the moment it is activated, before it has hit
+     anything at all — and the end-phase wipe would fire on activation too. */
+  const fx = P.fxParse(bladeOf(buildOf("dorinthea")));
+  const kinds = (fx.ops || []).map(o => o[0]);
+  assert.ok(!kinds.includes("hitCounter"), "a hit schedule is not an on-play effect");
+  assert.ok(!kinds.includes("wipePowIfIdle"), "nor is an end-phase schedule");
+});
+
+test("the SECOND hit each turn earns the counter — not the first, not the third", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const pow = g => (g.sides[0].counters[blade.uid] || {}).pow || 0;
+  const hit = g => resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
+    pend: {card: blade, from: "weapon", total: 3, ga: false, ops: [], onHit: [],
+           condOnHit: [], lateConds: [], lateOps: []}}));
+  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
+           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
+  g = hit(g); assert.strictEqual(pow(g), 0, "one hit earns nothing");
+  g = hit(g); assert.strictEqual(pow(g), 1, "the second earns exactly one counter");
+  g = hit(g); assert.strictEqual(pow(g), 1, "and a third earns no more — it says 'the SECOND time'");
+});
+
+test("counters PERSIST across turns and accumulate", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  const pow = g => (g.sides[0].counters[blade.uid] || {}).pow || 0;
+  const hit = g => resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
+    pend: {card: blade, from: "weapon", total: 3, ga: false, ops: [], onHit: [],
+           condOnHit: [], lateConds: [], lateOps: []}}));
+  /* CR 4.4.4 replaces `hist` at the turn boundary, which is exactly why the
+     per-turn hit TALLY lives there and the counters do not */
+  const nextTurn = (g, t) => ({...g, turn: t,
+    sides: g.sides.map((s, i) => i ? s : {...s, hist: S.freshHist(), weaponUsed: {}})});
+  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
+           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
+  g = hit(hit(g));           assert.strictEqual(pow(g), 1);
+  g = hit(hit(nextTurn(g, 3))); assert.strictEqual(pow(g), 2, "the turn boundary must not wipe them");
+  g = hit(hit(nextTurn(g, 4))); assert.strictEqual(pow(g), 3);
+  assert.strictEqual(g.sides[0].hist.wpnHits[blade.uid], 2,
+    "and the per-turn tally restarts each turn, or every later swing counts as a second one");
+});
+
+test("a swing blocked to nothing is not a hit and earns nothing", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {resolveStack} = E.makeEffects(ctx(b));
+  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
+           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
+  for(let i = 0; i < 3; i++)
+    g = resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
+      pend: {card: blade, from: "weapon", total: 0, ga: false, ops: [], onHit: [],
+             condOnHit: [], lateConds: [], lateOps: []}}));
+  assert.strictEqual((g.sides[0].counters[blade.uid] || {}).pow || 0, 0);
+  assert.deepStrictEqual(g.sides[0].hist.wpnHits || {}, {},
+    "three walled swings are three non-hits");
+});
+
+test("the swing actually READS the counters — otherwise they are decoration", {skip}, () => {
+  /* driven through `execute`, because that is where a weapon's power is
+     struck. Asserting the counter exists proves nothing about the damage. */
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {execute} = E.makeEffects(ctx(b));
+  for(const n of [0, 1, 2, 3]){
+    const g = {sides: [seat({counters: n ? {[blade.uid]: {pow: n}} : {}}), seat()],
+               actor: 0, turn: 2, mode: "act", log: [], feed: [], chain: [], stack: [],
+               hitSeq: 0, rng: RNG.make("r"), boostChain: 0};
+    assert.strictEqual(execute(g, blade, "weapon", 0).pend.total, (blade.power || 0) + n,
+      `+${n} in counters must reach the chain`);
+  }
+});
+
+test("a card played from HAND does not read a permanent's counters", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const {execute} = E.makeEffects(ctx(b));
+  const c = b.deck.find(x => x.name === "Wreck Havoc");
+  const g = {sides: [seat({hand: [c], counters: {[c.uid]: {pow: 3}}}), seat()],
+             actor: 0, turn: 2, mode: "act", log: [], feed: [], chain: [], stack: [],
+             hitSeq: 0, rng: RNG.make("r"), boostChain: 0};
+  assert.strictEqual(execute(g, c, "hand", 0).pend.total, c.power || 0,
+    "counters belong to a permanent in the arena, not to a card passing through");
+});
+
+/* ---- THE END-PHASE WIPE ----------------------------------------------
+   THIS DRILL WAS WRITTEN AS A SOURCE GREP FIRST, AND IT PROVED NOTHING.
+   The wipe lived inside `endTurn`, a Battle closure, so the only way to
+   check it was to read the trainer's text for `hist.wpnHits` — and that
+   string was sitting in the COMMENT above the gate. Replacing the gate
+   with `if(false)` left the drill green. A grep satisfied by prose is a
+   false PASS, which is worse than having no drill.
+
+   So the decision moved into `parser.idleCounterWipes`, where it can be
+   driven with real gear and real counters. */
+
+test("only a piece that did NOT hit loses its counters", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const gear = b.gear, ctr = {[blade.uid]: {pow: 2}};
+  assert.deepStrictEqual(P.idleCounterWipes(gear, ctr, {}), [blade.uid],
+    "no hits at all this turn — the counters fall away");
+  assert.deepStrictEqual(P.idleCounterWipes(gear, ctr, {[blade.uid]: 1}), [],
+    "ONE hit is enough to keep them: the clause asks whether it hit, not whether it hit twice");
+  assert.deepStrictEqual(P.idleCounterWipes(gear, ctr, {[blade.uid]: 2}), []);
+});
+
+test("a piece holding no counters is never listed", {skip}, () => {
+  const b = buildOf("dorinthea");
+  assert.deepStrictEqual(P.idleCounterWipes(b.gear, {}, {}), [],
+    "nothing to remove is not the same as something to remove");
+});
+
+test("the schedule is read off each piece's OWN text, never a card name", {skip}, () => {
+  /* every other piece of Dorinthea's iron sat through the same end phase
+     with counters on it and must be untouched — the Dawnblade is the only
+     one printing the clause */
+  const b = buildOf("dorinthea");
+  const ctr = {};
+  b.gear.forEach(g => { ctr[g.uid] = {pow: 2}; });
+  assert.deepStrictEqual(P.idleCounterWipes(b.gear, ctr, {}),
+    [bladeOf(b).uid],
+    "only the piece whose printed text carries the schedule loses anything");
+});
+
+test("the trainer drives the shared decision rather than its own copy", {skip}, () => {
+  assert.match(HTML, /idleCounterWipes\(you\(n\)\.gear, you\(n\)\.counters, you\(n\)\.hist\.wpnHits\)/,
+    "one copy of the rule, called with this turn's tally");
 });

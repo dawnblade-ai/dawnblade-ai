@@ -24,6 +24,10 @@ const arcaneDmg = c => { const m=(c.tx||"").match(/deals? (\d+) arcane damage/i)
 const NWORD = {a:1,an:1,one:1,two:2,three:3,four:4};
 const num = w => NWORD[w] || parseInt(w,10) || 1;
 const clean = t => (t||"").replace(/\*\*?/g,"").replace(/\s+/g," ").trim();
+/* FaB counts occurrences in words ("the SECOND time this hits each turn"),
+   so a clause that names WHICH occurrence it fires on needs these. Kept at
+   module scope rather than rebuilt inside classifyClause, which recurses. */
+const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
 
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
@@ -122,6 +126,34 @@ function classifyClause(raw){
   /* Mandible Claw's rider is read off the weapon when it swings. */
   if(/^if you have discarded a card with \d+ or more \{p\} this turn, this card'?s attacks? go again$/.test(c))
     return NOOP("weapon rider — read from the graveyard stamp when the weapon swings");
+  /* ---- THE "+1{p} COUNTER" FAMILY ------------------------------------
+     Eight pool cards move +1{p} counters around, and the Dawnblade is the
+     one that EARNS them:
+
+       "The second time this hits each turn, put a +1{p} counter on it."
+       "At the beginning of your end phase, if this hasn't hit this turn,
+        remove all +1{p} counters from it."
+
+     RULING (user, 2026-08-09): the counters PERSIST and accumulate across
+     turns. The removal clause only makes sense under that reading — it is
+     there precisely to punish a turn where the blade never connected. So
+     the blade grows while you keep hitting with it and resets to printed
+     the first turn you do not.
+
+     Both clauses are SCHEDULES, not on-play effects, so fxParse hoists
+     them out of `fx.ops`: left there, `runOps` would hand over the counter
+     the moment the weapon was activated, before it had hit anything.
+
+     The ordinal is read off the text rather than assumed to be "second" —
+     the clause names its own number, and picking it here would be
+     inventing card text. Two swings is also exactly what Dorinthea's
+     ability allows in a turn, which is why the blade rewards its second
+     hit and not its third; that is the card's design, not a coincidence
+     to hardcode. */
+  if(m=c.match(/^the (first|second|third|fourth|fifth) time this hits each turn, put an? \+(\d+)\s*\{p\} counter on it$/))
+    return R([["hitCounter", ORDINAL[m[1]], +m[2]]]);
+  if(/^at the beginning of your end phase, if this hasn'?t hit this turn, remove all \+\d+\s*\{p\} counters from it$/.test(c))
+    return R([["wipePowIfIdle"]]);
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
     const cond=m[1], rest=classifyClause(m[2]);
     if(!rest) return null;
@@ -918,6 +950,13 @@ function fxParse(card){
          collected when it is later played. Route it first, or "it gets go
          again this turn" would become the card's own printed go again. */
       if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op]; return; }
+      /* A SCHEDULE, NOT AN ON-PLAY EFFECT. Both of these fire long after
+         the activation that reads them — one when the weapon HITS for the
+         Nth time this turn, the other at the beginning of an end phase.
+         Left in `fx.ops` they would run at declaration, handing over the
+         counter before the swing had connected with anything. */
+      if(op[0]==="hitCounter"){ fx.hitCounter = {nth:op[1], amt:op[2]}; return; }
+      if(op[0]==="wipePowIfIdle"){ fx.wipePowIfIdle = true; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; return; }
       /* "It gains +1{p} until end of turn" on a card that also puts an arrow
          face up into the arsenal — "it" is the ARROW, not this equipment.
@@ -1446,12 +1485,42 @@ function rxPump(fx, fired){
   return {pump: base + cond + buff, base, cond, buff, replaced};
 }
 
+/* ---- THE IDLE-COUNTER WIPE (v2.68) ----------------------------------
+   Which permanents lose their +1{p} counters at the beginning of an end
+   phase: the ones whose OWN printed text carries the schedule, that
+   actually hold counters, and that did NOT hit this turn.
+
+     "At the beginning of your end phase, if this hasn't hit this turn,
+      remove all +1{p} counters from it."
+
+   RULING (user, 2026-08-09): the counters PERSIST across turns, so this
+   is the only thing that removes them — which is what makes a turn where
+   the blade never connects genuinely cost something.
+
+   It is a function rather than four lines inside `endTurn` because a
+   decision buried in a React closure can only be pinned by grepping the
+   trainer's source, and a grep is satisfied by a COMMENT. Written that
+   way first, this drill passed with the gate replaced by `if(false)` —
+   the words it was looking for were sitting in the comment above it. A
+   false pass is worse than no drill at all.
+
+   `hits` is the per-turn tally keyed by uid; the caller supplies it
+   because "this turn" is the caller's clock. */
+function idleCounterWipes(gear, counters, hits){
+  return (gear||[])
+    .filter(gr => gr && ((counters||{})[gr.uid]||{}).pow > 0
+                     && fxParse(gr).wipePowIfIdle
+                     && !(((hits||{})[gr.uid]||0) > 0))
+    .map(gr => gr.uid);
+}
+
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
