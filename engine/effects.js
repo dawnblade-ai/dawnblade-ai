@@ -280,8 +280,15 @@ function makeEffects(ctx){
            bare one. op[2] is the qualifier read off the printed type line;
            it rides in buffQ so only a matching attack collects it. Without
            this an arrow buff landed on a sword — 24 pool cards did that. */
-        if(op[2]){ actMut(n).buffQ = [...(act(n).buffQ||[]), {amt:v, q:op[2]}];
-          n=L(n,`Next ${op[2].map(g=>g.join(" ")).join(" or ")} attack +${v}.`); }
+        /* op[3] is a GRANTED ABILITY riding with the pump — Warrior's
+           Valor's `and "When this hits, it gets go again."` It has to
+           travel on the buffQ entry, because it belongs to the attack
+           that eventually collects the pump, not to the card that
+           handed it over. */
+        if(op[2] || op[3]){
+          actMut(n).buffQ = [...(act(n).buffQ||[]), {amt:v, q:op[2]||null, rider:op[3]||null}];
+          const who = op[2] ? op[2].map(g=>g.join(" ")).join(" or ")+" attack" : "attack";
+          n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
       /* a keyword this resolution has GRANTED — read beside the printed
@@ -709,6 +716,14 @@ function makeEffects(ctx){
          matches — qualMatches reads fields, never rules text */
       const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card)).reduce((a2,b)=>a2+b.amt,0);
       const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card));
+      /* AND ANY ABILITY THOSE BUFFS GRANTED comes with them. Warrior's
+         Valor's `and "When this hits, it gets go again."` belongs to the
+         attack that collects the pump, so it is gathered here, from the
+         entries that actually matched, and joins this attack's own on-hit
+         ops below. A buff that did NOT match keeps its rider and waits. */
+      const qRider = (act(n).buffQ||[]).filter(b=>b.rider && qualMatches(b.q, card))
+        .reduce((a2,b)=>a2.concat(b.rider.onHit||[]), []);
+      if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
       const arsPow = (card._arsPow && card._upTurn === n.turn) ? card._arsPow : 0;
@@ -782,7 +797,7 @@ function makeEffects(ctx){
          attack was declared from is the only thing that distinguishes a
          weapon swing from an attack action card. Inferring it from the card
          at resolution would mean re-deciding a question already answered. */
-      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:fx.onHit, condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate

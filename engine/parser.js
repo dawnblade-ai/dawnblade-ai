@@ -531,7 +531,32 @@ function classifyClause(raw){
      genuinely unqualified. */
   if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)){
     const q = attackQual(m[1]);
-    return R([q ? ["buffNext",+m[2],q] : ["buffNext",+m[2]]]);
+    /* A GRANTED ABILITY RIDES ALONG WITH THE PUMP, and it was silently
+       dropped. Warrior's Valor prints
+
+         Your next weapon attack this turn gets +3{p}
+         and "When this hits, it gets go again."
+
+       and the match above stops at the pump, so the whole quoted ability
+       — the half that makes the card a Dorinthea staple — was thrown
+       away. Six physical cards across her three pitches. Weaker than
+       printed, so `npm run fairness` is one-sided against seeing it, and
+       the audit counted the clause as consumed either way.
+
+       FaB prints a granted ability in QUOTES, which is what makes this
+       readable rather than guessable: the quoted text is a clause in its
+       own right, so it goes back through `classifyClause` instead of
+       being pattern-matched here. "When this hits, it gets go again"
+       already reads as an on-hit `ga`. If the quoted half cannot be read
+       the rider is simply absent — the pump still lands, and the audit
+       still reports the clause honestly. */
+    const gr = c.match(/\band ["“']([^"”']+)["”']/);
+    const sub = gr ? classifyClause(gr[1]) : null;
+    const rider = sub && sub.status === "run" && sub.onHit ? {onHit: sub.ops} : null;
+    const op = ["buffNext", +m[2]];
+    if(q || rider) op[2] = q || null;
+    if(rider) op[3] = rider;
+    return R([op]);
   }
   if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){ const o=[["gaNext"]]; if(/create a runechant/.test(c)) o.push(["runeHitNext"]); return R(o); }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);

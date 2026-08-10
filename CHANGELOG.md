@@ -9,6 +9,55 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.70 — the half of the card that was thrown away
+
+**Warrior's Valor prints two things and the engine kept one.**
+
+> Your next weapon attack this turn gets +3{p}
+> and **"When this hits, it gets go again."**
+
+The `buffNext` rule stopped at the pump, so the whole quoted ability — the
+half that makes the card a staple — was dropped. **Six physical cards across
+her three pitches**, every one reporting tier `full`, because the clause was
+consumed either way. Weaker than printed, so `npm run fairness` is one-sided
+against ever seeing it.
+
+**FaB prints a granted ability in QUOTES, and that is what makes this
+readable rather than guessable.** The quoted text is a clause in its own
+right, so it goes back through `classifyClause` instead of being
+pattern-matched — `"When this hits, it gets go again"` already read as an
+on-hit `ga`. Nothing is special-cased to a card, and the same rule picks up
+**four more**: Azalea's Lace with Frailty / Bloodrot / Inertia and Gravy
+Bones' Yo Ho Ho!. Seven cards, three heroes, one rule.
+
+The rider travels on the **buffQ entry**, not on the card that granted it,
+because it belongs to whichever attack eventually collects the pump. A buff
+whose qualifier does not match keeps its rider and waits — verified with a
+control, because a drill without one passes just as well when the qualifier
+is ignored and every attack collects everything.
+
+Driven end to end: play Valor, swing the Dawnblade at 3+3, it connects, and
+the action point is **kept**. Swing a non-weapon attack instead and it takes
+neither the pump nor the ability, and the buff is still waiting.
+
+**5 new drills, all sabotaged.** 895 total.
+
+### Dorinthea, after five versions
+
+| | |
+|---|---|
+| hero ability | built — 1 of 1 clauses, was 0 |
+| deck coverage | **29 full / 4 part / 0 unreadable** |
+| bugs fixed | 2 stronger-than-printed, 3 weaker-than-printed, all reporting `full` |
+| cards touched beyond her deck | 7 doubled pumps, 2 summed replacements, 13 dropped restrictions, 4 dropped riders — across Kayo, Azalea, Boltyn, Arakni, Gravy Bones and Enigma |
+
+Still open on her deck, all four genuinely unbuilt rather than misread:
+Refraction Bolters ("if you do" rider), Agile Engagement (defended-by-an-
+attack-action check), Oasis Respite (the life comparison), Wreck Havoc
+(turning a card in an opponent's arsenal face up).
+
+---
+
 ## v2.69 — the restriction the reactions never had
 
 **`buffNext` has carried its target restriction in `op[2]` since v2.30 —

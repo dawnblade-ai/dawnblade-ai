@@ -661,3 +661,108 @@ test("a reaction's go again reaches the attack it targets", {skip}, () => {
   assert.match(body, /qualMatches\(fx\.gaQ,\s*n\.pend\.card\)/,
     "and only when the printed restriction is satisfied");
 });
+
+/* ============================================================
+   WARRIOR'S VALOR — the granted ability that was thrown away.
+
+     Your next weapon attack this turn gets +3{p}
+     and "When this hits, it gets go again."
+
+   The buffNext rule stopped at the pump, so the whole quoted ability —
+   the half that makes the card a staple — was dropped. SIX physical
+   cards across her three pitches, and the audit reported tier `full`
+   for all of them because the clause was consumed either way. Weaker
+   than printed, so the fairness sweep is one-sided against seeing it.
+
+   FaB prints a granted ability in QUOTES, which is what makes this
+   readable rather than guessable: the quoted text is a clause in its
+   own right and goes back through `classifyClause`. Nothing here is
+   special-cased to a card, and the same rule fixes Azalea's three Lace
+   cards and Gravy Bones' Yo Ho Ho!.
+   ============================================================ */
+
+test("the quoted granted ability is read, not dropped", {skip}, () => {
+  const b = buildOf("dorinthea");
+  for(const [pitch, amt] of [[1, 3], [2, 2], [3, 1]]){
+    const c = b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === pitch);
+    assert.ok(c, "Warrior's Valor pitch " + pitch);
+    const op = P.fxParse(c).ops.find(o => o[0] === "buffNext");
+    assert.strictEqual(op[1], amt, "the printed pump");
+    assert.deepStrictEqual(op[2], [["weapon"]], "the printed restriction");
+    assert.deepStrictEqual(op[3], {onHit: [["ga"]]},
+      "and the granted on-hit ability — this is the half that used to vanish");
+  }
+});
+
+test("the rider is parsed as a CLAUSE, so it is not one card's special case", {skip}, () => {
+  /* the same rule reads three other pool cards' quoted abilities. A build
+     that only understood "go again" would leave these dropped. */
+  const want = {
+    "Lace with Frailty": [["fra", 1]],
+    "Lace with Bloodrot": [["rot", 1]],
+    "Yo Ho Ho!": [["token", "gold", 1, "self"]]
+  };
+  const all = {};
+  for(const h of W.HEROES)
+    for(const c of buildOf(h.k).deck) all[c.name] = all[c.name] || c;
+  for(const [nm, ops] of Object.entries(want)){
+    const c = all[nm];
+    if(!c) continue;                       // not in any default loadout
+    const op = P.fxParse(c).ops.find(o => o[0] === "buffNext");
+    assert.ok(op && op[3], nm + " must carry its granted ability");
+    assert.deepStrictEqual(op[3].onHit, ops, nm);
+  }
+});
+
+test("an unquoted next-attack buff gains no rider", {skip}, () => {
+  /* Sharpen Steel prints the same pump with no granted ability, and must
+     not acquire one */
+  const ss = buildOf("dorinthea").deck.find(x => x.name === "Sharpen Steel");
+  const op = P.fxParse(ss).ops.find(o => o[0] === "buffNext");
+  assert.deepStrictEqual(op, ["buffNext", 3, [["weapon"]]], "no rider printed, none granted");
+});
+
+test("the granted ability reaches the attack that collects the buff", {skip}, () => {
+  const b = buildOf("dorinthea"), blade = bladeOf(b);
+  const valor = b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === 1);
+  const {execute, resolveStack} = E.makeEffects(ctx(b));
+  const fresh = hand => ({sides: [seat({hand, ap: 3, res: 5}), seat()], actor: 0, turn: 2,
+    mode: "act", log: [], feed: [], chain: [], stack: [], hitSeq: 0,
+    rng: RNG.make("r"), boostChain: 0});
+
+  let g = execute(fresh([valor]), valor, "hand", 0);
+  assert.deepStrictEqual(g.sides[0].buffQ,
+    [{amt: 3, q: [["weapon"]], rider: {onHit: [["ga"]]}}],
+    "the rider waits on the buff, not on the card that granted it");
+
+  g = execute(g, blade, "weapon", 0);
+  assert.strictEqual(g.pend.total, (blade.power || 0) + 3, "the pump landed");
+  assert.deepStrictEqual(g.pend.onHit, [["ga"]], "and the granted ability came with it");
+
+  const before = g.sides[0].ap;
+  g = resolveStack({...g, pend: {...g.pend, total: 6}});
+  assert.strictEqual(g.sides[0].ap, before,
+    "it hit, so go again was granted and the action point is KEPT");
+});
+
+test("a non-weapon attack collects neither the buff nor its rider", {skip}, () => {
+  /* THE CONTROL. Without it this drill passes just as well when the
+     qualifier is ignored and every attack collects everything. */
+  const b = buildOf("dorinthea");
+  const valor = b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === 1);
+  const wreck = b.deck.find(x => x.name === "Wreck Havoc");
+  const {execute, resolveStack} = E.makeEffects(ctx(b));
+  let g = {sides: [seat({hand: [valor], ap: 3, res: 5}), seat()], actor: 0, turn: 2,
+    mode: "act", log: [], feed: [], chain: [], stack: [], hitSeq: 0,
+    rng: RNG.make("r"), boostChain: 0};
+  g = execute(g, valor, "hand", 0);
+  g = {...g, sides: g.sides.map((s, i) => i ? s : {...s, hand: [wreck]})};
+  g = execute(g, wreck, "hand", 0);
+  assert.strictEqual(g.pend.total, wreck.power || 0, "no pump — it is not a weapon attack");
+  assert.deepStrictEqual(g.pend.onHit, [], "and no granted ability");
+  assert.strictEqual(g.sides[0].buffQ.length, 1,
+    "an unmatched buff is not spent — it waits for an attack it applies to");
+  const before = g.sides[0].ap;
+  g = resolveStack({...g, pend: {...g.pend, total: 6}});
+  assert.strictEqual(g.sides[0].ap, before - 1, "so this one does NOT go again");
+});

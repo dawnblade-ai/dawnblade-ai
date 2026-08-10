@@ -970,8 +970,15 @@ test("double-count — a buffNext op suppresses the fallback self-pump", () => {
     tx:'Your next arrow attack this turn gains +3{p} and "When this hits a hero, create a Frailty token under their control."'});
   assert.equal(fx.self, 0,
     "the fallback must not re-read a +N{p} the buffNext rule already took");
-  assert.deepEqual(fx.ops.filter(o=>o[0]==="buffNext"), [["buffNext",3,[["arrow"]]]],
-    "and the buff is counted exactly once, with its qualifier");
+  const buffs = fx.ops.filter(o=>o[0]==="buffNext");
+  assert.equal(buffs.length, 1, "and the buff is counted exactly once");
+  assert.equal(buffs[0][1], 3);
+  assert.deepEqual(buffs[0][2], [["arrow"]], "with its qualifier");
+  /* op[3] is the GRANTED ABILITY (v2.69). This fixture happens to print one,
+     and it used to be thrown away with the rest of the tail — the same shape
+     that cost Warrior's Valor half its text on six physical cards. */
+  assert.ok(buffs[0][3] && buffs[0][3].onHit.length,
+    "and the quoted granted ability rides along with it rather than being dropped");
 });
 
 test("double-count — the fallback still catches a genuine self-pump", () => {
