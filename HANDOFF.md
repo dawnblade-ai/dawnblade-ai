@@ -1,19 +1,93 @@
-# Handoff — Dawnblade, at v2.70
+# Handoff — Dawnblade, at v2.72
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
 ---
 
-## THE PLAN, AND WHERE WE ARE IN IT
+## THE PLAN WAS REORDERED (user, 2026-08-12)
 
 ```
-1. ENGINE       ✔ done
-2. MULTIPLAYER  ✔ done — two humans, two hero decks, one game state
-3. CARD RULING TESTING (the text boxes)   ← YOU ARE HERE
-     KAYO       ✔ hero ability + the "6 or more {p}" spine  (27 full / 2 part / 1 none)
-     DORINTHEA  ✔ hero ability + the weapon spine           (29 full / 4 part / 0 none)
-     next hero: see "WHICH HERO NEXT" below
+1. ENGINE          core mechanics, numbers & card types, phases & priority
+2. HEROES & CARD TEXT
+3. UI & NETWORK
 ```
+
+Multiplayer/table/network was the OLD phase 2 and is already largely
+built — under the new order it is **phase 3 work that landed early, and it
+is FROZEN.** Do not extend the table or the netcode until phase 2 is done.
+
+**Why the reorder matters, in one sentence:** the customer pulling on "one
+rules engine" used to be the networked table; it is now phase 2 itself,
+and it is more demanding — 13 more heroes of card text will be written
+into whichever engine you point them at.
+
+### Where we are
+
+```
+1. ENGINE   ← YOU ARE HERE. Four steps were planned; two have shipped.
+     ✔ step 1 (v2.71) seat 1 takes a real turn
+     ✔ step 2 (v2.72) instant-speed activation on their turn
+     ☐ step 3        Frostbite as a token, Arcane Barrier as a payment
+     ☐ step 4        split declaration from defence in `execute`
+2. HEROES   KAYO ✔ (27 full / 2 part / 1 none) · DORINTHEA ✔ (29/4/0)
+            next: IYSLANDER — blocked on step 3, see below
+3. UI & NETWORK — frozen
+```
+
+### WHY IYSLANDER FORCED ENGINE WORK FIRST
+
+Five mechanics were filed `noop` in `parser.js`, and **every one gave a
+reason about the training PROP rather than about the rules**:
+
+| parser.js | the reason it gave |
+|---|---|
+| arcane barrier | "stops arcane damage — the dummy throws only fists" |
+| frostbite | "frostbite — dummy pays no costs" |
+| inertia | "taxes the opponent's action phase — the dummy has none" |
+| freeze (Cold Snap) | "idle against the dummy's scripted swing" |
+| "target hero may pay" | "the dummy pays no costs, so it always declines" |
+
+A `noop` counts as ACCOUNTED FOR, so all of it reports tier `full` and **no
+coverage tool can see any of it.** Iyslander's deck is built on those five,
+which is why her `28 full / 3 part / 0 none` was measuring the wrong thing.
+
+Steps 1 and 2 removed the *justifications*. **Step 3 is what makes the
+cards real**, and it is the remaining blocker for her.
+
+### STEP 3 — what is left (Frostbite, Arcane Barrier)
+
+- **Frostbite is a number on the screen with no rule behind it.** Nothing
+  creates one except a hardcoded line in `foeTurnIce`, and **nothing
+  consumes `frost` at all** — `effCost` does not read it, `effects.js`
+  never mentions it. Frost Spike's "create a Frostbite token" resolves to
+  nothing. Make it a real Aura under *their* control that modifies
+  `effCost`, exactly the v2.23 runechant move (a counter made seven cards
+  blind to runechants; the same is true here).
+  **RULING (user, 2026-08-10):** it taxes ONE play/activation and is then
+  destroyed — so the play that destroys it *is* the one that is taxed.
+- **Arcane Barrier is 24 cards across all 15 heroes** and is a `noop`.
+  It is a payment made when the hero would be dealt arcane damage.
+- Seat 1 must be able to be *asked* to pay and to answer (Winter's Bite,
+  Cold Snap, Aether Icevein). `prompts.js`'s `pay` variant is already
+  side-addressed; seat 1 can already pitch (`foePlay`).
+
+### STEP 4 — the one that costs most if deferred
+
+`execute` does two jobs: it applies the card's effect *and* advances the
+turn structure. The coupling is **four sites in 455 lines**:
+
+```
+effects.js:511   let n = {...s, mode:"act", pending:null}
+effects.js:905   const dd = dummyDefence(n, total, card)
+effects.js:926   n.mode = "act"        (phantasm pop)
+effects.js:932   n.mode = "stack"
+```
+
+v2.72 works *around* it — `activateInstant` captures `mode`/`bphase` and
+restores them after calling `execute`. That is honest and commented, and
+it is a patch on the seam rather than the fix. **Do step 4 before 13 more
+heroes are written on top of it**, or phase 3 is not UI work at all — it is
+re-hosting every hero's semantics onto `judge.js` and re-verifying them.
 
 **"Complete" means the hero ability and the deck's mechanical spine are
 built, not that every clause in every card is read.** Both finished heroes
@@ -30,11 +104,11 @@ DONE"; follow it rather than inventing a new one.
 
 ## WHERE THINGS STAND
 
-- `npm test` → **895 drills, all green.** Never leave them red.
+- `npm test` → **913 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way. It gained three checks
   in v2.66–v2.69 and each was verified to shout when its bug returns.
 - `npm run audit` → 405 unique pool cards, **306 full / 77 part / 22 none**.
-- **v2.70 on `main`, pushed and live**, verified serving: all 20 `engine/*.js`
+- **v2.72 on `main`, pushed and live**, verified serving: all 20 `engine/*.js`
   return 200 and the deployed `parser.js` carries the new symbols. `origin` is
   `git@github.com:dawnblade-ai/dawnblade-ai.git` over SSH and **a push IS
   the deploy** — Pages serves `main` at the repo root. The user has given
