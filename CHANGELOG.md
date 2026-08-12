@@ -9,6 +9,69 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.72 — the half of the iron that had no window
+
+**Spellfire Cloak prints `Activate this ability only during an opponent's
+turn`, and `fx.activateIf.kind === "foeTurn"` has read that gate for
+versions. The only function that consults it — `tryPlay` — refuses
+outright while `mode === "block"`.** So the printed gate named a window
+the engine could never be asked about while it was in it. Tapping iron on
+their turn either declared a defender or opened the zoom modal; there was
+no third thing it could do.
+
+It is Iyslander's **only Chest piece**, so it is equipped in every game she
+plays and was dead in every one of them. Crucible of Aetherweave
+(`Once per Turn Instant`) was in the same position.
+
+`activateInstant` is the route. It asks `priority.js` for the window
+rather than restating CR 8.1.6, so it correctly refuses in the DEFEND step
+where the turn-player holds priority (CR 7.3.3) — a refusal that is a rule
+rather than an oversight.
+
+**It resolves nothing itself.** The destroy cost, the graveyard stamp and
+the ops are card semantics and there is exactly one copy of those, so it
+calls `execute` and **restores the window afterwards**: `execute` returns
+`mode:"act"`, and leaving that would hand the player their own action
+phase in the middle of the opponent's turn — sev-3, illegal play allowed.
+
+### Two limits that expire differently, now that they can diverge
+
+`perTurnCleared` moved from `judge.js` to `parser.js` — the trainer
+needed the same answer, and a second copy is the no-mirror rule broken in
+slow motion. A TAP lifts only at its controller's untap step (CR 4.4.3d); a
+`Once per Turn` **allowance** comes back at every turn boundary for both
+seats. They coincide for a weapon swing and stop coinciding at the first
+`Instant - Once per Turn` equipment ability, which is now reachable.
+
+**Two real bugs were found by the drills, not by the code:**
+
+1. `weaponCost` requires `": attack"`, so an equipment ability's line read
+   as null and every ability was treated as an allowance —
+   `tapsToActivate` reads the cost segment for `{t}`.
+2. An ability's flag is namespaced (`"gp"+uid`) so it cannot collide with
+   the piece's own swing — and the uid is a NUMBER while the flag is a
+   string, so stripping `"gp9"` gave `"9"`, which never `===` 9. The
+   piece was never found and a tapped ability untapped at the wrong
+   boundary. Compared as strings now.
+
+### A drill that went green against a disabled route
+
+The first version of the routing drill grepped for
+`activateInstant(gr.powCard,"hero",i)`. Replacing the gate with
+`if(false)` leaves that text sitting in the source, so **it passed with
+the whole feature switched off** — a false PASS, worse than no drill, and
+exactly HANDOFF.md rule 4b. The decision is now
+`parser.instantAbilityReady`, a pure function a drill can CALL. Both the
+tap route and the window-opening check ask it, so they cannot disagree.
+
+Driven: Spellfire Cloak activated in the reaction step of the opponent's
+turn — 0 → 1 resource, the piece shattered, `mode`/`bphase` unchanged, no
+action point spent, 0 invariant violations.
+
+**8 new drills. 913 total.**
+
+---
+
 ## v2.71 — the turn the opponent never took
 
 **Five mechanics were filed `noop` in `parser.js`, and every one gave a

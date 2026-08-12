@@ -743,7 +743,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.71"; /* v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.72"; /* v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1391,7 +1391,9 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     num = DawnParser.num, clean = DawnParser.clean, classifyClause = DawnParser.classifyClause,
     fxParse = DawnParser.fxParse, parseHeroPower = DawnParser.parseHeroPower,
     runeRed = DawnParser.runeRed, boardRed = DawnParser.boardRed, effCost = DawnParser.effCost,
-    weaponCost = DawnParser.weaponCost, hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
+    weaponCost = DawnParser.weaponCost, perTurnCleared = DawnParser.perTurnCleared,
+    instantAbilityReady = DawnParser.instantAbilityReady,
+    hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
     isDR = DawnParser.isDR, isRx = DawnParser.isRx, rxAllowed = DawnParser.rxAllowed,
     rxPump = DawnParser.rxPump, idleCounterWipes = DawnParser.idleCounterWipes,
     isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
@@ -2999,6 +3001,85 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   /* CR 4.3.4 — both players pass in succession and the phase ends. */
   const foePassWindow = () => setG(s => s.mode!=="foeturn" ? s
     : foeEnd(L(s, `You pass — ${opp(s).name} may end their turn.`)));
+  /* ---- AN INSTANT-SPEED ABILITY, IN AN INSTANT-SPEED WINDOW (v2.71) ----
+     Spellfire Cloak prints "Activate this ability only during an
+     opponent's turn" and had NO ROUTE AT ALL. Tapping gear while
+     `mode==="block"` either declared it as a defender or opened the zoom
+     modal, and `tryPlay` — the only path that reads `fx.activateIf` —
+     refuses outright in that mode. So the printed gate said "only on
+     their turn" and the one function able to honour it could never run
+     then. It is Iyslander's ONLY chest piece, so it was equipped in every
+     game she has ever played and dead in every one of them.
+
+     Sev-1 rather than sev-3 — an ability that is inert is honest and
+     visible — but it is four cards across her gear alone, and `Once per
+     Turn Instant` (Crucible of Aetherweave) is the shape that made
+     `perTurnCleared` matter above.
+
+     WHY IT GOES THROUGH `execute` RATHER THAN RESOLVING ANYTHING ITSELF.
+     The destroy cost, the graveyard stamp and the ops are card semantics,
+     and there is exactly ONE copy of those (effects.js). For a non-attack,
+     `execute` never reaches the `dummyDefence` / `mode:"stack"` tail — the
+     whole of its turn-structure coupling on this path is the `mode:"act"`
+     it sets on the way in (effects.js:511), so restoring the window after
+     it returns is sufficient and is honest about what is borrowed. That is
+     the same seam step 4 unpicks properly rather than patching. */
+  const activateInstant = (card, from, idx) => setG(s=>{
+    if(s.over) return s;
+    /* CR 8.1.6 — an instant is legal in any window where you hold
+       priority. Asked of priority.js, never restated: in the DEFEND step
+       the turn-player holds it (CR 7.3.3), so this correctly refuses
+       there, and that refusal is a rule rather than an oversight. */
+    if(!DawnPriority.speedAllowed(s, 0).includes("instant"))
+      return L(s, `Not your window — ${opp(s).name} holds priority right now.`);
+    if(!card || !card._instant)
+      return L(s, `${card?card.name:"That ability"} is action speed — it can only be activated in your own action phase.`);
+    if(act(s).weaponUsed[card.uid]) return L(s, `${card.name} has already been used this turn.`);
+    const afx = fxParse(card);
+    if(afx.activateIf && !activateIfOk(s, afx.activateIf))
+      return L(s, `${card.name} can't be activated — ${afx.activateIf.why}.`);
+    const cost = effCost(card, act(s));
+    const paid = autoPitch(s, cost, null);
+    if(!paid) return L(s, `${card.name} costs ${cost} — not enough in hand to pitch for it at instant speed.`);
+    /* RESTORE THE WINDOW. `execute` returns with `mode:"act"`, which on the
+       opponent's turn would silently hand the player their own action
+       phase — an illegal play allowed, and the exact direction that steals
+       games. Captured before, restored after, and nothing else about the
+       window is touched. */
+    const win = {mode:s.mode, bphase:s.bphase};
+    const out = execute(paid, card, from, idx);
+    return {...out, ...win};
+  });
+  /* One reader for `fx.activateIf`, because tryPlay and activateInstant ask
+     the identical question in two windows and two hand-rolled copies of a
+     printed gate is how `rxAllowed` came to be extracted in the first
+     place. `foeTurn` covers BOTH shapes of "not your turn": their combat
+     window and their action phase. */
+  function activateIfOk(s, g2){
+    return g2.kind==="atkNamed"  ? (act(s).hist.atkNames||[]).includes(norm(g2.name||""))
+         : g2.kind==="hits"      ? (s.chain||[]).filter(l=>l.dmg>0).length >= g2.n
+         : g2.kind==="boosted"   ? (s.boostChain||0)>0
+         /* WHAT YOU CONTROL, for "only if you control a card with N or
+            more {p}" (Predatory Plating). RULING (user, 2026-08-08): the
+            arena and your equipment, PLUS an attack currently on the
+            COMBAT CHAIN — which is what makes a chest piece that pays you
+            for committing to a big swing actually reachable. Reading
+            board+gear alone left Kayo with nothing but Mandible Claw at
+            3, so the ability was unactivatable in his deck and looked
+            like a dead card. `zonePow` is deliberately NOT used: a card
+            on the chain is in the one zone Kayo's clause 2 excludes, and
+            gear and arena permanents are not attack action cards at all.
+            LIMIT, stated: only the LIVE attack (`pend`) is counted, not
+            links that have already resolved. The chain history keeps a
+            name and an image, not the card object, and widening it would
+            put a full card on every link — which is what the 16KB
+            table-snapshot budget exists to stop. */
+         : g2.kind==="controlPow"? [...act(s).board.map(b=>b.card), ...act(s).gear,
+             ...(s.pend&&s.pend.card?[s.pend.card]:[])].some(x=>x&&(x.power||0)>=g2.n)
+         : g2.kind==="defending" ? s.mode==="block"
+         : g2.kind==="foeTurn"   ? (s.mode==="block" || s.mode==="foeturn")
+         : true;
+  }
   /* resolveStack lives in engine/effects.js (v2.62) — the last of the
      three. It was `() => setG(s=>{…})`, so unlike runOps and execute it
      needed its React wrapper peeled off: the BODY was already a pure
@@ -3053,32 +3134,12 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       const afx = fxParse(card);
       if(afx.activateIf){
         const g2 = afx.activateIf;
-        const ok = g2.kind==="atkNamed"  ? (act(s).hist.atkNames||[]).includes(norm(g2.name||""))
-                 : g2.kind==="hits"      ? (s.chain||[]).filter(l=>l.dmg>0).length >= g2.n
-                 : g2.kind==="boosted"   ? (s.boostChain||0)>0
-                 /* WHAT YOU CONTROL, for "only if you control a card with N
-                    or more {p}" (Predatory Plating). RULING (user,
-                    2026-08-08): the arena and your equipment, PLUS an attack
-                    currently on the COMBAT CHAIN — which is what makes a
-                    chest piece that pays you for committing to a big swing
-                    actually reachable. Reading board+gear alone left Kayo
-                    with nothing but Mandible Claw at 3, so the ability was
-                    unactivatable in his deck and looked like a dead card.
-                    `zonePow` is deliberately NOT used: a card on the chain
-                    is in the one zone Kayo's clause 2 excludes, and gear and
-                    arena permanents are not attack action cards at all.
-                    LIMIT, stated: only the LIVE attack (`pend`) is counted,
-                    not links that have already resolved. The trainer's chain
-                    history keeps a name and an image, not the card object,
-                    and widening it would put a full card on every link —
-                    which is what the 16KB table-snapshot budget exists to
-                    stop. The live attack is the window this is used in. */
-                 : g2.kind==="controlPow"? [...act(s).board.map(b=>b.card), ...act(s).gear,
-                     ...(s.pend&&s.pend.card?[s.pend.card]:[])]
-                     .some(x=>x&&(x.power||0)>=g2.n)
-                 : g2.kind==="defending" ? s.mode==="block"
-                 : g2.kind==="foeTurn"   ? s.mode==="block"
-                 : true;
+        /* ONE READER, TWO WINDOWS (v2.71) — `activateIfOk`, above, which
+           `activateInstant` asks too. Two hand-rolled copies of a printed
+           gate is how five copies of "may this be played here" drifted
+           apart before `rxAllowed` was extracted; this is the same rule
+           applied before there are two. */
+        const ok = activateIfOk(s, g2);
         if(!ok) return L(s, `${card.name} can't be activated — ${g2.why}.`);
       }
       const pif = afx.playIf;
@@ -3374,6 +3435,16 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     actMut(n).weaponUsed = {};
     n = L(n, tapped ? `(d) ${_me()} untap${_you()?"":"s"} ${tapped} permanent${tapped>1?"s":""}.`
                     : `(d) Nothing of ${_you()?"yours":_me()+"'s"} is tapped.`);
+    /* THE OTHER SEAT KEEPS ITS TAPS AND LOSES ITS ALLOWANCE. CR 4.4.3d
+       untaps the TURN-PLAYER's permanents only, but `Once per Turn` is a
+       per-turn allowance that comes back at every turn boundary for
+       everyone — and `weaponUsed` conflates the two. They coincide for a
+       weapon swing (action speed, so a seat only reaches it on its own
+       turn) and stop coinciding at the first `Instant - Once per Turn`
+       equipment ability, which is Crucible of Aetherweave, which is in
+       Iyslander's gear and is now activatable on the opponent's turn.
+       Without this, using it on their turn would make it once per ROUND. */
+    foeMut(n).weaponUsed = perTurnCleared(foe(n));
 
     /* (e) CR 4.4.3e — "All players lose all action points and resource
        points." ALL, not just the turn-player. Score counts wasted resources,
@@ -3580,6 +3651,17 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     const ars = you(s).arsenal;
     if(ars && bAct(s).arsenalInstant && !isAttack(ars) && (ars.pitch||0)>=3
        && (ars.cost||0) <= bank) return true;
+    /* An INSTANT-speed piece of iron is a play (CR 8.1.6), and for
+       Spellfire Cloak it is the ONLY window its printed gate allows. The
+       gate itself is asked, not assumed: a piece whose activateIf is unmet
+       must not open a window it cannot be used in. */
+    const gearPlay = you(s).gear.some(gr=>{
+      if(!instantAbilityReady(gr, you(s))) return false;
+      const afx = fxParse(gr.powCard);
+      if(afx.activateIf && !activateIfOk(s, afx.activateIf)) return false;
+      return effCost(gr.powCard, you(s)) <= bank;
+    });
+    if(gearPlay) return true;
     return you(s).hand.some(c => isInstantT(c.tt||"") && fxParse(c).ops.length>0
        && (c.cost||0) <= bank - (c.pitch||0));
   }
@@ -3981,9 +4063,21 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
         onClick={(()=>{
           /* the same two-tap as the hand: peek the thing you are about to
              commit to — the ability's own card when the piece has one. */
-          if(g.mode==="block") return blockable && g.bphase==="defend"
-            ? tapTwice(gr, "tap again to defend", ()=>toggleBlock("g",i))
-            : ()=>setZoom(gr);
+          /* IRON DOES TWO THINGS ON THEIR TURN, NOT ONE (v2.71). Defending
+             is the defend step's business; an INSTANT-speed ability is
+             legal in any window you hold priority (CR 8.1.6), and before
+             this the reaction step offered nothing but the zoom modal —
+             so Spellfire Cloak, whose printed gate is "only during an
+             opponent's turn", had no window in which it could ever be
+             activated. */
+          const instAb = instantAbilityReady(gr, you(g));
+          if(g.mode==="block" || g.mode==="foeturn"){
+            if(g.mode==="block" && blockable && g.bphase==="defend")
+              return tapTwice(gr, "tap again to defend", ()=>toggleBlock("g",i));
+            if(instAb)
+              return tapTwice(gr.powCard, "tap again to activate", ()=>activateInstant(gr.powCard,"hero",i));
+            return ()=>setZoom(gr);
+          }
           if(w) return tapTwice(gr, "tap again to swing", ()=>tryPlay(gr,"weapon",i));
           if(gr.pow && !gr.destroyed)
             return tapTwice(gr.powCard, "tap again to activate", ()=>tryPlay(gr.powCard,"hero",i));

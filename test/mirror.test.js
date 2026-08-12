@@ -293,3 +293,128 @@ test("the end phase is actor-relative, so neither seat is hardcoded", () => {
   assert.ok(/\{\.\.\.s,\s*actor:si\}/.test(cf) && /actor:_prevActor/.test(cf),
     "the actor is borrowed for the procedure and handed straight back");
 });
+
+/* ===================================================================
+   INSTANT-SPEED ACTIVATION ON THEIR TURN (v2.71, step 2)
+
+   Spellfire Cloak prints "Activate this ability only during an
+   opponent's turn". `fx.activateIf.kind === "foeTurn"` has read that
+   gate since v2.x — and the ONLY function that consults it, `tryPlay`,
+   refuses outright while `mode === "block"`. So the gate named a window
+   the engine could never be in when it was asked. It is Iyslander's only
+   Chest piece: equipped in every game she plays, dead in every one.
+   =================================================================== */
+
+/* THE GATE IS A FUNCTION NOW, SO DRIVE IT.
+
+   Written as a grep for `activateInstant(gr.powCard,"hero",i)` this drill
+   went GREEN with the whole route disabled — replacing `if(instAb)` with
+   `if(false)` leaves the call text sitting right there for the scan to
+   find. A false PASS, which is worse than no drill, and exactly the trap
+   HANDOFF.md's rule 4b names. `parser.instantAbilityReady` was extracted
+   so the decision can be called instead of read. */
+test("instantAbilityReady: the printed facts, and only those", () => {
+  const P = require("../engine/parser.js");
+  const sd = used => ({weaponUsed: used || {}});
+  const piece = over => Object.assign({
+    uid: 7, pow: true, destroyed: false,
+    powCard: {uid: "gp7", _instant: true}
+  }, over || {});
+
+  assert.equal(P.instantAbilityReady(piece(), sd()), true, "a fresh instant ability is available");
+  assert.equal(P.instantAbilityReady(piece({destroyed: true}), sd()), false,
+    "a shattered piece has no ability left — Spellfire Cloak destroys itself to pay");
+  assert.equal(P.instantAbilityReady(piece({powCard: {uid: "gp7", _instant: false}}), sd()), false,
+    "an ACTION-speed ability is not legal in an instant window (CR 8.1.1 vs 8.1.6)");
+  assert.equal(P.instantAbilityReady(piece({pow: false}), sd()), false, "no ability, no route");
+  /* The flag is namespaced "gp"+uid so it cannot collide with the piece's
+     own swing; reading the bare uid would let a spent ability fire twice. */
+  assert.equal(P.instantAbilityReady(piece(), sd({gp7: true})), false, "already used this turn");
+  assert.equal(P.instantAbilityReady(piece(), sd({7: true})), true,
+    "the WEAPON's swing flag is a different limit and must not block the ability");
+  assert.equal(P.instantAbilityReady(null, sd()), false, "and it tolerates an empty slot");
+});
+
+test("both callers ask instantAbilityReady rather than re-deriving it", () => {
+  const gb = slice("  const gearBtn = (gr,i,extra,st) => {", "  const handAct = (c,i) => {");
+  assert.ok(/const instAb = instantAbilityReady\(gr, you\(g\)\)/.test(gb),
+    "the tap route reads the shared gate");
+  assert.ok(/if\(instAb\)\s*\n\s*return tapTwice\(gr\.powCard/.test(gb),
+    "and the ability branch is guarded BY it — pin the gate, not the call");
+  /* CR 7.3.3 gives priority to the turn-player in the defend step, so
+     declaring a defender must still win there. */
+  assert.ok(gb.indexOf('blockable && g.bphase==="defend"') < gb.indexOf("if(instAb)"),
+    "declaring a defender is tested first, or iron stops being able to block");
+  const h = slice("  function foeTurnHasPlay(s){", "  /* ---- SEAT 1'S TURN");
+  assert.ok(/instantAbilityReady\(gr, you\(s\)\)/.test(h),
+    "and so does the window-opening check, or the two can disagree");
+});
+
+test("activateInstant asks priority.js for the window, and restores it", () => {
+  const ai = slice("  const activateInstant = (card, from, idx) => setG(s=>{", "  function activateIfOk(s, g2){");
+  /* CR 8.1.6 asked of the module that owns it. Restating it here is how
+     five copies of "may this be played here" drifted apart pre-rxAllowed. */
+  assert.ok(/DawnPriority\.speedAllowed\(s,\s*0\)\.includes\("instant"\)/.test(ai),
+    "the window is priority.js's question, never a hand-rolled mode test");
+  /* THE HALF THAT WOULD STEAL GAMES. `execute` returns `mode:"act"`, and
+     leaving it there hands the player their own action phase in the
+     middle of the opponent's turn — an illegal play allowed, sev-3. */
+  assert.ok(/const win = \{mode:s\.mode, bphase:s\.bphase\}/.test(ai) && /\.\.\.out,\s*\.\.\.win/.test(ai),
+    "the window must be captured and restored around execute");
+  assert.ok(/execute\(paid, card, from, idx\)/.test(ai),
+    "and the card's semantics come from execute — there is ONE copy of those");
+});
+
+test("the activateIf gate has ONE reader, asked by both windows", () => {
+  const tp = slice("      const afx = fxParse(card);", "      const pif = afx.playIf;");
+  assert.ok(/activateIfOk\(s, g2\)/.test(tp),
+    "tryPlay must not re-implement the gate beside activateInstant's copy");
+  const ok = slice("  function activateIfOk(s, g2){", "\n  }\n");
+  /* "Not your turn" is BOTH their combat window and their action phase.
+     Reading it as mode==="block" alone meant the ability was unreachable
+     on any turn the opponent did not attack. */
+  assert.ok(/g2\.kind==="foeTurn"\s*\?\s*\(s\.mode==="block" \|\| s\.mode==="foeturn"\)/.test(ok),
+    "foeTurn must cover their action phase as well as their combat window");
+});
+
+test("perTurnCleared has one home, and the trainer uses it", () => {
+  const P = require("../engine/parser.js");
+  assert.strictEqual(typeof P.perTurnCleared, "function",
+    "it reads a printed line, which is parser.js's job");
+  /* A TAP and a per-turn ALLOWANCE expire differently (CR 4.4.3d). They
+     coincide for a weapon swing and stop coinciding at the first
+     `Instant - Once per Turn` equipment ability — Crucible of
+     Aetherweave, in Iyslander's gear, now activatable on their turn.
+     Without this the allowance would come back once per ROUND. */
+  const tapped = {gear:[{uid:"w1", tx:"Once per Turn Instant - {t}: Do a thing."}],
+                  weaponUsed:{w1:true}};
+  assert.deepEqual(P.perTurnCleared(tapped), {w1:true}, "a TAP survives the turn boundary");
+  const allowance = {gear:[{uid:"w2", tx:"Once per Turn Instant - {r}: Do a thing."}],
+                     weaponUsed:{w2:true}};
+  assert.deepEqual(P.perTurnCleared(allowance), {}, "a per-turn ALLOWANCE comes back");
+  /* AN ABILITY'S FLAG IS NAMESPACED — "gp"+uid, so it cannot collide with
+     the piece's own swing. The gear lookup therefore has to strip it: with
+     the bare uid the piece is never found, every ability entry falls
+     through as an allowance, and a TAPPED ability silently untaps at the
+     wrong seat's turn boundary. The fixture above cannot see that — its
+     uids carry no prefix — so it is asked explicitly here. */
+  const tappedAbility = {gear:[{uid:9, tx:"Once per Turn Instant - {t}: Do a thing."}],
+                         weaponUsed:{gp9:true}};
+  assert.deepEqual(P.perTurnCleared(tappedAbility), {gp9:true},
+    "a tapped ABILITY is still tapped, and its namespaced flag must resolve to its piece");
+  const allowanceAbility = {gear:[{uid:9, tx:"Once per Turn Instant - {r}: Do a thing."}],
+                            weaponUsed:{gp9:true}};
+  assert.deepEqual(P.perTurnCleared(allowanceAbility), {},
+    "and a NON-tapping ability's allowance still comes back — Crucible of Aetherweave");
+  const cf = slice("  function endPhaseCF(s, si){", "  function afterArsenal(s){");
+  assert.ok(/foeMut\(n\)\.weaponUsed = perTurnCleared\(foe\(n\)\)/.test(cf),
+    "the NON-ending seat keeps its taps and loses its allowance at the boundary");
+});
+
+test("the foeturn window will not open on an ability whose gate is unmet", () => {
+  const h = slice("  function foeTurnHasPlay(s){", "  /* ---- SEAT 1'S TURN");
+  assert.ok(/activateIfOk\(s, afx\.activateIf\)/.test(h),
+    "a piece whose printed gate is unmet must not open a window it cannot be used in");
+  assert.ok(/effCost\(gr\.powCard, you\(s\)\)\s*<=\s*bank/.test(h),
+    "nor one the player cannot pay for, even counting what they could pitch");
+});

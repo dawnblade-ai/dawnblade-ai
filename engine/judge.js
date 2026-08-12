@@ -1104,17 +1104,10 @@ function endPhaseAfterArsenal(g, seat){
    Reading the limit off the piece's own printed text rather than storing
    a kind on the flag is what keeps this from drifting: `weaponCost` is
    already the one reader of that line, and it answers both questions. */
-function perTurnCleared(sd){
-  const used = sd.weaponUsed || {};
-  const out = {};
-  for(const uid of Object.keys(used)){
-    if(!used[uid]) continue;
-    const piece = (sd.gear || []).find(x => x && x.uid === uid);
-    const wc = piece ? PR.weaponCost(piece.tx || "") : null;
-    if(wc && wc.taps) out[uid] = true;      /* still tapped — only (d) lifts it */
-  }
-  return out;
-}
+/* `perTurnCleared` moved to parser.js in v2.71 — the trainer needed the
+   same answer and a second copy is the no-mirror rule broken in slow
+   motion. It reads a printed line, which is parser.js's job. */
+const perTurnCleared = PR.perTurnCleared;
 
 /* Draw to intellect, taking whatever the deck still holds.
 

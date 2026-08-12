@@ -1350,6 +1350,80 @@ function weaponCost(tx){
           taps: /\{t\}/i.test(cs),
           oncePerTurn: !!m[1]};
 }
+/* TWO LIMITS LIVE IN `weaponUsed` AND THEY EXPIRE DIFFERENTLY (CR 4.4.3d).
+   Drop every entry whose limit is a per-turn ALLOWANCE — it comes back at
+   every turn boundary, for both seats — and keep every entry that records
+   a TAPPED permanent, because only its controller's untap step lifts that,
+   and a permanent that is both tapped and once-per-turn is still tapped.
+
+   Reading the limit off the piece's OWN printed line rather than storing a
+   kind on the flag is what keeps it from drifting: `weaponCost` is already
+   the one reader of that line and it answers both questions.
+
+   They coincide for a weapon swing — action speed, so a seat only reaches
+   it on its own turn — and stop coinciding at the first `Instant - Once
+   per Turn` equipment ability, which is Crucible of Aetherweave, which is
+   in Iyslander's gear. This lived in judge.js until v2.71; the trainer
+   needed the same answer and a second copy of it is the no-mirror rule
+   being broken in slow motion, so it moved here, beside `weaponCost`. */
+/* Does the printed ACTIVATION cost tap the permanent? `weaponCost` answers
+   this for a weapon's attack line and only for that — it requires ":
+   attack" — so an equipment ABILITY ("Once per Turn Instant - {t}: …")
+   reads as null there and would be treated as a plain allowance. Two
+   shapes, one question, asked of the cost segment before the colon. */
+function tapsToActivate(tx){
+  const line = clean(tx || "").split(/\n+/)
+    .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+  const cost = (line.split(":")[0] || "");
+  return /\{t\}/i.test(cost);
+}
+/* IS THIS PIECE'S ACTIVATED ABILITY AVAILABLE AT INSTANT SPEED, RIGHT NOW?
+   Printed facts only: the speed off its own ability line, the piece still
+   in play, and the once-per-turn / tap flag not yet set.
+
+   It deliberately does NOT ask the WINDOW — priority.js owns that (CR
+   8.1.6) — and does NOT ask the printed `activateIf` gate, because that
+   reads board state the parser has no business knowing. Both are asked
+   beside it by the caller.
+
+   EXTRACTED SO IT CAN BE DRIVEN. As a `const instAb = …` inside the render
+   it could only ever be pinned by grepping the source, and a grep for the
+   call it guards stays green when the gate is replaced by `if(false)` —
+   which is precisely how a drill went green against a disabled route
+   during this change. Pin the gate, not the identifier; better still,
+   make the gate a function a drill can call. */
+function instantAbilityReady(gr, sd){
+  if(!gr || !gr.pow || gr.destroyed) return false;
+  if(!gr.powCard || !gr.powCard._instant) return false;
+  const used = (sd && sd.weaponUsed) || {};
+  return !used["gp" + gr.uid];
+}
+function perTurnCleared(sd){
+  const used = (sd && sd.weaponUsed) || {};
+  const out = {};
+  for(const uid of Object.keys(used)){
+    if(!used[uid]) continue;
+    /* AN ABILITY'S FLAG IS NAMESPACED ("gp"+uid, "bp"+uid) so it cannot
+       collide with the piece's own swing — so the lookup has to strip it,
+       or every ability entry misses the gear list, reads as an allowance
+       and silently untaps a tapped permanent on the wrong seat's turn. */
+    const bare = String(uid).replace(/^(?:gp|bp)/, "");
+    /* COMPARED AS STRINGS, deliberately. A gear uid is a NUMBER and the
+       namespaced flag is a string, so stripping "gp9" yields "9" and a
+       strict === against 9 never matches — the piece is not found, the
+       entry falls through as an allowance, and a tapped ability untaps at
+       the wrong boundary. The prefix only exists to keep an ability's flag
+       from colliding with its piece's own swing, so identity here is the
+       printed uid regardless of how it was spelled. */
+    const piece = ((sd && sd.gear) || [])
+      .find(x => x && (String(x.uid) === String(uid) || String(x.uid) === bare));
+    if(!piece) continue;                    /* unknown: treat as an allowance */
+    const wc = weaponCost(piece.tx || "");
+    if((wc && wc.taps) || tapsToActivate(piece.tx || ""))
+      out[uid] = true;                      /* still tapped — only (d) lifts it */
+  }
+  return out;
+}
 const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) || new RegExp("\\b"+k+"\\b","i").test(c.tx||"");
 /* A DOUBLE-FACED CARD'S TYPE LINE CARRIES BOTH FACES — "Runeblade Action //
    Earth Instant". The card you PLAY is the front face; the back is reachable
@@ -1567,7 +1641,7 @@ const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        weaponCost, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount,
