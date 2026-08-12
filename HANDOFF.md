@@ -108,13 +108,13 @@ DONE"; follow it rather than inventing a new one.
 - `npm run fairness` → **clean.** Keep it that way. It gained three checks
   in v2.66–v2.69 and each was verified to shout when its bug returns.
 - `npm run audit` → 405 unique pool cards, **306 full / 77 part / 22 none**.
-- **v2.72 on `main`, pushed and live**, verified serving: all 20 `engine/*.js`
+- **v2.72 on `main`, pushed and live**, verified serving: all 22 `engine/*.js`
   return 200 and the deployed `parser.js` carries the new symbols. `origin` is
   `git@github.com:dawnblade-ai/dawnblade-ai.git` over SSH and **a push IS
   the deploy** — Pages serves `main` at the repo root. The user has given
   standing authorization to push without asking (2026-08-03).
 - **Verify the deploy, not just the tests.** Check the URL returns 200 *and*
-  that all **21** `engine/*.js` files do. Pages sometimes takes several
+  that all **22** `engine/*.js` files do. Pages sometimes takes several
   minutes and a few polls to rebuild; poll until `APP_VER` matches.
 - `node` is at `~/node/bin`, **not on PATH** —
   `export PATH="$HOME/node/bin:$PATH"`.
