@@ -9,6 +9,77 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.73 — execute declares, and stops
+
+**The knot the whole Phase 1 rebuild is named after.** `execute` did two
+jobs at once: it applied the card's effect AND advanced the turn structure
+— calling `dummyDefence` inline and setting `mode:"stack"` itself. That is
+why the table could never call the card semantics: `judge.js` drives combat
+through `phase`/`step`/`chainCards` and has no dummy to ask.
+
+```
+execute  ->  _declared?  ->  defend step  ->  afterDefenders  ->  window
+```
+
+`execute` now declares and returns. `resolvePlay` — the TRAINER's wrapper —
+runs `dummyDefence`, calls `afterDefenders`, and says which phase follows. A
+second caller brings its own.
+
+**`afterDefenders` exists because some card text cannot resolve until the
+DEFENDERS DO.** Phantasm reads the cards declared against the attack, so it
+was never declaration-time text — and folding it in was what forced
+`execute` to run the defend step itself.
+
+### The measurable results
+
+| | |
+|---|---|
+| `mode` writes in `engine/effects.js` | **0**, was 5 — pinned by a drill that strips comments first |
+| `dummyDefence` in `CTX_KEYS` | **gone** — the one context key that described the trainer's opponent rather than cards |
+| `activateInstant`'s capture-and-restore | **deleted** — v2.72 needed it because `execute` opened with `mode:"act"`; the window now simply survives |
+
+### TWO REAL BUGS, BOTH FOUND BY PLAYING
+
+**1. Going second opened turn 1 with ZERO action points.** v2.71 gave seat 1
+a real end phase, and CR 4.4.3e says *all* players lose their points — so
+seat 1's end phase correctly zeroed the point the initial state had handed
+you, and the opening handoff never passes through `newTurn`, which is where
+CR 4.3.2 issues one. You could not play a single action card on your first
+turn. **Not an illegal STATE** — zero action points is what you have for
+most of the game — so `invariants.js` cannot see it by construction, and all
+914 drills were green.
+
+**2. Seat 1 got 6 from Emeritus Scolding on its own turn, where it prints
+4.** The `foeTurn` condition read `mode === "block"`, which means "they are
+swinging at me" — but during the mirror's swing `foePlay` BORROWS THE ACTOR
+to seat 1, and it is seat 1's turn. Stronger than printed, and
+`npm run fairness` is one-sided against ever seeing it because the clause is
+consumed either way. It now asks `turnPlayer !== actorOf`, which is the
+question the CR actually asks.
+
+### Trap 4b, three times in one change
+
+Three drills went green against broken code before being rewritten:
+
+- the routing drill grepped for the call it guarded, so `if(false)` left it
+  passing **with the whole feature off**;
+- a `mode:` scan tripped on its own explanatory COMMENT — the same trap in
+  the failing direction;
+- the `foeTurn` drill matched `turnPlayer !== actorOf(s)` in the source,
+  which survives disabling the guard around it.
+
+Each is now DRIVEN — `parser.instantAbilityReady` is a function a drill
+calls, and the `foeTurn` pair runs Emeritus Scolding's printed text through
+`execute` and reads the damage off the ACTOR'S FOE (hardcoding seat 1 there
+reports a flat 0 the moment the actor is borrowed). **Every sabotage was
+verified to change the file (rule 4a) and to bite.**
+
+Driven end to end: pay → declare → dummy defends → reaction window →
+resolve → action phase, and the opening handoff issues its action point.
+0 invariant violations. **922 drills.**
+
+---
+
 ## v2.72 — the half of the iron that had no window
 
 **Spellfire Cloak prints `Activate this ability only during an opponent's

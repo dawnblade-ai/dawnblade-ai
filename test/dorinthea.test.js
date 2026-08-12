@@ -740,9 +740,16 @@ test("the granted ability reaches the attack that collects the buff", {skip}, ()
   assert.deepStrictEqual(g.pend.onHit, [["ga"]], "and the granted ability came with it");
 
   const before = g.sides[0].ap;
-  g = resolveStack({...g, pend: {...g.pend, total: 6}});
+  /* `mode:"stack"` IS THE DRILL'S TO SUPPLY NOW (v2.73). `execute` used to
+     set it on the way out; it declares and stops, and the caller runs the
+     defend step and opens the reaction window. Without it `resolveStack`
+     returns the state untouched — and this assertion (ap is KEPT) is
+     satisfied by nothing happening at all, so it would have gone on
+     passing while testing precisely nothing. */
+  g = resolveStack({...g, mode: "stack", pend: {...g.pend, total: 6}});
   assert.strictEqual(g.sides[0].ap, before,
     "it hit, so go again was granted and the action point is KEPT");
+  assert.strictEqual(g.pend, null, "and the link actually resolved");
 });
 
 test("a non-weapon attack collects neither the buff nor its rider", {skip}, () => {
@@ -763,6 +770,6 @@ test("a non-weapon attack collects neither the buff nor its rider", {skip}, () =
   assert.strictEqual(g.sides[0].buffQ.length, 1,
     "an unmatched buff is not spent — it waits for an attack it applies to");
   const before = g.sides[0].ap;
-  g = resolveStack({...g, pend: {...g.pend, total: 6}});
+  g = resolveStack({...g, mode: "stack", pend: {...g.pend, total: 6}});
   assert.strictEqual(g.sides[0].ap, before - 1, "so this one does NOT go again");
 });

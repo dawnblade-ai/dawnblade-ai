@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v2.72
+# Handoff — Dawnblade, at v2.73
 
 Paste everything below the line into a fresh Claude Code thread in this repo.
 
@@ -24,11 +24,12 @@ into whichever engine you point them at.
 ### Where we are
 
 ```
-1. ENGINE   ← YOU ARE HERE. Four steps were planned; two have shipped.
+1. ENGINE   ← YOU ARE HERE. Four steps were planned; three have shipped.
      ✔ step 1 (v2.71) seat 1 takes a real turn
      ✔ step 2 (v2.72) instant-speed activation on their turn
+     ✔ step 4 (v2.73) execute declares and stops — done EARLY, on purpose
      ☐ step 3        Frostbite as a token, Arcane Barrier as a payment
-     ☐ step 4        split declaration from defence in `execute`
+                     ← the only thing left before IYSLANDER
 2. HEROES   KAYO ✔ (27 full / 2 part / 1 none) · DORINTHEA ✔ (29/4/0)
             next: IYSLANDER — blocked on step 3, see below
 3. UI & NETWORK — frozen
@@ -71,23 +72,28 @@ cards real**, and it is the remaining blocker for her.
   Cold Snap, Aether Icevein). `prompts.js`'s `pay` variant is already
   side-addressed; seat 1 can already pitch (`foePlay`).
 
-### STEP 4 — the one that costs most if deferred
+### STEP 4 IS DONE (v2.73) — what it means for phase 2
 
-`execute` does two jobs: it applies the card's effect *and* advances the
-turn structure. The coupling is **four sites in 455 lines**:
+`execute` no longer advances the turn. `engine/effects.js` contains **zero
+`mode` writes** and no longer takes `dummyDefence` in its context; the
+trainer's `resolvePlay` owns the defend step, the reaction window and the
+action phase.
 
 ```
-effects.js:511   let n = {...s, mode:"act", pending:null}
-effects.js:905   const dd = dummyDefence(n, total, card)
-effects.js:926   n.mode = "act"        (phantasm pop)
-effects.js:932   n.mode = "stack"
+execute  ->  _declared?  ->  defend step  ->  afterDefenders  ->  window
 ```
 
-v2.72 works *around* it — `activateInstant` captures `mode`/`bphase` and
-restores them after calling `execute`. That is honest and commented, and
-it is a patch on the seam rather than the fix. **Do step 4 before 13 more
-heroes are written on top of it**, or phase 3 is not UI work at all — it is
-re-hosting every hero's semantics onto `judge.js` and re-verifying them.
+**This was taken out of order, before Iyslander, deliberately** — the
+coupling was four sites in 455 lines, and every hero built on top of it
+would have made it bigger. Card text can now be written without also
+writing turn structure, which is what phase 2 needs.
+
+`afterDefenders` is where text that needs the DEFENDERS TO EXIST resolves
+(phantasm reads what was declared against the attack). If a new card needs
+the same, it goes there, not back into `execute`.
+
+**Still not routed to the table**: `judge.js` calls none of this yet. The
+split is what MAKES that possible; wiring it is phase 3.
 
 **"Complete" means the hero ability and the deck's mechanical spine are
 built, not that every clause in every card is read.** Both finished heroes
@@ -104,11 +110,11 @@ DONE"; follow it rather than inventing a new one.
 
 ## WHERE THINGS STAND
 
-- `npm test` → **913 drills, all green.** Never leave them red.
+- `npm test` → **922 drills, all green.** Never leave them red.
 - `npm run fairness` → **clean.** Keep it that way. It gained three checks
   in v2.66–v2.69 and each was verified to shout when its bug returns.
 - `npm run audit` → 405 unique pool cards, **306 full / 77 part / 22 none**.
-- **v2.72 on `main`, pushed and live**, verified serving: all 21 `engine/*.js`
+- **v2.73 on `main`, pushed and live**, verified serving: all 21 `engine/*.js`
   return 200 and the deployed `parser.js` carries the new symbols. `origin` is
   `git@github.com:dawnblade-ai/dawnblade-ai.git` over SSH and **a push IS
   the deploy** — Pages serves `main` at the repo root. The user has given
@@ -130,16 +136,12 @@ first two moved byte-identically by script; the third was
 missing key**. `test/effects.test.js` fails if the trainer's context literal
 and the module's `CTX_KEYS` drift apart.
 
-### WHAT THE NETWORKED TABLE STILL NEEDS
+### WHAT THE NETWORKED TABLE STILL NEEDS (updated v2.73)
 
-**Not location.** It is that `execute` does two jobs at once: it applies the
-card's effect *and* **advances the turn structure** (it calls
-`dummyDefence` inline and sets `mode:"stack"`), while `judge.js` drives
-combat through `phase`/`step`/`chainCards`.
-
-Separating *"what the card does"* from *"what happens next"* is the
-remaining structural job, and the inline `dummyDefence` call is the first
-knot in it. Until then:
+**The separation is DONE** — `execute` declares and stops, and the caller
+owns what happens next. What is left is purely wiring: `judge.js` must call
+`execute`/`afterDefenders`/`resolveStack` at its own DEFEND and RESOLUTION
+steps. That is phase 3 and it is frozen. Until it happens:
 
 ```
 SOLO  play  ->  Battle     every card effect, the regression harness

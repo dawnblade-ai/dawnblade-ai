@@ -62,13 +62,13 @@ const rngRoll = R.roll, rngInt = R.int;
    different meaning, and a second definition under the same name is the
    collision KNOWN_COLLISIONS polices. Passing them guarantees the moved
    bodies keep calling exactly the functions they called inside Battle. */
-const CTX_KEYS = ["L","act","actMut","actorOf","bAct","bFoe","built","db","dummyDefence","foe","foeMut",
+const CTX_KEYS = ["L","act","actMut","actorOf","bAct","bFoe","built","db","foe","foeMut",
                   "gy","gyDisc","had6ThisTurn","mkRune","openPrompt","tokSeq","typeAbbr","winCheck"];
 
 function makeEffects(ctx){
   const missing = CTX_KEYS.filter(k => ctx[k] === undefined);
   if(missing.length) throw new Error("effects.js: missing context — " + missing.join(", "));
-  const {L, act, actMut, actorOf, bAct, bFoe, built, db, dummyDefence, foe, foeMut,
+  const {L, act, actMut, actorOf, bAct, bFoe, built, db, foe, foeMut,
          gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
 
   /* WHAT A DISCARD TRIGGERS. Kayo prints: "The first time you discard a
@@ -508,7 +508,12 @@ function makeEffects(ctx){
        was played and therefore survives to the next swing. Reading the
        board again at resolution is what made it pop on its own attack. */
     const runeAtPlay = runeCount(act(s));
-    let n = {...s, mode:"act", pending:null};
+    /* NO `mode` HERE (v2.73). This used to open with `mode:"act",
+       pending:null` — closing the payment sheet and putting the trainer
+       back in its action phase, neither of which is anything a CARD does.
+       Both moved to `resolvePlay`, the trainer's wrapper, so this module
+       states no phase at all and a second caller can bring its own. */
+    let n = {...s};
     const exSide = actMut(n);
     exSide.res = act(s).res - effCost(card, act(s)); exSide.paySel = [];
     // move the card out of its zone
@@ -620,7 +625,24 @@ function makeEffects(ctx){
         : cond==="lifeLt" ? act(n).hp < foe(n).hp
         : cond==="lifeGt" ? act(n).hp > foe(n).hp
         : cond==="marked" ? !!foe(n).marked
-        : cond==="foeTurn" ? s.mode==="block"
+        /* "IF IT'S NOT YOUR TURN" IS A QUESTION ABOUT THE TURN, NOT ABOUT
+           A COMBAT WINDOW (v2.73). Read as `mode==="block"` this meant
+           "they are swinging at me" — which was the only shape the
+           opponent's turn had until v2.71 gave them an action phase. The
+           moment `mode:"foeturn"` existed this silently answered FALSE
+           there, so an Emeritus Scolding played in the new window would
+           have taken the ordinary branch. A second copy of a gate the
+           trainer had already widened; the trainer's `activateIfOk` is the
+           other one, and this is why they must not be two.
+
+           `turnPlayer` rides on every state through `withPriority`
+           (v2.27), and the actor is who is resolving — so this is the
+           question the CR actually asks. The mode test stays as the
+           fallback for a state built without the priority fields, which
+           is every drill that hand-rolls one. */
+        : cond==="foeTurn" ? (s.turnPlayer != null && s.actor != null
+                                ? s.turnPlayer !== actorOf(s)
+                                : s.mode==="block" || s.mode==="foeturn")
         : cond==="arcDealt" ? (act(n).hist.arc||0)>0
         : cond==="auraTurn" ? (act(n).hist.aura||0)>0
         : cond==="madeCard" ? (act(n).hist.made||0)>0
@@ -902,33 +924,20 @@ function makeEffects(ctx){
              + ` — ${total} power on the chain`
              + (total !== _printed ? ` (printed ${_printed})` : "")
              + (ga ? ", and it goes again" : "") + ".");
-      const dd = dummyDefence(n, total, card);
-      n = dd.n;
-      n = L(n, `${dd.note}${declNote} Priority to you — react or pass.`);
-      /* RULING 2026-07-25 — phantasm: a single blocker with 6+ printed POWER
-         destroys this attack outright ("popping" it). Because the card is
-         destroyed its go again never resolves and the action point is not
-         refunded, so the pend is torn down here rather than resolved. */
-      if(hasKw(card,"phantasm")){
-        const popper = n.stack.filter(l=>l.k==="def" && l.gi==null)
-          .map(l=>foe(n).hand.find(c=>c.uid===l.uid)).filter(Boolean)
-          /* PRINTED power, deliberately — not zonePow. This is phantasm
-             reading the DEFENDING card, which is (a) the opponent's, and
-             Kayo's clause 2 reads "attack action cards YOU OWN", and
-             (b) already declared, so it is ON THE COMBAT CHAIN, the one
-             zone the clause excludes. Both reasons say printed. */
-          .find(c=>(c.power||0) >= 6);
-        if(popper){
-          n.pend = null; n.stack = []; n.mode = "act";
-          actMut(n).ap = act(n).ap - 1;
-          n = L(n, `${popper.name} has ${popper.power} power — ${card.name} is popped by phantasm and destroyed. No go again, no refund.`);
-          /* a phantasm card may pay off on being popped — read its own text */
-          const pm = clean(card.tx||"").toLowerCase().match(/when (?:this|[a-z' ]+) is destroyed, (.+?)(?:\.|$)/);
-          if(pm){ const eff = classifyClause(pm[1]); if(eff && eff.status==="run") n = runOps(n, eff.ops, card.name); }
-          return openPrompt(winCheck(n));
-        }
-      }
-      n.mode = "stack";
+      /* THE DECLARATION ENDS HERE (v2.73).
+
+         This used to call `dummyDefence` inline and then set `mode:"stack"`
+         — so `execute` did two jobs at once: it applied the card's effect
+         AND advanced the turn structure. That is the knot the whole Phase 1
+         rebuild names, and it is why the table could never call this: the
+         trainer's defend step is a dummy picking blocks, and `judge.js`
+         drives combat through `phase`/`step`/`chainCards` instead.
+
+         The attack is on the chain and awaiting defenders. WHOSE defenders,
+         and how they are chosen, is the caller's business; `_declared`
+         carries everything the caller needs to run its own defend step and
+         to hand the state back for `afterDefenders`. */
+      n._declared = {card, total, declNote};
       return n;
     } else {
       if(card._buildSteam){ const tgt=card._steamFor, cur=(act(n).counters[tgt]||{}); if((cur.steam||0)===0){ actMut(n).counters={...act(n).counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
@@ -994,6 +1003,52 @@ function makeEffects(ctx){
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
     else if(!apCost) n = L(n, `${card.name} plays at instant speed — no action point spent.`);
     return openPrompt(winCheck(n));
+  };
+
+  /* THE SECOND HALF OF A DECLARATION (v2.73).
+
+     Some card text cannot resolve until the DEFENDERS EXIST — phantasm
+     reads the cards declared against the attack — so it is not
+     declaration-time text at all, and folding it into `execute` was what
+     forced `execute` to run the defend step itself.
+
+     The caller declares defenders however its own turn structure does
+     (the trainer's `dummyDefence`, judge.js's DEFEND step) and hands the
+     state back here. This resolves what the defenders enabled, and reports
+     `_fizzled` when the attack did not survive to the reaction step. It
+     never names a phase: what "the attack is gone" MEANS is the caller's,
+     and that is the whole point of the split. */
+  const afterDefenders = (s) => {
+    let n = {...s};
+    const d = n._declared;
+    delete n._declared;
+    if(!d) return n;
+    const card = d.card;
+    /* RULING 2026-07-25 — phantasm: a single blocker with 6+ printed POWER
+       destroys this attack outright ("popping" it). Because the card is
+       destroyed its go again never resolves and the action point is not
+       refunded, so the pend is torn down here rather than resolved. */
+    if(hasKw(card,"phantasm")){
+      const popper = n.stack.filter(l=>l.k==="def" && l.gi==null)
+        .map(l=>foe(n).hand.find(c=>c.uid===l.uid)).filter(Boolean)
+        /* PRINTED power, deliberately — not zonePow. This is phantasm
+           reading the DEFENDING card, which is (a) the opponent's, and
+           Kayo's clause 2 reads "attack action cards YOU OWN", and
+           (b) already declared, so it is ON THE COMBAT CHAIN, the one
+           zone the clause excludes. Both reasons say printed. */
+        .find(c=>(c.power||0) >= 6);
+      if(popper){
+        n.pend = null; n.stack = [];
+        actMut(n).ap = act(n).ap - 1;
+        n = L(n, `${popper.name} has ${popper.power} power — ${card.name} is popped by phantasm and destroyed. No go again, no refund.`);
+        /* a phantasm card may pay off on being popped — read its own text */
+        const pm = clean(card.tx||"").toLowerCase().match(/when (?:this|[a-z' ]+) is destroyed, (.+?)(?:\.|$)/);
+        if(pm){ const eff = classifyClause(pm[1]); if(eff && eff.status==="run") n = runOps(n, eff.ops, card.name); }
+        n._fizzled = true;
+        return openPrompt(winCheck(n));
+      }
+    }
+    return n;
   };
 
   /* THE LAST OF THE THREE (v2.62). runOps and execute were plain
@@ -1184,11 +1239,14 @@ function makeEffects(ctx){
     actMut(n).ap = n.pend.ga ? act(n).ap : act(n).ap-1;
     if(n.pend.ga) n = L(n, "Go again — action point kept.");
     n.chainOpen = true;
-    n.stack = []; n.pend = null; n.mode = "act";
+    /* The link has resolved and the stack is empty. WHERE THAT LEAVES THE
+       GAME is the caller's (CR 7.6.3 hands priority back to the
+       turn-player); the trainer's wrapper says `mode:"act"`. */
+    n.stack = []; n.pend = null;
     return openPrompt(winCheck(n));
   };
 
-  return {runOps, execute, resolveStack, afterDiscard, payAddCost};
+  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost};
 }
 
 return {makeEffects, CTX_KEYS};

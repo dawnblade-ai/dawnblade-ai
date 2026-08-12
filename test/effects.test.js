@@ -88,11 +88,17 @@ test("no moved body is re-declared inside index.html", () => {
       `the trainer must take ${fn} from the module`);
   }
   /* resolveStack keeps a React wrapper in the trainer — it is a reducer the
-     UI calls, so `setG` stays behind while the BODY lives in the module. */
-  assert.ok(!/const resolveStack = \(\) => setG\(s=>\{/.test(HTML),
+     UI calls, so `setG` stays behind while the BODY lives in the module.
+     v2.73 gave that wrapper one more job: the module no longer says what
+     phase the game is in when a link resolves, so the trainer says
+     `mode:"act"` (CR 7.6.3 hands priority back to the turn-player). The
+     guard is still that the BODY is the module's — a wrapper that
+     delegates is fine, a wrapper that reimplements is the thing v2.20
+     deleted 51 duplicated definitions to escape. */
+  assert.ok(!/const resolveStack = \(\) => setG\(s=>\{[\s\S]{200}/.test(HTML),
     "resolveStack's body is back in index.html — that is two copies again");
-  assert.match(HTML, /const resolveStack = \(\) => setG\(_EFX\.resolveStack\);/,
-    "the trainer must hand setG the module's pure body");
+  assert.match(HTML, /_EFX\.resolveStack\(s\)|_EFX\.resolveStack\)/,
+    "the trainer must call the module's pure body, not its own");
   assert.match(E.makeEffects(stubCtx()).resolveStack.toString(), /^\(?s\)? *=>|^function/,
     "and the module's resolveStack must be a plain state function, not a reducer");
 });

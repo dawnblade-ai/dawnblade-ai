@@ -43,7 +43,6 @@ function stubCtx(over){
     bFoe: () => ({runeDmg: 1, atkPowOffChain: 0, mightOnFirst6Discard: false}),
     built: {runeDmg: 1},
     db: {},
-    dummyDefence: s => s,
     foe: s => s.sides[1 - (s.actor || 0)],
     foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
     gy: (turn, ...cards) => cards.map(c => ({...c, _gy: turn})),
@@ -356,13 +355,49 @@ test("activateInstant asks priority.js for the window, and restores it", () => {
      five copies of "may this be played here" drifted apart pre-rxAllowed. */
   assert.ok(/DawnPriority\.speedAllowed\(s,\s*0\)\.includes\("instant"\)/.test(ai),
     "the window is priority.js's question, never a hand-rolled mode test");
-  /* THE HALF THAT WOULD STEAL GAMES. `execute` returns `mode:"act"`, and
-     leaving it there hands the player their own action phase in the
-     middle of the opponent's turn — an illegal play allowed, sev-3. */
-  assert.ok(/const win = \{mode:s\.mode, bphase:s\.bphase\}/.test(ai) && /\.\.\.out,\s*\.\.\.win/.test(ai),
-    "the window must be captured and restored around execute");
   assert.ok(/execute\(paid, card, from, idx\)/.test(ai),
     "and the card's semantics come from execute — there is ONE copy of those");
+  /* v2.72 had to capture and restore `mode`/`bphase` around this call,
+     because `execute` opened with `mode:"act"` and leaving that would hand
+     the player their own action phase in the middle of the opponent's turn
+     (sev-3, illegal play allowed). v2.73 split the phase out of `execute`
+     entirely, so the window simply survives and the workaround is GONE.
+     Pinned in the negative: if a `mode:` write reappears in this function,
+     something has started advancing the turn from inside an instant. */
+  /* Comments stripped first — this function's prose is ABOUT the phase
+     handling it no longer does, so a raw scan reads the bug it documents.
+     Trap 4b, in the direction where a comment causes a false FAIL. */
+  const aiCode = ai.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/mode\s*:/.test(aiCode),
+    "activateInstant must not need to restore a window execute no longer touches");
+});
+
+test("engine/effects.js states no PHASE — that is the whole of the split", () => {
+  const fs = require("fs"), path = require("path");
+  const raw = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  /* Comments are stripped first: this module's prose is ABOUT the phases it
+     used to write, so a scan that reads them reports the bug it documents.
+     Same discipline as sync.test.js's and html-balance.test.js's. */
+  const code = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const writes = code.match(/mode\s*:\s*"|\.mode\s*=\s*"/g) || [];
+  assert.deepEqual(writes, [],
+    "a card effect must never say what phase the game is in — that is the caller's, " +
+    "and it is the one thing that kept judge.js from ever calling these semantics");
+  /* The reads that remain are named, so a NEW one is a deliberate edit.
+     Three shapes, and each is honest about what it is:
+       .mode!=="stack"   resolveStack's own guard
+       .mode==="block"   the shave, which only applies to an incoming attack
+       .mode==="block" / .mode==="foeturn"
+                         the FALLBACK inside the foeTurn condition, used
+                         only when a state carries no priority fields (every
+                         drill that hand-rolls one). The real answer is
+                         `turnPlayer !== actorOf`, which is why this pair
+                         may look redundant and is not. */
+  const reads = (code.match(/\.mode\s*[!=]==?\s*"[a-z]+"/g) || []).sort();
+  assert.deepEqual(reads,
+    ['.mode!=="stack"', '.mode==="block"', '.mode==="block"', '.mode==="foeturn"'].sort(),
+    "effects.js's remaining mode READS are pinned — adding one is a deliberate edit");
+
 });
 
 test("the activateIf gate has ONE reader, asked by both windows", () => {
@@ -417,4 +452,155 @@ test("the foeturn window will not open on an ability whose gate is unmet", () =>
     "a piece whose printed gate is unmet must not open a window it cannot be used in");
   assert.ok(/effCost\(gr\.powCard, you\(s\)\)\s*<=\s*bank/.test(h),
     "nor one the player cannot pay for, even counting what they could pitch");
+});
+
+test("going second still opens turn 1 with an action point (CR 4.3.2)", () => {
+  /* THE BUG, found by playing and invisible to every drill and to
+     invariants.js: seat 1's end phase (v2.71) correctly zeroes BOTH
+     players' points (CR 4.4.3e), and the opponent-first opening hands over
+     WITHOUT ticking the clock — so it never passes through `newTurn`,
+     which is where every other turn is issued its point. Going second
+     meant opening turn 1 unable to play a single action card.
+
+     Zero action points is not an illegal state — it is what you have for
+     most of the game — so `invariants.js` cannot see this by construction,
+     which is why it is pinned here as a property of the branch. */
+  const end = slice("  function foeEnd(s){", "  const toggleBlock = ");
+  /* Bound the branch to itself — sliced to the end of foeEnd it swallows
+     the `return newTurn(n)` that follows it, and the "does not tick"
+     assertion below would then be reading the NORMAL path. */
+  const from = end.indexOf("if(n._opening)");
+  assert.ok(from > -1, "the opening branch moved — re-anchor this drill");
+  const opening = end.slice(from, end.indexOf("return newTurn(", from));
+  assert.match(opening, /youMut\(o\)\.ap\s*=\s*1/,
+    "the opening handoff must issue the action point — it IS the beginning of your action phase");
+  /* And the clock must still NOT tick here: score is turns + wasted, so
+     ticking would silently tax a point for going second. */
+  assert.ok(!/turn\s*:\s*\w+\.turn\s*\+\s*1/.test(opening) && !/newTurn\(/.test(opening),
+    "and must still hand over without ticking the clock");
+});
+
+/* ===================================================================
+   THE DECLARATION/DEFENCE SPLIT (v2.73, Phase 1 step 4)
+
+   `execute` used to call `dummyDefence` inline and set `mode:"stack"`
+   itself — it applied the card's effect AND advanced the turn. That is
+   the single knot that kept judge.js from ever calling the card
+   semantics: it drives combat through `phase`/`step`/`chainCards` and has
+   no dummy to ask. The module now declares and stops.
+   =================================================================== */
+
+test("execute hands back a DECLARATION for the caller to defend", () => {
+  const rp = slice("  function resolvePlay(s, card, from, idx){", "  const maybeBoost = ");
+  assert.match(rp, /if\(!n\._declared\) return n;/,
+    "a play that resolved fully must not fall into the defend step");
+  assert.match(rp, /dummyDefence\(n, total, atk\)/,
+    "declaring the opponent's blockers is the TRAINER's job now, not the module's");
+  assert.match(rp, /_EFX\.afterDefenders\(n\)/,
+    "and card text that needs the defenders to exist resolves after they do");
+  /* The two phases the caller owns, and they are different outcomes:
+     a popped attack has no reaction window to open. */
+  assert.match(rp, /_fizzled[\s\S]{0,120}mode:"act"/,
+    "a phantasm pop returns to the action phase");
+  assert.match(rp, /return \{\.\.\.n, mode:"stack"\}/,
+    "and a surviving attack opens the reaction window");
+});
+
+test("dummyDefence is no longer part of the module's contract", () => {
+  /* The measurable result of the split: the one context key that was a
+     statement about the TRAINER's opponent rather than about cards. */
+  assert.ok(!E.CTX_KEYS.includes("dummyDefence"),
+    "effects.js must not need a way to declare the opponent's blockers");
+  assert.strictEqual(typeof E.makeEffects(stubCtx()).afterDefenders, "function",
+    "afterDefenders is the second half of a declaration and must be exported");
+});
+
+test("afterDefenders is inert without a declaration, and clears it", () => {
+  const efx = E.makeEffects(stubCtx());
+  const g = twoSeats();
+  const out = efx.afterDefenders(g);
+  assert.ok(!("_declared" in out), "no declaration in flight — nothing to do");
+  assert.ok(!out._fizzled, "and nothing fizzled");
+  /* A dangling `_declared` would be resolved by a LATER play as if it were
+     its own attack, so consuming it is part of the contract. */
+  const withDecl = {...g, _declared: {card: card({name: "Declared Atk", tx: ""}), total: 4, declNote: ""}};
+  const done = efx.afterDefenders(withDecl);
+  assert.ok(!("_declared" in done), "the declaration is consumed, never left dangling");
+});
+
+/* "IF IT'S NOT YOUR TURN" IS A QUESTION ABOUT THE TURN (v2.73).
+
+   Read as `mode==="block"` this meant "they are swinging at me" — the only
+   shape the opponent's turn had until v2.71 gave them an action phase. The
+   moment `mode:"foeturn"` existed it silently answered FALSE there, so an
+   Emeritus Scolding played in the new window took the ordinary branch and
+   dealt 4 where it prints 6.
+
+   DRIVEN, not grepped. The first version of this drill matched
+   `s.turnPlayer !== actorOf(s)` in the source and went green with the
+   guard around it replaced by `false` — the identifier survives, which is
+   trap 4b for the third time in this change. Printed text in, damage out. */
+const SCOLDING = "Deal 4 arcane damage to target hero. If Emeritus Scolding is played " +
+                 "during an opponents turn, instead deal 6 arcane damage to them.";
+
+function scold(over){
+  const efx = E.makeEffects(stubCtx());
+  const g = Object.assign(twoSeats(), {mode: "act", chain: [], stack: [], hitSeq: 0,
+    boostChain: 0, turn: 2}, over || {});
+  const c = card({name: "Emeritus Scolding " + (over && over._tag || ""), pitch: 1, cost: 0,
+    power: null, tt: "Wizard Action", ty: ["Wizard", "Action"], tx: SCOLDING});
+  /* MEASURE THE ACTOR'S FOE, not seat 1. With the actor borrowed to seat 1
+     (which is exactly what `foePlay` does to resolve the opponent's own
+     card) the arcane damage lands on seat 0, and a helper hardcoded to
+     seat 1 reports a flat 0 for every such case — a drill that fails for a
+     reason that has nothing to do with what it is testing. */
+  const me = g.actor || 0, them = 1 - me;
+  g.sides[me].hand = [c];
+  const before = g.sides[them].hp;
+  const out = efx.execute(g, c, "hand", 0);
+  return before - out.sides[them].hp;
+}
+
+test("Emeritus Scolding deals 6 on THEIR action phase, not just mid-combat", () => {
+  /* The new window: their action phase, priority passed to you. Before
+     v2.73 this branch read false and the card was quietly weaker. */
+  assert.strictEqual(scold({_tag: "foeturn", mode: "foeturn", turnPlayer: 1, actor: 0}), 6,
+    "their turn is their TURN — the printed 6 applies in their action phase");
+  /* And the shape that always worked: their combat window. */
+  assert.strictEqual(scold({_tag: "block", mode: "block", turnPlayer: 1, actor: 0}), 6,
+    "and still applies while they are swinging");
+});
+
+test("...and 4 on your own turn — the control that makes the pair mean anything", () => {
+  /* Without this the drill above passes just as well when the condition is
+     ignored and every Scolding deals 6. */
+  assert.strictEqual(scold({_tag: "own", mode: "act", turnPlayer: 0, actor: 0}), 4,
+    "your own action phase takes the printed base, never the instead");
+});
+
+test("the foeTurn fallback still answers on a state with no priority fields", () => {
+  /* Every drill that hand-rolls a state omits phase/step/turnPlayer, and
+     `withPriority` only merges them through the trainer's setG. The
+     fallback is why those states still get a sensible answer. */
+  assert.strictEqual(scold({_tag: "fb-block", mode: "block"}), 6, "falls back to the window");
+  assert.strictEqual(scold({_tag: "fb-act", mode: "act"}), 4, "and to your own turn");
+});
+
+test("seat 1 playing it on ITS OWN turn gets 4 — the discriminator", () => {
+  /* THE CASE THE FALLBACK CANNOT ANSWER, and the reason the turn read is
+     not just tidier. During the mirror's swing the trainer is in
+     `mode:"block"` and `foePlay` BORROWS THE ACTOR to seat 1 to resolve
+     the card's own effects. Read as `mode==="block"` the condition says
+     "not your turn" — but it IS seat 1's turn, so the old reading handed
+     the opponent 6 where the card prints 4, on every Scolding it played.
+
+     Stronger than printed, which is the direction that steals games, and
+     `npm run fairness` is deliberately one-sided against ever seeing it
+     because the clause is consumed either way. */
+  assert.strictEqual(scold({_tag: "theirs-own", mode: "block", turnPlayer: 1, actor: 1}), 4,
+    "it is seat 1's own turn — the instead must not fire for the turn player");
+  /* And the mirror image, so the pair cannot both be satisfied by a
+     constant: you acting during their turn still gets the 6. */
+  assert.strictEqual(scold({_tag: "yours-their-turn", mode: "block", turnPlayer: 1, actor: 0}), 6,
+    "while you act during their turn, it does");
 });
