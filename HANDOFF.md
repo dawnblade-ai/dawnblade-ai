@@ -24,16 +24,128 @@ into whichever engine you point them at.
 ### Where we are
 
 ```
-1. ENGINE   ← YOU ARE HERE. Four steps were planned; three have shipped.
+1. ENGINE   Four steps were planned; THREE SHIPPED this cycle.
      ✔ step 1 (v2.71) seat 1 takes a real turn
      ✔ step 2 (v2.72) instant-speed activation on their turn
-     ✔ step 4 (v2.73) execute declares and stops — done EARLY, on purpose
+     ✔ step 4 (v2.73) execute declares and stops
      ☐ step 3        Frostbite as a token, Arcane Barrier as a payment
-                     ← the only thing left before IYSLANDER
+                     — the last blocker for IYSLANDER. See the ordering
+                       note under THE NEW DIRECTION before starting it.
 2. HEROES   KAYO ✔ (27 full / 2 part / 1 none) · DORINTHEA ✔ (29/4/0)
-            next: IYSLANDER — blocked on step 3, see below
 3. UI & NETWORK — frozen
 ```
+
+---
+
+## THE NEW DIRECTION (user, 2026-08-14) ← START HERE
+
+**Unify the two engines, and give the opponent's seat to a policy.**
+
+Those are one job, not two. Today:
+
+```
+SOLO  play  ->  Battle     every card effect; the opponent is a BRANCH
+                           inside the rules (foePick/foePlay/foeVanilla/
+                           dummyDefence)
+TABLE play  ->  judge.js   real CR turn structure, real costs, and NO
+                           card text
+```
+
+Nothing routes between them. The opponent has nowhere to *sit* because it
+is not a seat — it is an `if` in the middle of the rules.
+
+### THIS REVERSES A STANDING DECISION, DELIBERATELY
+
+CLAUDE.md carried, from 2026-07-25: *"no AI opponent. The goal is real
+multiplayer — two humans... do not build a deck-piloting AI."* The user
+changed that on **2026-08-14**. Both dates are recorded so nobody
+re-litigates it from the old note. Real multiplayer is still the goal; a
+policy in seat 1 is now also a goal, not a detour.
+
+### MOST OF THE GROUNDWORK EXISTS, AND v2.73 IS WHAT UNBLOCKED IT
+
+| module | what it already is | state |
+|---|---|---|
+| `engine/sparring.js` | **`act(game, seat) -> action \| null` — a seat as a policy.** This IS the idea, already built and drilled (11 drills). | the ONLY module still in `wire.test.js`'s `HEADLESS` list, because nothing calls it |
+| `engine/judge.js` | `reduce(state, action, seat)` — the CR turn structure as a pure function | live at the table |
+| `engine/effects.js` | ALL the card semantics — and **phase-free since v2.73** | live in the trainer only |
+
+v2.73 is the reason this is now reachable: `execute` used to run the defend
+step itself, so only a caller with a dummy could use it. It declares and
+stops; `afterDefenders` is the post-declaration hook; there are **zero
+`mode` writes** in the module and `dummyDefence` is out of its context.
+
+So the target shape is already three real modules:
+
+```
+judge.reduce   the turn structure     (has no card text)
+effects.*      the card semantics     (has no phase)
+sparring.act   the seat               (has neither)
+```
+
+### WHAT THE UNIFICATION ACTUALLY COSTS — read before promising a date
+
+1. **`judge.js` must call `execute` / `afterDefenders` / `resolveStack`** at
+   its DEFEND and RESOLUTION steps. This is the wiring v2.73 enables and it
+   is **not started**.
+2. **`effects.js` still takes ~19 trainer closures** in `CTX_KEYS` — `L`,
+   `gy`, `gyDisc`, `openPrompt`, `winCheck`, `bAct`, `built`, `mkRune`,
+   `tokSeq`… `judge.js` would have to supply every one. That is the next
+   seam of the same kind `dummyDefence` was, and it is bigger.
+3. **`effects.js` still READS `mode` in 4 places**, pinned by a drill
+   (`"engine/effects.js states no PHASE"`): `resolveStack`'s own guard, the
+   block-mode damage shave, and the two-branch `foeTurn` fallback. Those
+   must speak `phase`/`step` before judge.js can drive them.
+4. **`Battle` is still written against `mode`/`bphase`** throughout, and so
+   is the whole solo UI.
+5. **`sparring.js` reads NO card text on purpose**, and a drill fails on
+   `require("./parser")`, on `fxParse`/`effCost`/`weaponCost`, and on
+   reading `.tx`/`.kw`. A policy that pilots real decks *well* will want
+   to. **That is a decision to make explicitly, not to drift into** — the
+   reason for the rule is that a sparring partner playing badly and a card
+   being read wrong must never be confusable.
+
+### WHAT MUST SURVIVE
+
+- **The trainer is the regression harness.** It plays every card effect
+  today and is the only proof the semantics are right. Do not retire
+  `Battle` before the unified path passes the same drills.
+- **The vanilla dummy's `[3,4,5]` escalation is TUNED**; real cards are
+  not. Retuning is a play session, not a drill.
+- **`sparring.js`'s three properties**, each drilled and each proven to
+  bite: it proposes and `judge.legal` disposes (a refusal is always a bug
+  in the policy); it reads no card text; it is deterministic and never
+  touches `game.rng` (ties broken on uid, or two equal blockers desync).
+- **The winner follows the HERO, not the chair** — Kayo beats Dorinthea
+  from seat 0 and from seat 1. That property is what says seat 1 is
+  genuinely occupiable.
+
+### THE TRAP THIS IDEA ALREADY WALKED INTO ONCE
+
+Porting `dummyDefence` unchanged into `sparring.js` made the game
+degenerate: **both seats blocked 41 of 41 attacks** and one finished a
+21-turn game on full life. The heuristic was written for a seat with **no
+action phase**, where a card in hand had no use but to block. Both seats
+have an action phase now (v2.71), so `takeUpTo` — the damage a seat will
+simply take rather than spend a card on — is load-bearing, and **lethal
+overrides it**. A regression run that never deals damage never exercises
+the damage step.
+
+### ORDERING — the one judgement call to make first
+
+**Step 3 (Frostbite, Arcane Barrier) is the last blocker for Iyslander**,
+and it is card semantics: it lands in `effects.js`/`parser.js`, which the
+unification does not move. So it can go either way, and the trade is:
+
+- **Step 3 first** — Iyslander ships sooner; the work is on the surface
+  the unification keeps, so it is not thrown away.
+- **Unify first** — step 3 gets built once, on the unified path, and is
+  proven at the table as well as solo. Costs a hero's delay.
+
+Neither is wrong. What *would* be wrong is starting the unification and
+leaving step 3 half-built across both.
+
+---
 
 ### WHY IYSLANDER FORCED ENGINE WORK FIRST
 

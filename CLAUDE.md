@@ -778,10 +778,12 @@ take rather than spend a card on; **lethal overrides it**, because
 nothing in hand is worth more than being alive. Iron stays greedy —
 equipment wears rather than leaving, so raising it costs no card.
 
-It is **not an AI opponent** (standing decision, 2026-07-25: the goal is
-two humans) and **not a difficulty curve** — the `[3,4,5]` escalation it
-replaces was *tuned* and real cards from a real hand are not. Retuning is
-a play session, not a drill.
+It was **not an AI opponent** (standing decision 2026-07-25) — **that
+decision was REVERSED on 2026-08-14**, and building the seat is now the
+active direction; see the roadmap entry below and `HANDOFF.md`. What has
+not changed is that it is **not a difficulty curve**: the `[3,4,5]`
+escalation it replaces was *tuned* and real cards from a real hand are not.
+Retuning is a play session, not a drill.
 
 ### THE POOL COMES IN FAITHFULLY (v2.48) — `test/loader.test.js`
 
@@ -2700,9 +2702,22 @@ it carded effects only once the engine can actually read them.
 > — it is that `you()` means `sides[0]`, not "the acting player", at 458 call
 > sites.** Read that section before starting any two-player work.
 
-**Decision 2026-07-25: no AI opponent.** The goal is real multiplayer — two humans,
-each piloting a deck. The dummy stays as the solo trainer and as the proving ground
-for symmetric state; do not build a deck-piloting AI.
+**~~Decision 2026-07-25: no AI opponent.~~ REVERSED 2026-08-14.** The original
+note read: *"The goal is real multiplayer — two humans, each piloting a deck. The
+dummy stays as the solo trainer and as the proving ground for symmetric state; do
+not build a deck-piloting AI."*
+
+**Decision 2026-08-14: build the seat.** The opponent becomes something that
+*occupies* seat 1 and answers *what do you do*, instead of a branch inside the
+rules (`foePick`/`foePlay`/`foeVanilla`/`dummyDefence`). Real multiplayer is still
+the goal; a policy in seat 1 is now **also** a goal rather than a detour.
+
+Both dates are kept because the old note is quoted elsewhere and a reader who
+finds only one of them will re-litigate the other. `engine/sparring.js` is already
+this shape — `act(game, seat) -> action | null`, 11 drills, and the only module
+still in `test/wire.test.js`'s `HEADLESS` list. **See `HANDOFF.md`, "THE NEW
+DIRECTION", for what unifying the two engines actually costs** — `effects.js` is
+phase-free as of v2.73, but still takes ~19 trainer closures.
 
 **Decision 2026-07-26: multiplayer is phased** — serverless friend-vs-friend
 (WebRTC room codes, no backend) first, then a hosted backend for the ELO ladder.
@@ -2737,9 +2752,13 @@ for symmetric state; do not build a deck-piloting AI.
    `reveal`), they are addressed to a side, and every one was driven in the real
    UI. See "Wiring a ruling to a prompt". What remains is per-card work: pick
    a ruling, write its spec, teach the parser whatever its text needs.
-3. **Give the dummy an action phase.** Swing with a real card from hand instead of
-   the scripted `[3,4,5][(turn-1)%3]` escalation. This retunes difficulty, so change
-   it with a play session, not just drills.
+3. ~~**Give the dummy an action phase.**~~ **DONE in v2.71** — seat 1 has a
+   start phase, an action point it spends, a window in which you hold priority,
+   and the same shared end phase your turn runs (`endPhaseCF`). The vanilla
+   dummy keeps the tuned `[3,4,5]` escalation; a real hero in seat 1 plays
+   cards. **The successor is THE NEW DIRECTION (2026-08-14): unify the two
+   engines and give seat 1 to a policy** — `engine/sparring.js` is already that
+   shape and is the last headless module. See `HANDOFF.md`.
 4. **Dash** is mostly online as of v2.11 — Hyper Driver discounts, Out Pace,
    Fender Bender, Overblast, Under Loop. What's left is **crank** (prompt to spend
    the entering steam counter for an action point) and Boom Grenade's on-hit rider,

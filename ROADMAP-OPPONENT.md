@@ -63,11 +63,22 @@ Three rules for the opponent's decision-making, in priority order:
    to swing first, and the log says so. It is not evaluating the matchup, and
    it should not pretend to."* Keep that honesty everywhere.
 
-A deliberately **non**-goal: strength. This is not an AI opponent project (that
-decision stands from 2026-07-25 and is unchanged — the goal is two humans). The
-opponent exists so that (a) the second seat is exercised by something, and
-(b) solo play stays useful. If it plays badly but legally and legibly, it has
-done its job.
+**STRENGTH WAS A NON-GOAL, AND THAT CHANGED ON 2026-08-14.** This paragraph
+used to read *"this is not an AI opponent project (that decision stands from
+2026-07-25 and is unchanged — the goal is two humans)"*. The user reversed it:
+building the seat is now an active goal alongside real multiplayer. See
+`HANDOFF.md`, "THE NEW DIRECTION".
+
+What survives the reversal is everything above it — points 1-3 are about
+LEGALITY and HONESTY, not about weakness, and they get *more* important as the
+policy gets stronger: it proposes and the judge disposes, it never bluffs, and
+it never pretends to evaluate what it does not. A stronger seat that quietly
+breaks a rule is worse than a weak one.
+
+Still true, and worth keeping separate from strength: the opponent exists so
+that (a) the second seat is exercised by something, and (b) solo play stays
+useful. Playing badly but legally and legibly was always an acceptable floor —
+it is no longer the ceiling.
 
 ---
 
