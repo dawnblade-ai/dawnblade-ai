@@ -1,6 +1,63 @@
 # Handoff — Dawnblade, at v2.73
 
-Paste everything below the line into a fresh Claude Code thread in this repo.
+## THE PROMPT — paste this into a fresh Claude Code thread in this repo
+
+> Read `CLAUDE.md` in full, then `HANDOFF.md`. Most entries in both exist
+> because breaking that rule already cost a real bug.
+>
+> **Your job, in this order:**
+>
+> **1. Engine step 3 — make Frostbite and Arcane Barrier real.** They are
+> the last blocker for Iyslander, and both are currently filed `noop` in
+> `parser.js` with a justification that is a fact about the old training
+> dummy rather than about the rules. Those justifications expired in
+> v2.71 when seat 1 got a real turn.
+>
+> - **Frostbite is a number on the screen with no rule behind it.**
+>   Nothing creates one except a hardcoded line in `foeTurnIce`, and
+>   **nothing consumes `frost` at all** — `effCost` does not read it,
+>   `effects.js` never mentions it. Frost Spike's "create a Frostbite
+>   token" resolves to nothing. Make it a real Aura under *their* control
+>   that modifies `effCost`. This is exactly the v2.23 runechant move: a
+>   bare counter made seven pool cards blind to runechants, and the same
+>   is true here.
+>   **RULING (user, 2026-08-10):** Frostbite taxes **one** play or
+>   activation and is then destroyed — so the play that destroys it *is*
+>   the one that is taxed.
+> - **Arcane Barrier is 24 cards across all 15 heroes**, and a `noop`. It
+>   is a payment made when the hero would be dealt arcane damage.
+> - Seat 1 must be able to be *asked* to pay and to answer (Winter's Bite,
+>   Cold Snap, Aether Icevein). `prompts.js`'s `pay` variant is already
+>   side-addressed, and seat 1 can already pitch (`foePlay`).
+>
+> Ship it, push it (push IS the deploy), and verify the deploy.
+>
+> **2. Then: unify the two engines and give seat 1 to a policy.** See
+> `HANDOFF.md` → "THE NEW DIRECTION". Do not start this with step 3
+> half-built. Read "WHAT THE UNIFICATION ACTUALLY COSTS" before scoping
+> it — `engine/sparring.js` already IS `act(game, seat)`, but
+> `effects.js` still takes ~19 trainer closures.
+>
+> **How to work:**
+>
+> - **Census the shape pool-wide before fixing it** (`HANDOFF.md` step
+>   3a). Every fix last cycle turned out to be a rule with a list behind
+>   it, and the list was always longer than the hero.
+> - **Fix the RULE, not the card.** Never special-case a card by name.
+> - **Never invent card effects** — teach the parser to read the text.
+> - **Write the drill, then SABOTAGE it**, and verify the sabotage
+>   actually changed the file. Three drills went green against completely
+>   broken code last cycle. Prefer a decision you can DRIVE over a source
+>   scan; when you must scan, strip comments first.
+> - **Assert on state — hands, life, zones, counters — never on log
+>   prose.**
+> - **Play it.** Three of the four bugs found last cycle were invisible to
+>   every drill and to `invariants.js`. `npm test` green is the floor, not
+>   the proof.
+> - **Ask me about rules.** I read cards for a living and I would rather
+>   be asked than have it guessed.
+>
+> Never claim more than is true.
 
 ---
 
@@ -29,15 +86,16 @@ into whichever engine you point them at.
      ✔ step 2 (v2.72) instant-speed activation on their turn
      ✔ step 4 (v2.73) execute declares and stops
      ☐ step 3        Frostbite as a token, Arcane Barrier as a payment
-                     — the last blocker for IYSLANDER. See the ordering
-                       note under THE NEW DIRECTION before starting it.
+                     ← DO THIS FIRST (user, 2026-08-14). Last blocker
+                       for IYSLANDER.
+   THEN: unify the engines + give seat 1 to a policy — see below.
 2. HEROES   KAYO ✔ (27 full / 2 part / 1 none) · DORINTHEA ✔ (29/4/0)
 3. UI & NETWORK — frozen
 ```
 
 ---
 
-## THE NEW DIRECTION (user, 2026-08-14) ← START HERE
+## THE NEW DIRECTION (user, 2026-08-14) — AFTER STEP 3
 
 **Unify the two engines, and give the opponent's seat to a policy.**
 
@@ -131,19 +189,20 @@ simply take rather than spend a card on — is load-bearing, and **lethal
 overrides it**. A regression run that never deals damage never exercises
 the damage step.
 
-### ORDERING — the one judgement call to make first
+### ORDERING — DECIDED (user, 2026-08-14)
 
-**Step 3 (Frostbite, Arcane Barrier) is the last blocker for Iyslander**,
-and it is card semantics: it lands in `effects.js`/`parser.js`, which the
-unification does not move. So it can go either way, and the trade is:
+**Step 3 first. Then unify.** Not a judgement call any more — build it.
 
-- **Step 3 first** — Iyslander ships sooner; the work is on the surface
-  the unification keeps, so it is not thrown away.
-- **Unify first** — step 3 gets built once, on the unified path, and is
-  proven at the table as well as solo. Costs a hero's delay.
+The reasoning that settled it: step 3 is card semantics, so it lands in
+`effects.js` / `parser.js`, and the unification does not move either of
+those. Nothing is thrown away by doing it first, and Iyslander ships
+sooner.
 
-Neither is wrong. What *would* be wrong is starting the unification and
-leaving step 3 half-built across both.
+**The one thing that would be wrong is starting the unification with step
+3 half-built**, because then Frostbite and Arcane Barrier exist on one path
+and not the other — which is the two-unrelated-bodies shape that let clash
+fire on the wrong trigger for five versions. Finish step 3, ship it, then
+start the unification from a clean base.
 
 ---
 
