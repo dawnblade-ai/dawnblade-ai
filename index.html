@@ -743,7 +743,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.74"; /* v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.75"; /* v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2634,8 +2634,12 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     const q = s.promptQ || [];
     if(!q.length) return {...s, prompt:null, promptQ:[]};
     const [p, ...rest] = q;
-    const spec = p.tag === "pay" && p.avail == null ? {...p, avail:you(s).res} : p;
-    const live = buildPrompt(s, spec);
+    /* `avail` USED TO BE PATCHED IN HERE as `you(s).res` — seat 0's
+       floating resources, whoever the sheet was addressed to, and without
+       counting what they could pitch for. buildPrompt computes it for the
+       ADDRESSED side now (v2.75), which is both the seat fix and the
+       late-binding fix; see the `pay` and `soak` branches there. */
+    const live = buildPrompt(s, p);
     if(!live) return openPrompt({...s, promptQ:rest});
     /* SEAT 1 ANSWERS ITS OWN SOAK (v2.74). A prompt addressed to side 1
        has always been ANSWERED by the human — v2.65 fixed where the
@@ -2652,7 +2656,41 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        a policy quietly answering a modal nobody knew was there is the kind
        of thing that only shows up in a game weeks later. */
     if(live.side === 1 && live.tag === "soak") return foeAnswerSoak({...s, promptQ:rest}, live);
+    /* AND A PAY (v2.75). Same reason as the soak: an "unless they pay"
+       clause hangs its whole consequence off the answer, so a sheet
+       addressed to seat 1 that nobody confirms is a printed effect that
+       never resolves — and asking YOU whether the opponent would like to
+       avoid your own card is not a question. This is the noop
+       "the dummy pays no costs, so it always declines" finally coming
+       off; it is a decision now, and seat 1 can lose the card instead. */
+    if(live.side === 1 && live.tag === "pay") return foeAnswerPay({...s, promptQ:rest}, live);
     return {...s, promptQ:rest, prompt:live};
+  }
+  /* SEAT 1 ANSWERING A PAY-OR-SUFFER. The decision is
+     `DawnEffects.payPolicy`, pure and drillable for the same reason
+     `soakPolicy` is; the applying goes through the shared `applyPrompt`,
+     because a second copy of a payout is how seat 1 collected a free
+     action point in v2.65. */
+  function foeAnswerPay(s, live){
+    let n = {...s, prompt:null};
+    const wasActor = n.actor||0;
+    n = {...n, actor:1};
+    let r = applyPrompt(n, {...live, choice: DawnEffects.payPolicy(live, opp(s)) ? "pay" : "decline"});
+    if(r.pay > 0){
+      const paid = autoPitch(n, r.pay, null);
+      if(paid){ n = paid; const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay); }
+      else {
+        /* Could not actually reach it, so the answer becomes a decline and
+           the consequence lands. An unpaid cost that skips its consequence
+           is the free-ability bug pointing the other way. */
+        n = L(n, `${opp(n).name} cannot reach the ${r.pay}.`);
+        r = applyPrompt(n, {...live, choice:"decline"});
+      }
+    }
+    r.msgs.forEach(m => { n = L(n, m); });
+    if(r.ops && r.ops.length) n = runOps(n, r.ops, live.src || "prompt");
+    n = {...n, actor:wasActor};
+    return winCheck(openPrompt(n));
   }
   /* SEAT 1 ANSWERING ITS OWN SOAK. The DECISION is
      `DawnEffects.soakPolicy` — pure, and out in the engine so a drill can
@@ -3476,6 +3514,9 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       n = L(n, `${gr.name} never landed a blow this turn — its +${lost}{p} in counters falls away.`);
     }
 
+    /* Beginning-of-end-phase triggers, ahead of (a). */
+    n = beginEndPhase(n, 0);
+
     /* (a) CR 4.4.3a — ally life resets to base. Allies heal every turn, so
        ally damage is a per-turn RACE rather than attrition, which is what
        makes attacking one a real decision (CR 1.4.5). */
@@ -3489,6 +3530,25 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     else n = L(n, "(b) No cards in hand — nothing to arsenal.");
     return afterArsenal(n);
   });
+  /* THE BEGINNING OF THE END PHASE, before (a) — one description, called by
+     both seats (v2.75). Inertia prints "At the BEGINNING of your end phase,
+     destroy Inertia, then put all cards from your hand and arsenal on the
+     bottom of your deck", and that is genuinely earlier than the (c)-(f)
+     block `endPhaseCF` owns: it has to land before (b) the arsenal set, or
+     the seat is invited to choose an arsenal card that is about to be swept
+     into the deck anyway. Same final state either way — which is exactly
+     why it would have been easy to put in the wrong place and never notice.
+
+     The rule itself is `DawnEffects.resolveInertia`, pure, so a drill can
+     drive it instead of grepping for it. */
+  function beginEndPhase(s, si){
+    const r = DawnEffects.resolveInertia(s, si);
+    let n = r.game;
+    if(r.tokens)
+      n = L(n, `Inertia seizes ${n.sides[si].name} — ${r.tokens>1?`${r.tokens} tokens shatter`:"the token shatters"}, and `
+             + `${r.wiped ? `${r.wiped} card${r.wiped>1?"s":""} from hand and arsenal go to the bottom of the deck` : "there was nothing left to sweep away"}.`);
+    return n;
+  }
   /* CR 4.4.3a. Runs over BOTH seats: an ally the opponent controls heals on
      their controller's schedule too, and building it one-sided now would be
      a bug to find later rather than a line to write now. */
@@ -3893,6 +3953,8 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   function foeEnd(s){
     if(s.over) return s;
     let n = L({...s, mode:"act"}, `— ${opp(s).name}'s end phase (CR 4.4). No priority. —`);
+    /* Beginning-of-end-phase triggers, ahead of (a). */
+    n = beginEndPhase(n, 1);
     /* (a) CR 4.4.3a — ally life resets. Already runs over BOTH seats. */
     n = endPhaseAllies(n);
     /* (b) CR 4.4.3b — the arsenal set. Yours pauses for a choice; seat 1's

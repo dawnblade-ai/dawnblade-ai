@@ -223,16 +223,29 @@ A `noop` counts as ACCOUNTED FOR, so all of it reports tier `full` and **no
 coverage tool can see any of it.** Iyslander's deck is built on those five,
 which is why her `28 full / 3 part / 0 none` was measuring the wrong thing.
 
-Steps 1 and 2 removed the *justifications*. **Step 3 (v2.74) made two of
-them real** — frostbite and arcane barrier. **Three are still `noop` and
-all three now carry reasons that are provably false**, which is the
-cheapest work left in the engine:
+Steps 1 and 2 removed the *justifications*. **Step 3 made four of the five real** —
+frostbite and arcane barrier in v2.74, inertia and "unless they pay" in
+v2.75. **One is left:**
 
-| still noop | the reason it still gives | why it is now wrong |
-|---|---|---|
-| inertia | "the dummy has no action phase" | seat 1 has had one since v2.71 |
-| freeze (Cold Snap) | "idle against the dummy's scripted swing" | seat 1 plays real cards, and its own text cites Frostbite as the precedent |
-| "target hero may pay" | "the dummy pays no costs, so it always declines" | seat 1 pitched to pay an Arcane Barrier in live play in v2.74 |
+| noop | status |
+|---|---|
+| inertia | **BUILT v2.75.** The reason was wrong about the MECHANIC, not just the prop — it is a hand wipe at the beginning of its controller's end phase, not an action-phase tax. `DawnEffects.resolveInertia`. |
+| "target hero may pay" / "unless they pay" | **BUILT v2.75.** `payOr` + `prompts.js` `elseOps` + `DawnEffects.payPolicy`. Winter's Bite had been deleting the opponent's printed escape entirely. |
+| freeze (Cold Snap) | **STILL OPEN** — the last one. Ruled but not built; see below. |
+
+**FREEZE IS THE ONE THING LEFT IN STEP 3.** RULING (user, 2026-08-14):
+the opponent is prompted to pay; if they decline, **the CASTER** is
+prompted to choose from the opponent's arsenal or an ally they control;
+that object is frozen **until the start of the caster's next turn**, and a
+frozen card cannot be played and its abilities cannot be activated. The
+arsenal is chosen **blind** — pick the zone, not the identity, so hidden
+information is preserved.
+
+What it needs: a `frozen` marker with an expiry turn, a gate on
+play/activation, a chained prompt back to the caster (`payOr`'s `elseOps`
+resolve at the ASKED side, so the freeze op has to queue a sheet addressed
+to `1-actorOf`), and Cold Snap's two sentences paired in `fxParse` the way
+`optCost` pairs its halves — the splitter breaks them on the period.
 
 The machinery all three want now exists: the `soak` prompt variant is
 side-addressed, `DawnEffects.soakPolicy` lets seat 1 answer, and

@@ -311,6 +311,39 @@ function makeEffects(ctx){
         n=L(n,`${srcName}: discarded ${taken.map(c=>c.name+" ("+zonePow(c,bAct(n))+"{p})").join(", ")} at random.`);
         n = afterDiscard(n, taken, {random:true});
       }
+      /* "TARGET HERO … UNLESS THEY PAY {r}{r}{r}" (v2.75) — the printed
+         escape hatch, offered to the hero who has to live with it.
+
+         Queued, never inline: the card has to finish resolving before
+         anybody is asked, the same rule every other prompt here follows.
+         Addressed to `1-actorOf(n)` so it is the TARGET's call — that is
+         what "target hero may pay" says, and it is why `prompts.js`
+         addresses specs to a side at all (Cold Snap's ruling is the
+         original example).
+
+         `ops` is empty and `elseOps` carries the payload: paying is what
+         AVOIDS the consequence. The payload is actor-relative to the asked
+         side, because promptConfirm resolves a sheet at the actor of the
+         side it was addressed to. */
+      else if(k==="payOr"){
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pay", side:1-actorOf(n), src:srcName, cost:v,
+          ops:[], elseOps: op[2] || [],
+          title:`Pay ${v} or ${srcName.toLowerCase()} bites`,
+          hint:`${srcName}: pay ${v}, or take what it prints. Pitching is on demand.`}];
+      }
+      /* The mirror of `foeDiscard`, for a payload resolving at the asked
+         side's own actor. Same selection rule: the cards at the back of
+         the hand, so a discard is not silently the player's best card. */
+      else if(k==="selfDiscard"){
+        const take = act(n).hand.slice(-Math.max(1,v));
+        if(!take.length) n = L(n, `${srcName}: ${act(n).name}'s hand is already empty.`);
+        else {
+          actMut(n).hand = act(n).hand.slice(0, act(n).hand.length-take.length);
+          actMut(n).grave = [...gyDisc(n.turn, ...take), ...act(n).grave];
+          n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
+        }
+      }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
@@ -1434,6 +1467,43 @@ function makeEffects(ctx){
 
    A token that leaves the arena ceases to exist, so nothing is filed to a
    graveyard — the same rule `popRunechants` documents. */
+/* ---- INERTIA, WHICH WAS NEVER AN ACTION-PHASE TAX (v2.75) ------------
+   The noop said "inertia — dummy has no action phase". The census says
+   the reason was wrong about the MECHANIC, not just about the prop. The
+   printed token, verbatim:
+
+     Inertia — "Generic Token - Aura"
+     "At the beginning of your end phase, destroy Inertia, then put all
+      cards from your hand and arsenal on the bottom of your deck."
+
+   It is not a tax on anything. It is a HAND WIPE at end of turn, and it
+   is the harshest token in the pool — which is why it being inert was
+   worth two real cards (Lace with Inertia, Inertia Trap) doing nothing.
+
+   Structurally it is Frostbite's end-phase half with a bigger payload, so
+   it lives beside `thawFrost` and is called from the same shared body.
+   Same `{game, …}` shape, and for the same reason: `resetAllyLife`
+   returns the bare game and a call site read `out.game` off it, so CR
+   4.4.3a ran only in the log for several versions.
+
+   The cards go to the BOTTOM of the deck, not the graveyard — so nothing
+   is stamped `_gy` and "discarded this turn" riders must not see them. */
+const isInertia = b => !!(b && b.card && P.norm(b.card.name) === "inertia");
+function resolveInertia(game, seat){
+  const sides = (game.sides || []).slice();
+  const sd = Object.assign({}, sides[seat]);
+  const tokens = (sd.board || []).filter(isInertia).length;
+  if(!tokens) return {game, tokens: 0, wiped: 0};
+  const hand = sd.hand || [];
+  const ars = sd.arsenal ? [sd.arsenal] : [];
+  sd.board = (sd.board || []).filter(b => !isInertia(b));
+  sd.deck = [...(sd.deck || []), ...hand, ...ars];
+  sd.hand = [];
+  sd.arsenal = null;
+  sides[seat] = sd;
+  return {game: Object.assign({}, game, {sides}), tokens, wiped: hand.length + ars.length};
+}
+
 function thawFrost(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -1489,5 +1559,39 @@ function soakPolicy(live, sd){
   return sel;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, soakPolicy};
+/* ---- WOULD THIS SEAT PAY TO AVOID WHAT THE CARD PRINTS? (v2.75) ------
+   The other half of "target hero may pay". Pure and out here for the same
+   reason `soakPolicy` is: the trainer's answer path is a closure inside
+   `Battle`, so a source scan is the only check available there, and a scan
+   is satisfied by whatever survives deleting the gate.
+
+   It replaces the noop "the dummy pays no costs, so it always declines" —
+   which was never a rule, only a fact about a prop that could not pay.
+
+   THE RULE IT FOLLOWS is the same one `soakPolicy` follows and for the same
+   reason: do not spend more than the thing is worth. A card is worth about
+   a card, so it pays when the cost is within what it can reach AND it is
+   not emptying itself to do it — with the usual override that at lethal
+   nothing it holds is worth more than being alive. A seat that pays every
+   toll every time is the shape that made both seats block 41 of 41
+   attacks.
+
+   Returns a boolean; the caller turns it into the prompt's `choice`. */
+function payPolicy(live, sd){
+  if(!live) return false;
+  const cost = live.cost || 0;
+  if(cost <= 0) return true;
+  if(cost > (live.avail || 0)) return false;          /* cannot reach it */
+  const res = (sd && sd.res) || 0;
+  const hand = ((sd && sd.hand) || []).length;
+  /* Free from the floating pool — always worth it, nothing is given up. */
+  if(cost <= res) return true;
+  /* Otherwise it costs CARDS, so weigh it against what it saves. Paying
+     with the last card in hand to avoid discarding a card is a straight
+     loss; paying out of a full grip is fine. */
+  if(hand <= 1) return false;
+  return true;
+}
+
+return {makeEffects, CTX_KEYS, thawFrost, resolveInertia, soakPolicy, payPolicy};
 });

@@ -115,12 +115,30 @@ function buildPrompt(game, spec){
       hint: spec.hint || "Pick one mode — the other is not used."};
   }
   if(spec.tag === "pay"){
-    /* pay-or-decline. `avail` is what the asked side can actually spend;
-       the caller supplies it because resources have not migrated onto
-       sides[] yet (see CLAUDE.md, the counters pass). */
+    /* pay-or-decline.
+
+       `avail` IS COMPUTED FOR THE ADDRESSED SIDE (v2.75), late, the same
+       way `soak` does it. It used to be handed in by `openPrompt` as
+       `you(s).res` — seat 0's floating resources, whoever the sheet was
+       actually addressed to — which was a latent seat-hardcoding bug of
+       exactly the kind v2.25 fixed in the rules helpers. It had never
+       fired because no card queued a `pay` spec until Winter's Bite.
+
+       It counts the hand too, because pitching is on demand (RULING
+       2026-08-01) and a hero asked to pay on someone else's turn has no
+       other way to find an {r}. */
     const cost = spec.cost || 0;
-    return {...base, cost, avail: spec.avail != null ? spec.avail : 0,
-      ops: spec.ops || [], choice:null,
+    const sd = (game.sides || [])[side] || {};
+    const avail = spec.avail != null ? spec.avail
+      : (sd.res || 0) + (sd.hand || []).reduce((a, c) => a + ((c && c.pitch) || 0), 0);
+    return {...base, cost, avail,
+      ops: spec.ops || [],
+      /* THE OTHER HALF OF "UNLESS". A `pay` spec used to carry only the
+         reward for paying; an "unless they pay" clause needs the
+         consequence of NOT paying, or declining silently does nothing and
+         the card is strictly weaker than printed in the other direction. */
+      elseOps: spec.elseOps || [],
+      choice:null,
       title: spec.title || ("Pay " + cost + "?"),
       hint: spec.hint || "You may pay this. If you do, the rider resolves."};
   }
@@ -305,7 +323,14 @@ function applyPrompt(game, prompt){
     return out;
   }
   if(prompt.tag === "pay"){
-    if(prompt.choice !== "pay"){ out.msgs.push(who + " declined to pay " + prompt.cost + "."); return out; }
+    if(prompt.choice !== "pay"){
+      out.msgs.push(who + " declined to pay " + prompt.cost + ".");
+      /* "…unless they pay" — declining is what makes the consequence
+         happen. These are actor-relative to the ASKED side, because that
+         is the actor a prompt resolves at. */
+      out.ops = prompt.elseOps || [];
+      return out;
+    }
     out.pay = prompt.cost;
     out.ops = prompt.ops || [];
     out.msgs.push(who + " paid " + prompt.cost + " — the rider resolves.");

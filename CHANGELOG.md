@@ -9,6 +9,72 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.75 — the printed escape hatch exists; Inertia is a hand wipe
+
+Two of the three remaining `noop`s whose stated reasons had expired. Both
+reasons were about the old training prop; one was also wrong about the
+mechanic.
+
+### "…unless they pay {r}{r}{r}"
+
+**Winter's Bite made a hero holding NINE resources discard without ever
+being offered the chance to pay.** `classifyClause` returned BYTE-IDENTICAL
+output with and without the second half of the sentence — the same shape as
+Strongest Survive in v2.66 — so the escape hatch simply did not exist. It
+reported tier `full`, and `npm run fairness` was CLEAN, because the sweep
+asks whether a card grants its CONTROLLER more than it prints, not whether
+it deleted the OPPONENT'S printed escape.
+
+`payOr` queues a `pay` sheet addressed to the TARGET hero. `prompts.js`
+gains `elseOps` — the consequence of declining, without which "unless" has
+no teeth. The payload is `selfDiscard`, actor-relative to the asked side,
+because a sheet resolves at the actor of the side it was addressed to;
+written as `foeDiscard` it would have discarded from the caster's own hand.
+
+The cost is COUNTED off the print — Winter's Bite prints `{r}` on one
+printing and `{r}{r}{r}` on another, so a hardcoded 3 would be wrong on the
+copy the player drew.
+
+**`avail` moved onto the addressed side.** `openPrompt` used to patch in
+`you(s).res` — seat 0's floating resources whoever the sheet was for, and
+without counting what they could pitch. A latent seat-hardcoding bug of the
+kind v2.25 fixed in the rules helpers; it had never fired because no card
+queued a `pay` spec until now.
+
+Seat 1 answers through the pure `DawnEffects.payPolicy`: spend the floating
+pool freely, but never pitch the last card in hand to avoid discarding a
+card — a seat that pays every toll every time is the shape that made both
+seats block 41 of 41 attacks.
+
+### Inertia
+
+The noop said "the dummy has no action phase". The census says the reason
+was wrong about the MECHANIC. The printed token:
+
+> "At the beginning of your end phase, destroy Inertia, then put all cards
+> from your hand and arsenal on the bottom of your deck."
+
+Not a tax on anything — a hand wipe, and the harshest token in the pool,
+which is why two real cards (Lace with Inertia, Inertia Trap) did nothing.
+`DawnEffects.resolveInertia` is pure and runs from `beginEndPhase`, ahead
+of (a) and (b): it has to land before the arsenal step or the seat is
+invited to choose a card that is about to be swept away anyway. Cards go to
+the BOTTOM of the deck, not the graveyard, so nothing is stamped `_gy`.
+
+### Notes
+
+17 drills; every sabotage verified to bite with a hash check. Two proved
+nothing until sabotage found them — one read `avail` off the post-answer
+state, and the policy's affordability guard had no case that needed it
+(an empty hand is refused by the last-card rule anyway).
+
+**Still open: freeze (Cold Snap)** — the third noop. Ruled by the user on
+2026-08-14 but not built: it needs a `frozen` state with an expiry, a
+chained prompt back to the CASTER to choose the target, and a gate on
+playing or activating a frozen object.
+
+---
+
 ## v2.74 — Frostbite is an Aura; arcane damage has one choke point
 
 **Engine step 3.** Both halves were filed `noop` in `parser.js` with

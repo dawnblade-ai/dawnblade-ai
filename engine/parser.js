@@ -348,7 +348,15 @@ function classifyClause(raw){
      same bookkeeping "watery grave" above uses to credit a hero ability
      for a different card's keyword. */
   if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("live — paid at the moment arcane damage is dealt (arcaneSoaks)");
-  if(/^inertia$/.test(c)) return NOOP("taxes the opponent's action phase — the dummy has none");
+  /* INERTIA IS LIVE (v2.75), and the reason this line used to give was
+     wrong about the MECHANIC, not just about the prop. It never taxed an
+     action phase: the printed token is "At the beginning of your end
+     phase, destroy Inertia, then put all cards from your hand and arsenal
+     on the bottom of your deck" — a hand wipe, resolved by
+     `DawnEffects.resolveInertia` at the beginning of its controller's end
+     phase. `noop` here because the printed keyword line carries no payload
+     of its own, the same bookkeeping "arcane barrier" above uses. */
+  if(/^inertia$/.test(c)) return NOOP("live — a hand wipe at the beginning of its controller's end phase (resolveInertia)");
   if(/^watery grave$/.test(c)) return NOOP("live — Gravy Bones' ability enables it once a blue card has hit your graveyard");
   /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
      read directly off the board in execute() at declaration (it scans
@@ -483,6 +491,26 @@ function classifyClause(raw){
      hazard as the unanchored draw that swallowed the discard in v2.55. */
   if(/(?:they|the defending hero|target hero|defending hero|opponent) discards? a card unless (?:they|he|she) reveals? a card from (?:their|his|her) hand with \{p\} greater than the damage dealt/.test(c))
     return R([["foeDiscardUnlessReveal",1]]);
+  /* "…UNLESS THEY PAY {r}{r}{r}" — the same shape as the reveal hatch
+     above, and it was missing for the same reason. `classifyClause` gave
+     BYTE-IDENTICAL output with and without this half of the sentence, so
+     Winter's Bite made a hero holding NINE resources discard without ever
+     being offered the chance to pay: stronger than printed, the direction
+     that steals games, reported tier `full`, and invisible to
+     `npm run fairness` because the sweep asks whether a card grants its
+     controller more than it prints, not whether it dropped the OPPONENT'S
+     printed escape.
+
+     Ordered ABOVE the bare foeDiscard so the qualified sentence is claimed
+     by the qualified rule — miss that and the loose rule eats it first.
+
+     The payload is written from the ASKED hero's point of view
+     (`selfDiscard`, not `foeDiscard`) because `openPrompt` resolves a
+     prompt at the actor of the side it is addressed TO. Writing it
+     actor-relative to the caster would discard from the caster's own hand,
+     which is the seat-hardcoding bug v2.25 fixed wearing a prompt. */
+  if(m=c.match(/(?:they|the defending hero|target hero|defending hero|opponent) discards? a card unless (?:they|he|she) pays? ((?:\{r\})+|\d+)/))
+    return R([["payOr", rCost(m[1]), [["selfDiscard",1]]]]);
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) discards?/.test(c)) return R([["foeDiscard",1]]);
   /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))
@@ -731,7 +759,7 @@ function classifyClause(raw){
     return R(names.map(nm=> ez ? ["token", nm, qty, foe?"foe":"self", {zone:"exposed"}]
                                : ["token", nm, qty, foe?"foe":"self"]));
   }
-  if(/inertia/.test(c)) return NOOP("inertia — dummy has no action phase");
+  if(/inertia/.test(c)) return NOOP("live — see the Inertia token; the wipe resolves in its controller's end phase");
   if(/put (?:it|this card) into your (?:hero'?s? )?soul/.test(c)) return R([["soulSelf"]]);
   if(m=c.match(/banish (a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul[:,]? ?(.*)/)){
     const sub = m[2] ? classifyClause(m[2]) : null;
@@ -1379,6 +1407,13 @@ const auraCount = sd => (sd && sd.board) ? sd.board.filter(isAura).length : 0;
    prints the same additional {r} (RULING, user 2026-08-14: three
    Frostbites make one play cost +3, and all three are then destroyed by
    that one play). */
+/* A printed resource cost, however it is written: "{r}{r}{r}" or a bare
+   number. Counting the symbols is the reliable read — the pool prints the
+   same cost both ways on different cards, and Winter's Bite prints {r} on
+   one printing and {r}{r}{r} on another, so a hardcoded 3 would be wrong
+   on the copy the player actually drew. */
+const rCost = s => /^\d+$/.test(String(s||"")) ? +s : (String(s||"").match(/\{r\}/g)||[]).length;
+
 const isFrostbite = b => !!(b && b.card && norm(b.card.name) === "frostbite");
 const frostCount = sd => (sd && sd.board) ? sd.board.filter(isFrostbite).length : 0;
 
