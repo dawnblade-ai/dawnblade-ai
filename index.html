@@ -1400,6 +1400,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
     isAura = DawnParser.isAura, auraCount = DawnParser.auraCount,
+    isFrostbite = DawnParser.isFrostbite, frostCount = DawnParser.frostCount,
     arsCap = DawnParser.arsCap, arsCount = DawnParser.arsCount,
     arsFree = DawnParser.arsFree, arsEmpty = DawnParser.arsEmpty,
     isAtkActionCard = DawnParser.isAtkActionCard, zonePow = DawnParser.zonePow,
@@ -1416,7 +1417,9 @@ var parseDeck = DawnGame.parseDeck, gearDef = DawnGame.gearDef,
     gearBlockApply = DawnGame.gearBlockApply, slotOf = DawnGame.slotOf,
     addRunechants = DawnGame.addRunechants, popRunechants = DawnGame.popRunechants,
     attackTargets = DawnGame.attackTargets, targetCanBeDefended = DawnGame.targetCanBeDefended,
-    damageAlly = DawnGame.damageAlly, resetAllyLife = DawnGame.resetAllyLife;
+    damageAlly = DawnGame.damageAlly, resetAllyLife = DawnGame.resetAllyLife,
+    ARMOR_SLOTS = DawnGame.ARMOR_SLOTS, exposedZones = DawnGame.exposedZones,
+    hasExposedZone = DawnGame.hasExposedZone;
 var RPS_THROWS = DawnRPS.RPS_THROWS, RPS_BEATS = DawnRPS.RPS_BEATS,
     rpsResolve = DawnRPS.rpsResolve, rpsSeries = DawnRPS.rpsSeries,
     rpsThrow = DawnRPS.rpsThrow, rpsSeat = DawnRPS.rpsSeat;
@@ -1903,7 +1906,10 @@ function CardFrame({card,className,noType,zone}){
    the grid areas and the class names are the part that must be shared,
    and they are.
    ============================================================ */
-const ARMOR_SLOTS = ["head","chest","arms","legs"];
+/* ARMOR_SLOTS moved to engine/game.js in v2.74 and is reached through the
+   bridge. The rules now ask which armour zones are EXPOSED (Frost Spike),
+   so the list of zones and the picture of them must agree — a hand-copied
+   second copy is exactly the mirror the v2.20 no-mirror rule deletes. */
 
 /* `cell(piece, zone)` draws an occupied slot; an empty one is drawn here
    so both boards show the same four holes in the same places. */
@@ -2975,8 +2981,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      card on their turn asks here. */
   function foeTurnIce(n, c){
     if(!bAct(n).iceFrostbite || !/ice/i.test(c.tt||"")) return n;
-    foeMut(n).frost = (foe(n).frost||0) + 1;
-    return L(n, `Ice card on the opponent's turn — Frostbite token created (now ${foe(n).frost}).`);
+    /* THE ONE HARDCODED `frost++` IN THE PROJECT USED TO LIVE HERE (v2.74).
+       It incremented a counter nothing read — not `effCost`, not
+       effects.js — so Iyslander's second clause produced a number on the
+       hero row and no rule. It mints a real token through the SAME op
+       every other card uses, which is what makes it countable by "3 or
+       more auras", destroyable by "destroy an aura", and taxing through
+       `frostCount`. Resolving the token from the database rather than
+       describing it here is the golden rule at the hero-ability level. */
+    return runOps(n, [["token","Frostbite",1,"foe",null]], `${act(n).name}'s winter`);
   }
   /* THE PLAYER'S WINDOW ON THE OPPONENT'S TURN (v2.71). Instants only, and
      `speedAllowed` is asked rather than restated — five hand-rolled copies
@@ -3459,6 +3472,35 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     const _prevActor = s.actor||0;
     let n = {...s, actor:si};
     const _me = () => act(n).name, _you = () => /^you$/i.test(act(n).name||"");
+
+    /* FROSTBITE'S OTHER EXPIRY (v2.74) — "At the beginning of your end
+       phase OR when you play a card or activate an ability, destroy
+       Frostbite." The play half is in effects.js `execute`; this is the
+       half that clears a Frostbite the frozen player simply never spent
+       anything into, so the tax cannot follow them into next turn.
+
+       IT LIVES IN THE SHARED BODY, ON PURPOSE. Both seats reach
+       `endPhaseCF` (yours through `afterArsenal`, seat 1's through
+       `foeEnd`) and it already takes the seat as an argument, so there is
+       one description of the expiry rather than two that can drift — the
+       shape that let clash fire on the wrong trigger for five versions.
+
+       It is a step or two later than "the beginning", which is honest
+       rather than exact: (a) ally life and (b) the arsenal set are all
+       that run ahead of it, and neither plays a card or pays a cost, so
+       nothing in the pool can tell the difference.
+
+       The rule itself lives in `DawnEffects.thawFrost`, a pure function,
+       so a drill can DRIVE it instead of grepping for it — this drill's
+       first version scanned the source and stayed green when the gate was
+       sabotaged, which is rule 4b exactly. The assignment below is
+       UNCONDITIONAL for the same reason: there is no gate here to switch
+       off, only a call to delete, and deleting it takes the identifier
+       the call-site check looks for with it. */
+    const _fb = DawnEffects.thawFrost(n, si);
+    n = _fb.game;
+    if(_fb.thawed)
+      n = L(n, `The ${_fb.thawed>1?`${_fb.thawed} Frostbites`:"Frostbite"} thaw${_fb.thawed>1?"":"s"} unspent at the end of ${_you()?"your":_me()+"'s"} turn.`);
 
     /* (c) CR 4.4.3c — pitch zones to the BOTTOM of their owners' decks.
        Both seats: it says "their pitch zone", not the turn-player's. */
@@ -4351,7 +4393,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
               </div>
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{you(g).hp}</span> you · R<b>{you(g).res}</b> A<b>{you(g).ap}</b></span>
-                <span className="sside r">{opp(g).name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{opp(g).frost>0?` · ❄${opp(g).frost}`:""}</span>
+                <span className="sside r">{opp(g).name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{frostCount(opp(g))>0?` · ❄${frostCount(opp(g))}`:""}</span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
@@ -5674,7 +5716,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
   if(me.ap>0)              pips.push(["action point", "on"]);
   if(runeCount(me)>0)      pips.push(["runechant ×"+runeCount(me), "on"]);
   if(me.ward>0)            pips.push(["ward "+me.ward, "on"]);
-  if(them.frost>0)         pips.push(["they are frostbitten "+them.frost, ""]);
+  if(frostCount(them)>0)   pips.push(["they are frostbitten "+frostCount(them), ""]);
   if(g.chain.length)       pips.push(["chain link "+g.chain.length, ""]);
   if(link!=="connected")   pips.push([link, "warn"]);
 

@@ -656,23 +656,71 @@ function classifyClause(raw){
   if(/^this enters the arena with (\d+) (?:verse|steam) counters?$/.test(c))
     return R([["enterCounters", +c.match(/(\d+)/)[1]]]);
   if(/^this enters the arena with a steam counter$/.test(c)) return R([["enterCounters",1]]);
-  if(/create .*frostbite/.test(c)) return NOOP("frostbite — dummy pays no costs");
+  /* FROSTBITE HAS NO NOOP ANY MORE (v2.74). It used to be intercepted here
+     with "frostbite — dummy pays no costs", which was a fact about the old
+     training prop and not about the rules — and a `noop` counts as
+     ACCOUNTED FOR, so Frost Spike reported tier `full` while creating
+     nothing at all. The dummy pays costs as of v2.71. It now falls through
+     to the generic token rule below like any other token, and the tax it
+     applies is read off the board by `frostCount` inside `effCost`. */
   if(/(create|give).*bloodrot/.test(c)) return R([["rot",1]],{approx:true});
   if(/(create|give).*frailty/.test(c)) return R([["fra",1]],{approx:true});
   /* RULING: a token is a card — put one copy on the correct player's board.
      "under their control" sends it to the opponent instead. This sits AFTER
-     runechant/frostbite/bloodrot/frailty on purpose: those four already have
-     dedicated counters and documented inertness, and a generic token would
-     quietly take their place. */
-  if(m=c.match(/create (?:a|an|(\d+)|one|two|three|x) ([a-z][a-z' ,-]*?) tokens?(?: in| under| on|,|\.|$)/)){
-    const foe = /under (?:their|the attacking hero'?s?|target hero'?s?) control/.test(c);
+     bloodrot/frailty on purpose: those two still have dedicated counters and
+     documented inertness, and a generic token would quietly take their
+     place. (Runechant and Frostbite are handled above and on the board
+     respectively, and neither wants this path.) */
+  if(m=c.match(/create (a|an|\d+|one|two|three|x) ([a-z][a-z' ,-]*?) tokens?(?: in| under| on|,|\.|$)/)){
+    /* AN "X" QUANTITY IS REFUSED, NOT READ AS ONE. Ice Eternal prints
+       "Create X Frostbite tokens" for a printed cost of "XX", and nothing
+       in this engine models an X cost — so there is no value of X to read.
+       Taking the old `m[1]?+m[1]:1` default would have created exactly ONE
+       Frostbite for a card that charges the player for X of them: quietly
+       WEAKER than printed, the direction `npm run fairness` is deliberately
+       one-sided against and coverage reads as `full` because the clause was
+       consumed. Refusing leaves it a visible gap until X-costs exist. It is
+       the only X card in the pool, so this costs nothing else. */
+    if(m[1]==="x") return null;
+    const QTY = {a:1, an:1, one:1, two:2, three:3};
+    const qty = QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
+    /* WHOSE BOARD. Two printed shapes say "the opponent's", and they are
+       read separately because they are different sentences:
+
+       1. a CONTROL phrase — "under their control" (Polar Cap), "under
+          target hero's control" (Ice Eternal);
+       2. a PLACEMENT into an exposed armour zone — "in an exposed head,
+          chest, arms, or legs zone" (Frost Spike).
+
+       (2) is a placement onto a HERO'S armour, and RULING (user,
+       2026-08-14): a Frostbite is handed to the opponent to slow them
+       down. Every other card in the database that prints this phrase says
+       so outright — Jarl Vetreiði "in an opponent's exposed …", Summit
+       "in their exposed …" — so the bare wording is the odd one out
+       rather than a different rule.
+
+       The zone list must be read WHOLE or the clause is refused: an
+       ungated token is strictly stronger than a printed one that can
+       fizzle, and this placement is the one thing that makes Frost Spike
+       WEAKER than an ordinary create. `zone:"exposed"` rides in the op and
+       effects.js fizzles it when the target has no exposed armour zone. */
+    const exposed = /\bexposed\b/.test(c);
+    const ez = c.match(/\bin (?:an?|their|the|target(?: hero'?s?)?|an opponent'?s?) (?:opponent'?s? )?exposed ((?:head|chest|arms|legs)(?:,?\s*(?:or\s+)?(?:head|chest|arms|legs))*) zones?\b/);
+    if(exposed && !ez) return null;
+    const foe = !!ez || /under (?:their|the attacking hero'?s?|target hero'?s?) control/.test(c);
     /* "Create an Agility and a Vigor token" is TWO tokens sharing one noun —
        split the list, or the name resolves to "agility and a vigor" and the
        card silently creates nothing. */
     const names = m[2].split(/\s*,\s*|\s+and\s+/)
       .map(x=>x.replace(/^(?:a|an|one|two|three)\s+/,"").trim()).filter(Boolean);
     if(!names.length) return null;
-    return R(names.map(nm=>["token", nm, m[1]?+m[1]:1, foe?"foe":"self"]));
+    /* The placement is APPENDED only when the card prints one, so the op
+       every ordinary token emits keeps the exact four-element shape it has
+       always had. A fifth slot carrying `null` on 30-odd cards would churn
+       the drills that pin this vocabulary and the wire format, for no card
+       that can ever read it. */
+    return R(names.map(nm=> ez ? ["token", nm, qty, foe?"foe":"self", {zone:"exposed"}]
+                               : ["token", nm, qty, foe?"foe":"self"]));
   }
   if(/inertia/.test(c)) return NOOP("inertia — dummy has no action phase");
   if(/put (?:it|this card) into your (?:hero'?s? )?soul/.test(c)) return R([["soulSelf"]]);
@@ -1298,6 +1346,33 @@ const runeCount = sd => (sd && sd.board) ? sd.board.filter(isRunechant).length :
 const isAura = b => !!(b && (b.kind === "aura" || (b.card && /\baura\b/i.test(b.card.tt || ""))));
 const auraCount = sd => (sd && sd.board) ? sd.board.filter(isAura).length : 0;
 
+/* ---- FROSTBITE IS AN AURA TOO (v2.74) -------------------------------
+   Exactly the same move as the runechant above, and for exactly the same
+   reason. The printed token, verbatim:
+
+     Frostbite — "Elemental Token - Aura"
+     "Cards and abilities cost you an additional {r} to play or activate.
+      At the beginning of your end phase or when you play a card or
+      activate an ability, destroy Frostbite."
+
+   Until v2.74 `frost` was a bare integer on the side that NOTHING read:
+   `effCost` did not see it, effects.js never mentioned it, and the only
+   writer in the project was one hardcoded line in `foeTurnIce`. Frost
+   Spike's "create a Frostbite token" resolved to nothing at all. The
+   number on the hero row was decoration with no rule behind it.
+
+   Counting off the board is what makes it a real permanent: it can be
+   counted by "3 or more auras", it can be destroyed by "destroy an aura",
+   and it renders its own art instead of a "❄2" chip — the same three
+   consequences the runechant move bought, none of them the goal.
+
+   The count is the TAX, because each token is its own source and each
+   prints the same additional {r} (RULING, user 2026-08-14: three
+   Frostbites make one play cost +3, and all three are then destroyed by
+   that one play). */
+const isFrostbite = b => !!(b && b.card && norm(b.card.name) === "frostbite");
+const frostCount = sd => (sd && sd.board) ? sd.board.filter(isFrostbite).length : 0;
+
 /* ---- ARSENAL CAPACITY (v2.34) ---------------------------------------
    Two printed wordings that are NOT the same question, per the user's
    ruling of 2026-07-28:
@@ -1316,7 +1391,20 @@ const arsCount = sd => (sd && sd.arsenal) ? 1 : 0;
 const arsFree  = sd => arsCap(sd) - arsCount(sd);
 const arsEmpty = sd => arsCount(sd) === 0;
 
-function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)); }
+/* FROSTBITE TAXES "CARDS AND ABILITIES ... TO PLAY OR ACTIVATE", and this
+   one function is where both halves of that sentence already meet: the
+   trainer charges a weapon swing and an equipment ability through
+   `effCost` on their `powCard` exactly as it charges a card from hand, so
+   the tax reaches all fourteen call sites without one of them opting in.
+   That is the whole reason it goes here and not at the play sites.
+
+   THE ORDER MATTERS AND IT IS NOT ARITHMETIC PEDANTRY. A reduction cannot
+   push a cost below zero and bank the difference, so the floor is applied
+   to the reduced cost FIRST and the tax is added on top. Folding it into
+   one `Math.max(0, cost - red + frost)` would let a spare {r} of reduction
+   silently eat a Frostbite — the tax would vanish on precisely the cheap
+   cards Iyslander is trying to tax. */
+function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)) + frostCount(sd); }
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -1644,7 +1732,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
-        isRunechant, runeCount, isAura, auraCount,
+        isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};
 });

@@ -55,6 +55,31 @@ function slotOf(c){
   return {z:"misc",h:0,lab:"gear"};
 }
 
+/* ---- THE FOUR ARMOUR ZONES, AND WHICH OF THEM ARE EXPOSED (v2.74) ----
+   "Create a Frostbite token in an exposed head, chest, arms, or legs
+   zone" (Frost Spike). An EXPOSED zone is an armour zone with nothing
+   live in it — never equipped, or equipped with a piece that has since
+   been destroyed. RULING (user, 2026-08-14): with no exposed zone the
+   card simply fizzles, and that placement is what makes Frost Spike
+   WEAKER than an ordinary create rather than stronger.
+
+   `ARMOR_SLOTS` lives here rather than in index.html because the rule
+   and the picture must agree about what the four zones are: it was a
+   hand-copied const beside `ArmorGrid`, and a second copy of a list the
+   rules now read is the mirror the v2.20 no-mirror rule exists to
+   delete. The trainer reaches this one through the bridge.
+
+   A DESTROYED PIECE STILL OCCUPIES ITS SLOT IN `sd.gear` — equipment
+   wears rather than leaving — so the `destroyed` flag has to be read
+   here or a hero who has lost every piece would still report a full set
+   of armour and Frost Spike would fizzle against an undefended hero,
+   which is the exact opposite of the card. */
+const ARMOR_SLOTS = ["head","chest","arms","legs"];
+const gearLive = p => !!p && !p.destroyed;
+const exposedZones = sd =>
+  ARMOR_SLOTS.filter(z => !((sd && sd.gear) || []).some(p => gearLive(p) && slotOf(p).z === z));
+const hasExposedZone = sd => exposedZones(sd).length > 0;
+
 /* ============================================================
    ATTACK TARGETS (CR 1.4.5)
 
@@ -238,6 +263,7 @@ function popRunechants(game, side, limit, dmgEach){
 }
 
 return {parseDeck, gearDef, gearBlockApply, slotOf,
+        ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,
         isRunechantEntry, addRunechants, popRunechants};

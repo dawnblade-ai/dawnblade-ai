@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-10T12:36:13.402Z · app v2.69 · data sage-v11 · db 4862 records
+Generated 2026-08-14T14:42:14.944Z · app v2.73 · data sage-v11 · db 4862 records
 
 ## Summary
 
@@ -429,7 +429,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - type: Elemental Wizard Action · printed: Iyslander Specialization, Ice Fusion
 - ○ Iyslander Specialization
 - ○ Ice Fusion
-- ○ Create X Frostbite tokens under target hero's control
+- — Create X Frostbite tokens under target hero's control
 - — Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.
 - 🚩 unreviewed keyword: "ice fusion"
 

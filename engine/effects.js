@@ -48,9 +48,10 @@
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, isAttack, norm, qualMatches, runeCount,
+       isFrostbite, frostCount,
        pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
-const {popRunechants, gearDef, gearBlockApply} = G;
+const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
 const {advValue} = A;
 const rngRoll = R.roll, rngInt = R.int;
 
@@ -326,6 +327,17 @@ function makeEffects(ctx){
         const rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database — token not created.`); return; }
         const side = op[3]==="foe" ? "foe" : "self";
+        /* A PLACEMENT INTO AN EXPOSED ARMOUR ZONE CAN FIZZLE, and that is
+           the point of it — Frost Spike is WEAKER than a plain create, not
+           stronger, because a fully-armoured hero offers it nowhere to
+           land. The gate rides in the op as data (`{zone:"exposed"}`) so
+           no card is named here. */
+        const where = op[4] || null;
+        const recip = side==="foe" ? foe(n) : act(n);
+        if(where && where.zone==="exposed" && !hasExposedZone(recip)){
+          n = L(n, `${srcName}: ${recip.name} has no exposed armour zone — the ${rec.name} has nowhere to land, and fizzles.`);
+          return;
+        }
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
           if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid}];
@@ -335,7 +347,12 @@ function makeEffects(ctx){
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
         const who = side==="foe" ? foe(n).name+"'s" : "your";
         n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
-        if(side==="foe") n = L(n, `${foe(n).name} pays no costs and takes no action phase, so anything that taxes those sits idle.`);
+        /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
+           "pays no costs and takes no action phase, so anything that taxes
+           those sits idle" — true of the training prop it was written for,
+           and false since v2.71 gave seat 1 a real turn with a real action
+           point. Left in place it would have told the player their
+           Frostbite did nothing on the very version that made it bite. */
       }
       else if(k==="opt"){
         /* RULING: look at the top X, then put them back on top or bottom in
@@ -516,6 +533,33 @@ function makeEffects(ctx){
     let n = {...s};
     const exSide = actMut(n);
     exSide.res = act(s).res - effCost(card, act(s)); exSide.paySel = [];
+    /* FROSTBITE, THE SECOND HALF OF ITS PRINTED LINE (v2.74):
+         "Cards and abilities cost you an additional {r} to play or
+          activate. At the beginning of your end phase OR WHEN YOU PLAY A
+          CARD OR ACTIVATE AN ABILITY, destroy Frostbite."
+
+       THE ORDER OF THESE TWO LINES IS THE WHOLE RULING. The cost is
+       charged on the line above, reading `frostCount` through `effCost`,
+       and only then are the tokens destroyed — so the play that destroys
+       a Frostbite IS the play that is taxed by it (RULING, user
+       2026-08-10). Destroy first and the tax never lands on anything;
+       Frostbite would be a permanent that reads as a tax and is free.
+
+       ALL of them go, not one. Each token carries its own copy of that
+       trigger and they all fire on the same play (RULING, user
+       2026-08-14), which is what makes Ice Eternal's X a burst rather
+       than a lasting tax.
+
+       `execute` is the single hook because it is what a card being PLAYED
+       and an ability being ACTIVATED both run through — a weapon swing
+       and an equipment ability arrive here as their `powCard`. A token
+       that leaves the arena ceases to exist, so nothing is filed to a
+       graveyard, exactly as `popRunechants` documents. */
+    const froze = frostCount(act(n));
+    if(froze){
+      actMut(n).board = act(n).board.filter(b => !isFrostbite(b));
+      n = L(n, `Frostbite bites — ${card.name} cost ${froze} more, and ${froze>1?`all ${froze} Frostbites shatter`:`the Frostbite shatters`}.`);
+    }
     // move the card out of its zone
     if(from==="hand"){ actMut(n).hand = act(n).hand.filter((_,i)=>i!==idx); }
     if(from==="arsenal"){ actMut(n).arsenal = null; }
@@ -1249,5 +1293,41 @@ function makeEffects(ctx){
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost};
 }
 
-return {makeEffects, CTX_KEYS};
+/* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------
+   The other half of the token's one printed sentence: "At the beginning
+   of your end phase OR when you play a card or activate an ability,
+   destroy Frostbite." The play half is inside `execute`; this is the half
+   that clears a Frostbite the frozen player never spent anything into, so
+   a tax that was never paid cannot follow them into the next turn.
+
+   IT IS A PURE FUNCTION AND THAT IS THE POINT. The trainer's end phase is
+   a closure inside `Battle`, so a drill cannot reach it and the only
+   available check would be a source scan — and a scan is satisfied by a
+   variable that survives deleting the gate it lives in, which is exactly
+   how v2.68 shipped a drill that stayed green against `if(false)`. This
+   version's first attempt at that drill did the same thing and the
+   sabotage pass caught it. So the decision moves somewhere it can be
+   DRIVEN, the way `parser.idleCounterWipes` and `parser.rxPump` were
+   extracted before it.
+
+   It returns `{game, thawed}` rather than the bare game, deliberately:
+   `resetAllyLife` returns THE GAME, and the CR review found a call site
+   reading `out.game` off it and silently falling back to the unchanged
+   state — the ally reset then ran only in the log. A shape that cannot be
+   half-read is worth the extra word.
+
+   A token that leaves the arena ceases to exist, so nothing is filed to a
+   graveyard — the same rule `popRunechants` documents. */
+function thawFrost(game, seat){
+  const sides = (game.sides || []).slice();
+  const sd = Object.assign({}, sides[seat]);
+  const board = (sd.board || []);
+  const thawed = board.filter(P.isFrostbite).length;
+  if(!thawed) return {game, thawed: 0};
+  sd.board = board.filter(b => !P.isFrostbite(b));
+  sides[seat] = sd;
+  return {game: Object.assign({}, game, {sides}), thawed};
+}
+
+return {makeEffects, CTX_KEYS, thawFrost};
 });

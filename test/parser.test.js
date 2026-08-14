@@ -78,7 +78,13 @@ test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Amp 1").ops, [["amp",1]]);
   assert.deepEqual(cc("Create a Runechant token.").ops, [["rune",1]]);
   assert.deepEqual(cc("Create 2 Runechant tokens.").ops, [["rune",2]]);
-  assert.equal(cc("Create a Frostbite token.").status, "noop");
+  /* v2.74: this line used to assert `status === "noop"`. That was not a
+     rule, it was a fact about the training prop — "frostbite — dummy pays
+     no costs" — and it expired in v2.71 when seat 1 got a real turn. A
+     Frostbite is an ordinary token op now and the tax it applies is read
+     off the board by `frostCount` inside `effCost`. Changing this drill is
+     the deliberate edit the behaviour change requires. */
+  assert.deepEqual(cc("Create a Frostbite token.").ops, [["token","frostbite",1,"self"]]);
 });
 
 test("classifyClause — gaNext, with and without the runechant rider", () => {
@@ -417,10 +423,15 @@ test("rulings — tokens resolve to a board-side token op", () => {
     [["token","agility",1,"self"],["token","vigor",1,"self"]]);
 });
 
-test("rulings — the four dedicated counters keep precedence over generic tokens", () => {
+test("rulings — the remaining dedicated counters keep precedence over generic tokens", () => {
   assert.deepEqual(cc("Create a Runechant token.").ops, [["rune",1]]);
-  assert.equal(cc("Create a Frostbite token.").status, "noop", "dummy pays no costs");
   assert.deepEqual(cc("Create a Bloodrot Pox token under their control.").ops, [["rot",1]]);
+  /* FROSTBITE LEFT THIS LIST IN v2.74 — it was four counters, it is three.
+     It is a real Aura on the board now (`parser.frostCount`), which is what
+     lets "3 or more auras" count it and "destroy an aura" remove it. The
+     precedence rule itself still holds for the two below. */
+  assert.deepEqual(cc("Create a Frostbite token.").ops, [["token","frostbite",1,"self"]],
+    "Frostbite is a board token now, not a counter — it must NOT be intercepted here");
 });
 
 test("rulings — arsenal and life-total conditions are readable now", () => {

@@ -79,7 +79,11 @@ function seat(sd){
     status: {amp: sd.amp, ward: sd.ward, awd: sd.awd,
       rune: PR.runeCount ? PR.runeCount(sd) : undefined,
       auras: PR.auraCount ? PR.auraCount(sd) : undefined,
-      rot: sd.rot, fra: sd.fra, frost: sd.frost, arcShield: sd.arcShield,
+      rot: sd.rot, fra: sd.fra, arcShield: sd.arcShield,
+      /* DERIVED off the board since v2.74, the same way `rune` above is —
+         a report that printed a stale counter beside a board that
+         disagreed with it would send the reader hunting the wrong bug. */
+      frost: PR.frostCount ? PR.frostCount(sd) : undefined,
       lifeLock: sd.lifeLock, marked: sd.marked, buffNext: sd.buffNext, buffQ: sd.buffQ,
       gaNext: sd.gaNext, weaponUsed: sd.weaponUsed},
     hist: sd.hist

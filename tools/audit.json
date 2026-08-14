@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-10T12:36:13.402Z",
- "appVer": "2.69",
+ "generated": "2026-08-14T14:42:14.944Z",
+ "appVer": "2.73",
  "dataVer": "sage-v11",
  "dbCount": 4862,
  "poolUnique": 405,
@@ -1944,7 +1944,7 @@
     },
     {
      "t": "If this was fused and deals damage to a hero, create a Frostbite token under their control.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -2324,7 +2324,7 @@
    "clauses": [
     {
      "t": "Create a Frostbite token in an exposed head, chest, arms, or legs zone.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -2390,7 +2390,7 @@
     },
     {
      "t": "Create X Frostbite tokens under target hero's control",
-     "st": "noop"
+     "st": "skip"
     },
     {
      "t": "Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.",
@@ -2398,6 +2398,7 @@
     }
    ],
    "skipped": [
+    "Create X Frostbite tokens under target hero's control",
     "Then, if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control."
    ],
    "weaponCost": null,

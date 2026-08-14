@@ -48,7 +48,12 @@ const SIDE_FIELDS = [
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
   "counters","weaponUsed","buffNext","buffQ","gaNext","runeHitNext",
-  "amp","ward","awd","rune","rot","fra","frost",
+  /* `frost` RETIRED in v2.74 — a Frostbite is an Aura on `board` and the
+     count is derived by `parser.frostCount`, exactly as `rune` above is
+     derived by `runeCount`. A bare integer beside the board is a second
+     source of truth for the same fact, and while it existed nothing read
+     it: not `effCost`, not effects.js. Do not reintroduce it. */
+  "amp","ward","awd","rune","rot","fra",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
@@ -80,7 +85,7 @@ function makeSide(o){
     pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, buffNext: 0, buffQ: [], gaNext: false, runeHitNext: false,
-    amp: 0, ward: 0, awd: 0, rune: 0, rot: 0, fra: 0, frost: 0,
+    amp: 0, ward: 0, awd: 0, rune: 0, rot: 0, fra: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
     hist: freshHist(),
