@@ -40,9 +40,9 @@
    test/effects.test.js fails if the trainer’s literal drifts.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"), require("./cards.js"), require("./rng.js"), require("./game.js"), require("./advisor.js"));
-  else root.DawnEffects = factory(root.DawnParser, root.DawnCards, root.DawnRNG, root.DawnGame, root.DawnAdvisor);
-})(typeof self!=="undefined" ? self : this, function(P, C, R, G, A){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"), require("./cards.js"), require("./rng.js"), require("./game.js"), require("./advisor.js"), require("./prompts.js"));
+  else root.DawnEffects = factory(root.DawnParser, root.DawnCards, root.DawnRNG, root.DawnGame, root.DawnAdvisor, root.DawnPrompts);
+})(typeof self!=="undefined" ? self : this, function(P, C, R, G, A, PR){
 
 /* Engine-side dependencies, taken as factory arguments — the same
    treatment advisor.js, cards.js and prompts.js already get. */
@@ -53,6 +53,13 @@ const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
 const {resolveEntry} = C;
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
 const {advValue} = A;
+/* prompts.js is a NEW factory argument in v2.74 and the load order already
+   allowed it — prompts.js is script tag 1341, effects.js 1353. `arcaneHit`
+   asks `buildPrompt` whether a soak is worth offering rather than
+   re-deciding it here: buildPrompt already drops options the hero cannot
+   afford and returns null when there is nothing to ask, and a second copy
+   of that filter is the mirror the no-mirror rule exists to prevent. */
+const {buildPrompt} = PR;
 const rngRoll = R.roll, rngInt = R.int;
 
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
@@ -186,6 +193,88 @@ function makeEffects(ctx){
     return {game:n, discarded: pool.map(p=>p.c2)};
   };
 
+  /* ============================================================
+     ARCANE DAMAGE — THE ONE PLACE A HERO TAKES IT (v2.74)
+
+     Before this there was no such place, and the cost was four dead
+     mechanics rather than one. Driven against the pre-fix engine, five
+     arcane damage through arcane ward 3 AND Pyroglyphic shield 3 dealt
+     five: `awd` and `arcShield` were written by the parser, stored on the
+     side, rendered as pips — and never once read. Arcane Barrier (21
+     pieces of iron across ALL FIFTEEN heroes) and Spellvoid were `noop`
+     for want of an event to hang off. Thirty pool cards deal arcane
+     damage across six heroes and nothing could stop any of it.
+
+     No coverage tool could see that, and neither could the fairness
+     sweep: every affected card reads tier `full` — the text was read
+     correctly and then never CHARGED — and the sweep is deliberately
+     one-sided towards cards that are too strong, while this was every
+     defence being too weak.
+
+     THE ORDER IS FREE-THEN-DRAINING-THEN-PAID, and it is a judgement:
+       1. `arcShield` — Pyroglyphic Protection, per SOURCE, does not
+          drain. Spending it first costs nothing.
+       2. `awd` — arcane ward, one draining pool.
+       3. the printed keywords — they cost resources or a permanent, so
+          they are offered LAST and only for what is still coming.
+     Reversing 1 and 2 would burn a limited pool while a renewable
+     prevention sat unused, which is strictly worse for the defender and
+     nothing in the rules asks for.
+
+     THE HIT IS DEFERRED WHEN THERE IS SOMETHING TO ASK. Prompts are
+     queued and drained after the action resolves, so applying the damage
+     here and asking afterwards would offer the prevention AFTER the
+     damage it prevents. The remaining damage therefore rides out on the
+     prompt's answer as `arcTaken`. That is also what puts the trigger
+     above the damage on the stack, which is where the CR puts it. */
+  const arcaneHit = (n, seat, amount, srcName) => {
+    const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
+    const sd  = () => n.sides[seat];
+    let left = Math.max(0, amount|0);
+    if(left <= 0) return n;
+
+    const shield = sd().arcShield || 0;
+    if(shield > 0 && left > 0){
+      const off = Math.min(shield, left); left -= off;
+      n = L(n, `${srcName}: arcane shield turns ${off} of it aside (it stands against every source).`);
+    }
+    const pool = sd().awd || 0;
+    if(pool > 0 && left > 0){
+      const off = Math.min(pool, left); left -= off;
+      mut().awd = pool - off;
+      n = L(n, `${srcName}: arcane ward soaks ${off}${pool-off>0?` (${pool-off} left)`:" and is spent"}.`);
+    }
+
+    /* WHAT THE PRINTED IRON OFFERS. `avail` is what the threatened hero
+       can actually reach — floating resources plus what their hand would
+       pitch for, because pitching is on demand (RULING, 2026-08-01) and a
+       hero being hit on someone else's turn has no other way to find an
+       {r}. `buildPrompt` drops anything they cannot afford and returns
+       null when there is nothing worth asking, so a hero with no iron
+       never sees a sheet. */
+    const soaks = P.arcaneSoaks(sd());
+    if(left > 0 && soaks.length){
+      /* NO `avail` ON THE SPEC — buildPrompt works it out from the live
+         state when the sheet is actually raised. Three Runechants queue
+         three of these off one attack and answering the first one pitches,
+         so a figure frozen here is stale by the second sheet. It is only
+         passed to the probe below, which asks "is there anything worth
+         asking RIGHT NOW" before committing to defer the damage. */
+      const spec = {tag:"soak", side:seat, src:srcName, amount:left, options:soaks};
+      if(buildPrompt(n, spec)){
+        n.promptQ = [...(n.promptQ||[]), spec];
+        return n;                    /* the damage rides out on the answer */
+      }
+    }
+    if(left > 0){
+      mut().hp -= left;
+      n = L(n, `${srcName}: ${left} arcane damage.`);
+    } else {
+      n = L(n, `${srcName}: every point of it prevented.`);
+    }
+    return n;
+  };
+
   const runOps = (s, ops, srcName) => {
     let n = {...s};
     ops.forEach(op=>{
@@ -275,7 +364,23 @@ function makeEffects(ctx){
         if(act(n).lifeLock && act(n).hp > foe(n).hp){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
         actMut(n).hp+=v; n=L(n,`+${v} life.`);
       }
-      else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; foeMut(n).hp-=total; actMut(n).hist={...act(n).hist, arc:(act(n).hist.arc||0)+1}; n=L(n,`${srcName}: ${total} arcane damage.`); }
+      /* ARCANE DAMAGE GOES THROUGH THE ONE CHOKE POINT (v2.74). It used to
+         be `foeMut(n).hp -= total` right here, which is why arcane ward,
+         Pyroglyphic Protection's shield, Arcane Barrier and Spellvoid were
+         ALL dead: there was nowhere for a prevention to stand. Driven
+         before the fix, five arcane through arcane-ward 3 AND shield 3
+         dealt five. `arcaneHit` is where every one of them now applies. */
+      else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; actMut(n).hist={...act(n).hist, arc:(act(n).hist.arc||0)+1}; n=arcaneHit(n, 1-actorOf(n), total, srcName); }
+      /* The damage that SURVIVED a soak prompt, landing on the hero that
+         was asked — the actor at prompt-confirm time is the threatened
+         side (promptConfirm borrows `p.side`). That is the whole reason it
+         is a separate op from `arcane`, which damages the foe. It is
+         already past every prevention, so it never re-enters arcaneHit;
+         doing so would offer a second Nullrune for the same hit. */
+      else if(k==="arcTaken"){
+        if(v>0){ actMut(n).hp -= v; n = L(n, `${op[2]||srcName}: ${v} arcane damage lands on ${act(n).name}.`); }
+        else n = L(n, `${op[2]||srcName}: all of it soaked — no damage.`);
+      }
       else if(k==="buffNext"){
         /* A QUALIFIED buff ("your next ARROW attack") is not the same as a
            bare one. op[2] is the qualifier read off the printed type line;
@@ -879,7 +984,18 @@ function makeEffects(ctx){
       if(runeAtPlay > 0){
         const rp = popRunechants(n, actorOf(n), runeAtPlay, built.runeDmg);
         n = rp.game;
-        foeMut(n).hp -= rp.damage;
+        /* EACH TOKEN IS ITS OWN SOURCE — this code has said so in the
+           comment below since v2.23, and until v2.74 it then pooled them
+           into one `hp -=` because there was nowhere for a prevention to
+           stand. Now there is, and the distinction is worth real life:
+           Pyroglyphic Protection prevents per SOURCE, and Arcane Barrier
+           triggers per threat, so three Runechants are three 1-point
+           threats a hero may answer three times — not one 3-point threat
+           they may answer once. Pooling them would quietly push more
+           damage through than the cards print, which is the direction that
+           steals games. */
+        const each = built.runeDmg == null ? 1 : built.runeDmg;
+        for(let i=0; i<rp.popped; i++) n = arcaneHit(n, 1-actorOf(n), each, "Runechant");
         /* CREDIT THE HISTORY HERE. `popRunechants` is pure and deliberately
            does not touch hist — it reports what popped and leaves the
            bookkeeping to whoever fired it, the same way runOps's `arcane` op
@@ -1329,5 +1445,49 @@ function thawFrost(game, seat){
   return {game: Object.assign({}, game, {sides}), thawed};
 }
 
-return {makeEffects, CTX_KEYS, thawFrost};
+/* ---- WHAT A SEAT SPENDS TO STOP ARCANE DAMAGE (v2.74) ----------------
+   Seat 1 has to be able to ANSWER a soak, not just be asked: `arcaneHit`
+   defers the damage into the answer, so a sheet nobody confirms is an
+   arcane hit that never lands.
+
+   PURE, AND OUT HERE, FOR THE SAME REASON `thawFrost` IS. The trainer's
+   answer path is a closure inside `Battle`, so the only check available
+   there is a source scan — and a scan is satisfied by whatever survives
+   deleting the gate, which is how this version's first end-phase drill
+   went green against dead code. The policy is a decision, so it belongs
+   somewhere a drill can drive it.
+
+   IT IS DELIBERATELY PLAIN, and plain in a specific direction. Porting
+   `dummyDefence` into sparring.js unchanged made both seats block 41 of
+   41 attacks and finish on full life, because a heuristic written for a
+   seat with nothing else to spend cards on spends everything on
+   everything. So: never pay MORE resources than the damage is worth —
+   Arcane Barrier 2 against 1 damage is printed as a bad deal and taking
+   it every time would drain a hero who needs those resources on their own
+   turn — except at LETHAL, where nothing they are holding is worth more
+   than being alive.
+
+   Spellvoid costs no resources, so it is always taken while damage is
+   still coming through. That is not greed: the piece is battleworn iron
+   in this pool and destroying it to stop 2 is what it prints.
+
+   Returns INDICES into `live.options`, in the order they were taken, with
+   no reliance on `game.rng` — the options are already a total order with
+   ties broken on uid, so two peers and a replay decide identically. */
+function soakPolicy(live, sd){
+  if(!live || !live.options) return [];
+  const lethal = ((sd && sd.hp) || 0) - (live.amount || 0) <= 0;
+  const sel = [];
+  let spent = 0, soaked = 0;
+  live.options.forEach((o, i) => {
+    if(soaked >= (live.amount || 0)) return;                       /* already covered */
+    if(o.kind === "spellvoid"){ sel.push(i); soaked += o.amount || 0; return; }
+    if(!lethal && (o.cost || 0) > (live.amount || 0) - soaked) return;  /* a bad deal */
+    if(spent + (o.cost || 0) > (live.avail || 0)) return;          /* cannot reach it */
+    sel.push(i); spent += o.cost || 0; soaked += o.amount || 0;
+  });
+  return sel;
+}
+
+return {makeEffects, CTX_KEYS, thawFrost, soakPolicy};
 });

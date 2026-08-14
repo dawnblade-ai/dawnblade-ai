@@ -2423,9 +2423,17 @@ prefixes the uid itself (`"rune"+seq`) so no call site can repeat it, and there
 is a regression drill. The other token sites prefix by hand (`"tok"`, `"chi"`,
 `"mk"`); keep that convention.
 
-**Still counters, deliberately:** Frostbite, Bloodrot Pox and Frailty. They sit
-on the *opponent* and nothing in the pool counts them as auras yet. Revisit if a
-card ever asks.
+**FROSTBITE FOLLOWED IT IN v2.74** — same move, same reason, and the same
+blindness beforehand: it was an integer `frost` on the side that NOTHING read
+(not `effCost`, not effects.js), written by one hardcoded line in `foeTurnIce`,
+so Frost Spike's "create a Frostbite token" resolved to nothing at all. It is
+`parser.frostCount` off the board now, the tax lives in `effCost`, and the two
+expiries — on any play or activation, and at the beginning of the controller's
+end phase — are `execute` and `DawnEffects.thawFrost`.
+
+**Still counters, deliberately:** Bloodrot Pox and Frailty. They sit on the
+*opponent* and nothing in the pool counts them as auras yet. Revisit if a card
+ever asks.
 
 ---
 
@@ -2676,10 +2684,22 @@ it carded effects only once the engine can actually read them.
 - **"If you do, …" is deliberately unread.** It hangs off an optional cost the engine
   can't model; running it would re-introduce the free-ability bug v2.04 fixed. Cards
   like Magmatic Carapace therefore stop at the cost line.
-- Tokens handed to the dummy land on its board and are logged as idle: it pays no
-  costs and takes no action phase, so Frostbite/Inertia-style taxes do nothing yet.
-  Runechant, Frostbite, Bloodrot and Frailty keep their older dedicated counters
-  rather than becoming board tokens.
+- **The "handed to the dummy, therefore idle" note is RETIRED (v2.74).** It was
+  true of a prop that paid no costs and took no action phase; seat 1 has had both
+  since v2.71, and the log line that said so was deleted along with it. Runechant
+  and Frostbite are real board auras; Bloodrot and Frailty keep their dedicated
+  counters. **Inertia is still a `noop`** and its stated reason ("the dummy has no
+  action phase") is now false — it is the same shape as Frostbite was and is the
+  obvious next one to make real.
+- **Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.** Its
+  printed cost is `XX`; nothing here models an X cost, so `create X ... tokens` is
+  REFUSED rather than read as one. Creating a single token for a card that charges
+  for X is quietly weaker than printed — which coverage reads as `full`, and the
+  fairness sweep is one-sided against the other direction.
+- **`Spellvoid X` (Mask of the Swarming Claw) is refused for the same reason** —
+  "where X is the number of chain links you control", and the chain belongs to the
+  attacker rather than to the hero being hit. The piece keeps its printed Arcane
+  Barrier 1.
 - A runechant created by *playing* an attack pops on that same swing; strictly it should
   survive to the next.
 - The steam-builder is once-per-turn in the model.

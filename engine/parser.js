@@ -338,7 +338,16 @@ function classifyClause(raw){
      against a hand-less dummy. Pending and unreviewed keywords are
      deliberately absent: they must keep surfacing as coverage gaps. */
   if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — carried by the engine's keyword system");
-  if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("stops arcane damage — the dummy throws only fists");
+  /* ARCANE BARRIER / SPELLVOID are LIVE as of v2.74 — read off
+     `card_keywords` by `arcaneBarrier`/`spellvoid` and offered by
+     `arcaneSoaks` at the one place a hero takes arcane damage. The old
+     reason on this line, "the dummy throws only fists", was a fact about
+     the training prop; seat 1 plays Ice Bolt now. They stay `noop` HERE
+     because the printed keyword line carries no payload of its own — the
+     rule hangs off the damage event, not off the clause — which is the
+     same bookkeeping "watery grave" above uses to credit a hero ability
+     for a different card's keyword. */
+  if(/^(?:arcane barrier|spellvoid)(?: \d+| x)?$/.test(c)) return NOOP("live — paid at the moment arcane damage is dealt (arcaneSoaks)");
   if(/^inertia$/.test(c)) return NOOP("taxes the opponent's action phase — the dummy has none");
   if(/^watery grave$/.test(c)) return NOOP("live — Gravy Bones' ability enables it once a blue card has hit your graveyard");
   /* VERSE COUNTERS (Malefic Incantation): the unwind-into-a-Runechant is
@@ -1373,6 +1382,71 @@ const auraCount = sd => (sd && sd.board) ? sd.board.filter(isAura).length : 0;
 const isFrostbite = b => !!(b && b.card && norm(b.card.name) === "frostbite");
 const frostCount = sd => (sd && sd.board) ? sd.board.filter(isFrostbite).length : 0;
 
+/* ---- ARCANE BARRIER AND SPELLVOID (v2.74) ---------------------------
+   Two keywords, 21 pieces of equipment across ALL FIFTEEN heroes, and
+   both were filed `noop` with the reason "stops arcane damage — the dummy
+   throws only fists". Another fact about the training prop rather than
+   about the rules, and one that expired when seat 1 got real cards.
+
+   THE DATABASE SHIPS NO REMINDER TEXT FOR EITHER, so neither could be
+   read off the card. Both come from the user (RULING, 2026-08-14):
+
+     Arcane Barrier N — when a hero is THREATENED with arcane damage, it
+       triggers. Its controller is prompted to pay N; if they do, N is
+       subtracted from the damage. The payment is the FULL N even when
+       that exceeds the damage — Arcane Barrier 2 costs 2 to prevent 1.
+       The equipment survives. EVERY instance triggers.
+
+     Spellvoid N — same trigger, but the cost is the PERMANENT: destroy it
+       and subtract N. No resources.
+
+   They are read off `card_keywords` because that is where the database
+   puts them and where the number lives. The v2.31 lesson does not apply:
+   that was about `card_keywords` being a keyword INDEX which can list a
+   keyword the text only grants CONDITIONALLY, so seeding an unconditional
+   grant from it was wrong. Neither of these is ever conditional on these
+   pieces — the one card that gates it (Arcanite Skullcap, "if you have
+   less {h} than your opponent") is outside this pool, and it prints the
+   grant in its text rather than relying on the index.
+
+   AN "X" AMOUNT IS REFUSED, exactly as Ice Eternal's is. Mask of the
+   Swarming Claw prints "Spellvoid X, where X is the number of chain links
+   you control" — a dynamic value, and the chain in question belongs to
+   whoever is attacking rather than to the frozen hero, so guessing it
+   would be inventing a rule. It keeps its printed Arcane Barrier 1 and
+   loses only the X, which stays a visible gap. */
+const kwAmount = (c, kw) => {
+  const list = (c && c.kw) || [];
+  for(const raw of list){
+    const m = String(raw).trim().match(new RegExp("^" + kw + "\\s*(\\d+|x)?$", "i"));
+    if(!m) continue;
+    if(!m[1] || String(m[1]).toLowerCase() === "x") return null;  /* dynamic — refused */
+    return +m[1];
+  }
+  return 0;
+};
+const arcaneBarrier = c => kwAmount(c, "arcane barrier");
+const spellvoid     = c => kwAmount(c, "spellvoid");
+
+/* Every piece of iron this side is wearing that could soak an arcane hit,
+   with what it would cost. A DESTROYED piece protects nothing — equipment
+   wears rather than leaving, so the flag has to be read here the same way
+   `exposedZones` reads it. Returned as data so the prompt layer can offer
+   them without knowing a single card name. */
+function arcaneSoaks(sd){
+  const out = [];
+  for(const p of ((sd && sd.gear) || [])){
+    if(!p || p.destroyed) continue;
+    const ab = arcaneBarrier(p);
+    if(ab) out.push({uid: p.uid, name: p.name, kind: "barrier", amount: ab, cost: ab});
+    const sv = spellvoid(p);
+    if(sv) out.push({uid: p.uid, name: p.name, kind: "spellvoid", amount: sv, cost: 0});
+  }
+  /* A TOTAL ORDER, ties broken on uid. An unordered list is a desync
+     waiting for two equal pieces — the same rule sparring.js is held to. */
+  return out.sort((a, b) => b.amount - a.amount || String(a.uid).localeCompare(String(b.uid)));
+}
+
 /* ---- ARSENAL CAPACITY (v2.34) ---------------------------------------
    Two printed wordings that are NOT the same question, per the user's
    ruling of 2026-07-28:
@@ -1733,6 +1807,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
+        arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};
 });

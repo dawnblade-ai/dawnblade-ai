@@ -85,10 +85,10 @@ into whichever engine you point them at.
      ✔ step 1 (v2.71) seat 1 takes a real turn
      ✔ step 2 (v2.72) instant-speed activation on their turn
      ✔ step 4 (v2.73) execute declares and stops
-     ☐ step 3        Frostbite as a token, Arcane Barrier as a payment
-                     ← DO THIS FIRST (user, 2026-08-14). Last blocker
-                       for IYSLANDER.
-   THEN: unify the engines + give seat 1 to a policy — see below.
+     ✔ step 3 (v2.74) Frostbite is an Aura; arcane damage has ONE choke
+                      point, and the four preventions that were dead
+                      state now hang off it. IYSLANDER IS UNBLOCKED.
+   NEXT: unify the engines + give seat 1 to a policy — see below.
 2. HEROES   KAYO ✔ (27 full / 2 part / 1 none) · DORINTHEA ✔ (29/4/0)
 3. UI & NETWORK — frozen
 ```
@@ -213,8 +213,8 @@ reason about the training PROP rather than about the rules**:
 
 | parser.js | the reason it gave |
 |---|---|
-| arcane barrier | "stops arcane damage — the dummy throws only fists" |
-| frostbite | "frostbite — dummy pays no costs" |
+| arcane barrier | "stops arcane damage — the dummy throws only fists" — **BUILT v2.74** |
+| frostbite | "frostbite — dummy pays no costs" — **BUILT v2.74** |
 | inertia | "taxes the opponent's action phase — the dummy has none" |
 | freeze (Cold Snap) | "idle against the dummy's scripted swing" |
 | "target hero may pay" | "the dummy pays no costs, so it always declines" |
@@ -223,8 +223,21 @@ A `noop` counts as ACCOUNTED FOR, so all of it reports tier `full` and **no
 coverage tool can see any of it.** Iyslander's deck is built on those five,
 which is why her `28 full / 3 part / 0 none` was measuring the wrong thing.
 
-Steps 1 and 2 removed the *justifications*. **Step 3 is what makes the
-cards real**, and it is the remaining blocker for her.
+Steps 1 and 2 removed the *justifications*. **Step 3 (v2.74) made two of
+them real** — frostbite and arcane barrier. **Three are still `noop` and
+all three now carry reasons that are provably false**, which is the
+cheapest work left in the engine:
+
+| still noop | the reason it still gives | why it is now wrong |
+|---|---|---|
+| inertia | "the dummy has no action phase" | seat 1 has had one since v2.71 |
+| freeze (Cold Snap) | "idle against the dummy's scripted swing" | seat 1 plays real cards, and its own text cites Frostbite as the precedent |
+| "target hero may pay" | "the dummy pays no costs, so it always declines" | seat 1 pitched to pay an Arcane Barrier in live play in v2.74 |
+
+The machinery all three want now exists: the `soak` prompt variant is
+side-addressed, `DawnEffects.soakPolicy` lets seat 1 answer, and
+`openPrompt` routes a seat-1 sheet to it. Two of those log lines are still
+printed verbatim in play — see them by playing Cold Snap in the mirror.
 
 ### STEP 3 — what is left (Frostbite, Arcane Barrier)
 

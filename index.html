@@ -743,7 +743,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.73"; /* v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.74"; /* v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2637,7 +2637,63 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
     const spec = p.tag === "pay" && p.avail == null ? {...p, avail:you(s).res} : p;
     const live = buildPrompt(s, spec);
     if(!live) return openPrompt({...s, promptQ:rest});
+    /* SEAT 1 ANSWERS ITS OWN SOAK (v2.74). A prompt addressed to side 1
+       has always been ANSWERED by the human — v2.65 fixed where the
+       consequences landed, not who decided — and for the five older
+       variants that is a known limit nobody is depending on. A soak is
+       different in kind: `arcaneHit` DEFERS the damage into the answer, so
+       a soak sheet that is never confirmed is an arcane hit that never
+       lands. Leaving seat 1's to the player would mean asking you whether
+       the opponent wants to spend their iron on the damage you just dealt
+       them — and if you closed it, they would take nothing.
+
+       Scoped to `soak` deliberately. Auto-answering every prompt kind for
+       seat 1 is a bigger behaviour change than this version is making, and
+       a policy quietly answering a modal nobody knew was there is the kind
+       of thing that only shows up in a game weeks later. */
+    if(live.side === 1 && live.tag === "soak") return foeAnswerSoak({...s, promptQ:rest}, live);
     return {...s, promptQ:rest, prompt:live};
+  }
+  /* SEAT 1 ANSWERING ITS OWN SOAK. The DECISION is
+     `DawnEffects.soakPolicy` — pure, and out in the engine so a drill can
+     drive it rather than grep for it. What is left here is the applying,
+     and it goes through the SAME `applyPrompt` the player's confirm does:
+     a second copy of the payout is exactly how seat 1 came to collect a
+     free action point in v2.65. */
+  function foeAnswerSoak(s, live){
+    let n = {...s, prompt:null};
+    const wasActor = n.actor||0;
+    n = {...n, actor:1};
+    /* PAY FIRST, THEN COLLECT — and if the payment cannot actually be made,
+       the answer becomes a DECLINE rather than a free prevention. An
+       unpaid cost that fires its rider is the v2.04 free-ability bug, and
+       here it would be silent: the hero would soak arcane with iron they
+       never paid for. `avail` is computed at build time now, so this
+       should be unreachable — which is exactly the kind of "should" this
+       codebase has been bitten by, and the fallback costs one line.
+
+       Pitching is on demand (RULING 2026-08-01): `autoPitch` spends the
+       floating pool first and only pitches the shortfall, which is the
+       flow the user specified — prompt, spend the pool automatically, then
+       pitch for what is still missing. */
+    let r = applyPrompt(n, {...live, sel: DawnEffects.soakPolicy(live, opp(s))});
+    if(r.pay > 0){
+      const paid = autoPitch(n, r.pay, null);
+      if(paid){ n = paid; const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay); }
+      else {
+        n = L(n, `${opp(n).name} cannot reach the ${r.pay} — the barrier goes unpaid and the damage lands in full.`);
+        r = applyPrompt(n, {...live, sel: []});
+      }
+    }
+    /* `r.game` is deliberately NOT taken here. applyPrompt moves nothing
+       for a soak — the whole outcome leaves as `pay` and `ops` — so the
+       game it hands back is the one it was GIVEN, from before the pitch
+       above. Assigning it would quietly undo the payment and hand the
+       hero their card back along with the prevention. */
+    r.msgs.forEach(m => { n = L(n, m); });
+    if(r.ops && r.ops.length) n = runOps(n, r.ops, live.src || "arcane");
+    n = {...n, actor:wasActor};
+    return winCheck(openPrompt(n));
   }
   const promptToggle = i => setG(s=> s.prompt ? {...s, prompt:promptToggleSel(s.prompt, i)} : s);
   const promptPick = choice => setG(s=> s.prompt ? {...s, prompt:promptChoose(s.prompt, choice)} : s);
@@ -2669,7 +2725,18 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        seat 0. Handed back before `winCheck`/`openPrompt`. */
     const pSide = p.side || 0, pWasActor = n.actor || 0;
     n = {...n, actor: pSide};
-    if(r.pay > 0){ const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay); }
+    /* PAY IT, OR PITCH FOR IT. `Math.max(0, …)` alone silently FORGIVES an
+       unaffordable payment, which was harmless while every `pay` spec was
+       built with `avail: you(s).res` — you could never select more than
+       you held. A `soak` spec's `avail` counts the hand too, because
+       pitching is on demand (RULING 2026-08-01) and a hero being hit on
+       someone else's turn has no other way to find an {r}. Without the
+       pitch here the clamp would hand them the prevention for free, which
+       is a keyword strictly better than printed. */
+    if(r.pay > 0){
+      if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
+      const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
+    }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
@@ -4641,6 +4708,37 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
               Decline<span className="sub">the rider does not resolve</span>
             </button>
           </div>}
+
+          {/* SOAK — arcane incoming, and the iron that could stop it. Every
+              option is a separate trigger, so this is multi-select and
+              "take none" is always legal: the running total says how much
+              is still getting through, because THAT is the number the
+              decision is actually about. A barrier that costs more than it
+              prevents is still offered (Arcane Barrier 2 costs 2 to stop 1)
+              — it is printed that way and the player may still want it at
+              lethal. */}
+          {p.tag==="soak" && (()=>{
+            const spent  = p.sel.reduce((a,i)=>a+(p.options[i].cost||0),0);
+            const soaked = p.sel.reduce((a,i)=>a+(p.options[i].amount||0),0);
+            const through = Math.max(0, p.amount - soaked);
+            return <div className="pmodal">
+              {p.options.map((o,i)=>{
+                const on = p.sel.includes(i);
+                const afford = on || o.kind==="spellvoid" || spent + (o.cost||0) <= p.avail;
+                return <button key={o.uid+o.kind} className={"popt"+(on?" on":"")}
+                  disabled={!afford} onClick={()=>promptToggle(i)}>
+                  {o.name} — stops {o.amount}
+                  <span className="sub">{o.kind==="spellvoid"
+                    ? "spellvoid: destroy it"
+                    : `arcane barrier: pay ${o.cost}${afford?"":" — can't reach it"}`}</span>
+                </button>;
+              })}
+              <div className="phint">
+                {through>0 ? `${through} of ${p.amount} still gets through` : `all ${p.amount} prevented`}
+                {spent>0 ? ` · costs ${spent}{r} of ${p.avail} reachable` : ""}
+              </div>
+            </div>;
+          })()}
 
           <div className="pact">
             {p.tag==="pick" && p.optional &&

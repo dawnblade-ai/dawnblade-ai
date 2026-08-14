@@ -9,6 +9,84 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.74 — Frostbite is an Aura; arcane damage has one choke point
+
+**Engine step 3.** Both halves were filed `noop` in `parser.js` with
+reasons that were facts about the old training prop rather than about the
+rules, and both expired in v2.71 when seat 1 got a real turn.
+
+### Frostbite
+
+`frost` was an integer on the side that NOTHING read — not `effCost`, not
+effects.js — and the only writer in the project was one hardcoded line in
+`foeTurnIce`. Frost Spike's "create a Frostbite token" resolved to nothing
+at all, and because a `noop` counts as accounted for, it and Polar Cap
+both reported tier `full`.
+
+Exactly the v2.23 runechant move: the board is the single source of truth
+(`parser.frostCount`), so "3 or more auras" can count it and "destroy an
+aura" can remove it. The tax lives in `effCost` — already the one place a
+card from hand, a weapon swing and an equipment ability all meet, so
+"cards and abilities cost you an additional {r} to play or activate"
+reaches all fourteen call sites without any of them opting in. The
+reduction floors at 0 BEFORE the tax adds, or a spare {r} of discount
+silently eats a Frostbite.
+
+RULING (user 2026-08-10): the play that destroys it IS the one that is
+taxed. RULING (2026-08-14): three Frostbites make one play cost +3 and all
+three shatter on it; a Frostbite is handed to the OPPONENT, and lands in an
+exposed armour zone only where the card prints that placement (Frost
+Spike), fizzling with none — which makes it weaker, not stronger.
+
+Ice Eternal's "Create X" is REFUSED rather than read as one: its printed
+cost is XX, nothing models an X cost, and creating one token for a card
+that charges for X is quietly weaker than printed. It stays a visible gap.
+
+### Arcane damage
+
+Driven against the pre-fix engine, **five arcane damage through arcane
+ward 3 AND Pyroglyphic shield 3 dealt five.** `awd` and `arcShield` were
+written by the parser, stored on the side and rendered as pips — and never
+read. Arcane Barrier (21 pieces of iron across ALL FIFTEEN heroes) and
+Spellvoid were `noop` for want of an event to hang off. Thirty pool cards
+deal arcane damage across six heroes and nothing could stop any of it.
+
+No tool here could see it: every affected card reads tier `full` (read
+correctly, then never charged) and the fairness sweep is deliberately
+one-sided towards cards that are too strong.
+
+`arcaneHit` is now the one place a hero takes arcane damage, and the order
+is free-then-draining-then-paid: `arcShield` (per source, no drain), then
+`awd` (one pool), then the printed keywords. The hit is DEFERRED into the
+prompt's answer when there is something to ask — prompts drain after the
+action resolves, so damage applied at its own site would arrive before the
+hero was ever asked.
+
+RULINGS (user 2026-08-14): Arcane Barrier N is prompted, costs the full N
+even to prevent less, and the piece survives; Spellvoid N destroys the
+permanent instead and costs no resources; every instance triggers. Each
+Runechant is its own source, so three are three 1-point threats a hero may
+answer three times rather than one 3-point threat. Spellvoid X is refused
+— the chain it counts belongs to the attacker, not the frozen hero.
+
+`prompts.js` gains a sixth variant, `soak`, and it is the first whose whole
+point is being addressed to the side that is NOT acting. Seat 1 answers its
+own through the pure `DawnEffects.soakPolicy` and the same `applyPrompt`
+the player's confirm uses.
+
+### Notes
+
+39 new drills; every sabotage verified to bite, with a hash check that each
+edit actually landed. Two drills proved nothing until sabotage found them —
+the end-phase thaw grepped for an identifier that survived deleting its
+gate (rule 4b), and the policy's "already covered" guard had no case that
+needed it. Both rules were moved into pure functions and are now driven.
+
+Coverage is unchanged at 306/77/22, which is the point: a `noop` and a real
+op both count as consumed.
+
+---
+
 ## v2.73 — execute declares, and stops
 
 **The knot the whole Phase 1 rebuild is named after.** `execute` did two

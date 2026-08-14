@@ -124,6 +124,53 @@ function buildPrompt(game, spec){
       title: spec.title || ("Pay " + cost + "?"),
       hint: spec.hint || "You may pay this. If you do, the rider resolves."};
   }
+  /* ---- SOAK — arcane damage, and what the threatened hero may spend to
+     stop it (v2.74). The sixth variant, and the first one whose whole
+     point is that it is addressed to the side that is NOT acting: the
+     attacker plays Ice Bolt, the DEFENDER decides whether their Nullrune
+     Hood is worth an {r}.
+
+     `options` are supplied by the caller (parser.arcaneSoaks reads them
+     off the printed keywords), so this module still names no card and
+     reads no card text.
+
+     IT IS MULTI-SELECT because every instance triggers (RULING, user
+     2026-08-14). Two Nullrune pieces are two separate {r}-for-1 offers,
+     and a hero may take either, both or neither — the same outcome space
+     as the CR's separate triggers on the stack, on one screen instead of
+     two sheets, which is a UI choice rather than a rules one.
+
+     A SOAK THE HERO CANNOT AFFORD IS NOT OFFERED. Barriers cost
+     resources; `avail` is what they can actually reach. Spellvoid costs
+     the permanent and is therefore always affordable. Offering an
+     unpayable option is the live-lock v2.45 found in `legal`: a choice
+     whose only exit is cancel. */
+  if(spec.tag === "soak"){
+    const amount = spec.amount || 0;
+    /* AVAIL IS COMPUTED HERE, AT BUILD TIME, NOT CARRIED FROM THE QUEUE.
+       Three Runechants queue three soaks off one attack, and answering the
+       first one PITCHES — so a figure worked out when the spec was queued
+       is already wrong by the second sheet, and it is wrong in the
+       dangerous direction: it would offer a barrier the hero can no longer
+       reach, the payment would fail, and the prevention would fire unpaid.
+       That is the v2.04 free-ability bug wearing a new hat. Found by
+       playing, not by a drill.
+
+       Floating resources plus what the hand would pitch for, because
+       pitching is on demand (RULING 2026-08-01) and a hero being hit on
+       someone else's turn has no other way to find an {r}. `openPrompt`
+       does the same late binding for the `pay` variant. */
+    const sd = (game.sides || [])[side] || {};
+    const avail = spec.avail != null ? spec.avail
+      : (sd.res || 0) + (sd.hand || []).reduce((a, c) => a + ((c && c.pitch) || 0), 0);
+    if(amount <= 0) return null;
+    const options = (spec.options || []).filter(o => o && (o.kind === "spellvoid" || (o.cost || 0) <= avail));
+    if(!options.length) return null;
+    return {...base, amount, avail, options, sel: [], src: spec.src || "",
+      title: spec.title || (amount + " arcane incoming"),
+      hint: spec.hint || "Tap what you want to spend. Barriers cost resources and stay; " +
+        "spellvoid destroys the piece. Take none and the damage lands in full."};
+  }
   if(spec.tag === "reveal"){
     const cards = spec.cards || promptZone(game, side, spec.zone || "deck").slice(0, spec.n || 1);
     return {...base, cards,
@@ -159,6 +206,21 @@ function promptToggleSel(prompt, i){
   if(prompt.tag === "pick"){
     if(prompt.sel.includes(i)) return {...prompt, sel: prompt.sel.filter(x=>x!==i)};
     if(prompt.sel.length >= prompt.max) return prompt;
+    return {...prompt, sel: [...prompt.sel, i]};
+  }
+  /* SOAK has no `max`: every barrier and spellvoid the hero controls
+     triggers, so any subset is legal. What it does have is a BUDGET —
+     un-toggling must always work, and toggling on must refuse anything the
+     hero cannot afford together with what is already selected. Without
+     that check a hero could select three barriers on two resources and the
+     trainer would clamp the payment to zero at `Math.max(0, res - pay)`,
+     soaking three for free. */
+  if(prompt.tag === "soak"){
+    if(prompt.sel.includes(i)) return {...prompt, sel: prompt.sel.filter(x=>x!==i)};
+    const o = prompt.options[i];
+    if(!o) return prompt;
+    const spent = prompt.sel.reduce((a, k) => a + ((prompt.options[k] || {}).cost || 0), 0);
+    if(spent + (o.cost || 0) > prompt.avail) return prompt;
     return {...prompt, sel: [...prompt.sel, i]};
   }
   return prompt;
@@ -247,6 +309,39 @@ function applyPrompt(game, prompt){
     out.pay = prompt.cost;
     out.ops = prompt.ops || [];
     out.msgs.push(who + " paid " + prompt.cost + " — the rider resolves.");
+    return out;
+  }
+  /* SOAK. This module runs no effects and touches no resources, so the
+     whole outcome leaves as data: `pay` is charged by the trainer, the
+     spellvoid destructions and the surviving damage leave as `ops` and are
+     fed to runOps at the ASKED side's actor (promptConfirm borrows it).
+
+     THE DAMAGE RIDES OUT ON `ops`, AND THAT IS THE DESIGN, not a
+     shortcut. Prompts are queued and drained after the action resolves, so
+     an arcane hit applied at its own site would land BEFORE the hero was
+     ever asked — the prevention would arrive after the damage it was meant
+     to prevent. Deferring the hit into the answer is what puts the trigger
+     above the damage on the stack, which is where the CR puts it.
+
+     `arcTaken` lands on the ACTOR because the actor here is the threatened
+     side. That is the whole reason it is a separate op from `arcane`,
+     which damages the foe. */
+  if(prompt.tag === "soak"){
+    const chosen = (prompt.sel || []).map(i => prompt.options[i]).filter(Boolean);
+    const prevented = chosen.reduce((a, o) => a + (o.amount || 0), 0);
+    const cost = chosen.reduce((a, o) => a + (o.cost || 0), 0);
+    /* Prevention is capped by the damage; the PAYMENT is not (RULING:
+       Arcane Barrier 2 costs 2 to prevent 1). Charging only what was used
+       would make the keyword strictly better than printed. */
+    const through = Math.max(0, (prompt.amount || 0) - prevented);
+    out.pay = cost;
+    out.ops = [...chosen.filter(o => o.kind === "spellvoid").map(o => ["destroyGear", o.uid]),
+               ["arcTaken", through, prompt.src || ""]];
+    out.msgs.push(chosen.length
+      ? who + " soaks " + Math.min(prevented, prompt.amount || 0) + " of " + prompt.amount +
+        " arcane with " + chosen.map(o => o.name + (o.kind === "spellvoid" ? " (destroyed)" : "")).join(", ") +
+        (cost ? " for " + cost + "{r}" : "") + "."
+      : who + " takes all " + prompt.amount + " arcane rather than spend.");
     return out;
   }
   /* CR 1.4.5 — the declared attack-target. This module moves nothing and
