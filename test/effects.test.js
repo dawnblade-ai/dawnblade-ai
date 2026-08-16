@@ -127,3 +127,84 @@ test("runOps damages the FOE of the actor", () => {
   assert.equal(out.sides[0].hp, 17, "seat 1 acting means seat 0 takes the damage");
   assert.equal(out.sides[1].hp, 20);
 });
+
+/* ---- THE LAST SEAT-0 READ (v2.77) ------------------------------------
+   `built` was the one context key that named a SEAT rather than a role:
+   seat 0's build, captured for the UI, read at four rules sites inside
+   `execute`. v2.41 fixed exactly this shape for the hero passives and
+   said so — "a passive read as `built.X` inside a rules function is the
+   bug this fixed" — and these four were left behind because moving them
+   was a behaviour change and the port's rule was that bodies move
+   unrewritten.
+
+   It comes off now because judge.js is about to build this context, and
+   a key meaning "seat 0" is a seat-0 rules read written into a caller
+   that does not have one yet.
+
+   THE DRILL DRIVES IT rather than grepping for `built`: a grep is
+   satisfied by whatever survives deleting the gate, and here the gate is
+   an arithmetic operand. Seat 1 swings with runechants whose token deals
+   THREE, and seat 0 must lose 6 — a version reading seat 0's build reads
+   1 and deals 2. */
+test("a runechant pops for the ACTOR's printed damage, not seat 0's", () => {
+  const runechant = () => ({card: {name: "Runechant", tt: "Runeblade Token - Aura",
+                                   tx: "When you play an attack action card or activate a weapon attack, "
+                                     + "destroy this and deal 1 arcane damage to target opposing hero.",
+                                   uid: "rune1"}, kind: "aura", uid: "rune1"});
+  const swing = {name: "Merge Probe Swing", tt: "Generic Attack Action", tx: "", kw: [],
+                 power: 4, pitch: 1, cost: 0, uid: 501};
+
+  /* Two DIFFERENT builds, so "which build answered" is observable. */
+  const builds = [{runeDmg: 1}, {runeDmg: 3}];
+  const {execute} = E.makeEffects(stubCtx({
+    bAct: g => builds[g.actor || 0],
+    bFoe: g => builds[1 - (g.actor || 0)]
+  }));
+
+  const g = stubGame();
+  g.actor = 1;                                  // SEAT 1 is swinging
+  g.chain = []; g.stack = []; g.hitSeq = 0;
+  g.sides[1].hand = [swing];
+  g.sides[1].board = [runechant(), runechant()];
+  g.sides[1].hist = {atk: 0, non: 0};
+
+  const out = execute(g, swing, "hand", 0);
+  assert.equal(out.sides[1].board.filter(b => b.card.name === "Runechant").length, 0,
+    "both tokens destroy themselves on the play — mandatorily, there is no 'you may'");
+  assert.equal(out.sides[0].hp, 14,
+    "two Runechants at the ACTOR's printed 3 each = 6. Reading seat 0's build gives 1 each " +
+    "and 2 damage, which is the v2.41 bug wearing the one context key that still named a seat.");
+});
+
+test("`built` is off the context — nothing in effects.js may name a seat", () => {
+  /* A ledger, like CTX_KEYS itself. Putting it back is allowed, but it
+     has to be a deliberate edit here, because every key on that list is
+     another thing judge.js must supply before it can drive card text. */
+  assert.ok(!E.CTX_KEYS.includes("built"),
+    "`built` means seat 0. The rules ask `bAct`; only the UI asks `built`, and the UI is " +
+    "not this module.");
+
+  /* DRIVEN, not grepped. A scan for the identifier is answered by the
+     English word sitting in a comment ("a state built without the
+     priority fields") — rule 4b, in the direction that makes a working
+     drill fail. So hand it a `built` that would be LOUD if anything read
+     it, and prove the state comes out identical. */
+  const loud = E.makeEffects(stubCtx({built: {runeDmg: 99}}));
+  const quiet = E.makeEffects(stubCtx());
+  const probe = () => {
+    const g = stubGame();
+    g.actor = 0; g.chain = []; g.stack = []; g.hitSeq = 0;
+    g.sides[0].board = [{card: {name: "Runechant", tt: "Runeblade Token - Aura", tx: "", uid: "r"},
+                         kind: "aura", uid: "r"}];
+    g.sides[0].hist = {atk: 0, non: 0};
+    return g;
+  };
+  const swing = {name: "Merge Probe Swing II", tt: "Generic Attack Action", tx: "", kw: [],
+                 power: 4, pitch: 1, cost: 0, uid: 502};
+  const a = loud.execute(probe(), swing, "hand", 0);
+  const b = quiet.execute(probe(), swing, "hand", 0);
+  assert.equal(a.sides[1].hp, b.sides[1].hp,
+    "a `built` in the context must change nothing — if 99 shows up in the damage, a rules " +
+    "site is still reading seat 0's build");
+  assert.equal(b.sides[1].hp, 19, "one runechant, one point (the stub build's default)");
+});

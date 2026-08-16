@@ -26,12 +26,15 @@
       the defend step run instead of resolving the block itself. It
       is passed in as context so the trainer keeps working exactly
       as it did; making it a hand-back is the next pass.
-   2. `execute` READS `built.runeDmg` at four sites. Per v2.41 a
-      passive read as `built.X` inside a RULES function is a bug —
-      `built` is seat 0’s build, captured for the UI, so it fires
-      for the wrong hero the moment seat 1 acts. It is moved as-is
-      and `bAct` is already in context beside it; changing it is a
-      behaviour change and belongs in its own commit.
+   2. `execute` READ `built.runeDmg` at four sites — CLOSED in v2.77.
+      Per v2.41 a passive read as `built.X` inside a RULES function
+      is a bug: `built` is seat 0’s build, captured for the UI, so it
+      fires for the wrong hero the moment seat 1 acts. All four now
+      read `bAct(n).runeDmg`, which was already in context beside
+      them, and `built` came OFF the context entirely (18 keys → 17).
+      That is not tidiness: this module is about to be driven by
+      judge.js, and a context key that means "seat 0's build" is a
+      seat-0 rules read written into a brand-new caller.
 
    `makeEffects(ctx)` takes the trainer closures the bodies reach
    for. They are listed explicitly rather than passed as a bag so
@@ -70,13 +73,13 @@ const rngRoll = R.roll, rngInt = R.int;
    different meaning, and a second definition under the same name is the
    collision KNOWN_COLLISIONS polices. Passing them guarantees the moved
    bodies keep calling exactly the functions they called inside Battle. */
-const CTX_KEYS = ["L","act","actMut","actorOf","bAct","bFoe","built","db","foe","foeMut",
+const CTX_KEYS = ["L","act","actMut","actorOf","bAct","bFoe","db","foe","foeMut",
                   "gy","gyDisc","had6ThisTurn","mkRune","openPrompt","tokSeq","typeAbbr","winCheck"];
 
 function makeEffects(ctx){
   const missing = CTX_KEYS.filter(k => ctx[k] === undefined);
   if(missing.length) throw new Error("effects.js: missing context — " + missing.join(", "));
-  const {L, act, actMut, actorOf, bAct, bFoe, built, db, foe, foeMut,
+  const {L, act, actMut, actorOf, bAct, bFoe, db, foe, foeMut,
          gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck} = ctx;
 
   /* WHAT A DISCARD TRIGGERS. Kayo prints: "The first time you discard a
@@ -174,7 +177,7 @@ function makeEffects(ctx){
         pool.push(_h[r.v]); _h = _h.filter((_,j)=>j!==r.v);
       }
     } else {
-      pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
+      pool = act(n).hand.map((c2,i2)=>({c2,i2,v:advValue(c2,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v).slice(0,fx.addCost.discard);
     }
     const ids = new Set(pool.map(p=>p.i2));
     /* RULING (Reincarnate): a card discarded at random can redirect itself
@@ -730,7 +733,7 @@ function makeEffects(ctx){
       const wantPitch = wantCond ? +wantCond.match(/\d+/)[0] : null;
       let idx = wantPitch!=null ? act(n).hand.findIndex(c2=>c2.pitch===wantPitch) : -1;
       if(idx===-1){
-        const ranked = act(n).hand.map((c2,i2)=>({i2,v:advValue(c2,n,{runeDmg:built.runeDmg})})).sort((a,b)=>a.v-b.v);
+        const ranked = act(n).hand.map((c2,i2)=>({i2,v:advValue(c2,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v);
         idx = ranked[0].i2;
       }
       const picked = act(n).hand[idx];
@@ -1015,7 +1018,7 @@ function makeEffects(ctx){
          destroys itself and deals its own damage, and there is no "you may"
          in the text — all of them, mandatorily. */
       if(runeAtPlay > 0){
-        const rp = popRunechants(n, actorOf(n), runeAtPlay, built.runeDmg);
+        const rp = popRunechants(n, actorOf(n), runeAtPlay, bAct(n).runeDmg);
         n = rp.game;
         /* EACH TOKEN IS ITS OWN SOURCE — this code has said so in the
            comment below since v2.23, and until v2.74 it then pooled them
@@ -1027,7 +1030,7 @@ function makeEffects(ctx){
            they may answer once. Pooling them would quietly push more
            damage through than the cards print, which is the direction that
            steals games. */
-        const each = built.runeDmg == null ? 1 : built.runeDmg;
+        const each = bAct(n).runeDmg == null ? 1 : bAct(n).runeDmg;
         for(let i=0; i<rp.popped; i++) n = arcaneHit(n, 1-actorOf(n), each, "Runechant");
         /* CREDIT THE HISTORY HERE. `popRunechants` is pure and deliberately
            does not touch hist — it reports what popped and leaves the

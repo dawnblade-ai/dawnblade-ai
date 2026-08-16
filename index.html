@@ -2391,8 +2391,19 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        call site. The RULES must not read it that way — they go through
        `bAct`/`bFoe` below, which is the same actor-vs-perspective split
        v2.24 made for zones, one layer up. */
-    return {..._s0.b, both:[_s0.b, s1], dGear, dDeck, myHP:_s0.b.hp, myInt:_s0.b.int,
-      runeDmg:runeDmg?+runeDmg:1, runeApprox:!runeTok, runeCard,
+    /* THE RUNECHANT'S DAMAGE RIDES ON BOTH BUILDS, NOT ONLY THE TOP LEVEL
+       (v2.77). It is read off the printed token, so it is the same number
+       for either hero — but the four sites that read it are RULES sites
+       inside effects.js, and they now ask `bAct(n)` like every other
+       passive. `built.runeDmg` sat at the top level only, so `both[0]` and
+       `both[1]` did not carry it and every one of those reads would have
+       fallen through to the `== null ? 1` default: identical today (the
+       Silver Age token deals 1) and silently wrong for a token that deals
+       more. Stamped onto both seats, the default becomes what it says it
+       is — a fallback — rather than the thing that is actually answering. */
+    const _rune = {runeDmg:runeDmg?+runeDmg:1, runeApprox:!runeTok, runeCard};
+    return {..._s0.b, both:[{..._s0.b, ..._rune}, {...s1, ..._rune}], dGear, dDeck,
+      myHP:_s0.b.hp, myInt:_s0.b.int, ..._rune,
       /* the stream AFTER both opening shuffles — Battle continues it */
       rng};
   },[h,oppH,db]);
@@ -2929,7 +2940,12 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
      opponent's blockers, because declaring them is no longer its job. It
      was the one context key that was a statement about the TRAINER's
      opponent rather than about cards. */
-  const _EFX = DawnEffects.makeEffects({L, act, actMut, actorOf, bAct, bFoe, built, db, foe, foeMut,
+  /* `built` LEFT THIS LIST IN v2.77, for the same reason `dummyDefence`
+     left it in v2.73: it was the last key that meant "seat 0". Its four
+     readers now ask `bAct`, so the module states no seat at all — which is
+     what lets judge.js build this context without writing a seat-0 rules
+     read into a brand-new caller. */
+  const _EFX = DawnEffects.makeEffects({L, act, actMut, actorOf, bAct, bFoe, db, foe, foeMut,
                                         gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck});
   const runOps = _EFX.runOps;
 

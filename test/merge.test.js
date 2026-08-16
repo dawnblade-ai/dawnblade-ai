@@ -152,13 +152,18 @@ test("judge has no you()/opp() — perspective is not a rules question", () => {
 
 /* ---- THE LEDGER ------------------------------------------------------- */
 
-test("the context is still 18 keys — a new one is a new thing judge must supply", () => {
-  assert.equal(E.CTX_KEYS.length, 18,
+test("the context is still 17 keys — a new one is a new thing judge must supply", () => {
+  assert.equal(E.CTX_KEYS.length, 17,
     "every key added to effects.js is another dependency judge.js has to satisfy before it " +
     "can drive the card semantics. Moving this number should be a deliberate edit.");
   /* `dummyDefence` came OFF this list in v2.73 and must not come back: it
-     is what made effects callable only by a caller that owns a dummy. */
-  assert.ok(!E.CTX_KEYS.includes("dummyDefence"),
-    "execute declares and stops (v2.73) — putting the defend step back into its context " +
-    "would re-close the door this merge walks through");
+     is what made effects callable only by a caller that owns a dummy.
+     `built` came off in v2.77 for the neighbouring reason — it was the
+     last key that named a SEAT rather than a role, so supplying it meant
+     writing seat 0 into judge.js's brand-new caller. */
+  for(const gone of ["dummyDefence", "built"]){
+    assert.ok(!E.CTX_KEYS.includes(gone),
+      "`" + gone + "` came off this list on purpose — putting it back re-closes a door " +
+      "this merge walks through");
+  }
 });
