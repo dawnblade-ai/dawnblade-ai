@@ -47,9 +47,16 @@ const SOURCES = {
 const ANCHORS = [
   /* --- engine/effects.js: the ported card semantics -------------------- */
   ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
-  ["execute",      "  const execute = (s,card,from,idx) => {", "effects"],
+  ["execute",      "  const execute = (s,card,from,idx,opts) => {", "effects"],
+  /* v2.77 split the link's resolution into two shared pieces so a caller
+     can put its OWN wall and its own damage routing between them. Both
+     are rules functions and both are anchored, or the ledger would report
+     `resolveStack` green while 130 lines of what it used to hold sat
+     unscanned in a body nobody bounded. */
+  ["linkPumps",    "  const linkPumps = (s, info) => {",           "effects"],
+  ["linkPayload",  "  const linkPayload = (s, info) => {",         "effects"],
   ["resolveStack", "  const resolveStack = (s) => {",              "effects"],
-  ["__endEffects", "  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost};", "effects"],
+  ["__endEffects", "  return {runOps, execute, afterDefenders, resolveStack,", "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way
@@ -130,12 +137,12 @@ function bodyOf(name){
    other half — the scripted escalation — is `foeVanilla`, which is seat-1
    specific by construction and is anchored above rather than counted here,
    exactly as foePick/foePlay are. */
-const RULES_FNS = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt",
-                   "newTurn", "endPhaseCF"];
+const RULES_FNS = ["runOps", "execute", "linkPumps", "linkPayload", "resolveStack",
+                   "tryPlay", "takeIt", "newTurn", "endPhaseCF"];
 
 /* Migrated to act()/foe(). Add a name here ONLY together with its edit. */
-const MIGRATED = ["runOps", "execute", "resolveStack", "tryPlay", "takeIt",
-                  "endPhaseCF"];
+const MIGRATED = ["runOps", "execute", "linkPumps", "linkPayload", "resolveStack",
+                  "tryPlay", "takeIt", "endPhaseCF"];
 /* Still on perspective helpers — the last of the Phase A step-1 work.
    `newTurn` is the player's turn setup and reads `you` throughout; it is
    the natural pair to giving seat 1 a start phase of its own, which
@@ -184,8 +191,21 @@ for(const name of MIGRATED){
 
   test(`${name} actually uses the actor helpers`, () => {
     const b = bodyOf(name);
-    assert.ok(/\b(act|foe|actMut|foeMut)\(/.test(b),
-      `${name} claims to be migrated but references no actor helper at all`);
+    /* WHAT THIS IS REALLY GUARDING is an anchor pair that has stopped
+       slicing anything: a body of nothing contains no `you(` either, so
+       it reports green while scanning air. That is the failure mode this
+       file exists to prevent, and it is why the check was written as
+       "must mention an actor helper".
+
+       It is a PROXY, and v2.77 produced a body where the proxy is simply
+       wrong: `linkPumps` is the attack's arithmetic before the wall — it
+       reads `pend` and the stack and touches no seat at all, correctly.
+       So the anti-empty-slice check is made directly, and the actor
+       helper is required only of a body that reaches for a SIDE. */
+    assert.ok(b.trim().length > 120, `${name}: the anchor pair sliced nothing to speak of`);
+    const touchesASide = /\bsides\b|\b(act|foe|actMut|foeMut|you|opp|youMut|oppMut)\(/.test(b);
+    if(touchesASide) assert.ok(/\b(act|foe|actMut|foeMut)\(/.test(b),
+      `${name} reaches for a side but references no actor helper at all`);
   });
 
   /* A LITERAL SEAT INDEX is the same bug as you(), wearing a different hat.

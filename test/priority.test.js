@@ -973,14 +973,17 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
      asserting. (It could become a behavioural drill now that execute is
      callable; that is a bigger change than repointing it.) */
   const EFFECTS = require("./helpers/extract.js").effects();
-  const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx)"),
-                             EFFECTS.indexOf("\n  /* THE LAST OF THE THREE"));
+  const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx,opts)"),
+                             EFFECTS.indexOf("\n  /* ============================================================\n     THE LINK RESOLVES"));
   /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
      +1, and only the spelled-out arithmetic gets both right. */
-  assert.match(body, /const apCost = costsAP\(card\) \? 1 : 0;/,
-    "the charge must be gated on costsAP — `ga ? keep : -1` charges instants too");
+  assert.match(body, /const apCost = costsAP\(card, opts && opts\.window\) \? 1 : 0;/,
+    "the charge must be gated on costsAP — `ga ? keep : -1` charges instants too. The\n"
+  + "WINDOW joined it in v2.77 and can only make the answer cheaper (CR 8.1.1): a card\n"
+  + "played in a reaction window is not being played as an action. The trainer passes\n"
+  + "none and is unchanged; judge.js decides it at doPlay and carries it through the pay.");
   assert.match(body, /actMut\(n\)\.ap = act\(n\)\.ap - apCost \+ \(ga \? 1 : 0\);/,
     "CR 5.3.5 — go again gains 1 action point, so the two rules compose "
   + "rather than being folded into a ternary");
@@ -1002,10 +1005,20 @@ test("action point — an attack still pays for itself", () => {
   /* resolveStack moved to engine/effects.js in v2.62 — reading it out of
      index.html now finds only the one-line setG wrapper, and a source
      guard aimed at the wrong file passes by finding nothing. */
+  /* AND IT MOVED AGAIN in v2.77, into `linkPayload` — the shared piece
+     both boards resolve a link through. The end anchor this drill used to
+     carry had ALREADY gone stale in v2.73 (the export list grew
+     `afterDefenders` and `payAddCost`), so indexOf returned -1, the
+     slice ran to the end of the file, and it passed by reading far too
+     much rather than by reading the right thing. Both anchors are
+     asserted found now, which is the only thing that stops that
+     recurring. */
   const EFFECTS = require("./helpers/extract.js").effects();
-  const body = EFFECTS.slice(EFFECTS.indexOf("const resolveStack = (s) => {"),
-                             EFFECTS.indexOf("\n  return {runOps, execute, resolveStack, afterDiscard};"));
-  assert.ok(body.length > 500, "the slice must actually contain resolveStack's body");
+  const from = EFFECTS.indexOf("  const linkPayload = (s, info) => {");
+  const to   = EFFECTS.indexOf("  const resolveStack = (s) => {");
+  assert.ok(from > 0 && to > from, "anchors not found — repoint this drill deliberately");
+  const body = EFFECTS.slice(from, to);
+  assert.ok(body.length > 500, "the slice must actually contain the payload");
   assert.match(body, /actMut\(n\)\.ap = n\.pend\.ga \? act\(n\)\.ap : act\(n\)\.ap-1;/,
     "an attack costs an action point whether or not it is an instant-typed card");
 });

@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.76"; /* v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.77"; /* v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3277,6 +3277,15 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
        back in its action phase */
     let n = execute({...s, mode:"act", pending:null}, card, from, idx);
     if(!n._declared) return n;          /* it resolved; the action phase continues */
+    /* WHERE THE DECLARED ATTACK GOES IS THIS BOARD'S ANSWER (v2.77).
+       `execute` used to file it to the graveyard itself, at declaration —
+       which is not something the card does, it is what a board with no
+       combat chain to hold a card has to do instead. This board still has
+       none, so it files immediately and nothing about its behaviour
+       changes; judge.js holds the card in `chainCards` and files at the
+       close step, which is what CR 7.x actually describes. `fileAttack`
+       is the one copy of WHERE, so neither board invents a destination. */
+    n = _EFX.fileAttack(n, card, from);
     const {total, card:atk, declNote} = n._declared;
     const dd = dummyDefence(n, total, atk);
     n = dd.n;

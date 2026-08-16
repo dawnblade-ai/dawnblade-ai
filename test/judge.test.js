@@ -115,9 +115,17 @@ function drive(g, o){
                        .sort((a, b) => (b.power || 0) - (a.power || 0))[0];
       if(c) did = send({t: "play", uid: c.uid, from: "hand"}, pri);
       if(!did){
+        /* ASK LEGAL, LIKE THE CARD BRANCH ALREADY DOES. The card path
+           filters on `playableWhy`, which reads affordability; this one
+           read only the printed line, so the driver proposed a swing it
+           could not pay for and then recorded its own optimism as an
+           engine refusal. A driver is a policy, and a policy proposes
+           what the judge will accept — the same contract sparring.js
+           holds itself to. */
         const w = (sd.gear || []).find(x => {
           const wc = PR.weaponCost(x.tx || "");
-          return wc && !x.destroyed && !(wc.oncePerTurn && (sd.weaponUsed || {})[x.uid]);
+          return wc && !x.destroyed && !(wc.oncePerTurn && (sd.weaponUsed || {})[x.uid])
+            && !J.legal(g, {t: "activate", uid: x.uid}, pri);
         });
         if(w) did = send({t: "activate", uid: w.uid}, pri);
       }
@@ -803,13 +811,30 @@ test("CR 8.1.6 — an instant costs no action point", {skip}, () => {
 });
 
 test("an action DOES cost an action point, and none is left for a second", {skip}, () => {
+  /* AN ATTACK'S ACTION POINT IS CHARGED WHEN THE LINK RESOLVES (v2.77),
+     not when it is declared. That is the ONE copy of CR 8.1.1's
+     arithmetic — `effects.js`'s `linkPayload`, spelled out as
+     `ap = ga ? ap : ap - 1` so that CR 5.3.5's GAIN composes with it
+     instead of being folded into a ternary — and it is where the trainer
+     has always charged it. This file used to charge it a second time at
+     declaration, which handed the attacker two points for one go again.
+
+     So the drill drives to the resolution rather than reading the state
+     one action in. */
   let g = match({seed: "apcost"});
   const seat = g.turnPlayer;
   const c = g.sides[seat].hand.find(x => PR.isAttack(x));
-  g = J.put(g, seat, s => ({...s, res: 9}));
+  g = J.put(g, seat, s => ({...s, res: 9, ap: 1}));
   const out = J.reduce(g, {t: "play", uid: c.uid, from: "hand"}, seat);
   assert.equal(out.error, null);
-  assert.equal(out.state.sides[seat].ap, PR.fxParse(c).ga ? 1 : 0,
+  let n = out.state;
+  for(let i = 0; i < 24 && n.priority != null && !(n.pend && n.pend.dealt != null); i++)
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  assert.ok(n.pend && n.pend.dealt != null, "the link never reached its damage step");
+  /* Read go again off the LINK, not off a fresh parse: a card can be
+     granted it by its own resolution, and the point follows what actually
+     happened rather than what the text says in isolation. */
+  assert.equal(n.sides[seat].ap, n.pend.ga ? 1 : 0,
     "go again is a GAIN, not a refund (CR 5.3.5)");
 });
 

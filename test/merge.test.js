@@ -220,6 +220,111 @@ test("judge has no you()/opp() — perspective is not a rules question", () => {
 
 /* ---- THE LEDGER ------------------------------------------------------- */
 
+/* ============================================================
+   AND NOW THE CLAIM ITSELF: CARD TEXT RESOLVES AT THE TABLE
+
+   Everything above measures the seam. This drives a real hero's real
+   cards through `judge.reduce` and asserts on the BOARD — tokens, life,
+   the attack's total — because the whole of v2.77 is one sentence and
+   this is the only thing that can check it.
+
+   Viserai is the subject for one reason: his rite is a hero passive read
+   through `bAct`, it MINTS a card out of the database, and the token it
+   mints then triggers on the next attack. So a single line of play
+   exercises the build, the database registration, the uid counter, the
+   actor helpers and the declaration-time trigger at once — five of the
+   things this file has been pinning separately.
+   ============================================================ */
+
+const fs = require("fs");
+const path = require("path");
+const B = require("../engine/build.js");
+const C = require("../engine/cards.js");
+const GM = require("../engine/game.js");
+const PR = require("../engine/parser.js");
+const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const noDb = !fs.existsSync(CACHE) && "no cached card database";
+const W = noDb ? null : require("./helpers/extract.js").loadData();
+let _db = null;
+const DB = () => _db || (_db = C.buildMaps(
+  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+
+function realMatch(k0, k1, seed){
+  const hero = k => W.HEROES.find(h => new RegExp(k, "i").test(h.n));
+  const h0 = hero(k0), h1 = hero(k1), ctr = {n: 0};
+  let rng = RNG.make(seed);
+  const b0 = B.buildSideDefault(h0, GM.parseDeck(W.DECKS[h0.k]), DB(), rng, ctr); rng = b0.rng;
+  const b1 = B.buildSideDefault(h1, GM.parseDeck(W.DECKS[h1.k]), DB(), rng, ctr); rng = b1.rng;
+  return J.newMatch({builds: [b0.b, b1.b], names: [h0.n, h1.n],
+                     heroKeys: [h0.k, h1.k], rng, first: 0, tokSeq: ctr.n});
+}
+/* Pass until the link in flight has actually dealt its damage. */
+const toDealt = n => {
+  for(let i = 0; i < 24 && n.priority != null && !(n.pend && n.pend.dealt != null); i++)
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  return n;
+};
+
+test("a hero passive fires at the table, and mints a REAL card", {skip: noDb}, () => {
+  J.setDb(DB());
+  let g = realMatch("viserai", "kayo", "rite");
+  const rb = g.sides[0].deck.find(c => /runeblade/i.test(c.tt || "") && PR.isAttack(c));
+  assert.ok(rb, "no Runeblade attack in the deck — the fixture is wrong, not the engine");
+  /* "if you've played a non-attack this turn" — the rite's own condition,
+     read off `hist` exactly as it is in solo play. */
+  g = J.put(g, 0, s => ({...s, hand: [rb, ...s.hand], res: 9, hist: {...s.hist, non: 1}}));
+
+  const out = J.reduce(g, {t: "play", uid: rb.uid, from: "hand"}, 0);
+  assert.equal(out.error, null, "a legal play was refused: " + out.error);
+  const board = out.state.sides[0].board;
+  assert.equal(board.length, 1, "the rite conjured nothing — no card text resolved");
+  assert.equal(board[0].card.name, "Runechant",
+    "the token must be the printed card out of the database, never invented");
+  assert.equal(board[0].kind, "aura",
+    "a Runechant is a Runeblade Token - AURA, and seven pool cards count auras generically");
+  assert.ok(String(board[0].uid).indexOf("rune") === 0,
+    "a token uid must be namespaced — a raw counter collides with a dealt card, which the " +
+    "invariant judge caught in live play as CARD-IN-TWO-ZONES");
+  assert.equal(g.sides[0].board.length, 0, "and reduce did not write through to the caller");
+});
+
+test("the token then triggers on the next attack — arcane, past the wall", {skip: noDb}, () => {
+  J.setDb(DB());
+  let g = realMatch("viserai", "kayo", "rite2");
+  const rbs = g.sides[0].deck.filter(c => /runeblade/i.test(c.tt || "") && PR.isAttack(c));
+  g = J.put(g, 0, s => ({...s, hand: [rbs[0], rbs[1], ...s.hand], res: 9, ap: 3,
+                         hist: {...s.hist, non: 1}}));
+
+  let n = toDealt(J.reduce(g, {t: "play", uid: rbs[0].uid, from: "hand"}, 0).state);
+  assert.ok(n.pend.dealt > 0, "the first link dealt nothing — the drill proves nothing after this");
+  for(let i = 0; i < 12 && n.pend; i++) n = J.reduce(n, {t: "pass"}, n.priority != null ? n.priority : 0).state;
+  assert.equal(n.sides[0].board.length, 1, "the runechant should have survived the chain");
+
+  const before = n.sides[1].hp;
+  n = J.reduce(n, {t: "play", uid: rbs[1].uid, from: "hand"}, 0).state;
+  /* THE TRIGGER IS ON *PLAY*, and it resolves ABOVE the attack — so the
+     damage lands at DECLARATION, before any defender is declared, and
+     arcane goes past equipment entirely. */
+  assert.ok(n.sides[1].hp < before,
+    "the Runechant did not pop at declaration — it triggers on PLAY (its own printed text) " +
+    "and a triggered ability resolves above the attack that triggered it");
+  assert.equal(n.sides[1].hp, before - 1, "one token, its printed one arcane");
+});
+
+test("the attack's TOTAL is what the card says, not what it prints", {skip: noDb}, () => {
+  /* The shape that would be invisible: every buff in the game resolving
+     correctly and then being thrown away at declaration by a `card.power`
+     read. Coverage says `full`, fairness is one-sided the other way, and
+     the card is simply weaker than printed. */
+  J.setDb(DB());
+  let g = realMatch("kayo", "dorinthea", "pump");
+  const atk = g.sides[0].deck.find(c => PR.isAttack(c) && (c.power || 0) > 0);
+  g = J.put(g, 0, s => ({...s, hand: [atk, ...s.hand], res: 9, buffNext: 3}));
+  const n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, 0).state;
+  assert.equal(n.pend.total, (atk.power || 0) + 3,
+    "a queued +3 to your next attack must reach the chain link");
+});
+
 test("the context is still 17 keys — a new one is a new thing judge must supply", () => {
   assert.equal(E.CTX_KEYS.length, 17,
     "every key added to effects.js is another dependency judge.js has to satisfy before it " +

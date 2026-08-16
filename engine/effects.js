@@ -678,7 +678,15 @@ function makeEffects(ctx){
     });
     return n;
   };
-  const execute = (s,card,from,idx) => {
+  /* `opts` IS THE CALLER'S HALF OF ONE QUESTION (v2.77): which WINDOW is
+     this being played in. The trainer has no windows and passes nothing,
+     so its answer is unchanged; judge.js decides the window at doPlay,
+     carries it through the payment so it cannot move while the player
+     pitches, and hands it here. It reaches exactly one line — the action
+     point — and `costsAP` refuses to make anything more expensive with
+     it. Nothing else in this body may read `opts`: the moment a card's
+     EFFECT depends on the caller, there are two engines again. */
+  const execute = (s,card,from,idx,opts) => {
     const fx = fxParse(card);
     /* THE RUNECHANT TRIGGER FIRES ON *PLAY* (CR + the printed token):
        "When you play an attack action card or activate a weapon attack,
@@ -1020,9 +1028,19 @@ function makeEffects(ctx){
       }
       if(from==="weapon" && card.addRust){ const cur=(act(n).counters[card.uid]||{}); actMut(n).counters={...act(n).counters,[card.uid]:{...cur,rust:(cur.rust||0)+1}}; declNote += ` Rust counter placed — now ${(cur.rust||0)+1}.`; }
       if(from==="weapon" && card.needSteam){ const cur=(act(n).counters[card.uid]||{}); actMut(n).counters={...act(n).counters,[card.uid]:{...cur,steam:Math.max(0,(cur.steam||0)-1)}}; declNote += ` Steam counter spent.`; }
-      if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
-      if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
-      if(card.pitch===3 && (from==="hand"||from==="arsenal")) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
+      /* WHERE A DECLARED ATTACK LIVES IS THE CALLER'S (v2.77) — the same
+         split `dummyDefence` went through in v2.73, and for the same
+         reason. This used to file the card here, at DECLARATION, which is
+         one board's answer to "what happens next" rather than anything
+         the card does: the trainer has no combat chain to hold a card, so
+         the graveyard was the only zone available to it.
+
+         CR 7.x puts a declared attack ON THE COMBAT CHAIN until the chain
+         link resolves. judge.js models that as a real zone (`chainCards`,
+         censused by invariants.js) and files at the close step; the
+         trainer files immediately and is unchanged to the character.
+         `fileAttack` is the ONE copy of where it goes, so neither caller
+         gets to invent a destination. */
       /* `from` rides on the pend because "when a WEAPON you control hits" is
          a question only the resolution can ask, and by then the zone the
          attack was declared from is the only thing that distinguishes a
@@ -1218,11 +1236,33 @@ function makeEffects(ctx){
                so for an action it is spend-then-gain (the familiar "kept")
                and for an instant it is a genuine +1.
        For every action card this is the identical arithmetic to before. */
-    const apCost = costsAP(card) ? 1 : 0;
+    const apCost = costsAP(card, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
     else if(!apCost) n = L(n, `${card.name} plays at instant speed — no action point spent.`);
     return openPrompt(winCheck(n));
+  };
+
+  /* WHERE A DECLARED ATTACK GOES WHEN IT IS DONE (v2.77).
+
+     Split out of `execute` so that WHEN it happens belongs to the caller
+     and WHERE is still answered once. A card played from hand or the
+     arsenal is filed to the graveyard, turn-stamped like every other path
+     in; one played from the graveyard or banish is banished, which is the
+     printed rule for the cards that reach back into those zones. A weapon
+     is neither — it stays equipped and is spent.
+
+     `blueGY` rides here rather than at declaration because it counts
+     blue cards IN THE GRAVEYARD, and until this runs the card is not in
+     one. */
+  const fileAttack = (s2, card, from) => {
+    let n = {...s2};
+    if(from==="hand"||from==="arsenal"){
+      actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
+      if(card.pitch===3) actMut(n).hist = {...act(n).hist, blueGY:(act(n).hist.blueGY||0)+1};
+    }
+    if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
+    return n;
   };
 
   /* THE SECOND HALF OF A DECLARATION (v2.73).
@@ -1271,84 +1311,87 @@ function makeEffects(ctx){
     return n;
   };
 
-  /* THE LAST OF THE THREE (v2.62). runOps and execute were plain
-     closures and moved verbatim; this one was `() => setG(s=>{…})`, so
-     what moved is its BODY — which was already a pure s => s' — with the
-     React wrapper left behind in the trainer as `() => setG(_EFX.resolveStack)`.
-     The body itself is unchanged.
+  /* ============================================================
+     THE LINK RESOLVES, IN THREE PIECES (v2.77)
 
-     With this, ONE COPY of the card semantics exists. What still keeps
-     the table from running them is not location any more: `execute`
-     drives the turn structure through the trainer's `mode`/`pend`/`stack`
-     vocabulary, and judge.js drives it through `phase`/`step`. Separating
-     "what the card does" from "what happens next" is the remaining work,
-     and the inline dummyDefence call is the first knot in it. */
-  const resolveStack = (s) => {
-    /* THE ONLY THING THIS BODY NEEDS TO KNOW IS WHETHER THERE IS A LINK
-       (v2.77). It used to ask `mode!=="stack"` as well — the trainer's
-       name for "the attack is declared and awaiting resolution" — which
-       is a statement about the trainer's board, not about the card. The
-       trainer's own wrapper asks the same question one line above the
-       call, so nothing changes for it; what changes is that a caller
-       driving `phase`/`step` is no longer refused by a vocabulary it does
-       not speak. */
-    if(!s.pend) return s;
+     `resolveStack` was one body, and two thirds of it was card semantics
+     wrapped around one third that was the trainer's turn structure. That
+     is exactly the knot that kept the table from ever resolving a card:
+     judge.js holds its defenders on `blockG`/`blockH` and routes damage
+     by CR 1.4.5 attack-target, so it could not call a body that reads the
+     trainer's `stack` and always hits the hero.
+
+     So the semantics come out as two shared pieces and each caller keeps
+     its own middle:
+
+       linkPumps    everything that changes the attack's TOTAL before the
+                    wall — reaction pumps on the stack, and the late ops
+                    that can only be known once defenders exist
+       (the caller) the wall, and where the damage lands
+       linkPayload  everything the link DOES once the damage is dealt —
+                    its ops, its on-hit clauses, the weapon counters, the
+                    hero's extra swing, crush, the soul, the chain entry
+                    and the attack's action point
+
+     `resolveStack` is now those three composed, with the trainer's own
+     wall in the middle, and its behaviour is unchanged — the drills that
+     cover Kayo, Dorinthea, arcane, frostbite and the pay-toll all drive
+     it and all still pass. What is NOT allowed is for judge.js to grow a
+     second copy of either piece; there is a drill for that.
+
+     Historic note: this body was `() => setG(s=>{…})` in `Battle` and its
+     React wrapper was peeled off in v2.62, leaving a pure s => s'.
+     ============================================================ */
+
+  /* PIECE ONE — the total, before anything is subtracted from it.
+     `equipDefenders` is a COUNT the caller supplies, because how a seat
+     holds its declared defenders is the caller's business: the trainer
+     files them as layers on the stack, judge.js as uid lists on the side. */
+  const linkPumps = (s, info) => {
     let n = {...s};
-    const pumps = n.stack.filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
-    const defLs = n.stack.filter(l=>l.k==="def");
+    const pumps = (n.stack||[]).filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
     let total = n.pend.total + pumps;
-    let blkNote = "";
-    /* non-equipment defenders are what dominate, reprise and "defended by
-       fewer than 2" all actually care about — count them for real */
-    let handBlockers = 0;
     /* RULING (Fender Bender): +1 per separate equipment the opponent defended
        with — only knowable once defenders are declared, so it lands here. */
     for(const op of (n.pend.lateOps||[])){
       if(op[0]!=="perEquipDef") continue;
-      const eq = defLs.filter(l=>l.gi!=null).length;
+      const eq = (info && info.equipDefenders) || 0;
       total += op[1]*eq;
       n = L(n, `${n.pend.card.name}: ${eq} equipment defending — +${op[1]*eq} power.`);
     }
-    if(defLs.length){
-      /* CR: every defender's printed defence sums, and the total reduces the
-         attack once — so report each card's real defence, not a running
-         remainder that makes the last blocker look weaker than it is. */
-      const parts = [];
-      let wall = 0;
-      for(const dl of defLs){
-        if(dl.gi != null){
-          const piece = foe(n).gear[dl.gi];
-          wall += gearDef(piece);
-          foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
-          /* an equipment that has blocked is spent for the rest of this chain */
-          foeMut(n).chainBlocked = [...(foe(n).chainBlocked||[]), piece.uid];
-          parts.push(`${piece.name} ${gearDef(piece)}`);
-        } else {
-          const c = foe(n).hand.find(x=>x.uid===dl.uid);
-          if(!c) continue;
-          wall += (c.def||0);
-          foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
-          foeMut(n).grave = [c, ...foe(n).grave];
-          handBlockers++;
-          parts.push(`${c.name} ${c.def||0}`);
-        }
-      }
-      const stopped = Math.min(wall, total);
-      total = Math.max(0, total - wall);
-      blkNote = ` Wall of ${wall} — ${parts.join(", ")} — stops ${stopped}.`;
-    }
-    foeMut(n).blockedHand = handBlockers;
-    foeMut(n).hp -= total;
-    /* Runechants no longer pop here. They trigger on PLAY and resolve above
-       the attack on the stack, so they are dealt with at declaration in
-       `execute`. `rd` stays 0 so the messages and hitSeq maths below read
-       the same shape. */
+    return {game:n, total, pumps};
+  };
+
+  /* PIECE TWO — THE PAYLOAD. Everything the link DOES once the damage
+     has landed, and not one line about where the damage went: the wall,
+     the attack-target and how a seat holds its declared defenders are all
+     the caller's, which is why they arrive as three numbers.
+
+       total          what was actually dealt (CR 7.5.5 — a hit is damage
+                      DEALT, so `total > 0` is what every on-hit clause,
+                      the weapon counters and the hero's extra swing all
+                      gate on)
+       handBlockers   non-equipment defenders, which is what dominate,
+                      reprise and "defended by fewer than 2" ask about
+       defenders      every defender including equipment — a DIFFERENT
+                      question, and the pool prints both
+
+     It does not clear `pend` and does not say what phase follows. Both
+     callers do that themselves, because that is the half this split
+     exists to keep apart. */
+  const linkPayload = (s, info) => {
+    let n = {...s};
+    let total = info.total;
+    const pumps = info.pumps || 0;
+    const handBlockers = info.handBlockers || 0;
+    const defCount = info.defenders || 0;
+    const blkNote = info.blkNote || "";
     let rd = 0, runeMsg = "";
     (n.pend.lateConds||[]).forEach(({cond,op})=>{
       /* "defended by fewer than 2 CARDS" counts every defender, equipment
          included — distinct from defLt2, which counts non-equipment only. */
       if(cond==="defLt2any"){
-        if(defLs.length >= 2){ n = L(n, `${n.pend.card.name}: two defenders met it — no bonus.`); return; }
+        if(defCount >= 2){ n = L(n, `${n.pend.card.name}: two defenders met it — no bonus.`); return; }
         if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — go again!`); }
         else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — +${op[1]} power.`); }
         else n = runOps(n,[op],n.pend.card.name);
@@ -1458,14 +1501,81 @@ function makeEffects(ctx){
         n = L(n, `Crush — ${top.name} is forced from the dummy's hand back on top of its deck.`);
       } else n = L(n, "Crush lands, but the dummy's hand is empty.");
     }
+    /* A CARD THAT ASCENDS MUST LEAVE WHATEVER HOLDS IT. It is in the
+       graveyard for a caller that files at declaration and on the combat
+       chain for one that files at the close step, and taking it out of
+       only one of those puts a card in two zones — invariants.js's
+       loudest error, and ours rather than a caught one. */
     if(n._soulSelf){ delete n._soulSelf;
-      if(total>0){ actMut(n).grave = act(n).grave.filter(x=>x!==pc); actMut(n).soul = [...act(n).soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
+      if(total>0){ actMut(n).grave = act(n).grave.filter(x=>x!==pc);
+        n.chainCards = (n.chainCards||[]).filter(e2 => e2.card !== pc);
+        actMut(n).soul = [...act(n).soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
     }
     n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
     if(n._gaGrant){ n.pend = {...n.pend, ga:true}; delete n._gaGrant; }
     actMut(n).hist = {...act(n).hist, atk:act(n).hist.atk+1};
     actMut(n).ap = n.pend.ga ? act(n).ap : act(n).ap-1;
     if(n.pend.ga) n = L(n, "Go again — action point kept.");
+    return {game:n, total};
+  };
+
+  const resolveStack = (s) => {
+    /* THE ONLY THING THIS BODY NEEDS TO KNOW IS WHETHER THERE IS A LINK
+       (v2.77). It used to ask `mode!=="stack"` as well — the trainer's
+       name for "the attack is declared and awaiting resolution" — which
+       is a statement about the trainer's board, not about the card. The
+       trainer's own wrapper asks the same question one line above the
+       call, so nothing changes for it; what changes is that a caller
+       driving `phase`/`step` is no longer refused by a vocabulary it does
+       not speak. */
+    if(!s.pend) return s;
+    let n = {...s};
+    const defLs = n.stack.filter(l=>l.k==="def");
+    const _pre = linkPumps(n, {equipDefenders: defLs.filter(l=>l.gi!=null).length});
+    n = _pre.game;
+    const pumps = _pre.pumps;
+    let total = _pre.total;
+    let blkNote = "";
+    /* non-equipment defenders are what dominate, reprise and "defended by
+       fewer than 2" all actually care about — count them for real */
+    let handBlockers = 0;
+    if(defLs.length){
+      /* CR: every defender's printed defence sums, and the total reduces the
+         attack once — so report each card's real defence, not a running
+         remainder that makes the last blocker look weaker than it is. */
+      const parts = [];
+      let wall = 0;
+      for(const dl of defLs){
+        if(dl.gi != null){
+          const piece = foe(n).gear[dl.gi];
+          wall += gearDef(piece);
+          foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
+          /* an equipment that has blocked is spent for the rest of this chain */
+          foeMut(n).chainBlocked = [...(foe(n).chainBlocked||[]), piece.uid];
+          parts.push(`${piece.name} ${gearDef(piece)}`);
+        } else {
+          const c = foe(n).hand.find(x=>x.uid===dl.uid);
+          if(!c) continue;
+          wall += (c.def||0);
+          foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
+          foeMut(n).grave = [c, ...foe(n).grave];
+          handBlockers++;
+          parts.push(`${c.name} ${c.def||0}`);
+        }
+      }
+      const stopped = Math.min(wall, total);
+      total = Math.max(0, total - wall);
+      blkNote = ` Wall of ${wall} — ${parts.join(", ")} — stops ${stopped}.`;
+    }
+    foeMut(n).blockedHand = handBlockers;
+    foeMut(n).hp -= total;
+    /* Runechants no longer pop here. They trigger on PLAY and resolve above
+       the attack on the stack, so they are dealt with at declaration in
+       `execute`. `rd` stays 0 so the messages and hitSeq maths below read
+       the same shape. */
+    const _out = linkPayload(n, {total, pumps, handBlockers,
+                               defenders: defLs.length, blkNote});
+    n = _out.game;
     n.chainOpen = true;
     /* The link has resolved and the stack is empty. WHERE THAT LEAVES THE
        GAME is the caller's (CR 7.6.3 hands priority back to the
@@ -1474,7 +1584,8 @@ function makeEffects(ctx){
     return openPrompt(winCheck(n));
   };
 
-  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost};
+  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
+          linkPumps, linkPayload};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------

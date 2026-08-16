@@ -1768,7 +1768,26 @@ function rxAllowed(c, win){
    the same way a card does — which matters, because "Instant - Destroy
    this: Gain 1 action point" (Achilles Accelerator) nets to nothing at
    all if activating it silently spends one. */
-const costsAP = c => !isInstantT(c) && !(c && c._instant);
+/* THE WINDOW IS AN OPTIONAL SECOND ARGUMENT (v2.77), and it can only ever
+   make the answer CHEAPER. CR 8.1.1 charges the point to an ACTION; a card
+   played in a reaction window is not being played as one, which is why a
+   dual-typed card like Den of the Spider costs a point as an Action and
+   none as a Defense Reaction. The trainer has no windows and passes
+   nothing, so its answer is unchanged to the character; judge.js decides
+   the window at `doPlay` and carries it through the payment, so the answer
+   cannot change while the player pitches.
+
+   `types.js`'s `typeCostsAP` asks the same question off the structured
+   type array and is the authority on what a card IS. It is deliberately
+   not called from here: parser.js is loaded before types.js, and the two
+   agree on every case that can actually reach this line — the disagreement
+   is only for a reaction card in the ACTION window, which `playWindowFor`
+   never returns. */
+const costsAP = (c, window) => {
+  if(c && c._instant) return false;
+  if(window && window !== "action") return false;
+  return !isInstantT(c);
+};
 
 /* ---- THE REACTION PUMP (v2.66) --------------------------------------
    How much an attack reaction adds to the attack it targets. THREE

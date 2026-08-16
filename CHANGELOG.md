@@ -9,6 +9,86 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.77 — judge.js resolves card text · ONE engine
+
+**Solo play and table play stop being two engines.** `engine/judge.js`
+modelled the CR turn structure, the combat chain and the costs, and
+resolved no card text at all; `engine/effects.js` held every card
+semantic and only the trainer could reach it. That is why solo play ran
+every card in the pool and the table ran none. judge.js is now a CALLER
+of effects.js and contributes no semantics of its own.
+
+The split before it was deliberate and load-bearing — getting the
+orchestration right was the part that did not exist, the semantics
+already worked, and keeping them apart meant a control-flow bug could
+never be confused for a card being read wrong. What ended it is that the
+customer changed: it used to be the networked table, and it is now every
+hero of card text that would otherwise have to be written into whichever
+engine you point them at.
+
+### What it took, in the order it landed
+
+| | |
+|---|---|
+| `built` off the context | the last key that named a SEAT rather than a role. Four rules sites read `built.runeDmg` — seat 0's build, captured for the UI — and now ask `bAct`. 18 keys → 17. Supplying it would have written a seat-0 rules read into a brand-new caller. |
+| two `mode` strings out | `resolveStack`'s guard was a duplicate of the test the trainer's own wrapper makes one line above the call; the "-N power" shave read `mode==="block"`, which answers FALSE in judge.js — a defence reaction's whole payload would have gone nowhere. |
+| the context | seventeen names, sixteen of them already exported here or a two-line adapter. The uid counter is the one that does not fit a pure reducer for free: it lives ON the state, so the context is built fresh per call over a cell and written back. The database is registered with `setDb` rather than carried — it is a lookup table, identical on both peers, and 62KB on a wire that drops large messages silently. |
+| `commitPlay` delegates | the zone move, the cost, the colour history, the action point, go again, arena placement and the graveyard filing were all restated in judge.js. Every one was a second answer to a question effects.js already answers. |
+| `resolveStack` splits | into `linkPumps` (everything that changes the total before the wall) and `linkPayload` (everything the link DOES once damage lands), with each caller keeping its own wall in between. That is the piece judge.js could never call: it holds defenders on `blockG`/`blockH` and routes damage by CR 1.4.5 attack-target. |
+
+### Three things the census and the drills caught
+
+**AN ATTACK WAS FILED TO THE GRAVEYARD WHILE IT WAS STILL ON THE CHAIN.**
+`execute` filed it at DECLARATION — which is not something a card does,
+it is what a board with no combat chain to hold a card has to do instead.
+Delegating handed that model to judge.js, whose `chainCards` then held
+the same card too: 175 pool cards reported `want chain, got grave`, and
+in judge it would have been CARD-IN-TWO-ZONES. `fileAttack` is now the
+one copy of WHERE, and WHEN belongs to the caller — the trainer files
+immediately and is unchanged, judge.js files at the close step.
+
+**GO AGAIN WAS ABOUT TO PAY TWICE.** `linkPayload` charges the attack's
+action point (`ap = ga ? ap : ap - 1`, spelled out so CR 5.3.5's GAIN
+composes with CR 8.1.1's cost) and judge.js's `resolveLink` also added
+one. Two points for one go again is the direction that steals games, and
+no coverage tool can see it.
+
+**A DRILL THAT PASSED BY READING TOO MUCH.** priority.test.js sliced
+`resolveStack` between two anchors, and its END anchor had gone stale in
+v2.73 — indexOf returned -1, so the slice ran to the end of the file and
+it passed by reading everything rather than the right thing. Both anchors
+are asserted found now.
+
+### Two drills that were asserting things they could not show
+
+- **sparring.js's chair-neutrality drill** ran Kayo against Dorinthea both
+  ways and asserted Kayo won both, on the premise that his precon
+  out-powers hers "on printed numbers alone with no card text in play".
+  Card text resolves at this table now, so the premise expired — and the
+  two games were never mirrors anyway, because both seats are built from
+  one seeded stream in seat order, so swapping the heroes hands them each
+  other's shuffles. Replaced with a real mirror: same hero in both chairs,
+  six seeds, both seatings. It splits **6-6**.
+- **judge.test.js's driver** proposed a weapon swing it had not checked it
+  could pay for, then recorded its own optimism as an engine refusal. The
+  card branch had always asked `playableWhy`; the weapon branch read only
+  the printed line.
+
+### What is proven, and how
+
+Driven through `judge.reduce` against the real database, asserting on the
+board rather than the log: Viserai's rite fires, mints the **printed**
+Runechant token out of the card database with a namespaced uid, and the
+token then **pops at declaration** on the next Runeblade attack for its
+printed arcane — past the wall, because a triggered ability resolves above
+the attack that triggered it. A queued "+3 to your next attack" reaches
+the chain link. All three sabotaged, file hashes checked.
+
+**1011 drills green.** `Battle` is untouched and remains the regression
+harness; it does not retire until the merged path passes the same drills.
+
+---
+
 ## v2.76 — the pre-game order matches the rules
 
 **`engine/lobby.js` has ruled this since it was written** — `STEPS =

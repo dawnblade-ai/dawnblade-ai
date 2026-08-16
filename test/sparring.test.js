@@ -153,20 +153,44 @@ test("both seats do the same things, through the same policy", {skip}, () => {
   }
 });
 
-/* AND THE RESULT FOLLOWS THE HERO, NOT THE CHAIR. If seat 1 were still
-   the weaker shape it used to be, moving a deck into it would move the
-   losses with it. Kayo's precon out-powers Dorinthea's on printed numbers
-   alone with no card text in play, so it should win from either seat —
-   and the seat it sits in should not matter. */
-test("swapping the seats swaps the winner — neither chair is privileged", {skip}, () => {
-  const kayo = heroBy(/kayo/i), dori = heroBy(/dorinthea/i);
-  for(const first of [0, 1]){
-    const a = SP.run(match({h0: kayo, h1: dori, seed: "chairs", first})).game;
-    const b = SP.run(match({h0: dori, h1: kayo, seed: "chairs", first})).game;
-    assert.ok(a.over && b.over, "a game did not finish");
-    assert.equal(a.over.winner, 0, "Kayo lost from seat 0 (first=" + first + ")");
-    assert.equal(b.over.winner, 1, "Kayo lost from seat 1 — the seats are not equivalent");
+/* AND NEITHER CHAIR IS PRIVILEGED. If seat 1 were still the weaker shape
+   it used to be — a branch in the rules rather than a seat somebody
+   occupies — it would lose regardless of what deck sat in it.
+
+   THIS DRILL USED TO ASSERT SOMETHING IT COULD NOT SHOW, and v2.77 is
+   what exposed it. It ran Kayo against Dorinthea both ways round and
+   asserted Kayo won both, on the reasoning that "Kayo's precon out-powers
+   Dorinthea's on printed numbers alone with no card text in play". Two
+   things were wrong with that:
+
+     1. THE PREMISE EXPIRED. Card text resolves at this table now, so the
+        matchup is no longer settled by printed power and Dorinthea's deck
+        — which is built to swing a weapon twice — takes some of them.
+     2. THE TWO GAMES WERE NEVER MIRRORS. Both seats are built from one
+        seeded stream in seat order, so swapping the heroes hands them
+        each other's shuffles. They are two different games with the same
+        two decks, and asserting one winner across both was only ever
+        going to hold while the outcome was overdetermined.
+
+   A MIRROR IS THE HONEST FORM OF THE QUESTION. Same hero in both chairs,
+   so nothing but the chair differs, across six seeds and both seatings.
+   A structurally weaker seat would lose all twelve; a structurally weaker
+   chair would take a lopsided share. It splits 6-6. */
+test("neither chair is privileged — a mirror splits its wins", {skip}, () => {
+  const kayo = heroBy(/kayo/i);
+  const wins = [0, 0];
+  let played = 0;
+  for(const seed of ["m1", "m2", "m3", "m4", "m5", "m6"]) for(const first of [0, 1]){
+    const g = SP.run(match({h0: kayo, h1: kayo, seed, first})).game;
+    assert.ok(g.over, `the mirror at ${seed}/first=${first} never finished`);
+    wins[g.over.winner]++; played++;
   }
+  assert.equal(played, 12, "the drill stopped driving games");
+  /* Pinned exactly, so a drift in either direction is a deliberate edit
+     rather than something that quietly rots into 11-1. */
+  assert.deepEqual(wins, [6, 6],
+    "a mirror match must not favour a chair. Seat 1 is a seat somebody occupies, not a " +
+    "weaker shape wearing a deck — that is the whole point of the policy.");
 });
 
 /* ---- THE POLICY ITSELF ------------------------------------------------- */

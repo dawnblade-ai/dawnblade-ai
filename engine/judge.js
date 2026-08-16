@@ -323,7 +323,12 @@ function effectsFor(g){
 function withEffects(g, body){
   const {fx, cell} = effectsFor(g);
   const out = body(fx, {...g});
-  return out == null ? g : (out.tokSeq === cell.n ? out : {...out, tokSeq: cell.n});
+  if(out == null) return g;
+  const back = s => s.tokSeq === cell.n ? s : {...s, tokSeq: cell.n};
+  /* Some pieces report a number alongside the state (`linkPumps` returns
+     the attack's total, `linkPayload` the total it actually dealt), so the
+     shape is `{game, …}` rather than a bare state. Carry it through. */
+  return out.game ? {...out, game: back(out.game)} : back(out);
 }
 
 /* ---- the match --------------------------------------------------------
@@ -749,6 +754,12 @@ function strike(g){
   let wall = 0, handBlockers = 0;
   const spentGear = [], spentHand = [];
 
+  /* THE ACTOR IS THE ATTACKER for everything the link does. Every
+     `act`/`foe` inside the shared pieces reads it, and a link resolving
+     under the wrong actor pops the wrong hero's runechants and credits
+     the wrong hero's history. */
+  n = {...n, actor: link.by != null ? link.by : atk};
+
   for(const uid of (sd.blockG || [])){
     const gi = find(sd.gear, uid);
     if(gi < 0) continue;
@@ -795,7 +806,16 @@ function strike(g){
     blockedHand: handBlockers}));
   if(spentHand.length) n = toGrave(n, def, spentHand);
 
-  const total = Math.max(0, (link.total || 0) - wall);
+  /* PIECE ONE OF THE SHARED RESOLUTION — every pump that lands before the
+     wall is subtracted: reaction layers on the stack, and the printed ops
+     that could only be known once defenders existed ("+1 for each
+     equipment that defended"). It is asked for the equipment COUNT rather
+     than reading the defenders itself, because how a seat holds its
+     declarations is this file's business and not the card's. */
+  const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length}));
+  n = pre.game;
+
+  const total = Math.max(0, (pre.total || 0) - wall);
 
   /* CR 1.4.5 — THE ATTACK-TARGET DECIDES WHERE THE DAMAGE LANDS. An
      attack on an ally never touches the hero: CR 7.3.2a lets no cards be
@@ -816,34 +836,50 @@ function strike(g){
     n = put(n, def, s => ({...s, hp: s.hp - total}));
   }
 
-  n = {...n, chain: [...(n.chain || []).slice(0, -1),
-        {...(n.chain || [])[n.chain.length - 1], dmg: total}],
-       pend: {...link, dealt: total, wall, handBlockers}};
+  n = {...n, pend: {...link, dealt: total, wall, handBlockers}};
+
+  /* PIECE TWO — the payload. Everything the link DOES now that its damage
+     has landed: its own ops, its on-hit clauses, the weapon's earned
+     counters, the hero ability that frees a blade for one more swing,
+     crush, the soul, the chain entry, and CR 5.3.5's action point.
+
+     THE CHAIN ENTRY IS PUSHED IN THERE, NOT HERE. This used to push one
+     at declaration and patch its damage in afterwards — one more thing
+     that had to agree with the trainer's copy and had nothing keeping it
+     honest. The link in flight is `pend` and `featured`, which is what
+     both boards render; the chain is the record of what resolved.
+
+     `blkNote` is passed rather than rebuilt: the wall is this file's, but
+     what the log SAYS about it should read the same on both boards. */
+  const blkNote = wall
+    ? ` Wall of ${wall} — ${parts.join(", ")} — stops ${Math.min(wall, pre.total || 0)}.`
+    : "";
+  const paid = withEffects(n, (fx, s) => fx.linkPayload(s, {
+    total, pumps: pre.pumps, handBlockers,
+    defenders: spentGear.length + handBlockers, blkNote}));
+  n = paid.game;
 
   /* CR 7.5.5 — if prevention means no damage is dealt it is NOT a hit, so
      nothing that keys off a hit may fire. The log must not claim one. */
   if(total > 0){ n = {...n, hitSeq: (n.hitSeq || 0) + 1, lastDmg: total}; }
 
-  n = say(n, link.name + " resolves for " + total
-    + (wall ? ". Wall of " + wall + " — " + parts.join(", ") + " — stops " + Math.min(wall, link.total) + "." : "."));
-  return winCheck(n, atk);
+  return openPrompt(winCheck(n, atk));
 }
 
 /* ---- the resolution step (CR 7.6) -------------------------------------
-   Go again pays out here (CR 7.6.2), and CR 5.3.5 is precise about what
+   Go again pays out at the RESOLUTION, and CR 5.3.5 is precise about what
    it is: "the controlling player GAINS 1 action point." Not a refund and
-   not a skipped cost — which is why the arithmetic is spelled out rather
-   than folded into `ga ? keep : -1`. For an action that is spend-then-gain
-   and reads the same; for an instant it is a genuine +1. */
+   not a skipped cost.
+
+   THIS FILE NO LONGER PAYS IT (v2.77). `linkPayload` does, in the one
+   copy of the arithmetic — `ap = ga ? ap : ap - 1`, which for an attack
+   is spend-then-gain and reads as the familiar "kept". Paying it here as
+   well handed the attacker TWO points for one go again, which is the
+   direction that steals games and which no coverage tool can see. The
+   step still exists because the CR has one and both seats get a priority
+   window in it. */
 function resolveLink(g){
-  const link = g.pend;
-  if(!link) return g;
-  let n = g;
-  if(link.ga){
-    n = put(n, link.by, s => ({...s, ap: (s.ap || 0) + 1}));
-    n = say(n, "Go again — action point kept.");
-  }
-  return n;
+  return g;
 }
 
 /* ---- the close step (CR 7.7) ------------------------------------------
@@ -854,7 +890,17 @@ function resolveLink(g){
 function closeChain(g){
   let n = g;
   const spent = n.chainCards || [];
-  for(const {by, card} of spent) n = toGrave(n, by, [card]);
+  /* WHERE each one goes is `effects.fileAttack`'s answer, not this file's
+     — a card played from the graveyard is BANISHED rather than filed, and
+     a second opinion about that is a second engine. The actor is borrowed
+     around the call because effects.js is actor-relative by construction;
+     it is restored below, since closing a chain does not make anyone the
+     acting player. */
+  const keepActor = n.actor;
+  for(const {by, card, from} of spent){
+    n = withEffects({...n, actor: by}, (fx, s) => fx.fileAttack(s, card, from || "hand"));
+  }
+  if(spent.length) n = {...n, actor: keepActor};
   for(let i = 0; i < 2; i++){
     n = put(n, i, s => ({...s, blockH: [], blockG: [], blockRx: [], chainBlocked: []}));
   }
@@ -994,40 +1040,57 @@ function doPayConfirm(g, seat){
   return commitPlay(n, p.card, p.from, seat, p.window, p.target);
 }
 
-/* The card is paid for and leaves its zone. An attack opens a chain link;
-   anything else resolves and is filed. */
+/* THE CARD RESOLVES, AND ITS TEXT RESOLVES WITH IT (v2.77).
+
+   This used to be the whole of "play a card" here: move it, charge it,
+   file it, and its rules text did nothing. `effects.js`'s `execute` is
+   the same body with the semantics attached, it is the ONE copy of them,
+   and it has been the proven one since long before this file existed —
+   solo play runs every card in the pool through it.
+
+   So this delegates, and keeps only the three things `execute` cannot
+   know because they are the caller's:
+
+     the WINDOW      which speed this card is being played at, decided at
+                     doPlay and carried through the payment so it cannot
+                     move while the player pitches. It reaches exactly one
+                     line inside execute (the action point) and can only
+                     ever make it cheaper.
+     the TARGET      CR 1.4.5. The trainer has no attack-targets at all.
+     WHAT HAPPENS    execute declares the attack and STOPS (v2.73). Whether
+     NEXT            that means a defend step or an action phase is this
+                     file's, and that split is the door this merge walks
+                     through.
+
+   NOTE WHAT IS NO LONGER HERE. The zone move, the cost, the colour
+   history, the action-point arithmetic, go again, arena placement and the
+   graveyard filing were all restated here and are all gone — every one of
+   them was a second answer to a question effects.js already answers, and
+   a second answer is a second engine. The frostbite tax now lands on a
+   weapon swing too, which this file's `weaponCost` read silently missed:
+   `effCost` is the reader that knows about the tax, and it is the one
+   execute uses. */
 function commitPlay(g, card, zone, seat, window, target){
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
      says Weapon, not Attack. The trainer says the same thing as
      `isAttack(card) || from==="weapon"`. */
   const fromWeapon = zone === "weapon";
-  const attacking = isAttack(card) || fromWeapon;
-  const cost = fromWeapon ? (PR.weaponCost(card.tx || "") || {}).cost || 0
-                          : effCost(card, at(g, seat));
-  /* CR 8.1.1 / 8.1.6 — the action point is an ACTION's cost. An instant
-     pays none, which is 24 pool cards and 26 "Instant - …" abilities that
-     used to eat the turn's action. A weapon swing is an activated
-     ability with the action-point cost (CR 8.1.1). */
-  const apCost = fromWeapon ? 1 : (card._instant ? 0 : (TY.typeCostsAP(card, window) ? 1 : 0));
-  let n = put(g, seat, s => ({...s,
-    /* the piece stays equipped; it is spent, not moved */
-    ...(fromWeapon ? {weaponUsed: {...(s.weaponUsed || {}), [card.uid]: true}}
-                   : {[zone]: zone === "arsenal" ? null : s[zone].filter(c => c.uid !== card.uid)}),
-    res: (s.res || 0) - cost,
-    ap: (s.ap || 0) - apCost,
-    hist: {...s.hist,
-      [attacking ? "atk" : "non"]: (s.hist[attacking ? "atk" : "non"] || 0) + 1,
-      blue: (s.hist.blue || 0) + (card.pitch === 3 ? 1 : 0),
-      red:  (s.hist.red  || 0) + (card.pitch === 1 ? 1 : 0)}}));
+  const sd = at(g, seat);
+  /* execute takes an INDEX, because that is how a zone is spliced. The
+     arsenal holds one card and is emptied by name rather than by index. */
+  const idx = zone === "arsenal" ? 0 : find(sd[zone] || [], card.uid);
 
-  if(attacking) return declareAttack(n, card, seat, fromWeapon, target);
+  /* THE ACTOR IS SET BEFORE THE CARD RUNS, not after. Every `act`/`foe`
+     inside effects.js reads it, and a hardcoded seat in a rules call is
+     the bug class v2.25 named (popRunechants popped seat 0's runechants
+     whoever was swinging). */
+  let n = withEffects({...g, actor: seat},
+    (fx, s) => fx.execute(s, card, zone, idx, {window}));
 
-  /* WHERE A RESOLVED CARD GOES IS A PROPERTY OF ITS SUBTYPE, and getting
-     it wrong is not subtle: an Aura, an Item or an Ally that resolves to
-     the graveyard is a card the player paid for and never receives.
-     Twelve Ally cards, ten Auras and five Items are in the pool. */
-  const ga = fxParse(card).ga;
-  if(ga) n = put(n, seat, s => ({...s, ap: (s.ap || 0) + 1}));
+  if(n._declared){
+    const d = n._declared; delete n._declared;
+    return declareAttack(n, card, seat, zone, target, d);
+  }
 
   /* SOMETHING HAPPENED, SO NOBODY HAS PASSED IN SUCCESSION ANY MORE.
      Every step-end rule in the CR is worded "when the stack is empty and
@@ -1043,46 +1106,68 @@ function commitPlay(g, card, zone, seat, window, target){
      respond to the card that was just played at them.
 
      `reset` is a no-op in a closed phase (`give` refuses priority there),
-     so it cannot hand out a window the phase does not have. */
-  if(TY.destination(card) === "arena"){
-    const kind = TY.permanentKind(card);
-    /* An ALLY is a living object and is attackable (CR 1.4.5a), so it
-       carries its printed life onto the board. game.js's ally helpers
-       read `kind === "ally"` and `card.life`, so the names must agree. */
-    n = put(n, seat, s => ({...s,
-      board: [...(s.board || []), {card, kind, spent: false, uid: card.uid,
-                                   life: kind === "ally" ? card.life : undefined}],
-      hist: {...s.hist, aura: (s.hist.aura || 0) + (kind === "aura" ? 1 : 0),
-                        made: (s.hist.made || 0) + 1}}));
-    n = say(n, at(n, seat).name + " plays " + card.name + " — it enters the arena as "
-      + (kind === "ally" ? "an ally" : "a" + (kind === "aura" ? "n aura" : " " + kind))
-      + (ga ? ". Go again." : "."));
-    return P.reset(n);
-  }
+     so it cannot hand out a window the phase does not have.
 
-  n = toGrave(n, seat, [card]);
-  n = say(n, at(n, seat).name + " plays " + card.name + (ga ? " — go again." : "."));
+     WHERE THE CARD WENT IS ALREADY DECIDED. `execute` placed a permanent
+     in the arena off `fx.perm`, filed a spent card to the graveyard
+     through the same turn-stamping `gy` every other path uses, and banished
+     one played from the graveyard. Restating any of that here is a second
+     answer to a question the card semantics already answered. */
   return P.reset(n);
 }
 
-function declareAttack(g, card, seat, fromWeapon, target){
-  const total = card.power || 0;
+function declareAttack(g, card, seat, fromZone, target, declared){
+  const fromWeapon = fromZone === "weapon";
   const tgt = target || {kind: "hero", side: P.other(seat), uid: null};
+  /* THE TOTAL COMES FROM THE CARD, NOT FROM ITS PRINTED POWER (v2.77).
+     `execute` has already applied every pump the card and the board
+     printed — the hero's own clause, a queued "+N to your next attack", a
+     qualified buff that matched, a boost. Reading `card.power` here would
+     throw all of that away and strike for the printed number, which is
+     the same shape as a card being read correctly and then CHARGED
+     wrongly: invisible to coverage, invisible to fairness, and it makes
+     every buff in the game do nothing. */
+  const link = g.pend || {};
+  const total = declared ? declared.total : (card.power || 0);
+  const ga = link.ga != null ? link.ga : fxParse(card).ga;
   let n = {...g,
-    chain: [...(g.chain || []), {n: card.name, img: card.img, dbImg: card.dbImg,
-                                 dmg: null, ga: fxParse(card).ga, kind: "atk"}],
-    pend: {name: card.name, card, by: seat, total, ga: fxParse(card).ga, target: tgt},
-    /* THE COMBAT CHAIN IS A ZONE, and `chainCards` is it.
+    /* NO CHAIN ENTRY HERE (v2.77). `linkPayload` pushes it when the link
+       RESOLVES, in the one copy both boards share — pushing a placeholder
+       here and patching its damage in at the strike was a second copy of
+       the entry's shape with nothing keeping the two honest. The attack in
+       flight is `pend` plus `featured`, which is what the board renders. */
+    /* MERGE, NEVER REPLACE. `execute` built this link: its ops, its
+       on-hit clauses, its late conditions, which zone it was declared
+       from. What this file adds is the three things the card cannot know
+       — who swung it, what it is called in a log line, and CR 1.4.5's
+       attack-target. Overwriting the object would silently delete the
+       card's entire payload and leave a number. */
+    pend: {...link, name: card.name, card, by: seat, total, ga, target: tgt},
+    /* execute leaves an `{k:"atk"}` label layer behind for the trainer's
+       stack pane. Here the attack is on the CHAIN, and a layer sitting on
+       the stack would tell priority.js a reaction is waiting to resolve. */
+    stack: [],
+    /* THE COMBAT CHAIN IS A ZONE, and `chainCards` is it — for the cards
+       that are genuinely in no other one.
+
        A card mid-chain is in no side zone at all, which `invariants.js`
        cannot see: it catches a card in TWO zones, and a card in NONE just
-       falls out of the census. Holding them in a named game-level zone —
-       rather than a private `_` field — is what lets the census count
-       them. Equipment is NOT filed here: a weapon stays equipped and is
-       spent, so it never leaves the gear zone. */
-    chainCards: fromWeapon ? (g.chainCards || []) : [...(g.chainCards || []), {by: seat, card}],
+       falls out of the census. But `execute` files an attack played from
+       hand or arsenal to the graveyard AT DECLARATION, which is the model
+       the whole `_gy` family is built on — so filing it here as well
+       would put one card in two zones, which is the census's loudest
+       error and would be OUR bug rather than a caught one.
+
+       Equipment is NOT filed here: a weapon stays equipped and is spent,
+       so it never leaves the gear zone. `from` rides along because WHERE
+       the card goes at the close step depends on where it came from, and
+       `effects.fileAttack` is the one thing that knows. */
+    chainCards: fromWeapon ? (g.chainCards || [])
+                           : [...(g.chainCards || []), {by: seat, card, from: fromZone}],
     featured: {card, chip: "LINK " + ((g.chain || []).length + 1)}};
   n = P.declareAttack(n, seat);
   n = say(n, at(n, seat).name + (fromWeapon ? " swings " : " attacks with ") + card.name + " for " + total + ".");
+  if(declared && declared.declNote && declared.declNote.trim()) n = say(n, declared.declNote.trim());
   return settle(n);
 }
 
