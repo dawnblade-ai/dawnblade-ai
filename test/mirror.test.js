@@ -383,19 +383,30 @@ test("engine/effects.js states no PHASE — that is the whole of the split", () 
   assert.deepEqual(writes, [],
     "a card effect must never say what phase the game is in — that is the caller's, " +
     "and it is the one thing that kept judge.js from ever calling these semantics");
-  /* The reads that remain are named, so a NEW one is a deliberate edit.
-     Three shapes, and each is honest about what it is:
-       .mode!=="stack"   resolveStack's own guard
-       .mode==="block"   the shave, which only applies to an incoming attack
+  /* THE LIST SHRANK IN v2.77 and this is a deliberate edit to the ledger.
+     Two reads went, and each was a place where a caller driving
+     `phase`/`step` would have been refused by a vocabulary it does not
+     speak:
+
+       .mode!=="stack"   resolveStack's own guard, and a duplicate of the
+                         test the trainer's wrapper already makes one line
+                         above the call. The honest question is `!s.pend`
+                         — is there a link to resolve.
+       .mode==="block"   the "-N power" shave. Whether there is a hostile
+                         attack in flight is not a phase question; it is
+                         `pend.by !== actorOf` for judge.js and `incoming`
+                         for the trainer, and both are now named.
+
+     What is left is ONE shape, and it is honest about being a fallback:
        .mode==="block" / .mode==="foeturn"
-                         the FALLBACK inside the foeTurn condition, used
-                         only when a state carries no priority fields (every
-                         drill that hand-rolls one). The real answer is
-                         `turnPlayer !== actorOf`, which is why this pair
+                         inside the foeTurn CONDITION, reached only when a
+                         state carries no priority fields (every drill that
+                         hand-rolls one). The real answer is
+                         `turnPlayer !== actorOf`, which is why the pair
                          may look redundant and is not. */
   const reads = (code.match(/\.mode\s*[!=]==?\s*"[a-z]+"/g) || []).sort();
   assert.deepEqual(reads,
-    ['.mode!=="stack"', '.mode==="block"', '.mode==="block"', '.mode==="foeturn"'].sort(),
+    ['.mode==="block"', '.mode==="foeturn"'].sort(),
     "effects.js's remaining mode READS are pinned — adding one is a deliberate edit");
 
 });

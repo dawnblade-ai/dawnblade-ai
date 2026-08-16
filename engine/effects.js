@@ -452,8 +452,32 @@ function makeEffects(ctx){
       else if(k==="soulSelf"){ n._soulSelf = true; }
       else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
       else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
+      /* "-N POWER" ASKS WHETHER THERE IS A HOSTILE ATTACK IN FLIGHT, and
+         that is not a phase question (v2.77). It read `mode==="block"`,
+         which is the trainer's name for one particular shape of one
+         particular board — so in judge.js, where the defending seat is an
+         argument rather than a mode string, a defence reaction's whole
+         payload would have gone quietly nowhere.
+
+         The two callers hold the incoming attack in different places and
+         both are named here rather than translated:
+
+           judge.js   `pend`, whoever declared it — one combat path, so the
+                      test is that the link belongs to the OTHER seat
+           trainer    `incoming`, a scalar set by foeSwing/foePlay, because
+                      seat 1's swing there never opens a `pend` at all
+
+         The one corner where this differs from the old line: an incoming
+         swing of exactly 0 (frailty ≥ the printed power) now logs "nothing
+         hostile to shave" instead of "shaved to 0". No state differs —
+         shaving 0 leaves 0 either way. */
       else if(k==="atkMinus"){
-        if(n.mode==="block"){ n.incoming = Math.max(0, n.incoming - v); n = L(n, `Incoming shaved by ${v} → ${n.incoming}.`); }
+        const hostile = n.pend && n.pend.by != null && n.pend.by !== actorOf(n);
+        if(hostile){
+          n.pend = {...n.pend, total: Math.max(0, (n.pend.total||0) - v)};
+          n = L(n, `Incoming shaved by ${v} → ${n.pend.total}.`);
+        }
+        else if((n.incoming||0) > 0){ n.incoming = Math.max(0, n.incoming - v); n = L(n, `Incoming shaved by ${v} → ${n.incoming}.`); }
         else n = L(n, `-${v} power — nothing hostile to shave.`);
       }
       else if(k==="soulSpend"){
@@ -1260,7 +1284,15 @@ function makeEffects(ctx){
      "what the card does" from "what happens next" is the remaining work,
      and the inline dummyDefence call is the first knot in it. */
   const resolveStack = (s) => {
-    if(s.mode!=="stack" || !s.pend) return s;
+    /* THE ONLY THING THIS BODY NEEDS TO KNOW IS WHETHER THERE IS A LINK
+       (v2.77). It used to ask `mode!=="stack"` as well — the trainer's
+       name for "the attack is declared and awaiting resolution" — which
+       is a statement about the trainer's board, not about the card. The
+       trainer's own wrapper asks the same question one line above the
+       call, so nothing changes for it; what changes is that a caller
+       driving `phase`/`step` is no longer refused by a vocabulary it does
+       not speak. */
+    if(!s.pend) return s;
     let n = {...s};
     const pumps = n.stack.filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
     const defLs = n.stack.filter(l=>l.k==="def");

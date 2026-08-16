@@ -120,6 +120,36 @@ test("nested state survives the round trip — the clone is deep ENOUGH", () => 
   assert.equal(JSON.stringify(g), before);
 });
 
+/* ---- THE SHAVE, WITHOUT A MODE STRING (v2.77) -------------------------
+   "-N power" on a defence reaction asked `mode==="block"` — the trainer's
+   name for one shape of one board. In judge.js the defending seat is an
+   argument and there is one combat path, so that test answers FALSE and
+   the whole printed payload goes quietly nowhere. Driven from both
+   directions, because a shave that fires on your OWN attack is the
+   opposite bug and just as wrong. */
+
+test("a defence reaction shaves the attack in flight, in a judge-shaped state", () => {
+  const {runOps} = E.makeEffects(judgeShapedCtx());
+  const g = judgeState();
+  g.actor = 0;                                   // seat 0 is DEFENDING
+  g.pend = {name: "their swing", by: 1, total: 5};
+  const out = runOps({...g}, [["atkMinus", 2]], "probe");
+  assert.equal(out.pend.total, 3,
+    "the incoming link is shaved — no `incoming` scalar and no `mode` anywhere in this state");
+  assert.equal(g.pend.total, 5, "and the caller's link is untouched");
+});
+
+test("it does NOT shave your own attack", () => {
+  const {runOps} = E.makeEffects(judgeShapedCtx());
+  const g = judgeState();
+  g.actor = 0;
+  g.pend = {name: "my swing", by: 0, total: 5};
+  const out = runOps({...g}, [["atkMinus", 2]], "probe");
+  assert.equal(out.pend.total, 5,
+    "the link belongs to the acting seat, so there is nothing hostile to shave. A shave " +
+    "that reads only 'is there a pend' would quietly weaken the attacker's own swing.");
+});
+
 /* ---- WHAT JUDGE ALREADY BRINGS ---------------------------------------- */
 
 test("judge.js already exports the accessors effects.js needs", () => {
