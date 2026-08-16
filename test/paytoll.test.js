@@ -28,6 +28,14 @@
    the failure mode a census catches and a coverage tool cannot.
 
    Assertions are on hands, decks, zones and resources. Never on prose.
+
+   DRIVEN THROUGH `judge.reduce` (v2.80). This file used to hand-roll an
+   effects context and then hand-roll the ANSWER as well — buildPrompt,
+   applyPrompt, charge the pay, re-run the ops at the right actor — which
+   is a third copy of a flow judge.js and the trainer already have. It
+   proved the clause parsed; it could not prove a player who taps the card
+   ever reaches it. The whole card is played through the reducer now, and
+   the sheet is answered with the reducer's own prompt actions.
    ============================================================ */
 const test = require("node:test");
 const assert = require("node:assert");
@@ -35,61 +43,37 @@ const fs = require("fs");
 const path = require("path");
 
 const P = require("../engine/parser.js");
-const C = require("../engine/cards.js");
-const PR = require("../engine/prompts.js");
-const RNG = require("../engine/rng.js");
 const E = require("../engine/effects.js");
+const H = require("./helpers/judged.js");
+const J = H.J;
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
-const skip = !fs.existsSync(CACHE) && "no cached card database";
-let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
-const card = (nm, p) => C.resolveEntry(DB(), {name: nm, p: p == null ? 0 : p, code: null, q: 1});
+const skip = !H.hasDb() && "no cached card database";
+const card = (nm, p) => H.card(nm, p);
 
-function ctx(){
-  return {
-    L: (s, m) => ({...s, log: [m, ...(s.log || [])], feed: [...(s.feed || []), m]}),
-    act: s => s.sides[s.actor || 0],
-    actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    actorOf: s => s.actor || 0,
-    bAct: () => ({runeDmg: 1}), bFoe: () => ({runeDmg: 1}), built: {runeDmg: 1},
-    db: DB(), dummyDefence: s => ({n: s, note: ""}),
-    foe: s => s.sides[1 - (s.actor || 0)],
-    foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    gy: (t, ...cs) => cs.map(c => ({...c, _gy: t})),
-    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy: t, _disc: true})),
-    had6ThisTurn: () => false, mkRune: s => s, openPrompt: s => s,
-    tokSeq: (() => { let i = 0; return () => ++i; })(),
-    typeAbbr: () => "action", winCheck: s => s
-  };
-}
-const side = o => Object.assign({
-  name: "them", hp: 20, res: 0, ap: 1, amp: 0, ward: 0, awd: 0, arcShield: 0,
-  hand: [], deck: [], grave: [], banish: [], pitch: [], board: [], soul: [], gear: [],
-  arsenal: null, counters: {}, weaponUsed: {}, hist: {}
-}, o || {});
-const game = (a, b) => ({sides: [side(a), side(b)], actor: 0, turn: 2,
-  log: [], feed: [], chain: [], promptQ: [], rng: RNG.make("toll")});
-
-/* Play Winter's Bite at seat 1, then answer the sheet the way the trainer
-   would: resolve at the ASKED side's actor. */
+/* Winter's Bite, played for real: seat 0 holds priority in its own action
+   phase and taps the card. Everything after that is the engine's. */
 function bite(defender, choice){
-  const {runOps} = E.makeEffects(ctx());
-  const wb = card("Winter's Bite", 3);
-  let n = runOps(game({}, defender), P.fxParse(wb).ops, "Winter's Bite");
-  if(!(n.promptQ || []).length) return {n, live: null};
-  const live = PR.buildPrompt(n, n.promptQ[0]);
-  const decided = choice === "policy" ? (E.payPolicy(live, n.sides[1]) ? "pay" : "decline") : choice;
-  const r = PR.applyPrompt(n, {...live, choice: decided});
-  let g = {...r.game, actor: live.side};
-  if(r.pay > 0){
-    const sides = g.sides.slice();
-    sides[1] = {...sides[1], res: Math.max(0, sides[1].res - r.pay)};
-    g = {...g, sides};
-  }
-  g = runOps(g, r.ops, "Winter's Bite");
-  return {n: {...g, actor: 0}, live, r, decided};
+  H.db();
+  const wb = {...card("Winter's Bite", 3), uid: "wb1"};
+  let g = H.state({res: 9, hand: [wb]}, defender, {actor: 0, turnPlayer: 0, seed: "toll"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+
+  const send = (a, seat) => {
+    const out = J.reduce(g, a, seat);
+    assert.equal(out.error, null, a.t + " was refused: " + out.error);
+    g = out.state;
+  };
+  send({t: "play", uid: "wb1", from: "hand"}, 0);
+  const live = g.prompt;
+  if(!live) return {n: g, live: null};
+
+  /* `autoAnswer` is the answer a seat with nobody in it gives, and it is
+     what `local.js` and `sparring.run` call. Asking for it here is what
+     makes the policy drills below a statement about the live path. */
+  const decided = choice === "policy" ? J.autoAnswer(g).choice : choice;
+  send({t: "promptChoose", choice: decided}, live.side);
+  send({t: "promptConfirm"}, live.side);
+  return {n: g, live, decided};
 }
 
 /* ---- THE ESCAPE HATCH -------------------------------------------------- */
@@ -122,11 +106,25 @@ test("the qualified sentence is not eaten by the bare discard rule", {skip}, () 
 });
 
 test("the sheet is addressed to the TARGET hero, not the caster", {skip}, () => {
-  const {n} = bite({res: 9, hand: [{uid: "h1", name: "a card", pitch: 3}]}, null);
-  assert.equal(n.promptQ.length, 1);
-  assert.equal(n.promptQ[0].tag, "pay");
-  assert.equal(n.promptQ[0].side, 1,
+  H.db();
+  const wb = {...card("Winter's Bite", 3), uid: "wb1"};
+  let g = H.state({res: 9, hand: [wb]},
+                  {res: 9, hand: [{uid: "h1", name: "a card", pitch: 3}]},
+                  {actor: 0, turnPlayer: 0, seed: "toll"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const out = J.reduce(g, {t: "play", uid: "wb1", from: "hand"}, 0);
+  assert.equal(out.error, null);
+  assert.equal(out.state.prompt.tag, "pay");
+  assert.equal(out.state.prompt.side, 1,
     "'target hero may pay' is THEIR call — that is why prompts.js addresses specs to a side");
+
+  /* AND THE OTHER SEAT IS STOPPED WHILE IT IS LIVE. A sheet nobody can
+     answer and a sheet everybody can walk around are the same bug from
+     opposite ends: whatever queued it is mid-resolution. */
+  assert.equal(J.legal(out.state, {t: "pass"}, 0),
+    out.state.sides[1].name + " is answering Winter's Bite",
+    "the caster may not play on around an unanswered toll");
+  assert.equal(J.legal(out.state, {t: "promptConfirm"}, 0), "that sheet is not addressed to you");
 });
 
 test("paying keeps the card; declining loses it", {skip}, () => {
@@ -146,26 +144,30 @@ test("paying keeps the card; declining loses it", {skip}, () => {
 
 test("the discard lands on the ASKED hero, never on the caster", {skip}, () => {
   const {n} = bite({res: 0, hand: [{uid: "h1", name: "theirs", pitch: 3}]}, "decline");
-  assert.equal(n.sides[0].hand.length, 0, "the caster's hand is untouched");
-  assert.equal(n.sides[0].grave.length, 0);
   assert.equal(n.sides[1].hand.length, 0,
     "the payload is actor-relative to the side the sheet was addressed to — writing it as " +
     "`foeDiscard` would have discarded from the caster's own hand");
+  /* The caster's own graveyard holds Winter's Bite and NOTHING ELSE. The
+     hand-rolled version asserted an empty graveyard, which only held
+     because the card was never really played; driving it through `reduce`
+     the card genuinely resolves, so the honest statement is which card is
+     in there — and that none of it is stamped as a discard. */
+  assert.deepEqual(n.sides[0].grave.map(c => c.name), ["Winter's Bite"]);
+  assert.ok(!n.sides[0].grave.some(c => c._disc),
+    "the caster discarded nothing — a card that was played is not a card that was discarded");
 });
 
 test("avail is the ASKED side's, and counts what they could pitch", {skip}, () => {
-  /* Build the sheet from the state BEFORE it is answered — `bite` returns
-     the post-answer game, where the hand has already gone to the
-     graveyard. An earlier version of this drill read avail off that and
-     measured the wrong thing. */
-  const {runOps} = E.makeEffects(ctx());
-  const n = runOps(game({}, {res: 2, hand: [{uid: "h1", name: "a", pitch: 3}]}),
-                   P.fxParse(card("Winter's Bite", 3)).ops, "Winter's Bite");
-  const live = PR.buildPrompt(n, n.promptQ[0]);
+  /* Read off the LIVE sheet before it is answered. `bite` returns the
+     post-answer game, where the hand has already gone to the graveyard;
+     an earlier version of this drill read avail off that and measured the
+     wrong thing. */
+  const {live} = bite({res: 2, hand: [{uid: "h1", name: "a", pitch: 3}]}, "decline");
   assert.equal(live.avail, 5,
-    "res 2 plus a pitchable 3. It used to be handed in by openPrompt as `you(s).res` — " +
-    "seat 0's floating resources whoever the sheet was addressed to, a latent seat bug " +
-    "that had never fired because no card queued a pay spec");
+    "res 2 plus a pitchable 3, and it is SEAT 1's 2 — the caster is holding 9. It used to be " +
+    "handed in by openPrompt as `you(s).res`, seat 0's floating resources whoever the sheet " +
+    "was addressed to: a latent seat bug that had never fired because no card queued a pay spec");
+  assert.equal(live.cost, 1);
 });
 
 /* ---- SEAT 1 CAN ANSWER ------------------------------------------------- */
@@ -230,7 +232,7 @@ test("the Inertia token is a HAND WIPE, and the old noop said otherwise", {skip}
 test("resolveInertia sweeps hand AND arsenal to the BOTTOM of the deck", {skip}, () => {
   const tok = card("Inertia");
   const ent = {card: {...tok, uid: "i1"}, kind: "token", spent: false, uid: "i1"};
-  const g = game({}, {board: [ent], hand: [{uid: "a"}, {uid: "b"}, {uid: "c"}],
+  const g = H.state({}, {board: [ent], hand: [{uid: "a"}, {uid: "b"}, {uid: "c"}],
                       arsenal: {uid: "d"}, deck: [{uid: "z"}]});
   const r = E.resolveInertia(g, 1);
   assert.equal(r.tokens, 1);
@@ -247,11 +249,11 @@ test("resolveInertia sweeps hand AND arsenal to the BOTTOM of the deck", {skip},
 test("resolveInertia touches the named seat only, and nothing without a token", {skip}, () => {
   const tok = card("Inertia");
   const ent = {card: {...tok, uid: "i1"}, kind: "token", spent: false, uid: "i1"};
-  const g = game({hand: [{uid: "mine"}]}, {board: [ent], hand: [{uid: "theirs"}]});
+  const g = H.state({hand: [{uid: "mine"}]}, {board: [ent], hand: [{uid: "theirs"}]});
   const r = E.resolveInertia(g, 1);
   assert.equal(r.game.sides[0].hand.length, 1, "'your end phase' is the CONTROLLER's");
 
-  const clean = E.resolveInertia(game({}, {hand: [{uid: "x"}]}), 1);
+  const clean = E.resolveInertia(H.state({}, {hand: [{uid: "x"}]}), 1);
   assert.equal(clean.tokens, 0);
   assert.equal(clean.game, g.board === undefined ? clean.game : clean.game,
     "no token, no wipe");

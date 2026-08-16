@@ -32,6 +32,12 @@
    EVERY ASSERTION HERE IS ON STATE — board contents, resources, hand
    sizes. Two of v2.45's nine bugs lived under drills that read the log
    while the engine did the wrong thing.
+
+   DRIVEN THROUGH `judge.reduce` (v2.80). The tax is charged when a card is
+   PLAYED, so a drill that calls `execute` with a hand-rolled context is
+   asserting about a payment nobody made — it never passed through
+   `legal`, never opened a `pending`, and the resources it spent were the
+   fixture's rather than the player's. `play()` below taps the card.
    ============================================================ */
 const test = require("node:test");
 const assert = require("node:assert");
@@ -39,19 +45,13 @@ const fs = require("fs");
 const path = require("path");
 
 const P = require("../engine/parser.js");
-const C = require("../engine/cards.js");
 const GM = require("../engine/game.js");
-const RNG = require("../engine/rng.js");
 const E = require("../engine/effects.js");
+const H = require("./helpers/judged.js");
+const J = H.J;
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
-const skip = !fs.existsSync(CACHE) && "no cached card database";
-
-let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
-
-const tok = nm => C.resolveEntry(DB(), {name: nm, p: 0, code: null, q: 1});
+const skip = !H.hasDb() && "no cached card database";
+const tok = nm => H.tok(nm);
 /* A Frostbite as it sits on a board — built from the DATABASE record, never
    described here, so a drill can never pass against an invented token. */
 const frostEntry = (i) => {
@@ -59,35 +59,24 @@ const frostEntry = (i) => {
   return {card: {...t, uid: "fb" + i}, kind: "token", spent: false, uid: "fb" + i};
 };
 
-function ctx(over){
-  return Object.assign({
-    L: (s, m) => ({...s, log: [m, ...(s.log || [])], feed: [...(s.feed || []), m]}),
-    act: s => s.sides[s.actor || 0],
-    actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    actorOf: s => s.actor || 0,
-    bAct: () => ({runeDmg: 1}), bFoe: () => ({runeDmg: 1}), built: {runeDmg: 1},
-    db: DB(),
-    /* HANDOFF: a dummyDefence stub must return {n, note} — the moment a
-       drill drives `execute` rather than `runOps`, the bare state reads
-       `undefined.log` and dies. */
-    dummyDefence: s => ({n: s, note: ""}),
-    foe: s => s.sides[1 - (s.actor || 0)],
-    foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    gy: (t, ...cs) => cs.map(c => ({...c, _gy: t})),
-    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy: t, _disc: true})),
-    had6ThisTurn: () => false,
-    mkRune: s => s, openPrompt: s => s,
-    tokSeq: (() => { let i = 0; return () => ++i; })(),
-    typeAbbr: () => "action", winCheck: s => s
-  }, over || {});
+const side = o => H.side(Object.assign({res: 9}, o || {}));
+const game = (a, b) => H.state(Object.assign({res: 9}, a || {}),
+                               Object.assign({res: 9}, b || {}), {seed: "frost"});
+const runOps = (g, ops, src) => H.runOps(g, ops, src);
+
+/* TAP THE CARD. The tax is charged at payment, so it is only real if it
+   goes through `legal` and the reducer's own play path — `execute` called
+   straight is a payment nobody made. */
+function play(c, o){
+  o = o || {};
+  H.db();
+  let g = H.state({res: o.res, hand: [c], board: o.board || [], gear: o.gear || []},
+                  {board: o.foeBoard || []}, {actor: 0, turnPlayer: 0, seed: "frost"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const out = J.reduce(g, {t: "play", uid: c.uid, from: "hand"}, 0);
+  assert.equal(out.error, null, "the play was refused: " + out.error);
+  return out.state;
 }
-const side = o => Object.assign({
-  name: "you", hp: 20, res: 9, ap: 1, amp: 0, ward: 0, awd: 0, buffNext: 0, buffQ: [],
-  hand: [], deck: [], grave: [], banish: [], pitch: [], board: [], soul: [], gear: [],
-  counters: {}, weaponUsed: {}, hist: {}
-}, o || {});
-const game = (a, b) => ({sides: [side(a), side(b)], actor: 0, turn: 2,
-  log: [], feed: [], chain: [], hitSeq: 0, rng: RNG.make("frost")});
 
 /* ---- THE TAX ---------------------------------------------------------- */
 
@@ -139,11 +128,9 @@ test("a cost REDUCTION cannot eat the Frostbite tax", {skip}, () => {
 /* ---- THE DESTRUCTION -------------------------------------------------- */
 
 test("the play that DESTROYS a Frostbite is the play that is TAXED", {skip}, () => {
-  const {execute} = E.makeEffects(ctx());
   const c = {...tok("Ice Bolt"), uid: "c1"};
   const printed = c.cost != null ? +c.cost : 0;
-  const g = game({res: 9, hand: [c], board: [frostEntry(1)]});
-  const out = execute(g, c, "hand", 0);
+  const out = play(c, {res: 9, board: [frostEntry(1)]});
   assert.equal(P.frostCount(out.sides[0]), 0, "the Frostbite is destroyed by the play");
   assert.equal(out.sides[0].res, 9 - printed - 1,
     "RULING 2026-08-10: it taxes the very play that destroys it. Destroying first would " +
@@ -151,22 +138,54 @@ test("the play that DESTROYS a Frostbite is the play that is TAXED", {skip}, () 
 });
 
 test("three Frostbites tax ONE play by three and ALL of them shatter on it", {skip}, () => {
-  const {execute} = E.makeEffects(ctx());
   const c = {...tok("Ice Bolt"), uid: "c1"};
   const printed = c.cost != null ? +c.cost : 0;
-  const g = game({res: 12, hand: [c], board: [frostEntry(1), frostEntry(2), frostEntry(3)]});
-  const out = execute(g, c, "hand", 0);
+  const out = play(c, {res: 12, board: [frostEntry(1), frostEntry(2), frostEntry(3)]});
   assert.equal(out.sides[0].res, 12 - printed - 3, "+3 on the one play");
   assert.equal(P.frostCount(out.sides[0]), 0,
     "each token carries its own copy of the destroy trigger and they all fire on the same play");
 });
 
+test("the tax reaches the resources through the REDUCER's own play path", {skip}, () => {
+  /* Not the same statement as the `effCost` drill above: this one spends
+     a player's resources by tapping a card, so it fails if the charge
+     stops reaching them anywhere between `legal` and `execute`. */
+  const c = {...tok("Ice Bolt"), uid: "c1"};
+  const frozen = play(c, {res: 9, board: [frostEntry(1)]});
+  const clear  = play(c, {res: 9, board: []});
+  assert.equal(clear.sides[0].res - frozen.sides[0].res, 1,
+    "one Frostbite, one resource, charged where the player actually feels it");
+});
+
+test("a play the tax makes UNAFFORDABLE opens a payment instead of resolving free", {skip}, () => {
+  /* `effCost` IS READ TWICE AND THE TWO READS ARE DIFFERENT QUESTIONS.
+     `execute` charges the cost; `doPlay` asks whether the seat can afford
+     it, and only that second read decides whether a payment opens. They
+     are separate lines and nothing else in this file drives the second —
+     verified by sabotage: replacing doPlay's `effCost` with the printed
+     cost leaves every other drill here green and fails only this one.
+
+     CR 8.x — an unaffordable play must not resolve for nothing. With the
+     tax the cost is 3, and a hero holding 2 has to find the difference or
+     abandon it. */
+  const c = {...tok("Ice Bolt"), uid: "c1"};
+  H.db();
+  let g = H.state({res: 2, hand: [c, {uid: "p1", name: "a blue", pitch: 3}], board: [frostEntry(1)]},
+                  {}, {actor: 0, turnPlayer: 0, seed: "frost"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const out = J.reduce(g, {t: "play", uid: "c1", from: "hand"}, 0);
+  assert.equal(out.error, null);
+  const p = J.pendingOf(out.state);
+  assert.ok(p && p.kind === "pay", "the taxed cost opens a payment rather than resolving free");
+  assert.equal(p.need, 3, "printed 2 plus the Frostbite's 1");
+  assert.equal(P.frostCount(out.state.sides[0]), 1,
+    "and nothing has shattered yet — the token is destroyed BY the play, which has not happened");
+});
+
 test("a Frostbite the OPPONENT controls does not tax YOUR play", {skip}, () => {
-  const {execute} = E.makeEffects(ctx());
   const c = {...tok("Ice Bolt"), uid: "c1"};
   const printed = c.cost != null ? +c.cost : 0;
-  const g = game({res: 9, hand: [c], board: []}, {board: [frostEntry(1)]});
-  const out = execute(g, c, "hand", 0);
+  const out = play(c, {res: 9, board: [], foeBoard: [frostEntry(1)]});
   assert.equal(out.sides[0].res, 9 - printed, "the printed cost, untaxed");
   assert.equal(P.frostCount(out.sides[1]), 1,
     "and theirs survives — it says 'cost YOU an additional {r}', so it is the controller who pays");
@@ -175,7 +194,6 @@ test("a Frostbite the OPPONENT controls does not tax YOUR play", {skip}, () => {
 /* ---- WHOSE BOARD IT LANDS ON ------------------------------------------ */
 
 test("Polar Cap's 'under their control' puts it on the OPPONENT's board", {skip}, () => {
-  const {runOps} = E.makeEffects(ctx());
   const ops = P.classifyClause("create a frostbite token under their control").ops;
   const out = runOps(game({}, {}), ops, "Polar Cap");
   assert.equal(P.frostCount(out.sides[1]), 1, "on theirs");
@@ -183,7 +201,6 @@ test("Polar Cap's 'under their control' puts it on the OPPONENT's board", {skip}
 });
 
 test("Frost Spike lands in an EXPOSED armour zone, on the opponent", {skip}, () => {
-  const {runOps} = E.makeEffects(ctx());
   const spike = tok("Frost Spike");
   assert.match(P.clean(spike.tx || ""), /exposed head, chest, arms, or legs zone/i,
     "fixture drifted — Frost Spike must still print the exposed-zone placement");
@@ -196,7 +213,6 @@ test("Frost Spike lands in an EXPOSED armour zone, on the opponent", {skip}, () 
 });
 
 test("Frost Spike FIZZLES against a fully armoured hero — the placement is a WEAKNESS", {skip}, () => {
-  const {runOps} = E.makeEffects(ctx());
   const ops = P.fxParse(tok("Frost Spike")).ops.filter(o => o[0] === "token");
   const armoured = [
     {name: "H", tt: "Generic Equipment - Head", uid: "g1"},
