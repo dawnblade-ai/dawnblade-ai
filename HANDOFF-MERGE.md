@@ -1,339 +1,175 @@
-# Handoff — Dawnblade, at v2.76 · THE MERGE
+# THE MERGE — done, at v2.79
 
-## THE PROMPT — paste this into a fresh Claude Code thread in this repo
+## WHAT HAPPENED
 
-> Read `CLAUDE.md` in full, then `HANDOFF.md`. Most entries in both exist
-> because breaking that rule already cost a real bug.
->
-> **Your job: merge the two engines into ONE flow.** Whether seat 1 is the
-> vanilla Dummy, a real hero deck, or a person on another phone, the same
-> engine handles the table state behind the scenes. Two-player is the only
-> mode; solo is just two-player where seat 1 is not a person.
->
-> The plan, the measurements and the compatibility findings are in
-> **`HANDOFF-MERGE.md`** — read it before scoping anything. It is written
-> so you do not have to rediscover what this session measured.
->
-> **How to work:**
->
-> - **Census the shape pool-wide before fixing it.** Every fix last cycle
->   turned out to be a rule with a list behind it, and the list was always
->   longer than the hero.
-> - **Fix the RULE, not the card.** Never special-case a card by name.
-> - **Never invent card effects** — teach the parser to read the text.
-> - **Write the drill, then SABOTAGE it**, and verify the sabotage actually
->   changed the file. Prefer a decision you can DRIVE over a source scan;
->   when you must scan, strip comments first.
-> - **Assert on state — hands, life, zones, counters — never on log prose.**
-> - **Play it.** `npm test` green is the floor, not the proof.
-> - **Ask me about rules.** I read cards for a living and I would rather be
->   asked than have it guessed.
->
-> Never claim more than is true.
+The plan in this file (written at v2.76) was three versions: judge resolves
+card text, a local session, one board. **The first two shipped and are
+live.** The third is deliberately not done, and the reason is in "WHAT IS
+LEFT" below.
+
+```
+v2.76  the flow (hero → throw → sideboard → game)        ✔
+v2.77  judge.js resolves card text                       ✔
+v2.78  the table can answer a prompt                     ✔
+v2.79  a session with no network — solo IS the table     ✔
+       one board; Battle's rules retire                  ☐  ← the last step
+```
+
+`npm test` → **1025 drills green**. `npm run fairness` → clean. All 22
+`engine/*.js` verified serving 200 at
+https://dawnblade-ai.github.io/dawnblade-ai/ .
+`node` is at `~/node/bin`, **not on PATH** —
+`export PATH="$HOME/node/bin:$PATH"`.
 
 ---
 
-## WHERE WE ARE — v2.76, pushed and live
-
-`npm test` → **988 drills green**. `npm run fairness` → clean.
-`npm run audit` → 405 pool cards, **306 full / 77 part / 22 none**.
-All 21 `engine/*.js` verified serving 200. `node` is at `~/node/bin`,
-**not on PATH** — `export PATH="$HOME/node/bin:$PATH"`.
-
-**A push IS the deploy.** The user has standing authorization to push
-without asking (2026-08-03). Verify the deploy, not just the tests: poll
-until `APP_VER` matches AND all 21 engine files return 200.
-
-### The four versions this session shipped
-
-| ver | what |
-|---|---|
-| 2.74 | Frostbite is a real Aura; arcane damage gets ONE choke point and four dead preventions wake up |
-| 2.75 | the printed "unless they pay" escape hatch exists; Inertia is a hand wipe |
-| 2.76 | the pre-game order matches the rules: **hero → throw → sideboard → game** |
-
-Engine **step 3 is done except freeze** (see "STILL OPEN" below).
-
----
-
-## THE TARGET — one flow, one engine
+## THE SHAPE IT ENDED UP IN
 
 ```
-   hero + opponent          opponent = Dummy | a hero | a person
-        ↓                   (picked on the hero screen — v2.76)
-      throw                 seating decided
+   hero + opponent
         ↓
-    sideboard               you board knowing matchup AND seating
+      throw
         ↓
-       game
+    sideboard
         ↓
-  ┌─────────────────────────────────────────┐
-  │  judge.reduce   the CR turn structure   │   ← one rules engine
-  │  effects.*      the card semantics      │
-  │  sparring.act   seat 1, when local      │
-  └─────────────────────────────────────────┘
-        ↓                        ↓
-   local session          net.js session
-   (Dummy / hero)         (a person)
-        └────────── TableBoard ──────────┘
+  ┌──────────────┐         ┌────────────────────────────────┐
+  │   Battle     │         │  judge.reduce  the CR structure│
+  │  (solo, the  │         │  effects.*     the card text   │  ← ONE engine
+  │   tuned      │         │  sparring.act  seat 1, local   │
+  │   dummy)     │         │  local.js / net.js  the session│
+  └──────────────┘         └────────────────────────────────┘
+        │                            │              │
+   the regression              TableBoard      TableBoard
+      harness                   (local)         (a person)
 ```
 
-**Solo and table stop being two things.** They become one game with
-different things answering *what do you do* in seat 1.
+**Both boards resolve every card effect, through the same `effects.js`.**
+There is exactly one copy of the semantics and two turn structures that
+call it. That was the whole job.
 
----
+### How judge calls the semantics
 
-## WHY THIS IS NOW TRACTABLE — measured 2026-08-16, not guessed
-
-The old handoff said the unification was blocked on "~19 trainer closures"
-and called it "the next seam of the same kind `dummyDefence` was, and it is
-bigger." **That estimate is stale, and the reason is good news.**
-
-### 1. `judge.js` ALREADY HAS THE SAME ACTOR DISCIPLINE
-
-This is the finding that changes the size of the job. `judge.js` lines
-126–170 already define, in the identical shape `effects.js` expects:
-
-```js
-const actorOf = g => g.actor != null ? g.actor : g.turnPlayer;
-const act = g => g.sides[actorOf(g)];
-const foe = g => g.sides[P.other(actorOf(g))];
-const at  = (g, i) => g.sides[i];
-const put = (g, i, o) => S.withSide(g, i, o);
-const bAct = g => (g.builds || [])[actorOf(g)] || {};
-const bOf  = (g, i) => (g.builds || [])[i] || {};
-const say  = (g, msg) => …            // this is `L`
-const toGrave = (g, i, cards) => …    // this is `gy`
-function mint(g, tag){ … }            // uid minting
-```
-
-and it carries `g.actor`, `g.builds`, `g.tokSeq`, `g.sides`, `g.pend`,
-`g.stack`, `g.turn`, `g.rng`. **It is not a foreign state shape — it is the
-same one, written functionally.**
-
-### 2. THE 18-KEY CONTEXT IS MOSTLY ALREADY THERE
-
-`E.CTX_KEYS` is 18. Mapping them to what `judge.js` already has:
-
-| ctx key | judge.js | note |
+| judge.js | effects.js | what it is |
 |---|---|---|
-| `act`, `foe`, `actorOf` | **identical** | no work |
-| `bAct` | **identical** | no work |
-| `bFoe` | `bOf(g, other)` | one line |
-| `L` | `say` | one line |
-| `gy` / `gyDisc` | `toGrave` | `_gy` / `_disc` stamps |
-| `tokSeq` | `g.tokSeq` + `mint` | one line |
-| `built` | `bOf(g,0)` | **UI only** — never a rules read (v2.41) |
-| `db` | passed in | no work |
-| `actMut`, `foeMut` | **the one real difference** | see below |
-| `winCheck` | judge has its own loss check | small |
-| `openPrompt` | **does not exist in judge** | real work |
-| `mkRune` | `game.addRunechants` | small |
-| `had6ThisTurn` | one pure line | small |
-| `typeAbbr` | already module-level | move it |
+| `effectsFor(g)` / `withEffects` | `makeEffects(ctx)` | the 17-key context, built FRESH per call over a uid cell that is written back — the one thing that does not fit a pure reducer for free |
+| `commitPlay` | `execute(s, card, from, idx, {window})` | the card resolves, and its text resolves with it |
+| `declareAttack` | — | merges into the pend `execute` already built; **never replaces it**, or the card's whole payload becomes a number |
+| `strike` | `linkPumps` → *(judge's own wall + CR 1.4.5 damage routing)* → `linkPayload` | the split that made the table callable at all |
+| `closeChain` | `fileAttack` | WHERE a spent card goes; WHEN is the caller's |
+| `promptConfirm` | `applyAnswer` | one shared body, both boards |
 
-**380 of ~500 context uses are the five seat accessors**, and four of those
-five are already identical. Only `openPrompt` is genuinely new work.
-
-### 3. THE MUTABLE/PURE MISMATCH IS COMPATIBLE — CHECK THIS FIRST
-
-`effects.js` uses the trainer's idiom:
-
-```js
-actMut(n).hp -= 4        // clones sides[] and the side, returns it mutable
-```
-
-`judge.js` is purely functional (`put(g, i, s => ({...s, hp: s.hp-4}))`).
-
-They are **compatible**, and the reason matters: `actMut` clones
-`n.sides` and `n.sides[i]` *itself* before handing back a mutable side. So
-if `judge` passes a shallow clone `{...g}` into an effects call and takes
-the returned object as its new state, nothing outside is ever mutated —
-which is exactly what `Battle` already does through `setG`.
-
-**VERIFIED 2026-08-16, not assumed.** Driven: a judge-shaped state was
-shallow-cloned into `runOps([["arcane",5]])`; the result changed
-(`sides[1].hp` 20 → 15) and `JSON.stringify(input)` was **byte-identical
-before and after**. And every accessor was supplied using only names
-`judge.js` already exports — all ten present:
-
-```
-actorOf ✓  act ✓  foe ✓  at ✓  put ✓  bAct ✓  bOf ✓  say ✓  toGrave ✓  mint ✓
-```
-
-**Turn that probe into a real drill as the first commit of v2.77**, because
-it is the property the whole merge rests on and it must keep being true as
-`effects.js` grows. The scratch version is in this session's transcript;
-the shape is: build the ctx from judge's exports only, snapshot the input,
-run an op, assert the snapshot is unchanged.
-
-### 4. THE BOARD ALREADY SPEAKS THE TARGET LANGUAGE
-
-`TableBoard` renders `phase`/`step` out of `priority.js` and shares
-`ArmorGrid`, `DeckPitchCol`, `InPlayRow`, `GravePane`, `PeekDock` with the
-trainer. **It has exactly ONE dispatch point:**
-
-```js
-const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
-```
-
-and the session is built with `reduce: DawnJudge.reduce`. So a **local
-session** with the same interface (`submit`, `status`, `seq`, `hash`,
-`stats`) that applies `reduce` directly is a small, well-bounded piece.
-`net.js`'s `loopback()` already proves the shape in drills.
-
-### 5. WHAT IS ACTUALLY LEFT
-
-| # | work | size |
-|---|---|---|
-| 1 | `effects.js` stops reading `mode` (2 real sites) | small |
-| 2 | `judge.js` supplies the ctx and calls `execute`/`afterDefenders`/`resolveStack` | **the real job** |
-| 3 | a prompt queue + drain in `judge.js` (`openPrompt`) | medium |
-| 4 | local session; seat 1 = `sparring.act` or a hero policy | small |
-| 5 | one board; retire `Battle`'s rules | medium |
+`judge.setDb(db)` registers the card database. It is **not state** — a
+lookup table identical on both peers, checked by the lobby before a hero
+is chosen — and an unregistered one REFUSES rather than throwing.
 
 ---
 
-## THE ORDER — decided by the user, 2026-08-16
+## WHAT IS LEFT, AND WHY IT IS NOT DONE
 
-```
-v2.76  the flow                                        ✔ SHIPPED
-v2.77  judge.js resolves card text  (items 1–3)
-v2.78  local session, seat 1 without a network (item 4)
-v2.79  one board; Battle's rules retire (item 5)
-```
+**`Battle` is the regression harness and does not retire until the merged
+path passes the same drills.** That rule has not moved and it is the whole
+reason there are still two boards. Concretely, before deleting anything in
+`Battle`:
 
-**Chosen deliberately over "switch the flow now and fill in card effects
-after."** The table resolves NO card text today, so switching first would
-make the game worse for a version or two. This order means **nothing ever
-regresses.**
+> `test/kayo.test.js`, `test/dorinthea.test.js`, `test/frostbite.test.js`,
+> `test/arcane.test.js` and `test/paytoll.test.js` must pass **driving
+> `judge.reduce`** rather than a hand-rolled effects context.
 
-### THE RULE THAT GOVERNS THE WHOLE MERGE
+Those five files build their own `ctx` and call `runOps`/`execute`
+directly. Repointing them at `judge.reduce` is the next session's job, and
+it is the honest gate: they are the only proof the semantics are right,
+and today they prove it about a context a test wrote rather than the one
+a player gets.
 
-> **`Battle` is the regression harness and does not retire until the merged
-> path passes the same drills.** It plays every card effect today and is the
-> only proof the semantics are right.
+Two more things belong to that step:
 
-Concretely: before deleting anything in `Battle`, `test/kayo.test.js`,
-`test/dorinthea.test.js`, `test/frostbite.test.js`, `test/arcane.test.js`
-and `test/paytoll.test.js` must pass **driving `judge.reduce`** rather than
-a hand-rolled effects context.
+- **The `[3,4,5]` escalation is TUNED and `sparring.act` is not.** The
+  local table's opponent is a printed-numbers policy that reads no card
+  text; it is a weaker sparring partner than the trainer's dummy, by
+  design. Retuning is a play session, not a drill.
+- **`Battle`'s 97 `mode`/`bphase` references.** Whatever replaces `setG`
+  must keep the invariant-judge funnel, or the guard rails go dark.
 
 ---
 
-## DECISIONS ALREADY MADE — do not re-litigate
+## WHAT THIS MERGE LEARNED THE HARD WAY
+
+Every one of these was found by a drill or by opening the game, not by
+reading, and each is a shape that will recur.
+
+1. **AN ATTACK WAS FILED TO THE GRAVEYARD WHILE STILL ON THE CHAIN.**
+   `execute` filed it at DECLARATION — which is not something a card
+   does, it is what a board with no combat chain to hold a card has to do
+   instead. Delegating handed that model to judge.js, whose `chainCards`
+   then held the same card: **175 pool cards reported `want chain, got
+   grave`**, and in judge it would have been CARD-IN-TWO-ZONES. The fix
+   is the split that keeps recurring — `fileAttack` answers WHERE, the
+   caller answers WHEN.
+2. **GO AGAIN WAS ABOUT TO PAY TWICE.** `linkPayload` charges the
+   attack's action point and judge's `resolveLink` also added one. Two
+   points for one go again is the direction that steals games, and no
+   coverage tool can see it.
+3. **A DRILL THAT PASSED BY READING TOO MUCH.** `priority.test.js` sliced
+   `resolveStack` between two anchors and its END anchor had gone stale
+   in v2.73 — `indexOf` returned -1, the slice ran to the end of the
+   file, and it passed by reading everything. **Assert both anchors are
+   found.** The mirror image of "a source guard aimed at the wrong file
+   passes by finding nothing".
+4. **TWO DRILLS WERE ASSERTING THINGS THEY COULD NOT SHOW.** The chair
+   mirror compared two games that were never mirrors — both seats build
+   from one seeded stream in seat order, so swapping the heroes swaps
+   their shuffles — on a premise (printed power decides it) that card
+   text then overturned. And `judge.test.js`'s driver proposed a weapon
+   swing it had not checked it could pay for, then recorded its own
+   optimism as an engine refusal.
+5. **A PINNED SAMPLE IS NOT A PINNED RULE.** The chair mirror was pinned
+   at exactly 6-6; with prompts resolving it is 5-7. Pinning an emergent
+   count turns every honest card fix into a red drill and trains the
+   reader to edit the number without thinking. It asserts a BAND now —
+   the shape it guards is "a weaker seat loses all twelve", which no band
+   of four hides.
+6. **THE GATE WITHOUT THE ANSWER STOPS THE GAME.** Making a live prompt
+   block both seats — correct, because whatever queued it is
+   mid-resolution — turned **seven drills red** with one symptom: *the
+   game never ended*. Every seat must be able to answer, which is why
+   `judge.autoAnswer` exists and why `sparring.act` calls it.
+7. **AN UNREGISTERED DATABASE MUST REFUSE, NOT THROW.** `resolveEntry`
+   reads `db.byName` unguarded, so a bare `{}` is a TypeError from inside
+   a reducer whose contract is that it never throws. It gets an empty
+   BUILT db.
+8. **PROSE TRIPS SCANS IN BOTH DIRECTIONS.** A comment containing the
+   words `youMut` and `you(s).res` — describing the bug that was fixed —
+   failed the actor ledger. Reword the prose; never weaken the scan.
+
+---
+
+## DECISIONS — do not re-litigate
 
 | decision | date | what |
 |---|---|---|
-| **Keep the `sparring.js` wall** | 2026-08-16 | It reads NO card text, and that stays. Seat 1 is printed-numbers-only. Accepting a weaker seat 1 was chosen explicitly over letting the policy read the parser, because "a sparring partner playing badly and a card being read wrong must never be confusable." `sparring.js` is **untouched** by this merge. |
+| **Keep the `sparring.js` wall** | 2026-08-16 | It reads NO card text, and that stays. v2.78 added one call — `judge.autoAnswer`, so a seat that is ASKED can answer — which reads no card text either; the two answers that cost real money delegate to `soakPolicy`/`payPolicy`, the same pure policies the trainer uses. |
 | **Two-player is the only mode** | 2026-08-16 | Opponent picked on the hero screen; vanilla Dummy is the default. |
-| **Sideboard follows the throw** | 2026-08-16 | Shipped in v2.76. `lobby.js` had ruled it since it was written; solo was the only thing doing it backwards. |
-| **Build the seat** | 2026-08-14 | Reverses the 2026-07-25 "no AI opponent" note. Both dates are kept so nobody re-litigates from the old one. |
+| **Sideboard follows the throw** | 2026-08-16 | v2.76. |
+| **Build the seat** | 2026-08-14 | Reverses the 2026-07-25 "no AI opponent" note. Both dates kept so nobody re-litigates from the old one. |
+| **`Battle` retires last** | 2026-08-16 | And only once the five semantics drills pass driving `judge.reduce`. |
 
 ---
 
-## WHAT MUST SURVIVE THE MERGE
+## WHAT MUST SURVIVE
 
 - **No build step, ever.** Plain UMD scripts, `file://` must work.
 - **Never invent card effects.** Teach the parser to read the text.
-- **One copy of the semantics.** `effects.js` is it. The whole point of
-  this merge is that there is one rules engine, not two.
+- **One copy of the semantics.** `effects.js` is it.
 - `you()`/`opp()` read and `youMut()`/`oppMut()` write — **UI only**.
   Rules use `act()`/`foe()`, builds use `bAct()`. **Never write a side
   field as a top-level game key.**
 - **Store the rng back** (`n.rng = rng`).
 - `instead` REPLACES · go again is a **GAIN** · an instant costs **no**
   action point.
-- **The vanilla dummy's `[3,4,5]` escalation is TUNED**; real cards are
-  not. Retuning is a play session, not a drill.
 - **`sparring.js`'s three properties**: it proposes and `judge.legal`
-  disposes (a refusal is always a bug in the policy); it reads no card
-  text; it is deterministic and never touches `game.rng` (ties broken on
-  uid, or two equal blockers desync).
-- **The winner follows the HERO, not the chair.**
-
----
-
-## THE TRAP THIS IDEA ALREADY WALKED INTO ONCE
-
-Porting `dummyDefence` unchanged into `sparring.js` made the game
-degenerate: **both seats blocked 41 of 41 attacks** and one finished a
-21-turn game on full life. The heuristic was written for a seat with **no
-action phase**, where a card in hand had no use but to block. Both seats
-have an action phase now (v2.71), so `takeUpTo` — the damage a seat will
-simply take rather than spend a card on — is load-bearing, and **lethal
-overrides it**. A regression run that never deals damage never exercises
-the damage step.
-
-The same lesson bit twice more this session and both fixes are in
-`effects.js`: `soakPolicy` will not pay more resources than the damage is
-worth, and `payPolicy` will not pitch its **last** card to avoid discarding
-a card. **Any new seat-1 policy needs the same brake.**
-
----
-
-## STILL OPEN — engine step 3's last piece
-
-**Freeze (Cold Snap)** is the only one of the five expired `noop`s not
-built. **RULING (user, 2026-08-14):**
-
-> The opponent is prompted to pay. If they pay, nothing happens. If they
-> decline, **the CASTER** is prompted to choose from the opponent's arsenal
-> or an ally they control. That object is frozen **until the start of the
-> caster's next turn**. A frozen card cannot be played and its abilities
-> cannot be activated. The arsenal is chosen **blind** — you pick the zone,
-> not the identity, so hidden information is preserved.
-
-What it needs: a `frozen` marker with an expiry turn; a gate on
-play/activation; a chained prompt back to the caster (`payOr`'s `elseOps`
-resolve at the ASKED side, so the freeze op has to queue a sheet addressed
-to `1-actorOf`); and Cold Snap's two sentences paired in `fxParse` the way
-`optCost` pairs its halves — the splitter breaks them on the period.
-
-**It is card semantics, so it lands in `parser.js`/`effects.js` and the
-merge does not move either.** Safe to do before, during or after.
-
-### Also open, and each is small
-
-- **Aether Icevein's rider** sits behind the unbuilt **Ice Fusion**
-  condition, so its "unless they pay {r}{r}" never fires. Fusion is
-  `unreviewed` in the ledger.
-- **Winter's Bite was never drawn in live play.** The engine path is driven
-  end to end; the trainer's seat-1 pay routing is so far pinned only by a
-  source scan.
-- **The "If you do, …" family** (24 cards) — Kayo's Beaten Trackers and
-  Dorinthea's Refraction Bolters both end here. The machinery now exists
-  (`pay` with `elseOps`, `pick` with `min:0`).
-- **`window.THROW_MODE = "coin"`** is still the testing default. Set it to
-  `"rps"` before launch; `rps.js` and the throw UI are untouched.
-
----
-
-## WHAT THIS SESSION LEARNED THE HARD WAY
-
-Four drills went green against broken code and only sabotage found them.
-Every one is a shape that will recur:
-
-1. **A grep is satisfied by what survives deleting the gate.** The
-   end-phase thaw drill searched `endPhaseCF` for `isFrostbite`; neutering
-   the gate with `const thawed = 0` left the identifier sitting in the dead
-   block. → the rule moved into pure `DawnEffects.thawFrost` and is driven.
-2. **A drill can assert on a fixture it built itself.** The stale-`avail`
-   drill checked a spec the *test* constructed, so sabotaging the engine
-   changed nothing. → drive the real queue.
-3. **A guard can have no case that needs it.** `soakPolicy`'s "already
-   covered" check and `payPolicy`'s affordability check were both masked by
-   other guards until a case was written that only they could catch.
-4. **A drill can fail for the wrong reason.** A non-greedy regex stopping
-   at a nested `</div>` looked like a real failure.
-
-And two bugs were invisible to **all 961 drills** and to `invariants.js`,
-found only by opening the game:
-
-- `avail` frozen at prompt-queue time went stale across three chained
-  Runechant soaks — would have fired an unpaid prevention.
-- An unpayable soak answer granted the prevention anyway.
-
-**Play it. Every time.**
-
----
+  disposes; it reads no card text; it is deterministic and never touches
+  `game.rng`.
+- **A live prompt stops BOTH seats.** Letting play continue around it is
+  how a deferred payload gets abandoned.
+- **`autoAnswer` is never called from `reduce`.** The session asks for it;
+  the rules never volunteer an answer on a player's behalf.

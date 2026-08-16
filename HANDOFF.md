@@ -1,18 +1,26 @@
-# Handoff — Dawnblade, at v2.76 · THE MERGE
+# Handoff — Dawnblade, at v2.79 · THE MERGE IS DONE
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
 > Read `CLAUDE.md` in full, then `HANDOFF.md`. Most entries in both exist
 > because breaking that rule already cost a real bug.
 >
-> **Your job: merge the two engines into ONE flow.** Whether seat 1 is the
-> vanilla Dummy, a real hero deck, or a person on another phone, the same
-> engine handles the table state behind the scenes. Two-player is the only
-> mode; solo is just two-player where seat 1 is not a person.
+> **The two engines are merged (v2.77-v2.79).** There is ONE copy of the
+> card semantics (`engine/effects.js`) and two turn structures that call
+> it: `Battle` for solo, `judge.reduce` for the table — and the table is
+> now reachable without a network, so solo can BE the table.
 >
-> The plan, the measurements and the compatibility findings are in
-> **`HANDOFF-MERGE.md`** — read it before scoping anything. It is written
-> so you do not have to rediscover what this session measured.
+> **Your job is the last step: retire `Battle`'s rules.** The gate is
+> written down and has not moved — `Battle` is the regression harness, so
+> before deleting anything in it, `test/kayo.test.js`,
+> `test/dorinthea.test.js`, `test/frostbite.test.js`,
+> `test/arcane.test.js` and `test/paytoll.test.js` must pass **driving
+> `judge.reduce`** rather than the hand-rolled effects context they build
+> today.
+>
+> **`HANDOFF-MERGE.md` is the record of the merge** — what it took, the
+> eight things it learned the hard way, and what is left. Read it before
+> scoping anything.
 >
 > **How to work:**
 >
@@ -33,11 +41,11 @@
 
 ---
 
-## WHERE WE ARE — v2.76, pushed and live
+## WHERE WE ARE — v2.79, pushed and live
 
-`npm test` → **988 drills green** · `npm run fairness` clean ·
+`npm test` → **1025 drills green** · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **306 full / 77 part / 22 none**.
-All 21 `engine/*.js` verified serving 200. `node` is at `~/node/bin`,
+All 22 `engine/*.js` verified serving 200. `node` is at `~/node/bin`,
 **not on PATH** — `export PATH="$HOME/node/bin:$PATH"`.
 **A push IS the deploy** (standing authorization, 2026-08-03). Verify the
 deploy, not just the tests.
@@ -51,24 +59,36 @@ deploy, not just the tests.
                             pay" escape hatch, Inertia
        ☐ freeze (Cold Snap) — the last piece; RULED, not built
 2. HEROES   KAYO ✔ · DORINTHEA ✔ · IYSLANDER unblocked and recommended next
-3. THE MERGE — IN PROGRESS.  v2.76 shipped the flow.
+3. THE MERGE
+     ✔ v2.76 the flow (hero → throw → sideboard → game)
+     ✔ v2.77 judge.js resolves card text — ONE copy of the semantics
+     ✔ v2.78 the table can answer a prompt
+     ✔ v2.79 a session with no network — solo can BE the table
+       ☐ retire Battle's rules — the last step, gated below
 ```
 
-## ➡ THE CURRENT JOB IS THE MERGE — read `HANDOFF-MERGE.md`
+## ➡ THE CURRENT JOB — retire `Battle`'s rules
 
-One flow, one engine: whether seat 1 is the vanilla Dummy, a real hero
-deck, or a person on another phone, the same engine handles the table state.
-**`HANDOFF-MERGE.md` carries the plan, the measurements and the
-compatibility findings** — including the one that changes the size of the
-job (`judge.js` already has the identical actor discipline `effects.js`
-expects) and the one assumption to verify first (the mutable/pure seam).
+The engines are merged. What is left is deleting the loser, and the gate
+has not moved:
 
-Order, decided by the user 2026-08-16:
-`v2.77` judge.js resolves card text · `v2.78` local session so seat 1 needs
-no network · `v2.79` one board, Battle's rules retire.
+> **`Battle` is the regression harness and does not retire until the
+> merged path passes the same drills.**
 
-**`Battle` is the regression harness and does not retire until the merged
-path passes the same drills.**
+Concretely: `test/kayo.test.js`, `test/dorinthea.test.js`,
+`test/frostbite.test.js`, `test/arcane.test.js` and
+`test/paytoll.test.js` each build their own effects context and call
+`runOps`/`execute` directly. They must pass **driving `judge.reduce`**
+first. They are the only proof the semantics are right, and today they
+prove it about a context a test wrote rather than the one a player gets.
+
+Two more things belong to that step: the `[3,4,5]` escalation is TUNED
+and `sparring.act` is not (retuning is a play session, not a drill), and
+`Battle`'s 97 `mode`/`bphase` references — whatever replaces `setG` must
+keep the invariant-judge funnel or the guard rails go dark.
+
+**Read `HANDOFF-MERGE.md`** for what the merge took and the eight things
+it learned the hard way.
 
 ---
 

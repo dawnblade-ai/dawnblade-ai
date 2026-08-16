@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.65
+**Current version:** v2.79
 
 ---
 
@@ -441,11 +441,12 @@ roadmap was being written.
 | module | what | status |
 |---|---|---|
 | `engine/build.js` | how a seat becomes a hero: `buildSide`, `defaultPicks`, the equipment slot rules, and `buildMatch` (both seats from one spec, v2.49) | **live** — loaded, bridged, in `MODULES` |
-| `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function | **live at the TABLE only** (v2.49) — loaded, module-qualified, in `MODULES` |
+| `engine/judge.js` | `reduce(state, action, seat)` — the rules as a pure function, and since v2.77 a CALLER of effects.js | **live, and it resolves card text** |
 | `engine/types.js` | what a card IS, off its structured type array | **live**, loaded but deliberately not bridged |
 | `engine/lobby.js` | the pre-game negotiation: hero, throw, sideboard (v2.49) | **live** — module-qualified, in `MODULES` |
-| `engine/effects.js` | `runOps` + `execute` + `resolveStack` — ALL the card semantics, out of `Battle` (v2.53, v2.62). One copy exists. | **live in the TRAINER only** — the table calls none of it yet |
-| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **headless** — the only one left |
+| `engine/effects.js` | ALL the card semantics, out of `Battle` (v2.53, v2.62). One copy exists. | **live in BOTH** — the trainer and judge.js both call it (v2.77) |
+| `engine/sparring.js` | `act(game, seat)` — a seat as a policy | **live** — `local.js` calls it (v2.79) |
+| `engine/local.js` | a session with no network: the merged engine, played alone (v2.79) | **live** |
 
 ### ONE COMBAT PATH, NOT TWO — the thing this replaces
 
@@ -649,29 +650,29 @@ still does **not** model card EFFECTS: `runOps`/`execute`/`resolveStack`
 are in the trainer. The original rule was that loading it would put a
 second, quieter rules engine on the page beside the real one.
 
-**THAT SPLIT IS NOW BEING CLOSED ON PURPOSE (from v2.76) — see
-`HANDOFF-MERGE.md`.** It was right while it lasted and the reason it is
-ending is that the customer for "one rules engine" changed: it used to be
-the networked table, and it is now every hero of card text that would
-otherwise have to be written into whichever engine you point them at.
-
-The state until the merge lands:
-
-```
-SOLO  play  ->  Battle     (every card effect, the regression harness)
-TABLE play  ->  judge.js   (the second seat, no card text)
-```
-
-The target, and the order (user, 2026-08-16):
+**THAT SPLIT IS CLOSED (v2.77-v2.79).** It was right while it lasted and
+the reason it ended is that the customer for "one rules engine" changed:
+it used to be the networked table, and it is now every hero of card text
+that would otherwise have to be written into whichever engine you point
+them at.
 
 ```
 judge.reduce   the CR turn structure
-effects.*      the card semantics          ONE engine, both callers
+effects.*      the card semantics          ONE engine, BOTH callers
 sparring.act   seat 1 when it is not a person
-
-v2.77 judge.js resolves card text · v2.78 local session, seat 1 without a
-network · v2.79 one board, Battle's rules retire
+local.js       the session, when there is no network
 ```
+
+There are still TWO BOARDS, and that is deliberate:
+
+```
+SOLO  play  ->  Battle     (the tuned dummy, and the regression harness)
+TABLE play  ->  judge.js   (a person, or sparring.act via local.js)
+```
+
+Both now resolve every card effect, through the same `effects.js`. What
+`Battle` still owns is the `[3,4,5]` escalation, which is TUNED, and the
+drills that prove the semantics are right.
 
 **`Battle` does not retire until the merged path passes the same drills.**
 It plays every card effect today and is the only proof the semantics are
@@ -685,10 +686,10 @@ must never be confusable with a card being read wrong** — so keep the
 split until the effects port makes one copy of the semantics that both
 callers share.
 
-`test/wire.test.js`'s `HEADLESS` list is the ledger and is now
-`["sparring"]`. Coming off it must be the same edit that adds the module
-to `test/sync.test.js`'s `MODULES` — `judge`, `types` and `lobby` moved
-that way.
+`test/wire.test.js`'s `HEADLESS` list is the ledger and is now **EMPTY**
+(v2.79). Every engine module is on the page. Coming off it must be the
+same edit that adds the module to `test/sync.test.js`'s `MODULES` —
+`judge`, `types`, `lobby`, `sparring` and `local` all moved that way.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 
@@ -998,20 +999,31 @@ Once per Turn` equipment ability.
    guard aimed at the wrong file **passes by finding nothing**, so they
    were repointed rather than left to rot.
 
-   **Two seams remain, and both are named in the module header:**
-   - **`execute` calls `dummyDefence` INLINE.** In `judge.js` it must
-     hand control back and let the defend step run. Until then the
-     table still resolves no card text.
-   - **`execute` reads `built.runeDmg` at four sites.** Per v2.41 a
-     passive read as `built.X` inside a RULES function is a bug —
-     `built` is seat 0's build, captured for the UI — and `bAct` is
-     already in context beside it. Moved as-is on purpose.
+   **BOTH SEAMS ARE CLOSED.** `execute` stopped calling `dummyDefence`
+   in v2.73 (it declares and stops), and the four `built.runeDmg` reads
+   became `bAct(n).runeDmg` in v2.77 — which took `built` off the
+   context entirely, 18 keys to 17. It was the last key that named a
+   SEAT rather than a role, and supplying it would have written a
+   seat-0 rules read into judge.js's brand-new caller.
 2. ~~**The dummy becomes a policy**~~ **Done in v2.46** —
    `engine/sparring.js`, above. `foeSwing` and `dummyDefence` remain in
    the trainer until step 3 retires them with everything else.
-3. **Wire `Battle` to `dispatch`** and retire the 97 `mode`/`bphase`
-   references. Whatever replaces `setG` must keep the invariant-judge
-   funnel, or the guard rails go dark.
+3. ~~**The effects port**~~ **DONE (v2.77-v2.79).** judge.js supplies
+   the context and calls `execute` / `linkPumps` / `linkPayload` /
+   `applyAnswer`; `local.js` is the session that lets a player alone
+   reach it; `sparring.act` sits in seat 1. `resolveStack` split into
+   two shared pieces so each caller keeps its own wall and its own
+   damage routing between them — that is the piece judge.js could never
+   call, because it holds defenders on `blockG`/`blockH` and routes by
+   CR 1.4.5 attack-target.
+4. **Retire `Battle`'s rules** — the last step, and the rule that
+   governs it has not moved: **`Battle` is the regression harness and
+   does not retire until the merged path passes the same drills.**
+   Concretely, `test/kayo.test.js`, `test/dorinthea.test.js`,
+   `test/frostbite.test.js`, `test/arcane.test.js` and
+   `test/paytoll.test.js` must pass driving `judge.reduce` rather than a
+   hand-rolled effects context. Whatever replaces `setG` must keep the
+   invariant-judge funnel, or the guard rails go dark.
 
 ---
 
@@ -2017,17 +2029,18 @@ person would quietly devalue the case.
 **CARD TEXT DOES NOT RESOLVE.** Worth stating plainly because the screen
 looks finished:
 
-| real | not real |
-|---|---|
-| two hero decks off the actual database, printed life and intellect, the CR turn structure, priority, the combat chain, costs paid by pitching on demand, defenders from hand and iron, printed power against printed defence, the ordered end phase | the parser's card semantics. `runOps`/`execute` moved to `engine/effects.js` in v2.53 and `resolveStack` is still a closure in `Battle` — but **the table calls none of them yet**, so nothing here has changed for a player |
+**CARD TEXT RESOLVES AT THE TABLE AS OF v2.77.** The paragraph that used
+to sit here said it did not, and that was true for three versions. The
+table now calls `engine/effects.js` — the one copy of the semantics —
+through `judge.js`, which supplies the context and adds none of its own.
+Prompts are answerable there too (v2.78), which matters because several
+cards defer their whole payload into the answer.
 
-That is `judge.js`'s own stated limit, not a new one. **SOLO PLAY IS
-`Battle` AND TABLE PLAY IS `judge.js`, and nothing routes between them** —
-the trainer keeps every card effect and stays the regression harness.
-That separation is why loading `judge.js` does not violate the Phase 1
-rule against a second quiet rules engine: the two never meet. They
-converge when those three functions become a shared `engine/effects.js`
-both callers use, which is the next pass and the last big one.
+`Battle` is untouched by all of it and remains the regression harness. It
+does not retire until the merged path passes the same drills:
+`test/kayo.test.js`, `test/dorinthea.test.js`, `test/frostbite.test.js`,
+`test/arcane.test.js` and `test/paytoll.test.js` must pass driving
+`judge.reduce` rather than a hand-rolled effects context.
 
 `foeSwing`'s `[3,4,5][(turn-1)%3]` escalation still drives the **solo**
 dummy. It is untouched here and is retired by step 3 of the remaining
