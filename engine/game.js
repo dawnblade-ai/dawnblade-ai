@@ -55,6 +55,32 @@ function slotOf(c){
   return {z:"misc",h:0,lab:"gear"};
 }
 
+/* THE ONE-WORD NAME FOR WHAT A CARD IS, for a chip on a card frame.
+   Presentation, not a rule — no rules site asks this, and `types.js` is
+   the authority on what a card IS. It lives here rather than in the
+   trainer because effects.js reaches for it when it features a resolved
+   card, and effects.js is about to have a second caller: a display label
+   defined once in `index.html` would have to be defined again in
+   judge.js, and two spellings of the same chip is the mirror the v2.20
+   rule exists to prevent. `slotOf` is right above it, which is the other
+   reason this is its home. */
+function typeAbbr(c){
+  const t = ((c && c.tt) || "").toLowerCase();
+  if(/attack reaction/.test(t)) return "React";
+  if(/defense reaction/.test(t)) return "D-React";
+  if(/\binstant\b/.test(t)) return "Instant";
+  if(/\bally\b/.test(t)) return "Ally";
+  if(/\bitem\b/.test(t)) return "Item";
+  if(/\baura\b/.test(t)) return "Aura";
+  if(/\btrap\b/.test(t)) return "Trap";
+  if(/\bhero\b/.test(t)) return "Hero";
+  if(/weapon|off[\s-]?hand|\b[12]h\b/.test(t)) return slotOf(c).lab.toUpperCase();
+  if(/attack/.test(t) && /action/.test(t)) return "Attack";
+  if(/equipment/.test(t)) return "Block";
+  if(/action/.test(t)) return "Non-attack";
+  return "";
+}
+
 /* ---- THE FOUR ARMOUR ZONES, AND WHICH OF THEM ARE EXPOSED (v2.74) ----
    "Create a Frostbite token in an exposed head, chest, arms, or legs
    zone" (Frost Spike). An EXPOSED zone is an armour zone with nothing
@@ -262,7 +288,7 @@ function popRunechants(game, side, limit, dmgEach){
           cards: popped};
 }
 
-return {parseDeck, gearDef, gearBlockApply, slotOf,
+return {parseDeck, gearDef, gearBlockApply, slotOf, typeAbbr,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,

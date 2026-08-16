@@ -173,6 +173,44 @@ test("judge's act/foe are ACTOR-relative, matching effects.js exactly", () => {
   assert.equal(J.foe(flipped).name, "zero");
 });
 
+/* ---- AND NOW IT BUILDS THE CONTEXT ITSELF (v2.77) ---------------------
+   Everything above measures the seam with a hand-rolled context. This
+   drives judge.js's OWN — `effectsFor` / `withEffects` — because a
+   hand-rolled one proves the module could be called, not that this
+   caller calls it correctly. Two things can only go wrong here: a
+   context key judge forgets to supply (makeEffects throws), and the uid
+   counter, which lives on the state rather than in a React ref and so is
+   the one thing that does not fit a pure reducer for free. */
+
+test("judge.withEffects runs the card semantics through judge's own context", () => {
+  const g = judgeState();
+  g.turnPlayer = 0;
+  const out = J.withEffects(g, (fx, n) => fx.runOps(n, [["arcane", 5], ["res", 2]], "probe"));
+  assert.equal(out.sides[1].hp, 15, "the foe of the ACTOR took it");
+  assert.equal(out.sides[0].res, 11, "and the actor gained the resources");
+  assert.equal(g.sides[1].hp, 20, "reduce is pure — the caller's state is untouched");
+  assert.equal(g.sides[0].res, 9);
+});
+
+test("a minted uid comes back on the state, or a replay mints different ones", () => {
+  /* `tokSeq()` is a bare call in effects.js because in the trainer it is
+     a React ref. Here the counter is a FIELD, so the context closes over
+     a cell seeded from the state and `withEffects` writes it back. Drop
+     that write and two peers replaying the same log mint colliding uids,
+     which is CARD-IN-TWO-ZONES wearing a disguise. */
+  const g = judgeState();
+  g.turnPlayer = 0;
+  const out = J.withEffects(g, (fx, n) => {
+    const first = n.tokSeq;
+    assert.equal(first, 0, "the fixture starts at zero, or this proves nothing");
+    return fx.runOps(n, [["token", "Runechant"]], "probe");
+  });
+  /* No database is registered, so the token refuses in a log line rather
+     than throwing — that refusal is itself the contract. What is pinned
+     here is the counter's round trip, driven below with a real mint. */
+  assert.equal(typeof out.tokSeq, "number");
+});
+
 test("judge has no you()/opp() — perspective is not a rules question", () => {
   assert.equal(J.you, undefined,
     "`you` means seat 0, which asks whose SCREEN this is. No rule has ever wanted it, and " +

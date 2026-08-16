@@ -55,20 +55,23 @@
    costing no action point (CR 8.1.6), the arsenal step, attack-targets
    (CR 1.4.5), and the ordered end phase (CR 4.4.3a-f).
 
-   NOT YET: card EFFECTS. `runOps`/`execute` — the parser's 700 lines of
-   card semantics — are still in the trainer and are ported in the next
-   pass. Until then a card here moves zones, costs what it prints and
-   hits for what it prints, and its rules text does nothing.
+   AND, SINCE v2.77: card EFFECTS. This file calls `engine/effects.js` —
+   the ONE copy of the card semantics — and adds none of its own. See "THE
+   CARD SEMANTICS" below for the seventeen things that module asks a
+   caller for and where each of them comes from.
 
-   THAT LIMIT IS DELIBERATE AND IT IS LOAD-BEARING. Getting the
-   orchestration right is the part that does not exist; the card semantics
-   already work and are covered by 594 drills. Building the skeleton first
-   means a control-flow bug can never be confused for a card being read
-   wrong — the same discipline that kept `actions.js` free of card text so
-   a transport failure could not masquerade as a parser failure.
+   The split that came before it was deliberate and load-bearing while it
+   lasted: getting the orchestration right was the part that did not
+   exist, the card semantics already worked, and building the skeleton
+   first meant a control-flow bug could never be confused for a card being
+   read wrong. That is the same discipline that keeps `actions.js` free of
+   card text so a transport failure cannot masquerade as a parser failure,
+   and it is why `sparring.js` still reads no card text at all.
 
-   DO NOT wire this into `Battle` as the rules source until the effects
-   port lands, or every card in the game quietly stops working.
+   WHAT REPLACES IT AS THE GUARD RAIL: this file contributes no semantics.
+   A drill fails if it grows a `fxParse`/`classifyClause` call of its own,
+   because the moment there are two readings of a card there are two
+   engines again.
 
    ---- PURITY ----------------------------------------------------------
 
@@ -81,10 +84,12 @@
 (function(root, factory){
   if(typeof module==="object" && module.exports)
     module.exports = factory(require("./priority.js"), require("./sides.js"), require("./rng.js"),
-                             require("./parser.js"), require("./game.js"), require("./types.js"));
+                             require("./parser.js"), require("./game.js"), require("./types.js"),
+                             require("./effects.js"), require("./cards.js"), require("./prompts.js"));
   else root.DawnJudge = factory(root.DawnPriority, root.DawnSides, root.DawnRNG,
-                                root.DawnParser, root.DawnGame, root.DawnTypes);
-})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM, TY){
+                                root.DawnParser, root.DawnGame, root.DawnTypes,
+                                root.DawnEffects, root.DawnCards, root.DawnPrompts);
+})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM, TY, E, C, PM){
 
 const {effCost, fxParse} = PR;
 const {gearDef, gearBlockApply} = GM;
@@ -169,6 +174,157 @@ const EPHEMERAL = /if it would be put into a graveyard from anywhere, instead it
 const toGrave = (g, i, cards) => put(g, i, s => ({...s,
   grave: [...cards.filter(c => !EPHEMERAL.test(c.tx || "")).map(c => ({...c, _gy: g.turn})),
           ...(s.grave || [])]}));
+
+/* ============================================================
+   THE CARD SEMANTICS (v2.77) — judge.js becomes a CALLER
+
+   Until now this file modelled the turn structure, the combat chain and
+   the costs, and resolved no card text at all. `effects.js` held all of
+   it and only the trainer could reach it, which is why solo play resolved
+   every effect and table play resolved none.
+
+   THE SPLIT WAS DELIBERATE AND IT IS OVER. It was right while it lasted:
+   a control-flow bug and a card being read wrong must never be
+   confusable, and keeping the two engines apart is what made every fix
+   this year attributable. What ended it is that the customer changed —
+   it used to be the networked table, and it is now every hero of card
+   text that would otherwise have to be written into whichever engine you
+   happen to point them at.
+
+   THIS FILE ADDS NO CARD SEMANTICS. Not one. It supplies the seventeen
+   things `effects.js` asks a caller for, and every one of them is either
+   a name this file already exported or a two-line adapter over one:
+
+     act foe actorOf bAct        already here, and already actor-relative
+     bFoe                        bOf(g, other)
+     L                           say
+     gy gyDisc                   the turn stamp, through the ONE ephemeral
+                                 test this file already owns
+     actMut foeMut               the trainer's mutable idiom, safe here
+                                 because it clones `sides` and the side
+                                 ITSELF — pinned in test/merge.test.js
+     had6ThisTurn                one pure line over the stamped graveyard
+     mkRune winCheck typeAbbr    adapters
+     tokSeq                      a per-call counter, see below
+     openPrompt db               the two genuinely new things
+
+   THE UID COUNTER IS THE ONE THING THAT DOES NOT FIT A PURE REDUCER.
+   `effects.js` asks for `tokSeq()` — a bare call that hands back the next
+   number — because in the trainer it is a React ref. Here the counter
+   lives ON the state as `g.tokSeq`, so the context is built FRESH for
+   each reduce, closed over a cell seeded from the state, and the cell is
+   written back when the call returns. Nothing outlives the call, so
+   `reduce` stays pure and a replay of the same log mints the same uids.
+
+   THE DATABASE IS NOT STATE. `db` is a lookup table, identical on both
+   peers — the lobby faults on a card-data skew before a hero is even
+   chosen — so it is registered once with `setDb` rather than carried on
+   the game object, where it would be dead weight to every rule and 62KB
+   on a wire that drops large messages without an error. With no db
+   registered, token creation refuses in a log line rather than throwing,
+   which is the same graceful answer effects.js already gives.
+   ============================================================ */
+
+let _db = null;
+/* Registered once by whoever loaded the cards. Returns the db so a caller
+   can assert it took. */
+function setDb(db){ _db = db || null; return _db; }
+/* AN UNREGISTERED DATABASE MUST REFUSE, NOT THROW. `resolveEntry` reads
+   `db.byName` unguarded — correct, because the trainer always has a real
+   one — so handing it a bare `{}` is a TypeError from inside a reducer
+   whose contract (test/fuzz.test.js) is that it never throws and never
+   mutates on refusal. An empty BUILT db answers "no such card" instead,
+   which is the graceful answer effects.js already knows how to log. */
+let _empty = null;
+const getDb = () => _db || (_empty || (_empty = C.buildMaps([])));
+
+/* THE TRAINER'S MUTABLE IDIOM, and it is safe here for a specific reason
+   rather than by luck: it clones `n.sides` AND `n.sides[i]` before handing
+   back something writable, so a caller that passes `{...g}` and takes the
+   result never has anything it still holds written through. That is what
+   `Battle` has always relied on via `setG`, and test/merge.test.js drives
+   it — including the nested `hist` object — because the whole merge rests
+   on it and it has to keep being true as effects.js grows. */
+const mutAt = (n, i) => { n.sides = n.sides.slice(); n.sides[i] = {...n.sides[i]}; return n.sides[i]; };
+
+/* The runechant token, read out of the database. NEVER invented: it is a
+   printed card with printed text, and the whole reason runechants are
+   board auras rather than an integer is that seven pool cards ask about
+   auras generically. */
+const RUNE_ENTRY = {name: "Runechant", p: 0, code: null, q: 1};
+function runeCard(){
+  const rec = C.resolveEntry(getDb(), RUNE_ENTRY);
+  return (rec && rec.resolved) ? rec : null;
+}
+
+/* ---- prompts: queue, then drain ---------------------------------------
+   Effects QUEUE a spec on `promptQ` and never open one inline, because
+   the action has to finish resolving first. This drains the head into a
+   live sheet. `buildPrompt` returns null when there is nothing to ask —
+   an empty zone, fewer than two modes, a cost nobody can pay — so a
+   prompt that has become pointless skips itself rather than showing an
+   empty sheet and stalling a seat that cannot answer it.
+
+   The sheet is addressed to a SIDE (`spec.side`), which at a table is the
+   difference between "your call" and "waiting on them". */
+function openPrompt(g){
+  const q = g.promptQ || [];
+  if(!q.length) return q === g.promptQ && !g.prompt ? g : {...g, prompt: null, promptQ: []};
+  const [p, ...rest] = q;
+  const live = PM.buildPrompt(g, p);
+  if(!live) return openPrompt({...g, promptQ: rest});
+  return {...g, promptQ: rest, prompt: live};
+}
+
+/* THE CONTEXT, BUILT FRESH PER CALL. `cell` is the uid counter; the
+   caller writes it back. Nothing here reads a card's text: every entry is
+   an accessor, a stamp or an adapter. */
+function effectsFor(g){
+  const cell = {n: g.tokSeq || 0};
+  const stamp = (turn, cards, disc) => cards
+    .filter(c => c && !EPHEMERAL.test(c.tx || ""))
+    .map(c => disc ? {...c, _gy: turn, _disc: true} : {...c, _gy: turn});
+  const ctx = {
+    L: say,
+    act, foe, actorOf, bAct,
+    bFoe: g2 => bOf(g2, P.other(actorOf(g2))),
+    actMut: n => mutAt(n, actorOf(n)),
+    foeMut: n => mutAt(n, P.other(actorOf(n))),
+    db: getDb(),
+    gy:     (turn, ...cards) => stamp(turn, cards, false),
+    gyDisc: (turn, ...cards) => stamp(turn, cards, true),
+    /* "you've DISCARDED a card with 6 or more {p} this turn" — a discard,
+       not a graveyard census. An attack reaches the graveyard AT
+       DECLARATION, so without `_disc` any 6-power attack already played
+       satisfies the condition, and one satisfies it for itself. */
+    had6ThisTurn: g2 => (act(g2).grave || [])
+      .some(c => c._gy === g2.turn && c._disc && PR.pow6(c, bAct(g2))),
+    mkRune: (g2, count) => {
+      if(!(count > 0)) return g2;
+      const tok = runeCard();
+      if(!tok) return say(g2, "Runechant: the token is not in the card database — none created.");
+      let n = GM.addRunechants(g2, actorOf(g2), count, tok, () => ++cell.n);
+      const h = mutAt(n, actorOf(n));
+      /* "played or CREATED an aura this turn" reads both of these. */
+      h.hist = {...h.hist, made: (h.hist.made || 0) + count, aura: (h.hist.aura || 0) + count};
+      return n;
+    },
+    openPrompt,
+    tokSeq: () => ++cell.n,
+    typeAbbr: GM.typeAbbr,
+    winCheck: g2 => winCheck(g2)
+  };
+  return {fx: E.makeEffects(ctx), cell};
+}
+
+/* Run a body of card semantics and put the uid counter back on the state.
+   Every call into effects.js goes through here, so the counter cannot be
+   dropped by one caller and kept by another. */
+function withEffects(g, body){
+  const {fx, cell} = effectsFor(g);
+  const out = body(fx, {...g});
+  return out == null ? g : (out.tokSeq === cell.n ? out : {...out, tokSeq: cell.n});
+}
 
 /* ---- the match --------------------------------------------------------
    Two heroes, two builds, one seeded stream. No seat is privileged and
@@ -1136,5 +1292,7 @@ function drawTo(g, i){
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf,
-        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf};
+        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
+        /* the card semantics seam (v2.77) */
+        setDb, effectsFor, withEffects, openPrompt};
 });

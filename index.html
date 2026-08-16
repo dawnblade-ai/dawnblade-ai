@@ -1426,6 +1426,7 @@ var rngMake = DawnRNG.make, rngNext = DawnRNG.next, rngInt = DawnRNG.int,
     rngSeedFrom = DawnRNG.seedFrom, rngRestore = DawnRNG.restore;
 var parseDeck = DawnGame.parseDeck, gearDef = DawnGame.gearDef,
     gearBlockApply = DawnGame.gearBlockApply, slotOf = DawnGame.slotOf,
+    typeAbbr = DawnGame.typeAbbr,
     addRunechants = DawnGame.addRunechants, popRunechants = DawnGame.popRunechants,
     attackTargets = DawnGame.attackTargets, targetCanBeDefended = DawnGame.targetCanBeDefended,
     damageAlly = DawnGame.damageAlly, resetAllyLife = DawnGame.resetAllyLife,
@@ -1894,22 +1895,6 @@ function ChainLink({l}){
       {l.ga && <i>↻</i>}
     </div>
   );
-}
-function typeAbbr(c){
-  const t = (c.tt||"").toLowerCase();
-  if(/attack reaction/.test(t)) return "React";
-  if(/defense reaction/.test(t)) return "D-React";
-  if(/\binstant\b/.test(t)) return "Instant";
-  if(/\bally\b/.test(t)) return "Ally";
-  if(/\bitem\b/.test(t)) return "Item";
-  if(/\baura\b/.test(t)) return "Aura";
-  if(/\btrap\b/.test(t)) return "Trap";
-  if(/\bhero\b/.test(t)) return "Hero";
-  if(/weapon|off[\s-]?hand|\b[12]h\b/.test(t)) return slotOf(c).lab.toUpperCase();
-  if(/attack/.test(t) && /action/.test(t)) return "Attack";
-  if(/equipment/.test(t)) return "Block";
-  if(/action/.test(t)) return "Non-attack";
-  return "";
 }
 function CardFrame({card,className,noType,zone}){
   const t = noType ? "" : typeAbbr(card);
