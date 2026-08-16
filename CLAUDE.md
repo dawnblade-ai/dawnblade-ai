@@ -649,13 +649,33 @@ still does **not** model card EFFECTS: `runOps`/`execute`/`resolveStack`
 are in the trainer. The original rule was that loading it would put a
 second, quieter rules engine on the page beside the real one.
 
-**That reasoning still stands, and it is exactly why the two never
-meet:**
+**THAT SPLIT IS NOW BEING CLOSED ON PURPOSE (from v2.76) — see
+`HANDOFF-MERGE.md`.** It was right while it lasted and the reason it is
+ending is that the customer for "one rules engine" changed: it used to be
+the networked table, and it is now every hero of card text that would
+otherwise have to be written into whichever engine you point them at.
+
+The state until the merge lands:
 
 ```
 SOLO  play  ->  Battle     (every card effect, the regression harness)
 TABLE play  ->  judge.js   (the second seat, no card text)
 ```
+
+The target, and the order (user, 2026-08-16):
+
+```
+judge.reduce   the CR turn structure
+effects.*      the card semantics          ONE engine, both callers
+sparring.act   seat 1 when it is not a person
+
+v2.77 judge.js resolves card text · v2.78 local session, seat 1 without a
+network · v2.79 one board, Battle's rules retire
+```
+
+**`Battle` does not retire until the merged path passes the same drills.**
+It plays every card effect today and is the only proof the semantics are
+right.
 
 Nothing routes between them. The trainer is untouched by v2.49 and keeps
 the `[3,4,5]` dummy; the table gets the one thing `Battle` cannot give,
