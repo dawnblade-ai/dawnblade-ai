@@ -67,52 +67,60 @@ test("the sideboard is TOLD the seating, or boarding after the throw buys nothin
   assert.match(lo[0], /onPlay=\{seating\.first===0\}/,
     "the whole reason the sideboard follows the throw is that you board knowing whether " +
     "you are on the play — passing the seating is what makes the order mean anything");
-  assert.match(lo[0], /oppH=\{oppH\}/, "and knowing the matchup");
 });
 
-test("Loadout no longer OWNS the opponent — it is a prop", () => {
-  assert.match(CODE, /function Loadout\(\{h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay\}\)/,
-    "oppH and onPlay arrive as props; both are settled before this screen opens");
-  assert.ok(!/const \[oppH,setOppH\] = uS\(/.test(CODE),
-    "a second copy of the choice inside Loadout would let the throw and the sideboard " +
-    "disagree about who is across the table");
+/* ============================================================
+   THERE IS NO OPPONENT PICKER (v2.81)
+
+   RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
+   own hero when they join a table, or the dummy — and a seat the dummy
+   fills is always the vanilla pile. There is no hero the dummy plays as.
+
+   Five drills used to live here pinning the picker: where it sat, what
+   it offered, and that the slot around it was not a button (a <select>
+   inside one swallows its own clicks). They are replaced by the single
+   claim that matters now, which is that NONE of it is there — because a
+   picker is the sort of thing that comes back one branch at a time, and
+   every branch it creates has to be carried by the trainer, the loadout,
+   the pregame and the table.
+   ============================================================ */
+test("no opponent picker survives anywhere in the file", () => {
+  assert.ok(!/id="foesel"/.test(CODE), "the dropdown is gone");
+  assert.ok(!/\boppH\b/.test(CODE),
+    "and so is the state it wrote to — `oppH` in live code means a branch somewhere is " +
+    "still asking which kind of opponent this is");
+  assert.ok(!/setOppH/.test(CODE));
 });
 
-test("the opponent picker lives on the HERO screen, and defaults to the Dummy", () => {
-  assert.match(CODE, /function VsStrip\(\{hero,db,oppH,setOppH\}\)/,
-    "the vs strip owns the picker now");
-  assert.match(CODE, /<VsStrip hero=\{hero\} db=\{db\} oppH=\{oppH\} setOppH=\{setOppH\}\/>/,
-    "and App wires it");
-  assert.match(CODE, /const \[oppH,setOppH\]=uS\(null\)/,
-    "null is the vanilla Dummy — the one deck where nothing can be faked, so it is the " +
-    "honest default to open on");
-  /* exactly one picker in the file: two would drift */
-  const pickers = (CODE.match(/id="foesel"/g) || []).length;
-  assert.equal(pickers, 1, "exactly one opponent picker in the file");
+test("the trainer and the table seat the SAME punching bag", () => {
+  assert.match(CODE, /function VsStrip\(\{hero,db\}\)/,
+    "the vs strip takes no opponent — P2 is the dummy, always");
+  assert.match(CODE, /buildVanilla\(DUMMY_DECK, DUMMY_GEAR, db, rng, ctr/,
+    "the trainer deals the pile through engine/build.js, not a copy of its own");
+  assert.match(CODE, /heroes: \[seating\.h\.k, null\]/,
+    "and the local table seats a NULL hero key, which buildMatch reads as the dummy — " +
+    "both boards face the same opponent, so the only thing that differs between them " +
+    "is which engine is driving, which is what makes them comparable");
+  assert.match(CODE, /vanilla: \{deck: DUMMY_DECK, gear: DUMMY_GEAR/,
+    "with the pile passed in as DATA, the same way buildSide takes a deck");
 });
 
-test("the picker still offers the Dummy, a random hero and every hero", () => {
-  const sel = CODE.match(/<select id="foesel"[\s\S]{0,700}?<\/select>/);
-  assert.ok(sel, "the picker moved — re-anchor this drill");
-  assert.match(sel[0], /<option value="">The Dummy/, "the vanilla pile is still an option");
-  assert.match(sel[0], /<option value="\?">Random hero<\/option>/);
-  assert.match(sel[0], /HEROES\.map\(x=><option key=\{x\.k\} value=\{x\.k\}>/,
-    "and the roster is read from HEROES rather than listed by hand");
+test("the table button is no longer gated on choosing a hero", () => {
+  assert.ok(!/Pick a hero opponent to fight at the table/.test(CODE),
+    "the merged engine can seat the vanilla pile now, so there is nothing left to ask for");
+  assert.match(CODE, /onClick=\{startTable\}/, "and the button is unconditional");
 });
 
-test("the seat the picker sits in is not a button", () => {
-  /* A <select> inside a <button> swallows its own clicks — the dummy's
-     poke had to move to a nested button so the dropdown stays usable. */
-  /* A fixed window rather than a `</div>` terminator: the slot contains
-     nested divs, so a non-greedy match to the first closing tag stops
-     inside the wrong branch and the drill fails for a reason that has
-     nothing to do with the claim. */
-  const p2 = CODE.match(/className=\{"vslot p2 clip-sm"[\s\S]{0,1400}/);
+test("the P2 slot keeps its poke button", () => {
+  /* The slot itself was never a <button> — a <select> inside one swallows
+     its own clicks, which would have made the picker unusable while
+     looking perfectly fine. The select is gone; the taunt's nested button
+     stays, because poking the dummy is the one bit of life on that
+     screen. */
+  const p2 = CODE.match(/className="vslot p2 clip-sm empty"[\s\S]{0,1200}/);
   assert.ok(p2, "the P2 slot moved — re-anchor this drill");
-  assert.ok(!/<button className=\{"vslot p2/.test(CODE),
-    "the slot itself must not be a <button>: a <select> inside one swallows its own clicks, " +
-    "which would make the picker unusable while looking perfectly fine");
-  assert.match(p2[0], /className="dmybtn"/,
-    "the taunt keeps its own nested button so the picker stays reachable");
-  assert.match(p2[0], /id="foesel"/, "and the picker really does live in this slot");
+  assert.ok(!/<button className=\{?"vslot p2/.test(CODE), "the slot is not itself a button");
+  assert.match(p2[0], /className="dmybtn"/, "the poke survives");
+  assert.match(p2[0], /The Dummy/, "and it says who is sitting there");
 });
+

@@ -13,10 +13,11 @@ v2.77  judge.js resolves card text                       ✔
 v2.78  the table can answer a prompt                     ✔
 v2.79  a session with no network — solo IS the table     ✔
 v2.80  the five gate drills drive judge.reduce           ✔  ← the gate
+v2.81  the dummy is a punching bag, not a hero           ✔
        one board; Battle's rules retire                  ☐  ← the last step
 ```
 
-`npm test` → **1032 drills green**. `npm run fairness` → clean. All 22
+`npm test` → **1039 drills green**. `npm run fairness` → clean. All 22
 `engine/*.js` verified serving 200 at
 https://dawnblade-ai.github.io/dawnblade-ai/ .
 `node` is at `~/node/bin`, **not on PATH** —
@@ -104,10 +105,15 @@ Three things, each invisible until the drills ran on the real context:
 
 Two more things belong to the retirement step:
 
-- **The `[3,4,5]` escalation is TUNED and `sparring.act` is not.** The
-  local table's opponent is a printed-numbers policy that reads no card
-  text; it is a weaker sparring partner than the trainer's dummy, by
-  design. Retuning is a play session, not a drill.
+- **The `[3,4,5]` escalation is TUNED and `sparring.act` is not, and the
+  untuned one is STRONGER — measured, not assumed.** Against the vanilla
+  pile at the local table the dummy wins **11 of 15**; at 20 life it
+  still wins 8, so it is not the life total. A deck with no rules text
+  SUITS a policy that reads no card text: `sparring.act` plays 30 vanilla
+  attacks better than it plays a real hero's deck. This file used to say
+  the table's seat was "a weaker sparring partner by design" — that was
+  written before anyone measured it, and it is backwards. The trainer is
+  unaffected. Retuning is a play session, not a drill.
 - **`Battle`'s 97 `mode`/`bphase` references.** Whatever replaces `setG`
   must keep the invariant-judge funnel, or the guard rails go dark.
 
@@ -169,7 +175,7 @@ reading, and each is a shape that will recur.
 | decision | date | what |
 |---|---|---|
 | **Keep the `sparring.js` wall** | 2026-08-16 | It reads NO card text, and that stays. v2.78 added one call — `judge.autoAnswer`, so a seat that is ASKED can answer — which reads no card text either; the two answers that cost real money delegate to `soakPolicy`/`payPolicy`, the same pure policies the trainer uses. |
-| **Two-player is the only mode** | 2026-08-16 | Opponent picked on the hero screen; vanilla Dummy is the default. |
+| **Two-player is the only mode** | 2026-08-16 | Seat 1 is a PERSON, who picks their own hero when they join a table, or the DUMMY, which is always the vanilla pile. The opponent picker is gone (v2.81) — there is no hero the dummy plays as. |
 | **Sideboard follows the throw** | 2026-08-16 | v2.76. |
 | **Build the seat** | 2026-08-14 | Reverses the 2026-07-25 "no AI opponent" note. Both dates kept so nobody re-litigates from the old one. |
 | **`Battle` retires last** | 2026-08-16 | And only once the five semantics drills pass driving `judge.reduce`. |

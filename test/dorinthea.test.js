@@ -440,7 +440,16 @@ test("the passive is declared in the build ledger, so no hero answers undefined"
   assert.ok(B.PASSIVES.includes("weaponRefresh"),
     "a passive missing from PASSIVES reads as a silent false on a real hero's turn");
   assert.strictEqual(B.PASSIVE_TYPE.weaponRefresh, "boolean");
-  assert.match(HTML, /weaponRefresh:\s*false/, "DUMMY_BUILD must answer for it too");
+  /* THE DUMMY MUST ANSWER FOR IT TOO, and it is `build.buildVanilla` that
+     answers now — `DUMMY_BUILD` was a literal in index.html until v2.81,
+     which is why this used to be a source match. Driven rather than
+     grepped: a build that answers `undefined` reads as a silent false at
+     a rules site on a real hero's turn, which is the v2.41 shape. */
+  const d = B.buildVanilla([], [], {byName:{}}, RNG.make("led"), {n:0}).b;
+  assert.strictEqual(d.weaponRefresh, false,
+    "the punching bag has no weapon-refresh, and says so explicitly");
+  for(const k of B.PASSIVES)
+    assert.notEqual(d[k], undefined, k + " is unanswered by the vanilla build");
 });
 
 /* ---- THE LEDGER AND THE BUILD MUST AGREE -----------------------------

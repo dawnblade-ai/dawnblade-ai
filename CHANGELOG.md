@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.81 — the dummy is a punching bag, not a hero
+
+**RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their own
+hero when they join a table, or the dummy — and a seat the dummy fills is
+always the vanilla pile.** There is no hero the dummy plays as.
+
+The picker is gone: no dropdown, no `oppH`, no branch anywhere asking
+which kind of opponent this is. It was never load-bearing, and what it
+cost was a branch carried by the trainer, the loadout, the pregame, the
+scout panel, the next-swing prediction and the table — the sort of
+question that multiplies quietly and is paid for at every later step.
+
+### `build.buildVanilla` — one copy of the deal
+
+The dealing lived inside `Battle`, which made it a second description of
+a build sitting where no drill could reach it. It is in the engine now,
+and `buildMatch` reads a **null hero key** as the dummy. The seat is
+filled differently; it is not a different KIND of seat — same
+sub-stream, same place in the uid threading, same build order — which is
+what keeps `judge.reduce` unable to tell them apart.
+
+The deck list stays DATA and is passed in, exactly as `buildSide` takes
+`d` rather than looking it up; `hp` and `int` are the caller's too, since
+42 life is a training prop's tuning and not a rule.
+
+**So both boards now face the same opponent**, and the only thing that
+differs between them is which engine is driving — which is precisely what
+makes them comparable while `Battle` is still the regression harness.
+
+### The drills that had to change, and what replaced them
+
+Seven went red, which is the guard working. Five pinned the picker (where
+it sat, what it offered, that the slot around it was not a button — a
+`<select>` inside one swallows its own clicks). They are replaced by the
+claim that matters now: **none of it is there**, asserted on `oppH`
+appearing anywhere in live code, because a picker comes back one branch
+at a time.
+
+Two were retargeted rather than deleted, and both got *stronger*:
+
+- the passive ledger read `DUMMY_BUILD`'s literal out of `index.html`; it
+  now drives `buildVanilla` and asserts every entry in `PASSIVES` is
+  answered rather than `undefined`;
+- the next-swing prediction was gated on there being no real hero (v2.65,
+  after the board announced "NEXT SWING 3" while a hero swung for 7).
+  With the seat always vanilla there is nothing to gate on, so the honest
+  claim is the stronger one: **the number displayed is the same
+  expression `foeVanilla` swings.** A prediction and a swing that compute
+  separately is how they drift.
+
+### Driven, not assumed
+
+All 15 heroes play a full game against the vanilla dummy through the
+merged engine: every game ends, **zero invariant failures, zero
+refusals**. Verified in the browser at 375x812 on both paths — the
+trainer opens on the scripted `INCOMING 3`, the table seats The Dummy at
+42 with its four Ironrot pieces and 26 left in deck.
+
+**One honest finding, and it is a tuning matter rather than a bug:** at
+the local table the dummy wins 11 of 15. At 20 life it still wins 8, so
+it is not the life total — a deck with no rules text suits a policy that
+reads no card text, and `sparring.act` plays 30 vanilla attacks better
+than it plays a real hero's deck. The TRAINER is unaffected and still
+runs the tuned `[3,4,5]` escalation. Retuning the table's seat is a play
+session, not a drill.
+
+1039 drills green. `npm run fairness` clean.
+
+---
+
 ## v2.80 — the gate `Battle` retires behind
 
 **`Battle` does not retire until the merged path passes the same drills.**

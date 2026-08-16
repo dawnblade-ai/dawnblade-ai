@@ -1138,15 +1138,35 @@ until they were sabotaged: a fix shipped with **no drill at all**, another
 grepped for a variable that survives deleting the gate it lives in, and a
 third keyword-matched a log string. **Pin the GATE, not the identifier.**
 
-### The solo mirror (v2.63)
+### The solo mirror (v2.63) — RETIRED in v2.81
 
-Set the opponent dropdown on the loadout screen to the same hero and seat 1
-plays real cards. **The actor stays 0 for the swing** — the block path
-reads `act(s).blockH`, so flipping it would ask the attacker to block its
-own attack; the actor is borrowed only around `runOps`. Only the
-opponent's **unconditional** effects fire, because `fx.conds` is
-`execute`'s to evaluate and copying that would be a second copy of the
-semantics.
+**RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
+own hero when they join a table, or the dummy — and a seat the dummy
+fills is ALWAYS the vanilla pile.** There is no hero the dummy plays as.
+The picker is gone; so is `oppH`, and a drill fails if the name appears
+in live code, because a picker comes back one branch at a time.
+
+Kept because the mechanics are still true of `foePlay`, which is still in
+`Battle` and now unreachable: the actor stayed 0 for the swing — the
+block path reads `act(s).blockH`, so flipping it would ask the attacker
+to block its own attack, and the actor was borrowed only around `runOps`.
+Only the opponent's **unconditional** effects fired, because `fx.conds`
+is `execute`'s to evaluate and copying that would be a second copy of the
+semantics. **Those closures retire with the rest of `Battle`'s rules.**
+
+**A SEAT THE DUMMY FILLS IS BUILT BY `build.buildVanilla`** — one copy of
+the deal, reachable by a drill, taking the deck list as DATA. It used to
+be written out inside `Battle`. `buildMatch` reads a **null hero key** as
+the dummy, so the trainer and the local table face the same opponent and
+the only thing that differs between them is which engine is driving —
+which is what makes them comparable while `Battle` is the harness.
+
+**The table's dummy is UNTUNED and currently wins 11 of 15.** At 20 life
+it still wins 8, so it is not the life total: a deck with no rules text
+suits a policy that reads no card text, and `sparring.act` plays 30
+vanilla attacks better than it plays a real hero's deck. The TRAINER is
+unaffected — it runs the tuned `[3,4,5]` escalation. Retuning is a play
+session, not a drill.
 
 `window.THROW_MODE = "coin"` is a testing affordance. `rps.js` and the
 throw UI are untouched; set it to `"rps"` to restore the throw for launch.

@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.80"; /* v2.80 — the retirement gate is PASSED: the five drills that prove the card semantics (kayo, dorinthea, frostbite, arcane, paytoll) now drive judge.reduce instead of a hand-rolled effects context, so what they prove is the path a player takes. Battle's rules are unblocked to retire, not retired. v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.81"; /* v2.81 — the dummy is a punching bag, not a hero: the opponent picker is gone and a seat the dummy fills is always the vanilla 30-card Generic pile. `build.buildVanilla` is the one copy of that deal, so the trainer and the local table face the same opponent and the only thing that differs between them is which engine is driving. v2.80 — the retirement gate is PASSED: the five drills that prove the card semantics (kayo, dorinthea, frostbite, arcane, paytoll) now drive judge.reduce instead of a hand-rolled effects context, so what they prove is the path a player takes. Battle's rules are unblocked to retire, not retired. v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1458,7 +1458,8 @@ var advPitchPotential = DawnAdvisor.advPitchPotential, advCardOut = DawnAdvisor.
     advise = DawnAdvisor.advise;
 var ARMOR_Z = DawnBuild.ARMOR_Z, HAND_Z = DawnBuild.HAND_Z, gearSlots = DawnBuild.gearSlots,
     applyPick = DawnBuild.applyPick, defaultPicks = DawnBuild.defaultPicks,
-    buildSide = DawnBuild.buildSide, buildSideDefault = DawnBuild.buildSideDefault;
+    buildSide = DawnBuild.buildSide, buildSideDefault = DawnBuild.buildSideDefault,
+    buildVanilla = DawnBuild.buildVanilla;
 </script>
 <script type="text/babel" data-presets="env,react">
 const {useState,useEffect,useMemo,useCallback} = React;
@@ -1640,16 +1641,25 @@ function HeroGrid({onPick,best,db,selected}){
   );
 }
 const TAUNTS=["hit me.","still undefeated.","creaks menacingly.","zero fear detected.","42 and holding.","your move, hero."];
-/* THE P2 SLOT IS A CHOICE NOW (v2.76). The opponent dropdown used to live
-   on the loadout screen, which put it AFTER the point where it matters:
-   you pick who you are facing, and only then does sideboarding mean
-   anything. Moving it up here also makes the vs strip say something true —
-   it announced "The Dummy" whoever you had chosen.
+/* THE P2 SLOT IS THE DUMMY, ALWAYS (v2.81).
 
-   The vanilla Dummy stays the DEFAULT (`oppH == null`). It is the one deck
-   in the project where nothing can be faked — 30 Generic attack actions
-   with no rules text — so it is the honest thing to open on. */
-function VsStrip({hero,db,oppH,setOppH}){
+   RULING (user, 2026-08-16): seat 1 is either a PERSON — who joins
+   through "Find an opponent" and picks their own hero there, like anyone
+   else — or the dummy, and a seat the dummy fills is always the vanilla
+   pile. There is no hero the dummy plays as.
+
+   The dropdown that used to sit here (v2.76, and on the loadout screen
+   before that) is gone. It was never load-bearing, and what it cost was
+   a branch in the trainer, the loadout, the pregame and the table, each
+   of which had to keep answering "which kind of opponent is this" — the
+   sort of question that multiplies quietly and is paid for at every
+   later step.
+
+   What is left is the one deck in the project where nothing can be
+   faked: 30 Generic attack actions with no rules text, blocking with
+   printed defence and swinging with printed power. A punching bag to
+   practise against, which is what the trainer is for. */
+function VsStrip({hero,db}){
   const [t,setT]=useState(()=>Math.floor(Math.random()*TAUNTS.length));
   const [bonk,setBonk]=useState(0);
   return (
@@ -1663,31 +1673,17 @@ function VsStrip({hero,db,oppH,setOppH}){
           : <span style={{fontSize:11,textAlign:"center"}}>choose your fighter</span>}
       </div>
       <div className="vsmid">VS</div>
-      <div className={"vslot p2 clip-sm"+(oppH?"":" empty")}>
+      <div className="vslot p2 clip-sm empty">
         <span className="ptag" style={{color:"var(--b)"}}>P2</span>
-        {oppH
-          ? <><div className="port clip-sm"><HeroArt h={oppH} db={db} key={db.status}/></div>
-              <span className="vname">{oppH.n.split(",")[0]}</span></>
-          : <><button className="dmybtn" onClick={()=>{setBonk(b=>b+1);setT(x=>(x+1)%TAUNTS.length);}}
-                aria-label="poke the dummy">
-                <div className="dmy" key={bonk} data-bonk={bonk>0?"1":undefined}>
-                  <div className="dhead"><span>✕</span><span>✕</span></div>
-                  <div className="dbody"/><div className="dpost"/>
-                </div>
-              </button>
-              <span className="vname">The Dummy <b className="mono" style={{color:"var(--r)"}}>42</b></span>
-              <span className="taunt">{TAUNTS[t]}</span></>}
-        <select id="foesel" className="foesel2" value={oppH ? oppH.k : ""}
-          onChange={e=>{
-            const v = e.target.value;
-            setOppH(v==="" ? null
-              : v==="?" ? HEROES[Math.floor(Math.random()*HEROES.length)]
-              : HEROES.find(x=>x.k===v) || null);
-          }}>
-          <option value="">The Dummy — 42 life, vanilla pile</option>
-          <option value="?">Random hero</option>
-          {HEROES.map(x=><option key={x.k} value={x.k}>{x.n} — {x.cls}</option>)}
-        </select>
+        <button className="dmybtn" onClick={()=>{setBonk(b=>b+1);setT(x=>(x+1)%TAUNTS.length);}}
+          aria-label="poke the dummy">
+          <div className="dmy" key={bonk} data-bonk={bonk>0?"1":undefined}>
+            <div className="dhead"><span>✕</span><span>✕</span></div>
+            <div className="dbody"/><div className="dpost"/>
+          </div>
+        </button>
+        <span className="vname">The Dummy <b className="mono" style={{color:"var(--r)"}}>42</b></span>
+        <span className="taunt">{TAUNTS[t]}</span>
       </div>
     </div>
   );
@@ -2274,26 +2270,19 @@ function ZoneStrip({label,none,hand,arsenal,pitch}){
    because no card was misread: the QUANTITY was illegal.
    ============================================================ */
 
-/* THE DUMMY, IN BUILD SHAPE (v2.41). Seat 1 is now read through the same
-   `built.both[i]` ledger whichever occupies it, so the dummy has to answer
-   the same questions a hero's build answers — and its answers are all
-   "no". Written out rather than defaulted so that a passive added to
-   buildSide and forgotten here shows up as `undefined` at the call site
+/* `DUMMY_BUILD` LIVED HERE UNTIL v2.81 and is now `build.buildVanilla` —
+   one copy, reachable by a drill, holding the same discipline it always
+   did: every passive written out rather than defaulted, so a passive
+   added to `buildSide` and forgotten reads `undefined` at the call site
    instead of silently reading as false on a real hero's turn. */
-const DUMMY_BUILD = (deck, gear) => ({
-  deck, gear, hasBoost:false, read:"", heroPow:null, HPOW:null, HZOOM:null, heroRec:{},
-  arsenalInstant:false, iceFrostbite:false, viseraiPassive:false, wateryGrave:false,
-  lyathBoo:false, atkPowOffChain:0, mightOnFirst6Discard:false, weaponRefresh:false,
-  startItem:null, hp:42, int:DUMMY_INT, _dummy:true
-});
 
-function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
+function Battle({h,cfg,first,db,onExit,onRecord}){
   const foeFirst = first === 1;
   /* Every log line that used to say "the dummy" now says who is actually
      across the table. One name, read from the seat, so a rename cannot
      drift between the twenty-odd strings that mention it. */
-  const foeName = oppH ? oppH.n : "the dummy";
-  const FoeName = oppH ? oppH.n : "The dummy";
+  const foeName = "the dummy";
+  const FoeName = "The dummy";
   /* tokens are minted during play, so they need uids the loadout never issued */
   const tokRef = uR(0);
   const tokSeq = () => ++tokRef.current;
@@ -2334,47 +2323,25 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       _token:true
     } : null;
 
-    /* SEAT 1 IS A HERO NOW, when one was chosen (v2.41).
+    /* SEAT 1 IS THE PUNCHING BAG (v2.81, replacing v2.41's chosen hero).
 
-       ROADMAP-OPPONENT.md Phase 1. The roadmap's standing warning — "do
-       not give it a real deck until the opponent can actually resolve the
-       cards in that deck" — is about *playing* cards, and this seat still
-       plays none. It blocks, and blocking with printed defence works for
-       any card in the game without the parser reading a word of it. So a
-       real hero here is strictly more honest than the dummy: real life
-       total, real intellect, real equipment, real defence values.
+       A seat the dummy fills is always the vanilla pile — 30 Generic
+       attack actions with no rules text — and the trainer is the only
+       place the dummy sits. A person takes seat 1 by joining a table,
+       where they pick their own hero like anyone else.
 
-       The dummy stays selectable and is still the default. It is the
-       regression harness for every phase above this one, and its vanilla
-       pile is the one deck where nothing at all can be faked. */
-    let s1, dGear = null, dDeck = null;
-    if(oppH){
-      /* THE OPPONENT EQUIPS A LEGAL LOADOUT, not its whole gear pool.
-         Passing `{}` here handed Azalea all EIGHT printed pieces — two
-         helms, a spare weapon, the lot — where the slot rules allow about
-         five. That is not cosmetic: `dummyDefence` raises one piece per
-         attack and `chainBlocked` only stops a piece re-blocking the SAME
-         chain, so every extra piece is another free block later in the
-         turn. Strictly stronger than printed, which is the direction that
-         steals games (see `npm run fairness`).
-
-         `buildSideDefault` is that one set of slot rules: it equips a hero
-         to a legal default loadout and builds it, with no seat argument
-         and no branch for "the opponent". The loadout screen reaches the
-         same `defaultPicks` for your own iron. */
-      const _s1 = buildSideDefault(oppH, PARSED[oppH.k], db, rng, ctr);
-      rng = _s1.rng;
-      s1 = _s1.b;
-    } else {
-      dGear = DUMMY_GEAR.map(nm=>({...resolveEntry(db,{name:nm,p:0,code:null,q:1}),uid:++ctr.n,used:false}));
-      const _dd = rngShuffle(rng, DUMMY_DECK.reduce((acc,[nm,p,q])=>{
-        for(let i=0;i<q;i++) acc.push({...resolveEntry(db,{name:nm,p,code:null,q:1}),uid:++ctr.n});
-        return acc;
-      },[]).filter(c=>c.resolved));
-      rng = _dd.rng;
-      dDeck = _dd.arr;
-      s1 = DUMMY_BUILD(dDeck, dGear);
-    }
+       THE DEALING MOVED TO `engine/build.js`. It was written out here,
+       which made it a second description of a build sitting where no
+       drill could reach it — the shape the no-mirror rule exists to
+       prevent. `buildVanilla` is the one copy, it takes the pile as
+       DATA (the list still lives in the data script beside the hero
+       decks), and it writes every passive out rather than defaulting
+       them, so a passive added to `buildSide` and forgotten reads
+       `undefined` at the call site instead of a silent false. */
+    const _s1 = buildVanilla(DUMMY_DECK, DUMMY_GEAR, db, rng, ctr,
+                             {hp:42, int:DUMMY_INT});
+    rng = _s1.rng;
+    const s1 = _s1.b, dDeck = s1.deck, dGear = s1.gear;
 
     /* `myHP`/`myInt` keep their names: they are seat 0's, they are read at
        a dozen call sites, and renaming them is a separate pass from
@@ -2401,7 +2368,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
       myHP:_s0.b.hp, myInt:_s0.b.int, ..._rune,
       /* the stream AFTER both opening shuffles — Battle continues it */
       rng};
-  },[h,oppH,db]);
+  },[h,db]);
 
   /* THE HERO PASSIVES ARE ACTOR-RELATIVE, NOT SEAT-0'S (v2.41).
 
@@ -2443,7 +2410,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
    const initial = {
     turn:1, actor:0, rng:built.rng, mode:"act", bphase:"defend", pending:null, incoming:0,
     log:[foeFirst ? "It won the throw and took the first turn. Iron up." : `${FoeName} stirs. ${built.both[1].hp} to carve away — go.`],
-    feed:["Tonight in the hall: "+h.n+" versus "+(oppH?oppH.n:"the Dummy")+".", built.read,
+    feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read,
       foeFirst ? `${FoeName} won the throw and elected to swing first.` : "You won the seating and took the first turn.",
       foeFirst ? "It won the throw and took the first turn. Iron up." : `${FoeName} stirs. ${built.both[1].hp} to carve away — go.`],
     /* BOTH SEATS ARE WHOLE HEROES NOW. Every zone, every counter, every
@@ -2463,7 +2430,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
          where DUMMY_INT stops being a number the trainer knows and starts
          being a property of whoever is sitting there. newTurn's refill
          reads the same field — see the landmine note there. */
-      id:1, name: oppH ? oppH.n : "The Dummy",
+      id:1, name:"The Dummy",
       hp:built.both[1].hp, maxHp:built.both[1].hp, int:built.both[1].int,
       deck:built.both[1].deck.slice(built.both[1].int),
       hand:built.both[1].deck.slice(0,built.both[1].int),
@@ -3880,10 +3847,7 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
   function foeStep(s){
     if(s.over) return s;
     if(opp(s).ap <= 0) return foeWindowOrEnd(s, "no action points left");
-    if(!oppH) return foeVanilla(s);
-    const pick = foePick(s);
-    if(!pick) return foeWindowOrEnd(s, "nothing it can pay for");
-    return foePlay(s, pick);
+    return foeVanilla(s);
   }
   /* THE VANILLA DUMMY KEEPS THE SCRIPTED ESCALATION — its whole job is to
      be the one deck where nothing can be faked, and the [3,4,5] curve is
@@ -4436,21 +4400,21 @@ function Battle({h,oppH,cfg,first,db,onExit,onRecord}){
               <div className="heror">
                 <div className="wslot clip-sm"><span className="wempty">weapon —</span></div>
                 <div className="heromid clip-sm">
-                  {oppH
-                    ? <div className="hport2"><HeroArt h={oppH} db={db}/></div>
-                    : <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>}
+                  <div className="dhead" style={{width:36}}><span>✕</span><span>✕</span></div>
                   <span className="hname">{opp(g).name}</span>
                   <b className="hlife2">{Math.max(0,opp(g).hp)}</b>
-                  {/* THE PREDICTION BELONGS TO THE SCRIPTED DUMMY ONLY (v2.65).
-                      Read unconditionally, the escalation table announced
-                      "NEXT SWING 3" while a real hero held real cards and
-                      swung Buckwild for 7. That is the "displayed total is
-                      wrong" category — the player TRUSTS this number, and the
-                      advisor's race maths sits beside it. A real opponent's
-                      next card is not knowable, so say nothing rather than
-                      something false. */}
+                  {/* THE PREDICTION IS HONEST BECAUSE THE SWING IS SCRIPTED.
+                      It reads the same [3,4,5] escalation `foeVanilla`
+                      swings, so it cannot announce a number the dummy will
+                      not throw. While a hero could sit here (v2.41-v2.80)
+                      this had to be suppressed for them: read
+                      unconditionally it announced "NEXT SWING 3" against a
+                      real hand that swung Buckwild for 7, which is the
+                      "displayed total is wrong" category — the player TRUSTS
+                      this number, and the advisor's race maths sits beside
+                      it. With the seat always vanilla the branch is gone
+                      and the number is always the one that lands. */}
                   <span className="hlbl">{g.mode==="block" ? "INCOMING "+g.incoming
-                    : oppH ? "holds "+(opp(g).hand||[]).length+" in hand"
                     : "next swing "+([3,4,5][(g.turn-1)%3]+(g.turn>6?1:0))}</span>
                   {g.hitSeq>0 && <span className="dmgpop" key={g.hitSeq}>−{g.lastDmg}</span>}
                 </div>
@@ -4871,16 +4835,18 @@ function Trophies(){
    actor-versus-perspective slip that `you()` meaning seat 0 caused all
    through the migration: a seat INDEX is not an answer to a question
    about THIS client. Named so it cannot be read the other way. */
-/* THE SIDEBOARD, AND IT NOW RUNS AFTER THE THROW (v2.76). `oppH` and
-   `first` arrive as PROPS because both are settled before this screen
-   opens: who you are facing was chosen on the hero screen, and whether you
-   are on the play was decided by the throw. That is the whole point of
+/* THE SIDEBOARD, AND IT RUNS AFTER THE THROW (v2.76). `first` arrives as
+   a PROP because it is settled before this screen opens: the throw
+   decided whether you are on the play. That is the whole point of
    boarding here — `engine/lobby.js` has ruled this order since it was
    written (`STEPS = [... "throw", "seat", "board", "ready"]`, "you
    sideboard knowing the matchup AND knowing whether you are on the play"),
    and the solo flow was the only thing in the project still doing it
-   backwards. */
-function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
+   backwards.
+
+   `oppH` was the other prop and is gone (v2.81): in the trainer the
+   opponent is the vanilla dummy, always. */
+function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
   const d = PARSED[h.k];
   const saSet = (d.hero.code||"").slice(0,3) || null;
   const gearR = uM(()=>d.gear.map((e,i)=>{ const c=resolveEntry(db,e,saSet); return {i, c, s:slotOf(c)}; }),[h,db]);
@@ -4899,7 +4865,6 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
      (ROADMAP-OPPONENT.md). Deliberately NOT saved per hero the way the
      loadout is — the opponent is a property of the match, not of your
      deck, and a remembered one would silently change a later game. */
-  /* oppH is a PROP now (v2.76) — chosen on the hero screen, before the throw. */
   const item = i => gearR.find(x=>x.i===i);
   const hands = sel.filter(i=>["1h","2h","off"].includes(item(i).s.z)).reduce((a,i)=>a+item(i).s.h,0);
   const armorN = sel.filter(i=>ARMOR_Z.includes(item(i).s.z)||item(i).s.z==="misc").length;
@@ -4912,19 +4877,23 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
     if(cur<q && size>40) return {...c,[ei]:cur+1};
     const n={...c}; delete n[ei]; return n;
   });
-  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, oppH}); };
+  const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts}); };
   /* THE MERGED ENGINE, WITHOUT A SECOND PHONE (v2.79). The same board a
      networked table renders, driven by `judge.reduce` — the one rules
-     engine — with `sparring.act` in seat 1. It needs a real HERO across
-     the table: the vanilla Dummy is 30 Generic attacks and a scripted
-     escalation, which is the trainer's own prop and has no build to sit
-     in a seat with.
+     engine — with `sparring.act` in seat 1.
+
+     IT SEATS THE SAME PUNCHING BAG (v2.81). It used to need a real HERO
+     across the table, because the dealing for the vanilla pile lived
+     inside `Battle` and there was no build to put in a seat. There is
+     one now — `build.buildVanilla` — so the two boards face the same
+     opponent and the only difference left between them is which engine
+     is driving.
 
      It is a SECOND button rather than a replacement, deliberately.
      `Battle` is the regression harness and does not retire until the
      merged path passes the same drills, and the [3,4,5] escalation it
-     runs is TUNED where a real hand of cards is not. */
-  const startTable = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, oppH, table:true}); };
+     runs is TUNED where `sparring.act` is not. */
+  const startTable = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, table:true}); };
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -4945,13 +4914,6 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
   const p2h = selHand[0] && selHand[0].s.z==="2h";
   const hcv = resolveHero(db, d.hero);
   const hHP = hcv && hcv.hp!=null ? hcv.hp : 20;
-  /* Read off the opponent's own hero record, the same way yours is — so
-     the scout panel shows the life total the game will actually deal. */
-  const oppHP = uM(()=>{
-    if(!oppH) return 42;
-    const oc = resolveHero(db, PARSED[oppH.k].hero);
-    return oc && oc.hp!=null ? oc.hp : 20;
-  },[oppH,db]);
   const prevTile = x => (
     <button key={x.i} className="g clip-sm" style={{width:"100%",maxWidth:118}} onClick={()=>setSel(s=>applyPick(gearR,s,x.i))}>
       <CardFrame card={x.c} className="sm"/>
@@ -4972,27 +4934,20 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
             <div className="vfillsp"/>
             <div className="featwrap">
               <div className="featfoe">
-                {oppH
-                  ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={oppH} db={db}/></div>
-                      <b>{oppHP}</b><span>{oppH.n.split(",")[0]} · Life</span></>
-                  : <><div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
-                      <b>{"42"}</b><span>The Dummy · Life</span></>}
+                <div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
+                <b>{"42"}</b><span>The Dummy · Life</span>
               </div>
               <span className="linkchip">Opponent hero</span>
             </div>
-            {/* THE PICK BELONGS HERE, NOT AT THE THROW. You scout the
-                opponent's hero and THEN you sideboard — putting it after
-                the loadout would show you the matchup too late to use it,
-                which is the one thing this panel exists to prevent. */}
-            {/* THE MATCHUP IS SETTLED BY NOW and this panel only reports it —
-                the picker moved to the hero screen in v2.76. What is new
-                here is the SEATING: you are boarding against a known hero
-                knowing whether you are on the play, which is the reason
-                the CR (and lobby.js) put the sideboard after the throw. */}
+            {/* THE MATCHUP IS SETTLED BY NOW and this panel only reports
+                it. In the trainer it is always the dummy (v2.81); at a
+                table it is whoever sat down. What this panel is really
+                for is the SEATING: you board knowing whether you are on
+                the play, which is the reason the CR (and lobby.js) put
+                the sideboard after the throw. */}
             <div className="foepick"><label>Across the table</label>
               <div className="foefixed mono">
                 {netFoe ? netFoe.n+" — "+netFoe.cls
-                        : oppH ? oppH.n+" — "+oppH.cls
                         : "The Dummy — 42 life, vanilla pile"}</div>
               <div className="seatline mono">{(netFoe ? netOnPlay : onPlay)
                 ? "You are ON THE PLAY — first turn, and a card of tempo for it."
@@ -5003,8 +4958,6 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
               ? `${netFoe.n.split(",")[0]} is a person, sitting somewhere else, holding a real hand. `
                 + (netOnPlay ? "You are on the play — you take the first turn and spend a card of tempo for it."
                              : "You are on the draw — they swing first, and you keep the extra card.")
-              : oppH
-              ? `${oppH.n.split(",")[0]} brings a real deck, real equipment and a real life total — blocks with printed defence, and takes a real turn: an action point it spends, a card played from hand, and an end phase of its own. It attacks, so a turn where its hand holds only non-attacks is a turn it passes.`
               : "The Dummy swings the scripted escalation rather than a card from hand — the one deck where nothing can be faked. Real sideboarding shows you only the enemy hero; their iron and their habits you learn in the pit."}</p>
           </div>
         </div>
@@ -5071,14 +5024,9 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
       </div>
       <div className="actbar">
         <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
-        {oppH
-          ? <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
-              Fight at the table — one engine
-            </button>
-          : <p className="note" style={{textAlign:"center",marginTop:6}}>
-              Pick a hero opponent to fight at the table — the merged engine seats two
-              heroes, and the vanilla Dummy is the trainer's own prop.
-            </p>}
+        <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
+          Fight at the table — one engine
+        </button>
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
@@ -5098,14 +5046,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
 const RPS_GLYPH = {rock:"✊", paper:"✋", scissors:"✌"};
 const RPS_LOSS = {rock:"Paper smothers it.", paper:"Scissors cut through.", scissors:"Rock shatters them."};
 
-function Pregame({h, oppH, seed, onSeated, onBack}){
+function Pregame({h, seed, onSeated, onBack}){
   const [rounds,setRounds] = uS([]);
   const [live,setLive] = uS(null);
   const [phase,setPhase] = uS("throw");
   /* Who is across the table was decided on the HERO SCREEN (v2.76), which
      is where it belongs now: you pick the matchup, throw for seating, and
      only THEN sideboard — knowing both. This screen only reads it. */
-  const foeLabel = oppH ? oppH.n.split(",")[0] : "The Dummy";
+  const foeLabel = "The Dummy";
   const [log,setLog] = uS(["Two hands over the table. Winner calls the seating."]);
   const timer = uR(null);
   const say = m => setLog(l=>[...l,m].slice(-7));
@@ -5168,7 +5116,7 @@ function Pregame({h, oppH, seed, onSeated, onBack}){
     timer.current = setTimeout(()=>{
       say(`${foeLabel} takes the first turn — it always does. Brace up.`);
       setPhase("done");
-      timer.current = setTimeout(()=>onSeated(1, oppH), 900);
+      timer.current = setTimeout(()=>onSeated(1), 900);
     }, 500);
   },[phase,winner]);
 
@@ -5176,7 +5124,7 @@ function Pregame({h, oppH, seed, onSeated, onBack}){
     const first = rpsSeat(0, choice);
     say(first===0 ? "You take the first turn. Initiative is yours." : "You hand it the first turn — you keep the extra card.");
     setPhase("done");
-    timer.current = setTimeout(()=>onSeated(first, oppH), 800);
+    timer.current = setTimeout(()=>onSeated(first), 800);
   };
 
   const shaking = phase==="shaking";
@@ -6202,11 +6150,6 @@ function App(){
      because they are two different boards and only one may be up. */
   const [localTable,setLocalTable]=uS(null);
   const [loHero,setLoHero]=uS(null);
-  /* WHO IS ACROSS THE TABLE, chosen on the hero screen (v2.76). `null` is
-     the vanilla Dummy, which stays the default. It lives up here rather
-     than inside Loadout because the THROW now happens before the
-     sideboard, and the throw needs to know the matchup. */
-  const [oppH,setOppH]=uS(null);
   /* seating is decided between the loadout and the first draw */
   const [seating,setSeating]=uS(null);
   /* the table: null -> "find" (the code screen) -> {table,host,code} (seated) */
@@ -6229,7 +6172,7 @@ function App(){
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:Date.now()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
-        <VsStrip hero={hero} db={db} oppH={oppH} setOppH={setOppH}/>
+        <VsStrip hero={hero} db={db}/>
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}
       </>}
@@ -6259,37 +6202,47 @@ function App(){
           knowing the matchup and knowing whether you are on the play. The
           solo flow ran Loadout → Pregame, which showed you the seating
           only after every choice that could use it. Reversing it is why
-          `Loadout` now takes `oppH` and `onPlay` as props. */}
-      {loHero && !fighting && <Pregame h={loHero} oppH={oppH} seed={loHero.seed}
+          `Loadout` now takes `onPlay` as a prop. */}
+      {loHero && !fighting && <Pregame h={loHero} seed={loHero.seed}
         onBack={()=>setLoHero(null)}
         onSeated={first=>{setSeating({h:loHero, first, seed:loHero.seed}); setLoHero(null);}}/>}
-      {seating && !fighting && <Loadout h={seating.h} db={db} oppH={oppH} onPlay={seating.first===0}
+      {seating && !fighting && <Loadout h={seating.h} db={db} onPlay={seating.first===0}
         onBack={()=>{setLoHero(seating.h); setSeating(null);}}
         onStart={cfg=>{
           /* ---- ONE ENGINE, NO NETWORK (v2.79) -----------------------
              The same screen a networked table renders and the same
              reducer behind it; the only difference is that seat 1 is a
              policy in this phone rather than a person in another. The
-             solo trainer is untouched and is still the default. */
-          if(cfg.table && oppH){
+             solo trainer is untouched and is still the default.
+
+             SEAT 1 IS THE SAME PUNCHING BAG THE TRAINER FACES (v2.81) —
+             a NULL hero key, which `buildMatch` reads as the dummy and
+             deals the vanilla pile for. It used to require a chosen hero
+             because the dealing lived inside `Battle` and there was no
+             build to seat; now both boards face the same opponent, and
+             the only thing that differs between them is which engine is
+             driving. That is exactly what makes them comparable. */
+          if(cfg.table){
             try {
               const m = DawnBuild.buildMatch({
-                heroes: [seating.h.k, oppH.k],
+                heroes: [seating.h.k, null],
                 boards: [{gearIdx: cfg.gearIdx, cuts: cfg.cuts}, {}],
                 first: seating.first, seed: String(seating.seed)
               }, {db, heroes: Object.fromEntries(HEROES.map(x=>[x.k,x])),
-                  decks: Object.fromEntries(HEROES.map(x=>[x.k,PARSED[x.k]]))});
+                  decks: Object.fromEntries(HEROES.map(x=>[x.k,PARSED[x.k]])),
+                  vanilla: {deck: DUMMY_DECK, gear: DUMMY_GEAR, hp: 42,
+                            int: DUMMY_INT, name: "The Dummy"}});
               setLocalTable({...m, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
                 heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
               setSeating(null);
               return;
             } catch(e){ /* fall through to the trainer rather than dead-ending */ }
           }
-          setFighting({h:seating.h, cfg:{...cfg, oppH, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
+          setFighting({h:seating.h, cfg:{...cfg, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
       {localTable && <TableBoard match={localTable} mySeat={0} host={true} code="solo" db={db}
         table={null} netRef={{current:null}} netQ={{current:[]}} local={true}
         onExit={()=>setLocalTable(null)}/>}
-      {fighting && <Battle h={fighting.h} oppH={fighting.cfg.oppH} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
+      {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && idle && <Judge/>}
       {tab==="trophies" && idle && <Trophies/>}
       {idle && <nav className="tabs">

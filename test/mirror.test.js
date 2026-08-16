@@ -211,13 +211,24 @@ test("promptConfirm pays out to the prompt's SIDE, not always to seat 0", () => 
     "the payment must not be hardcoded to seat 0");
 });
 
-test("the next-swing prediction is gated on there being no real hero", () => {
-  const body = slice('{g.mode==="block" ? "INCOMING "', "</span>");
-  /* THE BUG: the [3,4,5] escalation table was read unconditionally, so the
-     board announced "NEXT SWING 3" while a real hero swung for 7. A real
-     opponent's next card is not knowable — say nothing rather than a lie. */
-  assert.ok(/oppH/.test(body),
-    "the scripted escalation must not be shown for a hero that plays real cards");
+test("the next-swing prediction says what the dummy will actually swing", () => {
+  /* THE BUG (v2.65): the [3,4,5] escalation table was read
+     unconditionally, so the board announced "NEXT SWING 3" while a real
+     hero in seat 1 swung for 7 — the "displayed total is wrong" category,
+     where the player TRUSTS the number and the advisor's race maths sits
+     beside it. The gate that fixed it read `oppH`.
+
+     WITH THE SEAT ALWAYS VANILLA (v2.81) there is no hero to suppress it
+     for, so the gate is gone and the honest claim is the stronger one:
+     the number displayed is the SAME expression `foeVanilla` swings. A
+     prediction and a swing that compute separately is how they drift. */
+  const shown = slice('{g.mode==="block" ? "INCOMING "', "</span>");
+  const swung = slice("  function foeVanilla(s){", "  function foeWindowOrEnd");
+  const curve = /\[3,4,5\]\[\(?\w+\.turn-1\)%3\]\s*\+\s*\(\w+\.turn>6\?1:0\)/;
+  assert.match(shown, curve, "the board shows the escalation");
+  assert.match(swung, curve, "and the dummy swings the same one");
+  assert.ok(!/oppH/.test(shown),
+    "nothing left to gate on — a seat the dummy fills is always the vanilla pile");
 });
 
 /* ===================================================================
