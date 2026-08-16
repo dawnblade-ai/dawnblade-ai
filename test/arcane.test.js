@@ -37,64 +37,40 @@ const P = require("../engine/parser.js");
 const C = require("../engine/cards.js");
 const GM = require("../engine/game.js");
 const PR = require("../engine/prompts.js");
-const RNG = require("../engine/rng.js");
 const E = require("../engine/effects.js");
+const H = require("./helpers/judged.js");
+const J = H.J;
 const { loadData } = require("./helpers/extract.js");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
-const skip = !fs.existsSync(CACHE) && "no cached card database";
-
-let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
-const gear = (nm, uid) => ({...C.resolveEntry(DB(), {name: nm, p: 0, code: null, q: 1}), uid});
-
-function ctx(){
-  return {
-    L: (s, m) => ({...s, log: [m, ...(s.log || [])], feed: [...(s.feed || []), m]}),
-    act: s => s.sides[s.actor || 0],
-    actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    actorOf: s => s.actor || 0,
-    bAct: () => ({runeDmg: 1}), bFoe: () => ({runeDmg: 1}), built: {runeDmg: 1},
-    db: DB(), dummyDefence: s => ({n: s, note: ""}),
-    foe: s => s.sides[1 - (s.actor || 0)],
-    foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    gy: (t, ...cs) => cs.map(c => ({...c, _gy: t})),
-    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy: t, _disc: true})),
-    had6ThisTurn: () => false, mkRune: s => s, openPrompt: s => s,
-    tokSeq: (() => { let i = 0; return () => ++i; })(),
-    typeAbbr: () => "action", winCheck: s => s
-  };
-}
-const side = o => Object.assign({
-  name: "them", hp: 20, res: 0, ap: 1, amp: 0, ward: 0, awd: 0, arcShield: 0,
-  hand: [], deck: [], grave: [], banish: [], pitch: [], board: [], soul: [], gear: [],
-  counters: {}, weaponUsed: {}, hist: {}
-}, o || {});
-const game = (a, b) => ({sides: [side(a), side(b)], actor: 0, turn: 2,
-  log: [], feed: [], chain: [], hitSeq: 0, promptQ: [], rng: RNG.make("arc")});
+const skip = !H.hasDb() && "no cached card database";
+const DB = () => H.db();
+const gear = (nm, uid) => ({...H.card(nm, 0), uid});
+const game = (a, b) => H.state(a, b, {seed: "arc"});
 
 /* Five arcane at seat 1, and whatever prompt that leaves queued. */
-const bolt = (defender, amount) => {
-  const {runOps} = E.makeEffects(ctx());
-  return runOps(game({}, defender), [["arcane", amount == null ? 5 : amount]], "Ice Bolt");
-};
-/* …and the whole loop: build the sheet, choose, apply, run the ops at the
-   ASKED side, which is what the trainer's promptConfirm does. */
+const bolt = (defender, amount) =>
+  H.runOps(game({}, defender), [["arcane", amount == null ? 5 : amount]], "Ice Bolt");
+
+/* …and the ANSWER, through the reducer's own prompt actions (v2.80).
+   This used to hand-roll the loop — buildPrompt, toggle, applyPrompt,
+   charge the pay, re-run the ops at the asked side — which is a third
+   copy of a flow judge.js and the trainer already have, and the copy
+   most likely to be forgiving: it charged `r.pay` itself, so a reducer
+   that never charged would have looked identical here. */
 function answer(n, pickIdx){
-  const {runOps} = E.makeEffects(ctx());
-  const live0 = PR.buildPrompt(n, n.promptQ[0]);
-  const live = pickIdx.reduce((p, i) => PR.promptToggleSel(p, i), live0);
-  const r = PR.applyPrompt(n, live);
-  let g = r.game;
-  g = {...g, actor: live.side};
-  if(r.pay > 0){
-    const sides = g.sides.slice();
-    sides[live.side] = {...sides[live.side], res: Math.max(0, sides[live.side].res - r.pay)};
-    g = {...g, sides};
-  }
-  g = runOps(g, r.ops, "Ice Bolt");
-  return {game: {...g, actor: 0}, live, r};
+  let g = J.openPrompt(n);
+  assert.ok(g.prompt, "nothing was queued to answer");
+  const side = g.prompt.side;
+  const send = a => {
+    const out = J.reduce(g, a, side);
+    assert.equal(out.error, null, a.t + " was refused: " + out.error);
+    g = out.state;
+  };
+  const live = g.prompt;
+  pickIdx.forEach(i => send({t: "promptSel", i}));
+  const chosen = g.prompt;
+  send({t: "promptConfirm"});
+  return {game: g, live, chosen};
 }
 
 /* ---- THE DEAD MECHANICS, NOW ALIVE ------------------------------------ */
@@ -177,10 +153,11 @@ test("a soak DEFERS the damage — it does not land and then get refunded", {ski
 });
 
 test("declining takes the full hit", {skip}, () => {
-  const {game: g, r} = answer(bolt({gear: [gear("Nullrune Hood", "g1")], res: 3}), []);
+  const {game: g} = answer(bolt({gear: [gear("Nullrune Hood", "g1")], res: 3}), []);
   assert.equal(g.sides[1].hp, 15, "all 5");
   assert.equal(g.sides[1].res, 3, "and nothing is spent");
-  assert.equal(r.pay, 0);
+  assert.equal(g.sides[1].gear.filter(x => !x.destroyed).length, 1, "nor is any iron given up");
+  assert.equal(g.prompt, null, "and the sheet is gone — a soak answered is not a soak pending");
 });
 
 test("paying an Arcane Barrier prevents its number and charges its cost", {skip}, () => {
@@ -203,11 +180,15 @@ test("Spellvoid destroys the permanent and costs no resources", {skip}, () => {
   const n = bolt({gear: [gear("Halo of Illumination", "gh")], res: 0});
   assert.equal(n.promptQ[0].options[0].cost, 0,
     "always affordable — the cost is the iron, not an {r}");
-  const {game: g, r} = answer(n, [0]);
+  const {game: g} = answer(n, [0]);
   assert.equal(g.sides[1].hp, 17, "2 prevented");
   assert.equal(g.sides[1].res, 0);
-  assert.ok(r.ops.some(o => o[0] === "destroyGear"), "the piece is destroyed");
+  /* The piece is DESTROYED, asserted on the gear rather than on the op
+     that was going to destroy it — an op in a returned list is an
+     intention, and this file's whole subject is the gap between a
+     prevention being decided and it being applied. */
   assert.equal(g.sides[1].gear.filter(x => !x.destroyed).length, 0);
+  assert.equal(g.sides[1].gear.length, 1, "and it WEARS rather than leaving the zone");
 });
 
 test("a barrier costs its FULL number even to prevent less", {skip}, () => {
@@ -256,19 +237,49 @@ test("no soakable iron means no sheet AND no lost damage", {skip}, () => {
 /* ---- EACH RUNECHANT IS ITS OWN SOURCE --------------------------------- */
 
 test("three Runechants are three separate threats, not one pooled hit", {skip}, () => {
-  const {execute} = E.makeEffects(ctx());
-  const tokRune = i => ({card: {...C.resolveEntry(DB(), {name: "Runechant", p: 0, code: null, q: 1}), uid: "r" + i},
+  /* SWUNG FOR REAL. The runechants pop at DECLARATION — the triggered
+     ability goes on the stack above the attack that triggered it, so the
+     arcane resolves before the attack's own damage and before the defend
+     step. That ordering is a property of the play path, so a drill that
+     calls `execute` straight cannot see it. */
+  const tokRune = i => ({card: {...H.card("Runechant", 0), uid: "r" + i},
                          kind: "aura", spent: false, uid: "r" + i});
-  const atk = {...C.resolveEntry(DB(), {name: "Vexing Malice", p: 3, code: null, q: 1}), uid: "a1"};
-  const g = game({res: 9, hand: [atk], board: [tokRune(1), tokRune(2), tokRune(3)]},
-                 {gear: [gear("Nullrune Hood", "g1")], res: 9});
-  const out = execute(g, atk, "hand", 0);
-  assert.equal(P.runeCount(out.sides[0]), 0, "all three pop");
-  assert.equal((out.promptQ || []).filter(p => p.tag === "soak").length, 3,
+  const atk = {...H.card("Vexing Malice", 3), uid: "a1"};
+  let g = H.state({res: 9, hand: [atk], board: [tokRune(1), tokRune(2), tokRune(3)]},
+                  {gear: [gear("Nullrune Hood", "g1")], res: 9},
+                  {actor: 0, turnPlayer: 0, seed: "arc"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const out = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0);
+  assert.equal(out.error, null, "the swing was refused: " + out.error);
+  const n = out.state;
+
+  assert.equal(P.runeCount(n.sides[0]), 0, "all three pop");
+  const soaks = (n.promptQ || []).filter(p => p.tag === "soak");
+  assert.equal(soaks.length, 3,
     "Pyroglyphic prevents per SOURCE and Arcane Barrier triggers per threat, so three " +
     "Runechants are three 1-point threats a hero may answer three times. Pooling them " +
     "would push more damage through than the cards print.");
-  assert.deepEqual((out.promptQ || []).filter(p => p.tag === "soak").map(p => p.amount), [1, 1, 1]);
+  assert.deepEqual(soaks.map(p => p.amount), [1, 1, 1]);
+  assert.deepEqual(soaks.map(p => p.side), [1, 1, 1], "and every one is the DEFENDER's call");
+  assert.equal(n.step, "attack", "the attack is on the chain, not resolved — the arcane went first");
+});
+
+test("the queued arcane is not left hanging — it reaches the hero", {skip}, () => {
+  /* A DEFERRAL WITH NOBODY TO DRAIN IT IS DAMAGE THAT NEVER ARRIVES, and
+     three sheets queued at declaration are three chances to lose it. The
+     drill above proves they were offered; this one plays the link out and
+     proves they were paid for or taken. */
+  const tokRune = i => ({card: {...H.card("Runechant", 0), uid: "r" + i},
+                         kind: "aura", spent: false, uid: "r" + i});
+  const atk = {...H.card("Vexing Malice", 3), uid: "a1"};
+  let g = H.state({res: 9, hand: [atk], board: [tokRune(1), tokRune(2), tokRune(3)]},
+                  {gear: [], res: 0}, {actor: 0, turnPlayer: 0, seed: "arc"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  let n = J.reduce(g, {t: "play", uid: "a1", from: "hand"}, 0).state;
+  assert.equal(n.sides[1].hp, 17,
+    "no iron and no resources, so there is nothing to ask and all three land at once — " +
+    "the un-soakable path applies immediately rather than queueing a sheet nobody can answer");
+  assert.equal((n.promptQ || []).filter(p => p.tag === "soak").length, 0);
 });
 
 /* ---- SEAT 1 CAN ANSWER ------------------------------------------------ */

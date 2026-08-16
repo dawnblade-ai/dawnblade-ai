@@ -32,18 +32,21 @@ const path = require("path");
 
 const P = require("../engine/parser.js");
 const C = require("../engine/cards.js");
+const H = require("./helpers/judged.js");
+const J = H.J;
 const B = require("../engine/build.js");
 const GM = require("../engine/game.js");
 const RNG = require("../engine/rng.js");
 const E = require("../engine/effects.js");
 const { loadData } = require("./helpers/extract.js");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
-const skip = !fs.existsSync(CACHE) && "no cached card database";
-
-let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+const skip = !H.hasDb() && "no cached card database";
+/* ONE DATABASE, AND IT IS REGISTERED WITH THE JUDGE. `effectsFor` reaches
+   the card records through `judge.setDb`, not through a context key, so a
+   file holding its own copy builds a context whose `db` is EMPTY — and an
+   empty db does not throw, it refuses in a log line. Clause 3's Might
+   token then resolves to nothing and the drill reads a bare board. */
+const DB = () => H.db();
 
 const W = loadData();
 const kayoHero = () => W.HEROES.find(h => h.k === "kayo");
@@ -173,33 +176,24 @@ test("the trainer's turn-scoped check asks for a real discard", {skip}, () => {
 
 /* ---- THE OP ITSELF ---------------------------------------------------- */
 
-function ctx(build){
-  return {
-    L: (s, m) => ({...s, log: [m, ...(s.log || [])], feed: [...(s.feed || []), m]}),
-    act: s => s.sides[s.actor || 0],
-    actMut: n => { n.sides = n.sides.slice(); const i = n.actor || 0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    actorOf: s => s.actor || 0,
-    bAct: () => build,
-    bFoe: () => build,
-    built: build, db: DB(), dummyDefence: s => s,
-    foe: s => s.sides[1 - (s.actor || 0)],
-    foeMut: n => { n.sides = n.sides.slice(); const i = 1 - (n.actor || 0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    gy: (t, ...cs) => cs.map(c => ({...c, _gy: t})),
-    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy: t, _disc: true})),
-    had6ThisTurn: () => false,
-    mkRune: s => s, openPrompt: s => s,
-    tokSeq: (() => { let i = 0; return () => ++i; })(),
-    typeAbbr: () => "attack", winCheck: s => s
-  };
-}
-const side = hand => ({name: "kayo", hp: 20, res: 0, ap: 1, amp: 0, ward: 0, awd: 0, buffNext: 0,
-  hand, deck: [], grave: [], banish: [], pitch: [], board: [], soul: [], counters: {}, hist: {}});
-const game = hand => ({sides: [side(hand), side([])], actor: 0, turn: 2,
-  log: [], feed: [], rng: RNG.make("disc")});
+/* THE BUILD LIVES ON THE STATE, WHERE `bAct` READS IT (v2.80).
+
+   This file used to hand a build into a context literal, with `bAct` and
+   `bFoe` both returning it — so no drill here could tell the two seats
+   apart, and the one drill whose whole subject IS the distinction said so
+   in a comment and asserted on the source instead. `judged.js` goes
+   through judge's own `effectsFor`, where `bAct(g)` is `g.builds[actor]`
+   and `bFoe(g)` is the other seat's. Pass `builds` and they differ. */
+const game = (hand, o) => {
+  o = o || {};
+  const g = H.state({name: "kayo", hand}, {name: "kayo", hand: o.foeHand || []},
+                    {seed: "disc", builds: o.builds || [kayoBuild(), {}]});
+  return {...g, ...(o.over || {})};
+};
+const runOps = (g, ops, src) => H.runOps(g, ops, src);
 
 test("discardRandom moves a card from HAND to GRAVEYARD, stamped as a discard", {skip}, () => {
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const hand = [card("Buckwild"), card("Smash Instinct")];
   const out = runOps(game(hand), [["discardRandom", 1]], "probe");
   assert.equal(out.sides[0].hand.length, 1, "one card left the hand");
@@ -211,7 +205,6 @@ test("discardRandom moves a card from HAND to GRAVEYARD, stamped as a discard", 
 
 test("discardRandom is SEEDED — same seed, same card", {skip}, () => {
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const hand = () => [card("Buckwild"), card("Smash Instinct"), card("Bear Hug")];
   const a = runOps(game(hand()), [["discardRandom", 1]], "p");
   const c = runOps(game(hand()), [["discardRandom", 1]], "p");
@@ -222,7 +215,6 @@ test("discardRandom is SEEDED — same seed, same card", {skip}, () => {
 
 test("Reincarnate discarded at random goes to the DECK BOTTOM, not the graveyard", {skip}, () => {
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const out = runOps(game([card("Reincarnate")]), [["discardRandom", 1]], "probe");
   assert.equal(out.sides[0].grave.length, 0, "it never reaches the graveyard — its own printed text says so");
   assert.equal(out.sides[0].deck.length, 1);
@@ -300,7 +292,6 @@ test("clause 3 requires YOUR OWN turn, not merely the action phase", {skip}, () 
 
   /* and behaviourally, both ways round */
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const mine = game([card("Buckwild")]);
   mine.phase = "action"; mine.turnPlayer = 0;          // my turn
   const a = runOps(mine, [["discardRandom", 1]], "probe");
@@ -335,7 +326,6 @@ test("Beaten Trackers triggers only on a RANDOM discard", {skip}, () => {
 
 test("the trigger only fires when a random 6+ is actually discarded", {skip}, () => {
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const gear = [card("Beaten Trackers")];
   const withGear = hand => { const g = game(hand); g.sides[0].gear = gear; g.phase = "action"; return g; };
 
@@ -500,7 +490,6 @@ test("Strongest Survive reads its 'unless they reveal' half", {skip}, () => {
 
 test("the reveal beats the DAMAGE DEALT, not the printed power", {skip}, () => {
   const b = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(b));
   const mk = (nm, pow) => ({name: nm, uid: nm, pitch: 1, power: pow, cost: 0,
     tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []});
 
@@ -523,18 +512,33 @@ test("the reveal beats the DAMAGE DEALT, not the printed power", {skip}, () => {
 });
 
 test("the revealed card is read with the DEFENDER's own build", {skip}, () => {
-  /* In a Kayo mirror their clause 2 lifts their hand exactly as yours lifts
-     yours: a printed 5 attack action in their hand reveals as a 6. Using
-     the attacker's build for both sides is the same class of mistake bFoe
-     was created to prevent in the clash. */
-  const kayo = kayoBuild();
-  const { runOps } = E.makeEffects(ctx(kayo));   // ctx gives bFoe the same build
-  const g = game([]);
+  /* THE TWO SEATS HOLD DIFFERENT BUILDS, and until v2.80 no drill in this
+     file could say so: the context handed one build to both `bAct` and
+     `bFoe`, so this drill passed on an engine that read the ATTACKER's
+     build for the defender's hand and had to assert on the source instead.
+     Judge's own context reads `g.builds[seat]`, so the two can differ —
+     and here they deliberately do.
+
+     Seat 1 is the Kayo. Seat 0 is NOT, so an engine reaching for the
+     attacker's build finds no clause 2 at all and the escape fails. */
+  const g = game([], {builds: [{}, kayoBuild()]});
   g.sides[1].hand = [card("Unexpected Backhand")];   // printed 5 -> 6 for a Kayo
   g.lastDmg = 5;
   const out = runOps(g, [["foeDiscardUnlessReveal", 1]], "Strongest Survive");
   assert.equal(out.sides[1].hand.length, 1,
-    "printed 5 is not greater than 5, but their clause 2 makes it a 6 — they escape");
+    "printed 5 is not greater than 5, but THEIR clause 2 makes it a 6 — they escape, " +
+    "and the attacker has no clause 2 to lend them");
+  assert.equal(out.sides[1].grave.length, 0);
+
+  /* THE CONTROL, or the drill passes just as well on an engine that never
+     discards at all: the same card, the same damage, and no clause 2 on
+     either seat — now nothing beats 5 and the card goes. */
+  const bare = game([], {builds: [{}, {}]});
+  bare.sides[1].hand = [card("Unexpected Backhand")];
+  bare.lastDmg = 5;
+  const hit = runOps(bare, [["foeDiscardUnlessReveal", 1]], "Strongest Survive");
+  assert.equal(hit.sides[1].hand.length, 0, "without their hero the printed 5 does not beat 5");
+  assert.equal(hit.sides[1].grave.length, 1);
 
   const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   assert.match(efx, /zonePow\(c, bFoe\(n\)\) > dmg/,
