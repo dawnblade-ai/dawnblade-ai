@@ -59,8 +59,18 @@ const tok  = nm => card(nm, 0);
 /* A SIDE IS `makeSide`'s SHAPE, never a literal. Each of the five files
    wrote its own partial side object, and a field one of them forgot is a
    field the engine reads as `undefined` — which is `SIDES-ASYMMETRIC` and
-   `NAN-FIELD` waiting to happen inside a fixture no invariant sees. */
-const side = (o, id) => Object.assign(S.makeSide({id: id || 0}), o || {});
+   `NAN-FIELD` waiting to happen inside a fixture no invariant sees.
+
+   AN EXPLICIT `undefined` IS DROPPED, not written. `Object.assign` copies
+   a key whose value is undefined, so one optional field threaded through
+   a caller (`{hist: o.hist}` where the caller passed nothing) silently
+   deletes `freshHist()` and the first `hist.atkNames` read throws from
+   inside a reducer whose contract is that it never throws. */
+const side = (o, id) => {
+  const base = S.makeSide({id: id || 0});
+  for(const k of Object.keys(o || {})) if(o[k] !== undefined) base[k] = o[k];
+  return base;
+};
 
 /* A judge-shaped state small enough to say one thing about. It carries
    what `effectsFor` actually reads — `actor`, `builds`, `tokSeq`, `turn`

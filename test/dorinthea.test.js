@@ -234,51 +234,125 @@ const GM = require("../engine/game.js");
 const RNG = require("../engine/rng.js");
 const E = require("../engine/effects.js");
 const S = require("../engine/sides.js");
+const PRI = require("../engine/priority.js");
+const H = require("./helpers/judged.js");
+const J = H.J;
 const { loadData } = require("./helpers/extract.js");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
-const skip = !fs.existsSync(CACHE) && "no cached card database";
-let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+const skip = !H.hasDb() && "no cached card database";
+const DB = () => H.db();
 const W = loadData();
 const buildOf = k => B.buildSideDefault(
   W.HEROES.find(x => x.k === k), GM.parseDeck(W.DECKS[k]), DB(), RNG.make(k), {n: 0}).b;
 
-function ctx(build){
-  return {
-    L: (s, m) => ({...s, log: [m, ...(s.log||[])], feed: [...(s.feed||[]), m]}),
-    act: s => s.sides[s.actor||0],
-    actMut: n => { n.sides = n.sides.slice(); const i = n.actor||0; n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    actorOf: s => s.actor||0, bAct: () => build, bFoe: () => build,
-    /* `execute` destructures this as `{n, note}` — a stub returning the
-       bare state makes it read `undefined.log` and die. The Kayo ctx has
-       the short version because those drills only ever drive `runOps`. */
-    built: build, db: DB(), dummyDefence: s => ({n: s, note: "No defenders."}),
-    foe: s => s.sides[1-(s.actor||0)],
-    foeMut: n => { n.sides = n.sides.slice(); const i = 1-(n.actor||0); n.sides[i] = {...n.sides[i]}; return n.sides[i]; },
-    gy: (t, ...cs) => cs.map(c => ({...c, _gy:t})),
-    gyDisc: (t, ...cs) => cs.map(c => ({...c, _gy:t, _disc:true})),
-    had6ThisTurn: () => false, mkRune: s => s, openPrompt: s => s,
-    tokSeq: (() => { let i = 0; return () => ++i; })(),
-    typeAbbr: () => "attack", winCheck: s => s
-  };
-}
-const seat = o => Object.assign({
-  name:"x", hp:20, res:2, ap:1, amp:0, ward:0, awd:0, buffNext:0, buffQ:[],
-  hand:[], deck:[], grave:[], banish:[], pitch:[], board:[], soul:[], gear:[],
-  counters:{}, hist:S.freshHist(), weaponUsed:{}, blockedHand:0, chainBlocked:[]}, o||{});
-
-/* one swing, already declared: `weaponUsed` is set at declaration, which is
-   the state resolveStack actually sees */
-const swung = (blade, from, total, hist, extraTapped) => ({
-  sides:[seat({weaponUsed: Object.assign({[blade.uid]:true}, extraTapped||{}),
-               hist: Object.assign(S.freshHist(), hist||{})}), seat({})],
-  actor:0, turn:2, mode:"stack", log:[], feed:[], chain:[], stack:[], hitSeq:0,
-  rng: RNG.make("r"),
-  pend:{card:blade, from, total, ga:false, ops:[], onHit:[], condOnHit:[], lateConds:[], lateOps:[]}
-});
+const seat = o => H.side(Object.assign({name: "x", res: 2}, o || {}));
 const bladeOf = b => b.gear.find(g => g.name === "Dawnblade");
+
+/* ============================================================
+   THE SWING IS REAL NOW (v2.80).
+
+   This file used to build a `pend` by hand and hand it to `resolveStack`
+   with a hand-rolled context. Two things were wrong with that, and the
+   second is the reason `Battle` could not retire:
+
+   1. A FABRICATED `pend` IS THE ANSWER, NOT THE QUESTION. `total` was
+      supplied — so "an attack blocked to nothing does not refresh" was
+      asserted by writing 0 into the link rather than by anyone blocking,
+      and the wall was never exercised at all.
+   2. `resolveStack` IS THE TRAINER'S PATH. judge.js does not call it: the
+      body was SPLIT so each caller keeps its own wall and its own CR 1.4.5
+      damage routing between `linkPumps` and `linkPayload`. So every drill
+      here measured the half of the engine the table does not use, and the
+      half it does use had none.
+
+   `swing()` activates the weapon and lets the reducer run the chain —
+   declaration, the defend step, the reaction windows, the strike.
+   ============================================================ */
+const WALL = {uid: "wall1", name: "Big Wall", def: 6, pitch: 1, power: 0, cost: 0,
+              tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []};
+
+function swing(o){
+  o = o || {};
+  const b = o.build || buildOf("dorinthea");
+  const blade = o.blade || bladeOf(b);
+  let g = o.game;
+  if(!g){
+    g = H.state({name: "Dorinthea", res: 9, gear: [blade], weaponUsed: o.tapped,
+                 counters: o.counters, hand: o.hand},
+                /* `hp` is a knob because six accumulating swings is lethal,
+                   and a dead hero ends the game — the driver then finds
+                   nobody holding priority and reads a WIN as a stall. */
+                {name: "Them", res: 0, hp: o.foeHp, hand: o.block ? [WALL] : []},
+                {actor: 0, turnPlayer: 0, seed: "dor", builds: [b, {}], turn: o.turn});
+    if(o.hist) Object.assign(g.sides[0].hist, o.hist);
+  }
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  return drive(g, Object.assign({blade}, o));
+}
+
+/* Activate, then run the link out. Every action goes through `reduce`, and
+   a refusal is a failure rather than something to step over — a driver
+   that swallows one reports its own optimism as an engine result. */
+function drive(g, o){
+  const send = (a, s) => {
+    const r = J.reduce(g, a, s);
+    assert.strictEqual(r.error, null, a.t + " was refused: " + r.error);
+    g = r.state;
+  };
+  send(o.card ? {t: "play", uid: o.card.uid, from: "hand"} : {t: "activate", uid: o.blade.uid}, 0);
+  let declared = false;
+  for(let i = 0; i < 80 && g.pend; i++){
+    if(g.prompt){ send(J.autoAnswer(g), g.prompt.side || 0); continue; }
+    if(o.block && !declared && g.step === "defend"){
+      send({t: "defend", uid: WALL.uid}, PRI.defendingPlayer(g));
+      declared = true; continue;
+    }
+    const pri = g.priority;
+    if(pri == null) throw new Error("nobody holds priority at " + g.phase + "/" + g.step);
+    send({t: "pass"}, pri);
+  }
+  assert.strictEqual(g.pend, null, "the link never resolved — the drill would prove nothing");
+  return g;
+}
+
+/* SWING AGAIN on a game that has already had one. The action point and
+   the untap are handed back explicitly because in a real turn they are
+   not: the once-per-turn ability caps a Dorinthea at two swings, so a
+   third in the same turn is something else's doing. Saying that here is
+   the point — the schedules under test count HITS, and the drill has to
+   be able to produce a third one to show that the third earns nothing. */
+function reswing(g, o){
+  o = o || {};
+  const b = o.build || buildOf("dorinthea");
+  const blade = o.blade || bladeOf(b);
+  const sides = g.sides.slice();
+  sides[0] = {...sides[0], ap: 1, res: 9, weaponUsed: {}};
+  if(o.block) sides[1] = {...sides[1], hand: [WALL], blockH: [], chainBlocked: []};
+  g = {...g, sides, phase: "action", step: "layer", priority: 0, passed: [], pend: null};
+  return drive(g, Object.assign({blade}, o));
+}
+
+/* CR 4.4.4 replaces `hist` at the turn boundary, which is exactly why the
+   per-turn hit TALLY lives there and the counters do not. */
+const nextTurn = (g, t) => ({...g, turn: t,
+  sides: g.sides.map((s, i) => i ? s : {...s, hist: S.freshHist(), weaponUsed: {}})});
+
+/* Declare only, and stop: the state the moment the attack reaches the
+   chain, which is where a pump has landed and nothing has struck yet. */
+function declare(o){
+  o = o || {};
+  const b = o.build || buildOf("dorinthea");
+  const blade = o.blade || bladeOf(b);
+  let g = o.game || H.state({name: "Dorinthea", res: 9, ap: 3, gear: [blade],
+                             counters: o.counters, hand: o.hand},
+                            {name: "Them"},
+                            {actor: 0, turnPlayer: 0, seed: "dor", builds: [b, {}]});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const a = o.card ? {t: "play", uid: o.card.uid, from: "hand"} : {t: "activate", uid: blade.uid};
+  const r = J.reduce(g, a, 0);
+  assert.strictEqual(r.error, null, a.t + " was refused: " + r.error);
+  return r.state;
+}
 
 test("the ability is read off Dorinthea's PRINTED text, and only hers", {skip}, () => {
   assert.strictEqual(buildOf("dorinthea").weaponRefresh, true);
@@ -287,59 +361,67 @@ test("the ability is read off Dorinthea's PRINTED text, and only hers", {skip}, 
 });
 
 test("a weapon that HITS is freed to swing again, and the latch is set", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const out = resolveStack(swung(blade, "weapon", 3));
+  const blade = bladeOf(buildOf("dorinthea"));
+  const out = swing({});
   assert.ok(!out.sides[0].weaponUsed[blade.uid],
     "the weapon that hit must come untapped — that IS the whole ability");
   assert.strictEqual(out.sides[0].hist.wpnAgain, 1, "once per turn, latched on hist");
+  assert.strictEqual(out.sides[1].hp, 17,
+    "and it HIT — the fabricated `pend` used to supply the total, so this drill could pass " +
+    "on an engine where nothing was ever struck");
 });
 
 test("the extra swing is NOT free — no action point and no resources are given", {skip}, () => {
   /* the ruling, and the direction that would steal games if got wrong */
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const before = swung(blade, "weapon", 3);
-  const out = resolveStack(before);
-  assert.strictEqual(out.sides[0].res, before.sides[0].res,
-    "the ability waives the once-per-turn limit, not the weapon's {r}");
-  assert.strictEqual(out.sides[0].ap, before.sides[0].ap - 1,
+  const blade = bladeOf(buildOf("dorinthea"));
+  const out = swing({});
+  assert.strictEqual(out.sides[0].res, 9 - 1,
+    "the ability waives the once-per-turn limit, not the weapon's {r} — the Dawnblade " +
+    "prints `Action - {r}: Attack` and that {r} is charged");
+  assert.strictEqual(out.sides[0].ap, 0,
     "the swing that hit still spent its own action point; the ability adds none");
+  assert.ok(!out.sides[0].weaponUsed[blade.uid], "and it is genuinely free to swing again");
 });
 
 test("an attack blocked to nothing does NOT refresh — CR 7.5.5", {skip}, () => {
   /* "hit" is damage actually DEALT. A swing walled to 0 never hit, so the
-     ability never triggered and the latch is untouched. */
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const out = resolveStack(swung(blade, "weapon", 0));
+     ability never triggered and the latch is untouched.
+
+     THE WALL IS DECLARED, not written into the link. The old drill handed
+     `resolveStack` a `pend` with `total: 0` — which asserts the engine's
+     behaviour given an answer, and says nothing about whether a blocker
+     ever produced that answer. */
+  const blade = bladeOf(buildOf("dorinthea"));
+  const out = swing({block: true});
+  assert.strictEqual(out.sides[1].hp, 20, "6 defence against a 3-power swing: nothing lands");
   assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true, "it stays tapped");
   assert.ok(!out.sides[0].hist.wpnAgain, "and the once-per-turn is still unspent");
 });
 
 test("an attack ACTION CARD that hits refreshes nothing — it says 'a weapon'", {skip}, () => {
   const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const out = resolveStack(swung(blade, "hand", 6));
-  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true);
+  const wreck = {...b.deck.find(x => x.name === "Wreck Havoc")};
+  const out = swing({card: wreck, hand: [wreck], tapped: {[blade.uid]: true}});
+  assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true,
+    "a card from hand hit, and the weapon it did not come from stays tapped");
   assert.ok(!out.sides[0].hist.wpnAgain);
+  assert.ok(out.sides[1].hp < 20, "it really did hit, or this proves nothing");
 });
 
 test("ONCE per turn — a second hit does not free the weapon again", {skip}, () => {
   /* spent by TRIGGERING, not by being useful. This is exactly why the
      Dawnblade is printed to reward its SECOND hit each turn: two swings is
      the ceiling the ability sets. */
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const out = resolveStack(swung(blade, "weapon", 3, {wpnAgain: 1}));
+  const blade = bladeOf(buildOf("dorinthea"));
+  const out = swing({hist: {wpnAgain: 1}});
   assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true,
     "the ability is spent for the turn — the second hit frees nothing");
+  assert.strictEqual(out.sides[1].hp, 17, "though the swing still hit");
 });
 
 test("'THAT weapon' is literal — another tapped weapon stays tapped", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  const out = resolveStack(swung(blade, "weapon", 3, null, {"other-weapon": true}));
+  const blade = bladeOf(buildOf("dorinthea"));
+  const out = swing({tapped: {"other-weapon": true}});
   assert.ok(!out.sides[0].weaponUsed[blade.uid], "the one that hit is freed");
   assert.strictEqual(out.sides[0].weaponUsed["other-weapon"], true,
     "and nothing else is — a hero holding two weapons gets one extra swing, with the one that hit");
@@ -348,9 +430,10 @@ test("'THAT weapon' is literal — another tapped weapon stays tapped", {skip}, 
 test("a hero WITHOUT the ability never refreshes on a weapon hit", {skip}, () => {
   /* the gate is the passive, not the zone the attack came from */
   const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(Object.assign({}, b, {weaponRefresh: false})));
-  const out = resolveStack(swung(blade, "weapon", 3));
+  const out = swing({build: Object.assign({}, b, {weaponRefresh: false})});
   assert.strictEqual(out.sides[0].weaponUsed[blade.uid], true);
+  assert.strictEqual(out.sides[1].hp, 17,
+    "the swing hit exactly as before — only the passive changed");
 });
 
 test("the passive is declared in the build ledger, so no hero answers undefined", {skip}, () => {
@@ -452,75 +535,58 @@ test("the schedules are NOT on-play ops — runOps must never see them", {skip},
 });
 
 test("the SECOND hit each turn earns the counter — not the first, not the third", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
+  const blade = bladeOf(buildOf("dorinthea"));
   const pow = g => (g.sides[0].counters[blade.uid] || {}).pow || 0;
-  const hit = g => resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
-    pend: {card: blade, from: "weapon", total: 3, ga: false, ops: [], onHit: [],
-           condOnHit: [], lateConds: [], lateOps: []}}));
-  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
-           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
-  g = hit(g); assert.strictEqual(pow(g), 0, "one hit earns nothing");
-  g = hit(g); assert.strictEqual(pow(g), 1, "the second earns exactly one counter");
-  g = hit(g); assert.strictEqual(pow(g), 1, "and a third earns no more — it says 'the SECOND time'");
+  let g = swing({});          assert.strictEqual(pow(g), 0, "one hit earns nothing");
+  g = reswing(g, {});         assert.strictEqual(pow(g), 1, "the second earns exactly one counter");
+  g = reswing(g, {});         assert.strictEqual(pow(g), 1,
+    "and a third earns no more — it says 'the SECOND time'");
+  assert.strictEqual(g.sides[1].hp, 20 - 3 - 3 - 4,
+    "three real hits landed, and the third carried the +1 counter the second earned");
 });
 
 test("counters PERSIST across turns and accumulate", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
+  const blade = bladeOf(buildOf("dorinthea"));
   const pow = g => (g.sides[0].counters[blade.uid] || {}).pow || 0;
-  const hit = g => resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
-    pend: {card: blade, from: "weapon", total: 3, ga: false, ops: [], onHit: [],
-           condOnHit: [], lateConds: [], lateOps: []}}));
-  /* CR 4.4.4 replaces `hist` at the turn boundary, which is exactly why the
-     per-turn hit TALLY lives there and the counters do not */
-  const nextTurn = (g, t) => ({...g, turn: t,
-    sides: g.sides.map((s, i) => i ? s : {...s, hist: S.freshHist(), weaponUsed: {}})});
-  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
-           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
-  g = hit(hit(g));           assert.strictEqual(pow(g), 1);
-  g = hit(hit(nextTurn(g, 3))); assert.strictEqual(pow(g), 2, "the turn boundary must not wipe them");
-  g = hit(hit(nextTurn(g, 4))); assert.strictEqual(pow(g), 3);
+  /* SIX SWINGS IS LETHAL against a printed hero, and a hero at 0 ends the
+     game — so the counters would stop accumulating because the match was
+     over, which reads as the schedule failing. */
+  let g = reswing(swing({foeHp: 99}), {});  assert.strictEqual(pow(g), 1);
+  g = reswing(reswing(nextTurn(g, 3), {}), {});
+  assert.strictEqual(pow(g), 2, "the turn boundary must not wipe them");
+  g = reswing(reswing(nextTurn(g, 4), {}), {});
+  assert.strictEqual(pow(g), 3);
   assert.strictEqual(g.sides[0].hist.wpnHits[blade.uid], 2,
     "and the per-turn tally restarts each turn, or every later swing counts as a second one");
 });
 
 test("a swing blocked to nothing is not a hit and earns nothing", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {resolveStack} = E.makeEffects(ctx(b));
-  let g = {sides: [seat(), seat()], actor: 0, turn: 2, mode: "act",
-           log: [], feed: [], chain: [], stack: [], hitSeq: 0, rng: RNG.make("r")};
-  for(let i = 0; i < 3; i++)
-    g = resolveStack(Object.assign({}, g, {mode: "stack", stack: [],
-      pend: {card: blade, from: "weapon", total: 0, ga: false, ops: [], onHit: [],
-             condOnHit: [], lateConds: [], lateOps: []}}));
+  const blade = bladeOf(buildOf("dorinthea"));
+  let g = swing({block: true});
+  for(let i = 0; i < 2; i++) g = reswing(g, {block: true});
+  assert.strictEqual(g.sides[1].hp, 20, "three swings, three walls, no damage");
   assert.strictEqual((g.sides[0].counters[blade.uid] || {}).pow || 0, 0);
   assert.deepStrictEqual(g.sides[0].hist.wpnHits || {}, {},
     "three walled swings are three non-hits");
 });
 
 test("the swing actually READS the counters — otherwise they are decoration", {skip}, () => {
-  /* driven through `execute`, because that is where a weapon's power is
-     struck. Asserting the counter exists proves nothing about the damage. */
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {execute} = E.makeEffects(ctx(b));
+  /* Declared and stopped, because a weapon's power is struck at
+     declaration. Asserting the counter exists proves nothing about the
+     damage; asserting the link's total does. */
+  const blade = bladeOf(buildOf("dorinthea"));
   for(const n of [0, 1, 2, 3]){
-    const g = {sides: [seat({counters: n ? {[blade.uid]: {pow: n}} : {}}), seat()],
-               actor: 0, turn: 2, mode: "act", log: [], feed: [], chain: [], stack: [],
-               hitSeq: 0, rng: RNG.make("r"), boostChain: 0};
-    assert.strictEqual(execute(g, blade, "weapon", 0).pend.total, (blade.power || 0) + n,
+    const g = declare({counters: n ? {[blade.uid]: {pow: n}} : {}});
+    assert.strictEqual(g.pend.total, (blade.power || 0) + n,
       `+${n} in counters must reach the chain`);
   }
 });
 
 test("a card played from HAND does not read a permanent's counters", {skip}, () => {
-  const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const {execute} = E.makeEffects(ctx(b));
-  const c = b.deck.find(x => x.name === "Wreck Havoc");
-  const g = {sides: [seat({hand: [c], counters: {[c.uid]: {pow: 3}}}), seat()],
-             actor: 0, turn: 2, mode: "act", log: [], feed: [], chain: [], stack: [],
-             hitSeq: 0, rng: RNG.make("r"), boostChain: 0};
-  assert.strictEqual(execute(g, c, "hand", 0).pend.total, c.power || 0,
+  const b = buildOf("dorinthea");
+  const c = {...b.deck.find(x => x.name === "Wreck Havoc")};
+  const g = declare({card: c, hand: [c], counters: {[c.uid]: {pow: 3}}});
+  assert.strictEqual(g.pend.total, c.power || 0,
     "counters belong to a permanent in the arena, not to a card passing through");
 });
 
@@ -722,54 +788,66 @@ test("an unquoted next-attack buff gains no rider", {skip}, () => {
   assert.deepStrictEqual(op, ["buffNext", 3, [["weapon"]]], "no rider printed, none granted");
 });
 
-test("the granted ability reaches the attack that collects the buff", {skip}, () => {
+/* THE WHOLE LINE OF PLAY, TAPPED OUT. Play the buff, swing the weapon
+   that collects it, and let the link resolve — so the go again the buff
+   grants is measured as an action point the player still holds rather
+   than as an op sitting in a fabricated `pend`. */
+function valorLine(o){
+  o = o || {};
   const b = buildOf("dorinthea"), blade = bladeOf(b);
-  const valor = b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === 1);
-  const {execute, resolveStack} = E.makeEffects(ctx(b));
-  const fresh = hand => ({sides: [seat({hand, ap: 3, res: 5}), seat()], actor: 0, turn: 2,
-    mode: "act", log: [], feed: [], chain: [], stack: [], hitSeq: 0,
-    rng: RNG.make("r"), boostChain: 0});
+  const valor = {...b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === 1)};
+  const attacker = o.attacker ? {...b.deck.find(x => x.name === o.attacker)} : null;
+  let g = H.state({name: "Dorinthea", res: 9, ap: 3, gear: [blade],
+                   hand: attacker ? [valor, attacker] : [valor]},
+                  {name: "Them"}, {actor: 0, turnPlayer: 0, seed: "dor", builds: [b, {}]});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const send = (a, s) => {
+    const r = J.reduce(g, a, s == null ? 0 : s);
+    assert.strictEqual(r.error, null, a.t + " was refused: " + r.error);
+    g = r.state;
+  };
+  send({t: "play", uid: valor.uid, from: "hand"});
+  const afterBuff = g;
+  const apBefore = g.sides[0].ap;
+  send(attacker ? {t: "play", uid: attacker.uid, from: "hand"} : {t: "activate", uid: blade.uid});
+  const declared = g;
+  for(let i = 0; i < 80 && g.pend; i++){
+    if(g.prompt){ send(J.autoAnswer(g), g.prompt.side || 0); continue; }
+    const pri = g.priority;
+    if(pri == null) throw new Error("nobody holds priority at " + g.phase + "/" + g.step);
+    send({t: "pass"}, pri);
+  }
+  return {afterBuff, declared, resolved: g, apBefore, blade, valor, attacker};
+}
 
-  let g = execute(fresh([valor]), valor, "hand", 0);
-  assert.deepStrictEqual(g.sides[0].buffQ,
+test("the granted ability reaches the attack that collects the buff", {skip}, () => {
+  const r = valorLine({});
+  assert.deepStrictEqual(r.afterBuff.sides[0].buffQ,
     [{amt: 3, q: [["weapon"]], rider: {onHit: [["ga"]]}}],
     "the rider waits on the buff, not on the card that granted it");
 
-  g = execute(g, blade, "weapon", 0);
-  assert.strictEqual(g.pend.total, (blade.power || 0) + 3, "the pump landed");
-  assert.deepStrictEqual(g.pend.onHit, [["ga"]], "and the granted ability came with it");
+  assert.strictEqual(r.declared.pend.total, (r.blade.power || 0) + 3, "the pump landed");
+  assert.deepStrictEqual(r.declared.pend.onHit, [["ga"]], "and the granted ability came with it");
 
-  const before = g.sides[0].ap;
-  /* `mode:"stack"` IS THE DRILL'S TO SUPPLY NOW (v2.73). `execute` used to
-     set it on the way out; it declares and stops, and the caller runs the
-     defend step and opens the reaction window. Without it `resolveStack`
-     returns the state untouched — and this assertion (ap is KEPT) is
-     satisfied by nothing happening at all, so it would have gone on
-     passing while testing precisely nothing. */
-  g = resolveStack({...g, mode: "stack", pend: {...g.pend, total: 6}});
-  assert.strictEqual(g.sides[0].ap, before,
+  /* AND THE LINK IS RESOLVED BY THE REDUCER, not by a `pend` this drill
+     wrote a total into. The old version handed `resolveStack` a link with
+     `total: 6` — so "it hit, so go again was granted" was asserted about
+     a hit the drill had arranged. */
+  assert.strictEqual(r.resolved.sides[1].hp, 20 - 6, "6 landed");
+  assert.strictEqual(r.resolved.sides[0].ap, r.apBefore,
     "it hit, so go again was granted and the action point is KEPT");
-  assert.strictEqual(g.pend, null, "and the link actually resolved");
+  assert.strictEqual(r.resolved.pend, null, "and the link actually resolved");
 });
 
 test("a non-weapon attack collects neither the buff nor its rider", {skip}, () => {
-  /* THE CONTROL. Without it this drill passes just as well when the
+  /* THE CONTROL. Without it the drill above passes just as well when the
      qualifier is ignored and every attack collects everything. */
-  const b = buildOf("dorinthea");
-  const valor = b.deck.find(x => x.name === "Warrior's Valor" && x.pitch === 1);
-  const wreck = b.deck.find(x => x.name === "Wreck Havoc");
-  const {execute, resolveStack} = E.makeEffects(ctx(b));
-  let g = {sides: [seat({hand: [valor], ap: 3, res: 5}), seat()], actor: 0, turn: 2,
-    mode: "act", log: [], feed: [], chain: [], stack: [], hitSeq: 0,
-    rng: RNG.make("r"), boostChain: 0};
-  g = execute(g, valor, "hand", 0);
-  g = {...g, sides: g.sides.map((s, i) => i ? s : {...s, hand: [wreck]})};
-  g = execute(g, wreck, "hand", 0);
-  assert.strictEqual(g.pend.total, wreck.power || 0, "no pump — it is not a weapon attack");
-  assert.deepStrictEqual(g.pend.onHit, [], "and no granted ability");
-  assert.strictEqual(g.sides[0].buffQ.length, 1,
+  const r = valorLine({attacker: "Wreck Havoc"});
+  assert.strictEqual(r.declared.pend.total, r.attacker.power || 0,
+    "no pump — it is not a weapon attack");
+  assert.deepStrictEqual(r.declared.pend.onHit, [], "and no granted ability");
+  assert.strictEqual(r.declared.sides[0].buffQ.length, 1,
     "an unmatched buff is not spent — it waits for an attack it applies to");
-  const before = g.sides[0].ap;
-  g = resolveStack({...g, mode: "stack", pend: {...g.pend, total: 6}});
-  assert.strictEqual(g.sides[0].ap, before - 1, "so this one does NOT go again");
+  assert.strictEqual(r.resolved.sides[0].ap, r.apBefore - 1,
+    "so this one does NOT go again");
 });
