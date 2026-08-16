@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.78"; /* v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.79"; /* v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1390,6 +1390,15 @@ window.TROPHIES = [
 <script src="engine/net.js"></script>
 <script src="engine/actions.js"></script>
 <script src="engine/judge.js"></script>
+<!-- SEAT 1 WHEN IT IS NOT A PERSON, and the session that lets a player
+     alone reach the merged engine (v2.79). sparring.js came off
+     test/wire.test.js's HEADLESS list here: it stayed off the page for as
+     long as nothing called it, because a thing that proposes actions
+     sitting beside a trainer with its own dummy is a second quiet engine.
+     Something calls it now. Both must load AFTER judge.js — sparring asks
+     it for every legality question, and local.js drives it. -->
+<script src="engine/sparring.js"></script>
+<script src="engine/local.js"></script>
 <script src="engine/lobby.js"></script>
 <script src="engine/room.js"></script>
 <script>
@@ -4904,6 +4913,18 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
     const n={...c}; delete n[ei]; return n;
   });
   const start = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, oppH}); };
+  /* THE MERGED ENGINE, WITHOUT A SECOND PHONE (v2.79). The same board a
+     networked table renders, driven by `judge.reduce` — the one rules
+     engine — with `sparring.act` in seat 1. It needs a real HERO across
+     the table: the vanilla Dummy is 30 Generic attacks and a scripted
+     escalation, which is the trainer's own prop and has no build to sit
+     in a seat with.
+
+     It is a SECOND button rather than a replacement, deliberately.
+     `Battle` is the regression harness and does not retire until the
+     merged path passes the same drills, and the [3,4,5] escalation it
+     runs is TUNED where a real hand of cards is not. */
+  const startTable = () => { store.set("loadout."+h.k,{sel,cuts}); onStart({gearIdx:sel, cuts, oppH, table:true}); };
   const deckRows = d.deck.map((e,ei)=>({ei, e, c:resolveEntry(db,e,saSet)}));
   const PD = {1:"var(--r)",2:"var(--y)",3:"var(--b)"};
   const Tile = ({x}) => {
@@ -5050,6 +5071,14 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,oppH,onPlay}){
       </div>
       <div className="actbar">
         <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
+        {oppH
+          ? <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
+              Fight at the table — one engine
+            </button>
+          : <p className="note" style={{textAlign:"center",marginTop:6}}>
+              Pick a hero opponent to fight at the table — the merged engine seats two
+              heroes, and the vanilla Dummy is the trainer's own prop.
+            </p>}
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
@@ -5620,7 +5649,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    next-swing prediction — seat 1 is a person, so there is nothing to
    predict.
    ============================================================ */
-function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}){
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local}){
   const [g,setG]     = uS(match.g);
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
@@ -5677,6 +5706,49 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit}
                              ...(b.startItem?[b.startItem.card]:[])])),[match]);
 
   uE(()=>{
+    /* ---- A SESSION WITH NO NETWORK (v2.79) --------------------------
+       The board does not learn a second way to play a game. `local.js`
+       exposes exactly the surface net.js does — submit, state, seq,
+       hash, stats — so everything below this block is identical whether
+       the other seat is a person on another phone or a policy in this
+       one. That is the merge finishing: solo and table stop being two
+       screens as well as two engines.
+
+       The seat opposite is `sparring.act`, which reads NO card text and
+       offers every action to `judge.legal` before proposing it. It is a
+       weaker opponent than the trainer's tuned escalation and that is a
+       stated trade, not an oversight — the [3,4,5] table was TUNED and
+       real cards from a real hand are not. Retuning is a play session. */
+    if(local){
+      const s = DawnLocal.createLocal({
+        seat: mySeat,
+        state: match.g,
+        reduce: DawnJudge.reduce,
+        legal:  DawnJudge.legal,
+        policy: (st, i) => DawnSparring.act(st, i),
+        hash:   st => st ? DawnWire.hash(st) : null,
+        onState: st => { setG(st); setNote(null); audit(st); },
+        onEvent: e => {
+          if(e.t==="refused") setNote(e.reason);
+          /* A POLICY REFUSAL IS A BUG IN THE POLICY, not a move the
+             player made — sparring.js asks `legal` before it proposes,
+             so this can only mean the two disagreed. It goes on the
+             screen rather than into the console, because the console is
+             not a thing anyone reads on a phone. */
+          else if(e.t==="policy-refused") setNote("The opponent proposed an illegal action: " + e.reason);
+          else if(e.t==="stalled") setNote("The opponent could not stop — " + e.reason);
+        }
+      });
+      sess.current = s; netRef.current = null;
+      window.__dawnTable = {session: s, seat: mySeat, host: true, code: "local",
+        report: () => ({seat: mySeat, local: true, status: s.status(), seq: s.seq(),
+                        hash: s.hash(), stats: s.stats(),
+                        phase: (s.state()||{}).phase, step: (s.state()||{}).step,
+                        priority: (s.state()||{}).priority})};
+      setLink("connected");
+      s.start();
+      return ()=>{};
+    }
     const s = DawnNet.createSession({
       seat: mySeat, host,
       reduce: DawnJudge.reduce,
@@ -6126,6 +6198,9 @@ function App(){
   const [tab,setTab]=uS("heroes");
   const [hero,setHero]=uS(null);
   const [fighting,setFighting]=uS(null);
+  /* The merged engine, played alone. A separate slot from `fighting`
+     because they are two different boards and only one may be up. */
+  const [localTable,setLocalTable]=uS(null);
   const [loHero,setLoHero]=uS(null);
   /* WHO IS ACROSS THE TABLE, chosen on the hero screen (v2.76). `null` is
      the vanilla Dummy, which stays the default. It lives up here rather
@@ -6142,10 +6217,10 @@ function App(){
   });
   /* One screen at a time. `idle` is the lobby: no match, no loadout, no
      seating throw and nobody at a table. */
-  const idle = !fighting && !loHero && !seating && !table;
+  const idle = !fighting && !loHero && !seating && !table && !localTable;
   return (
     <div className="shell">
-      {!fighting && !table && <div className="topbar">
+      {!fighting && !table && !localTable && <div className="topbar">
         <span className="brand">DAWN<em>BLADE</em></span>
         <span className="tag">v{APP_VER}{db.status==="ready" ? " · "+db.count+" cards" : ""}</span>
       </div>}
@@ -6190,7 +6265,30 @@ function App(){
         onSeated={first=>{setSeating({h:loHero, first, seed:loHero.seed}); setLoHero(null);}}/>}
       {seating && !fighting && <Loadout h={seating.h} db={db} oppH={oppH} onPlay={seating.first===0}
         onBack={()=>{setLoHero(seating.h); setSeating(null);}}
-        onStart={cfg=>{setFighting({h:seating.h, cfg:{...cfg, oppH, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
+        onStart={cfg=>{
+          /* ---- ONE ENGINE, NO NETWORK (v2.79) -----------------------
+             The same screen a networked table renders and the same
+             reducer behind it; the only difference is that seat 1 is a
+             policy in this phone rather than a person in another. The
+             solo trainer is untouched and is still the default. */
+          if(cfg.table && oppH){
+            try {
+              const m = DawnBuild.buildMatch({
+                heroes: [seating.h.k, oppH.k],
+                boards: [{gearIdx: cfg.gearIdx, cuts: cfg.cuts}, {}],
+                first: seating.first, seed: String(seating.seed)
+              }, {db, heroes: Object.fromEntries(HEROES.map(x=>[x.k,x])),
+                  decks: Object.fromEntries(HEROES.map(x=>[x.k,PARSED[x.k]]))});
+              setLocalTable({...m, g: DawnJudge.newMatch({builds:m.builds, names:m.names,
+                heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
+              setSeating(null);
+              return;
+            } catch(e){ /* fall through to the trainer rather than dead-ending */ }
+          }
+          setFighting({h:seating.h, cfg:{...cfg, oppH, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
+      {localTable && <TableBoard match={localTable} mySeat={0} host={true} code="solo" db={db}
+        table={null} netRef={{current:null}} netQ={{current:[]}} local={true}
+        onExit={()=>setLocalTable(null)}/>}
       {fighting && <Battle h={fighting.h} oppH={fighting.cfg.oppH} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && idle && <Judge/>}
       {tab==="trophies" && idle && <Trophies/>}

@@ -9,6 +9,74 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.79 — a session with no network
+
+**The last thing keeping solo and table apart was not the engine, it was
+the way in.** After v2.77 and v2.78 there is one rules engine — judge
+drives the CR turn structure and calls `effects.js` for the card
+semantics — but the only way to REACH it was `net.js`, a session that
+needs a second phone. So a player alone still went to `Battle`, which is
+a different engine with the opponent written into the rules as a branch.
+
+`engine/local.js` is the same session with the network taken out. It
+exposes exactly the surface `TableBoard` already drives — `submit`,
+`state`, `seq`, `hash`, `stats` — so **the board does not learn a second
+way to play a game**. net.js's own `loopback()` proved that shape was
+enough for two peers; this proves it needs no channel at all.
+
+What makes it a game rather than half of one is the other seat. It takes
+a `policy` — `sparring.act` — and after every accepted action lets that
+seat act until it has nothing left to say. **Solo, hotseat and network
+now differ only in what is calling `reduce`**, which is what the whole
+rebuild was for.
+
+### Three rules it keeps, each because breaking it cost something
+
+| | |
+|---|---|
+| the policy proposes, the judge disposes | every policy action goes through the same `reduce`, and a refusal is RECORDED rather than swallowed. `sparring.js`'s contract is that a refusal is always a bug in the policy, and a session that ate them would make that unenforceable from the only place it can be enforced |
+| it never answers for the player | a sheet addressed to the local seat stays live and waits. A session that helpfully answered your prompt would be making your decisions |
+| it terminates | the policy loop is bounded and a bound that is hit is reported as a **stall** rather than spun on. An unanswerable prompt is a real failure mode — it turned seven drills red in v2.78 — and it has to look like one |
+
+The stall drill is the one that is driven against a **stub reducer**, and
+deliberately: against the real judge a repeating policy is stopped by a
+REFUSAL long before the bound, so the drill would have passed without the
+bound existing at all. That was its first version.
+
+### `sparring.js` is on the page, and the HEADLESS ledger is empty
+
+It stayed off for as long as nothing called it — a thing that proposes
+actions sitting beside a trainer with its own dummy is the second quiet
+engine that list exists to name. `local.js` calls it. Coming off
+`test/wire.test.js`'s HEADLESS list is the same edit that adds both
+modules to `test/sync.test.js`'s MODULES, which is what keeps the guard
+from going dark.
+
+### How you reach it
+
+A **second button** on the sideboard screen: *Fight at the table — one
+engine*. It needs a real hero opposite, because the vanilla Dummy is 30
+Generic attacks and a scripted escalation with no build to sit in a seat
+with.
+
+It is a second button rather than a replacement, deliberately. **`Battle`
+is the regression harness and does not retire until the merged path
+passes the same drills**, and the `[3,4,5]` escalation it runs is TUNED
+where a real hand of cards is not. Retuning is a play session.
+
+### Played, not just drilled
+
+Kayo against a real Dorinthea, on the phone: her Dawnblade equipped, the
+end phase running (c)-(f) in the CR's order with the first-turn-only
+both-draw, and on her turn 2 she pitched Puncture for 3, paid for Wreck
+Havoc and put 6 power on the chain — leaving the defend step with the
+turn-player's priority slid to me after her pass, which is CR 7.3.3
+exactly. Invariant judge clean throughout.
+
+**1025 drills green.** Fairness clean.
+
+---
+
 ## v2.78 — the table can answer a prompt
 
 **v2.77 gave the table card text; this gives it the half of card text

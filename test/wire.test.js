@@ -321,7 +321,12 @@ test("every engine module is loaded by index.html, or declared headless", () => 
      calls it, and loading a policy that proposes actions next to a
      trainer that has its own dummy is exactly the second-quiet-engine
      hazard this list exists to name. */
-  const HEADLESS = ["sparring"];
+  /* EMPTY AS OF v2.79, and that is the ledger's whole point: every
+     engine module is now on the page. `sparring` was the last entry —
+     it stayed off for as long as nothing called it, and `local.js` is
+     what calls it. Coming off this list must be the SAME edit that adds
+     the module to test/sync.test.js's MODULES, or the guard goes dark. */
+  const HEADLESS = [];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

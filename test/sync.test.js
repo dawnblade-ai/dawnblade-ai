@@ -23,8 +23,13 @@ const BABEL = '<script type="text/babel"';
 
 /* Load order matters only in that parser.js must precede its dependents
    (advisor, cards and prompts each take it as their factory argument). */
+/* `sparring` and `local` joined in v2.79, which is the same edit that
+   emptied test/wire.test.js's HEADLESS list. The policy stayed off the
+   page for as long as nothing called it — a thing that proposes actions
+   sitting beside a trainer with its own dummy is a second quiet engine —
+   and `local.js` is what calls it. */
 const MODULES = ["rng","parser","game","types","rps","sides","priority","prompts","invariants","cards","advisor","build",
-                 "effects","report","wire","net","actions","judge","lobby","room"];
+                 "effects","report","wire","net","actions","judge","sparring","local","lobby","room"];
 
 for(const m of MODULES){
   test(`index.html loads engine/${m}.js`, () => {

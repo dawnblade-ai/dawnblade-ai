@@ -48,14 +48,22 @@ test("the solo flow renders the THROW before the SIDEBOARD", () => {
   assert.match(pre[0], /onSeated=\{first=>\{setSeating\(/,
     "the throw must produce the seating that the sideboard then consumes");
 
-  const lo = CODE.match(/\{seating && !fighting && <Loadout[\s\S]{0,400}?\/>\}/);
+  /* THE WINDOW GREW IN v2.79 and the anchor moved with it deliberately.
+     `onStart` now chooses between two boards — the solo trainer and the
+     merged table — so the handler is no longer a one-liner and a 400-char
+     window stopped containing it. A regex that stops matching because the
+     code it guards got longer is a drill that passes by finding nothing,
+     so what is asserted is that the handler REACHES the trainer, not that
+     it is the first thing in it. */
+  const lo = CODE.match(/\{seating && !fighting && <Loadout[\s\S]{0,2600}?\/>\}/);
   assert.ok(lo, "Loadout is no longer entered from `seating` — the reorder was undone");
-  assert.match(lo[0], /onStart=\{cfg=>\{setFighting\(/,
+  assert.match(lo[0], /setFighting\(\{h:seating\.h/,
     "and the sideboard is the last thing before the game");
 });
 
 test("the sideboard is TOLD the seating, or boarding after the throw buys nothing", () => {
-  const lo = CODE.match(/\{seating && !fighting && <Loadout[\s\S]{0,400}?\/>\}/);
+  const lo = CODE.match(/\{seating && !fighting && <Loadout[\s\S]{0,2600}?\/>\}/);
+  assert.ok(lo, "Loadout is no longer entered from `seating`");
   assert.match(lo[0], /onPlay=\{seating\.first===0\}/,
     "the whole reason the sideboard follows the throw is that you board knowing whether " +
     "you are on the play — passing the seating is what makes the order mean anything");
