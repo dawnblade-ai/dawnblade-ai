@@ -9,6 +9,47 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.76 — the pre-game order matches the rules
+
+**`engine/lobby.js` has ruled this since it was written** — `STEPS =
+["fault","hero","throw","seat","board","ready"]`, with the reason stated
+in as many words: *"The sideboard comes AFTER the throw on purpose: you
+sideboard knowing the matchup and knowing whether you are on the play."*
+The table path always obeyed it. **The solo path did the opposite** —
+Loadout → Pregame → Battle, so every boarding choice was made before the
+throw, and the two facts that make sideboarding a decision were shown too
+late to use.
+
+Two descriptions of one rule, and the one nobody was reading was wrong.
+That is the shape that let clash fire on the wrong trigger for five
+versions.
+
+```
+was:  hero -> sideboard -> throw -> game
+now:  hero -> throw -> sideboard -> game
+```
+
+**The opponent picker moved to the hero screen**, into the P2 slot of the
+vs strip, because the throw now needs to know the matchup before the
+loadout exists. The vanilla **Dummy stays the default** — 30 Generic
+attack actions with no rules text, the one deck where nothing can be
+faked. `Loadout` takes `oppH` and `onPlay` as props rather than owning the
+choice; a second copy would let the throw and the sideboard disagree about
+who is across the table.
+
+The P2 slot had to stop being a `<button>`: a `<select>` inside one
+swallows its own clicks, so the picker would have looked fine and done
+nothing. The dummy's taunt keeps a nested button of its own.
+
+7 drills pin the ORDER against `lobby.js`'s, not the pixels — a change
+there is a rules change. All 9 sabotages verified to bite.
+
+Verified in play at 393x852: hero + opponent → coin → sideboard showing
+"You are ON THE PLAY" → Kayo vs Dorinthea dealt correctly, zero invariant
+violations, no console errors.
+
+---
+
 ## v2.75 — the printed escape hatch exists; Inertia is a hand wipe
 
 Two of the three remaining `noop`s whose stated reasons had expired. Both
