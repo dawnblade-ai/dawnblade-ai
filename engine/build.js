@@ -294,24 +294,84 @@ function buildSideDefault(h, d, db, rng, ctr){
    is `buildSide`'s contract kept one level up. */
 const buildSeed = (code, i) => String(code == null ? 0 : code) + ":build:" + i;
 
+/* ---- THE PUNCHING BAG -------------------------------------------------
+   A SEAT THE DUMMY FILLS IS ALWAYS VANILLA (ruling, user, 2026-08-16).
+   Seat 1 is either a person, who picks their own hero, or the dummy —
+   and the dummy is a pile of Generic attack actions with no rules text,
+   there for seat 0 to practise against. There is no third thing, and in
+   particular there is no hero the dummy "plays as": that choice existed,
+   was never load-bearing, and every branch it created had to be carried
+   by the trainer, the loadout, the pregame and the table.
+
+   THE DECK LIST IS DATA AND IS PASSED IN, exactly as `buildSide` takes
+   `d` rather than looking it up. It lives in index.html's data script
+   beside the hero decks; hardcoding thirty card names in the engine
+   would make the pool two things instead of one, and a drill could then
+   only check the copy it was told about.
+
+   `hp` and `int` are the caller's too. They are the trainer's tuning,
+   not a rule — 42 life is a training prop's number, and the engine has
+   no opinion about how long a practice session should last.
+
+   EVERY PASSIVE IS WRITTEN OUT AS FALSE rather than defaulted, which is
+   the discipline `DUMMY_BUILD` has held since v2.41: a passive added to
+   `buildSide` and forgotten here reads `undefined` at the call site
+   instead of quietly reading as false on a real hero's turn. The drill
+   over `PASSIVES` holds this build to the same list. */
+function buildVanilla(list, gearNames, db, rng, ctr, o){
+  o = o || {};
+  const gear = (gearNames || []).map(nm => Object.assign(
+    resolveEntry(db, {name: nm, p: 0, code: null, q: 1}), {uid: ++ctr.n, used: false}));
+  const flat = (list || []).reduce((acc, e) => {
+    const [nm, p, q] = e;
+    for(let i = 0; i < (q || 1); i++)
+      acc.push(Object.assign(resolveEntry(db, {name: nm, p, code: null, q: 1}), {uid: ++ctr.n}));
+    return acc;
+  }, []).filter(c => c.resolved);
+  const sh = RNG.shuffle(rng, flat);
+  const b = {
+    deck: sh.arr, gear, hasBoost: false, read: "", heroPow: null, HPOW: null,
+    HZOOM: null, heroRec: {},
+    startItem: null,
+    hp: o.hp != null ? o.hp : 42,
+    int: o.int != null ? o.int : 4,
+    _dummy: true
+  };
+  for(const p of PASSIVES) b[p] = PASSIVE_TYPE[p] === "number" ? 0 : false;
+  return {b, rng: sh.rng};
+}
+
 /* `spec` is the lobby's matchSpec; `o` supplies the data the engine has
    no opinion about — the hero entries, the parsed decks and the card
    database, all passed in for the same reason `buildSide` takes `d` as a
-   parameter rather than looking it up. */
+   parameter rather than looking it up.
+
+   A seat whose hero key is `null` is the DUMMY, and is built vanilla off
+   `o.vanilla` ({deck, gear, hp, int}). Its stream, its place in the uid
+   threading and its build order are identical to a hero's — the seat is
+   filled differently, it is not a different KIND of seat, which is what
+   keeps `judge.reduce` unable to tell them apart. */
 function buildMatch(spec, o){
   o = o || {};
   const ctr = {n: o.ctr0 || 0};
   const builds = [0, 1].map(i => {
     const key = spec.heroes[i];
+    const rng = RNG.make(RNG.seedFrom(buildSeed(spec.seed, i)));
+    if(key == null){
+      const v = o.vanilla;
+      if(!v) throw new Error("buildMatch: seat " + i + " is the dummy and no vanilla pile was given");
+      return buildVanilla(v.deck, v.gear, o.db, rng, ctr, v).b;
+    }
     const h = o.heroes[key], d = o.decks[key];
     if(!h) throw new Error("buildMatch: no hero entry for " + key);
     if(!d) throw new Error("buildMatch: no deck for " + key);
-    const rng = RNG.make(RNG.seedFrom(buildSeed(spec.seed, i)));
     return buildSide(h, d, o.db, spec.boards[i] || {}, rng, ctr).b;
   });
   return {builds, first: spec.first, seed: spec.seed,
           heroKeys: spec.heroes.slice(),
-          names: spec.heroes.map(k => (o.heroes[k] && o.heroes[k].n) || k),
+          names: spec.heroes.map(k => k == null
+            ? ((o.vanilla && o.vanilla.name) || "The Dummy")
+            : ((o.heroes[k] && o.heroes[k].n) || k)),
           tokSeq: 0, uidHigh: ctr.n};
 }
 
@@ -338,5 +398,5 @@ const PASSIVE_TYPE = {
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
-        buildSeed, buildMatch, PASSIVES, PASSIVE_TYPE};
+        buildSeed, buildMatch, buildVanilla, PASSIVES, PASSIVE_TYPE};
 });

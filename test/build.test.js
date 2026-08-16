@@ -377,3 +377,96 @@ test("buildMatch names a missing hero rather than dealing an empty deck", {skip}
                boards: [{gearIdx: [], cuts: {}}, {gearIdx: [], cuts: {}}]};
   assert.throws(() => B.buildMatch(bad, mopts()), /nosuchhero/);
 });
+
+/* ============================================================
+   THE PUNCHING BAG — a seat the dummy fills (v2.81)
+
+   RULING (user, 2026-08-16): seat 1 is either a person, who picks their
+   own hero, or the dummy — and a seat the dummy fills is ALWAYS the
+   vanilla pile. There is no hero the dummy plays as. That choice existed
+   and was never load-bearing; what it cost was a branch in the trainer,
+   the loadout, the pregame and the table, each of which had to keep
+   answering "which kind of opponent is this".
+
+   The property that makes the pile honest is that NOTHING ABOUT IT NEEDS
+   THE PARSER: it blocks with printed defence and swings with printed
+   power. That is also exactly what `sparring.act` reads, so the policy
+   piloting it is playing the deck at full strength rather than ignoring
+   text it cannot see.
+   ============================================================ */
+
+const vanillaOpts = () => Object.assign(mopts(), {vanilla: {
+  deck: W.DUMMY_DECK, gear: W.DUMMY_GEAR, hp: 42, int: W.DUMMY_INT, name: "The Dummy"}});
+const vspec = (keys) => ({heroes: keys, first: 0, seed: "K7QM",
+  boards: keys.map(k => k == null ? {}
+    : {gearIdx: B.defaultPicks(slotsOf(mopts().heroes[k])), cuts: {}})});
+
+test("a null hero key seats the vanilla pile, not an empty deck", {skip}, () => {
+  const m = B.buildMatch(vspec(["kayo", null]), vanillaOpts());
+  const d = m.builds[1];
+  assert.equal(d.deck.length, 30, "the dummy's 30-card pile");
+  assert.equal(d.gear.length, 4, "and its four pieces of iron");
+  assert.equal(d.hp, 42);
+  assert.equal(d.int, W.DUMMY_INT);
+  assert.equal(d._dummy, true);
+  assert.deepEqual(m.names, ["Kayo", "The Dummy"]);
+  assert.deepEqual(m.heroKeys, ["kayo", null], "the key stays null — the seat has no hero");
+});
+
+/* THE WHOLE POINT OF THE PILE, and the one property worth a drill of its
+   own: it is the one deck in the project where nothing can be faked. */
+test("NOT ONE CARD IN THE PILE HAS RULES TEXT", {skip}, () => {
+  const m = B.buildMatch(vspec(["kayo", null]), vanillaOpts());
+  const carded = m.builds[1].deck.filter(c => (c.tx || "").trim());
+  assert.deepEqual(carded.map(c => c.name), [],
+    "a card with text in the punching bag is a card the trainer would have to READ, and " +
+    "the pile exists precisely so that nothing about the opponent is faked or parsed");
+  assert.ok(m.builds[1].deck.every(c => c.resolved),
+    "and every one resolved from the database — never invented");
+});
+
+test("every passive is ANSWERED, not defaulted", {skip}, () => {
+  const d = B.buildMatch(vspec(["kayo", null]), vanillaOpts()).builds[1];
+  for(const p of B.PASSIVES){
+    assert.notEqual(d[p], undefined,
+      p + " reads undefined on the dummy — a passive added to buildSide and forgotten here " +
+      "is a silent false at a rules site on a real hero's turn (the v2.41 shape)");
+    assert.equal(typeof d[p], B.PASSIVE_TYPE[p],
+      p + " must answer in its declared type");
+  }
+});
+
+/* SYMMETRY IS THE CONTRACT, and a dummy seat must not quietly become an
+   exception to it. `buildSide` has no seat argument; neither does this. */
+test("the dummy can sit in EITHER chair", {skip}, () => {
+  const m = B.buildMatch(vspec([null, "kayo"]), vanillaOpts());
+  assert.equal(m.builds[0]._dummy, true, "seat 0 can be the dummy");
+  assert.ok(!m.builds[1]._dummy, "and seat 1 the hero");
+  assert.deepEqual(m.names, ["The Dummy", "Kayo"]);
+});
+
+test("no uid repeats across a hero seat and a dummy seat", {skip}, () => {
+  const m = B.buildMatch(vspec(["kayo", null]), vanillaOpts());
+  const all = m.builds.flatMap(b => [...b.deck, ...b.gear, ...(b.startItem ? [b.startItem] : [])]);
+  const uids = all.map(c => c.uid);
+  assert.equal(new Set(uids).size, uids.length,
+    "one counter threaded through both seats — a repeat is CARD-IN-TWO-ZONES in disguise, " +
+    "because the census works by uid");
+});
+
+test("two peers deal the same punching bag from one spec", {skip}, () => {
+  const s = vspec(["kayo", null]);
+  const a = B.buildMatch(s, vanillaOpts()), b = B.buildMatch(s, vanillaOpts());
+  assert.equal(JSON.stringify(a.builds), JSON.stringify(b.builds));
+  /* and a DIFFERENT seed deals a different order, or the shuffle is not
+     consuming the stream at all and the drill above proves nothing */
+  const other = B.buildMatch(Object.assign(vspec(["kayo", null]), {seed: "ZZZZ"}), vanillaOpts());
+  assert.notEqual(a.builds[1].deck.map(c => c.uid).join("|"),
+                  other.builds[1].deck.map(c => c.name).join("|"));
+});
+
+test("a dummy seat with no pile is NAMED, not dealt empty", {skip}, () => {
+  assert.throws(() => B.buildMatch(vspec(["kayo", null]), mopts()),
+    /seat 1 is the dummy and no vanilla pile was given/,
+    "the same discipline as a missing hero — refuse loudly rather than seat an empty deck");
+});
