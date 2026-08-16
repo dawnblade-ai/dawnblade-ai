@@ -9,6 +9,64 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.78 — the table can answer a prompt
+
+**v2.77 gave the table card text; this gives it the half of card text
+that stops and asks.** Prompts have been addressed to a SIDE since v2.17,
+and until now only the trainer could resolve one — `promptConfirm` was a
+`setG` reducer inside `Battle`. That is not a missing screen. Several
+cards defer their **whole payload** into the answer: `arcaneHit` rides the
+damage out on a soak, and a printed "unless they pay" hangs its
+consequence off a toll. An unanswerable sheet is arcane damage that never
+lands and a printed cost that is never charged.
+
+| moved | to | why |
+|---|---|---|
+| the prompt ANSWER | `effects.js` `applyAnswer` | it is more than plumbing — it borrows the actor to the addressed side (v2.65's free action point), it pitches for an unaffordable payment rather than forgiving it, and it does the arsenal face-up stamping, which is a real card rule |
+| `autoPitch` | `effects.js` | the answer reaches for it: a toll charged on someone else's turn has no other way to find an {r}, and a second copy of "which card do I give up" is a second engine's judgement about one decision |
+| `promptDecline` | `prompts.js` | which sheets CAN be declined is prompt data, and both boards ask it now |
+
+### A live sheet stops BOTH seats
+
+That is the point of it: whatever queued the sheet is mid-resolution. The
+asked seat may only answer; the other may do nothing. Letting play
+continue around it is exactly how a deferred payload gets abandoned.
+
+Which means **every seat must be able to answer**, and at a regression run
+or in a local game one of them is not a person. `judge.autoAnswer` is the
+answer a seat with nobody in it gives, and it is **never called from
+`reduce`** — a policy quietly answering a modal nobody knew was there is
+the kind of thing that surfaces in a game weeks later. The session asks
+for it; the rules never volunteer it. The two answers that cost real money
+delegate to `soakPolicy` / `payPolicy`, the same pure printed-number
+policies the trainer already uses for seat 1, so the two cannot disagree
+about whether a soak is worth paying for.
+
+`sparring.js` answers a sheet addressed to its seat. **The wall stands** —
+it reads no card text; it hands the question to `autoAnswer`.
+
+### The measurement that made this necessary
+
+Adding the gate without the answering turned **seven drills red** —
+whole-game drivers, the wire round trip and the chair mirror — all with
+the same symptom: *the game never ended*. That is what an unanswerable
+sheet looks like from the outside, and it is why "prompts stay live and
+somebody will get to them" was not an option.
+
+### And a drill that was pinning a sample rather than a rule
+
+The chair-neutrality mirror was pinned at exactly **6-6**. With prompts
+resolving it is **5-7** — still balanced, and the pin would have turned
+every honest card fix into a red drill and trained the reader to edit the
+number without thinking. It asserts a BAND now (four of twelve to each
+chair), because the shape it guards is not the sample: a structurally
+weaker seat loses all twelve, and a privileged chair takes ten or eleven.
+
+**1015 drills green.** Sabotaged by neutering the gate: three of the four
+new drills go red.
+
+---
+
 ## v2.77 — judge.js resolves card text · ONE engine
 
 **Solo play and table play stop being two engines.** `engine/judge.js`

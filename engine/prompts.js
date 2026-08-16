@@ -249,6 +249,24 @@ function promptChoose(prompt, choice){
     return {...prompt, choice};
   return prompt;
 }
+/* DECLINING IS A CHOICE, NOT A CANCEL (moved here v2.77).
+
+   A `pay` sheet's decline is the printed "unless they pay" branch and it
+   has a consequence; an optional `pick` declines by choosing nothing, and
+   `applyPrompt` returns the rider's ops ONLY when cards actually moved,
+   which is the v2.04 free-ability rule. Neither is a way out of the sheet
+   — both still confirm.
+
+   It lived as three lines inside `Battle` and both boards need it now, so
+   it lives beside the toggles it belongs with. A prompt that cannot be
+   declined is returned unchanged rather than forced. */
+function promptDecline(prompt){
+  if(!prompt) return prompt;
+  if(prompt.tag === "pay") return promptChoose(prompt, "decline");
+  if(prompt.tag === "pick" && prompt.optional) return {...prompt, sel: []};
+  return prompt;
+}
+
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
@@ -390,5 +408,5 @@ function applyPrompt(game, prompt){
 }
 
 return {PROMPT_ZONES, promptZone, promptFilter, buildPrompt,
-        promptToggleSel, promptChoose, promptReady, moveCards, applyPrompt};
+        promptToggleSel, promptChoose, promptDecline, promptReady, moveCards, applyPrompt};
 });

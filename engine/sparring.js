@@ -256,6 +256,23 @@ function act(g, seat, o){
   o = cfg(o);
   if(!g || g.over || (seat !== 0 && seat !== 1)) return null;
 
+  /* A SEAT THAT IS ASKED, ANSWERS (v2.77). A prompt sheet stops the game
+     for BOTH seats until it is resolved, so a policy occupying a seat has
+     to be able to answer one or the game stalls the first time a card
+     defers its payload into an answer.
+
+     THE WALL STANDS: this reads no card text. It hands the question to
+     `judge.autoAnswer`, which delegates the two answers that cost real
+     money to the pure printed-number policies in effects.js — the SAME
+     ones the trainer already uses for seat 1, so a policy here cannot
+     disagree with a policy there about whether a soak is worth paying
+     for. Everything else it does is structural: decline what is
+     optional, take the minimum where one is printed.
+
+     Asked before `pending` for the same reason `pending` is asked before
+     priority: it is the narrowest thing that blocks everything else. */
+  if(g.prompt) return (g.prompt.side || 0) === seat ? J.autoAnswer(g) : null;
+
   /* A half-finished interaction belongs to ONE seat and blocks the other
      entirely, so it is asked about before anything else. */
   const p = J.pendingOf(g);

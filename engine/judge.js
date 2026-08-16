@@ -124,8 +124,19 @@ const ACTIONS = [
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
   "endTurn",     /*              a PASS carrying the turn-player's intent */
-  "concede"
+  "concede",
+  /* A PROMPT IS ADDRESSED TO A SIDE, and until v2.77 nothing here could
+     answer one. That is not a missing screen: several cards defer their
+     whole payload into the answer — `arcaneHit` rides the damage out on
+     a soak, a printed "unless they pay" hangs its consequence off a toll
+     — so an unanswerable sheet is arcane damage that never lands and a
+     printed cost that is never charged. */
+  "promptSel",    /* {i}          toggle a card / an option on the sheet  */
+  "promptChoose", /* {choice}     pick a printed mode, pay or decline     */
+  "promptConfirm",/*              resolve it                             */
+  "promptDecline" /*              the declining half of an OPTIONAL sheet */
 ];
+const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline"];
 
 /* ---- reading and writing ---------------------------------------------
    `act`/`foe` are ACTOR-relative and are what rules code uses. There is
@@ -276,6 +287,60 @@ function openPrompt(g){
   return {...g, promptQ: rest, prompt: live};
 }
 
+/* THE ANSWER A SEAT WITH NOBODY IN IT WOULD GIVE (v2.77).
+
+   A live sheet stops the game for both seats, which is correct — whatever
+   queued it is mid-resolution — and it means every seat must be able to
+   answer. At a table both are people. In a local session, in a regression
+   run and in `sparring.run`, one or both are not.
+
+   IT IS NOT CALLED FROM `reduce`, ever. Answering on a player's behalf is
+   the caller's decision, not the rules', and a policy quietly answering a
+   modal nobody knew was there is the kind of thing that only surfaces in
+   a game weeks later. The session asks for it; the reducer never does.
+
+   The two answers that carry real money are DELEGATED to the pure
+   policies in effects.js, because they are the same decision the trainer
+   already makes for seat 1 and a second copy of "is this worth paying
+   for" is a second opinion about the same card:
+
+     soak   `soakPolicy` — do not spend more resources than the damage is
+            worth, unless it is lethal, in which case nothing you hold is
+            worth more than being alive
+     pay    `payPolicy`  — the same brake, plus: never pitch your LAST
+            card to avoid discarding a card
+
+   The rest are structural and text-free: decline what is optional, take
+   the minimum where a minimum is printed, and leave an `opt` in the order
+   it came. A policy that always took the maximum would be inventing
+   value it cannot read. */
+function autoAnswer(g){
+  const p = g && g.prompt;
+  if(!p) return null;
+  const sd = at(g, p.side || 0);
+  if(p.tag === "soak"){
+    const want = E.soakPolicy(p, sd);
+    for(let i = 0; i < (p.options || []).length; i++)
+      if(want.indexOf(i) >= 0 && (p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
+    return {t: "promptConfirm"};
+  }
+  if(p.tag === "pay")
+    return p.choice == null
+      ? {t: "promptChoose", choice: E.payPolicy(p, sd) ? "pay" : "decline"}
+      : {t: "promptConfirm"};
+  if(p.tag === "modal")  return p.choice == null ? {t: "promptChoose", choice: 0} : {t: "promptConfirm"};
+  /* CR 1.4.5 makes a target mandatory, so there is no declining it. */
+  if(p.tag === "target") return p.choice == null ? {t: "promptChoose", choice: 0} : {t: "promptConfirm"};
+  if(p.tag === "pick"){
+    if((p.sel || []).length < (p.min || 0)){
+      for(let i = 0; i < (p.cards || []).length; i++)
+        if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
+    }
+    return {t: "promptConfirm"};
+  }
+  return {t: "promptConfirm"};
+}
+
 /* THE CONTEXT, BUILT FRESH PER CALL. `cell` is the uid counter; the
    caller writes it back. Nothing here reads a card's text: every entry is
    an accessor, a stamp or an adapter. */
@@ -416,6 +481,22 @@ function legal(g, a, seat){
 
   const busy = blockedBy(g, seat);
   if(busy) return busy;
+
+  /* A LIVE SHEET STOPS THE GAME UNTIL IT IS ANSWERED, and it stops it for
+     BOTH seats. The asked seat may only answer; the other may do nothing,
+     because whatever is waiting on the answer is mid-resolution. This is
+     the same shape as `pending`, and for the same reason: letting play
+     continue around it is how a deferred payload gets abandoned. */
+  if(g.prompt){
+    if(PROMPT_ACTIONS.indexOf(a.t) < 0)
+      return at(g, g.prompt.side || 0).name + " is answering " + (g.prompt.src || "a prompt");
+    if(seat !== (g.prompt.side || 0)) return "that sheet is not addressed to you";
+    if(a.t === "promptConfirm" && !PM.promptReady(g.prompt))
+      return "the sheet is not answered yet";
+    return null;
+  }
+  if(PROMPT_ACTIONS.indexOf(a.t) >= 0) return "there is no sheet to answer";
+
   const p = pendingOf(g);
 
   /* Inside a payment nothing else is legal, including for the seat that
@@ -931,6 +1012,17 @@ function reduce(g, a, seat){
       n = say(n, at(n, seat).name + " concedes.");
       break;
 
+    /* The sheet is data (prompts.js) and the answer is one shared body
+       (effects.js's `applyAnswer`). This file supplies neither — it
+       decides only WHO may answer and WHEN, which is the same division
+       the rest of the merge keeps. */
+    case "promptSel":    n = {...n, prompt: PM.promptToggleSel(n.prompt, a.i)}; break;
+    case "promptChoose": n = {...n, prompt: PM.promptChoose(n.prompt, a.choice)}; break;
+    case "promptDecline":n = {...n, prompt: PM.promptDecline(n.prompt)}; break;
+    case "promptConfirm":
+      n = withEffects(n, (fx, s2) => fx.applyAnswer(s2, s2.prompt));
+      break;
+
     case "play":      n = doPlay(n, a, seat); break;
     case "activate":  n = doActivate(n, a, seat); break;
     case "paySel":    n = doPaySel(n, a, seat); break;
@@ -1379,5 +1471,5 @@ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
-        setDb, effectsFor, withEffects, openPrompt};
+        setDb, effectsFor, withEffects, openPrompt, autoAnswer};
 });

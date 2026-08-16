@@ -325,6 +325,77 @@ test("the attack's TOTAL is what the card says, not what it prints", {skip: noDb
     "a queued +3 to your next attack must reach the chain link");
 });
 
+/* ---- A SHEET CAN BE ANSWERED AT THE TABLE (v2.77) ---------------------
+   Prompts have been addressed to a SIDE since v2.17, and until now only
+   the trainer could resolve one. That is not a missing screen: several
+   cards defer their whole payload into the answer — `arcaneHit` rides the
+   damage out on a soak, a printed "unless they pay" hangs its consequence
+   off a toll — so an unanswerable sheet is arcane damage that never lands.
+
+   Driven through `reduce`, including the refusals, because the refusals
+   are the half that stops the game continuing around an unanswered sheet
+   and abandoning what it was holding. */
+
+const promptGame = () => {
+  const g = judgeState();
+  g.turnPlayer = 0; g.priority = 0; g.phase = "action"; g.step = "layer";
+  g.sides[0].hand = [{name: "Sheet Fodder", uid: 901, pitch: 1, cost: 0, tt: "Generic Action", tx: ""},
+                     {name: "Sheet Spare",  uid: 902, pitch: 1, cost: 0, tt: "Generic Action", tx: ""}];
+  g.promptQ = [{tag: "pick", side: 0, src: "Probe", zone: "hand", to: "grave", min: 1, max: 1}];
+  return J.openPrompt(g);
+};
+
+test("a live sheet stops BOTH seats until it is answered", () => {
+  const g = promptGame();
+  assert.ok(g.prompt, "the queue did not drain into a live sheet");
+  assert.match(J.legal(g, {t: "pass"}, 0) || "",
+    /answering/, "the asked seat may not play on around its own sheet");
+  assert.match(J.legal(g, {t: "pass"}, 1) || "",
+    /answering/, "and neither may the other seat — what queued it is mid-resolution");
+  assert.match(J.legal(g, {t: "promptConfirm"}, 1) || "",
+    /not addressed to you/, "only the side it is addressed to may answer");
+  assert.match(J.legal(g, {t: "promptConfirm"}, 0) || "",
+    /not answered yet/, "a `min:1` pick cannot be confirmed with nothing chosen");
+});
+
+test("answering it moves the card and hands the game back", () => {
+  let g = promptGame();
+  const sel = J.reduce(g, {t: "promptSel", i: 0}, 0);
+  assert.equal(sel.error, null);
+  assert.equal(J.legal(sel.state, {t: "promptConfirm"}, 0), null, "now it is answerable");
+  const out = J.reduce(sel.state, {t: "promptConfirm"}, 0);
+  assert.equal(out.error, null);
+  assert.equal(out.state.prompt, null, "the sheet must clear, or the game stays stopped");
+  assert.equal(out.state.sides[0].hand.length, 1, "the chosen card left the hand");
+  assert.equal(out.state.sides[0].grave.length, 1, "and landed in the destination zone");
+  assert.equal(out.state.sides[0].grave[0].uid, 901);
+  assert.equal(g.sides[0].hand.length, 2, "and reduce did not write through to the caller");
+});
+
+test("a prompt action with no sheet open is refused, not ignored", () => {
+  const g = judgeState();
+  g.turnPlayer = 0; g.priority = 0; g.phase = "action";
+  assert.match(J.legal(g, {t: "promptConfirm"}, 0) || "", /no sheet/,
+    "an action that silently does nothing is indistinguishable from a bug");
+});
+
+test("autoAnswer is never reached from reduce — answering is the caller's", () => {
+  /* A policy quietly answering a modal nobody knew was there is the kind
+     of thing that only surfaces in a game weeks later. The session asks
+     for the answer; the rules never volunteer one. */
+  const src = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "engine", "judge.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  const body = src.slice(src.indexOf("function reduce(g, a, seat){"));
+  assert.ok(!/autoAnswer\s*\(/.test(body),
+    "reduce must not answer a sheet on a seat's behalf");
+
+  const g = promptGame();
+  const a = J.autoAnswer(g);
+  assert.ok(a && /^prompt/.test(a.t), "and the helper must offer a real prompt action");
+  assert.equal(J.legal(g, a, g.prompt.side || 0), null, "which the judge then accepts");
+});
+
 test("the context is still 17 keys — a new one is a new thing judge must supply", () => {
   assert.equal(E.CTX_KEYS.length, 17,
     "every key added to effects.js is another dependency judge.js has to satisfy before it " +

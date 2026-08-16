@@ -48,6 +48,16 @@ const ANCHORS = [
   /* --- engine/effects.js: the ported card semantics -------------------- */
   ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
   ["execute",      "  const execute = (s,card,from,idx,opts) => {", "effects"],
+  /* BOUNDARIES, not rules functions — the same role `playRx` plays below.
+     Without them `execute`'s slice runs all the way to `linkPumps` and
+     swallows four unrelated bodies, which is how a ledger stops bounding
+     things and quietly stops being a guard. `applyAnswer` is a rules
+     function and is bounded here too; it is not on RULES_FNS because that
+     list is the roadmap's seven, and adding to it is a separate decision. */
+  ["autoPitch",    "  const autoPitch = (s, cost, keepUid) => {",     "effects"],
+  ["applyAnswer",  "  const applyAnswer = (s, prompt) => {",          "effects"],
+  ["fileAttack",   "  const fileAttack = (s2, card, from) => {",      "effects"],
+  ["afterDefenders","  const afterDefenders = (s) => {",              "effects"],
   /* v2.77 split the link's resolution into two shared pieces so a caller
      can put its OWN wall and its own damage routing between them. Both
      are rules functions and both are anchored, or the ledger would report

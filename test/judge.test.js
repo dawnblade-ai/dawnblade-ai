@@ -78,6 +78,12 @@ function drive(g, o){
     return true;
   };
   for(let tick = 0; tick < limit && !g.over; tick++){
+    /* A LIVE SHEET STOPS BOTH SEATS (v2.77), which is the point of it —
+       whatever queued it is mid-resolution. So a driver has to answer one
+       or the game simply stops, which reads as "the game never ended"
+       rather than as the stall it is. `autoAnswer` is the answer a seat
+       with nobody in it gives, and the reducer never calls it itself. */
+    if(g.prompt){ send(J.autoAnswer(g), g.prompt.side || 0); continue; }
     const p = J.pendingOf(g);
     if(p && p.kind === "pay"){
       const sd = g.sides[p.seat];

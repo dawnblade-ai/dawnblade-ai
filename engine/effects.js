@@ -62,7 +62,10 @@ const {advValue} = A;
    re-deciding it here: buildPrompt already drops options the hero cannot
    afford and returns null when there is nothing to ask, and a second copy
    of that filter is the mirror the no-mirror rule exists to prevent. */
-const {buildPrompt} = PR;
+/* `applyPrompt` and `promptReady` joined `buildPrompt` in v2.77, when the
+   prompt ANSWER moved here from the trainer: resolving a sheet is one
+   shared body now, and both boards call it. */
+const {buildPrompt, applyPrompt, promptReady} = PR;
 const rngRoll = R.roll, rngInt = R.int;
 
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
@@ -1243,6 +1246,139 @@ function makeEffects(ctx){
     return openPrompt(winCheck(n));
   };
 
+  /* PITCHING ON DEMAND, TO COVER A COST (moved here v2.77).
+
+     RULING (user, 2026-08-01): you cannot pitch to bank resources. The
+     pool is filled only when something costs more than you hold — and
+     then you may pay or decline. This is the paying half, and it moved
+     out of the trainer because the PROMPT ANSWER reaches for it: a soak
+     or a toll charged to a hero on someone else's turn has no other way
+     to find an {r}, and a second copy of "which card do I give up" is a
+     second engine's worth of judgement about the same decision.
+
+     It spends the CHEAPEST card first, by the advisor's valuation, with
+     ties broken on uid so two equal cards cannot desync two peers. It
+     returns null rather than a partial payment when the cost cannot be
+     reached — the caller must be able to tell "paid" from "could not",
+     because forgiving an unaffordable payment hands out the effect free. */
+  const autoPitch = (s, cost, keepUid) => {
+    let n = {...s};
+    const spendable = () => act(n).hand.filter(h=>h.uid!==keepUid);
+    while(act(n).res < cost && spendable().length){
+      const pool = spendable();
+      const p = pool.map(h=>({h,v:advValue(h,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v || a.h.uid-b.h.uid)[0].h;
+      actMut(n).res += (p.pitch||0);
+      actMut(n).pitch = [...act(n).pitch, p];
+      actMut(n).hand = act(n).hand.filter(h=>h.uid!==p.uid);
+      n = L(n, `Pitched ${p.name} at instant speed (+${p.pitch||0}).`);
+    }
+    return act(n).res < cost ? null : n;
+  };
+
+  /* ANSWERING A PROMPT (moved here v2.77).
+
+     A quarter of the recorded rulings are the same shape — stop, show a
+     side something, let them choose — and `prompts.js` is the data for
+     it. What was NOT shared was the answering: this body lived inside
+     `Battle` as a `setG` reducer, so a table with two seats had no way
+     to resolve a sheet at all. Several cards defer their whole payload
+     into the answer (`arcaneHit` rides the damage out on a soak, a
+     printed "unless they pay" hangs its consequence off a toll), so an
+     unanswerable prompt is not a missing UI — it is arcane damage that
+     never lands and a printed cost that is never charged.
+
+     It is more than plumbing, which is why it is here rather than
+     written twice: it borrows the ACTOR to the addressed side (v2.65 —
+     a payout that landed on seat 0 whoever was asked gave the player a
+     free action point every game), it pitches for an unaffordable
+     payment rather than forgiving it, and it does the arsenal face-up
+     stamping, which is a real card rule.
+
+     Pure `s => s'`. The caller decides what the game does next. */
+  const applyAnswer = (s, prompt) => {
+    const p = prompt;
+    if(!p || !promptReady(p)) return s;
+    const r = applyPrompt({...s, prompt:null}, p);
+    let n = r.game;
+    n.prompt = null;
+    r.msgs.forEach(m => { n = L(n, m); });
+    /* A PROMPT IS ADDRESSED TO A SIDE, AND SO IS ITS PAYOUT (v2.65).
+       `spec.side` has meant "whose call is this" since v2.17 — Cold Snap's
+       ruling has the OPPONENT choosing whether to pay — but this function
+       charged seat 0's side directly and ran the ops at the ambient actor, so every
+       consequence landed on seat 0 whoever was asked.
+
+       It went live the moment seat 1 played real cards: `afterDiscard`
+       queues Beaten Trackers' modal with `side: actorOf(n)`, `foePlay`
+       hands the actor back without draining the queue, and the sheet was
+       then answered by the PLAYER — who paid nothing, because
+       `destroyGear` looked for seat 1's uid in seat 0's gear and skipped
+       (its `return` exits one op, not the option), and still collected the
+       `["ap",1]`. A free action point every game, and the opponent kept
+       the iron it was printed to destroy.
+
+       Borrowing the actor for the whole body is what `foePlay` already
+       does around `runOps`; it also makes the arsenal tail below, which is
+       written on `act`/`actMut`, correct for seat 1 rather than only for
+       seat 0. Handed back before `winCheck`/`openPrompt`. */
+    const pSide = p.side || 0, pWasActor = n.actor || 0;
+    n = {...n, actor: pSide};
+    /* PAY IT, OR PITCH FOR IT. `Math.max(0, …)` alone silently FORGIVES an
+       unaffordable payment, which was harmless while every `pay` spec was
+       built with an `avail` of seat 0's floating resources — you could never select more than
+       you held. A `soak` spec's `avail` counts the hand too, because
+       pitching is on demand (RULING 2026-08-01) and a hero being hit on
+       someone else's turn has no other way to find an {r}. Without the
+       pitch here the clamp would hand them the prevention for free, which
+       is a keyword strictly better than printed. */
+    if(r.pay > 0){
+      if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
+      const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
+    }
+    if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
+    /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
+       different event from the end-of-turn arsenal step, which sets face
+       DOWN — Azalea's arrows trigger on the face-up one only. The flag
+       rides on the card itself, the way a minted card carries _playTurn,
+       so no new side field is needed.
+
+       The arrow's own payload is stamped ONTO the card rather than run
+       now: "+2{p} this turn" and "go again this turn" have to survive
+       until the arrow is actually played, which may be later the same
+       turn. `opt` is a real effect and runs immediately. */
+    if(p.tag === "pick" && p.to === "arsenal"){
+      const put = act(n).arsenal;
+      if(put && !put._faceUp){
+        const pfx = fxParse(put);
+        const up = {...put, _faceUp:true, _upTurn:n.turn};
+        for(const op of (pfx.arsenalUp||[])){
+          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+            n = L(n, `${put.name} goes face up — +${op[1]} power this turn.`); }
+          else if(op[0] === "ga"){ up._arsGA = true;
+            n = L(n, `${put.name} goes face up — it will go again this turn.`); }
+          else n = runOps(n, [op], put.name);
+        }
+        /* THE SOURCE'S OWN STAMP, on top of the arrow's trigger (v2.34).
+           Bull's Eye Bracers prints "It gains +1{p} until end of turn", where
+           "it" is the arrow that was just put. That is a SECOND stamp, and it
+           stacks with the arrow's own: an arrow set with the Bracers gets
+           both. "Until end of turn" and "this turn" are the same duration, so
+           both ride on _upTurn and expire together if the arrow is not
+           played. The parser holds this back from fx.self precisely so it
+           lands on the arrow instead of on the equipment. */
+        for(const op of (p.arsStamp||[])){
+          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+            n = L(n, `${p.src}: ${put.name} also gains +${op[1]} power this turn.`); }
+        }
+        actMut(n).arsenal = up;
+        if(!(pfx.arsenalUp||[]).length && !(p.arsStamp||[]).length)
+          n = L(n, `${put.name} set face up in arsenal.`);
+      }
+    }
+    n = {...n, actor: pWasActor};
+    return openPrompt(winCheck(n));
+  };
+
   /* WHERE A DECLARED ATTACK GOES WHEN IT IS DONE (v2.77).
 
      Split out of `execute` so that WHEN it happens belongs to the caller
@@ -1585,7 +1721,7 @@ function makeEffects(ctx){
   };
 
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
-          linkPumps, linkPayload};
+          linkPumps, linkPayload, autoPitch, applyAnswer};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------

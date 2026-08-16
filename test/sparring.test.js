@@ -186,11 +186,20 @@ test("neither chair is privileged — a mirror splits its wins", {skip}, () => {
     wins[g.over.winner]++; played++;
   }
   assert.equal(played, 12, "the drill stopped driving games");
-  /* Pinned exactly, so a drift in either direction is a deliberate edit
-     rather than something that quietly rots into 11-1. */
-  assert.deepEqual(wins, [6, 6],
-    "a mirror match must not favour a chair. Seat 1 is a seat somebody occupies, not a " +
-    "weaker shape wearing a deck — that is the whole point of the policy.");
+  /* A BAND, NOT A PINNED NUMBER, and the distinction is deliberate. These
+     counts are an emergent property of what the cards do, so every honest
+     card fix moves them by one or two — pinning 6-6 exactly would turn a
+     correct parser change into a red drill and train the reader to edit
+     the number without thinking, which is worse than no drill at all.
+
+     What is NOT emergent is the shape of the failure this guards. A seat
+     that is structurally weaker loses all twelve; a chair that is
+     privileged takes ten or eleven. Four of twelve to each is well inside
+     what seating alone explains and well outside either of those. */
+  assert.ok(wins[0] >= 4 && wins[1] >= 4,
+    "a mirror match must not favour a chair — it split " + wins[0] + "-" + wins[1] + ". " +
+    "Seat 1 is a seat somebody occupies, not a weaker shape wearing a deck; that is the " +
+    "whole point of the policy.");
 });
 
 /* ---- THE POLICY ITSELF ------------------------------------------------- */

@@ -183,7 +183,7 @@ test("foePick asks the printed gate, not just type and affordability", () => {
 });
 
 test("foePlay pays an additional cost before it resolves the card", () => {
-  const body = slice("  function foePlay(s, card){", "  function autoPitch(s, cost, keepUid){");
+  const body = slice("  function foePlay(s, card){", "  const autoPitch = _EFX.autoPitch;");
   assert.ok(/payAddCost\(/.test(body),
     "an additional cost is a COST — Savage Feast's discard was never paid");
   assert.ok(/addCost/.test(body) && /actor\s*:\s*1/.test(body),
@@ -191,7 +191,15 @@ test("foePlay pays an additional cost before it resolves the card", () => {
 });
 
 test("promptConfirm pays out to the prompt's SIDE, not always to seat 0", () => {
-  const body = slice("  const promptConfirm = () => setG(s=>{", "  const promptDecline = ");
+  /* THE BODY MOVED to engine/effects.js in v2.77 (`applyAnswer`), so a
+     guard aimed at index.html would now find only the setG wrapper — and
+     a source guard aimed at the wrong file PASSES BY FINDING NOTHING.
+     Repointed, with both anchors asserted found. */
+  const EFFECTS = require("./helpers/extract.js").effects();
+  const a0 = EFFECTS.indexOf("  const applyAnswer = (s, prompt) => {");
+  const b0 = EFFECTS.indexOf("  const fileAttack = (s2, card, from) => {");
+  assert.ok(a0 > 0 && b0 > a0, "anchors moved — repoint this drill deliberately");
+  const body = EFFECTS.slice(a0, b0);
   /* THE BUG: `spec.side` has meant "whose call is this" since v2.17, but
      this function charged `youMut` and ran the ops at the ambient actor.
      The opponent's Beaten Trackers modal was drained on the PLAYER's next
@@ -252,7 +260,7 @@ test("the vanilla escalation spends the action point — one swing per turn", ()
 });
 
 test("a go again attack lets seat 1 chain a second link (CR 5.3.5)", () => {
-  const play = slice("  function foePlay(s, card){", "  function autoPitch(s, cost, keepUid){");
+  const play = slice("  function foePlay(s, card){", "  const autoPitch = _EFX.autoPitch;");
   /* GO AGAIN IS A GAIN, NOT A REFUND — `ga ? keep : -1` cannot say +1, and
      spelling it out is what makes an instant cost nothing (CR 8.1.6). */
   assert.ok(/opp\(n\)\.ap\s*-\s*1\s*\+\s*\(_fga\s*\?\s*1\s*:\s*0\)/.test(play),
