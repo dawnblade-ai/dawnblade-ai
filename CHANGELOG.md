@@ -9,6 +9,80 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.80 — the gate `Battle` retires behind
+
+**`Battle` does not retire until the merged path passes the same drills.**
+That rule has governed the whole merge, and the five drills it names —
+`kayo`, `dorinthea`, `frostbite`, `arcane`, `paytoll` — now pass driving
+`judge.reduce`. The gate is PASSED, which unblocks retiring `Battle`'s
+rules; it does not retire them. That is still the next step, and it is
+still 97 `mode`/`bphase` references and a `setG` replacement that has to
+keep the invariant-judge funnel.
+
+### What the hand-rolled contexts were hiding
+
+Each of the five carried its own ~20-key `ctx()` literal — the no-mirror
+rule broken in the drills instead of in the engine. It had already
+drifted, in every direction at once:
+
+| stub | what it meant |
+|---|---|
+| `dummyDefence`, `built` | dead keys — neither has been in `CTX_KEYS` since v2.73 / v2.77 |
+| `mkRune: s => s` | a runechant was never minted |
+| `openPrompt: s => s` | a prompt never opened |
+| `winCheck: s => s` | nobody ever won |
+| `had6ThisTurn: () => false` | a CONSTANT for the condition half of Kayo's deck turns on |
+| `bAct` and `bFoe` returning ONE build | no drill could tell the two seats apart |
+
+`test/helpers/judged.js` is the one way in now: `judge.withEffects`, over
+`makeSide`'s shape rather than a partial side literal per file, with the
+build on `g.builds` where `bAct` reads it and the database registered
+through `judge.setDb`.
+
+### The three things it found
+
+1. **`effCost` IS READ TWICE, and the reads are different questions.**
+   `execute` charges the cost; `doPlay` asks whether the seat can AFFORD
+   it, and only that second read decides whether a payment opens.
+   Nothing drove the second — replacing `doPlay`'s `effCost` with the
+   printed cost left every existing drill green.
+2. **JUDGE'S WALL HAD NO DRILL AT ALL.** `resolveStack` is the trainer's
+   path; judge does not call it, because the body was split so each
+   caller keeps its own wall and its own CR 1.4.5 damage routing between
+   `linkPumps` and `linkPayload`. All 14 dorinthea drills measured the
+   half of the engine the table does not use. Blinding judge's `strike`
+   to every declared defender used to change nothing; it now fails two.
+3. **A FABRICATED `pend` IS THE ANSWER, NOT THE QUESTION.** `total` was
+   supplied by the fixture, so "an attack blocked to nothing does not
+   refresh" was asserted by writing 0 into the link rather than by
+   anyone blocking, and "it hit, so go again was granted" was asserted
+   about a hit the drill had arranged.
+
+### And the guard's own defect, found by sabotaging it
+
+The new guard in `test/sync.test.js` fails any drill file that builds its
+own effects context outside the three sanctioned seam files
+(`effects.test.js` proves `makeEffects` REFUSES an incomplete context and
+must hand it one; `merge.test.js` measures the clone property;
+`mirror.test.js` is Battle's context, not judge's).
+
+Written first as `[^.\w]makeEffects\(` — the idiom borrowed from the
+bare-name guard beside it, where excluding a property access is right —
+it **excluded every call it existed to catch**, and the sabotage that
+re-grew a context in a drill file passed. A source guard aimed at the
+wrong SHAPE passes by finding nothing, exactly as one aimed at the wrong
+file does.
+
+The second half of the guard caught a real gap the same way: kayo reached
+judge's context but never the reducer. It does now, with Bare Fangs —
+one printed sentence that exercises the draw, the discard that was
+silently deleted before v2.55, the `_disc` stamp, the 6+ threshold clause
+2 lifts and clause 3's Might token, on one tap.
+
+1032 drills green. `npm run fairness` clean.
+
+---
+
 ## v2.79 — a session with no network
 
 **The last thing keeping solo and table apart was not the engine, it was

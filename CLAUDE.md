@@ -366,6 +366,70 @@ Always, regardless of what the tests say:
 `fxParse` memoizes on `name|pitch`. Test cards **must have unique `name` fields**
 or results silently collide in the cache and produce misleading passes.
 
+### THE DRILLS RUN ON THE REAL CONTEXT (v2.80) — `test/helpers/judged.js`
+
+**A drill file must not build its own effects context.** `effects.js` is
+the one copy of the card semantics and `judge.effectsFor` is the one
+context a player's cards run in; a hand-rolled `ctx()` literal is the
+no-mirror rule broken in the drills instead of in the engine, and it had
+already drifted in every direction at once:
+
+| stub | what it meant |
+|---|---|
+| `dummyDefence`, `built` | dead keys — out of `CTX_KEYS` since v2.73 / v2.77 |
+| `mkRune: s => s` | a runechant was never minted |
+| `openPrompt: s => s` | a prompt never opened |
+| `winCheck: s => s` | nobody ever won |
+| `had6ThisTurn: () => false` | a CONSTANT for the condition half of Kayo's deck turns on |
+| `bAct` and `bFoe` returning ONE build | no drill could tell the two seats apart |
+
+Use `test/helpers/judged.js`: `state(a, b, o)` builds a judge-shaped game
+over `makeSide`'s shape, `runOps`/`execute`/`fx` go through
+`judge.withEffects`, and `db()` registers the database with
+`judge.setDb`. **The build goes on `g.builds`**, where `bAct` reads it —
+a build handed to a context is seat-agnostic by construction and cannot
+express "his hero ability, not theirs".
+
+Three files may still hand-roll, because in each the context IS the
+subject: `effects.test.js` (must pass an INCOMPLETE one to prove
+`makeEffects` refuses it), `merge.test.js` (the clone property),
+`mirror.test.js` (Battle's context, not judge's). `test/sync.test.js`
+pins that list and fails any other file.
+
+**AN EXPLICIT `undefined` IS DROPPED, not assigned.** `Object.assign`
+copies a key whose value is undefined, so one optional field threaded
+through a caller (`{hist: o.hist}` where the caller passed nothing)
+deletes `freshHist()` and the first `hist.atkNames` read throws from
+inside a reducer whose contract is that it never throws.
+
+**Three things this found, none of which a card-level tool can see:**
+
+1. **`effCost` is READ TWICE and the reads are different questions.**
+   `execute` charges the cost; `doPlay` asks whether the seat can AFFORD
+   it, and only that second read decides whether a payment opens.
+   Replacing `doPlay`'s `effCost` with the printed cost left every drill
+   in the project green.
+2. **Judge's wall had NO drill.** `resolveStack` is the TRAINER's path —
+   judge does not call it, because the body was split so each caller
+   keeps its own wall and its own CR 1.4.5 routing between `linkPumps`
+   and `linkPayload`. All 14 dorinthea drills measured the half of the
+   engine the table does not use.
+3. **A FABRICATED `pend` IS THE ANSWER, NOT THE QUESTION.** `total` was
+   supplied by the fixture, so "an attack blocked to nothing does not
+   refresh" was asserted by writing 0 into the link rather than by
+   anyone blocking, and "it hit, so go again was granted" was asserted
+   about a hit the drill had arranged.
+
+**And the guard's own defect, found by sabotaging it.** It was written
+`[^.\w]makeEffects\(` — the idiom borrowed from the bare-name guard
+beside it, where excluding a property access is right — which **excluded
+every call it existed to catch**, since the only form anyone writes is
+`E.makeEffects(…)`. A source guard aimed at the wrong SHAPE passes by
+finding nothing, exactly as one aimed at the wrong file does. Same
+family as `html-balance.test.js`'s pre-neutralize list and the actor
+ledger's prose false-positives: **sabotage the guard, not just the
+code.**
+
 ---
 
 ## Wiring a ruling to a prompt (v2.17)
@@ -1016,14 +1080,18 @@ Once per Turn` equipment ability.
    damage routing between them — that is the piece judge.js could never
    call, because it holds defenders on `blockG`/`blockH` and routes by
    CR 1.4.5 attack-target.
-4. **Retire `Battle`'s rules** — the last step, and the rule that
-   governs it has not moved: **`Battle` is the regression harness and
-   does not retire until the merged path passes the same drills.**
-   Concretely, `test/kayo.test.js`, `test/dorinthea.test.js`,
-   `test/frostbite.test.js`, `test/arcane.test.js` and
-   `test/paytoll.test.js` must pass driving `judge.reduce` rather than a
-   hand-rolled effects context. Whatever replaces `setG` must keep the
-   invariant-judge funnel, or the guard rails go dark.
+4. **Retire `Battle`'s rules** — the last step. The rule that governs it
+   has not moved: **`Battle` is the regression harness and does not
+   retire until the merged path passes the same drills.**
+
+   **THE GATE IS PASSED (v2.80).** `test/kayo.test.js`,
+   `test/dorinthea.test.js`, `test/frostbite.test.js`,
+   `test/arcane.test.js` and `test/paytoll.test.js` all drive
+   `judge.reduce` through `test/helpers/judged.js` — see "THE DRILLS RUN
+   ON THE REAL CONTEXT" below. That **unblocks** the retirement; it does
+   not perform it. What is left is `Battle`'s 97 `mode`/`bphase`
+   references, and whatever replaces `setG` must keep the invariant-judge
+   funnel or the guard rails go dark.
 
 ---
 
@@ -2036,11 +2104,10 @@ through `judge.js`, which supplies the context and adds none of its own.
 Prompts are answerable there too (v2.78), which matters because several
 cards defer their whole payload into the answer.
 
-`Battle` is untouched by all of it and remains the regression harness. It
-does not retire until the merged path passes the same drills:
-`test/kayo.test.js`, `test/dorinthea.test.js`, `test/frostbite.test.js`,
-`test/arcane.test.js` and `test/paytoll.test.js` must pass driving
-`judge.reduce` rather than a hand-rolled effects context.
+`Battle` is untouched by all of it and remains the regression harness.
+Its retirement gate — those five drills passing while driving
+`judge.reduce` — **is met as of v2.80**; what still stands between here
+and deleting anything is `Battle`'s 97 `mode`/`bphase` references.
 
 `foeSwing`'s `[3,4,5][(turn-1)%3]` escalation still drives the **solo**
 dummy. It is untouched here and is retired by step 3 of the remaining

@@ -221,6 +221,68 @@ test("Reincarnate discarded at random goes to the DECK BOTTOM, not the graveyard
   assert.equal(out.sides[0].deck[0].name, "Reincarnate");
 });
 
+/* ---- THE WHOLE HERO, ON ONE TAP ---------------------------------------
+   Every drill in this file measures one op, one clause or one number.
+   This one plays a card. Bare Fangs is the right card because its single
+   printed sentence exercises all three of Kayo's parts at once:
+
+     "When this attacks, draw a card then discard a random card. If a card
+      with 6 or more {p} is discarded this way, create a Might token."
+
+   the draw, the discard that was silently deleted before v2.55, the
+   `_disc` stamp that separates a discard from a card merely played, the
+   6+ threshold clause 2 lifts, and clause 3's token. Driven through
+   `judge.reduce`, so it is the line of play a player actually taps.
+   ------------------------------------------------------------------- */
+
+test("one tap of Bare Fangs runs the whole engine: draw, discard, threshold, token", {skip}, () => {
+  const b = kayoBuild();
+  const fangs = {...card("Bare Fangs"), uid: "bf1"};
+  const buck  = {...card("Buckwild"), uid: "bk1"};       // printed 7 — over the bar
+  const ride  = {...card("Wild Ride"), uid: "wr1"};
+  assert.equal(+fangs.power, 6, "fixture drifted — Bare Fangs should print 6");
+
+  let g = H.state({name: "Kayo", res: 9, hand: [fangs, buck], deck: [ride]},
+                  {name: "Them"}, {actor: 0, turnPlayer: 0, seed: "kayo", builds: [b, {}]});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const out = J.reduce(g, {t: "play", uid: "bf1", from: "hand"}, 0);
+  assert.equal(out.error, null, "the swing was refused: " + out.error);
+  const n = out.state;
+
+  assert.deepEqual(n.sides[0].hand.map(c => c.name), ["Wild Ride"],
+    "the draw happened and the discard took the OTHER card — Buckwild was the only " +
+    "candidate, so the seeded pick cannot be what makes this pass");
+  assert.equal(n.sides[0].deck.length, 0, "and it came off the deck");
+
+  assert.deepEqual(n.sides[0].grave.map(c => c.name), ["Buckwild"],
+    "Bare Fangs itself is on the CHAIN, not in the graveyard — an attack that files itself " +
+    "at declaration is the CARD-IN-TWO-ZONES the merge found");
+  assert.equal(n.sides[0].grave[0]._disc, true, "the discard is stamped");
+  assert.equal(n.sides[0].grave[0]._gy, n.turn, "and turn-stamped");
+
+  assert.deepEqual(n.sides[0].board.map(e => e.card && e.card.name), ["Might"],
+    "a 7-power card was discarded this way, so clause 3 pays out — and the token is " +
+    "resolved from the database, which only happens because the db is registered with " +
+    "the judge rather than held privately by this file");
+});
+
+test("under the bar, the same tap makes no token — the CONTROL", {skip}, () => {
+  /* Without this the drill above passes just as well on an engine that
+     mints a Might for any discard at all. A printed 3 is under the bar
+     even for Kayo, whose clause 2 lifts it only to 4. */
+  const b = kayoBuild();
+  const fangs = {...card("Bare Fangs"), uid: "bf1"};
+  const small = {name: "tiny", uid: "t1", pitch: 1, power: 3, cost: 0,
+                 tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []};
+  let g = H.state({name: "Kayo", res: 9, hand: [fangs, small],
+                   deck: [{...card("Wild Ride"), uid: "wr1"}]},
+                  {name: "Them"}, {actor: 0, turnPlayer: 0, seed: "kayo", builds: [b, {}]});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  const n = J.reduce(g, {t: "play", uid: "bf1", from: "hand"}, 0).state;
+  assert.deepEqual(n.sides[0].grave.map(c => c.name), ["tiny"], "it was still discarded");
+  assert.deepEqual(n.sides[0].board, [], "but 3 is not 6, so nothing is created");
+});
+
 /* ---- THE TOKENS, AND CLAUSE 3 ----------------------------------------- */
 
 test("Might / Agility / Vigor each parse to a real payload", {skip}, () => {

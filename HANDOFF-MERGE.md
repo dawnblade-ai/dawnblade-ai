@@ -1,4 +1,4 @@
-# THE MERGE — done, at v2.79
+# THE MERGE — done, at v2.79; the gate passed at v2.80
 
 ## WHAT HAPPENED
 
@@ -12,10 +12,11 @@ v2.76  the flow (hero → throw → sideboard → game)        ✔
 v2.77  judge.js resolves card text                       ✔
 v2.78  the table can answer a prompt                     ✔
 v2.79  a session with no network — solo IS the table     ✔
+v2.80  the five gate drills drive judge.reduce           ✔  ← the gate
        one board; Battle's rules retire                  ☐  ← the last step
 ```
 
-`npm test` → **1025 drills green**. `npm run fairness` → clean. All 22
+`npm test` → **1032 drills green**. `npm run fairness` → clean. All 22
 `engine/*.js` verified serving 200 at
 https://dawnblade-ai.github.io/dawnblade-ai/ .
 `node` is at `~/node/bin`, **not on PATH** —
@@ -66,22 +67,42 @@ is chosen — and an unregistered one REFUSES rather than throwing.
 
 ## WHAT IS LEFT, AND WHY IT IS NOT DONE
 
-**`Battle` is the regression harness and does not retire until the merged
-path passes the same drills.** That rule has not moved and it is the whole
-reason there are still two boards. Concretely, before deleting anything in
-`Battle`:
+**THE GATE IS PASSED (v2.80).** The rule has not moved — *`Battle` is the
+regression harness and does not retire until the merged path passes the
+same drills* — but the condition it names is now met:
 
 > `test/kayo.test.js`, `test/dorinthea.test.js`, `test/frostbite.test.js`,
 > `test/arcane.test.js` and `test/paytoll.test.js` must pass **driving
-> `judge.reduce`** rather than a hand-rolled effects context.
+> `judge.reduce`** rather than a hand-rolled effects context. ✔
 
-Those five files build their own `ctx` and call `runOps`/`execute`
-directly. Repointing them at `judge.reduce` is the next session's job, and
-it is the honest gate: they are the only proof the semantics are right,
-and today they prove it about a context a test wrote rather than the one
-a player gets.
+They go through `test/helpers/judged.js`, which is `judge.withEffects` —
+judge's own context — and each of the five drives `reduce` for the plays
+its subject is actually about. `test/sync.test.js` holds both halves: no
+drill file may build its own effects context outside the three sanctioned
+seam files, and those five must reach the reducer.
 
-Two more things belong to that step:
+**That UNBLOCKS retiring `Battle`'s rules. It does not retire them.**
+The remaining work is unchanged in size, and is the two bullets below.
+
+### What repointing them found
+
+Three things, each invisible until the drills ran on the real context:
+
+1. **`effCost` is read TWICE and the reads are different questions.**
+   `execute` charges the cost; `doPlay` asks whether the seat can AFFORD
+   it, and only that second read decides whether a payment opens.
+   Replacing `doPlay`'s `effCost` with the printed cost left every
+   existing drill green.
+2. **Judge's wall had NO drill.** `resolveStack` is the trainer's path —
+   judge does not call it, because the body was split so each caller
+   keeps its own wall and its own CR 1.4.5 routing between `linkPumps`
+   and `linkPayload`. All 14 dorinthea drills measured the half of the
+   engine the table does not use.
+3. **A fabricated `pend` is the answer, not the question.** `total` was
+   supplied by the fixture, so the blocked-to-nothing case was asserted
+   by writing 0 into the link rather than by anyone blocking.
+
+Two more things belong to the retirement step:
 
 - **The `[3,4,5]` escalation is TUNED and `sparring.act` is not.** The
   local table's opponent is a printed-numbers policy that reads no card

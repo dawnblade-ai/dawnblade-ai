@@ -154,3 +154,66 @@ test("the bridge lifts every engine export the trainer calls by bare name", () =
   }
   assert.deepEqual(missing, [], `called bare in index.html but never bridged: ${missing.join(", ")}`);
 });
+
+/* ============================================================
+   THE NO-MIRROR RULE, APPLIED TO THE DRILLS (v2.80)
+
+   `engine/effects.js` is the one copy of the card semantics, and
+   `judge.effectsFor` is the one context a player's cards actually run
+   in. A drill file that builds its OWN context is a second description
+   of that context sitting where nothing watches it — the same shape the
+   sync guard exists to prevent one layer down, and it had already
+   drifted: five files still passed `dummyDefence` and `built`, neither
+   of which has been in `CTX_KEYS` since v2.73 / v2.77, while stubbing
+   `mkRune`, `openPrompt` and `winCheck` to `s => s` and `had6ThisTurn`
+   to a constant `false`.
+
+   A stub is not a lie when the stub IS the subject. Three files are
+   sanctioned, and each measures the seam rather than a card:
+
+     effects.test.js  the CTX_KEYS contract — it must hand over an
+                      INCOMPLETE context to prove makeEffects refuses one
+     merge.test.js    that a shallow clone into effects leaves the
+                      caller's state untouched
+     mirror.test.js   the trainer's own mirror path, which is Battle's
+                      context and not judge's
+
+   Everything else goes through `test/helpers/judged.js`. Adding a file
+   here must be a deliberate edit, with a reason of the same kind.
+   ============================================================ */
+const SEAM_FILES = ["effects.test.js", "merge.test.js", "mirror.test.js"];
+
+test("no drill builds its own effects context outside the sanctioned seam files", () => {
+  const dir = __dirname;
+  const rogue = fs.readdirSync(dir)
+    .filter(f => f.endsWith(".test.js") && SEAM_FILES.indexOf(f) < 0)
+    /* MATCH THE PROPERTY FORM, which is the only form anyone uses:
+       `E.makeEffects({…})`. Written first as `[^.\w]makeEffects\(` —
+       borrowed from the bare-name guard above, where excluding a property
+       access is right — it excluded every call it existed to catch, and
+       the sabotage that re-grew a context in a drill file passed. A
+       source guard aimed at the wrong SHAPE passes by finding nothing,
+       exactly as one aimed at the wrong file does. */
+    .filter(f => /makeEffects\s*\(/.test(
+      fs.readFileSync(path.join(dir, f), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "")));
+  assert.deepEqual(rogue, [],
+    "these files hand-roll an effects context. Use test/helpers/judged.js, which goes " +
+    "through judge.withEffects — a context a drill wrote is not the one a player gets, " +
+    "and every one of the five gate files was asserting against a stub that had gone stale.");
+});
+
+/* The other half, or the guard above is satisfied by a file that reaches
+   effects.js through some third door instead. */
+test("the five gate drills reach the semantics through judge", () => {
+  const GATE = ["kayo.test.js", "dorinthea.test.js", "frostbite.test.js",
+                "arcane.test.js", "paytoll.test.js"];
+  for(const f of GATE){
+    const src = fs.readFileSync(path.join(__dirname, f), "utf8");
+    assert.match(src, /require\("\.\/helpers\/judged\.js"\)/,
+      f + " must reach the card semantics through judge's own context");
+    assert.match(src, /J\.reduce\(/,
+      f + " must drive the REDUCER — `Battle` retires only once these five prove the " +
+      "semantics about the path a player takes, not about a context a test wrote");
+  }
+});
