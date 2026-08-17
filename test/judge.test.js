@@ -27,6 +27,7 @@ const TY = require("../engine/types");
 const RNG = require("../engine/rng");
 const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
+const H = require("./helpers/judged.js");
 
 const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
 const ready = fs.existsSync(CACHE);
@@ -85,6 +86,14 @@ function drive(g, o){
        with nobody in it gives, and the reducer never calls it itself. */
     if(g.prompt){ send(J.autoAnswer(g), g.prompt.side || 0); continue; }
     const p = J.pendingOf(g);
+    /* A BOOST PENDING STOPS EVERYTHING, and this driver could not answer
+       one — so from v2.84 every Boost card in the pool was a wall it
+       walked into and spun against until the tick limit, filling `errs`
+       with refusals nobody read. The walk below filters `errs` to
+       INVARIANT, so it went green having stopped playing. Declining is
+       the plain line and keeps the driver a driver rather than a policy;
+       what matters is that the card RESOLVES instead of parking. */
+    if(p && p.kind === "boost"){ send({t: "boost", yes: false}, p.seat); continue; }
     if(p && p.kind === "pay"){
       const sd = g.sides[p.seat];
       if(p.need - sd.res - J.paySum(sd) > 0){
@@ -1128,11 +1137,82 @@ test("the arsenal round trip: set it at end of turn, play it the next", {skip}, 
 test("a card is never in two zones on the way through", {skip}, () => {
   /* Walk a whole game asserting the census after EVERY action rather
      than only at the end. The crumbling-aura bug (v2.16) was a card in
-     two zones for exactly one state transition. */
-  let g = match({seed: "walk"});
-  const {errs} = drive(g);
-  const dirty = errs.filter(e => /INVARIANT/.test(e.why || ""));
-  assert.deepEqual(dirty, []);
+     two zones for exactly one state transition.
+
+     IT DROVE ONE MATCHUP AND ONE SEED, and that is how it missed Under
+     Loop: the card has to be DEALT before its clause can break anything,
+     and this walk never seated a Mechanologist. A per-action census is
+     only as wide as the cards it draws, so the sample is now a spread of
+     heroes rather than one pairing — the whole-game drill in
+     `sparring.test.js` is what actually caught it, from a seating this
+     one did not have. Widen the sample when a hero's cards start doing
+     something new; do not widen the tolerance. */
+  const walks = [{seed: "walk"},
+                 {seed: "walk-vd", h0: heroBy(/viserai/i), h1: heroBy(/dash/i), first: 1},
+                 {seed: "walk-gb", h0: heroBy(/gravy/i),   h1: heroBy(/bravo/i)},
+                 {seed: "walk-bf", h0: heroBy(/boltyn/i),  h1: heroBy(/fai/i), first: 1}];
+  for(const w of walks){
+    const {g, errs} = drive(match(w));
+    const dirty = errs.filter(e => /INVARIANT/.test(e.why || ""));
+    assert.deepEqual(dirty, [], w.seed + ": " + dirty.map(e => e.why + " on " + e.a.t).join(", "));
+    /* A WALK THAT STOPPED WALKING PASSES A CENSUS BY FINDING NOTHING.
+       Filtering `errs` to INVARIANT and asserting only that is exactly
+       how the Viserai/Dash seating went green while parked on turn 1
+       against a boost pending the driver could not answer — 3,591
+       refusals, none of them read, and no card in two zones because no
+       card was ever played. The census is only worth what the walk
+       covers, so assert the walk. */
+    assert.deepEqual(errs, [], w.seed + ": the driver was refused an action — " +
+      [...new Set(errs.map(e => e.why))].slice(0, 3).join(" | "));
+    assert.ok(g.over, w.seed + ": the game never ended — the walk stalled at turn " + g.turn);
+  }
+});
+
+/* ---- A CARD THAT REDIRECTS ITSELF -------------------------------------
+
+   "When this hits, put it on the bottom of its owner's deck."
+
+   The two callers file a spent attack at two different moments and both
+   are right for their own turn structure: the trainer at DECLARATION, so
+   the card is in the graveyard by the time an on-hit clause runs;
+   judge.js at the CLOSE step, so it is on the combat chain. `bottomSelf`
+   was written against the first and lifted the card out of the graveyard
+   only — which on this path found nothing there, pushed the card onto the
+   deck, and left the chain still holding it.
+
+   ASSERT ON ZONES, and on the ORDER of the deck: "bottom" is the whole
+   clause, and a drill that only counted the deck would pass on an engine
+   that put it on top. */
+test("a card that redirects itself on hit leaves the combat chain with it", {skip}, () => {
+  const ul = {...C.resolveEntry(DB(), {name: "Under Loop", p: 1, code: null, q: 1}), uid: "ul1"};
+  assert.match(ul.tx || "", /bottom of its owner/i, "the printed text is the spec");
+
+  let g = H.state({name: "You", res: 9, ap: 3, hand: [ul], deck: [{uid: "d1", name: "Filler"}]},
+                  {name: "Them"}, {actor: 0, turnPlayer: 0, seed: "loop"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+
+  const played = J.reduce(g, {t: "play", uid: "ul1", from: "hand"}, 0);
+  assert.equal(played.error, null);
+  /* Under Loop prints Boost, so v2.84 asks the additional cost first.
+     Declining is the plain line and keeps this drill about the redirect. */
+  let n = J.reduce(played.state, {t: "boost", yes: false}, 0).state;
+  assert.deepEqual((n.chainCards || []).map(x => x.card.uid), ["ul1"],
+    "it is on the chain — this path files at the close step, not at declaration");
+
+  for(let i = 0; i < 20 && n.sides[1].hp === 20; i++)
+    for(const seat of [0, 1]){
+      const out = J.reduce(n, {t: "pass"}, seat);
+      if(!out.error){ n = out.state; break; }
+    }
+
+  assert.equal(n.sides[1].hp, 16, "it HIT — without that the redirect never fires and this drill proves nothing");
+  assert.deepEqual(INV.errors(n), [], "the census must be clean at the instant it lands");
+  assert.deepEqual((n.chainCards || []).map(x => x.card.uid), [],
+    "it left the chain — holding it there is the card in two zones");
+  assert.deepEqual(n.sides[0].deck.map(x => x.uid), ["d1", "ul1"],
+    "and it is on the BOTTOM of the deck, under what was already there");
+  assert.deepEqual(n.sides[0].grave.map(x => x.uid), [],
+    "the graveyard is what the clause REPLACES — a copy there is the card duplicated");
 });
 
 /* ---- PURITY AND DETERMINISM --------------------------------------------- */

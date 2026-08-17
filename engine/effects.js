@@ -100,6 +100,32 @@ function makeEffects(ctx){
      Every discard path should call this. Today that is `discardRandom`;
      an additional-cost discard is the other one and is not wired yet,
      which is a gap rather than a decision. */
+
+  /* ---- A CARD THAT REDIRECTS ITSELF MUST LEAVE EVERY ZONE HOLDING IT --
+
+     Two callers file a spent attack at two different moments, and both
+     are right for their own turn structure: the trainer files it to the
+     graveyard AT DECLARATION, judge.js holds it on the combat chain
+     until the CLOSE step. So when a card's own text sends it somewhere
+     else — "put it into your soul", "put it on the bottom of its
+     owner's deck" — the zone it has to be lifted OUT of depends on who
+     is driving, and lifting it out of only one puts one card in two
+     zones. That is `invariants.js`'s loudest error, and ours rather
+     than a caught one.
+
+     `soulSelf` learned this and `bottomSelf` did not, which is how Under
+     Loop came to sit in a deck and on the combat chain at the same time
+     — found by driving a whole Viserai/Dash game, not by reading. The
+     rule lives here once now, so the next self-redirecting op inherits
+     it instead of rediscovering it. Matching is by UID rather than by
+     reference: a card that has been through a spread is a different
+     object with the same identity, and the census works by uid. */
+  const liftSelf = (n, pc) => {
+    actMut(n).grave = act(n).grave.filter(x => x.uid !== pc.uid);
+    n.chainCards = (n.chainCards || []).filter(e => e.card.uid !== pc.uid);
+    return n;
+  };
+
   const afterDiscard = (s, taken, opts) => {
     let n = s;
     const b = bAct(n);
@@ -572,7 +598,7 @@ function makeEffects(ctx){
       else if(k==="bottomSelf"){
         const pc = n.pend && n.pend.card;
         if(!pc){ n = L(n, `${srcName}: nothing on the chain to recycle.`); return; }
-        actMut(n).grave = act(n).grave.filter(x=>x.uid!==pc.uid);
+        n = liftSelf(n, pc);
         actMut(n).deck = [...act(n).deck, pc];
         n = L(n, `${pc.name} loops under — bottom of your deck instead of the graveyard.`);
       }
@@ -1643,8 +1669,7 @@ function makeEffects(ctx){
        only one of those puts a card in two zones — invariants.js's
        loudest error, and ours rather than a caught one. */
     if(n._soulSelf){ delete n._soulSelf;
-      if(total>0){ actMut(n).grave = act(n).grave.filter(x=>x!==pc);
-        n.chainCards = (n.chainCards||[]).filter(e2 => e2.card !== pc);
+      if(total>0){ n = liftSelf(n, pc);
         actMut(n).soul = [...act(n).soul, pc]; n = L(n, `${pc.name} ascends to the soul.`); }
     }
     n.featured = {card:{name:pc.name,img:pc.img,dbImg:pc.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${total} DMG`};
