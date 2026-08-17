@@ -483,10 +483,17 @@ test("classifyClause — activated abilities defer to the weapon/equipment reade
   assert.deepEqual(cc("Gain {r}{r}"), {status:"run", ops:[["res",2]]});
 });
 
-test("classifyClause — leaves-the-arena payload fires early, flagged approx", () => {
+/* WAS "fires early, flagged approx" UNTIL v3.00. The trainer had no
+   arena-departure schedule, so the payload was queued on PLAY and Act of
+   Glory handed you +6{p} the moment the aura landed instead of two turns
+   later — the whole drawback of Suspense inverted into a bonus. It is a
+   DEPARTURE TRIGGER now, tagged the way `onHit` is and fired by whatever
+   destroys the permanent. This drill changed deliberately: it used to
+   assert the approximation. */
+test("classifyClause — 'when this leaves the arena' is a departure trigger, not a play effect", () => {
   const r = cc("When this leaves the arena, your next attack this turn gets +6{p}.");
-  assert.equal(r.approx, true);
-  assert.deepEqual(r.ops, [["buffNext",6]]);
+  assert.equal(r.onLeave, true, "tagged for the site that destroys the permanent");
+  assert.deepEqual(r.ops, [["buffNext",6]], "and the payload is read, not guessed");
 });
 
 /* ---- v2.08: the 2026-07-25 late rulings ------------------------------- */
@@ -1341,11 +1348,15 @@ test("suspense — the bare keyword is a qualifier-only noop, same shape as stea
   assert.equal(P.classifyClause("Suspense").status, "noop");
 });
 
-test("suspense — 'when this leaves the arena, next attack gets +N{p}' resolves to full once the bare keyword stops dragging the tier (Act of Glory)", () => {
+test("suspense — the payload waits on `onLeave` and is NOT queued on play (Act of Glory)", () => {
+  P.fxReset();
   const fx = P.fxParse({name:"Act of Glory", pitch:1, tt:"Guardian Instant - Aura", power:null, kw:["Suspense"],
     tx:"Suspense\n\nWhen this leaves the arena, your next attack this turn gets +6{p}."});
-  assert.ok(fx.ops.some(o=>o[0]==="buffNext" && o[1]===6));
+  assert.deepEqual(fx.onLeave, [["buffNext",6]], "held for the departure");
+  assert.ok(!fx.ops.some(o=>o[0]==="buffNext"),
+    "and NOT queued on play — that was the bug: +6{p} the moment the aura landed");
   assert.equal(fx.tier, "full");
+  P.fxReset();
 });
 
 test("suspense — 'if you control an aura of suspense' reads as cond suspenseAura (Full of Bravado)", () => {

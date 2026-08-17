@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-17T18:25:52.916Z · app v3.00 · data sage-v11 · db 764 records
+Generated 2026-08-17T18:34:51.479Z · app v3.00 · data sage-v11 · db 764 records
 
 ## Summary
 
@@ -66,7 +66,7 @@ Generated 2026-08-17T18:25:52.916Z · app v3.00 · data sage-v11 · db 764 recor
 | steal | unreviewed — Arakni package | Jack Be Quick |
 | stealth | live — RULED 2026-07-25: does nothing alone — a qualifier other cards test for | Art of Desire: Body, Art of Desire: Mind, Infect, Mark of the Black Widow, Mark of the Funnel Web, Mark the Prey, Reaper's Call |
 | surge | unreviewed — bonus when dealing more than printed arcane (Blaze) | Aether Quickening, Open the Flood Gates |
-| suspense | pending — RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at start of turn, destroyed at 0 and the payload fires then — not built yet | Act of Glory, Edge of Their Seats, Tension in the Air, The Suspense is Killing Me |
+| suspense | live — RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at the beginning of the turn, destroyed at 0 and the `when this leaves the arena` payload fires then | Act of Glory, Edge of Their Seats, Tension in the Air, The Suspense is Killing Me |
 | temper | live — -1 per block, destroyed at 0 | Basalt Boots, Gauntlets of Unity, Helm of Unity, Knucklehead, Mournful Casket, Steelbraid Buckler, Stonewall Impasse |
 | the crowd boos | live — RULED 2026-07-25: leaves a per-turn booed state; the boo itself does nothing and Reviled is a static talent | Booze!, Concealed Object, Goon Beatdown, Mocking Blow, Prime the Crowd, Villainous Pose |
 | the crowd cheers | info — RULED 2026-07-25: Revered is a static talent — nothing to resolve | Prime the Crowd |

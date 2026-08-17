@@ -1544,7 +1544,29 @@ function endPhaseAfterArsenal(g, seat){
      the start phase, so the only thing that can happen in it is a
      start-of-turn triggered effect going on the stack, and this reducer
      models no card effects at all. It becomes a real pause the moment one
-     of them exists, and that is Phase 3's problem, not a missing step. */
+     of them exists, and that is Phase 3's problem, not a missing step.
+
+     ONE OF THEM EXISTS NOW (v3.00): suspense ticks at the beginning of
+     the turn and pays out when the last counter goes. It still does not
+     need a pause — nothing may respond to it, because CR 4.2.1 gives
+     nobody priority here — so it resolves in the same breath. The rule is
+     `effects.tickSuspense`, the same pure function the trainer calls; a
+     schedule written into one board's turn boundary is a schedule the
+     other board does not have, which is how phantasm came to be inert
+     here for three versions. */
+  {
+    const inc = n.turnPlayer;
+    const sp = E.tickSuspense(n, inc);
+    if(sp.msgs.length){
+      n = sp.game;
+      for(const m of sp.msgs) n = say(n, m);
+      /* the payload is the LEAVING controller's, so it resolves with that
+         seat as the actor — `buffNext` is written to `act(n)`. */
+      if(sp.ops.length)
+        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sp.ops, sp.fired.join(", ")));
+    }
+  }
+
   n = P.toPhase(n, "action");                       /* CR 4.3.2 issues the AP */
   return say(n, "— " + at(n, n.turnPlayer).name + "'s turn " + n.turn + " —");
 }

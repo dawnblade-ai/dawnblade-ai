@@ -244,6 +244,15 @@ function classifyClause(raw){
        payload (Mark of the Black Widow's forced banish) would fire on
        every hit regardless of marking. Same family of bug as the fusion
        compound gate: checking one half first drops the other. */
+    /* "WHEN THIS LEAVES THE ARENA, …" IS A DEPARTURE TRIGGER, and until
+       v3.00 the trainer had no arena-departure schedule, so the payload
+       was queued on PLAY — Act of Glory handed you its +6{p} the moment
+       the aura landed instead of when it left. That is the whole drawback
+       of Suspense inverted into a bonus: you are meant to WAIT.
+
+       Tagged rather than run, exactly like `onHit`, so the site that
+       destroys the permanent fires it. */
+    if(/\bleaves the arena\b/.test(cond)) return Object.assign(rest,{onLeave:true});
     if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
@@ -1177,6 +1186,7 @@ function fxParse(card){
          also runs for free. condOnHit keeps the gate attached so the trigger
          site (resolveStack) can re-check it before the op fires. */
       if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op}]; return; }
+      if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op]; return; }
       if(r.onHit) fx.onHit.push(op);
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
@@ -1334,11 +1344,19 @@ function fxParse(card){
      one. `fx.self` is 0 here by the guard above, so `fx.ops` can carry no
      `self` op (line ~921 routes those into `fx.self`) — it is scanned
      anyway rather than reasoned about. */
-  const pumpRead = v => [...fx.ops, ...(fx.onHit||[]),
+  /* EVERY LIST AN OP CAN LAND IN, or this fires a SECOND copy of a pump
+     the card already read. That is v2.30's VALUE-DOUBLED bug, and adding
+     `onLeave` in v3.00 reintroduced it for one version's worth of edit:
+     Act of Glory's +6{p} moved out of `fx.ops` into the departure
+     trigger, this fallback stopped seeing it, and the aura paid +6 on the
+     way in as well as on the way out. When a new trigger list is added,
+     it belongs here too. */
+  const pumpRead = v => [...fx.ops, ...(fx.onHit||[]), ...(fx.onLeave||[]),
                          ...(fx.conds||[]).map(x=>x.op),
                          ...(fx.condOnHit||[]).map(x=>x.op)]
     .some(o => o && (o[0]==="self" || o[0]==="buffNext") && o[1]===v);
-  if(!fx.self && !isAttack(card) && !fx.ops.some(o=>o[0]==="buffNext")
+  if(!fx.self && !isAttack(card)
+     && ![...fx.ops, ...(fx.onLeave||[])].some(o=>o[0]==="buffNext")
      && !(fx.arsenalPut && fx.arsenalPut.stamp)){
     const pm = tl.match(/(?:gains?|gets?)\s*\+(\d+)\s*\{p\}/);
     const v = pm ? +pm[1]
@@ -1354,7 +1372,8 @@ function fxParse(card){
   fx.handAbility = parseHandAbility(card);
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
-  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || fx.conds.length>0 || !!fx.perm || fx.ga;
+  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onLeave||[]).length>0
+             || fx.conds.length>0 || !!fx.perm || fx.ga;
   FXMEMO.set(key,fx);
   return fx;
 }

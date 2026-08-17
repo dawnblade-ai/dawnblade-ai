@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-17T18:25:52.916Z",
+ "generated": "2026-08-17T18:34:51.479Z",
  "appVer": "3.00",
  "dataVer": "sage-v11",
  "dbCount": 764,
@@ -5292,7 +5292,7 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14041,7 +14041,7 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14105,7 +14105,7 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14268,7 +14268,7 @@
     "suspense"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -14492,7 +14492,7 @@
     "the crowd boos"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {

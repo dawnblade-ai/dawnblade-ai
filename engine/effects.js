@@ -1243,7 +1243,15 @@ function makeEffects(ctx){
            (Booze!, Goon Beatdown, Pyroglyphic Protection). Carry the schedule
            on the board entry so newTurn can sweep them. */
         const _sd = n._selfDestruct || null; delete n._selfDestruct;
-        actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,verse:_vm?+_vm[1]:0,sd:_sd}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_vm?` with ${_vm[1]} verse counters`:""}.`); }
+        /* SUSPENSE ALWAYS ENTERS WITH 2 COUNTERS. RULING 2026-07-25:
+           "suspense always comes in with 2 counters - that number is in
+           the rules text and is the same for every suspense card". The
+           database carries no reminder text for the keyword, which is
+           exactly why the ruling exists; `printedKw` and not `hasKw`,
+           because two pool cards only ASK whether you control an aura of
+           suspense (Full of Bravado, Stand Strong). */
+        const _susp = printedKw(card, "suspense") ? 2 : 0;
+        actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,verse:_vm?+_vm[1]:0,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_vm?` with ${_vm[1]} verse counters`:""}${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
       else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
@@ -1818,6 +1826,63 @@ function resolveInertia(game, seat){
   return {game: Object.assign({}, game, {sides}), tokens, wiped: hand.length + ars.length};
 }
 
+/* ---- SUSPENSE TICKS AT THE BEGINNING OF THE TURN (v3.00) -------------
+
+   RULING 2026-07-25: "just like the other 'counters' these are often
+   represented by dice and 'tick' down at the beginning of the turn.
+   unlike steam-powered it is destroyed immediately when it has none. The
+   effect activates when the aura is destroyed" — and the follow-up,
+   "suspense always comes in with 2 counters".
+
+   So the keyword is a DELAY, and until v3.00 it was a bonus: the payload
+   was queued on PLAY, so Act of Glory handed you +6{p} the moment the
+   aura landed rather than two turns later. Five pool cards, all Guardian
+   auras, all reporting `tier: full` — the keyword parsed to a `noop`,
+   and a noop counts as accounted for.
+
+   PURE, AND OUT HERE, for the same reason `thawFrost` and
+   `resolveInertia` are: the trainer's turn boundary is a closure inside
+   `Battle` and judge.js has its own, so a rule written into either one is
+   a rule the other board does not have. That is how phantasm came to work
+   on one board only. This returns the payload ops for the CALLER to run,
+   rather than running them, because "your next attack this turn gets
+   +N{p}" is an actor-relative effect and the two boards reach `runOps`
+   differently.
+
+   It returns `{game, fired, msgs, ops}`: `fired` names the auras that
+   left, `ops` is what they pay out. */
+function tickSuspense(game, seat){
+  const sides = (game.sides || []).slice();
+  const sd = Object.assign({}, sides[seat]);
+  const board = sd.board || [];
+  if(!board.some(b => (b.susp || 0) > 0)) return {game, fired: [], msgs: [], ops: []};
+
+  const msgs = [], fired = [], ops = [], keep = [], grave = [];
+  for(const b of board){
+    if(!(b.susp > 0)){ keep.push(b); continue; }
+    const left = b.susp - 1;
+    if(left > 0){
+      keep.push(Object.assign({}, b, {susp: left}));
+      msgs.push(b.card.name + " ticks down — " + left + " suspense counter" + (left === 1 ? "" : "s") + " left.");
+      continue;
+    }
+    /* DESTROYED IMMEDIATELY AT ZERO, and the payload fires because it
+       left the arena — which is what the printed "when this leaves the
+       arena" clause has been waiting for. */
+    fired.push(b.card.name);
+    grave.push(b.card);
+    const pay = (P.fxParse(b.card).onLeave || []);
+    ops.push(...pay);
+    msgs.push(b.card.name + " runs out of suspense and leaves the arena" +
+      (pay.length ? " — and it pays out." : "."));
+  }
+  if(!fired.length && !msgs.length) return {game, fired: [], msgs: [], ops: []};
+  sd.board = keep;
+  if(grave.length) sd.grave = [...grave.map(c => Object.assign({}, c, {_gy: game.turn})), ...(sd.grave || [])];
+  sides[seat] = sd;
+  return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+}
+
 function thawFrost(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -1907,5 +1972,5 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, resolveInertia, soakPolicy, payPolicy};
+return {makeEffects, CTX_KEYS, thawFrost, resolveInertia, tickSuspense, soakPolicy, payPolicy};
 });

@@ -4028,6 +4028,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = {...s};
     youMut(n).dracNext = false;
     const oSide = oppMut(n); oSide.blockedHand = 0; oSide.chainBlocked = [];
+    /* SUSPENSE TICKS AT THE BEGINNING OF THE TURN (v3.00), and the rule is
+       `DawnEffects.tickSuspense` — pure, so a drill can drive it, and
+       shared, so judge.js runs the identical schedule. It hands back the
+       payload rather than running it, because "your next attack this turn
+       gets +N{p}" is actor-relative and each board reaches runOps its own
+       way. */
+    { const sp = DawnEffects.tickSuspense(n, 0);
+      if(sp.msgs.length){ n = sp.game; sp.msgs.forEach(m => { n = L(n, m); });
+        if(sp.ops.length) n = _EFX.runOps(n, sp.ops, sp.fired.join(", ")); } }
     /* auras scheduled to die at the top of your turn go now, and anything
        they were holding up (the arcane shield, the life lock) goes with them */
     const dying = (you(n).board||[]).filter(b=>b.sd==="turn");

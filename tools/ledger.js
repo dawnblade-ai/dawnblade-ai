@@ -65,7 +65,11 @@ const KEYWORDS = {
    "steal":               {status:"unreviewed",  note:"Arakni package"},
    "stealth":             {status:"live",        note:"RULED 2026-07-25: does nothing alone — a qualifier other cards test for"},
    "surge":               {status:"unreviewed",  note:"bonus when dealing more than printed arcane (Blaze)"},
-   "suspense":            {status:"pending",     note:"RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at start of turn, destroyed at 0 and the payload fires then — not built yet"},
+   /* BUILT v3.00. The payload used to be queued on PLAY — Act of Glory
+      handed you +6{p} the moment the aura landed rather than two turns
+      later — so the keyword was a bonus where it prints a DELAY. It ticks
+      in `effects.tickSuspense`, which both turn structures call. */
+   "suspense":            {status:"live",        note:"RULED 2026-07-25: enters with 2 counters (same on every suspense card), ticks at the beginning of the turn, destroyed at 0 and the `when this leaves the arena` payload fires then"},
    "temper":              {status:"live",        note:"-1 per block, destroyed at 0"},
    "the crowd boos":      {status:"live",        note:"RULED 2026-07-25: leaves a per-turn booed state; the boo itself does nothing and Reviled is a static talent"},
    "the crowd cheers":    {status:"info",        note:"RULED 2026-07-25: Revered is a static talent — nothing to resolve"},
