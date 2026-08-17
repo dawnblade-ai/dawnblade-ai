@@ -9,6 +9,71 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.02 — Cold Snap stops claiming a mechanic nobody built
+
+Phase C opened on **Iyslander**, and the first thing the census found was
+not a missing card — it was her signature card reporting `tier: full`
+while doing nothing at all.
+
+```
+[noop] "Target hero may pay {r}"
+   -> "cost offer — the dummy pays no costs, so it always declines"
+[noop] "If they don't, freeze a card in their arsenal or an ally they
+        control until the start of your next turn."
+   -> "Freeze taxes a play/activation — idle against the dummy's
+       scripted swing, same as Frostbite/Inertia"
+```
+
+Both reasons stopped being true in **v2.71**, when seat 1 gained a real
+action phase and started paying costs. A `noop` counts as **accounted
+for**, so this is the no-op blind spot again — the one that hid watery
+grave and suspense — and v2.74 had already removed exactly this for
+Frostbite, calling it *"a fact about the old training prop and not about
+the rules"*. Cold Snap was the last card carrying it.
+
+**Unread rather than approximated**, and the direction is the point.
+`payOr` exists and would ask the opponent to pay (Winter's Bite uses it),
+but with the freeze unbuilt as its `elseOps` it would ask a question with
+**no consequence** — which makes paying strictly a waste, and is worse
+than not asking.
+
+So the card reports `part`, the coverage baseline is lowered on purpose,
+and `tools/failstates.js` names the gap instead of the card looking done.
+The two drills that asserted `noop` and `tier: full` were rewritten: they
+were pinning the false claim, which is how it survived this long.
+
+### The Iyslander census, for whoever builds her
+
+Her one mechanic is **Ice Fusion**, and it is genuinely built — `fused`
+is a real condition, so Aether Icevein (×3) and Polar Cap resolve in
+full. What is actually left is five cards, and only two of them are hers
+alone:
+
+| card | what is unread |
+|---|---|
+| **Cold Snap** | freeze — RULED, specced in `parser.js`, not built |
+| Brain Freeze | the fused rider's hand-to-top-of-deck payload |
+| Arcane Twining · Photon Splicing | `Instant - Discard this: Amp 1` — an activated ability on a card in HAND, the same shape as Kayo's Agile Windup |
+| Ice Eternal | X-cost, deliberately unbuilt (the pool's only one) |
+| Stir the Aetherwinds | "play your next Wizard non-attack as though it were an instant" — exposed by v3.00's rewording, unread on purpose |
+
+**Freeze needs no machinery that has to be invented**, and the spec is
+written into `parser.js` where the noop used to be: `payOr` for the
+offer, a `pick` that reports its choice structurally over
+caller-supplied candidates (two zones — arsenal AND allies — the way
+`target` already takes them), a `_frozen` stamp honoured by
+`playableFromZone` and the activation gate on **both** boards, and a
+thaw beside `effects.tickSuspense`, which is that schedule.
+
+```
+npm test          1070 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 304 full / 79 part / 22 none
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.01 — PHASE B: the UNFAIR block is empty
 
 Two keywords, eleven cards, and both were the **no-op blind spot** — the

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.01 · PHASE B IS DONE
+# Handoff — Dawnblade, at v3.02 · PHASE C IS OPEN, ON IYSLANDER
 
 > **v3.00–v3.01 happened after most of this file was written.** Where the
 > two disagree, this block and `FINISH.md` are current and the prose
@@ -16,13 +16,33 @@
 > 304 drills silently, which is how 22 broken cards survived a green
 > suite.
 >
-> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER is next.**
-> She is 88% covered with 0 unreadable cards, her hero ability is
-> genuinely unbuilt, and both axes she needs are live and verified in
-> play: instant-speed play from arsenal, and acting during the
-> opponent's turn. What is left on her is **freeze (Cold Snap)** —
-> RULED, not built — and Aether Icevein's rider behind the unbuilt Ice
-> Fusion condition.
+> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER is
+> STARTED.** v3.02 censused her and fixed the first thing it found; the
+> table below is what is actually left, and it is five cards.
+>
+> **BUILD FREEZE FIRST.** It is her signature card, it is RULED, and the
+> spec is written into `parser.js` where the noop used to be. Nothing in
+> it has to be invented: `payOr` for the offer (Winter's Bite uses it), a
+> `pick` that reports its choice STRUCTURALLY over caller-supplied
+> candidates — today `pick` reports only in `msgs`, and the candidates
+> span TWO zones, the opponent's arsenal and their allies, the way
+> `target` already takes them — a `_frozen` stamp honoured by
+> `parser.playableFromZone` and the activation gate on BOTH boards, and a
+> thaw at "the start of your next turn" beside `effects.tickSuspense`,
+> which is that schedule.
+>
+> | card | what is unread |
+> |---|---|
+> | **Cold Snap** | freeze — ruled, specced, not built |
+> | Brain Freeze | the fused rider's hand-to-top-of-deck payload |
+> | Arcane Twining · Photon Splicing | `Instant - Discard this: Amp 1` on a card in HAND — same shape as Kayo's Agile Windup, so it closes two heroes |
+> | Ice Eternal | X-cost, deliberately unbuilt (the pool's only one) |
+> | Stir the Aetherwinds | the instant-speed grant, unread on purpose since v3.00 |
+>
+> **Ice Fusion is genuinely built** — `fused` is a real condition, so
+> Aether Icevein (×3) and Polar Cap resolve in full. Do not re-derive it.
+> Her hero ability's two axes are live and verified in play: instant-speed
+> play from arsenal, and acting during the opponent's turn.
 >
 > **READ THE THREE v3.00–v3.01 FINDS FIRST. They are one shape and it
 > will bite you again:** phantasm, watery grave and suspense were each a
@@ -55,12 +75,16 @@
 
 ---
 
-## WHERE WE ARE — v3.01
+## WHERE WE ARE — v3.02
 
 `npm test` → **1070 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
-`npm run audit` → 405 pool cards, **305 full / 78 part / 22 none** ·
+`npm run audit` → 405 pool cards, **304 full / 79 part / 22 none** ·
 `tools/failstates.js` → **0 UNFAIR**.
+
+**304 is one lower than v3.01 and it is HONEST.** Cold Snap reported
+`full` while doing nothing; it reports `part` now. A number that goes
+down because a lie was removed is the number improving.
 `node` is at `~/node/bin`, **not on PATH** —
 `export PATH="$HOME/node/bin:$PATH"`.
 **A push to `main` IS the deploy** (standing authorization, 2026-08-03).
@@ -68,7 +92,7 @@
 ```
 1. ENGINE   ✔ merged · ✔ pool pinned · ✔ drift guarded
 2. PHASE B  ✔ DONE — 0 UNFAIR (watery grave + suspense, v3.01)
-3. PHASE C  ☐ 13 heroes — IYSLANDER next
+3. PHASE C  ▸ IYSLANDER started (v3.02) — freeze is the next build
 4. PHASE A  ☐ retire Battle — carries the tuning debt, needs a phone
 ```
 
