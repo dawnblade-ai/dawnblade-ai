@@ -160,14 +160,14 @@ footer{color:var(--faint); font-size:13px; border-top:1px solid var(--line);
 <div class="wrap">
 
 <header>
-  <div class="brand mono">DAWN<b>BLADE</b> &#183; v2.83 &#183; 2026-08-16</div>
+  <div class="brand mono">DAWN<b>BLADE</b> &#183; v2.84 &#183; 2026-08-17</div>
   <h1 class="disp">The blueprint<br>to <em>done</em></h1>
   <p class="lede">A Flesh and Blood training sim, judged to pro-tour standards, that runs
   from a <code>file://</code> URL on a phone with no build step. This is what is left, in
   what order, and <strong>what each phase costs</strong> &#8212; every number measured, with the
   command to re-derive it.</p>
   <div class="vitals">
-    <div class="vital mono">drills <b>1046</b> green</div>
+    <div class="vital mono">drills <b>1053</b> green</div>
     <div class="vital mono">fairness <b>clean</b></div>
     <div class="vital mono warn">pool <b>306</b>/405 full</div>
     <div class="vital mono warn">heroes <b>2</b>/15 done</div>
@@ -220,20 +220,23 @@ E. TUNE              play sessions          &#8592; last; depends on C</pre>
   <div class="phases">
 
     <article class="phase now">
-      <div class="phead"><span class="pid disp">A</span><span class="ptitle disp">One engine</span><span class="ptag disp">Next</span></div>
+      <div class="phead"><span class="pid disp">A</span><span class="ptitle disp">One engine</span><span class="ptag disp">In progress</span></div>
       <p class="dim">Retire <code>Battle</code>'s rules. The gate that governed this passed
       at v2.80 &#8212; the five semantics drills all drive <code>judge.reduce</code>.</p>
 <pre>Battle          <b>2,377</b> lines &#183; 90 declarations
                 <b>137</b> mode/bphase refs &#183; 29 setG sites
 drill anchors   <b>70</b> resolve INSIDE Battle, across 5 files
                 priority 33 &#183; mirror 21 &#183; dorinthea 6 &#183; kayo 5 &#183; sides 5</pre>
-      <p class="dim">The remaining feature gap, censused rather than guessed: the Advisor
-      and the score <span class="hero-done disp">&#10003; done at v2.83</span>. The next-swing
-      prediction is <strong>dropped</strong> &#8212; it reads the <code>[3,4,5]</code>
-      fabrication, and a card-playing seat has no such number.</p>
+      <p class="dim">The feature gap is <strong>closed</strong>: the Advisor and the score
+      <span class="hero-done disp">&#10003; v2.83</span>, boost
+      <span class="hero-done disp">&#10003; v2.84</span>. The next-swing prediction is
+      <strong>dropped</strong> &#8212; it reads the <code>[3,4,5]</code> fabrication, and a
+      card-playing seat has no such number. What is left is mechanical.</p>
       <ul>
-        <li><strong>Boost is the one real gap.</strong> <code>judge.js</code> has no boost
-        action, and <strong>19 pool cards print the keyword &#8212; every one of them Dash.</strong></li>
+        <li><strong>Boost &#8212; done at v2.84.</strong> It cost less than scoped: the
+        semantics were already in <code>effects.js</code> and only the QUESTION was
+        missing. <strong>There is no feature gap left</strong> &#8212; the table now does
+        everything the trainer does bar the two things deliberately dropped.</li>
         <li><strong>Route solo to the merged board.</strong> One &#8220;Fight&#8221; button; keep
         <code>Battle</code> behind a flag for exactly one version so the harness survives
         the first real games on the merged path.</li>

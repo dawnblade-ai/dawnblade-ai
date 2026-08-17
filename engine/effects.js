@@ -676,7 +676,7 @@ function makeEffects(ctx){
         n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
       }
       else if(k==="rot"){ actMut(n).rot+=v; n=L(n,`Bloodrot on ${act(n).name} (ticks ${v}/turn).`); }
-      else if(k==="fra"){ actMut(n).fra+=v; n=L(n,`Frailty — dummy's next swing −${v}.`); }
+      else if(k==="fra"){ actMut(n).fra+=v; n=L(n,`Frailty — ${foe(n).name}'s next swing −${v}.`); }
       else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
     });
     return n;
@@ -904,7 +904,7 @@ function makeEffects(ctx){
       const why = {atk:"no other attack yet", non:"no other non-attack yet",
         pitch6:"no 6+ power card in your pitch zone", arsenal:"not played from arsenal",
         lifeLt:"you aren't behind on life", lifeGt:"you aren't ahead on life",
-        marked:"the dummy isn't marked", foeTurn:"it's your turn, not the dummy's",
+        marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${foe(n).name}'s`,
         arcDealt:"no arcane damage dealt yet this turn",
         auraTurn:"no aura played or created this turn",
         madeCard:"nothing created this turn", booed:"the crowd hasn't booed you this turn",
@@ -1148,7 +1148,7 @@ function makeEffects(ctx){
         const lost = foe(n).hand[pick];
         foeMut(n).hand = foe(n).hand.filter((_,i)=>i!==pick);
         foeMut(n).intimidated = [...(foe(n).intimidated||[]), lost];
-        declNote += ` Intimidate — a card is pulled at random from the dummy's hand`
+        declNote += ` Intimidate — a card is pulled at random from ${foe(n).name}'s hand`
           + ` and banished face-down (${foe(n).hand.length} left); it comes back at the end phase.`;
       }
       /* NAME THE ATTACK YOU JUST DECLARED (v2.63). Reported from play: the
@@ -1634,8 +1634,8 @@ function makeEffects(ctx){
         const top = foe(n).hand[foe(n).hand.length-1];
         foeMut(n).hand = foe(n).hand.slice(0,-1);
         foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `Crush — ${top.name} is forced from the dummy's hand back on top of its deck.`);
-      } else n = L(n, "Crush lands, but the dummy's hand is empty.");
+        n = L(n, `Crush — ${top.name} is forced from ${foe(n).name}'s hand back on top of their deck.`);
+      } else n = L(n, `Crush lands, but ${foe(n).name}'s hand is empty.`);
     }
     /* A CARD THAT ASCENDS MUST LEAVE WHATEVER HOLDS IT. It is in the
        graveyard for a caller that files at declaration and on the combat

@@ -1423,3 +1423,40 @@ test("the second-person debt in the shared semantics does not grow", () => {
   assert.ok(lits.length >= 30,
     `only ${lits.length} matched — the scan shape moved, repoint this drill rather than banking the win`);
 });
+
+/* THE SHARED SEMANTICS MUST NOT NAME THE OPPONENT (v2.84)
+
+   Same family as the second-person ledger above, and found the same way —
+   by asking what a line reads like with a PERSON in seat 1. `effects.js`
+   is reached by both boards, and it hardcoded "the dummy" in six
+   player-facing strings:
+
+     "Frailty — dummy's next swing -2."
+     "Crush lands, but the dummy's hand is empty."
+     "it's your turn, not the dummy's"
+
+   At a networked table those describe a human being as the training prop.
+   Every one now reads `foe(n).name`, which is the opponent's real name on
+   both boards — the trainer's dummy is literally called "The Dummy", so
+   the trainer's own wording is unchanged.
+
+   `parser.js` carried the same sentence at PARSE time, where no game
+   state exists to name anybody, so that one is seat-neutral instead.
+   Two copies of one sentence is a small mirror; both were fixed. */
+test("the shared semantics never hardcode the training dummy", () => {
+  const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  for(const f of ["effects.js", "parser.js"]){
+    const src = strip(fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8"));
+    /* Player-facing string literals only. A comment may say "dummy" all it
+       likes — this is about what reaches a screen. */
+    const said = (src.match(/["`][^"`\n]*\bdummy\b[^"`\n]*["`]/gi) || [])
+      /* parser.js's keyword LEDGER notes describe the trainer's prop to a
+         reader of AUDIT.md and never reach a player. They are stale in
+         places (the dummy pays costs since v2.71) and that is a docs job,
+         not this one — so they are excluded by name rather than silently
+         tolerated by a loose regex. */
+      .filter(s => !/live |cost offer|crush rider|stops arcane|taxes a play|plays no defence/i.test(s));
+    assert.deepEqual(said, [],
+      f + " names the training dummy in a player-facing string — with a person in seat 1 that describes them as the prop");
+  }
+});

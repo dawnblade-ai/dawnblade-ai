@@ -37,7 +37,7 @@ current layer as cheat-resistant.**
 ## 1. WHERE WE ARE — measured at v2.83, refreshed at v2.84
 
 ```
-npm test          1052 drills green
+npm test          1053 drills green
 npm run fairness  clean
 npm run audit     405 unique pool cards — 306 full / 77 part / 22 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
@@ -281,8 +281,17 @@ Small, and the first item is **owed to the user**.
    says "you". Telling them apart is a judgement per line, not a regex.
    Pinned as a ledger in `test/judge.test.js` — the ledger pins the **source
    count**, because a driven count is emergent.
-3. **One refusal hardcodes the dummy** — `"it's your turn, not the dummy's"`
-   (`effects.js` ~line 907). Wrong with a person in seat 1.
+3. ~~One refusal hardcodes the dummy~~ — **fixed at v2.84.** Six
+   player-facing strings in `effects.js` named "the dummy" and now read
+   `foe(n).name`; `parser.js`'s copy is seat-neutral, because at parse
+   time there is no game state to name anybody. Pinned in
+   `test/judge.test.js`.
+4. **The keyword LEDGER notes in `parser.js` are stale** — several say
+   "the dummy pays no costs" or "has no action phase", both false since
+   v2.71. They reach `AUDIT.md`, never a player, so this is a docs job.
+5. **The boost line lands in the feed after the play it paid for**
+   (`execute` accumulates it into `declNote`). In a training sim the
+   sequence is the lesson.
 
 ---
 

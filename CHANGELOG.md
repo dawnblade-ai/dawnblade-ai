@@ -9,6 +9,40 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.84a — housekeeping: the shared feed stops naming the training prop
+
+Low-hanging fruit found by asking what a line reads like with a **person**
+in seat 1. `engine/effects.js` is reached by both boards and hardcoded
+"the dummy" in six player-facing strings:
+
+```
+"Frailty — dummy's next swing -2."
+"Crush lands, but the dummy's hand is empty."
+"it's your turn, not the dummy's"
+```
+
+At a networked table those describe a human being as the training prop.
+All six now read `foe(n).name` — and because the trainer's dummy is
+literally called *The Dummy*, **the trainer's own wording is unchanged**.
+
+`parser.js` carried the same sentence at PARSE time, where no game state
+exists to name anybody, so that one is seat-neutral instead. Two copies of
+one sentence is a small mirror; both were fixed.
+
+Pinned in `test/judge.test.js` and sabotaged. The guard **excludes the
+keyword LEDGER notes by name** rather than tolerating them with a loose
+regex — those describe the prop to a reader of `AUDIT.md` and never reach
+a player. They are also **stale** (several say the dummy pays no costs or
+has no action phase, both false since v2.71), which is a docs job and is
+now written down as one rather than left as folklore.
+
+Driven check: a full Kayo-vs-Dorinthea game produces **227 feed lines and
+zero naming the dummy**.
+
+1053 drills green.
+
+---
+
 ## v2.84 — boost, and the third keyword predicate
 
 **The last feature gap before `Battle` can retire.** `judge.js` had no boost

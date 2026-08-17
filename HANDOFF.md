@@ -1,37 +1,49 @@
-# Handoff — Dawnblade, at v2.83 · THE MERGE IS DONE, THE GATE IS PASSED
+# Handoff — Dawnblade, at v2.84 · THE FEATURE GAP IS CLOSED
 
-> **v2.80–v2.83 happened after most of this file was written.** Where the
-> two disagree, the "WHERE WE ARE" block below is current and the prose
-> further down is history. Specifically: the five gate drills now drive
-> `judge.reduce` (v2.80), the dummy is always vanilla (v2.81), two-tab
-> table play is verified over the real relay (v2.82), and the Advisor,
-> the score and the trophy reach the table (v2.83).
+> **v2.80–v2.84 happened after most of this file was written.** Where the
+> two disagree, the prompt and "WHERE WE ARE" blocks below are current
+> and the prose further down is history. Specifically: the five gate
+> drills now drive `judge.reduce` (v2.80), the dummy is always vanilla
+> (v2.81), two-tab table play is verified over the real relay (v2.82),
+> the Advisor, the score and the trophy reach the table (v2.83), and
+> boost lands (v2.84) — which **closes the feature gap entirely**.
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
-> Read `CLAUDE.md` in full, then `HANDOFF.md`. Most entries in both exist
-> because breaking that rule already cost a real bug.
+> Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done.
+> Most entries in both exist because breaking that rule already cost a
+> real bug.
 >
-> **The two engines are merged (v2.77-v2.79).** There is ONE copy of the
-> card semantics (`engine/effects.js`) and two turn structures that call
-> it: `Battle` for solo, `judge.reduce` for the table — and the table is
-> now reachable without a network, so solo can BE the table.
+> **The two engines are merged and the retirement gate is PASSED.** There
+> is ONE copy of the card semantics (`engine/effects.js`) and two turn
+> structures that call it: `Battle` for solo, `judge.reduce` for the
+> table. The table is reachable without a network, so solo can BE the
+> table — and as of v2.84 **the feature gap between the two boards is
+> closed**: the Advisor, the score, the trophy and boost are all there.
 >
-> **Your job is the last step: retire `Battle`'s rules.** The gate is
-> written down and has not moved — `Battle` is the regression harness, so
-> before deleting anything in it, `test/kayo.test.js`,
-> `test/dorinthea.test.js`, `test/frostbite.test.js`,
-> `test/arcane.test.js` and `test/paytoll.test.js` must pass **driving
-> `judge.reduce`** rather than the hand-rolled effects context they build
-> today.
+> **YOUR JOB IS PHASE A, AND WHAT IS LEFT OF IT IS MECHANICAL:**
 >
-> **`FINISH.md` is the blueprint to done** — what "finished" means as five
-> measurable conditions, and the ordered phases with their measured costs.
-> Read it before scoping a cycle.
+> 1. **Route solo to the merged board.** One "Fight" button. Keep
+>    `Battle` reachable behind a flag for exactly one version, so the
+>    regression harness still exists while the first real games are
+>    played on the merged path.
+> 2. **Repoint the 70 drill anchors** that resolve inside `Battle` —
+>    `priority` 33, `mirror` 21, `dorinthea` 6, `kayo` 5, `sides` 5.
+>    **This is the real work; the deletion is the easy half.** Prefer
+>    moving each decision into a pure engine function you can DRIVE over
+>    re-aiming a source scan.
+> 3. **Delete.** `foeVanilla`/`foeBegin`/`foeStep`/`foeEnd`,
+>    `dummyDefence`, `takeIt`, `finishBlock`, `resolveStack`, `newTurn`,
+>    `endPhaseCF` go together.
 >
-> **`HANDOFF-MERGE.md` is the record of the merge** — what it took, the
-> eight things it learned the hard way, and what is left. Read it before
-> scoping anything.
+> **Two things that will bite:** whatever replaces `setG` must keep the
+> invariant-judge funnel or the guard rails go dark; and retiring
+> `Battle` retires the TUNED `[3,4,5]` escalation with it, so Phase E
+> (tuning) becomes load-bearing the moment this lands — the table's
+> dummy currently wins 11 of 15.
+>
+> **`HANDOFF-MERGE.md` is the record of the merge** — what it took and
+> the eight things it learned the hard way.
 >
 > **How to work:**
 >
@@ -52,12 +64,12 @@
 
 ---
 
-## WHERE WE ARE — v2.83, pushed and live
+## WHERE WE ARE — v2.84, pushed and live
 
-`npm test` → **1046 drills green** · `npm run fairness` clean ·
+`npm test` → **1053 drills green** · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **306 full / 77 part / 22 none**.
 All 22 `engine/*.js` verified serving 200 and the deployed page serving
-`APP_VER "2.83"`. `node` is at `~/node/bin`, **not on PATH** —
+`APP_VER "2.84"`. `node` is at `~/node/bin`, **not on PATH** —
 `export PATH="$HOME/node/bin:$PATH"`.
 **A push IS the deploy** (standing authorization, 2026-08-03). Verify the
 deploy, not just the tests.
@@ -80,13 +92,14 @@ deploy, not just the tests.
      ✔ v2.81 the dummy is a punching bag, never a hero
      ✔ v2.82 two-tab table play over the real relay, 0 desyncs
      ✔ v2.83 the Advisor, the score and the trophy reach the table
-       ☐ retire Battle's rules — the last step, unblocked
+     ✔ v2.84 boost — the feature gap is CLOSED
+       ☐ retire Battle's rules — mechanical now: route, repoint, delete
 ```
 
 ## ➡ THE CURRENT JOB — retire `Battle`'s rules
 
-**The gate is PASSED (v2.80)** and the feature gap is now measured
-rather than guessed (v2.83). What is left is deleting the loser.
+**The gate is PASSED (v2.80)** and the feature gap is measured, then
+CLOSED (v2.83–v2.84). What is left is deleting the loser.
 
 ### Why it is worth finishing, concretely
 
@@ -96,23 +109,26 @@ card a two-place job: the semantics are one copy (`effects.js`), but the
 *schedule the card fires on* is not. Every hero from here pays that tax
 until `Battle` goes.
 
-### The gap, censused v2.83 — no longer folklore
+### The gap, censused v2.83 and closed at v2.84
 
 | feature | verdict |
 |---|---|
 | Advisor | **DONE** — `advView` + both call sites explicit |
 | score / trophy | **DONE** — local wins only; `wasted` was already tracked |
-| boost | **real gap** — judge has no boost action; 19 pool cards print the keyword, all Dash |
+| boost | **done** (v2.84) — the semantics were already shared; only the question was missing |
 | next-swing prediction | **drop** — reads the `[3,4,5]` fabrication; a card-playing seat has no such number |
 | `[3,4,5]` tuning | recorded decision: retuning is a play session, not a drill |
 
 ### What it costs
 
-`Battle` is ~2,370 lines and **~100 drill references** read its source —
-`mirror`, `actor`, `priority`, `sides` most of all. Whatever replaces
-`setG` **must keep the invariant-judge funnel** or the guard rails go
-dark. Budget the drill repointing as the real work; the deletion is the
-easy half.
+`Battle` is **2,377 lines**, and **70 drill anchors resolve inside it**
+across five files — `priority` 33, `mirror` 21, `dorinthea` 6, `kayo` 5,
+`sides` 5. (An earlier note said "~100 references"; 70 is the measured
+number of anchors that actually land in `Battle`, and the rest of the 109
+scanned point elsewhere in `index.html`.) Whatever replaces `setG`
+**must keep the invariant-judge funnel** or the guard rails go dark.
+Budget the drill repointing as the real work; the deletion is the easy
+half.
 
 **Read `HANDOFF-MERGE.md`** for what the merge took and the eight things
 it learned the hard way.
@@ -123,8 +139,17 @@ it learned the hard way.
   read by both seats and must name one; a *refusal* is returned to
   whoever acted and correctly says "you". Telling them apart is a
   judgement per line. Pinned as a ledger in `test/judge.test.js`.
-- **`"it's your turn, not the dummy's"`** is a refusal in `effects.js`
-  that hardcodes the dummy — wrong at a table with a person in seat 1.
+- ~~the hardcoded dummy~~ **FIXED at v2.84** — six player-facing strings
+  in `effects.js` named "the dummy" and now read `foe(n).name`; the one
+  in `parser.js` is seat-neutral, because at parse time there is no game
+  state to name anybody. Pinned, and the guard excludes the keyword
+  LEDGER notes by name rather than tolerating them with a loose regex.
+- **Those ledger notes are stale**, and that is a docs job: several say
+  "the dummy pays no costs" / "has no action phase", both false since
+  v2.71. They reach `AUDIT.md`, never a player.
+- **The boost line lands in the feed AFTER the play it paid for**,
+  because `execute` accumulates it into `declNote`. In a training sim the
+  sequence is the lesson, so it belongs with the voice pass above.
 
 ---
 

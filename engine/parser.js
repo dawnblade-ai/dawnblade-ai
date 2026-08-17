@@ -1169,7 +1169,7 @@ function fxParse(card){
   else if(tl.match(/activate this(?: ability)? only while this card is defending/))
     fx.activateIf = {kind:"defending", why:"this card isn't defending"};
   else if(tl.match(/activate this ability only during an opponent'?s? turn/))
-    fx.activateIf = {kind:"foeTurn", why:"it's your turn, not the dummy's"};
+    fx.activateIf = {kind:"foeTurn", why:"it's your turn, not your opponent's"};
   else if(tl.match(/activate this only if you'?(?:ve| have) played a ([a-z' -]+) this turn/))
     fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
   if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
