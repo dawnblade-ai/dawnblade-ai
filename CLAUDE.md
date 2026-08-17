@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.01
+**Current version:** v3.04
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1070 drills**.
+This is `node --test "test/*.test.js"` — currently **1082 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -914,6 +914,24 @@ existed on one board only.
 than running them**, because "your next attack this turn gets +N{p}" is
 actor-relative and the two boards reach `runOps` differently. The trainer
 calls it at the top of its turn; `judge.js` calls it in the START PHASE.
+
+**A ROUTE AND A GATE ARE PER BOARD TOO (v3.04).** The rule is not only
+about schedules. `judge.legal` refused every non-weapon piece as "not a
+weapon", so **17 equipment abilities across 12 heroes** were dead at the
+table; and `activateIfOk` — the reader for every printed "Activate this
+only …" — lived inside `Battle`, so no activation restriction was enforced
+there at all. Both are now shared, and sharing the gate meant making it
+board-agnostic first: two of its six cases asked `s.mode`, which judge
+seeds and NEVER WRITES, so a straight port would have answered FALSE in
+every step of every table game.
+
+**AND AN UNREAD RESTRICTION MUST REFUSE.** Four of the pool's ten printed
+activation conditions were not read — two because the pattern demanded a
+word the card does not print (`activate this ABILITY only`, and the
+contraction `you've`), two because no pattern existed and the gate was
+left `undefined`, which let the ability run unrestricted. An unreadable
+condition is filed `{kind:"unreadable"}` and refuses; v2.04 settled the
+same question for costs, and inert is honest where free is above rate.
 
 **Still trainer-only, and measured rather than assumed:** `thawFrost`,
 `resolveInertia` and the `sd:"turn"` aura sweep. None is UNFAIR — they are

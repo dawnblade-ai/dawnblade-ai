@@ -9,6 +9,70 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.04 — equipment abilities work at the table, and four printed restrictions start being read
+
+Phase C's next item was a hand-ability route. Censusing it turned up
+something bigger first, and then something bigger again.
+
+### 17 abilities, 12 heroes, dead at the table
+
+`judge.legal` refused every non-weapon piece with *"equipment, not a
+weapon"*, so no equipment ability could be activated there at all —
+Spellfire Cloak, Knucklehead, Predatory Plating, Bull's Eye Bracers,
+Pouncing Paws, all of them. Measured by driving it, not by reading.
+
+The same shape as v3.00's phantasm and v3.01's graveyard rule: **the route
+existed only in `Battle`, as UI.** `judge` makes the same
+`commitPlay(g, ab, "hero", seat)` call the trainer's
+`tryPlay(gr.powCard, "hero", i)` makes, so `execute` marks the
+once-per-turn flag for both boards and nothing describes an ability twice.
+
+### The gate came with it — and had holes
+
+`activateIfOk` lived inside `Battle`, so **no printed "Activate this
+only …" was enforced at the table**. Sharing it meant making it
+board-agnostic first: two of its six cases asked `s.mode`, which judge
+seeds and never writes, so a straight port would have answered FALSE for
+`defending` and `foeTurn` in every step of every table game. `defending`
+is asked of the **card's** place in the declared wall now; `foeTurn`
+shares one expression with the foeTurn condition, which is the only phase
+read left in `effects.js`.
+
+Then the census: **four of the pool's ten printed activation restrictions
+were never read.**
+
+| card | why |
+|---|---|
+| Spellfire Cloak · Achilles Accelerator | the pattern demanded the word *"ability"* the card does not print — and the contraction *"you've"* the v3.00 rewording introduced. Six sibling patterns already had both optional. |
+| Scorpio, Comet Tail · Stand Strong | no pattern at all, so the gate was left **undefined** and the ability ran unrestricted |
+
+An unread restriction is filed `unreadable` and **refuses**. v2.04 settled
+the same question for costs: inert is honest, free is a card above rate.
+
+### Two side-field writes, one line each, two rules each
+
+`delete act(n).gaNext` removed a field `makeSide` **declares** — that is
+`SIDES-ASYMMETRIC`, an error-severity invariant — *and* wrote through the
+**read** helper into a side React had already rendered. It never fired
+because nothing at the table could reach those lines until this version.
+Found by the invariant judge inside a driven game.
+
+### The chair mirror is a band now
+
+It pinned one matchup on one seed, and abilities resolving flipped it.
+Measured across five matchups at the same moment: **seat 0 won 5 of 10** —
+no bias at all. HANDOFF-MERGE lesson 5, which the *other* chair drill had
+already been converted for and this one had been missed by.
+
+```
+npm test          1082 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.03 — freeze is built, and Iyslander's signature card resolves
 
 v3.02 stopped Cold Snap claiming a mechanic nobody had built. This builds

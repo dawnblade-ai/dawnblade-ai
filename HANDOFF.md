@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.03 · PHASE C, IYSLANDER: FREEZE IS BUILT
+# Handoff — Dawnblade, at v3.04 · PHASE C, AND ABILITIES REACH THE TABLE
 
 > **v3.00–v3.01 happened after most of this file was written.** Where the
 > two disagree, this block and `FINISH.md` are current and the prose
@@ -26,7 +26,7 @@
 >
 > | card | what is unread |
 > |---|---|
-> | **Arcane Twining · Photon Splicing** | `Instant - Discard this: Amp 1` on a card in HAND. **Take this one** — it is the same shape as Kayo's Agile Windup and Dorinthea's family, so it is a rule with a list behind it rather than a card. `fx.handAbility` already PARSES it (deliberately without touching `tier`); what is missing is a ROUTE — only gear and arena permanents ever get a `powCard`. |
+> | **Arcane Twining · Photon Splicing** | `Instant - Discard this: Amp 1` on a card in HAND. **Take this one.** The census found FOUR true hand abilities across three heroes (these two, Kayo's Agile Windup, Arakni's Reaper's Call), so it is a rule with a list. `fx.handAbility` already PARSES them; what is missing is a ROUTE — only gear and arena permanents get a `powCard`, and v3.04 has just built the equivalent route for gear at the table, so the shape to copy is fresh. **Rally the Coast Guard is NOT one of them**: `parseHandAbility` stops at the first period and truncates away its printed "Activate this only while this card is defending", so a route built off `handAbility` alone would let it buff defence from hand at any time. Ask `fx.activateIf` — it reads that gate correctly, and `effects.activateIfOk` is the shared reader as of v3.04. |
 > | Brain Freeze | the fused rider's hand-to-top-of-deck payload |
 > | Ice Eternal | X-cost, deliberately unbuilt (the pool's only one) |
 > | Stir the Aetherwinds | the instant-speed grant, unread on purpose since v3.00 |
@@ -67,9 +67,9 @@
 
 ---
 
-## WHERE WE ARE — v3.03
+## WHERE WE ARE — v3.04
 
-`npm test` → **1076 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1082 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **305 full / 78 part / 22 none** ·
 `tools/failstates.js` → **0 UNFAIR**.
@@ -85,8 +85,8 @@ because a lie was removed is the number improving.
 ```
 1. ENGINE   ✔ merged · ✔ pool pinned · ✔ drift guarded
 2. PHASE B  ✔ DONE — 0 UNFAIR (watery grave + suspense, v3.01)
-3. PHASE C  ▸ IYSLANDER — freeze BUILT (v3.03); 4 cards left, and the
-              next one closes Kayo too
+3. PHASE C  ▸ IYSLANDER — freeze BUILT (v3.03); equipment abilities
+              reach the table (v3.04); 4 cards left
 4. PHASE A  ☐ retire Battle — carries the tuning debt, needs a phone
 ```
 
