@@ -15,7 +15,7 @@ const path = require("node:path");
 const C = require("../engine/cards.js");
 
 const ROOT = path.join(__dirname, "..");
-const CACHE = path.join(ROOT, "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const HTML = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 
 /* The pool drills need the card cache; skip cleanly without it, the way

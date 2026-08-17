@@ -49,7 +49,7 @@ const RNG = require("../engine/rng");
 const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const skip = !fs.existsSync(CACHE) && "no cached DB — run: node tools/audit.js";
 
 const W = loadData();

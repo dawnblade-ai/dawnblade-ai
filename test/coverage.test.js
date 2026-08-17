@@ -11,7 +11,7 @@ const G = require("../engine/game");
 const C = require("../engine/cards");
 const { loadData } = require("./helpers/extract");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const BASELINE = path.join(__dirname, "..", "tools", "coverage-baseline.json");
 const ready = fs.existsSync(CACHE) && fs.existsSync(BASELINE);
 

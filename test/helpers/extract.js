@@ -32,4 +32,31 @@ function loadData(){
   return w;
 }
 
-module.exports = { ROOT, html, effects, loadData };
+/* ---- WHERE THE CARD DATABASE COMES FROM -----------------------------
+
+   `npm test` on a fresh clone used to be 749 passes and 304 SILENT
+   SKIPS: every drill that needs a card gated on `tools/.cache/card.json`,
+   a 22MB download that is gitignored. "1053 green" therefore meant
+   "green on a machine that had happened to fetch", and it hid 22 pool
+   cards that had stopped resolving when the upstream database reworded
+   them.
+
+   THE SUITE READS THE PINNED POOL, AND PREFERS IT EVEN WHEN A LIVE COPY
+   IS SITTING THERE. That is the whole point: a drill is a statement
+   about the engine, and a drill whose fixture is re-downloaded from
+   someone else's `develop` branch is a statement about two things at
+   once. When upstream moves, exactly one drill is allowed to notice —
+   `test/drift.test.js`, which reads the live copy on purpose and
+   compares what the parser makes of each.
+
+   `data/pool.json` is written by `tools/pin-pool.js` and is fetched
+   data, never authored. The GAME still streams the live database at
+   runtime; pinning the fixture does not pin the player. */
+const POOL = path.join(ROOT, "data", "pool.json");
+const LIVE = path.join(ROOT, "tools", ".cache", "card.json");
+
+const cardDbPath = () => fs.existsSync(POOL) ? POOL : LIVE;
+const hasLiveDb  = () => fs.existsSync(LIVE);
+const liveDbPath = () => LIVE;
+
+module.exports = { ROOT, html, effects, loadData, cardDbPath, hasLiveDb, liveDbPath, POOL, LIVE };

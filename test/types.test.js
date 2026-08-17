@@ -24,7 +24,7 @@ const GM = require("../engine/game");
 const C = require("../engine/cards");
 const { loadData } = require("./helpers/extract");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const ready = fs.existsSync(CACHE);
 const skip = !ready && "no cached DB — run: node tools/audit.js";
 

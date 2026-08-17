@@ -224,8 +224,14 @@ test("the trainer routes a seat-1 pay to the policy", {skip}, () => {
 test("the Inertia token is a HAND WIPE, and the old noop said otherwise", {skip}, () => {
   const tok = card("Inertia");
   assert.ok(tok.resolved, "resolved from the database — never invented");
+  /* TWO PRINTINGS OF THE SAME TOKEN. Upstream resolved the self-reference
+     ("destroy Inertia" -> "destroy this") in the v3.00 rewording pass, and
+     a warm localStorage cache still holds the old one — so the drill reads
+     both rather than pinning whichever wording this machine fetched. What
+     it is actually asserting is unchanged: the token is a HAND WIPE at the
+     end phase, not a tax on an action phase. */
   assert.match(P.clean(tok.tx || ""),
-    /at the beginning of your end phase, destroy inertia, then put all cards from your hand and arsenal on the bottom of your deck/i,
+    /at the beginning of your end phase, destroy (?:inertia|this), then put all cards from your hand and arsenal on the bottom of your deck/i,
     "the printed text is the spec, and it is not a tax on an action phase");
 });
 

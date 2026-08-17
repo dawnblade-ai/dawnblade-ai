@@ -10,7 +10,14 @@
    Usage:
      node tools/audit.js                  # audit -> AUDIT.md + tools/audit.json
      node tools/audit.js --write-baseline # also pin tools/coverage-baseline.json
-     node tools/audit.js --refresh        # force re-download of the card DB
+     node tools/audit.js --live           # audit the LIVE upstream database
+     node tools/audit.js --refresh        # force re-download, then audit it
+
+   IT READS THE PINNED POOL BY DEFAULT (`data/pool.json`), so a fresh
+   clone can audit with no network and two machines produce the same
+   AUDIT.md. `--live`/`--refresh` point it at the upstream database
+   instead, which is how you see what has moved; `test/drift.test.js`
+   is the guard that says whether the movement broke anything.
    ============================================================ */
 const fs = require("fs");
 const path = require("path");
@@ -18,7 +25,7 @@ const P = require("../engine/parser");
 const G = require("../engine/game");
 const C = require("../engine/cards");
 const { KEYWORDS, SYMBOLS } = require("./ledger");
-const { loadData } = require("../test/helpers/extract");
+const { loadData, cardDbPath, hasLiveDb } = require("../test/helpers/extract");
 
 const ROOT = path.join(__dirname, "..");
 const CACHE = path.join(__dirname, ".cache", "card.json");
@@ -49,7 +56,7 @@ const HERO_STATICS = [
    note:"Kayo — attack actions get +N{p} off the combat chain (a THRESHOLD rule, not a damage buff)"},
   {key:"mightOnFirst6Discard", re:/the first time you discard a card with 6 or more \{p\} during each of your action phases, create a might token/,
    note:"Kayo — first 6+{p} discard per action phase → Might token"},
-  {key:"weaponRefresh", re:/when a weapon you control hits, you may attack an additional time with that weapon this turn/,
+  {key:"weaponRefresh", re:/(?:when a weapon you control hits|the first time your weapon attack hits each turn), you may attack an additional time with that weapon this turn/,
    note:"Dorinthea — a weapon that hits may swing again this turn (once per turn; pays {r} and an action point again)"}
 ];
 /* Tokens are read out of the pool's own text rather than listed by hand —
@@ -67,8 +74,12 @@ const tokensReferencedIn = texts => {
   return [...found].sort();
 };
 
-async function loadDB(refresh, DBSRC){
-  if(!refresh && fs.existsSync(CACHE)) return JSON.parse(fs.readFileSync(CACHE, "utf8"));
+async function loadDB(refresh, DBSRC, live){
+  /* The pinned pool is the default so this is reproducible offline. It
+     holds every record the pool can reach and nothing else, which is all
+     an audit of the pool ever looks at. */
+  if(!refresh && !live) return JSON.parse(fs.readFileSync(cardDbPath(), "utf8"));
+  if(!refresh && hasLiveDb()) return JSON.parse(fs.readFileSync(CACHE, "utf8"));
   console.log("Fetching card database:", DBSRC);
   const res = await fetch(DBSRC);
   if(!res.ok) throw new Error("HTTP " + res.status);
@@ -155,7 +166,9 @@ function analyzeHero(rec, heroName){
 async function main(){
   const W = loadData(); // window.* from index.html — DECKS, HEROES, DBSRC, DUMMY_GEAR, DATA_VER
   const refresh = process.argv.includes("--refresh");
-  const raw = await loadDB(refresh, W.DBSRC);
+  const live = refresh || process.argv.includes("--live");
+  const raw = await loadDB(refresh, W.DBSRC, live);
+  if(live) console.log("Auditing the LIVE database — `data/pool.json` is what the drills read.");
   const db = C.buildMaps(raw.filter(c=>c && c.name).map(C.mapDbCard));
   console.log("Database:", db.count, "cards mapped.");
   P.fxReset();

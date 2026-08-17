@@ -34,7 +34,7 @@ const S = require("../../engine/sides.js");
 const RNG = require("../../engine/rng.js");
 
 const ROOT = path.join(__dirname, "..", "..");
-const CACHE = path.join(ROOT, "tools", ".cache", "card.json");
+const CACHE = require("./extract").cardDbPath();
 
 const hasDb = () => fs.existsSync(CACHE);
 

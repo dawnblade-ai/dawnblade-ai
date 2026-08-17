@@ -36,7 +36,7 @@ const RNG = require("../engine/rng.js");
 const INV = require("../engine/invariants.js");
 const W = require("../engine/wire.js");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const skip = !fs.existsSync(CACHE) && "no cached card database";
 const DATA = skip ? null : require("./helpers/extract.js").loadData();
 let _db = null;

@@ -48,7 +48,7 @@ const esc = s => String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
 let _pool = null;
 function pool(){
   if(_pool) return _pool;
-  const CACHE = path.join(HERE, ".cache", "card.json");
+  const CACHE = require("../test/helpers/extract").cardDbPath();
   const imgs = {}, byName = {};
   if(fs.existsSync(CACHE)){
     for(const c of JSON.parse(fs.readFileSync(CACHE, "utf8"))){

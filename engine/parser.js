@@ -23,15 +23,63 @@ const arcaneDmg = c => { const m=(c.tx||"").match(/deals? (\d+) arcane damage/i)
 
 const NWORD = {a:1,an:1,one:1,two:2,three:3,four:4};
 const num = w => NWORD[w] || parseInt(w,10) || 1;
-const clean = t => (t||"").replace(/\*\*?/g,"").replace(/\s+/g," ").trim();
+/* Markdown emphasis, both spellings. Upstream prints keyword lines bold,
+   and one record in the pool ("Washed Up Wave") carries a stray empty
+   emphasis run — `**Blade Break** __` — which left the clause reading
+   "blade break __" and stopped the keyword line being recognised at all. */
+const clean = t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/g," ").trim();
 /* FaB counts occurrences in words ("the SECOND time this hits each turn"),
    so a clause that names WHICH occurrence it fires on needs these. Kept at
    module scope rather than rebuilt inside classifyClause, which recurses. */
 const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
 
+/* ---- ONE IDIOM, TWO SPELLINGS (v3.00) --------------------------------
+
+   The card database is somebody else's `develop` branch, and between
+   v2.84 and v3.00 it ran an editorial pass over 138 of this pool's 405
+   cards: contractions expanded, "it" resolved to "this", "or greater"
+   levelled to "or more". 22 cards stopped being read. Nothing invented a
+   new rule — the same effect is simply spelled differently.
+
+   BOTH SPELLINGS MUST BE READ, AND NOT ONLY FOR TIDINESS. `DATA_VER`
+   keys a localStorage cache, so a player who opened the game last week
+   is still holding the OLD text while a player opening it today gets the
+   new. The two populations coexist until every cache turns over, and a
+   parser that reads only one of them breaks somebody's game either way.
+
+   Every entry here is a SYNONYM of one printed idiom, never a change of
+   meaning — that is the line, and it is why `has` is levelled only where
+   it governs a pump ("this has +1{p}") and never on its own, where it is
+   a real question ("if this has 3 or more rust counters"). Widening an
+   anchor is the alternative and it is the right move when the two
+   wordings are not synonyms; see Brand with Cinderclaw, which grew a
+   TRIGGER, and is fixed at its anchor rather than here. */
+const SYNONYMS = [
+  /* contractions — upstream expanded them, the anchors read the long form */
+  [/\byou've\b/g,          "you have"],
+  [/\bthey've\b/g,         "they have"],
+  [/\byou'd\b/g,           "you would"],
+  /* self-reference. `fxParse` already rewrites a card's own NAME to
+     "this"/"this's" before we get here, so these two land on that form. */
+  [/\bthis card's\b/g,     "this's"],
+  [/\bthis card\b/g,       "this"],
+  /* comparatives and hyphenation */
+  [/\bor greater\b/g,      "or more"],
+  [/\bface-up\b/g,         "face up"],
+  [/\b(\d+)-sided die\b/g, "$1 sided die"],
+  /* "gains"/"has" governing a pump or a keyword grant — CLAUDE.md has
+     said since v2.12 that FaB prints all three of gains/gets/has, and most
+     anchors already spell the alternation out. These level the ones that
+     do not, and they are anchored to what FOLLOWS so a bare "has" is
+     untouched. */
+  [/\b(?:gains|has)(?=\s*\+\d+\s*\{[pdhi]\})/g, "gets"],
+  [/\b(?:gains|has) go again\b/g,               "gets go again"]
+];
+const levelIdiom = c => SYNONYMS.reduce((s, [re, to]) => s.replace(re, to), c);
+
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
-  const c = clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,"");
+  const c = levelIdiom(clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
   if(!c) return null;
   const R = (ops,extra) => Object.assign({status:"run",ops},extra||{});
   const NOOP = why => ({status:"noop",ops:[["noop",why]]});
@@ -65,11 +113,26 @@ function classifyClause(raw){
      These all begin with If/When but must be read as ONE unit. The if/when
      handler below splits on the first comma and would either fail to read
      the payload or lose the condition entirely, so they come first. */
-  if(/^when this is discarded at random, put it on the bottom of its owner'?s? deck$/.test(c))
+  /* THE SAME BONUS-ARCANE POOL, PRINTED AS TWO SENTENCES (Stir the
+     Aetherwinds). Upstream split "…as though it were an instant AND if it
+     has an effect that deals arcane damage, instead…" into two, which is
+     how anyone noticed that the single-sentence form was matched by an
+     UNANCHORED rule further down and quietly swallowed the instant-speed
+     grant with it. This reads the bonus half, which is the half the engine
+     models; the grant itself is genuinely unbuilt and is left UNREAD
+     rather than nooped — a noop counts as accounted for, and the card
+     would go back to claiming it works.
+
+     It belongs up here with the other whole-clause patterns: the if/when
+     handler below splits on the first comma and would take the condition
+     off, leaving a payload that means nothing on its own. */
+  if(m=c.match(/^if it has an arcane damage effect, instead it deals that much arcane damage plus (\d+)$/))
+    return R([["amp",+m[1]]]);
+  if(/^when this is discarded at random, put it on the bottom of (?:its owner'?s?|your) deck$/.test(c))
     return NOOP("discard redirect — honoured by the discard path, not on resolution");
   if(/^when you win a clash revealing this, deal \d+ damage to the other hero$/.test(c))
     return NOOP("reveal payoff — fires if this is the card revealed on a winning clash");
-  if(/^when it has none, destroy it$/.test(c))
+  if(/^when (?:it|this) has none, destroy it$/.test(c))
     return NOOP("counter tick — destruction handled with the tick that empties it");
   /* VERSE COUNTERS (Malefic Incantation): this exact rider is the OTHER
      half of the verse-counter unwind read directly off the board in
@@ -105,12 +168,12 @@ function classifyClause(raw){
     return NOOP("clash payoff — the defence step applies this when you win");
   /* RULING (Reaping Blade): a static lock — the hero ahead on life can't gain
      any. The life op checks it before healing. */
-  if(/^if a hero has more \{h\} than any other hero, they can'?t gain \{h\}$/.test(c))
+  if(/^if a hero has more \{h\} than (?:any|each) other hero, they can'?t gain \{h\}$/.test(c))
     return R([["lifeLock",1]]);
   /* RULING (Pyroglyphic Protection): prevents arcane PER SOURCE while it is in
      play — ten runechants popping are ten sources, so ten prevented. Distinct
      from ward/awd, which is a single pool that drains. */
-  if(m=c.match(/^if your hero would be dealt arcane damage, prevent (\d+) arcane damage that source would deal$/))
+  if(m=c.match(/^if (?:your hero|you) would be dealt arcane damage, prevent (\d+) (?:arcane damage that source would deal|of that damage)$/))
     return R([["arcShield", +m[1]]]);
   /* Cost reductions are read by boardRed / runeRed inside effCost, before the
      pitch prompt — they are not effects that fire on resolution. Both must sit
@@ -124,7 +187,7 @@ function classifyClause(raw){
   if(/^the winner creates? (?:a|an|\d+) [a-z' -]+ tokens?$/.test(c))
     return NOOP("clash payoff — the clash block creates this for whoever wins");
   /* Mandible Claw's rider is read off the weapon when it swings. */
-  if(/^if you have discarded a card with \d+ or more \{p\} this turn, this card'?s attacks? go again$/.test(c))
+  if(/^if you have discarded a card with \d+ or more \{p\} this turn, this'?s attacks? (?:get )?go again$/.test(c))
     return NOOP("weapon rider — read from the graveyard stamp when the weapon swings");
   /* ---- THE "+1{p} COUNTER" FAMILY ------------------------------------
      Eight pool cards move +1{p} counters around, and the Dawnblade is the
@@ -223,7 +286,7 @@ function classifyClause(raw){
     if(/^this attacks or defends$/.test(cond)) return Object.assign(rest,{approx:true});
     /* RULING (Emeritus Scolding): a card played at instant speed during the
        opponent's turn gets the bigger effect — Iyslander's whole game. */
-    if(/is played during an opponents? turn/.test(cond)) return Object.assign(rest,{cond:"foeTurn"});
+    if(/(?:is|was) played during an opponent'?s? turn/.test(cond)) return Object.assign(rest,{cond:"foeTurn"});
     /* RULING (Sigil of Suffering): +{d} once you've already dealt arcane */
     if(/you have dealt arcane damage this turn/.test(cond)) return Object.assign(rest,{cond:"arcDealt"});
     /* RULING (auras): non-attack actions that stay in play — so "played or
@@ -259,7 +322,9 @@ function classifyClause(raw){
        tags (see the NOOP above); reads the board the same way "seismic"
        reads it for its own named token. */
     if(/^you control an aura of suspense$/.test(cond)) return Object.assign(rest,{cond:"suspenseAura"});
-    if(m=cond.match(/^there is a card with cost (\d+) or greater in your pitch zone$/))
+    /* `or greater` is levelled to `or more` by SYNONYMS — one canonical
+       comparative, so an anchor spells it once. */
+    if(m=cond.match(/^there is a card with cost (\d+) or more in your pitch zone$/))
       return Object.assign(rest,{cond:"pitchCost"+m[1]});
     if(/^an ally has been put into your graveyard this turn$/.test(cond))
       return Object.assign(rest,{cond:"allyDied"});
@@ -474,7 +539,7 @@ function classifyClause(raw){
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
     return NOOP("stops arcane damage — the dummy throws only fists");
   /* rust destruction already runs in the end phase */
-  if(/^at the beginning of your end phase, if this has \d+ or more rust counters on it, destroy it$/.test(c))
+  if(/^at the beginning of your end phase, if this has \d+ or more rust counters(?: on it)?, destroy it$/.test(c))
     return NOOP("rust — the end phase already destroys it at 3 counters");
   /* the dummy holds a hand now, so revealing it is a real thing to do */
   if(/^target opponent reveals their hand$/.test(c)) return R([["foeReveal",1]]);
@@ -521,7 +586,7 @@ function classifyClause(raw){
      play this turn with an effect that deals arcane damage, instead deals
      that much arcane damage plus N" is the bonus-arcane pool — which the
      engine already has, as amp. Same mechanic, spelled out longhand. */
-  if(m=c.match(/(?:next card you play this turn with an effect that deals arcane damage, instead deals|effect that deals arcane damage, instead that effect deals) that much arcane damage plus (\d+)/))
+  if(m=c.match(/(?:next card you play this turn with an (?:effect that deals arcane damage|arcane damage effect), instead deals|(?:effect that deals arcane damage|arcane damage effect), instead (?:that effect|it) deals) that much arcane damage plus (\d+)/))
     return R([["amp",+m[1]]]);
   /* RULING: auras that scrub themselves at the top of your next turn */
   if(/^at the (?:beginning|start) of your (?:action phase|turn), destroy this$/.test(c))
@@ -614,7 +679,8 @@ function classifyClause(raw){
   /* RULING (Knucklehead): roll a d6, and your base intellect becomes the
      roll until end of turn — intellect is the end-of-turn draw, so this is
      a real swing. Two ops, because they are two printed sentences. */
-  if(/^roll a (?:6|six)-sided die$/.test(c)) return R([["roll",6]]);
+  /* the hyphen is levelled out by SYNONYMS — upstream prints it both ways */
+  if(/^roll a (?:6|six) sided die$/.test(c)) return R([["roll",6]]);
   if(/^until end of turn, your base \{i\} is the number rolled$/.test(c)) return R([["intRoll"]]);
   /* RULING (Put in Context): a printed limit on what this may be declared
      against — enforced when blockers are declared, not on resolution. */
@@ -634,7 +700,7 @@ function classifyClause(raw){
   /* RULING (Under Loop): on hit it recycles instead of hitting the graveyard,
      and the combat chain stays open. Written as the bare payload so the
      if/when handler above applies the onHit wrapper itself. */
-  if(/^put (?:it|this) on the bottom of its owner'?s? deck$/.test(c))
+  if(/^put (?:it|this) on the bottom of (?:its owner'?s?|your) deck$/.test(c))
     return R([["bottomSelf",1]]);
   /* RULING 2026-07-25: transcend flips the card over — it BECOMES Inner Chi
      (printed on its back) and returns to hand instead of hitting the
@@ -669,7 +735,7 @@ function classifyClause(raw){
     return R([["mkBanish", m[1].trim()]]);
   if(/^you may play it this turn$/.test(c))
     return NOOP("playable this turn — the flag is set when the card is created");
-  if(m=c.match(/^the next ([a-z][a-z' -]*?) you play this turn gains \+(\d+)\s*\{p\}$/))
+  if(m=c.match(/^the next ([a-z][a-z' -]*?) you play this turn gets \+(\d+)\s*\{p\}$/))
     return R([["namedBuff", m[1].trim(), +m[2]]]);
   /* activation gates on equipment abilities — the gate is its own printed
      sentence, so it must read as accounted-for while fx.activateIf enforces it */
@@ -680,7 +746,10 @@ function classifyClause(raw){
   if(/^clash with the attacking hero$/.test(c))
     return NOOP("clash — resolved when this blocks, off the clash keyword");
   /* RULING (Draconic chain): a card can make your next attack count as Draconic */
-  if(/^your next attack this combat chain is draconic in addition to its other card types$/.test(c))
+  /* upstream dropped ", in addition to its other card types" and moved the
+     trigger to the front; the if/when handler above unwraps "when this
+     attacks," and hands the payload here either way. */
+  if(/^your next attack this combat chain is draconic(?: in addition to its other card types)?$/.test(c))
     return R([["dracNext",1]]);
   /* "When it has none, destroy it" — the tail of a counter-tick sentence; the
      tick op that precedes it owns the destruction. */
@@ -688,7 +757,7 @@ function classifyClause(raw){
     return R([["selfDestruct","end"]]);
   if(/^damage that would be dealt by this can'?t be prevented$/.test(c))
     return R([["unpreventable",1]]);
-  if(/^defense reactions can'?t be played to this(?:'s)? chain link$/.test(c))
+  if(/^defense reaction(?: card)?s can'?t be played (?:to )?this(?:'s)? chain link$/.test(c))
     return NOOP("the dummy plays no defence reactions — nothing to deny yet");
   if(/^this enters the arena with (\d+) (?:verse|steam) counters?$/.test(c))
     return R([["enterCounters", +c.match(/(\d+)/)[1]]]);
@@ -1152,7 +1221,7 @@ function fxParse(card){
     fx.playIf = {kind:"soulYellow", why:"no yellow card has gone into your soul this turn"};
   /* "When this is discarded at random, put it on the bottom of its owner's
      deck" — a discard redirect the auto-discard path has to honour. */
-  if(/when this is discarded at random, put it on the bottom of its owner'?s? deck/.test(tl))
+  if(/when this is discarded at random, put it on the bottom of (?:its owner'?s?|your) deck/.test(tl))
     fx.bottomOnDiscard = true;
   /* RULING (Out Pace): hoisted so the declare step can refuse equipment */
   if(/can'?t be defended by equipment/.test(tl)) fx.noEquipDefend = true;

@@ -271,7 +271,7 @@ const tokenRefsIn = tx => [...new Set(
 let _pool = null;
 function pool(){
   if(_pool) return _pool;
-  const CACHE = path.join(HERE, ".cache", "card.json");
+  const CACHE = require("../test/helpers/extract").cardDbPath();
   const imgs = {}, byName = {}, TOKENS = {};
   if(fs.existsSync(CACHE)){
     for(const c of JSON.parse(fs.readFileSync(CACHE,"utf8"))){

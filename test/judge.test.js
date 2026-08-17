@@ -29,7 +29,7 @@ const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
 const H = require("./helpers/judged.js");
 
-const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
+const CACHE = require("./helpers/extract").cardDbPath();
 const ready = fs.existsSync(CACHE);
 const skip = !ready && "no cached DB — run: node tools/audit.js";
 

@@ -244,7 +244,14 @@ function buildSide(h, d, db, opts, rng, ctr){
 
      "That weapon" is literal — only the piece that hit is refreshed, so a
      hero holding two weapons does not get a free swing with the other. */
-  const weaponRefresh = /when a weapon you control hits, you may attack an additional time with that weapon this turn/.test(_htx);
+  /* TWO PRINTINGS, ONE ABILITY. Upstream rewrote this between v2.84 and
+     v3.00 — "Once per turn Effect - When a weapon you control hits, …"
+     became "The first time your weapon attack hits each turn, …" — moving
+     the once-per-turn limit out of the prefix and into the sentence. The
+     ENGINE already latched it on `hist.wpnAgain`, so the behaviour was
+     right and only the reader was stale; a player on a warm localStorage
+     cache is still holding the old wording, so both are read. */
+  const weaponRefresh = /(?:when a weapon you control hits|the first time your weapon attack hits each turn), you may attack an additional time with that weapon this turn/.test(_htx);
   let startItem = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
