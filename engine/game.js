@@ -188,9 +188,26 @@ function damageAlly(game, side, uid, amount){
     return Object.assign({}, b, {life: after});
   });
   if(killed){
-    msgs.push(killed.card.name + " takes " + amount + " and goes down.");
+    /* AN ALLY THAT DIES GOES FACE-DOWN. RULING 2026-07-25, verbatim:
+       "Because gravy can often play allies from the grave - they must be
+       turned face down when they die so they can not be used infinitely.
+       allow the player to check their own faced down cards but not their
+       opponents."
+
+       This is the DRAWBACK half of watery grave, and it is the whole
+       reason the keyword is a keyword rather than a bonus: without it the
+       six Pirate allies are an infinite loop, and every tool here reported
+       them `tier: full` because the keyword parsed to a noop. The stamp is
+       read by `parser.playableFromZone`, which is the one place that
+       decides whether a graveyard card can be played.
+
+       It is stamped on EVERY ally that dies, which is what the ruling
+       says; the consequence only bites the cards that could be replayed. */
+    const wg = (killed.card.kw || []).some(k => String(k).toLowerCase() === "watery grave");
+    msgs.push(killed.card.name + " takes " + amount + " and goes down" +
+      (wg ? " — face-down in the graveyard, so it will not be replayed." : "."));
     sd.board = sd.board.filter(b => !b._dead);
-    sd.grave = [Object.assign({}, killed.card), ...(sd.grave || [])];
+    sd.grave = [Object.assign({}, killed.card, {_fd: true}), ...(sd.grave || [])];
   } else {
     const now = (sd.board.find(b => b.uid === uid) || {});
     msgs.push("Ally takes " + amount + (now.life != null ? " — " + now.life + " life left." : "."));

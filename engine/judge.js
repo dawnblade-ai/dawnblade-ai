@@ -608,6 +608,18 @@ function legal(g, a, seat){
       if(i < 0) return "card is not in your " + zone;
       c = sd[zone][i];
     }
+    /* WHICH ZONES A CARD MAY BE PLAYED FROM (v3.00). This asked only
+       whether the card was THERE, so every card in a graveyard was
+       playable at the table — driven, a vanilla Brutal Assault went from
+       the graveyard onto the combat chain with `legal` returning null.
+       The rule existed, in `playables()`, which is the trainer's UI and
+       somewhere this reducer cannot reach; `parser.playableFromZone` is
+       the one copy now. The game's half of the question — whose hero
+       grants watery grave, and whether a blue card has hit the graveyard
+       this turn — is supplied here, because the parser is pure. */
+    if(!PR.playableFromZone(c, zone, {wateryGrave: !!bOf(g, seat).wateryGrave,
+                                      blueGY: (sd.hist || {}).blueGY || 0, turn: g.turn}))
+      return c.name + " cannot be played from your " + zone;
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
     return playableWhy(g, seat, c, win) || targetWhy(g, seat, c, a.target);

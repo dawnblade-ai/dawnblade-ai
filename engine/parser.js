@@ -1241,8 +1241,25 @@ function fxParse(card){
     fx.activateIf = {kind:"foeTurn", why:"it's your turn, not your opponent's"};
   else if(tl.match(/activate this only if you'?(?:ve| have) played a ([a-z' -]+) this turn/))
     fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
-  if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
-  if(/play(?:ed)?(?:[^.]{0,30})? from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
+  /* THE CARD MUST GRANT ITSELF THE ROUTE, and the subject of that grant is
+     "this". Written without it, these matched any card that merely TALKS
+     about graveyard plays: Compass of Sunken Depths ("the first card with
+     watery grave you play from your graveyard each turn gets go again")
+     was the only pool card either flag fired on, and it is Equipment,
+     which is never played from anywhere. Under `playableFromZone` that
+     false positive is a card replayable out of the graveyard against its
+     printed text, so the loose read stopped being harmless the moment
+     anything consumed the flag.
+
+     No pool card sets either flag now, and that is the honest answer
+     rather than a gap: Gravy Bones grants the graveyard route through his
+     HERO ABILITY, and Crouching Tiger's banish route is a `_playTurn`
+     stamp at mint time. The flags stay because the shape is real in FaB
+     and a future set will print it. */
+  if(/\b(?:play|played)\b[^.]{0,20}\bthis\b[^.]{0,30}?\bfrom (?:your |the |its owner'?s )?graveyard/.test(tl)
+     || /\bthis\b[^.]{0,30}?\b(?:may|can) be played from (?:your |the )?graveyard/.test(tl)) fx.fromGY = true;
+  if(/\b(?:play|played)\b[^.]{0,20}\bthis\b[^.]{0,30}?\bfrom (?:your |the |its owner'?s )?banish/.test(tl)
+     || /\bthis\b[^.]{0,30}?\b(?:may|can) be played from (?:your |the )?banish/.test(tl)) fx.fromBan = true;
   /* the enabler half: "you may put an arrow from your hand face-up into
      your arsenal". Read the SUBJECT so a card that says "an arrow" cannot
      put a non-arrow; anything else is left unclaimed.
@@ -1837,6 +1854,55 @@ const printedKw = (c, k) => {
   return false;
 };
 
+/* ---- WHICH ZONE A CARD MAY BE PLAYED FROM (v3.00) -------------------
+
+   A card is played from the HAND. The graveyard and the banished zone are
+   exceptions that something has to GRANT — Gravy Bones' watery grave,
+   Crouching Tiger's own printed line, a card that says "you may play this
+   from your graveyard".
+
+   THAT RULE LIVED IN THE TRAINER'S UI. `playables()` decided it while
+   building the tap list, so `judge.legal` never had it, and at the table
+   **every card in your graveyard was playable** — driven: a vanilla
+   Brutal Assault with no watery grave anywhere near it went from the
+   graveyard straight onto the combat chain, `legal` returning null. That
+   is sev-3 "illegal play allowed" over the whole pool rather than over a
+   keyword, and it is the same shape as phantasm: a rule that exists on
+   one board only, because the board that has it keeps it somewhere the
+   other one cannot reach.
+
+   It is asked of PRINTED fields and `fxParse`, so it stays pure and both
+   callers share it. What the caller supplies is the part that belongs to
+   the game rather than the card: whose hero grants watery grave, whether
+   a blue card has hit the graveyard this turn, and which turn it is.
+
+   `printedKw`, NOT `hasKw`. The hero reads "you may play cards WITH
+   watery grave from your graveyard" — a card that merely mentions the
+   keyword does not have it. Three pool cards do exactly that (Jittery
+   Bones, Compass of Sunken Depths, Washed Up Wave, all of which ASK
+   about watery grave), and under `hasKw` all three were replayable from
+   the graveyard against their own printed text. */
+const playableFromZone = (c, zone, o) => {
+  o = o || {};
+  if(!c) return false;
+  /* the ordinary routes, and the two the trainer models as zones */
+  if(zone === "hand" || zone === "arsenal" || zone === "weapon" || zone === "hero") return true;
+  if(zone === "grave"){
+    if(fxParse(c).fromGY) return true;
+    /* FACE DOWN IS THE DRAWBACK, and it is why watery grave is a keyword
+       rather than a bonus: an ally that dies is turned face-down
+       "specifically so it cannot be replayed infinitely" (RULING
+       2026-07-25). Without this the six allies are a loop. */
+    if(c._fd) return false;
+    return !!(o.wateryGrave && (o.blueGY || 0) > 0 && printedKw(c, "watery grave"));
+  }
+  if(zone === "banish"){
+    if(fxParse(c).fromBan) return true;
+    return c._playTurn != null && c._playTurn === o.turn;
+  }
+  return false;
+};
+
 /* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
    CR 8.1.2a — an attack reaction "can only be played/activated by a
    player who controls the attack during the Reaction Step of combat."
@@ -1964,7 +2030,7 @@ function idleCounterWipes(gear, counters, hits){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
+        classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,

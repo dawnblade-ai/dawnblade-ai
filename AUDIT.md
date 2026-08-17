@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-17T17:21:29.698Z · app v3.00 · data sage-v11 · db 764 records
+Generated 2026-08-17T18:25:52.916Z · app v3.00 · data sage-v11 · db 764 records
 
 ## Summary
 
@@ -73,7 +73,7 @@ Generated 2026-08-17T17:21:29.698Z · app v3.00 · data sage-v11 · db 764 recor
 | transcend | live — RULED 2026-07-25: the card flips to Inner Chi and returns to hand instead of the graveyard | A Drop in the Ocean, Homage to Ancestors, Pass Over, Preserve Tradition, Rising Sun, Setting Moon |
 | unity | unreviewed — Boltyn package | Gauntlets of Unity, Helm of Unity |
 | ward | live — soaks incoming; arcane ward tracked separately (awd) | Uphold Tradition, Waning Vengeance, Waxing Specter |
-| watery grave | partial — RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn. THE DRAWBACK IS NOT BUILT: a dead ally must go face-down so it cannot be replayed forever | Barnacle, Cutty Shark, Quick Clip, Limpit, Hop-a-long, Oysten, Heart of Gold, Riggermortis, Swabbie |
+| watery grave | live — RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn, and a dead ally goes FACE-DOWN so it cannot be replayed | Barnacle, Cutty Shark, Quick Clip, Limpit, Hop-a-long, Oysten, Heart of Gold, Riggermortis, Swabbie |
 
 ## Granted keywords in pool (conditional grants — never merged with printed)
 

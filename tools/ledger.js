@@ -72,12 +72,12 @@ const KEYWORDS = {
    "transcend":           {status:"live",        note:"RULED 2026-07-25: the card flips to Inner Chi and returns to hand instead of the graveyard"},
    "unity":               {status:"unreviewed",  note:"Boltyn package"},
    "ward":                {status:"live",        note:"soaks incoming; arcane ward tracked separately (awd)"},
-   /* TWO HALVES, AND ONLY ONE IS BUILT (v3.00). The UPSIDE is live —
-      `built.wateryGrave` plus the blue-in-graveyard check lets Gravy Bones
-      replay these from the graveyard. The DRAWBACK the ruling exists for
-      is not: "they must be turned face down when they die so they can not
-      be used infinitely". Recorded as live, it read as done. */
-   "watery grave":        {status:"partial",     note:"RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn. THE DRAWBACK IS NOT BUILT: a dead ally must go face-down so it cannot be replayed forever"},
+   /* BOTH HALVES BUILT (v3.00). The upside was live for a long time and
+      the drawback was not, which left the six Pirate allies an infinite
+      loop that every coverage tool reported as `tier: full`. An ally that
+      dies is now stamped `_fd` in the graveyard and
+      `parser.playableFromZone` refuses it — one rule, both boards. */
+   "watery grave":        {status:"live",        note:"RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn, and a dead ally goes FACE-DOWN so it cannot be replayed"},
 };
 
 const SYMBOLS = {

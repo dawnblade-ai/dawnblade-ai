@@ -1415,6 +1415,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     instantAbilityReady = DawnParser.instantAbilityReady,
     hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
     isDR = DawnParser.isDR, isRx = DawnParser.isRx, rxAllowed = DawnParser.rxAllowed,
+    playableFromZone = DawnParser.playableFromZone,
     rxPump = DawnParser.rxPump, idleCounterWipes = DawnParser.idleCounterWipes,
     isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
@@ -1997,17 +1998,29 @@ function InPlayRow({entries, chips, cell, empty}){
    entitled to read. `soul` is the one zone never exercised in live solo
    play (the on-hit trigger needs an attack to connect), so drawing it
    from one place is worth something on its own. */
-function GravePane({sd, who, back}){
+function GravePane({sd, who, back, mine}){
+  const own = mine != null ? mine : who === "Your";
+  /* FACE-DOWN IS INFORMATION, AND IT IS ASYMMETRIC. RULING 2026-07-25:
+     "allow the player to check their own faced down cards but not their
+     opponents." An ally that dies goes face-down (watery grave's drawback,
+     see engine/game.js), so YOUR graveyard still shows you what is in it
+     and theirs shows a back with the count. This is the display half; the
+     rule that a face-down card cannot be replayed lives in
+     `parser.playableFromZone` and does not depend on it. */
+  const faceDown = c => !own && c && c._fd;
+  const cell = (c,i) => <div key={i} className={"gyc"+(faceDown(c)?" fd":"")}>
+    {faceDown(c) ? <div className="deckback clip-sm" title="face down — theirs to know"/>
+                 : <CardFrame card={c} className="sm"/>}</div>;
   const pile = (label, cards) => !cards.length ? null : (
     <><div className="zone" style={{marginTop:10}}>{label} · {cards.length}</div>
-      <div className="gyrow">{cards.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div></>
+      <div className="gyrow">{cards.map(cell)}</div></>
   );
   return (
     <div className="hpane">
       <div className="paneflag"><span>{who} graveyard / banish</span><span>{back||"swipe ← back"}</span></div>
       {!sd.grave.length
-        ? <div className="gyempty">Empty — the first card {who==="Your"?"you play or block with":"they discard"} lands here.</div>
-        : <div className="gyrow">{sd.grave.map((c,i)=><div key={i} className="gyc"><CardFrame card={c} className="sm"/></div>)}</div>}
+        ? <div className="gyempty">Empty — the first card {own?"you play or block with":"they discard"} lands here.</div>
+        : <div className="gyrow">{sd.grave.map(cell)}</div>}
       {pile("Banished", sd.banish||[])}
       {pile("Soul (face up)", sd.soul||[])}
     </div>
@@ -4267,12 +4280,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     you(g).gear.forEach((gr,i)=>{ if(isWeapon(gr)&&!gr.destroyed&&!you(g).weaponUsed[gr.uid]) out.push({card:{...gr,def:null}, zone:slotOf(gr).lab, verb:"tap again to swing", fn:()=>tryPlay(gr,"weapon",i)}); });
     you(g).gear.forEach((gr,i)=>{ if(gr.pow&&!gr.destroyed&&!you(g).weaponUsed["gp"+gr.uid]) out.push({card:gr.powCard, zone:slotOf(gr).lab, verb:"tap again to activate", fn:()=>tryPlay(gr.powCard,"hero",i)}); });
     if(built.HPOW && !you(g).weaponUsed["hpow"]) out.push({card:built.HPOW, zone:"hero", verb:"tap again to use the hero power", fn:()=>tryPlay(built.HPOW,"hero",0)});
+    /* THE ZONE RULE IS `parser.playableFromZone` (v3.00) — it was written
+       out here, in the UI, so `judge.legal` never had it and every card
+       in a graveyard was playable at the table. One copy, both boards. */
+    const zoneOpts = {wateryGrave: built.wateryGrave, blueGY: you(g).hist.blueGY||0, turn: g.turn};
     you(g).grave.forEach((c,i)=>{
-      const wg = built.wateryGrave && (you(g).hist.blueGY||0)>0 && hasKw(c,"watery grave");
-      if(fxParse(c).fromGY || wg) out.push({card:c, zone:"discard", verb:"tap again to play from the graveyard", fn:()=>tryPlay(c,"grave",i)}); });
+      if(playableFromZone(c, "grave", zoneOpts)) out.push({card:c, zone:"discard", verb:"tap again to play from the graveyard", fn:()=>tryPlay(c,"grave",i)}); });
     you(g).banish.forEach((c,i)=>{
       /* a card minted into banish and marked playable this turn (Crouching Tiger) */
-      if(fxParse(c).fromBan || c._playTurn===g.turn) out.push({card:c, zone:"banish", verb:"tap again to play from banish", fn:()=>tryPlay(c,"banish",i)}); });
+      if(playableFromZone(c, "banish", zoneOpts)) out.push({card:c, zone:"banish", verb:"tap again to play from banish", fn:()=>tryPlay(c,"banish",i)}); });
     return out;
   })();
   return (
@@ -5869,7 +5885,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     </button>)}/>
               </div>
             </div>
-            <GravePane sd={them} who={them.name+"'s"}/>
+            <GravePane sd={them} who={them.name+"'s"} mine={false}/>
           </div>
         </div>
 
