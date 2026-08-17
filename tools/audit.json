@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-17T22:23:22.431Z",
- "appVer": "3.03",
+ "generated": "2026-08-17T22:55:05.147Z",
+ "appVer": "3.04",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 305,
-  "part": 78,
-  "none": 22
+  "full": 310,
+  "part": 74,
+  "none": 21
  },
  "heroes": {
   "kayo": {
@@ -1317,18 +1317,16 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Instant - Discard this: Create an Agility token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Instant - Discard this: Create an Agility token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Instant - Discard this: Create an Agility token.",
@@ -1407,22 +1405,20 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Once per Turn Instant - Discard a card: This gets +3{d}",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Activate this only while this card is defending.",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Once per Turn Instant - Discard a card: This gets +3{d}"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Once per Turn Instant - Discard a card: This gets +3{d}. Activate this only while this card is defending.",
@@ -2105,7 +2101,7 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2115,12 +2111,10 @@
     },
     {
      "t": "Instant - Discard this: Amp 1",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Instant - Discard this: Amp 1"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 1 arcane damage to any target.\nInstant - Discard this: Amp 1",
@@ -2416,7 +2410,7 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2426,12 +2420,10 @@
     },
     {
      "t": "Instant - Discard this: Amp 1",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Instant - Discard this: Amp 1"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 2 arcane damage to any target.\nInstant - Discard this: Amp 1",
@@ -10366,7 +10358,7 @@
     "mark",
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10376,12 +10368,10 @@
     },
     {
      "t": "Instant - Discard this: Mark target opposing hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Instant - Discard this: Mark target opposing hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Stealth\nInstant - Discard this: Mark target opposing hero.",

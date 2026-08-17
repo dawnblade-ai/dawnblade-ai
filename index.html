@@ -3320,61 +3320,28 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       tt:"Card Ability", kw:[], tx:ha.eff, _instant:true,
       img:c.img, dbImg:c.dbImg, _gearArt:true, uid:"ha"+c.uid, _forUid:c.uid};
   };
-  /* Can it be activated RIGHT NOW? It is an instant, so it needs a window
-     the player holds priority in; Rally additionally prints "Activate this
-     only while this card is defending", already read as fx.activateIf. */
+  /* CAN IT BE ACTIVATED RIGHT NOW? The rule is `effects.handAbilityOK`
+     (v3.05) — shared, so judge.js can ask the identical question. This
+     adds only the trainer's own busy-modes, which are not a rule about
+     the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    const fx = fxParse(c), ha = fx.handAbility;
-    if(!ha || s.over) return false;
     if(["pay","arsenal","boostpick","defpay"].indexOf(s.mode) >= 0) return false;
-    if(ha.oncePerTurn && (act(s).hist.handAb||{})[c.uid]) return false;
-    if(fx.activateIf && fx.activateIf.kind==="defending" && act(s).blockH.indexOf(c.uid) < 0) return false;
-    /* a cost you cannot pay is not an option — "discard a card" needs
-       another card that is not itself committed to the block */
-    if(ha.cost==="card" && !act(s).hand.some(x=>x.uid!==c.uid && act(s).blockH.indexOf(x.uid)<0)) return false;
-    return true;
+    return DawnEffects.handAbilityOK(s, c);
   };
+  /* THE PAYMENT AND THE OPS ARE SHARED; the DEFENCE BUFF is this board's.
+     `finishBlock` reads a per-uid bonus map, which is how confirmDefPay
+     already routes a +{d} onto a specific defender, and `runOps` has no
+     way to raise one — so `activateHandAbility` hands the number back and
+     this routes it. Same split as `linkPumps`/`linkPayload`. */
   const activateHand = c => setG(s=>{
-    const fx = fxParse(c), ha = fx.handAbility;
-    if(!ha) return s;
-    if(!handAbilityOK(s, c)) return L(s, `${c.name}: its ability can't be activated right now.`);
-    let n = {...s};
-    if(ha.oncePerTurn) actMut(n).hist = {...act(n).hist, handAb:{...(act(n).hist.handAb||{}), [c.uid]:1}};
-    /* A DEFENCE BUFF IS NOT AN OP HERE. `finishBlock` reads a per-uid bonus
-       map, which is how confirmDefPay already routes a +{d} onto a specific
-       defender; runOps has no way to raise one. Same split the defence-
-       reaction paths make. */
-    const dbuff = ha.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
-    const rest  = ha.ops.filter(o=>o[0]!=="defBuff");
-    let paid = [];
-    if(ha.cost==="self"){
-      paid = [c];
-      actMut(n).hand = act(n).hand.filter(x=>x.uid!==c.uid);
-      actMut(n).grave = [...gyDisc(n.turn, c), ...act(n).grave];
-      n = L(n, `${c.name} is discarded to pay for its own ability.`);
-    } else {
-      /* "Discard a card" is the player's choice, and the trainer's standing
-         approximation is to auto-pick the lowest advisor value rather than
-         prompt (CLAUDE.md, known approximations). A card already declared
-         as a defender is committed and is not available to spend. */
-      const pool = act(n).hand.map((h,i)=>({h,i}))
-        .filter(x=>x.h.uid!==c.uid && act(n).blockH.indexOf(x.h.uid)<0)
-        .sort((a,b)=>advValue(a.h,n,{runeDmg:bAct(n).runeDmg})-advValue(b.h,n,{runeDmg:bAct(n).runeDmg}));
-      if(!pool.length) return L(s, `${c.name}: nothing spare in hand to discard.`);
-      const pick = pool[0].h;
-      paid = [pick];
-      actMut(n).hand = act(n).hand.filter(x=>x.uid!==pick.uid);
-      actMut(n).grave = [...gyDisc(n.turn, pick), ...act(n).grave];
-      n = L(n, `${c.name}: discarded ${pick.name} to activate.`);
+    if(["pay","arsenal","boostpick","defpay"].indexOf(s.mode) >= 0) return s;
+    const r = _EFX.activateHandAbility(s, c);
+    if(r.why) return L(s, r.why + ".");
+    let n = r.game;
+    if(r.dbuff){
+      n.defBonus = {...(n.defBonus||{}), [c.uid]:((n.defBonus||{})[c.uid]||0)+r.dbuff};
+      n = L(n, `${c.name} braces — +${r.dbuff} defence on the wall.`);
     }
-    if(dbuff){
-      n.defBonus = {...(n.defBonus||{}), [c.uid]:((n.defBonus||{})[c.uid]||0)+dbuff};
-      n = L(n, `${c.name} braces — +${dbuff} defence on the wall.`);
-    }
-    if(rest.length) n = runOps(n, rest, c.name);
-    /* the cost was a DISCARD, so everything that watches a discard sees it —
-       Kayo's clause 3 among them. Never `random`: this one is chosen. */
-    n = _EFX.afterDiscard(n, paid, {random:false});
     return winCheck(openPrompt(n));
   });
   const allySwing = bi => setG(s=>{

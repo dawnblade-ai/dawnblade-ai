@@ -627,6 +627,41 @@ function legal(g, a, seat){
 
   if(a.t === "activate"){
     const sd = at(g, seat);
+    /* ---- AN ACTIVATED ABILITY ON A CARD IN HAND (v3.05) --------------
+       "Instant - Discard this: Amp 1" — four pool cards across three
+       heroes print one, and the route was built in `Battle` (v2.63), so
+       none of the four could be activated here. `handAbilityOK` is the
+       shared question and `activateHandAbility` the shared body. */
+    if(a.from === "hand"){
+      const hi = find(sd.hand, a.uid);
+      if(hi < 0) return "card is not in your hand";
+      const c = sd.hand[hi];
+      const ha = PR.fxParse(c).handAbility;
+      if(!ha) return c.name + " prints no ability to activate";
+      /* THE PRINTED RULE IS ASKED FIRST. Ordered the other way, a player
+         who simply is not defending was told about a missing board
+         feature instead of the restriction their card prints — a refusal
+         that names the wrong thing teaches the wrong lesson. */
+      if(!E.handAbilityOK({...g, actor: seat}, c)){
+        const gate = PR.fxParse(c).activateIf;
+        return c.name + (gate ? " can't be activated — " + gate.why
+                              : "'s ability can't be activated right now");
+      }
+      /* AND THEN what this board cannot yet route. `runOps` cannot raise
+         ONE defender, so a +{d} needs a per-defender bonus map: the
+         trainer keeps one (`defBonus`) and this board does not. Rally the
+         Coast Guard is the only pool card in that shape, and it is
+         reachable only while it is itself defending. Refused by name
+         rather than silently dropped. */
+      if(ha.ops.some(o => o[0] === "defBuff"))
+        return c.name + "'s +{d} needs a per-defender bonus this board does not keep yet";
+      const want = ha.kind === "instant" ? "instant" : "action";
+      if(P.speedAllowed(g, seat).indexOf(want) < 0)
+        return "no " + want + "-speed window for " + c.name;
+      /* CR 8.1.6 — an instant costs no action point. */
+      if(want !== "instant" && !(sd.ap > 0)) return "no action point left";
+      return null;
+    }
     const gi = find(sd.gear, a.uid);
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
@@ -1189,6 +1224,14 @@ function playWindowFor(g, seat, card){
    without it half the pool cannot play its game at all. */
 function doActivate(g, a, seat){
   const sd = at(g, seat);
+  if(a.from === "hand"){
+    const c = sd.hand[find(sd.hand, a.uid)];
+    const out = withEffects({...g, actor: seat}, (fx, s) => {
+      const r = fx.activateHandAbility(s, c);
+      return r.why ? say(s, r.why + ".") : r.game;
+    });
+    return settle(out);
+  }
   const piece = sd.gear[find(sd.gear, a.uid)];
   /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the
      powCard's uid ("gp"+uid) for a destroy-cost, so no index is needed —

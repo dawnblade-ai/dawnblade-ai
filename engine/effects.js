@@ -1386,6 +1386,67 @@ function makeEffects(ctx){
      stamping, which is a real card rule.
 
      Pure `s => s'`. The caller decides what the game does next. */
+  /* ---- AN ACTIVATED ABILITY ON A CARD IN HAND (v3.05) ----------------
+
+     "Instant - Discard this: Amp 1". Four pool cards across THREE heroes
+     print one — Agile Windup (Kayo), Arcane Twining and Photon Splicing
+     (Iyslander), Reaper's Call (Arakni) — so it is a rule with a list
+     rather than a hero's card.
+
+     The route was built in `Battle` (v2.63) and lived there, which is why
+     none of the four could be activated at the table. This is the same
+     body, shared, with two deliberate changes:
+
+       * IT ASKS THE WHOLE GATE. The trainer's version tested only
+         `activateIf.kind === "defending"`, the one case its own pool card
+         needed. Any other printed restriction — including v3.04's
+         `unreadable` — slipped through. `activateIfOk` is the reader.
+       * THE DEFENCE BUFF IS RETURNED, NOT WRITTEN. `runOps` cannot raise
+         one specific defender, so a +{d} has to reach the wall through
+         the caller's own per-defender map: `defBonus` in the trainer,
+         and judge.js keeps its wall somewhere else. Same split as
+         `linkPumps`/`linkPayload`. */
+  /* Pays the printed cost, runs what `runOps` can run, and hands back the
+     defence buff for the caller to route. `{game, dbuff, why}` — `why` is
+     set when nothing happened, so a caller can report a refusal rather
+     than silently doing nothing. */
+  const activateHandAbility = (s, c) => {
+    const fx = fxParse(c), ha = fx.handAbility;
+    if(!ha) return {game: s, dbuff: 0, why: c.name + " prints no ability to activate"};
+    if(!handAbilityOK(s, c)) return {game: s, dbuff: 0, why: c.name + "'s ability can't be activated right now"};
+    let n = {...s};
+    if(ha.oncePerTurn) actMut(n).hist = {...act(n).hist, handAb: {...(act(n).hist.handAb || {}), [c.uid]: 1}};
+    const dbuff = ha.ops.filter(o => o[0] === "defBuff").reduce((a, o) => a + o[1], 0);
+    const rest  = ha.ops.filter(o => o[0] !== "defBuff");
+    let paid = [];
+    if(ha.cost === "self"){
+      paid = [c];
+      actMut(n).hand = act(n).hand.filter(x => x.uid !== c.uid);
+      actMut(n).grave = [...gyDisc(n.turn, c), ...act(n).grave];
+      n = L(n, `${c.name} is discarded to pay for its own ability.`);
+    } else {
+      /* "Discard a card" is the player's choice, and the standing
+         approximation is to auto-pick the lowest advisor value rather than
+         prompt (CLAUDE.md, known approximations). A card already declared
+         as a defender is committed and is not available to spend. */
+      const pool = act(n).hand
+        .filter(h => h.uid !== c.uid && (act(n).blockH || []).indexOf(h.uid) < 0)
+        .map(h => ({h, v: advValue(h, n, {runeDmg: bAct(n).runeDmg})}))
+        .sort((a, b) => a.v - b.v);
+      if(!pool.length) return {game: s, dbuff: 0, why: c.name + ": nothing spare in hand to discard"};
+      const pick = pool[0].h;
+      paid = [pick];
+      actMut(n).hand = act(n).hand.filter(x => x.uid !== pick.uid);
+      actMut(n).grave = [...gyDisc(n.turn, pick), ...act(n).grave];
+      n = L(n, `${c.name}: discarded ${pick.name} to activate.`);
+    }
+    if(rest.length) n = runOps(n, rest, c.name);
+    /* the cost was a DISCARD, so everything that watches a discard sees it —
+       Kayo's clause 3 among them. Never `random`: this one is chosen. */
+    n = afterDiscard(n, paid, {random: false});
+    return {game: n, dbuff, why: null};
+  };
+
   const applyAnswer = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
@@ -1835,7 +1896,8 @@ function makeEffects(ctx){
   };
 
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
-          linkPumps, linkPayload, autoPitch, applyAnswer};
+          linkPumps, linkPayload, autoPitch, applyAnswer,
+          activateHandAbility};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------
@@ -1981,6 +2043,32 @@ function tickSuspense(game, seat){
 const foeTurnNow = s => (s && s.turnPlayer != null && s.actor != null)
   ? s.turnPlayer !== s.actor
   : (s && (s.mode === "block" || s.mode === "foeturn"));
+
+/* IS THIS CARD'S HAND ABILITY LIVE RIGHT NOW? (v3.05)
+
+   Module scope, not inside `makeEffects`, because it is a QUESTION and
+   `judge.legal` has to be able to ask it — `legal` is pure and holds no
+   effects context. Same reasoning that put `activateIfOk` out here.
+
+   It reads the ACTING side off the state, so a caller asking about a
+   particular seat passes `{...g, actor: seat}`. */
+function handAbilityOK(s, c){
+  if(!s || !c || s.over) return false;
+  const fx = P.fxParse(c), ha = fx.handAbility;
+  if(!ha) return false;
+  const sd = (s.sides || [])[s.actor || 0] || {};
+  if(ha.oncePerTurn && ((sd.hist || {}).handAb || {})[c.uid]) return false;
+  /* THE WHOLE GATE, not one case of it. The trainer's original asked only
+     `activateIf.kind === "defending"` — the one restriction its own pool
+     card prints — so any other, including v3.04's `unreadable`, slipped
+     straight through. */
+  if(fx.activateIf && !activateIfOk(s, fx.activateIf, c)) return false;
+  /* a cost you cannot pay is not an option — "discard a card" needs
+     another card that is not itself committed to the block */
+  if(ha.cost === "card" && !(sd.hand || []).some(x => x.uid !== c.uid && (sd.blockH || []).indexOf(x.uid) < 0))
+    return false;
+  return true;
+}
 
 /* ---- IS THIS PRINTED ACTIVATION GATE SATISFIED? (v3.04) --------------
 
@@ -2155,5 +2243,5 @@ function payPolicy(live, sd){
 }
 
 return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense,
-        activateIfOk, soakPolicy, payPolicy};
+        activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

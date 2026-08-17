@@ -1453,12 +1453,26 @@ function fxParse(card){
             : null;
     if(v != null && !pumpRead(v)) fx.self = v;
   }
-  /* An activated ability on a card in HAND. Deliberately does NOT touch
-     `tier`: the clause accounting stays as it was, so the audit keeps
-     reporting Agile Windup as unread until its clause is properly
-     consumed. Under-claiming is the safe direction — over-claiming is the
-     failure mode "never parse ahead of wiring" exists to prevent. */
+  /* An activated ability on a card in HAND. It deliberately did NOT touch
+     `tier` from v2.63 to v3.05 — "the audit keeps reporting Agile Windup
+     as unread UNTIL ITS CLAUSE IS PROPERLY CONSUMED", which is the
+     never-parse-ahead-of-wiring rule holding the line while only the
+     parser could read it.
+
+     IT IS CONSUMED NOW, on both boards: `effects.handAbilityOK` and
+     `effects.activateHandAbility` are the shared route, and judge.js
+     activates one with `{t:"activate", uid, from:"hand"}`. So the clause
+     is marked read, which is what that comment was waiting for.
+
+     THE CLAUSE, NOT THE CARD. Only the ability's own line is credited —
+     a card whose OTHER text is still unread stays `part`, and Rally the
+     Coast Guard's printed restriction is a separate clause that is read
+     on its own account (`fx.activateIf`). */
   fx.handAbility = parseHandAbility(card);
+  if(fx.handAbility){
+    const HA = /^(?:once per turn )?instant\s*[-—]/i;
+    fx.clauses.forEach(cl => { if(cl.st === "skip" && HA.test(cl.t)) cl.st = "run"; });
+  }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
   fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onLeave||[]).length>0
