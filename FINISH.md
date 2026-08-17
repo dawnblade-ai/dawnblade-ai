@@ -1,0 +1,331 @@
+# FINISH — the blueprint to done
+
+**Written 2026-08-16 at v2.83.** Every number here was **measured**, not
+estimated; the commands that produce each one are given so a future session
+can re-derive rather than trust. Where a number is a judgement call it says
+so.
+
+Read `CLAUDE.md` first, in full. This file says *what is left and in what
+order*; that one says *how to work and why*, and almost every line of it
+exists because breaking the rule cost a real bug.
+
+---
+
+## 0. WHAT "DONE" MEANS
+
+Dawnblade is a **rules-accurate Flesh and Blood training sim, judged to
+pro-tour standards, that runs from a `file://` URL on a phone with no build
+step**. Finished means all five of these are true at once:
+
+| # | done when | measurable as |
+|---|---|---|
+| 1 | **one engine** — a card is wired in exactly one place | `Battle`'s rules are gone; the CR 4.4.3 end phase exists once |
+| 2 | **the pool resolves faithfully** | `npm run audit` → 405/405 full · `npm run fairness` clean · `tools/failstates.js` reports 0 UNFAIR |
+| 3 | **every hero is playable as printed** | 0 unread hero-ability clauses in `npm run sweep` §1 |
+| 4 | **two humans can finish a game** | the lobby ready gate exists; a networked match plays start to finish with 0 desyncs |
+| 5 | **it is tuned** | a play session says the difficulty curve is right — *not a drill* |
+
+**Explicitly OUT of scope, and stated rather than implied:** hidden
+information. Both peers hold full state including the opponent's hand. That
+is `ROADMAP-MULTIPLAYER.md`'s deliberate Phase B position — a peer that
+cannot see the state cannot run the reducer — and fixing it needs an
+authoritative server, which is a different product. **Never present the
+current layer as cheat-resistant.**
+
+---
+
+## 1. WHERE WE ARE — measured at v2.83
+
+```
+npm test          1046 drills green
+npm run fairness  clean
+npm run audit     405 unique pool cards — 306 full / 77 part / 22 none
+npm run sweep     11 heroes with unread ability clauses (26 total)
+                  129 fail-state entries — 17 UNFAIR
+deployed          APP_VER 2.83, all 22 engine/*.js serving 200
+```
+
+There is **one copy of the card semantics** (`engine/effects.js`) and **two
+turn structures that call it**: `Battle` (solo, the tuned dummy) and
+`judge.reduce` (the table, local or networked).
+
+### Per-hero deck coverage
+
+Unique `name|pitch` across deck + gear, read from the audit's own `usage`
+map — **not** from the deck list, because pitch normalises on resolution and
+keying the raw entry silently mismatches ~12 cards a hero.
+
+```bash
+node -e 'const a=require("./tools/audit.json");const per={};
+for(const[k,u]of Object.entries(a.usage))for(const x of u){if(x.hero==="dummy")continue;
+(per[x.hero]=per[x.hero]||{full:0,n:0});per[x.hero].n++;
+if((a.cards[k]||{}).tier==="full")per[x.hero].full++;}
+console.log(Object.entries(per).map(([h,v])=>h+" "+Math.round(100*v.full/v.n)+"%").join("\n"))'
+```
+
+| hero | uniq | full | part | none | %full | passive wired |
+|---|---|---|---|---|---|---|
+| lyath | 32 | 30 | 2 | 0 | **94%** | ✔ `lyathBoo` |
+| kayo | 32 | 29 | 2 | 1 | **91%** | ✔ **done** |
+| iyslander | 33 | 29 | 4 | 0 | **88%** | ✔ partial |
+| dorinthea | 33 | 29 | 4 | 0 | **88%** | ✔ **done** |
+| bravo | 33 | 28 | 3 | 2 | 85% | ✘ |
+| viserai | 32 | 27 | 5 | 0 | 84% | ✔ |
+| dash | 33 | 26 | 6 | 1 | 79% | ✘ |
+| boltyn | 32 | 25 | 5 | 2 | 78% | ✘ |
+| azalea | 32 | 25 | 3 | 4 | 78% | ✘ |
+| fai | 34 | 26 | 6 | 2 | 76% | ✘ |
+| briar | 32 | 24 | 8 | 0 | 75% | ✘ |
+| blaze | 31 | 23 | 8 | 0 | 74% | ✘ |
+| enigma | 34 | 23 | 9 | 2 | 68% | ✘ |
+| gravy | 33 | 22 | 9 | 2 | 67% | ✔ `wateryGrave` |
+| **arakni** | 32 | 15 | 10 | 7 | **47%** | ✘ |
+
+**6 of 15 heroes have a wired passive** (`DawnBuild.PASSIVES` has 8 entries).
+"Passive wired" is not the same as "hero ability built" — Dash's discounts
+live in `boardRed`, not in a passive flag — so treat the column as a hint and
+`npm run sweep` §1 as the authority.
+
+---
+
+## 2. THE ORDER, AND THE ARGUMENT FOR IT
+
+```
+A. ONE ENGINE        retire Battle          ← everything after is cheaper
+B. THE UNFAIR 17     rules broken today     ← correctness, one shape
+C. THE HEROES        13 left                ← the bulk of the work
+D. THE TABLE         ready gate + voice     ← small, and owed
+E. TUNE              play sessions          ← last, needs C
+```
+
+**A goes first because it is a multiplier, not because it is urgent.** The
+CR 4.4.3 end phase is implemented **twice** — `Battle.endPhaseCF` and
+`judge.js` — and so is the combat path. `effects.js` holds the semantics
+once, but *the schedule a card fires on* is duplicated. Every hero built
+before A costs double at the point where a card needs a trigger window. C is
+the biggest phase; paying its tax 13 times is the expensive mistake.
+
+**B goes before C because those 17 cards break a rule every time they are
+played**, and 16 of them are a single shape. Fixing a rule with a list behind
+it is the cheapest correctness in the project.
+
+**E goes last because it depends on C.** Tuning against a pool that is 76%
+built measures the gaps, not the difficulty.
+
+---
+
+## PHASE A — ONE ENGINE
+
+**Retire `Battle`'s rules.** The gate that governed this has been passed
+since v2.80: the five semantics drills (`kayo`, `dorinthea`, `frostbite`,
+`arcane`, `paytoll`) drive `judge.reduce` through `test/helpers/judged.js`.
+
+### The measured cost
+
+```
+Battle            2,377 lines · 90 top-level declarations
+                  137 mode/bphase references · 29 setG call sites
+drill anchors     70 resolve INSIDE Battle, across 5 files
+                  priority 33 · mirror 21 · dorinthea 6 · kayo 5 · sides 5
+```
+
+**The drill repointing is the real work; the deletion is the easy half.**
+
+### The remaining feature gap — censused v2.83
+
+| feature | verdict |
+|---|---|
+| Advisor | **done** (v2.83) — `advisor.advView` + both call sites explicit |
+| score / trophy | **done** (v2.83) — local wins only; `wasted` was already tracked |
+| **boost** | **the one real gap.** `judge.js` has no boost action. **19 pool cards print the keyword, every one of them Dash.** |
+| next-swing prediction | **drop** — it reads the `[3,4,5]` fabrication; a card-playing seat has no such number |
+| `[3,4,5]` tuning | standing decision: retuning is a play session, not a drill |
+
+### Steps
+
+1. **Boost at the table.** A `judge` action plus a prompt. Follow the
+   `maybeBoost`/`confirmBoost` precedent: it pauses before executing and
+   re-enters, which is the shape a target choice needs too.
+2. **Route solo to the merged board.** One "Fight" button. Keep `Battle`
+   reachable behind a flag for exactly one version so the harness still
+   exists while the first real games are played on the merged path.
+3. **Repoint the 70 anchors.** Prefer moving each decision into a pure
+   engine function you can DRIVE over re-aiming a source scan —
+   `parser.idleCounterWipes` and `parser.rxPump` were both extracted for
+   this reason. Anchors that survive must name their source file.
+4. **Delete.** Then `foeVanilla`/`foeBegin`/`foeStep`/`foeEnd`,
+   `dummyDefence`, `takeIt`, `finishBlock`, `resolveStack`, `newTurn`,
+   `endPhaseCF` all go together.
+
+### Traps specific to A
+
+- **Whatever replaces `setG` must keep the invariant-judge funnel**, or
+  `DawnInvariants` goes dark on the board where a bad state is hardest to
+  reconstruct. `TableBoard` already funnels through the session's `onState`;
+  that is the pattern.
+- **When a rules function moves, the LEDGERS must follow it.**
+  `test/actor.test.js` slices bodies by anchor pairs; an anchor pointing at a
+  file the function has left **passes by finding nothing**.
+- **A ledger that widens its own slice reports the wrong body.** Removing an
+  anchor without replacing it lets the previous slice run on and swallow the
+  next function — this bit during the v2.83 burn and was caught only because
+  `endPhaseCF` is on the MIGRATED list.
+
+---
+
+## PHASE B — THE UNFAIR 17
+
+```bash
+node tools/failstates.js     # ranked; the UNFAIR block is at the top
+```
+
+**These break a rule every time the card is played** — the sev-3 "illegal
+play allowed" and "drawback skipped" categories, where the player wins games
+they should lose and the sim teaches wrong play.
+
+> **The two tools count differently and they do not disagree.**
+> `npm run sweep` reports **17 entries**; `node tools/failstates.js` reports
+> **16 cards**. Two cards (Edge of Their Seats, Enigma Chimera) appear at two
+> pitches. Verified split: **16 `keyword filed as no-op, but it is a
+> DRAWBACK` + 1 `drawback skipped`** (Lyath Goldmane).
+
+**16 of the 17 are one shape:** *a keyword filed `noop` that is actually a
+DRAWBACK.* This is the **no-op blind spot** — `noop` counts as "accounted
+for", so a coverage audit reports these cards `tier: full` with their entire
+mechanic ignored:
+
+```
+Spears of Surreality   tier = FULL   kw = [Phantasm, Go again]
+Barnacle               tier = FULL   kw = [Watery Grave]
+```
+
+Phantasm destroys an attack blocked by a 6+ power card. Watery grave turns a
+dead ally face-down *specifically so it cannot be replayed infinitely*. The
+cards are Enigma's and Gravy Bones's identities.
+
+**The honest test is the ruling's own words**: where a ruling says a keyword
+"does nothing on its own", `noop` is right; where it describes real
+behaviour, `noop` is a mis-filing. **Neither `npm run audit` nor `npm run
+fairness` can see any of this** — coverage counts clauses consumed, and the
+fairness sweep is deliberately one-sided toward too-strong.
+
+The 17th is Lyath Goldmane, "drawback skipped".
+
+---
+
+## PHASE C — THE HEROES
+
+**13 to go.** Kayo ✔ and Dorinthea ✔ are done and the method is the
+deliverable as much as the cards are — see `HANDOFF.md` "HOW A HERO GETS
+DONE" and `KAYO-GUIDE.md`.
+
+```
+99 cards still short of full   (22 read nothing · 77 partial)
+26 unread hero-ability clauses across 11 heroes
+10 tokens need a look — 6 with unread text and near-zero mentions
+```
+
+### Recommended order
+
+**Take the well-covered heroes first**, so each pass is mostly hero ability
+and a short tail rather than a rewrite:
+
+1. **Iyslander** (88%, ability partly built) — both axes she needed are live
+   since v2.71–v2.75: instant-speed play from arsenal, and acting during the
+   opponent's turn. What is left is **freeze (Cold Snap)** — RULED, not built
+   — and Aether Icevein's rider behind the unbuilt Ice Fusion condition.
+2. **Lyath** (94%, the best-covered deck) — but chapter 3, and the crowd/boo
+   mechanic is the least conventional in the pool.
+3. **Viserai** (84%, passive already built) — the gentlest curve; tests
+   runechants and arcane, both of which are real board auras now.
+4. **Bravo** (85%) then **Dash** (79%) — Dash lands naturally *after* Phase A
+   because boost is built there. Then Boltyn, Azalea (reload/charge), Fai and
+   Briar (combo), Blaze.
+5. **Enigma** (68%) and **Gravy Bones** (67%) — both carry Phase B's no-op
+   keywords, so B makes them cheaper.
+6. **Arakni LAST** (47%, 7 cards reading nothing). Traps and marks are their
+   own subsystem.
+
+### The method, compressed
+
+1. Find the hero's **ONE mechanic**. Kayo's whole deck is "a card with 6 or
+   more {p}" in three sets of words.
+2. **Read the hero ability first.** Kayo's clause 2 was worth *half the
+   deck* — 22 of 47 cards met his threshold before it, 45 after.
+3. **Diff what the card PRINTS against what the engine GRANTS.** Every real
+   bug in this phase so far reported tier `full`.
+4. **Census the shape pool-wide, then fix the RULE.** Every fix last cycle
+   had a list behind it and the list was always longer than the hero.
+5. **Write the drill, then SABOTAGE it** — and verify the sabotage changed
+   the file.
+6. **Play it.**
+
+---
+
+## PHASE D — THE TABLE
+
+Small, and the first item is **owed to the user**.
+
+1. **THE LOBBY READY GATE — asked for, not built.** Both seats press Ready
+   before the game starts. It belongs in `engine/lobby.js` as a **write-once
+   slot per seat** — the same monotone accumulator as hero/throw/sideboard,
+   so the writes commute and **no sequencer is needed** — derived into
+   `stepOf` (never stored: a stored step is a transition, a transition has an
+   order, and an order is the thing that module is built not to need), with
+   UI in `TableRoom`. `test/lobby.test.js` enumerates all 16 interleavings;
+   follow that.
+2. **The second-person feed pass.** `engine/effects.js` has **44** literals
+   containing you/your. A `say()` goes into the shared feed and must NAME the
+   seat; a returned **refusal** is addressed to whoever acted and correctly
+   says "you". Telling them apart is a judgement per line, not a regex.
+   Pinned as a ledger in `test/judge.test.js` — the ledger pins the **source
+   count**, because a driven count is emergent.
+3. **One refusal hardcodes the dummy** — `"it's your turn, not the dummy's"`
+   (`effects.js` ~line 907). Wrong with a person in seat 1.
+
+---
+
+## PHASE E — TUNE
+
+**Not a drill. A play session.**
+
+The local table's dummy is **untuned and too strong: it wins 11 of 15
+heroes, and 8 of 15 even at 20 life** — so it is not the life total. A deck
+with no rules text *suits* a policy that reads no card text: `sparring.act`
+plays 30 vanilla attacks better than it plays a real hero's deck.
+
+The trainer is unaffected while it exists — it runs the tuned `[3,4,5]`
+escalation — but **Phase A retires that**, so E becomes load-bearing the
+moment A lands. Sequence it accordingly: A creates the tuning debt, C is what
+makes tuning meaningful, E pays it.
+
+Also untuned and honest about it: **going second costs an extra swing**, and
+the difficulty curve was built around going first.
+
+---
+
+## THE RULES THAT DO NOT CHANGE
+
+These survive every phase. Each one cost a real bug.
+
+- **No build step. Ever.** Plain UMD scripts, `file://` must work.
+- **Never invent card effects.** Teach the parser to read the text; never
+  special-case a card by name.
+- **One copy of the semantics.** `effects.js` is it.
+- **Never parse ahead of wiring** — reading a clause marks it consumed and
+  makes the audit claim the card works.
+- **Read the whole phrase or refuse.** A loose substring drops printed
+  restrictions silently.
+- `you()`/`opp()` read and `youMut()`/`oppMut()` write — **UI only**. Rules
+  use `act()`/`foe()`, builds use `bAct()`. **Never write a side field as a
+  top-level game key.**
+- **Store the rng back** (`n.rng = rng`).
+- `instead` **REPLACES** · go again is a **GAIN** · an instant costs **no**
+  action point.
+- **Assert on state — hands, life, zones, counters — never on log prose.**
+- **Sabotage every new drill**, and verify the sabotage changed the file.
+- **A source guard aimed at the wrong file, or the wrong shape, passes by
+  finding nothing.**
+- **A pinned sample is not a pinned rule.** Pinning an emergent count trains
+  the reader to edit the number without thinking.
+- **The user reads cards for a living. Ask them.**

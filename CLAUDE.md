@@ -2138,7 +2138,7 @@ same punching bag, scored the same way (`turn + wasted`, and `wasted`
 has been kept for both seats since `priority.endTurn` fizzled both).
 
 **Still trainer-only:** the **boost toggle** (judge has no boost action;
-8 pool cards print the keyword, all Dash) and the **next-swing
+19 pool cards print the keyword, all Dash) and the **next-swing
 prediction**, which reads the `[3,4,5]` fabrication — a card-playing
 seat has no such number, so it is dropped rather than ported.
 
@@ -2911,6 +2911,15 @@ it carded effects only once the engine can actually read them.
 ---
 
 ## Roadmap (highest leverage first)
+
+> **➡ `FINISH.md` is the blueprint to done** (written v2.83). It states what
+> "finished" means as five measurable conditions, then orders the remaining
+> work — **A** retire `Battle` (a multiplier, so it goes first) · **B** the
+> 17 UNFAIR fail states (16 of them one shape) · **C** the 13 remaining
+> heroes · **D** the lobby ready gate and the feed's voice · **E** tuning.
+> Every number in it was measured, with the command to re-derive it. Read it
+> before scoping a cycle; the items below remain accurate and this file
+> explains *why* that order.
 
 > **See `ROADMAP-MULTIPLAYER.md`** — as of v2.20 the road to online play is
 > planned there in full (the actor/perspective split, the seeded RNG, the pure

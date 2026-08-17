@@ -25,6 +25,10 @@
 > `judge.reduce`** rather than the hand-rolled effects context they build
 > today.
 >
+> **`FINISH.md` is the blueprint to done** — what "finished" means as five
+> measurable conditions, and the ordered phases with their measured costs.
+> Read it before scoping a cycle.
+>
 > **`HANDOFF-MERGE.md` is the record of the merge** — what it took, the
 > eight things it learned the hard way, and what is left. Read it before
 > scoping anything.
@@ -98,7 +102,7 @@ until `Battle` goes.
 |---|---|
 | Advisor | **DONE** — `advView` + both call sites explicit |
 | score / trophy | **DONE** — local wins only; `wasted` was already tracked |
-| boost | **real gap** — judge has no boost action; 8 pool cards, all Dash |
+| boost | **real gap** — judge has no boost action; 19 pool cards print the keyword, all Dash |
 | next-swing prediction | **drop** — reads the `[3,4,5]` fabrication; a card-playing seat has no such number |
 | `[3,4,5]` tuning | recorded decision: retuning is a play session, not a drill |
 
