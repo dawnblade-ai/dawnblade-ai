@@ -1,6 +1,6 @@
 # FINISH — the blueprint to done
 
-**Written 2026-08-16 at v2.83.** Every number here was **measured**, not
+**Written 2026-08-16 at v2.83; Phase A step 1 landed at v2.84.** Every number here was **measured**, not
 estimated; the commands that produce each one are given so a future session
 can re-derive rather than trust. Where a number is a judgement call it says
 so.
@@ -34,15 +34,15 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v2.84
 
 ```
-npm test          1046 drills green
+npm test          1052 drills green
 npm run fairness  clean
 npm run audit     405 unique pool cards — 306 full / 77 part / 22 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
                   129 fail-state entries — 17 UNFAIR
-deployed          APP_VER 2.83, all 22 engine/*.js serving 200
+deployed          APP_VER 2.84, all 22 engine/*.js serving 200
 ```
 
 There is **one copy of the card semantics** (`engine/effects.js`) and **two
@@ -137,15 +137,16 @@ drill anchors     70 resolve INSIDE Battle, across 5 files
 |---|---|
 | Advisor | **done** (v2.83) — `advisor.advView` + both call sites explicit |
 | score / trophy | **done** (v2.83) — local wins only; `wasted` was already tracked |
-| **boost** | **the one real gap.** `judge.js` has no boost action. **19 pool cards print the keyword, every one of them Dash.** |
+| boost | **done** (v2.84) — a pending, a legality gate and two buttons; the semantics were already in `effects.js`. `parser.printedKw` is the new predicate that keeps a card which only *mentions* boost from being offered it. |
 | next-swing prediction | **drop** — it reads the `[3,4,5]` fabrication; a card-playing seat has no such number |
 | `[3,4,5]` tuning | standing decision: retuning is a play session, not a drill |
 
 ### Steps
 
-1. **Boost at the table.** A `judge` action plus a prompt. Follow the
-   `maybeBoost`/`confirmBoost` precedent: it pauses before executing and
-   re-enters, which is the shape a target choice needs too.
+1. ~~**Boost at the table.**~~ **DONE (v2.84).** It cost less than scoped,
+   because the semantics were already shared — only the QUESTION was
+   missing. **There is now no feature gap left**: the table does
+   everything the trainer does except the two things deliberately dropped.
 2. **Route solo to the merged board.** One "Fight" button. Keep `Battle`
    reachable behind a flag for exactly one version so the harness still
    exists while the first real games are played on the merged path.

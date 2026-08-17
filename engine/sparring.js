@@ -126,6 +126,18 @@ function pitchPick(sd, self, o){
 
 function payAction(g, seat, p, o){
   const sd = g.sides[seat];
+  /* BOOST'S ADDITIONAL COST (v2.84). Declined, and that is a rule rather
+     than a shrug: `autoAnswer`'s standing policy is to decline what is
+     optional, and here it is also the only HONEST answer available. The
+     card boost banishes is the top of this seat's own deck, which is
+     hidden from it — so there is nothing to weigh, and a policy that
+     accepted would be guessing at a card it cannot see. Declining is also
+     the conservative direction: it can never make the seat stronger than
+     printed, which is the direction that steals games.
+
+     THE WALL STANDS. This reads no card text — `judge` asked the
+     question, and "no" is a complete answer to "you may". */
+  if(p.kind === "boost") return {t: "boost", yes: false};
   if(p.need - sd.res - J.paySum(sd) <= 0) return {t: "payConfirm"};
   const c = pitchPick(sd, p.card, o);
   /* Unreachable after a play this policy proposed — `legal` guarantees

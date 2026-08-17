@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.83
+**Current version:** v2.84
 
 ---
 
@@ -71,6 +71,27 @@ text — never to special-case the card by name.
   while a granted one sits inside a sentence. If the text never mentions it at
   all, trust the list. 77 cards keep it, 27 lose it, and the conditional path
   still grants it when the condition is actually met.
+
+### THREE KEYWORD PREDICATES, THREE QUESTIONS (v2.84)
+
+Reaching for the wrong one is how a keyword gets granted off raw text.
+
+| | asks |
+|---|---|
+| `hasKw` | it appears ANYWHERE — list or text. **Deliberately loose and load-bearing**: 58 pool cards grant go again inside a sentence and really do gain it |
+| `hasKwNow` | …and no `if`/`unless` gates every mention of it |
+| `printedKw` | the card **CARRIES** it as printed rules text — nothing about whether it currently applies |
+
+**An ADDITIONAL COST cannot be conditionally granted**, which is what
+`printedKw` exists for. Boost is printed on the card or it is not — so
+*"when you boost a card"* (Hyper Driver) and *"the next attack you boost
+this turn"* (Re-Charge!) are **references to the mechanic**, and `hasKw`
+answers TRUE for both. Offering their controller boost's cost is strictly
+stronger than printed.
+
+The trainer escaped only because `maybeBoost` also tests `isAttack` and
+both cards are Mechanologist **non-attacks** — an accident, not the rule.
+A non-attack that genuinely printed Boost would be wrong there.
 
 ---
 
@@ -2137,10 +2158,12 @@ the dummy fills is always the vanilla pile, so a local win is over the
 same punching bag, scored the same way (`turn + wasted`, and `wasted`
 has been kept for both seats since `priority.endTurn` fizzled both).
 
-**Still trainer-only:** the **boost toggle** (judge has no boost action;
-19 pool cards print the keyword, all Dash) and the **next-swing
-prediction**, which reads the `[3,4,5]` fabrication — a card-playing
-seat has no such number, so it is dropped rather than ported.
+**BOOST IS AT THE TABLE AS OF v2.84** — judge asks the additional cost,
+`effects.js` already resolved it, and `parser.printedKw` keeps a card
+that only MENTIONS boost from being offered it. What stays trainer-only
+is the boost TOGGLE (a UI affordance, not a rule) and the **next-swing
+prediction**, which reads the `[3,4,5]` fabrication — a card-playing seat
+has no such number, so it is dropped rather than ported.
 
 **A DEAD BUTTON READS AS A BROKEN SCREEN, NOT AS A RULE.** CR 7.3.3 gives
 the turn-player priority in the defend step while the defender declares,

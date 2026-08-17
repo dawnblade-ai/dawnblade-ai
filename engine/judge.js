@@ -120,6 +120,7 @@ const ACTIONS = [
   "paySel",      /* {uid}        toggle a card into the pitch selection   */
   "payConfirm",  /*              commit the payment and resolve the play  */
   "payCancel",   /*              abandon it; nothing has been spent yet   */
+  "boost",       /* {yes}        pay boost's additional cost, or decline  */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -516,6 +517,17 @@ function legal(g, a, seat){
     }
     return null;
   }
+  /* THE BOOST QUESTION STOPS THE GAME THE SAME WAY A PAYMENT DOES, and for
+     the same reason: an additional cost is part of playing the card, so
+     the card is mid-play until it is answered. There is no cancel — the
+     play is already committed by this point, and "no" is a complete
+     answer to "you may". */
+  if(p && p.kind === "boost"){
+    if(a.t !== "boost") return "answer boost for " + p.card.name + " first";
+    return null;
+  }
+  if(a.t === "boost") return "nothing to boost";
+
   if(["paySel", "payConfirm", "payCancel"].indexOf(a.t) >= 0) return "nothing to pay for";
 
   /* CR 7.3.2 — declaring defenders is a free, simultaneous game-state
@@ -1028,6 +1040,7 @@ function reduce(g, a, seat){
     case "paySel":    n = doPaySel(n, a, seat); break;
     case "payConfirm":n = doPayConfirm(n, seat); break;
     case "payCancel": n = doPayCancel(n, seat); break;
+    case "boost":     n = doBoost(n, a, seat); break;
     case "defend":    n = doDefend(n, a, seat); break;
     case "arsenal":   n = doArsenal(n, a, seat); break;
     case "pass":      n = settle(P.pass(n)); break;
@@ -1074,7 +1087,12 @@ function doPlay(g, a, seat){
     return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window, target}},
       card.name + " costs " + cost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
   }
-  return commitPlay(g, card, zone, seat, window, target);
+  /* THE RESOURCE COST IS SETTLED FIRST, THEN THE ADDITIONAL ONE. Both are
+     costs and the CR pays them as a set, so the order they are ASKED in
+     cannot change the outcome — declining a boost refunds nothing and
+     costs nothing. It matches the trainer's order deliberately, so a
+     player who learns one board is not surprised by the other. */
+  return maybeBoost(g, card, zone, seat, window, target);
 }
 
 /* The window a card is actually being played in: the intersection of
@@ -1136,7 +1154,10 @@ function doPayConfirm(g, seat){
     paySel: []}));
   n = say(n, "Pitched " + pitched.map(c => c.name).join(", ") + " for " + gained + ".");
   n = {...n, pending: null};
-  return commitPlay(n, p.card, p.from, seat, p.window, p.target);
+  /* A weapon swing never boosts (boost is printed on attack ACTIONS), but
+     this asks rather than assuming — `boostable` reads the keyword, and a
+     predicate that reads the card cannot be wrong about a card. */
+  return maybeBoost(n, p.card, p.from, seat, p.window, p.target);
 }
 
 /* THE CARD RESOLVES, AND ITS TEXT RESOLVES WITH IT (v2.77).
@@ -1169,6 +1190,56 @@ function doPayConfirm(g, seat){
    weapon swing too, which this file's `weaponCost` read silently missed:
    `effCost` is the reader that knows about the tax, and it is the one
    execute uses. */
+/* ---- BOOST (v2.84) ----------------------------------------------------
+   Printed reminder text, off the card itself, because the database
+   carries none for keywords and guessing one would break the golden rule
+   at the keyword level:
+
+     Boost (As an additional cost to play this, YOU MAY banish the top
+     card of your deck. If it's a Mechanologist card, this gains go again.)
+
+   Three things in that sentence do work, and all three are already true
+   of `effects.js`, which is why nothing here resolves anything: it is an
+   ADDITIONAL COST (so it is settled at play time, beside the resource
+   cost), it is OPTIONAL ("you may"), and the go again rides on the
+   banished card's TYPE rather than on the attack's.
+
+   So the only thing missing at the table was the question. 19 pool cards
+   print the keyword and every one of them is Dash's. */
+const boostable = (card, sd) => !!card && PR.printedKw(card, "boost")
+  && !!sd && (sd.deck || []).length > 0;
+
+/* The answer rides to `execute` on the state, because that is the field
+   effects.js reads (`n._doBoost`). IT IS STRIPPED AGAIN BELOW: the
+   trainer sets it on every play path and so never noticed that nothing
+   clears it, which is luck rather than design — a sticky `true` would
+   boost the next attack that happened to print the keyword without ever
+   asking. A reducer whose state carries a spent answer is one refactor
+   away from that being live. */
+function commitPlayBoosted(g, card, zone, seat, window, target, doBoost){
+  const out = commitPlay({...g, _doBoost: !!doBoost}, card, zone, seat, window, target);
+  if(out && out._doBoost !== undefined){ const n = {...out}; delete n._doBoost; return n; }
+  return out;
+}
+
+/* Ask, or don't. Returns the pending when there is a real choice to make,
+   and otherwise plays straight through — the same rule `buildPrompt`
+   follows for an empty spec, and the reason an empty deck never shows a
+   sheet that can only be answered one way. */
+function maybeBoost(g, card, zone, seat, window, target){
+  if(!boostable(card, at(g, seat)))
+    return commitPlayBoosted(g, card, zone, seat, window, target, false);
+  return say({...g, pending: {kind: "boost", seat, card, from: zone, window, target}},
+    card.name + " has boost — " + at(g, seat).name
+    + " may banish the top card of the deck as an additional cost.");
+}
+
+function doBoost(g, a, seat){
+  const p = g.pending;
+  const n = {...g, pending: null};
+  return commitPlayBoosted(n, p.card, p.from, seat, p.window, p.target, !!a.yes);
+}
+
 function commitPlay(g, card, zone, seat, window, target){
   /* A WEAPON SWING IS AN ATTACK even though a weapon's printed type line
      says Weapon, not Attack. The trainer says the same thing as

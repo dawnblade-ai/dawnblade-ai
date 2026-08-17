@@ -50,7 +50,7 @@
 /* Engine-side dependencies, taken as factory arguments — the same
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
-       fxParse, hasKw, isAttack, norm, qualMatches, runeCount,
+       fxParse, hasKw, printedKw, isAttack, norm, qualMatches, runeCount,
        isFrostbite, frostCount,
        pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
@@ -1017,7 +1017,7 @@ function makeEffects(ctx){
         n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
       }
       let declNote = "";
-      if(n._doBoost && hasKw(card,"boost") && act(n).deck.length){
+      if(n._doBoost && printedKw(card,"boost") && act(n).deck.length){
         const top = act(n).deck[0];
         actMut(n).deck = act(n).deck.slice(1); actMut(n).banish = [...act(n).banish, top];
         n.boostChain = (n.boostChain||0)+1;

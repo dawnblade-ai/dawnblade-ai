@@ -9,6 +9,90 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.84 — boost, and the third keyword predicate
+
+**The last feature gap before `Battle` can retire.** `judge.js` had no boost
+action, so 19 pool printings — every one of them Dash's — could not pay their
+printed additional cost at the table.
+
+### The semantics were already shared; only the QUESTION was missing
+
+`effects.js` has resolved boost since the port, off `n._doBoost`. Judge simply
+never asked. So this is a pending, a legality gate and two buttons — not a
+port.
+
+The printed reminder text, read **off the card image**, because the database
+carries none for keywords and guessing one would break the golden rule at the
+keyword level:
+
+> **Boost** *(As an additional cost to play this, **you may** banish the top
+> card of your deck. If it's a **Mechanologist** card, this gains **go again**.)*
+
+Three things do work in that sentence and all three were already true of the
+engine: it is an **additional cost** (settled at play time, beside the
+resource cost), it is **optional**, and the go again rides on the **banished
+card's type** rather than on the attack's. Payment first, then boost —
+matching the trainer, so a player who learns one board is not surprised by
+the other.
+
+### `parser.printedKw` — the third predicate
+
+Building it surfaced a real bug, in the direction that steals games.
+
+```
+hasKw      the keyword appears ANYWHERE — list or text. Deliberately loose,
+           and load-bearing: 58 pool cards grant go again inside a sentence
+hasKwNow   ...and no if/unless gates every mention of it
+printedKw  the card CARRIES it as printed rules text            <- NEW
+```
+
+**An additional cost cannot be conditionally granted.** Boost is printed on
+the card or it is not — so *"when you boost a card"* (Hyper Driver) and *"the
+next attack you boost this turn"* (Re-Charge!) are **references to the
+mechanic**, and `hasKw` answers TRUE for both. Offering their controller
+boost's cost is strictly stronger than printed.
+
+The trainer escaped only because `maybeBoost` also tests `isAttack`, and both
+cards are Mechanologist **non-attacks**. That is an accident rather than the
+rule: a non-attack that genuinely printed Boost would be wrong there. The
+discriminator is v2.31's layout rule — a real keyword line stands alone in
+the printed paragraph, a reference sits inside a sentence.
+
+### Six sabotages, six bites, and one drill measuring the wrong thing
+
+Every new guard was sabotaged and each edit hash-checked to confirm it landed.
+
+**The go-again drill asserted on the seat's action point, and passed on both
+arms.** An attack's action point is charged when the link RESOLVES, in
+`linkPayload`, not when it is declared — so both arms read 3 while the attack
+sat on the chain, and the drill would have passed on an engine where boost did
+nothing. It reads `pend.ga` now, which is the flag boost actually sets.
+
+The census in `journey.test.js` also **asserts the question was asked**.
+Without that it passes just as well on an engine that never opens the pending,
+because declining and never being asked land the card in the same place.
+
+### Played, not assumed
+
+Dash at the table, 375x812: Crankshaft paid 2, then took the boost with **Out
+Pace — a Mechanologist card — on top of the deck**.
+
+```
+deck 39 -> 38 · Out Pace -> banish · pend.ga true · 0 invariant failures
+"Boost: Out Pace banished — Mechanologist, go again!"
+```
+
+**Re-Charge! sat in the same hand and was correctly not offered the cost.**
+
+Known and cosmetic: the boost line lands in the feed *after* the play it paid
+for, because `execute` accumulates it into `declNote`. In a training sim the
+sequence is the lesson, so it is worth fixing — with the rest of the shared
+feed's voice, not inside a commit about boost.
+
+1052 drills green. `npm run fairness` clean.
+
+---
+
 ## v2.83 — Claude's call reaches the table
 
 The advisor is the product's namesake and the table did not have it. The

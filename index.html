@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.83"; /* v2.83 — Claude's call reaches the table: the advisor is TOLD which window it is in (advView) instead of reading a `mode` that judge.js seeds once and never writes, a local win records the same score and pulls the same trophy the trainer's does, and foePick/foePlay burn. Full history in CHANGELOG.md — this comment is deliberately one sentence again (it reached 2,969 characters and 12 versions, which is the drift v2.32 fixed and this restores). (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.84"; /* v2.84 — boost at the table: the last feature gap before Battle can retire. judge.js asks the additional cost, effects.js already resolved it, and `parser.printedKw` is the third keyword predicate — a card that only MENTIONS boost (Hyper Driver, Re-Charge!) must never be offered it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5683,7 +5683,13 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const mine = a => DawnJudge.legal(g, a, mySeat) === null;
   const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
   const over = g.over;
-  const pay  = g.pending && g.pending.seat === mySeat ? g.pending : null;
+  /* A PENDING IS ONE FIELD AND NOW TWO KINDS (v2.84), so it is split by
+     kind here rather than at each reader. A boost pending reaching the
+     pay branch renders "need NaN more" — `p.need` belongs to a payment
+     and boost has no such number. */
+  const myPend = g.pending && g.pending.seat === mySeat ? g.pending : null;
+  const pay   = myPend && myPend.kind !== "boost" ? myPend : null;
+  const boost = myPend && myPend.kind === "boost" ? myPend : null;
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -5949,6 +5955,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               {/* The status line says what the CR machine is asking of
                   THIS seat, in the trainer's voice. */}
               {over ? <div className="statusline">{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</div>
+                : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
                 : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); return short>0?<span>need <b>{short}</b> more</span>:<span>covered ✓</span>;})()}
                     <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
                 : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
@@ -6051,6 +6058,16 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           one from each seat — which is what a table does. */}
       <div className="actbar">
         {over ? <button className="a go" onClick={onExit}>Leave the table</button>
+          /* BOOST'S ADDITIONAL COST (v2.84) — asked before the payment
+             branch because a boost pending and a pay pending are the same
+             field, and this one has no Cancel: by the time it is asked the
+             play is committed, and "no" is a complete answer to "you may".
+             The two buttons say what they do, in the trainer's own words,
+             so a player who learns one board is not relearning the other. */
+          : boost ? <>
+              <button className="a go" onClick={()=>fire({t:"boost",yes:true})}>⚡ Boost</button>
+              <button className="a" onClick={()=>fire({t:"boost",yes:false})}>No boost</button>
+            </>
           : pay ? <>
               <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>
               <button className="a pay" disabled={!mine({t:"payConfirm"})} onClick={()=>fire({t:"payConfirm"})}>Pitch &amp; play</button>

@@ -1729,6 +1729,45 @@ const kwGated = (c, k) => {
 /* what the card actually HAS right now, before any conditional grant */
 const hasKwNow = (c, k) => hasKw(c, k) && !kwGated(c, k);
 
+/* ---- DOES THE CARD *PRINT* THIS KEYWORD? (v2.84) ---------------------
+   The third predicate, and the three answer genuinely different
+   questions. Reaching for the wrong one is how a keyword gets granted
+   off raw text, which is v2.31's bug:
+
+     hasKw      the keyword appears ANYWHERE — list or text. Deliberately
+                loose, and load-bearing: 58 pool cards grant go again
+                inside a sentence and really do gain it.
+     hasKwNow   ...and no `if`/`unless` gates every mention of it.
+     printedKw  the card CARRIES the keyword as printed rules text —
+                nothing about whether it currently applies.
+
+   The discriminator is v2.31's layout rule: the database puts a real
+   keyword line in its own paragraph, so a printed keyword stands alone
+   on a line while a reference sits inside a sentence. If the text never
+   mentions it at all, trust `card_keywords`.
+
+   WHY THIS EXISTS: an ADDITIONAL COST cannot be conditionally granted.
+   Boost is printed on the card or it is not — so "when you boost a card"
+   (Hyper Driver) and "the next attack you boost this turn" (Re-Charge!)
+   are references to the mechanic, and `hasKw` answers TRUE for both.
+   Offering their controller boost's cost would be strictly stronger than
+   printed, the direction that steals games. Neither prints the keyword;
+   both are Mechanologist non-attacks; and the trainer only escaped by
+   ALSO testing `isAttack`, which is an accident rather than the rule —
+   a non-attack that genuinely printed Boost would be wrong there. */
+const printedKw = (c, k) => {
+  if(!c || !k) return false;
+  const raw = String(c.tx || ""), kw = String(k).toLowerCase();
+  const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  /* READ THE RAW TEXT, NOT THE CLEANED ONE — `clean` collapses the very
+     newlines this rule depends on. Same trap kwGated documents above. */
+  if(raw.split(/\n+/).some(l => new RegExp("^\\**" + esc + "\\**\\.?$", "i").test(l.trim())))
+    return true;
+  if(!new RegExp("\\b" + esc + "\\b", "i").test(raw))
+    return (c.kw || []).some(x => String(x).toLowerCase().includes(kw));
+  return false;
+};
+
 /* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
    CR 8.1.2a — an attack reaction "can only be played/activated by a
    player who controls the attack during the Reaction Step of combat."
@@ -1859,7 +1898,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         classifyClause, fxParse, fxReset, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes,
-        isAtkActionCard, zonePow, pow6, kwGated, hasKwNow,
+        isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,

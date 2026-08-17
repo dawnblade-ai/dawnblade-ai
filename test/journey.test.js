@@ -46,6 +46,7 @@ const C = require("../engine/cards");
 const B = require("../engine/build");
 const P = require("../engine/priority");
 const RNG = require("../engine/rng");
+const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
 
 const CACHE = path.join(__dirname, "..", "tools", ".cache", "card.json");
@@ -119,9 +120,24 @@ function inDefendStep(card){
 }
 
 /* Resolve a play all the way through its payment. */
+/* Every card in the pool that prints boost is asked, so the census
+   records that it saw the question rather than merely tolerating it. */
+const boostsAsked = [];
+
 function settle(n){
   for(let i = 0; i < 12 && J.pendingOf(n); i++){
     const p = J.pendingOf(n), sd = n.sides[p.seat];
+    /* BOOST IS AN ADDITIONAL COST (v2.84), so it belongs in the helper
+       that resolves a play through its costs. Answered YES here, on
+       purpose: the census is about where a card ENDS UP, and taking the
+       boost is the branch that also moves a second card (the banished
+       top of deck) — so it exercises the route that can put a card in
+       two zones, which is the failure `invariants.js` exists to catch. */
+    if(p.kind === "boost"){
+      boostsAsked.push(p.card.name);
+      n = J.reduce(n, {t: "boost", yes: true}, p.seat).state;
+      continue;
+    }
     if(p.need - sd.res - J.paySum(sd) > 0){
       const f = sd.hand.find(x => x.uid !== p.card.uid && !(sd.paySel || []).includes(x.uid));
       if(!f) return J.reduce(n, {t: "payCancel"}, p.seat).state;
@@ -177,6 +193,30 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      quietly stopped driving anything cannot pass by reporting nothing. */
   assert.deepEqual(tally, {chain: 175, arena: 23, grave: 91},
     "the pool's play destinations moved — that is a rules change, so it is a deliberate edit here");
+  /* AND THE BOOST QUESTION WAS ACTUALLY ASKED (v2.84). Without this the
+     census passes just as well on an engine that never opens the pending
+     — the cards still reach the chain, because declining and never being
+     asked land in the same place.
+
+     ELEVEN NAMES, NINETEEN PRINTINGS. The pool has 19 `name|pitch` cards
+     printing Boost and 11 distinct names; this collects names, so it
+     counts 11. Both numbers are correct and they are written down
+     together because they otherwise read as a discrepancy — the same
+     entries-vs-cards split that makes `sweep` say 17 where `failstates`
+     says 16.
+
+     AND IT IS A CENSUS OF WHAT *PRINTS* THE KEYWORD, not what mentions
+     it. Hyper Driver ("when you boost a card") and Re-Charge! ("the next
+     attack you boost this turn") both answer `hasKw` TRUE and neither
+     prints it; offering them the cost is strictly stronger than printed.
+     If either name appears in this list, `printedKw` has regressed to
+     `hasKw`. */
+  const names = [...new Set(boostsAsked)].sort();
+  assert.equal(names.length, 11,
+    "every card printing boost must be asked the question: " + names.join(", "));
+  for(const ref of ["Hyper Driver", "Re-Charge!"])
+    assert.ok(!names.includes(ref),
+      ref + " only MENTIONS boost — it must never be offered the additional cost");
 });
 
 test("anything printing defence, bar a defence reaction, can be declared", {skip}, () => {
@@ -274,4 +314,121 @@ test("the four journeys account for every card in the pool", {skip}, () => {
   assert.equal(playable + unplayable, pool().length);
   assert.deepEqual({total: pool().length, playable, unplayable, pitchable, defendable},
     {total: 401, playable: 289, unplayable: 112, pitchable: 328, defendable: 332});
+});
+
+/* ===================================================================
+   BOOST — THE ADDITIONAL COST (v2.84)
+
+   Printed reminder text, read off the card image because the database
+   carries none for keywords:
+
+     Boost (As an additional cost to play this, YOU MAY banish the top
+     card of your deck. If it's a Mechanologist card, this gains go again.)
+
+   Three things do work in that sentence and each gets a drill: it is
+   OPTIONAL, the banished card leaves the DECK for the BANISH zone, and
+   the go again rides on the banished card's TYPE rather than on the
+   attack's. Driven through `reduce`, never scanned — the whole point of
+   the merge is that this is the path a player takes.
+   =================================================================== */
+const boostCard = () => pool().find(c => PR.printedKw(c, "boost"));
+
+/* A Mechanologist card on top, so the go-again arm is reachable, and a
+   non-Mechanologist one for the arm that is not. */
+const topped = (card, top) => {
+  const {g} = holding(card);
+  return J.put(g, SEAT, s => ({...s, deck: [{...top, uid: "TOP"}, ...s.deck], banish: []}));
+};
+const MECH = {name: "Boost-drill Mech", uid: "TOP", pitch: 1, power: 3, cost: 0,
+              tt: "Mechanologist Action - Attack", ty: ["Mechanologist","Action","Attack"], kw: [], tx: ""};
+const PLAIN = {name: "Boost-drill Plain", uid: "TOP", pitch: 1, power: 3, cost: 0,
+               tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], kw: [], tx: ""};
+
+test("boost opens a pending, and it is OPTIONAL", {skip}, () => {
+  const card = boostCard();
+  assert.ok(card, "no card in the pool prints boost — the fixture is wrong, not the engine");
+  let g = topped(card, PLAIN);
+  const out = J.reduce(g, {t: "play", uid: "UT", from: "hand"}, SEAT);
+  assert.equal(out.error, null);
+  const p = J.pendingOf(out.state);
+  assert.ok(p && p.kind === "boost", "playing a boost card must ask before it resolves");
+
+  /* DECLINING IS A COMPLETE ANSWER, and it must cost nothing: the deck is
+     untouched and nothing reaches the banish zone. */
+  const no = J.reduce(out.state, {t: "boost", yes: false}, SEAT);
+  assert.equal(no.error, null);
+  assert.equal(no.state.sides[SEAT].deck[0].uid, "TOP", "declining must not banish the top card");
+  assert.equal((no.state.sides[SEAT].banish || []).length, 0, "and must banish nothing at all");
+  assert.equal(J.pendingOf(no.state), null, "the pending is spent either way");
+});
+
+test("accepting boost moves the top card DECK -> BANISH, exactly once", {skip}, () => {
+  const card = boostCard();
+  let g = topped(card, PLAIN);
+  const before = g.sides[SEAT].deck.length;
+  const asked = J.reduce(g, {t: "play", uid: "UT", from: "hand"}, SEAT).state;
+  const yes = J.reduce(asked, {t: "boost", yes: true}, SEAT);
+  assert.equal(yes.error, null);
+  const sd = yes.state.sides[SEAT];
+  assert.equal(sd.deck.length, before - 1, "exactly one card leaves the deck");
+  assert.ok(!sd.deck.some(c => c.uid === "TOP"), "and it is the TOP one");
+  assert.ok((sd.banish || []).some(c => c.uid === "TOP"), "which lands in the banish zone");
+  /* A CARD IN TWO ZONES IS THE FAILURE THE JUDGE EXISTS FOR, and a
+     banish that copied rather than moved would look correct in the log. */
+  assert.deepEqual(INV.errors(yes.state).filter(v => /ZONE/.test(v.code)), []);
+});
+
+test("the go again rides on the BANISHED card's type, not the attack's", {skip}, () => {
+  const card = boostCard();
+  const swing = top => {
+    const asked = J.reduce(topped(card, top), {t: "play", uid: "UT", from: "hand"}, SEAT).state;
+    return J.reduce(asked, {t: "boost", yes: true}, SEAT).state;
+  };
+  const mech = swing(MECH), plain = swing(PLAIN);
+  /* READ THE LINK, NOT THE ACTION POINT. The obvious observable is `ap`,
+     and it is the wrong one: an attack's action point is charged when the
+     link RESOLVES, in `linkPayload`, not when it is declared — so both
+     arms read the same `ap` while the attack is still on the chain, and
+     the drill passes on an engine where boost does nothing. (That is what
+     it did when first written.) `pend.ga` is the flag boost actually
+     sets, and it is state rather than prose. */
+  assert.equal(mech.pend.ga, true, "a Mechanologist card banished grants go again");
+  assert.equal(plain.pend.ga, false, "any other card does not");
+  /* Both arms must genuinely have boosted, or the pair above is two
+     readings of an attack that never paid the cost. */
+  for(const [n, s] of [["mech", mech], ["plain", plain]])
+    assert.ok((s.sides[SEAT].banish || []).some(c => c.uid === "TOP"),
+      n + " never banished the top card — the arms are not comparable");
+});
+
+test("boost blocks the game until answered, for BOTH seats", {skip}, () => {
+  const card = boostCard();
+  const asked = J.reduce(topped(card, PLAIN), {t: "play", uid: "UT", from: "hand"}, SEAT).state;
+  /* The asked seat may only answer... */
+  assert.match(J.legal(asked, {t: "pass"}, SEAT) || "", /answer boost/,
+    "the seat mid-decision may not do anything else");
+  /* ...and the other seat may do nothing, because the card is mid-play. */
+  assert.ok(J.legal(asked, {t: "pass"}, OPP), "the other seat is blocked too");
+  /* And a boost answer with nothing pending is refused rather than silently
+     dropped — without this the action is a no-op that reads as accepted. */
+  assert.match(J.legal(topped(card, PLAIN), {t: "boost", yes: true}, SEAT) || "", /nothing to boost/);
+});
+
+test("an empty deck never asks a question with one answer", {skip}, () => {
+  const card = boostCard();
+  const g = J.put(topped(card, PLAIN), SEAT, s => ({...s, deck: []}));
+  const out = J.reduce(g, {t: "play", uid: "UT", from: "hand"}, SEAT);
+  assert.equal(out.error, null);
+  assert.equal(J.pendingOf(out.state), null,
+    "with nothing to banish the play resolves straight through — buildPrompt's own rule");
+});
+
+test("judge's state never retains the spent boost answer", {skip}, () => {
+  const card = boostCard();
+  const asked = J.reduce(topped(card, PLAIN), {t: "play", uid: "UT", from: "hand"}, SEAT).state;
+  for(const yes of [true, false]){
+    const out = J.reduce(asked, {t: "boost", yes}, SEAT).state;
+    assert.equal(out._doBoost, undefined,
+      "_doBoost must be stripped — a sticky answer boosts the NEXT card that prints the keyword");
+  }
 });
