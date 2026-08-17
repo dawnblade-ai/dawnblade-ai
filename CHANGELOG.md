@@ -9,6 +9,57 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.82 — what two tabs found
+
+**Played a real game against myself over the public relay** — two tabs,
+PeerJS, host and guest. Everything the engine does was right; everything
+wrong was on the one screen that serves two masters, and **no drill in
+the project could have found any of it**, because `Loadout` is the solo
+sideboard AND the table's board step and every drill only ever asked it
+the solo question.
+
+| what | whose |
+|---|---|
+| the scout panel showed **The Dummy at 42** where a person was sitting | pre-existing — the panel read `oppH`, which is null for a networked game, so it fell through to the prop |
+| **two buttons offering to start a solo game** on the table's own board step, one of them against the dummy, mid-negotiation | v2.81's, from making the table button unconditional |
+| the blurb still said **"card text does not resolve yet"** | stale since v2.77 |
+
+A networked sideboard now shows the opponent's real portrait and printed
+life, and offers one button that says what it does: **Lock the
+sideboard**. All three are pinned, and all three were sabotaged.
+
+### What the session proved
+
+```
+lobby     hero → throw → sideboard, both seats, write-once
+combat    play → pay → declare → defend → reaction
+sync      9 commits · 0 desyncs · 0 resyncs · 0 nacks
+snapshot  10.8KB, against the pinned 16KB budget
+```
+
+Every rule that matters showed up on screen. The **pitch was demanded,
+not banked** — Rally the Coast Guard costs 2 against 0 resources, so the
+payment opened and `Pitch & play` stayed refused until enough was
+selected; that is the affordability gate, and it looks exactly like the
+live-lock it is not. **CR 7.3.3** appeared as prose rather than a dead
+control: *"declare your blockers — Kayo still holds priority"*, becoming
+**Done defending** the moment the attacker passed. Both peers held the
+same hash at every single commit.
+
+### And two drill anchors that were wrong
+
+Found while pinning the fixes, both the shapes this project keeps paying
+for: `indexOf('<div className="featfoe">')` matched the FIRST of two, in
+`Battle`'s featured-card area rather than the scout panel; and an anchor
+built from the explanatory comment above the action bar could never
+match, because `CODE` strips comments before scanning. **A drill that
+fails for a reason unrelated to its claim is one edit away from being
+"fixed" by weakening the claim.**
+
+1042 drills green.
+
+---
+
 ## v2.81 — the dummy is a punching bag, not a hero
 
 **RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their own

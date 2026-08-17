@@ -124,3 +124,63 @@ test("the P2 slot keeps its poke button", () => {
   assert.match(p2[0], /The Dummy/, "and it says who is sitting there");
 });
 
+
+/* ============================================================
+   THE SIDEBOARD SCREEN SERVES TWO MASTERS (v2.81)
+
+   `Loadout` is the solo sideboard AND the table's board step — one
+   screen, because it is the same rules problem across the wire as it is
+   against the dummy. What differs is `netFoe`, and three things were
+   reading it wrong. Found by opening two tabs and playing, which is the
+   only way any of them could have been found: every drill was green.
+   ============================================================ */
+
+test("the scout panel shows the PERSON across the table, not the dummy", () => {
+  /* PRE-EXISTING, and it survived because the panel read `oppH` — null
+     for a networked game — so it fell through to the dummy. A player
+     boarding against Kayo was shown a 42-life training prop. */
+  assert.match(CODE, /const netFoeHP = uM\(\(\)=>\{/,
+    "the opponent's life must be read off their own hero record");
+  /* ANCHORED ON THE PANEL, NOT ON `featfoe` — there are TWO of those and
+     the first belongs to Battle's featured-card area, so `indexOf` found
+     the wrong one and the drill failed for a reason with nothing to do
+     with the claim. And a fixed WINDOW rather than a `</div>` terminator,
+     because the slot nests divs; the same note this file already carries
+     for the P2 slot. */
+  const i = CODE.indexOf("Scout the opponent");
+  assert.ok(i > 0, "the scout panel moved — re-anchor this drill");
+  const feat = CODE.slice(i, i + 1600);
+  assert.match(feat, /netFoe\s*\n?\s*\?/, "netFoe decides the portrait");
+  assert.match(feat, /\{netFoeHP\}/, "and their real life total is shown");
+  assert.match(feat, /The Dummy · Life/,
+    "with the dummy as the FALLBACK — it is what a solo board still faces");
+});
+
+test("a networked sideboard offers one button, and it is not 'Fight'", () => {
+  /* v2.81 made the table button unconditional, which put TWO offers to
+     start a solo game on the table's own board step — one of them
+     against the dummy, mid-negotiation. There is nothing to start here:
+     `onStart` locks the board and waits for the other seat. */
+  /* Anchored on the string under test, with a window BACK far enough to
+     see the branch it sits in. The obvious anchor — the explanatory
+     comment above the bar — is stripped from CODE before scanning. */
+  const j = CODE.indexOf("Lock the sideboard");
+  assert.ok(j > 0, "the table branch lost its button — re-anchor this drill");
+  const bar = CODE.slice(j - 300, j + 700);
+  assert.match(bar, /netFoe\s*\n?\s*\?/, "the bar branches on netFoe");
+  const lock = bar.indexOf("Lock the sideboard");
+  const fight = bar.indexOf("<span>Fight</span>");
+  assert.ok(lock > 0, "the table branch must say what it does");
+  assert.ok(fight > lock,
+    "Fight and the table button belong to the SOLO branch, after the netFoe one");
+});
+
+test("the table no longer claims card text does not resolve", () => {
+  /* It has resolved since v2.77. Stale copy on the one screen where a
+     player is deciding whether the mode is worth their time is worse
+     than no copy. */
+  assert.ok(!/does not resolve yet/.test(CODE),
+    "card text resolves at the table through the same engine/effects.js the trainer uses");
+  assert.match(CODE, /printed costs and <strong>card text<\/strong>/,
+    "and the blurb says so");
+});

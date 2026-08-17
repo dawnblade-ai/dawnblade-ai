@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.81"; /* v2.81 — the dummy is a punching bag, not a hero: the opponent picker is gone and a seat the dummy fills is always the vanilla 30-card Generic pile. `build.buildVanilla` is the one copy of that deal, so the trainer and the local table face the same opponent and the only thing that differs between them is which engine is driving. v2.80 — the retirement gate is PASSED: the five drills that prove the card semantics (kayo, dorinthea, frostbite, arcane, paytoll) now drive judge.reduce instead of a hand-rolled effects context, so what they prove is the path a player takes. Battle's rules are unblocked to retire, not retired. v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.82"; /* v2.82 — three things a two-tab game found that no drill could: the table sideboard showed the DUMMY where a person was sitting, offered two buttons to start a solo game mid-negotiation, and still claimed card text does not resolve. v2.81 — the dummy is a punching bag, not a hero: the opponent picker is gone and a seat the dummy fills is always the vanilla 30-card Generic pile. `build.buildVanilla` is the one copy of that deal, so the trainer and the local table face the same opponent and the only thing that differs between them is which engine is driving. v2.80 — the retirement gate is PASSED: the five drills that prove the card semantics (kayo, dorinthea, frostbite, arcane, paytoll) now drive judge.reduce instead of a hand-rolled effects context, so what they prove is the path a player takes. Battle's rules are unblocked to retire, not retired. v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4914,6 +4914,13 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
   const p2h = selHand[0] && selHand[0].s.z==="2h";
   const hcv = resolveHero(db, d.hero);
   const hHP = hcv && hcv.hp!=null ? hcv.hp : 20;
+  /* Read off the opponent's own hero record, the same way yours is, so the
+     scout panel shows the life total the game will actually deal. */
+  const netFoeHP = uM(()=>{
+    if(!netFoe) return 42;
+    const oc = resolveHero(db, PARSED[netFoe.k].hero);
+    return oc && oc.hp!=null ? oc.hp : 20;
+  },[netFoe,db]);
   const prevTile = x => (
     <button key={x.i} className="g clip-sm" style={{width:"100%",maxWidth:118}} onClick={()=>setSel(s=>applyPick(gearR,s,x.i))}>
       <CardFrame card={x.c} className="sm"/>
@@ -4934,8 +4941,17 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
             <div className="vfillsp"/>
             <div className="featwrap">
               <div className="featfoe">
-                <div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
-                <b>{"42"}</b><span>The Dummy · Life</span>
+                {/* AT A TABLE THIS IS A PERSON, and it showed the dummy —
+                    a bug that predates v2.81 and survived because the panel
+                    read `oppH`, which is null for a networked game, so it
+                    fell through to the prop. `netFoe` is who is actually
+                    across the table; the dummy is the fallback, not the
+                    default. */}
+                {netFoe
+                  ? <><div className="port clip-sm" style={{width:96}}><HeroArt h={netFoe} db={db}/></div>
+                      <b>{netFoeHP}</b><span>{netFoe.n.split(",")[0]} · Life</span></>
+                  : <><div className="dmy"><div className="dhead"><span>✕</span><span>✕</span></div><div className="dbody"/><div className="dpost"/></div>
+                      <b>{"42"}</b><span>The Dummy · Life</span></>}
               </div>
               <span className="linkchip">Opponent hero</span>
             </div>
@@ -5023,10 +5039,22 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         </div>
       </div>
       <div className="actbar">
-        <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
-        <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
-          Fight at the table — one engine
-        </button>
+        {/* AT A TABLE THERE IS NOTHING TO START. This screen is the
+            lobby's sideboard STEP when `netFoe` is set — `onStart` locks
+            the board and waits for the other seat — so a "Fight" button
+            here offers to begin a game that is already being negotiated,
+            and v2.81's unconditional table button briefly offered to
+            start a SECOND one against the dummy. One button, and it says
+            what it does. */}
+        {netFoe
+          ? <button className="battlebtn clip" style={{marginTop:0}} onClick={start}>
+              <span>Lock the sideboard</span></button>
+          : <>
+              <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
+              <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
+                Fight at the table — one engine
+              </button>
+            </>}
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
     </div>
@@ -5518,9 +5546,10 @@ function TableRoom({table, host, code, db, onExit}){
       {err && <div className="tblerr">{err}</div>}
       <p className="mnote">
         Table play runs <strong>two real hero decks</strong> through
-        engine/judge.js — the CR turn structure, priority, the combat chain and
-        printed costs. Card <em>text</em> does not resolve yet: the parser's
-        effects still live in the solo trainer and are the next thing to move.
+        engine/judge.js — the CR turn structure, priority, the combat chain,
+        printed costs and <strong>card text</strong>, which resolves through
+        the same engine/effects.js the solo trainer uses. One copy of the
+        rules, two seats.
       </p>
       <button className="a" onClick={onExit}>Leave the table</button>
     </div>
