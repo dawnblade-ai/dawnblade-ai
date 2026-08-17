@@ -1,4 +1,11 @@
-# Handoff — Dawnblade, at v2.79 · THE MERGE IS DONE
+# Handoff — Dawnblade, at v2.83 · THE MERGE IS DONE, THE GATE IS PASSED
+
+> **v2.80–v2.83 happened after most of this file was written.** Where the
+> two disagree, the "WHERE WE ARE" block below is current and the prose
+> further down is history. Specifically: the five gate drills now drive
+> `judge.reduce` (v2.80), the dummy is always vanilla (v2.81), two-tab
+> table play is verified over the real relay (v2.82), and the Advisor,
+> the score and the trophy reach the table (v2.83).
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
@@ -41,12 +48,13 @@
 
 ---
 
-## WHERE WE ARE — v2.79, pushed and live
+## WHERE WE ARE — v2.83, pushed and live
 
-`npm test` → **1025 drills green** · `npm run fairness` clean ·
+`npm test` → **1046 drills green** · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **306 full / 77 part / 22 none**.
-All 22 `engine/*.js` verified serving 200. `node` is at `~/node/bin`,
-**not on PATH** — `export PATH="$HOME/node/bin:$PATH"`.
+All 22 `engine/*.js` verified serving 200 and the deployed page serving
+`APP_VER "2.83"`. `node` is at `~/node/bin`, **not on PATH** —
+`export PATH="$HOME/node/bin:$PATH"`.
 **A push IS the deploy** (standing authorization, 2026-08-03). Verify the
 deploy, not just the tests.
 
@@ -64,31 +72,55 @@ deploy, not just the tests.
      ✔ v2.77 judge.js resolves card text — ONE copy of the semantics
      ✔ v2.78 the table can answer a prompt
      ✔ v2.79 a session with no network — solo can BE the table
-       ☐ retire Battle's rules — the last step, gated below
+     ✔ v2.80 THE GATE — the five semantics drills drive judge.reduce
+     ✔ v2.81 the dummy is a punching bag, never a hero
+     ✔ v2.82 two-tab table play over the real relay, 0 desyncs
+     ✔ v2.83 the Advisor, the score and the trophy reach the table
+       ☐ retire Battle's rules — the last step, unblocked
 ```
 
 ## ➡ THE CURRENT JOB — retire `Battle`'s rules
 
-The engines are merged. What is left is deleting the loser, and the gate
-has not moved:
+**The gate is PASSED (v2.80)** and the feature gap is now measured
+rather than guessed (v2.83). What is left is deleting the loser.
 
-> **`Battle` is the regression harness and does not retire until the
-> merged path passes the same drills.**
+### Why it is worth finishing, concretely
 
-Concretely: `test/kayo.test.js`, `test/dorinthea.test.js`,
-`test/frostbite.test.js`, `test/arcane.test.js` and
-`test/paytoll.test.js` each build their own effects context and call
-`runOps`/`execute` directly. They must pass **driving `judge.reduce`**
-first. They are the only proof the semantics are right, and today they
-prove it about a context a test wrote rather than the one a player gets.
+**The CR 4.4.3 end phase is implemented TWICE** — `Battle.endPhaseCF`
+and `judge.js` — and so is the combat path. That is what makes wiring a
+card a two-place job: the semantics are one copy (`effects.js`), but the
+*schedule the card fires on* is not. Every hero from here pays that tax
+until `Battle` goes.
 
-Two more things belong to that step: the `[3,4,5]` escalation is TUNED
-and `sparring.act` is not (retuning is a play session, not a drill), and
-`Battle`'s 97 `mode`/`bphase` references — whatever replaces `setG` must
-keep the invariant-judge funnel or the guard rails go dark.
+### The gap, censused v2.83 — no longer folklore
+
+| feature | verdict |
+|---|---|
+| Advisor | **DONE** — `advView` + both call sites explicit |
+| score / trophy | **DONE** — local wins only; `wasted` was already tracked |
+| boost | **real gap** — judge has no boost action; 8 pool cards, all Dash |
+| next-swing prediction | **drop** — reads the `[3,4,5]` fabrication; a card-playing seat has no such number |
+| `[3,4,5]` tuning | recorded decision: retuning is a play session, not a drill |
+
+### What it costs
+
+`Battle` is ~2,370 lines and **~100 drill references** read its source —
+`mirror`, `actor`, `priority`, `sides` most of all. Whatever replaces
+`setG` **must keep the invariant-judge funnel** or the guard rails go
+dark. Budget the drill repointing as the real work; the deletion is the
+easy half.
 
 **Read `HANDOFF-MERGE.md`** for what the merge took and the eight things
 it learned the hard way.
+
+### Also open, and small
+
+- **`engine/effects.js` has 44 second-person literals.** A log line is
+  read by both seats and must name one; a *refusal* is returned to
+  whoever acted and correctly says "you". Telling them apart is a
+  judgement per line. Pinned as a ledger in `test/judge.test.js`.
+- **`"it's your turn, not the dummy's"`** is a refusal in `effects.js`
+  that hardcodes the dummy — wrong at a table with a person in seat 1.
 
 ---
 
