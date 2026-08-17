@@ -1,5 +1,13 @@
 # THE MERGE — done, at v2.79; the gate passed at v2.80
 
+> **THIS FILE IS A RECORD, NOT A PLAN.** It describes what the merge took
+> and the eight things it learned the hard way — read it before scoping
+> anything that touches `effects.js` or `judge.js`. For what is left and
+> in what order, read **`FINISH.md`**; for the next session's job, the
+> prompt block in **`HANDOFF.md`**. Where this file's "WHAT IS LEFT"
+> disagrees with those, they are current: the feature gap it names as
+> open was closed at v2.84.
+
 ## WHAT HAPPENED
 
 The plan in this file (written at v2.76) was three versions: judge resolves
