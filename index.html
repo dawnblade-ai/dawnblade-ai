@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.84"; /* v2.84 — boost at the table: the last feature gap before Battle can retire. judge.js asks the additional cost, effects.js already resolved it, and `parser.printedKw` is the third keyword predicate — a card that only MENTIONS boost (Hyper Driver, Re-Charge!) must never be offered it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.00"; /* v3.00 — the merged engine, and three things a fresh clone found: a card in two zones on the merged path, 22 pool cards that stopped resolving when the upstream database was reworded under us, and phantasm doing nothing at all at the table. The pool is pinned in `data/pool.json` so the drills run with no network and drift is caught the day it lands. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a

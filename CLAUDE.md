@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.84
+**Current version:** v3.00
 
 ---
 
@@ -51,6 +51,43 @@ in the bridge. Do not "fix" this into modules; it is load-bearing.
 public Flesh and Blood card database and is parsed by `classifyClause` / `fxParse`.
 If a card does something new, the fix is *always* to teach the parser to read its
 text — never to special-case the card by name.
+
+### THE TEXT IS UPSTREAM'S, AND IT MOVES UNDER YOU (v3.00)
+
+The corollary of the golden rule, and it cost 22 cards before anyone priced
+it. The database is the-fab-cube's **`develop` branch**: it is edited, and
+the game fetches it live. Between v2.84 and v3.00 an editorial pass reworded
+**138 of this pool's 405 cards** — contractions expanded, "it" resolved to
+"this", "its owner's deck" to "your deck", "or greater" to "or more". The
+parser survived 116 of them. **22 stopped resolving, in production, and every
+tool here reported success**: coverage printed a lower number without
+comparing it to anything, the fairness sweep is one-sided toward cards that
+are too STRONG, and `npm test` skipped.
+
+- **`data/pool.json` is the pinned pool** — 764 records, every card the pool
+  can reach, written by `tools/pin-pool.js`. **Fetched data, never authored.**
+  The whole drill suite reads it, which is why the suite now needs no network
+  and skips nothing.
+- **The GAME still streams the live database.** Pinning the fixture must not
+  pin the player, or errata stop reaching anybody.
+- **`test/drift.test.js` is the ONE drill allowed to read the live wire.** It
+  compares what the PARSER makes of each database rather than the text, so a
+  rewording read identically is not an event, and it covers cards, **hero
+  passives and tokens** — written for deck entries alone it would have missed
+  Dorinthea, whose ability stopped being recognised entirely. Refresh with
+  `node tools/audit.js --refresh` at the start of a release cycle.
+- **READ BOTH WORDINGS.** `DATA_VER` keys a localStorage cache, so a player
+  who opened the game last week holds the OLD text while a player opening it
+  today gets the new; the two populations coexist until every cache turns
+  over. `parser.js`'s `SYNONYMS` table levels the recurring idioms in one
+  place — **every entry a synonym of one printed form, never a change of
+  meaning**, which is why `has` is levelled only where it governs a pump and
+  never where it asks a question ("if this has 3 rust counters"). Where the
+  two wordings are genuinely not synonyms, widen the anchor instead.
+- **An UNANCHORED match hides an unbuilt clause.** Stir the Aetherwinds read
+  `full` because one loose regex consumed a whole sentence and modelled half
+  of it; upstream splitting that sentence in two is the only reason anyone
+  found out. Its tier is `part` now, on purpose.
 
 - `DATA_VER` (e.g. `"sage-v6"`) keys the localStorage cache. **Bump it whenever the
   loader's schema or card-field handling changes**, or users will run on stale data.
@@ -124,7 +161,20 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently 834 drills:
+This is `node --test "test/*.test.js"` — currently **1060 drills**.
+`# skipped` must read **0** with a live database cached, and **4** without
+one: those four are `test/drift.test.js`, which reads the live wire on
+purpose. Anything else skipping means a fixture went missing.
+
+**READ THE SKIP COUNT, NOT ONLY THE FAIL COUNT (v3.00).** Until v3.00 a
+fresh clone ran this as **749 passes and 304 SILENT SKIPS**: every drill
+that needs a card gated on `tools/.cache/card.json`, a 22MB download that
+is gitignored. "1053 green" therefore meant "green on the machine that had
+happened to fetch" — and on a clean clone it was hiding 22 pool cards that
+had stopped resolving and a card sitting in two zones on the merged path.
+The pool is pinned in `data/pool.json` now (`tools/pin-pool.js`), so the
+suite needs no network and skips nothing. **A drill that skipped is not a
+drill that passed.**
 1. **Bracket balance** on both `text/babel` blocks (`test/html-balance.test.js`).
    String- and template-literal-aware, not regex-literal-aware — the
    offending regexes are pre-neutralized inside the checker.
@@ -290,6 +340,35 @@ deliberately made unpayable costs inert rather than free, and "If you do, …" i
 intentionally unread for the same reason. Those cards are listed because the `pay`
 prompt variant now exists to build them, not because they are broken.
 
+#### THE MENTION COUNT IS GRADED AGAINST THE LEDGER, NOT A GREP (v3.00)
+
+`failstates.js` decides how bad a no-op keyword is partly by counting the
+keyword's mentions in the source — and it counted them **in `index.html`
+alone**, which is a file the card semantics left in **v2.53**. Measured with
+the tool's own regex: phantasm **2** mentions there and **11** across the
+engine, watery grave 2 and 13, suspense 2 and 11. All three sat under the
+≥3 threshold, so **all 16 UNFAIR entries were one scan aimed at the wrong
+file**. A source scan aimed at the wrong file *passes* by finding nothing;
+this one *failed* by finding nothing, which is the same defect with the
+opposite sign.
+
+Repointing it alone would have been worse than leaving it — the count would
+then have cleared the whole block, including two keywords nobody built. So:
+
+- **the LEDGER outranks the grep.** `tools/ledger.js` records what this
+  project claims to have BUILT. A keyword marked `pending` is never
+  "likely handled", however often the source says its name — suspense has
+  11 mentions and every one of them is in the parser.
+- **a DRAWBACK is held to a higher bar than an upside.** `partial` counts as
+  built for meaning and never for a drawback: half a keyword is fine for a
+  bonus and is exactly the wrong shape for a penalty. Watery grave was
+  recorded `live` when only its upside is — Gravy Bones replays allies out
+  of the graveyard and **nothing turns a dead ally face-down**, which is the
+  entire reason its ruling exists.
+
+UNFAIR is **11** now, in two real groups (6 watery grave, 5 suspense). The
+four phantasm cards left because they were fixed.
+
 #### THE NO-OP BLIND SPOT — the most dangerous thing this found
 
 The audit files a clause as `noop` to mean "parsed, and genuinely does nothing on
@@ -304,8 +383,14 @@ Barnacle               tier = FULL   kw = [Watery Grave]
 
 Both report as **fully scripted** with their entire mechanic ignored. Phantasm
 destroys an attack blocked by a 6+ power card; watery grave turns a dead ally
-face-down *specifically so it cannot be replayed infinitely*. Eleven cards are in
-this state across Enigma's and Gravy Bones's identities.
+face-down *specifically so it cannot be replayed infinitely*.
+
+**PHANTASM IS BUILT AS OF v3.00 — and it was not a mis-filing.** It worked in
+the trainer and did nothing at the table, which no coverage tool and no
+keyword ledger can express: the keyword was carried, on one board. The
+remaining cards are **6 watery grave** (upside built, drawback not) and
+**5 suspense** (`pending`, not built), across Gravy Bones's and Enigma's
+identities.
 
 The honest test is the ruling's own words: where a ruling says a keyword "does
 nothing on its own", `noop` is right; where it describes real behaviour, `noop` is
@@ -775,6 +860,38 @@ callers share.
 (v2.79). Every engine module is on the page. Coming off it must be the
 same edit that adds the module to `test/sync.test.js`'s `MODULES` —
 `judge`, `types`, `lobby`, `sparring` and `local` all moved that way.
+
+### TWO CALLERS, ONE CARD — the shape v3.00 found twice (v3.00)
+
+`effects.js` holds the semantics once and **two turn structures call it**,
+and they file a spent attack at two different moments. Both are right for
+their own board: the trainer files it to the graveyard **at declaration**,
+`judge.js` holds it on the combat chain until the **close step**. Any card
+text that touches the attack card itself therefore has to ask *which* zone
+holds it, and v3.00 found the mistake in both directions.
+
+**AS A WRITER — `bottomSelf`.** Under Loop ("when this hits, put it on the
+bottom of its owner's deck") lifted the card out of the GRAVEYARD only. On
+judge's path it found nothing there, pushed a second reference onto the
+deck, and left the chain holding the first: `CARD-IN-TWO-ZONES`, and the
+duplicate propagated into a graveyard. `soulSelf` had already learned this
+and `bottomSelf` had not — the rule existed once and was missed once. It is
+**`liftSelf`** now, matched by uid rather than reference, because a card
+that has been through a spread is a different object with the same identity
+and the census works by uid.
+
+**AS A READER — `afterDefenders`.** Phantasm reads the cards declared
+against the attack, and it looked the wall up *itself*, as `{k:"def"}`
+entries on `stack` — the TRAINER's representation. judge.js holds
+declarations on the defending side's `blockH`, so the lookup found an empty
+wall and returned quietly. **Phantasm worked in the trainer and did nothing
+at the table for three versions**, while the feed printed the drawback as
+though it had applied. The wall is the **caller's** answer now, the same
+split `linkPumps`/`linkPayload` already keep.
+
+**So the rule for any new card text that touches the attack card:** ask what
+holds it on each board, or hand the answer in from the caller. Never read
+one board's representation from inside the shared semantics.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 
@@ -2937,12 +3054,18 @@ it carded effects only once the engine can actually read them.
 
 > **➡ `FINISH.md` is the blueprint to done** (written v2.83). It states what
 > "finished" means as five measurable conditions, then orders the remaining
-> work — **A** retire `Battle` (a multiplier, so it goes first) · **B** the
-> 17 UNFAIR fail states (16 of them one shape) · **C** the 13 remaining
-> heroes · **D** the lobby ready gate and the feed's voice · **E** tuning.
+> work — **A** retire `Battle` · **B** the **11** UNFAIR fail states (two
+> keywords: 6 watery grave, 5 suspense) · **C** the 13 remaining heroes ·
+> **D** the lobby ready gate and the feed's voice · **E** tuning.
 > Every number in it was measured, with the command to re-derive it. Read it
 > before scoping a cycle; the items below remain accurate and this file
 > explains *why* that order.
+>
+> **v3.00 refreshed those numbers and moved A's argument.** A is still a
+> multiplier, but retiring `Battle` retires the TUNED `[3,4,5]` escalation
+> with it and the table's dummy wins 11 of 15 — so **A now sequences with
+> E, not before it**, and B is the phase a session with no phone should
+> take. See FINISH.md Phase A step 2.
 
 > **See `ROADMAP-MULTIPLAYER.md`** — as of v2.20 the road to online play is
 > planned there in full (the actor/perspective split, the seeded RNG, the pure

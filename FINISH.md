@@ -1,9 +1,18 @@
 # FINISH — the blueprint to done
 
-**Written 2026-08-16 at v2.83; Phase A step 1 landed at v2.84.** Every number here was **measured**, not
-estimated; the commands that produce each one are given so a future session
-can re-derive rather than trust. Where a number is a judgement call it says
-so.
+**Written 2026-08-16 at v2.83; refreshed at v3.00.** Every number here was
+**measured**, not estimated; the commands that produce each one are given so a
+future session can re-derive rather than trust. Where a number is a judgement
+call it says so.
+
+> **v3.00 CHANGED THREE OF THESE NUMBERS AND THE REASON MATTERS MORE THAN THE
+> NUMBERS.** A fresh clone of this repo ran `npm test` as **749 passes and 304
+> SILENT SKIPS** — every drill that needs a card gated on a 22MB gitignored
+> download — so "1053 green" meant "green on the machine that had happened to
+> fetch". The pool is pinned in `data/pool.json` now, and the only drills that
+> still skip are the 4 in `test/drift.test.js`, which read the live database
+> on purpose. **Re-derive before trusting any table below**; the commands are
+> given, and on a fresh clone they now work offline.
 
 Read `CLAUDE.md` first, in full. This file says *what is left and in what
 order*; that one says *how to work and why*, and almost every line of it
@@ -34,16 +43,34 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83, refreshed at v2.84
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.00
 
 ```
-npm test          1053 drills green
+npm test          1060 green — 0 skipped with a live DB cached, and
+                  only the 4 drift drills skip without one
 npm run fairness  clean
-npm run audit     405 unique pool cards — 306 full / 77 part / 22 none
+npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
-                  129 fail-state entries — 17 UNFAIR
-deployed          APP_VER 2.84, all 22 engine/*.js serving 200
+tools/failstates  11 UNFAIR — 6 watery grave, 5 suspense
+deployed          APP_VER 3.00, all 22 engine/*.js serving 200
 ```
+
+**Three of those moved at v3.00 and none of them by drifting:**
+
+* **1053 → 1060 drills and 304 → 0 skips.** `data/pool.json` pins every
+  record the pool can reach, so the suite measures the same engine on every
+  machine. `test/drift.test.js` is the one drill allowed to read the live
+  database, and it compares what the PARSER makes of each rather than the
+  text — upstream's wording is upstream's business.
+* **306 → 305 full**, and the pool went to 286 in between. Upstream reworded
+  **138 of the 405 cards**; the parser survived 116 and 22 stopped resolving,
+  silently, in production. All 22 are read again, in **both** wordings,
+  because `DATA_VER` keys a localStorage cache and the two populations
+  coexist. The missing 306th is Stir the Aetherwinds, lowered on purpose:
+  its `full` was an unanchored match swallowing a clause nobody built.
+* **17 → 11 UNFAIR.** Four were phantasm and were genuinely fixed; the
+  rest of the drop is `tools/failstates.js` no longer grading a keyword by
+  counting its mentions in a file the semantics left in v2.53. See Phase B.
 
 There is **one copy of the card semantics** (`engine/effects.js`) and **two
 turn structures that call it**: `Battle` (solo, the tuned dummy) and
@@ -92,7 +119,7 @@ live in `boardRed`, not in a passive flag — so treat the column as a hint and
 
 ```
 A. ONE ENGINE        retire Battle          ← everything after is cheaper
-B. THE UNFAIR 17     rules broken today     ← correctness, one shape
+B. THE UNFAIR 11     rules broken today     ← correctness, two keywords
 C. THE HEROES        13 left                ← the bulk of the work
 D. THE TABLE         ready gate + voice     ← small, and owed
 E. TUNE              play sessions          ← last, needs C
@@ -105,9 +132,10 @@ once, but *the schedule a card fires on* is duplicated. Every hero built
 before A costs double at the point where a card needs a trigger window. C is
 the biggest phase; paying its tax 13 times is the expensive mistake.
 
-**B goes before C because those 17 cards break a rule every time they are
-played**, and 16 of them are a single shape. Fixing a rule with a list behind
-it is the cheapest correctness in the project.
+**B goes before C because those 11 cards break a rule every time they are
+played**, and they are TWO keywords rather than eleven problems — 6 watery
+grave and 5 suspense. Fixing a rule with a list behind it is the cheapest
+correctness in the project.
 
 **E goes last because it depends on C.** Tuning against a pool that is 76%
 built measures the gaps, not the difficulty.
@@ -150,6 +178,20 @@ drill anchors     70 resolve INSIDE Battle, across 5 files
 2. **Route solo to the merged board.** One "Fight" button. Keep `Battle`
    reachable behind a flag for exactly one version so the harness still
    exists while the first real games are played on the merged path.
+
+   **NOT DONE AT v3.00, AND DELIBERATELY.** The routing is already there —
+   `App` branches on `cfg.table` and the local table builds through
+   `buildMatch` with a null hero key — so the edit is close to one line.
+   What stops it is the second-order cost: retiring the trainer retires the
+   **TUNED** `[3,4,5]` escalation with it, and the table's dummy is measured
+   winning **11 of 15** heroes (8 of 15 even at 20 life, so it is not the
+   life total). Flipping the default ships a known regression to the default
+   experience, and Phase E is a play session rather than a drill.
+
+   **So sequence it with E, not before it.** Either land A and E in the same
+   cycle, or land A behind a toggle the player chooses and watch a real game
+   on it first. Do not flip the default from a session that cannot play the
+   game on a phone.
 3. **Repoint the 70 anchors.** Prefer moving each decision into a pure
    engine function you can DRIVE over re-aiming a source scan —
    `parser.idleCounterWipes` and `parser.rxPump` were both extracted for
@@ -174,7 +216,7 @@ drill anchors     70 resolve INSIDE Battle, across 5 files
 
 ---
 
-## PHASE B — THE UNFAIR 17
+## PHASE B — THE UNFAIR 11
 
 ```bash
 node tools/failstates.js     # ranked; the UNFAIR block is at the top
@@ -184,33 +226,63 @@ node tools/failstates.js     # ranked; the UNFAIR block is at the top
 play allowed" and "drawback skipped" categories, where the player wins games
 they should lose and the sim teaches wrong play.
 
-> **The two tools count differently and they do not disagree.**
-> `npm run sweep` reports **17 entries**; `node tools/failstates.js` reports
-> **16 cards**. Two cards (Edge of Their Seats, Enigma Chimera) appear at two
-> pitches. Verified split: **16 `keyword filed as no-op, but it is a
-> DRAWBACK` + 1 `drawback skipped`** (Lyath Goldmane).
+> **THIS SAID 17 UNTIL v3.00 AND THE NUMBER WAS AN ARTIFACT.**
+> `tools/failstates.js` graded a no-op keyword by counting its mentions in
+> `index.html` — a file the card semantics left in **v2.53**. Measured with
+> the tool's own regex: phantasm 2 mentions there and **11 across the
+> engine**, watery grave 2 and 13, suspense 2 and 11. All three sat under
+> the ≥3 threshold, so the whole block was one scan aimed at the wrong file.
+> A source scan aimed at the wrong file passes by finding nothing; this one
+> FAILED by finding nothing, which is the same defect with the opposite sign.
+>
+> Repointing it alone would have been worse than leaving it — the count
+> would then have cleared the block, including two keywords nobody built. So
+> the **LEDGER outranks the grep** (`tools/ledger.js` records what is
+> BUILT), and a **DRAWBACK is held to a higher bar than an upside**: half a
+> keyword is fine for a bonus and is exactly the wrong shape for a penalty.
 
-**16 of the 17 are one shape:** *a keyword filed `noop` that is actually a
-DRAWBACK.* This is the **no-op blind spot** — `noop` counts as "accounted
-for", so a coverage audit reports these cards `tier: full` with their entire
-mechanic ignored:
+**The 11 are TWO keywords, not eleven problems.** That is the whole reason
+this phase is cheap:
+
+| keyword | cards | state |
+|---|---|---|
+| **watery grave** | 6 | the UPSIDE is live and the drawback is not |
+| **suspense** | 5 | `pending` in the ledger — not built at all |
+
+**WATERY GRAVE — build the half that is missing.** Gravy Bones already
+replays allies out of the graveyard (`built.wateryGrave` plus the
+blue-in-graveyard check). Nothing turns a dead ally **face-down**, which is
+the entire reason the ruling exists: *"they must be turned face down when
+they die so they can not be used infinitely."* The ledger said `live` and
+now says `partial`, with the gap named. The ruling also asks that a player
+may inspect their OWN face-down cards and not their opponent's.
+
+**SUSPENSE — build it.** The ruling is recorded and unambiguous: enters with
+2 counters (the same on every suspense card), ticks at the start of turn,
+is destroyed at 0 and **the payload fires then**. The counter machinery
+already exists — verse counters and steam counters both tick on a schedule
+— so this is a schedule plus a payload, not new machinery.
+
+**Phantasm was the third of these and it is DONE (v3.00)** — and it was not
+a mis-filing at all. It worked in the trainer and did **nothing at the
+table**, because `effects.afterDefenders` was only ever called from
+`index.html`. See the changelog; the shape is the WHERE/WHEN split in the
+reader rather than the writer, and it is worth reading before building the
+other two, because both of them will have to fire on *both* boards.
+
+**The 12th entry is Lyath Goldmane, "drawback skipped"** — reported by
+`npm run sweep` rather than by `failstates.js`, which counts cards.
+
+**Neither `npm run audit` nor `npm run fairness` can see any of this** —
+coverage counts clauses consumed, and the fairness sweep is deliberately
+one-sided toward too-strong. The no-op blind spot is why: `noop` counts as
+"accounted for", so these cards report `tier: full` with their mechanic
+ignored.
 
 ```
 Spears of Surreality   tier = FULL   kw = [Phantasm, Go again]
 Barnacle               tier = FULL   kw = [Watery Grave]
 ```
-
-Phantasm destroys an attack blocked by a 6+ power card. Watery grave turns a
-dead ally face-down *specifically so it cannot be replayed infinitely*. The
-cards are Enigma's and Gravy Bones's identities.
-
-**The honest test is the ruling's own words**: where a ruling says a keyword
-"does nothing on its own", `noop` is right; where it describes real
-behaviour, `noop` is a mis-filing. **Neither `npm run audit` nor `npm run
-fairness` can see any of this** — coverage counts clauses consumed, and the
-fairness sweep is deliberately one-sided toward too-strong.
-
-The 17th is Lyath Goldmane, "drawback skipped".
 
 ---
 
@@ -338,4 +410,16 @@ These survive every phase. Each one cost a real bug.
   finding nothing.**
 - **A pinned sample is not a pinned rule.** Pinning an emergent count trains
   the reader to edit the number without thinking.
+- **A DRILL THAT SKIPPED IS NOT A DRILL THAT PASSED.** 304 of 1053 skipped
+  on a fresh clone and the suite reported green. Check the skip count, not
+  just the fail count.
+- **A WALK THAT STOPPED WALKING PASSES A CENSUS BY FINDING NOTHING.** Assert
+  that the driver FINISHED and was never refused, or a harness parked
+  against a pending it cannot answer reads exactly like a clean game.
+- **THE CARD TEXT IS UPSTREAM'S, AND IT MOVES.** 138 of 405 cards were
+  reworded in one pass. Anchors must read both wordings — a warm
+  localStorage cache holds the old text — and `test/drift.test.js` is the
+  guard. Run `node tools/audit.js --refresh` before a release cycle.
+- **A SOURCE SCAN CAN FAIL BY FINDING NOTHING, not only pass by it.** Both
+  directions are the same defect: the scan is aimed at the wrong file.
 - **The user reads cards for a living. Ask them.**

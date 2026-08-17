@@ -1,102 +1,110 @@
-# Handoff — Dawnblade, at v2.84 · THE FEATURE GAP IS CLOSED
+# Handoff — Dawnblade, at v3.00 · ONE ENGINE, AND A PINNED POOL
 
-> **v2.80–v2.84 happened after most of this file was written.** Where the
-> two disagree, the prompt and "WHERE WE ARE" blocks below are current
-> and the prose further down is history. Specifically: the five gate
-> drills now drive `judge.reduce` (v2.80), the dummy is always vanilla
-> (v2.81), two-tab table play is verified over the real relay (v2.82),
-> the Advisor, the score and the trophy reach the table (v2.83), and
-> boost lands (v2.84) — which **closes the feature gap entirely**.
+> **v3.00 happened after most of this file was written.** Where the two
+> disagree, this block and `FINISH.md` are current and the prose further
+> down is history.
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
 > Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done.
-> Most entries in both exist because breaking that rule already cost a
-> real bug.
+> Most entries in both exist because breaking that rule cost a real bug.
 >
-> **The two engines are merged and the retirement gate is PASSED.** There
-> is ONE copy of the card semantics (`engine/effects.js`) and two turn
-> structures that call it: `Battle` for solo, `judge.reduce` for the
-> table. The table is reachable without a network, so solo can BE the
-> table — and as of v2.84 **the feature gap between the two boards is
-> closed**: the Advisor, the score, the trophy and boost are all there.
+> **The two engines are merged, the retirement gate is PASSED, and the
+> pool is PINNED.** `npm test` is **1060 drills** and every card drill
+> runs offline; on a fresh clone it used to be 749 passes and **304
+> silent skips**, which is how 22 broken cards and a card-in-two-zones
+> bug survived a green suite. The only skips left are the **4 drift
+> drills**, which need a live database on purpose (`node tools/audit.js
+> --refresh`). **Run `npm test` and check the SKIP count, not just the
+> fails.**
 >
-> **YOUR JOB IS PHASE A, AND WHAT IS LEFT OF IT IS MECHANICAL:**
+> **PICK ONE OF THESE TWO. They are both ready and they are different
+> shapes of work:**
 >
-> 1. **Route solo to the merged board.** One "Fight" button. Keep
->    `Battle` reachable behind a flag for exactly one version, so the
->    regression harness still exists while the first real games are
->    played on the merged path.
-> 2. **Repoint the 70 drill anchors** that resolve inside `Battle` —
->    `priority` 33, `mirror` 21, `dorinthea` 6, `kayo` 5, `sides` 5.
->    **This is the real work; the deletion is the easy half.** Prefer
->    moving each decision into a pure engine function you can DRIVE over
->    re-aiming a source scan.
-> 3. **Delete.** `foeVanilla`/`foeBegin`/`foeStep`/`foeEnd`,
->    `dummyDefence`, `takeIt`, `finishBlock`, `resolveStack`, `newTurn`,
->    `endPhaseCF` go together.
+> **(A) Phase A — retire `Battle`, WITH a play session.** What is left is
+> mechanical: route solo to the merged board (one line — `App` already
+> branches on `cfg.table`), repoint the 70 drill anchors, delete. **The
+> reason v3.00 did not do it is not difficulty.** Retiring the trainer
+> retires the TUNED `[3,4,5]` escalation, and the table's dummy is
+> measured winning 11 of 15 heroes. Only take this if you can play the
+> game on a phone in the same cycle; otherwise it ships a known
+> regression to the default experience.
 >
-> **Two things that will bite:** whatever replaces `setG` must keep the
-> invariant-judge funnel or the guard rails go dark; and retiring
-> `Battle` retires the TUNED `[3,4,5]` escalation with it, so Phase E
-> (tuning) becomes load-bearing the moment this lands — the table's
-> dummy currently wins 11 of 15.
+> **(B) Phase B — the UNFAIR 11, which are TWO keywords.** No phone
+> needed, pure rules correctness, and it makes Enigma and Gravy Bones
+> cheaper in Phase C. **watery grave** (6 cards): the upside is live and
+> the face-down drawback is not built, which is the entire reason its
+> ruling exists. **suspense** (5 cards): ruled, `pending` in the ledger,
+> not built — 2 counters, tick at start of turn, payload fires at 0. The
+> counter machinery already exists (verse, steam).
 >
-> **`HANDOFF-MERGE.md` is the record of the merge** — what it took and
-> the eight things it learned the hard way.
+> **READ THE PHANTASM FIX FIRST IF YOU TAKE (B)** — v3.00's third find.
+> Phantasm worked in the trainer and did **nothing at the table**,
+> because `effects.afterDefenders` was only ever called from
+> `index.html`. Both of the remaining keywords will have to fire on
+> **both** boards, and that is the shape that will bite.
 >
 > **How to work:**
 >
-> - **Census the shape pool-wide before fixing it.** Every fix last cycle
->   turned out to be a rule with a list behind it, and the list was always
->   longer than the hero.
+> - **Census the shape pool-wide before fixing it.** Every fix turns out
+>   to be a rule with a list behind it, and the list is always longer
+>   than the hero.
 > - **Fix the RULE, not the card.** Never special-case a card by name.
 > - **Never invent card effects** — teach the parser to read the text.
-> - **Write the drill, then SABOTAGE it**, and verify the sabotage actually
->   changed the file. Prefer a decision you can DRIVE over a source scan;
->   when you must scan, strip comments first.
-> - **Assert on state — hands, life, zones, counters — never on log prose.**
+> - **Write the drill, then SABOTAGE it**, and verify the sabotage
+>   actually changed the file. A sabotage that reproduces nothing proves
+>   nothing: v3.00's first drift sabotage was invalid and had to be
+>   redone, because with the parser reading both wordings there was no
+>   differential to detect.
+> - **Assert on state — hands, life, zones, counters — never on log
+>   prose.**
 > - **Play it.** `npm test` green is the floor, not the proof.
-> - **Ask me about rules.** I read cards for a living and I would rather be
->   asked than have it guessed.
+> - **Ask me about rules.** I read cards for a living and I would rather
+>   be asked than have it guessed.
 >
 > Never claim more than is true.
 
 ---
 
-## WHERE WE ARE — v2.84, pushed and live
+## WHERE WE ARE — v3.00
 
-`npm test` → **1053 drills green** · `npm run fairness` clean ·
-`npm run audit` → 405 pool cards, **306 full / 77 part / 22 none**.
-All 22 `engine/*.js` verified serving 200 and the deployed page serving
-`APP_VER "2.84"`. `node` is at `~/node/bin`, **not on PATH** —
+`npm test` → **1060 drills, 0 failed** (0 skipped with a live DB
+cached; 4 drift drills skip without one) · `npm run fairness` clean ·
+`npm run audit` → 405 pool cards, **305 full / 78 part / 22 none** ·
+`tools/failstates.js` → **11 UNFAIR** (6 watery grave, 5 suspense).
+`node` is at `~/node/bin`, **not on PATH** —
 `export PATH="$HOME/node/bin:$PATH"`.
 **A push IS the deploy** (standing authorization, 2026-08-03). Verify the
 deploy, not just the tests.
 
 ```
 1. ENGINE
-     ✔ step 1 (v2.71) seat 1 takes a real turn
-     ✔ step 2 (v2.72) instant-speed activation on their turn
-     ✔ step 4 (v2.73) execute declares and stops
-     ✔ step 3 (v2.74–v2.75) Frostbite, arcane prevention, the "unless they
-                            pay" escape hatch, Inertia
-       ☐ freeze (Cold Snap) — the last piece; RULED, not built
-2. HEROES   KAYO ✔ · DORINTHEA ✔ · IYSLANDER unblocked and recommended next
-3. THE MERGE
-     ✔ v2.76 the flow (hero → throw → sideboard → game)
-     ✔ v2.77 judge.js resolves card text — ONE copy of the semantics
-     ✔ v2.78 the table can answer a prompt
-     ✔ v2.79 a session with no network — solo can BE the table
-     ✔ v2.80 THE GATE — the five semantics drills drive judge.reduce
-     ✔ v2.81 the dummy is a punching bag, never a hero
-     ✔ v2.82 two-tab table play over the real relay, 0 desyncs
-     ✔ v2.83 the Advisor, the score and the trophy reach the table
-     ✔ v2.84 boost — the feature gap is CLOSED
-       ☐ retire Battle's rules — mechanical now: route, repoint, delete
+     ✔ the merge (v2.76-v2.80) — ONE copy of the card semantics
+     ✔ v3.00 the pool is PINNED; the suite skips nothing
+       ☐ freeze (Cold Snap) — RULED, not built
+2. HEROES   KAYO ✔ · DORINTHEA ✔ · IYSLANDER recommended next
+3. RETIRE `Battle`  ☐ mechanical, but it carries the tuning debt — see (A)
 ```
 
-## ➡ THE CURRENT JOB — retire `Battle`'s rules
+### The three things v3.00 found, and why none of them was visible
+
+| find | why no tool saw it |
+|---|---|
+| Under Loop in a deck AND on the chain | the census walk had parked against a boost pending it could not answer, on turn 1, with 3,591 unread refusals |
+| 22 cards stopped resolving | the 22MB database is gitignored, so every drill that needs a card SKIPPED |
+| phantasm inert at the table | the tool grading it counted mentions in a file the semantics left in v2.53 |
+
+**All three are the same family**: a guard aimed at the wrong thing
+reports success by finding nothing. `CLAUDE.md` has said so since v2.53
+about source scans; v3.00 adds that a *skipped* drill and a *parked*
+driver do it too.
+
+## RETIRING `Battle` — the standing detail (option A above)
+
+> **This was "THE CURRENT JOB" through v2.84 and is now one of two.** The
+> cost below is still accurate; what changed at v3.00 is that the reason
+> to hold it became explicit — it carries the tuning debt, so sequence it
+> with a play session. See `FINISH.md` Phase A step 2.
 
 **The gate is PASSED (v2.80)** and the feature gap is measured, then
 CLOSED (v2.83–v2.84). What is left is deleting the loser.

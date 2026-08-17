@@ -9,6 +9,146 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.00 — THE MERGED ENGINE, and what a fresh clone found
+
+The version that celebrates one copy of the card semantics. It was going
+to be Phase A — routing solo to the merged board — and it is not, because
+cloning this repo and running `npm test` turned up three things first,
+and two of them were live.
+
+**`npm test` on a fresh clone was 749 passes and 304 SILENT SKIPS.** Every
+drill that needs a card gated on `tools/.cache/card.json`, a 22MB download
+that is gitignored. "1053 green" meant "green on the machine that had
+happened to fetch". Fetching it turned nine drills red.
+
+### 1. A card that redirects itself must leave the combat chain with it
+
+Found by driving a whole Viserai/Dash game. Under Loop — *"when this hits,
+put it on the bottom of its owner's deck"* — ended up in a deck **and** on
+the combat chain, and the duplicate propagated into a graveyard.
+
+The WHERE/WHEN split, again. Two callers file a spent attack at two
+different moments and both are right for their own turn structure: the
+trainer at DECLARATION, judge.js at the CLOSE step. `bottomSelf` was
+written against the first and lifted the card out of the graveyard only,
+so on judge's path it found nothing there and pushed a second reference
+onto the deck. `soulSelf` had already learned this; the rule existed once
+and was missed once. It is `liftSelf` now.
+
+**And the harness that should have caught it was parked.** The census walk
+could not answer a boost pending, so from v2.84 every Boost card was a
+wall it walked into: the Viserai/Dash seating stalled on turn 1 with 3,591
+unread refusals, and the drill went green because it filtered `errs` to
+INVARIANT and no card can be in two zones when no card is ever played.
+**A walk that stopped walking passes a census by finding nothing.** It
+answers boost now, asserts it FINISHED, and drives four seatings.
+
+### 2. The card database is somebody else's `develop` branch
+
+Upstream ran an editorial pass between v2.84 and v3.00: contractions
+expanded, "it" resolved to "this", "its owner's deck" to "your deck", "or
+greater" levelled to "or more". **138 of this pool's 405 cards were
+reworded.** The parser survived 116 and **22 stopped resolving** — plus
+seven of the fifteen hero abilities and the Inertia token.
+
+Nothing invented a new rule; the same effect is spelled differently. And
+nothing reported it. `npm run audit` measures COVERAGE and printed the
+new, lower number without comparing it to anything. `npm run fairness` is
+one-sided toward cards STRONGER than printed, and a card that stops being
+read is weaker. `npm test` was green, because it had skipped.
+
+```
+data/pool.json      764 records — every card the pool can reach, whole,
+                    with `printings` slimmed to the fields mapDbCard
+                    reads. FETCHED DATA, NEVER AUTHORED.
+tools/pin-pool.js   writes it; --check fails if it is stale
+test/drift.test.js  the one drill allowed to read the live wire
+```
+
+**The suite now reads the pin: 1060 drills, and every card drill runs
+offline.** The only skips left are the four in `test/drift.test.js`, which
+need a live database on purpose. The GAME still streams it at runtime —
+pinning the fixture must not pin the player, or errata stop reaching
+anybody.
+
+The drift guard compares **what the parser makes of** each database, not
+the text: upstream's wording is upstream's business, and a rewording read
+identically is not an event. It fails only when one costs a card, and
+names the card, the tier it fell to and both texts. It covers cards,
+**hero passives and tokens** — written for deck entries alone it would
+have missed Dorinthea, whose ability stopped being recognised entirely.
+
+**Both wordings are read, and not for tidiness.** `DATA_VER` keys a
+localStorage cache, so a player who opened the game last week still holds
+the old text while a player opening it today gets the new. The two
+populations coexist until every cache turns over. One levelling table in
+`parser.js` for the recurring idioms — each entry a synonym of one printed
+form, never a change of meaning, which is why `has` is levelled only where
+it governs a pump and never where it asks a question — plus 13 anchors
+widened where the two wordings are genuinely not synonyms.
+
+Coverage is back to **305 full** from 286. The 306th is deliberate: Stir
+the Aetherwinds' `full` was an **unanchored match** swallowing an
+instant-speed grant it never modelled, and upstream splitting the sentence
+in two is what exposed it. Its bonus-arcane half is read; the grant is
+left UNREAD rather than nooped, and the baseline is lowered to `part` —
+the honest tier. A noop counts as accounted for, and the card would go
+back to claiming it works.
+
+### 3. Phantasm did nothing at the table
+
+`effects.afterDefenders` — which is phantasm, entire — was only ever
+called from `index.html`. Driven, a 6-power blocker met Spears of
+Surreality, the feed printed *"a single 6+ power blocker pops this
+attack"*, and the attack resolved for 2 anyway.
+
+The same split in the reader rather than the writer: `afterDefenders`
+looked the wall up itself, as `{k:"def"}` entries on `stack`, which is the
+trainer's representation. The wall is the **caller's** answer now, and
+judge.js calls it on the defend → reaction transition (CR 7.3.4 → 7.4),
+closing a popped link through `closeChain` so a destroyed attack still
+lands in exactly one zone.
+
+**And the tool that grades it read the wrong file.**
+`tools/failstates.js` counted a keyword's mentions in `index.html` — which
+the semantics left in v2.53. With its own regex: phantasm 2 there and 11
+across the engine, watery grave 2 and 13, suspense 2 and 11. All three sat
+under the ≥3 threshold, so **all 16 UNFAIR entries were one scan aimed at
+the wrong file.** A source scan aimed at the wrong file passes by finding
+nothing; this one failed by finding nothing.
+
+Repointing it alone would have been worse than leaving it — the count
+would then have cleared the whole block, including two keywords nobody
+built. So the **ledger outranks the grep**, and a **drawback is held to a
+higher bar than an upside**: suspense is `pending` and stays UNFAIR;
+watery grave was recorded `live` when only its upside is (nothing turns a
+dead ally face-down, which is the entire reason its ruling exists) and is
+corrected to `partial`, which counts as built for meaning and never for a
+drawback.
+
+**UNFAIR goes 17 → 11**, and the 11 are two real groups — 6 watery grave,
+5 suspense — rather than a threshold artifact. The phantasm cards left
+because they were fixed.
+
+### What this version deliberately does NOT do
+
+**Solo still routes to `Battle`.** Phase A's remaining step is one line;
+what stops it is that retiring the trainer retires the TUNED `[3,4,5]`
+escalation with it, and the table's dummy is measured winning 11 of 15.
+Flipping the default without a play session ships a known regression to
+the default experience, and tuning is a play session rather than a drill.
+The routing is unchanged and the decision is recorded rather than taken
+quietly.
+
+```
+npm test          1060 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
+tools/failstates  11 UNFAIR (6 watery grave, 5 suspense)
+```
+
+---
+
 ## v2.84a — housekeeping: the shared feed stops naming the training prop
 
 Low-hanging fruit found by asking what a line reads like with a **person**
