@@ -9,6 +9,95 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.01 — PHASE B: the UNFAIR block is empty
+
+Two keywords, eleven cards, and both were the **no-op blind spot** — the
+keyword parses to a `noop`, a noop counts as accounted for, and so every
+one of the eleven reported `tier: full` with its mechanic ignored.
+Neither `npm run audit` nor `npm run fairness` can see that by
+construction; `tools/failstates.js` is the only tool that asks.
+
+```
+UNFAIR   16 (v3.00, and 17 by the sweep's count)  ->  0
+```
+
+### Watery grave — the drawback, and the hole under it
+
+Six Pirate Necromancer allies print it, and Gravy Bones replays them from
+the graveyard once a blue card has hit it. The **upside** was live. The
+drawback was not, so those six were an infinite loop.
+
+RULING 2026-07-25, verbatim: *"Because gravy can often play allies from
+the grave - they must be turned face down when they die so they can not
+be used infinitely. allow the player to check their own faced down cards
+but not their opponents."*
+
+An ally that dies is stamped `_fd` on the way into the graveyard,
+`parser.playableFromZone` refuses a face-down card, and `GravePane` shows
+you your own face-down cards and a **back** for theirs.
+
+**BUILDING IT FOUND SOMETHING MUCH BIGGER.** The rule that decides whether
+a graveyard card may be played *at all* lived in `playables()` — the
+trainer's UI — so `judge.legal` never had it. Driven: a vanilla Brutal
+Assault, no watery grave anywhere near it, went from the graveyard
+straight onto the combat chain with `legal` returning `null`. **Every card
+in a graveyard was playable at the table.** Sev-3 *illegal play allowed*,
+over the whole pool rather than over a keyword — and the same shape as
+v3.00's phantasm: a rule that exists on one board only, because the board
+that has it keeps it somewhere the other cannot reach.
+
+Two more, both the loose-predicate family:
+
+- the gate read `hasKw`, which is "appears ANYWHERE — list or text". The
+  hero prints "cards **with** watery grave", and three pool cards only
+  *ask* about it (Jittery Bones, Compass of Sunken Depths, Washed Up
+  Wave) — all three were replayable against their own printed text. It
+  reads `printedKw` now.
+- `fx.fromGY` matched any card that *talks about* graveyard plays.
+  Compass of Sunken Depths was the only pool card either flag ever fired
+  on, and it is Equipment, which is never played from anywhere. Both
+  flags now require the card to grant **itself** the route.
+
+### Suspense — a delay that was being paid as a bonus
+
+RULING 2026-07-25: *"these 'tick' down at the beginning of the turn.
+unlike steam-powered it is destroyed immediately when it has none. The
+effect activates when the aura is destroyed"*, plus *"suspense always
+comes in with 2 counters"*.
+
+There was no arena-departure schedule anywhere, so the payload was queued
+**on play**: Act of Glory handed you +6{p} the moment the aura landed
+rather than two turns later.
+
+`"when this leaves the arena, X"` is a **departure trigger** now, tagged
+`onLeave` the way `onHit` already is. An aura that prints suspense enters
+with 2 counters. `effects.tickSuspense` is a pure shared schedule — tick,
+destroy at zero, hand the payload back — and **both** boards call it: the
+trainer at the top of its turn, `judge.js` in the START PHASE, whose own
+comment predicted this ("it becomes a real pause the moment one of them
+exists").
+
+**It reintroduced v2.30's VALUE-DOUBLED bug for exactly one edit.** The
+whole-text self-pump fallback refuses to fire when an op already read that
+same "+N{p}" — and it checks `fx.ops`, so moving the op into `onLeave`
+made it blind and the aura paid +6 on the way in *and* on the way out.
+The guard reads every trigger list now. Caught by driving the play.
+
+### What is left of Phase B
+
+One entry, and it is not a keyword: **Lyath Goldmane**, *"the base {p} and
+{d} of cards you control are halved, rounded up"* — a hero ability, so it
+belongs with Lyath in Phase C rather than here.
+
+```
+npm test          1070 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.00 — THE MERGED ENGINE, and what a fresh clone found
 
 The version that celebrates one copy of the card semantics. It was going

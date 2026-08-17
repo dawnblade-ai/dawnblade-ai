@@ -43,16 +43,16 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.00
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.01
 
 ```
-npm test          1060 green — 0 skipped with a live DB cached, and
+npm test          1070 green — 0 skipped with a live DB cached, and
                   only the 4 drift drills skip without one
 npm run fairness  clean
 npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
-tools/failstates  11 UNFAIR — 6 watery grave, 5 suspense
-deployed          APP_VER 3.00, all 22 engine/*.js serving 200
+tools/failstates  0 UNFAIR  ← PHASE B DONE (v3.01)
+deployed          APP_VER 3.01, all 22 engine/*.js on main
 ```
 
 **Three of those moved at v3.00 and none of them by drifting:**
@@ -68,9 +68,10 @@ deployed          APP_VER 3.00, all 22 engine/*.js serving 200
   because `DATA_VER` keys a localStorage cache and the two populations
   coexist. The missing 306th is Stir the Aetherwinds, lowered on purpose:
   its `full` was an unanchored match swallowing a clause nobody built.
-* **17 → 11 UNFAIR.** Four were phantasm and were genuinely fixed; the
-  rest of the drop is `tools/failstates.js` no longer grading a keyword by
-  counting its mentions in a file the semantics left in v2.53. See Phase B.
+* **17 → 11 → 0 UNFAIR.** Four were phantasm, genuinely fixed at v3.00;
+  six more of the drop was `tools/failstates.js` no longer grading a
+  keyword by counting its mentions in a file the semantics left in v2.53;
+  and v3.01 built the two keywords that actually remained. See Phase B.
 
 There is **one copy of the card semantics** (`engine/effects.js`) and **two
 turn structures that call it**: `Battle` (solo, the tuned dummy) and
@@ -118,9 +119,9 @@ live in `boardRed`, not in a passive flag — so treat the column as a hint and
 ## 2. THE ORDER, AND THE ARGUMENT FOR IT
 
 ```
-A. ONE ENGINE        retire Battle          ← everything after is cheaper
-B. THE UNFAIR 11     rules broken today     ← correctness, two keywords
-C. THE HEROES        13 left                ← the bulk of the work
+A. ONE ENGINE        retire Battle          ← needs a play session (see A2)
+B. ~~THE UNFAIR 11~~ DONE at v3.01           ← 0 UNFAIR
+C. THE HEROES        13 left                ← the bulk of the work, and NEXT
 D. THE TABLE         ready gate + voice     ← small, and owed
 E. TUNE              play sessions          ← last, needs C
 ```
@@ -132,10 +133,13 @@ once, but *the schedule a card fires on* is duplicated. Every hero built
 before A costs double at the point where a card needs a trigger window. C is
 the biggest phase; paying its tax 13 times is the expensive mistake.
 
-**B goes before C because those 11 cards break a rule every time they are
-played**, and they are TWO keywords rather than eleven problems — 6 watery
-grave and 5 suspense. Fixing a rule with a list behind it is the cheapest
-correctness in the project.
+**B WENT BEFORE C AND IS DONE (v3.01).** Two keywords rather than eleven
+problems, exactly as scoped — and both turned out to be worth more than
+the cards: watery grave's build found that **every card in a graveyard was
+playable at the table**, and suspense's found that a schedule written into
+one board's turn boundary is a schedule the other board does not have.
+Fixing a rule with a list behind it remains the cheapest correctness in
+the project.
 
 **E goes last because it depends on C.** Tuning against a pool that is 76%
 built measures the gaps, not the difficulty.
@@ -216,73 +220,51 @@ drill anchors     70 resolve INSIDE Battle, across 5 files
 
 ---
 
-## PHASE B — THE UNFAIR 11
+## PHASE B — ~~THE UNFAIR 11~~ **DONE at v3.01**
 
 ```bash
-node tools/failstates.js     # ranked; the UNFAIR block is at the top
+node tools/failstates.js     # the UNFAIR block is empty
 ```
 
-**These break a rule every time the card is played** — the sev-3 "illegal
-play allowed" and "drawback skipped" categories, where the player wins games
-they should lose and the sim teaches wrong play.
+Two keywords, eleven cards, both the **no-op blind spot**: the keyword
+parses to a `noop`, a noop counts as accounted for, and every one of the
+eleven reported `tier: full` with its mechanic ignored.
 
-> **THIS SAID 17 UNTIL v3.00 AND THE NUMBER WAS AN ARTIFACT.**
-> `tools/failstates.js` graded a no-op keyword by counting its mentions in
-> `index.html` — a file the card semantics left in **v2.53**. Measured with
-> the tool's own regex: phantasm 2 mentions there and **11 across the
-> engine**, watery grave 2 and 13, suspense 2 and 11. All three sat under
-> the ≥3 threshold, so the whole block was one scan aimed at the wrong file.
-> A source scan aimed at the wrong file passes by finding nothing; this one
-> FAILED by finding nothing, which is the same defect with the opposite sign.
->
-> Repointing it alone would have been worse than leaving it — the count
-> would then have cleared the block, including two keywords nobody built. So
-> the **LEDGER outranks the grep** (`tools/ledger.js` records what is
-> BUILT), and a **DRAWBACK is held to a higher bar than an upside**: half a
-> keyword is fine for a bonus and is exactly the wrong shape for a penalty.
-
-**The 11 are TWO keywords, not eleven problems.** That is the whole reason
-this phase is cheap:
-
-| keyword | cards | state |
+| keyword | cards | what was missing |
 |---|---|---|
-| **watery grave** | 6 | the UPSIDE is live and the drawback is not |
-| **suspense** | 5 | `pending` in the ledger — not built at all |
+| **watery grave** | 6 | the drawback — a dead ally must go FACE-DOWN so it cannot be replayed. The upside had been live for versions. |
+| **suspense** | 5 | everything — the payload was queued on PLAY, so a delay was being paid as a bonus |
 
-**WATERY GRAVE — build the half that is missing.** Gravy Bones already
-replays allies out of the graveyard (`built.wateryGrave` plus the
-blue-in-graveyard check). Nothing turns a dead ally **face-down**, which is
-the entire reason the ruling exists: *"they must be turned face down when
-they die so they can not be used infinitely."* The ledger said `live` and
-now says `partial`, with the gap named. The ruling also asks that a player
-may inspect their OWN face-down cards and not their opponent's.
+**BOTH BUILDS WERE WORTH MORE THAN THEIR CARDS, and in the same way.**
+Each one turned out to be a rule that existed on one board only:
 
-**SUSPENSE — build it.** The ruling is recorded and unambiguous: enters with
-2 counters (the same on every suspense card), ticks at the start of turn,
-is destroyed at 0 and **the payload fires then**. The counter machinery
-already exists — verse counters and steam counters both tick on a schedule
-— so this is a schedule plus a payload, not new machinery.
+* watery grave's gate lived in `playables()` — the trainer's UI — so
+  `judge.legal` had none, and **every card in a graveyard was playable at
+  the table**. `parser.playableFromZone` is the one copy now.
+* suspense needed a start-of-turn schedule, and a schedule written into
+  one board's turn boundary is a schedule the other does not have.
+  `effects.tickSuspense` is pure and shared, beside `thawFrost` and
+  `resolveInertia`.
 
-**Phantasm was the third of these and it is DONE (v3.00)** — and it was not
-a mis-filing at all. It worked in the trainer and did **nothing at the
-table**, because `effects.afterDefenders` was only ever called from
-`index.html`. See the changelog; the shape is the WHERE/WHEN split in the
-reader rather than the writer, and it is worth reading before building the
-other two, because both of them will have to fire on *both* boards.
+That is v3.00's phantasm shape twice more. **When you build a keyword,
+ask which board runs its schedule** — the answer has been "one of them"
+every time so far.
 
-**The 12th entry is Lyath Goldmane, "drawback skipped"** — reported by
-`npm run sweep` rather than by `failstates.js`, which counts cards.
+### The one entry left, and it is not this phase
 
-**Neither `npm run audit` nor `npm run fairness` can see any of this** —
-coverage counts clauses consumed, and the fairness sweep is deliberately
-one-sided toward too-strong. The no-op blind spot is why: `noop` counts as
-"accounted for", so these cards report `tier: full` with their mechanic
-ignored.
+**Lyath Goldmane** — *"the base {p} and {d} of cards you control are
+halved, rounded up"*, reported by `npm run sweep` as *drawback skipped*.
+It is a HERO ABILITY, so it belongs with Lyath in Phase C rather than
+here. FINISH.md has counted it separately since it was written.
 
-```
-Spears of Surreality   tier = FULL   kw = [Phantasm, Go again]
-Barnacle               tier = FULL   kw = [Watery Grave]
-```
+### Still open in the neighbourhood, and now measurable
+
+`thawFrost`, `resolveInertia` and the `sd:"turn"` aura sweep are all
+called by the TRAINER only — the same gap suspense had, in three
+mechanics that are already built. None of them is UNFAIR (they are
+missing behaviour rather than an above-rate card), but they are the next
+thing to look at when Phase A wires the boards together, and they are
+cheap now that `tickSuspense` has established the shape.
 
 ---
 

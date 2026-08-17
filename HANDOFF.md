@@ -1,61 +1,50 @@
-# Handoff — Dawnblade, at v3.00 · ONE ENGINE, AND A PINNED POOL
+# Handoff — Dawnblade, at v3.01 · PHASE B IS DONE
 
-> **v3.00 happened after most of this file was written.** Where the two
-> disagree, this block and `FINISH.md` are current and the prose further
-> down is history.
+> **v3.00–v3.01 happened after most of this file was written.** Where the
+> two disagree, this block and `FINISH.md` are current and the prose
+> further down is history.
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
 > Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done.
 > Most entries in both exist because breaking that rule cost a real bug.
 >
-> **The two engines are merged, the retirement gate is PASSED, and the
-> pool is PINNED.** `npm test` is **1060 drills** and every card drill
-> runs offline; on a fresh clone it used to be 749 passes and **304
-> silent skips**, which is how 22 broken cards and a card-in-two-zones
-> bug survived a green suite. The only skips left are the **4 drift
-> drills**, which need a live database on purpose (`node tools/audit.js
-> --refresh`). **Run `npm test` and check the SKIP count, not just the
-> fails.**
+> **The two engines are merged, the pool is PINNED, and Phase B is
+> DONE.** `npm test` is **1070 drills** and every card drill runs
+> offline; `tools/failstates.js` reports **0 UNFAIR**. Run `npm test` and
+> check the SKIP count, not just the fails — a fresh clone used to skip
+> 304 drills silently, which is how 22 broken cards survived a green
+> suite.
 >
-> **PICK ONE OF THESE TWO. They are both ready and they are different
-> shapes of work:**
+> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER is next.**
+> She is 88% covered with 0 unreadable cards, her hero ability is
+> genuinely unbuilt, and both axes she needs are live and verified in
+> play: instant-speed play from arsenal, and acting during the
+> opponent's turn. What is left on her is **freeze (Cold Snap)** —
+> RULED, not built — and Aether Icevein's rider behind the unbuilt Ice
+> Fusion condition.
 >
-> **(A) Phase A — retire `Battle`, WITH a play session.** What is left is
-> mechanical: route solo to the merged board (one line — `App` already
-> branches on `cfg.table`), repoint the 70 drill anchors, delete. **The
-> reason v3.00 did not do it is not difficulty.** Retiring the trainer
-> retires the TUNED `[3,4,5]` escalation, and the table's dummy is
-> measured winning 11 of 15 heroes. Only take this if you can play the
-> game on a phone in the same cycle; otherwise it ships a known
-> regression to the default experience.
->
-> **(B) Phase B — the UNFAIR 11, which are TWO keywords.** No phone
-> needed, pure rules correctness, and it makes Enigma and Gravy Bones
-> cheaper in Phase C. **watery grave** (6 cards): the upside is live and
-> the face-down drawback is not built, which is the entire reason its
-> ruling exists. **suspense** (5 cards): ruled, `pending` in the ledger,
-> not built — 2 counters, tick at start of turn, payload fires at 0. The
-> counter machinery already exists (verse, steam).
->
-> **READ THE PHANTASM FIX FIRST IF YOU TAKE (B)** — v3.00's third find.
-> Phantasm worked in the trainer and did **nothing at the table**,
-> because `effects.afterDefenders` was only ever called from
-> `index.html`. Both of the remaining keywords will have to fire on
-> **both** boards, and that is the shape that will bite.
+> **READ THE THREE v3.00–v3.01 FINDS FIRST. They are one shape and it
+> will bite you again:** phantasm, watery grave and suspense were each a
+> rule that existed on ONE board. `effects.js` holds the semantics once,
+> but the SCHEDULE a card fires on is still written per board — and
+> `thawFrost`, `resolveInertia` and the `sd:"turn"` aura sweep are all
+> trainer-only today. **When you build anything that fires on a
+> schedule, ask which board runs it.** `effects.tickSuspense` is the
+> worked example: pure, shared, and it hands the payload back to the
+> caller rather than running it.
 >
 > **How to work:**
 >
+> - **Find the hero's ONE mechanic, and read the hero ability FIRST.**
+>   Kayo's clause 2 was worth half his deck.
 > - **Census the shape pool-wide before fixing it.** Every fix turns out
 >   to be a rule with a list behind it, and the list is always longer
->   than the hero.
+>   than the hero. Both v3.01 keywords were worth more than their cards.
 > - **Fix the RULE, not the card.** Never special-case a card by name.
 > - **Never invent card effects** — teach the parser to read the text.
 > - **Write the drill, then SABOTAGE it**, and verify the sabotage
->   actually changed the file. A sabotage that reproduces nothing proves
->   nothing: v3.00's first drift sabotage was invalid and had to be
->   redone, because with the parser reading both wordings there was no
->   differential to detect.
+>   actually changed the file.
 > - **Assert on state — hands, life, zones, counters — never on log
 >   prose.**
 > - **Play it.** `npm test` green is the floor, not the proof.
@@ -66,38 +55,36 @@
 
 ---
 
-## WHERE WE ARE — v3.00
+## WHERE WE ARE — v3.01
 
-`npm test` → **1060 drills, 0 failed** (0 skipped with a live DB
-cached; 4 drift drills skip without one) · `npm run fairness` clean ·
+`npm test` → **1070 drills, 0 failed** (0 skipped with a live DB cached;
+4 drift drills skip without one) · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **305 full / 78 part / 22 none** ·
-`tools/failstates.js` → **11 UNFAIR** (6 watery grave, 5 suspense).
+`tools/failstates.js` → **0 UNFAIR**.
 `node` is at `~/node/bin`, **not on PATH** —
 `export PATH="$HOME/node/bin:$PATH"`.
-**A push IS the deploy** (standing authorization, 2026-08-03). Verify the
-deploy, not just the tests.
+**A push to `main` IS the deploy** (standing authorization, 2026-08-03).
 
 ```
-1. ENGINE
-     ✔ the merge (v2.76-v2.80) — ONE copy of the card semantics
-     ✔ v3.00 the pool is PINNED; the suite skips nothing
-       ☐ freeze (Cold Snap) — RULED, not built
-2. HEROES   KAYO ✔ · DORINTHEA ✔ · IYSLANDER recommended next
-3. RETIRE `Battle`  ☐ mechanical, but it carries the tuning debt — see (A)
+1. ENGINE   ✔ merged · ✔ pool pinned · ✔ drift guarded
+2. PHASE B  ✔ DONE — 0 UNFAIR (watery grave + suspense, v3.01)
+3. PHASE C  ☐ 13 heroes — IYSLANDER next
+4. PHASE A  ☐ retire Battle — carries the tuning debt, needs a phone
 ```
 
-### The three things v3.00 found, and why none of them was visible
+### The five things v3.00–v3.01 found, and why no tool saw them
 
-| find | why no tool saw it |
+| find | why it was invisible |
 |---|---|
-| Under Loop in a deck AND on the chain | the census walk had parked against a boost pending it could not answer, on turn 1, with 3,591 unread refusals |
-| 22 cards stopped resolving | the 22MB database is gitignored, so every drill that needs a card SKIPPED |
+| Under Loop in a deck AND on the chain | the census walk had parked against a boost pending it could not answer |
+| 22 cards stopped resolving | the 22MB database is gitignored, so every card drill SKIPPED |
 | phantasm inert at the table | the tool grading it counted mentions in a file the semantics left in v2.53 |
+| every graveyard card playable at the table | the zone rule lived in the trainer's UI, where no reducer could reach it |
+| suspense paid on the way IN | no arena-departure schedule existed on either board |
 
-**All three are the same family**: a guard aimed at the wrong thing
-reports success by finding nothing. `CLAUDE.md` has said so since v2.53
-about source scans; v3.00 adds that a *skipped* drill and a *parked*
-driver do it too.
+**All five are one family**: a guard aimed at the wrong thing reports
+success by finding nothing, and a rule kept on one board is a rule the
+other board does not have.
 
 ## RETIRING `Battle` — the standing detail (option A above)
 

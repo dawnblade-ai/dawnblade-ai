@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.00
+**Current version:** v3.01
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1060 drills**.
+This is `node --test "test/*.test.js"` — currently **1070 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -366,8 +366,10 @@ then have cleared the whole block, including two keywords nobody built. So:
   of the graveyard and **nothing turns a dead ally face-down**, which is the
   entire reason its ruling exists.
 
-UNFAIR is **11** now, in two real groups (6 watery grave, 5 suspense). The
-four phantasm cards left because they were fixed.
+UNFAIR is **0** as of v3.01. It went 16 → 11 when the tool stopped
+reading the wrong file, and 11 → 0 when the two keywords that actually
+remained were built (see Phase B in `FINISH.md`). The four phantasm cards
+left first, because they were fixed rather than reclassified.
 
 #### THE NO-OP BLIND SPOT — the most dangerous thing this found
 
@@ -385,12 +387,14 @@ Both report as **fully scripted** with their entire mechanic ignored. Phantasm
 destroys an attack blocked by a 6+ power card; watery grave turns a dead ally
 face-down *specifically so it cannot be replayed infinitely*.
 
-**PHANTASM IS BUILT AS OF v3.00 — and it was not a mis-filing.** It worked in
-the trainer and did nothing at the table, which no coverage tool and no
-keyword ledger can express: the keyword was carried, on one board. The
-remaining cards are **6 watery grave** (upside built, drawback not) and
-**5 suspense** (`pending`, not built), across Gravy Bones's and Enigma's
-identities.
+**ALL THREE ARE BUILT AS OF v3.01, and none was a mis-filing.** Phantasm
+worked in the trainer and did nothing at the table — the keyword was
+carried, on one board, which no coverage tool and no keyword ledger can
+express. Watery grave's upside was live and its drawback was not, so six
+allies were an infinite loop. Suspense fired its payload on PLAY, so a
+printed delay was being paid as a bonus. **A `noop` keyword is still the
+place to look first**: the blind spot is real, and it is the only one of
+these three shapes a keyword ledger can catch on its own.
 
 The honest test is the ruling's own words: where a ruling says a keyword "does
 nothing on its own", `noop` is right; where it describes real behaviour, `noop` is
@@ -892,6 +896,30 @@ split `linkPumps`/`linkPayload` already keep.
 **So the rule for any new card text that touches the attack card:** ask what
 holds it on each board, or hand the answer in from the caller. Never read
 one board's representation from inside the shared semantics.
+
+### A SCHEDULE IS WRITTEN PER BOARD — ask which one runs it (v3.01)
+
+`effects.js` holds the semantics once. **The schedule a card fires on does
+not.** Three of the last five bugs were the same sentence: a rule that
+existed on one board only.
+
+| rule | lived in | the table had |
+|---|---|---|
+| phantasm's pop | `effects.afterDefenders`, called from `index.html` alone | nothing |
+| "may I play this from the graveyard" | `playables()` — the trainer's **UI** | nothing, so EVERY graveyard card was playable |
+| the arena-departure payload | nowhere — it fired on play instead | nothing |
+
+`effects.tickSuspense` is the shape to copy: **pure**, exported beside
+`thawFrost` and `resolveInertia`, and it **returns the payload ops rather
+than running them**, because "your next attack this turn gets +N{p}" is
+actor-relative and the two boards reach `runOps` differently. The trainer
+calls it at the top of its turn; `judge.js` calls it in the START PHASE.
+
+**Still trainer-only, and measured rather than assumed:** `thawFrost`,
+`resolveInertia` and the `sd:"turn"` aura sweep. None is UNFAIR — they are
+missing behaviour rather than an above-rate card — but they are the same
+gap in three already-built mechanics, and they are cheap now that the
+shape exists.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 
@@ -3054,18 +3082,19 @@ it carded effects only once the engine can actually read them.
 
 > **➡ `FINISH.md` is the blueprint to done** (written v2.83). It states what
 > "finished" means as five measurable conditions, then orders the remaining
-> work — **A** retire `Battle` · **B** the **11** UNFAIR fail states (two
-> keywords: 6 watery grave, 5 suspense) · **C** the 13 remaining heroes ·
+> work — **A** retire `Battle` · ~~**B** the UNFAIR fail states~~ **DONE
+> at v3.01** · **C** the 13 remaining heroes ·
 > **D** the lobby ready gate and the feed's voice · **E** tuning.
 > Every number in it was measured, with the command to re-derive it. Read it
 > before scoping a cycle; the items below remain accurate and this file
 > explains *why* that order.
 >
-> **v3.00 refreshed those numbers and moved A's argument.** A is still a
-> multiplier, but retiring `Battle` retires the TUNED `[3,4,5]` escalation
-> with it and the table's dummy wins 11 of 15 — so **A now sequences with
-> E, not before it**, and B is the phase a session with no phone should
-> take. See FINISH.md Phase A step 2.
+> **v3.00 refreshed those numbers and moved A's argument; v3.01 finished
+> B.** A is still a multiplier, but retiring `Battle` retires the TUNED
+> `[3,4,5]` escalation with it and the table's dummy wins 11 of 15 — so
+> **A sequences with E, not before it**. B is done (0 UNFAIR), so the
+> phase a session with no phone should take is now **C, starting with
+> Iyslander**. See FINISH.md.
 
 > **See `ROADMAP-MULTIPLAYER.md`** — as of v2.20 the road to online play is
 > planned there in full (the actor/perspective split, the seeded RNG, the pure
