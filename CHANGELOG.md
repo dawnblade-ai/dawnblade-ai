@@ -9,6 +9,67 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.05 — an activated ability on a card in hand
+
+*"Instant - Discard this: Amp 1"*. **Four pool cards across three heroes**
+print one — Agile Windup (Kayo), Arcane Twining and Photon Splicing
+(Iyslander), Reaper's Call (Arakni) — so it is a rule with a list rather
+than one hero's card. The route was built in `Battle` at v2.63 and lived
+there, so none of the four could be activated at the table.
+
+| piece | where |
+|---|---|
+| `handAbilityOK` | `effects.js`, **module scope** — `judge.legal` is pure and holds no effects context, the same reasoning that placed `activateIfOk` there at v3.04 |
+| `activateHandAbility` | pays the printed cost, runs the ops, **returns** the defence buff |
+| the action | `{t:"activate", uid, from:"hand"}` |
+| the trainer | delegates, keeping only its own `defBonus` routing |
+
+Two deliberate changes while sharing it:
+
+- **The whole gate is asked.** The trainer's version tested only
+  `activateIf.kind === "defending"` — the one restriction its own pool card
+  prints — so every other, including v3.04's `unreadable`, went straight
+  through.
+- **The defence buff is returned, not written.** `runOps` cannot raise
+  *one* defender, so a +{d} needs the caller's per-defender map. Same split
+  as `linkPumps`/`linkPayload`.
+
+### The fifth card is an impostor
+
+`parseHandAbility` matches to the first period, so **Rally the Coast
+Guard**'s printed *"Activate this only while this card is defending"* is
+truncated away from `handAbility` and survives only on `fx.activateIf`. A
+route built off `handAbility` alone would let it buff defence from hand at
+any time — the sev-3 direction.
+
+It is refused, and the refusal names the **printed** reason. Ordered the
+other way, a player who simply is not defending was told about a missing
+board feature instead of the rule their card prints; a refusal that names
+the wrong thing teaches the wrong lesson.
+
+**What this board does not do is said out loud:** Rally's +{d} is refused
+by name at the table until judge keeps a per-defender bonus map. Dropping
+it silently would be a card that does nothing.
+
+### Tier counts it now
+
+`fx.handAbility` withheld coverage credit from v2.63 to v3.05 — *"the
+audit keeps reporting Agile Windup as unread **until its clause is
+properly consumed**"*, which is the never-parse-ahead-of-wiring rule
+holding the line while only the parser could read it. It is consumed now,
+on both boards, so the comment is honoured rather than overridden. Only
+the ability's own line is credited: a card whose other text is still
+unread stays `part`.
+
+```
+npm test          1089 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 310 full / 74 part / 21 none
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.04 — equipment abilities work at the table, and four printed restrictions start being read
 
 Phase C's next item was a hand-ability route. Censusing it turned up

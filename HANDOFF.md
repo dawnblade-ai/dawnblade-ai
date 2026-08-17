@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.04 · PHASE C, AND ABILITIES REACH THE TABLE
+# Handoff — Dawnblade, at v3.05 · PHASE C, IYSLANDER IS TWO CARDS FROM DONE
 
 > **v3.00–v3.01 happened after most of this file was written.** Where the
 > two disagree, this block and `FINISH.md` are current and the prose
@@ -16,25 +16,25 @@
 > 304 drills silently, which is how 22 broken cards survived a green
 > suite.
 >
-> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER is nearly
-> done.** Her signature card is built (v3.03): freeze offers the target
-> the {r}, declining lets you freeze one of their arsenal cards or
-> allies, and it thaws at the start of your next turn — on both boards.
->
-> **WHAT IS LEFT ON HER IS FOUR CARDS, and the best one to take next
-> closes TWO heroes:**
+> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER IS TWO CARDS
+> FROM DONE.** Freeze (v3.03), equipment abilities (v3.04) and hand
+> abilities (v3.05) are all built, on both boards.
 >
 > | card | what is unread |
 > |---|---|
-> | **Arcane Twining · Photon Splicing** | `Instant - Discard this: Amp 1` on a card in HAND. **Take this one.** The census found FOUR true hand abilities across three heroes (these two, Kayo's Agile Windup, Arakni's Reaper's Call), so it is a rule with a list. `fx.handAbility` already PARSES them; what is missing is a ROUTE — only gear and arena permanents get a `powCard`, and v3.04 has just built the equivalent route for gear at the table, so the shape to copy is fresh. **Rally the Coast Guard is NOT one of them**: `parseHandAbility` stops at the first period and truncates away its printed "Activate this only while this card is defending", so a route built off `handAbility` alone would let it buff defence from hand at any time. Ask `fx.activateIf` — it reads that gate correctly, and `effects.activateIfOk` is the shared reader as of v3.04. |
-> | Brain Freeze | the fused rider's hand-to-top-of-deck payload |
-> | Ice Eternal | X-cost, deliberately unbuilt (the pool's only one) |
-> | Stir the Aetherwinds | the instant-speed grant, unread on purpose since v3.00 |
+> | **Brain Freeze** | the fused rider: "put an action card with cost 0 from their hand on top of their deck" — a hand-to-deck-top move, and `fused` is already a real condition |
+> | Ice Eternal | X-cost, deliberately unbuilt — the pool's only one, and CLAUDE.md records the decision |
+> | *(Stir the Aetherwinds)* | the instant-speed grant, unread on purpose since v3.00. It is one of THREE cards printing "play … as though it were an instant" (with Iyslander's own clause 1, which IS built as `arsenalInstant`), so it is a small rule with a list — worth doing when you build the next Wizard. |
 >
 > **Ice Fusion is genuinely built** — `fused` is a real condition, so
 > Aether Icevein (×3) and Polar Cap resolve in full. Do not re-derive it.
 > Her hero ability's two axes are live and verified in play: instant-speed
 > play from arsenal, and acting during the opponent's turn.
+>
+> **THEN PICK THE NEXT HERO.** Regenerate the coverage table rather than
+> trusting it — the snippet is in `FINISH.md` §1. Viserai (passive already
+> built, gentlest curve) or Lyath (best-covered deck, but chapter 3 and
+> the crowd/boo mechanic). Leave Arakni for last.
 >
 > **READ THE THREE v3.00–v3.01 FINDS FIRST. They are one shape and it
 > will bite you again:** phantasm, watery grave and suspense were each a
@@ -67,11 +67,11 @@
 
 ---
 
-## WHERE WE ARE — v3.04
+## WHERE WE ARE — v3.05
 
-`npm test` → **1082 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1089 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
-`npm run audit` → 405 pool cards, **305 full / 78 part / 22 none** ·
+`npm run audit` → 405 pool cards, **310 full / 74 part / 21 none** ·
 `tools/failstates.js` → **0 UNFAIR**.
 
 **305 went to 304 and back, and the round trip is the point.** Cold Snap
@@ -85,8 +85,8 @@ because a lie was removed is the number improving.
 ```
 1. ENGINE   ✔ merged · ✔ pool pinned · ✔ drift guarded
 2. PHASE B  ✔ DONE — 0 UNFAIR (watery grave + suspense, v3.01)
-3. PHASE C  ▸ IYSLANDER — freeze BUILT (v3.03); equipment abilities
-              reach the table (v3.04); 4 cards left
+3. PHASE C  ▸ IYSLANDER — freeze (v3.03), equipment abilities (v3.04)
+              and hand abilities (v3.05) all built; TWO cards left
 4. PHASE A  ☐ retire Battle — carries the tuning debt, needs a phone
 ```
 

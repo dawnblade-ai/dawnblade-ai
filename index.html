@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.04"; /* v3.04 — equipment abilities work at the table: `judge.legal` refused every non-weapon piece as "not a weapon", so 17 abilities across 12 heroes were dead there, and the printed "Activate this only …" gate lived in the trainer too — four of the pool's ten restrictions turned out never to be read at all. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.05"; /* v3.05 — an activated ability on a card in HAND works at the table: four pool cards across three heroes print one, the route lived in Battle, and a fifth card (Rally the Coast Guard) is an impostor whose printed restriction `parseHandAbility` truncates away — so the route asks the whole gate, not one case of it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
