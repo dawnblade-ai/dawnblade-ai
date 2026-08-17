@@ -4034,6 +4034,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        payload rather than running it, because "your next attack this turn
        gets +N{p}" is actor-relative and each board reaches runOps its own
        way. */
+    /* freeze lifts at the start of the freezing player's turn (Cold Snap) */
+    { const fz = DawnEffects.thawFreeze(n, 0);
+      if(fz.thawed.length){ n = fz.game; n = L(n, `${fz.thawed.join(", ")} thaws — free to be played again.`); } }
     { const sp = DawnEffects.tickSuspense(n, 0);
       if(sp.msgs.length){ n = sp.game; sp.msgs.forEach(m => { n = L(n, m); });
         if(sp.ops.length) n = _EFX.runOps(n, sp.ops, sp.fired.join(", ")); } }

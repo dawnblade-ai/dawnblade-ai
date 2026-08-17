@@ -1498,19 +1498,22 @@ test("payOrLose — Look Tuff resolves to tier full", () => {
    as its else-payload it would ask a question with NO CONSEQUENCE, which
    makes paying strictly a waste. Worse than not asking. So the card sits
    at `part` and the tools report the gap. */
-test("cold snap — the pay-or-freeze is UNREAD, not nooped into looking done", () => {
-  assert.equal(cc("Target hero may pay {r}"), null,
-    "reading the offer alone asks the opponent to pay for nothing");
-  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."), null,
-    "and freeze is not built — a noop here is the card claiming it works");
+test("cold snap — NEITHER HALF is readable alone; the pair is what carries it", () => {
+  /* Read on its own, the offer asks the opponent to pay for nothing and
+     the freeze has lost what it is conditional on. They are one reading,
+     paired in `fxParse` where the whole card is visible — the same reason
+     `optCost` and `payCost` are paired there. */
+  assert.equal(cc("Target hero may pay {r}"), null);
+  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."), null);
 });
 
-test("cold snap — reports `part`, which is the truth about it", () => {
+test("cold snap — the pair reads as payOr with the FREEZE as its else", () => {
   P.fxReset();
   const fx = P.fxParse({name:"Cold Snap", pitch:3, tt:"Ice Action", power:null, kw:[],
     tx:"Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again"});
-  assert.equal(fx.tier, "part", "full was the card claiming a mechanic nobody built");
-  /* the halves that ARE built still resolve — this is not a card switched off */
+  assert.deepEqual(fx.ops, [["payOr", 1, [["freeze", 1]]]],
+    "declining is what makes the consequence happen — that is payOr's whole rule");
+  assert.equal(fx.tier, "full");
   assert.equal(fx.ga, true, "go again is printed and still granted");
   P.fxReset();
 });

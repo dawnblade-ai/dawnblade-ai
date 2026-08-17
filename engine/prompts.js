@@ -84,11 +84,17 @@ function buildPrompt(game, spec){
   }
   if(spec.tag === "pick"){
     const zone = spec.zone || "hand";
-    const pool = promptZone(game, side, zone).filter(promptFilter(spec.filter));
+    /* CANDIDATES MAY BE THE CALLER'S, the way `target`'s already are — a
+       choice does not always live in one zone. Cold Snap's freeze picks
+       from the opponent's ARSENAL and their ALLIES together, which is two
+       zones, and teaching `promptZone` a synthetic third would put a rules
+       decision inside a module that is meant to stay data-driven. */
+    const pool = (spec.cards ? spec.cards.filter(Boolean) : promptZone(game, side, zone))
+      .filter(promptFilter(spec.filter));
     if(!pool.length) return null;
     const max = Math.min(spec.max != null ? spec.max : 1, pool.length);
     const min = Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
-    return {...base, zone, cards:pool, min, max,
+    return {...base, zone: spec.cards ? null : zone, cards:pool, min, max,
       to: spec.to || null, optional: min === 0,
       /* THE "IF YOU DO" RIDER. A pick with `min:0` is an OPTIONAL COST —
          "you may banish an aura from your graveyard. If you do, deal 1
@@ -104,6 +110,11 @@ function buildPrompt(game, spec){
          hand it to runOps, which would apply it to the source. It rides on
          the prompt as data so the trainer can stamp the card that moved. */
       arsStamp: spec.arsStamp || null,
+      /* WHICH SEAT'S FREEZE THIS IS. Like `arsStamp` it is DATA, not ops:
+         this module runs no effects, and the stamp belongs to the object
+         that was chosen rather than to the source. `applyAnswer` reads it
+         off `out.picked`. */
+      freezeSide: spec.freezeSide != null ? spec.freezeSide : null,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
@@ -328,8 +339,19 @@ function applyPrompt(game, prompt){
        without re-opening the v2.04 free-ability bug. */
     if(!picked.length){ out.msgs.push(who + " chose nothing."); return out; }
     if(prompt.to) out.game = moveCards(game, side, prompt.zone, prompt.to, picked);
+    /* THE CHOICE, STRUCTURALLY. It used to be reported in `msgs` alone, so
+       a caller that needed to know WHICH card was chosen had to parse
+       prose — and asserting on log prose is the thing this project has
+       been bitten by most. */
+    out.picked = picked;
+    /* CALLER-SUPPLIED CANDIDATES HAVE NO ZONE, and saying one anyway is a
+       feed line that lies: Cold Snap's freeze picks across the opponent's
+       arsenal and their allies, and the default zone label read "revealed
+       from hand". */
     out.msgs.push(picked.map(c=>c.name).join(", ") +
-      (prompt.to ? " → " + prompt.to : " revealed") + " from " + prompt.zone + ".");
+      (prompt.to ? " → " + prompt.to
+                 : prompt.zone ? " revealed" : " chosen") +
+      (prompt.zone ? " from " + prompt.zone : "") + ".");
     /* PAID. The cards moved, so the rider resolves. */
     out.ops = prompt.ops || [];
     return out;

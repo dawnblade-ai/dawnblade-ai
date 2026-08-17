@@ -1110,6 +1110,41 @@ function fxParse(card){
      damage" / "draw a card" / "this gets +2{p}" all keep using the one
      reader. Nothing about a card is special-cased by name. */
   const handled = new Set();
+  /* ---- COLD SNAP: "may pay, and if they don't, FREEZE" (v3.03) --------
+
+     Two printed sentences, so they arrive as two clauses and are paired
+     here where the whole card is visible — the same reason `optCost` and
+     `payCost` are paired here rather than in `classifyClause`, which sees
+     one at a time.
+
+     RULING 2026-07-25: "this gives the opponent a pop up that allows them
+     to pay 1 resource to avoid the negative effect of the card. if they
+     don't pay the player gets a pop up and they can choose the arsenal or
+     an ally - whatever they choose cannot be played or activated until
+     the start of your next turn."
+
+     `payOr` is the offer and already exists (Winter's Bite uses it); the
+     freeze is its `elseOps`, which is exactly the shape that rule was
+     built for — declining is what makes the consequence happen. Until
+     v3.03 both halves were `noop`, so the card reported `tier: full`
+     while doing nothing; see the long note at the freeze clause above. */
+  for(let i = 0; i < clauses.length - 1; i++){
+    /* THE TRAILING PERIOD SURVIVES on the last clause of a paragraph — the
+       splitter breaks on ". " and nothing follows the final sentence — so
+       these anchors tolerate it. `classifyClause` strips it for its own
+       matching; this loop reads the raw clause text. */
+    const offer = clauses[i].match(/^target hero may pay ((?:\{r\})+|\d+)\.?$/i);
+    if(!offer) continue;
+    if(!/^if they don'?t, freeze .+ until the start of your next turn\.?$/i.test(clauses[i+1])) continue;
+    fx.ops.push(["payOr", rCost(offer[1]), [["freeze", 1]]]);
+    /* `handled` is how a paired reading marks its clauses read — the loop
+       below reports them `run` and does not re-classify them. Written as a
+       direct edit of `fx.clauses` this found nothing, because that array
+       is not built until the loop below runs. */
+    handled.add(i); handled.add(i+1);
+    break;                                       /* one pay-or-freeze per card in the pool */
+  }
+
   for(let i = 0; i < clauses.length - 1; i++){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
@@ -1930,6 +1965,13 @@ const printedKw = (c, k) => {
 const playableFromZone = (c, zone, o) => {
   o = o || {};
   if(!c) return false;
+  /* FROZEN (Cold Snap). "Whatever they choose cannot be played or
+     activated until the start of your next turn" — so the gate is here,
+     where both boards already ask whether a card may be played from where
+     it sits. `_frozenBy` records WHICH seat's freeze it is; the thaw
+     (`effects.thawFreeze`) reads the same mark, so no turn arithmetic is
+     stored and the two boards' different `turn` clocks cannot disagree. */
+  if(c._frozenBy != null) return false;
   /* the ordinary routes, and the two the trainer models as zones */
   if(zone === "hand" || zone === "arsenal" || zone === "weapon" || zone === "hero") return true;
   if(zone === "grave"){

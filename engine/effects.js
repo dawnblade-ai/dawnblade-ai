@@ -602,6 +602,49 @@ function makeEffects(ctx){
         actMut(n).deck = [...act(n).deck, pc];
         n = L(n, `${pc.name} loops under — bottom of your deck instead of the graveyard.`);
       }
+      /* ---- FREEZE (Cold Snap) --------------------------------------
+         RULING 2026-07-25: "if they don't pay the player gets a pop up and
+         they can choose the arsenal or an ally - whatever they choose
+         cannot be played or activated until the start of your next turn."
+
+         The candidates span TWO zones — the opponent's arsenal and their
+         allies — so they are supplied to `prompts.js` rather than read
+         from one, the way an attack-target's already are. The choice is
+         the FREEZING player's, so the sheet is addressed to the actor,
+         and `buildPrompt` returns null with fewer than two candidates, so
+         a single legal choice skips the sheet instead of asking a
+         question with one answer.
+
+         WHAT FREEZE STOPS, honestly: a frozen arsenal card cannot be
+         played — `parser.playableFromZone` refuses it on both boards. The
+         "or activated" half has nothing to bite on yet, because allies do
+         not attack (see judge.js's module header); the stamp is on the
+         entry and will be read the moment they do. */
+      else if(k==="freeze"){
+        /* THE ACTOR HERE IS THE DECLINING HERO, not the caster. `payOr`'s
+           `elseOps` are actor-relative to the side that was ASKED — that
+           is the actor a prompt resolves at, and it is the whole reason
+           the else-branch can say "they discard a card" without naming a
+           seat. So the objects to freeze are `act`'s ("freeze a card in
+           THEIR arsenal", where "their" is the target hero), and the
+           CHOICE belongs to the other seat, who played Cold Snap.
+
+           Written the other way round first, it read the caster's own
+           board and reported "Iyslander has nothing to freeze". */
+        const fs = actorOf(n);                   /* the target hero — theirs is frozen */
+        const chooser = 1-fs;                    /* the Cold Snap player chooses */
+        const sd = act(n);
+        const cands = [];
+        if(sd.arsenal) cands.push({...sd.arsenal, _frz:{kind:"arsenal", uid:sd.arsenal.uid}});
+        (sd.board||[]).filter(b => b && b.kind==="ally" && b.card)
+          .forEach(b => cands.push({...b.card, _frz:{kind:"ally", uid:b.uid}}));
+        if(!cands.length){ n = L(n, `${srcName}: ${sd.name} has nothing to freeze — no arsenal, no allies.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:chooser, src:srcName, cards:cands, min:1, max:1,
+          freezeSide: fs,
+          title:`Freeze one of ${sd.name}'s objects`,
+          hint:`It cannot be played or activated until the start of your next turn.`}];
+      }
       /* the dummy has a real deck, so banishing off its top is a real cost */
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
@@ -1380,6 +1423,23 @@ function makeEffects(ctx){
        now: "+2{p} this turn" and "go again this turn" have to survive
        until the arrow is actually played, which may be later the same
        turn. `opt` is a real effect and runs immediately. */
+    /* THE FREEZE STAMP. `prompts.js` runs no effects, so it reports WHICH
+       object was chosen and this applies it — the same split `arsStamp`
+       keeps one paragraph below. The mark records WHOSE freeze it is, so
+       the thaw needs no turn arithmetic: it lifts at the start of that
+       seat's next turn, which is what the card prints, and the two boards
+       count `turn` differently. */
+    if(p.tag === "pick" && p.freezeSide != null && (r.picked||[]).length){
+      /* The actor is borrowed to the ASKED side for this whole body, and
+         the asked side is the freezing player — so the frozen side is
+         simply `foe`, and the established Mut helper is the write path. */
+      const chosen = r.picked[0], fz = chosen._frz || {}, by = p.side || 0;
+      if(fz.kind === "arsenal" && foe(n).arsenal && foe(n).arsenal.uid === fz.uid)
+        foeMut(n).arsenal = {...foe(n).arsenal, _frozenBy: by};
+      else foeMut(n).board = (foe(n).board||[]).map(b =>
+        b && b.uid === fz.uid ? {...b, _frozenBy: by, card: {...b.card, _frozenBy: by}} : b);
+      n = L(n, `${chosen.name} is frozen — it cannot be played or activated until the start of ${act(n).name}'s next turn.`);
+    }
     if(p.tag === "pick" && p.to === "arsenal"){
       const put = act(n).arsenal;
       if(put && !put._faceUp){
@@ -1883,6 +1943,43 @@ function tickSuspense(game, seat){
   return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
 }
 
+/* ---- FREEZE LIFTS AT THE START OF THE FREEZING PLAYER'S TURN --------
+
+   "until the start of your next turn", where "your" is whoever played
+   Cold Snap. The mark records that seat rather than a turn number, and
+   this clears the marks belonging to `seat` wherever they landed — which
+   is why no turn arithmetic is involved. That matters: judge.js counts
+   `turn` in player-turns and the trainer counts only your own, so a
+   stored deadline would mean two different things on the two boards.
+
+   Pure and out here for the same reason `thawFrost` and `tickSuspense`
+   are: a schedule written into one board's turn boundary is a schedule
+   the other board does not have. */
+function thawFreeze(game, seat){
+  const sides = (game.sides || []).slice();
+  const names = [];
+  for(let i = 0; i < sides.length; i++){
+    const sd = Object.assign({}, sides[i]);
+    let touched = false;
+    if(sd.arsenal && sd.arsenal._frozenBy === seat){
+      const a = Object.assign({}, sd.arsenal); delete a._frozenBy;
+      sd.arsenal = a; names.push(a.name); touched = true;
+    }
+    if((sd.board || []).some(b => b && b._frozenBy === seat)){
+      sd.board = sd.board.map(b => {
+        if(!b || b._frozenBy !== seat) return b;
+        const e = Object.assign({}, b); delete e._frozenBy;
+        if(e.card){ e.card = Object.assign({}, e.card); delete e.card._frozenBy; names.push(e.card.name); }
+        return e;
+      });
+      touched = true;
+    }
+    if(touched) sides[i] = sd;
+  }
+  if(!names.length) return {game, thawed: []};
+  return {game: Object.assign({}, game, {sides}), thawed: names};
+}
+
 function thawFrost(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -1972,5 +2069,5 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, resolveInertia, tickSuspense, soakPolicy, payPolicy};
+return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, soakPolicy, payPolicy};
 });

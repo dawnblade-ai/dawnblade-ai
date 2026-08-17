@@ -1573,10 +1573,19 @@ test("the second-person debt in the shared semantics does not grow", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const lits = (src.match(/`[^`]*`|"[^"]*"/g) || []).filter(s => /\byour?\b/i.test(s));
-  /* 44 today. A real share are REFUSAL reasons, where the second person is
+  /* 45 today. A real share are REFUSAL reasons, where the second person is
      correct — telling those from feed lines is a judgement per line rather
-     than a regex, which is why this is a ledger and not a fix. */
-  assert.ok(lits.length <= 44,
+     than a regex, which is why this is a ledger and not a fix.
+
+     IT WENT 44 -> 45 AT v3.03, DELIBERATELY. Cold Snap's freeze opens a
+     `pick` whose hint reads "it cannot be played or activated until the
+     start of YOUR next turn" — and a prompt is addressed to ONE SIDE
+     (`spec.side` has meant that since v2.17), so the second person is
+     correct there for the same reason it is correct in a refusal. The
+     matching FEED line names the seat instead: "…until the start of
+     <name>'s next turn". Moving this number must always be an edit with a
+     reason attached; that is the whole device. */
+  assert.ok(lits.length <= 45,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

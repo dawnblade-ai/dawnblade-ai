@@ -37,7 +37,12 @@ const KEYWORDS = {
    "crank":               {status:"pending",  note:"RULED 2026-07-25: the item enters with a steam counter; crank prompts to spend it for an action point. Needs the prompt sheet"},
    "crush":               {status:"partial",     note:"4+ threshold checked at resolve; hand payload live from v2.05, arsenal/next-turn payloads still inert"},
    "dominate":            {status:"live",        note:"v2.05: the dummy holds cards, so this really does hold it to one blocker from hand"},
-   "freeze":              {status:"unreviewed",  note:""},
+   /* BUILT v3.03. Both halves were `noop` until v3.02 with reasons about a
+      training prop retired in v2.71, so Cold Snap reported `tier: full`
+      while doing nothing. `payOr` asks the target, declining freezes, and
+      the mark records WHOSE freeze it is so the thaw needs no turn
+      arithmetic — the two boards count `turn` differently. */
+   "freeze":              {status:"live",        note:"RULED 2026-07-25: the target may pay {r} to avoid it; if they decline the caster picks one of their arsenal cards or allies, and it cannot be played or activated until the start of the caster's next turn. The 'or activated' half has nothing to bite on until allies attack"},
    "go again":            {status:"live",        note:"printed via card_keywords; conditional grants parsed from text (never merged — the Kayo rule)"},
    "guardwell":           {status:"live",        note:"defense drops to 0 at chain close"},
    "heave":               {status:"unreviewed",  note:"seen on Thunder Quake (Guardian)"},

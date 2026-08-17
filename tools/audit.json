@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-17T19:00:29.188Z",
- "appVer": "3.01",
+ "generated": "2026-08-17T19:12:27.115Z",
+ "appVer": "3.02",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 304,
-  "part": 79,
+  "full": 305,
+  "part": 78,
   "none": 22
  },
  "heroes": {
@@ -2221,17 +2221,17 @@
     "freeze",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Target hero may pay {r}",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If this was played from arsenal, draw a card.",
@@ -2242,16 +2242,11 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Target hero may pay {r}",
-    "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf this was played from arsenal, draw a card.\nGo again",
-   "flags": [
-    "unreviewed keyword: \"freeze\""
-   ]
+   "flags": []
   },
   "emeritus scolding|3": {
    "name": "Emeritus Scolding",

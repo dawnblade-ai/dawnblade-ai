@@ -1556,6 +1556,11 @@ function endPhaseAfterArsenal(g, seat){
      here for three versions. */
   {
     const inc = n.turnPlayer;
+    /* FREEZE LIFTS AT THE START OF THE FREEZING PLAYER'S TURN (Cold Snap),
+       which is this moment for `inc`. Same shared-schedule rule as the
+       suspense tick below it. */
+    const fz = E.thawFreeze(n, inc);
+    if(fz.thawed.length){ n = say(fz.game, fz.thawed.join(", ") + " thaws — free to be played again."); }
     const sp = E.tickSuspense(n, inc);
     if(sp.msgs.length){
       n = sp.game;
