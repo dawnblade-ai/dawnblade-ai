@@ -812,6 +812,15 @@ function settle(g){
        which "when this hits" has already happened. `actions.js` strikes
        on the way out, which is fine for a blank game with nothing hanging
        off a hit and wrong for a real one. */
+    /* CARD TEXT THAT NEEDS THE DEFENDERS TO EXIST (CR 7.3 -> 7.4).
+       Phantasm reads the cards declared against the attack, so it is not
+       declaration-time text at all — the trainer has run it at exactly
+       this moment since v2.73 and this board never ran it at all, because
+       `afterDefenders` was only ever called from `index.html`. Driven, a
+       6-power blocker met Spears of Surreality and the attack resolved
+       for 2 anyway while the feed explained the drawback. Sev-3, on the
+       board the merge is making the default. */
+    if(g.step === "reaction" && before === "defend") g = afterDefenders(g);
     if(g.step === "damage" && before !== "damage") g = strike(g);
     if(g.step === "resolution" && before !== "resolution") g = resolveLink(g);
   }
@@ -832,6 +841,28 @@ function resolveLayer(g){
    priority.js says it is, its wall is whatever it declared, and the
    damage lands on it. There is no second copy of this for the other
    direction, which is the entire point. */
+/* ---- the defend step has closed (CR 7.3.4 -> 7.4) ----------------------
+   `effects.js` owns WHAT the text does; this owns WHO is defending and
+   what "the attack is gone" means here. The wall is the defending seat's
+   declared hand cards — phantasm reads no other kind, and equipment is
+   held on `blockG` precisely because it is a different thing.
+
+   A popped attack is DESTROYED, so it must leave the chain and land in a
+   zone: `closeChain` is already the one place that files chain cards
+   through `fileAttack`, so the link is closed here rather than given a
+   second, quieter description of where a spent card goes. */
+function afterDefenders(g){
+  const link = g.pend;
+  if(!link) return g;
+  const def = P.defendingPlayer(g), sd = at(g, def);
+  const wall = (sd.blockH || []).map(uid => (sd.hand || []).find(c => c.uid === uid)).filter(Boolean);
+  const out = withEffects({...g, actor: P.attackingPlayer(g)},
+    (fx, s) => fx.afterDefenders(s, wall));
+  if(!out._fizzled) return out;
+  const n = {...out}; delete n._fizzled;
+  return closeChain(P.reset(n));
+}
+
 function strike(g){
   const link = g.pend;
   if(!link) return g;

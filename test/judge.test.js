@@ -1168,6 +1168,86 @@ test("a card is never in two zones on the way through", {skip}, () => {
   }
 });
 
+/* ---- CARD TEXT THAT NEEDS THE DEFENDERS TO EXIST (CR 7.3.4 -> 7.4) ----
+
+   Phantasm reads the cards declared AGAINST the attack, so it cannot be
+   read at declaration. The trainer has run it at the close of the defend
+   step since v2.73 — and this board never ran it at all, because
+   `afterDefenders` was only ever called from `index.html`. Driven, a
+   6-power blocker met Spears of Surreality and the attack resolved for 2
+   anyway, while the feed printed the drawback as though it had applied.
+
+   No tool here could see it. Coverage read the card `full`; the fairness
+   sweep is one-sided toward cards STRONGER than printed and this one was
+   stronger on one board only; and `tools/failstates.js` graded the
+   keyword by counting mentions in `index.html`, which is a file the
+   semantics left in v2.53 — a source scan aimed at the wrong file, this
+   time failing by finding nothing rather than passing by it.
+
+   ASSERT ON ZONES AND LIFE. The old feed line was already correct while
+   the hero took the damage. */
+test("phantasm pops the attack at the table, not just in the trainer", {skip}, () => {
+  const atk = {...C.resolveEntry(DB(), {name: "Spears of Surreality", p: 1, code: null, q: 1}), uid: "ph1"};
+  assert.ok(PR.hasKw(atk, "phantasm"), "the printed keyword is the spec");
+
+  const big = {uid: "w1", name: "Six Power", def: 3, power: 6, pitch: 1,
+               tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"]};
+  let g = H.state({name: "You", res: 9, ap: 3, hand: [atk]},
+                  {name: "Them", hand: [big]},
+                  {actor: 0, turnPlayer: 0, seed: "phantasm"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+
+  let n = J.reduce(g, {t: "play", uid: "ph1", from: "hand"}, 0).state;
+  if(n.pending && n.pending.kind === "boost") n = J.reduce(n, {t: "boost", yes: false}, 0).state;
+  for(let i = 0; i < 8 && n.step !== "defend"; i++)
+    for(const seat of [0, 1]){
+      const out = J.reduce(n, {t: "pass"}, seat);
+      if(!out.error){ n = out.state; break; }
+    }
+  assert.equal(n.step, "defend", "the drill has to REACH the defend step or it proves nothing");
+
+  const d = J.reduce(n, {t: "defend", uid: "w1"}, 1);
+  assert.equal(d.error, null, "declaring the 6-power blocker was refused: " + d.error);
+  n = d.state;
+  for(let i = 0; i < 16 && n.phase === "action" && n.step !== "layer"; i++)
+    for(const seat of [0, 1]){
+      const out = J.reduce(n, {t: "pass"}, seat);
+      if(!out.error){ n = out.state; break; }
+    }
+
+  assert.equal(n.sides[1].hp, 20, "the attack was POPPED — no damage reaches the hero");
+  assert.equal(n.sides[0].ap, 2, "destroyed, so go again never resolves and the point is not refunded");
+  assert.deepEqual((n.chainCards || []).map(x => x.card.uid), [], "and it left the chain");
+  assert.deepEqual(n.sides[0].grave.map(x => x.uid), ["ph1"], "destroyed means the graveyard, once");
+  assert.deepEqual(INV.errors(n), [], "a popped attack still lands in exactly one zone");
+});
+
+/* A five-power blocker is the control: without it the drill above passes
+   just as well on an engine that pops EVERY blocked phantasm attack. */
+test("phantasm needs SIX printed power — five is an ordinary block", {skip}, () => {
+  const atk = {...C.resolveEntry(DB(), {name: "Spears of Surreality", p: 1, code: null, q: 1}), uid: "ph2"};
+  const five = {uid: "w2", name: "Five Power", def: 3, power: 5, pitch: 1,
+                tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"]};
+  let g = H.state({name: "You", res: 9, ap: 3, hand: [atk]},
+                  {name: "Them", hand: [five]},
+                  {actor: 0, turnPlayer: 0, seed: "phantasm5"});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  let n = J.reduce(g, {t: "play", uid: "ph2", from: "hand"}, 0).state;
+  if(n.pending && n.pending.kind === "boost") n = J.reduce(n, {t: "boost", yes: false}, 0).state;
+  for(let i = 0; i < 8 && n.step !== "defend"; i++)
+    for(const seat of [0, 1]){
+      const out = J.reduce(n, {t: "pass"}, seat);
+      if(!out.error){ n = out.state; break; }
+    }
+  n = J.reduce(n, {t: "defend", uid: "w2"}, 1).state;
+  for(let i = 0; i < 16 && n.phase === "action" && n.step !== "layer"; i++)
+    for(const seat of [0, 1]){
+      const out = J.reduce(n, {t: "pass"}, seat);
+      if(!out.error){ n = out.state; break; }
+    }
+  assert.equal(n.sides[1].hp, 18, "5 power blocks 3 of a 5-power attack — 2 gets through, and it HIT");
+});
+
 /* ---- A CARD THAT REDIRECTS ITSELF -------------------------------------
 
    "When this hits, put it on the bottom of its owner's deck."

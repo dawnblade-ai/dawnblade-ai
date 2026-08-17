@@ -557,8 +557,14 @@ test("execute hands back a DECLARATION for the caller to defend", () => {
     "a play that resolved fully must not fall into the defend step");
   assert.match(rp, /dummyDefence\(n, total, atk\)/,
     "declaring the opponent's blockers is the TRAINER's job now, not the module's");
-  assert.match(rp, /_EFX\.afterDefenders\(n\)/,
-    "and card text that needs the defenders to exist resolves after they do");
+  /* THE WALL IS THE CALLER'S, and the trainer's is `{k:"def"}` entries on
+     the stack. Reading either shape from inside effects.js is what made
+     phantasm work here and do nothing at all at the table, so this pins
+     that the trainer hands its own declarations over rather than leaving
+     the module to guess which board it is on. */
+  assert.match(rp, /_EFX\.afterDefenders\(n, n\.stack\.filter/,
+    "and card text that needs the defenders to exist resolves after they do, " +
+    "off a wall this caller supplies");
   /* The two phases the caller owns, and they are different outcomes:
      a popped attack has no reaction window to open. */
   assert.match(rp, /_fizzled[\s\S]{0,120}mode:"act"/,
@@ -585,7 +591,7 @@ test("afterDefenders is inert without a declaration, and clears it", () => {
   /* A dangling `_declared` would be resolved by a LATER play as if it were
      its own attack, so consuming it is part of the contract. */
   const withDecl = {...g, _declared: {card: card({name: "Declared Atk", tx: ""}), total: 4, declNote: ""}};
-  const done = efx.afterDefenders(withDecl);
+  const done = efx.afterDefenders(withDecl, []);
   assert.ok(!("_declared" in done), "the declaration is consumed, never left dangling");
 });
 

@@ -57,7 +57,7 @@ const ANCHORS = [
   ["autoPitch",    "  const autoPitch = (s, cost, keepUid) => {",     "effects"],
   ["applyAnswer",  "  const applyAnswer = (s, prompt) => {",          "effects"],
   ["fileAttack",   "  const fileAttack = (s2, card, from) => {",      "effects"],
-  ["afterDefenders","  const afterDefenders = (s) => {",              "effects"],
+  ["afterDefenders","  const afterDefenders = (s, wall) => {",        "effects"],
   /* v2.77 split the link's resolution into two shared pieces so a caller
      can put its OWN wall and its own damage routing between them. Both
      are rules functions and both are anchored, or the ledger would report

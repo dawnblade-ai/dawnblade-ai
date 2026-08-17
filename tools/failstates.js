@@ -189,6 +189,8 @@ const otherSubject = t => /\b(they|their|them|opponent|opposing|target card defe
    Where the ruling describes real behaviour, noop is a mis-filing. */
 const INERT_BY_DESIGN = /does nothing on its own|doesn'?t mean anything on it'?s own|nothing happens|is static and doesn'?t change|nothing on its own/i;
 
+const { KEYWORDS } = require("./ledger.js");
+
 function noopBlindSpots(card, RULINGS, mentionsFn){
   const out = [];
   for(const cl of (card.clauses || [])){
@@ -207,7 +209,15 @@ function noopBlindSpots(card, RULINGS, mentionsFn){
        the trainer's mentions and let the reviewer judge. Zero mentions plus
        real meaning is the only combination that reliably means absent. */
     const hits = mentionsFn ? mentionsFn(kw) : null;
-    const likelyHandled = hits != null && hits >= 3;
+    /* THE LEDGER OUTRANKS THE GREP. `tools/ledger.js` records what this
+       project claims to have BUILT, keyword by keyword, and a status of
+       `pending` means "understood and not implemented" in as many words.
+       Letting a mention count overrule that is how suspense — 11 mentions
+       across the engine, every one of them in the parser — would be
+       downgraded from a drawback nobody built to a "verify". A keyword
+       the ledger has not marked live is never `likelyHandled`, however
+       often the source says its name. */
+    const led = (KEYWORDS || {})[kw] || (KEYWORDS || {})[key] || null;
     /* A drawback filed as noop is the worst case: the card is above rate
        and every tool reports it as handled. */
     /* "can not" with a space is how the watery-grave ruling phrases it, and
@@ -215,6 +225,16 @@ function noopBlindSpots(card, RULINGS, mentionsFn){
        this wrong matters: unread, watery grave lets Gravy Bones replay the
        same ally out of the graveyard forever. */
     const isDrawback = /drawback|destroy(ed)?|penalt|can ?not|can'?t|reduce|restrict|prevent|infinit/i.test(txt);
+    /* A DRAWBACK HELD TO A HIGHER BAR THAN AN UPSIDE, deliberately. Half a
+       keyword is fine for a bonus and is exactly the wrong shape for a
+       penalty: watery grave's UPSIDE is live (Gravy Bones replays allies
+       out of the graveyard) while the face-down half the ruling exists for
+       is not built at all, which leaves the card above rate and every tool
+       calling it handled. So `partial` counts as built for meaning and not
+       for a drawback. */
+    const claimedBuilt = !led || led.status === "live"
+      || (!isDrawback && (led.status === "partial" || led.status === "approx"));
+    const likelyHandled = claimedBuilt && hits != null && hits >= 3;
     out.push({
       cat: "noop-with-meaning",
       /* a keyword the trainer clearly names is a VERIFY, not a defect */
@@ -384,9 +404,27 @@ module.exports = {failStates, heroFailStates, classify, CATS, SEV_NAME, isUnread
 if(require.main === module){
   const A = JSON.parse(fs.readFileSync(path.join(HERE, "audit.json"), "utf8"));
   let R = {}; try { R = JSON.parse(fs.readFileSync(path.join(HERE, "rulings.json"), "utf8")); } catch(e){}
-  /* the trainer source, so a keyword it enforces by name is not reported
-     as ignored on parser status alone (see noopBlindSpots) */
-  let TR = ""; try { TR = fs.readFileSync(path.join(HERE, "..", "index.html"), "utf8"); } catch(e){}
+  /* THE SEMANTICS ARE NOT IN index.html ANY MORE, AND HAVE NOT BEEN SINCE
+     v2.53. This read the trainer alone, so every keyword carried by
+     `engine/effects.js` counted ZERO mentions and was graded sev-3
+     "filed as no-op" — which is how 16 of the 17 UNFAIR entries came to
+     be one tool looking at the file the code left. Measured with this
+     tool's own regex: phantasm 2 mentions in index.html and 11 across the
+     engine, watery grave 2 and 13, suspense 2 and 11.
+
+     A source scan aimed at the wrong file passes by finding nothing; this
+     one FAILED by finding nothing, which is the same defect wearing the
+     opposite sign. It reads the whole engine now, and the count stays
+     what it always was — a SIGNAL, not a verdict. Phantasm is the worked
+     example in both directions: it was mentioned 11 times and still did
+     nothing at the table until v3.00 wired judge.js to call it. */
+  const srcOf = f => { try { return fs.readFileSync(f, "utf8"); } catch(e){ return ""; } };
+  const ENG = path.join(HERE, "..", "engine");
+  let TR = srcOf(path.join(HERE, "..", "index.html"));
+  try {
+    for(const f of fs.readdirSync(ENG).filter(x => x.endsWith(".js")))
+      TR += "\n" + srcOf(path.join(ENG, f));
+  } catch(e){}
   const mentionsFn = kw => {
     const bare = String(kw||"").replace(/[^A-Za-z ]/g, "").trim();
     if(!bare || !TR) return 0;

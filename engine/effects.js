@@ -1440,19 +1440,26 @@ function makeEffects(ctx){
      `_fizzled` when the attack did not survive to the reaction step. It
      never names a phase: what "the attack is gone" MEANS is the caller's,
      and that is the whole point of the split. */
-  const afterDefenders = (s) => {
+  const afterDefenders = (s, wall) => {
     let n = {...s};
     const d = n._declared;
     delete n._declared;
-    if(!d) return n;
-    const card = d.card;
+    /* WHO IS DEFENDING IS THE CALLER'S ANSWER, not this file's — the same
+       split `linkPumps`/`linkPayload` already keep. The trainer holds its
+       declarations as `{k:"def"}` entries on `stack`; judge.js holds them
+       on the defending side's `blockH`. Reading either shape from here
+       would be a second description of a wall, and reading only ONE of
+       them is how phantasm came to work on one board and silently do
+       nothing on the other. `wall` is the declared NON-EQUIPMENT cards;
+       phantasm reads no other kind. */
+    const card = d ? d.card : (n.pend && n.pend.card);
+    if(!card) return n;
     /* RULING 2026-07-25 — phantasm: a single blocker with 6+ printed POWER
        destroys this attack outright ("popping" it). Because the card is
        destroyed its go again never resolves and the action point is not
        refunded, so the pend is torn down here rather than resolved. */
     if(hasKw(card,"phantasm")){
-      const popper = n.stack.filter(l=>l.k==="def" && l.gi==null)
-        .map(l=>foe(n).hand.find(c=>c.uid===l.uid)).filter(Boolean)
+      const popper = (wall || [])
         /* PRINTED power, deliberately — not zonePow. This is phantasm
            reading the DEFENDING card, which is (a) the opponent's, and
            Kayo's clause 2 reads "attack action cards YOU OWN", and

@@ -3186,7 +3186,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const dd = dummyDefence(n, total, atk);
     n = dd.n;
     n = L(n, `${dd.note}${declNote} Priority to you — react or pass.`);
-    n = _EFX.afterDefenders(n);
+    /* THE TRAINER'S WALL: its declarations are `{k:"def"}` entries on the
+       stack, and a gear block carries `gi` instead of a uid. effects.js
+       takes the cards because judge.js keeps its wall somewhere else. */
+    n = _EFX.afterDefenders(n, n.stack.filter(l=>l.k==="def" && l.gi==null)
+      .map(l=>opp(n).hand.find(c=>c.uid===l.uid)).filter(Boolean));
     /* the attack did not survive its own defend step (phantasm), so there
        is no reaction window to open — back to the action phase */
     if(n._fizzled){ const o = {...n, mode:"act"}; delete o._fizzled; return o; }
