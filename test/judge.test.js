@@ -1296,3 +1296,130 @@ test("legal() gives a reason or null for every action, and never throws", {skip}
   assert.equal(J.legal(g, {t: "pass"}, 7), "no such seat");
   assert.equal(J.legal(null, {t: "pass"}, 0), "no action");
 });
+
+/* ===================================================================
+   THE FEED IS SHARED; A REFUSAL IS NOT (v2.83)
+
+   Found by playing a game at the local table rather than by a drill.
+   The dummy's own payment appeared in the log as "Brutal Assault costs
+   2 and YOU hold 0 — pitch, or cancel", because the message was written
+   in the second person while the state named the seat. On the trainer's
+   board that never mattered — seat 1 paid no costs — and it is wrong
+   the moment seat 1 spends anything, which it has since v2.71.
+
+   The distinction is real and both halves are load-bearing:
+
+     say(...)        goes into `feed`, which BOTH seats read  -> NAME the seat
+     return "reason" goes back to the caller who acted        -> "you" is right
+
+   So this is not "never say you". It is a census over the two kinds,
+   which is what stops the fix being three edited strings that a fourth
+   line quietly reopens.
+   =================================================================== */
+test("a log line names the seat; only a refusal speaks in the second person", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")          /* prose trips scans in both directions */
+    .replace(/\/\/[^\n]*/g, "");
+
+  /* Every argument to say() that is a literal or a concatenation of them.
+     A say() whose message is a variable is out of reach of a source scan
+     and is deliberately not claimed — see the driven check below. */
+  const says = [...src.matchAll(/\bsay\(/g)].map(m => {
+    /* walk to the matching close paren so a nested call cannot truncate it */
+    let i = m.index + 4, depth = 1;
+    while(i < src.length && depth > 0){ const c = src[i]; if(c === "(") depth++; else if(c === ")") depth--; i++; }
+    return src.slice(m.index, i);
+  });
+  /* 27 today. The floor is a canary against the SCAN breaking, not a pin
+     on how much judge.js logs — set from the real count rather than
+     guessed, because a threshold nobody measured is the same as none. */
+  assert.ok(says.length >= 20, `only ${says.length} say() calls found — the scan shape moved, repoint this drill`);
+
+  const offenders = [];
+  for(const s of says)
+    for(const lit of (s.match(/"[^"]*"/g) || []))
+      if(/\byour?\b/i.test(lit)) offenders.push(lit);
+  assert.deepEqual(offenders, [],
+    "these go into the shared feed and address one seat as 'you' — name the seat instead");
+
+  /* AND THE OTHER HALF, or this passes just as well on an engine that
+     stopped refusing anything at all. Refusals are returned, not logged,
+     and they SHOULD be second person. */
+  const g = J.newMatch({builds: [null, null], names: ["A", "B"], heroKeys: [null, null],
+                        first: 0, seed: "voice"});
+  assert.equal(J.legal(g, {t: "pass"}, 1), "you do not hold priority",
+    "a refusal is addressed to whoever attempted the action");
+});
+
+/* The same rule, DRIVEN — because a source scan cannot see a message built
+   from a variable, and because the scan alone would not have caught this
+   one had the string been assembled a line earlier.
+
+   THE FIRST VERSION OF THIS DRILL PASSED BY FINDING NOTHING, and it is
+   worth saying how: it built `newMatch({builds:[null,null]})`, which seats
+   two heroes with no deck and no hand. The game ran 101 turns and produced
+   1002 feed lines — every one of them an end-phase step — and NOT ONE
+   payment, because neither seat ever had a card to pay for. It asserted
+   `feed.length > 0`, which was true and meaningless. Sabotaging the fix
+   left it green while the source scan beside it went red, which is the
+   only reason it was caught.
+
+   So it drives two REAL precons, and it asserts that it saw the thing it
+   is about before it asserts anything about how that thing reads. */
+test("a payment reaches the shared feed under the paying seat's name", {skip}, () => {
+  const {g} = drive(match({seed: "voice-2"}));
+  const feed = g.feed || [];
+
+  /* THE CANARY FIRST: this drill is only worth having if the game actually
+     reached a payment. Without this it passes on any game at all. */
+  const pays = feed.filter(l => /pitch, or cancel/.test(l));
+  assert.ok(pays.length > 0,
+    "the driven game never reached a payment — this drill would prove nothing");
+
+  /* Both seats pay over a full game, so this covers both without having to
+     name which. */
+  const secondPerson = pays.filter(l => /\byour?\b/i.test(l));
+  assert.deepEqual(secondPerson, [],
+    "a payment line must name the seat paying, not address one of them");
+});
+
+/* ---- THE REST OF THE FEED IS A LEDGER, NOT A CLEAN BILL --------------
+   Driving the drill above over two real precons turned up the SAME defect
+   in `engine/effects.js`, which judge.js's source scan cannot see because
+   it is a different file:
+
+     "Dawnblade connects — YOUR hero ability frees it for one more swing"
+     "The first card with 6 or more {p} YOU have discarded this action phase"
+
+   Those are card semantics, shared by both boards, and they read as the
+   player's whichever seat resolved them. It is the same rule and it is a
+   separate pass: 44 literals in that file mention you/your and a real
+   share of them are REFUSAL reasons, where the second person is correct.
+   Telling those apart is a judgement per line, not a regex.
+
+   So the debt is PINNED rather than papered over or silently fixed in a
+   commit about something else — the same device `flatRemaining` used for
+   the sides migration, and what keeps "known" from decaying into folklore.
+
+   IT PINS THE SOURCE, NOT A GAME'S OUTPUT. The obvious version of this
+   drill counts second-person lines in a driven feed, and that count is
+   EMERGENT: 3 on one seed, 4 on the next, because it depends on which
+   cards happened to resolve. Pinning it would turn every honest card fix
+   into a red drill and train the reader to edit the number without
+   thinking — HANDOFF-MERGE.md's own lesson 5, in a fresh disguise. The
+   number of second-person literals IN THE FILE is a property of the code,
+   so it moves only when somebody writes or fixes one. */
+test("the second-person debt in the shared semantics does not grow", () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const lits = (src.match(/`[^`]*`|"[^"]*"/g) || []).filter(s => /\byour?\b/i.test(s));
+  /* 44 today. A real share are REFUSAL reasons, where the second person is
+     correct — telling those from feed lines is a judgement per line rather
+     than a regex, which is why this is a ledger and not a fix. */
+  assert.ok(lits.length <= 44,
+    `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
+  /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
+     matching, an empty result reads as a clean file. */
+  assert.ok(lits.length >= 30,
+    `only ${lits.length} matched — the scan shape moved, repoint this drill rather than banking the win`);
+});

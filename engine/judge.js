@@ -1064,8 +1064,15 @@ function doPlay(g, a, seat){
      cannot pitch to bank resources. The pool is filled only when a cost
      exceeds what you hold, and then you may pitch OR cancel. */
   if(cost > sd.res){
+    /* A LOG LINE IS READ BY BOTH SEATS, SO IT NAMES THE SEAT (v2.83). This
+       said "you hold 0" for whichever side was paying, so the dummy's own
+       payment appeared in the feed addressed to the player — read from a
+       real table as though the game were demanding a pitch nobody had been
+       asked for. A REFUSAL is different and stays second person: it is
+       returned to the caller who attempted the action, and never enters
+       the shared feed. */
     return say({...g, pending: {kind: "pay", seat, card, from: zone, need: cost, window, target}},
-      card.name + " costs " + cost + " and you hold " + sd.res + " — pitch, or cancel.");
+      card.name + " costs " + cost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
   }
   return commitPlay(g, card, zone, seat, window, target);
 }
@@ -1095,7 +1102,7 @@ function doActivate(g, a, seat){
   const target = targetOf(g, seat, a.target);
   if(cost > sd.res){
     return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost, target}},
-      piece.name + " costs " + cost + " to swing and you hold " + sd.res + " — pitch, or cancel.");
+      piece.name + " costs " + cost + " to swing and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
   }
   return commitPlay(g, piece, "weapon", seat, null, target);
 }
@@ -1332,7 +1339,7 @@ function doEndTurn(g, seat){
   /* (b) the turn-player may arsenal. Ask, then continue in doArsenal. */
   const hand = at(n, seat).hand;
   if(!at(n, seat).arsenal && hand.length && PR.arsFree(at(n, seat)) > 0)
-    return say({...n, arsenalFor: seat}, "(b) Set a card in your arsenal, or skip.");
+    return say({...n, arsenalFor: seat}, "(b) " + at(n, seat).name + " may set a card in the arsenal, or skip.");
   return endPhaseAfterArsenal(say(n, "(b) No arsenal set."), seat);
 }
 

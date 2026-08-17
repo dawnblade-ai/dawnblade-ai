@@ -1455,7 +1455,7 @@ var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
     resolveEntry = DawnCards.resolveEntry, resolveHero = DawnCards.resolveHero;
 var advPitchPotential = DawnAdvisor.advPitchPotential, advCardOut = DawnAdvisor.advCardOut,
     advValue = DawnAdvisor.advValue, advBestPitch = DawnAdvisor.advBestPitch,
-    advise = DawnAdvisor.advise;
+    advView = DawnAdvisor.advView, advise = DawnAdvisor.advise;
 var ARMOR_Z = DawnBuild.ARMOR_Z, HAND_Z = DawnBuild.HAND_Z, gearSlots = DawnBuild.gearSlots,
     applyPick = DawnBuild.applyPick, defaultPicks = DawnBuild.defaultPicks,
     buildSide = DawnBuild.buildSide, buildSideDefault = DawnBuild.buildSideDefault,
@@ -3674,109 +3674,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const n = endPhaseCF(s, 0);
     return n.over ? n : foeBegin(n);
   }
-  /* The dummy's swing, split out of afterArsenal so the opponent-goes-first
-     opening can take the same path. This is also the seam a real card slots
-     into when the dummy finally gets an action phase (roadmap item 3) — the
-     scripted escalation is the only faked part, and it lives here alone. */
-  /* ---- A REAL CARD FROM A REAL HAND (v2.63, roadmap item 3) ------------
-     With a hero in seat 1 the opponent has a real deck, real gear and real
-     printed passives — everything except a turn. This gives it one.
-
-     WHY THE ACTOR STAYS 0 FOR THE SWING ITSELF. The obvious move is to set
-     `actor:1` and push the card through `execute`, and it does not work:
-     `execute` calls `dummyDefence`, which picks blocks for seat 1, and the
-     whole block path (`toggleBlock`, `finishBlock`, `takeIt`) reads
-     `act(s).blockH` — with the actor flipped, the attacker would be asked
-     to block its own attack. Untangling that is the same actor work
-     `newTurn`/`foeSwing` are still PENDING for.
-
-     So the swing is assembled here and the actor is borrowed ONLY around
-     the card's own effects, where `runOps` is fully actor-relative and
-     drilled to be. Everything the player then does — declaring blockers,
-     reactions, damage — runs on the unchanged, working path.
-
-     It is a heuristic, and a deliberately plain one: the biggest attack it
-     can pay for, cheapest pitch first. Per the standing decision this is
-     NOT an AI opponent and not a difficulty curve — it is a real card
-     instead of a fabricated number. */
-  function foePick(n){
-    const hand = opp(n).hand || [];
-    const bank = c => hand.filter(x=>x.uid!==c.uid).reduce((a,x)=>a+(x.pitch||0), 0) + (opp(n).res||0);
-    /* THE PRINTED GATE IS PART OF LEGALITY, NOT PART OF THE HEURISTIC
-       (v2.65). Borrow the actor so `playIfOk` reads seat 1's pitch zone
-       and seat 1's graveyard — asked with the ambient actor it would gate
-       the opponent's card on the PLAYER's board. */
-    const asFoe = {...n, actor:1};
-    return hand
-      .filter(c => isAttack(c) && !isRx(c) && !DawnTypes.isBlock(c))
-      .filter(c => playIfOk(asFoe, c))
-      .filter(c => effCost(c, opp(n)) <= bank(c))
-      .sort((a,b) => (b.power||0)-(a.power||0) || a.uid-b.uid)[0] || null;
-  }
-  function foePlay(s, card){
-    let n = {...s};
-    const cost = effCost(card, opp(n));
-    /* pay it: cheapest pitch first, so the fat cards stay for the swing */
-    let res = opp(n).res || 0, pitched = [];
-    const rest = opp(n).hand.filter(x=>x.uid!==card.uid)
-      .slice().sort((a,b)=>(a.pitch||0)-(b.pitch||0));
-    for(const p of rest){ if(res >= cost) break; res += (p.pitch||0); pitched.push(p); }
-    const spent = new Set(pitched.map(p=>p.uid));
-    const o = oppMut(n);
-    o.hand  = opp(n).hand.filter(x=>x.uid!==card.uid && !spent.has(x.uid));
-    o.pitch = [...opp(n).pitch, ...pitched];
-    o.res   = Math.max(0, res - cost);
-    o.hist  = {...opp(n).hist, atk:(opp(n).hist.atk||0)+1};
-    if(pitched.length) n = L(n, `${opp(n).name} pitches ${pitched.map(p=>p.name).join(", ")} for ${cost}.`);
-
-    /* THE CARD'S OWN EFFECTS BELONG TO ITS OWNER. Borrow the actor for
-       exactly this, then hand it straight back — every rules helper inside
-       runOps reads s.actor, so this is the supported way to resolve one
-       side's effect while the rest of the turn belongs to the other. */
-    const fx = fxParse(card);
-    /* AN ADDITIONAL COST IS A COST, NOT AN EFFECT (v2.65). It is paid to
-       play the card at all, so it is not subject to the `declOps`
-       whitelist below and it is not optional. Seat 1 was paying it on
-       neither path: Savage Feast prints "As an additional cost to play
-       Savage Feast discard a random card" and the opponent simply never
-       discarded — a printed drawback skipped, and the one place the
-       mirror ran STRONGER than printed.
-
-       `payAddCost` is the same body `execute` pays through, borrowed the
-       same way as the effects below: it is actor-relative throughout, so
-       it discards out of seat 1's hand and stamps seat 1's graveyard with
-       `gyDisc`. The conditional payoff that follows it in `execute` is
-       deliberately not taken here — that is the documented limit, and
-       paying a cost without collecting the bonus is the safe direction. */
-    if(fx.addCost && fx.addCost.discard && opp(n).hand.length){
-      const paid = _EFX.payAddCost({...n, actor:1}, card, fx);
-      n = {...paid.game, actor:0};
-    }
-    const declOps = (fx.ops||[]).filter(o=>["draw","discardRandom","token","rune","res","buffNext","gaNext","amp","ward","mark","dmg"].includes(o[0]));
-    if(declOps.length){
-      const borrowed = _EFX.runOps({...n, actor:1}, declOps, card.name);
-      n = {...borrowed, actor:0};
-    }
-    const power = Math.max(0, (card.power||0) + (opp(n).buffNext||0));
-    if(opp(n).buffNext) oppMut(n).buffNext = 0;
-    n.incoming = Math.max(0, power - you(n).fra);
-    if(you(n).fra>0){ n=L(n,`Frailty saps the swing: ${power} → ${n.incoming}.`); youMut(n).fra=0; }
-    oppMut(n).grave = [...gy(n.turn, card), ...opp(n).grave];
-    /* THE ACTION POINT IS AN ACTION'S COST, AND GO AGAIN IS A GAIN (CR
-       8.1.1 / 5.3.5) — the same arithmetic `execute` spells out for you,
-       and for the same reason: `ga ? keep : -1` cannot say "+1" and this
-       is what lets seat 1 chain a second link off a go again attack
-       instead of getting exactly one swing a turn forever. `hasKwNow`
-       rather than raw text, so a conditionally-granted go again does not
-       hand it a free action it has not earned. */
-    const _fga = hasKwNow(card, "go again");
-    oppMut(n).ap = opp(n).ap - 1 + (_fga ? 1 : 0);
-    n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:n.incoming,ga:_fga,kind:"foe"}];
-    n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — ${opp(n).name.toUpperCase()} ATTACKS`};
-    n.mode="block"; n.bphase="defend"; youMut(n).blockH=[]; youMut(n).blockG=[]; youMut(n).blockRx=[];
-    return L(n, `${opp(n).name} plays ${card.name} — ${n.incoming} power${_fga?", and it goes again":""}.`
-      + ` Priority to you — reactions, blocks, or take it.`);
-  }
   /* PITCH ON DEMAND, AT INSTANT SPEED. Pitching is never proactive (ruling,
      2026-08-01): the pool is filled only when something costs more than you
      hold. On your own turn `mode:"pay"` asks with a sheet; in an instant
@@ -4457,7 +4354,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <span className="sside r">{opp(g).name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{frostCount(opp(g))>0?` · ❄${frostCount(opp(g))}`:""}</span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
-              <Advisor g={g} ctx={{runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
+              {/* THE WINDOW IS PASSED, NOT SNIFFED (v2.83). `advise` used to
+                  read `g.mode` itself, which is right here and silently wrong
+                  at the table — judge.js seeds `mode` once and never writes
+                  it, so a table game would be coached as an action phase from
+                  the first draw to the last point of life. The trainer's
+                  `mode` is live and authoritative, so it says so out loud;
+                  the table derives the same answer with `advView`. */}
+              <Advisor g={g} ctx={{window:g.mode, incoming:g.incoming, runeDmg:built.runeDmg, hpow:built.HPOW, boostOn:g.boostOn, dBlk:opp(g).gear.filter(x=>gearDef(x)>0).length + opp(g).hand.filter(c=>(c.def||0)>0).length, dDef:gearDef(opp(g).gear.find(x=>gearDef(x)>0)||{})||1}} read={built.read}/>
               <div className="gamelog" style={{marginTop:8}}>{[...g.feed].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
             </div>
             {/* PANE 2 — PLAY: dummy hand · stack|card|defend · your hand+extras */}
@@ -5969,6 +5873,40 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <span className="sside r">{them.name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,them.hp)}</span></span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
+              {/* ---- CLAUDE'S CALL, AT THE TABLE (v2.83) ------------------
+                  This board had no advisor, and the stated reason — that it
+                  "would coach card text that does not resolve here" — has
+                  been false since v2.77, when judge.js started resolving
+                  every card effect through engine/effects.js. What was
+                  actually missing was the WINDOW: `advise` read `g.mode`,
+                  which judge seeds once and never writes, so it would have
+                  coached the action phase in every step of every turn.
+                  `advView` derives it from the CR machine instead.
+
+                  LOCAL SESSIONS ONLY, and that is a decision rather than a
+                  limit of the machinery. Across a network the seat opposite
+                  is a PERSON: `advCardOut` prices your line against the
+                  opponent's gear and hand, which at a table is reading a
+                  board you can see but coaching against an opponent who is
+                  choosing — and the trainer's whole framing is that the
+                  advisor reads a punching bag. Turn it on for a person only
+                  as a deliberate call.
+
+                  AND SEAT 0 ONLY, stated rather than assumed. `advise` reads
+                  its own hand through `you(g)`, which is `sides[0]` — a
+                  module-local accessor, not the seat it was handed. Asking
+                  `advView` for seat 1 while `advise` coached seat 0's hand
+                  would derive the right window for the wrong player, and it
+                  would read as ordinary bad advice. A local session always
+                  seats you at 0, so this costs nothing today and cannot go
+                  quietly wrong if that ever changes. */}
+              {local && mySeat === 0 && <Advisor g={g}
+                ctx={{...advView(g, mySeat),
+                      runeDmg: myBuild.runeDmg, hpow: myBuild.HPOW, boostOn: false,
+                      dBlk: (them.gear||[]).filter(x=>gearDef(x)>0).length
+                          + (them.hand||[]).filter(c=>(c.def||0)>0).length,
+                      dDef: gearDef((them.gear||[]).find(x=>gearDef(x)>0)||{})||1}}
+                read={myBuild.read}/>}
               <div className="gamelog" style={{marginTop:8}}>{[...(g.feed||[])].reverse().map((l,i)=><div key={i} className="gl">{l}</div>)}</div>
             </div>
 

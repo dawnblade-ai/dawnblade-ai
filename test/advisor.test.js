@@ -79,24 +79,85 @@ const gameWith = (side0, rest) => ({
   ]
 });
 
+/* THE WINDOW IS A PARAMETER AS OF v2.83 — see advisor.js's advView header.
+   These fixtures pass it explicitly, exactly as both boards do; a fixture
+   that still relied on `mode` would be testing a field `advise` no longer
+   reads and would pass for the wrong reason. */
 test("advise — act mode with an empty board says end turn", () => {
   P.fxReset();
-  const r = A.advise(gameWith({}), {runeDmg:1});
+  const r = A.advise(gameWith({}), {runeDmg:1, window:"act"});
   assert.match(r.line, /End turn/);
 });
 
 test("advise — recommends the profitable attack in act mode", () => {
   P.fxReset();
   const g = gameWith({hand:[{name:"adv-drill-swing", pitch:1, tt:"Attack Action", power:7, def:3, cost:0, kw:[], tx:""}]});
-  const r = A.advise(g, {runeDmg:1});
+  const r = A.advise(g, {runeDmg:1, window:"act"});
   assert.match(r.line, /adv-drill-swing/);
 });
 
 test("advise — block mode reads both sides' life off sides[]", () => {
   P.fxReset();
   const g = gameWith(
-    {hp:6, hand:[{name:"adv-drill-shield", pitch:2, tt:"Attack Action", power:2, def:3, cost:0, kw:[], tx:""}]},
-    {mode:"block", incoming:4});
-  const r = A.advise(g, {runeDmg:1});
+    {hp:6, hand:[{name:"adv-drill-shield", pitch:2, tt:"Attack Action", power:2, def:3, cost:0, kw:[], tx:""}]});
+  const r = A.advise(g, {runeDmg:1, window:"block", incoming:4});
   assert.match(r.line, /adv-drill-shield/, "on 6 life it should block, not take it");
+});
+
+/* ===================================================================
+   THE WINDOW (v2.83) — the advisor is TOLD, it never sniffs.
+
+   `judge.js` seeds `mode` into its opening state and never writes it
+   again, so a table game carries `mode:"act"` for its whole length.
+   The failure that creates is not a crash — it is confident
+   action-phase coaching in every step of every turn, which is the
+   category the player TRUSTS. These pin both halves: that a missing
+   window is REFUSED rather than guessed, and that advView reads the
+   CR machine rather than the dead field.
+   =================================================================== */
+test("advise REFUSES without a window rather than guessing the action phase", () => {
+  P.fxReset();
+  /* The fixture still carries `mode:"act"`, so a fallback to `g.mode`
+     would make this return real coaching — which is exactly the silent
+     path being closed. Sabotage-proven: restoring the fallback turns
+     this red. */
+  const r = A.advise(gameWith({}), {runeDmg:1});
+  assert.match(r.line, /not told which step/,
+    "a missing window must be visible, not resolved to action-phase advice");
+  assert.ok(!/End turn/.test(r.line), "and must not read g.mode behind the caller's back");
+});
+
+test("advView derives the window from the CR machine, not from mode", () => {
+  /* A judge-SHAPED state: `mode` says one thing throughout and the CR
+     fields say another, which is precisely the table's situation. */
+  const base = {mode:"act", turnPlayer:0, priority:0, phase:"action", step:"layer",
+                sides:[{}, {}]};
+  assert.equal(A.advView(base, 0).window, "act");
+
+  /* CR 7.3.2 — the defender declares in the defend step. The ATTACKER is
+     seat 1, so seat 0 is the one blocking. */
+  const defending = {...base, phase:"action", step:"defend", attacker:1,
+                     pend:{total:7}};
+  const v = A.advView(defending, 0);
+  assert.equal(v.window, "block", "seat 0 is declaring defenders");
+  assert.equal(v.incoming, 7,
+    "and the incoming damage comes off pend.total — judge never writes g.incoming");
+
+  /* The same state, asked of the ATTACKING seat, is not a block. */
+  assert.notEqual(A.advView(defending, 1).window, "block",
+    "the attacker is not the one declaring defenders");
+
+  /* CR 8.1.2a — an attack reaction belongs to whoever controls the attack. */
+  assert.equal(A.advView({...base, step:"reaction", attacker:0}, 0).window, "stack");
+  assert.equal(A.advView({...base, step:"reaction", attacker:1}, 0).window, "act",
+    "their attack is not your reaction window");
+
+  /* A payment belongs to ONE seat. */
+  assert.equal(A.advView({...base, pending:{seat:0, kind:"pay"}}, 0).window, "pay");
+  assert.equal(A.advView({...base, pending:{seat:1, kind:"pay"}}, 0).window, "act",
+    "their payment is not yours to advise on");
+
+  /* CR 4.4.3b — the arsenal set names the seat it is asking. */
+  assert.equal(A.advView({...base, phase:"end", arsenalFor:0}, 0).window, "arsenal");
+  assert.equal(A.advView({...base, phase:"end", arsenalFor:1}, 0).window, "act");
 });

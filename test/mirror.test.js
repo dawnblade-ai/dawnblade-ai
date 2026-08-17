@@ -173,21 +173,42 @@ test("the no-play branch still ends the turn — the soft-lock (v2.65, v2.71)", 
     "a window with nothing in it must not open — buildPrompt's own rule");
 });
 
-test("foePick asks the printed gate, not just type and affordability", () => {
-  const body = slice("  function foePick(n){", "  function foePlay(s, card){");
-  /* THE BUG: Bear Hug and Run Roughshod both print "Play this only if …"
-     and both swung with the gate unmet — sev-3 illegal play allowed. */
-  assert.ok(/playIfOk\(/.test(body), "foePick must consult the playIf gate");
-  assert.ok(/actor\s*:\s*1/.test(body),
-    "and must ask it AS SEAT 1 — at the ambient actor it reads the player's board");
-});
+/* ===================================================================
+   THE SOLO MIRROR IS BURNED (v2.83)
 
-test("foePlay pays an additional cost before it resolves the card", () => {
-  const body = slice("  function foePlay(s, card){", "  const autoPitch = _EFX.autoPitch;");
-  assert.ok(/payAddCost\(/.test(body),
-    "an additional cost is a COST — Savage Feast's discard was never paid");
-  assert.ok(/addCost/.test(body) && /actor\s*:\s*1/.test(body),
-    "paid out of seat 1's hand, via the borrow");
+   v2.81 ruled that a seat the dummy fills is ALWAYS the vanilla pile,
+   which made `foePick`/`foePlay` — the closures that played a real
+   hero's card in seat 1 — unreachable. They were kept one version
+   longer because the mechanics they recorded were still true of them.
+
+   They are gone now, and what replaces the three drills that pinned
+   their internals is the claim that actually matters going forward:
+   NONE OF IT IS THERE. The same substitution v2.81 made for the
+   opponent picker, and for the same reason — a second way to play a
+   card in seat 1 comes back one closure at a time, and while it exists
+   it is a second description of a rule that `judge.reduce` already
+   owns.
+
+   Nothing was lost with them. Every mechanic they held is asked of the
+   live path instead: the printed `playIf` gate, the additional cost,
+   and go-again-as-a-GAIN are all `execute`'s, drilled in
+   `test/kayo.test.js` and `test/judge.test.js` against the reducer a
+   player actually drives.
+   =================================================================== */
+test("the solo mirror is gone — seat 1 never plays a hero's card in Battle", () => {
+  /* Comments stripped: this file's own prose names both functions, and a
+     scan that reads them would report the mirror as live forever. Same
+     discipline as the sync guard's, and the reason v2.66's mirror-image
+     false positive is a documented shape. */
+  const CODE = HTML.replace(/\/\*[\s\S]*?\*\//g, "");
+  for(const dead of ["foePick", "foePlay"])
+    assert.ok(!new RegExp("\\b" + dead + "\\b").test(CODE),
+      dead + " is back in live code — a seat the dummy fills is always the vanilla pile (v2.81)");
+  /* AND THE SEAT STILL TAKES ITS TURN. Without this the drill above passes
+     just as well if somebody deleted seat 1's action phase along with the
+     mirror, which is the "passes by finding nothing" shape. */
+  assert.ok(/function foeVanilla\(s\)\{/.test(CODE) && /function foeBegin\(s\)\{/.test(CODE),
+    "seat 1 must still have a turn — only the hero-card path was burned");
 });
 
 test("promptConfirm pays out to the prompt's SIDE, not always to seat 0", () => {
@@ -270,16 +291,26 @@ test("the vanilla escalation spends the action point — one swing per turn", ()
     "and the tuned curve itself is untouched — it is what difficulty is built on");
 });
 
-test("a go again attack lets seat 1 chain a second link (CR 5.3.5)", () => {
-  const play = slice("  function foePlay(s, card){", "  const autoPitch = _EFX.autoPitch;");
+test("go again is a GAIN on the shared path, for whichever seat is acting", () => {
+  /* THIS DRILL WAS SLICING `foePlay` (v2.83). That was the mirror's own
+     copy of the arithmetic; burning it did not weaken the claim, because
+     the claim belongs to `execute` — the ONE body both boards resolve a
+     card through — where it is asked of `act(n)` rather than of `opp(n)`.
+     Repointed rather than deleted: a rule with no drill is worse than a
+     drill aimed at a retired copy. */
+  const EFFECTS = require("./helpers/extract.js").effects();
+  const a0 = EFFECTS.indexOf("    const apCost = costsAP(card, opts && opts.window) ? 1 : 0;");
+  assert.ok(a0 > 0, "anchor moved — repoint this drill deliberately");
+  const body = EFFECTS.slice(a0, a0 + 400);
   /* GO AGAIN IS A GAIN, NOT A REFUND — `ga ? keep : -1` cannot say +1, and
      spelling it out is what makes an instant cost nothing (CR 8.1.6). */
-  assert.ok(/opp\(n\)\.ap\s*-\s*1\s*\+\s*\(_fga\s*\?\s*1\s*:\s*0\)/.test(play),
-    "the action point is spent and go again GAINS one back");
-  /* hasKwNow, not raw text: a conditionally-granted go again must not hand
-     seat 1 a free action it has not earned (the v2.31 shape). */
-  assert.ok(/hasKwNow\(card,\s*"go again"\)/.test(play),
-    "read through the keyword gate, never off raw printed text");
+  assert.ok(/actMut\(n\)\.ap\s*=\s*act\(n\)\.ap\s*-\s*apCost\s*\+\s*\(ga\s*\?\s*1\s*:\s*0\)/.test(body),
+    "the action point is spent and go again GAINS one back — for the ACTING seat");
+  /* An action costs the point and an instant does not (CR 8.1.1 / 8.1.6).
+     Folded back into a ternary this becomes unsayable, which is the bug
+     v2.39 fixed: Achilles Accelerator netted to zero and did nothing. */
+  assert.ok(/costsAP\(card/.test(body),
+    "and the cost itself is asked, never assumed to be 1");
 });
 
 test("seat 1's end phase is the SAME procedure, not a second copy", () => {

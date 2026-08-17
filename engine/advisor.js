@@ -4,9 +4,10 @@
    from index.html. No DOM, no React: state in, coaching out.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"));
-  else root.DawnAdvisor = factory(root.DawnParser);
-})(typeof self!=="undefined" ? self : this, function(P){
+  if(typeof module==="object" && module.exports)
+    module.exports = factory(require("./parser.js"), require("./priority.js"));
+  else root.DawnAdvisor = factory(root.DawnParser, root.DawnPriority);
+})(typeof self!=="undefined" ? self : this, function(P, PRI){
 
 const {fxParse, effCost, isAttack, isArrow, isWeapon, isAR, isRx, isInstantT, costsAP, hasKw, runeCount} = P;
 
@@ -60,11 +61,67 @@ function advBestPitch(hand, need, exclIdx, valueOf){
   }
   return best;
 }
+/* ---- WHICH WINDOW IS THIS SEAT IN (v2.83) ---------------------------
+   THE ADVISOR IS TOLD WHICH WINDOW IT IS IN. IT NEVER SNIFFS, and the
+   reason is specific rather than stylistic.
+
+   `advise` was written against the trainer's `mode`. `judge.js` seeds
+   `mode` into its opening state — every game carries both vocabularies,
+   deliberately, so that neither being present says which engine is
+   driving — and then never writes it again. So a table game carries
+   `mode:"act"` from the first draw to the last point of life.
+
+   Handing `advise` a judge state unchanged therefore does NOT fail. It
+   coaches, confidently, off a frozen field: action-phase advice while
+   you are being attacked, in every step of every turn. That is the
+   "displayed value is wrong" category — sev-2, the one the player
+   TRUSTS — and no drill that checks the advisor returns a line could
+   see it.
+
+   So the window is a parameter, and this derives it for a judge state
+   off the CR machine and the fields judge actually maintains. The
+   trainer passes its own `mode`, which is live and authoritative there
+   and retires with `Battle`. */
+function advView(g, seat){
+  const me = seat || 0;
+  /* A payment is an INTERACTION belonging to one seat (judge's `pending`):
+     while it is set that seat may only finish or abandon it. */
+  if(g.pending && g.pending.seat === me) return {window:"pay", incoming:0};
+  /* CR 4.4.3b — the arsenal set is an END-PHASE step, and judge names the
+     seat it is asking rather than leaving it to be inferred from turn. */
+  if(g.arsenalFor === me) return {window:"arsenal", incoming:0};
+  /* CR 7.3.2 — declaring defenders is free and simultaneous, which is why
+     it is a different question from holding priority (CR 7.3.3 gives that
+     to the TURN player in the very same step). Ask priority.js rather than
+     restating it: five hand-rolled copies of "may this be played here" is
+     how `rxAllowed` came to exist. */
+  if(PRI.canDeclareDefenders(g, me))
+    return {window:"block", incoming: g.pend ? (g.pend.total || 0) : 0};
+  /* Your own attack is on the chain and the reaction window is open. The
+     attacker decides which KIND of reaction is legal, which is a different
+     question from who holds the window — so this asks who controls the
+     attack, exactly as CR 8.1.2a does. */
+  if(g.step === "reaction" && (g.attacker != null ? g.attacker : g.turnPlayer) === me)
+    return {window:"stack", incoming:0};
+  /* Everything else is the action phase, including their turn — where the
+     honest coaching is about instants and blocks, which the act branch
+     already filters to by asking `legal`-shaped questions of the hand. */
+  return {window:"act", incoming:0};
+}
+
 function advise(g, ctx){
   const V = c => advValue(c,g,ctx);
   const PV = c => (isAttack(c)&&isArrow(c)) ? V(c)*0.3 : V(c);
   const nm = c => c.name;
-  if(g.mode==="pay" && g.pending){
+  /* NO FALLBACK TO `g.mode`. A missing window would otherwise fall through
+     every branch below and land on the action-phase advice, which reads as
+     a real answer — the same silent-wrongness this parameter exists to
+     stop, just relocated. It says so on screen instead. */
+  const win = ctx.window;
+  if(win == null) return {line:"(the advisor was not told which step this is)",
+    why:"advise() reads ctx.window — see advView. Without it, every step of the game would be coached as an action phase."};
+  const incoming = ctx.incoming != null ? ctx.incoming : 0;
+  if(win==="pay" && g.pending){
     const need = effCost(g.pending.card, you(g))-you(g).res;
     const set = advBestPitch(you(g).hand, need, g.pending.from==="hand"?g.pending.idx:null, PV);
     if(!set) return {line:"Cancel — you can't cover this cost.", why:"Not enough pitch in hand. Pick a cheaper line."};
@@ -72,22 +129,22 @@ function advise(g, ctx){
     return {line:`Pitch ${names} — exactly ${set.gain}${set.waste?` (${set.waste} floats: spend it before end of turn)`:""}.`,
             why:"Fodder first — feed the fire with the cards you'd least like to swing."};
   }
-  if(g.mode==="stack"){
+  if(win==="stack"){
     const rx = you(g).hand.map(c=>({c,fx:fxParse(c)})).filter(x=>(isAR(x.c)||(isInstantT(x.c)&&x.fx.ops.length>0)) && (x.c.cost||0)<=you(g).res)
       .map(x=>({...x,p:(x.fx.self||0)+x.fx.ops.filter(o=>o[0]==="buffNext").reduce((a,o)=>a+o[1],0)}))
       .sort((a,b)=>b.p-a.p)[0];
     if(rx && rx.p>0) return {line:`React with ${rx.c.name} (+${rx.p}), then pass.`, why:"Reactions land before the iron — every point punches through."};
     return {line:"Pass — let it resolve.", why:"No profitable reaction in hand; keep your cards for the swing back."};
   }
-  if(g.mode==="arsenal"){
+  if(win==="arsenal"){
     const arrows = you(g).hand.map((c,i)=>({c,i})).filter(x=>isAttack(x.c)&&isArrow(x.c));
     if(arrows.length){ const b=arrows.sort((a,z)=>V(z.c)-V(a.c))[0]; return {line:`Arsenal ${nm(b.c)} — arrows only fire from there.`, why:"Ranger law: the arsenal is your bowstring."}; }
     if(!you(g).hand.length) return {line:"Skip — nothing to stash.", why:""};
     const b = you(g).hand.map((c,i)=>({c,i})).sort((a,z)=>V(z.c)-V(a.c))[0];
     return {line:`Arsenal ${nm(b.c)} — it swings again tomorrow.`, why:"Bank your best card; you'll draw back to full anyway."};
   }
-  if(g.mode==="block"){
-    const inc = g.incoming, hp = you(g).hp;
+  if(win==="block"){
+    const inc = incoming, hp = you(g).hp;
     const atkEsts = you(g).hand.filter(isAttack).map(c=>advCardOut(c,g,ctx)).sort((a,b)=>b-a);
     const est = Math.max(3, ((atkEsts[0]||0)+(atkEsts[1]||0)) / (atkEsts.length>1?1.4:1));
     const myTTK = Math.max(1, Math.ceil(opp(g).hp/Math.max(3,est)));
@@ -168,5 +225,5 @@ function advise(g, ctx){
   return {line:`Play ${nm(best.c)}${srcTxt}${pitchTxt} → ${bits.join(", ")||"effect"}.`, why};
 }
 
-return {advPitchPotential, advCardOut, advValue, advBestPitch, advise};
+return {advPitchPotential, advCardOut, advValue, advBestPitch, advView, advise};
 });

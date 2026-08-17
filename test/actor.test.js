@@ -82,15 +82,29 @@ const ANCHORS = [
      throughout and `foeEnd` drives it with the actor borrowed to seat 1.
      It is anchored before afterArsenal, which is now a two-line caller. */
   ["endPhaseCF",   "  function endPhaseCF(s, si){"],
-  /* foePick/foePlay (v2.63) and the seat-1 turn machinery (v2.71) are the
-     opponent's turn. They stay seat-1-specific for the reason foeSwing did
-     — the block path reads act(s).blockH, so the actor stays 0 for the
-     swing and is borrowed only around the card's own effects — and each is
-     anchored so its body is not silently swallowed by a neighbour's slice.
-     `foeSwing` itself is GONE: v2.71 decomposed it into a start, a step, a
-     window and an end phase, and an anchor left pointing at a declaration
-     that no longer exists throws rather than passing by finding nothing. */
-  ["foePick",      "  function foePick(n){"],
+  /* The seat-1 turn machinery (v2.71) is the opponent's turn. It stays
+     seat-1-specific for the reason foeSwing did — the block path reads
+     act(s).blockH, so the actor stays 0 for the swing — and each function
+     is anchored so its body is not silently swallowed by a neighbour's
+     slice. `foeSwing` itself is GONE: v2.71 decomposed it into a start, a
+     step, a window and an end phase, and an anchor left pointing at a
+     declaration that no longer exists throws rather than passing by
+     finding nothing.
+
+     `foePick`/`foePlay` (v2.63) were anchored here and are GONE TOO — the
+     solo mirror retired with the opponent picker (v2.81), and v2.83 burned
+     the closures it left behind. THE ANCHOR IS REPLACED, NOT DROPPED:
+     without one here, `endPhaseCF`'s slice runs on to `foeBegin` and
+     swallows `instantBank`/`foeTurnHasPlay`, whose `you(s)` reads are then
+     charged to a MIGRATED function that does not contain them — which is
+     exactly how it failed when the anchor was first dropped. A ledger that
+     silently widens its own slice reports the wrong body, the same shape as
+     the stale end-anchor that passed by reading everything.
+
+     It anchors `instantBank` rather than `foeTurnHasPlay` because
+     `instantBank` is the FIRST declaration past the burn, and an anchor
+     that starts one function late leaves the gap it was added to close. */
+  ["instantBank",  "  const instantBank = s => you(s).res"],
   ["foeBegin",     "  function foeBegin(s){"],
   ["foeStep",      "  function foeStep(s){"],
   ["foeVanilla",   "  function foeVanilla(s){"],
@@ -145,8 +159,7 @@ function bodyOf(name){
    honest substitution: half of what foeSwing did was "end seat 1's turn",
    and that half is now a real, shared, actor-relative rules function. The
    other half — the scripted escalation — is `foeVanilla`, which is seat-1
-   specific by construction and is anchored above rather than counted here,
-   exactly as foePick/foePlay are. */
+   specific by construction and is anchored above rather than counted here. */
 const RULES_FNS = ["runOps", "execute", "linkPumps", "linkPayload", "resolveStack",
                    "tryPlay", "takeIt", "newTurn", "endPhaseCF"];
 

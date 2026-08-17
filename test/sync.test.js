@@ -38,11 +38,45 @@ for(const m of MODULES){
   });
 }
 
-test("parser.js loads before the modules that depend on it", () => {
-  const at = m => htmlSrc.indexOf(`<script src="engine/${m}.js"></script>`);
-  for(const dep of ["advisor","cards","prompts"]){
-    assert.ok(at("parser") < at(dep), `engine/parser.js must load before engine/${dep}.js`);
+/* EVERY MODULE LOADS AFTER THE MODULES IT TAKES AS FACTORY ARGUMENTS, and
+   the list of those is READ OFF THE SOURCE rather than written here.
+
+   It used to be the hardcoded triple ["advisor","cards","prompts"] against
+   parser alone, which was true when it was written and silently stopped
+   being the whole truth: v2.83 gave advisor.js a second dependency
+   (priority.js, for `canDeclareDefenders` — the alternative was a sixth
+   hand-rolled copy of a CR rule). A hardcoded ledger cannot fail for a
+   dependency nobody remembered to add to it, which is the same shape as
+   the old mirror rule missing `makeSide` and `freshHist`.
+
+   The browser branch of each UMD header names its globals in order, so
+   that line IS the dependency list. A module loaded before something it
+   destructures at factory time throws a TypeError on page load — and the
+   page is blank, which is the failure this repo can least afford to ship. */
+const DEPS = (() => {
+  const out = {};
+  for(const m of MODULES){
+    const src = fs.readFileSync(path.join(ROOT, "engine", m + ".js"), "utf8");
+    const line = src.match(/else\s+root\.\w+\s*=\s*factory\(([\s\S]*?)\);/);
+    out[m] = line ? [...line[1].matchAll(/root\.Dawn(\w+)/g)].map(x => x[1].toLowerCase()) : [];
   }
+  return out;
+})();
+
+test("every engine module loads after the modules it takes as arguments", () => {
+  const at = m => htmlSrc.indexOf(`<script src="engine/${m}.js"></script>`);
+  /* The census must not pass by finding nothing: if the header shape ever
+     changes, every list comes back empty and this drill goes quiet. */
+  const total = Object.values(DEPS).reduce((a, d) => a + d.length, 0);
+  assert.ok(total >= 20, `only ${total} factory dependencies parsed — the UMD header shape moved, repoint this drill`);
+  assert.ok(DEPS.advisor.includes("parser") && DEPS.advisor.includes("priority"),
+    "advisor.js takes parser and priority — if that changed, it was a deliberate edit");
+  for(const [m, deps] of Object.entries(DEPS))
+    for(const d of deps){
+      if(!MODULES.includes(d)) continue;   /* a module the page does not load is wire.test.js's business */
+      assert.ok(at(d) >= 0 && at(d) < at(m),
+        `engine/${d}.js must load before engine/${m}.js — it is a factory argument of it`);
+    }
 });
 
 /* The engine scripts must load AFTER the plain data script, because
