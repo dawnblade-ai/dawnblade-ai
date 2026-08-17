@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "2.82"; /* v2.82 — three things a two-tab game found that no drill could: the table sideboard showed the DUMMY where a person was sitting, offered two buttons to start a solo game mid-negotiation, and still claimed card text does not resolve. v2.81 — the dummy is a punching bag, not a hero: the opponent picker is gone and a seat the dummy fills is always the vanilla 30-card Generic pile. `build.buildVanilla` is the one copy of that deal, so the trainer and the local table face the same opponent and the only thing that differs between them is which engine is driving. v2.80 — the retirement gate is PASSED: the five drills that prove the card semantics (kayo, dorinthea, frostbite, arcane, paytoll) now drive judge.reduce instead of a hand-rolled effects context, so what they prove is the path a player takes. Battle's rules are unblocked to retire, not retired. v2.79 — a session with no network: solo play can now be the SAME table a second phone gets, driven by judge.reduce with sparring.act in seat 1. Every engine module is on the page — the HEADLESS ledger is empty. v2.78 — the table can answer a prompt: the prompt ANSWER moved to engine/effects.js, so both boards resolve a sheet through one body, and a live sheet stops the game for both seats until the side it is addressed to answers it. v2.77 — judge.js resolves card text: the table engine calls engine/effects.js, which is the ONE copy of the card semantics, and adds none of its own. Solo and table stop being two engines. v2.76 — the pre-game order matches the rules: the opponent is chosen on the hero screen (vanilla Dummy by default) and the sideboard now follows the throw, so you board knowing the matchup AND whether you are on the play. engine/lobby.js has ruled this since it was written; the solo flow was the only thing still doing it backwards. v2.75 — the printed escape hatch exists: "unless they pay" was byte-identically ignored, so Winter's Bite made a hero holding nine resources discard without ever being asked. Inertia is a hand wipe, not an action-phase tax — the noop was wrong about the mechanic. v2.74 — Frostbite is an Aura and arcane damage has one choke point: four prevention mechanics (arcane ward, Pyroglyphic's shield, Arcane Barrier, Spellvoid) were dead state with nowhere to stand, and `frost` was an integer nothing read. v2.73 — execute declares and stops: the defend step, the reaction window and the action phase all belong to the caller now, so engine/effects.js states no phase at all. v2.72 — instant-speed equipment abilities have a route on the opponent's turn: Spellfire Cloak's printed gate named a window nothing could ask it about. v2.71 — seat 1 takes a real turn: a start phase, an action point it spends, a window in which you hold priority, and the same shared end phase your turn runs. Full history in CHANGELOG.md. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "2.83"; /* v2.83 — Claude's call reaches the table: the advisor is TOLD which window it is in (advView) instead of reading a `mode` that judge.js seeds once and never writes, a local win records the same score and pulls the same trophy the trainer's does, and foePick/foePlay burn. Full history in CHANGELOG.md — this comment is deliberately one sentence again (it reached 2,969 characters and 12 versions, which is the drift v2.32 fixed and this restores). (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5530,7 +5530,7 @@ function TableThrow({lob, mySeat, myH, foeH, onThrow}){
    next-swing prediction — seat 1 is a person, so there is nothing to
    predict.
    ============================================================ */
-function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local}){
+function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit, local, heroKey, onRecord}){
   const [g,setG]     = uS(match.g);
   const [note,setNote] = uS(null);
   const [link,setLink] = uS("connected");
@@ -5697,6 +5697,15 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   /* CR 1.4.5 — with an ally in the arena, declaring an attack is a
      mandatory choice. With one candidate the picker never appears, which
      is every game until somebody lands an ally. */
+  /* THE SCORE IS THE TRAINER'S, and it is computable here for free: score
+     is turns + wasted, and `wasted` has been kept for BOTH seats since
+     priority.js's endTurn started fizzling both (CR 4.4.3e). Recorded only
+     for a local win — see the reveal block below for why beating a person
+     earns no pull. Keyed off `g.over` exactly as the trainer's is, so a
+     re-render cannot record twice. */
+  uE(()=>{ if(over && local && over.winner===mySeat && onRecord && heroKey)
+             onRecord(heroKey, g.turn + (me.wasted||0)); },[g.over]);
+
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
   const [tgt,setTgt] = uS(null);
   const needTarget = targets.length > 1;
@@ -6069,12 +6078,22 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             </>}
       </div>
 
-      {/* NOT `WinPanel`. That one says "DUMMY DESTROYED" and pulls a
-          random trophy — right for the solo trainer's loop, wrong for
-          beating a person, and a trophy handed out for a real match
-          would quietly devalue the case. Same visual language, honest
-          words, no reward. */}
-      {over && <div className={"reveal"+(over.winner===mySeat?"":" lose")} onClick={onExit}>
+      {/* WHO YOU BEAT DECIDES WHETHER IT IS A TROPHY (v2.83).
+
+          The rule here has not changed — "a trophy handed out for a real
+          match would quietly devalue the case" — but v2.81 changed who is
+          sitting opposite. A seat the dummy fills is ALWAYS the vanilla
+          pile, so a LOCAL win is a win over the same punching bag the
+          trainer's is, scored the same way (turns + wasted, and `wasted`
+          is already kept by priority.js's endTurn for both seats). It
+          earns the same pull.
+
+          A NETWORKED win is over a person and still gets the honest words
+          and no reward. So the distinction is `local`, and it follows the
+          existing rule rather than overriding it. */}
+      {over && local && over.winner===mySeat && onRecord
+        ? <WinPanel score={g.turn + (me.wasted||0)} onExit={onExit}/>
+        : over && <div className={"reveal"+(over.winner===mySeat?"":" lose")} onClick={onExit}>
         <h2 className="disp" style={{marginBottom:14}}>
           {over.winner===mySeat ? "YOU TAKE IT" : "THEY TAKE IT"}</h2>
         <div className="card clip">
@@ -6208,6 +6227,7 @@ function App(){
           setFighting({h:seating.h, cfg:{...cfg, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
       {localTable && <TableBoard match={localTable} mySeat={0} host={true} code="solo" db={db}
         table={null} netRef={{current:null}} netQ={{current:[]}} local={true}
+        heroKey={localTable.heroKeys && localTable.heroKeys[0]} onRecord={record}
         onExit={()=>setLocalTable(null)}/>}
       {fighting && <Battle h={fighting.h} cfg={fighting.cfg} first={fighting.first} db={db} onExit={()=>setFighting(null)} onRecord={record}/>}
       {tab==="judge" && idle && <Judge/>}

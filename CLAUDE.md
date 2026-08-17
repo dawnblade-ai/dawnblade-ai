@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v2.79
+**Current version:** v2.83
 
 ---
 
@@ -1138,7 +1138,7 @@ until they were sabotaged: a fix shipped with **no drill at all**, another
 grepped for a variable that survives deleting the gate it lives in, and a
 third keyword-matched a log string. **Pin the GATE, not the identifier.**
 
-### The solo mirror (v2.63) — RETIRED in v2.81
+### The solo mirror (v2.63) — RETIRED in v2.81, BURNED in v2.83
 
 **RULING (user, 2026-08-16): seat 1 is either a PERSON, who picks their
 own hero when they join a table, or the dummy — and a seat the dummy
@@ -1146,13 +1146,27 @@ fills is ALWAYS the vanilla pile.** There is no hero the dummy plays as.
 The picker is gone; so is `oppH`, and a drill fails if the name appears
 in live code, because a picker comes back one branch at a time.
 
-Kept because the mechanics are still true of `foePlay`, which is still in
-`Battle` and now unreachable: the actor stayed 0 for the swing — the
-block path reads `act(s).blockH`, so flipping it would ask the attacker
-to block its own attack, and the actor was borrowed only around `runOps`.
-Only the opponent's **unconditional** effects fired, because `fx.conds`
-is `execute`'s to evaluate and copying that would be a second copy of the
-semantics. **Those closures retire with the rest of `Battle`'s rules.**
+**`foePick`/`foePlay` ARE GONE (v2.83)** — 103 lines that had been
+unreachable since v2.81 and still read as live rules. Dead rules code is
+worse than dead code elsewhere: it is a second description of a rule that
+nobody can reach and everybody can read.
+
+The mechanics they recorded are not lost, because every one of them is
+asked of the live path instead — the printed `playIf` gate, the
+additional cost, and go-again-as-a-GAIN all belong to `execute`. The
+three drills that pinned their internals were replaced the way v2.81
+replaced the picker's, with the claim that matters (**none of it is
+there**, scanned with comments stripped), except the go again
+arithmetic, which was **repointed at `execute`** and is now asked of
+`act(n)` rather than `opp(n)`. A rule with no drill is worse than a
+drill aimed at a retired copy.
+
+Worth keeping for the shape: the actor stayed 0 for the swing, because
+the block path reads `act(s).blockH` and flipping it would ask the
+attacker to block its own attack; the actor was borrowed only around
+`runOps`; and only unconditional effects fired, because `fx.conds` is
+`execute`'s to evaluate and copying that would have been a second copy
+of the semantics.
 
 **A SEAT THE DUMMY FILLS IS BUILT BY `build.buildVanilla`** — one copy of
 the deal, reachable by a drill, taking the deck list as DATA. It used to
@@ -2092,10 +2106,41 @@ in this table is a claim about the source; check it before trusting it.
 separate — sharing a few more lines of JSX by folding them back together
 would undo it.
 
-**Three things the trainer shows that the table cannot**, each stated
-rather than faked: no **Advisor** (it reads the trainer's `built` and
-would coach card text that does not resolve here), no **boost toggle**,
-and no **next-swing prediction** — seat 1 is a person.
+**THE ADVISOR IS AT THE TABLE AS OF v2.83**, and the reason it was not
+is worth keeping because the shape recurs. This section used to say it
+"would coach card text that does not resolve here" — false since v2.77.
+What was actually missing was the **window**:
+
+> `advise` read `g.mode`. **judge.js seeds `mode` into its opening state
+> and never writes it again**, so a table game carries `mode:"act"` from
+> the first draw to the last point of life. The advisor would therefore
+> not FAIL — it would coach, confidently, off a frozen field, in every
+> step of every turn. Sev-2, the category the player TRUSTS.
+
+`advisor.advView(g, seat)` derives the window from the CR machine and
+asks `priority.js` for `canDeclareDefenders` rather than restating it.
+**Both boards pass the window explicitly and `advise` REFUSES without
+one** — a fallback to `g.mode` relocates the silent wrongness rather
+than removing it. `incoming` comes off `pend.total` for the same reason:
+judge never writes `g.incoming` either.
+
+**Local sessions and seat 0 only**, both stated in the source: `advise`
+reads its own hand through `you(g)` = `sides[0]`, so deriving the window
+for seat 1 would coach the wrong player's hand. Across a network the
+seat opposite is a PERSON, and `advCardOut` prices your line against
+their gear and hand — turn it on for a person only as a deliberate call.
+
+**A LOCAL WIN SCORES AND PULLS A TROPHY (v2.83).** `WinPanel` stays out
+of a *networked* game — "a trophy handed out for beating a person would
+quietly devalue the case" — but v2.81 changed who sits opposite: a seat
+the dummy fills is always the vanilla pile, so a local win is over the
+same punching bag, scored the same way (`turn + wasted`, and `wasted`
+has been kept for both seats since `priority.endTurn` fizzled both).
+
+**Still trainer-only:** the **boost toggle** (judge has no boost action;
+8 pool cards print the keyword, all Dash) and the **next-swing
+prediction**, which reads the `[3,4,5]` fabrication — a card-playing
+seat has no such number, so it is dropped rather than ported.
 
 **A DEAD BUTTON READS AS A BROKEN SCREEN, NOT AS A RULE.** CR 7.3.3 gives
 the turn-player priority in the defend step while the defender declares,
@@ -2657,6 +2702,39 @@ judge's state too, and the trainer has carried a derived `phase`/`step`
 since v2.27's shadow. `machine.lang` names the authoritative one — without
 it a table report showing `bphase:"defend"` sends the reader into the
 trainer hunting a bug that is not there.
+
+**AND THE SEEDED HALF IS FROZEN, WHICH IS WORSE THAN ABSENT (v2.83).**
+`judge.js` seeds `mode`/`bphase` and then **never writes them again** —
+so any consumer that reads `mode` off a judge state gets `"act"` for the
+whole game. A field that is missing throws and gets fixed in a minute; a
+field that is *present, plausible and never updated* reads as an answer.
+The advisor was one line from shipping exactly that. **When you reach for
+a state field at the table, check which engine maintains it**, and pass
+it in rather than sniffing — `advisor.advView` is the worked example, and
+`advise` refuses outright when it is not told.
+
+`g.incoming` is the same trap without the disguise: judge never writes it
+at all, and the table's incoming damage is `g.pend.total`.
+
+### A LOG LINE IS READ BY BOTH SEATS; A REFUSAL IS NOT (v2.83)
+
+Found by playing, not by a drill — the dummy's own payment appeared in
+the shared feed as *"Brutal Assault costs 2 and **you** hold 0"*.
+
+```
+say(...)         -> feed, which BOTH seats read      -> NAME the seat
+return "reason"  -> back to whoever attempted it     -> "you" is correct
+```
+
+It never mattered while seat 1 paid no costs; it has been wrong since
+v2.71 gave that seat a real action phase. In judge.js 11 refusals were
+already right and 3 log lines were not. **`engine/effects.js` still has
+44 second-person literals** — a real share of them refusals — and that
+is a pinned ledger in `test/judge.test.js`, not a clean bill.
+
+**The ledger pins the SOURCE COUNT, not a driven feed's.** The driven
+count is emergent (3 on one seed, 4 on the next), and pinning a sample
+turns every honest card fix into a red drill.
 
 Also confirmed from the CR and not yet modelled: **simultaneous triggers are
 ordered by the first-turn-player** (CR 4.1.8a), and the chain closes

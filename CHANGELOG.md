@@ -9,6 +9,112 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v2.83 — Claude's call reaches the table
+
+The advisor is the product's namesake and the table did not have it. The
+stated reason — it *"would coach card text that does not resolve here"* —
+has been **false since v2.77**, when judge.js started resolving every card
+effect through `engine/effects.js`.
+
+### What was actually missing, and why it was worse than a crash
+
+`advise` read `g.mode`. **judge.js seeds `mode` into its opening state and
+never writes it again** — every game carries both vocabularies, deliberately,
+so that neither being present says which engine is driving. So a table game
+carries `mode:"act"` from the first draw to the last point of life.
+
+Ported unchanged, the advisor would therefore **not fail**. It would coach,
+confidently, off a frozen field: action-phase advice in every step of every
+turn. That is the *"displayed value is wrong"* category — the one the player
+**trusts** — and no drill that checks the advisor returns a line could see it.
+
+`advisor.advView(g, seat)` derives the window from the CR machine instead,
+asking `priority.js` for `canDeclareDefenders` rather than adding a sixth
+hand-rolled copy of a CR rule. **Both boards now pass the window explicitly
+and `advise` REFUSES without one** — a fallback to `g.mode` would put the
+same silent wrongness back one layer down, which is where it would live
+longest.
+
+Driven at 375x812 against the vanilla dummy, with `mode` frozen at `"act"`
+throughout:
+
+| real window | what it says |
+|---|---|
+| arsenal (CR 4.4.3b) | *"Arsenal Run Roughshod — it swings again tomorrow."* |
+| defend (CR 7.3.2) | *"Block with Unexpected Backhand (3) — take 1."* |
+
+`incoming` comes off `pend.total`, because judge never writes `g.incoming`
+either. Seat 0 and local sessions only, both stated in the source rather
+than assumed: `advise` reads its own hand through `you(g)` = `sides[0]`, so
+deriving the window for seat 1 would coach the wrong player's hand.
+
+### A local win is a win over the same punching bag
+
+`WinPanel` was deliberately not reused at the table because *"a trophy handed
+out for beating a person would quietly devalue the case"*. That rule has not
+changed — **v2.81 changed who is sitting opposite.** A seat the dummy fills
+is always the vanilla pile, so a local win is scored the same way the
+trainer's is (turns + wasted, and `wasted` has been kept for both seats
+since `priority.endTurn` started fizzling both) and earns the same pull. A
+networked win is still over a person and still gets honest words and no
+reward.
+
+Verified by playing: a 26-turn game won on life at 2 life, `best: {kayo: 29}`,
+the trophy in the case, **zero invariant failures**.
+
+### Found by playing, not by a drill
+
+The dummy's own payment appeared in the shared feed as *"Brutal Assault
+costs 2 and **you** hold 0"*. The distinction is real and both halves are
+load-bearing:
+
+```
+say(...)         goes into feed, which BOTH seats read   -> NAME the seat
+return "reason"  goes back to whoever acted              -> "you" is right
+```
+
+11 refusals were already right; 3 log lines were not. The wider census found
+the same defect in `effects.js` — **44 literals, a real share of them
+refusals where "you" is correct**, so telling them apart is a judgement per
+line rather than a regex. That is a separate pass and it is a **pinned
+ledger**, not a silent fix.
+
+**The ledger pins the SOURCE, not a game's output.** The obvious version
+counts second-person lines in a driven feed, and that count is emergent — 3
+on one seed, 4 on the next — so pinning it would turn every honest card fix
+into a red drill. That is HANDOFF-MERGE.md's lesson 5 in a fresh disguise.
+
+### Burned
+
+`foePick`/`foePlay` — **103 lines**, dead since v2.81 made the dummy always
+vanilla, still reading as live rules. Their drills are replaced the way v2.81
+replaced the picker's: with the claim that matters, that none of it is
+there. **Except the go again arithmetic, which was REPOINTED at `execute`**,
+where the rule actually lives and is asked of the *acting* seat — a rule with
+no drill is worse than a drill aimed at a retired copy.
+
+`sync.test.js`'s load-order guard now **reads each module's factory
+arguments** instead of a hardcoded triple that was true when written and
+silently stopped being the whole truth. Sabotaging it surfaced a dependency
+the old list never knew about: `invariants.js` -> `priority.js`.
+
+### The drill that passed by finding nothing
+
+The first version of the driven feed check built `newMatch({builds:[null,null]})`
+— two heroes with no deck and no hand. It ran **101 turns and produced 1002
+feed lines, every one an end-phase step, and not one payment**, then asserted
+`feed.length > 0`. True and meaningless. It was caught only because the source
+scan beside it went red under the same sabotage. It drives two real precons
+now and **asserts it saw a payment before asserting anything about how one
+reads**.
+
+The `APP_VER` comment is one sentence again — it had reached 2,969 characters
+and 12 versions, which is exactly the drift v2.32 extracted this file for.
+
+1046 drills green. `npm run fairness` clean.
+
+---
+
 ## v2.82 — what two tabs found
 
 **Played a real game against myself over the public relay** — two tabs,
