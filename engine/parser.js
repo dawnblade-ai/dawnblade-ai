@@ -143,16 +143,43 @@ function classifyClause(raw){
      silently claim clauses this exact wording was never written for. */
   if(/^if you do, create a runechant token$/.test(c))
     return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
-  /* COLD SNAP (RULING, per CR: Freeze prevents an object being played or its
-     activated abilities being activated until unfrozen): the dummy pays no
-     costs, so "target hero may pay" always resolves to declining — and
-     Freeze taxes a play/activation the dummy's scripted swing never makes,
-     same idle-against-the-dummy shape as Frostbite/Inertia. Read as a whole
-     unit before the if/when splitter for the same reason the verse-counter
-     rider above is: "if they don't" alone carries no information about
-     what preceded it. */
-  if(/^if they don'?t, freeze .+ until the start of your next turn$/.test(c))
-    return NOOP("Freeze taxes a play/activation — idle against the dummy's scripted swing, same as Frostbite/Inertia");
+  /* COLD SNAP / FREEZE IS UNREAD ON PURPOSE (v3.02), and it used to be a
+     `noop` for reasons that stopped being true in v2.71.
+
+     The old notes said "the dummy pays no costs, so target hero may pay
+     always resolves to declining" and "Freeze taxes a play/activation the
+     dummy's scripted swing never makes". Seat 1 has paid costs and taken a
+     real action phase since v2.71, so both were facts about a training
+     prop that no longer exists — and a `noop` COUNTS AS ACCOUNTED FOR, so
+     Cold Snap reported `tier: full` while doing nothing at all. That is
+     the no-op blind spot on Iyslander's signature card, and it is exactly
+     what v2.74 removed for Frostbite ("a fact about the old training prop
+     and not about the rules"). This is the last card that carried it.
+
+     UNREAD, NOT APPROXIMATED. The ruling is recorded and precise —
+
+       "this gives the opponent a pop up that allows them to pay 1
+        resource to avoid the negative effect of the card. if they don't
+        pay the player gets a pop up and they can choose the arsenal or an
+        ally - whatever they choose cannot be played or activated until
+        the start of your next turn."
+
+     — and every piece of it is a real question. `payOr` already asks the
+     opponent to pay (Winter's Bite uses it), but emitting it here with an
+     unbuilt else-payload would ASK A QUESTION WITH NO CONSEQUENCE, which
+     makes paying strictly a waste and is worse than not asking. So both
+     clauses fall through and the card reports `part`, which is the truth.
+
+     WHAT IT NEEDS, and none of it is machinery that has to be invented:
+       1. `payOr` with the freeze as its `elseOps` — the offer exists
+       2. a `pick` that REPORTS the chosen object structurally (today it
+          reports only in `msgs`) over a candidate list spanning the
+          opponent's arsenal AND their allies — two zones, so the
+          candidates are the caller's, the way `target` already works
+       3. a `_frozen` stamp honoured by `playableFromZone` and by the
+          activation gate, on BOTH boards
+       4. a thaw at "the start of your next turn" — beside
+          `effects.tickSuspense`, which is that schedule */
   /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
      it's blue, pitch it" are two SEPARATE printed clauses, but reading them
      apart breaks on an ATTACK card — the generic conds loop that would
@@ -473,10 +500,9 @@ function classifyClause(raw){
   if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i))
     return GATED(m[2], "surgeOver"+m[1]);
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
-  /* COLD SNAP: the cost-offer half. See the "if they don't, freeze" NOOP
-     above for why declining is the only outcome that matters in solo play. */
-  if(/^target hero may pay (?:\{r\}+|\d+)$/.test(c))
-    return NOOP("cost offer — the dummy pays no costs, so it always declines");
+  /* COLD SNAP's cost-offer half is UNREAD with the freeze it gates — see
+     the long note above. Reading the offer alone would ask the opponent
+     to pay for nothing. */
   /* FUSION — the bare "X Fusion" line is the additional cost itself
      (hoisted into fx.fusionCost above, same layout rule as a standalone
      "Go again" line); the riders that ask "if this was fused" are read

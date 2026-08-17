@@ -1479,16 +1479,40 @@ test("payOrLose — Look Tuff resolves to tier full", () => {
   assert.equal(fx.tier, "full");
 });
 
-/* ---- Cold Snap — Freeze is idle against the dummy, same as Frostbite -- */
-test("cold snap — both halves of the opponent's pay-or-freeze are noop, same shape as Frostbite/Inertia", () => {
-  assert.equal(cc("Target hero may pay {r}").status, "noop");
-  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.").status, "noop");
+/* ---- Cold Snap — freeze is UNREAD, and that is the honest answer -----
+
+   These two drills asserted the opposite until v3.02: that both halves
+   were `noop` and the card resolved `tier: full`. The reasons filed with
+   those noops were "the dummy pays no costs" and "Freeze taxes a
+   play/activation the dummy's scripted swing never makes" — facts about a
+   training prop that stopped existing in v2.71, when seat 1 gained a real
+   action phase and started paying costs.
+
+   A `noop` COUNTS AS ACCOUNTED FOR, so the card reported fully scripted
+   while doing nothing at all: the no-op blind spot, on Iyslander's
+   signature card. v2.74 removed exactly this for Frostbite; Cold Snap was
+   the last card carrying it.
+
+   UNREAD RATHER THAN APPROXIMATED, and the direction matters. `payOr`
+   exists and would ask the opponent to pay — but with the freeze unbuilt
+   as its else-payload it would ask a question with NO CONSEQUENCE, which
+   makes paying strictly a waste. Worse than not asking. So the card sits
+   at `part` and the tools report the gap. */
+test("cold snap — the pay-or-freeze is UNREAD, not nooped into looking done", () => {
+  assert.equal(cc("Target hero may pay {r}"), null,
+    "reading the offer alone asks the opponent to pay for nothing");
+  assert.equal(cc("If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."), null,
+    "and freeze is not built — a noop here is the card claiming it works");
 });
 
-test("cold snap — resolves to tier full", () => {
+test("cold snap — reports `part`, which is the truth about it", () => {
+  P.fxReset();
   const fx = P.fxParse({name:"Cold Snap", pitch:3, tt:"Ice Action", power:null, kw:[],
     tx:"Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf Cold Snap is played from arsenal, draw a card.\nGo again"});
-  assert.equal(fx.tier, "full");
+  assert.equal(fx.tier, "part", "full was the card claiming a mechanic nobody built");
+  /* the halves that ARE built still resolve — this is not a card switched off */
+  assert.equal(fx.ga, true, "go again is printed and still granted");
+  P.fxReset();
 });
 
 /* ---- fx.payCost — Brothers in Arms, a real mid-block pay window, v2.39 */

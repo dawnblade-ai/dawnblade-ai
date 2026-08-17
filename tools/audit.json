@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-17T18:40:40.526Z",
+ "generated": "2026-08-17T19:00:29.188Z",
  "appVer": "3.01",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 305,
-  "part": 78,
+  "full": 304,
+  "part": 79,
   "none": 22
  },
  "heroes": {
@@ -2221,17 +2221,17 @@
     "freeze",
     "go again"
    ],
-   "tier": "full",
+   "tier": "part",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Target hero may pay {r}",
-     "st": "noop"
+     "st": "skip"
     },
     {
      "t": "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.",
-     "st": "noop"
+     "st": "skip"
     },
     {
      "t": "If this was played from arsenal, draw a card.",
@@ -2242,7 +2242,10 @@
      "st": "run"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Target hero may pay {r}",
+    "If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target hero may pay {r}. If they don't, freeze a card in their arsenal or an ally they control until the start of your next turn.\nIf this was played from arsenal, draw a card.\nGo again",
