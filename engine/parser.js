@@ -1296,22 +1296,50 @@ function fxParse(card){
     fx.bottomOnDiscard = true;
   /* RULING (Out Pace): hoisted so the declare step can refuse equipment */
   if(/can'?t be defended by equipment/.test(tl)) fx.noEquipDefend = true;
-  /* activation gates, hoisted the same way play gates are */
+  /* ---- ACTIVATION GATES, hoisted the same way play gates are ---------
+
+     "ACTIVATE THIS" AND "ACTIVATE THIS ABILITY" ARE THE SAME LINE, and
+     mixing the two spellings cost four cards. Six patterns wrote the word
+     as optional and two did not, so Spellfire Cloak ("Activate this only
+     during an opponent's turn") and Achilles Accelerator ("…only if
+     you've boosted this turn") had their restriction silently dropped —
+     free to activate on any turn, which is strictly stronger than
+     printed. `ACT_ONLY` is the one prefix now.
+
+     CONTRACTIONS TOO. `SYNONYMS` levels "you've" to "you have", but it
+     runs inside `classifyClause` and these read `tl` directly, so the
+     v3.00 rewording reached here untouched. They accept both. */
   let ag;
-  if(ag = tl.match(/activate this(?: ability)? only if you'?(?:ve| have) attacked with a ([a-z' -]+) this turn/))
+  const ACT_ONLY = "activate this(?: ability)? only ";
+  const A = re => new RegExp(ACT_ONLY + re);
+  const YOUVE = "you'?(?:ve| have) ";
+  if(ag = tl.match(A("if " + YOUVE + "attacked with a ([a-z' -]+) this turn")))
     fx.activateIf = {kind:"atkNamed", name:ag[1].trim(), why:`you haven't attacked with a ${ag[1].trim()} this turn`};
-  else if(ag = tl.match(/activate this(?: ability)? only if you'?(?:ve| have) hit (\d+) or more times this combat chain/))
+  else if(ag = tl.match(A("if " + YOUVE + "hit (\\d+) or more times this combat chain")))
     fx.activateIf = {kind:"hits", n:+ag[1], why:`you haven't hit ${ag[1]} or more times on this chain`};
-  else if(tl.match(/activate this(?: ability)? only if you have boosted this turn/))
+  else if(tl.match(A("if " + YOUVE + "boosted this turn")))
     fx.activateIf = {kind:"boosted", why:"you haven't boosted this turn"};
-  else if(ag = tl.match(/activate this(?: ability)? only if you control a card with (\d+) or more \{p\}/))
+  else if(ag = tl.match(A("if you control a card with (\\d+) or more \\{p\\}")))
     fx.activateIf = {kind:"controlPow", n:+ag[1], why:`you control nothing with ${ag[1]} or more power`};
-  else if(tl.match(/activate this(?: ability)? only while this card is defending/))
+  else if(tl.match(A("while this card is defending")))
     fx.activateIf = {kind:"defending", why:"this card isn't defending"};
-  else if(tl.match(/activate this ability only during an opponent'?s? turn/))
+  else if(tl.match(A("during an opponent'?s? turn")))
     fx.activateIf = {kind:"foeTurn", why:"it's your turn, not your opponent's"};
-  else if(tl.match(/activate this only if you'?(?:ve| have) played a ([a-z' -]+) this turn/))
-    fx.activateIf = {kind:"playedNamed", name:(tl.match(/played a ([a-z' -]+) this turn/)||[])[1], why:"you haven't played the required card this turn"};
+  else if(ag = tl.match(A("if " + YOUVE + "played a ([a-z' -]+) this turn")))
+    fx.activateIf = {kind:"playedNamed", name:ag[1].trim(), why:"you haven't played the required card this turn"};
+  /* AN UNREAD RESTRICTION MUST REFUSE, NOT WAVE THROUGH. Two pool cards
+     print a condition no pattern above reads — Scorpio, Comet Tail ("only
+     if you control a Lightning attack") and Stand Strong ("only if you
+     control an aura of suspense"). With `activateIf` left undefined the
+     ability was activatable with NO restriction at all, which is the
+     sev-3 direction: a card strictly stronger than printed.
+
+     v2.04 settled this shape for costs — an unpayable cost is INERT
+     rather than free — and it is the same call. Inert is honest and
+     `tools/failstates.js` reports it as "ability inert"; free is a card
+     above rate that every coverage tool calls `full`. */
+  else if(new RegExp(ACT_ONLY).test(tl))
+    fx.activateIf = {kind:"unreadable", why:"its printed activation condition isn't modelled yet"};
   /* THE CARD MUST GRANT ITSELF THE ROUTE, and the subject of that grant is
      "this". Written without it, these matched any card that merely TALKS
      about graveyard plays: Compass of Sunken Depths ("the first card with

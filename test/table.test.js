@@ -210,12 +210,41 @@ test("the finish is a LIFE total, never an invented loss", {skip}, () => {
    the same two heroes the other way round flipped the result, seat 1
    would be a weaker shape wearing a deck rather than a seat somebody can
    occupy. */
-test("swapping the two heroes between the chairs swaps the winner", {skip}, () => {
-  const a = playOut({heroes: ["kayo", "dorinthea"]}).host.state().over;
-  const b = playOut({heroes: ["dorinthea", "kayo"]}).host.state().over;
-  assert.ok(a && b);
-  assert.notEqual(a.winner, b.winner,
-    "the same matchup was won from both chairs — the chair is deciding, not the hero");
+/* THE CHAIR MUST NOT BE DECIDING — and this is a BAND, not a sample.
+
+   It ran ONE matchup on ONE seed and asserted the winner flipped when the
+   heroes swapped chairs. That is an emergent outcome, and v3.04 flipped it
+   by making 17 equipment abilities activatable at the table: Kayo/Dorinthea
+   became close enough that the seat on the play took both. Measured across
+   five matchups at the same moment, seat 0 won 5 of 10 — no bias at all.
+
+   HANDOFF-MERGE.md lesson 5, in a fresh disguise: "a pinned sample is not a
+   pinned rule… pinning an emergent count turns every honest card fix into a
+   red drill and trains the reader to edit the number without thinking." The
+   other chair drill was already converted to a band for exactly this; this
+   one had been missed.
+
+   THE SHAPE IT GUARDS is "one chair wins everything", which no band of this
+   width hides. `sparring.test.js` holds the stronger per-hero property. */
+test("the chair is not deciding — neither seat sweeps", {skip}, () => {
+  /* THREE MATCHUPS, SIX GAMES. Five cost 31s in a suite that is meant to
+     run on every change; three still cannot hide a sweep, which is the
+     only shape this guards. Measured over five at v3.04: seat 0 won 5 of
+     10, no bias. */
+  const PAIRS = [["kayo", "dorinthea"], ["viserai", "dash"], ["boltyn", "fai"]];
+  let seat0 = 0, games = 0, heroFollows = 0;
+  for(const [x, y] of PAIRS){
+    const p = playOut({heroes: [x, y]}).host.state().over;
+    const q = playOut({heroes: [y, x]}).host.state().over;
+    assert.ok(p && q, x + " vs " + y + " never finished");
+    seat0 += (p.winner === 0 ? 1 : 0) + (q.winner === 0 ? 1 : 0);
+    games += 2;
+    if([x, y][p.winner] === [y, x][q.winner]) heroFollows++;
+  }
+  assert.ok(seat0 > 0 && seat0 < games,
+    "seat " + (seat0 ? 0 : 1) + " won all " + games + " games — the chair is deciding, not the hero");
+  assert.ok(heroFollows > 0,
+    "not one matchup was won by the same HERO from both chairs — the seating is the whole game");
 });
 
 test("the state stays clean under the invariant judge for a whole game", {skip}, () => {

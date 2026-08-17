@@ -633,16 +633,25 @@ test("the additional-cost discard is stamped and counts as this way", {skip}, ()
 
 /* ---- PREDATORY PLATING ------------------------------------------------ */
 
+/* DRIVEN, NOT GREPPED (v3.04). This read `index.html` for the gate's
+   source, and the gate moved to `engine/effects.js` when it was shared
+   with judge.js — a source guard aimed at the wrong file passes by
+   finding nothing, so it is asked of the function instead. */
 test('"control a card with 6 or more {p}" includes the live attack', {skip}, () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const i = html.indexOf('g2.kind==="controlPow"');
-  assert.ok(i > 0, "the controlPow gate moved — re-anchor this drill");
-  const body = html.slice(i, i + 300);
-  assert.match(body, /s\.pend&&s\.pend\.card/,
-    "RULING: arena + equipment + the attack on the combat chain. Board and gear alone " +
-    "left Kayo with nothing over 3 power, so Predatory Plating was unactivatable.");
-  assert.ok(!/zonePow/.test(body),
-    "and NOT zonePow — the chain is the one zone clause 2 excludes, and gear is not an attack action");
+  const gate = {kind: "controlPow", n: 6};
+  const bare = H.state({name: "Kayo", board: [], gear: []}, {name: "Them"}, {actor: 0});
+  assert.equal(E.activateIfOk(bare, gate), false,
+    "nothing over 6 anywhere — without this the drill passes on a gate that always says yes");
+
+  /* RULING (user, 2026-08-08): arena + equipment + the attack currently on
+     the COMBAT CHAIN. Board and gear alone left Kayo with nothing over 3
+     power, so Predatory Plating was unactivatable in his own deck. */
+  const big = {...card("Buckwild"), uid: "big"};
+  assert.ok((big.power || 0) >= 6, "the fixture card must actually print 6+");
+  assert.equal(E.activateIfOk({...bare, pend: {card: big}}, gate), true,
+    "the live attack on the chain counts");
+  assert.equal(E.activateIfOk({...bare, sides: [{...bare.sides[0], gear: [big]}, bare.sides[1]]}, gate), true,
+    "and so does equipment");
 });
 
 /* ---- THE BUG THIS WHOLE DISTINCTION EXISTS FOR ------------------------ */

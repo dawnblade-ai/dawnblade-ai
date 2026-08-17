@@ -929,9 +929,7 @@ function makeEffects(ctx){
            question the CR actually asks. The mode test stays as the
            fallback for a state built without the priority fields, which
            is every drill that hand-rolls one. */
-        : cond==="foeTurn" ? (s.turnPlayer != null && s.actor != null
-                                ? s.turnPlayer !== actorOf(s)
-                                : s.mode==="block" || s.mode==="foeturn")
+        : cond==="foeTurn" ? foeTurnNow(s)
         : cond==="arcDealt" ? (act(n).hist.arc||0)>0
         : cond==="auraTurn" ? (act(n).hist.aura||0)>0
         : cond==="madeCard" ? (act(n).hist.made||0)>0
@@ -1064,8 +1062,24 @@ function makeEffects(ctx){
       /* a qualified buff that did NOT match is not spent — it waits for an
          attack it actually applies to */
       actMut(n).buffNext = 0; actMut(n).buffQ = qKept; delete n._condSelf;
-      if(act(n).gaNext){ ga = true; delete act(n).gaNext; n = L(n, "The rite empowers this swing — go again."); }
-      const runeOnHit = !!act(n).runeHitNext; if(act(n).runeHitNext) delete act(n).runeHitNext;
+      /* CLEARED TO `false`, NOT DELETED, AND WRITTEN THROUGH `actMut`.
+         Both of these broke two standing rules on one line each:
+
+           `delete` removed a field `makeSide` DECLARES, so the two seats
+           stopped declaring the same shape — `SIDES-ASYMMETRIC`, which is
+           an error-severity invariant and the thing that says a second
+           human cannot occupy a seat. It never fired because nothing at
+           the table could reach these lines until judge.js learned to
+           activate an ability (v3.04); the trainer's own rite path hid it
+           because `withPriority`/`setG` rebuild the side anyway.
+
+           And they wrote through `act()`, which READS. The side object is
+           the very one React already rendered — `{...s}` is shallow — so
+           the write reaches back into a previous state. That is the access
+           rule CLAUDE.md spends a section on, in the file that should be
+           the last place to break it. */
+      if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, "The rite empowers this swing — go again."); }
+      const runeOnHit = !!act(n).runeHitNext; if(runeOnHit) actMut(n).runeHitNext = false;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
          and doing it inside the walk would be clobbered by the rebuild. */
@@ -1955,6 +1969,77 @@ function tickSuspense(game, seat){
    Pure and out here for the same reason `thawFrost` and `tickSuspense`
    are: a schedule written into one board's turn boundary is a schedule
    the other board does not have. */
+/* IS IT THE OTHER SEAT'S TURN? One expression, two callers — the `foeTurn`
+   condition and the `foeTurn` activation gate ask the identical question,
+   and a second copy of it is how `activateIfOk` came to answer with the
+   trainer's vocabulary in the first place.
+
+   `turnPlayer`/`actor` is the CR machine's answer and rides on every state
+   through `withPriority` (v2.27). The mode test is the fallback for a
+   state built without the priority fields — every drill that hand-rolls
+   one — and is the ONLY phase read left in this file. */
+const foeTurnNow = s => (s && s.turnPlayer != null && s.actor != null)
+  ? s.turnPlayer !== s.actor
+  : (s && (s.mode === "block" || s.mode === "foeturn"));
+
+/* ---- IS THIS PRINTED ACTIVATION GATE SATISFIED? (v3.04) --------------
+
+   `fx.activateIf` is the "Activate this only …" line, and one reader for
+   it has existed since v2.71 — inside `Battle`, where `judge.js` could
+   not reach it. That is the shape this cycle keeps finding: phantasm's
+   pop, the graveyard zone rule, the arena-departure schedule, and now
+   every printed activation gate.
+
+   TWO OF THE SIX CASES ASKED `s.mode`, WHICH IS THE TRAINER'S VOCABULARY
+   AND A TRAP AT THE TABLE. judge.js seeds `mode` into its opening state
+   and never writes it again, so a straight port would answer FALSE for
+   `defending` and `foeTurn` in every step of every table game — the
+   advisor was one line from shipping exactly that in v2.83. Both are
+   asked of the CR machine here, with the mode test kept as the fallback
+   for a state built without the priority fields (every drill that
+   hand-rolls one).
+
+   `defending` is asked of the CARD, not of the phase: "activate this only
+   while THIS CARD is defending" (Rally the Coast Guard). Reading the
+   phase alone would let any card in hand answer yes while the hero
+   happened to be blocking with something else. */
+function activateIfOk(game, gate, card){
+  if(!gate) return true;
+  const s = game, i = s.actor || 0, sd = (s.sides || [])[i] || {};
+  const k = gate.kind;
+  if(k === "atkNamed")   return ((sd.hist || {}).atkNames || []).includes(P.norm(gate.name || ""));
+  if(k === "hits")       return (s.chain || []).filter(l => l.dmg > 0).length >= gate.n;
+  if(k === "boosted")    return (s.boostChain || 0) > 0;
+  /* WHAT YOU CONTROL — the arena and your equipment, PLUS the attack
+     currently on the combat chain. RULING (user, 2026-08-08): that last
+     part is what makes a chest piece paying you for a big swing reachable
+     at all; board+gear alone left Kayo with nothing above 3. Only the LIVE
+     attack counts, not resolved links — the chain history keeps a name and
+     an image, not the card. */
+  if(k === "controlPow") return [...(sd.board || []).map(b => b && b.card), ...(sd.gear || []),
+                                 ...(s.pend && s.pend.card ? [s.pend.card] : [])]
+                                .some(x => x && (x.power || 0) >= gate.n);
+  /* ASKED OF THE CARD, NOT THE PHASE. "Activate this only while THIS CARD
+     is defending" (Rally the Coast Guard) — so the question is whether it
+     is in the declared wall, which both boards keep on the side. Reading
+     the phase instead would let a card in hand answer yes while the hero
+     happened to be blocking with something else, which is the ability
+     escaping the one restriction it prints. */
+  if(k === "defending"){
+    if(!card) return false;
+    const dec = [...(sd.blockH || []), ...(sd.blockG || [])];
+    return dec.includes(card.uid) || dec.includes(String(card.uid));
+  }
+  if(k === "foeTurn") return foeTurnNow(s);
+  /* AN UNREAD RESTRICTION REFUSES. `parser.js` files a printed "Activate
+     this only …" whose condition it cannot read as `unreadable` rather
+     than leaving the gate undefined, and the fallthrough below used to
+     wave it through — which is the ability escaping the one limit it
+     prints. v2.04 settled the same question for costs: inert, never free. */
+  if(k === "unreadable") return false;
+  return true;
+}
+
 function thawFreeze(game, seat){
   const sides = (game.sides || []).slice();
   const names = [];
@@ -2069,5 +2154,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, soakPolicy, payPolicy};
+return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense,
+        activateIfOk, soakPolicy, payPolicy};
 });

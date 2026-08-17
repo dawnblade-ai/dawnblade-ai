@@ -3124,36 +3124,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(out._declared) return L(s, `${card.name} declared an attack at instant speed — the trainer has no defend step here.`);
     return out;
   });
-  /* One reader for `fx.activateIf`, because tryPlay and activateInstant ask
-     the identical question in two windows and two hand-rolled copies of a
-     printed gate is how `rxAllowed` came to be extracted in the first
-     place. `foeTurn` covers BOTH shapes of "not your turn": their combat
-     window and their action phase. */
-  function activateIfOk(s, g2){
-    return g2.kind==="atkNamed"  ? (act(s).hist.atkNames||[]).includes(norm(g2.name||""))
-         : g2.kind==="hits"      ? (s.chain||[]).filter(l=>l.dmg>0).length >= g2.n
-         : g2.kind==="boosted"   ? (s.boostChain||0)>0
-         /* WHAT YOU CONTROL, for "only if you control a card with N or
-            more {p}" (Predatory Plating). RULING (user, 2026-08-08): the
-            arena and your equipment, PLUS an attack currently on the
-            COMBAT CHAIN — which is what makes a chest piece that pays you
-            for committing to a big swing actually reachable. Reading
-            board+gear alone left Kayo with nothing but Mandible Claw at
-            3, so the ability was unactivatable in his deck and looked
-            like a dead card. `zonePow` is deliberately NOT used: a card
-            on the chain is in the one zone Kayo's clause 2 excludes, and
-            gear and arena permanents are not attack action cards at all.
-            LIMIT, stated: only the LIVE attack (`pend`) is counted, not
-            links that have already resolved. The chain history keeps a
-            name and an image, not the card object, and widening it would
-            put a full card on every link — which is what the 16KB
-            table-snapshot budget exists to stop. */
-         : g2.kind==="controlPow"? [...act(s).board.map(b=>b.card), ...act(s).gear,
-             ...(s.pend&&s.pend.card?[s.pend.card]:[])].some(x=>x&&(x.power||0)>=g2.n)
-         : g2.kind==="defending" ? s.mode==="block"
-         : g2.kind==="foeTurn"   ? (s.mode==="block" || s.mode==="foeturn")
-         : true;
-  }
+  /* ONE READER FOR `fx.activateIf`, AND IT LIVES IN `effects.js` NOW
+     (v3.04). It was written here, so `judge.js` had no printed activation
+     gate at all — the same one-board shape as phantasm's pop and the
+     graveyard zone rule. Two of its cases asked `s.mode`, which judge
+     seeds and never writes, so the port had to make them board-agnostic
+     before it could be shared; see the note on the function. */
+  const activateIfOk = (s, g2, card) => DawnEffects.activateIfOk(s, g2, card);
   /* resolveStack lives in engine/effects.js (v2.62) — the last of the
      three. It was `() => setG(s=>{…})`, so unlike runOps and execute it
      needed its React wrapper peeled off: the BODY was already a pure

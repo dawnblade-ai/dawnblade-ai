@@ -631,7 +631,39 @@ function legal(g, a, seat){
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
     if(piece.destroyed) return piece.name + " is destroyed";
-    if(!TY.isWeaponType(piece)) return piece.name + " is equipment, not a weapon";
+    /* ---- AN ACTIVATED ABILITY IS NOT A WEAPON SWING (v3.04) ----------
+       This refused every non-weapon piece outright, so **17 non-weapon
+       equipment abilities across 12 heroes were dead at the table** —
+       Spellfire Cloak, Knucklehead, Bull's Eye Bracers, Pouncing Paws,
+       every one of them. Measured, not guessed: `legal` answered
+       "Spellfire Cloak is equipment, not a weapon".
+
+       It is the shape this cycle keeps finding — a route that exists on
+       one board only, because `Battle` built it as UI. The trainer's own
+       path is `tryPlay(gr.powCard, "hero", i)`, so this is the same call
+       with the same powCard, and `execute` marks the once-per-turn flag
+       (`weaponUsed["gp"+uid]`) for both. */
+    if(!TY.isWeaponType(piece)){
+      if(!piece.pow || !piece.powCard) return piece.name + " prints no activated ability";
+      const ab = piece.powCard;
+      /* Matching the trainer, deliberately: an ability is available once
+         per turn. Most of these are "Destroy this:" and spend themselves;
+         the rest print `Once per Turn`. Widening it here would be a NEW
+         rules claim on the board that is not the regression harness. */
+      if((sd.weaponUsed || {})[ab.uid]) return piece.name + "'s ability is spent this turn";
+      const gate = PR.fxParse(ab).activateIf;
+      if(gate && !E.activateIfOk({...g, actor: seat}, gate, piece))
+        return piece.name + " can't be activated — " + gate.why;
+      const want = ab._instant ? "instant" : "action";
+      if(P.speedAllowed(g, seat).indexOf(want) < 0)
+        return "no " + want + "-speed window for " + piece.name;
+      /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
+         instant does not. `costsAP` is the one reader of that rule. */
+      if(!ab._instant && !(sd.ap > 0)) return "no action point left";
+      if((ab.cost || 0) > sd.res + payCeiling(sd, null))
+        return piece.name + " costs " + ab.cost + " to activate and you cannot raise it";
+      return null;
+    }
     const wc = PR.weaponCost(piece.tx || "");
     if(!wc) return piece.name + " prints no weapon attack";
     /* TWO SEPARATE LIMITS, and honouring only one gets a card wrong in a
@@ -1158,6 +1190,16 @@ function playWindowFor(g, seat, card){
 function doActivate(g, a, seat){
   const sd = at(g, seat);
   const piece = sd.gear[find(sd.gear, a.uid)];
+  /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the
+     powCard's uid ("gp"+uid) for a destroy-cost, so no index is needed —
+     the "hero" zone is not a list and nothing splices it. */
+  if(!TY.isWeaponType(piece)){
+    const ab = piece.powCard, acost = ab.cost || 0;
+    if(acost > sd.res)
+      return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
+        ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+    return commitPlay(g, ab, "hero", seat, null, null);
+  }
   const wc = PR.weaponCost(piece.tx || "");
   const cost = wc.cost || 0;
   const target = targetOf(g, seat, a.target);

@@ -400,7 +400,13 @@ test("both callers ask instantAbilityReady rather than re-deriving it", () => {
 });
 
 test("activateInstant asks priority.js for the window, and restores it", () => {
-  const ai = slice("  const activateInstant = (card, from, idx) => setG(s=>{", "  function activateIfOk(s, g2){");
+  /* THE END ANCHOR MOVED (v3.04): `activateIfOk` was shared into
+     `engine/effects.js`, and a slice whose end anchor is gone runs to the
+     end of the file and passes by reading everything — the exact failure
+     HANDOFF-MERGE.md lesson 3 records. `slice` asserts both anchors, which
+     is why this went red rather than quietly green. */
+  const ai = slice("  const activateInstant = (card, from, idx) => setG(s=>{",
+                   "  /* ONE READER FOR `fx.activateIf`");
   /* CR 8.1.6 asked of the module that owns it. Restating it here is how
      five copies of "may this be played here" drifted apart pre-rxAllowed. */
   assert.ok(/DawnPriority\.speedAllowed\(s,\s*0\)\.includes\("instant"\)/.test(ai),
@@ -454,23 +460,51 @@ test("engine/effects.js states no PHASE — that is the whole of the split", () 
                          hand-rolls one). The real answer is
                          `turnPlayer !== actorOf`, which is why the pair
                          may look redundant and is not. */
-  const reads = (code.match(/\.mode\s*[!=]==?\s*"[a-z]+"/g) || []).sort();
+  /* NORMALISED, because the pin is about the SHAPE and not the spacing:
+     sharing the reader into `foeTurnNow` (v3.04) reformatted the same two
+     reads as `.mode === "block"` and turned this red for a whitespace
+     difference. Still exactly two, still named, still a deliberate edit to
+     add one. */
+  const reads = (code.match(/\.mode\s*[!=]==?\s*"[a-z]+"/g) || [])
+    .map(r => r.replace(/\s+/g, "")).sort();
   assert.deepEqual(reads,
     ['.mode==="block"', '.mode==="foeturn"'].sort(),
     "effects.js's remaining mode READS are pinned — adding one is a deliberate edit");
+  /* AND THEY LIVE IN ONE PLACE NOW. Both are inside `foeTurnNow`, shared
+     by the foeTurn CONDITION and the foeTurn activation GATE; a second
+     copy of that expression is how the gate came to answer with the
+     trainer's vocabulary. */
+  assert.match(code, /const foeTurnNow\s*=/,
+    "the fallback has one home — if it is inlined again, two callers will drift");
 
 });
 
-test("the activateIf gate has ONE reader, asked by both windows", () => {
+test("the activateIf gate has ONE reader, and BOTH boards ask it", () => {
+  const E = require("../engine/effects.js");
+  /* THE READER LEFT index.html IN v3.04. It was written inside `Battle`,
+     so judge.js had no printed activation gate at all — 17 non-weapon
+     equipment abilities across 12 heroes were unactivatable at the table.
+     The trainer now delegates, and this drives the shared function rather
+     than grepping for its source, which is the project's own preference:
+     a scan is satisfied by whatever survives deleting the gate. */
+  assert.strictEqual(typeof E.activateIfOk, "function");
   const tp = slice("      const afx = fxParse(card);", "      const pif = afx.playIf;");
-  assert.ok(/activateIfOk\(s, g2\)/.test(tp),
-    "tryPlay must not re-implement the gate beside activateInstant's copy");
-  const ok = slice("  function activateIfOk(s, g2){", "\n  }\n");
-  /* "Not your turn" is BOTH their combat window and their action phase.
-     Reading it as mode==="block" alone meant the ability was unreachable
-     on any turn the opponent did not attack. */
-  assert.ok(/g2\.kind==="foeTurn"\s*\?\s*\(s\.mode==="block" \|\| s\.mode==="foeturn"\)/.test(ok),
-    "foeTurn must cover their action phase as well as their combat window");
+  assert.ok(/activateIfOk\(s, ?g2\)/.test(tp),
+    "tryPlay must not re-implement the gate beside activateInstant's call");
+
+  /* "NOT YOUR TURN" IS BOTH their combat window and their action phase.
+     Read as mode==="block" alone the ability was unreachable on any turn
+     the opponent did not attack. Asked of the CR machine now, with the
+     mode test surviving only for a state that carries no priority fields. */
+  const gate = {kind: "foeTurn"};
+  assert.equal(E.activateIfOk({sides: [{}, {}], turnPlayer: 1, actor: 0}, gate), true,
+    "their turn, by the CR machine");
+  assert.equal(E.activateIfOk({sides: [{}, {}], turnPlayer: 0, actor: 0}, gate), false,
+    "your own turn is not theirs — without this the gate could always say yes");
+  assert.equal(E.activateIfOk({sides: [{}, {}], mode: "foeturn"}, gate), true,
+    "their ACTION PHASE, on a state with no priority fields");
+  assert.equal(E.activateIfOk({sides: [{}, {}], mode: "block"}, gate), true,
+    "and their combat window");
 });
 
 test("perTurnCleared has one home, and the trainer uses it", () => {

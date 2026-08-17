@@ -775,9 +775,16 @@ test("EQUIPMENT cannot be played from hand", {skip}, () => {
   const g2 = J.put(g, seat, s => ({...s, hand: [piece, ...s.hand], res: 9}));
   const why = J.legal(g2, {t: "play", uid: piece.uid, from: "hand"}, seat);
   assert.ok(why && /worn, not played/.test(why), `${piece.name} was playable from hand`);
-  /* and activating a non-weapon as a weapon is refused by name */
-  const act = J.legal(g, {t: "activate", uid: piece.uid}, seat);
-  assert.ok(act && /equipment, not a weapon|prints no weapon attack/.test(act));
+  /* AND IT IS NOT A WEAPON SWING. This asserted "equipment, not a weapon"
+     until v3.04, when `activate` learned the ABILITY route — 17 non-weapon
+     equipment abilities across 12 heroes had been dead at the table until
+     then. A plain piece of armour still has nothing to activate, and that
+     is the half this drill is about; the ability route has its own file. */
+  const plain = g.sides[seat].gear.find(x => !TY.isWeaponType(x) && !x.pow);
+  assert.ok(plain, "the hero is wearing no plain armour — re-pick the fixture");
+  const act = J.legal(g, {t: "activate", uid: plain.uid}, seat);
+  assert.match(String(act), /prints no activated ability/,
+    plain.name + " has no ability and must not be swingable either");
 });
 
 test("a TRAP defence reaction is refused in the action phase", {skip}, () => {
