@@ -1,0 +1,384 @@
+<title>Dawnblade Finish Line</title>
+<style>
+/* ============================================================
+   Grounded in the game's own system (index.html :root) &#8212; the forge
+   palette, the amber accent, and the chamfered corner-cut that every
+   panel in the trainer already wears. Dark-first, because the game is.
+   ============================================================ */
+:root{
+  --ink:#14100E; --forge:#1E1712; --forge2:#2E241D; --raise:#241B16;
+  --bone:#E8DFD0; --dim:#B8AC98; --faint:#7E7263;
+  --line:#3D3126; --line2:#4A3B2E;
+  --amber:#E8B33C; --red:#C4302B; --green:#7BA05B; --blue:#5B8BC9;
+  --shadow:0 1px 0 rgba(0,0,0,.5);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --ink:#E4DACA; --forge:#EFE7DA; --forge2:#D9CCB7; --raise:#F5EFE4;
+    --bone:#1B1511; --dim:#5A4E42; --faint:#877868;
+    --line:#CDBEA6; --line2:#B9A88C;
+    --amber:#8A5F12; --red:#9E2420; --green:#4A6B33; --blue:#2F5C93;
+    --shadow:0 1px 0 rgba(0,0,0,.06);
+  }
+}
+:root[data-theme="light"]{
+  --ink:#E4DACA; --forge:#EFE7DA; --forge2:#D9CCB7; --raise:#F5EFE4;
+  --bone:#1B1511; --dim:#5A4E42; --faint:#877868;
+  --line:#CDBEA6; --line2:#B9A88C;
+  --amber:#8A5F12; --red:#9E2420; --green:#4A6B33; --blue:#2F5C93;
+  --shadow:0 1px 0 rgba(0,0,0,.06);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ink); color:var(--bone);
+  font:16px/1.62 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  margin:0; padding:0;
+}
+.disp{
+  font-family:"Arial Narrow","Helvetica Neue Condensed",Roboto Condensed,
+              ui-sans-serif,system-ui,sans-serif;
+  font-stretch:condensed; font-weight:700;
+  text-transform:uppercase; letter-spacing:.045em; text-wrap:balance;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-variant-numeric:tabular-nums}
+
+.wrap{max-width:860px; margin:0 auto; padding:34px 20px 80px;
+      display:flex; flex-direction:column; gap:46px}
+
+/* the chamfer &#8212; the trainer's own panel shape, not a rounded card */
+.clip{clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+
+/* ---- masthead ---- */
+header{display:flex; flex-direction:column; gap:14px}
+.brand{font-size:13px; letter-spacing:.22em; color:var(--faint)}
+.brand b{color:var(--amber); font-weight:700}
+h1{margin:0; font-size:clamp(38px,7vw,62px); line-height:.94; color:var(--bone)}
+h1 em{font-style:normal; color:var(--amber)}
+.lede{max-width:62ch; color:var(--dim); font-size:17px}
+.lede strong{color:var(--bone); font-weight:600}
+
+.vitals{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px}
+.vital{background:var(--forge); border:1px solid var(--line); padding:7px 12px;
+       font-size:12.5px; letter-spacing:.06em; color:var(--dim)}
+.vital b{color:var(--green); font-weight:700}
+.vital.warn b{color:var(--amber)}
+
+/* ---- sections ---- */
+section{display:flex; flex-direction:column; gap:18px}
+.eyebrow{font-size:11.5px; letter-spacing:.2em; color:var(--faint)}
+h2{margin:0; font-size:clamp(23px,3.4vw,31px); line-height:1.06}
+h3{margin:0; font-size:17px; letter-spacing:.03em; color:var(--bone)}
+p{margin:0; max-width:66ch}
+p.wide{max-width:none}
+.dim{color:var(--dim)}
+strong{color:var(--bone); font-weight:650}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+     font-size:.88em; background:var(--forge2); padding:1px 5px; color:var(--bone)}
+.rule{height:1px; background:var(--line); border:0; margin:0}
+
+/* ---- done-conditions ---- */
+.conds{display:flex; flex-direction:column; gap:1px; background:var(--line)}
+.cond{background:var(--forge); padding:15px 17px; display:grid;
+      grid-template-columns:30px 1fr; gap:4px 15px; align-items:baseline}
+.cond .n{color:var(--amber); font-size:15px}
+.cond .t{font-size:16px}
+.cond .m{grid-column:2; color:var(--dim); font-size:13.5px;
+         font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ---- phase ---- */
+.phases{display:flex; flex-direction:column; gap:14px}
+.phase{background:var(--forge); border:1px solid var(--line); padding:20px 20px 22px;
+       display:flex; flex-direction:column; gap:12px}
+.phead{display:flex; align-items:baseline; gap:13px; flex-wrap:wrap}
+.pid{font-size:27px; color:var(--amber); line-height:1}
+.ptitle{font-size:20px; flex:1; min-width:180px}
+.ptag{font-size:11px; letter-spacing:.13em; padding:4px 9px;
+      border:1px solid var(--line2); color:var(--dim); white-space:nowrap}
+.phase.now{border-color:var(--amber)}
+.phase.now .ptag{border-color:var(--amber); color:var(--amber)}
+
+ul{margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px;
+   max-width:66ch; color:var(--dim)}
+li strong{color:var(--bone)}
+li::marker{color:var(--faint)}
+
+.trap{border-left:2px solid var(--red); padding:3px 0 3px 14px;
+      color:var(--dim); font-size:14.5px; max-width:64ch}
+.trap b{color:var(--red); font-weight:650; letter-spacing:.02em}
+
+/* ---- data ---- */
+.tblwrap{overflow-x:auto; border:1px solid var(--line); background:var(--forge)}
+table{border-collapse:collapse; width:100%; font-size:14px; min-width:440px}
+th{text-align:left; padding:10px 13px; font-size:11px; letter-spacing:.13em;
+   color:var(--faint); border-bottom:1px solid var(--line); font-weight:600;
+   text-transform:uppercase; white-space:nowrap}
+td{padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+
+/* stacked coverage bar &#8212; full / part / none */
+.bar{display:flex; height:9px; min-width:120px; width:100%; background:var(--forge2)}
+.bar i{display:block; height:100%}
+.bar .f{background:var(--green)}
+.bar .p{background:var(--amber)}
+.bar .z{background:var(--red)}
+.legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--dim)}
+.legend span{display:flex; align-items:center; gap:6px}
+.sw{width:11px; height:11px; display:block}
+.hero-done{color:var(--green); font-size:11px; letter-spacing:.1em; white-space:nowrap; display:inline-block}
+td:first-child{white-space:nowrap}
+.hero-pas{color:var(--dim); font-size:15px}
+
+pre{margin:0; overflow-x:auto; background:var(--forge); border:1px solid var(--line);
+    padding:15px 17px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.65; color:var(--dim)}
+pre b{color:var(--amber); font-weight:600}
+pre .g{color:var(--green)}
+
+.callout{background:var(--raise); border:1px solid var(--line2); padding:16px 18px;
+         display:flex; flex-direction:column; gap:8px}
+.callout .k{font-size:11px; letter-spacing:.16em; color:var(--amber)}
+
+.laws{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1px;
+      background:var(--line)}
+.law{background:var(--forge); padding:13px 15px; font-size:14px; color:var(--dim)}
+.law b{color:var(--bone); display:block; font-weight:650; margin-bottom:2px;
+       letter-spacing:.01em}
+
+footer{color:var(--faint); font-size:13px; border-top:1px solid var(--line);
+       padding-top:20px; display:flex; flex-direction:column; gap:6px}
+
+@media (max-width:560px){
+  .wrap{padding:26px 15px 60px; gap:38px}
+  .cond{grid-template-columns:24px 1fr; gap:3px 11px}
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="brand mono">DAWN<b>BLADE</b> &#183; v2.83 &#183; 2026-08-16</div>
+  <h1 class="disp">The blueprint<br>to <em>done</em></h1>
+  <p class="lede">A Flesh and Blood training sim, judged to pro-tour standards, that runs
+  from a <code>file://</code> URL on a phone with no build step. This is what is left, in
+  what order, and <strong>what each phase costs</strong> &#8212; every number measured, with the
+  command to re-derive it.</p>
+  <div class="vitals">
+    <div class="vital mono">drills <b>1046</b> green</div>
+    <div class="vital mono">fairness <b>clean</b></div>
+    <div class="vital mono warn">pool <b>306</b>/405 full</div>
+    <div class="vital mono warn">heroes <b>2</b>/15 done</div>
+  </div>
+</header>
+
+<hr class="rule">
+
+<section>
+  <div class="eyebrow disp">Section one</div>
+  <h2 class="disp">What &#8220;done&#8221; means</h2>
+  <p class="dim">Five conditions, each checkable by a command rather than argued about.</p>
+  <div class="conds clip">
+    <div class="cond"><span class="n disp">01</span><span class="t"><strong>One engine</strong> &#8212; a card is wired in exactly one place</span><span class="m">Battle's rules gone &#183; the CR 4.4.3 end phase exists once</span></div>
+    <div class="cond"><span class="n disp">02</span><span class="t"><strong>The pool resolves faithfully</strong></span><span class="m">audit 405/405 full &#183; fairness clean &#183; 0 UNFAIR</span></div>
+    <div class="cond"><span class="n disp">03</span><span class="t"><strong>Every hero playable as printed</strong></span><span class="m">0 unread hero-ability clauses in sweep &#167;1</span></div>
+    <div class="cond"><span class="n disp">04</span><span class="t"><strong>Two humans can finish a game</strong></span><span class="m">ready gate exists &#183; a networked match, 0 desyncs</span></div>
+    <div class="cond"><span class="n disp">05</span><span class="t"><strong>It is tuned</strong></span><span class="m">a play session says so &#8212; deliberately not a drill</span></div>
+  </div>
+  <div class="callout">
+    <div class="k disp">Explicitly out of scope</div>
+    <p><strong>Hidden information.</strong> Both peers hold full state, including the
+    opponent's hand &#8212; a peer that cannot see the state cannot run the reducer. Fixing it
+    needs an authoritative server, which is a different product. <strong>Never present the
+    current layer as cheat-resistant.</strong></p>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow disp">Section two</div>
+  <h2 class="disp">The order, and the argument for it</h2>
+<pre>A. ONE ENGINE        retire Battle          <b>&#8592; a multiplier, so it goes first</b>
+B. THE UNFAIR 17     rules broken today     &#8592; correctness, one shape
+C. THE HEROES        13 left                &#8592; the bulk of the work
+D. THE TABLE         ready gate + voice     &#8592; small, and owed
+E. TUNE              play sessions          &#8592; last; depends on C</pre>
+  <p><strong>A leads because it is a multiplier, not because it is urgent.</strong> The
+  CR 4.4.3 end phase is implemented <strong>twice</strong> &#8212; once in <code>Battle</code>,
+  once in <code>judge.js</code> &#8212; and so is the combat path. <code>effects.js</code> holds
+  the semantics once, but <em>the schedule a card fires on</em> is duplicated. Every hero
+  built before A pays that tax, and C is thirteen heroes.</p>
+  <p><strong>B precedes C</strong> because those cards break a rule every time they are
+  played, and sixteen of the seventeen are a single shape. <strong>E goes last</strong>
+  because tuning against a pool that is 76% built measures the gaps, not the difficulty.</p>
+</section>
+
+<section>
+  <div class="eyebrow disp">Phases</div>
+  <h2 class="disp">The work</h2>
+  <div class="phases">
+
+    <article class="phase now">
+      <div class="phead"><span class="pid disp">A</span><span class="ptitle disp">One engine</span><span class="ptag disp">Next</span></div>
+      <p class="dim">Retire <code>Battle</code>'s rules. The gate that governed this passed
+      at v2.80 &#8212; the five semantics drills all drive <code>judge.reduce</code>.</p>
+<pre>Battle          <b>2,377</b> lines &#183; 90 declarations
+                <b>137</b> mode/bphase refs &#183; 29 setG sites
+drill anchors   <b>70</b> resolve INSIDE Battle, across 5 files
+                priority 33 &#183; mirror 21 &#183; dorinthea 6 &#183; kayo 5 &#183; sides 5</pre>
+      <p class="dim">The remaining feature gap, censused rather than guessed: the Advisor
+      and the score <span class="hero-done disp">&#10003; done at v2.83</span>. The next-swing
+      prediction is <strong>dropped</strong> &#8212; it reads the <code>[3,4,5]</code>
+      fabrication, and a card-playing seat has no such number.</p>
+      <ul>
+        <li><strong>Boost is the one real gap.</strong> <code>judge.js</code> has no boost
+        action, and <strong>19 pool cards print the keyword &#8212; every one of them Dash.</strong></li>
+        <li><strong>Route solo to the merged board.</strong> One &#8220;Fight&#8221; button; keep
+        <code>Battle</code> behind a flag for exactly one version so the harness survives
+        the first real games on the merged path.</li>
+        <li><strong>Repoint the 70 anchors.</strong> Prefer moving each decision into a pure
+        engine function you can <em>drive</em> over re-aiming a source scan.</li>
+        <li><strong>Then delete</strong> &#8212; <code>foeVanilla</code>, <code>dummyDefence</code>,
+        <code>takeIt</code>, <code>finishBlock</code>, <code>resolveStack</code>,
+        <code>newTurn</code> and <code>endPhaseCF</code> all go together.</li>
+      </ul>
+      <p class="trap"><b>Trap.</b> Whatever replaces <code>setG</code> must keep the
+      invariant-judge funnel, or the guard rails go dark on the board where a bad state is
+      hardest to reconstruct. And a ledger that silently widens its own slice reports the
+      wrong body &#8212; removing an anchor without replacing it lets the previous slice swallow
+      the next function.</p>
+    </article>
+
+    <article class="phase">
+      <div class="phead"><span class="pid disp">B</span><span class="ptitle disp">The unfair seventeen</span><span class="ptag disp">One shape</span></div>
+      <p class="dim">Cards that break a rule <em>every time they are played</em> &#8212; the
+      player wins games they should lose, and the sim teaches wrong play.</p>
+      <p><strong>Sixteen of the seventeen are one shape:</strong> a keyword filed
+      <code>noop</code> that is actually a <strong>drawback</strong>. Because
+      <code>noop</code> counts as &#8220;accounted for&#8221;, coverage reports these cards as fully
+      scripted with their entire mechanic ignored:</p>
+<pre>Spears of Surreality   tier = <span class="g">FULL</span>   kw = [Phantasm, Go again]
+Barnacle               tier = <span class="g">FULL</span>   kw = [Watery Grave]</pre>
+      <p class="dim">Phantasm destroys an attack blocked by a 6+ power card. Watery grave
+      turns a dead ally face-down <em>specifically so it cannot be replayed infinitely</em>.
+      These are Enigma's and Gravy Bones's identities. The seventeenth is Lyath Goldmane,
+      drawback skipped.</p>
+      <p class="trap"><b>Neither sweep can see this.</b> Coverage counts clauses consumed;
+      the fairness sweep is deliberately one-sided toward too-strong. The honest test is the
+      ruling's own words &#8212; where it says a keyword &#8220;does nothing on its own&#8221;,
+      <code>noop</code> is right; where it describes real behaviour, <code>noop</code> is a
+      mis-filing.</p>
+    </article>
+
+    <article class="phase">
+      <div class="phead"><span class="pid disp">C</span><span class="ptitle disp">The heroes</span><span class="ptag disp">The bulk &#183; 13 left</span></div>
+<pre>99 cards still short of full   (22 read nothing &#183; 77 partial)
+26 unread hero-ability clauses across 11 heroes
+10 tokens need a look &#8212; 6 with unread text and near-zero mentions</pre>
+      <p><strong>Take the well-covered heroes first</strong>, so each pass is mostly hero
+      ability and a short tail rather than a rewrite. <strong>Iyslander</strong> is
+      recommended next: both axes she needed went live at v2.71&#8211;v2.75, leaving freeze
+      (Cold Snap) &#8212; ruled, not built. <strong>Dash lands after A</strong>, because boost is
+      built there. <strong>Arakni goes last</strong> &#8212; traps and marks are their own
+      subsystem.</p>
+    </article>
+
+    <article class="phase">
+      <div class="phead"><span class="pid disp">D</span><span class="ptitle disp">The table</span><span class="ptag disp">Small &#183; owed</span></div>
+      <ul>
+        <li><strong>The lobby ready gate &#8212; asked for, not built.</strong> Both seats press
+        Ready before the game starts. A write-once slot per seat, so the writes commute and
+        <strong>no sequencer is needed</strong>; derived into <code>stepOf</code>, never
+        stored.</li>
+        <li><strong>The feed's voice.</strong> 44 second-person literals in
+        <code>effects.js</code>. A logged line is read by both seats and must name one; a
+        <em>refusal</em> is returned to whoever acted and correctly says &#8220;you&#8221;.</li>
+        <li><strong>One refusal hardcodes the dummy</strong> &#8212; wrong with a person in seat 1.</li>
+      </ul>
+    </article>
+
+    <article class="phase">
+      <div class="phead"><span class="pid disp">E</span><span class="ptitle disp">Tune</span><span class="ptag disp">Not a drill</span></div>
+      <p>The local table's dummy is untuned and <strong>too strong: it wins 11 of 15
+      heroes, and 8 of 15 even at 20 life</strong> &#8212; so it is not the life total. A deck
+      with no rules text <em>suits</em> a policy that reads no card text.</p>
+      <p class="dim">The trainer is unaffected while it exists &#8212; it runs the tuned
+      <code>[3,4,5]</code> escalation &#8212; but <strong>A retires that</strong>. A creates the
+      tuning debt, C makes tuning meaningful, E pays it.</p>
+    </article>
+
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow disp">Section four</div>
+  <h2 class="disp">Where the pool stands</h2>
+  <p class="dim">Unique <code>name|pitch</code> across deck and gear, read from the audit's
+  own usage map &#8212; <strong>not</strong> from the deck list, because pitch normalises on
+  resolution and keying the raw entry silently mismatches about twelve cards a hero.</p>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--green)"></i> full</span>
+    <span><i class="sw" style="background:var(--amber)"></i> partial</span>
+    <span><i class="sw" style="background:var(--red)"></i> reads nothing</span>
+    <span><i class="sw" style="background:var(--forge2)"></i> &#9670; passive wired</span>
+  </div>
+  <div class="tblwrap clip">
+    <table>
+      <thead><tr><th>Hero</th><th style="width:38%">Coverage</th><th class="num">Full</th><th class="num">Part</th><th class="num">None</th><th class="num">%</th><th></th></tr></thead>
+      <tbody id="heroes"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow disp">Section five</div>
+  <h2 class="disp">The rules that do not change</h2>
+  <p class="dim">These survive every phase. Each one cost a real bug.</p>
+  <div class="laws clip">
+    <div class="law"><b>No build step. Ever.</b> Plain UMD scripts; <code>file://</code> must work.</div>
+    <div class="law"><b>Never invent card effects.</b> Teach the parser to read the text; never special-case a card by name.</div>
+    <div class="law"><b>One copy of the semantics.</b> <code>effects.js</code> is it.</div>
+    <div class="law"><b>Never parse ahead of wiring.</b> Reading a clause marks it consumed and makes the audit claim the card works.</div>
+    <div class="law"><b>Read the whole phrase or refuse.</b> A loose substring drops printed restrictions silently.</div>
+    <div class="law"><b>Rules use act() and foe().</b> you()/opp() are UI only. Never write a side field as a top-level game key.</div>
+    <div class="law"><b>instead REPLACES.</b> Go again is a GAIN. An instant costs no action point.</div>
+    <div class="law"><b>Assert on state.</b> Hands, life, zones, counters &#8212; never on log prose.</div>
+    <div class="law"><b>Sabotage every new drill</b> &#8212; and verify the sabotage actually changed the file.</div>
+    <div class="law"><b>A guard aimed at the wrong file, or the wrong shape, passes by finding nothing.</b></div>
+    <div class="law"><b>A pinned sample is not a pinned rule.</b> Pinning an emergent count trains the reader to edit the number without thinking.</div>
+    <div class="law"><b>The user reads cards for a living.</b> Ask them.</div>
+  </div>
+</section>
+
+<footer>
+  <div>Measured at v2.83 &#183; 1046 drills green &#183; <span class="mono">npm test</span> &#183;
+  <span class="mono">npm run audit</span> &#183; <span class="mono">npm run fairness</span> &#183;
+  <span class="mono">npm run sweep</span></div>
+  <div>Source of truth is <span class="mono">FINISH.md</span> in the repo; this page mirrors it.</div>
+</footer>
+
+</div>
+
+<script>
+const HEROES = [
+  ["lyath",32,30,2,0,1],["kayo",32,29,2,1,1,"done"],["iyslander",33,29,4,0,1],
+  ["dorinthea",33,29,4,0,1,"done"],["bravo",33,28,3,2,0],["viserai",32,27,5,0,1],
+  ["dash",33,26,6,1,0],["boltyn",32,25,5,2,0],["azalea",32,25,3,4,0],
+  ["fai",34,26,6,2,0],["briar",32,24,8,0,0],["blaze",31,23,8,0,0],
+  ["enigma",34,23,9,2,0],["gravy",33,22,9,2,1],["arakni",32,15,10,7,0]
+];
+document.getElementById("heroes").innerHTML = HEROES.map(h=>{
+  const [n,uniq,full,part,none,pas,done] = h;
+  const pct = Math.round(100*full/uniq);
+  const w = v => (100*v/uniq).toFixed(1)+"%";
+  return `<tr>
+    <td style="text-transform:capitalize">${n}${done?' <span class="hero-done disp">\u2713 DONE</span>':''}</td>
+    <td><span class="bar" role="img" aria-label="${full} full, ${part} partial, ${none} unread of ${uniq}">
+      <i class="f" style="width:${w(full)}"></i><i class="p" style="width:${w(part)}"></i><i class="z" style="width:${w(none)}"></i></span></td>
+    <td class="num">${full}</td><td class="num">${part}</td>
+    <td class="num" style="${none?'color:var(--red)':'color:var(--faint)'}">${none}</td>
+    <td class="num" style="color:${pct>=85?'var(--green)':pct>=70?'var(--bone)':'var(--amber)'}">${pct}%</td>
+    <td class="hero-pas">${pas?'\u25C6':''}</td></tr>`;
+}).join("");
+</script>
