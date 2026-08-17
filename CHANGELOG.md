@@ -9,6 +9,54 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.03 — freeze is built, and Iyslander's signature card resolves
+
+v3.02 stopped Cold Snap claiming a mechanic nobody had built. This builds
+it, to the ruling's own words — the offer, the choice, the freeze and the
+thaw — and it lands on **both** boards.
+
+| piece | where |
+|---|---|
+| the two printed sentences read as one | `parser.js`, PAIRED where the whole card is visible |
+| `["payOr", 1, [["freeze", 1]]]` | declining is what makes the consequence happen |
+| a `pick` over **caller-supplied** candidates | `prompts.js` — the freeze spans the arsenal AND allies, two zones |
+| the choice reported **structurally** | `applyPrompt` returns `picked`, not just prose |
+| the `_frozenBy` stamp | `applyAnswer`, the shared body |
+| "cannot be played" | `parser.playableFromZone` — one copy, both boards |
+| the thaw | `effects.thawFreeze`, called at **both** turn boundaries |
+
+**The mark records the SEAT, not a deadline.** "Until the start of your
+next turn" is stored as *whose* freeze it is, so the thaw needs no
+arithmetic — `judge.js` counts `turn` in player-turns and the trainer
+counts only your own, and a stored deadline would quietly mean two
+different things on the two boards.
+
+**Two seats, and they were inverted first.** `payOr`'s `elseOps` resolve
+at the side that was **asked**, so inside the freeze the actor is the
+*declining* hero: the objects to freeze are theirs and the choice belongs
+to the other seat. Written the other way round it read the caster's own
+board and logged *"Iyslander has nothing to freeze"*. The sabotage that
+reproduces it turns three drills red.
+
+**Honest about what it does not do:** the *"or activated"* half has
+nothing to bite on yet, because allies do not attack. The stamp is on the
+board entry and will be read the moment they do — said in the code rather
+than implied by silence.
+
+One line moved the second-person ledger 44 → 45, deliberately: a prompt
+**hint** is addressed to one side, so "until the start of *your* next
+turn" is correct there for the same reason it is correct in a refusal.
+The matching feed line names the seat instead.
+
+```
+npm test          1076 green (4 drift drills skip without a live DB)
+npm run fairness  clean
+npm run audit     405 unique pool cards — 305 full / 78 part / 22 none
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.02 — Cold Snap stops claiming a mechanic nobody built
 
 Phase C opened on **Iyslander**, and the first thing the census found was
