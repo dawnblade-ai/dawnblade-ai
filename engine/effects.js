@@ -65,7 +65,7 @@ const {advValue} = A;
 /* `applyPrompt` and `promptReady` joined `buildPrompt` in v2.77, when the
    prompt ANSWER moved here from the trainer: resolving a sheet is one
    shared body now, and both boards call it. */
-const {buildPrompt, applyPrompt, promptReady} = PR;
+const {buildPrompt, applyPrompt, promptReady, promptFilter} = PR;
 const rngRoll = R.roll, rngInt = R.int;
 
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
@@ -561,6 +561,26 @@ function makeEffects(ctx){
          card (see optFilter/pickPrompt in parser.js). Queued, not opened
          inline, same rule as every other prompt: the action finishes
          resolving first. */
+      /* ---- REACHING INTO THE OTHER SEAT'S HAND (Brain Freeze) --------
+         "put an action card with cost 0 from their hand on top of their
+         deck". The CHOICE is the caster's — the card says "put", not
+         "they put" — but the cards are in the opponent's hand, and
+         `prompts.js` reads ONE side. So the candidates are supplied and
+         the move is done here, the pattern v3.03's freeze established.
+
+         `buildPrompt` returns null with fewer than two candidates, so a
+         single legal card is taken without a sheet and an empty hand
+         asks nothing. */
+      else if(k==="foePickTop"){
+        const filt = promptFilter((v||{}).filter);
+        const cands = (foe(n).hand||[]).filter(filt);
+        if(!cands.length){ n = L(n, `${srcName}: nothing in ${foe(n).name}'s hand matches.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:actorOf(n), src:srcName, cards:cands, min:1, max:1,
+          moveFoe:{from:"hand", to:"deckTop"},
+          title:`Put one of ${foe(n).name}'s cards on top of their deck`,
+          hint:`It leaves their hand and becomes the next card they draw.`}];
+      }
       else if(k==="pickPrompt"){
         n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName, ...v}];
       }
@@ -1514,6 +1534,19 @@ function makeEffects(ctx){
       else foeMut(n).board = (foe(n).board||[]).map(b =>
         b && b.uid === fz.uid ? {...b, _frozenBy: by, card: {...b.card, _frozenBy: by}} : b);
       n = L(n, `${chosen.name} is frozen — it cannot be played or activated until the start of ${act(n).name}'s next turn.`);
+    }
+    /* THE CROSS-SEAT MOVE. `prompts.js` moves cards within ONE side, so a
+       pick whose candidates came from the other seat reports the choice
+       and this performs it — the same split the freeze stamp above keeps.
+       The actor is borrowed to the asked side for this whole body, so the
+       hand being reached into is `foe`. */
+    if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
+      const got = r.picked[0];
+      if((foe(n).hand||[]).some(x => x.uid === got.uid)){
+        foeMut(n).hand = foe(n).hand.filter(x => x.uid !== got.uid);
+        foeMut(n).deck = [got, ...(foe(n).deck||[])];
+        n = L(n, `${got.name} is pushed out of ${foe(n).name}'s hand onto the top of their deck.`);
+      }
     }
     if(p.tag === "pick" && p.to === "arsenal"){
       const put = act(n).arsenal;

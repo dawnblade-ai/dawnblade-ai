@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-17T22:55:05.147Z",
- "appVer": "3.04",
+ "generated": "2026-08-18T11:59:18.341Z",
+ "appVer": "3.05",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 310,
-  "part": 74,
+  "full": 311,
+  "part": 73,
   "none": 21
  },
  "heroes": {
@@ -2135,7 +2135,7 @@
    "mentions": [
     "ice fusion"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -2149,12 +2149,10 @@
     },
     {
      "t": "If this was fused, put an action card with cost 0 from their hand on top of their deck.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If this was fused, put an action card with cost 0 from their hand on top of their deck."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nTarget opponent reveals their hand. If this was fused, put an action card with cost 0 from their hand on top of their deck.",

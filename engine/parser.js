@@ -529,7 +529,14 @@ function classifyClause(raw){
   if(/^the crowd cheers each revered hero$/.test(c)) return NOOP("Revered is a static talent — nothing to resolve");
   if(/^(?:mark|marked)$/.test(c)) return NOOP("qualifier only — marking is a state other cards read");
   if(/^[a-z' ]+ specialization$/.test(c)) return NOOP("hero-locked card — deckbuilding marker");
-  if(/^crush\s*[-—]\s*when this deals \d+ or more damage to a hero/.test(c)) return NOOP("crush rider — the payload reaches for a hand, arsenal or turn the dummy hasn't got");
+  /* THE NOTE WAS STALE, NOT THE CARD (v3.06). It read "the payload reaches
+     for a hand, arsenal or turn the dummy hasn't got" — a fact about a
+     training prop that stopped existing in v2.71, and it reaches AUDIT.md.
+     Crush IS built: `linkPayload` forces a card from the defending hero's
+     hand onto their deck when a crush attack deals 4 or more. What is
+     approximate is WHICH card — the last in hand rather than their choice
+     — and that is worth saying instead. */
+  if(/^crush\s*[-—]\s*when this deals \d+ or more damage to a hero/.test(c)) return NOOP("crush rider — live: the keyword system forces a card from their hand onto their deck. Which card is an approximation (the last in hand, not their pick)");
   if(/^as an additional cost/.test(c)) return NOOP("additional cost — enforced when played");
   if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
@@ -745,6 +752,21 @@ function classifyClause(raw){
   if(m=c.match(/put an aim counter on it/)) return R([["aim",1]]);
   /* the dummy has a real deck now, so banishing off the top is a real cost */
   if(/^banish the top card of their deck$/.test(c)) return R([["foeBanishTop",1]]);
+  /* THE SAME MOVE, AIMED AT THE OTHER SEAT (Brain Freeze): "put an action
+     card with cost 0 from THEIR hand on top of THEIR deck". The reader is
+     `optFilter` again — the subject phrase has to be consumed whole or the
+     card stays unclaimed — and the destination is fixed by the text.
+
+     It is a separate op from `pickPrompt` because `prompts.js` reads ONE
+     side: the sheet is addressed to the seat that played the card, and the
+     cards are in the other seat's hand. Supplying the candidates and doing
+     the move in the caller is the pattern v3.03's freeze already
+     established, and it is what keeps the prompt module data-driven. */
+  if(m=c.match(/^put (.+) from their hand on top of their deck$/)){
+    const filter = optFilter(m[1]);
+    if(!filter) return null;
+    return R([["foePickTop", {filter}]]);
+  }
   /* RETRIEVE (Memorial Ground): a MANDATORY target pick from the graveyard
      back onto the deck — reads the subject the same way optFilter already
      does for optional-cost riders, and refuses (returns null, leaving the
@@ -925,6 +947,15 @@ function optFilter(phrase){
      phrase as we go. */
   const cm = rest.match(/\s*\bwith cost (\d+) or less\b/i);
   if(cm){ f.costLe = +cm[1]; rest = (rest.slice(0, cm.index) + " " + rest.slice(cm.index + cm[0].length)).trim(); }
+  /* AN EXACT COST is a different printed qualifier from "or less", and
+     Brain Freeze prints one: "an action card with cost 0". Read as
+     `costLe` alone it would also offer a cost-1 card if one ever printed
+     below it; both bounds are set so the phrase is consumed exactly. */
+  else {
+    const ce = rest.match(/\s*\bwith cost (\d+)\b/i);
+    if(ce){ f.costLe = +ce[1]; f.costGe = +ce[1];
+      rest = (rest.slice(0, ce.index) + " " + rest.slice(ce.index + ce[0].length)).trim(); }
+  }
 
   /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of
      these EXACTLY — not as a substring.
@@ -940,6 +971,13 @@ function optFilter(phrase){
   const low = rest.toLowerCase();
   if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
   if(/^attack action cards?$/.test(low))  { f.type = "attack"; return f; }
+  /* "AN ACTION CARD" — read off the STRUCTURED type array, never `tt`.
+     The display string calls Den of the Spider and Lair of the Spider
+     "Action Defense Reaction" and both are in this pool, so a `tt` read
+     would offer a defence reaction as an action card. An attack action IS
+     an action card, which is why this is a wider filter than the line
+     above rather than a rival to it. */
+  if(/^action cards?$/.test(low))         { f.ty = "action";   return f; }
   if(/^yellow cards?$/.test(low))         { f.pitch = 2;       return f; }
   if(/^blue cards?$/.test(low))           { f.pitch = 3;       return f; }
   if(/^red cards?$/.test(low))            { f.pitch = 1;       return f; }

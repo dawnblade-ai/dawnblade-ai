@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-17T22:55:05.147Z · app v3.04 · data sage-v11 · db 764 records
+Generated 2026-08-18T11:59:18.341Z · app v3.05 · data sage-v11 · db 764 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 310 |
-| Partially scripted | 74 |
+| Fully scripted | 311 |
+| Partially scripted | 73 |
 | Text-only (nothing parsed) | 21 |
 | Cards with audit flags | 66 |
 
@@ -257,13 +257,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ This enters the arena with a steam counter
 - — At the start of your turn, destroy this unless you remove a steam counter from it.
 - ▶ When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
-
-### Brain Freeze (pitch 3) — part · [iyslander]
-- type: Elemental Wizard Action · printed: Ice Fusion
-- ○ Ice Fusion
-- ▶ Target opponent reveals their hand
-- — If this was fused, put an action card with cost 0 from their hand on top of their deck.
-- 🚩 unreviewed keyword: "ice fusion"
 
 ### Burn Up // Shock (pitch 1) — part · [briar]
 - type: Runeblade Action // Lightning Instant · printed: Go again, Meld
@@ -760,6 +753,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
+- **Brain Freeze** (pitch 3): unreviewed keyword: "ice fusion"
 - **Concealed Object** (pitch 3): tap cost {t} — not enforced (see ledger)
 - **Cutty Shark, Quick Clip** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Display Loyalty** (pitch 1): text mentions go again but no clause parses it

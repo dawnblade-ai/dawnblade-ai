@@ -56,6 +56,16 @@ function promptFilter(spec){
     if(spec.type === "attack" && !isAttack(c)) return false;
     if(spec.type === "nonAttack" && isAttack(c)) return false;
     if(spec.tt != null && !new RegExp(spec.tt, "i").test(c.tt||"")) return false;
+    /* THE STRUCTURED ARRAY IS THE AUTHORITY, and for a TYPE it is the only
+       safe reader. `tt` is a display string and the database's two fields
+       disagree on five records — it calls Den of the Spider and Lair of
+       the Spider "Action Defense Reaction", and BOTH are in this pool. A
+       `tt` regex asking "is this an action card" would offer either of
+       them as a legal choice; `ty` says Defense Reaction and a reaction is
+       not an action. (`\baction\b` also keeps "Reaction" from matching as
+       a substring, which is the other half of the same trap.) */
+    if(spec.ty != null && !(c.ty||[]).some(t => String(t).toLowerCase() === String(spec.ty).toLowerCase()))
+      return false;
     if(spec.pitch != null && (c.pitch||0) !== spec.pitch) return false;
     if(spec.costLe != null && (c.cost||0) > spec.costLe) return false;
     if(spec.costGe != null && (c.cost||0) < spec.costGe) return false;
@@ -115,6 +125,16 @@ function buildPrompt(game, spec){
          that was chosen rather than to the source. `applyAnswer` reads it
          off `out.picked`. */
       freezeSide: spec.freezeSide != null ? spec.freezeSide : null,
+      /* A CROSS-SEAT MOVE, and it is DATA for the same reason `arsStamp`
+         is: this module moves cards within ONE side, so a pick whose
+         candidates came from the other seat reports the choice and the
+         caller performs it. Added here explicitly because a spec only
+         carries fields `buildPrompt` knows about — `arsStamp` had to be
+         added the same way in v2.34, and until it was the Bracers' +1{p}
+         was silently dropped. Driving Brain Freeze caught this one the
+         same way: the sheet opened, the right card was offered, and
+         nothing moved. */
+      moveFoe: spec.moveFoe || null,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
