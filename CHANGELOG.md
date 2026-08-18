@@ -9,6 +9,54 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.06 — Brain Freeze reaches into the other seat's hand
+
+*"...if you've played an ice card and a lightning card this turn, put an
+action card with cost 2 or less from their hand on top of their deck."*
+Iyslander's fused rider — the last card of hers anything could be done
+about — and the first payload in the project that **moves a card the
+acting seat does not own**.
+
+The census first, because one card is not a rule: **four pool cards move a
+card to the top of a deck**, across four heroes. Two were already built
+(Boulder Drop through Crush, Memorial Ground through a pick prompt); Brain
+Freeze and Crown of Dichotomy read `part`. Brain Freeze is now `full`;
+Crown of Dichotomy prints a two-target ability nothing here can express
+and is left honestly unread.
+
+| piece | where |
+|---|---|
+| `["foePickTop", {filter}]` | `parser.js` — one payload rule, anchored end to end so a phrase it cannot read refuses |
+| `{ty:"action"}`, exact `with cost N` | `optFilter` — the filter's two new printed-field readings |
+| `ty` | `promptFilter` — it could ask `tt` and could not ask the structured array |
+| `moveFoe` | `buildPrompt` + `applyAnswer` — the cross-seat move |
+
+### The display type line would have mistyped two real cards
+
+`an action card` is the obvious thing to read off `tt`, and `tt` is wrong
+on exactly the cards this filter would offer: **Den of the Spider** and
+**Lair of the Spider** print `Assassin / Warrior Action Defense Reaction -
+Trap`, and both are in the pool. A `tt`-based filter offers a defence
+reaction as an action card. `promptFilter` asks `ty` — the same ruling
+v2.39 settled for playability, applied to a filter — and a drill fails if
+it is read the other way.
+
+### And the prompt spec has to carry the field
+
+`moveFoe` had to be added to `buildPrompt` explicitly. Until it was, the
+prompt opened, the right card was offered, the tap registered and
+**nothing moved** — the `arsStamp` trap from v2.34, verbatim, found by
+driving the flow rather than by any drill.
+
+`test/brainfreeze.test.js` — 6 drills, three sabotages each proven to
+bite: reading `tt` turns 3 red, dropping the cost lower bound turns 2 red,
+dropping `moveFoe` turns 1 red.
+
+**Also corrected:** Boulder Drop's crush note in the parser still described
+the dummy having no action phase — false since v2.71.
+
+---
+
 ## v3.05 — an activated ability on a card in hand
 
 *"Instant - Discard this: Amp 1"*. **Four pool cards across three heroes**

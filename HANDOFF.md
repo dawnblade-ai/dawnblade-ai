@@ -67,11 +67,11 @@
 
 ---
 
-## WHERE WE ARE — v3.05
+## WHERE WE ARE — v3.06
 
-`npm test` → **1089 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1095 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
-`npm run audit` → 405 pool cards, **310 full / 74 part / 21 none** ·
+`npm run audit` → 405 pool cards, **311 full / 73 part / 21 none** ·
 `tools/failstates.js` → **0 UNFAIR**.
 
 **305 went to 304 and back, and the round trip is the point.** Cold Snap
@@ -85,10 +85,40 @@ because a lie was removed is the number improving.
 ```
 1. ENGINE   ✔ merged · ✔ pool pinned · ✔ drift guarded
 2. PHASE B  ✔ DONE — 0 UNFAIR (watery grave + suspense, v3.01)
-3. PHASE C  ▸ IYSLANDER — freeze (v3.03), equipment abilities (v3.04)
-              and hand abilities (v3.05) all built; TWO cards left
+3. PHASE C  ✔ IYSLANDER — freeze (v3.03), equipment abilities (v3.04),
+              hand abilities (v3.05), Brain Freeze (v3.06). 31/33 full;
+              the two left are RECORDED DECISIONS, not work — see below
+            ▸ NEXT HERO — 12 remain; Viserai is the gentlest curve
 4. PHASE A  ☐ retire Battle — carries the tuning debt, needs a phone
 ```
+
+### IYSLANDER IS DONE, AND TWO CARDS ARE STILL `part`
+
+That is not a contradiction and it must not be read as one. Both are
+**recorded decisions** with the reason written down, and building either
+would make the card *wrong* rather than *more complete*:
+
+| card | why it stays |
+|---|---|
+| **Ice Eternal** | the pool's only X-cost card. `create X ... tokens` is REFUSED rather than read as one — creating a single token for a card that charges for X is quietly weaker than printed, and coverage reads that as `full` |
+| **Stir the Aetherwinds** | its bonus half IS read; the instant-speed grant is not. Its `full` at v2.99 was an unanchored regex swallowing a whole sentence and modelling half of it — the tier was lowered ON PURPOSE at v3.00 |
+
+**A hero is finished when every card is either built or has a written
+reason.** Chasing the last two tiers here buys a number and costs the
+truth of the number.
+
+### NEXT HERO — the shortlist, and why
+
+Twelve remain. **Viserai** is the recommendation: his passive is already
+built (`bAct(n).viseraiPassive`), runechants are real board auras since
+v2.23, and his deck's one mechanic — the rite — has a live schedule to
+hang off. **Lyath** is the best-covered on paper but his chapter-3 text
+is the pool's densest. **Leave Arakni last**: stealth-as-qualifier is
+filed `noop` by ruling, so his deck's coverage number is the least
+honest one in the pool.
+
+Find the hero's ONE mechanic first, and **read the hero ability before
+the cards** — Kayo's clause 2 was worth half his deck.
 
 ### The five things v3.00–v3.01 found, and why no tool saw them
 

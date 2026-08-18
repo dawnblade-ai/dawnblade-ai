@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.05"; /* v3.05 — an activated ability on a card in HAND works at the table: four pool cards across three heroes print one, the route lived in Battle, and a fifth card (Rally the Coast Guard) is an impostor whose printed restriction `parseHandAbility` truncates away — so the route asks the whole gate, not one case of it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.06"; /* v3.06 — Brain Freeze's fused rider reaches into the other seat's hand: a payload that moves a card from THEIR hand to the top of THEIR deck, filtered on printed fields, which needed the structured type array rather than the display line — `an action card` read off `tt` matches the two Spider cards the database mistypes. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
