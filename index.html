@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.06"; /* v3.06 — Brain Freeze's fused rider reaches into the other seat's hand: a payload that moves a card from THEIR hand to the top of THEIR deck, filtered on printed fields, which needed the structured type array rather than the display line — `an action card` read off `tt` matches the two Spider cards the database mistypes. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.07"; /* v3.07 — the arena has a clock and it runs on both boards: five cards and fifteen tokens print a self-destruct schedule, the "end" half ran on NEITHER board (Concealed Object paid its tap-pump every turn forever), tokens were never stamped with theirs, and the "destroy this, THEN X" wording swallowed the schedule outright. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3451,6 +3451,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(r.tokens)
       n = L(n, `Inertia seizes ${n.sides[si].name} — ${r.tokens>1?`${r.tokens} tokens shatter`:"the token shatters"}, and `
              + `${r.wiped ? `${r.wiped} card${r.wiped>1?"s":""} from hand and arsenal go to the bottom of the deck` : "there was nothing left to sweep away"}.`);
+    /* "AT THE BEGINNING OF YOUR END PHASE, DESTROY THIS" — the other half
+       of the arena's clock, and until v3.07 it ran on NEITHER board.
+       Concealed Object is an Item whose tap pumps an attack; never
+       destroyed, step (d) untaps it and it pays out again every turn,
+       forever.
+
+       AFTER Inertia, deliberately. Both print "at the beginning of your
+       end phase", so CR 4.1.8a says the turn-player orders them and this
+       reducer does not model that choice — but Inertia is itself an aura,
+       and running it first means one description of its destruction
+       instead of two racing for the same board entry. */
+    { const sw = DawnEffects.sweepArena(n, si, "end");
+      if(sw.msgs.length){ n = sw.game; sw.msgs.forEach(m => { n = L(n, m); });
+        if(sw.ops.length) n = _EFX.runOps(n, sw.ops, sw.fired.join(", ")); } }
     return n;
   }
   /* CR 4.4.3a. Runs over BOTH seats: an ally the opponent controls heals on
@@ -3984,18 +3998,32 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const sp = DawnEffects.tickSuspense(n, 0);
       if(sp.msgs.length){ n = sp.game; sp.msgs.forEach(m => { n = L(n, m); });
         if(sp.ops.length) n = _EFX.runOps(n, sp.ops, sp.fired.join(", ")); } }
-    /* auras scheduled to die at the top of your turn go now, and anything
-       they were holding up (the arcane shield, the life lock) goes with them */
-    const dying = (you(n).board||[]).filter(b=>b.sd==="turn");
-    if(dying.length){
-      youMut(n).board = you(n).board.filter(b=>b.sd!=="turn");
-      youMut(n).grave = [...gy(s.turn, ...dying.map(b=>b.card)), ...you(n).grave];
-      dying.forEach(b=>{ n = L(n, `${b.card.name} crumbles at the top of your turn.`); });
-      const stillShielded = you(n).board.some(b=>/prevent \d+ arcane damage that source/i.test(b.card.tx||""));
-      if(!stillShielded && you(n).arcShield) { youMut(n).arcShield = 0; n = L(n, "The arcane shield goes with it."); }
-      const stillLocked = you(n).board.some(b=>/can'?t gain \{h\}/i.test(b.card.tx||""));
-      if(!stillLocked && you(n).lifeLock) youMut(n).lifeLock = false;
-    }
+    /* EVERYTHING SCHEDULED TO DIE AT THE TOP OF THE TURN GOES NOW — the
+       crumbling auras and the counter tokens alike — and anything they
+       were holding up (the arcane shield, the life lock) goes with them.
+
+       IT WAS TWO BLOCKS UNTIL v3.07, and neither was shared. This one was
+       written out inline, so the table had no clock on the arena at all
+       and Pyroglyphic Protection prevented arcane damage there forever.
+       The other re-read the raw printed line to find Might, Agility and
+       Vigor — it had to, because "destroy this, THEN X" parsed to X alone
+       and left no `sd` stamp to sweep on (v2.56 built that block for
+       exactly this reason, when all three tokens were inert and every
+       clash payoff in Kayo's deck was decoration). The parser reads both
+       halves now and the token mint stamps `sd`, so one call covers both
+       and judge.js makes the same one.
+
+       Simplification, carried over and still stated rather than hidden: a
+       token that leaves the arena strictly ceases to exist, and these go
+       to the graveyard like the crumbling auras. Nothing reads them there
+       — Kayo's discard checks require the `_disc` stamp — so it is a
+       display difference, not a rules one.
+
+       It hands back the departure payload rather than running it, the
+       same contract `tickSuspense` above keeps and for the same reason. */
+    { const sw = DawnEffects.sweepArena(n, 0, "turn");
+      if(sw.msgs.length){ n = sw.game; sw.msgs.forEach(m => { n = L(n, m); });
+        if(sw.ops.length) n = _EFX.runOps(n, sw.ops, sw.fired.join(", ")); } }
     /* The recycle log moved with the recycle, into endPhaseCF's (f). What
        stays is the running-dry notice, which is about the board you are
        looking at now rather than about the draw that caused it. */
@@ -4015,34 +4043,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        so turn-start triggers have somewhere to happen. The crumbling auras
        above ARE those triggers. */
     let out = L(fresh, `— Turn ${s.turn+1}. Start phase (CR 4.2) — no priority. —`);
-    /* START-OF-TURN TRIGGERS (v2.56). Might, Agility and Vigor all print
-       "At the start of your turn, destroy this, then …", all three parse
-       PERFECTLY — `buffNext 1`, `gaNext`, `res 1` — and until now all three
-       were inert, because nothing in the engine had a schedule for them to
-       fire on. They piled up on the board forever, which quietly made every
-       clash payoff in Kayo's deck decoration: seven of his cards create one.
-       A coverage tool cannot see this at all — the card reads `full`.
-
-       Matched on the PRINTED TEXT, never on a token's name, so anything that
-       prints the same line gets the same treatment. This is the start phase
-       CR 4.2 describes, which is where the comment above already said
-       turn-start triggers belong; the crumbling auras were the only ones.
-
-       Simplification, stated rather than hidden: a token that leaves the
-       arena strictly ceases to exist, but these go to the graveyard like the
-       crumbling auras two blocks up. Nothing reads them there — Kayo's
-       discard checks require the `_disc` stamp — so it is a display
-       difference, not a rules one. */
-    const fired = (you(out).board||[]).filter(b=>/at the start of your turn, destroy this/i.test(clean(b.card.tx||"")));
-    if(fired.length){
-      youMut(out).board = you(out).board.filter(b=>fired.indexOf(b)<0);
-      youMut(out).grave = [...gy(out.turn, ...fired.map(b=>b.card)), ...you(out).grave];
-      for(const b of fired){
-        out = L(out, `${b.card.name} resolves at the top of your turn and is destroyed.`);
-        const ops = fxParse(b.card).ops || [];
-        if(ops.length) out = runOps(out, ops, b.card.name);
-      }
-    }
     /* CR 4.3.1-4.3.3: the action phase begins, the turn-player has 1 action
        point, and then gains priority. */
     out = L(out, "— Action phase (CR 4.3). You have 1 action point and priority. —");

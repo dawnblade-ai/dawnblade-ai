@@ -1523,6 +1523,47 @@ function doEndTurn(g, seat){
   let n = say({...g}, "— End phase —");
   n = P.toPhase(n, "end");
 
+  /* THE BEGINNING OF THE END PHASE, BEFORE (a) — v3.07. Three printed
+     schedules say "at the beginning of your end phase" and the table ran
+     none of them; the trainer has had `beginEndPhase` since v2.75 and it
+     is one of the last places where one board knew a rule the other did
+     not.
+
+     It is genuinely earlier than (a)-(f) rather than a convenient slot:
+     Inertia wipes the hand and arsenal, so it has to land before (b)
+     invites this seat to arsenal a card that is about to be swept into
+     the deck anyway. Same final state either way, which is exactly why
+     putting it in the wrong place would never have been noticed.
+
+     CR 4.1.8a orders simultaneous triggers by the turn-player and this
+     reducer does not model that choice; the order here matches the
+     trainer's so the two boards cannot disagree about a board Inertia
+     also sits on. */
+  {
+    const ri = E.resolveInertia(n, seat);
+    if(ri.tokens){
+      n = say(ri.game, "Inertia seizes " + at(ri.game, seat).name + " — "
+        + (ri.tokens > 1 ? ri.tokens + " tokens shatter" : "the token shatters") + ", and "
+        + (ri.wiped ? ri.wiped + " card" + (ri.wiped > 1 ? "s" : "") + " from hand and arsenal go to the bottom of the deck"
+                    : "there was nothing left to sweep away") + ".");
+    }
+    /* Frostbite's OTHER expiry — the play half is in `execute`; this
+       clears a Frostbite the frozen seat never spent anything into, so
+       the tax cannot follow them into the next turn. */
+    const fb = E.thawFrost(n, seat);
+    n = fb.game;
+    if(fb.thawed)
+      n = say(n, "The " + (fb.thawed > 1 ? fb.thawed + " Frostbites" : "Frostbite")
+        + " thaw" + (fb.thawed > 1 ? "" : "s") + " unspent at the end of " + at(n, seat).name + "'s turn.");
+    const sw = E.sweepArena(n, seat, "end");
+    if(sw.msgs.length){
+      n = sw.game;
+      for(const m of sw.msgs) n = say(n, m);
+      if(sw.ops.length)
+        n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, sw.ops, sw.fired.join(", ")));
+    }
+  }
+
   /* (a) all allies' life resets to base.
 
      `resetAllyLife` returns THE GAME, not `{game, msgs}`. This read
@@ -1654,6 +1695,18 @@ function endPhaseAfterArsenal(g, seat){
          seat as the actor — `buffNext` is written to `act(n)`. */
       if(sp.ops.length)
         n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sp.ops, sp.fired.join(", ")));
+    }
+    /* "AT THE BEGINNING OF YOUR ACTION PHASE, DESTROY THIS" (v3.07). The
+       trainer swept these inline inside `newTurn`, so the table kept them
+       forever: Pyroglyphic Protection prevented 1-3 arcane damage every
+       turn for the rest of the game. Same shared-schedule rule as the two
+       above, and the same actor reasoning for the payload. */
+    const sw = E.sweepArena(n, inc, "turn");
+    if(sw.msgs.length){
+      n = sw.game;
+      for(const m of sw.msgs) n = say(n, m);
+      if(sw.ops.length)
+        n = withEffects({...n, actor: inc}, (fx, s2) => fx.runOps(s2, sw.ops, sw.fired.join(", ")));
     }
   }
 

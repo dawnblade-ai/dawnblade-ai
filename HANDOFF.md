@@ -39,11 +39,13 @@
 > **READ THE THREE v3.00–v3.01 FINDS FIRST. They are one shape and it
 > will bite you again:** phantasm, watery grave and suspense were each a
 > rule that existed on ONE board. `effects.js` holds the semantics once,
-> but the SCHEDULE a card fires on is still written per board — and
-> `thawFrost`, `resolveInertia` and the `sd:"turn"` aura sweep are all
-> trainer-only today. **When you build anything that fires on a
-> schedule, ask which board runs it.** `effects.tickSuspense` is the
-> worked example: pure, shared, and it hands the payload back to the
+> but the SCHEDULE a card fires on is still written per board. The last
+> three known ones were closed at v3.07 (`thawFrost`, `resolveInertia`
+> and the aura sweep, now `effects.sweepArena`) — and finishing them
+> turned up three MORE of the same shape, including one above rate.
+> **When you build anything that fires on a schedule, ask which board
+> runs it.** `effects.tickSuspense` and `effects.sweepArena` are the
+> worked examples: pure, shared, and they hand the payload back to the
 > caller rather than running it.
 >
 > **How to work:**
@@ -67,9 +69,9 @@
 
 ---
 
-## WHERE WE ARE — v3.06
+## WHERE WE ARE — v3.07
 
-`npm test` → **1095 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1111 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **311 full / 73 part / 21 none** ·
 `tools/failstates.js` → **0 UNFAIR**.

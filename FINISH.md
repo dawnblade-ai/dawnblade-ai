@@ -43,16 +43,16 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.06
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.07
 
 ```
-npm test          1095 green — 0 skipped with a live DB cached, and
+npm test          1111 green — 0 skipped with a live DB cached, and
                   only the 4 drift drills skip without one
 npm run fairness  clean
 npm run audit     405 unique pool cards — 311 full / 73 part / 21 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
 tools/failstates  0 UNFAIR  ← PHASE B DONE (v3.01)
-deployed          APP_VER 3.06, all 22 engine/*.js on main
+deployed          APP_VER 3.07, all 22 engine/*.js on main
 ```
 
 **Three of those moved at v3.00 and none of them by drifting:**
@@ -259,12 +259,14 @@ here. FINISH.md has counted it separately since it was written.
 
 ### Still open in the neighbourhood, and now measurable
 
-`thawFrost`, `resolveInertia` and the `sd:"turn"` aura sweep are all
-called by the TRAINER only — the same gap suspense had, in three
-mechanics that are already built. None of them is UNFAIR (they are
-missing behaviour rather than an above-rate card), but they are the next
-thing to look at when Phase A wires the boards together, and they are
-cheap now that `tickSuspense` has established the shape.
+**DONE at v3.07.** `thawFrost`, `resolveInertia` and the aura sweep (now
+`effects.sweepArena`) are all shared, and finishing the third turned up
+three more of the same shape — one of them above rate rather than below:
+`sd:"end"` ran on NEITHER board, so Concealed Object's tap-pump paid out
+every turn forever; tokens were never stamped with their own printed
+clock; and the "…destroy this, THEN X" wording swallowed the schedule
+entirely, which is why the trainer had grown a second sweep that re-read
+the raw printed line. See CLAUDE.md, "A SCHEDULE IS WRITTEN PER BOARD".
 
 ---
 

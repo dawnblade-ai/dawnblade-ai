@@ -9,6 +9,98 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.07 — the arena has a clock, and it runs on both boards
+
+Five pool cards and fifteen tokens print a self-destruct schedule. The
+parser has read the plain form for a long time and `execute` stamps it
+onto the board entry as `sd`, so a permanent has been carrying its own
+expiry since the moment it entered the arena. What was missing was a
+reader — four of them, as it turned out.
+
+| | before v3.07 |
+|---|---|
+| `sd:"turn"` | swept in the TRAINER only, written out inline inside `newTurn` |
+| `sd:"end"` | swept on **NEITHER** board |
+| a token | never stamped at all — the mint skips `execute` |
+| `…, then X` | the schedule swallowed by a loose temporal-prefix match |
+
+**The "end" half is above rate, not below it.** Concealed Object is a
+Lyath Item printing *"Instant - {t}: Target attack gets +1{p}"* and *"at
+the beginning of your end phase, destroy this"*. The tap is what makes it
+once; the destroy is what makes it once EVER. Never destroyed, CR 4.4.3d
+untaps it and it hands its controller a free +1{p} every turn for the rest
+of the game. Pyroglyphic Protection is the same shape in the other zone:
+prevent 1–3 arcane damage, forever, at the table.
+
+### No tool here could see it, and each missed it for its own reason
+
+Coverage reads both cards `full` — the clause IS read, faithfully, and the
+op IS consumed by `runOps`. The fairness sweep is five checks over a
+card's PARSE, and this is a defect in the board's turn boundary.
+`failstates.js` has a *"no schedule to fire on"* category and fills it by
+looking for UNREAD text, so a schedule that parses and then evaporates is
+exactly the case it cannot reach.
+
+### Three more, found by finishing the first
+
+- **A token carried no clock.** `execute` stamps `sd` onto a permanent
+  played from hand; the mint skips that path. For a token typed `Aura`
+  that also inflates every *"auras you control"* count on the board.
+- **"…destroy this, THEN X" swallowed the schedule.** Might parsed to
+  `[["buffNext",1]]` — payload, no destroy. Same shape as Stir the
+  Aetherwinds at v3.00. The trainer had grown a SECOND sweep that
+  re-reads the raw printed line to find these three tokens, which is why
+  solo play worked and the table had no start-of-turn trigger at all.
+  **It is one sweep now**, and a drill fails if either board grows
+  another.
+- **"Enters OR leaves" is two occasions.** The reader tested for "leaves"
+  first and filed the whole payload as a departure, losing the entry.
+  Booze! was the only card where that was the card's entire effect — and
+  with nothing consuming `onLeave` either, the crowd booed **zero** times
+  for a card whose printed job is to boo twice. For Lyath that is a Might
+  token per boo, which is his whole engine.
+
+### The payload rides after the destroy, in printed order
+
+That is what lets one sweep pay a departing card without re-running its
+on-play statics. Pyroglyphic Protection reads `[arcShield 3, selfDestruct
+turn]` and pays nothing on the way out; Might reads `[selfDestruct turn,
+buffNext 1]` and pays. No card is named and no kind is stored on the
+entry — the printed sentence order does the work.
+
+### And a teardown predicate must ask the card, not a second regex
+
+Both of the trainer's were always FALSE, each for its own reason, and
+both were invisible because being wrong in that direction only ever tears
+an effect down EARLY — which looks like the effect expiring.
+
+| flag | why it never matched |
+|---|---|
+| `arcShield` | matched *"prevent N arcane damage that source"*, a wording upstream **stopped printing**. v3.00's drift, in a predicate instead of in a card |
+| `lifeLock` | scanned the BOARD for Reaping Blade, which is a **Sword** and lives in `gear` — so any aura crumbling on Viserai's turn silently unlocked life-gain while his sword was still equipped. Both cards are in the same deck |
+
+Both flags are a CACHE of a board fact, so `sweepArena` re-derives them
+through `fxParse` over the board and the gear alike. One reader of a
+printed line, asked.
+
+### The drills drive, and one of them had to be re-earned
+
+`test/arena.test.js` — 13 drills, every claim proven to bite. The old
+Kayo drill that grepped `newTurn` became a DRIVE of `sweepArena`, which
+was right about the rule and wrong about the call: deleting the trainer's
+sweep afterwards left the whole suite green, because the surviving source
+claim only asked whether `sweepArena` appeared in the file at all — and
+it appears three times. A drive proves the rule works; only a call-site
+claim proves the board runs it. Both are pinned now.
+
+**Also shared at v3.07:** judge.js calls `resolveInertia` and `thawFrost`
+at the beginning of its end phase. Both were pure and shared-shaped in
+`effects.js` and the table called neither, so Inertia never wiped a hand
+there and a Frostbite the frozen seat never spent followed them into the
+next turn.
+
+---
+
 ## v3.06 — Brain Freeze reaches into the other seat's hand
 
 *"...if you've played an ice card and a lightning card this turn, put an

@@ -532,10 +532,20 @@ function makeEffects(ctx){
           n = L(n, `${srcName}: ${recip.name} has no exposed armour zone — the ${rec.name} has nowhere to land, and fizzles.`);
           return;
         }
+        /* A TOKEN CARRIES ITS OWN CLOCK (v3.07). Every permanent played
+           from hand gets its `sd` stamp from `execute`, off the same
+           `selfDestruct` op; a token skips that path entirely, so 15 of
+           the pool's tokens printed a destroy schedule and none of them
+           carried it. `sweepArena` works off the stamp, so an unstamped
+           token is a permanent that never leaves — which for a token
+           typed `Aura` also inflates every "auras you control" count on
+           the board. Read from the token's own printed text, so nothing
+           here names a token. */
+        const _tsd = ((P.fxParse(rec).ops || []).find(o => o[0] === "selfDestruct") || [])[1] || null;
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
-          if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid}];
-          else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid}];
+          if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
+          else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
         }
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
@@ -2052,6 +2062,128 @@ function tickSuspense(game, seat){
   return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
 }
 
+/* ---- THE ARENA HAS A CLOCK, AND IT RUNS ON BOTH BOARDS (v3.07) ------
+
+   Five pool cards print a self-destruct schedule and the parser has read
+   all five for a long time. `runOps` stashes the answer as `_selfDestruct`
+   and `execute` stamps it onto the board entry as `sd`, so the card is
+   already carrying its own expiry the moment it enters the arena.
+
+   Nothing was reading it correctly:
+
+     sd:"turn"   swept in the TRAINER only, inline inside `newTurn`
+     sd:"end"    swept on NEITHER board — three versions, no reader
+
+   The "end" half is the worse of the two and it is above rate rather
+   than below it. Concealed Object is an Item printing "Instant - {t}:
+   Target attack gets +1{p}" and "At the beginning of your end phase,
+   destroy this" — the tap is what makes it once, and the destroy is what
+   makes it once EVER. Never destroyed, it untaps at CR 4.4.3d and hands
+   its controller a free +1{p} every turn for the rest of the game.
+   Pyroglyphic Protection is the same shape in the other zone: prevent
+   1-3 arcane damage, forever, at the table.
+
+   NO TOOL HERE COULD SEE IT and each one missed it for its own reason.
+   Coverage reads both cards `full` — the clause IS read, faithfully, and
+   the op IS consumed by `runOps`. The fairness sweep is five checks over
+   a card's PARSE and this is a defect in the board's turn boundary.
+   `failstates.js` has a "no schedule to fire on" category and files a
+   card there by looking for UNREAD text, so a schedule that parses and
+   then evaporates is exactly the case it cannot reach.
+
+   The general shape, third time this cycle: A SCHEDULE IS WRITTEN PER
+   BOARD. `effects.js` holds the semantics once and the two turn
+   structures each write their own clock, so a rule kept in one of them is
+   a rule the other does not have. Pure, exported, and it RETURNS the
+   payload ops rather than running them — same contract as `tickSuspense`
+   beside it, for the same reason: an `onLeave` payload is actor-relative
+   and the two boards reach `runOps` differently.
+
+   `when` is the schedule to run, never "everything expiring": "turn" at
+   the top of the controller's turn, "end" at the beginning of their end
+   phase. Passing the wrong one would sweep a card a whole phase early. */
+function sweepArena(game, seat, when){
+  const sides = (game.sides || []).slice();
+  const sd = Object.assign({}, sides[seat]);
+  const board = sd.board || [];
+  const dying = board.filter(b => b.sd === when);
+  if(!dying.length) return {game, fired: [], msgs: [], ops: []};
+
+  const msgs = [], fired = [], ops = [];
+  const kept = board.filter(b => b.sd !== when);
+  for(const b of dying){
+    fired.push(b.card.name);
+    /* WHAT A DEPARTING CARD PAYS OUT, from two places, and the two are
+       different printed sentences rather than two readings of one:
+
+         onLeave           "when this leaves the arena, X" — a trigger
+         ops AFTER the     "at the start of your turn, destroy this,
+         selfDestruct       THEN X" — the schedule's own payout
+
+       Taking the ops after the destroy rather than all of them is what
+       keeps an on-play static out of the payout: Pyroglyphic Protection
+       reads `[arcShield 3, selfDestruct turn]`, so its shield is not
+       re-granted on the way out, while Might reads `[selfDestruct turn,
+       buffNext 1]` and pays. Printed order does the work — no card is
+       named here and no kind is stored on the entry.
+
+       `tickSuspense` already pays `onLeave` when a counter runs out; a
+       card leaving on its own printed clock has left the arena just as
+       much, so it pays here too rather than only under the keyword that
+       happened to be built first. */
+    const f = P.fxParse(b.card);
+    const di = (f.ops || []).findIndex(o => o[0] === "selfDestruct");
+    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...(f.onLeave || [])];
+    ops.push(...pay);
+    msgs.push(b.card.name + (when === "turn"
+      ? " crumbles at the top of the turn."
+      : " is destroyed at the beginning of the end phase.")
+      + (pay.length ? " It pays out as it goes." : ""));
+  }
+  sd.board = kept;
+  sd.grave = [...dying.map(b => Object.assign({}, b.card, {_gy: game.turn})), ...(sd.grave || [])];
+
+  /* WHAT THE DEPARTING CARD WAS HOLDING UP GOES WITH IT. `arcShield` and
+     `lifeLock` are side fields rather than properties of the card, so
+     removing the card does not remove the effect. They are a CACHE of a
+     board fact, so the honest move is to re-derive them from whatever is
+     still in play rather than to decrement them.
+
+     ASK THE CARD THROUGH `fxParse`, NEVER A SECOND REGEX. Both of the
+     hand-rolled tests this inherited from the trainer were always FALSE,
+     each for its own reason, and each was invisible because being wrong
+     in that direction only ever tore an effect down early:
+
+       arcShield   matched "prevent N arcane damage that source", a
+                   wording upstream STOPPED PRINTING. `classifyClause`
+                   levels both forms ("...or N of that damage") and this
+                   copy was never told — v3.00's drift, in a predicate
+                   instead of in a card.
+       lifeLock    scanned the BOARD for Reaping Blade, which is a Sword
+                   and lives in `gear`. So any aura crumbling at the top
+                   of Viserai's turn silently unlocked life-gain while
+                   his sword was still equipped.
+
+     A predicate that answers a card question by re-reading the card text
+     is the no-mirror rule broken one level down: there is one reader of a
+     printed line, and this asks it. */
+  const stillGrants = op => {
+    const live = [...kept.map(b => b.card),
+                  ...(sd.gear || []).filter(gp => gp && !gp.destroyed)];
+    return live.some(c => {
+      if(!c) return false;
+      const f = P.fxParse(c);
+      return [...(f.ops || []), ...((f.conds || []).flatMap(x => x.ops || []))]
+        .some(o => o[0] === op);
+    });
+  };
+  if(sd.arcShield && !stillGrants("arcShield")){ sd.arcShield = 0; msgs.push("The arcane shield goes with it."); }
+  if(sd.lifeLock && !stillGrants("lifeLock")) sd.lifeLock = false;
+
+  sides[seat] = sd;
+  return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+}
+
 /* ---- FREEZE LIFTS AT THE START OF THE FREEZING PLAYER'S TURN --------
 
    "until the start of your next turn", where "your" is whoever played
@@ -2275,6 +2407,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense,
+return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

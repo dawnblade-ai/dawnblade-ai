@@ -279,7 +279,21 @@ function classifyClause(raw){
 
        Tagged rather than run, exactly like `onHit`, so the site that
        destroys the permanent fires it. */
-    if(/\bleaves the arena\b/.test(cond)) return Object.assign(rest,{onLeave:true});
+    /* "ENTERS **OR** LEAVES" IS TWO OCCASIONS, NOT ONE (v3.07). The test
+       above is for "leaves", and it matched the compound wording first —
+       so the whole payload was filed as a departure and the ENTRY was
+       thrown away. Two pool cards print it, and on Booze! that was the
+       card's only effect: with nothing consuming `onLeave` either, the
+       crowd booed ZERO times for a card whose printed job is to boo
+       twice. For Lyath that is a Might token per boo, which is his whole
+       engine.
+
+       Flagged on both, and `fxParse` pushes the op into `fx.ops` and
+       `fx.onLeave` alike — one printed trigger, two occasions it fires
+       on, not one value read by two rules (which is v2.30's bug and the
+       opposite mistake). */
+    if(/\bleaves the arena\b/.test(cond))
+      return Object.assign(rest, /\benters?\b/.test(cond) ? {onLeave:true, onEnter:true} : {onLeave:true});
     if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true});
     if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
@@ -635,6 +649,36 @@ function classifyClause(raw){
     return R([["selfDestruct","turn"]]);
   if(/^at the beginning of your end phase, destroy this$/.test(c))
     return R([["selfDestruct","end"]]);
+  /* "…DESTROY THIS, **THEN** X" — THE SCHEDULE AND ITS PAYOUT (v3.07).
+
+     The two rules above are anchored to the whole clause, so the far more
+     common wording — the one every counter-style token prints — fell past
+     them into the generic temporal-prefix handler, which stripped "At the
+     start of your turn, destroy this, then" and kept only X. Might parsed
+     to `[["buffNext",1]]` and Vigor to `[["res",1]]`: the payload with no
+     schedule, and the card reporting `full`.
+
+     That is v3.00's Stir the Aetherwinds shape exactly — a loose match
+     consuming a sentence and modelling half of it — and it is why the
+     trainer grew a SECOND sweep that re-reads the raw printed line to find
+     these, while the table had no start-of-turn trigger at all.
+
+     The payload rides AFTER the destroy, in printed order, which is what
+     lets one sweep pay a departing card without re-running its on-play
+     statics: Pyroglyphic Protection's `arcShield` sits before its
+     `selfDestruct` and is therefore not part of the payout.
+
+     IT REFUSES WHEN THE PAYLOAD IS UNREADABLE rather than claiming the
+     card for the half it can read — Seismic Surge's cost reduction is not
+     read, so Seismic Surge stays unread, exactly as it is today. Emitting
+     the destroy alone would report the clause consumed and hide the
+     unbuilt half, which is the trap this whole rule exists to undo. */
+  if(m=c.match(/^at the (?:beginning|start) of your (action phase|turn|end phase), destroy (?:this|it)(?:, then |,? and )(.+)$/)){
+    const rest = classifyClause(m[2]);
+    if(!rest || !rest.ops || !rest.ops.length) return null;
+    if(rest.ops.some(o=>o[0]==="noop")) return null;
+    return R([["selfDestruct", m[1]==="end phase" ? "end" : "turn"], ...rest.ops]);
+  }
   /* A KEYWORD GRANTED BY A CLAUSE, e.g. Pulping's "this gets dominate".
      Without this the gated half of `kwGated` has nothing to grant when its
      condition DOES fire, and refusing the unconditional grant would simply
@@ -1285,7 +1329,12 @@ function fxParse(card){
          also runs for free. condOnHit keeps the gate attached so the trigger
          site (resolveStack) can re-check it before the op fires. */
       if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op}]; return; }
-      if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op]; return; }
+      if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op];
+        /* "enters OR leaves" — the entry half is an ordinary on-play op
+           for a permanent, which is where every other "when this enters
+           the arena" payload already lands. */
+        if(r.onEnter) fx.ops.push(op);
+        return; }
       if(r.onHit) fx.onHit.push(op);
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);

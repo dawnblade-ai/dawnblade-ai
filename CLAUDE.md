@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.06
+**Current version:** v3.07
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1095 drills**.
+This is `node --test "test/*.test.js"` — currently **1111 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -933,11 +933,45 @@ left `undefined`, which let the ability run unrestricted. An unreadable
 condition is filed `{kind:"unreadable"}` and refuses; v2.04 settled the
 same question for costs, and inert is honest where free is above rate.
 
-**Still trainer-only, and measured rather than assumed:** `thawFrost`,
-`resolveInertia` and the `sd:"turn"` aura sweep. None is UNFAIR — they are
-missing behaviour rather than an above-rate card — but they are the same
-gap in three already-built mechanics, and they are cheap now that the
-shape exists.
+**ALL THREE ARE SHARED AS OF v3.07** — `thawFrost`, `resolveInertia` and
+the aura sweep (now `effects.sweepArena`). The last one was not a function
+at all, and finishing it turned up two more of the same shape and one
+worse:
+
+- **`sd:"end"` ran on NEITHER board.** Concealed Object is an Item whose
+  tap pumps an attack and which prints "at the beginning of your end
+  phase, destroy this"; never destroyed, step (d) untaps it and it pays
+  again every turn forever. That is ABOVE rate, and coverage reads it
+  `full` — the clause is read faithfully and the op *is* consumed by
+  `runOps`. `failstates.js` has a "no schedule to fire on" category and
+  fills it by looking for UNREAD text, so a schedule that parses and then
+  evaporates is the one case it cannot reach.
+- **A TOKEN CARRIED NO CLOCK.** `execute` stamps `sd` onto a permanent
+  played from hand; the token mint skips that path, so 15 of the pool's
+  tokens print a destroy schedule and none of them carried it. For a
+  token typed `Aura` that also inflates every "auras you control" count.
+- **"…destroy this, THEN X" SWALLOWED THE SCHEDULE.** Might parsed to
+  `[["buffNext",1]]` — the payload with no destroy — because a generic
+  temporal-prefix match ate the first half. Same shape as Stir the
+  Aetherwinds at v3.00. The trainer had grown a SECOND sweep that
+  re-reads the raw printed line to find these, which is why solo play
+  worked and the table had no start-of-turn trigger at all.
+
+**The payload rides AFTER the destroy, in printed order.** That is what
+lets one sweep pay a departing card without re-running its on-play
+statics: Pyroglyphic Protection reads `[arcShield 3, selfDestruct turn]`
+and pays nothing on the way out; Might reads `[selfDestruct turn,
+buffNext 1]` and pays. No card is named and no kind is stored.
+
+**AND A TEARDOWN PREDICATE MUST ASK THE CARD, NOT A SECOND REGEX.** Both
+of the trainer's were always FALSE. `arcShield` matched *"prevent N
+arcane damage that source"*, a wording upstream stopped printing —
+v3.00's drift, in a predicate instead of in a card. `lifeLock` scanned
+the BOARD for Reaping Blade, which is a Sword and lives in `gear`, so any
+aura crumbling on Viserai's turn silently unlocked life-gain while his
+sword was still equipped. Both flags are a CACHE of a board fact, so
+`sweepArena` re-derives them through `fxParse` over the board AND the
+gear — one reader of a printed line, asked.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 

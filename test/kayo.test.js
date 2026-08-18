@@ -285,40 +285,87 @@ test("under the bar, the same tap makes no token — the CONTROL", {skip}, () =>
 
 /* ---- THE TOKENS, AND CLAUSE 3 ----------------------------------------- */
 
-test("Might / Agility / Vigor each parse to a real payload", {skip}, () => {
-  const want = {Might: [["buffNext", 1]], Agility: [["gaNext"]], Vigor: [["res", 1]]};
+/* THE SCHEDULE AND THE PAYLOAD, IN PRINTED ORDER (v3.07).
+
+   This used to expect the payload ALONE — `[["buffNext",1]]` — which is
+   what "At the start of your turn, destroy this, then your next attack
+   this turn gets +1{p}" parsed to. The destroy was being swallowed by the
+   generic temporal-prefix handler, so the card carried a payload with no
+   schedule and reported `full`; the trainer papered over it by re-reading
+   the raw printed line, and the table had no start-of-turn trigger at all.
+
+   Expecting the schedule FIRST is the load-bearing half: `sweepArena`
+   pays the ops that follow the destroy, which is what keeps an on-play
+   static (Pyroglyphic Protection's `arcShield`) out of the payout. */
+test("Might / Agility / Vigor each parse to a schedule AND a payload", {skip}, () => {
+  const want = {Might: [["selfDestruct", "turn"], ["buffNext", 1]],
+                Agility: [["selfDestruct", "turn"], ["gaNext"]],
+                Vigor: [["selfDestruct", "turn"], ["res", 1]]};
   for(const [nm, ops] of Object.entries(want)){
     const tok = C.resolveEntry(DB(), {name: nm, p: 0, code: null, q: 1});
     assert.ok(tok.resolved, `${nm} must resolve from the database — never invent a token`);
     assert.deepEqual(P.fxParse(tok).ops, ops, `${nm}`);
+    assert.equal(P.fxParse(tok).ops[0][0], "selfDestruct",
+      `${nm}: the destroy must come FIRST — sweepArena pays what follows it`);
     assert.match(P.clean(tok.tx || ""), /at the start of your turn, destroy this/i);
   }
 });
 
-/* The schedule is in `newTurn`, a closure inside Battle, so pin the call
-   site by reading it — the alternative is no check at all, and these three
-   tokens were inert for their whole existence precisely because nothing
-   asked. */
-test("the trainer fires start-of-turn triggers, off printed text", {skip}, () => {
+/* THE SCHEDULE IS A PURE FUNCTION NOW, SO DRIVE IT (v3.07).
+
+   This drill used to read `newTurn` out of index.html and look for the
+   printed trigger line, and its own comment said why: "the schedule is in
+   `newTurn`, a closure inside Battle … the alternative is no check at
+   all". That stopped being true when `sweepArena` moved the rule into
+   `effects.js` — so the check is now a DRIVE, and the source scan that
+   remains asserts the opposite of what it used to: that the trainer no
+   longer carries a second description of the rule. */
+test("a start-of-turn token is destroyed and pays out — driven", {skip}, () => {
+  const E = require("../engine/effects");
+  const H = require("./helpers/judged.js");
+  H.db();
+  const might = H.card("Might", 0);
+  const sd = P.fxParse(might).ops[0][1];
+  assert.equal(sd, "turn", "Might's own printed schedule");
+
+  const g = H.state({board: [{card: might, kind: "token", spent: false, uid: might.uid, sd}]},
+                    {}, {turn: 4});
+  const out = E.sweepArena(g, 0, "turn");
+  assert.deepEqual(out.game.sides[0].board, [], "the token leaves the arena");
+  assert.deepEqual(out.game.sides[0].grave.map(c => c.name), ["Might"], "and lands in the graveyard");
+  assert.deepEqual(out.ops, [["buffNext", 1]],
+    "and pays the ops AFTER the destroy — never the whole parse");
+  assert.equal(g.sides[0].board.length, 1, "the input game is untouched");
+});
+
+test("the token mint stamps the token's own printed clock", {skip}, () => {
+  const H = require("./helpers/judged.js");
+  H.db();
+  const g = H.state({}, {}, {turn: 2, tokSeq: 0});
+  const n = H.runOps(g, [["token", "Might", 1, "self"]], "drill");
+  assert.equal(n.sides[0].board.length, 1, "a Might was created");
+  assert.equal(n.sides[0].board[0].sd, "turn",
+    "an unstamped token is a permanent that never leaves — and for an Aura " +
+    "token it also inflates every 'auras you control' count on the board");
+});
+
+test("neither board carries a second description of the sweep", {skip}, () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  /* ANCHOR ON THE FUNCTION, NOT ON THE LOG LINE (v2.71). This used to find
-     the first "Start phase (CR 4.2)" in the file — which was newTurn's only
-     while seat 1 had no turn to start. `foeBegin` now announces one too and
-     is declared earlier, so the slice silently moved to a function that has
-     no triggers in it and the drill reported a bug that was not there.
-     Slice to the END of the function rather than a byte count, for the same
-     reason the neighbouring drill already does. */
-  const start = html.indexOf("  function newTurn(s){");
-  assert.ok(start > 0, "newTurn moved — re-anchor this drill");
-  const stop = html.indexOf("  const toks = [", start);
-  assert.ok(stop > start, "newTurn's end anchor moved");
-  const body = html.slice(start, stop);
-  assert.match(body, /at the start of your turn, destroy this/i,
-    "newTurn must look for the printed trigger line");
-  assert.match(body, /fxParse\(b\.card\)\.ops/,
-    "and run the token's OWN parsed ops — never a payload hardcoded per token name");
-  assert.ok(!/"Might"|'Might'/.test(body),
-    "matched on printed text, not on a token's name");
+  const efx = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  /* The rule lives in effects.js and nowhere else. A board that re-reads
+     the printed line to find these tokens is the second sweep coming
+     back — which is how the table came to have neither. */
+  /* COMMENTS STRIPPED ON BOTH — the claim is about code, and the comment
+     that explains the rule necessarily quotes the printed line it stopped
+     reading. Same reason the retired-picker drills strip before scanning. */
+  const decomment = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/at the start of your turn, destroy this/i.test(decomment(efx)),
+    "effects.js works off the `sd` stamp, not off a re-read of the printed line");
+  const live = decomment(html);
+  assert.ok(!/\.board\s*\|\|\s*\[\]\)\.filter\(b\s*=>\s*\/at the start of your turn/i.test(live),
+    "the trainer must not re-grow its own start-of-turn sweep");
+  assert.ok(/DawnEffects\.sweepArena/.test(live),
+    "the trainer reaches the shared sweep");
 });
 
 /* Slice to the END of the function, not a fixed byte count: adding the
