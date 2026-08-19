@@ -423,15 +423,26 @@ test("rulings — tokens resolve to a board-side token op", () => {
     [["token","agility",1,"self"],["token","vigor",1,"self"]]);
 });
 
-test("rulings — the remaining dedicated counters keep precedence over generic tokens", () => {
+test("rulings — RUNECHANT is the last dedicated counter; every other token is a board token", () => {
+  /* THIS LIST HAS ONLY EVER SHRUNK, and that is the direction it should
+     go. It was four counters; Frostbite left at v2.74, Bloodrot Pox and
+     Frailty at v3.09. Each departure bought the same three things: the
+     token expires on its own printed schedule, the seven pool cards that
+     count auras generically can see it, and there is no bespoke per-token
+     state to keep in step with the board.
+
+     Runechant keeps `rune` because `addRunechants` owns its uid
+     namespacing (v2.23's `CARD-IN-TWO-ZONES`), not because it is a
+     counter — it is a real Aura on the board like the others. */
   assert.deepEqual(cc("Create a Runechant token.").ops, [["rune",1]]);
-  assert.deepEqual(cc("Create a Bloodrot Pox token under their control.").ops, [["rot",1]]);
-  /* FROSTBITE LEFT THIS LIST IN v2.74 — it was four counters, it is three.
-     It is a real Aura on the board now (`parser.frostCount`), which is what
-     lets "3 or more auras" count it and "destroy an aura" remove it. The
-     precedence rule itself still holds for the two below. */
   assert.deepEqual(cc("Create a Frostbite token.").ops, [["token","frostbite",1,"self"]],
-    "Frostbite is a board token now, not a counter — it must NOT be intercepted here");
+    "Frostbite is a board token (v2.74) — it must NOT be intercepted here");
+  assert.deepEqual(cc("Create a Bloodrot Pox token under their control.").ops,
+    [["token","bloodrot pox",1,"foe"]],
+    "Bloodrot Pox is a board token (v3.09), on the side the card prints");
+  assert.deepEqual(cc("Create a Frailty token under their control.").ops,
+    [["token","frailty",1,"foe"]],
+    "and so is Frailty — the counter it replaced was never once set in a real game");
 });
 
 test("rulings — arsenal and life-total conditions are readable now", () => {

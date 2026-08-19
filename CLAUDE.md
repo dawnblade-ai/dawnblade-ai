@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.08
+**Current version:** v3.09
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1119 drills**.
+This is `node --test "test/*.test.js"` — currently **1127 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -989,6 +989,11 @@ array wins** — one layer further down than anyone had looked. And the
 reason it survived is worth keeping: **a card that does nothing is a card
 nobody follows.** All four read `tier: none`, so no one ever asked where
 they went; building their triggers is what made the zone visible.
+
+**RULING (user, 2026-08-19): a Trap is played from HAND like any other
+Defence Reaction** — the subtype carries no zone restriction, and the
+database prints no reminder text for it. So v3.08's build is complete
+rather than provisional, and nobody needs to re-open it.
 
 The clear is on `fx.dr`, not on the word "trap". The defect is not that
 the word was wrong, it is that **a reaction is not a permanent whatever
@@ -2847,9 +2852,43 @@ so Frost Spike's "create a Frostbite token" resolved to nothing at all. It is
 expiries — on any play or activation, and at the beginning of the controller's
 end phase — are `execute` and `DawnEffects.thawFrost`.
 
-**Still counters, deliberately:** Bloodrot Pox and Frailty. They sit on the
-*opponent* and nothing in the pool counts them as auras yet. Revisit if a card
-ever asks.
+**THEY ARE ALL BOARD AURAS AS OF v3.09.** Bloodrot Pox and Frailty were the
+last two counters, and the note that used to sit here — "nothing in the pool
+counts them as auras yet" — was the wrong test. Both print `Generic Token -
+Aura`; the question is what the CARD says, not what another card asks about
+it. Nine pool cards create them across three heroes, and every one says
+"under their control", so **the token sits with the hero it hurts.**
+
+Most of what building them took was DELETING the two parser lines that
+intercepted them: the generic token rule underneath already routes the side
+correctly. The counters were the thing taking the token's place.
+
+Both were also wrong in the direction that steals games, and RULING (user,
+2026-08-19) was to build both to print:
+
+| | the counter did | the card prints |
+|---|---|---|
+| `fra` | a blanket −1 to ANY incoming swing | −1 to attack actions played **from arsenal** and to **weapon** attacks. From hand is untouched |
+| `rot` | an unavoidable, **never-expiring** per-turn drain | a ONE-SHOT at your end phase, and you may pay `{r}{r}{r}` to shrug it off |
+
+`fra` was never once SET in a real game — its only source, Frailty Trap, read
+`none` until v3.08 — so the storage convention it used was untested rather
+than settled, which is why replacing it cost nothing.
+
+**A PAYMENT WITH NO WINDOW TO PAUSE IN RESOLVES INLINE.** CR 4.4.1 gives
+nobody priority in the end phase, and `openPrompt` drains at the tail of
+`execute`, which the end phase never calls — so a queued prompt there is
+**silently** never shown. The first build of Bloodrot did exactly that: the
+feed said "it pays out as it goes" and no damage landed. `selfPayOr` pays
+from **floating resources only** and never pitches on the player's behalf:
+three cards for 2 life is usually a losing trade, and a training sim that
+quietly makes it is teaching bad play. Floating resources fizzle at CR
+4.4.3e anyway, so spending them costs nothing the player was keeping.
+
+**`selfPayOr` is not `payOr`.** `payOr` is Cold Snap's shape ("target hero
+may pay") and bills `1-actorOf(n)`; this bills the actor. Same self/foe
+pairing `selfDiscard`/`foeDiscard` keep, and mixing them up hands the bill
+to the wrong player behind a plausible-looking prompt.
 
 ---
 
@@ -3114,8 +3153,8 @@ it carded effects only once the engine can actually read them.
   a complete backup. Regenerating from it took one pass — but prefer small, asserted
   edits to that file over regex surgery.
 - Clash is honest as of v2.07: both sides reveal a real top card and **power** decides
-  it (confirmed from the printed reminder text, not guessed). A tie counts as no
-  winner — that reading is still awaiting confirmation.
+  it (confirmed from the printed reminder text, not guessed). **A tie counts as no
+  winner — CONFIRMED (user, 2026-08-19)**, so this is settled rather than assumed.
 - Ally swings are simplified (no action point consumed).
 - Auto-pitch/auto-discard picks the lowest advisor-valued card rather than prompting.
 - **Equipment abilities keep their riders.** `parseHeroPower` stops at the first

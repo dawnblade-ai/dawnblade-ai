@@ -164,7 +164,7 @@ function check(game){
 
   /* ---- numbers ------------------------------------------------------ */
   const NUMS = ["hp","maxHp","int","res","ap","wasted","amp","ward","awd","rune",
-                "rot","fra","arcShield","buffNext","blockedHand"];
+                "arcShield","buffNext","blockedHand"];
   sides.forEach((sd, si) => {
     for(const f of NUMS){
       const v = sd[f];

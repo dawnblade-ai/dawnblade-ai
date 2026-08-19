@@ -299,13 +299,19 @@ test("no per-side field is written as a top-level key on a state spread", () => 
    missing the six statuses only the dummy has ever carried. */
 test("symmetry gap: coverage — how much of a hero each seat carries", () => {
   const gap = S.symmetryGap();
-  /* 42 -> 41 in v2.74: `frost` RETIRED. A Frostbite is an Aura on `board`
-     and the count is derived by `parser.frostCount`, so the integer beside
-     it was a second source of truth for the same fact — and nothing read
-     it. A field LEAVING is as deliberate an edit as one arriving. */
-  assert.equal(gap.fields, 41);   /* +buffQ in v2.30, -frost in v2.74 */
-  assert.equal(gap.player.length, 41);
-  assert.equal(gap.opponent.length, 41);
+  /* 42 -> 41 in v2.74 and 41 -> 39 in v3.09, and all three departures are
+     the same fact: `frost`, `rot` and `fra` were integers standing beside
+     a token that is really an Aura on `board`, so each was a second source
+     of truth for something the board already knew. The counts are derived
+     now (`frostCount`, `frailtyCount`) or the token simply resolves
+     (Bloodrot Pox). Nothing read `frost`; `fra` was never once SET.
+
+     A field LEAVING is as deliberate an edit as one arriving — that is
+     what this line is for, and the direction of travel is the point: the
+     right number of bespoke per-token counters is zero. */
+  assert.equal(gap.fields, 39);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09 */
+  assert.equal(gap.player.length, 39);
+  assert.equal(gap.opponent.length, 39);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -315,8 +321,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 41);   /* -frost in v2.74 */
-  assert.equal(gap.nativeForOpponent.length, 41);
+  assert.equal(gap.nativeForPlayer.length, 39);   /* -frost v2.74, -rot -fra v3.09 */
+  assert.equal(gap.nativeForOpponent.length, 39);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

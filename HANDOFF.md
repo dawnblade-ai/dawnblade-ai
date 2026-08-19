@@ -69,9 +69,9 @@
 
 ---
 
-## WHERE WE ARE — v3.08
+## WHERE WE ARE — v3.09
 
-`npm test` → **1119 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1127 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
 `npm run audit` → 405 pool cards, **315 full / 73 part / 17 none** ·
 `tools/failstates.js` → **0 UNFAIR**.

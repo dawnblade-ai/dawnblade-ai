@@ -41,7 +41,8 @@ function advValue(c, g, ctx){
     else if(op[0]==="ward") v += op[1]*0.4;
     else if(op[0]==="awd") v += op[1]*0.1;
     else if(op[0]==="amp") v += op[1]*0.7;
-    else if(op[0]==="rot") v += 2;
+    /* `rot` RETIRED in v3.09 — Bloodrot Pox is a real token now, so it is
+       valued by the generic `token` branch like every other one. */
   });
   if(fx.perm==="ally") v += (c.power||0)*1.5;
   if(hasKw(c,"boost") && ctx.boostOn!==false) v += 0.8;

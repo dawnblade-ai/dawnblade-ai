@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-19T02:32:44.725Z",
- "appVer": "3.07",
+ "generated": "2026-08-19T05:29:08.441Z",
+ "appVer": "3.08",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
@@ -393,7 +393,7 @@
    "tx": "At the beginning of your end phase, destroy this, then it deals 2 damage to you unless you pay {r}{r}{r}.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "full"
   },
   "Confidence": {
    "found": true,
@@ -433,7 +433,7 @@
    "tx": "Attack action cards you've played from arsenal and your weapon attacks get -1{p}.\nAt the beginning of your end phase, destroy this.",
    "pw": null,
    "def": null,
-   "fx": "part"
+   "fx": "full"
   },
   "Frostbite": {
    "found": true,
@@ -5898,7 +5898,7 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -6396,7 +6396,7 @@
    ],
    "mentions": [],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9696,7 +9696,7 @@
     "go again"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {
@@ -9792,7 +9792,7 @@
     "stealth"
    ],
    "tier": "full",
-   "approx": true,
+   "approx": false,
    "playable": true,
    "clauses": [
     {

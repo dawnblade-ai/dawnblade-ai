@@ -9,6 +9,78 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.09 — the last two counters become the Auras they print
+
+Frailty and Bloodrot Pox both print **`Generic Token - Aura`**. Both were
+side counters — `fra` and `rot` — and each was read in exactly ONE place
+inside the trainer, so **at the table neither did anything at all.** Nine
+pool cards create them, across three heroes.
+
+Most of what building them took was **deleting** the two parser lines that
+intercepted them. The generic token rule underneath already routes "under
+their control" to the correct side, and every one of the nine says exactly
+that — so **the token sits with the hero it hurts**, with no convention to
+invent. The counters were the thing taking the token's place.
+
+Same move Runechant made at v2.23 and Frostbite at v2.74, and it buys the
+same three things: the token expires on its own printed schedule
+(`sweepArena`, both boards), the seven pool cards that count auras
+generically can see it, and there is no bespoke state to keep in step.
+
+### Both were stronger than printed, and RULING was to build to print
+
+| | the counter did | the card prints |
+|---|---|---|
+| `fra` | a blanket −1 to **any** incoming swing | −1 to attack actions played **from arsenal** and to **weapon** attacks — an attack action from hand is untouched |
+| `rot` | an unavoidable, **never-expiring** per-turn drain | a **one-shot** at your end phase, and you may pay `{r}{r}{r}` to shrug it off |
+
+`fra` had **never once been SET in a real game** — its only source, Frailty
+Trap, read `none` until v3.08 — so the storage convention it used was
+untested rather than settled, and replacing it cost nothing.
+
+### A payment with no window to pause in resolves inline
+
+The first build of Bloodrot queued a `pay` prompt, and **nothing drained
+it**: `openPrompt` runs at the tail of `execute`, which the end phase never
+calls. The feed said *"it pays out as it goes"* and no damage landed —
+completely silent, and found by driving rather than by any drill.
+
+CR 4.4.1 gives nobody priority in the end phase, and this project already
+had the ruling for a payment demanded where there is no room to pause (the
+trainer's auto-pitch note says so in as many words). So `selfPayOr` resolves
+inline, and pays from **floating resources only** — it never pitches on the
+player's behalf, because three cards for 2 life is usually a losing trade
+and a training sim that quietly makes it is teaching bad play. Floating
+resources fizzle at CR 4.4.3e anyway, so spending them costs nothing the
+player was keeping.
+
+**`selfPayOr` is not `payOr`.** `payOr` is Cold Snap's shape — "target hero
+may pay" — and bills `1-actorOf(n)`. This bills the actor. Same self/foe
+pairing `selfDiscard`/`foeDiscard` already keep, and mixing them up hands
+the bill to the wrong player behind a plausible-looking prompt.
+
+### Two fields left the side shape
+
+`symmetryGap` goes **41 → 39**. Three counters have now left it — `frost`
+at v2.74, `rot` and `fra` here — and all three departures are the same
+fact: an integer standing beside a token that is really an Aura on the
+board is a second source of truth for something the board already knows.
+**The right number of bespoke per-token counters is zero.**
+
+### Also settled this version
+
+Two long-standing questions answered by the user rather than guessed:
+
+- **A clash tie is no winner** — CLAUDE.md had carried "that reading is
+  still awaiting confirmation" since v2.07. Confirmed; the caveat is gone.
+- **A Trap is played from hand** like any other Defence Reaction. The
+  subtype carries no zone restriction, so v3.08's build is complete rather
+  than provisional.
+
+`test/pox.test.js` — 8 drills, three sabotages proven to bite.
+
+---
+
 ## v3.08 — Arakni's four Traps, and the zone they were sitting in
 
 Den of the Spider, Lair of the Spider, Frailty Trap and Inertia Trap are a

@@ -773,8 +773,10 @@ test("the rider is parsed as a CLAUSE, so it is not one card's special case", {s
   /* the same rule reads three other pool cards' quoted abilities. A build
      that only understood "go again" would leave these dropped. */
   const want = {
-    "Lace with Frailty": [["fra", 1]],
-    "Lace with Bloodrot": [["rot", 1]],
+    /* BOTH BECAME REAL TOKENS AT v3.09, on the side the card prints
+       ("under their control"). They were `fra`/`rot` side counters. */
+    "Lace with Frailty": [["token", "frailty", 1, "foe"]],
+    "Lace with Bloodrot": [["token", "bloodrot pox", 1, "foe"]],
     "Yo Ho Ho!": [["token", "gold", 1, "self"]]
   };
   const all = {};

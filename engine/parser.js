@@ -597,6 +597,28 @@ function classifyClause(raw){
     return R([["ga", 1, attackQual(m[1])]]);
   /* "they lose N{h}" is damage to the opposing hero */
   if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
+  /* BLOODROT POX PRINTS AN ESCAPE HATCH (v3.09) — "…then it deals 2 damage
+     to you unless you pay {r}{r}{r}". The `rot` counter this replaced
+     offered no payment and never expired, so it was a permanent
+     unavoidable tick where the card is a ONE-SHOT the controller can buy
+     out of. Both halves of that were stronger than printed.
+
+     `selfPayOr` rather than `payOr`: the payer is the token's CONTROLLER,
+     which is the acting seat when `sweepArena` fires this at their end
+     phase — `payOr` is Cold Snap's shape and hardcodes the opponent. Same
+     self/foe pairing `selfDiscard` and `foeDiscard` already keep. */
+  if(m=c.match(/^it deals (\d+) damage to you unless you pay ((?:\{r\})+|\d+)$/))
+    return R([["selfPayOr", rCost(m[2]), [["dmgSelf", +m[1]]]]]);
+  /* FRAILTY'S SCOPE IS PRINTED AND IT IS NARROW (v3.09): attack action
+     cards played FROM ARSENAL, and WEAPON attacks. An attack action from
+     hand is untouched. The `fra` counter this replaced shaved any incoming
+     swing at all.
+
+     Filed as a reader-noop for the same reason the cost reductions are:
+     the rule is real and it is applied by a NAMED reader (`frailtyCount`,
+     inside `execute`'s bonus), not on resolution. */
+  if(/^attack action cards you'?(?:ve| have) played from arsenal and your weapon attacks get -1\{p\}$/.test(c))
+    return NOOP("frailty's debuff — read off the board by frailtyCount when an attack is declared");
   /* "it gets -N{p}" while defending — the incoming swing is shaved */
   if(m=c.match(/^(?:this|it) gets -(\d+)\s*\{p\}$/)) return R([["atkMinus",+m[1]]]);
   /* "it gets -N{p} unless you pay {cost}" (Look Tuff) — this REDUCES ITS
@@ -892,14 +914,31 @@ function classifyClause(raw){
      nothing at all. The dummy pays costs as of v2.71. It now falls through
      to the generic token rule below like any other token, and the tax it
      applies is read off the board by `frostCount` inside `effCost`. */
-  if(/(create|give).*bloodrot/.test(c)) return R([["rot",1]],{approx:true});
-  if(/(create|give).*frailty/.test(c)) return R([["fra",1]],{approx:true});
+  /* BLOODROT AND FRAILTY HAVE NO INTERCEPT ANY MORE (v3.09), and deleting
+     the two lines that were here is most of what building them took.
+
+     They were routed to dedicated side counters — `rot` and `fra` — with
+     the note that "a generic token would quietly take their place". That
+     was true and it was the wrong way round: both print `Generic Token -
+     Aura`, both say "under their control", and the generic rule below
+     already puts a token on the correct player's board. The counters were
+     the thing taking the TOKEN's place, and each was read in exactly one
+     spot inside the trainer, so at the table both did nothing at all.
+
+     Same move Runechant made at v2.23 and Frostbite at v2.74, and it buys
+     the same three things: they expire on their own printed schedule
+     (`sweepArena`, both boards), they are countable by the seven pool
+     cards that ask about auras generically, and there is no bespoke state
+     to keep in step. `fra` was never once set in a real game — its only
+     source, Frailty Trap, read `none` until v3.08.
+
+     RULING (user, 2026-08-19): build both to PRINT. The counters were also
+     stronger than printed in both directions — see `frailtyCount` for the
+     debuff's real scope, and `selfPayOr` for the escape hatch Bloodrot
+     prints and the tick never offered. */
   /* RULING: a token is a card — put one copy on the correct player's board.
-     "under their control" sends it to the opponent instead. This sits AFTER
-     bloodrot/frailty on purpose: those two still have dedicated counters and
-     documented inertness, and a generic token would quietly take their
-     place. (Runechant and Frostbite are handled above and on the board
-     respectively, and neither wants this path.) */
+     "under their control" sends it to the opponent instead.
+     (Runechant is handled above; Frostbite falls through here.) */
   if(m=c.match(/create (a|an|\d+|one|two|three|x) ([a-z][a-z' ,-]*?) tokens?(?: in| under| on|,|\.|$)/)){
     /* AN "X" QUANTITY IS REFUSED, NOT READ AS ONE. Ice Eternal prints
        "Create X Frostbite tokens" for a printed cost of "XX", and nothing
@@ -1752,6 +1791,14 @@ const rCost = s => /^\d+$/.test(String(s||"")) ? +s : (String(s||"").match(/\{r\
 const isFrostbite = b => !!(b && b.card && norm(b.card.name) === "frostbite");
 const frostCount = sd => (sd && sd.board) ? sd.board.filter(isFrostbite).length : 0;
 
+/* FRAILTY IS A BOARD FACT TOO (v3.09), read the same way frostbite's tax
+   is: the token sits on the board of the hero it weakens, so the count is
+   derived rather than stored. It replaced a `fra` side counter that only
+   the trainer read — and that counter applied a blanket -1 to ANY incoming
+   swing, where the token prints a much narrower scope. See `execute`. */
+const isFrailty = b => !!(b && b.card && norm(b.card.name) === "frailty");
+const frailtyCount = sd => (sd && sd.board) ? sd.board.filter(isFrailty).length : 0;
+
 /* ---- ARCANE BARRIER AND SPELLVOID (v2.74) ---------------------------
    Two keywords, 21 pieces of equipment across ALL FIFTEEN heroes, and
    both were filed `noop` with the reason "stops arcane damage — the dummy
@@ -2291,6 +2338,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         idleCounterWipes,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
+        isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         CARD_OVERRIDES};

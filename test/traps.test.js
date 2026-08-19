@@ -55,7 +55,7 @@ test("all four Traps parse to the right condition and the right payload", {skip}
   const want = {
     "Den of the Spider":  ["defPumped", ["mark", 1]],
     "Lair of the Spider": ["defGA",     ["mark", 1]],
-    "Frailty Trap":       ["defGA",     ["fra", 1]],
+    "Frailty Trap":       ["defGA",     ["token", "frailty", 1, "foe"]],
     "Inertia Trap":       ["defPumped", ["token", "inertia", 1, "foe"]]
   };
   for(const [nm, [cond, op]] of Object.entries(want)){
@@ -108,18 +108,19 @@ test("the payload lands under the ATTACKING hero's control", {skip}, () => {
   assert.deepEqual(inert.n.sides[0].board, [], "and nothing lands on the trap's own side");
 });
 
-test("Frailty Trap fires on go again, and its counter is trainer-only today", {skip}, () => {
+test("Frailty Trap puts a real token under the ATTACKING hero's control", {skip}, () => {
   H.db();
+  /* At v3.08 this asserted `sides[0].fra === 1` — a side counter, on the
+     DEFENDER, read in exactly one place inside the trainer. v3.09 made it
+     the printed `Generic Token - Aura` it always was, on the attacker's
+     board, where both engines can see it and its own end-phase schedule
+     destroys it. */
   const hit = defendWith("Frailty Trap", {ga: true});
-  assert.equal(hit.n.sides[0].fra, 1, "the trigger fires and the counter is written");
-  assert.ok(!defendWith("Frailty Trap", {ga: false}).n.sides[0].fra,
-    "and a plain attack does not");
-  /* STATED, NOT HIDDEN: `fra` is read in ONE place — the trainer's
-     `foeSwing`, where the swing is a fabricated scalar — so at the table
-     the counter is written and never spent. Frailty Trap's TRIGGER is
-     built on both boards; its payload is not, and that is the next
-     schedule-per-board job rather than something this drill can assert
-     away. Bloodrot (`rot`) is the same shape, from three more cards. */
+  assert.deepEqual(hit.n.sides[1].board.map(b => b.card.name.toLowerCase()), ["frailty"],
+    "it lands on the attacker, who is the hero it weakens");
+  assert.deepEqual(hit.n.sides[0].board, [], "and nothing lands on the trap's own side");
+  assert.deepEqual(defendWith("Frailty Trap", {ga: false}).n.sides[1].board, [],
+    "and a plain attack creates nothing");
 });
 
 /* ---- A DEFENCE REACTION IS NOT A PERMANENT --------------------------- */

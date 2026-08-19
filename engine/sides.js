@@ -48,12 +48,15 @@ const SIDE_FIELDS = [
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
   "counters","weaponUsed","buffNext","buffQ","gaNext","runeHitNext",
-  /* `frost` RETIRED in v2.74 — a Frostbite is an Aura on `board` and the
-     count is derived by `parser.frostCount`, exactly as `rune` above is
-     derived by `runeCount`. A bare integer beside the board is a second
-     source of truth for the same fact, and while it existed nothing read
-     it: not `effCost`, not effects.js. Do not reintroduce it. */
-  "amp","ward","awd","rune","rot","fra",
+  /* `frost` RETIRED in v2.74, `rot` and `fra` in v3.09 — each is an Aura
+     on `board` and each count is derived (`parser.frostCount`,
+     `frailtyCount`), exactly as `rune` above is derived by `runeCount`. A
+     bare integer beside the board is a second source of truth for the same
+     fact, and in all three cases almost nothing read it: `frost` was read
+     by neither `effCost` nor effects.js, and `fra` was never once SET in a
+     real game — its only source read `none` until v3.08. Do not
+     reintroduce any of them. */
+  "amp","ward","awd","rune",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
@@ -85,7 +88,7 @@ function makeSide(o){
     pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, buffNext: 0, buffQ: [], gaNext: false, runeHitNext: false,
-    amp: 0, ward: 0, awd: 0, rune: 0, rot: 0, fra: 0,
+    amp: 0, ward: 0, awd: 0, rune: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
     hist: freshHist(),

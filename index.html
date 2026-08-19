@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.08"; /* v3.08 — Arakni's four Traps, which read nothing at all: two conditions over two payloads, both payload ops already built and only the trigger missing — and building them showed all four had been resolving into the ARENA and staying there, because `perm` was read off the printed line where "Trap" is a subtype of Defense Reaction. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.09"; /* v3.09 — Frailty and Bloodrot Pox become the board Auras they print, replacing the last two side counters: each was read in exactly one place inside the trainer, so at the table neither did anything, and both were wrong in the direction that steals games — a blanket debuff where the card names two narrow cases, and a never-expiring unavoidable drain where the card is a one-shot you can pay to shrug off. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3640,7 +3640,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(si===0 && drawn.length<need && act(n).hand.length===0){
       n.over={win:false}; return {...L(n,`Deck empty — fatigued. ${foe(n).name} wins by attrition.`), actor:_prevActor};
     }
-    if(act(n).rot>0){ foeMut(n).hp-=act(n).rot; n.chain=[...n.chain,{n:"Bloodrot",img:null,dbImg:null,dmg:act(n).rot,ga:false,kind:"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=act(n).rot; n=L(n,`Bloodrot ticks ${foe(n).name} for ${act(n).rot}.`); n=winCheck(n); if(n.over) return {...n, actor:_prevActor}; }
+    /* THE BLOODROT TICK IS GONE (v3.09). It was a per-turn, unavoidable,
+       never-expiring drain standing in for a token that prints a ONE-SHOT
+       the controller can buy out of: "at the beginning of your end phase,
+       destroy this, then it deals 2 damage to you unless you pay
+       {r}{r}{r}". Bloodrot Pox is a real board Aura now, so its own
+       schedule fires it (`sweepArena`, both boards) and `selfPayOr` offers
+       the escape hatch the tick never did. */
     return {...n, actor:_prevActor};
   }
   /* The player's end phase continues here after the arsenal choice, then
@@ -3730,8 +3736,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = {...s};
     oppMut(n).ap = opp(n).ap - 1;
     const base = [3,4,5][(n.turn-1)%3] + (n.turn>6?1:0);
-    n.incoming = Math.max(0, base - you(n).fra);
-    if(you(n).fra>0){ n=L(n,`Frailty saps the swing: ${base} → ${n.incoming}.`); youMut(n).fra=0; }
+    /* FRAILTY NO LONGER SHAVES THIS SWING (v3.09), and it never should
+       have. The token prints a narrow scope — "attack action cards you've
+       played FROM ARSENAL and your WEAPON attacks" — where this applied a
+       blanket -1 to any incoming swing at all. It is read off the board by
+       `parser.frailtyCount` inside `execute` now, on the side that
+       controls the token, so it reaches both engines and only the two
+       cases the card names. */
+    n.incoming = base;
     n.chain=[...n.chain,{n:opp(n).name,img:null,dbImg:null,dmg:n.incoming,ga:false,kind:"foe"}];
     n.featured = {foe:true, dmg:n.incoming, chip:`LINK ${n.chain.length} — ${opp(n).name.toUpperCase()} ATTACKS`};
     n.mode="block"; n.bphase="defend"; youMut(n).blockH=[]; youMut(n).blockG=[]; youMut(n).blockRx=[];
@@ -4074,7 +4086,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        would just be the old counter wearing a disguise. */
     you(g).buffNext>0 && ["Next atk +"+you(g).buffNext],
     you(g).amp>0 && ["Amp "+you(g).amp], you(g).ward>0 && ["Ward "+you(g).ward], you(g).awd>0 && ["ArcWard "+you(g).awd],
-    you(g).soul.length>0 && ["Soul ×"+you(g).soul.length], you(g).rot>0 && ["Bloodrot "+you(g).rot,"bad"], you(g).fra>0 && ["Frailty "+you(g).fra,"bad"]
+    you(g).soul.length>0 && ["Soul ×"+you(g).soul.length]
   ].filter(Boolean);
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
@@ -4384,7 +4396,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 if(you(g).awd>0)       pips.push(["arcane ward "+you(g).awd, "on"]);
                 if(runeCount(you(g))>0) pips.push(["runechant ×"+runeCount(you(g)), "on"]);
                 if(opp(g).marked)     pips.push(["dummy marked", "on"]);
-                if(you(g).rot>0)       pips.push(["bloodrot "+you(g).rot, "warn"]);
+                /* bloodrot and frailty are board Auras as of v3.09 — the
+                   board renders them, so a duplicate pip would be a second
+                   description of the same fact. */
                 if(you(g).fra>0)       pips.push(["frailty "+you(g).fra, "warn"]);
                 const drac = g.chain.filter(l=>l.drac && l.kind==="atk").length;
                 if(drac>0)        pips.push(["draconic links "+drac, ""]);

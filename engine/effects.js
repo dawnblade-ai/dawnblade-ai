@@ -51,7 +51,7 @@
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, norm, qualMatches, runeCount,
-       isFrostbite, frostCount,
+       isFrostbite, frostCount, isFrailty, frailtyCount,
        pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
@@ -774,8 +774,56 @@ function makeEffects(ctx){
         if(tgt){ const cur=(act(n).counters[tgt]||{}); actMut(n).counters={...act(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
         n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
       }
-      else if(k==="rot"){ actMut(n).rot+=v; n=L(n,`Bloodrot on ${act(n).name} (ticks ${v}/turn).`); }
-      else if(k==="fra"){ actMut(n).fra+=v; n=L(n,`Frailty — ${foe(n).name}'s next swing −${v}.`); }
+      /* `rot` AND `fra` ARE GONE (v3.09). Both were side counters standing
+         in for a printed `Generic Token - Aura`, and each was read in
+         exactly one place inside the trainer — so at the table neither did
+         anything. They are real board tokens now, minted by the generic
+         `token` op like Runechant and Frostbite before them, and the two
+         parser lines that intercepted them were deleted rather than
+         rewritten. See parser.js for the full note. */
+      else if(k==="dmgSelf"){
+        if(v>0){ actMut(n).hp -= v; n = L(n, `${srcName}: ${v} damage — ${act(n).name} to ${act(n).hp}{h}.`); n = winCheck(n); }
+      }
+      /* THE ACTING SEAT IS THE ONE BILLED, which is why this is not
+         `payOr`. Bloodrot Pox prints "it deals 2 damage to YOU unless YOU
+         pay" and fires in its controller's end phase, where `sweepArena`
+         hands the payload back with that seat as the actor. `payOr` is
+         Cold Snap's shape — "target hero may pay" — and asks
+         `1-actorOf(n)`; mixing them up bills the wrong player behind a
+         perfectly plausible-looking prompt.
+
+         IT RESOLVES INLINE, AND IT PAYS ONLY FROM FLOATING RESOURCES.
+         Two reasons, both already settled in this project rather than
+         decided here:
+
+         1. THERE IS NO WINDOW TO PAUSE IN. CR 4.4.1 gives nobody priority
+            in the end phase. The trainer's auto-pitch carries the same
+            ruling in as many words — "on your own turn `mode:"pay"` asks
+            with a sheet; in an instant window there is no room to pause
+            for one" — and a queued prompt here would simply never drain:
+            `openPrompt` runs at the tail of `execute`, which the end phase
+            does not call. That failure is SILENT, and it is what the first
+            build of this did: the feed said "it pays out as it goes" and
+            nothing happened.
+
+         2. IT MUST NOT PITCH ON THE PLAYER'S BEHALF. Pitching three cards
+            to avoid 2 damage is usually a losing trade, and a training sim
+            that quietly makes it is teaching bad play. Floating resources
+            are already spent-or-lost at CR 4.4.3e, so spending them here
+            costs the player nothing they were keeping — which is the one
+            payment that can be made without asking.
+
+         So: float 3 and Bloodrot is shrugged off; float less and you take
+         it. Declining is never silent — both branches say which happened. */
+      else if(k==="selfPayOr"){
+        if(act(n).res >= v){
+          actMut(n).res = act(n).res - v;
+          n = L(n, `${srcName}: ${v} paid — shrugged off by ${act(n).name}.`);
+        } else {
+          n = L(n, `${srcName}: only ${act(n).res} of ${v} floating — it lands on ${act(n).name}.`);
+          n = runOps(n, op[2] || [], srcName);
+        }
+      }
       else if(k==="noop"){ n=L(n,`${srcName}: ${v}.`); }
     });
     return n;
@@ -1112,7 +1160,19 @@ function makeEffects(ctx){
         if(act(n).res >= cost){ actMut(n).res -= cost; n = L(n, `${card.name}: paid ${cost} — the ${penAmt}{p} penalty is avoided.`); }
         else { payPenalty = -penAmt; n = L(n, `${card.name}: can't pay ${cost} — takes -${penAmt}{p}.`); }
       }
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty;
+      /* FRAILTY IS NARROW, AND THE SCOPE IS PRINTED ON THE TOKEN (v3.09):
+         "Attack action cards you've played FROM ARSENAL and your WEAPON
+         attacks get -1{p}." An attack action from hand is untouched.
+
+         The `fra` counter this replaces shaved ANY incoming swing, which
+         is a blanket debuff where the card prints two narrow cases —
+         stronger than printed, and the direction that steals games. It is
+         read off the board here, the same way `frostCount` is read inside
+         `effCost`, because the token sits with the hero it weakens. */
+      const frail = frailtyCount(act(n));
+      const frailPen = (frail && (from==="weapon" || (from==="arsenal" && isAttack(card)))) ? -frail : 0;
+      if(frailPen) n = L(n, `Frailty saps ${card.name} by ${-frailPen}{p} — ${from==="weapon"?"a weapon attack":"an attack action from arsenal"}.`);
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty+frailPen;
       /* +1{p} COUNTERS ARE PART OF THE WEAPON'S POWER, not a bonus on the
          swing. They sit on the piece and travel between turns, so a
          counter-bearing blade is simply a bigger weapon — which is what
