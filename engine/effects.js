@@ -997,6 +997,33 @@ function makeEffects(ctx){
            its base" reduces to "is an Amp bonus live right now" — checked
            before the arcane op below consumes it. */
         : /^surgeOver\d+$/.test(cond) ? act(n).amp>0
+        /* THE FOUR TRAPS ASK ABOUT THE ATTACK COMING AT YOU (v3.08), which
+           is a different object from the one every condition above reads.
+
+           `hostileAtk` is the same test `atkMinus` already makes and for
+           the same reason: a `pend` belongs to whoever DECLARED it, so the
+           only way to know it is aimed at the resolving seat is that the
+           seat is not its owner. Without that a trap would read the
+           holder's OWN attack and mark the wrong hero.
+
+           NOT `pumped`. That one asks whether MY attack beat its own base
+           and is settled in `linkPumps` after the total is struck; these
+           are checked the moment the trap resolves, which is when the CR
+           checks a trigger condition. A pump landing later in the same
+           reaction step does not reach back and turn the trigger on.
+
+           IN THE TRAINER BOTH ARE FALSE, and that is the right answer
+           rather than a gap: seat 1 there is always the vanilla pile
+           (v2.81), its swing is the `[3,4,5]` scalar on `n.incoming` with
+           no card behind it, and a fabricated number has neither go again
+           nor a base to beat. At the table, against a person, both are
+           live. */
+        : cond==="defGA" || cond==="defPumped" ? (() => {
+            const hostile = n.pend && n.pend.by != null && n.pend.by !== actorOf(n);
+            if(!hostile) return false;
+            return cond==="defGA" ? !!n.pend.ga
+                                  : (n.pend.total||0) > ((n.pend.card && n.pend.card.power)||0);
+          })()
         : dracN!=null ? dracLinks >= dracN : false;
       const why = {atk:"no other attack yet", non:"no other non-attack yet",
         pitch6:"no 6+ power card in your pitch zone", arsenal:"not played from arsenal",
@@ -1017,7 +1044,13 @@ function makeEffects(ctx){
         pitchOverBase:"nothing in your pitch zone beats its base power",
         lifeTie:"life totals aren't level",
         charged:"you didn't charge your hero's soul this turn",
-        fused:"no qualifying card in hand to reveal for Fusion"}[cond]
+        fused:"no qualifying card in hand to reveal for Fusion",
+        /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
+           BOTH seats read — so the subject is the trap card the message
+           already names, never "you". `test/judge.test.js`'s ledger caught
+           the first draft of exactly this. */
+        defGA:"the attack it defends has no go again",
+        defPumped:"the attack it defends isn't pumped above its base"}[cond]
         || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on your board` : null)
         || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in your pitch zone` : null)
         || (/^pitchBlue(\d+)$/.test(cond) ? `fewer than ${cond.match(/\d+/)[0]} blue cards in your pitch zone` : null)

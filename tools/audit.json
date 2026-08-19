@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-18T21:07:28.931Z",
- "appVer": "3.06",
+ "generated": "2026-08-19T02:32:44.725Z",
+ "appVer": "3.07",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 311,
+  "full": 315,
   "part": 73,
-  "none": 21
+  "none": 17
  },
  "heroes": {
   "kayo": {
@@ -9667,18 +9667,16 @@
    "mentions": [
     "mark"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this defends an attack with {p} greater than its base, mark the attacking hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends an attack with {p} greater than its base, mark the attacking hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends an attack with {p} greater than its base, mark the attacking hero.",
@@ -9697,18 +9695,16 @@
    "mentions": [
     "go again"
    ],
-   "tier": "none",
-   "approx": false,
+   "tier": "full",
+   "approx": true,
    "playable": true,
    "clauses": [
     {
      "t": "When this defends an attack with go again, create a Frailty token under the attacking hero's control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends an attack with go again, create a Frailty token under the attacking hero's control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends an attack with go again, create a Frailty token under the attacking hero's control.",
@@ -9765,18 +9761,16 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this defends an attack with {p} greater than its base, create an Inertia token under the attacking hero's control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends an attack with {p} greater than its base, create an Inertia token under the attacking hero's control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends an attack with {p} greater than its base, create an Inertia token under the attacking hero's control.",
@@ -9832,18 +9826,16 @@
     "go again",
     "mark"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this defends an attack with go again, mark the attacking hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this defends an attack with go again, mark the attacking hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends an attack with go again, mark the attacking hero.",

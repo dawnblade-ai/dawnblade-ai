@@ -332,6 +332,24 @@ function classifyClause(raw){
     if(/^(?:this is played|you play this|this attacks(?: a hero)?)$/.test(cond)) return rest;
     /* "When this defends, …" — the block step is a real trigger point */
     if(/^this defends(?: an attack)?$/.test(cond)) return rest;
+    /* THE FOUR TRAPS (v3.08) — "when this defends AN ATTACK WITH …".
+
+       Arakni's Den of the Spider, Lair of the Spider, Frailty Trap and
+       Inertia Trap are a 2x2: two conditions over two payloads, and all
+       four read `none` — the whole card, unparsed, because the qualifier
+       on the attack fell past the anchored rule above.
+
+       THE SUBJECT IS THE INCOMING ATTACK, NOT THIS CARD, and that is why
+       neither reuses `pumped`. `pumped` asks whether MY attack was pumped
+       above its own base and is resolved in `linkPumps` once the total is
+       struck; these ask about the attack I am DEFENDING against, from the
+       other seat, at the moment the trap resolves. Same words, opposite
+       side of the chain — exactly the same-name-different-meaning trap
+       `KNOWN_COLLISIONS` polices one layer up. */
+    if(/^this defends an attack with go again$/.test(cond))
+      return Object.assign(rest,{cond:"defGA"});
+    if(/^this defends an attack with \{p\} greater than its base$/.test(cond))
+      return Object.assign(rest,{cond:"defPumped"});
     /* "attacks or defends" — the defend half has no trigger point yet */
     if(/^this attacks or defends$/.test(cond)) return Object.assign(rest,{approx:true});
     /* RULING (Emeritus Scolding): a card played at instant speed during the
@@ -792,7 +810,11 @@ function classifyClause(raw){
      (printed on its back) and returns to hand instead of hitting the
      graveyard on resolution. Inner Chi is already a card in the database. */
   if(/^transcend$/.test(c)) return R([["transcend"]]);
-  if(m=c.match(/\bmark (?:them|target (?:opposing )?hero)\b/)) return R([["mark",1]]);
+  /* "THE ATTACKING HERO" IS THE OPPOSING HERO, from the defender's seat —
+     the only seat that can read this line, since every card printing it is
+     a Defense Reaction. `mark` already writes to `foe(n)`, so the existing
+     op is the right one and this is a wording the reader did not have. */
+  if(m=c.match(/\bmark (?:them|the attacking hero|target (?:opposing )?hero)\b/)) return R([["mark",1]]);
   if(m=c.match(/put an aim counter on it/)) return R([["aim",1]]);
   /* the dummy has a real deck now, so banishing off the top is a real cost */
   if(/^banish the top card of their deck$/.test(c)) return R([["foeBanishTop",1]]);
@@ -1147,7 +1169,25 @@ function fxParse(card){
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
   else if(/\baura\b/.test(tt)) fx.perm="aura";
-  else if(/\btrap\b/.test(tt)) fx.perm="trap";
+  /* A TRAP IS A SUBTYPE OF DEFENSE REACTION, NOT A PERMANENT (v3.08).
+
+     `perm` used to be set off a `\btrap\b` match on the printed line, so
+     all four of the pool's Traps — Den of the Spider, Lair of the Spider,
+     Frailty Trap, Inertia Trap — resolved INTO THE ARENA and stayed there
+     for the rest of the game. `types.destination` says `grave` for every
+     one of them and has been right the whole time; this is the settled
+     ruling (v2.39: where `tt` and `ty` conflict, the structured array
+     wins) reaching one layer further down than anyone had looked.
+
+     Nobody noticed because all four read `tier: none` — the card did
+     nothing, so no one asked where it went. Building their triggers is
+     what made the zone visible.
+
+     CLEARED FOR ANY DEFENCE REACTION rather than by deleting the trap
+     branch: the defect is not that "trap" was the wrong word, it is that
+     a reaction is not a permanent whatever its subtype says. A future DR
+     printing "Aura" would walk into the identical bug. */
+  if(fx.dr) fx.perm = null;
   /* Split on the printed line breaks FIRST: the database puts keyword
      lines in their own paragraph, and clean() collapses newlines, so
      splitting after it would glue "Stealth" onto the rules text. */

@@ -9,6 +9,81 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.08 — Arakni's four Traps, and the zone they were sitting in
+
+Den of the Spider, Lair of the Spider, Frailty Trap and Inertia Trap are a
+**2x2** — two conditions over two payloads — and all four read `tier:
+none`. Not partially read: **nothing**, the whole card.
+
+| the attack this defends | payload | card |
+|---|---|---|
+| has **go again** | mark the attacking hero | Lair of the Spider |
+| has **go again** | Frailty under the attacker | Frailty Trap |
+| **{p} above its base** | mark the attacking hero | Den of the Spider |
+| **{p} above its base** | Inertia under the attacker | Inertia Trap |
+
+Both payload ops already existed. What was missing was the **qualifier on
+the attack**: `^this defends(?: an attack)?$` is anchored, so "when this
+defends an attack **with go again**" fell straight past it and the card
+was never claimed. One reader, four cards.
+
+**The subject is the incoming attack, and that is why neither condition
+reuses `pumped`.** `pumped` asks whether MY attack beat its own base and
+is settled in `linkPumps` after the total is struck. These ask about the
+attack I am *defending against*, at the moment the trap resolves. Same
+words, opposite side of the chain — the same-name-different-meaning trap
+`KNOWN_COLLISIONS` polices one layer up, so they are `defGA` and
+`defPumped`.
+
+A `pend` belongs to whoever **declared** it, so the ownership test is
+load-bearing: drop it and a trap reads its holder's own swing and marks
+the wrong hero, with a payload that looks perfectly correct in the feed.
+That is the same test `atkMinus` already makes, named rather than
+translated.
+
+### And building them made a zone bug visible
+
+`fx.perm` was set off a `\btrap\b` match on the **printed type line**, so
+all four resolved **into the arena** and stayed there for the rest of the
+game — inflating every permanent count on the board. `types.destination`
+has said `grave` for every one of them the whole time.
+
+This is v2.39's ruling — *where `tt` and `ty` conflict, the structured
+array wins* — one layer further down than anyone had looked. It is also
+why nobody found it: **a card that does nothing is a card nobody
+follows.** All four read `none`, so no one ever asked where they went.
+
+Cleared for **any** Defence Reaction rather than by deleting the trap
+branch. The defect is not that "trap" was the wrong word; it is that a
+reaction is not a permanent whatever its subtype says, and a future DR
+printing "Aura" would walk into the identical bug.
+
+`test/traps.test.js` — 8 drills, four sabotages each proven to bite. The
+last one is the guard that would have caught this in the first place:
+**`fx.perm` and `types.destination` must agree across the whole pool.**
+They decide the same question from the two different fields and nothing
+compared them.
+
+### Measured
+
+**315 full / 73 part / 17 none**, from 311 / 73 / 21 — every one of the
+four, `none` to `full`. Fail states: LOST VALUE 57 → 54, INERT 8 → 7,
+UNFAIR still 0.
+
+### Stated, not hidden
+
+Three of the four work on **both** boards; **Frailty Trap's payload does
+not.** `fra` is read in exactly one place — the trainer's `foeSwing`,
+where the swing is a fabricated scalar — so at the table the counter is
+written and never spent. Bloodrot (`rot`) is the same shape, from three
+more cards. The Traps' *triggers* are built on both boards; the counters
+are the next schedule-per-board job, and the storage convention wants
+deciding first: `fra` has never been set in a real game (Frailty Trap
+read `none` until now), the trainer stores it on the side whose OPPONENT
+is weakened, and the UI paints it as a bad pip on your own status.
+
+---
+
 ## v3.07 — the arena has a clock, and it runs on both boards
 
 Five pool cards and fifteen tokens print a self-destruct schedule. The

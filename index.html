@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.07"; /* v3.07 — the arena has a clock and it runs on both boards: five cards and fifteen tokens print a self-destruct schedule, the "end" half ran on NEITHER board (Concealed Object paid its tap-pump every turn forever), tokens were never stamped with theirs, and the "destroy this, THEN X" wording swallowed the schedule outright. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.08"; /* v3.08 — Arakni's four Traps, which read nothing at all: two conditions over two payloads, both payload ops already built and only the trigger missing — and building them showed all four had been resolving into the ARENA and staying there, because `perm` was read off the printed line where "Trap" is a subtype of Defense Reaction. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.07
+**Current version:** v3.08
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1111 drills**.
+This is `node --test "test/*.test.js"` — currently **1119 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -972,6 +972,37 @@ aura crumbling on Viserai's turn silently unlocked life-gain while his
 sword was still equipped. Both flags are a CACHE of a board fact, so
 `sweepArena` re-derives them through `fxParse` over the board AND the
 gear — one reader of a printed line, asked.
+
+### `perm` AND `destination` ANSWER THE SAME QUESTION (v3.08)
+
+Where a resolved card goes is decided in two places — `parser.fxParse`'s
+`fx.perm` (off the printed line) and `types.destination` (off the
+structured array) — and **nothing compared them.** They disagreed on
+exactly four cards, Arakni's Traps, and `types.js` was right every time:
+a **Trap is a SUBTYPE of Defense Reaction**, so it resolves to the
+graveyard like any reaction. Read off `tt`, all four resolved into the
+ARENA and stayed there for the rest of the game, inflating every
+permanent count on the board.
+
+Same ruling as v2.39 — **where `tt` and `ty` conflict the structured
+array wins** — one layer further down than anyone had looked. And the
+reason it survived is worth keeping: **a card that does nothing is a card
+nobody follows.** All four read `tier: none`, so no one ever asked where
+they went; building their triggers is what made the zone visible.
+
+The clear is on `fx.dr`, not on the word "trap". The defect is not that
+the word was wrong, it is that **a reaction is not a permanent whatever
+its subtype says** — a future DR printing "Aura" walks into the identical
+bug. `test/traps.test.js` pins the pool-wide agreement, which is the
+guard that would have caught it.
+
+**A CONDITION ABOUT THE INCOMING ATTACK IS NOT `pumped`.** `pumped` asks
+whether MY attack beat its own base and is settled in `linkPumps` once
+the total is struck; `defGA`/`defPumped` ask about the attack being
+DEFENDED, at the moment the trap resolves. A `pend` belongs to whoever
+declared it, so both test `pend.by !== actorOf(n)` — the same test
+`atkMinus` makes. Without it a trap reads its holder's own swing and
+marks the wrong hero, and the feed looks perfectly correct.
 
 ### THE CR REVIEW (v2.45) — nine bugs, none of them a card
 
