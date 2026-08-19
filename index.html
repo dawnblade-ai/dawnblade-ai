@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.10"; /* v3.10 — a granted ability rides alongside, so read it: FaB prints one in quotes and three printed shapes dropped it, each in its own way — and a trigger stripped of its trigger fires on PLAY, which is stronger than printed, so Bolt of Courage drew a card at declaration and Hot on Their Heels lost its go again AND marked early. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.11"; /* v3.11 — an attack reaction resolves onto the OPEN link: linkPumps has read {k:"rx"} layers since v2.77 and only the trainer ever pushed one, so at the table 14 cards across four heroes paid their cost and pumped the player's NEXT attack instead, with the feed saying so confidently — and the printed target restriction went with it, because buffNext asks no qualifier. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2910,63 +2910,25 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     rxSide.hand = act(s).hand.filter((_,x)=>x!==i);
     rxSide.grave = [...gy(s.turn, c),...act(s).grave];
     if(inAtk){
-      /* playRx never evaluated conditions, so a conditional reaction did
-         nothing. Reprise is the live case: the dummy blocks from hand now, so
-         "defended with a card from their hand this chain link" is a real
-         count of the non-equipment defenders already declared on the stack. */
-      /* THE ARITHMETIC IS `parser.rxPump` (v2.66) — this loop now only
-         answers which printed conditions actually FIRED, which is the half
-         that needs the board. The total used to be hand-rolled right here
-         as a plain sum of the card's own pump and the gated one, and a
-         plain sum cannot say "instead": Overpower prints +6 with reprise
-         and granted +10. (Spelled out in prose rather than as the
-         expression, because the drill below scans this source and an
-         example of the bug reads exactly like the bug.) */
-      const fired = [];
-      (fx.conds||[]).forEach(({cond,op})=>{
-        if(cond==="reprise"){
-          const fromHand = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
-          if(!fromHand){ n = L(n, `${c.name}: reprise needs ${foe(n).name} to have blocked from hand — it didn't.`); return; }
-          fired.push(cond);
-          if(op[0]!=="self") n = runOps(n,[op],c.name);
-          n = L(n, `Reprise — ${fromHand} card${fromHand>1?"s":""} from the dummy's hand met the attack.`);
-          return;
-        }
-        /* CHARGE (Boltyn): "if you've charged this turn" is a plain turn-scoped
-           read, same check execute() uses — a reaction played from hand asks
-           the identical question. */
-        if(cond==="charged"){
-          if(!(act(n).hist.charged>0)){ n = L(n, `${c.name}: you haven't charged your hero's soul this turn.`); return; }
-          fired.push(cond);
-          if(op[0]!=="self") n = runOps(n,[op],c.name);
-          n = L(n, `${c.name}: charged this turn — the bonus is live.`);
-        }
-      });
-      const {pump, replaced} = rxPump(fx, fired);
-      if(replaced && fx.self) n = L(n, `${c.name}: that bonus REPLACES the printed +${fx.self} — it doesn't stack with it.`);
-      /* "TARGET SWORD ATTACK GAINS GO AGAIN" DID NOTHING AT ALL (v2.69).
-         The attack branch never read `fx.ga`, so Run Through — the pool's
-         only reaction that grants it — resolved as half a card: its +2{p}
-         rider landed and the go again it is printed for did not. That is
-         a card WEAKER than printed, the direction `npm run fairness`
-         deliberately does not look in.
+      /* THE RESOLUTION IS `DawnEffects.attackRx` AS OF v3.11, and moving it
+         is what gave the TABLE attack reactions at all. `linkPumps` has
+         always read `{k:"rx"}` layers off the stack and only this function
+         ever pushed one — so at the table a reaction left the hand, paid,
+         and its pump went to `buffNext`: it landed on the player's NEXT
+         attack, and the feed said so. 14 pool cards, four heroes, eight of
+         them Dorinthea's.
 
-         `fx.ga` on an attack reaction can only mean the TARGET's go again:
-         no attack reaction in the pool prints the keyword for itself, so
-         there is nothing to confuse it with. The qualifier is honoured the
-         same way the pump's is. */
-      if(fx.ga && n.pend){
-        if(qualMatches(fx.gaQ, n.pend.card)){
-          n.pend = {...n.pend, ga:true};
-          n = L(n, `${c.name}: ${n.pend.card.name} goes again.`);
-        } else {
-          const want = (fx.gaQ||[]).map(g=>g.join(" ")).join(" or ");
-          n = L(n, `${c.name} grants go again to a ${want} attack — ${n.pend.card.name} isn't one.`);
-        }
-      }
-      n = runOps(n, fx.ops.filter(o=>o[0]!=="buffNext"), c.name);
-      n.stack = [...n.stack, {k:"rx", label:`${c.name} — +${pump}`, pump}];
-      return L(n, `${c.name} on the stack (+${pump}). ${foe(n).name} passes back.`);
+         THE HAND-BLOCKER COUNT IS THIS CALLER'S ANSWER. Reprise asks
+         whether a card from hand met the attack, and the two boards hold
+         declared defenders differently — the trainer as `{k:"def"}` layers
+         here, judge.js on `blockH`. A shared body that read either one is
+         a body the other board cannot call, which is exactly how phantasm
+         came to be inert at the table for three versions. */
+      const handBlockers = n.stack.filter(l=>l.k==="def" && l.gi==null).length;
+      const rx = _EFX.attackRx(n, c, {handBlockers});
+      if(rx.why) return L(n, rx.why);
+      n = rx.game;
+      return L(n, `${c.name} on the stack (+${rx.pump}). ${foe(n).name} passes back.`);
     }
     const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
     const dv = (c.def||0) + dbuff;

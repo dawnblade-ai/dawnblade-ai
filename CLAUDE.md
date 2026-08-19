@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.10
+**Current version:** v3.11
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1137 drills**.
+This is `node --test "test/*.test.js"` — currently **1143 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -972,6 +972,26 @@ aura crumbling on Viserai's turn silently unlocked life-gain while his
 sword was still equipped. Both flags are a CACHE of a board fact, so
 `sweepArena` re-derives them through `fxParse` over the board AND the
 gear — one reader of a printed line, asked.
+
+### AN ATTACK REACTION RESOLVES ONTO THE OPEN LINK (v3.11)
+
+`linkPumps` has read `{k:"rx"}` layers off the stack since v2.77 and **only
+the trainer ever pushed one.** At the table a reaction was played legally,
+paid, and its pump fell through to `buffNext` — landing on the player's
+NEXT attack while the current one resolved for its base, with the feed
+saying so. 14 pool cards, four heroes, eight of them Dorinthea's.
+
+**The printed target restriction is a LEGALITY, not a modifier.**
+`buffNext` asks no qualifier, so Puncture pumped whatever was swinging —
+v2.30's shape on the board nobody had checked. It lives in `judge.legal`
+now, because refusing after the card has left the hand costs the player a
+card for a play the rules never allowed.
+
+`effects.attackRx` is the third shared piece beside `linkPumps` and
+`linkPayload`, and **the hand-blocker count is the caller's answer** — the
+trainer files defenders as `{k:"def"}` layers, judge on `blockH`, and a
+body that reads either is a body the other cannot call. A drill fails if
+it ever goes looking.
 
 ### A GRANTED ABILITY RIDES ALONGSIDE — READ IT (v3.10)
 

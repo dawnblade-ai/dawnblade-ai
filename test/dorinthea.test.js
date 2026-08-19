@@ -191,14 +191,32 @@ test("rxPump: a cond that did not fire contributes nothing", () => {
    already make, and stated rather than hidden. The gate is that the
    arithmetic is NOT hand-rolled here: a second copy is what drifted. */
 
-test("playRx computes its pump with rxPump, not by hand", () => {
+test("the reaction resolution is ONE body, and both boards call it", () => {
+  /* v3.11 moved the whole attack branch into `effects.attackRx`, because
+     `linkPumps` read `{k:"rx"}` layers that only the trainer ever pushed —
+     so at the table a reaction's pump went to `buffNext` and landed on the
+     player's NEXT attack. The arithmetic gate below is unchanged in
+     substance; it just moved to where both callers can reach it. */
+  const EFX = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  /* SLICE `attackRx`, DO NOT SCAN THE FILE. The negative below is about a
+     REACTION re-deriving its own pump; `execute` legitimately writes
+     `(fx.self||0)+…` for the attacking card's own bonus, and a guard aimed
+     at the whole file catches that instead — passing or failing for a
+     reason that has nothing to do with what it is guarding. */
+  const ai = EFX.indexOf("const attackRx = (s, c, o) =>");
+  assert.ok(ai > 0, "attackRx moved — re-anchor this drill");
+  const rxBody = EFX.slice(ai, EFX.indexOf("  /* PIECE ONE", ai));
+  assert.ok(/rxPump\(fx,\s*fired\)/.test(rxBody),
+    "the shared body must call the engine's rxPump");
+  assert.ok(!/\(fx\.self\s*\|\|\s*0\)\s*\+/.test(rxBody),
+    "a hand-rolled sum over fx.self is the bug: it cannot express 'instead'");
   const i = HTML.indexOf("const playRx = i => setG");
   assert.ok(i > 0, "playRx must still be findable");
   const body = HTML.slice(i, HTML.indexOf("const playRxA", i));
-  assert.ok(/rxPump\(fx,\s*fired\)/.test(body),
-    "playRx must call the engine's rxPump");
-  assert.ok(!/\(fx\.self\s*\|\|\s*0\)\s*\+/.test(body),
-    "a hand-rolled sum over fx.self is the bug: it cannot express 'instead'");
+  assert.ok(/_EFX\.attackRx\(/.test(body), "the trainer delegates rather than keeping a copy");
+  assert.ok(!/rxPump\(/.test(body), "and does NOT re-derive the pump itself");
+  const JS = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
+  assert.ok(!/\{\s*k:\s*"rx"/.test(JS), "judge must not grow its own rx layer either");
 });
 
 test("rxPump is bridged into the trainer's bare namespace", () => {
@@ -724,17 +742,26 @@ test("playRx refuses a reaction whose target does not match", {skip}, () => {
     "and refused by NAME rather than dead-tapped");
 });
 
-test("a reaction's go again reaches the attack it targets", {skip}, () => {
+test("a reaction's go again reaches the attack it targets — DRIVEN", {skip}, () => {
   /* Run Through resolved as half a card: its +2{p} rider landed and the
      go again it is printed for did nothing, because the attack branch
      never read `fx.ga`. Weaker than printed — the direction the fairness
-     sweep deliberately does not look in. */
-  const body = codeOf(HTML.slice(HTML.indexOf("const playRx = i => setG"),
-                                 HTML.indexOf("const playRxA")));
-  assert.match(body, /n\.pend\s*=\s*\{\.\.\.n\.pend,\s*ga:true\}/,
-    "the targeted attack must actually gain go again");
-  assert.match(body, /qualMatches\(fx\.gaQ,\s*n\.pend\.card\)/,
-    "and only when the printed restriction is satisfied");
+     sweep deliberately does not look in.
+
+     This was a source scan while the rule lived in a closure. v3.11 made
+     it `effects.attackRx`, so it is DRIVEN now: the drill plays the real
+     card onto a real pend and reads the pend back. */
+  const H = require("./helpers/judged.js");
+  const J = require("../engine/judge");
+  H.db();
+  const sword = {...H.card("Dawnblade", 0), uid: "w1"};
+  const rt = H.card("Run Through", 1);
+  if(!rt || !rt.tx) return;                       /* not in this pool */
+  const g = {...H.state({hand: [], res: 9}, {}, {turn: 3, actor: 0}),
+             pend: {card: sword, by: 0, total: sword.power || 4, ga: false, ops: [], onHit: []},
+             stack: []};
+  const out = J.withEffects(g, (fx, s) => fx.attackRx(s, rt, {handBlockers: 0}).game);
+  assert.equal(out.pend.ga, true, "the targeted attack must actually gain go again");
 });
 
 /* ============================================================

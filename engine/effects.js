@@ -50,7 +50,7 @@
 /* Engine-side dependencies, taken as factory arguments — the same
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
-       fxParse, hasKw, printedKw, isAttack, norm, qualMatches, runeCount,
+       fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
        isFrostbite, frostCount, isFrailty, frailtyCount,
        pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
@@ -1404,7 +1404,23 @@ function makeEffects(ctx){
       n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
       n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
-      if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
+      /* AN ATTACK REACTION PUMPS THE ATTACK IT IS PLAYED ON, NOT THE NEXT
+         ONE (v3.11). Falling through to `buffNext` is how the table came to
+         hand Dorinthea's whole reaction game to her FOLLOWING swing — and
+         to say so in the feed, confidently, while the current attack
+         resolved for its base. 14 pool cards across four heroes.
+
+         The pend must be the ACTOR'S OWN (CR 8.1.2a: an attack reaction is
+         played by the player who controls the attack), which is the same
+         ownership test `atkMinus` and the Traps make. Without a live pend
+         there is nothing to react to, so the printed `buffNext` reading
+         stays as the honest fallback rather than the card doing nothing. */
+      if(fx.self && !isAttack(card) && isAR(card) && n.pend && n.pend.by === actorOf(n)){
+        const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0});
+        if(rx.why) n = L(n, rx.why);
+        else { n = rx.game; n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
+      }
+      else if(fx.self && !isAttack(card)){ actMut(n).buffNext += fx.self; n = L(n, `${card.name}: +${fx.self} power queued for your next attack.`); }
       n.featured = {card:{name:card.name,img:card.img,dbImg:card.dbImg,pitch:card.pitch,cost:card.cost,power:card.power,def:card.def,tt:card.tt}, chip:(fx.perm?"ENTERS PLAY — ":"RESOLVED — ")+(typeAbbr(card)||"effect").toUpperCase()};
       if(from==="hero" && card.sd){ actMut(n).gear = act(n).gear.map(x=> ("gp"+x.uid)===card.uid ? {...x,destroyed:true} : x); n = L(n, "The piece shatters — cost paid."); }
       /* A BOARD PERMANENT PAYING ITS OWN DESTROY COST (v2.35). Energy Potion
@@ -1798,6 +1814,82 @@ function makeEffects(ctx){
      React wrapper was peeled off in v2.62, leaving a pure s => s'.
      ============================================================ */
 
+  /* ---- AN ATTACK REACTION RESOLVES ONTO THE OPEN LINK (v3.11) --------
+
+     `linkPumps` has always read `{k:"rx"}` layers off the stack, and until
+     now **only the trainer ever pushed one.** At the table an attack
+     reaction was played legally, left the hand, cost its resources — and
+     its pump went to `buffNext`, so it landed on the player's NEXT attack
+     instead of the one it was printed to pump. The feed said so, in as
+     many words: *"+3 power queued for your next attack."*
+
+     That is sev-2, the category the player TRUSTS: nothing failed, nothing
+     refused, and the number on screen was simply wrong. **14 pool cards
+     across four heroes**, eight of them Dorinthea's — her whole reaction
+     game.
+
+     THE HAND-BLOCKER COUNT IS THE CALLER'S ANSWER, exactly as
+     `equipDefenders` is for `linkPumps` below. Reprise asks "did they
+     block with a card from hand this chain link", and the trainer files
+     declared defenders as `{k:"def"}` layers on the stack while judge.js
+     holds them on `blockH`. A body that reads one of those representations
+     is a body the other board cannot call — which is how phantasm came to
+     be inert at the table for three versions (v3.00).
+
+     Returns `{game, pump, why}`. `why` is a refusal the CALLER logs, so a
+     printed target restriction reads the same on both boards: "target
+     sword attack" cannot be played onto a dagger at all, and that is a
+     legality rather than a modifier. */
+  const attackRx = (s, c, o) => {
+    o = o || {};
+    const fx = fxParse(c);
+    const pend = s.pend;
+    if(!pend || !pend.card) return {game: s, pump: 0, why: c.name + " has no attack to react to."};
+    /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER. */
+    if(fx.selfQ && !qualMatches(fx.selfQ, pend.card)){
+      const want = fx.selfQ.map(g => g.join(" ")).join(" or ");
+      return {game: s, pump: 0,
+              why: `${c.name} targets a ${want} attack — ${pend.card.name} isn't one.`};
+    }
+    let n = {...s};
+    /* WHICH PRINTED CONDITIONS ACTUALLY FIRED — the half that needs the
+       board. The arithmetic is `parser.rxPump`, which knows that a gated
+       bonus may REPLACE the printed one rather than stack with it. */
+    const fired = [];
+    (fx.conds || []).forEach(({cond, op}) => {
+      if(cond === "reprise"){
+        const fromHand = o.handBlockers || 0;
+        if(!fromHand){ n = L(n, `${c.name}: reprise needs a card from hand to have met the attack — none did.`); return; }
+        fired.push(cond);
+        if(op[0] !== "self") n = runOps(n, [op], c.name);
+        n = L(n, `Reprise — ${fromHand} card${fromHand > 1 ? "s" : ""} from hand met the attack.`);
+        return;
+      }
+      if(cond === "charged"){
+        if(!(act(n).hist.charged > 0)){ n = L(n, `${c.name}: no charge to the soul this turn.`); return; }
+        fired.push(cond);
+        if(op[0] !== "self") n = runOps(n, [op], c.name);
+        n = L(n, `${c.name}: charged this turn — the bonus is live.`);
+      }
+    });
+    const {pump, replaced} = rxPump(fx, fired);
+    if(replaced && fx.self) n = L(n, `${c.name}: that bonus REPLACES the printed +${fx.self} — it doesn't stack with it.`);
+    /* `fx.ga` on an attack reaction can only mean the TARGET's go again —
+       no attack reaction in the pool prints the keyword for itself. */
+    if(fx.ga && n.pend){
+      if(qualMatches(fx.gaQ, n.pend.card)){
+        n.pend = {...n.pend, ga: true};
+        n = L(n, `${c.name}: ${n.pend.card.name} goes again.`);
+      } else {
+        const want = (fx.gaQ || []).map(g => g.join(" ")).join(" or ");
+        n = L(n, `${c.name} grants go again to a ${want} attack — ${n.pend.card.name} isn't one.`);
+      }
+    }
+    n = runOps(n, fx.ops.filter(op => op[0] !== "buffNext"), c.name);
+    n.stack = [...(n.stack || []), {k: "rx", label: `${c.name} — +${pump}`, pump}];
+    return {game: n, pump, why: null};
+  };
+
   /* PIECE ONE — the total, before anything is subtracted from it.
      `equipDefenders` is a COUNT the caller supplies, because how a seat
      holds its declared defenders is the caller's business: the trainer
@@ -2040,7 +2132,7 @@ function makeEffects(ctx){
   };
 
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
-          linkPumps, linkPayload, autoPitch, applyAnswer,
+          linkPumps, linkPayload, attackRx, autoPitch, applyAnswer,
           activateHandAbility};
 }
 

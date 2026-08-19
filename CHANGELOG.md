@@ -9,6 +9,68 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.11 — an attack reaction resolves onto the open link
+
+`linkPumps` has read `{k:"rx"}` layers off the stack since v2.77, and
+**only the trainer ever pushed one.**
+
+At the table an attack reaction was played legally, left the hand and paid
+its cost — and its pump fell through to `buffNext`. It landed on the
+player's **next** attack while the current one resolved for its base, and
+the feed announced it:
+
+> *"Puncture: +3 power queued for your next attack."*
+
+Nothing refused. Nothing failed. The number on screen was simply wrong —
+sev-2, the category the player **trusts**. **14 pool cards across four
+heroes**, eight of them Dorinthea's, which is her entire reaction game.
+
+### The printed target restriction went with it
+
+`buffNext` asks no qualifier, so at the table **Puncture** — *"target sword
+or dagger attack gets +3{p}"* — pumped whatever happened to be swinging.
+That is v2.30's arrow-buff-landing-on-a-sword, on the board nobody had
+looked at. The trainer has refused it since v2.69.
+
+It is a **legality**, not a modifier: a card with no legal target cannot be
+played at all. So it moved into `judge.legal`, where the play is refused
+before the card is spent. Refusing it after — as a log line, with the card
+already in the graveyard — costs the player a card for a play the rules
+never allowed, which is the worst kind of dead tap.
+
+### The third shared piece
+
+`effects.attackRx` joins `linkPumps` and `linkPayload`, and the split note
+above them already predicted its shape:
+
+| | |
+|---|---|
+| `attackRx` | the reaction's own resolution — conditions, `rxPump`, the target's go again, and the layer |
+| `linkPumps` | everything that changes the total before the wall |
+| `linkPayload` | everything the link does once damage is dealt |
+
+**The hand-blocker count is the caller's answer**, exactly as
+`equipDefenders` already is. Reprise asks whether a card from hand met the
+attack, and the trainer files declared defenders as `{k:"def"}` layers
+while judge holds them on `blockH`. A shared body that read either one is
+a body the other board cannot call — which is precisely how phantasm came
+to be inert at the table for three versions. A drill fails if `attackRx`
+ever goes looking for either representation.
+
+### Measured
+
+The same attack that resolved for **7** at the table now resolves for
+**10**. Pool tiers are unchanged at 315 / 73 / 17 — every one of these
+cards read `full` throughout, because the clause was always parsed
+correctly and then *charged* to the wrong attack.
+
+`test/reactions.test.js` — 7 drills, three sabotages proven to bite. Two
+Dorinthea drills were repointed rather than deleted, and one of them became
+a **drive**: it scanned `playRx`'s source because the rule lived in a
+closure, and the rule is a callable function now.
+
+---
+
 ## v3.10 — a granted ability rides alongside, so read it
 
 FaB prints a granted ability in **quotes**, which is what makes it readable

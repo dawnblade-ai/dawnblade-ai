@@ -43,16 +43,16 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.10
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.11
 
 ```
-npm test          1137 green — 0 skipped with a live DB cached, and
+npm test          1143 green — 0 skipped with a live DB cached, and
                   only the 4 drift drills skip without one
 npm run fairness  clean
 npm run audit     405 unique pool cards — 315 full / 73 part / 17 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
 tools/failstates  0 UNFAIR  ← PHASE B DONE (v3.01)
-deployed          APP_VER 3.10, all 22 engine/*.js on main
+deployed          APP_VER 3.11, all 22 engine/*.js on main
 ```
 
 **Three of those moved at v3.00 and none of them by drifting:**

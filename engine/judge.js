@@ -775,6 +775,25 @@ function playableWhy(g, seat, c, win){
   const free = open.some(w => !TY.typeCostsAP(c, w));
   if(!free && !(sd.ap > 0)) return "no action point left";
 
+  /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER (v3.11).
+     "Target sword or dagger attack gets +3{p}" cannot be PLAYED at all
+     when the attack on the chain is neither — the card has no legal
+     target. The trainer has refused it since v2.69; at the table the
+     reaction was resolving, the refusal was a log line, and the card had
+     already left the hand and paid. A player losing a card to a play the
+     rules never allowed is the worst kind of dead tap.
+
+     Only the attack window: `pend` is the attack being reacted to, and a
+     DEFENCE reaction answers a swing that does not live there. */
+  if(open.indexOf("attack-reaction") >= 0 && PR.isAR(c)){
+    const q = PR.fxParse(c).selfQ;
+    if(q && !PR.qualMatches(q, g.pend && g.pend.card)){
+      const want = q.map(gr => gr.join(" ")).join(" or ");
+      return c.name + " targets a " + want + " attack — "
+           + ((g.pend && g.pend.card) ? g.pend.card.name : "this attack") + " isn't one";
+    }
+  }
+
   /* A PLAY YOU CANNOT PAY FOR IS NOT A LEGAL PLAY. Resources come from
      the pool plus whatever the rest of the hand can pitch, so `payCeiling`
      is the most this seat could possibly raise.
