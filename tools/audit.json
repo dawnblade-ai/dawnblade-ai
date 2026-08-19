@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-19T05:29:08.441Z",
- "appVer": "3.08",
+ "generated": "2026-08-19T13:32:43.327Z",
+ "appVer": "3.09",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
@@ -7878,9 +7878,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this attacks a hero, create a Fealty token.\"",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "enflame the firebrand|1": {
    "name": "Enflame the Firebrand",
@@ -8058,9 +8056,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this hits a hero, mark them.\"",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "lava burst|1": {
    "name": "Lava Burst",

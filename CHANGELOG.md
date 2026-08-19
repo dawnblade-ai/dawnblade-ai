@@ -9,6 +9,83 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.10 — a granted ability rides alongside, so read it
+
+FaB prints a granted ability in **quotes**, which is what makes it readable
+rather than guessable: the quoted text is a clause in its own right, so it
+goes back through `classifyClause`. The next-attack pump rule has done that
+since v2.30. **Three other printed shapes did not**, and each dropped the
+rider its own way.
+
+**28 pool cards grant a quoted ability. Seven carried it.** Every card fixed
+here reported `tier: full` throughout — coverage counts the clause as
+consumed either way, which is exactly why the census had to be written
+before the fix.
+
+### A trigger stripped of its trigger is stronger than printed
+
+The worst of it was not the dropping. `^(?:this|it) gains? "(.+)"$` spelled
+only **gains**, and the cards print **gets** — so the quoted text fell past
+that anchor into the loose payload matchers below, which found the payload
+inside it and returned that op **with no `onHit`**:
+
+| card | printed | did |
+|---|---|---|
+| Bolt of Courage ×2 | *"…gets \"When this hits, draw a card.\""* | drew a card **on play** |
+| Engulfing Light ×2 | *"…gets \"When this hits, put it into your soul.\""* | fired on play |
+| Hot on Their Heels | *"…gets go again and \"…mark them.\""* | marked on play, **and lost the go again** |
+
+Hot on Their Heels is the one worth staring at: unanchored, it fell to the
+loose `mark them` matcher, so the card was **weaker than printed in its head
+and stronger in its rider, in the same clause**. CLAUDE.md has said since
+v2.12 that FaB prints all three of gains/gets/has and every anchor must
+accept all three; this one didn't.
+
+### The count was a boolean
+
+Mauvrion Skies prints **3** Runechants at red, **2** at yellow, **1** at
+blue. The reader tested for the bare string `"create a runechant"` — so only
+the **blue** copy matched, and `runeHitNext` was a `boolean`, which could not
+have carried 3 even if it had. Red and yellow forged **nothing**. Viserai's
+own card, and Runechants are his whole engine.
+
+### What was built
+
+| piece | |
+|---|---|
+| `quotedOnHit` | one reader for the quoted ability, shared by every shape |
+| the grant verb | `gains` **and** `gets` **and** `has` |
+| `riderOnHit` | routed by `fxParse` — the only place that can see whether the clause also carried a condition |
+| `runeHitNext` | a **count**, read off the printed number |
+
+**A gated rider is `condOnHit`, never `onHit`.** Filing Fai's pair as a plain
+on-hit would mark the hero on every hit whether or not the Draconic chain
+links were ever there — the KEYWORD-UNGATED shape `npm run fairness` exists
+to catch.
+
+**And an unreadable rider refuses.** Display Loyalty's rider triggers on
+*attacks*, not hits — a different schedule; Goon Tactics' payload has no
+reader. Both keep their printed head and claim nothing else, which leaves
+the gap visible in the audit instead of hiding it behind a guess.
+
+### Measured
+
+**Riders carried: 7 → 15 of 28.** Eight cards across four heroes — Boltyn
+×4, Fai ×2 (one head-only), Lyath ×2 (one head-only), Viserai ×3. Pool tiers
+are **unchanged at 315 / 73 / 17**, and that is the point: not one of these
+was visible to the audit.
+
+`test/riders.test.js` — 10 drills, three sabotages proven to bite, and the
+census pinned so a regression is a number rather than folklore.
+
+**Still dropped, and named:** the *targeted* grant (Scar Tissue, Spike with
+Bloodrot) and the *modal* grant (Pummel, Two Sides to the Blade). Both need
+a reaction to attach a rider to the attack it is pumping, which is a
+per-board question — where the trainer files `{k:"rx"}` on the stack, judge
+holds it differently — and that is the next slice rather than a guess here.
+
+---
+
 ## v3.09 — the last two counters become the Auras they print
 
 Frailty and Bloodrot Pox both print **`Generic Token - Aura`**. Both were

@@ -87,10 +87,19 @@ test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Create a Frostbite token.").ops, [["token","frostbite",1,"self"]]);
 });
 
-test("classifyClause — gaNext, with and without the runechant rider", () => {
+test("classifyClause — gaNext, and the runechant rider carries its PRINTED count", () => {
   assert.deepEqual(cc("The next attack action card you play this turn gains go again.").ops, [["gaNext"]]);
-  const r = cc("The next attack action card you play this turn gains go again, and if it hits create a Runechant.");
-  assert.deepEqual(r.ops, [["gaNext"],["runeHitNext"]]);
+  /* v3.10: `runeHitNext` was a bare flag and the test for it was the
+     literal string "create a runechant" — so of Mauvrion Skies' three
+     pitches only the BLUE copy matched, and it forged one Runechant
+     because one was all a boolean could say. Red prints 3 and yellow 2,
+     and both forged nothing at all. */
+  assert.deepEqual(cc("The next attack action card you play this turn gains go again, and if it hits create a Runechant.").ops,
+    [["gaNext"],["runeHitNext",1]]);
+  assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 3 Runechant tokens.\"").ops,
+    [["gaNext"],["runeHitNext",3]], "the printed count, not a flag");
+  assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 2 Runechant tokens.\"").ops,
+    [["gaNext"],["runeHitNext",2]]);
 });
 
 test("classifyClause — soul: self-entombing and soul spend", () => {

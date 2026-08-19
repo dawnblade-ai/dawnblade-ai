@@ -448,7 +448,22 @@ function classifyClause(raw){
      reader rather than inventing a second vocabulary for granted text —
      an on-hit grant recurses back through the onHit branch above via the
      inner clause's own "when this hits" wrapper. */
-  if(m=c.match(/^(?:this|it) gains? "(.+)"$/)){
+  /* GAINS **AND GETS AND HAS** (v3.10). CLAUDE.md has said since v2.12
+     that FaB prints all three and every anchor must accept all three;
+     this one spelled only `gains`, and the cards print `gets`.
+
+     A missing alternation here does not merely drop the grant — it
+     RELOCATES IT. The quoted text fell past this anchor into the loose
+     payload matchers below, which found "draw a card" inside it and
+     returned that op with NO `onHit`. So Bolt of Courage drew a card on
+     PLAY rather than on hit, Hot on Their Heels marked on play, and
+     Display Loyalty made a Fealty token on play. A trigger stripped of
+     its trigger is strictly stronger than printed, and all three cards
+     reported tier `full` throughout.
+
+     Same shape as Stir the Aetherwinds at v3.00: an unanchored match
+     consuming a sentence and modelling half of it. */
+  if(m=c.match(/^(?:this|it) (?:gains?|gets|has) ["“'](.+)["”']$/)){
     const inner = classifyClause(m[1]);
     return (inner && inner.status==="run") ? inner : null;
   }
@@ -757,6 +772,43 @@ function classifyClause(raw){
      silently dropped, making the card strictly better than printed.
      `attackQual` reads the qualifier off the type line, and null means
      genuinely unqualified. */
+  /* A GRANTED ABILITY RIDES ALONGSIDE — ONE READER FOR ALL OF IT (v3.10).
+
+     FaB prints a granted ability in QUOTES, which is what makes it
+     readable rather than guessable: the quoted text is a clause in its own
+     right, so it goes back through `classifyClause` instead of being
+     pattern-matched here. The next-attack rule below has done this since
+     v2.30; three other printed shapes did not, and each dropped the rider
+     in a different way. This is the one reader they now share. */
+  const quotedOnHit = txt => {
+    const g = txt.match(/\band ["\u201c'](.+?)["\u201d']/);
+    if(!g) return null;
+    const sub = classifyClause(g[1]);
+    return (sub && sub.status === "run" && sub.onHit && sub.ops.length) ? sub.ops : null;
+  };
+  /* "this gets <keyword-or-pump> and \"<granted ability>\"" — the SELF
+     grant, four pool cards across two heroes, and the worst-behaved of the
+     shapes because the head was lost too:
+
+       Hot on Their Heels / Display Loyalty (Fai)
+         "…this gets go again and \"When this hits a hero, mark them.\""
+       Goon Beatdown / Goon Tactics (Lyath)
+         "…this gets +3{p} and \"When this hits a hero, the crowd boos you.\""
+
+     Unanchored, the Fai pair fell through to the loose `mark them` matcher
+     — so GO AGAIN was thrown away and the mark fired on PLAY instead of on
+     hit. A trigger stripped of its trigger is stronger than printed, and
+     losing the keyword is weaker; the card was wrong in both directions at
+     once and reported tier `full`.
+
+     `riderOnHit` is routed by `fxParse`, which is the only place that can
+     see whether the clause also carries a condition — a gated rider is
+     `condOnHit`, an ungated one is `onHit`. */
+  if(m=c.match(/^(?:this|it) (?:gains?|gets|has) (go again|\+\d+\s*\{p\}) and ["\u201c'].+["\u201d']$/)){
+    const head = /go again/.test(m[1]) ? ["ga"] : ["self", +m[1].match(/\d+/)[0]];
+    const rider = quotedOnHit(c);
+    return rider ? R([head], {riderOnHit: rider}) : R([head]);
+  }
   if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)){
     const q = attackQual(m[1]);
     /* A GRANTED ABILITY RIDES ALONG WITH THE PUMP, and it was silently
@@ -778,15 +830,26 @@ function classifyClause(raw){
        already reads as an on-hit `ga`. If the quoted half cannot be read
        the rider is simply absent — the pump still lands, and the audit
        still reports the clause honestly. */
-    const gr = c.match(/\band ["“']([^"”']+)["”']/);
-    const sub = gr ? classifyClause(gr[1]) : null;
-    const rider = sub && sub.status === "run" && sub.onHit ? {onHit: sub.ops} : null;
+    const ro = quotedOnHit(c);
+    const rider = ro ? {onHit: ro} : null;
     const op = ["buffNext", +m[2]];
     if(q || rider) op[2] = q || null;
     if(rider) op[3] = rider;
     return R([op]);
   }
-  if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){ const o=[["gaNext"]]; if(/create a runechant/.test(c)) o.push(["runeHitNext"]); return R(o); }
+  /* "…gets go again and \"When this hits, create N Runechant tokens.\"" —
+     Mauvrion Skies, at all three pitches, and the count is PRINTED: 3 at
+     red, 2 at yellow, 1 at blue. The old test was the bare string "create
+     a runechant", which matches only the blue copy — so red and yellow
+     forged NOTHING and blue forged one by accident. `runeHitNext` was a
+     boolean, so it could not have carried 3 even if it had matched.
+     Viserai's own card, and runechants are his engine. */
+  if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){
+    const o=[["gaNext"]];
+    const rn = c.match(/create (a|an|one|two|three|\d+) runechants?/);
+    if(rn) o.push(["runeHitNext", num(rn[1])]);
+    return R(o);
+  }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
@@ -1370,6 +1433,22 @@ function fxParse(card){
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
     fx.clauses.push({t:raw, st:r.status});
     if(r.approx) fx.approx = true;
+    /* A GRANTED ABILITY RIDING ALONGSIDE THE CLAUSE'S OWN HEAD (v3.10).
+       "this gets go again and \"When this hits a hero, mark them.\"" is two
+       effects in one clause: an immediate keyword or pump, and an ability
+       granted to the same card. The head goes through the op loop below;
+       the rider lands here, because this is the only place that can see
+       whether the clause ALSO carried a condition.
+
+       A GATED RIDER IS `condOnHit`, NOT `onHit` — the same distinction the
+       loop below already draws for Bolt of Courage. Filing Fai's pair as a
+       plain `onHit` would mark the hero on every hit whether or not the
+       Draconic chain links were ever there, which is the KEYWORD-UNGATED
+       shape `npm run fairness` exists to catch. */
+    if(r.riderOnHit)
+      for(const rop of r.riderOnHit)
+        if(r.cond) fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op:rop}];
+        else       fx.onHit.push(rop);
     r.ops.forEach(op=>{
       /* An arsenal-face-up payload is not an on-play effect: it fires when
          the card ENTERS the arsenal, and is stamped onto the card to be

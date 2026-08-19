@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.09
+**Current version:** v3.10
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1127 drills**.
+This is `node --test "test/*.test.js"` — currently **1137 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -972,6 +972,36 @@ aura crumbling on Viserai's turn silently unlocked life-gain while his
 sword was still equipped. Both flags are a CACHE of a board fact, so
 `sweepArena` re-derives them through `fxParse` over the board AND the
 gear — one reader of a printed line, asked.
+
+### A GRANTED ABILITY RIDES ALONGSIDE — READ IT (v3.10)
+
+FaB prints a granted ability in **quotes**, which is what makes it readable
+rather than guessable: the quoted text is a clause in its own right and goes
+back through `classifyClause`. `quotedOnHit` is the one reader; every shape
+that grants an ability shares it.
+
+**A MISSING ALTERNATION DOES NOT DROP A RULE, IT RELOCATES IT.** The anchor
+spelled `gains?` and the cards print `gets`, so the quoted text fell past it
+into the loose payload matchers, which found the payload inside and returned
+it **with no `onHit`**. Bolt of Courage drew a card on PLAY; Hot on Their
+Heels marked on play **and lost its go again** — weaker than printed in the
+head, stronger in the rider, in one clause. Every affected card read `full`.
+CLAUDE.md has said since v2.12 that FaB prints gains/gets/has and every
+anchor must accept all three; that is not a style note, it is this bug.
+
+**A GATED RIDER IS `condOnHit`, NEVER `onHit`.** `riderOnHit` is routed by
+`fxParse` because that is the only place that can see whether the clause
+also carried a condition. Filing a gated rider as a plain on-hit grants it
+on every hit regardless of the gate — KEYWORD-UNGATED, which the fairness
+sweep exists to catch.
+
+**AND A COUNT IS NOT A FLAG.** Mauvrion Skies prints 3 / 2 / 1 Runechants by
+pitch; the reader tested for the bare string "create a runechant" so only
+blue matched, into a `boolean`. Red and yellow forged nothing.
+
+An unreadable rider **refuses** and the head still lands — Display Loyalty's
+triggers on *attacks* rather than hits, Goon Tactics' payload has no reader.
+That leaves the gap visible in the audit instead of behind a guess.
 
 ### `perm` AND `destination` ANSWER THE SAME QUESTION (v3.08)
 

@@ -474,7 +474,14 @@ function makeEffects(ctx){
         n=L(n,`${g2.name} is destroyed — the cost is paid.`);
       }
       else if(k==="gaNext"){ actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
-      else if(k==="runeHitNext"){ actMut(n).runeHitNext=true; n=L(n,"Your next attack: if it hits, a Runechant is forged."); }
+      /* A COUNT, NOT A FLAG (v3.10). Mauvrion Skies prints 3 Runechants at
+         red, 2 at yellow and 1 at blue; this was a boolean, so it could
+         not have carried 3 even when it fired — and it only ever fired on
+         the blue copy, because the parser tested for the bare string
+         "create a runechant". Viserai's own card, and Runechants are his
+         whole engine. */
+      else if(k==="runeHitNext"){ const many=Math.max(1,v||1); actMut(n).runeHitNext=many;
+        n=L(n,`Your next attack: if it hits, ${many>1?`${many} Runechants are`:"a Runechant is"} forged.`); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
       else if(k==="ward"){ actMut(n).ward+=v; n=L(n,`Ward ${v}.`); }
       else if(k==="awd"){ actMut(n).awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
@@ -1202,7 +1209,7 @@ function makeEffects(ctx){
            rule CLAUDE.md spends a section on, in the file that should be
            the last place to break it. */
       if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, "The rite empowers this swing — go again."); }
-      const runeOnHit = !!act(n).runeHitNext; if(runeOnHit) actMut(n).runeHitNext = false;
+      const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
          and doing it inside the walk would be clobbered by the rebuild. */
@@ -1883,7 +1890,8 @@ function makeEffects(ctx){
         else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":"a differently-coloured charge"} — condition not met.`);
       });
     }
-    if(n.pend.runeOnHit && total>0){ n = mkRune(n, 1); n = L(n, `${pc.name} connects — a Runechant is forged (now ${runeCount(act(n))}), poised for your next swing.`); }
+    if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
+      n = L(n, `${pc.name} connects — ${many>1?`${many} Runechants are`:"a Runechant is"} forged (now ${runeCount(act(n))}), poised for your next swing.`); }
     /* ---- A WEAPON THAT HITS EARNS ITS COUNTERS -----------------------
        "The second time this hits each turn, put a +1{p} counter on it."
 
