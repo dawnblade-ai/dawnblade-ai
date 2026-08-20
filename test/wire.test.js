@@ -326,7 +326,26 @@ test("every engine module is loaded by index.html, or declared headless", () => 
      it stayed off for as long as nothing called it, and `local.js` is
      what calls it. Coming off this list must be the SAME edit that adds
      the module to test/sync.test.js's MODULES, or the guard goes dark. */
-  const HEADLESS = [];
+  /* `actions` IS HEADLESS AGAIN AS OF v3.15, and it went back the way this
+     ledger is meant to be used.
+
+     It is the BLANK reference reducer — six actions over cards with no
+     rules text, written to prove that `priority.js` can drive a whole game
+     and that a transport bug can never be confused with a card being read
+     wrong. CLAUDE.md said from the start what would happen to it: "when
+     judge.js lands (Phase B step 6) it replaces this reducer wholesale;
+     net.js takes `reduce` as a parameter for exactly that reason."
+
+     judge.js landed. The table passes `DawnJudge.reduce` at both session
+     sites, and `DawnActions` then appeared exactly three times in the whole
+     repository: its own factory line and two comments. Nobody removed the
+     script tag, so 20K of unreachable reducer shipped on every page load —
+     and, worse, a second quiet rules engine sat on the page, which is the
+     precise hazard this list exists to name.
+
+     The MODULE stays: its 21 drills are a specification for priority.js
+     that nothing else provides. Only the script tag went. */
+  const HEADLESS = ["actions"];
   const dir = path.join(__dirname, "..", "engine");
   const mods = fs.readdirSync(dir).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
   const src = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");

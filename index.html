@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.14"; /* v3.14 — the hero's own Silver Age set becomes an ORACLE on the deck list: a card listed at a pitch that set never printed, or a set card absent from its own deck, now fails a drill in both directions — because a wrong card of the right COUNT is invisible to every other check, which is how v3.13's bug survived. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.15"; /* v3.15 — an architecture audit of the guard rails themselves: `engine/actions.js` had been shipping 20K of unreachable reducer to every page since judge.js replaced it (DawnActions appears three times in the repo — its own factory line and two comments), so it goes back on the HEADLESS ledger with its 21 drills intact; and one negative source scan over a SLICE now asserts the slice exists before asserting about it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1388,7 +1388,6 @@ window.TROPHIES = [
      become a shared engine/effects.js, which is the next pass. -->
 <script src="engine/wire.js"></script>
 <script src="engine/net.js"></script>
-<script src="engine/actions.js"></script>
 <script src="engine/judge.js"></script>
 <!-- SEAT 1 WHEN IT IS NOT A PERSON, and the session that lets a player
      alone reach the merged engine (v2.79). sparring.js came off

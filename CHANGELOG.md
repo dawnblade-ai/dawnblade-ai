@@ -9,6 +9,71 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.15 — an audit of the guard rails themselves
+
+Prompted by v3.13, where a drill had pinned a bug as an expected fact. If
+one guard could do that, the rest were worth reading with the same
+suspicion. Four checks were run over all 55 drill files.
+
+### 1. Source-scan anchors — clean
+
+**42 anchors, all resolve.** No drill is aimed at code that has moved,
+which is the failure this session hit twice while working (`mirror.test.js`
+after `activateIfOk` left `index.html`; two Kayo drills after the
+start-of-turn sweep was unified).
+
+### 2. Ledgers — live and shrinking
+
+| ledger | state |
+|---|---|
+| `actor.test.js` PENDING | `["newTurn"]` — was two |
+| `sides.js` symmetryGap | 39 — was 41 before v3.09 retired two counters |
+| `riders.test.js` census | 19 of 28 — was 7 before v3.10 |
+| `wire.test.js` HEADLESS | empty… and that turned out to be wrong. See below |
+
+### 3. A module shipped and unreachable — `engine/actions.js`
+
+The blank reference reducer: six actions over cards with **no rules text**,
+written to prove `priority.js` can drive a whole game and that a transport
+bug can never be confused with a card being read wrong.
+
+CLAUDE.md said from the start what would become of it — *"when judge.js
+lands (Phase B step 6) it replaces this reducer wholesale; net.js takes
+`reduce` as a parameter for exactly that reason."* **judge.js landed.** The
+table passes `DawnJudge.reduce` at both session sites, and `DawnActions`
+then appeared exactly **three times in the whole repository**: its own
+factory line and two comments.
+
+Nobody removed the script tag. So **20K of unreachable reducer shipped on
+every page load** — and worse, a second quiet rules engine sat on the page,
+which is precisely the hazard the HEADLESS list exists to name.
+
+**The module stays; only the script tag went.** Its 21 drills are a
+specification for `priority.js` that nothing else provides. `HEADLESS` is
+`["actions"]` again, and the paired edit — out of `sync.test.js`'s
+`MODULES` — went with it, exactly as CLAUDE.md prescribes for a module
+crossing that line in either direction.
+
+### 4. Negative source scans over a slice — one found, one fixed
+
+A negative assertion (`assert.ok(!/…/.test(src))`) passes **for free** if
+the thing it scans is empty. Over a whole file that is safe —
+`readFileSync` throws if the file vanishes. Over a **slice** it is not:
+move an anchor and the drill goes green having read nothing.
+
+Five tests assert only negatives against source; four read whole files.
+The fifth, `build.test.js`'s "buildSide takes no seat argument", sliced
+between two anchors — so renaming either would have silently disabled all
+four of its checks. It now asserts the slice exists and is plausibly sized
+before asserting anything about its contents, and moving the end anchor
+turns it red.
+
+**Nothing else was found to be stale, vacuous, or unnecessary.** The
+priority shadow is still genuinely shadowing (73 `mode`/`bphase` reads
+remain in the trainer), and every other loaded module is reachable.
+
+---
+
 ## v3.14 — the hero's own set becomes an oracle on the deck list
 
 v3.13 fixed one wrong card. This makes the class of bug findable.

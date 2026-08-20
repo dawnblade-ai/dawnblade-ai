@@ -132,7 +132,16 @@ test("every hero that PRINTS a weapon gets one", {skip}, () => {
 
 test("buildSide takes no seat argument and branches on no seat", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "build.js"), "utf8");
-  const body = src.slice(src.indexOf("function buildSide"), src.indexOf("function buildSideDefault"));
+  const a = src.indexOf("function buildSide"), b = src.indexOf("function buildSideDefault");
+  /* ASSERT THE SLICE BEFORE ASSERTING ABOUT IT (v3.15). Every check below
+     is a NEGATIVE, and a negative over an empty slice passes for free —
+     rename either anchor, or move `buildSideDefault` above `buildSide`,
+     and this test goes green having read nothing at all. The audit that
+     found this found only one of its shape; the rule is cheap, so keep it
+     wherever a negative scan runs over a slice rather than a whole file. */
+  assert.ok(a >= 0 && b > a, "buildSide's anchors moved — re-anchor this drill");
+  const body = src.slice(a, b);
+  assert.ok(body.length > 400, `the slice is ${body.length} bytes — too small to be buildSide`);
   /* Strip comments AND regex literals before scanning. A hero's printed
      text legitimately contains the word "opponent" — iceFrostbite matches
      "an ice card during an opponent's turn" — so an English-word scan

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.14
+**Current version:** v3.15
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1150 drills**.
+This is `node --test "test/*.test.js"` — currently **1149 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -860,10 +860,17 @@ must never be confusable with a card being read wrong** — so keep the
 split until the effects port makes one copy of the semantics that both
 callers share.
 
-`test/wire.test.js`'s `HEADLESS` list is the ledger and is now **EMPTY**
-(v2.79). Every engine module is on the page. Coming off it must be the
-same edit that adds the module to `test/sync.test.js`'s `MODULES` —
-`judge`, `types`, `lobby`, `sparring` and `local` all moved that way.
+`test/wire.test.js`'s `HEADLESS` list is the ledger. It was EMPTY from
+v2.79 and is **`["actions"]`** again as of v3.15 — the blank reference
+reducer went back off the page once `judge.reduce` had replaced it at both
+session sites, because 20K of unreachable rules code on every page load is
+the second-quiet-engine hazard this list exists to name. **The module and
+its 21 drills stay**; only the script tag went.
+
+Crossing this line in EITHER direction is one edit: onto `HEADLESS` and
+out of `test/sync.test.js`'s `MODULES`, or the reverse. `judge`, `types`,
+`lobby`, `sparring` and `local` all came off it that way; `actions` is the
+first to go back.
 
 ### TWO CALLERS, ONE CARD — the shape v3.00 found twice (v3.00)
 

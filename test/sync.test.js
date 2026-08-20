@@ -29,7 +29,7 @@ const BABEL = '<script type="text/babel"';
    sitting beside a trainer with its own dummy is a second quiet engine —
    and `local.js` is what calls it. */
 const MODULES = ["rng","parser","game","types","rps","sides","priority","prompts","invariants","cards","advisor","build",
-                 "effects","report","wire","net","actions","judge","sparring","local","lobby","room"];
+                 "effects","report","wire","net","judge","sparring","local","lobby","room"];
 
 for(const m of MODULES){
   test(`index.html loads engine/${m}.js`, () => {
