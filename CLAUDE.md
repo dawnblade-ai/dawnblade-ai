@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.13
+**Current version:** v3.14
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1148 drills**.
+This is `node --test "test/*.test.js"` — currently **1150 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -2653,6 +2653,12 @@ misses is a false negative, which is worse than no guard at all.
 > copies. The deck still totalled 55, so every count-based check passed.
 >
 > **Reported by a player checking fabrary — no tool here could find it.**
+> (v3.14 gave it partial coverage: `decks.test.js` now diffs every list
+> against its hero's own set in both directions — a card at a pitch the set
+> never printed, and a set card absent from its deck. Partial because a
+> precon legitimately holds shared cards from OTHER Silver Age sets, so it
+> can only speak about the hero's own. Still not a substitute for the
+> printed product.)
 > The audit reads card text, the fairness sweep compares a card to its own
 > printing, `decks.test.js` counts to 55; a wrong card of the right count is
 > invisible to all three. The only oracle for "is this the RIGHT card" is the

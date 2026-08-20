@@ -9,6 +9,49 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.14 — the hero's own set becomes an oracle on the deck list
+
+v3.13 fixed one wrong card. This makes the class of bug findable.
+
+**A wrong card of the right COUNT is invisible to everything here.** The
+deck still sums to 55, the hero line is there, the gear is there, the card
+text parses perfectly, and the fairness sweep compares each card to its
+own printing and finds nothing amiss. Every existing check passes.
+
+But there is a partial oracle sitting in the data: **each hero's Silver Age
+set essentially IS their precon.** So two questions can be asked, and both
+now are:
+
+| direction | catches |
+|---|---|
+| a deck card at a pitch its hero's set never printed | v3.13's bug exactly — Chimera at yellow when SEN prints red and blue |
+| a set card that appears in no deck | a card silently swapped for another, which leaves a hole on the other side |
+
+Verified by sabotage in both directions. Restoring `\|2\|` fails the first;
+swapping one card for another of the same count fails the second (along
+with three type-census drills, which is a pleasant surprise).
+
+**Stated as partial, because it is.** A precon legitimately contains shared
+cards printed in OTHER Silver Age sets — every Nullrune and Blade Beckoner
+piece — so this can only speak about cards the hero's own set printed. It
+is not a substitute for the printed product. It is the difference between
+zero automated coverage of deck-list correctness and some.
+
+### The two documented absences
+
+The reverse check finds exactly two cards a set prints that no deck lists,
+and they are the two CLAUDE.md already names as **minted at runtime**:
+**Crouching Tiger** (banished, playable that turn) and **Inner Chi**
+(transcend). Both are in the loader's `NEEDED` list precisely because no
+deck contains them. The oracle finding those two and nothing else is a
+good sign that it is measuring what it claims to.
+
+**And it asserts its own work.** `compared > 400` — a check that examines
+nothing also reports zero, which is the failure mode this repo keeps
+paying for.
+
+---
+
 ## v3.13 — a deck-list error, and the guard that had legitimised it
 
 **Reported by a player**, checking Enigma's list against fabrary: the
