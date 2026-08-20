@@ -9,6 +9,81 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.16 — crush runs the card's own rider
+
+**Twelve pool cards across two heroes print a crush rider. Every one of
+them ran Boulder Drop's.** Two separate things pointed at the same card:
+
+| | |
+|---|---|
+| the parser | one rule anchored to the crush **prefix** returned a noop whose text asserts a payload — *"the keyword system forces a card from their hand onto their deck"* |
+| the engine | the trigger site pushed a card from hand to deck, **hardcoded**, for anything carrying the keyword |
+
+So Buckling Blow's -1{d} counter, Wee Wrecking Ball's arsenal destruction
+and nine others were not merely unbuilt. They were **SUBSTITUTED** — the
+card did something real, and something else. And all twelve reported
+`tier: full`, because a `noop` counts as accounted for.
+
+This is the blind spot CLAUDE.md names, at twelve cards: *"where a ruling
+says a keyword does nothing on its own, `noop` is right; where it
+describes real behaviour, `noop` is a mis-filing."* This one described
+real behaviour — someone else's.
+
+### Seven built, five refused
+
+The rule now reads each card's **own** payload with the ordinary reader,
+and the threshold is the printed number rather than a literal 4.
+
+| built | payload |
+|---|---|
+| Boulder Drop | a card from hand onto their deck *(the old behaviour, now READ rather than hardcoded)* |
+| Short Shrift | they discard a card |
+| Buckling Blow | a -1{d} counter on their equipment |
+| Wee Wrecking Ball | destroy a card in their arsenal |
+| Disable | their arsenal card to the bottom of the deck |
+| Fault Line | **all** arsenals to the bottom — the caster's too, because the card says all |
+| Flatten the Field | destroy a Seismic Surge they control |
+
+The five that reach into the **opponent's next turn** — Cartilage Crush,
+Chokeslam, Debilitate, Crush the Weak, Walk in My Shoes — need a schedule
+that does not exist, so the clause **refuses**. They now do nothing and
+say so, where before they quietly did Boulder Drop's thing. A card doing
+the WRONG thing teaches wrong play; a card doing nothing looks like a card
+doing nothing.
+
+### Coverage went DOWN, and that is the number improving
+
+**315 → 308 full.** Seven cards dropped to their honest tier. Drill Shot
+went the other way, `none` → `part`, because the -1{d} payload it shares
+with Buckling Blow now reads. Same principle as v3.02's Cold Snap: a
+number that falls because a lie was removed is the number getting better.
+
+### A payload drill is not a trigger drill
+
+Sabotaging the trigger — disabling the line that fires the rider — left
+**every drill green**, because they all called `runOps` on the payload
+directly. That is the third time this session the same gap has appeared
+(the arena sweep, `attackRx`, now this). Four drills now drive
+`linkPayload`, and the sabotage turns them red.
+
+### And a tool that pointed at the wrong seat
+
+Making the clauses honest surfaced **UNFAIR: 2** — Chokeslam, filed
+"illegal play allowed". Wrong: its restriction binds the **opponent**
+(*"attack action cards **they** control can't gain {p}"*), so leaving it
+unbuilt makes the Chokeslam player weaker, not stronger.
+
+`failstates.js` already had the helper — `otherSubject`, with the comment
+*"a penalty pattern in it is the controller's upside"* — and it was wired
+to one category only. Extended to `illegal-play`, Chokeslam moves to LOST
+VALUE where it belongs and **UNFAIR returns to 0**. The finding was
+invisible until this version, because the noop had kept the clause from
+ever reaching the matcher.
+
+`test/crush.test.js` — 11 drills, four sabotages proven to bite.
+
+---
+
 ## v3.15 — an audit of the guard rails themselves
 
 Prompted by v3.13, where a drill had pinned a bug as an expected fact. If

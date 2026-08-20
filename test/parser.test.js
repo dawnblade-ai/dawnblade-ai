@@ -465,9 +465,30 @@ test("rulings — 'if you do' stays unread: it hangs off an optional cost", () =
     "running an optional-cost payload free is the bug v2.04 fixed");
 });
 
-test("classifyClause — crush riders are honest noops vs a hand-less dummy", () => {
-  const r = cc("Crush - When this deals 4 or more damage to a hero, they put a card from their hand on top of their deck.");
-  assert.equal(r.status, "noop");
+test("classifyClause — a crush rider is the CARD'S OWN payload, not one card's", () => {
+  /* THE NOOP THIS REPLACES DESCRIBED ONE CARD AND CLAIMED TWELVE. It was
+     anchored to the crush PREFIX and returned "the keyword system forces a
+     card from their hand onto their deck" — true of Boulder Drop and of
+     nothing else. Eleven other pool cards print a different rider behind
+     the same prefix, and every one reported `tier: full` while the engine
+     ran Boulder Drop's payload for them. Not unbuilt: SUBSTITUTED. */
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, they put a card from their hand on top of their deck.").ops,
+    [["crushRider", 4, [["foeHandToDeck", 1]]]], "Boulder Drop's own payload, read");
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, they discard a card.").ops,
+    [["crushRider", 4, [["foeDiscard", 1]]]], "Short Shrift's, which is a different thing");
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, put a -1{d} counter on target equipment they control.").ops,
+    [["crushRider", 4, [["foeGearDef", -1]]]], "and Buckling Blow's");
+  /* THE THRESHOLD IS PRINTED, not a literal 4. */
+  assert.equal(cc("Crush - When this deals 6 or more damage to a hero, they discard a card.").ops[0][1], 6);
+  /* AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE. The five "during their
+     next turn" riders need a schedule that does not exist, and a noop
+     would hide them again — which is precisely what it did. */
+  assert.equal(
+    cc("Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}."),
+    null, "no schedule for the opponent's next turn — say so by refusing");
 });
 
 test("classifyClause — target-attack pump folds into self (the reaction pump)", () => {

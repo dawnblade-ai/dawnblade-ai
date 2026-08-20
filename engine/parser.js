@@ -583,7 +583,49 @@ function classifyClause(raw){
      hand onto their deck when a crush attack deals 4 or more. What is
      approximate is WHICH card — the last in hand rather than their choice
      — and that is worth saying instead. */
-  if(/^crush\s*[-—]\s*when this deals \d+ or more damage to a hero/.test(c)) return NOOP("crush rider — live: the keyword system forces a card from their hand onto their deck. Which card is an approximation (the last in hand, not their pick)");
+  /* THE CRUSH NOOP DESCRIBED ONE CARD AND CLAIMED TWELVE (v3.16).
+
+     This was anchored to the crush PREFIX only — "Crush - When this deals
+     N or more damage to a hero" — and returned a noop whose text asserts
+     a specific payload: *"the keyword system forces a card from their hand
+     onto their deck."* That is true of Boulder Drop and of nothing else.
+
+     Eleven other pool cards across two heroes print a completely different
+     rider behind the same prefix — a -1{d} counter on equipment, a tax on
+     their next action, an arsenal card to the bottom, a discard, a halving
+     of their attack actions — and every one of them reported `tier: full`
+     while doing nothing at all, because a `noop` counts as ACCOUNTED FOR.
+
+     That is the blind spot CLAUDE.md names in as many words: "where a
+     ruling says a keyword does nothing on its own, `noop` is right; where
+     it describes real behaviour, `noop` is a mis-filing." This one
+     described real behaviour — someone else's.
+
+     Anchored to the payload it actually names. Every other crush rider now
+     falls through to be read on its own terms, or to be refused honestly. */
+  if(m=c.match(/^crush\s*[-—]\s*when this deals (\d+) or more damage to a hero, (.+?)\.?$/)){
+    /* THE PAYLOAD IS THE CARD'S OWN, read with the ordinary reader. An
+       unreadable one REFUSES the whole clause rather than claiming it —
+       the five "during their next turn" riders need a schedule that does
+       not exist, and a noop would hide them again. */
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status !== "run" || !sub.ops.length) return null;
+    return R([["crushRider", +m[1], sub.ops]]);
+  }
+  /* ---- the crush payloads, each read on its own terms (v3.16) --------
+     None of these existed: one noop stood in for all twelve. */
+  if(/^they put a card from their hand on top of their deck$/.test(c))
+    return R([["foeHandToDeck", 1]]);
+  if(m=c.match(/^put a -(\d+)\{d\} counter on (?:target |an )?equipment they control$/))
+    return R([["foeGearDef", -(+m[1])]]);
+  if(/^destroy a card in their arsenal$/.test(c))
+    return R([["foeArsDestroy", 1]]);
+  if(/^put a card from their arsenal on the bottom of (?:its owner'?s|their) deck$/.test(c))
+    return R([["foeArsBottom", 1]]);
+  if(/^put all cards in all arsenals on the bottom of (?:their owner'?s|its owner'?s) decks?$/.test(c))
+    return R([["allArsBottom", 1]]);
+  if(m=c.match(/^destroy an? ([a-z' -]+?) token they control$/))
+    return R([["destroyFoeToken", m[1].trim()]]);
   if(/^as an additional cost/.test(c)) return NOOP("additional cost — enforced when played");
   if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
@@ -1506,6 +1548,11 @@ function fxParse(card){
          Left in `fx.ops` they would run at declaration, handing over the
          counter before the swing had connected with anything. */
       if(op[0]==="hitCounter"){ fx.hitCounter = {nth:op[1], amt:op[2]}; return; }
+      /* A CRUSH RIDER IS A GATED TRIGGER, not an on-play op. Left in
+         `fx.ops` it would fire at declaration for every crush card — which
+         is how Short Shrift briefly discarded on play while this was being
+         built. `linkPayload` reads `fx.crush` once the damage is struck. */
+      if(op[0]==="crushRider"){ fx.crush = {n:op[1], ops:op[2]}; return; }
       if(op[0]==="wipePowIfIdle"){ fx.wipePowIfIdle = true; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; if(op[2]) fx.gaQ = op[2]; return; }
       /* "It gains +1{p} until end of turn" on a card that also puts an arrow

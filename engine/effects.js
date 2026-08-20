@@ -376,6 +376,67 @@ function makeEffects(ctx){
           n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
         }
       }
+      /* ---- THE CRUSH PAYLOADS (v3.16) ---------------------------------
+         Each is the printed rider of ONE card, and until now all twelve
+         crush cards ran Boulder Drop's. `foeHandToDeck` IS Boulder Drop's,
+         moved out of the trigger so the generic path serves it too — one
+         reader, no card named at the trigger site. */
+      else if(k==="foeHandToDeck"){
+        /* WHICH card is an approximation and always was: the printed text
+           lets THEM choose, and this takes the last in hand. Carried over
+           verbatim from the hardcoded trigger rather than quietly changed. */
+        if(!foe(n).hand.length){ n = L(n, `${srcName}: ${foe(n).name}'s hand is empty.`); return; }
+        const top = foe(n).hand[foe(n).hand.length-1];
+        foeMut(n).hand = foe(n).hand.slice(0,-1);
+        foeMut(n).deck = [top, ...foe(n).deck];
+        n = L(n, `${srcName}: ${top.name} is forced from ${foe(n).name}'s hand back on top of their deck.`);
+      }
+      else if(k==="foeGearDef"){
+        /* A -1{d} COUNTER SITS ON THE PIECE, so it travels between turns
+           and every later block reads it. `curDef` is the live value the
+           block path already uses; a piece at 0 stays in play. */
+        const live = (foe(n).gear||[]).filter(g => g && !g.destroyed && (g.curDef != null ? g.curDef : g.def) > 0);
+        if(!live.length){ n = L(n, `${srcName}: ${foe(n).name} has no equipment left to weaken.`); return; }
+        const worst = live.slice().sort((a,b) => ((b.curDef!=null?b.curDef:b.def)||0) - ((a.curDef!=null?a.curDef:a.def)||0))[0];
+        foeMut(n).gear = foe(n).gear.map(g => g && g.uid === worst.uid
+          ? {...g, curDef: Math.max(0, ((g.curDef!=null?g.curDef:g.def)||0) + v)} : g);
+        n = L(n, `${srcName}: ${worst.name} takes a ${v}{d} counter.`);
+      }
+      else if(k==="foeArsDestroy"){
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        const a = foe(n).arsenal;
+        foeMut(n).arsenal = null;
+        foeMut(n).grave = [...gy(n.turn, a), ...foe(n).grave];
+        n = L(n, `${srcName}: ${a.name} is destroyed in ${foe(n).name}'s arsenal.`);
+      }
+      else if(k==="foeArsBottom"){
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        const a = foe(n).arsenal;
+        foeMut(n).arsenal = null;
+        foeMut(n).deck = [...foe(n).deck, a];
+        n = L(n, `${srcName}: ${a.name} goes to the bottom of ${foe(n).name}'s deck.`);
+      }
+      else if(k==="allArsBottom"){
+        /* ALL arsenals — the caster's too. Fault Line prints "all cards in
+           all arsenals", and reading it as the opponent's alone would make
+           it strictly better than printed. */
+        let moved = 0;
+        for(const i of [0,1]){
+          const sd = n.sides[i]; if(!sd || !sd.arsenal) continue;
+          const a = sd.arsenal; moved++;
+          n = {...n, sides: n.sides.map((x,ix) => ix!==i ? x : {...x, arsenal:null, deck:[...x.deck, a]})};
+        }
+        n = L(n, moved ? `${srcName}: ${moved} arsenal card${moved>1?"s go":" goes"} to the bottom of the deck.`
+                       : `${srcName}: every arsenal is already empty.`);
+      }
+      else if(k==="destroyFoeToken"){
+        const want = norm(String(v||""));
+        const hit = (foe(n).board||[]).find(b => b && b.card && norm(b.card.name) === want);
+        if(!hit){ n = L(n, `${srcName}: ${foe(n).name} controls no ${v}.`); return; }
+        foeMut(n).board = foe(n).board.filter(b => b !== hit);
+        foeMut(n).grave = [...gy(n.turn, hit.card), ...foe(n).grave];
+        n = L(n, `${srcName}: ${hit.card.name} is destroyed.`);
+      }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
         if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
@@ -2071,16 +2132,19 @@ function makeEffects(ctx){
       actMut(n).weaponUsed = wu;
       n = L(n, `${pc.name} connects — your hero ability frees it for one more swing this turn.`);
     }
-    if(hasKw(pc,"crush") && total>=4){
-      /* the threshold is met and the dummy has a hand now — the payloads
-         that reach for an arsenal or its action phase are still inert */
-      if(foe(n).hand.length){
-        const top = foe(n).hand[foe(n).hand.length-1];
-        foeMut(n).hand = foe(n).hand.slice(0,-1);
-        foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `Crush — ${top.name} is forced from ${foe(n).name}'s hand back on top of their deck.`);
-      } else n = L(n, `Crush lands, but ${foe(n).name}'s hand is empty.`);
-    }
+    /* CRUSH RUNS THE CARD'S OWN RIDER (v3.16). This site used to run
+       Boulder Drop's payload — a card from hand onto their deck — for
+       EVERY crush card in the pool, so Buckling Blow's -1{d} counter,
+       Wee Wrecking Ball's arsenal destruction and nine others were not
+       merely unbuilt but SUBSTITUTED. All twelve reported `tier: full`,
+       because the parser filed the whole family behind one noop whose
+       text described Boulder Drop and claimed the rest.
+
+       The threshold is the card's own printed number, not a literal 4. */
+    { const cr = fxParse(pc).crush;
+      if(cr && total >= cr.n) n = runOps(n, cr.ops, pc.name + " — crush");
+      else if(hasKw(pc,"crush") && total >= 4 && !cr)
+        n = L(n, `Crush lands, but ${pc.name}'s rider is not built — it needs a schedule for the opponent's next turn.`); }
     /* A CARD THAT ASCENDS MUST LEAVE WHATEVER HOLDS IT. It is in the
        graveyard for a caller that files at declaration and on the combat
        chain for one that files at the close step, and taking it out of

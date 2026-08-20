@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-20T03:00:33.115Z",
- "appVer": "3.12",
+ "generated": "2026-08-20T20:55:31.665Z",
+ "appVer": "3.15",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 315,
-  "part": 73,
-  "none": 17
+  "full": 308,
+  "part": 75,
+  "none": 22
  },
  "heroes": {
   "kayo": {
@@ -4722,11 +4722,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, they put a card from their hand on top of their deck.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -4754,11 +4754,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, put a -1{d} counter on target equipment they control.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -4784,16 +4784,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, their first action during their next turn costs an additional {r} to play or activate.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, their first action during their next turn costs an additional {r} to play or activate."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, their first action during their next turn costs an additional {r} to play or activate.",
@@ -4816,16 +4818,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
@@ -4884,16 +4888,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}.",
@@ -4926,7 +4932,7 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, put all cards in all arsenals on the bottom of their owner's deck.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5057,11 +5063,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, they put a card from their hand on top of their deck.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5089,11 +5095,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, put a -1{d} counter on target equipment they control.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5119,16 +5125,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
@@ -5185,16 +5193,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase.",
@@ -5217,16 +5227,18 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}.",
@@ -5249,11 +5261,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, put a card from their arsenal on the bottom of its owner's deck.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5316,11 +5328,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, destroy a Seismic Surge token they control.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5761,9 +5773,9 @@
    "mentions": [
     "piercing"
    ],
-   "tier": "none",
+   "tier": "part",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If this has an aim counter, it gets piercing 1.",
@@ -5771,12 +5783,11 @@
     },
     {
      "t": "When this hits a hero, put a -1{d} counter on an equipment they control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
    "skipped": [
-    "If this has an aim counter, it gets piercing 1.",
-    "When this hits a hero, put a -1{d} counter on an equipment they control."
+    "If this has an aim counter, it gets piercing 1."
    ],
    "weaponCost": null,
    "eqAbility": null,
@@ -14366,7 +14377,7 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, they discard a card.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -14393,7 +14404,7 @@
    "mentions": [
     "crush"
    ],
-   "tier": "full",
+   "tier": "part",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -14403,10 +14414,12 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",
-     "st": "noop"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If this has {p} greater than its base, it gets +1{p}.\nCrush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",
@@ -14439,7 +14452,7 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, destroy a card in their arsenal.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],

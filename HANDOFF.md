@@ -69,11 +69,11 @@
 
 ---
 
-## WHERE WE ARE — v3.15
+## WHERE WE ARE — v3.16
 
-`npm test` → **1149 drills, 0 failed** (0 skipped with a live DB cached;
+`npm test` → **1160 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·
-`npm run audit` → 405 pool cards, **315 full / 73 part / 17 none** ·
+`npm run audit` → 405 pool cards, **308 full / 75 part / 22 none** ·
 `tools/failstates.js` → **0 UNFAIR**.
 
 **305 went to 304 and back, and the round trip is the point.** Cold Snap

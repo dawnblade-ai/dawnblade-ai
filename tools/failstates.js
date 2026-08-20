@@ -279,8 +279,23 @@ function classify(card, RULINGS, mentionsFn){
       if(!cat.re.some(re => re.test(t))) continue;
       /* A penalty aimed at the opponent is not the controller's drawback:
          skipping it denies the PLAYER a payoff and spares the OPPONENT a
-         cost. Real, but the opposite of unfair-to-the-opponent. */
-      if(cat.key === "missing-drawback" && other){
+         cost. Real, but the opposite of unfair-to-the-opponent.
+
+         THE SAME IS TRUE OF A RESTRICTION (v3.16). `illegal-play` is sev-3
+         because an unenforced restriction lets a play through that the
+         rules forbid — but only when it binds the CONTROLLER. Chokeslam
+         prints "attack action cards THEY control can't gain {p} during
+         their next action phase": leaving that unbuilt lets the OPPONENT
+         do something they should not, which costs the Chokeslam player a
+         payoff. Filing it UNFAIR points the reader at the wrong seat and
+         at the wrong severity.
+
+         This was invisible until v3.16 made the crush riders honest — one
+         noop had been claiming the whole family, so the clause never
+         reached this matcher at all. The `other` test already existed and
+         was already written up as "a penalty pattern in it is the
+         controller's upside"; it was simply wired to one category. */
+      if((cat.key === "missing-drawback" || cat.key === "illegal-play") && other){
         hits.push({cat: "lost-upside", sev: 1, label: "Earned value denied",
           table: "This penalty lands on the OPPONENT, so skipping it denies the player a payoff and spares the opponent a cost.",
           clause: clean(cl.t)});

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.15
+**Current version:** v3.16
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1149 drills**.
+This is `node --test "test/*.test.js"` — currently **1160 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -370,6 +370,28 @@ UNFAIR is **0** as of v3.01. It went 16 → 11 when the tool stopped
 reading the wrong file, and 11 → 0 when the two keywords that actually
 remained were built (see Phase B in `FINISH.md`). The four phantasm cards
 left first, because they were fixed rather than reclassified.
+
+#### A NOOP CAN CLAIM A WHOLE FAMILY (v3.16)
+
+The blind spot below is about ONE keyword filed wrongly. The worse shape
+is a noop **anchored to a prefix**, whose text asserts a payload:
+
+> `/^crush\s*[-—]\s*when this deals \d+ or more damage to a hero/`
+> → *"the keyword system forces a card from their hand onto their deck"*
+
+That is Boulder Drop's rider, and it is true of **no other card**. Eleven
+more pool cards print a different payload behind the same prefix — a
+-1{d} counter, an arsenal destroyed, a discard, a next-turn tax — and the
+trigger site pushed a card from hand to deck for all of them. **Not
+unbuilt: SUBSTITUTED**, and all twelve read `tier: full`.
+
+**A noop must describe the clause in front of it, never a sibling.** If
+the reason names a payload, anchor the pattern to that payload. The
+threshold is the card's printed number too — `crush.n`, not a literal 4.
+
+Seven riders are read on their own terms now; the five reaching into the
+opponent's NEXT TURN refuse, because no such schedule exists. Coverage
+went **315 → 308 full**, which is the number improving.
 
 #### THE NO-OP BLIND SPOT — the most dangerous thing this found
 
