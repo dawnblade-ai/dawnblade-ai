@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-20T01:04:24.108Z",
- "appVer": "3.11",
+ "generated": "2026-08-20T03:00:33.115Z",
+ "appVer": "3.12",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
@@ -8870,12 +8870,12 @@
    "tx": "If you've pitched a blue card this turn, this enters the arena with a +1{p} counter.\nWard 3",
    "flags": []
   },
-  "enigma chimera|2": {
+  "enigma chimera|3": {
    "name": "Enigma Chimera",
-   "pitch": 2,
+   "pitch": 3,
    "tt": "Illusionist Action - Attack",
    "cost": 2,
-   "power": 7,
+   "power": 6,
    "def": 3,
    "kw": [
     "Phantasm"
@@ -16937,7 +16937,7 @@
     "zone": "deck"
    }
   ],
-  "enigma chimera|2": [
+  "enigma chimera|3": [
    {
     "hero": "enigma",
     "q": 2,

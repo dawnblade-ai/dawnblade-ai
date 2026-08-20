@@ -9,6 +9,59 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.13 — a deck-list error, and the guard that had legitimised it
+
+**Reported by a player**, checking Enigma's list against fabrary: the
+yellow Enigma Chimera isn't in the precon. They were right.
+
+| pitch | printings | in the Silver Age Enigma set? |
+|---|---|---|
+| 1 red | DRO020, MON098, **SEN010**, TNP058 | ✓ |
+| **2 yellow** | MON099, PSM027, TNP059 | **none** |
+| 3 blue | MON100, PSM028, **SEN021**, TNP060 | ✓ |
+
+SEN prints Chimera at red and blue and never at yellow. Our list had two
+yellow copies and **no blue ones at all** — a transcription slip of one
+character, `|2|` where `|3|` belongs. The deck still totalled 55, so every
+count-based check passed; the wrong card simply sat there, 7 power instead
+of 6, wearing a **Monarch** face in an otherwise all-Silver-Age lineup.
+
+### The evidence was visible and had been written down as a fact
+
+`test/printings.test.js` asserted *exactly one* non-Silver-Age card and
+named it:
+
+> *"Enigma Chimera (pitch 2) is the single genuine exception — it has no
+> Silver Age printing at all. If this count ever moves, read the diff: a
+> NEW name here means a printing regressed, not that the floor changed."*
+
+Every word of that is accurate and it points in the wrong direction. **A
+guard that pins an anomaly legitimises it.** The missing face was the
+symptom of a bad deck entry, and pinning the symptom turned it into a
+specification — the comment even tells the next reader to suspect the
+resolver rather than the list.
+
+Worse, I had gone looking at this exact card two sessions earlier, called
+it "the one card in the pool with no Silver Age printing", and wrote it up
+as a poignant detail. It was a bug I walked straight past because a drill
+told me it was expected.
+
+**The floor is now zero.** Every one of the 488 deck and gear entries
+resolves to a Silver Age face, with the Dawnblade's Marvel printing the one
+deliberate exception (and its own drill). Putting `|2|` back turns the
+guard red.
+
+### What this says about the tooling
+
+Nothing in this repo could have found it. The audit reads card TEXT, the
+fairness sweep compares a card to its own printing, `decks.test.js` counts
+to 55 — and a wrong card of the right count is invisible to all three.
+**The only oracle for "is this the right card" is the printed product**,
+which means a human with the real decklist. That is worth knowing before
+the next fifteen decks arrive.
+
+---
+
 ## v3.12 — "Choose 1;" is a choice, and it was being summed
 
 Two pool cards print a modal choice, and the clause loop added **both**

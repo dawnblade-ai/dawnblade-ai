@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.12
+**Current version:** v3.13
 
 ---
 
@@ -2644,6 +2644,19 @@ misses is a false negative, which is worse than no guard at all.
 ---
 
 ## Printings — every card wears its Silver Age face (v2.35)
+
+> **A GUARD THAT PINS AN ANOMALY LEGITIMISES IT (v3.13).** `printings.test.js`
+> asserted exactly ONE non-Silver-Age card and named it — Enigma Chimera at
+> pitch 2, "the single genuine exception". Accurate, and it was a SYMPTOM:
+> SEN prints Chimera at red (SEN010) and blue (SEN021) and never at yellow,
+> so the card was a **deck-list transcription error** displacing two blue
+> copies. The deck still totalled 55, so every count-based check passed.
+>
+> **Reported by a player checking fabrary — no tool here could find it.**
+> The audit reads card text, the fairness sweep compares a card to its own
+> printing, `decks.test.js` counts to 55; a wrong card of the right count is
+> invisible to all three. The only oracle for "is this the RIGHT card" is the
+> printed product. The floor is zero exceptions now, and it bites.
 
 `resolveEntry` used to fall back to `pr._first`, which is whatever printing the
 card database listed first — arbitrary order, not a choice. An Azalea deck

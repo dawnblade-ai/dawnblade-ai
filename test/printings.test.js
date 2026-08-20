@@ -106,11 +106,27 @@ test("printings — every other pool card resolves to a Silver Age set", {skip: 
       notSA.push(h.k + " · " + e.name + " · " + s);
     }
   }
-  /* Enigma Chimera (pitch 2) is the single genuine exception — it has no
-     Silver Age printing at all. If this count ever moves, read the diff:
-     a NEW name here means a printing regressed, not that the floor changed. */
-  assert.deepEqual([...new Set(notSA.map(x => x.split(" · ")[1]))], ["Enigma Chimera"],
-    "unexpected non-Silver-Age printings:\n" + notSA.join("\n"));
+  /* ZERO EXCEPTIONS, and the history here is worth keeping.
+
+     This drill used to expect exactly one: Enigma Chimera at pitch 2, "the
+     single genuine exception — it has no Silver Age printing at all". That
+     was true, and it was a SYMPTOM. The Silver Age Enigma precon prints
+     Chimera at SEN010 (red) and SEN021 (blue) and never at yellow — so the
+     card was in the deck list by mistake, displacing the blue copy, and
+     wearing a Monarch face in an all-Silver-Age lineup because that was the
+     only face it had.
+
+     A GUARD THAT PINS AN ANOMALY LEGITIMISES IT. The old comment even told
+     the reader how to misread a change — "a NEW name here means a printing
+     regressed, not that the floor changed" — which points at the resolver
+     and away from the deck list, where the bug actually was. The anomaly
+     was the evidence; pinning it turned the evidence into a specification.
+
+     Found by a player checking the list against fabrary, not by any tool
+     here. Fixed in the deck list (v3.13); the floor is now zero. */
+  assert.deepEqual(notSA, [],
+    "every pool card must wear a Silver Age face — the Dawnblade is the one " +
+    "deliberate Marvel exception and is excluded above:\n" + notSA.join("\n"));
 });
 
 test("printings — mapDbCard records one image per set", () => {

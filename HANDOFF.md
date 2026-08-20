@@ -69,7 +69,7 @@
 
 ---
 
-## WHERE WE ARE — v3.12
+## WHERE WE ARE — v3.13
 
 `npm test` → **1148 drills, 0 failed** (0 skipped with a live DB cached;
 4 drift drills skip without one) · `npm run fairness` clean ·

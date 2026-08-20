@@ -43,7 +43,7 @@ current layer as cheat-resistant.**
 
 ---
 
-## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.12
+## 1. WHERE WE ARE — measured at v2.83, refreshed at v3.13
 
 ```
 npm test          1148 green — 0 skipped with a live DB cached, and
@@ -52,7 +52,7 @@ npm run fairness  clean
 npm run audit     405 unique pool cards — 315 full / 73 part / 17 none
 npm run sweep     11 heroes with unread ability clauses (26 total)
 tools/failstates  0 UNFAIR  ← PHASE B DONE (v3.01)
-deployed          APP_VER 3.12, all 22 engine/*.js on main
+deployed          APP_VER 3.13, all 22 engine/*.js on main
 ```
 
 **Three of those moved at v3.00 and none of them by drifting:**
