@@ -368,6 +368,46 @@ makes tuning meaningful, E pays it.
 Also untuned and honest about it: **going second costs an extra swing**, and
 the difficulty curve was built around going first.
 
+### THE CLOCK IS A DIFFICULTY KNOB THAT NEEDS NO SMARTER OPPONENT
+
+> **Direction (user, 2026-08-20):** *"In the final version we should emulate
+> chess — not only with ELO but with timers to increase difficulty. We're a
+> long way from there though."*
+
+Recorded here rather than in the roadmap because it bears directly on the
+tuning debt above, and the reason is not obvious:
+
+**`sparring.act` is deliberately not an AI.** It reads no card text, ranks
+on printed numbers, and a drill fails if it ever reaches for the parser —
+so that a partner playing badly and a card being read wrong can never be
+confused. That is the right call and it caps how hard the seat can ever be.
+
+A chess clock raises difficulty **without touching the policy at all.**
+The opponent stays exactly as honest and as readable; the pressure comes
+from the player's own time. In chess the clock is what turns a drawn
+position into a blunder, and blunders are where the drama lives. For a
+*training* sim the same knob does something better: it stops the player
+taking thirty seconds to re-read a card they should already know, which is
+the actual skill being trained.
+
+Three things it would need, and all three are already true:
+
+| needed | status |
+|---|---|
+| a game that is a **seed plus an action log** | `rng.js`, since v2.26 — a timed game is replayable, so a loss on time can be reviewed |
+| **no hidden per-turn work** that could stall a clock | `reduce` is pure and never throws (`test/fuzz.test.js`) |
+| a turn structure with **real, nameable boundaries** to charge time against | `priority.js` — phase, step and priority, CR-grounded |
+
+**What it must not become:** a reflex test. Flesh and Blood's decisions are
+about sequencing and resource commitment, not speed. Long increments and a
+generous base, the way correspondence-leaning chess controls work — the
+clock should punish *dithering*, never *thinking*.
+
+ELO is already a recorded decision (2026-07-26: multiplayer is phased, and
+the hosted backend for the ladder is Phase C of that plan). The clock is
+independent of it and could land in solo play first, which is where it is
+worth the most.
+
 ---
 
 ## THE RULES THAT DO NOT CHANGE
