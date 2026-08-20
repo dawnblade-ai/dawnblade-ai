@@ -206,7 +206,10 @@ test("the reaction resolution is ONE body, and both boards call it", () => {
   const ai = EFX.indexOf("const attackRx = (s, c, o) =>");
   assert.ok(ai > 0, "attackRx moved — re-anchor this drill");
   const rxBody = EFX.slice(ai, EFX.indexOf("  /* PIECE ONE", ai));
-  assert.ok(/rxPump\(fx,\s*fired\)/.test(rxBody),
+  /* `eff` since v3.12: a modal reaction resolves ONE chosen mode, so the
+     pump is computed from that mode rather than from the card's summed
+     `fx.self`. The gate is unchanged — the arithmetic is the engine's. */
+  assert.ok(/rxPump\((?:fx|eff),\s*fired\)/.test(rxBody),
     "the shared body must call the engine's rxPump");
   assert.ok(!/\(fx\.self\s*\|\|\s*0\)\s*\+/.test(rxBody),
     "a hand-rolled sum over fx.self is the bug: it cannot express 'instead'");

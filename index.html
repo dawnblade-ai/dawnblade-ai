@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.11"; /* v3.11 — an attack reaction resolves onto the OPEN link: linkPumps has read {k:"rx"} layers since v2.77 and only the trainer ever pushed one, so at the table 14 cards across four heroes paid their cost and pumped the player's NEXT attack instead, with the feed saying so confidently — and the printed target restriction went with it, because buffNext asks no qualifier. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.12"; /* v3.12 — "Choose 1;" is a choice and it was being SUMMED: Pummel granted +8 where it prints +4 and Two Sides to the Blade +6 where it prints +3, so on a real board Sledge of Anvilheim went from 6 to 14 instead of 10 — and the fairness sweep could not see it, because its doubling check looks for one printed value applied by two paths while a modal sum prints the value twice. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a

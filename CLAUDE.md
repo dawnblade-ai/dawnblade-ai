@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.11
+**Current version:** v3.12
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1143 drills**.
+This is `node --test "test/*.test.js"` — currently **1148 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -972,6 +972,34 @@ aura crumbling on Viserai's turn silently unlocked life-gain while his
 sword was still equipped. Both flags are a CACHE of a board fact, so
 `sweepArena` re-derives them through `fxParse` over the board AND the
 gear — one reader of a printed line, asked.
+
+### "CHOOSE 1;" IS A CHOICE, NOT A SUM (v3.12)
+
+Two pool cards print a modal choice and both modes were ADDED: Pummel
+granted +8 where it prints +4, Two Sides to the Blade +6 where it prints
++3. Driven, Sledge of Anvilheim went 6 → **14** instead of 10.
+
+**The fairness sweep could not see it, and that was a tool bug.**
+`VALUE-DOUBLED` looks for one printed value applied by two PATHS; a modal
+sum prints the value TWICE and consumes both, so there is one path and
+nothing to compare. `MODAL-SUMMED` is check 3b and is verified by
+sabotage. `RESTRICTION-DROPPED` also had to learn that a modal card parks
+its qualifier on `fx.modes[].q` — without that it reported both cards as
+unrestricted, which is **the tool's model going stale, not the card going
+wrong**, and the two look identical in a report.
+
+**The board picks the mode.** The printed targets are disjoint — a WEAPON
+attack and an ATTACK ACTION CARD cannot be the same object — so no prompt
+is needed. **Only a mode whose restriction was READ is selectable**:
+`attackQual` cannot read "target attack action card with stealth", and
+treating that as "matches anything" would let Pummel pump a card it cannot
+legally target. Refusing is weaker than printed and honest; v2.04 settled
+the same question for costs.
+
+**A targeted grant's rider belongs to the ATTACK.** A reaction never hits
+anything itself, so `attackRx` stamps it onto the open link. `quotedOnHit`
+is a function DECLARATION for this — the targeted pump rule sits above it
+in the file and a `const` arrow is in the temporal dead zone there.
 
 ### AN ATTACK REACTION RESOLVES ONTO THE OPEN LINK (v3.11)
 

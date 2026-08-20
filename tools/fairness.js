@@ -172,10 +172,45 @@ for(const c of Object.values(audit.cards)){
     const grantsSomething = fx.self > 0 || fx.ga
       || [...(fx.ops||[]), ...(fx.conds||[]).map(x=>x.op)]
            .some(o => o && (o[0]==="self" || o[0]==="ga"));
-    if(qual && grantsSomething && !fx.selfQ && !fx.gaQ)
+    /* A MODAL CARD PARKS ITS RESTRICTIONS PER MODE (v3.12). "Choose 1;"
+       gives each mode its own printed target, so the qualifier lives on
+       `fx.modes[].q` rather than on `fx.selfQ` — and only a mode whose
+       restriction was READ is selectable, which `attackRx` enforces. A
+       check that knows only about `selfQ` reports every modal card as
+       unrestricted; that is the tool's model being out of date rather
+       than the card being wrong. */
+    const modeCarries = (fx.modes||[]).some(md => md && md.q);
+    if(qual && grantsSomething && !fx.selfQ && !fx.gaQ && !modeCarries)
       flag(2, "RESTRICTION-DROPPED", c,
         `it targets a "${qual}" attack but nothing carries that restriction`,
         "it will apply to any attack at all");
+  }
+
+  /* ---- 3b. A MODAL CHOICE APPLIED AS A SUM (v3.12) -------------------
+     "Choose 1;" means ONE mode. Pummel prints +4 in each of its two modes
+     and the clause loop added both, granting +8; Two Sides to the Blade
+     printed +3 and granted +6. Driven on a real board, Sledge of Anvilheim
+     went from 6 to 14 instead of 10.
+
+     CHECK 2 COULD NEVER SEE THIS. It looks for one printed value applied
+     by two PATHS; here the value is printed TWICE — once per mode — and
+     both are consumed, so there is only ever one path and nothing to
+     compare. A doubling this plain went unreported for the tool's whole
+     existence, which is why the shape gets its own check rather than a
+     widening of the old one. */
+  if(/\bchoose \d/i.test(tl)){
+    const modeVals = ((c.tx||"").split("\n") || [])
+      .filter(l => /^\s*-/.test(l))
+      .map(l => { const g = l.match(/\+(\d+)\s*(?:\{p\}|power)/); return g ? +g[1] : null; })
+      .filter(v => v != null);
+    if(modeVals.length > 1){
+      const summed = modeVals.reduce((a, b) => a + b, 0);
+      const most = Math.max(...modeVals);
+      if(fx.self >= summed && summed > most)
+        flag(3, "MODAL-SUMMED", c,
+          `"Choose 1" prints ${modeVals.join(" / ")} across its modes and the card grants ${fx.self}`,
+          `one mode is chosen, so the most it can grant is +${most}`);
+    }
   }
 
   /* An optional-cost filter that silently lost a printed limit. */

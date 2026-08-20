@@ -118,3 +118,85 @@ test("14 pool attack reactions pump, and that is the blast radius", {skip}, () =
   }
   assert.equal(n, 14, "every one of these was landing on the wrong attack at the table");
 });
+
+/* ============================================================
+   "CHOOSE 1;" IS A CHOICE, AND IT WAS BEING SUMMED (v3.12)
+   ============================================================ */
+
+test("a modal reaction reads its modes apart, never added together", {skip}, () => {
+  H.db();
+  /* Pummel prints +4 in EACH of two modes and granted +8; Two Sides to
+     the Blade printed +3 and granted +6. Both literally double. */
+  for(const [nm, each] of [["Pummel", 4], ["Two Sides to the Blade", 3]]){
+    P.fxReset && P.fxReset();
+    const fx = P.fxParse(H.card(nm, 1));
+    assert.equal((fx.modes || []).length, 2, nm + ": two printed modes");
+    assert.ok(fx.modes.every(m => m.self === each), nm + `: each mode prints +${each}`);
+    assert.ok(fx.self <= each, nm + `: the card must never carry the SUM (${each * 2})`);
+  }
+});
+
+test("the board picks the mode, and an unreadable restriction is not selectable", {skip}, () => {
+  H.db();
+  const sledge = {...H.card("Sledge of Anvilheim", 0), uid: "w1"};   /* Hammer */
+  const g = {...H.state({res: 9}, {}, {turn: 3, actor: 0}),
+             pend: {card: sledge, by: 0, total: sledge.power, ga: false, ops: [], onHit: []},
+             stack: []};
+  const out = J.withEffects(g, (fx, s) => {
+    const r = fx.attackRx(s, H.card("Pummel", 1), {handBlockers: 0});
+    assert.equal(r.why, null, "a hammer satisfies mode 1");
+    assert.equal(r.pump, 4, "and gets the ONE mode's +4, not +8");
+    return r.game;
+  });
+  const pre = J.withEffects(out, (fx, s) => fx.linkPumps(s, {equipDefenders: 0}));
+  assert.equal(pre.total, sledge.power + 4,
+    "driven: 6 -> 10. It was 14 before v3.12");
+});
+
+test("a modal reaction with no legal mode is refused, not silently applied", {skip}, () => {
+  H.db();
+  const plain = {...H.card("Raging Onslaught", 1), uid: "a1"};   /* neither hammer nor stealth */
+  const g = {...H.state({res: 9}, {}, {turn: 3, actor: 0}),
+             pend: {card: plain, by: 0, total: plain.power, ga: false, ops: [], onHit: []},
+             stack: []};
+  J.withEffects(g, (fx, s) => {
+    const r = fx.attackRx(s, H.card("Pummel", 1), {handBlockers: 0});
+    assert.match(String(r.why), /no mode/, "refused by name");
+    assert.equal(r.pump, 0);
+    return s;
+  });
+});
+
+/* ---- THE GRANTED RIDER LANDS ON THE ATTACK, NOT THE REACTION -------- */
+
+test("a targeted grant stamps its rider onto the open link", {skip}, () => {
+  H.db();
+  const cards = require("../tools/audit.json").cards;
+  const dg = Object.keys(cards).map(k => cards[k])
+    .find(c => /dagger/i.test(c.tt || "") && /weapon/i.test(c.tt || ""));
+  const dagger = {...H.card(dg.name, 0), uid: "w1"};
+  const g = {...H.state({res: 9}, {}, {turn: 3, actor: 0}),
+             pend: {card: dagger, by: 0, total: dagger.power || 1, ga: false, ops: [], onHit: []},
+             stack: []};
+  const out = J.withEffects(g, (fx, s) => fx.attackRx(s, H.card("Scar Tissue", 1), {handBlockers: 0}).game);
+  /* A reaction never hits anything itself, so "target dagger attack gets
+     +3{p} and \"When this hits a hero, mark them\"" belongs to the ATTACK. */
+  assert.deepEqual(out.pend.onHit, [["mark", 1]],
+    "the rider rides on the link, where linkPayload fires it if it connects");
+});
+
+test("the fairness sweep would catch the doubling — MODAL-SUMMED exists", () => {
+  const fs2 = require("fs"), path2 = require("path");
+  const src = fs2.readFileSync(path2.join(__dirname, "..", "tools", "fairness.js"), "utf8");
+  /* Check 2 (VALUE-DOUBLED) looks for one printed value applied by two
+     PATHS. A modal sum prints the value TWICE and consumes both, so there
+     is only ever one path and nothing to compare — which is why a
+     doubling this plain went unreported for the tool's whole existence,
+     and why the shape needed its own check rather than a widening. */
+  assert.match(src, /MODAL-SUMMED/, "the check must exist");
+  assert.ok(src.indexOf("choose") >= 0, "and it must key off the printed 'Choose N'");
+  /* VERIFIED BY SABOTAGE, not assumed: disabling the parser's modal branch
+     makes `npm run fairness` report both cards with their printed numbers
+     — "prints 4 / 4 across its modes and the card grants 8". */
+  assert.match(src, /fx\.modes/, "and RESTRICTION-DROPPED must know modes carry their own qualifier");
+});

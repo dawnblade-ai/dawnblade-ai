@@ -9,6 +9,78 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.12 — "Choose 1;" is a choice, and it was being summed
+
+Two pool cards print a modal choice, and the clause loop added **both**
+modes:
+
+| card | prints | granted |
+|---|---|---|
+| Pummel (Bravo) | +4 per mode | **+8** |
+| Two Sides to the Blade (Arakni) | +3 per mode | **+6** |
+
+Driven on a real board: **Sledge of Anvilheim went from 6 to 14** where it
+should reach 10. A card doing literally double what it prints, on both
+boards, since the modes were first parsed.
+
+### The fairness sweep could not see it, and that is a tool bug
+
+`VALUE-DOUBLED` looks for **one printed value applied by two paths**. A
+modal sum prints the value **twice** — once per mode — and consumes both,
+so there is only ever one path and nothing to compare. A doubling this
+plain went unreported for the tool's entire existence.
+
+So the shape gets its own check rather than a widening of the old one.
+**`MODAL-SUMMED`** is check 3b, and it is verified by sabotage: disabling
+the parser's modal branch makes it report both cards with their printed
+numbers — *"prints 4 / 4 across its modes and the card grants 8"*.
+
+`RESTRICTION-DROPPED` also learned that a modal card parks its qualifier
+on `fx.modes[].q` rather than `fx.selfQ`. Without that it reported both
+cards as unrestricted — **the tool's model going stale, not the card going
+wrong**, which is worth naming because it looked identical to a real
+finding.
+
+### The board picks the mode — no prompt needed
+
+The printed target restrictions are **disjoint**: a WEAPON attack and an
+ATTACK ACTION CARD cannot be the same object, so at most one mode can ever
+be legal against what is actually swinging. `attackRx` chooses it.
+
+**Only a mode whose restriction we can READ is selectable.** `attackQual`
+reads the words between "target" and "attack", which covers *"target
+dagger attack"* and not *"target attack action card **with stealth**"* — so
+the second mode of both cards parses no qualifier. Treating that as
+"matches anything" would let Pummel pump a card it cannot legally target;
+refusing leaves it visibly weaker than printed instead. Same call v2.04
+made for unpayable costs: **inert is honest where free is above rate.**
+
+### And the targeted grant carries its rider
+
+*"Target dagger attack gets +3{p} and \"When this hits a hero, mark
+them.\""* — Scar Tissue and Spike with Bloodrot, both now `full`. The
+rider belongs to the **attack**, not to the reaction: a reaction never hits
+anything itself, so `attackRx` stamps it onto the open link where
+`linkPayload` fires it if the attack connects.
+
+`quotedOnHit` became a **function declaration** rather than a `const` in
+the same pass — the targeted pump rule sits above it in the file and a
+`const` arrow is in the temporal dead zone there. Hoisting is the point,
+not an accident.
+
+### Measured
+
+Granted riders carried: **15 → 19 of 28**. The nine that remain are honest
+refusals — an `attacks` trigger rather than a hit, or a payload with no
+reader. Pool tiers unchanged at 315 / 73 / 17; Pummel and Two Sides stay
+`part` because their second mode's restriction is still unread, which is
+the truth rather than a rounding.
+
+`test/reactions.test.js` grew to 12 drills, three more sabotages proven to
+bite.
+
+---
+
 ## v3.11 — an attack reaction resolves onto the open link
 
 `linkPumps` has read `{k:"rx"}` layers off the stack since v2.77, and

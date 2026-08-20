@@ -1852,6 +1852,27 @@ function makeEffects(ctx){
               why: `${c.name} targets a ${want} attack — ${pend.card.name} isn't one.`};
     }
     let n = {...s};
+    /* A MODAL REACTION: THE BOARD PICKS THE MODE (v3.12). "Choose 1;" was
+       being SUMMED — Pummel granted +8 where it prints +4 — and the fix
+       is not a prompt: the printed target restrictions are disjoint, so at
+       most one mode can ever be legal against what is actually swinging.
+
+       ONLY A MODE WHOSE RESTRICTION WE CAN READ IS SELECTABLE. `attackQual`
+       reads the words between "target" and "attack", which covers "target
+       dagger attack" and not "target attack action card WITH STEALTH" — so
+       the second mode of both pool cards parses no qualifier at all.
+       Treating an unreadable restriction as "matches anything" would let
+       Pummel pump a card it cannot legally target, which is the direction
+       that steals games. Refusing leaves it visibly weaker than printed
+       instead, the same call v2.04 made for unpayable costs. */
+    let mode = null;
+    if(fx.modes && fx.modes.length){
+      mode = fx.modes.find(md => md.q && qualMatches(md.q, pend.card)) || null;
+      if(!mode) return {game: s, pump: 0,
+        why: `${c.name}: no mode of it can target ${pend.card.name}.`};
+      n = L(n, `${c.name}: ${mode.label}.`);
+    }
+    const eff = mode ? Object.assign({}, fx, {self: mode.self, ops: mode.ops}) : fx;
     /* WHICH PRINTED CONDITIONS ACTUALLY FIRED — the half that needs the
        board. The arithmetic is `parser.rxPump`, which knows that a gated
        bonus may REPLACE the printed one rather than stack with it. */
@@ -1872,8 +1893,19 @@ function makeEffects(ctx){
         n = L(n, `${c.name}: charged this turn — the bonus is live.`);
       }
     });
-    const {pump, replaced} = rxPump(fx, fired);
-    if(replaced && fx.self) n = L(n, `${c.name}: that bonus REPLACES the printed +${fx.self} — it doesn't stack with it.`);
+    const {pump, replaced} = rxPump(eff, fired);
+    if(replaced && eff.self) n = L(n, `${c.name}: that bonus REPLACES the printed +${eff.self} — it doesn't stack with it.`);
+    /* THE GRANTED ABILITY BELONGS TO THE ATTACK, NOT TO THE REACTION. A
+       reaction never hits anything itself, so "target dagger attack gets
+       +3{p} and \"When this hits a hero, mark them\"" stamps its rider onto
+       the OPEN LINK — where `linkPayload` fires the link's on-hit clauses
+       once damage is dealt. Scar Tissue and Spike with Bloodrot print it
+       plainly; Pummel and Two Sides print it inside a mode. */
+    const rider = mode ? mode.riderOnHit : (fx.onHit && fx.onHit.length ? fx.onHit : null);
+    if(rider && rider.length && n.pend){
+      n.pend = {...n.pend, onHit: [...(n.pend.onHit || []), ...rider]};
+      n = L(n, `${c.name}: ${n.pend.card.name} carries its rider — it pays out if it connects.`);
+    }
     /* `fx.ga` on an attack reaction can only mean the TARGET's go again —
        no attack reaction in the pool prints the keyword for itself. */
     if(fx.ga && n.pend){
@@ -1885,7 +1917,7 @@ function makeEffects(ctx){
         n = L(n, `${c.name} grants go again to a ${want} attack — ${n.pend.card.name} isn't one.`);
       }
     }
-    n = runOps(n, fx.ops.filter(op => op[0] !== "buffNext"), c.name);
+    n = runOps(n, (eff.ops || []).filter(op => op[0] !== "buffNext"), c.name);
     n.stack = [...(n.stack || []), {k: "rx", label: `${c.name} — +${pump}`, pump}];
     return {game: n, pump, why: null};
   };

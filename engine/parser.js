@@ -605,8 +605,17 @@ function classifyClause(raw){
      "attack" and no more. `attackQual` is the same reader buffNext uses,
      so "sword or dagger" is an OR of two groups and "Pirate ally" is one
      group of two words. */
-  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/))
-    return R([["self", +m[2], attackQual(m[1])]]);
+  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/)){
+    /* AND ITS GRANTED ABILITY RIDES ALONG (v3.12) — the same `quotedOnHit`
+       the next-attack pump and the self-grant already share. Scar Tissue
+       and Spike with Bloodrot print "…and \"When this hits a hero, mark
+       them.\"", and the rider belongs to the ATTACK being pumped, not to
+       the reaction: a reaction never hits anything itself. `attackRx`
+       stamps it onto the open link. */
+    const rider = quotedOnHit(c);
+    return rider ? R([["self", +m[2], attackQual(m[1])]], {riderOnHit: rider})
+                 : R([["self", +m[2], attackQual(m[1])]]);
+  }
   /* the go-again twin of the target-attack pump, restriction and all */
   if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?) go again$/))
     return R([["ga", 1, attackQual(m[1])]]);
@@ -780,12 +789,16 @@ function classifyClause(raw){
      pattern-matched here. The next-attack rule below has done this since
      v2.30; three other printed shapes did not, and each dropped the rider
      in a different way. This is the one reader they now share. */
-  const quotedOnHit = txt => {
+  /* A FUNCTION DECLARATION, NOT A `const` — it is called from rules ABOVE
+     its own position in this file (the targeted pump at "target … attack
+     gets +N{p}"), and a `const` arrow is in the temporal dead zone there.
+     Hoisting is the point rather than an accident. */
+  function quotedOnHit(txt){
     const g = txt.match(/\band ["\u201c'](.+?)["\u201d']/);
     if(!g) return null;
     const sub = classifyClause(g[1]);
     return (sub && sub.status === "run" && sub.onHit && sub.ops.length) ? sub.ops : null;
-  };
+  }
   /* "this gets <keyword-or-pump> and \"<granted ability>\"" — the SELF
      grant, four pool cards across two heroes, and the worst-behaved of the
      shapes because the head was lost too:
@@ -1427,6 +1440,9 @@ function fxParse(card){
     break;                                       /* one pay-cost rider per card in the pool */
   }
 
+  /* Does this card print a MODAL choice? Asked once, off the whole text,
+     because a single mode line cannot tell you it is one of several. */
+  const modal = /\bchoose \d/i.test(clean(card.tx||"").toLowerCase());
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);
@@ -1445,6 +1461,35 @@ function fxParse(card){
        plain `onHit` would mark the hero on every hit whether or not the
        Draconic chain links were ever there, which is the KEYWORD-UNGATED
        shape `npm run fairness` exists to catch. */
+    /* "CHOOSE 1;" IS A CHOICE, AND IT WAS BEING SUMMED (v3.12).
+
+       Pummel and Two Sides to the Blade each print two modes with the SAME
+       pump, and the clause loop added both: Pummel gave **+8** where it
+       prints +4, Two Sides +6 where it prints +3. Driven on a real board,
+       Sledge of Anvilheim went from 6 to **14** instead of 10.
+
+       `npm run fairness` could not see it. Its VALUE-DOUBLED check looks
+       for one printed value applied by two PATHS; here the value is
+       printed TWICE — once per mode — and both are consumed. A third
+       check (`MODAL-SUMMED`) now covers that shape.
+
+       THE BOARD PICKS THE MODE, and no prompt is needed for either card:
+       the printed target restrictions are disjoint (a WEAPON attack and an
+       ATTACK ACTION CARD cannot be the same object), so exactly one mode
+       can ever be legal against what is actually swinging. `attackRx`
+       chooses it and refuses when neither matches — which is the same
+       "no legal target" refusal a single-mode reaction already gives. */
+    if(modal && /^-\s/.test(raw)){
+      const pump = (r.ops || []).find(op => op[0] === "self");
+      fx.modes = [...(fx.modes || []), {
+        label: raw.replace(/^-\s*/, "").replace(/\.$/, ""),
+        self: pump ? pump[1] : 0,
+        q: pump ? (pump[2] || null) : null,
+        riderOnHit: r.riderOnHit || null,
+        ops: (r.ops || []).filter(op => op[0] !== "self")
+      }];
+      return;
+    }
     if(r.riderOnHit)
       for(const rop of r.riderOnHit)
         if(r.cond) fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op:rop}];

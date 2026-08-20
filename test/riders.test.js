@@ -149,9 +149,11 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
     total++;
     const f = fx(c.name, c.pitch);
     if((f.ops || []).some(o => o[3] && o[3].onHit) || (f.onHit || []).length
-       || (f.condOnHit || []).length || (f.ops || []).some(o => o[0] === "runeHitNext")) carried++;
+       || (f.condOnHit || []).length || (f.ops || []).some(o => o[0] === "runeHitNext")
+       || (f.modes || []).some(m => m.riderOnHit)) carried++;
   }
   assert.equal(total, 28, "pool cards granting a quoted ability");
-  assert.equal(carried, 15, "carrying their rider — was 7 before v3.10; " +
-    "the 13 that do not are honest refusals plus the targeted/modal shapes, still to build");
+  assert.equal(carried, 19, "carrying their rider — 7 before v3.10, 15 after it, " +
+    "and the targeted and modal shapes at v3.12. The nine that do not are honest " +
+    "refusals: an `attacks` trigger rather than a hit, or a payload with no reader.");
 });
