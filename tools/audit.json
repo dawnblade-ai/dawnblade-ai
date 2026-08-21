@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-21T01:37:43.662Z",
- "appVer": "3.17",
+ "generated": "2026-08-21T20:14:31.827Z",
+ "appVer": "3.20",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
  "tiers": {
-  "full": 310,
-  "part": 73,
+  "full": 311,
+  "part": 72,
   "none": 22
  },
  "heroes": {
@@ -3426,7 +3426,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3436,21 +3436,18 @@
     },
     {
      "t": "When this enters or leaves the arena, you may banish another aura from your graveyard",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, deal 1 arcane damage to target hero.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "At the beginning of your action phase, destroy this.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this enters or leaves the arena, you may banish another aura from your graveyard",
-    "If you do, deal 1 arcane damage to target hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Go again\nWhen this enters or leaves the arena, you may banish another aura from your graveyard. If you do, deal 1 arcane damage to target hero.\nAt the beginning of your action phase, destroy this.",

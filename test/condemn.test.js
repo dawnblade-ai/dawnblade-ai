@@ -84,9 +84,17 @@ test("only 'you control' is consumed — every other qualifier still refuses", (
   }).optCost;
 
   assert.ok(variant("an aura you control", "v1"), "the phrase the pool actually prints");
-  assert.ok(!variant("another aura you control", "v2"),
-    "an EXCLUSION is not a field filter and must still refuse — v2.29's rule, " +
-    "and the reason Sigil of Silphidae is still unbuilt");
+  /* DELIBERATE CHANGE AT v3.20 — this line asserted a REFUSAL and the
+     reason it gave ("the reason Sigil of Silphidae is still unbuilt") is
+     no longer true. The exclusion is now CARRIED as `notSelf` rather than
+     dropped, which is what v2.29's rule actually demands: read the whole
+     phrase or refuse. Carrying it is reading it. The two siblings below
+     still refuse, which is what keeps this drill about the rule rather
+     than about one card. */
+  const v2 = variant("another aura you control", "v2");
+  assert.ok(v2 && v2.filter.notSelf === true,
+    "an EXCLUSION must be carried structurally, never flattened away");
+  assert.equal(v2.zone, "board", "and 'you control' is still the board");
   assert.ok(!variant("an aura you control with cost less than the number of Draconic chain links you control", "v3"),
     "a DYNAMIC limit must still refuse — Mounting Anger's bug was exactly this " +
     "phrase being dropped silently");
@@ -195,4 +203,34 @@ test("it destroys an aura and NOT a non-aura permanent", () => {
   const out = H.runOps(g, [["foeDestroyAura", 1]], "Condemn");
   assert.ok(!(out.prompt) && !(out.promptQ || []).length,
     "an Item is a permanent and is not an aura — the printed word is the filter");
+});
+
+/* ---- THE OFFER IS ACTUALLY REACHED — v3.20 ------------------------- */
+
+test("DRIVEN: playing it offers the cost — the queue site was attack-only", () => {
+  /* THE BUG THIS PINS. From v3.18 until v3.20 the only `optCost` queue
+     site sat inside `execute`'s `if(attacking)` branch, and every
+     `play`-trigger card in the pool is a NON-ATTACK — all three
+     printings of this one. So the printed "you may destroy an aura you
+     control" was never offered at either board.
+
+     NONE OF THE DRILLS ABOVE COULD SEE IT, and that is the lesson worth
+     keeping: they build the spec BY HAND and hand it to `buildPrompt`,
+     which measures the sheet rather than whether anything ever asks for
+     it. A drill that constructs its own fixture proves the fixture. This
+     one drives `execute` and asserts the offer EXISTS. */
+  P.fxReset();
+  const card = Object.assign({}, H.card("Condemn to Slaughter", 1), {uid: "cds"});
+  const g = H.state(
+    {hand: [card], board: [onBoard(aura("Runechant", "a1"))], res: 9, ap: 1},
+    {board: [onBoard(aura("Frostbite", "b1"))]},
+    {turn: 3});
+  const out = H.execute(g, card, "hand", 0, {});
+  const asked = (out.promptQ || []).concat(out.prompt ? [out.prompt] : []);
+  assert.equal(asked.length, 1, "the printed optional cost must be offered when the card is played");
+  assert.equal(asked[0].src, "Condemn to Slaughter");
+  assert.equal(asked[0].zone, "board", "'you control' is the board");
+  assert.equal(asked[0].side, 0, "the cost is paid by the player who played it");
+  assert.equal(asked[0].min, 0, "'you may' — declining stays possible");
+  assert.deepEqual(asked[0].ops, [["foeDestroyAura", 1]], "the rider rides with the cost");
 });

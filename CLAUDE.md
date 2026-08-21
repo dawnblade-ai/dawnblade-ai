@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.19
+**Current version:** v3.20
 
 ---
 
@@ -1866,6 +1866,55 @@ default would destroy a card the text never named. That makes *"an aura
 **you control**"* the one phrase a seat-addressed board zone genuinely
 restates, so it is consumed; `another aura`, a dynamic limit and a
 rules-text qualifier all still refuse.
+
+### "ANOTHER" IS AN EXCLUSION THE ENGINE CAN CARRY (v3.20)
+
+`optFilter` refused `another <subject>`, which was honest while nothing
+could express it. It rides as **`notSelf`** now — a STRUCTURAL fact, not a
+printed field — and the discipline around it is the whole of why it is
+safe:
+
+- **the uid is NEVER in the parse.** `fxParse` memoizes on `name|pitch`,
+  so one parse serves every copy of the card in a match; a uid stored
+  there names whichever copy parsed first and excludes that one forever.
+  The QUEUE SITE supplies it as `notUid`.
+- **a `notSelf` filter with no uid REFUSES EVERY CANDIDATE.** Offering the
+  source is stronger than printed; refusing is weaker and visible. Same
+  question v2.04 settled for costs.
+- **the uid is threaded only when the card prints "another"**, or the
+  other optional-cost cards quietly lose their source as a legal choice.
+
+**It is load-bearing on the LEAVE trigger and nowhere else.** By the time
+Sigil of Silphidae's leave trigger asks, `sweepArena` has already filed
+it into the graveyard it banishes FROM — an Aura among its own legal
+choices. Without the exclusion it eats itself for a free arcane damage
+every turn. And the exclusion is by **uid, never by name**: a second copy
+of the same card is a different object and a legal choice.
+
+**ONE PRINTED CLAUSE, TWO SCHEDULES.** "When this enters or leaves the
+arena" is one sentence naming two events, so it maps to one trigger
+(`entersLeaves`) that two sites answer to — `execute` when the aura
+reaches the arena, `sweepArena` when its own printed clock removes it.
+The name is shared; the schedules are per board, as always.
+
+### A QUEUE SITE INSIDE `if(attacking)`, AND NOTHING THAT NEEDS IT ATTACKS (v3.20)
+
+The only `optCost` queue site in `execute` sat inside the attacking
+branch — and **every `play`-trigger optional-cost card in the pool is a
+NON-ATTACK** (all three Condemn to Slaughter printings). Its printed
+*"you may destroy an aura you control"* was never once offered at either
+board between v3.18 and v3.20.
+
+**No tool here could see it, and one of them was a drill.** Coverage read
+the card `full` because the clause IS consumed — it counts consumption,
+never whether anything asks. The fairness sweep is one-sided toward
+too-strong. And `condemn.test.js` built the spec **by hand** and handed it
+to `buildPrompt`, which measures the sheet rather than whether anything
+opens it: **a drill that constructs its own fixture proves the fixture.**
+Drive the real entry point, or pin nothing.
+
+The three spec literals this would have created are one `optCostSpec` —
+the no-mirror rule applied inside a single file.
 
 **AND A RIDER CAN BE CROSS-SEAT.** Condemn to Slaughter's *"each opponent
 destroys an aura permanent they control"* is THEIR choice, so

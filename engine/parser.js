@@ -1177,13 +1177,31 @@ function qualMatches(qual, card){
 function optFilter(phrase){
   let rest = String(phrase||"").trim();
   if(!rest) return null;
-  /* "ANOTHER aura" excludes the card itself, and a prompts.js filter reads
-     printed fields — it cannot express "not this one". Refuse rather than
-     flatten it into "an aura", which would offer an illegal choice. */
-  if(/^another\s+/i.test(rest)) return null;
+  /* "ANOTHER aura" EXCLUDES THE CARD ITSELF. That is a STRUCTURAL fact
+     rather than a printed field, which is why this refused outright until
+     v3.20: a prompts.js filter reads fields and cannot say "not this
+     one", and flattening it to "an aura" offers an illegal choice.
+
+     It rides as `notSelf` now — and the uid is deliberately NOT baked in
+     here. `fxParse` MEMOIZES ON `name|pitch`, so one parse is shared by
+     every copy of the card in the match; a uid stored in it would name
+     whichever copy happened to be parsed first and exclude the wrong
+     object forever after. The QUEUE SITE supplies the uid as `notUid`,
+     and a `notSelf` filter that never receives one refuses every
+     candidate rather than offering the source — weaker than printed, and
+     therefore the honest direction (v2.04 settled the same question for
+     costs).
+
+     The exclusion is load-bearing exactly on Sigil of Silphidae's LEAVE
+     trigger: by the time it asks, the Sigil is an aura sitting in the
+     very graveyard it is banishing from, so without `another` it eats
+     itself. */
+  const notSelf = /^another\s+/i.test(rest);
+  if(notSelf) rest = rest.replace(/^another\s+/i, "");
   rest = rest.replace(/^(?:a|an|one)\s+/i, "");
 
   const f = {};
+  if(notSelf) f.notSelf = true;
   /* Consume the qualifiers we can actually express, removing each from the
      phrase as we go. */
   const cm = rest.match(/\s*\bwith cost (\d+) or less\b/i);
@@ -1446,7 +1464,7 @@ function fxParse(card){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
     const cm = clauses[i].match(
-      /^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (banish|discard|destroy) (.+)$/i);
+      /^(?:when(?:ever)? (this attacks|this defends|this hits|this enters or leaves the arena|you play an aura),\s*)?you may (banish|discard|destroy) (.+)$/i);
     if(!cm) continue;
     let subject = cm[3].trim();
     let zone = null;
@@ -1476,7 +1494,14 @@ function fxParse(card){
     const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
     if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — same */
     fx.optCost = {
-      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
+      /* ONE PRINTED PHRASE NAMING TWO EVENTS. "When this enters or leaves
+         the arena" is a single clause and two schedules, so it maps to one
+         trigger name that BOTH queue sites answer to — `execute` when the
+         aura reaches the arena, `sweepArena` when its own printed clock
+         takes it away again. */
+      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"")
+                            .replace(/^enters or leaves the arena$/,"entersLeaves")
+                            .replace(/^you play an aura$/,"playAura") : "play",
       kind: cm[2].toLowerCase(),
       /* the printed zone if it says one; otherwise the natural home of the
          cost — you discard from hand, you banish from the graveyard */

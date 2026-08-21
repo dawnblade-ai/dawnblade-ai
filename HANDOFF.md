@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.19 · PHASE C, VISERAI IS THREE CARDS FROM DONE
+# Handoff — Dawnblade, at v3.20 · PHASE C, VISERAI IS DONE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,40 +12,54 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1197 drills**
+> the card semantics run on both boards.** `npm test` is **1204 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.19: coverage **310 full / 73 part / 22 none**, fairness
+> Current at v3.20: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
-> **YOUR JOB IS PHASE C — THE HEROES.** Kayo and Iyslander are complete.
-> Viserai is nearly there; three cards are named below. Twelve heroes
-> after him.
+> **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Iyslander and Viserai are
+> complete. Twelve heroes remain; the shortlist is below.
 >
-> ### Viserai — what is left
+> ### Viserai — DONE at v3.20
 >
-> | card | what is unread, and why |
+> **Sigil of Silphidae is built** (`notSelf` + `notUid`, and the
+> enters/leaves trigger on both boards — see CLAUDE.md and the v3.20
+> changelog). The remaining two are **recorded decisions, not work**, the
+> same way Iyslander ends with two `part` cards:
+>
+> | card | why it stays |
 > |---|---|
-> | **Sigil of Silphidae** | *"When this enters or leaves the arena, you may banish another aura from your graveyard. If you do, deal 1 arcane damage to target hero."* Three pieces: the `enters or leaves the arena` trigger is not in the optCost pairing's alternation; `another` is an EXCLUSION, which a field filter cannot express and which must ride as a structural fact (`notSelf` + the source uid) — **and it has to be added to `buildPrompt` explicitly or it vanishes silently**, which is the `arsStamp` lesson; and the source uid has to be threaded through `sweepArena`'s `onLeave` ops, which is the real cost. The exclusion is load-bearing exactly on the LEAVE trigger: a Sigil that has just left the arena is sitting in the graveyard it would be banishing from, so without `another` it eats itself. |
-> | Beckoning Haunt | X-cost. A recorded refusal class — see Ice Eternal in `CLAUDE.md`. Building it is a decision about X, not about this card. |
+> | Beckoning Haunt | X-cost. Building it is a decision about X, not about this card — see Ice Eternal in `CLAUDE.md`. |
 > | Crown of Dichotomy | a two-target ability with no reader. Recorded unread rather than guessed. |
 >
-> ### One open question only you can answer
+> **A hero is finished when every card is either built or has a written
+> reason.** Viserai: 30 full / 2 part / 0 none.
 >
-> **`2|Sigil of Suffering|0|` in Viserai's list.** A deck entry's third
-> field is its pitch, and `0` normally means "the only printing" — safe
-> for Sigil of Silphidae and Trot Along, which each print at one pitch.
-> **Sigil of Suffering prints at 1, 2 AND 3**, so whichever the resolver
-> picks is a guess among three. It is the ONLY ambiguous pitch-0 entry in
-> the whole pool (verified v3.19), and no drill catches it: `decks.test.js`
-> counts to 55 and the v3.14 oracle checks the RESOLVED pitch, which is a
-> pitch the set really prints. This is the v3.13 shape — a wrong card of
-> the right count — and the only oracle is the printed product. **Ask the
-> user to check the list on fabrary before touching it.** That is how
-> Enigma Chimera was found.
+> ### The open question from v3.19 is CLOSED — answered from the data
+>
+> `2|Sigil of Suffering|0|` needed no trip to fabrary. The database
+> settles it: pitch 1 is printed in **SVI019** and **SBA023** — Viserai's
+> and Briar's own Silver Age sets — while pitch 2 and 3 exist only in
+> ELE, which neither precon draws from. The resolver already picks 1.
+>
+> **And the claim that no drill catches it was wrong.** v3.14's oracle
+> does: sabotaged to resolve the highest pitch, `decks.test.js` names both
+> decks and both sets. Verified, then restored. Nothing to change.
+>
+> *The lesson, since it is the second time: try the data before booking a
+> question. Card images and printing records are the printed product.*
+>
+> ### NEXT — twelve heroes remain
+>
+> Three are done (Kayo, Iyslander, Viserai). On the coverage table
+> **lyath** (29/3/0) and **dorinthea** (done) sit next; `briar` and
+> `blaze` are the densest of the mid pack. **Leave Arakni last** —
+> stealth-as-qualifier is filed `noop` by ruling, so his number is the
+> least honest in the pool.
 >
 > ### The method, in one line each
 >

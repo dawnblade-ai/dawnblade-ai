@@ -1435,16 +1435,12 @@ function makeEffects(ctx){
          offered when the card is played. `hits` and `defends` are still
          unwired; the parser names which in `fx.optCost.trigger`, so each
          remaining one is a queue site rather than new machinery. */
+      /* THIS SITE IS INSIDE `if(attacking)`, which is the whole of v3.18's
+         defect — see the non-attack site below. `entersLeaves` is
+         deliberately NOT listed here: a card that enters the arena is a
+         permanent, and a permanent never reaches this branch. */
       if(fx.optCost && (fx.optCost.trigger === "attacks" || fx.optCost.trigger === "play")){
-        const oc = fx.optCost;
-        const verb = oc.kind === "banish" ? "Banish" : oc.kind === "destroy" ? "Destroy" : "Discard";
-        n.promptQ = [...(n.promptQ||[]), {
-          tag:"pick", side:actorOf(n), src:card.name,
-          zone:oc.zone, to:(oc.kind === "banish" ? "banish" : "grave"),
-          filter:oc.filter, min:0, max:1, ops:oc.ops,
-          title:verb + " to power " + card.name + "?",
-          hint:"Optional — choose none to decline. The rider only resolves if you pay."
-        }];
+        n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
       }
       if(hasKw(card,"intimidate") && foe(n).hand.length){
         /* SEEDED: which card intimidate strips is hidden information in a
@@ -1552,6 +1548,26 @@ function makeEffects(ctx){
       else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
+      /* THE OPTIONAL COST ON A NON-ATTACK (v3.20), and the reason it is a
+         FIX rather than only a new site.
+
+         The only queue site was inside `if(attacking)`. Every `play`
+         trigger card in the pool is a NON-ATTACK — all three printings of
+         Condemn to Slaughter — so from v3.18 until here its printed "you
+         may destroy an aura you control" was never once offered at either
+         board. Coverage read the card `full`, and the fairness sweep is
+         one-sided toward too-strong, so neither could see it; the drills
+         could not either, because they built the spec BY HAND and passed
+         it to `buildPrompt` instead of driving `execute`. A drill that
+         asserts against its own fixture proves the fixture.
+
+         `entersLeaves` is offered HERE and only when the card actually
+         reached the arena: the trigger is "when this ENTERS the arena",
+         not "when this is played", so an aura that never got there has
+         not entered anything. The LEAVES half is `sweepArena`'s. */
+      if(fx.optCost && (fx.optCost.trigger === "play"
+          || (fx.optCost.trigger === "entersLeaves" && fx.perm)))
+        n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
     }
     const delta = preHP - foe(n).hp;
     if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
@@ -2424,6 +2440,30 @@ function tickSuspense(game, seat){
    `when` is the schedule to run, never "everything expiring": "turn" at
    the top of the controller's turn, "end" at the beginning of their end
    phase. Passing the wrong one would sweep a card a whole phase early. */
+/* ONE DESCRIPTION OF THE OPTIONAL-COST OFFER (v3.20).
+
+   The spec was written out at the `execute` queue site, and building the
+   LEAVE half of "enters or leaves the arena" would have made a second
+   copy, and fixing Condemn a third. Three hand-copied spec literals is
+   the no-mirror rule broken inside one file — the shape this project
+   deleted 51 times over at v2.20.
+
+   THE UID IS THREADED HERE AND ONLY WHEN THE CARD ASKS FOR IT.
+   `fxParse` memoizes on name|pitch, so the parse cannot carry a uid; and
+   setting `notUid` unconditionally would quietly exclude the source from
+   the cards whose text never prints "another". */
+function optCostSpec(oc, card, side, leaving){
+  const verb = oc.kind === "banish" ? "Banish" : oc.kind === "destroy" ? "Destroy" : "Discard";
+  return {
+    tag:"pick", side, src:card.name,
+    zone:oc.zone, to:(oc.kind === "banish" ? "banish" : "grave"),
+    filter:(oc.filter && oc.filter.notSelf) ? {...oc.filter, notUid:card.uid} : oc.filter,
+    min:0, max:1, ops:oc.ops,
+    title:verb + " to power " + card.name + (leaving ? " as it goes?" : "?"),
+    hint:"Optional — choose none to decline. The rider only resolves if you pay."
+  };
+}
+
 function sweepArena(game, seat, when){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -2456,6 +2496,21 @@ function sweepArena(game, seat, when){
     const f = P.fxParse(b.card);
     const di = (f.ops || []).findIndex(o => o[0] === "selfDestruct");
     const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...(f.onLeave || [])];
+    /* THE LEAVES HALF of "when this enters or leaves the arena" (v3.20).
+       It queues rather than resolves, because the cost is a CHOICE — and
+       it goes out as a `pickPrompt` op rather than onto `promptQ`
+       directly, because `sweepArena` is pure and returns its payload for
+       the caller to run. That is the same contract `tickSuspense` keeps,
+       and it is what lets both boards call this one body.
+
+       THE EXCLUSION IS LOAD-BEARING RIGHT HERE. `sd.grave` below already
+       holds the departing card by the time these ops run, so a Sigil of
+       Silphidae asking for "another aura from your graveyard" is looking
+       straight at itself. `notUid` is what stops it eating itself for a
+       free point of arcane damage. */
+    const oc = f.optCost;
+    if(oc && oc.trigger === "entersLeaves")
+      pay.push(["pickPrompt", optCostSpec(oc, b.card, seat, true)]);
     ops.push(...pay);
     msgs.push(b.card.name + (when === "turn"
       ? " crumbles at the top of the turn."

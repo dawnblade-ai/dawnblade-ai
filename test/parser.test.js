@@ -915,12 +915,26 @@ test("look-alike — a DYNAMIC cost limit is refused, not flattened", () => {
     {costLe:2, type:"attack"});
 });
 
-test("look-alike — 'ANOTHER aura' is an exclusion and is refused", () => {
-  /* Sigil of Silphidae says "banish ANOTHER aura", which excludes itself.
-     A prompts filter reads printed fields and cannot say "not this one",
-     so offering it as "an aura" would offer an illegal choice. */
-  assert.equal(P.optFilter("another aura"), null);
+test("'ANOTHER aura' is an exclusion, and it is carried rather than dropped", () => {
+  /* DELIBERATE CHANGE AT v3.20. This drill pinned the REFUSAL, which was
+     the honest answer while nothing could express the exclusion: a
+     prompts filter reads printed fields and cannot say "not this one",
+     and flattening it to "an aura" offers an illegal choice.
+
+     `notSelf` expresses it structurally now, so the refusal is no longer
+     the honest answer — but the thing being pinned is unchanged. What
+     must never happen is the exclusion going MISSING, and there are two
+     ways for that now instead of one: the flag absent from the filter,
+     or the flag present with no uid ever supplied. Both are pinned, here
+     and in the promptFilter drill below. */
+  assert.deepEqual(P.optFilter("another aura"), {notSelf:true, tt:"aura"},
+    "the exclusion must be CARRIED — flattening it to 'an aura' offers an illegal choice");
   assert.deepEqual(P.optFilter("an aura"), {tt:"aura"}, "the plain form is still read");
+  assert.ok(!P.optFilter("an aura").notSelf,
+    "and a card that does NOT print 'another' must not acquire the exclusion");
+  /* the exclusion does not rescue an otherwise unreadable subject */
+  assert.equal(P.optFilter("another card with crush"), null,
+    "'another' + a rules-text qualifier is still unreadable and must still refuse");
 });
 
 test("look-alike — a RULES-TEXT qualifier is refused", () => {

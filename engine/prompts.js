@@ -53,6 +53,21 @@ function promptFilter(spec){
   if(!spec) return () => true;
   return c => {
     if(!c) return false;
+    /* "ANOTHER" — the printed exclusion `optFilter` reads off the card.
+       It is STRUCTURAL rather than a field, so the uid cannot come from
+       the parse (`fxParse` memoizes on name|pitch, and one parse serves
+       every copy of the card); the QUEUE SITE supplies it as `notUid`.
+
+       A `notSelf` filter that was never given a uid refuses EVERYTHING
+       rather than falling through to offer the source itself. Offering it
+       is stronger than printed, and Sigil of Silphidae is the case that
+       makes this concrete: by the time its LEAVE trigger asks, the Sigil
+       is an aura sitting in the very graveyard it banishes from, so a
+       dropped exclusion lets it eat itself for a free arcane damage.
+       Refusing is weaker than printed and visible; the other direction
+       steals games. */
+    if(spec.notSelf && spec.notUid == null) return false;
+    if(spec.notUid != null && c.uid === spec.notUid) return false;
     if(spec.type === "attack" && !isAttack(c)) return false;
     if(spec.type === "nonAttack" && isAttack(c)) return false;
     if(spec.tt != null && !new RegExp(spec.tt, "i").test(c.tt||"")) return false;

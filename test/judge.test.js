@@ -1600,7 +1600,15 @@ test("the second-person debt in the shared semantics does not grow", () => {
      player ("Not optional — <name> condemned it.") and the empty-board
      feed line names the seat that has nothing to lose, because both of
      those are read by the table. */
-  assert.ok(lits.length <= 46,
+  /* AND 46 -> 47 AT v3.20, for the third time and the same reason. Sigil
+     of Silphidae's LEAVE trigger queues a `pick` from `sweepArena`, and
+     its hint is the SAME STRING the `execute` queue site already uses —
+     "the rider only resolves if you pay" — so the scan counts it twice.
+     A prompt hint is addressed to `spec.side`; the seat being asked is
+     the seat "you" names. The FEED half of this card stays seat-neutral:
+     `sweepArena`'s own message says "<card> crumbles at the top of the
+     turn", with no second person in it. */
+  assert.ok(lits.length <= 47,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

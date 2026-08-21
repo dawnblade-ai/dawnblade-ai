@@ -9,6 +9,101 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.20 — "another" is an exclusion, and the offer nobody was reaching
+
+**Sigil of Silphidae is built, and the card that came with it had been
+inert for two versions.** Viserai's last buildable card needed three
+pieces, and looking for the third found a live bug in a card everything
+reported as finished.
+
+### "another aura" — carried, not refused
+
+`optFilter` refused `another <subject>` outright, and that was the honest
+answer while nothing could express it: a prompts filter reads printed
+fields and cannot say "not this one", and flattening it to "an aura"
+offers an illegal choice.
+
+It is carried as `notSelf` now — a **structural** fact rather than a
+field. The uid is deliberately not in the parse: `fxParse` memoizes on
+`name|pitch`, so one parse serves every copy of the card in the match,
+and a uid stored there would name whichever copy was parsed first and go
+on excluding that one forever. The **queue site** supplies it as
+`notUid`, and a `notSelf` filter that never receives one refuses every
+candidate rather than offering the source — weaker than printed, which is
+the honest direction v2.04 settled for costs.
+
+**The exclusion is load-bearing on exactly one of the two triggers.** By
+the time the LEAVE trigger asks, `sweepArena` has already filed the Sigil
+into the graveyard it is banishing *from*: it is an Aura sitting among
+its own legal choices. Without `another` it eats itself for a free point
+of arcane damage, every turn, forever.
+
+### One printed clause, two schedules
+
+"When this enters or leaves the arena" is one sentence and two events, so
+it maps to one trigger name (`entersLeaves`) that two sites answer to —
+`execute` when the aura reaches the arena, `sweepArena` when the card's
+own printed clock takes it away. A schedule is written per board; the
+name is shared and the sites are not.
+
+### THE QUEUE SITE WAS INSIDE `if(attacking)` — and no card that needs it attacks
+
+Building the enters half is what exposed it. The only `optCost` queue
+site in `execute` sat inside the attacking branch, and **every
+`play`-trigger optional-cost card in the pool is a non-attack** — all
+three printings of Condemn to Slaughter. So from v3.18 until now its
+printed *"you may destroy an aura you control"* was **never once offered
+at either board**.
+
+No tool here could see it. Coverage read the card `full`, because the
+clause is consumed faithfully — it counts consumption, not whether
+anything ever asks. The fairness sweep is one-sided toward too-strong and
+this is too-weak. And the drills could not see it either, because **they
+built the spec by hand and passed it to `buildPrompt`**, which measures
+the sheet rather than whether anything opens it. *A drill that constructs
+its own fixture proves the fixture.* There is a driven drill now.
+
+The three spec literals this would have made became one `optCostSpec` —
+the no-mirror rule, inside a single file.
+
+### The tools that had to be taught, not silenced
+
+`RESTRICTION-DROPPED` flagged the finished card, because its model said
+"another" is inexpressible. Teaching it that `notSelf` **is** the
+expression is the same edit it needed at v3.12 for `fx.modes[].q`; the
+check still bites when the flag is genuinely absent, verified by
+sabotage. A model that has gone stale and a card that has gone wrong look
+identical in a report.
+
+Two drills that pinned the old refusal were changed **deliberately**, and
+both said in prose "the reason Sigil of Silphidae is still unbuilt". What
+they pin is unchanged: the exclusion must never go missing. There are two
+ways for that now instead of one — the flag absent, or the flag present
+with no uid — and both are pinned.
+
+### Also settled: the handoff's one open question
+
+`2|Sigil of Suffering|0|` was flagged as needing the printed product,
+since the card prints at pitch 1, 2 and 3 and `0` means "the only
+printing". **The database answers it:** pitch 1 is printed in **SVI019**
+and **SBA023** — Viserai's and Briar's own Silver Age sets — while pitch
+2 and 3 exist only in ELE, which neither precon draws from. The resolver
+already picks 1, and the v3.14 oracle **does** catch a regression here,
+contrary to the note: sabotaged to the highest pitch it names both decks
+and both sets. No deck-list change, and the question is closed.
+
+```
+npm test          1204 drills, 0 failed (4 drift drills skip without a live DB)
+npm run audit     405 cards — 311 full / 72 part / 22 none   (+1 full: the Sigil)
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+The coverage baseline was stale since v3.16, so repinning it also moved
+Condemn's two entries to `full` — v3.18's work, not this one's.
+
+---
+
 ## v3.19 — the log screen says where you are
 
 A small thing asked for from play, and it turned out to have the project's

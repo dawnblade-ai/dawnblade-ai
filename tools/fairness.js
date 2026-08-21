@@ -220,9 +220,23 @@ for(const c of Object.values(audit.cards)){
       flag(2, "RESTRICTION-DROPPED", c,
         "the cost's subject has a printed cost limit the filter does not carry",
         JSON.stringify(f));
-    if(/\banother\b/.test(tl) && !/another (?:player|hero|opponent)/.test(tl))
+    /* `notSelf` IS the exclusion, expressed structurally (v3.20). A field
+       filter still cannot say "not this one"; what it carries is a flag
+       the QUEUE SITE turns into a uid, and `promptFilter` refuses every
+       candidate when it was never given one. So a filter carrying
+       `notSelf` has NOT dropped the restriction — and one that omits it
+       while the card prints "another" still has, which is what keeps this
+       check biting.
+
+       THIS IS THE MODEL BEING TAUGHT, NOT SILENCED — the same edit this
+       check needed at v3.12, when a modal card parked its qualifier on
+       `fx.modes[].q` and the tool reported both cards as unrestricted. A
+       model that has gone stale and a card that has gone wrong look
+       identical in a report, so the difference has to be argued rather
+       than assumed. */
+    if(/\banother\b/.test(tl) && !/another (?:player|hero|opponent)/.test(tl) && !f.notSelf)
       flag(2, "RESTRICTION-DROPPED", c,
-        '"another" excludes the card itself, which a field filter cannot express',
+        '"another" excludes the card itself, which the filter does not carry',
         JSON.stringify(f));
   }
 
