@@ -733,6 +733,12 @@ img{display:block;max-width:100%}
 .mover{border:1px solid var(--y);background:var(--forge2);padding:12px;text-align:center;display:flex;flex-direction:column;gap:4px}
 .mover b{font-family:'Big Shoulders Display';font-weight:800;font-size:26px;letter-spacing:.14em;text-transform:uppercase;color:var(--y)}
 .mover span{font-size:12px;color:var(--bone-dim)}
+.phasebar{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  margin-top:4px;padding:3px 7px;border-radius:6px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  font-size:11px;letter-spacing:.02em;opacity:.85}
+.phasebar b{font-weight:700}
+.phasebar .ph{text-transform:lowercase;opacity:.9}
 </style>
 </head>
 <body>
@@ -754,7 +760,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.18"; /* v3.18 — Condemn to Slaughter reads its whole middle sentence: the optional-cost pairing accepted only banish and discard, so a DESTROY paid out of the arena was unread on both of Viserai's copies, and its rider is cross-seat — each opponent destroys an aura THEY control, so the op opens a prompt addressed to the other seat rather than choosing for them. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.19"; /* v3.19 — the log screen says where you are: turn number and current phase, in each board's own words, because judge.js seeds mode once and never writes it again so a shared label would print "your action phase" for a whole table game. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2214,6 +2220,52 @@ function JudgeSheet({open, onClose, report, meta, warn}){
       </div>
     </div>
   );
+}
+
+/* WHERE ARE WE? — the turn and the phase, on the log screen (v3.19).
+   Reported from play: the feed says what just happened and the board says
+   what you hold, and nothing on screen says which part of the turn you are
+   standing in. In a training sim the phase IS the lesson — "you cannot play
+   that here" only teaches something if the player can see where "here" is.
+
+   IT READS THE TRAINER'S VOCABULARY, DELIBERATELY. `mode`/`bphase` are
+   authoritative in `Battle` and the derived `phase`/`step` are the v2.27
+   shadow; at the TABLE it is the other way round and `mode` is seeded once
+   and never written again. So this takes the label it needs from the board
+   that owns it rather than sniffing, which is the rule `advise` was one
+   line from breaking (v2.83) — a frozen field reads as an answer.
+
+   Pure, and it takes each board's own words. */
+function phaseLabel(mode, bphase, over){
+  if(over) return "game over";
+  if(mode === "block") return bphase === "react" ? "reaction step" : "defend step";
+  if(mode === "stack") return "attack — reaction step";
+  if(mode === "pay") return "paying a cost";
+  if(mode === "arsenal") return "end phase — arsenal";
+  if(mode === "boostpick") return "boost?";
+  if(mode === "targetpick") return "choosing a target";
+  if(mode === "act") return "your action phase";
+  return mode || "—";
+}
+
+/* THE SAME QUESTION, IN THE TABLE'S WORDS. judge.js drives `phase`/`step`
+   out of `priority.js`; `mode` is seeded into its opening state and never
+   written again, so calling `phaseLabel` here would print "your action
+   phase" for the whole game — present, plausible, and frozen, which is
+   worse than absent (v2.83).
+
+   "your action phase" is NOT `phase === "action"`: the combat chain lives
+   inside the TURN PLAYER's action phase, so while you defend against their
+   swing the phase is still action and simply is not yours. `seat` is what
+   tells them apart. */
+function stepLabel(g, seat){
+  if(g.over) return "game over";
+  const mine = g.turnPlayer === seat;
+  if(g.phase === "start") return mine ? "your start phase" : "their start phase";
+  if(g.phase === "end")   return mine ? "your end phase"   : "their end phase";
+  if(g.step && g.step !== "layer")
+    return (mine ? "your attack — " : "their attack — ") + g.step + " step";
+  return mine ? "your action phase" : "their action phase";
 }
 
 function Ticker({feed}){
@@ -4247,6 +4299,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <span className="sside"><span className="hpme">{you(g).hp}</span> you · R<b>{you(g).res}</b> A<b>{you(g).ap}</b></span>
                 <span className="sside r">{opp(g).name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,opp(g).hp)}</span>{frostCount(opp(g))>0?` · ❄${frostCount(opp(g))}`:""}</span>
               </div>
+              {/* the turn and the phase — see phaseLabel */}
+              <div className="phasebar clip-sm">
+                <span>turn <b>{g.turn}</b></span>
+                <span className="ph">{phaseLabel(g.mode, g.bphase, g.over)}</span>
+              </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               {/* THE WINDOW IS PASSED, NOT SNIFFED (v2.83). `advise` used to
                   read `g.mode` itself, which is right here and silently wrong
@@ -5782,6 +5839,12 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               <div className="scorebar clip-sm">
                 <span className="sside"><span className="hpme">{me.hp}</span> you · R<b>{me.res}</b> A<b>{me.ap}</b></span>
                 <span className="sside r">{them.name.split(",")[0].toLowerCase()} <span className="hpopp">{Math.max(0,them.hp)}</span></span>
+              </div>
+              {/* the turn and the phase — see stepLabel, which reads the CR
+                  machine because `mode` is frozen on this board */}
+              <div className="phasebar clip-sm">
+                <span>turn <b>{g.turn}</b></span>
+                <span className="ph">{stepLabel(g, mySeat)}</span>
               </div>
               <div style={{marginTop:6}}><Ticker feed={g.feed}/></div>
               {/* ---- CLAUDE'S CALL, AT THE TABLE (v2.83) ------------------

@@ -9,6 +9,53 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.19 — the log screen says where you are
+
+A small thing asked for from play, and it turned out to have the project's
+favourite hazard inside it.
+
+The feed says what just happened and the board says what you hold, and
+nothing on screen said which part of the turn you were standing in. In a
+training sim the phase **is** the lesson — *"you cannot play that here"*
+only teaches something if the player can see where "here" is. So the log
+pane now carries a bar: **turn number, and the current phase.**
+
+### Two labels, because the two boards speak different languages
+
+`phaseLabel(mode, bphase, over)` for the trainer, `stepLabel(g, seat)` for
+the table. That is not duplication, it is the v2.83 hazard avoided:
+
+> **judge.js seeds `mode` into its opening state and never writes it
+> again.** One shared label reading `mode` would print *"your action
+> phase"* from the first draw to the last point of life — present,
+> plausible, and frozen, which reads as an answer. It is the sev-2 shape
+> the advisor was one line from shipping.
+
+So each board's label reads the state its own engine maintains, and a
+drill fails `TableBoard` for calling `phaseLabel` at all.
+
+Two details the labels have to get right, both of which have bitten before:
+
+- **`block` splits on `bphase`.** Defending and reacting are different
+  windows (CR 7.3 vs the reaction step), and which one you are in decides
+  what you may play. Collapsing them would be a label that is technically
+  true and useless.
+- **"your action phase" is NOT `phase === "action"`.** The combat chain
+  lives inside the TURN PLAYER's action phase, so while you defend against
+  their swing the phase is still action and simply is not yours.
+  `stepLabel` takes the seat, and follows it from either chair.
+
+An unrecognised mode is shown rather than blanked — that is how the next
+one gets noticed.
+
+`test/phasebar.test.js` (10), both labels lifted out of the source and
+driven. Sabotages verified: pointing the table at the frozen label turns 1
+red, and hardcoding seat 0 in `stepLabel` turns 1 red.
+
+1187 → **1197** drills, 0 skipped.
+
+---
+
 ## v3.18 — Condemn to Slaughter, and a cost paid out of the arena
 
 > *"Your next Runeblade attack this turn gets +N{p}.*
