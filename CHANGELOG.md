@@ -9,6 +9,94 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.22 — one trigger, four tokens, and the weapon half that keeps it honest
+
+**Briar's Embodiment of Lightning needed building, and the census found
+it was never one card.** Four pool tokens print the same trigger:
+
+| token | fires on | payload | before |
+|---|---|---|---|
+| Runechant | attack card **or weapon** | 1 arcane damage | built, by NAME |
+| Courage | attack card **or weapon** | the attack gets +1{p} | **nothing** |
+| Quicken | attack card **or weapon** | the attack gets go again | **nothing** |
+| Embodiment of Lightning | attack card **only** | the attack gets go again | **nothing** |
+
+Runechant worked through `isRunechantEntry` — a name match — and a
+hardcoded pop block. The other three read `tier: none` and did nothing at
+all; Courage was already on the sweep's "unread and barely named" list.
+Building only the Embodiment would have left the same bug twice, which is
+the method's rule 4 with a list behind it: **fix the RULE, not the card.**
+
+### The weapon half is part of the printed trigger
+
+Three of them say *"or activate a weapon attack"* and the Embodiment does
+not. Dropping that distinction makes Briar's token strictly stronger than
+printed — the direction that steals games — so it rides in the parse as
+`weaponToo` and is checked at the pop. Driven: on a weapon swing the other
+three pop and the Embodiment **stays on the board**.
+
+### Where the pop moved, and why
+
+Two of the four payloads MODIFY THE ATTACK, and the old block fired
+*after* `pend` was built — by which point the total is already baked into
+the link and its label. The pop now runs just before the attack is
+declared, so Courage's +1{p} is part of the declared total.
+
+Runechant's arcane body was **moved, not rewritten**: it keeps its
+per-source loop (Pyroglyphic Protection prevents per source, Arcane
+Barrier triggers per threat — pooling them pushes through more damage than
+the cards print), its `hist.arc` credit, and its win check. A port that
+changes behaviour is wrong by definition.
+
+**The firing set is captured before the card acts**, which is v2.23's rule
+generalised: a token this very attack conjures was not there when it was
+played. That is load-bearing rather than theoretical — Viserai's rite
+mints *inside* `execute`, before the pop site, so the new token is
+genuinely on the board when the pop runs and survives only because the
+set was captured by uid.
+
+### Three drills changed deliberately, and one of them by failing
+
+`test/runechant.test.js` **threw** — *"the runechant pop block moved —
+re-anchor this drill"* — rather than quietly measuring nothing. That is
+exactly why anchors name what they slice, and it is the good outcome.
+
+The drill pinning `bAct(n).runeDmg` was rewritten, because the mechanism
+it pinned is retired. `runeDmg` is a **cache of a card fact**, parsed off
+the Runechant record by a second regex at build time, so the divergence it
+relied on cannot occur in a real game. v3.07 settled this shape for
+`arcShield` and `lifeLock`: *ask the card through `fxParse`, never a
+second regex.* The property is pinned harder now — seat 1's tokens print
+THREE, seat 0 holds a decoy printing ONE, and only reading the actor's own
+board at the printed value lands on 6.
+
+A third drill's probe token carried `tx: ""` and still popped, because the
+old pop matched by name. It carries its printed line now: **a token with
+no text does nothing**, which is the golden rule working rather than a
+regression — nothing can create one without the real database record.
+
+### And the memo bit, in the lucky direction
+
+`fxParse` caches on `name|pitch`, and the pop reads its payload out of
+that parse — so a drill giving "Runechant" a 3-damage line poisoned a
+later drill using the same name. It surfaced as a FAILING assertion; the
+documented hazard is a misleading pass.
+
+```
+npm test          1228 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 311 full / 72 part / 22 none
+npm run sweep     tokens needing a look 9 -> 7
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+All four tokens read `full` now, and the number is honest: the clause is
+marked consumed because it is WIRED. Rule 2 forbids parsing ahead of
+wiring; its other half is that a clause which really is built must stop
+reporting as unread.
+
+---
+
 ## v3.21 — Briar's Embodiments, and a pool the fixture could not see
 
 **Phase C, hero four.** Briar's one mechanic is visible from her printed

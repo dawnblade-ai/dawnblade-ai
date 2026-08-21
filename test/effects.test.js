@@ -21,6 +21,12 @@ const fs = require("fs");
 const path = require("path");
 
 const E = require("../engine/effects.js");
+/* THE MEMO IS SHARED ACROSS DRILLS. `fxParse` caches on `name|pitch`, and
+   the attack-play pop reads a token's payload out of that parse — so a
+   drill that gives "Runechant" a 3-damage line poisons every later drill
+   using the same name. It bit here in the FAILING direction, which is the
+   lucky one; the documented hazard is a misleading PASS. */
+const P = require("../engine/parser.js");
 const HTML = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 
 /* A context whose every value is a distinguishable stub. The point is
@@ -146,34 +152,48 @@ test("runOps damages the FOE of the actor", () => {
    an arithmetic operand. Seat 1 swings with runechants whose token deals
    THREE, and seat 0 must lose 6 — a version reading seat 0's build reads
    1 and deals 2. */
-test("a runechant pops for the ACTOR's printed damage, not seat 0's", () => {
-  const runechant = () => ({card: {name: "Runechant", tt: "Runeblade Token - Aura",
+test("a runechant pops for the ACTOR's OWN tokens, at their printed damage", () => {
+  /* REWRITTEN AT v3.22, deliberately, because the mechanism it pinned is
+     retired. It used to hand two builds DIFFERENT `runeDmg` values and
+     assert the actor's was read — but `runeDmg` is a CACHE of a card
+     fact, parsed off the Runechant record by a second regex at build
+     time, so the divergence it relied on cannot occur in a real game.
+     v3.07 settled this shape for `arcShield` and `lifeLock`: ask the card
+     through `fxParse`, never a second regex, because a cached board fact
+     goes quietly stale.
+
+     The pop reads each token's own printed line now, so the property is
+     pinned HARDER rather than dropped: seat 1's tokens print THREE and
+     seat 0's print ONE, so a version reading the wrong board or a cached
+     number cannot land on 6. */
+  const rune = (dmg, uid) => ({card: {name: "Runechant", tt: "Runeblade Token - Aura",
                                    tx: "When you play an attack action card or activate a weapon attack, "
-                                     + "destroy this and deal 1 arcane damage to target opposing hero.",
-                                   uid: "rune1"}, kind: "aura", uid: "rune1"});
+                                     + "destroy this and deal " + dmg + " arcane damage to target opposing hero.",
+                                   uid}, kind: "aura", uid});
   const swing = {name: "Merge Probe Swing", tt: "Generic Attack Action", tx: "", kw: [],
                  power: 4, pitch: 1, cost: 0, uid: 501};
 
-  /* Two DIFFERENT builds, so "which build answered" is observable. */
-  const builds = [{runeDmg: 1}, {runeDmg: 3}];
-  const {execute} = E.makeEffects(stubCtx({
-    bAct: g => builds[g.actor || 0],
-    bFoe: g => builds[1 - (g.actor || 0)]
-  }));
+  P.fxReset();
+  const {execute} = E.makeEffects(stubCtx({}));
 
   const g = stubGame();
   g.actor = 1;                                  // SEAT 1 is swinging
   g.chain = []; g.stack = []; g.hitSeq = 0;
   g.sides[1].hand = [swing];
-  g.sides[1].board = [runechant(), runechant()];
+  g.sides[1].board = [rune(3, "mine1"), rune(3, "mine2")];
+  /* the DECOY: seat 0 holds tokens too, printing a different number. They
+     are not the actor's and must not fire, or pop for their value. */
+  g.sides[0].board = [rune(1, "theirs1")];
   g.sides[1].hist = {atk: 0, non: 0};
 
   const out = execute(g, swing, "hand", 0);
   assert.equal(out.sides[1].board.filter(b => b.card.name === "Runechant").length, 0,
-    "both tokens destroy themselves on the play — mandatorily, there is no 'you may'");
+    "both of the ACTOR's tokens destroy themselves on the play — mandatorily, no 'you may'");
+  assert.equal(out.sides[0].board.filter(b => b.card.name === "Runechant").length, 1,
+    "the other seat's token is not theirs to pop");
   assert.equal(out.sides[0].hp, 14,
-    "two Runechants at the ACTOR's printed 3 each = 6. Reading seat 0's build gives 1 each " +
-    "and 2 damage, which is the v2.41 bug wearing the one context key that still named a seat.");
+    "two Runechants at their PRINTED 3 each = 6. Reading seat 0's board gives 1 token for 1, " +
+    "and a cached seat-0 number gives 2 — the v2.41 bug wearing whichever copy still names a seat.");
 });
 
 test("`built` is off the context — nothing in effects.js may name a seat", () => {
@@ -189,12 +209,21 @@ test("`built` is off the context — nothing in effects.js may name a seat", () 
      priority fields") — rule 4b, in the direction that makes a working
      drill fail. So hand it a `built` that would be LOUD if anything read
      it, and prove the state comes out identical. */
+  P.fxReset();
   const loud = E.makeEffects(stubCtx({built: {runeDmg: 99}}));
   const quiet = E.makeEffects(stubCtx());
   const probe = () => {
     const g = stubGame();
     g.actor = 0; g.chain = []; g.stack = []; g.hitSeq = 0;
-    g.sides[0].board = [{card: {name: "Runechant", tt: "Runeblade Token - Aura", tx: "", uid: "r"},
+    /* THE TOKEN CARRIES ITS PRINTED LINE (v3.22). It used to be `tx: ""`
+       and still popped, because the pop matched the token by NAME. The
+       pop reads the card now, so a token with no text does nothing —
+       which is the golden rule working, not a regression: nothing can
+       create a runechant without the real database record to copy. */
+    g.sides[0].board = [{card: {name: "Runechant", tt: "Runeblade Token - Aura",
+                                tx: "When you play an attack action card or activate a weapon attack, "
+                                  + "destroy this and deal 1 arcane damage to target opposing hero.",
+                                uid: "r"},
                          kind: "aura", uid: "r"}];
     g.sides[0].hist = {atk: 0, non: 0};
     return g;

@@ -995,6 +995,20 @@ function makeEffects(ctx){
        was played and therefore survives to the next swing. Reading the
        board again at resolution is what made it pop on its own attack. */
     const runeAtPlay = runeCount(act(s));
+    /* THE SAME RULE, IN ITS GENERAL FORM (v3.22). Four pool tokens print
+       "when you play an attack action card[ or activate a weapon attack],
+       destroy this and X" and only Runechant was built — by NAME, through
+       `isRunechantEntry`. Courage, Quicken and Briar's Embodiment of
+       Lightning read `tier: none` and did nothing.
+
+       Captured HERE for the same reason `runeAtPlay` is: the auras that
+       trigger are the ones in the arena at this instant, so one the card
+       itself conjures was not there when the attack was played and
+       survives to the next swing. Captured by ENTRY, and popped later by
+       uid, because the board is about to change underneath this. */
+    const atkTrigAt = (act(s).board || [])
+      .map(b => ({b, trig: fxParse(b.card).atkTrigger}))
+      .filter(x => x.trig);
     /* NO `mode` HERE (v2.73). This used to open with `mode:"act",
        pending:null` — closing the payment sheet and putting the trainer
        back in its action phase, neither of which is anything a CARD does.
@@ -1402,6 +1416,58 @@ function makeEffects(ctx){
          attack was declared from is the only thing that distinguishes a
          weapon swing from an attack action card. Inferring it from the card
          at resolution would mean re-deciding a question already answered. */
+      /* ---- THE ATTACK-PLAY AURAS FIRE HERE (v3.22) -------------------
+         Before `pend`, because two of the four payloads MODIFY THE ATTACK
+         — Courage's +1{p} and go again — and after `pend` the total is
+         already baked into the link and its label. Runechant's arcane
+         body is MOVED here rather than rewritten; it kept its own
+         per-source loop, its hist credit and its win check, and a port
+         that changes behaviour is wrong by definition.
+
+         THE WEAPON HALF IS PART OF THE PRINTED TRIGGER. Runechant,
+         Courage and Quicken fire on a weapon swing; the Embodiment fires
+         only on an attack action card, so it must not pop for one. */
+      if(atkTrigAt.length){
+        const fire = atkTrigAt.filter(x => x.trig.weaponToo || from !== "weapon");
+        if(fire.length){
+          const uids = new Set(fire.map(x => x.b.uid));
+          /* A token that leaves the arena ceases to exist — it is not a
+             real card and never enters a graveyard. */
+          actMut(n).board = act(n).board.filter(b => !uids.has(b.uid));
+          let arcCount = 0, arcDmg = 0, arcName = "";
+          for(const x of fire){
+            for(const op of x.trig.ops){
+              if(op[0] === "ga"){ ga = true; declNote += ` ${x.b.card.name} pops — the attack goes again.`; }
+              else if(op[0] === "pump"){ total += op[1]; declNote += ` ${x.b.card.name} pops for +${op[1]} power.`; }
+              else if(op[0] === "arcane"){ arcCount++; arcDmg += op[1]; arcName = x.b.card.name;
+                /* EACH TOKEN IS ITS OWN SOURCE — said here since v2.23, and
+                   until v2.74 they were pooled into one `hp -=` because
+                   there was nowhere for a prevention to stand. Now there
+                   is, and the distinction is worth real life: Pyroglyphic
+                   Protection prevents per SOURCE and Arcane Barrier
+                   triggers per threat, so three Runechants are three
+                   1-point threats a hero may answer three times, not one
+                   3-point threat they answer once. Pooling them pushes
+                   more damage through than the cards print. */
+                n = arcaneHit(n, 1-actorOf(n), op[1], x.b.card.name); }
+            }
+          }
+          if(arcCount){
+            /* CREDIT THE HISTORY HERE, as the old hardcoded block did: the
+               pop is pure and leaves the bookkeeping to whoever fired it,
+               the same way runOps's `arcane` op does. Miss this and "you
+               have dealt arcane damage this turn" stays false after
+               Viserai's PRIMARY arcane source has just resolved. Each
+               token is its own source, so N popped is N instances. */
+            actMut(n).hist = {...act(n).hist, arc:(act(n).hist.arc||0)+arcCount};
+            n.hitSeq = n.hitSeq + 1; n.lastDmg = arcDmg;
+            declNote += ` ${arcCount} ${arcName}${arcCount>1?"s":""} pop for ${arcDmg} arcane`
+              + `${runeCount(act(n))?` (${runeCount(act(n))} still on the board)`:""}.`;
+            n = winCheck(n);
+            if(n.over) return n;
+          }
+        }
+      }
       n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
@@ -1415,36 +1481,12 @@ function makeEffects(ctx){
          so a runechant this attack conjured is not among them. Each token
          destroys itself and deals its own damage, and there is no "you may"
          in the text — all of them, mandatorily. */
-      if(runeAtPlay > 0){
-        const rp = popRunechants(n, actorOf(n), runeAtPlay, bAct(n).runeDmg);
-        n = rp.game;
-        /* EACH TOKEN IS ITS OWN SOURCE — this code has said so in the
-           comment below since v2.23, and until v2.74 it then pooled them
-           into one `hp -=` because there was nowhere for a prevention to
-           stand. Now there is, and the distinction is worth real life:
-           Pyroglyphic Protection prevents per SOURCE, and Arcane Barrier
-           triggers per threat, so three Runechants are three 1-point
-           threats a hero may answer three times — not one 3-point threat
-           they may answer once. Pooling them would quietly push more
-           damage through than the cards print, which is the direction that
-           steals games. */
-        const each = bAct(n).runeDmg == null ? 1 : bAct(n).runeDmg;
-        for(let i=0; i<rp.popped; i++) n = arcaneHit(n, 1-actorOf(n), each, "Runechant");
-        /* CREDIT THE HISTORY HERE. `popRunechants` is pure and deliberately
-           does not touch hist — it reports what popped and leaves the
-           bookkeeping to whoever fired it, the same way runOps's `arcane` op
-           does its own. Miss this and "you have dealt arcane damage this
-           turn" (arcDealt / dealtDmg) stays false after Viserai's PRIMARY
-           arcane source has just resolved, and the UI pip never lights.
-           Each token is its own source, so N popped is N instances — that
-           is what runOps counts too (one per op, not one per point). */
-        actMut(n).hist = {...act(n).hist, arc:(act(n).hist.arc||0)+rp.popped};
-        n.hitSeq = n.hitSeq + 1; n.lastDmg = rp.damage;
-        declNote += ` ${rp.popped} Runechant${rp.popped>1?"s":""} pop for ${rp.damage} arcane`
-          + `${runeCount(act(n))?` (${runeCount(act(n))} still on the board)`:""}.`;
-        n = winCheck(n);
-        if(n.over) return n;
-      }
+      /* THE HARDCODED RUNECHANT POP THAT USED TO SIT HERE IS GONE
+         (v3.22). It matched the token BY NAME and fired after `pend`,
+         which is why the three other tokens printing the identical
+         trigger were never built and why a payload that modifies the
+         attack had nowhere to land. Its body moved up to the general
+         site above, unchanged in what it does. */
       /* intimidate resolves on the attack, before defenders are declared —
          it really does strip a card off the dummy now */
       /* RULING 2026-07-25: intimidate picks a card from the opponent's hand

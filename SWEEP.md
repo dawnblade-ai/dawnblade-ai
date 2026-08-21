@@ -7,7 +7,7 @@ axes it never covered.
 | area | entries | note |
 |---|---|---|
 | Hero abilities | 11 heroes, 24 unread clauses | never charged by the stack |
-| Tokens | 9 | 7 barely named in the trainer |
+| Tokens | 7 | 6 barely named in the trainer |
 | Ruled but not built | 94 cards | understood ≠ built |
 | **Fail states** | 125 entries, 1 break a rule | how cards go *wrong* at the table |
 
@@ -71,9 +71,6 @@ axes it never covered.
 ### Confidence — fx `none`, 0 mentions in the trainer — **likely a real gap**
 > At the start of your turn, destroy this, then the next attack action card you play this turn can't be defended by more than 2 non-block cards.
 
-### Courage — fx `none`, 2 mentions in the trainer — **likely a real gap**
-> When you play an attack action card or activate a weapon attack, destroy this and the attack gets +1{p}.
-
 ### Fealty — fx `none`, 0 mentions in the trainer — **likely a real gap**
 > Instant - Destroy this: The next card you play this turn is Draconic.
 At the beginning of your end phase, if you haven't created a Fealty token or played a Draconic card this turn, destroy this.
@@ -96,9 +93,6 @@ When this attacks a marked hero, the attack gets go again.
 > Cards and abilities cost you an additional {r} to play or activate.
 When you play a card or activate an ability, destroy this.
 At the beginning of your end phase, destroy this.
-
-### Runechant — fx `none`, 14 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
-> When you play an attack action card or activate a weapon attack, destroy this and deal 1 arcane damage to target opposing hero.
 
 ## 3. Ruled but not built
 

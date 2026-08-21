@@ -204,10 +204,21 @@ test("a null cap pops everything — the plain 'all of them' case", () => {
    check is worth more than no check when the alternative is unreachable. */
 const popBlock = (() => {
   const src = effects();   /* the pop block moved with `execute` (v2.53) */;
-  const at = src.indexOf("if(runeAtPlay > 0){");
-  if(at < 0) throw new Error("the runechant pop block moved — re-anchor this drill");
+  /* RE-ANCHORED AT v3.22, and the drill FAILING is what brought us here —
+     it threw "the pop block moved" rather than quietly measuring nothing,
+     which is the whole reason anchors name what they slice.
+
+     The block is no longer runechant-shaped. Four pool tokens print the
+     same trigger and only Runechant was built, by NAME; the pop is
+     general now and dispatches on the parsed payload. Every property
+     below still holds and is still worth pinning — they are about the
+     bookkeeping, not about which token fired. */
+  const at = src.indexOf("if(atkTrigAt.length){");
+  if(at < 0) throw new Error("the attack-trigger pop block moved — re-anchor this drill");
   const end = src.indexOf("\n      }", at);
-  return src.slice(at, end);
+  const body = src.slice(at, end);
+  if(body.length < 400) throw new Error("the slice is " + body.length + " bytes — too small to be the pop block");
+  return body;
 })();
 
 test("the trainer's runechant pop credits hist.arc", () => {
@@ -220,8 +231,13 @@ test("the pop counts one arcane instance per token, not one per pop", () => {
      separate sources are N instances. `rp.popped` is that number; a bare
      +1 would under-count and `rp.damage` would count POINTS, a different
      quantity that happens to coincide only when the token deals 1. */
-  assert.match(popBlock, /arc\s*:\s*\(act\(n\)\.hist\.arc\s*\|\|\s*0\)\s*\+\s*rp\.popped/,
-    "credit rp.popped — not a literal 1, and not rp.damage");
+  assert.match(popBlock, /arc\s*:\s*\(act\(n\)\.hist\.arc\s*\|\|\s*0\)\s*\+\s*arcCount/,
+    "credit the COUNT of tokens that fired — not a literal 1, and not the points dealt");
+  /* and the count really is per token rather than per point: the two
+     coincide only while a token deals exactly 1, which is the coincidence
+     this assertion exists to survive. */
+  assert.match(popBlock, /arcCount\+\+/,
+    "one instance per token that fired");
 });
 
 test("the history is written through actMut, never as a game-object key", () => {

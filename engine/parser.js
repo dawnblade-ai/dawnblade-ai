@@ -1460,6 +1460,54 @@ function fxParse(card){
     break;                                       /* one pay-or-freeze per card in the pool */
   }
 
+  /* ---- THE ATTACK-PLAY AURA TRIGGER (v3.22) --------------------------
+     "When you play an attack action card[ or activate a weapon attack],
+      destroy this and X."
+
+     FOUR POOL TOKENS PRINT THIS and only one of them was built. Runechant
+     worked, by name, through `isRunechantEntry` and a hardcoded pop; the
+     other three — Courage, Quicken and Briar's Embodiment of Lightning —
+     read `tier: none` and did nothing at all. That is the shape rule 4 of
+     the method names: fix the RULE, not the card. One reader, one site,
+     four tokens, and nothing named.
+
+     THE WEAPON HALF IS PART OF THE TRIGGER, not decoration. Runechant,
+     Courage and Quicken all fire on a weapon swing; the Embodiment fires
+     ONLY on an attack action card. Dropping that distinction would make
+     Briar's token strictly stronger than printed.
+
+     AN UNREADABLE PAYLOAD REFUSES. Malefic Incantation prints the same
+     trigger with "remove a verse counter from this" instead of a destroy,
+     so it never reaches here — and anything whose payload has no reader
+     leaves the card unclaimed rather than firing a guess. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const cl = clauses[ci];
+    const m = cl.match(
+      /^when you play an attack action card( or activate a weapon attack)?, destroy (?:this|it) and (.+)$/i);
+    if(!m) continue;
+    const tail = m[2].trim().replace(/\.$/, "");
+    let ops = null;
+    if(/^the attack (?:gains?|gets?|has) go again$/i.test(tail)) ops = [["ga"]];
+    else {
+      const pm = tail.match(/^the attack (?:gains?|gets?|has) \+(\d+)\{p\}$/i);
+      if(pm) ops = [["pump", +pm[1]]];
+      else {
+        const am = tail.match(/^deal (\d+) arcane damage to target opposing hero$/i);
+        if(am) ops = [["arcane", +am[1]]];
+      }
+    }
+    if(!ops) continue;                    /* unreadable payload — do not claim it */
+    fx.atkTrigger = {weaponToo: !!m[1], ops};
+    /* MARK IT CONSUMED, because it is WIRED. Rule 2 forbids parsing ahead
+       of wiring — reading a clause raises the card's tier and makes the
+       audit claim it works — and the other side of that rule is that a
+       clause which really is built must stop reporting as unread. All
+       four of these tokens read `tier: none` while Runechant was the only
+       one that did anything. */
+    handled.add(ci);
+    break;                                /* one such trigger per card in the pool */
+  }
+
   for(let i = 0; i < clauses.length - 1; i++){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;

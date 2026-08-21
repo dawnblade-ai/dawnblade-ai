@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.21 · PHASE C, BRIAR'S ABILITY IS BUILT
+# Handoff — Dawnblade, at v3.22 · PHASE C, BRIAR'S ENGINE IS LIVE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1219 drills**
+> the card semantics run on both boards.** `npm test` is **1228 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.20: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.22: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -63,7 +63,7 @@
 >
 > | what | note |
 > |---|---|
-> | **Embodiment of Lightning's trigger** | *"When you play an attack action card, destroy this and the attack gets go again."* This is **Runechant's exact shape** with a different payload — and Runechant reads `tier: none`, handled by bespoke code (`popRunechants`). The honest job is ONE reader for *"when you play an attack action card, destroy this and X"* that both use. Doing it as a second mechanism beside Runechant is the second-quiet-engine hazard. |
+> | ~~Embodiment of Lightning's trigger~~ | **DONE at v3.22** — one reader, one pop site, four tokens (Runechant, Courage, Quicken, the Embodiment). The weapon half of the trigger is carried, so the Embodiment does not pop on a weapon swing. |
 > | **Embodiment of Earth's buff** | *"Non-attack action cards you control get +1{d} while defending."* Needs a static "while defending" reader; nothing has one. |
 > | her 8 `part` cards | fusion/meld (`Arcane Seeds // Life`, `Burn Up // Shock`, and Weave Lightning's *"if it's fused"*), turn-history predicates over card CLASS (Star Fall's *"played a Lightning card this turn"*, Arcane Polarity's *"been dealt arcane damage this turn"*), and Jack Be Quick's steal. |
 >

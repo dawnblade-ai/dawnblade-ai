@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.21
+**Current version:** v3.22
 
 ---
 
@@ -313,6 +313,42 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### ONE TRIGGER, FOUR TOKENS, AND A NAME MATCH THAT HID THREE (v3.22)
+
+Four pool tokens print *"when you play an attack action card[ or activate
+a weapon attack], destroy this and X"*. **Runechant was built by NAME**
+(`isRunechantEntry` plus a hardcoded pop) and the other three — Courage,
+Quicken, Briar's Embodiment of Lightning — read `tier: none` and did
+nothing. Building one would have left the same bug twice.
+
+`fx.atkTrigger = {weaponToo, ops}` is the one reader; the pop is one site
+and dispatches on the parsed payload.
+
+**THE WEAPON HALF IS PART OF THE TRIGGER.** Three say *"or activate a
+weapon attack"* and the Embodiment does not. Dropping it makes Briar's
+token stronger than printed, so it is carried and checked — driven, the
+Embodiment stays on the board through a weapon swing.
+
+**THE POP MOVED BEFORE `pend`**, because two payloads MODIFY THE ATTACK
+and after `pend` the total is already in the link and its label.
+Runechant's arcane body was **moved, not rewritten** — per-source loop,
+`hist.arc` credit, win check all intact.
+
+**THE FIRING SET IS CAPTURED BEFORE THE CARD ACTS**, which is v2.23's rule
+generalised. Load-bearing, not theoretical: Viserai's rite mints INSIDE
+`execute` before the pop site, so the new token is on the board when the
+pop runs and survives only because the set was captured by uid.
+
+**A CACHED CARD FACT IS THE THING TO DELETE.** `bAct(n).runeDmg` is
+parsed off the Runechant record by a second regex at build time — v3.07's
+`arcShield`/`lifeLock` shape exactly. The pop asks each token's own
+printed line instead. Its drill was rewritten to pin the property harder:
+seat 1's tokens print THREE and seat 0 holds a decoy printing ONE.
+
+**AND A TOKEN WITH NO TEXT NOW DOES NOTHING** — the golden rule working,
+not a regression. Nothing can create one without the real database record
+to copy, so this cannot happen outside a fixture.
 
 ### A ONE-SIDED LEDGER NEVER ASKS ABOUT WHAT IT OMITS (v3.21)
 
