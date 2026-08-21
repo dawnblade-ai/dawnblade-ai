@@ -9,6 +9,107 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.21 — Briar's Embodiments, and a pool the fixture could not see
+
+**Phase C, hero four.** Briar's one mechanic is visible from her printed
+text before a line of code: *both* clauses of "Essence of Earth and
+Lightning" mint a token, so the Embodiments are her engine and nothing
+else in the deck can matter until they exist.
+
+They did not exist.
+
+### The pinned pool could not see either token
+
+`data/pool.json` is what every tool and every drill reads; the browser
+reads the live database. They need the same rule for what to keep, and
+for tokens they had two:
+
+| | kept a token when |
+|---|---|
+| `index.html` (the phone) | the record's **TYPE** says Token |
+| `tools/pin-pool.js` (the fixture) | a **NAME** scraped out of card text matched |
+
+The scrape required every word capitalised, so *"create an Embodiment of
+Earth token"* captured **`Earth`** — a name no card has. It added it,
+matched nothing, and said nothing. **A scan aimed at the wrong shape
+passes by finding nothing.**
+
+So the phone could mint both Embodiments while every Node tool and all
+1204 drills were blind to them — the fixture and production reasoning
+about different pools, each internally consistent. The fix is not a wider
+regex: the pinner keeps a token **by its type**, the way the loader does.
+764 → 788 records, and no name's spelling can decide whether a card
+exists. (The scan is widened too, because `drift.test.js` uses it; nothing
+lost, exactly the two Embodiments gained, 17 → 19.)
+
+### The hero ability
+
+Two per-turn latches, and Kayo's neighbour is per *action phase* because
+his text says so — they must not be copied onto each other.
+
+**Neither mint site names a token.** The build carries the name read off
+Briar's own printed line, the same reason Kayo's clause 2 carries its
+magnitude rather than a flag; writing "Embodiment of Earth" into
+`effects.js` is inventing card text one level up. That made the passive a
+`string`, which was a deliberate widening of `PASSIVE_TYPE`'s ledger.
+
+Earth's three gates each name a way to be wrong: an attack **action
+card** (not a weapon swing), that **deals damage** (CR 7.5.5 — prevented
+damage is not a hit), to an opposing **hero** (never an ally). *Where the
+damage landed is the caller's answer* — judge routes by CR 1.4.5
+attack-target and the trainer wires no ally targeting, so a body guessing
+inside `linkPayload` would be right on one board and wrong on the other.
+The latch lives in the shared body, so **both boards** get it.
+
+Lightning fires on exactly the **second** non-attack — not the second and
+every one after, which a `>= 2` test would mint and which is the
+direction that steals games.
+
+Each token arrives carrying its own printed clock: Earth's *"at the
+beginning of your action phase, destroy this"* is read off the token's
+text and swept by `sweepArena`. Both are Auras, which is load-bearing
+rather than flavour — seven pool cards count auras generically.
+
+### Two guards, because both failures were invisible
+
+`test/loader.test.js`: **every token name the pool's own text can create
+must resolve in the pool.** The scan count is asserted too — a scan that
+stops matching returns an empty set, and an empty set satisfies "all of
+them resolve" perfectly.
+
+`test/dorinthea.test.js` gained **the other direction**. Its existing
+check walks `HERO_STATICS` and asks the build about each entry, so a
+passive with no ledger entry was never asked about at all. That is how
+Kayo's three clauses reported "unrecognized" for eleven versions after
+they were built — and Briar's two repeated it exactly: the ability
+worked, every drill was green, and the audit still called the hero
+unread. **A one-sided census is a coverage tool wearing a judge's coat.**
+
+### Driving it found what the suite could not
+
+The token reached the board named **"embodiment of lightning"**, in
+lowercase — `resolveEntry` returns the *entry's* name, not the database
+record's, so a name captured off the lowercased hero text rides all the
+way onto the card. The whole suite was green. It is captured with its
+printed capitalisation now.
+
+```
+npm test          1219 drills, 0 failed, 0 skipped (live DB cached)
+npm run audit     405 cards — 311 full / 72 part / 22 none
+npm run sweep     hero abilities 26 -> 24 unread clauses
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+Briar's remaining hero "unread" line is **"Essence of Earth and
+Lightning"** — the ability's NAME, not a rule. Iyslander, a finished
+hero, carries the identical line for the same reason. Recorded, not work.
+
+No `DATA_VER` bump: the loader's rule for what to keep did not change and
+`mapDbCard`'s fields did not change. Only the fixture was blind.
+
+---
+
 ## v3.20 — "another" is an exclusion, and the offer nobody was reaching
 
 **Sigil of Silphidae is built, and the card that came with it had been

@@ -1080,9 +1080,15 @@ function strike(g){
   const blkNote = wall
     ? ` Wall of ${wall} — ${parts.join(", ")} — stops ${Math.min(wall, pre.total || 0)}.`
     : "";
+  /* WHERE THE DAMAGE LANDED IS THIS FILE'S ANSWER, like the wall above it.
+     CR 1.4.5 routes an attack at an ally away from the hero entirely, and
+     a shared body cannot know that — the trainer wires no ally targeting
+     at all, so a guess made inside `linkPayload` would be right on one
+     board and wrong on this one. Briar's Earth reads it. */
+  const heroHit = total > 0 && !(link.target && link.target.kind === "ally");
   const paid = withEffects(n, (fx, s) => fx.linkPayload(s, {
     total, pumps: pre.pumps, handBlockers,
-    defenders: spentGear.length + handBlockers, blkNote}));
+    defenders: spentGear.length + handBlockers, blkNote, heroHit}));
   n = paid.game;
 
   /* CR 7.5.5 — if prevention means no damage is dealt it is NOT a hit, so

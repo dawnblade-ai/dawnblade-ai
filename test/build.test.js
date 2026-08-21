@@ -177,7 +177,15 @@ test("PASSIVE_TYPE covers exactly PASSIVES", () => {
   assert.deepEqual(Object.keys(B.PASSIVE_TYPE).sort(), [...B.PASSIVES].sort(),
     "every passive needs a declared type, and every declared type a passive");
   for(const [p, t] of Object.entries(B.PASSIVE_TYPE))
-    assert.ok(t === "boolean" || t === "number", `${p}: a passive answers a boolean or a number, not ${t}`);
+    /* "string" JOINED THEM AT v3.21, deliberately. Briar's two clauses each
+       NAME the token they create, and the passive carries that name so the
+       mint site in `effects.js` names no token — the same reasoning that
+       makes `atkPowOffChain` a number rather than a flag. Widening this
+       list must stay a deliberate edit: it is what stops a passive being
+       added with no declared type, where `typeof x !== undefined` quietly
+       becomes the whole check. */
+    assert.ok(t === "boolean" || t === "number" || t === "string",
+      `${p}: a passive answers a boolean, a number or a string, not ${t}`);
 });
 
 test("every hero's build answers every passive, and its deck is 60 cards of hero", {skip}, () => {

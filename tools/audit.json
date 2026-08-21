@@ -1,8 +1,8 @@
 {
- "generated": "2026-08-21T20:14:31.827Z",
- "appVer": "3.20",
+ "generated": "2026-08-21T21:53:55.055Z",
+ "appVer": "3.21",
  "dataVer": "sage-v11",
- "dbCount": 764,
+ "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
   "full": 311,
@@ -301,7 +301,10 @@
    "int": 4,
    "tt": "Elemental Runeblade Hero - Young",
    "tx": "Essence of Earth and Lightning\nThe first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.\nThe second time you play a non-attack action card each turn, create an Embodiment of Lightning token.",
-   "statics": [],
+   "statics": [
+    "Briar — first attack action card to damage a hero each turn → Embodiment of Earth",
+    "Briar — the SECOND non-attack action card each turn → Embodiment of Lightning"
+   ],
    "power": null,
    "clauses": [
     {
@@ -310,15 +313,15 @@
     },
     {
      "t": "The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "The second time you play a non-attack action card each turn, create an Embodiment of Lightning token.",
-     "covered": false
+     "covered": true
     }
    ],
    "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader"
    ]
   },
   "gravy": {
@@ -389,7 +392,7 @@
   },
   "Bloodrot Pox": {
    "found": true,
-   "tt": "Generic Token - Aura",
+   "tt": "Generic Token - Disease Aura",
    "tx": "At the beginning of your end phase, destroy this, then it deals 2 damage to you unless you pay {r}{r}{r}.",
    "pw": null,
    "def": null,
@@ -429,7 +432,7 @@
   },
   "Frailty": {
    "found": true,
-   "tt": "Generic Token - Aura",
+   "tt": "Generic Token - Disease Aura",
    "tx": "Attack action cards you've played from arsenal and your weapon attacks get -1{p}.\nAt the beginning of your end phase, destroy this.",
    "pw": null,
    "def": null,
@@ -461,7 +464,7 @@
   },
   "Inertia": {
    "found": true,
-   "tt": "Generic Token - Aura",
+   "tt": "Generic Token - Disease Aura",
    "tx": "At the beginning of your end phase, destroy this, then put all cards from your hand and arsenal on the bottom of your deck.",
    "pw": null,
    "def": null,

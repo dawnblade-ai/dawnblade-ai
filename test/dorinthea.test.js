@@ -500,6 +500,26 @@ test("every HERO_STATICS recognizer agrees with the build it names", {skip}, () 
   }
 });
 
+/* AND THE OTHER DIRECTION (v3.21). The check above walks HERO_STATICS and
+   asks the build about each one, so a passive that exists in `build.js`
+   with NO ledger entry is never asked about at all — it is simply absent
+   from the census. That is exactly how Kayo's three clauses reported
+   "unrecognized" for eleven versions after they were built, and Briar's
+   two repeated it: the ability worked, every drill was green, and the
+   audit and the sweep both still called the hero unread.
+
+   A ONE-SIDED CENSUS IS A COVERAGE TOOL WEARING A JUDGE'S COAT. Writing
+   the reverse is what turns "nothing reported" into a claim. */
+test("every build passive read off hero text has a HERO_STATICS entry", {skip}, () => {
+  const src = fs.readFileSync(path.join(__dirname, "..", "tools", "audit.js"), "utf8");
+  const STATICS = eval(src.match(/const HERO_STATICS = (\[[\s\S]*?\n\]);/)[1]);
+  const known = new Set(STATICS.map(s => s.key));
+  const missing = B.PASSIVES.filter(p => !known.has(p));
+  assert.deepEqual(missing, [],
+    "passive(s) the audit ledger has never heard of — the hero's clause will report "
+    + "as unrecognized even though it is built:\n  " + missing.join("\n  "));
+});
+
 test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
   /* the two heroes Phase 3 has finished. A regression here means either a
      recognizer or a passive was lost. */

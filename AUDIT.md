@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-21T20:14:31.827Z · app v3.20 · data sage-v11 · db 764 records
+Generated 2026-08-21T21:53:55.055Z · app v3.21 · data sage-v11 · db 788 records
 
 ## Summary
 
@@ -147,10 +147,10 @@ Generated 2026-08-21T20:14:31.827Z · app v3.20 · data sage-v11 · db 764 recor
 - 🚩 2 hero-text clause(s) not recognized by any ability reader
 
 ### Briar (Elemental Runeblade)
+- static: Briar — first attack action card to damage a hero each turn → Embodiment of Earth
+- static: Briar — the SECOND non-attack action card each turn → Embodiment of Lightning
 - ⚠ unrecognized: "Essence of Earth and Lightning"
-- ⚠ unrecognized: "The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token."
-- ⚠ unrecognized: "The second time you play a non-attack action card each turn, create an Embodiment of Lightning token."
-- 🚩 3 hero-text clause(s) not recognized by any ability reader
+- 🚩 1 hero-text clause(s) not recognized by any ability reader
 
 ### Gravy Bones (Pirate Necromancer)
 - static: Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)

@@ -215,6 +215,34 @@ function buildSide(h, d, db, opts, rng, ctr){
   const wateryGrave = /if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/.test(_htx);
   /* LYATH: "Whenever the crowd boos you, create a Might token." */
   const lyathBoo = /whenever the crowd boos you, create a might token/.test(_htx);
+  /* BRIAR — "Essence of Earth and Lightning", and both clauses mint a
+     token, which is what makes the Embodiments her deck's engine rather
+     than decoration.
+
+     THE TOKEN'S NAME IS READ OFF THE TEXT, not stored as a boolean and
+     named again at the mint site. Kayo's clause 2 set the precedent for
+     reading a clause's own MAGNITUDE ("get +1{p}") rather than hardcoding
+     it; a token's name is the same kind of fact, and writing "Embodiment
+     of Earth" into `effects.js` would be inventing card text one level up.
+     The mint site therefore names no token at all — it mints whatever the
+     hero's printed line says.
+
+     Both are per-TURN latches ("each turn"), unlike Kayo's, which is per
+     ACTION PHASE and says so. Do not copy one onto the other.
+
+     THE NAME IS CAPTURED WITH ITS PRINTED CAPITALISATION, off the raw
+     text rather than the lowercased copy every other recogniser here
+     reads. `resolveEntry` returns the ENTRY's name, not the database
+     record's, so a lowercased capture rides all the way onto the board
+     and the player is dealt a card called "embodiment of lightning".
+     Driving it is what showed that; the whole suite was green. */
+  const _htxRaw = clean(heroRec.tx || "");
+  const _earth = _htxRaw.match(
+    /the first time an attack action card you control deals damage to an opposing hero each turn, create an? ([A-Za-z][A-Za-z' -]*?) token/i);
+  const earthOnFirstHeroDmg = _earth ? _earth[1].trim() : "";
+  const _light = _htxRaw.match(
+    /the second time you play a non-attack action card each turn, create an? ([A-Za-z][A-Za-z' -]*?) token/i);
+  const lightningOnSecondNonAtk = _light ? _light[1].trim() : "";
   /* KAYO: "Attack action cards you own get +1{p} while they are in any zone
      other than the combat chain." Read the NUMBER off the text rather than
      hardcoding 1 — the clause names its own value, and inventing it here
@@ -259,6 +287,7 @@ function buildSide(h, d, db, opts, rng, ctr){
   }
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
     arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
+    earthOnFirstHeroDmg,lightningOnSecondNonAtk,
     atkPowOffChain,mightOnFirst6Discard,weaponRefresh,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
 }
@@ -344,7 +373,8 @@ function buildVanilla(list, gearNames, db, rng, ctr, o){
     int: o.int != null ? o.int : 4,
     _dummy: true
   };
-  for(const p of PASSIVES) b[p] = PASSIVE_TYPE[p] === "number" ? 0 : false;
+  for(const p of PASSIVES)
+    b[p] = PASSIVE_TYPE[p] === "number" ? 0 : PASSIVE_TYPE[p] === "string" ? "" : false;
   return {b, rng: sh.rng};
 }
 
@@ -389,7 +419,8 @@ function buildMatch(spec, o){
    `buildSide` and forgotten elsewhere then fails loudly instead of
    reading as a silent `false` on a real hero's turn. */
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
-                  "atkPowOffChain","mightOnFirst6Discard","weaponRefresh"];
+                  "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
+                  "earthOnFirstHeroDmg","lightningOnSecondNonAtk"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -401,7 +432,14 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
 const PASSIVE_TYPE = {
   arsenalInstant: "boolean", iceFrostbite: "boolean", viseraiPassive: "boolean",
   wateryGrave: "boolean", lyathBoo: "boolean", mightOnFirst6Discard: "boolean",
-  weaponRefresh: "boolean", atkPowOffChain: "number"
+  weaponRefresh: "boolean", atkPowOffChain: "number",
+  /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
+     token they create, so the passive carries that name and the mint site
+     names nothing. A boolean here would move "Embodiment of Earth" into
+     `effects.js`, which is inventing card text one level up — the same
+     reason `atkPowOffChain` is a number rather than a flag. Widening the
+     ledger's allowed types was a deliberate edit to `build.test.js`. */
+  earthOnFirstHeroDmg: "string", lightningOnSecondNonAtk: "string"
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,

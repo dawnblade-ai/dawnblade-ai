@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.20
+**Current version:** v3.21
 
 ---
 
@@ -313,6 +313,59 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### A ONE-SIDED LEDGER NEVER ASKS ABOUT WHAT IT OMITS (v3.21)
+
+`tools/audit.js`'s `HERO_STATICS` decides whether a hero clause reports as
+recognised; `build.js` decides whether the passive EXISTS. The drill that
+compares them walks `HERO_STATICS` and asks the build about each entry —
+so **a passive with no ledger entry is never asked about at all.** It is
+absent from the census rather than failing it.
+
+That is how Kayo's three clauses reported *"unrecognized by any ability
+reader"* for eleven versions AFTER they were built, and Briar's two
+repeated it exactly: the ability worked, every drill was green, and the
+audit and the sweep both still called the hero unread. **Under-reporting
+is the safe direction only while somebody is looking.**
+
+The reverse check exists now — every build passive has a ledger entry —
+and it is the same lesson as `journey.test.js`: **when you write a census,
+write the other direction too.** A hero ability is finished when the
+clause is BUILT *and* the ledger has been told.
+
+**A named ability line is a HEADING, not a clause.** Briar's *"Essence of
+Earth and Lightning"* and Iyslander's *"Essence of Ice"* both report
+unread and neither is work — the audit splits on newlines and a bold
+ability name looks like a sentence. Recorded so nobody chases it.
+
+### BRIAR'S TOKENS ARE HER ENGINE, AND NEITHER SITE NAMES ONE (v3.21)
+
+Both clauses of her hero ability mint a token, so the Embodiments are the
+deck rather than decoration — the "find the hero's ONE mechanic first"
+exercise answered by her printed text before any code.
+
+**The token's NAME is read off her line and carried on the build**, which
+is why `PASSIVE_TYPE` grew a `string`. Storing a boolean would move
+"Embodiment of Earth" into `effects.js`, and that is inventing card text
+one level up — the same reason `atkPowOffChain` is a number. The mint
+sites name no token at all.
+
+**AND IT IS CAPTURED WITH ITS PRINTED CAPITALISATION.** Every other
+recogniser reads the lowercased hero text, and `resolveEntry` returns the
+ENTRY's name rather than the database record's — so a lowercased capture
+rides onto the board and deals the player a card called *"embodiment of
+lightning"*. The suite was green; **driving it is what showed it.**
+
+Earth's three gates are each a way to be wrong: an attack **action card**
+(a weapon swing is not one), that **deals damage** (CR 7.5.5 — prevented
+damage is not a hit), to an opposing **HERO**. That last one is the
+CALLER's answer, like the wall: judge routes by CR 1.4.5 attack-target
+and the trainer wires no ally targeting, so a body that guessed inside
+`linkPayload` would be right on one board and wrong on the other. The
+latch sits in the shared body, so both boards have it.
+
+Lightning fires on **exactly the second** non-attack. A `>= 2` test mints
+on every one after the first, which is stronger than printed.
 
 ### THE FIXTURE AND THE PHONE MUST AGREE ON WHAT A CARD IS (v3.21)
 

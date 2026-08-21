@@ -45,6 +45,15 @@ const HERO_STATICS = [
    note:"Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"},
   {key:"lyathBoo", re:/whenever the crowd boos you, create a might token/,
    note:"Lyath — booed → Might token"},
+  /* BRIAR's two clauses, built in v3.21. Both mint a token, and the token's
+     NAME is read off her printed line rather than stored as a flag — so
+     these passives answer a string, not a boolean. */
+  {key:"earthOnFirstHeroDmg",
+   re:/the first time an attack action card you control deals damage to an opposing hero each turn, create an? [a-z][a-z' -]*? token/,
+   note:"Briar — first attack action card to damage a hero each turn → Embodiment of Earth"},
+  {key:"lightningOnSecondNonAtk",
+   re:/the second time you play a non-attack action card each turn, create an? [a-z][a-z' -]*? token/,
+   note:"Briar — the SECOND non-attack action card each turn → Embodiment of Lightning"},
   /* KAYO's three clauses were BUILT in v2.55–v2.56 and this ledger was
      never told, so the audit reported all three as "not recognized by any
      ability reader" for eleven versions while the handoff called the hero

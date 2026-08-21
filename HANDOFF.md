@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.20 · PHASE C, VISERAI IS DONE
+# Handoff — Dawnblade, at v3.21 · PHASE C, BRIAR'S ABILITY IS BUILT
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,7 +12,7 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1204 drills**
+> the card semantics run on both boards.** `npm test` is **1219 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
@@ -22,7 +22,8 @@
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Iyslander and Viserai are
-> complete. Twelve heroes remain; the shortlist is below.
+> complete. **Briar is in progress**: her hero ability is BUILT (v3.21) and
+> her 8 `part` cards are the remaining work — see below.
 >
 > ### Viserai — DONE at v3.20
 >
@@ -53,13 +54,32 @@
 > *The lesson, since it is the second time: try the data before booking a
 > question. Card images and printing records are the printed product.*
 >
-> ### NEXT — twelve heroes remain
+> ### BRIAR — the ability is built, the deck is not
 >
-> Three are done (Kayo, Iyslander, Viserai). On the coverage table
-> **lyath** (29/3/0) and **dorinthea** (done) sit next; `briar` and
-> `blaze` are the densest of the mid pack. **Leave Arakni last** —
-> stealth-as-qualifier is filed `noop` by ruling, so his number is the
-> least honest in the pool.
+> **Her ONE mechanic is the Embodiments**, and both clauses of "Essence of
+> Earth and Lightning" mint one. Both are now live on both boards, the
+> tokens are in the pinned pool, and each carries its own printed destroy
+> clock. What is left is her deck and the tokens' OWN text:
+>
+> | what | note |
+> |---|---|
+> | **Embodiment of Lightning's trigger** | *"When you play an attack action card, destroy this and the attack gets go again."* This is **Runechant's exact shape** with a different payload — and Runechant reads `tier: none`, handled by bespoke code (`popRunechants`). The honest job is ONE reader for *"when you play an attack action card, destroy this and X"* that both use. Doing it as a second mechanism beside Runechant is the second-quiet-engine hazard. |
+> | **Embodiment of Earth's buff** | *"Non-attack action cards you control get +1{d} while defending."* Needs a static "while defending" reader; nothing has one. |
+> | her 8 `part` cards | fusion/meld (`Arcane Seeds // Life`, `Burn Up // Shock`, and Weave Lightning's *"if it's fused"*), turn-history predicates over card CLASS (Star Fall's *"played a Lightning card this turn"*, Arcane Polarity's *"been dealt arcane damage this turn"*), and Jack Be Quick's steal. |
+>
+> **Both tokens are currently inert and that is honest, not a gap.** Earth
+> sits on the board doing nothing but counting as an aura (which is
+> correct — seven pool cards count auras); Lightning does nothing yet.
+> Neither is stronger than printed, which is the direction that matters.
+>
+> ### NEXT — eleven heroes after her
+>
+> The user's own heuristic, and the data backs it: **a hero sharing a class
+> with a finished one transfers the most work.** Blaze is `Wizard` like
+> Iyslander; Boltyn is `Light/Warrior` like Dorinthea; Briar was
+> `Elemental/Runeblade` — Viserai's class and Iyslander's talent, which is
+> why she went first. **Leave Arakni last** — stealth-as-qualifier is filed
+> `noop` by ruling, so his number is the least honest in the pool.
 >
 > ### The method, in one line each
 >

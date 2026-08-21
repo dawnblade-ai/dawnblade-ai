@@ -170,6 +170,58 @@ function makeEffects(ctx){
     return runOps(n, [["token","Might",1,"self"]], "Kayo");
   };
 
+  /* ---- BRIAR'S TWO EMBODIMENTS (v3.21) --------------------------------
+
+     "Essence of Earth and Lightning" is two clauses and both mint a
+     token, which is what makes the Embodiments her engine rather than
+     decoration.
+
+     NEITHER SITE NAMES A TOKEN. The build carries the name read off the
+     hero's own printed line (`build.js`), so these mint whatever she
+     prints — the same reason Kayo's clause 2 carries its magnitude rather
+     than a flag.
+
+     BOTH LATCH PER TURN, and `hist` is per-turn, so the latch IS the
+     counter. Kayo's neighbour above latches per ACTION PHASE because his
+     text says so; do not copy one onto the other. */
+
+  /* "The FIRST time an attack action card you control deals damage to an
+     opposing hero each turn." Three gates, and each is a way to be wrong:
+
+       - an attack ACTION CARD, so a weapon swing is not one (`from`);
+       - DEALS DAMAGE — CR 7.5.5, if prevention means no damage is dealt
+         it is not a hit, so a fully blocked attack must not mint;
+       - to an opposing HERO, never an ally. WHERE THE DAMAGE LANDED IS
+         THE CALLER'S ANSWER (`info.heroHit`), the same split `blkNote`
+         and the wall already keep: judge routes by CR 1.4.5 attack-target
+         and the trainer has no ally targeting wired, so a body that
+         guessed here would be right on one board and wrong on the other. */
+  const briarEarth = (s, heroHit) => {
+    let n = {...s};
+    const b = bAct(n);
+    if(!b || !b.earthOnFirstHeroDmg) return n;
+    if(!heroHit) return n;
+    if(n.pend && n.pend.from === "weapon") return n;
+    if(n.pend && !isAttack(n.pend.card)) return n;
+    if(act(n).hist && act(n).hist.briarEarth) return n;
+    actMut(n).hist = {...act(n).hist, briarEarth:1};
+    n = L(n, `${act(n).name}: the first attack action card to land on a hero this turn — Briar draws up Earth.`);
+    return runOps(n, [["token", b.earthOnFirstHeroDmg, 1, "self"]], act(n).hero ? act(n).hero.name : "Briar");
+  };
+
+  /* "The SECOND time you play a non-attack action card each turn." Exactly
+     the second — not the second and every one after, which is what a
+     `>= 2` test would mint. `hist.non` is incremented by `execute` on the
+     way past, so this reads the count it has just become. */
+  const briarLightning = (s) => {
+    let n = {...s};
+    const b = bAct(n);
+    if(!b || !b.lightningOnSecondNonAtk) return n;
+    if((act(n).hist||{}).non !== 2) return n;
+    n = L(n, `${act(n).name}: the second non-attack action card this turn — Briar draws up Lightning.`);
+    return runOps(n, [["token", b.lightningOnSecondNonAtk, 1, "self"]], act(n).hero ? act(n).hero.name : "Briar");
+  };
+
   /* ---- ONE COPY OF THE ADDITIONAL-COST DISCARD (v2.65) ----------------
      "As an additional cost to play this, discard a random card." The body
      below existed TWICE, verbatim, in `execute`'s attack and non-attack
@@ -1548,6 +1600,7 @@ function makeEffects(ctx){
       else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
+      n = briarLightning(n);
       /* THE OPTIONAL COST ON A NON-ATTACK (v3.20), and the reason it is a
          FIX rather than only a new site.
 
@@ -2108,6 +2161,10 @@ function makeEffects(ctx){
     n = runOps(n, n.pend.ops, pc.name);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    /* BOTH BOARDS GET THIS, because it lives in the shared body rather
+       than in either caller's damage step. `heroHit` is the caller's
+       answer — see `briarEarth`. */
+    n = briarEarth(n, info.heroHit != null ? info.heroHit : (total > 0));
     /* CHARGE'S CONDITIONALLY GRANTED on-hit abilities (see fx.condOnHit in
        parser.js) — re-checked here, at the actual trigger point, rather than
        at declaration, because "if this hits" only fires on a connected
@@ -2266,7 +2323,10 @@ function makeEffects(ctx){
        `execute`. `rd` stays 0 so the messages and hitSeq maths below read
        the same shape. */
     const _out = linkPayload(n, {total, pumps, handBlockers,
-                               defenders: defLs.length, blkNote});
+                               defenders: defLs.length, blkNote,
+                               /* the trainer has no ally targeting wired, so a
+                                  resolved attack always landed on the hero */
+                               heroHit: total > 0});
     n = _out.game;
     n.chainOpen = true;
     /* The link has resolved and the stack is empty. WHERE THAT LEAVES THE
