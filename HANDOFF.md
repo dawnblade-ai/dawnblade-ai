@@ -1,73 +1,78 @@
-# Handoff — Dawnblade, at v3.05 · PHASE C, IYSLANDER IS TWO CARDS FROM DONE
+# Handoff — Dawnblade, at v3.19 · PHASE C, VISERAI IS THREE CARDS FROM DONE
 
-> **v3.00–v3.01 happened after most of this file was written.** Where the
-> two disagree, this block and `FINISH.md` are current and the prose
-> further down is history.
+> **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
+> `FINISH.md` are current; where they disagree with the older sections,
+> they win. The older sections are kept because each records a bug shape
+> that can come back, not because their numbers are live.
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
-> Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done.
-> Most entries in both exist because breaking that rule cost a real bug.
+> Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done —
+> then `POLISH.md` for the shipping bar. Most entries in all three exist
+> because breaking that rule cost a real bug.
 >
-> **The two engines are merged, the pool is PINNED, and Phase B is
-> DONE.** `npm test` is **1070 drills** and every card drill runs
-> offline; `tools/failstates.js` reports **0 UNFAIR**. Run `npm test` and
-> check the SKIP count, not just the fails — a fresh clone used to skip
-> 304 drills silently, which is how 22 broken cards survived a green
-> suite.
+> **The two engines are merged, the pool is PINNED, Phase B is DONE, and
+> the card semantics run on both boards.** `npm test` is **1197 drills**
+> and **0 skipped**. Read the SKIP count, not just the fails — a fresh
+> clone once skipped 304 drills silently, which is how 22 broken cards
+> survived a green suite.
 >
-> **YOUR JOB IS PHASE C — THE HEROES. 13 left, and IYSLANDER IS TWO CARDS
-> FROM DONE.** Freeze (v3.03), equipment abilities (v3.04) and hand
-> abilities (v3.05) are all built, on both boards.
+> Current at v3.19: coverage **310 full / 73 part / 22 none**, fairness
+> **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
+> 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
-> | card | what is unread |
+> **YOUR JOB IS PHASE C — THE HEROES.** Kayo and Iyslander are complete.
+> Viserai is nearly there; three cards are named below. Twelve heroes
+> after him.
+>
+> ### Viserai — what is left
+>
+> | card | what is unread, and why |
 > |---|---|
-> | **Brain Freeze** | the fused rider: "put an action card with cost 0 from their hand on top of their deck" — a hand-to-deck-top move, and `fused` is already a real condition |
-> | Ice Eternal | X-cost, deliberately unbuilt — the pool's only one, and CLAUDE.md records the decision |
-> | *(Stir the Aetherwinds)* | the instant-speed grant, unread on purpose since v3.00. It is one of THREE cards printing "play … as though it were an instant" (with Iyslander's own clause 1, which IS built as `arsenalInstant`), so it is a small rule with a list — worth doing when you build the next Wizard. |
+> | **Sigil of Silphidae** | *"When this enters or leaves the arena, you may banish another aura from your graveyard. If you do, deal 1 arcane damage to target hero."* Three pieces: the `enters or leaves the arena` trigger is not in the optCost pairing's alternation; `another` is an EXCLUSION, which a field filter cannot express and which must ride as a structural fact (`notSelf` + the source uid) — **and it has to be added to `buildPrompt` explicitly or it vanishes silently**, which is the `arsStamp` lesson; and the source uid has to be threaded through `sweepArena`'s `onLeave` ops, which is the real cost. The exclusion is load-bearing exactly on the LEAVE trigger: a Sigil that has just left the arena is sitting in the graveyard it would be banishing from, so without `another` it eats itself. |
+> | Beckoning Haunt | X-cost. A recorded refusal class — see Ice Eternal in `CLAUDE.md`. Building it is a decision about X, not about this card. |
+> | Crown of Dichotomy | a two-target ability with no reader. Recorded unread rather than guessed. |
 >
-> **Ice Fusion is genuinely built** — `fused` is a real condition, so
-> Aether Icevein (×3) and Polar Cap resolve in full. Do not re-derive it.
-> Her hero ability's two axes are live and verified in play: instant-speed
-> play from arsenal, and acting during the opponent's turn.
+> ### One open question only you can answer
 >
-> **THEN PICK THE NEXT HERO.** Regenerate the coverage table rather than
-> trusting it — the snippet is in `FINISH.md` §1. Viserai (passive already
-> built, gentlest curve) or Lyath (best-covered deck, but chapter 3 and
-> the crowd/boo mechanic). Leave Arakni for last.
+> **`2|Sigil of Suffering|0|` in Viserai's list.** A deck entry's third
+> field is its pitch, and `0` normally means "the only printing" — safe
+> for Sigil of Silphidae and Trot Along, which each print at one pitch.
+> **Sigil of Suffering prints at 1, 2 AND 3**, so whichever the resolver
+> picks is a guess among three. It is the ONLY ambiguous pitch-0 entry in
+> the whole pool (verified v3.19), and no drill catches it: `decks.test.js`
+> counts to 55 and the v3.14 oracle checks the RESOLVED pitch, which is a
+> pitch the set really prints. This is the v3.13 shape — a wrong card of
+> the right count — and the only oracle is the printed product. **Ask the
+> user to check the list on fabrary before touching it.** That is how
+> Enigma Chimera was found.
 >
-> **READ THE THREE v3.00–v3.01 FINDS FIRST. They are one shape and it
-> will bite you again:** phantasm, watery grave and suspense were each a
-> rule that existed on ONE board. `effects.js` holds the semantics once,
-> but the SCHEDULE a card fires on is still written per board. The last
-> three known ones were closed at v3.07 (`thawFrost`, `resolveInertia`
-> and the aura sweep, now `effects.sweepArena`) — and finishing them
-> turned up three MORE of the same shape, including one above rate.
-> **When you build anything that fires on a schedule, ask which board
-> runs it.** `effects.tickSuspense` and `effects.sweepArena` are the
-> worked examples: pure, shared, and they hand the payload back to the
-> caller rather than running it.
+> ### The method, in one line each
 >
-> **How to work:**
+> - **Find the hero's ONE mechanic first**, and **read the hero ability
+>   before the cards** — Kayo's clause 2 was worth half his deck.
+> - **Every bug this phase found reported `tier: full`.** They were read,
+>   and read wrong. Coverage counts consumption, not faithfulness.
+> - **Sabotage every new drill, and verify the sabotage changed the file.**
+>   A sabotage that silently fails to apply is a false green.
+> - **Assert on hands, life and zones — never on `feed` prose.**
+> - **Build to print, or refuse.** Inert is honest; above-rate steals games.
+> - Ship the loop: build → drive → drill → sabotage → `npm test` →
+>   `npm run fairness` → `npm run audit` → bump `APP_VER` → `CHANGELOG.md`
+>   → `CLAUDE.md` → push to `main`, which IS the deploy.
 >
-> - **Find the hero's ONE mechanic, and read the hero ability FIRST.**
->   Kayo's clause 2 was worth half his deck.
-> - **Census the shape pool-wide before fixing it.** Every fix turns out
->   to be a rule with a list behind it, and the list is always longer
->   than the hero. Both v3.01 keywords were worth more than their cards.
-> - **Fix the RULE, not the card.** Never special-case a card by name.
-> - **Never invent card effects** — teach the parser to read the text.
-> - **Write the drill, then SABOTAGE it**, and verify the sabotage
->   actually changed the file.
-> - **Assert on state — hands, life, zones, counters — never on log
->   prose.**
-> - **Play it.** `npm test` green is the floor, not the proof.
-> - **Ask me about rules.** I read cards for a living and I would rather
->   be asked than have it guessed.
+> ### Two recurring shapes worth holding in mind
 >
-> Never claim more than is true.
-
----
+> **A rule that exists on ONE BOARD ONLY.** v3.17 found three at once, all
+> in the trainer and none at the table. `effects.beginEndPhase` is the
+> pattern to copy: one pure, seat-relative body, both boards calling it and
+> restating nothing. A comment saying "the order here matches the other
+> board's" is not a mechanism.
+>
+> **A guard aimed at the wrong file, shape, scope or slice** — it passes by
+> finding nothing. `failstates.js` scanned a file the semantics had left;
+> the `makeEffects` guard excluded the only call form anyone writes; a rust
+> guard tripped on Valiant Th*rust*. Sabotage the guard, not just the code.
 
 ## WHERE WE ARE — v3.16
 
