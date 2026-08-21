@@ -1591,8 +1591,16 @@ test("the second-person debt in the shared semantics does not grow", () => {
      correct there for the same reason it is correct in a refusal. The
      matching FEED line names the seat instead: "…until the start of
      <name>'s next turn". Moving this number must always be an edit with a
-     reason attached; that is the whole device. */
-  assert.ok(lits.length <= 45,
+     reason attached; that is the whole device.
+
+     AND 45 -> 46 AT v3.18, for the identical reason. Condemn to Slaughter's
+     rider opens a `pick` on the OPPONENT's board titled "Destroy an aura
+     you control" — addressed to that seat, so "you" is that seat. Its
+     sibling lines are the ones to check: the hint names the condemning
+     player ("Not optional — <name> condemned it.") and the empty-board
+     feed line names the seat that has nothing to lose, because both of
+     those are read by the table. */
+  assert.ok(lits.length <= 46,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

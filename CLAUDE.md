@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.17
+**Current version:** v3.18
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1177 drills**.
+This is `node --test "test/*.test.js"` — currently **1187 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -1859,9 +1859,24 @@ inline — the attack finishes resolving first) and addressed to `actorOf(n)` so
 it asks whoever is swinging. `buildPrompt` returns `null` on an empty zone, so
 a cost you cannot pay skips itself.
 
-**Still to wire:** the `hits`, `defends` and `playAura` triggers. The parser
-reads them already — `fx.optCost.trigger` names which — so each is a queue site,
-not new machinery.
+**A COST CAN BE PAID OUT OF THE ARENA (v3.18).** `destroy` joins `banish`
+and `discard` as a cost verb, with the board as its zone — you cannot
+destroy a card in a hand or a graveyard, and falling back to the graveyard
+default would destroy a card the text never named. That makes *"an aura
+**you control**"* the one phrase a seat-addressed board zone genuinely
+restates, so it is consumed; `another aura`, a dynamic limit and a
+rules-text qualifier all still refuse.
+
+**AND A RIDER CAN BE CROSS-SEAT.** Condemn to Slaughter's *"each opponent
+destroys an aura permanent they control"* is THEIR choice, so
+`foeDestroyAura` opens a prompt addressed to the other seat rather than
+picking for them. That works because **`applyAnswer` ends in
+`openPrompt`** — a prompt queued from inside a rider's ops opens like any
+other. `min:1`, because there is no "you may" in the rider.
+
+**Still to wire:** the `hits` and `defends` triggers (`play` and `attacks`
+are live). The parser reads them already — `fx.optCost.trigger` names
+which — so each is a queue site, not new machinery.
 
 **Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong and
 Mounting Anger went none/part → full; Golden Tipple (×3) and Fire that Burns

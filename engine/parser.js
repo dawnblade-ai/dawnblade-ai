@@ -710,6 +710,17 @@ function classifyClause(raw){
      number rather than a literal 3. */
   if(m=c.match(/^at the beginning of your end phase, if this has (\d+) or more rust counters(?: on it)?, destroy it$/))
     return R([["rustDestroy", +m[1]]]);
+  /* CONDEMN TO SLAUGHTER'S RIDER (v3.18). "Each opponent destroys an aura
+     permanent they control" — THEIR aura, and THEIR choice which one, so
+     this is an op that opens a prompt addressed to the other seat rather
+     than a destruction performed here. In a two-player game "each
+     opponent" is exactly one seat; the count rides in the op so a wider
+     table is a change to the op's caller and not to this reader.
+     "permanent" is not a second restriction: an aura in the arena IS a
+     permanent, and the word is the card distinguishing it from an aura
+     sitting in a graveyard. */
+  if(m=c.match(/^each opponent destroys an aura(?: permanent)? they control$/))
+    return R([["foeDestroyAura",1]]);
   /* the dummy holds a hand now, so revealing it is a real thing to do */
   if(/^target opponent reveals their hand$/.test(c)) return R([["foeReveal",1]]);
   /* a self-imposed cost tax for the rest of the turn */
@@ -1435,10 +1446,25 @@ function fxParse(card){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
     const cm = clauses[i].match(
-      /^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (banish|discard) (.+)$/i);
+      /^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (banish|discard|destroy) (.+)$/i);
     if(!cm) continue;
     let subject = cm[3].trim();
     let zone = null;
+    /* A DESTROY IS PAID OUT OF THE ARENA, AND "YOU CONTROL" IS THE ZONE
+       SAYING ITSELF (v3.18). Condemn to Slaughter reads "you may destroy
+       an aura you control" — you cannot destroy a card in a graveyard or
+       a hand, so the zone is the board, and a board reached through
+       `spec.side` is already the asked seat's own.
+       This is NOT the subject-consumption rule being relaxed. That rule
+       exists because a dropped qualifier makes a cost cheaper than
+       printed — Mounting Anger's dynamic limit, "another aura"'s
+       exclusion. "You control" is the one phrase a seat-addressed board
+       zone genuinely restates, so consuming it adds nothing and drops
+       nothing. Anything else in the phrase still has to be read. */
+    if(cm[2].toLowerCase() === "destroy"){
+      zone = "board";
+      subject = subject.replace(/\s+you control$/i, "").trim();
+    }
     /* NOT end-anchored: "an attack action card from your hand with cost 2
        or less" puts the zone in the MIDDLE. Anchoring it missed that and
        silently fell back to the wrong zone — banishing from the graveyard
@@ -1455,6 +1481,8 @@ function fxParse(card){
       /* the printed zone if it says one; otherwise the natural home of the
          cost — you discard from hand, you banish from the graveyard */
       zone: zone || (cm[2].toLowerCase() === "discard" ? "hand" : "grave"),
+      /* where the paid card LANDS. A banish goes to the banished zone; a
+         discard and a destroy both reach the graveyard. */
       filter,
       ops: rr.ops
     };

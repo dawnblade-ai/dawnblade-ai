@@ -9,6 +9,90 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.18 — Condemn to Slaughter, and a cost paid out of the arena
+
+> *"Your next Runeblade attack this turn gets +N{p}.*
+> *You may destroy an aura you control. If you do, each opponent destroys*
+> *an aura permanent they control.*
+> *Go again"*
+
+Two of Viserai's cards (pitch 1 and pitch 3 — his list runs no pitch 2,
+though the database prints one). The head resolved and **the entire middle
+sentence was unread**: `fx.optCost` came back `undefined`, because the
+"you may X. If you do, Y" pairing accepted only `banish` and `discard` as
+cost verbs.
+
+### Two things make this card different from the optional costs already built
+
+**The cost is paid out of the ARENA.** You cannot destroy a card in a hand
+or a graveyard, so the zone is the board — and the default the pairing
+would otherwise have fallen back to is the graveyard, which is the
+"printed zone wins" bug from v2.29 in a new place.
+
+That makes *"an aura **you control**"* the one phrase a seat-addressed
+board zone genuinely restates, so it is consumed. **This is not the
+subject-consumption rule being relaxed**, and the drills say so by
+example: `another aura`, `an aura you control with cost less than the
+number of Draconic chain links you control`, and `a card with crush you
+control` all still refuse, each for its own reason (an exclusion, a
+dynamic limit, a rules-text qualifier).
+
+**The rider is CROSS-SEAT, and the choice is theirs.** *"Each opponent
+destroys an aura permanent they control"* — picking which of their auras
+dies would be inventing a decision, so `foeDestroyAura` opens a prompt
+addressed to the other seat. That works because `applyAnswer` ends in
+`openPrompt`, so a prompt queued from inside a rider's ops opens like any
+other. `min:1`: the destruction is mandatory once the cost is paid, there
+being no "you may" in the rider. An opponent controlling no aura skips it
+and the feed says so — *"nothing happened"* and *"they chose not to"* are
+different lessons.
+
+"Permanent" is not a second restriction. An aura in the arena **is** a
+permanent; the word is the card distinguishing it from an aura in a
+graveyard.
+
+### Also
+
+- **The `play` trigger is wired**, joining `attacks`. Condemn prints its
+  optional cost with no trigger prefix at all. `hits` and `defends` remain
+  unwired and the parser still names which in `fx.optCost.trigger`, so
+  each is a queue site rather than new machinery.
+- **The second-person ledger moved 45 → 46**, deliberately and for the
+  v3.03 reason: the rider's sheet is titled *"Destroy an aura you
+  control"* and a prompt is addressed to ONE side, so "you" is that side.
+  Its siblings are the check — the hint names the condemning player and
+  the empty-board feed line names the seat, because the table reads both.
+
+### The drills
+
+`test/condemn.test.js` (10). Five sabotages, all verified to bite:
+dropping `destroy` from the verbs (2 red), not consuming "you control"
+(2), letting the zone fall back to the graveyard (1), addressing the rider
+to the wrong seat (2), and making the rider optional (1).
+
+The decline path is the one that matters and it is drilled cross-seat:
+decline, and the opponent's board must be **untouched**. Running the rider
+anyway is v2.04's free-ability bug wearing a new coat — and here it would
+destroy an opponent's card for a cost nobody paid.
+
+One drill was wrong first and is worth recording: `prompt.sel` holds
+**indices**, not uids. Passing a uid selects nothing, and the drill then
+reports a rider that did not fire — which looks exactly like the bug it
+was written to catch.
+
+Coverage 308 → **310 full**, 75 → 73 part. 1177 → **1187** drills, 0
+skipped. Fairness clean, UNFAIR 0.
+
+Still open on Viserai (29/32): **Sigil of Silphidae** needs the
+`enters or leaves the arena` trigger and the `another` exclusion — which
+is buildable now that a prompt carries its source, and is load-bearing
+precisely there, because a Sigil that has just *left* the arena is sitting
+in the graveyard it would be banishing from. **Beckoning Haunt** is an
+X-cost (a recorded refusal class) and **Crown of Dichotomy** is a
+two-target ability with no reader.
+
+---
+
 ## v3.17 — one description of the beginning of the end phase
 
 **Found by a tool built to answer a different question.** James White is

@@ -770,6 +770,33 @@ function makeEffects(ctx){
         actMut(n).namedBuff = {name:norm(v), amount:op[2]||0};
         n = L(n, `Your next ${v} this turn gets +${op[2]||0} power.`);
       }
+      /* "EACH OPPONENT DESTROYS AN AURA PERMANENT THEY CONTROL" (v3.18).
+         Condemn to Slaughter's rider, and it is THEIR choice which aura
+         goes — so this opens a prompt addressed to the other seat rather
+         than picking for them. `applyAnswer` ends in `openPrompt`, so a
+         prompt queued from inside a rider's ops opens the way any other
+         does; without that this would need the caller's help.
+
+         `min:1` because the destruction is MANDATORY once the cost is
+         paid — there is no "you may" in the rider. `buildPrompt` returns
+         null on an empty zone, so an opponent controlling no aura simply
+         skips it, which is the card doing nothing rather than the seat
+         declining. The feed says which, because "nothing happened" and
+         "they chose not to" are different lessons. */
+      else if(k==="foeDestroyAura"){
+        const fs = 1 - actorOf(n);
+        const auras = (n.sides[fs].board||[]).filter(b => b && b.card && /aura/i.test(b.card.tt||""));
+        if(!auras.length){
+          n = L(n, `${foe(n).name} controls no aura — nothing to destroy.`);
+        } else {
+          n.promptQ = [...(n.promptQ||[]), {
+            tag:"pick", side:fs, src:srcName,
+            zone:"board", to:"grave", filter:{tt:"aura"}, min:1, max:v||1,
+            title:"Destroy an aura you control",
+            hint:"Not optional — " + act(n).name + " condemned it."
+          }];
+        }
+      }
       /* the dummy holds a hand now, so showing it is real information */
       else if(k==="foeReveal"){
         n = L(n, foe(n).hand.length
@@ -1403,13 +1430,19 @@ function makeEffects(ctx){
           ? `${card.name}: it needs an empty arsenal — the rest of the card still resolves.`
           : `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
       }
-      if(fx.optCost && fx.optCost.trigger === "attacks"){
+      /* THE `play` TRIGGER JOINS `attacks` (v3.18). Condemn to Slaughter
+         prints its optional cost with no trigger prefix at all, so it is
+         offered when the card is played. `hits` and `defends` are still
+         unwired; the parser names which in `fx.optCost.trigger`, so each
+         remaining one is a queue site rather than new machinery. */
+      if(fx.optCost && (fx.optCost.trigger === "attacks" || fx.optCost.trigger === "play")){
         const oc = fx.optCost;
+        const verb = oc.kind === "banish" ? "Banish" : oc.kind === "destroy" ? "Destroy" : "Discard";
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:card.name,
           zone:oc.zone, to:(oc.kind === "banish" ? "banish" : "grave"),
           filter:oc.filter, min:0, max:1, ops:oc.ops,
-          title:(oc.kind === "banish" ? "Banish" : "Discard") + " to power " + card.name + "?",
+          title:verb + " to power " + card.name + "?",
           hint:"Optional — choose none to decline. The rider only resolves if you pay."
         }];
       }
