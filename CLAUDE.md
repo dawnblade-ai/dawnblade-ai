@@ -314,6 +314,39 @@ open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
 
+### THE FIXTURE AND THE PHONE MUST AGREE ON WHAT A CARD IS (v3.21)
+
+`data/pool.json` is what every tool and every drill reads; the browser
+reads the live database. They therefore need the SAME rule for what to
+keep, and for tokens they had two:
+
+| | kept a token when |
+|---|---|
+| `index.html` (the phone) | the record's **TYPE** says Token |
+| `tools/pin-pool.js` (the fixture) | a **NAME** it scraped out of card text matched |
+
+The scrape required every word of the name to be capitalised, so Briar's
+*"create an Embodiment of Earth token"* captured **`Earth`** — a name no
+card has. It added it, matched nothing, and said nothing. **A scan aimed
+at the wrong SHAPE passes by finding nothing**, the same family as the
+`makeEffects` guard that excluded the only call form anyone writes.
+
+So the phone could mint both of Briar's Embodiments while every Node tool
+and all 1204 drills were blind to them — **the fixture and production
+reasoning about different pools, each internally consistent.** That is
+`mapDbCard`'s drift hazard one layer down, and it is why the fix is not
+to widen the regex but to **keep a token by its TYPE, the way the loader
+does**: one rule for what a token is, and no way for a name's spelling to
+decide whether a card exists. It costs 24 records on 764.
+
+The guard is in `test/loader.test.js` and it is the offline half:
+**every token name the pool's own text can create must RESOLVE in the
+pool.** It asserts the scan count too, because a scan that stops matching
+returns an empty set and an empty set satisfies "all of them resolve"
+perfectly. Its live-wire sibling compares against `liveDbPath()`, never
+`cardDbPath()` — that returns the POOL when one exists, so the first draft
+compared the pool with itself and passed by construction.
+
 ### Fail states — how cards go WRONG at the table (v2.21)
 
 ```

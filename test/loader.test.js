@@ -266,3 +266,76 @@ test("every hero is seated at its PRINTED life and intellect", {skip}, () => {
   assert.equal(rows["Blaze, Firemind"], "17/4");
   assert.equal(rows["Lyath Goldmane"], "20/5");
 });
+
+/* ---- A TOKEN A CARD CAN CREATE IS A TOKEN THE POOL CARRIES (v3.21) -----
+
+   Briar's hero ability prints "create an Embodiment of Earth token", and
+   the pinned pool did not contain that card. It was not a decision: the
+   pinner found its tokens by scanning card text for a capitalised name
+   followed by "token", and every word had to be capitalised — so "of"
+   ended the name and the scan captured **"Earth"**, which no card is
+   called. It added that, matched nothing, and reported nothing.
+
+   THE LOADER AND THE PINNER DISAGREED ABOUT WHAT A TOKEN IS. `index.html`
+   keeps any record whose type says Token, so the phone could mint both
+   Embodiments while every Node tool and every drill was blind to them —
+   the fixture and production reasoning about different pools, each
+   internally consistent. That is the hazard the `mapDbCard` field-map
+   guard above exists for, one layer down.
+
+   This is the offline half of the check and it is the half that bites:
+   every token name the pool's own text can create must RESOLVE in the
+   pool. It fails on the old scanner (with "earth" and "lightning"
+   dangling) and it fails if the pinner stops keeping tokens by type. */
+test("every token the pool's cards can create resolves in the pool", {skip}, () => {
+  const {tokenNames} = require("../tools/pin-pool.js");
+  const recs = JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name);
+  const db = C.buildMaps(recs.map(C.mapDbCard));
+  const names = [...tokenNames(recs.map(c => ({functional_text: c.functional_text || ""})))];
+
+  /* THE COUNT IS ASSERTED SO IT CANNOT PASS BY FINDING NOTHING. A scan
+     that stops matching returns an empty set, and an empty set satisfies
+     "every one of them resolves" perfectly. */
+  assert.ok(names.length >= 19,
+    `only ${names.length} token names scanned — the scan shape moved, repoint this rather than banking the win`);
+
+  const dangling = names.filter(n =>
+    !C.resolveEntry(db, {name: n, p: 0, code: null, q: 1}).resolved);
+  assert.deepEqual(dangling, [],
+    "token(s) a pool card creates that the pool does not carry — the phone can mint "
+    + "them and no drill here can see them:\n  " + dangling.join("\n  "));
+
+  /* and the two that were missing are named, so a silent regression to a
+     name-shaped scan is caught by name rather than by a count */
+  for(const nm of ["Embodiment of Earth", "Embodiment of Lightning"])
+    assert.ok(C.resolveEntry(db, {name: nm, p: 0, code: null, q: 1}).resolved,
+      nm + " must be in the pool — Briar's hero ability creates it");
+});
+
+test("the pinner keeps tokens by TYPE, the way the loader does", {skip}, () => {
+  /* One rule for "what is a token", not two. The loader's rule is the
+     record's TYPE; the pinner's used to be a scan over names, which is
+     what let a name's spelling decide whether a card existed. */
+  const src = fs.readFileSync(path.join(__dirname, "..", "tools", "pin-pool.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  assert.match(src, /token\/i\.test\(c\.type_text/,
+    "pin-pool must keep a token on its printed TYPE, not only on a scanned name");
+
+  /* Driven against the LIVE database, not against `cardDbPath()` — which
+     returns the PINNED POOL whenever it exists, so comparing to it would
+     compare the pool with itself and pass by construction. That is the
+     wrong-SCOPE version of the same trap this whole test is about, and it
+     was written that way first. Skips when there is no live wire, the way
+     `drift.test.js` does. */
+  const E = require("./helpers/extract");
+  if(!E.hasLiveDb()) return;
+  const live = JSON.parse(fs.readFileSync(E.liveDbPath(), "utf8")).filter(c => c && c.name);
+  const isTok = c => /token/i.test(c.type_text || "") || /token/i.test((c.types || []).join(" "));
+  const pool = JSON.parse(fs.readFileSync(
+    path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  const have = new Set(pool.filter(isTok).map(c => c.name));
+  const liveToks = live.filter(isTok).map(c => c.name);
+  assert.ok(liveToks.length >= 40, "the live token scan found almost nothing — repoint it");
+  const missing = liveToks.filter(n => !have.has(n));
+  assert.deepEqual(missing, [], "token(s) in the database that the pinned pool dropped");
+});

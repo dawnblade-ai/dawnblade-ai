@@ -66,12 +66,26 @@ function neededNames(W){
    audit learned this the expensive way, with a hardcoded list that
    carried 6 of the 17 real tokens and named "Bloodrot" for what the
    database calls "Bloodrot Pox". */
+/* A TOKEN NAME CAN CONTAIN A LOWERCASE WORD (v3.21). This required every
+   word of the name to be capitalised, so "create an Embodiment of Earth
+   token" captured **"Earth"** — a name no card has. It then added it,
+   matched nothing, and said nothing: a scan aimed at the wrong SHAPE
+   passes by finding nothing, the same family as the `makeEffects` guard
+   that excluded the only call form anyone writes.
+
+   Both of Briar's Embodiments were lost this way, and they are the only
+   two in the pool — measured, not assumed. The connective is allowed
+   before each following word now; a leading verb or article is stripped
+   after the fact, because "Destroy the Runechant token" would otherwise
+   capture the verb along with the name. */
 function tokenNames(records){
   const found = new Set();
   for(const c of records)
     for(const m of (c.functional_text || "")
-        .matchAll(/\b([A-Z][A-Za-z0-9'-]*(?: [A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g))
-      found.add(norm(m[1].replace(/^(?:Create|Equip|Destroy) (?:X |\d+ )?/, "")));
+        .matchAll(/\b([A-Z][A-Za-z0-9'-]*(?:(?: of| the| and)? [A-Z][A-Za-z0-9'-]*){0,3}) tokens?\b/g))
+      found.add(norm(m[1]
+        .replace(/^(?:Create|Equip|Destroy|Put|Gain) (?:X |\d+ )?/, "")
+        .replace(/^(?:a|an|the|of|and)\s+/i, "")));
   return found;
 }
 
@@ -90,7 +104,19 @@ function build(db, W){
   const need = neededNames(W);
   const direct = db.filter(c => c && c.name && need.has(norm(c.name)));
   tokenNames(direct).forEach(t => need.add(t));
-  const keep = db.filter(c => c && c.name && need.has(norm(c.name)));
+  /* A TOKEN IS KEPT BY ITS TYPE, THE WAY THE LOADER KEEPS ONE (v3.21).
+     `index.html` keeps any record whose type says Token — so the browser
+     could mint Briar's Embodiments while the PINNED POOL, which found its
+     tokens by scanning names out of card text, could not see them. That
+     is the fixture and production disagreeing about what a card is, which
+     is the hazard `mapDbCard`'s field-map guard exists for one layer up:
+     the Node tools audit one pool while the phone plays another.
+
+     One rule for "what is a token", not two. It costs 24 records on 764
+     and it cannot be defeated by how a name is spelled. */
+  const isTok = c => /token/i.test(c.type_text || "")
+                  || /token/i.test((c.types || []).join(" "));
+  const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || isTok(c)));
   /* Stable order, so a re-pin against an unchanged upstream is an empty
      diff rather than a reshuffle nobody can review. */
   keep.sort((a, b) => (a.name === b.name)
