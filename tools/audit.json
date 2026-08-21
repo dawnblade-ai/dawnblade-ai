@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-20T20:55:31.665Z",
- "appVer": "3.15",
+ "generated": "2026-08-21T01:24:02.668Z",
+ "appVer": "3.16",
  "dataVer": "sage-v11",
  "dbCount": 764,
  "poolUnique": 405,
@@ -3687,7 +3687,7 @@
     },
     {
      "t": "At the beginning of your end phase, if this has 3 or more rust counters, destroy it.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],

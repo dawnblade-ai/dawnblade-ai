@@ -10,6 +10,7 @@
     "failstates": "node tools/failstates.js",
     "sweep": "node tools/sweep.js",
     "fairness": "node tools/fairness.js",
-    "progress": "node tools/progress.js"
+    "progress": "node tools/progress.js",
+    "crindex": "node tools/crindex.js"
   }
 }

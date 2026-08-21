@@ -559,8 +559,12 @@ function legal(g, a, seat){
     if(ci < 0) return "card is not in hand or gear";
     const c = sd.hand[ci];
     if(c.def == null) return c.name + " prints no defence";
-    /* CR 8.1.3 — a defence reaction is played in the reaction step at
-       instant speed; it is never DECLARED as a defending card. */
+    /* CR 8.1.3a — a defence reaction "can only be played/activated by a
+       player who controls a hero as an attack-target during the Reaction
+       Step", so it is never DECLARED as a defending card. Cite the
+       SUBRULE: `tools/crindex.js` scores each rule by whether a drill
+       cites it too, and the drill that drives this over all fifteen of
+       the pool's defence reactions is filed under 8.1.3a. */
     if(PR.isDR(c)) return c.name + " is a defence reaction — play it in the reaction step";
     return null;
   }
@@ -1542,11 +1546,13 @@ function doEndTurn(g, seat){
   let n = say({...g}, "— End phase —");
   n = P.toPhase(n, "end");
 
-  /* THE BEGINNING OF THE END PHASE, BEFORE (a) — v3.07. Three printed
-     schedules say "at the beginning of your end phase" and the table ran
-     none of them; the trainer has had `beginEndPhase` since v2.75 and it
-     is one of the last places where one board knew a rule the other did
-     not.
+  /* CR 4.4.2 — THE BEGINNING OF THE END PHASE, BEFORE (a).
+
+     `E.beginEndPhase` is the whole event, pure and seat-relative, and it
+     is ONE description for both boards. It has to be: v3.07 landed three
+     of these schedules here and the trainer still held three more inline
+     in `endTurn` against `you(n)` — rust, the idle counter wipe and
+     intimidate's return — so the table ran none of them until v3.17.
 
      It is genuinely earlier than (a)-(f) rather than a convenient slot:
      Inertia wipes the hand and arsenal, so it has to land before (b)
@@ -1555,32 +1561,16 @@ function doEndTurn(g, seat){
      putting it in the wrong place would never have been noticed.
 
      CR 4.1.8a orders simultaneous triggers by the turn-player and this
-     reducer does not model that choice; the order here matches the
-     trainer's so the two boards cannot disagree about a board Inertia
-     also sits on. */
+     reducer does not model that choice. The order therefore lives in the
+     shared body, where two callers cannot drift out of agreement about
+     it — which is what "the same order on both boards" used to mean and
+     could not enforce. */
   {
-    const ri = E.resolveInertia(n, seat);
-    if(ri.tokens){
-      n = say(ri.game, "Inertia seizes " + at(ri.game, seat).name + " — "
-        + (ri.tokens > 1 ? ri.tokens + " tokens shatter" : "the token shatters") + ", and "
-        + (ri.wiped ? ri.wiped + " card" + (ri.wiped > 1 ? "s" : "") + " from hand and arsenal go to the bottom of the deck"
-                    : "there was nothing left to sweep away") + ".");
-    }
-    /* Frostbite's OTHER expiry — the play half is in `execute`; this
-       clears a Frostbite the frozen seat never spent anything into, so
-       the tax cannot follow them into the next turn. */
-    const fb = E.thawFrost(n, seat);
-    n = fb.game;
-    if(fb.thawed)
-      n = say(n, "The " + (fb.thawed > 1 ? fb.thawed + " Frostbites" : "Frostbite")
-        + " thaw" + (fb.thawed > 1 ? "" : "s") + " unspent at the end of " + at(n, seat).name + "'s turn.");
-    const sw = E.sweepArena(n, seat, "end");
-    if(sw.msgs.length){
-      n = sw.game;
-      for(const m of sw.msgs) n = say(n, m);
-      if(sw.ops.length)
-        n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, sw.ops, sw.fired.join(", ")));
-    }
+    const be = E.beginEndPhase(n, seat);
+    n = be.game;
+    for(const m of be.msgs) n = say(n, m);
+    if(be.ops.length)
+      n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, be.ops, be.fired.join(", ")));
   }
 
   /* (a) all allies' life resets to base.

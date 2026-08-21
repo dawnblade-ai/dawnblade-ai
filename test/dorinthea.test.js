@@ -659,9 +659,37 @@ test("the schedule is read off each piece's OWN text, never a card name", {skip}
     "only the piece whose printed text carries the schedule loses anything");
 });
 
-test("the trainer drives the shared decision rather than its own copy", {skip}, () => {
-  assert.match(HTML, /idleCounterWipes\(you\(n\)\.gear, you\(n\)\.counters, you\(n\)\.hist\.wpnHits\)/,
-    "one copy of the rule, called with this turn's tally");
+test("the REAL Dawnblade loses its counters through the shared end-phase body", {skip}, () => {
+  /* REPOINTED AND UPGRADED IN v3.17. This used to grep `index.html` for the
+     trainer's own call — which was the right guard while the call lived
+     there, and it was hiding the bigger thing: the call lived ONLY there.
+     Seat 0, one board. At the table the blade kept counters it prints to
+     lose, on every idle turn, forever.
+     So now it DRIVES the shared body with Dorinthea's actual iron. A grep
+     is satisfied by an identifier surviving; this is satisfied by the
+     counters being gone. */
+  const b = buildOf("dorinthea");
+  const blade = bladeOf(b);
+  const g = H.state([], [], {});
+  g.sides[0].gear = b.gear;
+  g.sides[0].counters = {[blade.uid]: {pow: 2}};
+  g.sides[0].hist = {wpnHits: {}};
+
+  const out = E.beginEndPhase(g, 0);
+  assert.equal(out.game.sides[0].counters[blade.uid].pow, 0,
+    "a turn the blade never landed a blow must cost it the counters");
+
+  /* and a turn it DID connect keeps them — without this the drill passes
+     just as well against a body that wipes unconditionally */
+  const g2 = H.state([], [], {});
+  g2.sides[0].gear = b.gear;
+  g2.sides[0].counters = {[blade.uid]: {pow: 2}};
+  g2.sides[0].hist = {wpnHits: {[blade.uid]: 1}};
+  assert.equal(E.beginEndPhase(g2, 0).game.sides[0].counters[blade.uid].pow, 2,
+    "RULING (user, 2026-08-09): the counters PERSIST across turns");
+
+  assert.ok(!/idleCounterWipes\(/.test(HTML.replace(/\/\*[\s\S]*?\*\//g, "")),
+    "and the trainer must hold no copy of the decision of its own");
 });
 
 /* ============================================================

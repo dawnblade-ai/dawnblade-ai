@@ -295,23 +295,39 @@ test("thawFrost returns {game, thawed}, not a bare game", {skip}, () => {
   assert.ok(!out.sides, "and is NOT the game itself, which is how that bug read as working");
 });
 
-test("the trainer's SHARED end phase actually calls it", {skip}, () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  /* Strip comments first — this file is full of prose about Frostbite and
-     a grep is satisfied by a comment in both directions. */
-  const code = html.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  const m = code.match(/function endPhaseCF\(s, si\)\{[\s\S]{0,1200}/);
-  assert.ok(m, "endPhaseCF moved — re-anchor this drill");
-  assert.match(m[0], /DawnEffects\.thawFrost\(n, si\)/,
-    "the thaw must sit in endPhaseCF, which BOTH seats reach (yours via afterArsenal, " +
-    "seat 1's via foeEnd). Two copies of one expiry is the shape that let clash fire on " +
-    "the wrong trigger for five versions.");
-  assert.match(m[0], /n = _fb\.game;/,
-    "and the result must be taken UNCONDITIONALLY — a gated call is a gate a sabotage " +
-    "can switch off while leaving this identifier sitting in the source");
-  /* Both seats reach it: pin the two callers rather than trusting the prose. */
-  assert.match(code, /endPhaseCF\(s, 0\)/, "your end phase");
-  assert.match(code, /endPhaseCF\(n, 1\)/, "seat 1's end phase");
+test("the end-phase thaw is DRIVEN by the shared beginning-of-end-phase body", {skip}, () => {
+  /* REPOINTED IN v3.17, deliberately. This drill used to pin the call
+     inside `endPhaseCF` and it was right to: two copies of one expiry is
+     the shape that let clash fire on the wrong trigger for five versions.
+     The expiry moved one step earlier, into `E.beginEndPhase`, because
+     Frostbite prints "at the beginning of your end phase" and the arena
+     sweep at the beginning was taking the token before the thaw could
+     name it.
+
+     And it is DRIVEN now rather than grepped. A source scan for
+     `thawFrost` is satisfied by the identifier surviving, which says
+     nothing about whether the token actually leaves the board. */
+  const g = H.state([], [], {});
+  const frost = {name:"Frostbite", tt:"Elemental Token - Aura",
+                 tx:"Cards and abilities cost you an additional {r} to play or activate.\n\nWhen you play a card or activate an ability, destroy this.\n\nAt the beginning of your end phase, destroy this.",
+                 pitch:0, uid:"fb1", kw:[]};
+  g.sides[0].board = [{card:frost, kind:"token", spent:false, uid:"fb1", sd:"end"}];
+
+  const out = E.beginEndPhase(g, 0);
+  assert.equal((out.game.sides[0].board||[]).filter(P.isFrostbite).length, 0,
+    "the Frostbite must be gone from the board at the beginning of the end phase");
+  assert.ok(out.msgs.some(m => /Frostbite/.test(m) && /thaw/i.test(m)),
+    "and the SPECIFIC line must be the one that speaks — the generic sweep line " +
+    "('is destroyed at the beginning of the end phase') tells the player a token " +
+    "left without telling them what it cost. Order the thaw before the sweep.");
+
+  /* both seats reach it */
+  const g2 = H.state([], [], {});
+  g2.sides[1].board = [{card:{...frost, uid:"fb2"}, kind:"token", spent:false, uid:"fb2", sd:"end"}];
+  assert.equal((E.beginEndPhase(g2, 1).game.sides[1].board||[]).filter(P.isFrostbite).length, 0,
+    "seat 1's Frostbite thaws on seat 1's end phase");
+  assert.equal((E.beginEndPhase(g2, 0).game.sides[1].board||[]).filter(P.isFrostbite).length, 1,
+    "and NOT on seat 0's — the expiry is the controller's end phase, not any end phase");
 });
 
 test("the hero ability mints a real token, not a counter", {skip}, () => {

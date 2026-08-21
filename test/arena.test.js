@@ -224,30 +224,43 @@ test("the trainer's start phase reaches the sweep, with the TURN schedule", () =
     "and two blocks sweeping it is how the table came to have neither");
 });
 
-/* SLICED SOURCE, AND ONLY BECAUSE THERE IS NO OTHER WAY. `beginEndPhase`
-   is a closure inside `Battle`, so no drill can call it — the same
-   reasoning `mirror.test.js` records. The rule ITSELF is drilled by
-   driving `sweepArena` above; what this pins is that the trainer's end
-   phase actually reaches it, with the right `when`. Passing "turn" here
-   would sweep the wrong set a whole phase early. */
-test("the trainer's end phase reaches the sweep, with the END schedule", () => {
+/* REPOINTED IN v3.17. These two used to scan each board for its own calls
+   to `resolveInertia` / `thawFrost` / `sweepArena` — which is what you write
+   when the event is assembled twice, and it passes happily while the two
+   assemblies drift. They did drift: three MORE beginning-of-end-phase rules
+   were sitting inline in the trainer and at the table there were none.
+   `effects.beginEndPhase` is the whole event now, so what these pin is that
+   each board DELEGATES and restates nothing. The event's own content and
+   its order are drilled in `test/endphase.test.js`. */
+test("the trainer's end phase delegates the whole event, restating none of it", () => {
   const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
   const start = html.indexOf("  function beginEndPhase(s, si){");
   assert.ok(start > 0, "beginEndPhase moved — re-anchor this drill");
   const stop = html.indexOf("\n  function ", start + 10);
   assert.ok(stop > start, "beginEndPhase's end anchor moved");
   const body = html.slice(start, stop).replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(body, /DawnEffects\.sweepArena\(n,\s*si,\s*"end"\)/,
-    'the beginning of the end phase must sweep the "end" schedule for THIS seat');
-  assert.match(body, /DawnEffects\.resolveInertia/, "beside Inertia, which shares the moment");
+  assert.match(body, /DawnEffects\.beginEndPhase\(s, si\)/,
+    "the trainer's half is to log the messages and run the ops, nothing more");
+  assert.ok(!/DawnEffects\.(sweepArena|resolveInertia|thawFrost)\(/.test(body),
+    "a board reaching past the shared body for one step of the event is that " +
+    "board growing its own copy of the order again");
+  assert.match(body, /runOps\(n, r\.ops/,
+    "the ops come back rather than being run inside — an op is actor-relative " +
+    "and the two boards reach runOps differently");
 });
 
-test("judge runs the beginning-of-end-phase schedules it never had", {skip}, () => {
+test("the shared body still runs every schedule the table never had", {skip}, () => {
+  const eff = fs.readFileSync(path.join(ROOT, "engine", "effects.js"), "utf8");
+  const i = eff.indexOf("function beginEndPhase(game, seat){");
+  assert.ok(i > 0, "beginEndPhase moved — re-anchor this drill");
+  const body = eff.slice(i, eff.indexOf("\nfunction ", i + 10)).replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(body.length > 400, "the slice must actually contain the body");
+  /* All three were pure and shared-shaped in effects.js and judge.js called
+     none of them, so Inertia never wiped a hand and a Frostbite the frozen
+     seat never spent followed them into the next turn. */
+  for(const fn of ["resolveInertia", "thawFrost", "sweepArena"])
+    assert.ok(new RegExp(fn + "\\(").test(body), fn + " must run at the table too");
   const judge = fs.readFileSync(path.join(ROOT, "engine", "judge.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  /* All three were pure and shared-shaped in effects.js and judge.js
-     called none of them, so Inertia never wiped a hand and a Frostbite
-     the frozen seat never spent followed them into the next turn. */
-  for(const fn of ["resolveInertia", "thawFrost", "sweepArena"])
-    assert.ok(new RegExp("E\\." + fn + "\\(").test(judge), fn + " must run at the table too");
+  assert.ok(/E\.beginEndPhase\(n, seat\)/.test(judge), "and judge must call the body");
 });

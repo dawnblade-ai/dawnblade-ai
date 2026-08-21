@@ -700,9 +700,16 @@ function classifyClause(raw){
   /* spellvoid destroys itself to stop arcane; the dummy throws only fists */
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
     return NOOP("stops arcane damage — the dummy throws only fists");
-  /* rust destruction already runs in the end phase */
-  if(/^at the beginning of your end phase, if this has \d+ or more rust counters(?: on it)?, destroy it$/.test(c))
-    return NOOP("rust — the end phase already destroys it at 3 counters");
+  /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
+     This was a NOOP reading "the end phase already destroys it at 3
+     counters" — a reason that named a payload living in ONE board's end
+     phase (index.html's, seat 0's), which is exactly the shape v3.16 found
+     under crush. At the table Talishar accrued counters forever and never
+     shattered: a weapon that prints its own death swinging on past it.
+     `effects.beginEndPhase` fires it now, for either seat, off THIS
+     number rather than a literal 3. */
+  if(m=c.match(/^at the beginning of your end phase, if this has (\d+) or more rust counters(?: on it)?, destroy it$/))
+    return R([["rustDestroy", +m[1]]]);
   /* the dummy holds a hand now, so revealing it is a real thing to do */
   if(/^target opponent reveals their hand$/.test(c)) return R([["foeReveal",1]]);
   /* a self-imposed cost tax for the rest of the turn */
@@ -1554,6 +1561,10 @@ function fxParse(card){
          built. `linkPayload` reads `fx.crush` once the damage is struck. */
       if(op[0]==="crushRider"){ fx.crush = {n:op[1], ops:op[2]}; return; }
       if(op[0]==="wipePowIfIdle"){ fx.wipePowIfIdle = true; return; }
+      /* A SCHEDULE, NOT AN OP. Left in `fx.ops` it would shatter the piece
+         the moment it was equipped; `beginEndPhase` reads `fx.rustDestroy`
+         at the seat's end phase, which is what the card prints. */
+      if(op[0]==="rustDestroy"){ fx.rustDestroy = op[1]; return; }
       if(op[0]==="ga" && !r.cond && !r.onHit){ fx.ga=true; if(op[2]) fx.gaQ = op[2]; return; }
       /* "It gains +1{p} until end of turn" on a card that also puts an arrow
          face up into the arsenal — "it" is the ARROW, not this equipment.
@@ -2500,13 +2511,27 @@ function idleCounterWipes(gear, counters, hits){
     .map(gr => gr.uid);
 }
 
+/* WHICH PIECES HAVE RUSTED THROUGH (v3.17) — the same shape, and here for
+   the same reason: the threshold is the CARD'S printed number, so a piece
+   that prints 4 must not shatter at 3 because a board's inline filter said
+   so. Talishar is the pool's only ruster today; the next one is data. */
+function rustedThrough(gear, counters){
+  return (gear||[])
+    .filter(gr => {
+      if(!gr || gr.destroyed) return false;
+      const n = fxParse(gr).rustDestroy;
+      return n != null && (((counters||{})[gr.uid]||{}).rust || 0) >= n;
+    })
+    .map(gr => gr.uid);
+}
+
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
-        idleCounterWipes,
+        idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,

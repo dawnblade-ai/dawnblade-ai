@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.16
+**Current version:** v3.17
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1160 drills**.
+This is `node --test "test/*.test.js"` — currently **1177 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -925,6 +925,69 @@ split `linkPumps`/`linkPayload` already keep.
 **So the rule for any new card text that touches the attack card:** ask what
 holds it on each board, or hand the answer in from the caller. Never read
 one board's representation from inside the shared semantics.
+
+### THE EVENT IS ONE BODY, OR IT IS NOT AN EVENT (v3.17)
+
+v3.01 said a schedule is written per board and told you to ask which one
+runs it. That is necessary and it is not sufficient, because **asking is
+a thing a person does once**. `beginEndPhase` existed in the trainer and
+held Inertia and the arena sweep; three MORE beginning-of-end-phase
+events sat OUTSIDE it, inline in `endTurn`, written against `you(n)`.
+Seat 0, one board, and the table had none of them:
+
+| event | card | the table |
+|---|---|---|
+| rust destruction | Talishar, the Lost Prince | swung on past the death it prints, forever |
+| the idle counter wipe | Dawnblade | kept the +{p} counters it prints to lose |
+| intimidate's return | any intimidate | **a permanent theft** — v2.10's bug, back |
+
+All three fail STRONGER than printed. **`effects.beginEndPhase(game, seat)`
+is the whole event now** — pure, seat-relative, six steps in a fixed
+order, returning `{game, msgs, ops, fired}`. Both boards call it and
+restate nothing, and a drill fails either board for reaching past it to
+one step. A comment saying "the order here matches the trainer's" is not
+a mechanism; a shared body is.
+
+**THE THRESHOLD IS THE CARD'S NUMBER.** The rust clause was a `noop`
+reading *"the end phase already destroys it at 3 counters"* — a reason
+naming a payload in one board's inline filter, which is v3.16's shape one
+level up. It is `fx.rustDestroy` off the printed line now, read by
+`parser.rustedThrough` beside `idleCounterWipes`.
+
+**TWO READERS OF ONE RULE, AND THE ORDER DECIDES WHICH SPEAKS.** Frostbite
+prints "at the beginning of your end phase, destroy this", so the token is
+minted with `sd:"end"` and `sweepArena` takes it — while `thawFrost` also
+takes it. judge thawed first and got the specific line; the trainer swept
+first and told the player a token *"is destroyed"* without saying what it
+cost. State right, lesson silent. The specific reader goes first.
+
+### `tools/crindex.js` — WHICH CR RULES DOES A DRILL ACTUALLY GUARD? (v3.17)
+
+```
+npm run crindex          # ranked report + CR-INDEX.md
+node tools/crindex.js --check    # non-zero if a rule regressed to UNGUARDED
+```
+
+A rules revision does not arrive as a diff against this source; it arrives
+as a renumbered, reworded CR. The cost of absorbing one is exactly *how
+many places did we encode a rule where nothing would turn red*. So the
+tool indexes every citation across `engine/`, `index.html`, the drills and
+the docs, and scores each rule **guarded** / **UNGUARDED** / drill-only /
+prose. 63 distinct rules, 866 citations, **50 guarded, 3 UNGUARDED** (all
+section pointers). The gloss is HARVESTED from verbatim CR quotes already
+in the source — nothing in it is restated from memory.
+
+**AN `UNGUARDED` VERDICT IS A LEAD, NOT A FINDING**, and the first run
+proved both directions. `CR 8.1.3` was cited where the rule is `8.1.3a`,
+whose behaviour is driven over all fifteen of the pool's defence reactions
+— guarded, loosely cited. `CR 4.1.8a` was the opposite, and reading its
+two sites is what found v3.17. **Read the site, then ask whether a drill
+drives the BEHAVIOUR under this rule's number or a neighbouring one.**
+
+**A RANGE IS A RUN.** `CR 4.3.1-4.3.3` cites three rules; an alternation of
+only `,` `/` `&` reads one and drops the far end of every range in the
+source silently — a scan undercounting exactly the rules that travel in
+company.
 
 ### A SCHEDULE IS WRITTEN PER BOARD — ask which one runs it (v3.01)
 

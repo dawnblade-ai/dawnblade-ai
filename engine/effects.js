@@ -2607,6 +2607,138 @@ function thawFreeze(game, seat){
   return {game: Object.assign({}, game, {sides}), thawed: names};
 }
 
+/* ---- CR 4.4.2 — THE BEGINNING OF THE END PHASE, FOR ONE SEAT (v3.17) --
+   ONE description of the event, called by both boards, seat-relative.
+
+   It was not one description, and that cost three rules. `beginEndPhase`
+   existed in the trainer and held Inertia and the arena sweep; three MORE
+   beginning-of-end-phase events sat OUTSIDE it, inline in `endTurn`, each
+   written against `you(n)` — so they ran for seat 0, on one board, and the
+   table had none of them:
+
+     rust destruction     Talishar prints its own death at 3 counters and
+                          swung on past it forever
+     the idle wipe        Dawnblade keeps the +{p} counters it prints to
+                          lose on a turn it never connects
+     intimidate's return  a card banished face-down came back at seat 0's
+                          end phase or never — at the table, never, which
+                          is a permanent theft and is v2.10's bug exactly
+
+   All three fail STRONGER than printed, which is the direction that steals
+   games, and all three read `tier: full`: two are consumed by ops and the
+   third was a NOOP whose stated reason named the trainer's end phase.
+
+   The ORDER is the one CR 4.1.8a hands to the turn-player and this engine
+   does not model that choice — so it is fixed here, in one place, rather
+   than agreed twice by two callers who cannot see each other. Inertia
+   leads because it is itself an aura and the sweep would otherwise race it
+   for the same board entry.
+
+   Returns `{game, msgs, ops, fired}` — the same contract `sweepArena`
+   already keeps, and for its reason: an op is actor-relative and the two
+   boards reach `runOps` differently, so the caller runs them. */
+function beginEndPhase(game, seat){
+  let n = game;
+  const msgs = [], ops = [], fired = [];
+  const nameOf = i => ((n.sides||[])[i]||{}).name || "seat " + i;
+
+  /* (1) INERTIA — destroy the token, then hand and arsenal to the bottom. */
+  {
+    const r = resolveInertia(n, seat);
+    n = r.game;
+    if(r.tokens)
+      msgs.push("Inertia seizes " + nameOf(seat) + " — "
+        + (r.tokens > 1 ? r.tokens + " tokens shatter" : "the token shatters") + ", and "
+        + (r.wiped ? r.wiped + " card" + (r.wiped > 1 ? "s" : "") + " from hand and arsenal go to the bottom of the deck"
+                   : "there was nothing left to sweep away") + ".");
+  }
+
+  /* (2) FROSTBITE THAWS. The play-half of the expiry is in `execute`;
+     this clears a Frostbite the frozen seat never spent anything into, so
+     the tax cannot follow them into the next turn.
+
+     IT RUNS BEFORE THE SWEEP, AND THE ORDER IS THE POINT. Frostbite's
+     printed line IS "at the beginning of your end phase, destroy this",
+     so the token is minted with `sd:"end"` and step (5) would take it
+     too. Two readers, one rule: the specific one goes first so the feed
+     names the token and says what it cost, and the generic sweep is the
+     backstop that finds nothing left. Reverse them and the state stays
+     right while the lesson goes quiet — which is what the trainer did
+     until v3.17, because its sweep ran here and its thaw ran in (c)-(f). */
+  {
+    const fb = thawFrost(n, seat);
+    n = fb.game;
+    if(fb.thawed)
+      msgs.push("The " + (fb.thawed > 1 ? fb.thawed + " Frostbites" : "Frostbite")
+        + " thaw" + (fb.thawed > 1 ? "" : "s") + " unspent at the end of " + nameOf(seat) + "'s turn.");
+  }
+
+  /* (3) RUST — off each piece's own printed threshold. */
+  {
+    const sd = (n.sides||[])[seat] || {};
+    const out = P.rustedThrough(sd.gear, sd.counters);
+    if(out.length){
+      const sides = n.sides.slice(), me = Object.assign({}, sides[seat]);
+      me.gear = (me.gear||[]).map(gr => out.indexOf(gr.uid) >= 0 ? Object.assign({}, gr, {destroyed:true}) : gr);
+      sides[seat] = me; n = Object.assign({}, n, {sides});
+      for(const uid of out){
+        const gr = (me.gear||[]).find(x => x.uid === uid) || {};
+        msgs.push(gr.name + " rusts through — "
+          + ((sd.counters||{})[uid]||{}).rust + " rust counters, it shatters.");
+      }
+    }
+  }
+
+  /* (4) THE IDLE WIPE — "if this hasn't hit this turn, remove all +{p}
+     counters from it". `hist.wpnHits` is THIS turn's tally and is still
+     the current turn's here: the (c)-(f) block is what replaces `hist`,
+     and it has not run yet. */
+  {
+    const sd = (n.sides||[])[seat] || {};
+    const out = P.idleCounterWipes(sd.gear, sd.counters, (sd.hist||{}).wpnHits);
+    if(out.length){
+      const sides = n.sides.slice(), me = Object.assign({}, sides[seat]);
+      const ctr = Object.assign({}, me.counters);
+      for(const uid of out){
+        const gr = (me.gear||[]).find(x => x.uid === uid) || {};
+        const lost = (ctr[uid]||{}).pow || 0;
+        ctr[uid] = Object.assign({}, ctr[uid], {pow:0});
+        msgs.push(gr.name + " never landed a blow this turn — its +" + lost + "{p} in counters falls away.");
+      }
+      me.counters = ctr; sides[seat] = me; n = Object.assign({}, n, {sides});
+    }
+  }
+
+  /* (5) INTIMIDATE RETURNS. An attack is declared by the turn-player, so
+     the only pile that can be holding anything at this seat's end phase is
+     the OTHER seat's — but both are swept, because a card stranded
+     face-down in a zone nothing empties is a card the census keeps finding
+     and the player never gets back. */
+  for(const i of [1 - seat, seat]){
+    const sd = (n.sides||[])[i] || {};
+    const held = sd.intimidated || [];
+    if(!held.length) continue;
+    const sides = n.sides.slice(), me = Object.assign({}, sides[i]);
+    me.hand = [...(me.hand||[]), ...held];
+    me.intimidated = [];
+    sides[i] = me; n = Object.assign({}, n, {sides});
+    msgs.push(nameOf(i) + " takes back " + held.length + " intimidated card"
+      + (held.length > 1 ? "s" : "") + " — the tax expires.");
+  }
+
+  /* (6) THE ARENA CLOCK — "at the beginning of your end phase, destroy
+     this", and whatever rides after the destroy in printed order. */
+  {
+    const sw = sweepArena(n, seat, "end");
+    n = sw.game;
+    for(const m of sw.msgs) msgs.push(m);
+    for(const o of sw.ops) ops.push(o);
+    for(const f of sw.fired) fired.push(f);
+  }
+
+  return {game: n, msgs, ops, fired};
+}
+
 function thawFrost(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -2696,6 +2828,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena,
+return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

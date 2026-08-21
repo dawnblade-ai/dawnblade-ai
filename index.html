@@ -754,7 +754,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.16"; /* v3.16 — crush runs the CARD'S OWN rider: twelve pool cards printed twelve different riders and every one of them ran Boulder Drop's, because a prefix-anchored noop described one card and claimed the family while the trigger site pushed a card from hand to deck for anything carrying the keyword — not unbuilt, SUBSTITUTED, and all twelve read tier full. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.17"; /* v3.17 — one description of the beginning of the end phase: three CR 4.4.2 events sat inline in the trainer against seat 0 and the table ran none of them, so a rusting weapon never shattered, a blade kept counters it prints to lose, and a card taken by intimidate was a permanent theft rather than a one-turn tax. Found by tools/crindex.js, which ranks every CR rule this project cites by whether a drill cites it too. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1415,7 +1415,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
     isDR = DawnParser.isDR, isRx = DawnParser.isRx, rxAllowed = DawnParser.rxAllowed,
     playableFromZone = DawnParser.playableFromZone,
-    rxPump = DawnParser.rxPump, idleCounterWipes = DawnParser.idleCounterWipes,
+    rxPump = DawnParser.rxPump,
     isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
@@ -3349,36 +3349,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(s.over||s.mode!=="act") return s;
     let n = L({...s}, "— End phase (CR 4.4). No priority. —");
 
-    /* CR 4.4.2: the beginning-of-end-phase event, before the procedure.
-       RULING: intimidate returns the banished card here — a one-turn tempo
-       tax, not a permanent loss. */
-    if((opp(n).intimidated||[]).length){
-      oppMut(n).hand = [...opp(n).hand, ...opp(n).intimidated];
-      n = L(n, `The dummy takes back ${opp(n).intimidated.length} intimidated card${opp(n).intimidated.length>1?"s":""} — the tax expires.`);
-      oppMut(n).intimidated = [];
-    }
-    const rusted = you(n).gear.filter(gr=>((you(n).counters[gr.uid]||{}).rust||0)>=3 && !gr.destroyed);
-    if(rusted.length){ youMut(n).gear = you(n).gear.map(gr=> rusted.includes(gr) ? {...gr,destroyed:true} : gr); rusted.forEach(gr=> { n=L(n,`${gr.name} rusts through — 3 rust counters, it shatters.`); }); }
-    /* "At the beginning of your end phase, if this hasn't hit this turn,
-       remove all +1{p} counters from it." Also a CR 4.4.2 beginning-of-end-
-       phase event, so it belongs beside the rust check rather than in the
-       ordered (a)-(f) procedure below.
-
-       RULING (user, 2026-08-09): the counters PERSIST across turns — this
-       clause is the only thing that removes them, which is what makes a
-       turn where the blade never connects genuinely cost something. The
-       schedule is read off each piece's OWN printed text (fx.wipePowIfIdle)
-       rather than from a list of weapon names.
-
-       `hist.wpnHits` is this turn's tally and is still the current turn's
-       here: newTurn is what replaces `hist`, and it has not run yet. */
-    for(const uid of idleCounterWipes(you(n).gear, you(n).counters, you(n).hist.wpnHits)){
-      const gr = you(n).gear.find(x=>x.uid===uid);
-      const cur = you(n).counters[uid]||{}; const lost = cur.pow||0;
-      youMut(n).counters = {...you(n).counters, [uid]:{...cur, pow:0}};
-      n = L(n, `${gr.name} never landed a blow this turn — its +${lost}{p} in counters falls away.`);
-    }
-
     /* Beginning-of-end-phase triggers, ahead of (a). */
     n = beginEndPhase(n, 0);
 
@@ -3395,39 +3365,29 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     else n = L(n, "(b) No cards in hand — nothing to arsenal.");
     return afterArsenal(n);
   });
-  /* THE BEGINNING OF THE END PHASE, before (a) — one description, called by
-     both seats (v2.75). Inertia prints "At the BEGINNING of your end phase,
-     destroy Inertia, then put all cards from your hand and arsenal on the
-     bottom of your deck", and that is genuinely earlier than the (c)-(f)
-     block `endPhaseCF` owns: it has to land before (b) the arsenal set, or
-     the seat is invited to choose an arsenal card that is about to be swept
-     into the deck anyway. Same final state either way — which is exactly
-     why it would have been easy to put in the wrong place and never notice.
+  /* CR 4.4.2 — THE BEGINNING OF THE END PHASE, before (a). The EVENT lives
+     in `DawnEffects.beginEndPhase`, pure and seat-relative, so a drill can
+     drive it instead of grepping for it and the table runs the same one.
+     This is the trainer's half: log the messages, run the ops.
 
-     The rule itself is `DawnEffects.resolveInertia`, pure, so a drill can
-     drive it instead of grepping for it. */
+     It is genuinely earlier than the (c)-(f) block `endPhaseCF` owns —
+     Inertia sweeps hand and arsenal, so it has to land before (b) invites
+     this seat to arsenal a card about to go to the bottom of the deck
+     anyway. Same final state either way, which is exactly why putting it
+     in the wrong place would never have been noticed.
+
+     THREE MORE EVENTS USED TO SIT OUTSIDE IT (v3.17), inline in `endTurn`
+     and written against `you(n)`: rust destruction, the idle counter wipe
+     and intimidate's return. Seat 0, one board. Anything added here goes
+     in the shared body, not beside the call. */
   function beginEndPhase(s, si){
-    const r = DawnEffects.resolveInertia(s, si);
+    const r = DawnEffects.beginEndPhase(s, si);
     let n = r.game;
-    if(r.tokens)
-      n = L(n, `Inertia seizes ${n.sides[si].name} — ${r.tokens>1?`${r.tokens} tokens shatter`:"the token shatters"}, and `
-             + `${r.wiped ? `${r.wiped} card${r.wiped>1?"s":""} from hand and arsenal go to the bottom of the deck` : "there was nothing left to sweep away"}.`);
-    /* "AT THE BEGINNING OF YOUR END PHASE, DESTROY THIS" — the other half
-       of the arena's clock, and until v3.07 it ran on NEITHER board.
-       Concealed Object is an Item whose tap pumps an attack; never
-       destroyed, step (d) untaps it and it pays out again every turn,
-       forever.
-
-       AFTER Inertia, deliberately. Both print "at the beginning of your
-       end phase", so CR 4.1.8a says the turn-player orders them and this
-       reducer does not model that choice — but Inertia is itself an aura,
-       and running it first means one description of its destruction
-       instead of two racing for the same board entry. */
-    { const sw = DawnEffects.sweepArena(n, si, "end");
-      if(sw.msgs.length){ n = sw.game; sw.msgs.forEach(m => { n = L(n, m); });
-        if(sw.ops.length) n = _EFX.runOps(n, sw.ops, sw.fired.join(", ")); } }
+    r.msgs.forEach(m => { n = L(n, m); });
+    if(r.ops.length) n = _EFX.runOps(n, r.ops, r.fired.join(", "));
     return n;
   }
+
   /* CR 4.4.3a. Runs over BOTH seats: an ally the opponent controls heals on
      their controller's schedule too, and building it one-sided now would be
      a bug to find later rather than a line to write now. */
@@ -3479,34 +3439,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     let n = {...s, actor:si};
     const _me = () => act(n).name, _you = () => /^you$/i.test(act(n).name||"");
 
-    /* FROSTBITE'S OTHER EXPIRY (v2.74) — "At the beginning of your end
-       phase OR when you play a card or activate an ability, destroy
-       Frostbite." The play half is in effects.js `execute`; this is the
-       half that clears a Frostbite the frozen player simply never spent
-       anything into, so the tax cannot follow them into next turn.
-
-       IT LIVES IN THE SHARED BODY, ON PURPOSE. Both seats reach
-       `endPhaseCF` (yours through `afterArsenal`, seat 1's through
-       `foeEnd`) and it already takes the seat as an argument, so there is
-       one description of the expiry rather than two that can drift — the
-       shape that let clash fire on the wrong trigger for five versions.
-
-       It is a step or two later than "the beginning", which is honest
-       rather than exact: (a) ally life and (b) the arsenal set are all
-       that run ahead of it, and neither plays a card or pays a cost, so
-       nothing in the pool can tell the difference.
-
-       The rule itself lives in `DawnEffects.thawFrost`, a pure function,
-       so a drill can DRIVE it instead of grepping for it — this drill's
-       first version scanned the source and stayed green when the gate was
-       sabotaged, which is rule 4b exactly. The assignment below is
-       UNCONDITIONAL for the same reason: there is no gate here to switch
-       off, only a call to delete, and deleting it takes the identifier
-       the call-site check looks for with it. */
-    const _fb = DawnEffects.thawFrost(n, si);
-    n = _fb.game;
-    if(_fb.thawed)
-      n = L(n, `The ${_fb.thawed>1?`${_fb.thawed} Frostbites`:"Frostbite"} thaw${_fb.thawed>1?"":"s"} unspent at the end of ${_you()?"your":_me()+"'s"} turn.`);
+    /* FROSTBITE'S END-PHASE EXPIRY MOVED TO `beginEndPhase` (v3.17), and
+       the reason is worth keeping. It sat here, a step or two after "the
+       beginning", with a comment arguing that (a) ally life and (b) the
+       arsenal set are all that run ahead of it and neither plays a card,
+       so nothing in the pool can tell the difference. That was true of
+       the STATE and false of the FEED: Frostbite's printed line is "at
+       the beginning of your end phase, destroy this", so the token is
+       minted with `sd:"end"` and the arena sweep — which DOES run at the
+       beginning — took it first. The thaw then found nothing and its line
+       never printed, so the player was told a token "is destroyed" rather
+       than what it cost them. Two readers of one rule, and the order
+       decided which one spoke.
+       Both now sit in `DawnEffects.beginEndPhase`, in that order. */
 
     /* (c) CR 4.4.3c — pitch zones to the BOTTOM of their owners' decks.
        Both seats: it says "their pitch zone", not the turn-player's. */

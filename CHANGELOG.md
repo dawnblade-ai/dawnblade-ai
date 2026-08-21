@@ -9,6 +9,112 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.17 — one description of the beginning of the end phase
+
+**Found by a tool built to answer a different question.** James White is
+teasing "FaB 3.0", and `CLAUDE.md`'s claim that this architecture absorbs a
+rules revision — *"a rules change is a parser change plus a drill, not a
+rewrite"* — is testable rather than reassuring. `tools/crindex.js` tests it:
+it indexes every Comprehensive Rules citation in the engine, the trainer and
+the drills, then asks one question per rule that is **not** "is it cited":
+
+> a rule cited in CODE and in NO DRILL is a rule this project believes but
+> does not check. Change it upstream and every test stays green while the
+> game plays the old game.
+
+**63 distinct rules, 866 citations, 50 guarded.** And `CR 4.1.8a` came back
+UNGUARDED — cited on *both* boards, in a comment claiming they deliberately
+run their end-phase triggers in the **same order** so they cannot disagree.
+A claim about behaviour, pinned by nothing.
+
+Reading the two sites to check it found something worse than a disagreement
+about order.
+
+### Three CR 4.4.2 events that were not in the shared body at all
+
+`beginEndPhase` existed in the trainer and held Inertia and the arena sweep.
+Three more beginning-of-end-phase events sat **outside** it, inline in
+`endTurn`, written against `you(n)` — so they ran for seat 0, on one board,
+and the table had none of them:
+
+| event | card | at the table | on the trainer |
+|---|---|---|---|
+| rust destruction | Talishar, the Lost Prince | **absent** — it swung on past the death it prints, forever | seat 0 only, against a literal `3` |
+| the idle counter wipe | Dawnblade | **absent** — the blade kept the +{p} counters it prints to lose | seat 0 only |
+| intimidate's return | any intimidate | **absent** — a permanent theft | seat 0 only |
+
+All three fail **stronger than printed**, the direction that steals games.
+Intimidate is the sharpest: v2.10 fixed exactly this ("the first pass
+banished it forever") and it came back on the board nobody had checked.
+
+**None was visible to any card-level tool.** Two are consumed by ops; the
+third was a `noop` whose stated reason — *"the end phase already destroys it
+at 3 counters"* — named a payload living in one board's inline filter. That
+is v3.16's shape one level up, and the audit reads Talishar `tier: full`
+before and after this fix. Coverage is byte-identical apart from its
+timestamp.
+
+### What changed
+
+- **`effects.beginEndPhase(game, seat)`** — the whole event, pure and
+  seat-relative, returning `{game, msgs, ops, fired}` (the contract
+  `sweepArena` already keeps, and for its reason: an op is actor-relative
+  and the two boards reach `runOps` differently). Six steps in one fixed
+  order. Both boards call it and restate nothing.
+- **The rust threshold is the CARD's number.** `fx.rustDestroy` off the
+  printed line, `parser.rustedThrough` beside `idleCounterWipes`. A piece
+  printing 5 must not shatter at 3 because a board's filter said so.
+- **`thawFrost` moved into it, ahead of the sweep, and the order is the
+  point.** Frostbite prints *"at the beginning of your end phase, destroy
+  this"*, so the token is minted with `sd:"end"` and the generic sweep would
+  take it. Two readers of one rule: the specific one goes first so the feed
+  names the token and says what it cost. The trainer had them reversed —
+  state right, lesson silent.
+- **`judge.js` stopped assembling the event itself**, which also retired a
+  latent `n = sw.game` that only ran when the sweep had something to say.
+
+### The drills
+
+`test/endphase.test.js` (17), plus four repointed. Every one was sabotaged
+and every sabotage verified to have changed the file: removing rust turns 4
+red, the idle wipe 4, intimidate 3, hardcoding the threshold to 3 turns 1,
+and regrowing the trainer's own copy turns 1.
+
+Two are **driven through `judge.reduce`** over Dash's real Talishar rather
+than calling the body — the difference between "the shared body is right"
+and "the table reaches it", which is the whole finding. The Dorinthea drill
+was **upgraded from a grep to a drive**: it used to scan `index.html` for
+the trainer's own call, which was the right guard while the call lived there
+and was hiding the bigger thing — that the call lived *only* there.
+
+`test/arena.test.js`'s two scans were repointed the same way. They used to
+check each board for its own calls to the three schedules, which is what you
+write when the event is assembled twice — and it passes happily while the
+two assemblies drift.
+
+### The tool's own caveat, learned on its first run
+
+**An `UNGUARDED` verdict is a lead, not a finding.** It measures *citation*
+coverage, not *behaviour* coverage, and it misreads both ways: `CR 8.1.3` was
+cited in `judge.js` where the rule is `8.1.3a`, whose behaviour is driven
+over all fifteen of the pool's defence reactions — guarded, loosely cited
+(now tightened). `CR 4.1.8a` was the opposite. The scan also learned that a
+range is a run: `CR 4.3.1-4.3.3` cites three rules and an alternation of only
+`,` `/` `&` reads one, silently dropping the far end of every range in the
+source.
+
+And one for the file of guards aimed at the wrong shape: the first version of
+the no-regrowth drill asserted the trainer contains no `rust` at all. It does
+— `.cc.rust` styles the counter chip, the chip renderer reads `ct.rust`, and
+Dorinthea's deck list contains Valiant Th**rust**. Anchor to the payload, not
+the word.
+
+UNGUARDED: 7 → **3**, all three genuine section pointers. 1160 → **1177**
+drills, 0 skipped. Fairness clean, UNFAIR 0, coverage 308 full / 75 part /
+22 none.
+
+---
+
 ## v3.16 — crush runs the card's own rider
 
 **Twelve pool cards across two heroes print a crush rider. Every one of
