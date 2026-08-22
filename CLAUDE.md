@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.23
+**Current version:** v3.24
 
 ---
 
@@ -313,6 +313,35 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### THE CONDITION CAN BELONG TO THE ATTACK, NOT THE CARD (v3.24)
+
+The four Blade Beckoner pieces print *"this gets +1{d} while defending a
+weapon attack"*, all read `tier: full`, and all four blocked for their
+printed number — both walls summed `gearDef(piece)` and nothing else. The
+audit number did not move this version; **what changed is that it is
+true.**
+
+*"While defending a weapon attack"* cannot be answered from the piece, so
+`defendValue` takes it from the CALLER — the same split `heroHit` and the
+wall itself keep. **Absent, the buff does not apply**: a caller that
+forgets to say what it defends gets the printed value. Weaker than
+printed and visible; the other direction is a wall that quietly stops
+more than the cards grant.
+
+**The wear stays `gearDef`'s** — it owns Guardwell, Temper, battleworn and
+destruction, and re-deriving any of it inside `defendValue` is a second
+copy of the wear rules. **A destroyed piece gains nothing**, because
+`gearDef` answers 0 and the buff would otherwise lift it back to 1.
+Found by DRIVING it.
+
+**AND THE GUARD I HAD JUST WRITTEN LET IT THROUGH.** Removing
+`weaponAttack` from judge's gear wall failed NO drill, because v3.23's
+guard matched the CALL (`E.defendValue(sd, piece`) and a dropped third
+argument still matches perfectly. Every call site is checked for saying
+what it defends now, with the DEFINITION excluded from the scan — it
+matches the same text and has no arguments. **Sabotage the guard, not
+just the code**, and re-sabotage after you widen it.
 
 ### A DEFENDER IS WORTH ITS PRINTED NUMBER PLUS WHAT MODIFIES IT (v3.23)
 

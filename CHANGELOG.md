@@ -9,6 +9,72 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.24 — four pieces that printed a promise they never kept
+
+v3.23 built the seam and measured a 23-card family it did not build.
+This takes the first four off that list.
+
+> **Blade Beckoner Boots / Gauntlets / Helm / Plating** —
+> *"This gets +1{d} while defending a weapon attack."*
+
+All four read `tier: full` and all four blocked for their printed number,
+because both walls summed `gearDef(piece)` — wear, and nothing else. The
+number in the audit did not change this version; **what changed is that
+it is now true.**
+
+### The condition belongs to the attack, not to the card
+
+*"While defending a weapon attack"* is not answerable from the piece. It
+is a property of the thing coming at you, so `defendValue` takes it from
+the caller — the same split `heroHit` and the wall itself already keep,
+and for the same reason: judge routes combat one way and the trainer
+another, so a body that guessed would be right on one board and wrong on
+the other.
+
+**Absent, the buff does not apply.** A caller that forgets to say what it
+is defending gets the printed value, never the buffed one. Weaker than
+printed and visible; the other direction is a wall that quietly stops
+more than the cards grant.
+
+**The wear stays `gearDef`'s.** It owns Guardwell, Temper, battleworn and
+destruction, and re-deriving any of that inside `defendValue` would be a
+second copy of the wear rules. The caller passes the base.
+
+**A destroyed piece gains nothing** — `gearDef` answers 0 for one, and
+without an explicit guard the buff lifted that back to 1: a piece that
+has left the arena blocking for a point. **Found by driving it, not by a
+drill.**
+
+### The drill that let it through
+
+Sabotage is the point of sabotage. Removing `weaponAttack` from judge's
+gear wall — which silently stops the buff applying on that board — failed
+**no drill at all**, because v3.23's guard matched the *call*
+(`E.defendValue(sd, piece`) and a dropped third argument still matches it
+perfectly.
+
+That is the family this project keeps paying for: **a guard aimed at the
+wrong shape passes by finding nothing**, this time in a guard I had just
+written. Every `defendValue` call site is now checked for saying what it
+defends, the definition is excluded from that scan (it matches the same
+text and has no arguments), and all four call sites were re-sabotaged to
+confirm each one bites.
+
+```
+npm test          1242 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 311 full / 72 part / 22 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+**19 of the 23 remain**, and the reasons are recorded rather than vague:
+Wax On is a *Defence Reaction*, which is played rather than declared and
+takes a third path through the wall; the rest gate on turn history, board
+state, or a paid cost, and each needs its own reader. `defendValue` is
+where they go.
+
+---
+
 ## v3.23 — a defender is worth its printed number plus what modifies it
 
 **Briar's engine is complete**, and finishing it opened a 23-card family

@@ -1482,6 +1482,27 @@ function fxParse(card){
     break;
   }
 
+  /* ---- A DEFENDER THAT BUFFS ITSELF AGAINST A KIND OF ATTACK (v3.24)
+     "This gets +1{d} while defending a weapon attack." — the four Blade
+     Beckoner pieces, and the condition is a property of the INCOMING
+     attack rather than of the card, so it can only be answered at the
+     wall. `defendValue` takes it from the caller.
+
+     ONLY THIS CONDITION IS READ. The pool prints a whole self-buff family
+     on other gates — "for each blue card you've pitched this turn", "if
+     you've dealt arcane damage this turn", "if you control a Seismic
+     Surge token" — and each needs its own reader. Claiming them together
+     would grant conditions nobody has built, which is how a card ends up
+     blocking for more than it prints. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const ds = clauses[ci].match(
+      /^this gets \+(\d+)\{d\} while defending a weapon attack\.?$/i);
+    if(!ds) continue;
+    fx.defSelf = {amt: +ds[1], when: "weaponAttack"};
+    handled.add(ci);
+    break;
+  }
+
   /* ---- THE ATTACK-PLAY AURA TRIGGER (v3.22) --------------------------
      "When you play an attack action card[ or activate a weapon attack],
       destroy this and X."

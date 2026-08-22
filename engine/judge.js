@@ -990,8 +990,12 @@ function strike(g){
     const gi = find(sd.gear, uid);
     if(gi < 0) continue;
     const piece = sd.gear[gi];
-    wall += gearDef(piece);
-    parts.push(piece.name + " " + gearDef(piece));
+    /* the WEAR is gearDef's; the situational buff is the card's, and what
+       it is defending is this file's answer — the same split as `heroHit`. */
+    const gv = E.defendValue(sd, piece,
+      {base: gearDef(piece), weaponAttack: link.from === "weapon"});
+    wall += gv;
+    parts.push(piece.name + " " + gv);
     spentGear.push(uid);
   }
   for(const uid of (sd.blockH || [])){
@@ -1001,7 +1005,7 @@ function strike(g){
        both boards read the same number. The WALL stays this file's — judge
        holds its defenders on `blockH` and the trainer on the hand — which
        is the split `linkPumps`/`linkPayload` already keep. */
-    const dv = E.defendValue(sd, c);
+    const dv = E.defendValue(sd, c, {weaponAttack: link.from === "weapon"});
     wall += dv;
     handBlockers++;
     parts.push(c.name + " " + dv);

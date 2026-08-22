@@ -118,10 +118,97 @@ test("both walls ask defendValue rather than reading the printed number", {skip}
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const eff = strip("effects.js"), jud = strip("judge.js");
 
-  assert.match(eff, /defendValue\(foe\(n\), c\)/, "the trainer's wall must ask");
-  assert.match(jud, /E\.defendValue\(sd, c\)/, "and judge's wall must ask");
+  /* BOTH PATHS, on both boards (widened at v3.24). Equipment and a card
+     from hand are two loops in each wall, and a buff wired into one of
+     them only is half a rule. Matched loosely on the call rather than on
+     its exact arguments — this drill FAILED when the third argument was
+     added, which is the anchor doing its job, but the property it protects
+     is "the wall asks", not the argument list. */
+  assert.match(eff, /defendValue\(foe\(n\), c\b/,     "the trainer's HAND wall must ask");
+  assert.match(eff, /defendValue\(foe\(n\), piece\b/, "the trainer's GEAR wall must ask");
+  assert.match(jud, /E\.defendValue\(sd, c\b/,        "judge's HAND wall must ask");
+  assert.match(jud, /E\.defendValue\(sd, piece\b/,    "judge's GEAR wall must ask");
 
-  /* and neither may go back to summing the printed value into the wall */
-  assert.doesNotMatch(eff, /wall \+= \(c\.def/, "the trainer's wall must not read the printed number");
-  assert.doesNotMatch(jud, /wall \+= \(c\.def/, "judge's wall must not read the printed number");
+  /* EVERY CALL MUST SAY WHAT IT IS DEFENDING (v3.24). Matching the call
+     alone is not enough: dropping the third argument leaves
+     `E.defendValue(sd, piece)` matching perfectly while the Blade Beckoner
+     buff silently stops applying on that board. Proven by sabotage — this
+     assertion exists because removing judge's `weaponAttack` failed NO
+     drill until it was added. */
+  for(const [nm, src] of [["effects.js", eff], ["judge.js", jud]]){
+    /* the DEFINITION is not a call — `function defendValue(defSide, card,
+       opts)` matches the same text and has no arguments to check */
+    const at = [...src.matchAll(/(?<!function )defendValue\(/g)].map(m => m.index);
+    assert.ok(at.length >= 2, nm + ": expected a hand and a gear call, found " + at.length);
+    for(const i of at){
+      const call = src.slice(i, i + 220);
+      assert.match(call, /weaponAttack/,
+        nm + ": a defendValue call that never says what it is defending — the "
+        + "situational buff cannot apply, and nothing else would notice");
+    }
+  }
+
+  /* and neither may go back to summing the raw value into the wall */
+  assert.doesNotMatch(eff, /wall \+= \(c\.def/,    "the trainer's wall must not read the printed number");
+  assert.doesNotMatch(jud, /wall \+= \(c\.def/,    "judge's wall must not read the printed number");
+  assert.doesNotMatch(eff, /wall \+= gearDef\(/,    "the trainer's gear wall must not read wear alone");
+  assert.doesNotMatch(jud, /wall \+= gearDef\(/,    "judge's gear wall must not read wear alone");
+});
+
+/* ---- 4. A DEFENDER THAT BUFFS ITSELF AGAINST A KIND OF ATTACK (v3.24)
+
+   "This gets +1{d} while defending a weapon attack." Four Blade Beckoner
+   pieces, and the condition is a property of the INCOMING attack rather
+   than of the card — so only the wall can answer it, and the caller hands
+   it in. Absent, the buff must NOT apply: a defender blocking for more
+   than it prints because a caller forgot to say what it was defending is
+   the direction that steals games. ------------------------------------ */
+
+const helm = o => { const r = rec("Blade Beckoner Helm"); return Object.assign({
+  name: r.name, tt: r.type_text, ty: r.types, def: 1, uid: "h1",
+  tx: (r.functional_text || "").replace(/\*\*/g, "")}, o || {}); };
+
+test("the four Blade Beckoner pieces read the clause, and only they", {skip}, () => {
+  const pool = JSON.parse(fs.readFileSync(CACHE, "utf8"));
+  const claimed = new Set();
+  for(const c of pool){
+    P.fxReset();
+    const fx = P.fxParse({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text,
+      ty: c.types, kw: c.card_keywords || [],
+      tx: (c.functional_text || "").replace(/\*\*/g, "")});
+    if(fx.defSelf) claimed.add(c.name);
+  }
+  assert.deepEqual([...claimed].sort(), [
+    "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
+    "Blade Beckoner Helm", "Blade Beckoner Plating"]);
+});
+
+test("it applies against a WEAPON attack and not against an attack action card", {skip}, () => {
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, helm(), {base: 1, weaponAttack: true}), 2);
+  assert.equal(E.defendValue({board: []}, helm(), {base: 1, weaponAttack: false}), 1);
+});
+
+test("a caller that does not say what it is defending gets NO buff", {skip}, () => {
+  /* weaker than printed, and visible — the other direction is a wall that
+     silently stops more than the cards grant */
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, helm(), {base: 1}), 1);
+});
+
+test("the WEAR is the base — gearDef owns that, not this", {skip}, () => {
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, helm(), {base: 1, weaponAttack: true}), 2,
+    "a piece worn to 1 blocks for 2 against a weapon");
+  assert.equal(E.defendValue({board: []}, helm(), {base: 0, weaponAttack: true}), 1,
+    "and one worn to 0 still gains its printed +1");
+});
+
+test("a DESTROYED piece gains nothing — it is not in the arena", {skip}, () => {
+  /* `gearDef` answers 0 for a destroyed piece; without this the buff lifts
+     it back to 1 and a piece that has left the arena blocks for a point.
+     Found by DRIVING it, not by a drill. */
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, helm({destroyed: true}),
+    {base: 0, weaponAttack: true}), 0);
 });

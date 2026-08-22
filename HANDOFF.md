@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.23 · PHASE C, BRIAR'S ENGINE IS COMPLETE
+# Handoff — Dawnblade, at v3.24 · PHASE C, BRIAR'S ENGINE IS COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1237 drills**
+> the card semantics run on both boards.** `npm test` is **1242 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.23: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.24: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -72,14 +72,14 @@
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
 >
-> ### THE DEFENSIVE SELF-BUFF FAMILY — 23 cards, measured, unbuilt
+> ### THE DEFENSIVE SELF-BUFF FAMILY — 4 built (v3.24), 19 left
 >
 > Finishing Earth exposed it. The pool prints a whole family of *"this
 > gets +N{d}"* defensive buffs and **not one is applied**, because both
 > walls read the printed number:
 >
 > ```
-> Blade Beckoner Boots/Gauntlets/Helm/Plating   +1{d} vs a weapon attack
+> Blade Beckoner Boots/Gauntlets/Helm/Plating   DONE v3.24
 > Wax On (x3)                                   +2{d} vs a cost-0 attack action
 > Sigil of Suffering (x3)                       +1{d} if arcane dealt this turn
 > Big Blue Sky                                  +1{d} per blue pitched this turn
@@ -93,11 +93,18 @@
 > fairness sweep is blind to them too.
 >
 > `defendValue` is where they go, so each is a READER rather than new
-> machinery. **The trap to plan around:** Blade Beckoner is EQUIPMENT and
-> equipment defence flows through `gearDef`, which the UI and the advisor
-> also read. Buff at the wall alone and the number on screen disagrees
-> with the number that blocked — sev-2, the category the player trusts.
-> Do `gearDef` and the wall together, or not at all.
+> machinery, and it now takes `{base, weaponAttack}` from the caller.
+>
+> **The gearDef trap turned out not to bite for Blade Beckoner**, and the
+> reasoning is worth keeping: its condition is a property of the INCOMING
+> attack, so out of combat there is no buffed number to display and the
+> base shown on screen is correct. A buff gated on something knowable at
+> rest — Basalt Boots' Seismic Surge token, Mournful Casket's graveyard —
+> WOULD show wrong, so for those, do `gearDef` and the wall together.
+>
+> **Wax On is a DEFENCE REACTION**, played rather than declared, so it
+> takes a third path through the wall — not the declared-defender loop.
+> The rest gate on turn history, board state or a paid cost.
 >
 > ### NEXT — eleven heroes after her
 >

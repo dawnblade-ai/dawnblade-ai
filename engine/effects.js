@@ -2339,16 +2339,20 @@ function makeEffects(ctx){
       for(const dl of defLs){
         if(dl.gi != null){
           const piece = foe(n).gear[dl.gi];
-          wall += gearDef(piece);
+          /* the WEAR is gearDef's; the situational buff is the card's */
+          const _gv = defendValue(foe(n), piece,
+            {base: gearDef(piece), weaponAttack: n.pend && n.pend.from === "weapon"});
+          wall += _gv;
           foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
           /* an equipment that has blocked is spent for the rest of this chain */
           foeMut(n).chainBlocked = [...(foe(n).chainBlocked||[]), piece.uid];
-          parts.push(`${piece.name} ${gearDef(piece)}`);
+          parts.push(`${piece.name} ${_gv}`);
         } else {
           const c = foe(n).hand.find(x=>x.uid===dl.uid);
           if(!c) continue;
           /* the DEFENDING side is the foe of whoever is swinging */
-          const _dv = defendValue(foe(n), c);
+          const _dv = defendValue(foe(n), c,
+            {weaponAttack: n.pend && n.pend.from === "weapon"});
           wall += _dv;
           foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
           foeMut(n).grave = [c, ...foe(n).grave];
@@ -2573,8 +2577,17 @@ const isNonAtkActionCard = c => {
       && !ty.some(t => /^attack$/i.test(String(t)));
 };
 
-function defendValue(defSide, card){
-  let d = (card && card.def != null) ? card.def : 0;
+function defendValue(defSide, card, opts){
+  opts = opts || {};
+  /* THE BASE IS THE CALLER'S WHEN IT KNOWS BETTER. A piece of equipment's
+     current defence is `gearDef` — wear, Guardwell and destruction all
+     live there — and re-deriving it here would be a second copy of the
+     wear rules. A card from hand has no such state and uses its printed
+     value. */
+  let d = opts.base != null ? opts.base
+        : ((card && card.def != null) ? card.def : 0);
+
+  /* A STATIC ON THE BOARD, buffing OTHER cards — Briar's Embodiment. */
   for(const b of (defSide && defSide.board) || []){
     if(!b || !b.card) continue;
     const g = P.fxParse(b.card).defGrant;
@@ -2582,6 +2595,21 @@ function defendValue(defSide, card){
     if(g.subject === "nonAttackAction" && !isNonAtkActionCard(card)) continue;
     d += g.amt;
   }
+
+  /* AND THE CARD'S OWN, gated on a property of the INCOMING attack (v3.24).
+     "This gets +1{d} while defending a weapon attack" is answerable only
+     where the attack is known, so the caller hands it in — the same split
+     `heroHit` and the wall itself already keep. Absent, the buff does not
+     apply: a defender must never block for more than it prints because a
+     caller forgot to say what it was defending. */
+  const self = card ? P.fxParse(card).defSelf : null;
+  /* A DESTROYED PIECE IS NOT THERE, so its static does not apply. `gearDef`
+     already answers 0 for one, and without this the buff would lift that
+     back to 1 — a piece that has left the arena blocking for a point.
+     Found by driving it, not by a drill. */
+  if(self && !(card && card.destroyed)
+     && self.when === "weaponAttack" && opts.weaponAttack === true) d += self.amt;
+
   return d;
 }
 
