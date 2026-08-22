@@ -9,6 +9,68 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.26 — two more defence conditions, and a default that refuses
+
+v3.25 made a *played* defence reaction reach the wall. That is what made
+these reachable at all — before it, building them would have been
+building a buff onto a number nobody read.
+
+| card | printed condition | answered from |
+|---|---|---|
+| **Sigil of Suffering** ×3 | *"if you've dealt arcane damage this turn"* | the defending side's own turn history |
+| **Wax On** ×3 | *"while this is defending an attack action card with cost 0"* | the incoming attack card |
+
+`fx.defSelf` carries the condition instead of a bare flag, and
+`defSelfMet` answers it. Three shapes, three different sources — which is
+exactly why it is a function and not a boolean.
+
+**Every unknown condition returns FALSE.** A `when` the evaluator does not
+recognise leaves the card at its printed value. That is the guard against
+the drift where a fourth condition is added to the parser and forgotten
+here, and it is the honest direction: a defender that blocks for more than
+it prints steals games; one that blocks for its printed number is merely
+incomplete, and visible.
+
+**The cost threshold is read off the clause**, not hardcoded to 0. The
+card names its own number.
+
+### Sabotage found three drills that proved nothing
+
+Worth recording, because two of the three were mine from the same session:
+
+1. **Wax On vs a weapon swing** was the wrong fixture. A weapon carries
+   neither Action nor Attack, so it is refused by *either* half of the
+   test — dropping the Attack check alone still excluded it. Only a
+   **non-attack action card at cost 0** tells the two apart.
+2. **Dropping `atkCard`** from judge's hand wall failed no drill: v3.24's
+   call-site guard required `weaponAttack` and said nothing about which
+   card. Both are required now.
+3. **The unbuilt-condition default** could not be reached from a card
+   fixture at all — the parser only emits the three `when` values the
+   evaluator knows, so `if(self && …)` short-circuited and the sabotage
+   changed nothing. `defSelfMet` is exported and asked directly, with the
+   three built conditions asserted alongside so it cannot pass by
+   refusing everything.
+
+### One recorded assumption
+
+Sigil of Suffering deals its own arcane and then asks whether arcane has
+been dealt this turn. **Its own damage satisfies its own condition** —
+that is what the CR ordering gives (the card resolves, then its defence is
+totalled), and it leaves the clause meaningful rather than vacuous,
+because a turn where the arcane never lands is a turn where it does not
+apply. Flagged in the drill for the user to correct if the intent is
+"arcane dealt *before* this card".
+
+```
+npm test          1254 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 312 full / 72 part / 21 none   (Wax On: none -> full)
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.25 — the defence reaction that stopped nothing
 
 Chasing the last of v3.23's self-buff family turned up something much

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.25
+**Current version:** v3.26
 
 ---
 
@@ -313,6 +313,28 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### A DEFENCE CONDITION IS ANSWERED FROM THREE DIFFERENT PLACES (v3.26)
+
+`fx.defSelf` carries a CONDITION, not a flag, and `defSelfMet` answers it:
+
+| `when` | answered from |
+|---|---|
+| `weaponAttack` | the INCOMING attack — the caller's, nothing else knows |
+| `arcDealt` | the defending side's own turn history |
+| `atkActionCostLe` | the incoming attack CARD — its type and its cost |
+
+**AN UNKNOWN `when` RETURNS FALSE.** A condition added to the parser and
+forgotten in the evaluator leaves the card at its printed value. Weaker
+than printed and visible; the other direction grants a buff nobody built.
+Its drill asks `defSelfMet` DIRECTLY, because no card fixture can reach
+that default — the parser only emits the three known values, so
+`if(self && …)` short-circuits and a sabotage changes nothing.
+
+**PICK A FIXTURE THAT TELLS THE TWO HALVES APART.** Testing Wax On's
+*"attack action card"* against a WEAPON proves nothing: a weapon carries
+neither Action nor Attack, so dropping either half of the test still
+excludes it. A **non-attack action card** is the shape that bites.
 
 ### A DEFENCE REACTION IS PLAYED, NOT DECLARED — AND IT STILL BLOCKS (v3.25)
 

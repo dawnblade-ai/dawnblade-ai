@@ -993,7 +993,7 @@ function strike(g){
     /* the WEAR is gearDef's; the situational buff is the card's, and what
        it is defending is this file's answer — the same split as `heroHit`. */
     const gv = E.defendValue(sd, piece,
-      {base: gearDef(piece), weaponAttack: link.from === "weapon"});
+      {base: gearDef(piece), weaponAttack: link.from === "weapon", atkCard: link.card});
     wall += gv;
     parts.push(piece.name + " " + gv);
     spentGear.push(uid);
@@ -1005,7 +1005,7 @@ function strike(g){
        both boards read the same number. The WALL stays this file's — judge
        holds its defenders on `blockH` and the trainer on the hand — which
        is the split `linkPumps`/`linkPayload` already keep. */
-    const dv = E.defendValue(sd, c, {weaponAttack: link.from === "weapon"});
+    const dv = E.defendValue(sd, c, {weaponAttack: link.from === "weapon", atkCard: link.card});
     wall += dv;
     handBlockers++;
     parts.push(c.name + " " + dv);
@@ -1464,7 +1464,8 @@ function commitPlay(g, card, zone, seat, window, target){
     const atkSeat = n.pend.by != null ? n.pend.by : n.turnPlayer;
     if(seat !== atkSeat){
       const dsd = at(n, seat);
-      const dv = E.defendValue(dsd, card, {weaponAttack: n.pend.from === "weapon"});
+      const dv = E.defendValue(dsd, card,
+        {weaponAttack: n.pend.from === "weapon", atkCard: n.pend.card});
       if(dv > 0){
         n = put(n, seat, s => ({...s,
           blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv}]}));

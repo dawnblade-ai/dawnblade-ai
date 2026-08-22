@@ -2341,7 +2341,8 @@ function makeEffects(ctx){
           const piece = foe(n).gear[dl.gi];
           /* the WEAR is gearDef's; the situational buff is the card's */
           const _gv = defendValue(foe(n), piece,
-            {base: gearDef(piece), weaponAttack: n.pend && n.pend.from === "weapon"});
+            {base: gearDef(piece), weaponAttack: n.pend && n.pend.from === "weapon",
+             atkCard: n.pend && n.pend.card});
           wall += _gv;
           foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
           /* an equipment that has blocked is spent for the rest of this chain */
@@ -2352,7 +2353,7 @@ function makeEffects(ctx){
           if(!c) continue;
           /* the DEFENDING side is the foe of whoever is swinging */
           const _dv = defendValue(foe(n), c,
-            {weaponAttack: n.pend && n.pend.from === "weapon"});
+            {weaponAttack: n.pend && n.pend.from === "weapon", atkCard: n.pend && n.pend.card});
           wall += _dv;
           foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
           foeMut(n).grave = [c, ...foe(n).grave];
@@ -2577,6 +2578,37 @@ const isNonAtkActionCard = c => {
       && !ty.some(t => /^attack$/i.test(String(t)));
 };
 
+/* IS THE SELF-BUFF'S PRINTED CONDITION MET RIGHT NOW?
+
+   Three shapes so far, and each is answered from a different place —
+   which is the whole reason this is a function and not a boolean:
+
+     weaponAttack      a property of the INCOMING attack. The caller knows
+                       it; nothing on the card or the side does.
+     arcDealt          the defending side's own turn history.
+     atkActionCostLe   the incoming attack CARD — its type and its cost.
+
+   EVERY ONE DEFAULTS TO FALSE. A caller that does not supply what a
+   condition needs gets the printed value, never the buffed one: a
+   defender blocking for more than it prints because the caller was
+   incomplete is the direction that steals games. */
+function defSelfMet(self, defSide, opts){
+  if(!self) return false;
+  if(self.when === "weaponAttack") return opts.weaponAttack === true;
+  if(self.when === "arcDealt")     return (((defSide || {}).hist || {}).arc || 0) > 0;
+  if(self.when === "atkActionCostLe"){
+    const a = opts.atkCard;
+    if(!a) return false;
+    /* the STRUCTURED array is the authority, and an attack action card
+       carries both Action and Attack — a weapon swing carries neither */
+    const ty = a.ty || [];
+    const isAtkAction = ty.some(t => /^action$/i.test(String(t)))
+                     && ty.some(t => /^attack$/i.test(String(t)));
+    return isAtkAction && (a.cost || 0) <= self.cost;
+  }
+  return false;                       /* an unread condition never fires */
+}
+
 function defendValue(defSide, card, opts){
   opts = opts || {};
   /* THE BASE IS THE CALLER'S WHEN IT KNOWS BETTER. A piece of equipment's
@@ -2607,8 +2639,7 @@ function defendValue(defSide, card, opts){
      already answers 0 for one, and without this the buff would lift that
      back to 1 — a piece that has left the arena blocking for a point.
      Found by driving it, not by a drill. */
-  if(self && !(card && card.destroyed)
-     && self.when === "weaponAttack" && opts.weaponAttack === true) d += self.amt;
+  if(self && !(card && card.destroyed) && defSelfMet(self, defSide, opts)) d += self.amt;
 
   return d;
 }
@@ -3089,6 +3120,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

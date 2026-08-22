@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-22T02:57:48.146Z",
- "appVer": "3.24",
+ "generated": "2026-08-22T03:45:37.080Z",
+ "appVer": "3.25",
  "dataVer": "sage-v11",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 311,
+  "full": 312,
   "part": 72,
-  "none": 22
+  "none": 21
  },
  "heroes": {
   "kayo": {
@@ -8330,18 +8330,16 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "While this is defending an attack action card with cost 0, this gets +2{d}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "While this is defending an attack action card with cost 0, this gets +2{d}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "While this is defending an attack action card with cost 0, this gets +2{d}.",

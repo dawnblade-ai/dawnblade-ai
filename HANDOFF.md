@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.25 · PHASE C · EVERY DEFENCE REACTION NOW BLOCKS
+# Handoff — Dawnblade, at v3.26 · PHASE C · DEFENCE READS ITS CONDITIONS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1248 drills**
+> the card semantics run on both boards.** `npm test` is **1254 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.25: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.26: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -82,7 +82,7 @@
 > made the plumbing look finished. When you find a side field, check both
 > halves — who writes it and who reads it — not just that it is there.
 >
-> ### THE DEFENSIVE SELF-BUFF FAMILY — 4 built (v3.24), 19 left
+> ### THE DEFENSIVE SELF-BUFF FAMILY — 10 built (v3.24, v3.26), 13 left
 >
 > Finishing Earth exposed it. The pool prints a whole family of *"this
 > gets +N{d}"* defensive buffs and **not one is applied**, because both

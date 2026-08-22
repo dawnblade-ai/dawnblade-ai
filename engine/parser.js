@@ -1495,10 +1495,28 @@ function fxParse(card){
      would grant conditions nobody has built, which is how a card ends up
      blocking for more than it prints. */
   for(let ci = 0; ci < clauses.length; ci++){
-    const ds = clauses[ci].match(
-      /^this gets \+(\d+)\{d\} while defending a weapon attack\.?$/i);
+    const cl = clauses[ci];
+    let ds = null;
+    /* "while defending a WEAPON attack" — Blade Beckoner x4 (v3.24) */
+    let m = cl.match(/^this gets \+(\d+)\{d\} while defending a weapon attack\.?$/i);
+    if(m) ds = {amt: +m[1], when: "weaponAttack"};
+    /* "if you've DEALT ARCANE DAMAGE this turn" — Sigil of Suffering x3.
+       The same event `arcDealt` already answers for the attack side of the
+       card; here it gates the defence. */
+    if(!ds){
+      m = cl.match(/^if you.?ve dealt arcane damage this turn, this gets \+(\d+)\{d\}\.?$/i);
+      if(m) ds = {amt: +m[1], when: "arcDealt"};
+    }
+    /* "while this is defending an ATTACK ACTION CARD WITH COST N" — Wax On
+       x3. A property of the incoming attack, like the weapon test, so the
+       caller supplies the card. The COST IS READ OFF THE CLAUSE rather
+       than hardcoded to 0: the card names its own number. */
+    if(!ds){
+      m = cl.match(/^while this is defending an attack action card with cost (\d+), this gets \+(\d+)\{d\}\.?$/i);
+      if(m) ds = {amt: +m[2], when: "atkActionCostLe", cost: +m[1]};
+    }
     if(!ds) continue;
-    fx.defSelf = {amt: +ds[1], when: "weaponAttack"};
+    fx.defSelf = ds;
     handled.add(ci);
     break;
   }

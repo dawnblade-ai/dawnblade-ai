@@ -74,12 +74,20 @@ function played(drCard, o){
 const sigil = uid => Object.assign({},
   C.resolveEntry(DB(), {name: "Sigil of Suffering", p: 1, code: null, q: 1}), {uid: uid || "dr1"});
 
+/* A PLAIN defence reaction for the plumbing drills: 3 printed defence, no
+   self-buff, and a trigger ("when this defends an attack with go again")
+   that a plain swing does not fire. Sigil is the wrong fixture for
+   measuring the printed number, because its own clause modifies it. */
+const plain = uid => Object.assign({},
+  C.resolveEntry(DB(), {name: "Frailty Trap", p: 1, code: null, q: 1}), {uid: uid || "dr1"});
+
 /* ---- 1. the fixture is what it claims to be ----------------------- */
 
-test("the fixture really is a defence reaction with printed defence", {skip}, () => {
-  const c = sigil();
-  assert.equal(PR.isDR(c), true, "or this drill measures something else entirely");
-  assert.equal(c.def, 3, "Sigil of Suffering prints 3 defence");
+test("the fixtures really are defence reactions with printed defence", {skip}, () => {
+  for(const c of [sigil(), plain()]){
+    assert.equal(PR.isDR(c), true, c.name + ": or this drill measures something else");
+    assert.equal(c.def, 3, c.name + " prints 3 defence");
+  }
 });
 
 /* ---- 2. the control: no reaction, full damage --------------------- */
@@ -92,11 +100,27 @@ test("with no answer the attack lands in full", {skip}, () => {
 /* ---- 3. THE BUG: the printed defence must reach the wall ---------- */
 
 test("a defence reaction played at the table reduces the damage it prints", {skip}, () => {
-  const {g, answered} = played(sigil());
+  const {g, answered} = played(plain());
   assert.equal(answered, true, "it must be legal to play in the reaction step");
   assert.equal(g.sides[1].hp, 17,
     "20 - (6 - 3). Before v3.25 this was 14: the card resolved, went to the "
     + "graveyard, and its printed defence was thrown away.");
+});
+
+test("a self-buff on the reaction reaches the wall too (v3.26)", {skip}, () => {
+  /* Sigil of Suffering: "Deal 1 arcane damage to the attacking hero. If
+     you've dealt arcane damage this turn, this gets +1{d}."
+
+     ASSUMPTION, RECORDED: the card's OWN arcane satisfies its own
+     condition. It is dealt while the card resolves, and the defence is
+     totalled after that, so by the time the wall asks, arcane HAS been
+     dealt this turn. That is what the CR ordering gives and it is what
+     the engine does; it also leaves the clause meaningful rather than
+     vacuous, because a turn in which the arcane never lands is a turn in
+     which it does not apply. Flagged for the user to correct if the
+     intent is "arcane dealt BEFORE this card". */
+  const {g} = played(sigil());
+  assert.equal(g.sides[1].hp, 18, "20 - (6 - (3 printed + 1 from its own clause))");
 });
 
 test("and its TEXT still resolves — the ops were never the broken half", {skip}, () => {
@@ -111,7 +135,7 @@ test("the declaration is spent — blockRx does not survive the link", {skip}, (
   /* CR 7.3.2: defenders defend ONE chain link. `blockRx` is cleared in
      `strike` alongside blockH/blockG; a leftover entry would block the
      next link for free, which is the v2.46 bug in a third zone. */
-  const {g} = played(sigil());
+  const {g} = played(plain());
   assert.deepEqual(g.sides[1].blockRx || [], []);
 });
 

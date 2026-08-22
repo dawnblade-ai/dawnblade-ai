@@ -145,6 +145,12 @@ test("both walls ask defendValue rather than reading the printed number", {skip}
       assert.match(call, /weaponAttack/,
         nm + ": a defendValue call that never says what it is defending — the "
         + "situational buff cannot apply, and nothing else would notice");
+      /* AND WHICH CARD (v3.26). Wax On reads the attacking card's type and
+         cost, so a call that passes only `weaponAttack` silently stops it
+         applying. Sabotage found this: dropping `atkCard` from judge's
+         hand wall failed no drill until this line existed. */
+      assert.match(call, /atkCard/,
+        nm + ": a defendValue call that never says WHICH card it is defending");
     }
   }
 
@@ -178,9 +184,17 @@ test("the four Blade Beckoner pieces read the clause, and only they", {skip}, ()
       tx: (c.functional_text || "").replace(/\*\*/g, "")});
     if(fx.defSelf) claimed.add(c.name);
   }
+  /* WIDENED AT v3.26, deliberately. Two more printed conditions are read
+     now — Sigil of Suffering's "if you've dealt arcane damage this turn"
+     and Wax On's "while this is defending an attack action card with cost
+     0" — and both became reachable only because v3.25 made a PLAYED
+     defence reaction reach the wall at all. Moving this list must stay a
+     deliberate edit: it is what stops a loose anchor quietly claiming a
+     condition nobody has built. */
   assert.deepEqual([...claimed].sort(), [
     "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
-    "Blade Beckoner Helm", "Blade Beckoner Plating"]);
+    "Blade Beckoner Helm", "Blade Beckoner Plating",
+    "Sigil of Suffering", "Wax On"]);
 });
 
 test("it applies against a WEAPON attack and not against an attack action card", {skip}, () => {
@@ -211,4 +225,81 @@ test("a DESTROYED piece gains nothing — it is not in the arena", {skip}, () =>
   P.fxReset();
   assert.equal(E.defendValue({board: []}, helm({destroyed: true}),
     {base: 0, weaponAttack: true}), 0);
+});
+
+/* ---- 5. TWO MORE CONDITIONS (v3.26) — reachable only because v3.25
+   made a PLAYED defence reaction reach the wall at all. --------------- */
+
+const waxOn = () => { const r = rec("Wax On"); return {
+  name: r.name, tt: r.type_text, ty: r.types, def: +r.defense || 0, uid: "w1",
+  tx: (r.functional_text || "").replace(/\*\*/g, "")}; };
+const sigil = () => { const r = rec("Sigil of Suffering"); return {
+  name: r.name, tt: r.type_text, ty: r.types, def: 3, uid: "s1",
+  tx: (r.functional_text || "").replace(/\*\*/g, "")}; };
+
+const atkAction = cost => ({name: "Swing", ty: ["Generic", "Action", "Attack"],
+  tt: "Generic Action - Attack", cost, power: 6});
+const weaponSwing = () => ({name: "Blade", ty: ["Warrior", "Weapon"],
+  tt: "Warrior Weapon", cost: 0, power: 4});
+
+test("Sigil of Suffering reads its own side's turn history", {skip}, () => {
+  P.fxReset();
+  const noArc = {board: [], hist: {arc: 0}}, didArc = {board: [], hist: {arc: 1}};
+  assert.equal(E.defendValue(noArc,  sigil(), {}), 3, "no arcane dealt — printed only");
+  assert.equal(E.defendValue(didArc, sigil(), {}), 4, "arcane dealt this turn — +1{d}");
+});
+
+test("a side with no hist at all does not crash, and does not buff", {skip}, () => {
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, sigil(), {}), 3);
+});
+
+test("Wax On reads the INCOMING attack — its type and its cost", {skip}, () => {
+  P.fxReset();
+  const s = {board: []};
+  assert.equal(E.defendValue(s, waxOn(), {atkCard: atkAction(0)}), waxOn().def + 2,
+    "a cost-0 attack action card is exactly what it prints");
+  assert.equal(E.defendValue(s, waxOn(), {atkCard: atkAction(2)}), waxOn().def,
+    "a cost-2 attack action card is not");
+  assert.equal(E.defendValue(s, waxOn(), {atkCard: weaponSwing()}), waxOn().def,
+    "a WEAPON swing is not an attack action card, whatever it costs");
+  /* THE FIXTURE THAT ACTUALLY BITES. A weapon carries neither Action nor
+     Attack, so it is refused by either half of the test — dropping the
+     Attack check alone still excludes it, and the drill passed on a
+     sabotaged engine. A non-attack ACTION card at cost 0 carries Action
+     and NOT Attack, which is the only shape that tells the two apart. */
+  const nonAtkAction = {name: "Ritual", ty: ["Runeblade", "Action"],
+                        tt: "Runeblade Action", cost: 0, power: null};
+  assert.equal(E.defendValue(s, waxOn(), {atkCard: nonAtkAction}), waxOn().def,
+    "a cost-0 NON-attack action card is not an attack action card");
+  assert.equal(E.defendValue(s, waxOn(), {}), waxOn().def,
+    "and a caller that supplies no attack gets the printed value");
+});
+
+test("the cost threshold is read off the card, not hardcoded", {skip}, () => {
+  P.fxReset();
+  const r = rec("Wax On");
+  const fx = P.fxParse({name: r.name, pitch: 0, tt: r.type_text, ty: r.types, kw: [],
+                        tx: (r.functional_text || "").replace(/\*\*/g, "")});
+  assert.equal(fx.defSelf.cost, 0, "Wax On prints cost 0 — the clause names its own number");
+  assert.equal(fx.defSelf.amt, 2);
+});
+
+test("an unread condition never fires", {skip}, () => {
+  /* THE PREDICATE IS ASKED DIRECTLY, because the shape this guards cannot
+     be built from a real card: the parser only ever emits the three `when`
+     values the evaluator knows, so a card fixture reaches the default only
+     if someone adds a fourth to the parser and forgets the evaluator —
+     which is exactly the drift. The first draft of this drill handed it a
+     card with no clause at all, so the `if(self && ...)` short-circuited
+     and the sabotage changed nothing. Found by sabotage. */
+  assert.equal(E.defSelfMet({amt: 9, when: "somethingNobodyBuilt"}, {hist: {arc: 5}},
+    {weaponAttack: true, atkCard: {ty: ["Generic", "Action", "Attack"], cost: 0}}), false,
+    "an unbuilt condition must leave the card at its printed value");
+  /* and the three that ARE built still answer, so this is not passing by
+     refusing everything */
+  assert.equal(E.defSelfMet({amt: 1, when: "weaponAttack"}, {}, {weaponAttack: true}), true);
+  assert.equal(E.defSelfMet({amt: 1, when: "arcDealt"}, {hist: {arc: 1}}, {}), true);
+  assert.equal(E.defSelfMet({amt: 2, when: "atkActionCostLe", cost: 0}, {},
+    {atkCard: {ty: ["Generic", "Action", "Attack"], cost: 0}}), true);
 });
