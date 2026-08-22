@@ -194,7 +194,13 @@ test("the four Blade Beckoner pieces read the clause, and only they", {skip}, ()
   assert.deepEqual([...claimed].sort(), [
     "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
     "Blade Beckoner Helm", "Blade Beckoner Plating",
-    "Sigil of Suffering", "Wax On"]);
+    "Gauntlets of Unity", "Helm of Unity",
+    "Sigil of Suffering", "Springboard Somersault", "Unmovable", "Wax On"]);
+  /* UNMOVABLE WAS NOT ON THE LIST THIS CYCLE SET OUT TO BUILD. It prints
+     the same clause as Springboard Somersault with its own number (+1
+     against +2), so the reader found it for free — which is the whole
+     point of fixing the RULE rather than the card, and the reason each
+     amount is read off the clause instead of hardcoded. */
 });
 
 test("it applies against a WEAPON attack and not against an attack action card", {skip}, () => {
@@ -302,4 +308,104 @@ test("an unread condition never fires", {skip}, () => {
   assert.equal(E.defSelfMet({amt: 1, when: "arcDealt"}, {hist: {arc: 1}}, {}), true);
   assert.equal(E.defSelfMet({amt: 2, when: "atkActionCostLe", cost: 0}, {},
     {atkCard: {ty: ["Generic", "Action", "Attack"], cost: 0}}), true);
+});
+
+/* ---- 6. TWO WALL-TIME CONDITIONS (v3.27) --------------------------
+   Both are true only DURING a block, which is why they carry no
+   display problem: at rest there is no buffed number to show. That is
+   the boundary v3.24 set, and it is what still keeps Basalt Boots and
+   Mournful Casket out — their conditions are true sitting on the
+   board, so building them at the wall alone would put a number on
+   screen that disagrees with the number that blocked. ---------------- */
+
+const unity = () => { const r = rec("Helm of Unity"); return {
+  name: r.name, tt: r.type_text, ty: r.types, def: 1, uid: "u1",
+  tx: (r.functional_text || "").replace(/\*\*/g, "")}; };
+const springboard = () => { const r = rec("Springboard Somersault"); return {
+  name: r.name, tt: r.type_text, ty: r.types, def: 2, uid: "sb1",
+  tx: (r.functional_text || "").replace(/\*\*/g, "")}; };
+
+test("Unity asks about the REST of the wall", {skip}, () => {
+  P.fxReset();
+  const s = {board: []};
+  assert.equal(E.defendValue(s, unity(), {base: 1, handDefenders: 0}), 1,
+    "alone, it is worth its printed defence");
+  assert.equal(E.defendValue(s, unity(), {base: 1, handDefenders: 1}), 2,
+    "defending together with a card from hand");
+  assert.equal(E.defendValue(s, unity(), {base: 1}), 1,
+    "a caller that does not count the wall gets the printed value");
+});
+
+test("Unity's buff does not scale with the number of hand defenders", {skip}, () => {
+  /* "together with A card from hand" is a condition, not a count. */
+  P.fxReset();
+  assert.equal(E.defendValue({board: []}, unity(), {base: 1, handDefenders: 3}), 2);
+});
+
+test("Springboard Somersault reads the zone it was played from", {skip}, () => {
+  P.fxReset();
+  const s = {board: []};
+  assert.equal(E.defendValue(s, springboard(), {fromArsenal: true}), 4, "2 printed + 2");
+  assert.equal(E.defendValue(s, springboard(), {fromArsenal: false}), 2);
+  assert.equal(E.defendValue(s, springboard(), {}), 2,
+    "unstated is not from arsenal — weaker than printed, never stronger");
+  /* the same clause on another card, with its OWN number */
+  const r = rec("Unmovable");
+  const unmov = {name: r.name, tt: r.type_text, ty: r.types, def: 7, uid: "un1",
+                 tx: (r.functional_text || "").replace(/\*\*/g, "")};
+  assert.equal(E.defendValue(s, unmov, {fromArsenal: true}), 8, "7 printed + its own 1");
+});
+
+test("both walls count the hand defenders BEFORE they start summing", {skip}, () => {
+  /* judge loops gear first, so a running total would read zero for every
+     piece; the trainer loops both together and would see only the
+     defenders declared earlier. Unity asks about the whole wall. */
+  const strip = f => fs.readFileSync(path.join(__dirname, "..", "engine", f), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  for(const [nm, src] of [["effects.js", strip("effects.js")], ["judge.js", strip("judge.js")]]){
+    const decl = src.indexOf("handDefenders =");
+    const use  = src.indexOf("handDefenders}");
+    assert.ok(decl >= 0, nm + ": the wall must count its hand defenders");
+    assert.ok(use > decl, nm + ": counted after it is used — every piece would read zero");
+  }
+});
+
+/* ---- 7. THE TRAINER'S WALL, DRIVEN (v3.27) --------------------------
+   The judge side of Unity is driven in defreaction.test.js. This is the
+   other board: `resolveStack` is the TRAINER's path and judge never
+   calls it, so a drill on one says nothing about the other — which is
+   the split CLAUDE.md records as "judge's wall had no drill" and the
+   reason both are driven now.
+
+   The DECLARATION is constructed, and that is legitimate: which cards
+   are defending is the caller's answer on both boards. What is being
+   measured is what the wall makes of them. ---------------------------- */
+const H = require("./helpers/judged.js");
+const G = require("../engine/game.js");
+
+test("the trainer's wall counts its hand defenders too", {skip}, () => {
+  P.fxReset();
+  const CD = require("../engine/cards.js");
+  const db = CD.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+    .filter(c => c && c.name).map(CD.mapDbCard));
+  const helm = Object.assign({},
+    CD.resolveEntry(db, {name: "Helm of Unity", p: 0, code: null, q: 1}), {uid: "helm1"});
+  const blk = {name: "Plain Blocker", tt: "Generic Action - Attack",
+    ty: ["Generic", "Action", "Attack"], tx: "", kw: [], def: 3, uid: "blk1"};
+  const swing = {name: "Probe Swing", tt: "Generic Action - Attack",
+    ty: ["Generic", "Action", "Attack"], tx: "", kw: [], power: 6, uid: "atk1"};
+
+  const run = withHand => {
+    const g = H.state({}, {gear: [helm], hand: withHand ? [blk] : [], hp: 20}, {turn: 3});
+    g.builds = [{}, {}];
+    g.pend = {card: swing, from: "hand", total: 6, ga: false,
+              ops: [], onHit: [], condOnHit: [], lateConds: [], lateOps: []};
+    g.stack = [{k: "def", gi: 0}].concat(withHand ? [{k: "def", uid: "blk1"}] : []);
+    return H.fx(g, (f, n) => f.resolveStack(n));
+  };
+
+  assert.equal(run(false).sides[1].hp, 15, "the helm alone: 20 - (6 - 1)");
+  assert.equal(run(true).sides[1].hp, 19,
+    "alongside a card from hand: wall is (1 + 1 Unity) + 3 = 5, so 1 gets through. "
+    + "A wall that stopped counting gives 4 and lets 2 through.");
 });

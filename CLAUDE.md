@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.26
+**Current version:** v3.27
 
 ---
 
@@ -313,6 +313,29 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### A SOURCE GUARD CANNOT SEE A WALL THAT STOPPED COUNTING (v3.27)
+
+Unity asks *"does a card from hand defend alongside me"*, so both walls
+count their hand defenders BEFORE either loop starts — judge loops gear
+first, and a running total reads zero for every piece.
+
+The guard asserted the count is **declared before it is used**. Replacing
+either count with a literal `0` still declares it before use, so the guard
+passed on a wall that had stopped counting. **Both walls are driven now**,
+with a real block: judge's through `reduce`, the trainer's through
+`resolveStack`, which judge never calls — a drill on one board says
+nothing about the other. The DECLARATION is constructed in both, and that
+is legitimate: which cards defend is the caller's answer either way. What
+is measured is what the wall makes of them.
+
+**AT-REST vs WALL-TIME is the boundary for this family.** A condition true
+only while blocking (Unity, Blade Beckoner, Wax On) has no at-rest number
+to display, so building it at the wall alone is complete. A condition true
+sitting on the board — Basalt Boots' Seismic Surge token, Mournful
+Casket's graveyard — would put a number on screen that disagrees with the
+number that blocked. Those wait for a display pass; the split is not
+laziness, it is which half of the sev-2 category you land in.
 
 ### A DEFENCE CONDITION IS ANSWERED FROM THREE DIFFERENT PLACES (v3.26)
 

@@ -2336,13 +2336,18 @@ function makeEffects(ctx){
          remainder that makes the last blocker look weaker than it is. */
       const parts = [];
       let wall = 0;
+      /* HOW MANY CARDS FROM HAND ARE DEFENDING, counted BEFORE the loop.
+         "Unity — when this defends together with a card from hand" is a
+         fact about the whole wall, and a piece read mid-loop would see
+         only the defenders declared before it. */
+      const handDefenders = defLs.filter(d => d.gi == null).length;
       for(const dl of defLs){
         if(dl.gi != null){
           const piece = foe(n).gear[dl.gi];
           /* the WEAR is gearDef's; the situational buff is the card's */
           const _gv = defendValue(foe(n), piece,
             {base: gearDef(piece), weaponAttack: n.pend && n.pend.from === "weapon",
-             atkCard: n.pend && n.pend.card});
+             atkCard: n.pend && n.pend.card, handDefenders});
           wall += _gv;
           foeMut(n).gear = foe(n).gear.map((x,ix)=>ix===dl.gi?gearBlockApply(x):x);
           /* an equipment that has blocked is spent for the rest of this chain */
@@ -2353,7 +2358,8 @@ function makeEffects(ctx){
           if(!c) continue;
           /* the DEFENDING side is the foe of whoever is swinging */
           const _dv = defendValue(foe(n), c,
-            {weaponAttack: n.pend && n.pend.from === "weapon", atkCard: n.pend && n.pend.card});
+            {weaponAttack: n.pend && n.pend.from === "weapon", atkCard: n.pend && n.pend.card,
+             handDefenders});
           wall += _dv;
           foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
           foeMut(n).grave = [c, ...foe(n).grave];
@@ -2606,6 +2612,11 @@ function defSelfMet(self, defSide, opts){
                      && ty.some(t => /^attack$/i.test(String(t)));
     return isAtkAction && (a.cost || 0) <= self.cost;
   }
+  /* a fact about the REST OF THE WALL — the two Unity pieces */
+  if(self.when === "withHandDefender") return (opts.handDefenders || 0) > 0;
+  /* the ZONE the card was played from — Springboard Somersault. By the
+     time the wall asks, the card has left it, so the caller answers. */
+  if(self.when === "fromArsenal")      return opts.fromArsenal === true;
   return false;                       /* an unread condition never fires */
 }
 

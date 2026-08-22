@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.26 · PHASE C · DEFENCE READS ITS CONDITIONS
+# Handoff — Dawnblade, at v3.27 · PHASE C · DEFENCE READS ITS CONDITIONS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1254 drills**
+> the card semantics run on both boards.** `npm test` is **1261 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.26: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.27: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -82,7 +82,7 @@
 > made the plumbing look finished. When you find a side field, check both
 > halves — who writes it and who reads it — not just that it is there.
 >
-> ### THE DEFENSIVE SELF-BUFF FAMILY — 10 built (v3.24, v3.26), 13 left
+> ### THE DEFENSIVE SELF-BUFF FAMILY — 13 built, 10 left
 >
 > Finishing Earth exposed it. The pool prints a whole family of *"this
 > gets +N{d}"* defensive buffs and **not one is applied**, because both
@@ -93,8 +93,13 @@
 > Wax On (x3)                                   +2{d} vs a cost-0 attack action
 > Sigil of Suffering (x3)                       +1{d} if arcane dealt this turn
 > Big Blue Sky                                  +1{d} per blue pitched this turn
-> Basalt Boots · Mournful Casket                board / graveyard conditions
-> Gauntlets/Helm of Unity                       defending alongside a hand card
+> Gauntlets/Helm of Unity                       DONE v3.27
+> Springboard Somersault · Unmovable            DONE v3.27 (from arsenal)
+> Basalt Boots · Mournful Casket    AT-REST conditions — true sitting on the
+>                                   board, so the wall alone puts a wrong
+>                                   number on screen. Needs a display pass.
+> Stonewall Impasse                 clash on defend
+> Washed Up Wave                    a choice, plus watery grave
 > Rally the Coast Guard · Staunch Response      paid
 > ```
 >

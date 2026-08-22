@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-22T03:45:37.080Z",
- "appVer": "3.25",
+ "generated": "2026-08-22T03:54:00.647Z",
+ "appVer": "3.26",
  "dataVer": "sage-v11",
  "dbCount": 788,
  "poolUnique": 405,
@@ -7146,7 +7146,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "If this was played from arsenal, it gets +2{d}.",
@@ -8786,7 +8786,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "If this was played from arsenal, it gets +1{d}.",
@@ -9354,7 +9354,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "If this was played from arsenal, it gets +1{d}.",

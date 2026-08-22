@@ -153,3 +153,66 @@ test("the wall reads blockRx, and commitPlay only records it for the defender", 
   assert.match(src, /PR\.isDR\(card\) && n\.pend/,
     "and it defends only against a live attack");
 });
+
+/* ---- UNITY, DRIVEN THROUGH A REAL WALL (v3.27) ---------------------
+
+   "Unity — when this defends together with a card from hand, this gets
+   +1{d}." A fact about the REST of the wall, so both walls must count
+   their hand defenders BEFORE they start summing: judge loops gear
+   first, and a running total would read zero for every piece.
+
+   A SOURCE GUARD CANNOT SEE THIS. Replacing either count with a literal
+   0 still declares the variable before it is used, so the ordering check
+   in defstatic.test.js passes on a wall that has stopped counting.
+   Sabotage found that; this drives it instead. -------------------------- */
+
+const helmOfUnity = () => Object.assign({},
+  C.resolveEntry(DB(), {name: "Helm of Unity", p: 0, code: null, q: 1}),
+  {uid: "helm1", curDef: null, destroyed: false});
+const plainBlocker = () => ({name: "Plain Blocker", tt: "Generic Action - Attack",
+  ty: ["Generic", "Action", "Attack"], tx: "", kw: [],
+  power: 1, pitch: 1, cost: 0, def: 3, uid: "blk1"});
+
+function blocked(o){
+  o = o || {};
+  DB();
+  let g = J.newMatch({builds: [null, null], names: ["A", "B"],
+                      heroKeys: [null, null], seed: "unity-drill"});
+  g.sides[0].hand = [SWING()]; g.sides[0].ap = 1; g.sides[0].res = 9;
+  g.sides[0].gear = [];
+  g.sides[1].hand = o.hand ? [plainBlocker()] : [];
+  g.sides[1].gear = [helmOfUnity()]; g.sides[1].hp = 20; g.sides[1].res = 9;
+  g.phase = "action"; g.step = "layer"; g.priority = 0; g.turnPlayer = 0;
+
+  const send = (a, seat) => {
+    const r = J.reduce(g, a, seat);
+    if(r.error) return false;
+    g = r.state; return true;
+  };
+  assert.ok(send({t: "play", uid: "atk1", from: "hand"}, 0), "the attack must be legal");
+
+  let declared = false;
+  for(let i = 0; i < 30 && !g.over && g.step !== "close"; i++){
+    if(g.step === "defend" && !declared){
+      assert.ok(send({t: "defend", uid: "helm1"}, 1), "the helm must be declarable");
+      if(o.hand) assert.ok(send({t: "defend", uid: "blk1"}, 1), "and the hand card too");
+      declared = true; continue;
+    }
+    if(g.priority == null) break;
+    if(!send({t: "pass"}, g.priority)) break;
+  }
+  return g;
+}
+
+test("the helm alone blocks for its printed 1", {skip}, () => {
+  const g = blocked({hand: false});
+  assert.equal(g.sides[1].hp, 15, "20 - (6 - 1). Unity has nothing to pair with.");
+});
+
+test("the helm ALONGSIDE a card from hand blocks for 2 — Unity, driven", {skip}, () => {
+  /* wall = (1 printed + 1 Unity) + 3 from hand = 5, so 1 gets through.
+     A wall that stopped counting its hand defenders gives 4 and lets 2
+     through, and no source guard would notice. */
+  const g = blocked({hand: true});
+  assert.equal(g.sides[1].hp, 19, "20 - (6 - 5)");
+});

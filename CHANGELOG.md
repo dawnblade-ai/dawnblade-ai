@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.27 — Unity, the arsenal reactions, and a guard that could not see
+
+Two more printed defence conditions, and a free third the rule found on
+its own.
+
+| card | printed condition |
+|---|---|
+| **Gauntlets / Helm of Unity** | *"when this defends together with a card from hand"* |
+| **Springboard Somersault** | *"if this was played from arsenal"* |
+| **Unmovable** | the same clause, with its own number |
+
+**Unmovable was not on the list this cycle set out to build.** It prints
+Springboard's clause with +1 where Springboard prints +2, so the reader
+found it for free — which is the whole point of fixing the RULE rather
+than the card, and the reason every amount is read off the clause rather
+than hardcoded.
+
+### Why these two and not the others
+
+Both conditions are true only **during a block**. That keeps them clear of
+the at-rest display problem v3.24 recorded: Basalt Boots (*"if you control
+a Seismic Surge token"*) and Mournful Casket (*"if an ally has been put
+into your graveyard this turn"*) are true sitting on the board, so
+buffing them at the wall alone would put a number on screen that
+disagrees with the number that blocked. They still wait for a display
+pass.
+
+### The wall has to count before it sums
+
+*"Together with a card from hand"* is a fact about the **rest of the
+wall**, so both walls count their hand defenders before either loop
+starts. judge loops gear first — a running total would read zero for
+every piece.
+
+### A source guard could not see this, and sabotage said so
+
+The ordering check asserted the count is declared before it is used.
+Replacing either count with a literal `0` **still declares it before use**,
+so the guard passed on a wall that had stopped counting entirely.
+
+Both walls are **driven** now, with a real block:
+
+```
+helm alone                       20 - (6 - 1) = 15
+helm + a card from hand          20 - (6 - 5) = 19     wall (1+1) + 3
+a wall that stopped counting     20 - (6 - 4) = 18     <- now fails
+```
+
+judge's is driven through `reduce`; the trainer's through `resolveStack`,
+which judge never calls — a drill on one board says nothing about the
+other, which is exactly why CLAUDE.md records that judge's wall once had
+no drill at all. The *declaration* is constructed in both, and that is
+legitimate: which cards are defending is the caller's answer on either
+board. What is measured is what the wall makes of them.
+
+```
+npm test          1261 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 312 full / 72 part / 21 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+**13 of the 23 built.** What is left: the two at-rest equipment
+conditions, Big Blue Sky (counts blue cards **pitched** — nothing tracks
+pitches today, so it needs a new hist field), Stonewall Impasse (clash on
+defend), Washed Up Wave (a choice plus watery grave), and the two paid
+ones.
+
+---
+
 ## v3.26 — two more defence conditions, and a default that refuses
 
 v3.25 made a *played* defence reaction reach the wall. That is what made

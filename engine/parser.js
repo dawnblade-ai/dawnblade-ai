@@ -1515,6 +1515,21 @@ function fxParse(card){
       m = cl.match(/^while this is defending an attack action card with cost (\d+), this gets \+(\d+)\{d\}\.?$/i);
       if(m) ds = {amt: +m[2], when: "atkActionCostLe", cost: +m[1]};
     }
+    /* "UNITY - when this defends TOGETHER WITH a card from hand" — the two
+       Unity pieces. Wall-time, like the weapon test: it is a fact about
+       the rest of the wall, not about the piece. The keyword prefix is
+       part of the printed line and is consumed with it. */
+    if(!ds){
+      m = cl.match(/^unity\s*[-—]\s*when this defends together with a card from hand, this gets \+(\d+)\{d\}(?: until end of turn)?\.?$/i);
+      if(m) ds = {amt: +m[1], when: "withHandDefender"};
+    }
+    /* "IF THIS WAS PLAYED FROM ARSENAL" — Springboard Somersault. The zone
+       it came from is the caller's answer, the same as everything else
+       here: by the time the wall asks, the card is no longer in it. */
+    if(!ds){
+      m = cl.match(/^if this was played from arsenal, it gets \+(\d+)\{d\}\.?$/i);
+      if(m) ds = {amt: +m[1], when: "fromArsenal"};
+    }
     if(!ds) continue;
     fx.defSelf = ds;
     handled.add(ci);

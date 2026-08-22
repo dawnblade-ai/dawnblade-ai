@@ -986,6 +986,11 @@ function strike(g){
      the wrong hero's history. */
   n = {...n, actor: link.by != null ? link.by : atk};
 
+  /* HOW MANY CARDS FROM HAND ARE DEFENDING, counted before either loop —
+     the gear loop runs first, so a piece reading a running total would
+     always see zero. Unity asks about the whole wall. */
+  const handDefenders = (sd.blockH || [])
+    .filter(u => (sd.hand || []).some(c => c.uid === u)).length;
   for(const uid of (sd.blockG || [])){
     const gi = find(sd.gear, uid);
     if(gi < 0) continue;
@@ -993,7 +998,8 @@ function strike(g){
     /* the WEAR is gearDef's; the situational buff is the card's, and what
        it is defending is this file's answer — the same split as `heroHit`. */
     const gv = E.defendValue(sd, piece,
-      {base: gearDef(piece), weaponAttack: link.from === "weapon", atkCard: link.card});
+      {base: gearDef(piece), weaponAttack: link.from === "weapon", atkCard: link.card,
+       handDefenders});
     wall += gv;
     parts.push(piece.name + " " + gv);
     spentGear.push(uid);
@@ -1005,7 +1011,8 @@ function strike(g){
        both boards read the same number. The WALL stays this file's — judge
        holds its defenders on `blockH` and the trainer on the hand — which
        is the split `linkPumps`/`linkPayload` already keep. */
-    const dv = E.defendValue(sd, c, {weaponAttack: link.from === "weapon", atkCard: link.card});
+    const dv = E.defendValue(sd, c,
+      {weaponAttack: link.from === "weapon", atkCard: link.card, handDefenders});
     wall += dv;
     handBlockers++;
     parts.push(c.name + " " + dv);
@@ -1465,7 +1472,9 @@ function commitPlay(g, card, zone, seat, window, target){
     if(seat !== atkSeat){
       const dsd = at(n, seat);
       const dv = E.defendValue(dsd, card,
-        {weaponAttack: n.pend.from === "weapon", atkCard: n.pend.card});
+        {weaponAttack: n.pend.from === "weapon", atkCard: n.pend.card,
+         /* the zone it was PLAYED from — Springboard Somersault */
+         fromArsenal: zone === "arsenal"});
       if(dv > 0){
         n = put(n, seat, s => ({...s,
           blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv}]}));
