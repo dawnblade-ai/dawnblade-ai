@@ -308,10 +308,18 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
 
      A field LEAVING is as deliberate an edit as one arriving — that is
      what this line is for, and the direction of travel is the point: the
-     right number of bespoke per-token counters is zero. */
-  assert.equal(gap.fields, 39);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09 */
-  assert.equal(gap.player.length, 39);
-  assert.equal(gap.opponent.length, 39);
+     right number of bespoke per-token counters is zero.
+
+     39 -> 40 AT v3.29, and this one ARRIVED. `nextTurn` holds effects
+     armed against a side's NEXT turn — the crush riders that reach
+     forward ("their first attack during their next turn gets -2{p}").
+     It is not a per-token counter and it is not derivable from the
+     board: the whole point is that it survives the moment `hist` is
+     cleared for the incoming seat (CR 4.4.4), which is precisely when
+     such an effect has to still be there. */
+  assert.equal(gap.fields, 40);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29 */
+  assert.equal(gap.player.length, 40);
+  assert.equal(gap.opponent.length, 40);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -321,8 +329,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 39);   /* -frost v2.74, -rot -fra v3.09 */
-  assert.equal(gap.nativeForOpponent.length, 39);
+  assert.equal(gap.nativeForPlayer.length, 40);   /* -frost v2.74, -rot -fra v3.09, +nextTurn v3.29 */
+  assert.equal(gap.nativeForOpponent.length, 40);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

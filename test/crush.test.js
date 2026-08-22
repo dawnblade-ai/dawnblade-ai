@@ -110,17 +110,38 @@ test("the threshold is the card's printed number, not a literal 4", {skip}, () =
     "a card printing 6 must carry 6");
 });
 
-test("the five next-turn riders REFUSE, and say why", {skip}, () => {
+test("TWO of the five next-turn riders are built; THREE still refuse", {skip}, () => {
   H.db();
-  /* Cartilage Crush, Chokeslam, Debilitate, Crush the Weak and Walk in My
-     Shoes all reach into the OPPONENT'S NEXT TURN, and no such schedule
-     exists. They reported `full` while running Boulder Drop's payload;
-     they now report the truth and do nothing. A card that does nothing
-     looks like it does nothing — that is the v2.04 call, and it is the
-     right one for a training sim, because a card doing the WRONG thing
-     teaches wrong play. */
-  for(const nm of ["Cartilage Crush", "Chokeslam", "Debilitate", "Crush the Weak", "Walk in My Shoes"])
-    assert.equal(crushOf(nm), undefined, nm + " must not claim a rider it cannot run");
+  /* All five reach into the OPPONENT'S NEXT TURN. v3.16 refused all five
+     because no such schedule existed; `nextTurn` on the side is that
+     schedule now, and two of the payloads map onto readers that already
+     exist — a power debuff and a cost tax.
+
+     THE OTHER THREE STILL REFUSE, and each for its own reason rather than
+     a shared shrug. Claiming one here would file a card `full` that does
+     nothing, which is the tier lie this project keeps finding. */
+  assert.deepEqual(crushOf("Debilitate"), {n: 4, ops: [["foeNextTurn", "firstAtkMinus", 2]]},
+    "a deferred power debuff — the amount read off the clause");
+  assert.deepEqual(crushOf("Cartilage Crush"), {n: 4, ops: [["foeNextTurn", "firstActionTax", 1]]},
+    "a deferred cost tax");
+
+  for(const nm of ["Chokeslam", "Crush the Weak", "Walk in My Shoes"])
+    assert.equal(crushOf(nm), undefined,
+      nm + " must not claim a rider it cannot run — a RESTRICTION ('can't gain {p}', "
+      + "'can't play') or a whole-turn halving needs gates this does not have");
+});
+
+test("both built riders are FIRST-only, never a whole-turn debuff", {skip}, () => {
+  /* "their FIRST attack during their next turn" and "their FIRST action".
+     A blanket debuff for the whole turn is strictly stronger than printed,
+     which is the direction that steals games — so the entry is spent by
+     whatever consumes it. */
+  H.db();
+  for(const nm of ["Debilitate", "Cartilage Crush"]){
+    const c = H.card(nm, 1);
+    assert.match((c.tx || "").toLowerCase(), /their first (attack|action) during their next turn/,
+      nm + ": the printed word is FIRST");
+  }
 });
 
 test("no crush rider leaks into fx.ops — it is a gated trigger", {skip}, () => {

@@ -75,6 +75,12 @@ function seat(sd){
     blockH: list(sd.blockH).length, blockG: list(sd.blockG).length,
     chainBlocked: sd.chainBlocked,
     paySel: list(sd.paySel).length,
+    /* WHAT IS ARMED AGAINST THIS SIDE'S NEXT TURN (v3.29). A report that
+       silently omits state is worse than no report, and a crush rider is
+       exactly the sort of thing a player reports as "my attack was weaker
+       than the card says". */
+    nextTurn: list(sd.nextTurn).map(e => e && (e.kind + (e.amt != null ? " " + e.amt : "")
+                                     + (e.ready ? " (live)" : " (armed)"))),
     intimidated: list(sd.intimidated).map(c => c.name),
     status: {amp: sd.amp, ward: sd.ward, awd: sd.awd,
       rune: PR.runeCount ? PR.runeCount(sd) : undefined,

@@ -760,7 +760,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.28"; /* v3.28 — prevented arcane is not dealt arcane (RULING, user 2026-08-22): the credit for "you have dealt arcane damage this turn" was added at the call site BEFORE any shield, ward or barrier ran, so a point turned entirely aside still counted — it now happens where the damage lands, and on the deferred soak path it credits the DEALER, who is not the seat answering the sheet. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.29"; /* v3.29 — an effect can now be armed against a side's NEXT turn, which is the schedule five crush riders had been refusing for want of: `hist` is cleared for the incoming seat at CR 4.4.4, the exact moment such an effect must survive, so it lives on its own side field that arms at the start of that turn, is spent by the FIRST attack or action, and expires with the turn whether it fired or not. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3965,6 +3965,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* freeze lifts at the start of the freezing player's turn (Cold Snap) */
     { const fz = DawnEffects.thawFreeze(n, 0);
       if(fz.thawed.length){ n = fz.game; n = L(n, `${fz.thawed.join(", ")} thaws — free to be played again.`); } }
+    /* WHAT WAS ARMED AGAINST THIS TURN TURNS ON (v3.29). A separate call
+       from the suspense tick, which returns early when nothing is
+       suspended — piggybacking there would arm nothing on most turns. */
+    { const aw = DawnEffects.armNextTurn(n, 0);
+      if(aw.msgs.length){ n = aw.game; aw.msgs.forEach(m => { n = L(n, m); }); } }
     { const sp = DawnEffects.tickSuspense(n, 0);
       if(sp.msgs.length){ n = sp.game; sp.msgs.forEach(m => { n = L(n, m); });
         if(sp.ops.length) n = _EFX.runOps(n, sp.ops, sp.fired.join(", ")); } }

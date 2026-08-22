@@ -1766,6 +1766,11 @@ function endPhaseAfterArsenal(g, seat){
        suspense tick below it. */
     const fz = E.thawFreeze(n, inc);
     if(fz.thawed.length){ n = say(fz.game, fz.thawed.join(", ") + " thaws — free to be played again."); }
+    /* WHAT WAS ARMED AGAINST THIS TURN TURNS ON (v3.29), beside the
+       suspense tick — a separate call because tickSuspense returns early
+       when nothing is suspended. */
+    { const aw = E.armNextTurn(n, inc); n = aw.game;
+      for(const m of aw.msgs) n = say(n, m); }
     const sp = E.tickSuspense(n, inc);
     if(sp.msgs.length){
       n = sp.game;

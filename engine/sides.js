@@ -68,7 +68,17 @@ const SIDE_FIELDS = [
   /* escrow: cards banished by intimidate, handed back at the end phase */
   "intimidated",
   /* transient selection while paying a cost */
-  "paySel"
+  "paySel",
+  /* EFFECTS ARMED FOR THIS SIDE'S NEXT TURN (v3.29). Crush riders reach
+     forward — "their first attack during their next turn gets -2{p}" —
+     and there was nowhere for that to live: `hist` is the natural home
+     for a per-turn fact and is CLEARED for the incoming seat at CR 4.4.4,
+     which is exactly the moment such an effect has to survive.
+
+     Entries are `{kind, amt, ready}`. They arm at the start of this
+     side's turn, are consumed by whatever reads them, and are dropped at
+     the end of that turn whether they fired or not. */
+  "nextTurn"
 ];
 
 const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[]});
@@ -92,6 +102,7 @@ function makeSide(o){
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
     hist: freshHist(),
+    nextTurn: [],
     blockH: [], blockG: [], blockRx: [], blockedHand: 0, chainBlocked: [],
     intimidated: [],
     paySel: []

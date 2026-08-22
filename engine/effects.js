@@ -463,6 +463,18 @@ function makeEffects(ctx){
          crush cards ran Boulder Drop's. `foeHandToDeck` IS Boulder Drop's,
          moved out of the trigger so the generic path serves it too — one
          reader, no card named at the trigger site. */
+      /* ARMED AGAINST THEIR NEXT TURN (v3.29). A crush rider that reaches
+         forward has nowhere else to live: `hist` is the natural home for
+         a per-turn fact and is CLEARED for the incoming seat at CR 4.4.4,
+         which is the exact moment this has to survive.
+
+         `ready:false` — it does nothing until `armNextTurn` turns it on at
+         the start of that side's turn. Without that an effect created on
+         their turn would fire immediately, which is a turn early. */
+      else if(k==="foeNextTurn"){
+        foeMut(n).nextTurn = [...(foe(n).nextTurn||[]), {kind:v, amt:op[2]||0, ready:false}];
+        n = L(n, `${srcName}: ${foe(n).name} feels it next turn.`);
+      }
       else if(k==="foeHandToDeck"){
         /* WHICH card is an approximation and always was: the printed text
            lets THEM choose, and this takes the last in hand. Carried over
@@ -1054,6 +1066,16 @@ function makeEffects(ctx){
     let n = {...s};
     const exSide = actMut(n);
     exSide.res = act(s).res - effCost(card, act(s)); exSide.paySel = [];
+    /* THE ONE-SHOT COST TAX IS SPENT HERE, at the CHARGE, never at the
+       affordability check — `effCost` is read twice and only this read
+       actually takes the resources (v2.80). Cartilage Crush taxes "their
+       FIRST action during their next turn", so marking it spent is what
+       keeps it from taxing every card they play. */
+    if(P.nextTurnTax(act(s)) > 0)
+      exSide.nextTurn = (act(s).nextTurn || []).map((e, i, arr) =>
+        (e && e.ready && !e.spent && e.kind === "firstActionTax"
+         && arr.findIndex(x => x && x.ready && !x.spent && x.kind === "firstActionTax") === i)
+          ? {...e, spent: true} : e);
     /* FROSTBITE, THE SECOND HALF OF ITS PRINTED LINE (v2.74):
          "Cards and abilities cost you an additional {r} to play or
           activate. At the beginning of your end phase OR WHEN YOU PLAY A
@@ -1453,6 +1475,24 @@ function makeEffects(ctx){
          attack was declared from is the only thing that distinguishes a
          weapon swing from an attack action card. Inferring it from the card
          at resolution would mean re-deciding a question already answered. */
+      /* THEIR FIRST ATTACK THIS TURN IS WEAKER (v3.29) — Debilitate's
+         crush rider, armed on the previous turn. Applied before `pend` so
+         the declared total and its label agree, and SPENT so it hits the
+         first attack only: a debuff that lasted the whole turn would be
+         stronger than the card prints. */
+      {
+        const _dbf = P.nextTurnDebuff(act(n), "firstAtkMinus");
+        if(_dbf > 0){
+          total = Math.max(0, total - _dbf);
+          let _done = false;
+          actMut(n).nextTurn = (act(n).nextTurn || []).map(e => {
+            if(_done || !(e && e.ready && !e.spent && e.kind === "firstAtkMinus")) return e;
+            _done = true; return {...e, spent: true};
+          });
+          declNote += ` The crush still tells — this attack is ${_dbf} weaker.`;
+        }
+      }
+
       /* ---- THE ATTACK-PLAY AURAS FIRE HERE (v3.22) -------------------
          Before `pend`, because two of the four payloads MODIFY THE ATTACK
          — Courage's +1{p} and go again — and after `pend` the total is
@@ -2522,6 +2562,25 @@ function resolveInertia(game, seat){
 
    It returns `{game, fired, msgs, ops}`: `fired` names the auras that
    left, `ops` is what they pay out. */
+/* TURN ON WHAT WAS ARMED AGAINST THIS SIDE'S TURN (v3.29).
+
+   Called at the top of a seat's turn by BOTH boards, beside
+   `tickSuspense`. It is a separate function rather than a branch inside
+   that one because `tickSuspense` returns early when nothing is
+   suspended — piggybacking there would arm nothing on most turns, which
+   is the quiet half of "a schedule is written per board". */
+function armNextTurn(game, seat){
+  const sides = (game.sides || []).slice();
+  const sd = Object.assign({}, sides[seat]);
+  const list = sd.nextTurn || [];
+  if(!list.some(e => e && !e.ready)) return {game, msgs: []};
+  sd.nextTurn = list.map(e => (e && !e.ready) ? {...e, ready: true} : e);
+  sides[seat] = sd;
+  return {game: Object.assign({}, game, {sides}),
+          msgs: [sd.name + " starts the turn under " + sd.nextTurn.filter(e=>e&&e.ready).length
+                 + " lingering effect(s)."]};
+}
+
 function tickSuspense(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -3078,6 +3137,22 @@ function beginEndPhase(game, seat){
     for(const f of sw.fired) fired.push(f);
   }
 
+  /* (7) WHAT WAS ARMED AGAINST THIS TURN EXPIRES WITH IT (v3.29).
+     "Their FIRST attack during their next turn" — if they never attacked,
+     the effect is spent all the same. Only entries that were armed for
+     THIS turn are dropped; one armed during this turn is aimed at the
+     next one and must survive. */
+  {
+    const sd = (n.sides || [])[seat] || {};
+    const live = (sd.nextTurn || []).filter(e => e && e.ready);
+    if(live.length){
+      const sides = n.sides.slice();
+      sides[seat] = Object.assign({}, sd, {nextTurn: (sd.nextTurn||[]).filter(e => e && !e.ready)});
+      n = Object.assign({}, n, {sides});
+      msgs.push(nameOf(seat) + ": " + live.length + " lingering effect(s) expire with the turn.");
+    }
+  }
+
   return {game: n, msgs, ops, fired};
 }
 
@@ -3170,6 +3245,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -115,7 +115,8 @@ const NON_CARD_SIDE_FIELDS = [
   "res","ap","wasted","counters","weaponUsed","buffNext","buffQ","gaNext",
   "runeHitNext","amp","ward","awd","rune","arcShield",
   "lifeLock","namedBuff","dracNext","marked","fatigue","hist",
-  "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel"
+  "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",
+  "nextTurn"
 ];
 
 /* Per-instance by construction: never part of a dictionary entry. `uid`

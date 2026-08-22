@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.28
+**Current version:** v3.29
 
 ---
 
@@ -313,6 +313,46 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### AN EFFECT CAN BE ARMED AGAINST A SIDE'S NEXT TURN (v3.29)
+
+Five crush riders reach forward and all five refused for want of a
+schedule. `nextTurn` on the side is it, and it needed its OWN field for a
+precise reason: **`hist` is cleared for the incoming seat at CR 4.4.4**,
+which is the exact moment an effect aimed at that seat's turn must still
+be there.
+
+| | |
+|---|---|
+| **armed** | created on my turn, does nothing yet |
+| **ready** | turned on at the start of THEIR turn, by `armNextTurn` |
+| **spent** | consumed by the FIRST attack / FIRST action |
+| **expired** | dropped at the end of that turn, fired or not |
+
+**ARMED IS NOT LIVE.** An entry created during their own turn would fire
+immediately — a whole turn early. **SPENT IS NOT OPTIONAL**: both cards
+print *"their FIRST"*, and a debuff lasting the whole turn is stronger
+than printed.
+
+**`armNextTurn` IS ITS OWN FUNCTION, not a branch in `tickSuspense`** —
+that one returns early when nothing is suspended, so piggybacking would
+arm nothing on most turns. Both boards call it.
+
+**THE TAX IS SPENT AT THE CHARGE, never at the affordability check.**
+`effCost` is read twice and only one of those reads takes resources
+(v2.80); marking it spent at the wrong one taxes every card they play or
+none.
+
+**A SIDE FIELD IS NOT REAL UNTIL THREE PLACES CARRY IT** — `SIDE_FIELDS`
+(or invariants reports SIDES-ASYMMETRIC), `wire.js` (a dropped field is a
+desync), and `report.js`'s `seat()`. The symmetry ledger moved 39 → 40,
+deliberately: a field arriving is as deliberate an edit as one leaving.
+
+**THREE OF THE FIVE STILL REFUSE**, each for its own reason: Chokeslam
+and Crush the Weak are RESTRICTIONS ("can't gain {p}", "can't play") that
+belong in `legal` and in every pump path, and Walk in My Shoes halves
+base {p} and {d} for a turn. Claiming one would file a card `full` that
+does nothing.
 
 ### PREVENTED IS NOT DEALT, AND THE CREDIT MOVES WITH IT (v3.28)
 

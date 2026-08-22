@@ -614,6 +614,29 @@ function classifyClause(raw){
   }
   /* ---- the crush payloads, each read on its own terms (v3.16) --------
      None of these existed: one noop stood in for all twelve. */
+  /* ---- CRUSH RIDERS THAT REACH INTO THEIR NEXT TURN (v3.29) ---------
+     Five pool names print one, and all five refused until now because no
+     schedule existed to fire on — the honest refusal v3.16 recorded.
+     `nextTurn` on the side is that schedule, and these two are the ones
+     whose payload maps onto a reader that already exists:
+
+       Debilitate       a power debuff, like `atkMinus` but deferred
+       Cartilage Crush  a cost tax, like frostbite's but one-shot
+
+     BOTH ARE "FIRST X", not "every X". A blanket debuff for the whole
+     turn is strictly stronger than printed.
+
+     THE OTHER THREE STILL REFUSE, and each for its own reason rather
+     than a shared shrug: Chokeslam and Crush the Weak are RESTRICTIONS
+     ("can't gain {p}", "can't play") that belong in `legal` and in every
+     pump path, and Walk in My Shoes halves base {p} and {d} across a
+     whole turn. Claiming them here would file a card `full` that does
+     nothing, which is the tier lie this project keeps finding. */
+  if(m=c.match(/^their first attack during their next turn gets -(\d+)\{p\}$/))
+    return R([["foeNextTurn", "firstAtkMinus", +m[1]]]);
+  if(/^their first action during their next turn costs an additional \{r\} to play or activate$/.test(c))
+    return R([["foeNextTurn", "firstActionTax", 1]]);
+
   if(/^they put a card from their hand on top of their deck$/.test(c))
     return R([["foeHandToDeck", 1]]);
   if(m=c.match(/^put a -(\d+)\{d\} counter on (?:target |an )?equipment they control$/))
@@ -2254,7 +2277,22 @@ const arsEmpty = sd => arsCount(sd) === 0;
    one `Math.max(0, cost - red + frost)` would let a spare {r} of reduction
    silently eat a Frostbite — the tax would vanish on precisely the cheap
    cards Iyslander is trying to tax. */
-function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)) + frostCount(sd); }
+/* WHAT A LINGERING EFFECT ADDS TO A COST (v3.29). Cartilage Crush taxes
+   "their FIRST action during their next turn", so this reports the tax
+   while one is live and unspent; the site that charges it marks it spent.
+   Only `ready` entries count — an effect armed during this turn is aimed
+   at the next one. */
+function nextTurnTax(sd){
+  return ((sd && sd.nextTurn) || [])
+    .filter(e => e && e.ready && !e.spent && e.kind === "firstActionTax")
+    .reduce((a, e) => a + (e.amt || 0), 0);
+}
+function nextTurnDebuff(sd, kind){
+  return ((sd && sd.nextTurn) || [])
+    .filter(e => e && e.ready && !e.spent && e.kind === kind)
+    .reduce((a, e) => a + (e.amt || 0), 0);
+}
+function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)) + frostCount(sd) + nextTurnTax(sd); }
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -2706,6 +2744,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
+        nextTurnTax, nextTurnDebuff,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,

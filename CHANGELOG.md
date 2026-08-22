@@ -9,6 +9,73 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.29 — an effect armed against their next turn
+
+Bravo's deck holds the pool's biggest unreadable block, and it is one
+missing mechanism rather than eight broken cards. Five names print a
+crush rider that reaches **forward**:
+
+```
+Debilitate         their FIRST attack during their next turn gets -2{p}
+Cartilage Crush    their FIRST action during their next turn costs an extra {r}
+Chokeslam          attack action cards they control can't gain {p}
+Crush the Weak     they can't play attack action cards with 3 or less base {p}
+Walk in My Shoes   base {p} and {d} of their attack action cards are halved
+```
+
+v3.16 refused all five, honestly, "because no such schedule exists".
+There is one now.
+
+### Why it needed a field of its own
+
+`hist` is the natural home for a per-turn fact — and it is **cleared for
+the incoming seat at CR 4.4.4**, which is the exact moment an effect
+aimed at that seat's turn has to still be there. So `nextTurn` is a real
+side field, and the lifecycle is the rule:
+
+| | |
+|---|---|
+| **armed** | created on my turn, does nothing yet |
+| **ready** | turned on at the start of *their* turn |
+| **spent** | consumed by the FIRST attack / FIRST action |
+| **expired** | dropped at the end of that turn, fired or not |
+
+**Armed is not live.** An effect created during their own turn would
+otherwise fire immediately — a whole turn early. **Spent is not
+optional**: both cards print *"their FIRST"*, and a debuff lasting the
+whole turn is strictly stronger than printed.
+
+Driven end to end: their first attack goes 6 → **4**, their second stays
+**6**; a 2-cost card costs **3**, and the next costs **2** again.
+
+### Two built, three still refusing — each for its own reason
+
+Chokeslam and Crush the Weak are **restrictions** (*"can't gain {p}"*,
+*"can't play"*) that belong in `legal` and in every pump path; Walk in My
+Shoes halves base {p} and {d} across a whole turn. Claiming any of them
+here would file a card `full` that does nothing, which is the tier lie
+this project keeps finding.
+
+### Two things the new field had to be told to
+
+The tax is spent at the **charge**, never at the affordability check —
+`effCost` is read twice and only one of those reads actually takes
+resources (v2.80). And a side field is not real until the wire carries it
+(a dropped field is a desync) and the report names it (a report that
+omits state is worse than none).
+
+The symmetry ledger moved **39 → 40**, deliberately. A field arriving is
+as deliberate an edit as one leaving.
+
+```
+npm test          1273 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 315 full / 72 part / 18 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.28 — prevented arcane is not dealt arcane
 
 **RULING (user, 2026-08-22):** Sigil of Suffering's own arcane satisfies
