@@ -231,6 +231,10 @@ function buildPrompt(game, spec){
     const options = (spec.options || []).filter(o => o && (o.kind === "spellvoid" || (o.cost || 0) <= avail));
     if(!options.length) return null;
     return {...base, amount, avail, options, sel: [], src: spec.src || "",
+      /* WHO DEALT IT. Carried explicitly, because a spec only keeps the
+         fields this function knows about — and `arcTaken` credits the
+         dealer, who is NOT the side answering this sheet. */
+      by: spec.by != null ? spec.by : null,
       title: spec.title || (amount + " arcane incoming"),
       hint: spec.hint || "Tap what you want to spend. Barriers cost resources and stay; " +
         "spellvoid destroys the piece. Take none and the damage lands in full."};
@@ -436,7 +440,7 @@ function applyPrompt(game, prompt){
     const through = Math.max(0, (prompt.amount || 0) - prevented);
     out.pay = cost;
     out.ops = [...chosen.filter(o => o.kind === "spellvoid").map(o => ["destroyGear", o.uid]),
-               ["arcTaken", through, prompt.src || ""]];
+               ["arcTaken", through, prompt.src || "", prompt.by]];
     out.msgs.push(chosen.length
       ? who + " soaks " + Math.min(prevented, prompt.amount || 0) + " of " + prompt.amount +
         " arcane with " + chosen.map(o => o.name + (o.kind === "spellvoid" ? " (destroyed)" : "")).join(", ") +

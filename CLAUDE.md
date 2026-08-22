@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.27
+**Current version:** v3.28
 
 ---
 
@@ -313,6 +313,39 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### PREVENTED IS NOT DEALT, AND THE CREDIT MOVES WITH IT (v3.28)
+
+**RULING (user, 2026-08-22): Sigil of Suffering's own arcane satisfies its
+own condition — "as long as it's not prevented."**
+
+`hist.arc`, the field behind *"if you've dealt arcane damage this turn"*,
+was incremented at the CALL SITE before `arcaneHit` ran, so a point turned
+entirely aside by a shield, a ward or a barrier still counted as dealt.
+It is credited inside `arcaneHit`, where the damage lands, and a fully
+prevented hit now credits nothing (CR 7.5.5).
+
+**ONE INSTANCE PER SOURCE, never per point.** Three Runechants are three
+threats a hero may answer three times; points and instances coincide only
+while a token deals exactly 1.
+
+**THE DEFERRED PATH CREDITS THE DEALER.** When the threatened hero holds a
+barrier the damage is not applied — it rides out on the soak answer as
+`arcTaken`, and that answer is given by the side being HIT
+(`promptConfirm` borrows their seat), so the actor there is the victim.
+The dealing seat rides on the spec as `by` and is passed through
+`buildPrompt` explicitly — a spec only carries fields it knows about
+(`arsStamp`, v2.34).
+
+**SABOTAGE IS THE ONLY REASON THAT HALF EXISTS.** On the immediate path
+the dealer IS the actor, so swapping the lookup for `actMut` failed
+nothing at all. A drill that cannot tell two things apart has not tested
+either.
+
+**AND A SOURCE SLICE ROTS WHERE A RULE MOVES.** Three drills grepped the
+pop block for this credit — written when `execute` was unreachable inside
+the React component. The credit has now left that block entirely, for the
+second time (v3.22, v3.28). They are driven now.
 
 ### A SOURCE GUARD CANNOT SEE A WALL THAT STOPPED COUNTING (v3.27)
 

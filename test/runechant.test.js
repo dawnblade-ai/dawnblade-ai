@@ -202,58 +202,88 @@ test("a null cap pops everything — the plain 'all of them' case", () => {
    `execute` is inside the React component, so no drill can call it. Pin
    the call site by reading it, the way the actor ledger does — a source
    check is worth more than no check when the alternative is unreachable. */
-const popBlock = (() => {
-  const src = effects();   /* the pop block moved with `execute` (v2.53) */;
-  /* RE-ANCHORED AT v3.22, and the drill FAILING is what brought us here —
-     it threw "the pop block moved" rather than quietly measuring nothing,
-     which is the whole reason anchors name what they slice.
+/* `popBlock` (a source slice of the pop) was retired at v3.28: every
+   property it guarded is driven above. */
 
-     The block is no longer runechant-shaped. Four pool tokens print the
-     same trigger and only Runechant was built, by NAME; the pop is
-     general now and dispatches on the parsed payload. Every property
-     below still holds and is still worth pinning — they are about the
-     bookkeeping, not about which token fired. */
-  const at = src.indexOf("if(atkTrigAt.length){");
-  if(at < 0) throw new Error("the attack-trigger pop block moved — re-anchor this drill");
-  const end = src.indexOf("\n      }", at);
-  const body = src.slice(at, end);
-  if(body.length < 400) throw new Error("the slice is " + body.length + " bytes — too small to be the pop block");
-  return body;
-})();
+/* ---- THE ARCANE CREDIT IS DRIVEN NOW (v3.28) -------------------------
 
-test("the trainer's runechant pop credits hist.arc", () => {
-  assert.match(popBlock, /hist\s*=\s*\{\s*\.\.\.act\(n\)\.hist\s*,\s*arc\s*:/,
-    "without this, arcDealt and the arcane pip never see a runechant");
+   These three used to slice the pop block and grep it, because `execute`
+   lived inside the React component and no drill could call it. It does
+   not any more, and the credit has moved out of the pop entirely: it
+   happens in `arcaneHit`, at the point the damage actually lands. So the
+   same three properties are DRIVEN instead of read.
+
+   That is strictly better and it is also the reason they had to change:
+   a source check pinned to a location stops meaning anything the moment
+   the rule moves, which is what happened here twice (v3.22, v3.28). */
+
+const HH = require("./helpers/judged.js");
+
+const arcOnce = o => {
+  o = o || {};
+  const g = HH.state({}, {hp: 20, arcShield: o.shield || 0, awd: o.ward || 0}, {turn: 3});
+  g.builds = [{}, {}];
+  return HH.runOps(g, o.ops || [["arcane", 1]], "Runechant");
+};
+
+test("arcane that LANDS credits the dealer's hist.arc", () => {
+  const n = arcOnce();
+  assert.equal(n.sides[1].hp, 19, "it landed");
+  assert.equal(n.sides[0].hist.arc, 1, "and the DEALER is credited, not the hero hit");
+  assert.equal((n.sides[1].hist || {}).arc || 0, 0, "the side taking it dealt nothing");
 });
 
-test("the pop counts one arcane instance per token, not one per pop", () => {
+test("arcane that is PREVENTED credits nothing — CR 7.5.5", () => {
+  /* RULING (user, 2026-08-22): Sigil of Suffering's own arcane satisfies
+     its own condition "as long as it's not prevented". The credit used to
+     be added at the call site BEFORE any prevention ran, so a point
+     turned aside entirely still counted as dealt. */
+  const n = arcOnce({shield: 5});
+  assert.equal(n.sides[1].hp, 20, "every point of it prevented");
+  assert.equal((n.sides[0].hist || {}).arc || 0, 0, "so nothing was dealt this turn");
+});
+
+test("partial prevention still counts — some of it landed", () => {
+  const n = arcOnce({shield: 1, ops: [["arcane", 3]]});
+  assert.equal(n.sides[1].hp, 18, "3 minus a 1-point shield");
+  assert.equal(n.sides[0].hist.arc, 1, "one instance, and it dealt damage");
+});
+
+test("one instance per SOURCE, not one per point", () => {
   /* runOps counts one per arcane op regardless of the points dealt, so N
-     separate sources are N instances. `rp.popped` is that number; a bare
-     +1 would under-count and `rp.damage` would count POINTS, a different
-     quantity that happens to coincide only when the token deals 1. */
-  assert.match(popBlock, /arc\s*:\s*\(act\(n\)\.hist\.arc\s*\|\|\s*0\)\s*\+\s*arcCount/,
-    "credit the COUNT of tokens that fired — not a literal 1, and not the points dealt");
-  /* and the count really is per token rather than per point: the two
-     coincide only while a token deals exactly 1, which is the coincidence
-     this assertion exists to survive. */
-  assert.match(popBlock, /arcCount\+\+/,
-    "one instance per token that fired");
+     separate sources are N instances — three Runechants are three threats
+     a hero may answer three times. Points and instances coincide only
+     while a token deals exactly 1, which is the coincidence this exists
+     to survive. */
+  const n = arcOnce({ops: [["arcane", 1], ["arcane", 1], ["arcane", 1]]});
+  assert.equal(n.sides[1].hp, 17, "three points");
+  assert.equal(n.sides[0].hist.arc, 3, "and three instances");
+  const one = arcOnce({ops: [["arcane", 3]]});
+  assert.equal(one.sides[1].hp, 17, "the same three points");
+  assert.equal(one.sides[0].hist.arc, 1, "from ONE source");
 });
 
-test("the history is written through actMut, never as a game-object key", () => {
+test("the history is written through the side, never as a game-object key", () => {
   /* the v2.18/v2.19 bug class: `{...n, hist}` writes to the GAME object,
-     the side keeps its old value, and the write silently does nothing.
-     `hist` is a per-side field and SIDE-FIELD-ON-GAME exists for this. */
-  assert.match(popBlock, /actMut\(n\)\.hist\s*=/);
-  assert.doesNotMatch(popBlock, /\{\s*\.\.\.n\s*,[^}]*\bhist\b\s*[,:}]/,
-    "hist belongs to the side — write it with actMut, not as a top-level key");
+     the side keeps its old value, and the write silently does nothing. */
+  const n = arcOnce();
+  assert.equal(n.hist, undefined, "hist belongs to a side, not to the game");
+  assert.equal(n.sides[0].hist.arc, 1);
 });
 
-test("the pop credits the ACTOR's history, not seat 0's", () => {
-  /* same bug class as popRunechants(n, 0, …), fixed in v2.25: the arcane
-     a runechant deals belongs to whoever swung. */
-  assert.doesNotMatch(popBlock, /you(Mut)?\(n\)\.hist/,
-    "a perspective helper here would credit seat 0 whoever is acting");
+test("the credit goes to the ACTOR's history, not seat 0's", () => {
+  /* Same bug class as popRunechants(n, 0, …), fixed in v2.25: the arcane a
+     runechant deals belongs to whoever swung. DRIVEN from seat 1 now
+     rather than grepped — the write moved into `creditArc` at v3.28, and
+     a scan pinned to where a rule USED to live stops meaning anything the
+     moment it moves. */
+  const g = HH.state({hp: 20}, {}, {turn: 3, actor: 1});
+  g.builds = [{}, {}];
+  const n = HH.runOps(g, [["arcane", 1]], "Runechant");
+  assert.equal(n.sides[0].hp, 19, "seat 1 is acting, so seat 0 takes it");
+  assert.equal(n.sides[1].hist.arc, 1, "and seat 1 is credited");
+  assert.equal((n.sides[0].hist || {}).arc || 0, 0,
+    "a perspective helper would have credited seat 0 whoever is acting");
 });
 
 /* ---- cost reduction still works off the board --------------------- */
@@ -270,4 +300,56 @@ test("effCost survives a side with no board at all", () => {
   const card = {cost: 3, tx: "This costs {r} less to play for each Runechant you control."};
   assert.equal(P.effCost(card, {}), 3);
   assert.equal(P.effCost(card, null), 3);
+});
+
+/* ---- THE DEFERRED PATH CREDITS THE DEALER, NOT THE VICTIM (v3.28) ----
+
+   When the threatened hero has a barrier to spend, `arcaneHit` does not
+   apply the damage — it queues a soak prompt and the damage "rides out
+   on the answer" as an `arcTaken` op. That answer is given by the side
+   being HIT, and `promptConfirm` borrows their seat, so at `arcTaken`
+   time the actor is the victim.
+
+   Crediting `act` there hands the arcane to the hero taking it. Which
+   seat dealt it therefore rides on the spec (`by`) and is passed through
+   `buildPrompt` explicitly — a spec only carries fields it knows about,
+   which is the `arsStamp` lesson from v2.34.
+
+   Sabotage is why this drill exists: on the IMMEDIATE path the dealer
+   and the actor are the same seat, so replacing the dealer lookup with
+   `actMut` failed nothing at all. -------------------------------------- */
+
+test("a soak-deferred hit still credits the DEALER", () => {
+  const PRM = require("../engine/prompts.js");
+  const barrier = {name: "Nullrune Boots", uid: "nb1", tt: "Generic Equipment - Legs",
+                   kw: ["Arcane Barrier 1"], def: 1};
+  const g = HH.state({}, {hp: 20, gear: [barrier], res: 5}, {turn: 3});
+  g.builds = [{}, {}];
+
+  const n = HH.runOps(g, [["arcane", 1]], "Runechant");
+  const spec = (n.promptQ || [])[0] || n.prompt;
+  assert.ok(spec, "a hero holding a barrier must be ASKED before the damage lands");
+  assert.equal(spec.tag, "soak");
+  assert.equal(spec.side, 1, "the side being hit is the one asked");
+  assert.equal(spec.by, 0, "and the spec records who dealt it");
+  assert.equal(n.sides[1].hp, 20, "nothing has landed yet — it rides on the answer");
+  assert.equal((n.sides[0].hist || {}).arc || 0, 0, "and nothing is credited yet either");
+
+  /* decline the barrier: take all of it */
+  const live = PRM.buildPrompt(n, spec);
+  assert.ok(live, "the sheet must open");
+  assert.equal(live.by, 0, "buildPrompt must carry `by` through — a spec only keeps what it knows");
+  const out = PRM.applyPrompt(n, {...live, sel: []});
+  const taken = (out.ops || []).find(o => o[0] === "arcTaken");
+  assert.ok(taken, "the damage rides out as arcTaken");
+  assert.equal(taken[1], 1, "all of it, undeclined");
+  assert.equal(taken[3], 0, "carrying the DEALER's seat");
+
+  /* and running it credits seat 0, while the ACTOR at that moment is the
+     victim — which is the whole point */
+  const vg = {...n, actor: 1};
+  const done = HH.runOps(vg, [taken], "Runechant");
+  assert.equal(done.sides[1].hp, 19, "the victim takes it");
+  assert.equal(done.sides[0].hist.arc, 1, "the DEALER is credited");
+  assert.equal((done.sides[1].hist || {}).arc || 0, 0, "the victim dealt nothing");
 });

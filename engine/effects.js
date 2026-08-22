@@ -311,6 +311,28 @@ function makeEffects(ctx){
      damage it prevents. The remaining damage therefore rides out on the
      prompt's answer as `arcTaken`. That is also what puts the trigger
      above the damage on the stack, which is where the CR puts it. */
+  /* "YOU HAVE DEALT ARCANE DAMAGE THIS TURN" — CREDITED WHERE IT LANDS.
+
+     This used to be added at the CALL SITE, before `arcaneHit` ran, so a
+     point of arcane that was entirely turned aside by an arcane shield, a
+     ward or a barrier still counted as dealt. CR 7.5.5 says prevented
+     damage is not dealt, and the user ruled the same for the card that
+     asks (2026-08-22, Sigil of Suffering: its own arcane counts "as long
+     as it's not prevented").
+
+     ONE INSTANCE PER SOURCE, not one per point — that is what `runOps`
+     has always counted and what three Runechants are: three threats a
+     hero may answer three times.
+
+     The DEALER is credited, never the hero being hit. On the deferred
+     path that distinction is load-bearing: a soak prompt is answered by
+     the THREATENED side, so at `arcTaken` time the actor is the victim. */
+  const creditArc = (n, dealer) => {
+    const sd = dealer === actorOf(n) ? actMut(n) : foeMut(n);
+    sd.hist = {...sd.hist, arc: ((sd.hist || {}).arc || 0) + 1};
+    return n;
+  };
+
   const arcaneHit = (n, seat, amount, srcName) => {
     const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
     const sd  = () => n.sides[seat];
@@ -344,7 +366,11 @@ function makeEffects(ctx){
          so a figure frozen here is stale by the second sheet. It is only
          passed to the probe below, which asks "is there anything worth
          asking RIGHT NOW" before committing to defer the damage. */
-      const spec = {tag:"soak", side:seat, src:srcName, amount:left, options:soaks};
+      /* WHO DEALT IT rides on the spec, because the answer is given by the
+         side being hit and `arcTaken` would otherwise credit the victim.
+         A spec only carries fields `buildPrompt` knows about (the
+         `arsStamp` lesson, v2.34), so it is passed through explicitly. */
+      const spec = {tag:"soak", side:seat, src:srcName, amount:left, options:soaks, by:1-seat};
       if(buildPrompt(n, spec)){
         n.promptQ = [...(n.promptQ||[]), spec];
         return n;                    /* the damage rides out on the answer */
@@ -352,8 +378,12 @@ function makeEffects(ctx){
     }
     if(left > 0){
       mut().hp -= left;
+      n = creditArc(n, 1 - seat);
       n = L(n, `${srcName}: ${left} arcane damage.`);
     } else {
+      /* PREVENTED IS NOT DEALT (CR 7.5.5, and RULING user 2026-08-22:
+         Sigil of Suffering's own arcane satisfies its own condition "as
+         long as it's not prevented"). No credit — see `creditArc`. */
       n = L(n, `${srcName}: every point of it prevented.`);
     }
     return n;
@@ -548,7 +578,7 @@ function makeEffects(ctx){
          ALL dead: there was nowhere for a prevention to stand. Driven
          before the fix, five arcane through arcane-ward 3 AND shield 3
          dealt five. `arcaneHit` is where every one of them now applies. */
-      else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; actMut(n).hist={...act(n).hist, arc:(act(n).hist.arc||0)+1}; n=arcaneHit(n, 1-actorOf(n), total, srcName); }
+      else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; n=arcaneHit(n, 1-actorOf(n), total, srcName); }
       /* The damage that SURVIVED a soak prompt, landing on the hero that
          was asked — the actor at prompt-confirm time is the threatened
          side (promptConfirm borrows `p.side`). That is the whole reason it
@@ -556,7 +586,14 @@ function makeEffects(ctx){
          already past every prevention, so it never re-enters arcaneHit;
          doing so would offer a second Nullrune for the same hit. */
       else if(k==="arcTaken"){
-        if(v>0){ actMut(n).hp -= v; n = L(n, `${op[2]||srcName}: ${v} arcane damage lands on ${act(n).name}.`); }
+        if(v>0){
+          actMut(n).hp -= v;
+          /* THE DEALER IS op[3], not the actor. The actor here is the side
+             that was ASKED — it borrowed `p.side` at prompt-confirm — so
+             crediting `act` would hand the arcane to the hero taking it. */
+          if(op[3] != null) n = creditArc(n, op[3]);
+          n = L(n, `${op[2]||srcName}: ${v} arcane damage lands on ${act(n).name}.`);
+        }
         else n = L(n, `${op[2]||srcName}: all of it soaked — no damage.`);
       }
       else if(k==="buffNext"){
@@ -1459,7 +1496,9 @@ function makeEffects(ctx){
                have dealt arcane damage this turn" stays false after
                Viserai's PRIMARY arcane source has just resolved. Each
                token is its own source, so N popped is N instances. */
-            actMut(n).hist = {...act(n).hist, arc:(act(n).hist.arc||0)+arcCount};
+            /* the credit is `arcaneHit`'s now — it happens only where the
+               damage actually lands, so a fully prevented pop counts for
+               nothing. `arcCount` still drives the message and hitSeq. */
             n.hitSeq = n.hitSeq + 1; n.lastDmg = arcDmg;
             declNote += ` ${arcCount} ${arcName}${arcCount>1?"s":""} pop for ${arcDmg} arcane`
               + `${runeCount(act(n))?` (${runeCount(act(n))} still on the board)`:""}.`;

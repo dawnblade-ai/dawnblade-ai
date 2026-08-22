@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.27 · PHASE C · DEFENCE READS ITS CONDITIONS
+# Handoff — Dawnblade, at v3.28 · PHASE C · DEFENCE READS ITS CONDITIONS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1261 drills**
+> the card semantics run on both boards.** `npm test` is **1264 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.27: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.28: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >

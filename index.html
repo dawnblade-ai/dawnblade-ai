@@ -760,7 +760,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.27"; /* v3.27 — Unity and the arsenal reactions: two more printed defence conditions, both true only DURING a block, which is what keeps them clear of the at-rest display problem that still holds Basalt Boots and Mournful Casket back — and both walls are now DRIVEN with a real block, because a source guard cannot see a wall that has quietly stopped counting. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.28"; /* v3.28 — prevented arcane is not dealt arcane (RULING, user 2026-08-22): the credit for "you have dealt arcane damage this turn" was added at the call site BEFORE any shield, ward or barrier ran, so a point turned entirely aside still counted — it now happens where the damage lands, and on the deferred soak path it credits the DEALER, who is not the seat answering the sheet. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a

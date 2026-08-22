@@ -9,6 +9,74 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.28 — prevented arcane is not dealt arcane
+
+**RULING (user, 2026-08-22):** Sigil of Suffering's own arcane satisfies
+its own condition — *"as long as it's not prevented."*
+
+The first half was already right. The second half was not, and the
+qualifier is what exposed it.
+
+### The credit was added before anything could stop it
+
+`hist.arc` — the field behind *"if you've dealt arcane damage this
+turn"* — was incremented **at the call site, before `arcaneHit` ran**. So
+a point of arcane turned entirely aside by an arcane shield, an arcane
+ward or a barrier still counted as dealt. CR 7.5.5 says prevented damage
+is not dealt; the user's ruling says the same about the card that asks.
+
+It is credited where the damage **lands** now:
+
+```
+arcane lands            dealer hist.arc = 1
+fully shielded          dealer hist.arc = 0     <- the ruling
+partially prevented     dealer hist.arc = 1     <- some of it landed
+```
+
+And Sigil reads it correctly off that: 3 printed, 4 when its own arcane
+got through, 3 when it did not.
+
+### The deferred path credits the dealer, not the victim
+
+When the threatened hero holds a barrier, `arcaneHit` does not apply the
+damage — it queues a soak prompt and the damage rides out on the answer
+as an `arcTaken` op. **That answer is given by the side being hit**, and
+`promptConfirm` borrows their seat, so at `arcTaken` time the actor *is*
+the victim. Crediting `act` there hands the arcane to the hero taking it.
+
+Which seat dealt it rides on the spec as `by`, passed through
+`buildPrompt` explicitly — a spec only carries the fields it knows about,
+which is the `arsStamp` lesson from v2.34.
+
+**Sabotage is the only reason that got built.** On the immediate path the
+dealer and the actor are the same seat, so replacing the dealer lookup
+with `actMut` failed *nothing*. The soak path is drilled now, end to end:
+the spec records `by`, `buildPrompt` carries it, `applyPrompt` puts it on
+the op, and running the op with the victim as actor still credits the
+dealer.
+
+### Three source-slice drills became driven ones
+
+`runechant.test.js` sliced the pop block and grepped it for the credit —
+written when `execute` lived inside the React component and no drill
+could call it. That has not been true for a long time, and the credit has
+now left the pop entirely. **A source check pinned to a location stops
+meaning anything the moment the rule moves**, which happened to these
+twice (v3.22, v3.28).
+
+The same three properties — that it credits, that it counts one instance
+per *source* rather than per point, and that it writes to the side rather
+than the game object — are driven now, plus the two the ruling added.
+
+```
+npm test          1264 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 312 full / 72 part / 21 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+---
+
 ## v3.27 — Unity, the arsenal reactions, and a guard that could not see
 
 Two more printed defence conditions, and a free third the rule found on
