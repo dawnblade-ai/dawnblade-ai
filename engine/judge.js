@@ -1011,6 +1011,23 @@ function strike(g){
     parts.push(c.name + " " + dv);
     spentHand.push(c);
   }
+  /* A DEFENCE REACTION IS NOT DECLARED, IT IS PLAYED — and its printed
+     defence still has to reach the wall (v3.25).
+
+     `blockRx` has been on the side since v2.14, cleared here since v2.46,
+     and NEVER WRITTEN OR READ in this file: so every defence reaction in
+     the pool resolved its text at the table, went to the graveyard, and
+     stopped exactly nothing. Driven before it was believed — Sigil of
+     Suffering prints 3 defence, dealt its 1 arcane, and the defender took
+     the full 6.
+
+     The trainer has always summed it (`drx` in its own wall). One board
+     had the rule and the other did not, which is v3.17's shape and the
+     reason that entry says a comment is not a mechanism. */
+  for(const l of (sd.blockRx || [])){
+    wall += l.def || 0;
+    parts.push(l.label || "defence reaction");
+  }
 
   /* Equipment WEARS rather than leaving; a card GOES to the graveyard.
 
@@ -1426,6 +1443,34 @@ function commitPlay(g, card, zone, seat, window, target){
   if(n._declared){
     const d = n._declared; delete n._declared;
     return declareAttack(n, card, seat, zone, target, d);
+  }
+
+  /* THE DEFENCE REACTION'S PRINTED NUMBER (v3.25). Its TEXT already ran —
+     `execute` is the one copy of the semantics and it resolved the card.
+     What never happened is the half that makes it a DEFENCE: the number
+     on the card reaching the wall.
+
+     Recorded here rather than inside `execute`, because "is this card
+     defending" is a question about the combat this file owns: the trainer
+     answers it from its own `mode`/`bphase`, and effects.js is phase-free
+     on purpose. `defendValue` supplies the number so a conditional buff
+     lands the same way it does for a declared defender.
+
+     Only for the DEFENDER, and only against a live attack — a defence
+     reaction its own controller somehow played on their own swing defends
+     nothing (CR 8.1.3a: the player must control a hero as an
+     attack-target). */
+  if(PR.isDR(card) && n.pend){
+    const atkSeat = n.pend.by != null ? n.pend.by : n.turnPlayer;
+    if(seat !== atkSeat){
+      const dsd = at(n, seat);
+      const dv = E.defendValue(dsd, card, {weaponAttack: n.pend.from === "weapon"});
+      if(dv > 0){
+        n = put(n, seat, s => ({...s,
+          blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv}]}));
+        n = say(n, card.name + " answers at instant speed — +" + dv + " defence.");
+      }
+    }
   }
 
   /* SOMETHING HAPPENED, SO NOBODY HAS PASSED IN SUCCESSION ANY MORE.

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.24 · PHASE C, BRIAR'S ENGINE IS COMPLETE
+# Handoff — Dawnblade, at v3.25 · PHASE C · EVERY DEFENCE REACTION NOW BLOCKS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1242 drills**
+> the card semantics run on both boards.** `npm test` is **1248 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.24: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.25: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -71,6 +71,16 @@
 > sits on the board doing nothing but counting as an aura (which is
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
+>
+> ### v3.25 FOUND SOMETHING BIGGER UNDERNEATH THAT FAMILY
+>
+> **Every defence reaction in the pool blocked for zero at the table** —
+> 15 cards, 39 copies, 11 of 15 heroes. `blockRx` was a field judge
+> cleared and never wrote or read. Fixed and driven.
+>
+> **The lesson to carry:** the field existed and the clear existed, which
+> made the plumbing look finished. When you find a side field, check both
+> halves — who writes it and who reads it — not just that it is there.
 >
 > ### THE DEFENSIVE SELF-BUFF FAMILY — 4 built (v3.24), 19 left
 >

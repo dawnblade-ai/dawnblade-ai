@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.24
+**Current version:** v3.25
 
 ---
 
@@ -313,6 +313,37 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### A DEFENCE REACTION IS PLAYED, NOT DECLARED — AND IT STILL BLOCKS (v3.25)
+
+**Every defence reaction in the pool blocked for zero at the table** — 15
+cards, 39 copies, 11 of 15 heroes. `blockRx` has been a side field since
+v2.14 and cleared in judge's `strike` since v2.46, and was never WRITTEN
+or READ there. The card resolved its text, reached the graveyard, and the
+number printed on it was discarded.
+
+The trainer always summed it (`drx`). **One board had the rule and the
+other did not** — v3.17's shape, and the reason that entry says a comment
+is not a mechanism. Here the *field* and the *clear* both existed, which
+made it look wired.
+
+**DRIVEN BEFORE IT WAS BELIEVED.** Sigil of Suffering prints 3: played
+into a 6-power attack it dealt its 1 arcane and the defender still took
+6. The OPS were never the broken half, and both are pinned together now
+so a later fix cannot trade one for the other.
+
+**No tool could see it.** `journey.test.js` proves a defence reaction is
+never DECLARED (CR 8.1.3a) — the other half of the rule — and nothing
+asked whether a PLAYED one did anything. Coverage reads them `full`
+because the text resolves; the fairness sweep is one-sided toward
+too-strong and this is as weak as a card gets.
+
+**The record is `judge.js`'s, the number is `defendValue`'s.** Whether a
+card is defending is a question about the combat structure each board
+owns (`effects.js` is phase-free on purpose); what it is WORTH is card
+semantics. Only the defender's card, only against a live attack, and the
+entry clears in `strike` with the rest of the wall — a leftover defends
+the next chain link for free, which is v2.46's bug in a third zone.
 
 ### THE CONDITION CAN BELONG TO THE ATTACK, NOT THE CARD (v3.24)
 

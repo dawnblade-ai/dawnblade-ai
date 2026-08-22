@@ -9,6 +9,78 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.25 — the defence reaction that stopped nothing
+
+Chasing the last of v3.23's self-buff family turned up something much
+larger sitting underneath it.
+
+> **Every defence reaction in the pool blocked for zero at the table.**
+> 15 unique cards, 39 copies, across **11 of the 15 heroes**.
+
+### What was actually broken
+
+A defence reaction is not *declared* the way a card from hand or a piece
+of equipment is — it is **played**, at instant speed, in the reaction
+step. The trainer has always handled that: it pushes the card onto
+`blockRx` and its wall subtracts `drx`.
+
+`blockRx` has been a field on every side since **v2.14** and has been
+cleared in judge's `strike` since **v2.46**. It was never *written* and
+never *read* there. So at the table the card resolved its text, went to
+the graveyard, and the number printed on it was thrown away.
+
+**Driven before it was believed.** Sigil of Suffering prints 3 defence:
+played legally into a 6-power attack, it dealt its 1 arcane to the
+attacker and the defender still took the full 6.
+
+```
+before   seat1 hp 14   (6 through)      after   seat1 hp 17   (3 stopped)
+         seat0 hp 19   (arcane landed)          seat0 hp 19   (unchanged)
+```
+
+The ops were never the broken half. Both are pinned together now, so a
+future fix cannot trade one for the other.
+
+### Why no tool could see it
+
+`journey.test.js` proves a defence reaction can never be **declared** as a
+defender (CR 8.1.3a) — correct, and it is the *other* half of the rule.
+Nothing asked whether one that was *played* did anything. Coverage reads
+these cards `full` because their text parses and resolves; the fairness
+sweep is one-sided toward too-strong and this is as weak as a card gets.
+
+It is the shape v3.17 named and this project keeps paying for: **a rule
+that exists on one board only.** The field was there, the clear was there,
+and the two halves that would have used it were not.
+
+### Where the fix lives, and why there
+
+The wall reads `blockRx`; `commitPlay` records it. Recorded in `judge.js`
+rather than in `effects.js` because *"is this card defending"* is a
+question about the combat structure this file owns — the trainer answers
+it from its own `mode`/`bphase`, and `effects.js` is phase-free on
+purpose.
+
+The NUMBER comes from `defendValue`, the body v3.23 built, so a
+conditional buff will land on a played reaction exactly as it does on a
+declared defender. Only the **defender's** card counts, and only against a
+live attack (CR 8.1.3a). The entry is cleared in `strike` with the rest of
+the wall — a leftover would defend the next chain link for free, which is
+v2.46's bug in a third zone.
+
+```
+npm test          1248 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 311 full / 72 part / 22 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+Four guards sabotaged and confirmed to bite, including the two that would
+let the attacker's own reaction count and one that would let a reaction
+defend with no attack in flight.
+
+---
+
 ## v3.24 — four pieces that printed a promise they never kept
 
 v3.23 built the seam and measured a 23-card family it did not build.
