@@ -9,6 +9,80 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.23 — a defender is worth its printed number plus what modifies it
+
+**Briar's engine is complete**, and finishing it opened a 23-card family
+nobody had looked at.
+
+### Embodiment of Earth did nothing, on both boards
+
+> "Non-attack action cards you control get +1{d} while defending."
+
+Both walls summed `c.def || 0` — the **printed** number — so a card whose
+defence is modified while it defends blocked for the wrong value on the
+trainer *and* at the table. The aura sat on the board doing nothing.
+
+`effects.defendValue(defSide, card)` is the one body now. The **wall
+stays the caller's** — the trainer holds defenders on the hand, judge on
+`blockH`, and that split is deliberate — but what a single card is
+*worth* is card semantics and belongs in one place, or the two boards
+disagree about a number.
+
+**The subject is read off the structured type array**, and each exclusion
+is a way to be wrong:
+
+| card | gets it? | why |
+|---|---|---|
+| non-attack action card | **yes** | the printed subject |
+| attack action card | no | carries Attack as well as Action |
+| defence reaction | no | *"Reaction"* contains the substring *"action"*, and a reaction is not an action card |
+
+Two Embodiments stack. A card printing no defence comes back 0 + 1, not
+`NaN`. Only the defender's own board is consulted, because the printed
+phrase is *"cards **you** control"*.
+
+### And the family it exposed — 23 cards, measured, not built
+
+The pool prints a whole *defensive self-buff* family and **not one of
+them is applied**, because both walls read the printed value:
+
+```
+Blade Beckoner Boots/Gauntlets/Helm/Plating   +1{d} while defending a weapon attack
+Wax On (x3)                                   +2{d} vs a cost-0 attack action card
+Sigil of Suffering (x3)                       +1{d} if you've dealt arcane this turn
+Big Blue Sky                                  +1{d} per blue pitched this turn
+Basalt Boots · Mournful Casket                +1{d} on a board/graveyard condition
+Gauntlets/Helm of Unity                       +1{d} defending alongside a hand card
+Rally the Coast Guard · Staunch Response      paid
+```
+
+**Most of them read `tier: full`.** The clause is consumed, so coverage
+counts it; the buff simply never reaches a wall. And every one is
+*weaker* than printed, so the fairness sweep — deliberately one-sided
+toward too-strong — cannot see them either. This is the shape Phase 3
+keeps finding: *they were read, and read wrong.*
+
+They are **not built here, on purpose.** `defendValue` is where they go,
+so each is a reader rather than new machinery — but Blade Beckoner is
+EQUIPMENT and equipment defence flows through `gearDef`, which the UI and
+the advisor also read. A buff applied at the wall alone would make the
+number on screen disagree with the number that blocked, which is the
+sev-2 category the player *trusts*. Half-building it is worse than the
+honest gap.
+
+```
+npm test          1237 drills, 0 failed, 0 skipped
+npm run audit     405 cards — 311 full / 72 part / 22 none
+npm run fairness  clean
+tools/failstates  0 UNFAIR
+```
+
+Six guards sabotaged and confirmed to bite, including both walls
+individually — a wall that drifts back to `c.def` is a board where the
+aura silently does nothing, which is exactly the state this found.
+
+---
+
 ## v3.22 — one trigger, four tokens, and the weapon half that keeps it honest
 
 **Briar's Embodiment of Lightning needed building, and the census found

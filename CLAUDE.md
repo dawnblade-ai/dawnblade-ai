@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.22
+**Current version:** v3.23
 
 ---
 
@@ -313,6 +313,39 @@ now a spec object plus whatever parser work its card text needs. Still genuinely
 open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
 Nimblism this turn" macro, which need deck manipulation and a turn-history
 predicate rather than a choice.
+
+### A DEFENDER IS WORTH ITS PRINTED NUMBER PLUS WHAT MODIFIES IT (v3.23)
+
+Both walls summed `c.def || 0`, so a card whose defence changes while it
+defends blocked for the wrong value **on both boards**. Briar's
+Embodiment of Earth — *"non-attack action cards you control get +1{d}
+while defending"* — sat on the board doing nothing.
+
+**`effects.defendValue(defSide, card)` is the one body.** The WALL stays
+the caller's (the trainer holds defenders on the hand, judge on
+`blockH`), because that split is deliberate; what a single card is WORTH
+is card semantics and belongs in one place, or the two boards disagree
+about a number.
+
+**THE SUBJECT IS READ OFF `ty`.** An attack action card carries Action
+AND Attack, so excluding Attack is what makes this *non-attack* action
+cards; a Defense Reaction carries no Action at all and is correctly left
+out. *"Reaction" contains the substring "action"* — a loose `tt` test
+hands a defence reaction a buff its text never granted.
+
+**23 MORE POOL CARDS PRINT A DEFENSIVE SELF-BUFF AND NONE OF THEM IS
+APPLIED** — Blade Beckoner ×4, Wax On ×3, Sigil of Suffering ×3, Big Blue
+Sky, Basalt Boots, Mournful Casket, the two Unity pieces, Rally, Staunch.
+**Most read `tier: full`**: the clause is consumed, so coverage counts it,
+and the buff simply never reaches a wall. Every one is WEAKER than
+printed, so the one-sided fairness sweep cannot see them either.
+
+They are deliberately **not built yet**. `defendValue` is where they go,
+so each is a reader rather than new machinery — but Blade Beckoner is
+EQUIPMENT, and equipment defence flows through `gearDef`, which the UI
+and the advisor also read. Buffing at the wall alone makes the number on
+screen disagree with the number that blocked, which is the sev-2 category
+the player TRUSTS. **Half-building it is worse than the honest gap.**
 
 ### ONE TRIGGER, FOUR TOKENS, AND A NAME MATCH THAT HID THREE (v3.22)
 

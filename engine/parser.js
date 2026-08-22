@@ -1460,6 +1460,28 @@ function fxParse(card){
     break;                                       /* one pay-or-freeze per card in the pool */
   }
 
+  /* ---- A BOARD STATIC THAT BUFFS OTHER CARDS' DEFENCE (v3.23) --------
+     "Non-attack action cards you control get +1{d} while defending."
+
+     Briar's Embodiment of Earth, and the only card in the pool that buffs
+     ANOTHER card's defence rather than its own. The self-buff family —
+     Blade Beckoner's "this gets +1{d} while defending a weapon attack",
+     Big Blue Sky, Sigil of Suffering — is a different shape and is
+     deliberately NOT read here; each gates on its own condition and
+     claiming them together would grant conditions nobody has built.
+
+     THE SUBJECT MUST BE ONE WE CAN EXPRESS, or this refuses. A defence
+     buff handed to the wrong cards is a wall that stops more than it
+     should, which is the direction that steals games. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const dg = clauses[ci].match(
+      /^(non-attack action cards) you control get \+(\d+)\{d\} while defending\.?$/i);
+    if(!dg) continue;
+    fx.defGrant = {amt: +dg[2], subject: "nonAttackAction"};
+    handled.add(ci);
+    break;
+  }
+
   /* ---- THE ATTACK-PLAY AURA TRIGGER (v3.22) --------------------------
      "When you play an attack action card[ or activate a weapon attack],
       destroy this and X."

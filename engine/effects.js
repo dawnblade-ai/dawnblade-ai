@@ -2347,11 +2347,13 @@ function makeEffects(ctx){
         } else {
           const c = foe(n).hand.find(x=>x.uid===dl.uid);
           if(!c) continue;
-          wall += (c.def||0);
+          /* the DEFENDING side is the foe of whoever is swinging */
+          const _dv = defendValue(foe(n), c);
+          wall += _dv;
           foeMut(n).hand = foe(n).hand.filter(x=>x.uid!==dl.uid);
           foeMut(n).grave = [c, ...foe(n).grave];
           handBlockers++;
-          parts.push(`${c.name} ${c.def||0}`);
+          parts.push(`${c.name} ${_dv}`);
         }
       }
       const stopped = Math.min(wall, total);
@@ -2542,6 +2544,47 @@ function tickSuspense(game, seat){
    `when` is the schedule to run, never "everything expiring": "turn" at
    the top of the controller's turn, "end" at the beginning of their end
    phase. Passing the wrong one would sweep a card a whole phase early. */
+/* WHAT A DEFENDER IS ACTUALLY WORTH (v3.23).
+
+   Both walls read `c.def || 0` — the PRINTED number — so a card whose
+   defence is modified while it defends was blocking for the wrong value
+   on both boards. Briar's Embodiment of Earth prints "non-attack action
+   cards you control get +1{d} while defending" and did nothing at all.
+
+   ONE BODY, BOTH WALLS. The wall itself stays the caller's — the trainer
+   holds defenders on `foe(n).hand`, judge on `sd.blockH`, and that split
+   is deliberate — but what a single card is WORTH is card semantics and
+   belongs here, or the two boards drift on the number.
+
+   THE SUBJECT IS READ OFF THE STRUCTURED TYPE ARRAY. `ty` is the
+   authority and `tt` is a display string the database contradicts on five
+   records; "Reaction" also contains the substring "action", so a loose
+   `tt` test hands a defence reaction a buff its text never granted. An
+   attack action card carries BOTH Action and Attack, so excluding Attack
+   is what makes this "non-attack action cards" rather than "action
+   cards". A Defense Reaction carries no Action at all and is correctly
+   left out — it is not an action card.
+
+   Only the AURA's controller's board is consulted, because the printed
+   phrase is "cards YOU control". */
+const isNonAtkActionCard = c => {
+  const ty = (c && c.ty) || [];
+  return ty.some(t => /^action$/i.test(String(t)))
+      && !ty.some(t => /^attack$/i.test(String(t)));
+};
+
+function defendValue(defSide, card){
+  let d = (card && card.def != null) ? card.def : 0;
+  for(const b of (defSide && defSide.board) || []){
+    if(!b || !b.card) continue;
+    const g = P.fxParse(b.card).defGrant;
+    if(!g) continue;
+    if(g.subject === "nonAttackAction" && !isNonAtkActionCard(card)) continue;
+    d += g.amt;
+  }
+  return d;
+}
+
 /* ONE DESCRIPTION OF THE OPTIONAL-COST OFFER (v3.20).
 
    The spec was written out at the `execute` queue site, and building the
@@ -3018,6 +3061,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
+return {makeEffects, CTX_KEYS, defendValue, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

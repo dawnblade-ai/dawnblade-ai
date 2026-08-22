@@ -997,9 +997,14 @@ function strike(g){
   for(const uid of (sd.blockH || [])){
     const c = (sd.hand || []).find(x => x.uid === uid);
     if(!c) continue;
-    wall += (c.def || 0);
+    /* WHAT THE CARD IS WORTH IS CARD SEMANTICS, and lives in effects.js so
+       both boards read the same number. The WALL stays this file's — judge
+       holds its defenders on `blockH` and the trainer on the hand — which
+       is the split `linkPumps`/`linkPayload` already keep. */
+    const dv = E.defendValue(sd, c);
+    wall += dv;
     handBlockers++;
-    parts.push(c.name + " " + (c.def || 0));
+    parts.push(c.name + " " + dv);
     spentHand.push(c);
   }
 

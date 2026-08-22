@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.22 · PHASE C, BRIAR'S ENGINE IS LIVE
+# Handoff — Dawnblade, at v3.23 · PHASE C, BRIAR'S ENGINE IS COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1228 drills**
+> the card semantics run on both boards.** `npm test` is **1237 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.22: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.23: coverage **311 full / 72 part / 22 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -64,13 +64,40 @@
 > | what | note |
 > |---|---|
 > | ~~Embodiment of Lightning's trigger~~ | **DONE at v3.22** — one reader, one pop site, four tokens (Runechant, Courage, Quicken, the Embodiment). The weapon half of the trigger is carried, so the Embodiment does not pop on a weapon swing. |
-> | **Embodiment of Earth's buff** | *"Non-attack action cards you control get +1{d} while defending."* Needs a static "while defending" reader; nothing has one. |
+> | ~~Embodiment of Earth's buff~~ | **DONE at v3.23** — `effects.defendValue` is the one body and both walls ask it. It exposed a 23-card family below. |
 > | her 8 `part` cards | fusion/meld (`Arcane Seeds // Life`, `Burn Up // Shock`, and Weave Lightning's *"if it's fused"*), turn-history predicates over card CLASS (Star Fall's *"played a Lightning card this turn"*, Arcane Polarity's *"been dealt arcane damage this turn"*), and Jack Be Quick's steal. |
 >
 > **Both tokens are currently inert and that is honest, not a gap.** Earth
 > sits on the board doing nothing but counting as an aura (which is
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
+>
+> ### THE DEFENSIVE SELF-BUFF FAMILY — 23 cards, measured, unbuilt
+>
+> Finishing Earth exposed it. The pool prints a whole family of *"this
+> gets +N{d}"* defensive buffs and **not one is applied**, because both
+> walls read the printed number:
+>
+> ```
+> Blade Beckoner Boots/Gauntlets/Helm/Plating   +1{d} vs a weapon attack
+> Wax On (x3)                                   +2{d} vs a cost-0 attack action
+> Sigil of Suffering (x3)                       +1{d} if arcane dealt this turn
+> Big Blue Sky                                  +1{d} per blue pitched this turn
+> Basalt Boots · Mournful Casket                board / graveyard conditions
+> Gauntlets/Helm of Unity                       defending alongside a hand card
+> Rally the Coast Guard · Staunch Response      paid
+> ```
+>
+> **Most read `tier: full`** — the clause is consumed, the buff never
+> reaches a wall — and every one is WEAKER than printed, so the one-sided
+> fairness sweep is blind to them too.
+>
+> `defendValue` is where they go, so each is a READER rather than new
+> machinery. **The trap to plan around:** Blade Beckoner is EQUIPMENT and
+> equipment defence flows through `gearDef`, which the UI and the advisor
+> also read. Buff at the wall alone and the number on screen disagrees
+> with the number that blocked — sev-2, the category the player trusts.
+> Do `gearDef` and the wall together, or not at all.
 >
 > ### NEXT — eleven heroes after her
 >
