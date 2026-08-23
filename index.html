@@ -760,7 +760,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.33"; /* v3.33 — Bravo's last two minters: a REVEAL is a cost that moves nothing, "a card with crush" is a printed field once printedKw can answer it, and a {t} inside a pay-cost is part of the cost; the defends and playAura triggers are wired out of one shared body each. Two older faults fell out of it — printedKw was FALSE for every crush card because a keyword line may carry a rider, and every token the parser minted reached the board with a lowercased name. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.34"; /* v3.34 — Bravo is COMPLETE (Staunch Response's optional additional cost, asked before the card resolves like boost), and three faults surfaced under it: the trainer's own DEFENDING wall never called defendValue, so every defensive self-buff worked when the dummy blocked and did nothing when you did; at the table no "this turn" grant ever expired; and both SPLIT cards ran BOTH halves for free with nothing asked, which had Burn Up // Shock dealing five arcane on play where it prints a delayed four. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -777,7 +777,7 @@ window.APP_VER = "3.33"; /* v3.33 — Bravo's last two minters: a REVEAL is a co
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v11"; /* v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v12"; /* v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1555,6 +1555,17 @@ function useCardDB(){
                Den of the Spider an "Action Defense Reaction", which would
                make a defence reaction playable on your own turn. Change
                both, and bump DATA_VER when you do. */
+            /* IS THIS A SPLIT CARD? (v3.34) The database says so itself, and the
+               flag is the authority — `//` in the type line is how two typeboxes
+               are RENDERED, not what makes a card a split card. Exactly two
+               records in this pool carry it, and both print Meld.
+
+               A split card is ONE card with two halves: one pitch value, one
+               defence value, one card in hand and one card in the graveyard. The
+               halves are told apart by `tt`, which is the one place the boundary
+               survives — the structured `ty` array flattens both faces into a
+               single list (v2.39). */
+            hz:!!c.played_horizontally,
             ty:(c.types||[]).slice(),
             kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
             tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
@@ -2896,7 +2907,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
 
   const execute = _EFX.execute;
 
-  const playRx = i => setG(s=>{
+  /* AN OPTIONAL ADDITIONAL COST ON A PLAYED REACTION (v3.34) — Staunch
+     Response. A COST is settled at play time, so it cannot be a queued
+     prompt (those drain after the card has resolved). Boost is the
+     precedent on both boards: pause, ask, then re-enter the play with the
+     answer. `_addPaid` is the same seam judge.js threads to `execute`. */
+  const playRx = (i, addPaid) => setG(s=>{
     /* THE WINDOW IS `speedAllowed`'S QUESTION NOW (v2.37) — the first consumer
        moved off `mode`/`bphase`, which is roadmap item 1's last step.
 
@@ -2955,9 +2971,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
-    let n = {...s};
+    /* ASK ONLY WHEN THERE IS A REAL CHOICE — enough floating for BOTH the
+       printed cost and the addition. Otherwise it plays straight through
+       unpaid and the rider simply does not fire, which is the same rule
+       `buildPrompt` follows for a spec with nothing to ask. */
+    if(addPaid === undefined && fx.addPay && act(s).res >= cost + fx.addPay.cost)
+      return L({...s, mode:"rxaddpay", rxAdd:{idx:i, name:c.name, cost:fx.addPay.cost}},
+        `${c.name} has an additional cost — you may pay ${fx.addPay.cost} more for +${(fxParse(c).defSelf||{}).amt||0}{d}.`);
+    let n = {...s, _addPaid: addPaid === true};
     const rxSide = actMut(n);
     rxSide.res = act(s).res - cost;
+    if(addPaid === true && fx.addPay){
+      rxSide.res = rxSide.res - fx.addPay.cost;
+      n = L(n, `${c.name}: the additional ${fx.addPay.cost} is paid.`);
+    }
     rxSide.hand = act(s).hand.filter((_,x)=>x!==i);
     rxSide.grave = [...gy(s.turn, c),...act(s).grave];
     if(inAtk){
@@ -2982,9 +3009,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return L(n, `${c.name} on the stack (+${rx.pump}). ${foe(n).name} passes back.`);
     }
     const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
-    const dv = (c.def||0) + dbuff;
+    /* A PLAYED DEFENCE REACTION IS WORTH `defendValue` TOO (v3.34) — judge
+       has asked it since v3.25 and this path summed the printed number.
+       Sigil of Suffering's own ruling (user, 2026-08-22) lives here. */
+    const dv = _EFX.defendValue(act(n), c,
+      {weaponAttack:false, atkCard:null, fromArsenal:false, addPaid: addPaid === true,
+       handDefenders:n.stack.filter(l=>l.k==="def" && l.gi==null).length}) + dbuff;
     n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
     actMut(n).blockRx = [...act(n).blockRx, {label:`${c.name} — defend ${dv}`, def:dv}];
+    /* STRIPPED, like judge's. A sticky answer would pay for the next
+       reaction that happened to print an additional cost without asking. */
+    delete n._addPaid; n.mode = "block"; n.rxAdd = null;
     return L(n, `${c.name} played at instant speed — +${dv} defense.`);
   });
   const playRxA = () => setG(s=>{
@@ -2996,7 +3031,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
     const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
-    const dv = (c.def||0)+dbuff;
+    /* …and from the ARSENAL, which is the one place `fromArsenal` is true
+       — Springboard Somersault and Unmovable print exactly that. */
+    const dv = _EFX.defendValue(act(s), c,
+      {weaponAttack:false, atkCard:null, fromArsenal:true,
+       handDefenders:s.stack.filter(l=>l.k==="def" && l.gi==null).length}) + dbuff;
     let n = {...s};
     const rxaSide = actMut(n);
     rxaSide.res = act(s).res - cost;
@@ -3004,7 +3043,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     rxaSide.grave = [...gy(s.turn, c),...act(s).grave];
     n = runOps(n, fx.ops.filter(o=>o[0]!=="defBuff"), c.name);
     actMut(n).blockRx = [...act(n).blockRx, {label:`${c.name} (arsenal) — defend ${dv}`, def:dv}];
-    return L(n, `${c.name} fired from arsenal — +${c.def||0} defense.`);
+    return L(n, `${c.name} fired from arsenal — +${dv} defense.`);
   });
   const playArsenalInstant = () => setG(s=>{
     /* "IF IT'S NOT YOUR TURN" IS THE WHOLE CLAUSE, NOT ONE STEP OF IT
@@ -3175,6 +3214,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        anything a card does: close the payment sheet, and put the board
        back in its action phase */
     let n = execute({...s, mode:"act", pending:null}, card, from, idx);
+    /* THE DECLARED HALF IS SPENT (v3.34). It rode in on the state, like
+       `_doBoost` and `_addPaid`; leaving it there would play the next
+       split card as whatever the last one chose, without asking. */
+    if(n._half !== undefined){ n = {...n}; delete n._half; }
     if(!n._declared) return n;          /* it resolved; the action phase continues */
     /* WHERE THE DECLARED ATTACK GOES IS THIS BOARD'S ANSWER (v2.77).
        `execute` used to file it to the graveyard itself, at declaration —
@@ -3203,8 +3246,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     ? {...s, mode:"boostpick", pending:{card,from,idx}}
     : resolvePlay({...s,_doBoost:false},card,from,idx);
   const confirmBoost = (doBoost) => setG(s=>{ if(s.mode!=="boostpick"||!s.pending) return s; const {card,from,idx}=s.pending; return resolvePlay({...s,_doBoost:doBoost},card,from,idx); });
-  const tryPlay = (card,from,idx) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay"||s.mode==="foeturn") return s;
+  /* THE ANSWER RE-ENTERS `tryPlay`, so there is ONE description of what
+     playing a card does. A second body that resolved the half itself
+     would skip every gate above it — the reaction-window refusal, the
+     Block refusal, the playIf gate, the next-turn bar. */
+  const confirmSplit = half => {
+    let pick = null;
+    setG(s => { if(s.mode==="splitpick" && s.splitPick){ pick = s.splitPick; return {...s, mode:"act", splitPick:null}; } return s; });
+    if(pick) tryPlay(pick.card, pick.from, pick.idx, half);
+  };
+  const tryPlay = (card,from,idx,half) => setG(s=>{
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3222,6 +3274,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        minting a runechant on your own turn, the Warrior reprise reactions
        swinging with no attack to react to. playRx/playRxA are the legal
        doors, and they ask rxAllowed the same question. */
+    /* WHICH HALF? — declared FIRST for a split card (v3.34). One card, two
+       textboxes, and the reminder text says "you may play 1 or both
+       halves of this card". Until now both halves resolved, always, with
+       nothing asked — Burn Up // Shock dealt five arcane on play. */
+    if(half !== undefined) s = {...s, _half: half};
+    if(half === undefined && DawnParser.isSplit(card)){
+      const hs = DawnParser.splitHalves(card) || [];
+      return L({...s, mode:"splitpick", splitPick:{card, from, idx, name:card.name,
+                 halves:hs.map(h=>({name:h.name, tt:h.tt})),
+                 meld:hasKw(card,"meld")}},
+        `${card.name} is a split card — play ${hs.map(h=>h.name).join(" or ")}`
+        + `${hasKw(card,"meld")?", or meld both":""}.`);
+    }
     if(isRx(card))
       return L(s, `${card.name} is ${isAR(card)?"an attack":"a defense"} reaction — it can only be played in the reaction step`
                 + `${isAR(card)?", by the player who controls the attack":", by the player being attacked"}.`);
@@ -3569,7 +3634,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n = L(n, fizzled
       ? `(e) All players lose their points — ${fizzled} floating resource${fizzled>1?"s":""} wasted.`
       : "(e) All players lose their points — nothing was floating.");
-    actMut(n).buffNext = 0; actMut(n).buffQ = [];
+    /* THE "THIS TURN" GRANTS EXPIRE IN `beginEndPhase` NOW (v3.34), where
+       both boards reach them and both seats are covered. This line cleared
+       two of the five, for one seat, on one board. */
 
     /* (f) CR 4.4.3f — the turn-player draws up to intellect.
 
@@ -3833,8 +3900,30 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const finishBlock = (s, clashDef, defBonus) => {
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
     const bonus = defBonus || {};
-    const dh = bcards.reduce((a,c)=>a+(c.def||0)+(bonus[c.uid]||0),0);
-    const dg = act(s).blockG.reduce((a,i)=>a+gearDef(act(s).gear[i])+(bonus[act(s).gear[i].uid]||0),0);
+    /* WHAT A DEFENDER IS WORTH IS `defendValue`'s, ON THIS WALL TOO (v3.34).
+       This wall summed `c.def || 0` and `gearDef(piece)`, so every
+       defensive self-buff built since v3.23 applied when the DUMMY blocked
+       (through `resolveStack`) and did nothing when the PLAYER blocked —
+       which in the trainer is most of the game. Sigil of Suffering blocked
+       for 3 here and 4 at the table on the same board state.
+
+       WHAT THE ATTACK IS is the caller's answer, and this caller genuinely
+       does not know: the dummy's swing is the `[3,4,5]` escalation, not a
+       card. So `atkCard` is null and `weaponAttack` false, and the two
+       conditions that ask about the incoming CARD (Wax On's cost test,
+       Blade Beckoner's weapon test) stay honestly unmet rather than
+       guessed — `defSelfMet` answers false for an absent condition, which
+       is weaker than printed and visible. They come alive the moment seat
+       1 swings a real card. */
+    const _atkOpts = {weaponAttack:false, atkCard:null, handDefenders:bcards.length};
+    const dh = bcards.reduce((a,c)=>a+_EFX.defendValue(act(s), c, _atkOpts)+(bonus[c.uid]||0),0);
+    const dg = act(s).blockG.reduce((a,i)=>{
+      const piece = act(s).gear[i];
+      /* the WEAR stays `gearDef`'s and rides in as `base` — re-deriving
+         Guardwell, Temper, battleworn and destruction inside `defendValue`
+         would be a second copy of the wear rules (v3.24). */
+      return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)}) + (bonus[piece.uid]||0);
+    },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     let through = Math.max(0, s.incoming-dh-dg-drx-clashDef);
     let wardNote = "";
@@ -3939,6 +4028,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        Found by playing the mirror, not by a drill. */
     return finishBlock(s, clashDef, s.defBonus || {});
   });
+  /* THE ANSWER RE-ENTERS `playRx`, which is what keeps ONE description of
+     what playing a reaction does. A second body that paid and pushed
+     blockRx itself would be the no-mirror rule broken inside one file. */
+  const confirmRxAdd = pay => {
+    let idx = null;
+    setG(s => { if(s.mode==="rxaddpay" && s.rxAdd){ idx = s.rxAdd.idx; return {...s, mode:"block", rxAdd:null}; } return s; });
+    if(idx != null) playRx(idx, !!pay);
+  };
   const confirmDefPay = pay => setG(s=>{
     if(s.mode!=="defpay" || !(s.defPayQueue||[]).length) return s;
     const [cur, ...rest] = s.defPayQueue;
@@ -4374,6 +4471,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   {off && <button onClick={doHeave}>heave {off.card.name} ({off.n})</button>}
                   <button onClick={skipArsenal}>skip</button></div>); })()}
               {g.mode==="boostpick" && <div className="statusline">Boost <b>{g.pending.card.name}</b>? Banish the top card of your deck — a Mechanologist card grants go again.</div>}
+              {g.mode==="splitpick" && g.splitPick && <div className="statusline">
+                <b>{g.splitPick.name}</b> is a split card — one card, two halves.
+                {(g.splitPick.halves||[]).map((h,i)=><span key={i}> <b>{h.name}</b> ({h.tt}).</span>)}
+                {g.splitPick.meld && <span> Meld plays both.</span>}
+              </div>}
+              {g.mode==="rxaddpay" && g.rxAdd && <div className="statusline">
+                <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
+              </div>}
               {g.mode==="defpay" && (g.defPayQueue||[]).length>0 && <div className="statusline">
                 <b>{g.defPayQueue[0].name}</b> is defending — pay <b>{g.defPayQueue[0].cost}</b> for +{g.defPayQueue[0].ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0)}{"{d}"}? You have {you(g).res} floating.
                 {g.defPayQueue.length>1 && <span> ({g.defPayQueue.length-1} more waiting.)</span>}
@@ -4509,6 +4614,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
             Pay {(g.defPayQueue||[])[0]?.cost||0}
           </button>
           <button className="a" onClick={()=>confirmDefPay(false)}>Decline</button>
+        </>) : g.mode==="splitpick" ? (<>
+          {(g.splitPick?.halves||[]).map((h,i)=>
+            <button key={i} className="a go" onClick={()=>confirmSplit(i)}>{h.name}</button>)}
+          {g.splitPick?.meld && <button className="a" onClick={()=>confirmSplit("both")}>Meld both</button>}
+        </>) : g.mode==="rxaddpay" ? (<>
+          <button className="a go" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
+          <button className="a" onClick={()=>confirmRxAdd(false)}>Decline</button>
         </>) : g.mode==="foeturn" ? (<>
           {/* NAME WHOSE WINDOW THIS IS. The board looks like your turn and
               it is not — CR 4.3.4 gives you a window before their action

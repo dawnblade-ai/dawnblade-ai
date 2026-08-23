@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-23T14:19:56.536Z",
- "appVer": "3.32",
- "dataVer": "sage-v11",
+ "generated": "2026-08-23T16:34:42.296Z",
+ "appVer": "3.33",
+ "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 323,
-  "part": 69,
+  "full": 326,
+  "part": 66,
   "none": 13
  },
  "heroes": {
@@ -4973,7 +4973,7 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -4983,12 +4983,10 @@
     },
     {
      "t": "If the additional cost is paid, this gets +3{d}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If the additional cost is paid, this gets +3{d}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "As an additional cost to play this, you may pay {r}{r}{r}{r}.\nIf the additional cost is paid, this gets +3{d}.",
@@ -11995,13 +11993,13 @@
     "go again",
     "meld"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Meld",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Create a Runechant token",
@@ -12017,17 +12015,14 @@
     },
     {
      "t": "//",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Gain 1{h}",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Meld",
-    "//"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Meld\nCreate a Runechant token. Create a Runechant token.\nGo again\n//\nGain 1{h}",
@@ -12088,13 +12083,13 @@
     "go again",
     "meld"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Meld",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "The next time an attack you control hits a hero this turn, deal 4 arcane damage to them.",
@@ -12106,17 +12101,14 @@
     },
     {
      "t": "//",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Deal 1 arcane damage to any target.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Meld",
-    "//"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Meld\nThe next time an attack you control hits a hero this turn, deal 4 arcane damage to them.\nGo again\n//\nDeal 1 arcane damage to any target.",

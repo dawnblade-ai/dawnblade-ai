@@ -121,6 +121,8 @@ const ACTIONS = [
   "payConfirm",  /*              commit the payment and resolve the play  */
   "payCancel",   /*              abandon it; nothing has been spent yet   */
   "boost",       /* {yes}        pay boost's additional cost, or decline  */
+  "addPay",      /* {yes}        pay an optional additional cost, or decline */
+  "split",       /* {half}       declare which half of a split card is played */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -522,6 +524,24 @@ function legal(g, a, seat){
      the card is mid-play until it is answered. There is no cancel — the
      play is already committed by this point, and "no" is a complete
      answer to "you may". */
+  if(p && p.kind === "split"){
+    if(a.t !== "split") return "declare which half of " + p.card.name + " first";
+    if([0, 1, "both"].indexOf(a.half) < 0) return "that is not a half of this card";
+    if(a.half === "both" && !PR.hasKw(p.card, "meld"))
+      return p.card.name + " has no meld — one half or the other";
+    return null;
+  }
+  if(a.t === "split") return "nothing is asking which half";
+  if(p && p.kind === "addPay"){
+    /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
+       gate above this block already refuses the other with "Opponent is
+       mid-decision" — a second test would be a gate that gates nothing,
+       which is the shape this project keeps finding (v3.30's
+       `nextTurnDebuff >= 0`). Verified by asking as the wrong seat. */
+    if(a.t !== "addPay") return "answer the additional cost for " + p.card.name + " first";
+    return null;
+  }
+  if(a.t === "addPay") return "nothing is asking for an additional cost";
   if(p && p.kind === "boost"){
     if(a.t !== "boost") return "answer boost for " + p.card.name + " first";
     return null;
@@ -1228,6 +1248,8 @@ function reduce(g, a, seat){
     case "paySel":    n = doPaySel(n, a, seat); break;
     case "payConfirm":n = doPayConfirm(n, seat); break;
     case "payCancel": n = doPayCancel(n, seat); break;
+    case "split":     n = doSplit(n, a, seat); break;
+    case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "defend":    n = doDefend(n, a, seat); break;
     case "arsenal":   n = doArsenal(n, a, seat); break;
@@ -1248,6 +1270,26 @@ function reduce(g, a, seat){
 /* ---- play ------------------------------------------------------------- */
 function doPlay(g, a, seat){
   const zone = a.from || "hand";
+  /* WHICH HALF? — the FIRST thing declared about a split card (v3.34).
+
+     It comes before the payment on purpose: melding costs twice the base
+     resource cost, so a player cannot be asked to pitch before they have
+     said what they are paying for. Both pool split cards are base 0, so
+     nothing observable rides on the order today — which is exactly why
+     getting it right now costs nothing and getting it wrong later would
+     cost a rewrite. */
+  {
+    const sd0 = at(g, seat);
+    const c0 = zone === "arsenal" ? sd0.arsenal : (sd0[zone] || [])[find(sd0[zone] || [], a.uid)];
+    if(c0 && PR.isSplit(c0) && a.half === undefined && g._half == null){
+      const hs = PR.splitHalves(c0) || [];
+      return say({...g, pending: {kind: "split", seat, card: c0, from: zone,
+                                  target: a.target, halves: hs.map(h => h.name)}},
+        c0.name + " is a split card — " + at(g, seat).name + " declares "
+        + hs.map(h => h.name).join(" or ")
+        + (PR.hasKw(c0, "meld") ? ", or melds both." : "."));
+    }
+  }
   /* CR 1.4.5 — the attack-target, resolved now and carried through the
      payment, exactly like `window`: the board must not be allowed to
      change under a choice already made while the player pitches. */
@@ -1280,7 +1322,7 @@ function doPlay(g, a, seat){
      cannot change the outcome — declining a boost refunds nothing and
      costs nothing. It matches the trainer's order deliberately, so a
      player who learns one board is not surprised by the other. */
-  return maybeBoost(g, card, zone, seat, window, target);
+  return maybeAddPay(g, card, zone, seat, window, target);
 }
 
 /* The window a card is actually being played in: the intersection of
@@ -1363,7 +1405,7 @@ function doPayConfirm(g, seat){
   /* A weapon swing never boosts (boost is printed on attack ACTIONS), but
      this asks rather than assuming — `boostable` reads the keyword, and a
      predicate that reads the card cannot be wrong about a card. */
-  return maybeBoost(n, p.card, p.from, seat, p.window, p.target);
+  return maybeAddPay(n, p.card, p.from, seat, p.window, p.target);
 }
 
 /* THE CARD RESOLVES, AND ITS TEXT RESOLVES WITH IT (v2.77).
@@ -1422,10 +1464,60 @@ const boostable = (card, sd) => !!card && PR.printedKw(card, "boost")
    boost the next attack that happened to print the keyword without ever
    asking. A reducer whose state carries a spent answer is one refactor
    away from that being live. */
-function commitPlayBoosted(g, card, zone, seat, window, target, doBoost){
-  const out = commitPlay({...g, _doBoost: !!doBoost}, card, zone, seat, window, target);
-  if(out && out._doBoost !== undefined){ const n = {...out}; delete n._doBoost; return n; }
+function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid){
+  const out = commitPlay({...g, _doBoost: !!doBoost, _addPaid: !!addPaid},
+                         card, zone, seat, window, target);
+  if(out && (out._doBoost !== undefined || out._addPaid !== undefined || out._half !== undefined)){
+    const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half; return n;
+  }
   return out;
+}
+
+/* AN OPTIONAL RESOURCE ADDITIONAL COST — Staunch Response (v3.34).
+
+   Boost's exact shape and for the same reason: a COST is settled at play
+   time, so it cannot be a queued prompt (those drain after the card has
+   resolved). `pending` holds the half-finished interaction and the answer
+   rides to `execute` on the state.
+
+   Asked only when there is a real choice — enough floating to pay BOTH
+   the printed cost and the addition. Otherwise it plays straight through
+   unpaid, the same rule `buildPrompt` follows for an empty spec, and the
+   rider simply does not fire. */
+const addPayable = (card, sd) => {
+  const ap = PR.fxParse(card).addPay;
+  return !!ap && !!sd && (sd.res || 0) >= effCost(card, sd) + ap.cost;
+};
+
+function maybeAddPay(g, card, zone, seat, window, target){
+  if(!addPayable(card, at(g, seat)))
+    return maybeBoost(g, card, zone, seat, window, target);
+  const ap = PR.fxParse(card).addPay;
+  return say({...g, pending: {kind: "addPay", seat, card, from: zone, window, target, cost: ap.cost}},
+    card.name + " has an additional cost — " + at(g, seat).name
+    + " may pay " + ap.cost + " more.");
+}
+
+/* The declaration rides to `execute` on the state, like boost's and the
+   additional cost's — a split card is played as ONE card, so nothing about
+   the zone, the uid, the pitch value or the graveyard changes. What the
+   answer decides is which textbox resolves and what it costs. */
+function doSplit(g, a, seat){
+  const p = g.pending;
+  const half = (a.half === "both" || a.half === 1) ? a.half : 0;
+  const n = {...g, pending: null, _half: half};
+  return doPlay(n, {t: "play", uid: p.card.uid, from: p.from, target: p.target, half}, seat);
+}
+
+function doAddPay(g, a, seat){
+  const p = g.pending;
+  const n = {...g, pending: null};
+  /* The boost question, if the card also asks one, comes after — two
+     additional costs on one card would both be settled before `execute`.
+     No pool card prints both; the ordering is stated rather than assumed. */
+  if(!a.yes) return maybeBoost(n, p.card, p.from, seat, p.window, p.target);
+  return commitPlayBoosted({...n, _addPaid: true}, p.card, p.from, seat, p.window, p.target,
+    false, true);
 }
 
 /* Ask, or don't. Returns the pending when there is a real choice to make,
@@ -1490,7 +1582,12 @@ function commitPlay(g, card, zone, seat, window, target){
       const dv = E.defendValue(dsd, card,
         {weaponAttack: n.pend.from === "weapon", atkCard: n.pend.card,
          /* the zone it was PLAYED from — Springboard Somersault */
-         fromArsenal: zone === "arsenal"});
+         fromArsenal: zone === "arsenal",
+         /* and whether the optional additional cost was paid — Staunch
+            Response. `_addPaid` is stripped from the state on the way out
+            of `commitPlayBoosted`, so this is the only moment it can be
+            read (v3.34). */
+         addPaid: g._addPaid === true});
       if(dv > 0){
         n = put(n, seat, s => ({...s,
           blockRx: [...(s.blockRx || []), {label: card.name + " " + dv, def: dv}]}));

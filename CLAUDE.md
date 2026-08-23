@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.33
+**Current version:** v3.34
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1339 drills**.
+This is `node --test "test/*.test.js"` — currently **1370 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,69 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A SPLIT CARD IS ONE CARD WITH TWO TEXTBOXES (v3.34)
+
+Two pool records are printed HORIZONTALLY and cut in half, and both print
+the rule in reminder text:
+
+> **Meld** *(You may play 1 or both halves of this card. Each costs 0.)*
+
+**ONE card.** One pitch value, one defence value, one card in hand, one
+card in the graveyard. What is doubled is the TEXTBOX — the CR is explicit
+that a melded split card is a *single card played as a single layer* with
+the properties of both sides. Dealing it as two cards would break the
+55-card count, the pitch value, the wall and the census at once.
+
+**THE ENGINE RAN BOTH HALVES, ALWAYS, ASKING NOTHING.** Burn Up // Shock
+dealt **five arcane on play** and kept its action point, where the top
+half is a DELAYED trigger — *"the next time an attack you control hits a
+hero this turn"* — whose whole prefix was swallowed. It read `tier: part`,
+so no coverage tool looked at it.
+
+| | |
+|---|---|
+| which cards | `played_horizontally`, the DATABASE's flag. `//` in the type line is a RENDERING, not a fact |
+| the halves | told apart by **`tt`** — the only place the boundary survives, because `ty` flattens both faces (v2.39) |
+| a half's keywords | its OWN textbox. `card_keywords` lists the whole card's, and Go again is on the top half only (v2.31) |
+| the declaration | asked FIRST, before the payment — melding doubles the base cost |
+| the default | the LEFT half, **never both**. Defaulting to meld hands a player a textbox they never asked for |
+| the action point | the DECLARED half's. Meld costs one if EITHER side is an Action |
+
+**RESOLUTION ORDER FOR A MELD IS A STATED APPROXIMATION** — the CR gives
+priority between the two sides; this runs them in printed order as one
+layer. Both pool cards' halves are independent, so nothing is observable.
+
+**AND `Meld` IS A `noop` ONLY NOW THAT THE CHOICE EXISTS** — filed earlier
+it would have been the no-op blind spot at its purest.
+
+### A COST IS SETTLED BEFORE THE CARD RESOLVES (v3.34)
+
+Staunch Response's *"as an additional cost to play this, you MAY pay
+{r}{r}{r}{r}"* cannot be a queued prompt: `openPrompt` drains after the
+card has resolved, which is the wall Charge and Fusion still sit behind.
+**Boost is the precedent on both boards** — pause, ask, and let the answer
+ride to `execute` on the state (`_doBoost`, `_addPaid`, `_half`).
+
+Asked only when there is a real choice (enough for BOTH costs), and the
+rider's answer belongs to the PLAY rather than the card, so
+`defSelf.when === "addCostPaid"` reads `opts.addPaid`.
+
+### THREE WALLS, ONE READER — AND THE TRAINER HAD NONE (v3.34)
+
+`defendValue` was reached from `resolveStack` alone, which is the wall the
+DUMMY raises. **When the player blocked — most of the trainer — every
+defensive self-buff built since v3.23 did nothing.** Sigil of Suffering
+blocked for 3 on one board and 4 on the other from the same state.
+
+What the trainer genuinely cannot answer stays honestly unmet: the dummy's
+swing is the `[3,4,5]` escalation, not a card, so the conditions that ask
+about the incoming CARD read false rather than being guessed.
+
+**AND "THIS TURN" NEVER ENDED AT THE TABLE.** Five single-shot grants
+(`buffNext`/`buffQ`, `gaNext`/`gaNextQ`, `costOff`) are all printed "this
+turn"; the trainer cleared two of five for one seat and judge cleared
+none. They expire in `beginEndPhase` now, for BOTH seats.
 
 ### A KEYWORD LINE MAY CARRY A RIDER (v3.33)
 

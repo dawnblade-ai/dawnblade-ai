@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-23T14:19:56.536Z · app v3.32 · data sage-v11 · db 788 records
+Generated 2026-08-23T16:34:42.296Z · app v3.33 · data sage-v12 · db 788 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 323 |
-| Partially scripted | 69 |
+| Fully scripted | 326 |
+| Partially scripted | 66 |
 | Text-only (nothing parsed) | 13 |
 | Cards with audit flags | 63 |
 
@@ -204,16 +204,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ Gain 1{h}
 - — If you've been dealt arcane damage this turn, instead gain 4{h}.
 
-### Arcane Seeds // Life (pitch 1) — part · [briar]
-- type: Runeblade Action // Earth Instant · printed: Meld, Go again
-- — Meld
-- ▶ Create a Runechant token
-- ▶ Create a Runechant token.
-- ▶ Go again
-- — //
-- ▶ Gain 1{h}
-- 🚩 unreviewed keyword: "meld"
-
 ### Astral Etchings (pitch 1) — none · [enigma]
 - type: Illusionist Action
 - — Put three +1{p} counters on target aura with ward you control.
@@ -257,15 +247,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ This enters the arena with a steam counter
 - — At the start of your turn, destroy this unless you remove a steam counter from it.
 - ▶ When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
-
-### Burn Up // Shock (pitch 1) — part · [briar]
-- type: Runeblade Action // Lightning Instant · printed: Go again, Meld
-- — Meld
-- ▶ The next time an attack you control hits a hero this turn, deal 4 arcane damage to them.
-- ▶ Go again
-- — //
-- ▶ Deal 1 arcane damage to any target.
-- 🚩 unreviewed keyword: "meld"
 
 ### Call in the Big Guns (pitch 1) — part · [azalea]
 - type: Ranger Action · printed: Go again
@@ -592,11 +573,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — If you've played a Lightning card this turn, this card's attacks get +1{p} and go again.
 - 🚩 text mentions go again but no clause parses it
 
-### Staunch Response (pitch 1) — part · [bravo]
-- type: Guardian Defense Reaction
-- ○ As an additional cost to play this, you may pay {r}{r}{r}{r}.
-- — If the additional cost is paid, this gets +3{d}.
-
 ### Stir the Aetherwinds (pitch 3) — part · [iyslander]
 - type: Wizard Action
 - — You may play your next Wizard non-attack action card this turn as though it were an instant
@@ -682,11 +658,13 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Aether Icevein** (pitch 2): unreviewed keyword: "ice fusion"
 - **Aether Icevein** (pitch 3): unreviewed keyword: "ice fusion"
 - **Aether Quickening** (pitch 3): unreviewed keyword: "surge"
+- **Arcane Seeds // Life** (pitch 1): unreviewed keyword: "meld"
 - **Arcanic Shockwave** (pitch 1): unreviewed keyword: "lightning fusion"
 - **Banneret of Salvation** (pitch 2): unreviewed keyword: "solflare"
 - **Barnacle** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Battalion Barque** (pitch 1): unreviewed keyword: "high tide"
 - **Brain Freeze** (pitch 3): unreviewed keyword: "ice fusion"
+- **Burn Up // Shock** (pitch 1): unreviewed keyword: "meld"
 - **Concealed Object** (pitch 3): tap cost {t} — not enforced (see ledger)
 - **Cutty Shark, Quick Clip** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Drop the Anchor** (pitch 1): tap cost {t} — not enforced (see ledger)
@@ -718,4 +696,4 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ## Fully scripted, no flags — the roll call
 
-A Drop in the Ocean (3) · Absorb in Aether (1) · Achilles Accelerator (0) · Act of Glory (1) · Aether Hail (3) · Aether Spindle (1) · Aether Spindle (3) · Aetherstorm Wellingtons (0) · Agile Windup (3) · Amplify the Arknight (1) · Arcane Lantern (0) · Arcane Twining (3) · Art of Desire: Body (1) · Art of Desire: Mind (3) · Art of the Dragon: Fire (1) · Avast Ye! (3) · Bare Fangs (1) · Bare Fangs (2) · Basalt Boots (0) · Beaming Bravado (1) · Beaming Bravado (2) · Bear Hug (3) · Big Blue Sky (3) · Blade Beckoner Boots (0) · Blade Beckoner Gauntlets (0) · Blade Beckoner Helm (0) · Blade Beckoner Plating (0) · Blaze Headlong (1) · Blood Scent (0) · Blossom of Spring (0) · Bolt of Courage (1) · Bolt of Courage (2) · Booze! (3) · Boulder Drop (1) · Boulder Drop (3) · Brand with Cinderclaw (1) · Brand with Cinderclaw (2) · Brand with Cinderclaw (3) · Brothers in Arms (3) · Buckling Blow (1) · Buckling Blow (3) · Buckwild (1) · Buckwild (3) · Bull's Eye Bracers (0) · Cartilage Crush (1) · Chokeslam (1) · Chokeslam (3) · Cinderskin Devotion (3) · Clash of Agility (1) · Clash of Might (1) · Clash of Might (2) · Clash of Vigor (3) · Cloud Cover (1) · Cold Snap (3) · Condemn to Slaughter (1) · Condemn to Slaughter (3) · Courageous Steelhand (1) · Crash and Bash (1) · Crucible of Aetherweave (0) · Crush the Weak (3) · Dawnblade (0) · Death Dealer (0) · Debilitate (1) · Debilitate (3) · Den of the Spider (1) · Disable (3) · Display Loyalty (1) · Double Cross Strap (0) · Drag Down (1) · Dragon Power (3) · Dry Powder Shot (1) · Duty Bound Blitz (1) · Duty Bound Blitz (2) · Edge of Their Seats (1) · Edge of Their Seats (3) · Emeritus Scolding (1) · Emeritus Scolding (2) · Emeritus Scolding (3) · Enclosed Firemind (0) · Energy Potion (3) · Engulfing Light (1) · Engulfing Light (2) · Enigma Chimera (1) · Enigma Chimera (3) · Fault Line (1) · Fender Bender (1) · Fire Tenet: Strike First (1) · Fire that Burns Within (1) · Flat Trackers (0) · Flatten the Field (3) · Fluid Motion (3) · Flying High (3) · Frost Spike (3) · Frosting (3) · Fry (1) · Full of Bravado (3) · Fyendal's Fighting Spirit (1) · Garland of Spring (0) · Goblet of Bloodrun Wine (3) · Golden Tipple (1) · Golden Tipple (2) · Golden Tipple (3) · Goon Beatdown (3) · Goon Tactics (3) · High Pitched Howl (1) · Hit and Run (3) · Hit the High Notes (1) · Homage to Ancestors (3) · Hot on Their Heels (1) · Hyper Driver (1) · Hyper Inflation (1) · Ice Bolt (1) · Ice Bolt (3) · Illuminate (1) · Inertia Trap (1) · Infecting Shot (1) · Infecting Shot (2) · Infect (1) · Ironrot Gauntlet (0) · Ironrot Helm (0) · Ironrot Legs (0) · Ironrot Plate (0) · Ironsong Response (1) · Ironsong Response (3) · Jump Start (1) · Jump Start (2) · Jump Start (3) · Knucklehead (0) · Lace with Bloodrot (1) · Lace with Frailty (1) · Lace with Inertia (1) · Lead with Speed (1) · Lightning Press (1) · Lightning Surge (1) · Look Tuff (1) · Macho Grande (3) · Mage Master Boots (0) · Malefic Incantation (1) · Malefic Incantation (2) · Manifest Muscle (3) · Mark of the Black Widow (1) · Mark of the Black Widow (3) · Mark of the Huntsman (0) · Mark the Prey (1) · Mask of the Swarming Claw (0) · Mauvrion Skies (1) · Mauvrion Skies (3) · Memorial Ground (2) · Mocking Blow (1) · Mocking Blow (2) · Mocking Blow (3) · Mournful Casket (0) · Murderous Rabble (3) · Murkmire Grapnel (1) · Nimblism (1) · Nimblism (2) · Nip at the Heels (3) · Nullrune Boots (0) · Nullrune Gloves (0) · Nullrune Hood (0) · Nullrune Robe (0) · On the Horizon (1) · Out for Blood (1) · Out Pace (1) · Overblast (1) · Overpower (1) · Overpower (3) · Phoenix Flame (1) · Photon Splicing (3) · Pouncing Paws (0) · Power Play (3) · Predatory Plating (0) · Prey Spotters (0) · Prime the Crowd (1) · Pulping (1) · Pummel (1) · Put in Context (3) · Pyroglyphic Protection (3) · Quick Clicks (0) · Rally the Coast Guard (3) · Ravenous Rabble (1) · Raydn, Duskbane (0) · Read the Glide Path (1) · Read the Runes (1) · Reaper's Call (3) · Reaping Blade (0) · Reduce to Runechant (1) · Reincarnate (3) · Release the Tension (1) · Rev Up (1) · Ridge Rider Shot (1) · Rising Sun, Setting Moon (3) · Ronin Renegade (1) · Rough Up (1) · Run Roughshod (3) · Run Through (2) · Rune Flash (1) · Runebleed Robe (0) · Runerager Swarm (1) · Runic Fellingsong (1) · Sadistic Scowl (1) · Salt the Wound (2) · Saltwater Swell (1) · Saltwater Swell (3) · Savage Feast (1) · Scar for a Scar (1) · Scar Tissue (1) · Scout the Periphery (1) · Searing Shot (1) · Second Tenet of Chi: Wind (3) · Seeker's Mitts (0) · Sharpen Steel (1) · Short Shrift (2) · Shrill of Skullform (1) · Shrill of Skullform (2) · Shrill of Skullform (3) · Sigil of Silphidae (3) · Sigil of Suffering (1) · Sizzle (1) · Sledge of Anvilheim (0) · Smash Instinct (3) · Snatch (1) · Spears of Surreality (3) · Spectral Manifestations (1) · Spellblade Assault (1) · Spellblade Assault (3) · Spellfire Cloak (0) · Spike with Bloodrot (1) · Springboard Somersault (2) · Sprout Strength (1) · Stand Strong (0) · Steelbraid Buckler (0) · Stonewall Impasse (0) · Stroke of Foresight (1) · Strongest Survive (1) · Strongest Survive (2) · Strongest Survive (3) · Swiftstrike Bracers (0) · Take Aim (1) · Take Flight (1) · Take Flight (2) · Talishar, the Lost Prince (0) · Talismanic Lens (0) · Tearing Shuko (0) · Teklo Trebuchet 2000 (3) · Tension in the Air (1) · Test of Might (1) · Test of Strength (1) · The Suspense is Killing Me (3) · Throttle (1) · Throttle (3) · Thunder Quake (3) · Timesnap Potion (3) · Titan's Fist (0) · Trot Along (3) · Two Sides to the Blade (1) · Under Loop (1) · Unexpected Backhand (3) · Unmovable (1) · Unmovable (3) · Valiant Thrust (2) · Vexing Malice (3) · Villainous Pose (1) · Voltic Bolt (1) · Voltic Bolt (3) · Warrior's Valor (1) · Warrior's Valor (2) · Warrior's Valor (3) · Wax On (1) · Wee Wrecking Ball (2) · Whisper of the Oracle (1) · Whisper of the Oracle (2) · Whisper of the Oracle (3) · Widowmaker (2) · Wild Ride (1) · Wild Ride (2) · Winter's Bite (3) · Wounded Bull (1) · Yo Ho Ho! (3) · Zealous Belting (1) · Zero to Sixty (1) · Zero to Sixty (2) · Zero to Sixty (3) · Zipper Hit (1) · Zipper Hit (2) · Zipper Hit (3)
+A Drop in the Ocean (3) · Absorb in Aether (1) · Achilles Accelerator (0) · Act of Glory (1) · Aether Hail (3) · Aether Spindle (1) · Aether Spindle (3) · Aetherstorm Wellingtons (0) · Agile Windup (3) · Amplify the Arknight (1) · Arcane Lantern (0) · Arcane Twining (3) · Art of Desire: Body (1) · Art of Desire: Mind (3) · Art of the Dragon: Fire (1) · Avast Ye! (3) · Bare Fangs (1) · Bare Fangs (2) · Basalt Boots (0) · Beaming Bravado (1) · Beaming Bravado (2) · Bear Hug (3) · Big Blue Sky (3) · Blade Beckoner Boots (0) · Blade Beckoner Gauntlets (0) · Blade Beckoner Helm (0) · Blade Beckoner Plating (0) · Blaze Headlong (1) · Blood Scent (0) · Blossom of Spring (0) · Bolt of Courage (1) · Bolt of Courage (2) · Booze! (3) · Boulder Drop (1) · Boulder Drop (3) · Brand with Cinderclaw (1) · Brand with Cinderclaw (2) · Brand with Cinderclaw (3) · Brothers in Arms (3) · Buckling Blow (1) · Buckling Blow (3) · Buckwild (1) · Buckwild (3) · Bull's Eye Bracers (0) · Cartilage Crush (1) · Chokeslam (1) · Chokeslam (3) · Cinderskin Devotion (3) · Clash of Agility (1) · Clash of Might (1) · Clash of Might (2) · Clash of Vigor (3) · Cloud Cover (1) · Cold Snap (3) · Condemn to Slaughter (1) · Condemn to Slaughter (3) · Courageous Steelhand (1) · Crash and Bash (1) · Crucible of Aetherweave (0) · Crush the Weak (3) · Dawnblade (0) · Death Dealer (0) · Debilitate (1) · Debilitate (3) · Den of the Spider (1) · Disable (3) · Display Loyalty (1) · Double Cross Strap (0) · Drag Down (1) · Dragon Power (3) · Dry Powder Shot (1) · Duty Bound Blitz (1) · Duty Bound Blitz (2) · Edge of Their Seats (1) · Edge of Their Seats (3) · Emeritus Scolding (1) · Emeritus Scolding (2) · Emeritus Scolding (3) · Enclosed Firemind (0) · Energy Potion (3) · Engulfing Light (1) · Engulfing Light (2) · Enigma Chimera (1) · Enigma Chimera (3) · Fault Line (1) · Fender Bender (1) · Fire Tenet: Strike First (1) · Fire that Burns Within (1) · Flat Trackers (0) · Flatten the Field (3) · Fluid Motion (3) · Flying High (3) · Frost Spike (3) · Frosting (3) · Fry (1) · Full of Bravado (3) · Fyendal's Fighting Spirit (1) · Garland of Spring (0) · Goblet of Bloodrun Wine (3) · Golden Tipple (1) · Golden Tipple (2) · Golden Tipple (3) · Goon Beatdown (3) · Goon Tactics (3) · High Pitched Howl (1) · Hit and Run (3) · Hit the High Notes (1) · Homage to Ancestors (3) · Hot on Their Heels (1) · Hyper Driver (1) · Hyper Inflation (1) · Ice Bolt (1) · Ice Bolt (3) · Illuminate (1) · Inertia Trap (1) · Infecting Shot (1) · Infecting Shot (2) · Infect (1) · Ironrot Gauntlet (0) · Ironrot Helm (0) · Ironrot Legs (0) · Ironrot Plate (0) · Ironsong Response (1) · Ironsong Response (3) · Jump Start (1) · Jump Start (2) · Jump Start (3) · Knucklehead (0) · Lace with Bloodrot (1) · Lace with Frailty (1) · Lace with Inertia (1) · Lead with Speed (1) · Lightning Press (1) · Lightning Surge (1) · Look Tuff (1) · Macho Grande (3) · Mage Master Boots (0) · Malefic Incantation (1) · Malefic Incantation (2) · Manifest Muscle (3) · Mark of the Black Widow (1) · Mark of the Black Widow (3) · Mark of the Huntsman (0) · Mark the Prey (1) · Mask of the Swarming Claw (0) · Mauvrion Skies (1) · Mauvrion Skies (3) · Memorial Ground (2) · Mocking Blow (1) · Mocking Blow (2) · Mocking Blow (3) · Mournful Casket (0) · Murderous Rabble (3) · Murkmire Grapnel (1) · Nimblism (1) · Nimblism (2) · Nip at the Heels (3) · Nullrune Boots (0) · Nullrune Gloves (0) · Nullrune Hood (0) · Nullrune Robe (0) · On the Horizon (1) · Out for Blood (1) · Out Pace (1) · Overblast (1) · Overpower (1) · Overpower (3) · Phoenix Flame (1) · Photon Splicing (3) · Pouncing Paws (0) · Power Play (3) · Predatory Plating (0) · Prey Spotters (0) · Prime the Crowd (1) · Pulping (1) · Pummel (1) · Put in Context (3) · Pyroglyphic Protection (3) · Quick Clicks (0) · Rally the Coast Guard (3) · Ravenous Rabble (1) · Raydn, Duskbane (0) · Read the Glide Path (1) · Read the Runes (1) · Reaper's Call (3) · Reaping Blade (0) · Reduce to Runechant (1) · Reincarnate (3) · Release the Tension (1) · Rev Up (1) · Ridge Rider Shot (1) · Rising Sun, Setting Moon (3) · Ronin Renegade (1) · Rough Up (1) · Run Roughshod (3) · Run Through (2) · Rune Flash (1) · Runebleed Robe (0) · Runerager Swarm (1) · Runic Fellingsong (1) · Sadistic Scowl (1) · Salt the Wound (2) · Saltwater Swell (1) · Saltwater Swell (3) · Savage Feast (1) · Scar for a Scar (1) · Scar Tissue (1) · Scout the Periphery (1) · Searing Shot (1) · Second Tenet of Chi: Wind (3) · Seeker's Mitts (0) · Sharpen Steel (1) · Short Shrift (2) · Shrill of Skullform (1) · Shrill of Skullform (2) · Shrill of Skullform (3) · Sigil of Silphidae (3) · Sigil of Suffering (1) · Sizzle (1) · Sledge of Anvilheim (0) · Smash Instinct (3) · Snatch (1) · Spears of Surreality (3) · Spectral Manifestations (1) · Spellblade Assault (1) · Spellblade Assault (3) · Spellfire Cloak (0) · Spike with Bloodrot (1) · Springboard Somersault (2) · Sprout Strength (1) · Stand Strong (0) · Staunch Response (1) · Steelbraid Buckler (0) · Stonewall Impasse (0) · Stroke of Foresight (1) · Strongest Survive (1) · Strongest Survive (2) · Strongest Survive (3) · Swiftstrike Bracers (0) · Take Aim (1) · Take Flight (1) · Take Flight (2) · Talishar, the Lost Prince (0) · Talismanic Lens (0) · Tearing Shuko (0) · Teklo Trebuchet 2000 (3) · Tension in the Air (1) · Test of Might (1) · Test of Strength (1) · The Suspense is Killing Me (3) · Throttle (1) · Throttle (3) · Thunder Quake (3) · Timesnap Potion (3) · Titan's Fist (0) · Trot Along (3) · Two Sides to the Blade (1) · Under Loop (1) · Unexpected Backhand (3) · Unmovable (1) · Unmovable (3) · Valiant Thrust (2) · Vexing Malice (3) · Villainous Pose (1) · Voltic Bolt (1) · Voltic Bolt (3) · Warrior's Valor (1) · Warrior's Valor (2) · Warrior's Valor (3) · Wax On (1) · Wee Wrecking Ball (2) · Whisper of the Oracle (1) · Whisper of the Oracle (2) · Whisper of the Oracle (3) · Widowmaker (2) · Wild Ride (1) · Wild Ride (2) · Winter's Bite (3) · Wounded Bull (1) · Yo Ho Ho! (3) · Zealous Belting (1) · Zero to Sixty (1) · Zero to Sixty (2) · Zero to Sixty (3) · Zipper Hit (1) · Zipper Hit (2) · Zipper Hit (3)

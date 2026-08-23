@@ -1061,7 +1061,18 @@ function makeEffects(ctx){
      it. Nothing else in this body may read `opts`: the moment a card's
      EFFECT depends on the caller, there are two engines again. */
   const execute = (s,card,from,idx,opts) => {
-    const fx = fxParse(card);
+    /* WHICH HALF OF A SPLIT CARD IS BEING PLAYED (v3.34). `_half` is the
+       declared answer and rides on the state, the same seam `_doBoost`
+       and `_addPaid` use — a declaration is settled BEFORE the card
+       resolves, so it cannot be a queued prompt.
+
+       DEFAULTING TO HALF 0 IS THE SAFE DIRECTION. A caller that declares
+       nothing gets the left half alone, which is always a legal play;
+       the alternative default, meld, would hand a player both textboxes
+       they never asked for — which is exactly what this engine did until
+       now, and it made Burn Up // Shock deal FIVE arcane on play. */
+    const _half = P.isSplit(card) ? (s._half != null ? s._half : 0) : null;
+    const fx = P.splitFx(card, _half);
     /* THE RUNECHANT TRIGGER FIRES ON *PLAY* (CR + the printed token):
        "When you play an attack action card or activate a weapon attack,
         destroy this and deal 1 arcane damage to target opposing hero."
@@ -1094,6 +1105,21 @@ function makeEffects(ctx){
     let n = {...s};
     const exSide = actMut(n);
     exSide.res = act(s).res - effCost(card, act(s)); exSide.paySel = [];
+    /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
+       cost, because that is what "as an additional cost to play this"
+       means (v3.34). The ANSWER rides on the state as `_addPaid`, the
+       same seam boost uses for `_doBoost` — a cost cannot be a queued
+       prompt, which drains after the card has already resolved. */
+    if(n._addPaid && fx.addPay && act(s).res >= effCost(card, act(s)) + fx.addPay.cost){
+      exSide.res = exSide.res - fx.addPay.cost;
+      n = L(n, `${card.name}: the additional ${fx.addPay.cost} is paid.`);
+    } else if(n._addPaid){
+      /* AN UNAFFORDABLE ANSWER IS NOT PAID, and must not collect the
+         rider — v2.04's rule, and the reason `_addPaid` is re-derived
+         below rather than trusted. */
+      n = {...n, _addPaid: false};
+      n = L(n, `${card.name}: not enough floating for the additional cost — it goes unpaid.`);
+    }
     /* THE ONE-SHOT COST TAX IS SPENT HERE, at the CHARGE, never at the
        affordability check — `effCost` is read twice and only this read
        actually takes the resources (v2.80). Cartilage Crush taxes "their
@@ -1847,7 +1873,7 @@ function makeEffects(ctx){
        attack instead. */
     { const _gq = takeGaNext(n, card, {from});
       if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`); } }
-    const apCost = costsAP(card, opts && opts.window) ? 1 : 0;
+    const apCost = P.splitCostsAP(card, _half, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
     else if(!apCost) n = L(n, `${card.name} plays at instant speed — no action point spent.`);
@@ -2878,6 +2904,11 @@ function defSelfMet(self, defSide, opts){
   /* the ZONE the card was played from — Springboard Somersault. By the
      time the wall asks, the card has left it, so the caller answers. */
   if(self.when === "fromArsenal")      return opts.fromArsenal === true;
+  /* WAS THE OPTIONAL ADDITIONAL COST PAID? (v3.34) — Staunch Response.
+     The answer belongs to the PLAY: the payment happened before the card
+     resolved and nothing on the card records it, so the caller carries it
+     the way it carries `fromArsenal`. */
+  if(self.when === "addCostPaid")      return opts.addPaid === true;
   return false;                       /* an unread condition never fires */
 }
 
@@ -3428,6 +3459,37 @@ function beginEndPhase(game, seat){
       n = Object.assign({}, n, {sides});
       msgs.push(nameOf(seat) + ": " + live.length + " lingering effect(s) expire with the turn.");
     }
+  }
+
+  /* (8) "THIS TURN" ENDS WITH THE TURN (v3.34). Five single-shot grants
+     wait for a card that matches, and every one of them is printed "this
+     turn":
+
+       buffNext / buffQ   power   (v2.30)
+       gaNext  / gaNextQ  go again (v3.31)
+       costOff            cost    (v3.32)
+
+     THE TRAINER CLEARED THE FIRST TWO AT CR 4.4.3e AND JUDGE CLEARED
+     NOTHING AT ALL, so at the table a next-attack buff survived every
+     later turn of the game — permanent where the card prints one turn,
+     which is the direction that steals games. A schedule is written per
+     board (v3.01) and this one was written on one board; it belongs in
+     the shared event, where two callers cannot disagree.
+
+     BOTH SEATS, not just the turn player. CR 4.4.3e loses points for all
+     players, and a grant is the same kind of thing: a hero who banks one
+     during your turn must not keep it into their own. */
+  for(const i of [0, 1]){
+    const sd = (n.sides || [])[i] || {};
+    const held = (sd.buffNext || 0) + (sd.buffQ || []).length
+               + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length;
+    if(!held) continue;
+    const sides = n.sides.slice();
+    sides[i] = Object.assign({}, sd,
+      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: []});
+    n = Object.assign({}, n, {sides});
+    msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
+      + (held > 1 ? "s expire" : " expires") + " with the turn.");
   }
 
   return {game: n, msgs, ops, fired};

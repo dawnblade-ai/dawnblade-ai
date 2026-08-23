@@ -87,6 +87,13 @@ function resolveEntry(db, e, prefer){
        `db.byName`, and it is null when the card did not resolve, so a
        caller must still choose its fallback deliberately. */
     dbName: card ? card.n : null,
+    /* AND THE SPLIT-CARD FLAG (v3.34). `resolveEntry` has silently
+       narrowed the record TWICE before — `life`, so allies could not be
+       attacked, and `ty`, so a defence reaction was playable on its own
+       turn — and both were invisible because the card simply became a
+       different card, consistently. A split card that arrives without
+       `hz` is one whose halves nobody can tell apart. */
+    hz: card ? !!card.hz : false,
     pitch: card&&card.p!=null ? card.p : (e.p||0),
     cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
     /* An ally's LIFE. The database calls it `health` (mapDbCard puts it on
@@ -164,6 +171,17 @@ function mapDbCard(c){
 
        Carried as `ty` so a type question can ask the structured field and
        fall back to parsing `tt` only when a record has none. */
+    /* IS THIS A SPLIT CARD? (v3.34) The database says so itself, and the
+       flag is the authority — `//` in the type line is how two typeboxes
+       are RENDERED, not what makes a card a split card. Exactly two
+       records in this pool carry it, and both print Meld.
+
+       A split card is ONE card with two halves: one pitch value, one
+       defence value, one card in hand and one card in the graveyard. The
+       halves are told apart by `tt`, which is the one place the boundary
+       survives — the structured `ty` array flattens both faces into a
+       single list (v2.39). */
+    hz:!!c.played_horizontally,
     ty:(c.types||[]).slice(),
     kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
     tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet

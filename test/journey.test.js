@@ -122,7 +122,7 @@ function inDefendStep(card){
 /* Resolve a play all the way through its payment. */
 /* Every card in the pool that prints boost is asked, so the census
    records that it saw the question rather than merely tolerating it. */
-const boostsAsked = [];
+const boostsAsked = [], splitsAsked = [];
 
 function settle(n){
   for(let i = 0; i < 12 && J.pendingOf(n); i++){
@@ -136,6 +136,25 @@ function settle(n){
     if(p.kind === "boost"){
       boostsAsked.push(p.card.name);
       n = J.reduce(n, {t: "boost", yes: true}, p.seat).state;
+      continue;
+    }
+    /* A SPLIT CARD DECLARES A HALF BEFORE IT IS PLAYED (v3.34), so the
+       journey now has one more step in it. Answered as the LEFT half,
+       which is the Action side on both pool split cards and therefore the
+       journey this census is measuring — the card still ends in the
+       graveyard either way, because it is ONE card however many textboxes
+       resolve. Recorded so a census that stopped being asked cannot pass
+       by finding nothing. */
+    if(p.kind === "split"){
+      splitsAsked.push(p.card.name);
+      n = J.reduce(n, {t: "split", half: 0}, p.seat).state;
+      continue;
+    }
+    /* An optional additional cost is DECLINED here: the census is about
+       where a card lands, and declining is the branch that moves nothing
+       extra. */
+    if(p.kind === "addPay"){
+      n = J.reduce(n, {t: "addPay", yes: false}, p.seat).state;
       continue;
     }
     if(p.need - sd.res - J.paySum(sd) > 0){
@@ -211,6 +230,14 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      prints it; offering them the cost is strictly stronger than printed.
      If either name appears in this list, `printedKw` has regressed to
      `hasKw`. */
+  /* AND THE SPLIT DECLARATION WAS ACTUALLY ASKED. Without this the census
+     passes just as well on an engine that never opens the pending — both
+     halves resolving unasked and the card still reaching the graveyard,
+     which is precisely the bug v3.34 fixed. Exactly two records in the
+     pool are printed horizontally. */
+  assert.deepEqual([...new Set(splitsAsked)].sort(),
+    ["Arcane Seeds // Life", "Burn Up // Shock"],
+    "every split card must be ASKED which half is being played");
   const names = [...new Set(boostsAsked)].sort();
   assert.equal(names.length, 11,
     "every card printing boost must be asked the question: " + names.join(", "));

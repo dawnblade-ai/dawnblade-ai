@@ -299,7 +299,10 @@ test("go again is a GAIN on the shared path, for whichever seat is acting", () =
      Repointed rather than deleted: a rule with no drill is worse than a
      drill aimed at a retired copy. */
   const EFFECTS = require("./helpers/extract.js").effects();
-  const a0 = EFFECTS.indexOf("    const apCost = costsAP(card, opts && opts.window) ? 1 : 0;");
+  /* REPOINTED AGAIN AT v3.34: the charge now asks `splitCostsAP`, which
+     falls through to `costsAP` for every ordinary card and reads the
+     DECLARED half of a split one. */
+  const a0 = EFFECTS.indexOf("    const apCost = P.splitCostsAP(card, _half, opts && opts.window) ? 1 : 0;");
   assert.ok(a0 > 0, "anchor moved — repoint this drill deliberately");
   const body = EFFECTS.slice(a0, a0 + 400);
   /* GO AGAIN IS A GAIN, NOT A REFUND — `ga ? keep : -1` cannot say +1, and
@@ -309,7 +312,7 @@ test("go again is a GAIN on the shared path, for whichever seat is acting", () =
   /* An action costs the point and an instant does not (CR 8.1.1 / 8.1.6).
      Folded back into a ternary this becomes unsayable, which is the bug
      v2.39 fixed: Achilles Accelerator netted to zero and did nothing. */
-  assert.ok(/costsAP\(card/.test(body),
+  assert.ok(/splitCostsAP\(card/.test(body),
     "and the cost itself is asked, never assumed to be 1");
 });
 

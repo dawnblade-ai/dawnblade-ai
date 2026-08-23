@@ -570,6 +570,23 @@ function classifyClause(raw){
      line is genuinely a no-op; what matters is the state it leaves behind,
      which the mark/aim effect clauses below actually set. */
   if(/^(?:stealth|cloaked)$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  /* MELD (v3.34). The printed reminder text is the whole rule:
+
+       Meld (You may play 1 or both halves of this card. Each costs 0.)
+
+     A `noop` because the keyword grants nothing on its own — what it does
+     is make "both" a legal DECLARATION, and that is asked before the card
+     resolves (`judge.doSplit`, the trainer's `splitpick`) rather than
+     resolved as a clause.
+
+     ONLY HONEST NOW THAT THE CHOICE EXISTS. Filed before it, this would
+     have been the no-op blind spot at its purest: the keyword counted as
+     accounted for while the engine quietly played BOTH halves of every
+     split card for free. It did exactly that until this version. */
+  if(/^meld$/.test(c)) return NOOP("declared when the card is played — one half, the other, or both");
+  /* THE SEPARATOR BETWEEN TWO TEXTBOXES is not a clause. It is how the
+     database writes the cut down the middle of a horizontal card. */
+  if(/^\/\/$/.test(c)) return NOOP("the cut between a split card's two halves");
   /* "CHOOSE 1;" IS A HEADING, NOT A CLAUSE (v3.33). The audit splits text
      on newlines and a modal header looks like a sentence, so Pummel and
      Two Sides to the Blade reported `part` with BOTH of their modes read.
@@ -830,6 +847,23 @@ function classifyClause(raw){
   /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))
     return R([["foeBanish",1]]);
+  /* "THE NEXT TIME AN ATTACK YOU CONTROL HITS A HERO THIS TURN, DEAL N
+     ARCANE DAMAGE TO THEM" — Burn Up (v3.34).
+
+     A DELAYED TRIGGER, NOT DAMAGE. The whole prefix was being swallowed
+     and the clause read as immediate arcane damage, so Burn Up dealt its
+     4 the instant it was played — no attack, no hit, no condition. It is
+     the unanchored-match shape v3.00 names, on a card that reads `part`
+     so no coverage tool ever looked at it.
+
+     IT RIDES ON `buffQ`, WITH NO POWER. That entry already means "the
+     next attack that matches, with this rider attached", already waits
+     rather than being spent by a card it does not name, and already
+     expires with the turn. An amount of 0 is a rider and nothing else —
+     which is exactly what this clause is. */
+  if(m=c.match(/^the next time an attack you control hits a hero this turn, deal (\d+) arcane damage to them$/))
+    return R([["buffNext", 0, null, {onHit: [["arcane", +m[1]]]}]]);
+
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
   if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
   /* RULING (Crucible of Aetherweave, Absorb in Aether): "the next card you
@@ -1566,7 +1600,7 @@ function applyOverride(card, fx){
   if(patch.self) fx.self += patch.self;
   if(patch.ga) fx.ga = true;
   if(patch.perm) fx.perm = patch.perm;
-  ["arsenalPut","arsenalUp","addCost","playIf","activateIf","defLimit",
+  ["arsenalPut","arsenalUp","addCost","addPay","playIf","activateIf","defLimit",
    "noEquipDefend","fromGY","fromBan","optCost","bottomOnDiscard"].forEach(k=>{
     if(patch[k]!==undefined) fx[k]=patch[k];
   });
@@ -1790,6 +1824,14 @@ function fxParse(card){
     if(!ds){
       m = cl.match(/^if this was played from arsenal, it gets \+(\d+)\{d\}\.?$/i);
       if(m) ds = {amt: +m[1], when: "fromArsenal"};
+    }
+    /* "IF THE ADDITIONAL COST IS PAID, THIS GETS +N{d}" — Staunch Response.
+       The answer belongs to the PLAY, not to the card: by the time the
+       wall asks, the payment is long settled. Same split as `fromArsenal`
+       and, one layer up, the same split `heroHit` keeps. */
+    if(!ds){
+      m = cl.match(/^if the additional cost is paid, (?:this|it) gets \+(\d+)\{d\}\.?$/i);
+      if(m) ds = {amt: +m[1], when: "addCostPaid"};
     }
     if(!ds) continue;
     fx.defSelf = ds;
@@ -2073,6 +2115,23 @@ function fxParse(card){
      LOWEST-VALUE card, which is strictly better than the card prints. */
   const am = tl.match(/as an additional cost to play(?: this| [a-z',\-! ]{2,30}?)?,? (you may )?discard (a|an|one|two|\d+) (random )?cards?/);
   if(am && !am[1]) fx.addCost = {discard: num(am[2]), random: !!am[3]};
+  /* AN OPTIONAL RESOURCE ADDITIONAL COST (v3.34) — Staunch Response's
+     "As an additional cost to play this, you MAY pay {r}{r}{r}{r}."
+
+     IT IS A COST, NOT A TRIGGER, so it is settled at play time beside the
+     resource cost and cannot be a queued prompt (those drain after the
+     card has resolved — the wall Charge and Fusion still sit behind).
+     Boost is the precedent: an optional additional cost asked BEFORE
+     `execute` and answered onto the state.
+
+     "YOU MAY" IS THE WHOLE DIFFERENCE. A mandatory additional cost would
+     simply raise the price; this one is a choice, and the rider that
+     reads it is `defSelf.when === "addCostPaid"`. */
+  {
+    const ap = clean(card.tx||"").toLowerCase()
+      .match(/as an additional cost to (?:play|activate) this, you may pay ((?:\{r\})+|\d+)/);
+    if(ap) fx.addPay = {cost: /^\d+$/.test(ap[1]) ? +ap[1] : (ap[1].match(/\{r\}/g)||[]).length};
+  }
   /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
      because it may name the card instead of saying "this"; the pattern
      therefore skips either rather than requiring one. */
@@ -2741,6 +2800,107 @@ const hasKw = (c,k) => (c.kw||[]).some(x=>String(x).toLowerCase().includes(k)) |
    only by melding, so every type question is asked of the front. Reading the
    whole line called Arcane Seeds // Life and Burn Up // Shock instants, which
    is exactly how an action card would slip past its action point below. */
+/* ---- SPLIT CARDS (v3.34) ---------------------------------------------
+
+   Two records in this pool are printed HORIZONTALLY and cut in half, and
+   the reminder text on both says exactly what that means:
+
+     Meld (You may play 1 or both halves of this card. Each costs 0.)
+
+   IT IS ONE CARD, and that is the thing to hold on to. One pitch value,
+   one defence value, one card in hand, one card in the graveyard. What is
+   doubled is the TEXTBOX, not the card — so it cannot be dealt as two
+   cards without breaking the 55-card count, the pitch value, the wall and
+   the census all at once.
+
+   You DECLARE, on playing it, which half you are playing — or, with meld,
+   that you are playing both. The engine ran BOTH halves unconditionally
+   and asked nothing, which made Burn Up // Shock deal FIVE arcane damage
+   the moment it was played.
+
+   THE BOUNDARY LIVES IN `tt`, AND ONLY THERE. `ty` flattens both faces
+   into one list ("Runeblade","Action","Earth","Instant") — v2.39's note —
+   so each half's types are read off its own segment of the display
+   string. That is the documented case where `tt` knows more than `ty`. */
+const isSplit = c => !!(c && (c.hz || /\/\//.test(String(c.tt || ""))));
+
+/* The halves, left to right as the card is read when turned. Returns null
+   for an ordinary card, so a caller must ask rather than assume. */
+function splitHalves(c){
+  if(!isSplit(c)) return null;
+  const tts = String(c.tt || "").split("//").map(x => x.trim());
+  const nms = String(c.name || "").split("//").map(x => x.trim());
+  /* The text splits on a line that is exactly "//" — the database writes
+     the separator as its own line between the two textboxes. */
+  const lines = String(c.tx || "").split(/\n/);
+  const at = lines.findIndex(l => l.trim() === "//");
+  const txs = at < 0 ? [c.tx || "", ""]
+    : [lines.slice(0, at).join("\n"), lines.slice(at + 1).join("\n")];
+  if(tts.length < 2) return null;
+  return tts.slice(0, 2).map((tt, i) => ({
+    /* THE HALF IS A CARD FOR EVERY PURPOSE THE PARSER HAS. It carries the
+       whole card's pitch, cost and defence, because those are printed once
+       on the card and belong to it rather than to a half. */
+    name: nms[i] || nms[0] || c.name, tt,
+    ty: tt.split(/\s+/).filter(Boolean),
+    tx: (txs[i] || "").trim(),
+    /* A HALF'S KEYWORDS ARE WHAT ITS OWN TEXTBOX PRINTS, and the card's
+       `card_keywords` list is NOT that: it is a keyword INDEX for the
+       whole card (v2.31). Both of these print `["Meld","Go again"]` while
+       Go again is on the TOP half only — copying the list to both halves
+       hands the instant half a keyword it does not print, which is the
+       most valuable keyword in the game to get wrong. Left empty, so
+       `hasGA` and friends read the half's own text. */
+    kw: [],
+    pitch: c.pitch, cost: c.cost, def: c.def, power: c.power,
+    uid: c.uid, _half: i, _of: c.name
+  }));
+}
+
+/* WHICH HALF IS BEING PLAYED, as an fx (v3.34).
+
+   `half` is 0, 1, or "both". For an ordinary card it is ignored and the
+   card's own fx comes back, so every caller can ask unconditionally.
+
+   MELD MERGES THE TEXTBOXES, NOT THE CARD. The CR is explicit that a
+   melded split card is a SINGLE card, played as a SINGLE layer, with the
+   properties of both sides — so the two op lists concatenate and the
+   keywords are the union.
+
+   RESOLUTION ORDER IS A STATED APPROXIMATION. The CR resolves a melded
+   card one side then the other with priority between; this runs them in
+   printed order as one layer. Both pool cards' halves are independent —
+   two Runechants and 1 life, a delayed rider and 1 arcane — so no order
+   is observable on either. Revisit if a split card ever prints halves
+   that interact. */
+function splitFx(card, half){
+  if(!isSplit(card)) return fxParse(card);
+  const hs = splitHalves(card);
+  if(!hs) return fxParse(card);
+  if(half === 0 || half === 1) return fxParse(hs[half]);
+  const a = fxParse(hs[0]), b = fxParse(hs[1]);
+  return Object.assign({}, a, b, {
+    ops: [...(a.ops || []), ...(b.ops || [])],
+    onHit: [...(a.onHit || []), ...(b.onHit || [])],
+    conds: [...(a.conds || []), ...(b.conds || [])],
+    ga: !!(a.ga || b.ga),
+    self: (a.self || 0) + (b.self || 0),
+    tier: (a.tier === "full" && b.tier === "full") ? "full" : "part"
+  });
+}
+
+/* DOES THE CHOSEN HALF COST AN ACTION POINT? CR 8.1.1 / 8.1.6, and the
+   ruling that makes melding expensive: if EITHER side of a melded card
+   has the Action type the play costs an action point and needs an empty
+   stack, even though the other side is an Instant. */
+function splitCostsAP(card, half, window){
+  if(!isSplit(card)) return costsAP(card, window);
+  const hs = splitHalves(card);
+  if(!hs) return costsAP(card, window);
+  if(half === 0 || half === 1) return costsAP(hs[half], window);
+  return costsAP(hs[0], window) || costsAP(hs[1], window);
+}
+
 const frontFace = c => String((c && c.tt) || "").split("//")[0];
 const isAR = c => /attack reaction/i.test(frontFace(c));
 const isDR = c => /defense reaction/i.test(frontFace(c));
@@ -3104,7 +3264,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isNonAtkActionCard, costOffFor, heaveOf,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,

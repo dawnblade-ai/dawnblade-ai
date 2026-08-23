@@ -191,11 +191,16 @@ test("the four Blade Beckoner pieces read the clause, and only they", {skip}, ()
      defence reaction reach the wall at all. Moving this list must stay a
      deliberate edit: it is what stops a loose anchor quietly claiming a
      condition nobody has built. */
+  /* WIDENED AGAIN AT v3.34: Staunch Response's "if the additional cost is
+     paid, this gets +3{d}". Like `fromArsenal` the answer belongs to the
+     PLAY rather than to the card — by the time the wall asks, the payment
+     is long settled — so the caller carries it in `opts.addPaid`. */
   assert.deepEqual([...claimed].sort(), [
     "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
     "Blade Beckoner Helm", "Blade Beckoner Plating",
     "Gauntlets of Unity", "Helm of Unity",
-    "Sigil of Suffering", "Springboard Somersault", "Unmovable", "Wax On"]);
+    "Sigil of Suffering", "Springboard Somersault", "Staunch Response",
+    "Unmovable", "Wax On"]);
   /* UNMOVABLE WAS NOT ON THE LIST THIS CYCLE SET OUT TO BUILD. It prints
      the same clause as Springboard Somersault with its own number (+1
      against +2), so the reader found it for free — which is the whole

@@ -857,7 +857,7 @@ test("playRx — the trainer no longer decides the window from mode/bphase", () 
      arsenal-instant handlers, which legitimately still read mode/bphase
      until their own turn to migrate comes. Comments are stripped because
      this file documents the old test in prose right above the new one. */
-  const start = HTML.indexOf("const playRx = i => setG");
+  const start = HTML.indexOf("const playRx = (i, addPaid) => setG");
   const end = HTML.indexOf("\n  const ", start + 10);
   const body = HTML.slice(start, end).replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(body, /DawnPriority\.speedAllowed\(s, 0\)/,
@@ -957,7 +957,7 @@ test("peek — the preview is positioned ABOVE the hand, measured not guessed", 
    =================================================================== */
 
 test("action point — the play gate exempts instants (CR 8.1.6)", () => {
-  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx)"),
+  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx,half)"),
                           HTML.indexOf("const confirmPay = () => setG"));
   const gate = body.match(/^.*ap<1.*$/m);
   assert.ok(gate, "tryPlay must still refuse an ACTION with no action point");
@@ -979,11 +979,13 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
      +1, and only the spelled-out arithmetic gets both right. */
-  assert.match(body, /const apCost = costsAP\(card, opts && opts\.window\) \? 1 : 0;/,
-    "the charge must be gated on costsAP — `ga ? keep : -1` charges instants too. The\n"
+  assert.match(body, /const apCost = P\.splitCostsAP\(card, _half, opts && opts\.window\) \? 1 : 0;/,
+    "the charge must be gated on the type reader — `ga ? keep : -1` charges instants too. The\n"
   + "WINDOW joined it in v2.77 and can only make the answer cheaper (CR 8.1.1): a card\n"
   + "played in a reaction window is not being played as an action. The trainer passes\n"
-  + "none and is unchanged; judge.js decides it at doPlay and carries it through the pay.");
+  + "none and is unchanged; judge.js decides it at doPlay and carries it through the pay.\n"
+  + "THE HALF joined it in v3.34: a split card's action point belongs to the half being\n"
+  + "declared, and `splitCostsAP` falls through to `costsAP` for every ordinary card.");
   assert.match(body, /actMut\(n\)\.ap = act\(n\)\.ap - apCost \+ \(ga \? 1 : 0\);/,
     "CR 5.3.5 — go again gains 1 action point, so the two rules compose "
   + "rather than being folded into a ternary");
@@ -1031,7 +1033,7 @@ test("action point — an attack still pays for itself", () => {
    =================================================================== */
 
 test("reactions — tryPlay refuses one in the action phase (CR 8.1.2a / 8.1.3a)", () => {
-  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx)"),
+  const body = HTML.slice(HTML.indexOf("const tryPlay = (card,from,idx,half)"),
                           HTML.indexOf("const confirmPay = () => setG"));
   assert.match(body, /if\(isRx\(card\)\)/,
     "tryPlay is only reached in the action phase, which is not the reaction step");
@@ -1043,7 +1045,7 @@ test("reactions — tryPlay refuses one in the action phase (CR 8.1.2a / 8.1.3a)
 });
 
 test("reactions — playRx splits the window by seat and asks rxAllowed", () => {
-  const body = HTML.slice(HTML.indexOf("const playRx = i => setG"),
+  const body = HTML.slice(HTML.indexOf("const playRx = (i, addPaid) => setG"),
                           HTML.indexOf("const playRxA = () => setG"));
   assert.match(body, /rxAllowed\(c, rxWin\)/, "the card half of the rule comes from the engine");
   assert.match(body, /inAtk \? "attack-reaction" : "defense-reaction"/,
@@ -1057,7 +1059,7 @@ test("reactions — no site in the trainer hand-rolls the window test any more",
   /* Five copies of `fx.dr || (isInstantT(c) && fx.ops.length>0)` is five
      chances to drift, and the dim in handCell drifting from playRx is a card
      that looks playable and refuses when tapped. */
-  const babel = HTML.slice(HTML.indexOf("const playRx = i => setG"));
+  const babel = HTML.slice(HTML.indexOf("const playRx = (i, addPaid) => setG"));
   assert.ok(!/isInstantT\([a-z()g.]*\)\s*&&\s*fx\.ops\.length/.test(babel),
     "rxAllowed owns this test — do not restate it in the trainer");
   const cell = HTML.slice(HTML.indexOf("const handCell = (c,i)"), HTML.indexOf("const playables = "));

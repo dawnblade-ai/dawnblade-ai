@@ -73,8 +73,8 @@ const ANCHORS = [
      to resolveStack and swallow three unrelated handlers. An anchor list
      that stops bounding things stops being a guard. */
   ["dummyDefence", "  const dummyDefence = (s, total, card) => {"],
-  ["playRx",       "  const playRx = i => setG(s=>{"],
-  ["tryPlay",      "  const tryPlay = (card,from,idx) => setG(s=>{"],
+  ["playRx",       "  const playRx = (i, addPaid) => setG(s=>{"],
+  ["tryPlay",      "  const tryPlay = (card,from,idx,half) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
   ["allySwing",    "  const allySwing = bi => setG(s=>{"],
   /* THE END PHASE IS A RULES FUNCTION AND IT IS MIGRATED (v2.71). It runs

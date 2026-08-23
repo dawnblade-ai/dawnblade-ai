@@ -9,6 +9,105 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.34 — Bravo is complete, and the split cards were playing themselves
+
+### Staunch Response — an optional additional cost
+
+> As an additional cost to play this, you may pay {r}{r}{r}{r}.
+> If the additional cost is paid, this gets +3{d}.
+
+**It is a COST, not a trigger**, and that decides where it lives. A cost is
+settled at play time beside the printed resource cost, so it cannot be a
+queued prompt — those drain after the card has already resolved, which is
+the timing wall Charge and Fusion still sit behind. **Boost is the
+precedent on both boards:** pause, ask, and let the answer ride to
+`execute` on the state.
+
+It is asked **only when there is a real choice** — enough floating for
+both the printed cost and the addition. Otherwise it plays through unpaid
+and the rider does not fire, the same rule `buildPrompt` follows for a
+spec with nothing to ask. And the rider's answer belongs to the **play**,
+not the card: by the time the wall asks what the card is worth the payment
+is long settled, so `defSelf.when === "addCostPaid"` reads `opts.addPaid`,
+the split `fromArsenal` already keeps.
+
+Driven: 6 floating → asked; pay → blocks for **10**, decline → **7**.
+
+**Bravo is finished. Zero gaps.**
+
+### THE FAULT UNDER IT: the trainer's own wall never called `defendValue`
+
+`defendValue` was reached from `resolveStack` alone — the wall the **dummy**
+raises when you attack. When the **player** blocked, which in the trainer
+is most of the game, every defensive self-buff built since v3.23 did
+nothing. Sigil of Suffering blocked for **3** on one board and **4** on the
+other from the same board state — and that is the card whose ruling the
+user gave personally.
+
+Three walls now ask the one reader: the hand wall, the gear wall (passing
+its wear in as `base`, so `gearDef` stays the only copy of the wear rules)
+and the played defence reaction. What the trainer genuinely **cannot**
+answer stays honestly unmet: the dummy's swing is the `[3,4,5]`
+escalation, not a card, so the two conditions that ask about the incoming
+card read false rather than being guessed.
+
+### AND ANOTHER: at the table, "this turn" never ended
+
+Five single-shot grants wait for a matching card — `buffNext`/`buffQ`,
+`gaNext`/`gaNextQ`, `costOff` — and every one is printed *"this turn"*.
+The trainer cleared **two of the five, for one seat**; judge cleared
+**nothing at all**. A next-attack buff at the table survived every later
+turn of the game. Now expired in `beginEndPhase`, the shared event, for
+**both seats** — CR 4.4.3e loses points for all players and a grant is the
+same kind of thing.
+
+---
+
+## The split cards — read every word, and the CR
+
+The two horizontal cards print their own rule in reminder text:
+
+> **Meld** *(You may play 1 or both halves of this card. Each costs 0.)*
+
+**IT IS ONE CARD.** One pitch value, one defence value, one card in hand,
+one card in the graveyard. What is doubled is the **textbox**. The CR is
+explicit: a melded split card is a *single card played as a single layer*
+with the properties of both sides.
+
+**WHAT THE ENGINE DID:** it ran **both halves, unconditionally, asking
+nothing**. `Burn Up // Shock` dealt **five arcane damage on play** and kept
+its action point. Four of those five are printed as a *delayed* trigger —
+*"the next time an attack you control hits a hero this turn"* — and the
+whole prefix was swallowed, so it read as immediate damage. The card sat
+at `tier: part`, so no coverage tool ever looked at it, and the fairness
+sweep's captures stop at the word "attack".
+
+| what | now |
+|---|---|
+| which card is split | `played_horizontally`, the database's own flag — `//` in the type line is a **rendering**, not a fact. `DATA_VER` → `sage-v12` |
+| the halves | told apart by `tt`, the **only** place the boundary survives — `ty` flattens both faces into one list (v2.39's note) |
+| a half's keywords | its **own textbox**. `card_keywords` is `["Meld","Go again"]` for the whole card and Go again is on the top half only — v2.31's index rule, on the keyword most expensive to misplace |
+| the declaration | asked **first**, before the payment, because melding doubles the base cost |
+| the default | the **left** half, never both — defaulting to meld hands a player a textbox they never asked for, which is exactly what shipped |
+| the action point | the **declared** half's. Meld costs one if *either* side is an Action, even though the other is an Instant |
+| Burn Up's trigger | a `buffQ` rider with **no power** — an entry that already waits for the next attack, already carries an on-hit payload, and already expires with the turn |
+
+**Resolution order for a meld is a stated approximation.** The CR resolves
+one side then the other with priority between; this runs them in printed
+order as one layer. Both pool cards' halves are independent — two
+Runechants and 1 life; a delayed rider and 1 arcane — so no order is
+observable on either.
+
+**And `Meld` is filed a `noop` only now that the choice exists.** Filed
+before it, that would have been the no-op blind spot at its purest: the
+keyword counted as accounted for while the engine played both halves of
+every split card for free.
+
+**Measured:** 323 → **326 full**, 69 → **66 part**. 1339 → **1370
+drills**, 0 skipped. Fairness clean, 0 UNFAIR. 18 sabotages, all biting.
+
+---
+
 ## v3.33 — Bravo's last two minters, and two faults underneath them
 
 Both of his remaining cards create Seismic Surge, which v3.32 made real.

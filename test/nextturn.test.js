@@ -301,3 +301,37 @@ test("nextTurn is a real side field, serialized and reported", () => {
   const R = fs.readFileSync(path.join(__dirname, "..", "engine", "report.js"), "utf8");
   assert.match(R, /nextTurn/, "a report that omits state is worse than no report");
 });
+
+/* ---- 7. "THIS TURN" ENDS WITH THE TURN (v3.34) ---------------------- */
+
+test("every single-shot 'this turn' grant expires in the shared end phase", () => {
+  /* FIVE GRANTS, all printed "this turn", and the expiry was written on
+     ONE BOARD: the trainer cleared two of them at CR 4.4.3e and judge
+     cleared nothing at all — so at the table a next-attack buff survived
+     every later turn of the game. Permanent where the card prints one
+     turn, which is the direction that steals games. A schedule is written
+     per board (v3.01); this one belongs in the shared event. */
+  let g = H.state({buffNext: 3, buffQ: [{amt: 2, q: null}], gaNext: true,
+                   gaNextQ: [{powLe: 3}], costOff: [{amt: 1, q: null}]},
+                  {buffNext: 5}, {turn: 4, actor: 0});
+  const out = E.beginEndPhase(g, 0);
+  const me = out.game.sides[0], them = out.game.sides[1];
+  assert.equal(me.buffNext, 0);
+  assert.deepEqual(me.buffQ, []);
+  assert.equal(me.gaNext, false);
+  assert.deepEqual(me.gaNextQ, []);
+  assert.deepEqual(me.costOff, []);
+  /* BOTH SEATS, not just the turn player. CR 4.4.3e loses points for all
+     players and a grant is the same kind of thing: a hero who banks one
+     during your turn must not keep it into their own. */
+  assert.equal(them.buffNext, 0, "the other seat's grants expire too");
+  assert.ok(out.msgs.some(m => /expire/.test(m)), "and the feed says so");
+});
+
+test("the expiry does not fire when there is nothing to expire", () => {
+  /* A step that announces itself and does nothing is worse than one that
+     is missing (CR 4.4.3a's lesson). */
+  const g = H.state({}, {}, {turn: 4, actor: 0});
+  const out = E.beginEndPhase(g, 0);
+  assert.ok(!out.msgs.some(m => /expire/.test(m)));
+});

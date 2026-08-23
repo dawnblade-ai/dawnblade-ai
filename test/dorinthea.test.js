@@ -213,7 +213,7 @@ test("the reaction resolution is ONE body, and both boards call it", () => {
     "the shared body must call the engine's rxPump");
   assert.ok(!/\(fx\.self\s*\|\|\s*0\)\s*\+/.test(rxBody),
     "a hand-rolled sum over fx.self is the bug: it cannot express 'instead'");
-  const i = HTML.indexOf("const playRx = i => setG");
+  const i = HTML.indexOf("const playRx = (i, addPaid) => setG");
   assert.ok(i > 0, "playRx must still be findable");
   const body = HTML.slice(i, HTML.indexOf("const playRxA", i));
   assert.ok(/_EFX\.attackRx\(/.test(body), "the trainer delegates rather than keeping a copy");
@@ -795,7 +795,7 @@ test("playRx refuses a reaction whose target does not match", {skip}, () => {
      with comments stripped, because prose satisfying a grep is a false
      pass (v2.68). The GATE is the call itself: deleting it removes the
      expression, not merely a word. */
-  const body = codeOf(HTML.slice(HTML.indexOf("const playRx = i => setG"),
+  const body = codeOf(HTML.slice(HTML.indexOf("const playRx = (i, addPaid) => setG"),
                                 HTML.indexOf("const playRxA")));
   assert.match(body, /qualMatches\(fx\.selfQ,\s*s\.pend/,
     "the printed restriction must be checked against the attack being reacted to");

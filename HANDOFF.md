@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.33 · PHASE C · BRAVO IS DOWN TO ONE CARD
+# Handoff — Dawnblade, at v3.34 · PHASE C · BRAVO IS COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1339 drills**
+> the card semantics run on both boards.** `npm test` is **1370 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.33: coverage **323 full / 69 part / 13 none**, fairness
+> Current at v3.34: coverage **326 full / 66 part / 13 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -72,6 +72,24 @@
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
 >
+> ### SPLIT CARDS ARE BUILT (v3.34) — and were playing themselves
+>
+> The two horizontal cards print **Meld (You may play 1 or both halves of
+> this card. Each costs 0.)** and the engine ran BOTH halves, always,
+> asking nothing — Burn Up // Shock dealt **five arcane on play** where its
+> top half is a *delayed* four. It is **one card**: one pitch, one defence,
+> one card in hand and in the graveyard; only the textbox is doubled.
+>
+> `played_horizontally` names them (the DB's own flag), `tt` tells the
+> halves apart (`ty` flattens both faces), each half reads its OWN
+> keywords, and the declaration is asked before the payment because
+> melding doubles the base cost. Default is the LEFT half, never both.
+>
+> **Still an approximation, and stated:** the CR gives priority between a
+> melded card's two sides; this runs them in printed order as one layer.
+> Both pool cards' halves are independent so nothing is observable —
+> revisit if a split card ever prints halves that interact.
+>
 > ### v3.31 — 13 CARDS WERE PUMPING WHATEVER WAS SWINGING
 >
 > `attackQual` read the words BEFORE "attack" and `[^.]*` ate the rest, so
@@ -117,7 +135,7 @@
 > there face up. His remaining two cards (Crash and Bash, Magmatic
 > Carapace) both mint Seismic Surge, so they are now readers rather than
 > new machinery.
-> | Staunch Response | **the last one.** "As an additional cost to play this, you MAY pay {r}{r}{r}{r}" — an OPTIONAL additional cost decided at play time, which is the timing wall Charge and Fusion already hit: a cost has to be settled before the card resolves, and `openPrompt` drains after. It then needs a `defSelf` condition (`addCostPaid`) whose answer belongs to the PLAY, not the card — so it rides on the `blockRx` entry and reaches the wall through `defendValue`'s `opts`, the way every other caller-supplied fact does. Machinery, not a reader. |
+> | Staunch Response | **DONE at v3.34** — an optional additional cost, asked before the card resolves (boost's precedent), with the rider reading `opts.addPaid` because the answer belongs to the PLAY. |
 >
 > ### THE FIVE CRUSH RIDERS — four built, one refusing
 >
