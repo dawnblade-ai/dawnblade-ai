@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-23T03:54:56.893Z",
- "appVer": "3.30",
+ "generated": "2026-08-23T04:14:36.406Z",
+ "appVer": "3.31",
  "dataVer": "sage-v11",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 318,
+  "full": 319,
   "part": 72,
-  "none": 15
+  "none": 14
  },
  "heroes": {
   "kayo": {
@@ -500,7 +500,7 @@
    "tx": "At the beginning of your action phase, destroy this, then your next Guardian attack action card this turn costs {r} less to play.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "full"
   },
   "Spectral Shield": {
    "found": true,
@@ -5404,24 +5404,20 @@
    "mentions": [
     "heave"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Heave 3",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Heave 3"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Heave 3",
-   "flags": [
-    "unreviewed keyword: \"heave\""
-   ]
+   "flags": []
   },
   "bolt n boots|0": {
    "name": "Bolt'n Boots",

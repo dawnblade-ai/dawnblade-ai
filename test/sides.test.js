@@ -325,9 +325,14 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      for the four cards that name a target. `gaNextQ` holds the qualified
      grants so an unmatched one WAITS rather than being spent, exactly as
      `buffQ` does beside `buffNext`. */
-  assert.equal(gap.fields, 41);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31 */
-  assert.equal(gap.player.length, 41);
-  assert.equal(gap.opponent.length, 41);
+  /* 41 -> 42 AT v3.32, and it completes a family rather than starting
+     one: `buffQ` holds qualified power, `gaNextQ` qualified go again, and
+     `costOff` qualified cost. All three are single-shot grants that WAIT
+     for the card the printed line names, and all three ask one qualifier
+     reader. Seismic Surge is the pool's only printing of the third. */
+  assert.equal(gap.fields, 42);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32 */
+  assert.equal(gap.player.length, 42);
+  assert.equal(gap.opponent.length, 42);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -337,8 +342,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 41);   /* -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31 */
-  assert.equal(gap.nativeForOpponent.length, 41);
+  assert.equal(gap.nativeForPlayer.length, 42);   /* … +gaNextQ v3.31, +costOff v3.32 */
+  assert.equal(gap.nativeForOpponent.length, 42);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

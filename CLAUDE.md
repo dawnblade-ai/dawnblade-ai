@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.31
+**Current version:** v3.32
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1305 drills**.
+This is `node --test "test/*.test.js"` — currently **1323 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,71 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### THE PRINTED CARD IS THE ORACLE FOR A KEYWORD (v3.32)
+
+Thunder Quake's entire database text is `**Heave 3**` — no reminder text
+in any field. **The card has it**, and reading the printing settled the
+whole build:
+
+> *(At the beginning of your end phase, if Thunder Quake is in your hand
+> and you have an empty arsenal zone, you may pay {r}{r}{r} and put
+> Thunder Quake FACE UP into your arsenal. If you do, create 3 Seismic
+> Surge tokens.)*
+
+That is more precise than the ruling recorded 2026-07-25, which had heave
+**replacing** the arsenal action rather than performing one and knew
+nothing of the empty-arsenal gate or the face-up put. **Try the printing
+before booking a question** — second time this has paid (Clash of Agility
+was the first).
+
+**BOTH NUMBERS ARE THE KEYWORD'S PARAMETER.** The cost and the token count
+are each N, and Thunder Quake prints 3 for both — so no pool fixture can
+tell a read number from a hardcoded one. Drill it with a synthetic.
+
+**THE GATE IS `arsEmpty`, NOT `arsFree`** (v2.34). They coincide at
+capacity 1, which is why the wrong one stays invisible.
+
+**PITCHING FOR IT IS NOT OFFERED.** CR 4.4.3c sends the pitch zone to the
+deck bottom two steps later and 4.4.3e fizzles the rest, so pitching here
+spends cards for a discount that cannot be banked. What it may spend is
+what it is about to lose.
+
+**WHERE THE PLAYER IS ASKED IS A STATED APPROXIMATION.** CR 4.4.1 gives
+nobody priority in the end phase, so the only place a choice can be put is
+a pause the turn structure already owns — and this effect IS an arsenal
+set. Offered at the arsenal step on both boards. The one observable
+difference is a hand-sweep (Inertia) firing first, which already precedes
+the ORDINARY arsenal set. CR 4.1.8a's trigger ordering is not modelled.
+
+**A `noop` FOR A KEYWORD IS ONLY HONEST ONCE THE KEYWORD IS CARRIED.**
+`Heave N` is filed `noop` now and would have been the blind spot exactly
+if filed earlier. `tools/ledger.js` is the discriminator: heave is `live`
+there, so `failstates.js` grades it against the claim, not a grep.
+
+### THREE QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.32)
+
+| field | grants | since |
+|---|---|---|
+| `buffQ` | power | v2.30 |
+| `gaNextQ` | go again | v3.31 |
+| `costOff` | cost | v3.32 |
+
+All three **wait** for the card the printed line names rather than being
+spent by one that does not match, and all three ask `qualMatches`.
+Building the third invented no vocabulary — v3.31's tail reader already
+handles *"your next Guardian attack action card this turn"*.
+
+**`effCost` IS PURE.** It is read twice and only one read takes resources
+(v2.80), so the grant is spent at the **charge**, like the next-turn tax
+(v3.29). **"Your NEXT" is one card per grant** — two tokens are two cards,
+never {r}{r} off one.
+
+**AND SEISMIC SURGE WAS `none` ON PURPOSE.** `selfDestruct … then X`
+refuses when X has no reader, precisely so a schedule cannot be filed
+`full` with its payout missing (v3.07). Building the payout is what gave
+the token its clock; without one it sat on the board forever inflating
+every "auras you control" count.
 
 ### THE RESTRICTION CAN COME AFTER THE SUBJECT (v3.31)
 

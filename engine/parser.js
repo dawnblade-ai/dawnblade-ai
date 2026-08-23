@@ -486,6 +486,16 @@ function classifyClause(raw){
      against a hand-less dummy. Pending and unreviewed keywords are
      deliberately absent: they must keep surfacing as coverage gaps. */
   if(/^(?:boost|battleworn|temper|guardwell|blade break|crush)$/.test(c)) return NOOP("printed keyword — carried by the engine's keyword system");
+  /* HEAVE N (v3.32). This line is a `noop` for the same reason as the ones
+     above and for NO OTHER: the keyword is carried, by `heaveOf` /
+     `heaveOffer` / `heave`, and both boards offer it at the arsenal step.
+
+     FILING IT HERE BEFORE IT WAS BUILT WOULD HAVE BEEN THE NO-OP BLIND
+     SPOT EXACTLY — a keyword with real rules meaning filed as accounted
+     for, which every coverage tool then counts as read. `tools/ledger.js`
+     is what keeps this honest: heave is `live` there, so `failstates.js`
+     grades it against the claim rather than against a grep of the source. */
+  if(/^heave \d+$/.test(c)) return NOOP("printed keyword — the arsenal-step offer, carried by heaveOffer/heave");
   /* ARCANE BARRIER / SPELLVOID are LIVE as of v2.74 — read off
      `card_keywords` by `arcaneBarrier`/`spellvoid` and offered by
      `arcaneSoaks` at the one place a hero takes arcane damage. The old
@@ -815,6 +825,26 @@ function classifyClause(raw){
      engine already has, as amp. Same mechanic, spelled out longhand. */
   if(m=c.match(/(?:next card you play this turn with an (?:effect that deals arcane damage|arcane damage effect), instead deals|(?:effect that deals arcane damage|arcane damage effect), instead (?:that effect|it) deals) that much arcane damage plus (\d+)/))
     return R([["amp",+m[1]]]);
+  /* "YOUR NEXT <x> COSTS {r} LESS TO PLAY" (v3.32) — the third qualified
+     single-shot grant, beside `buffNext`/`buffQ` and `gaNext`/`gaNextQ`.
+
+     Seismic Surge is the pool's only printing and it is Bravo's keystone:
+     four of his cards create the token and a fifth reads it. The clause
+     was deliberately UNREAD until now — `selfDestruct … then X` refuses
+     when X has no reader, precisely so the schedule could not be filed
+     `full` with its payout missing.
+
+     THE SUBJECT GOES THROUGH `attackQual` LIKE ANY OTHER. "your next
+     GUARDIAN attack ACTION CARD this turn" is a head, a subject and a
+     tail, and v3.31 taught one reader all three — so this rule invents no
+     qualifier vocabulary of its own. */
+  if(m=c.match(/^(?:your|the) next([^.]*?)\battack\b([^.]*?) costs? ((?:\{r\})+|\d+) less to play$/)){
+    const q = attackQual(m[1], m[2]);
+    if(q === false) return null;
+    const amt = /^\d+$/.test(m[3]) ? +m[3] : (m[3].match(/\{r\}/g)||[]).length;
+    return R([["costOff", amt, q]]);
+  }
+
   /* RULING: auras that scrub themselves at the top of your next turn */
   if(/^at the (?:beginning|start) of your (?:action phase|turn), destroy this$/.test(c))
     return R([["selfDestruct","turn"]]);
@@ -2497,7 +2527,54 @@ function nextTurnDebuff(sd, kind){
     .filter(e => e && e.ready && !e.spent && e.kind === kind)
     .reduce((a, e) => a + (e.amt || 0), 0);
 }
-function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)) + frostCount(sd) + nextTurnTax(sd); }
+/* WHAT A ONE-SHOT COST REDUCTION IS WORTH TO THIS CARD (v3.32).
+
+   PURE, and it consumes nothing — `effCost` is read TWICE and only one of
+   those reads takes resources (v2.80), so a reader that spent here would
+   discount the affordability check and then charge full price, or the
+   reverse. The CHARGE SITE spends it, exactly as the next-turn tax is
+   spent (v3.29).
+
+   Only the FIRST matching entry applies. Two Seismic Surges resolving on
+   the same turn are two separate grants against two separate cards, not
+   {r}{r} off one — the printed line says "your NEXT". */
+/* HEAVE N — read off the printed KEYWORD, semantics off the printed
+   REMINDER TEXT (v3.32).
+
+   `functional_text` carries the bare words "**Heave 3**" and the database
+   prints no reminder text for it. The CARD does:
+
+     Heave 3 (At the beginning of your end phase, if Thunder Quake is in
+     your hand and you have an empty arsenal zone, you may pay {r}{r}{r}
+     and put Thunder Quake FACE UP into your arsenal. If you do, create 3
+     Seismic Surge tokens.)
+
+   Read off the printing, the way Clash of Agility's comparison was
+   settled — the printed product is the oracle, and it is more precise
+   than the ruling recorded in 2026-07-25, which had heave replacing the
+   arsenal action rather than performing one.
+
+   BOTH NUMBERS ARE N. The keyword's parameter is the cost and the token
+   count on the one card that prints it; storing one and hardcoding the
+   other would be inventing card text the moment a second heave exists.
+
+   THE EMPTY-ARSENAL GATE IS `arsEmpty`, NOT `arsFree` (v2.34). They
+   coincide at the normal capacity of 1, which is exactly why reading the
+   wrong one stays invisible until a second slot exists. */
+function heaveOf(c){
+  const kws = [...((c && c.kw) || []), ...String((c && c.tx) || "").split("\n")];
+  for(const k of kws){
+    const m = clean(String(k)).match(/^heave (\d+)$/i);
+    if(m) return {n: +m[1]};
+  }
+  return null;
+}
+
+function costOffFor(c, sd){
+  const e = ((sd && sd.costOff) || []).find(x => x && qualMatches(x.q, c));
+  return e ? (e.amt || 0) : 0;
+}
+function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)) + frostCount(sd) + nextTurnTax(sd); }
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -2957,7 +3034,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isNonAtkActionCard,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isNonAtkActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,

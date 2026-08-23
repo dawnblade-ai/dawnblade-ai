@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.31 · PHASE C · THE QUALIFIER READS ITS TAIL
+# Handoff — Dawnblade, at v3.32 · PHASE C · BRAVO'S KEYSTONE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1305 drills**
+> the card semantics run on both boards.** `npm test` is **1323 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.31: coverage **318 full / 72 part / 15 none**, fairness
+> Current at v3.32: coverage **319 full / 72 part / 14 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -100,10 +100,23 @@
 >
 > | card | what it needs |
 > |---|---|
-> | Thunder Quake | **heave**, and its ruling is already recorded (2026-07-25): at end of turn, instead of arsenaling it, offer to pay 3 resources for 3 Seismic Surge tokens. The arsenal step is a real interactive pause on both boards, which is the window it needs. |
+> | Thunder Quake | **DONE at v3.32.** Built from the card's PRINTED reminder text, which the database does not carry and which is more precise than the July ruling — an empty-arsenal gate and a FACE-UP put, and it performs the arsenal action rather than replacing it. |
 > | Crash and Bash | a `defends` optCost trigger + a REVEAL cost kind. `optFilter` can express "a card with crush" now that `printedKw` exists. |
 > | Magmatic Carapace | "whenever you play an aura" trigger + a tap-and-pay cost (the `pay` prompt variant). |
 > | Pummel | **DONE at v3.31** — its second mode is selectable now that the cost restriction can be read. |
+>
+> **AND SEISMIC SURGE IS DONE (v3.32)**, which was the real keystone: four
+> of his cards create it, a fifth reads it, and it was `tier: none` on
+> purpose because `selfDestruct … then X` refuses when X has no reader.
+> Its payout is `costOff`, the third qualified single-shot grant beside
+> `buffQ` and `gaNextQ`. The token has a clock now, so it stops inflating
+> every "auras you control" count.
+>
+> **BRAVO'S ONE MECHANIC IS THE ARSENAL** — his hero ability turns a
+> face-down arsenal card face up and rewards crush, and heave puts one
+> there face up. His remaining two cards (Crash and Bash, Magmatic
+> Carapace) both mint Seismic Surge, so they are now readers rather than
+> new machinery.
 > | Staunch Response | an optional additional cost paying into `defSelf.cost`. |
 >
 > ### THE FIVE CRUSH RIDERS — four built, one refusing

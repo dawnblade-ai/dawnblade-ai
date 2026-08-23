@@ -35,7 +35,7 @@ const KEYWORDS = {
    "ephemeral":           {status:"live",        note:"from Crouching Tiger's printed reminder text: if it would be put into a graveyard from anywhere, instead it ceases to exist. Enforced in the gy() helper, the single path into the graveyard"},
    "cloaked":             {status:"unreviewed",  note:"Arakni package"},
    "crank":               {status:"pending",  note:"RULED 2026-07-25: the item enters with a steam counter; crank prompts to spend it for an action point. Needs the prompt sheet"},
-   "crush":               {status:"partial",     note:"4+ threshold checked at resolve; hand payload live from v2.05, arsenal/next-turn payloads still inert"},
+   "crush":               {status:"partial",     note:"threshold and payload read off each card's own printed rider (v3.16); the two next-turn DEBUFFS built v3.29 and the two RESTRICTIONS v3.30. Partial for one card: Walk in My Shoes halves base {p} and {d} for a turn and has no reader"},
    "dominate":            {status:"live",        note:"v2.05: the dummy holds cards, so this really does hold it to one blocker from hand"},
    /* BUILT v3.03. Both halves were `noop` until v3.02 with reasons about a
       training prop retired in v2.71, so Cold Snap reported `tier: full`
@@ -45,7 +45,7 @@ const KEYWORDS = {
    "freeze":              {status:"live",        note:"RULED 2026-07-25: the target may pay {r} to avoid it; if they decline the caster picks one of their arsenal cards or allies, and it cannot be played or activated until the start of the caster's next turn. The 'or activated' half has nothing to bite on until allies attack"},
    "go again":            {status:"live",        note:"printed via card_keywords; conditional grants parsed from text (never merged — the Kayo rule)"},
    "guardwell":           {status:"live",        note:"defense drops to 0 at chain close"},
-   "heave":               {status:"unreviewed",  note:"seen on Thunder Quake (Guardian)"},
+   "heave":               {status:"live",        note:"BUILT v3.32 from the card's printed reminder text (the database carries none): at the arsenal step, with an empty arsenal and N floating, pay N to set it FACE UP and create N Seismic Surge tokens"},
    "high tide":           {status:"unreviewed",  note:"2+ blue cards in pitch zone rider (Gravy Bones)"},
    "ice fusion":          {status:"unreviewed",  note:"RULED 2026-07-25 (spec in tools/rulings.json) — Iyslander — fusion cost rider"},
    "intimidate":          {status:"live",        note:"v2.05: banishes a card from the dummy's hand face-down on attack — a real cost now"},

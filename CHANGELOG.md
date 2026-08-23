@@ -9,6 +9,108 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.32 — heave, and Bravo's keystone
+
+**Bravo's ONE mechanic is the arsenal.** His hero ability turns a
+face-down arsenal card face up and rewards crush; **heave puts a card face
+up into the arsenal**. Reading the hero before the cards, as always.
+
+### The printed product is the oracle
+
+Thunder Quake's entire rules text in the database is `**Heave 3**`. There
+is no reminder text in any field. The **card** has it:
+
+> Heave 3 *(At the beginning of your end phase, if Thunder Quake is in
+> your hand and you have an empty arsenal zone, you may pay {r}{r}{r} and
+> put Thunder Quake **face up** into your arsenal. If you do, create 3
+> Seismic Surge tokens.)*
+
+That is materially more precise than the ruling recorded 2026-07-25, which
+had heave **replacing** the arsenal action rather than performing one, and
+knew nothing of the empty-arsenal gate or the face-up put. Same lesson as
+Clash of Agility: **try the printing before booking a question.**
+
+**Both numbers are the keyword's parameter.** The cost and the token count
+are each N. Hardcoding either would be inventing card text the moment a
+second heave printing exists — and no pool fixture could tell, because
+Thunder Quake prints 3 for both. The drills use a synthetic Heave 2.
+
+**The gate is `arsEmpty`, not `arsFree`** (v2.34's distinction). They
+coincide at the normal capacity of 1, which is exactly why reading the
+wrong one stays invisible until a second slot exists.
+
+**Pitching for it is not offered.** CR 4.4.3c sends the pitch zone to the
+bottom of the deck two steps later and CR 4.4.3e fizzles what is left, so
+a seat that pitched here would be spending cards for a discount it cannot
+bank. The resources it *can* spend are ones it is about to lose anyway.
+
+### Where the player is asked — a stated approximation
+
+It is offered at the **arsenal step**, not at the beginning of the end
+phase. CR 4.4.1 gives nobody priority in the end phase, so the only place
+a choice can be put to a player there is a pause the turn structure
+already owns — and this effect **is** an arsenal set: it requires an empty
+arsenal and it fills the arsenal, so it lands in the step it competes
+with. The one observable difference is a hand-sweep (Inertia) firing
+first, which already precedes the *ordinary* arsenal set on both boards.
+CR 4.1.8a hands the order of simultaneous triggers to the turn player and
+this engine does not model that choice. **Recorded, not papered over.**
+
+### Seismic Surge was `tier: none` on purpose, and now it is not
+
+Four Bravo cards create the token and a fifth reads it, so it is the
+keystone of his deck — and it was deliberately unread: `selfDestruct …
+then X` **refuses** when X has no reader, precisely so a schedule could
+not be filed `full` with its payout missing (v3.07). Its payout is
+
+> your next Guardian attack action card this turn costs {r} less to play
+
+which is the **third qualified single-shot grant**:
+
+| field | grants | since |
+|---|---|---|
+| `buffQ` | power | v2.30 |
+| `gaNextQ` | go again | v3.31 |
+| **`costOff`** | **cost** | **v3.32** |
+
+All three wait for the card the printed line names, all three ask **one**
+qualifier reader, and none of them is spent by a card that does not match.
+Building the third invented no vocabulary: *"your next **Guardian** attack
+**action card** this turn"* is a head, a subject and a tail, and v3.31
+taught `attackQual` all three. Symmetry ledger 41 → 42.
+
+**`effCost` is PURE and consumes nothing.** It is read twice and only one
+of those reads takes resources (v2.80), so the grant is spent at the
+**charge**, exactly where the next-turn tax is spent (v3.29). A reader
+that consumed would discount the affordability check and then charge full
+price, or the reverse.
+
+**"Your NEXT" is one card per grant.** Two Seismic Surges resolving on the
+same turn are two grants against two cards, not {r}{r} off one.
+
+**And the token now has a clock.** It carries `sd:"turn"` and crumbles at
+the top of its controller's action phase, paying out as it goes — instead
+of sitting on the board forever inflating every "auras you control" count,
+which is the v3.07 hazard this repairs.
+
+### The keyword ledger caught up
+
+`heave` was `unreviewed` and is `live`. The parser files `Heave N` as a
+`noop` **only because the keyword is now carried** — filing it there
+beforehand would have been the no-op blind spot exactly, a keyword with
+real rules meaning counted as accounted for. `tools/ledger.js` is what
+keeps that honest: `failstates.js` grades a keyword against the claim
+rather than against a grep of the source.
+
+`crush` was still described as *"arsenal/next-turn payloads still inert"*,
+three versions after v3.16, v3.29 and v3.30 built them. Corrected.
+
+**Measured:** 318 → **319 full**, 15 → **14 none** (Thunder Quake;
+Seismic Surge is a token and sits outside the 405). 1305 → **1323
+drills**, 0 skipped. Fairness clean, 0 UNFAIR.
+
+---
+
 ## v3.31 — the restriction after the subject
 
 > **Target attack action card WITH COST 1 OR LESS gets +3{p}.**

@@ -571,6 +571,16 @@ function legal(g, a, seat){
 
   if(a.t === "arsenal"){
     if(g.phase !== "end" || g.arsenalFor !== seat) return "not your arsenal step";
+    /* HEAVE IS A THIRD CHOICE AT THIS STEP (v3.32), not a fourth action:
+       it requires an empty arsenal and it FILLS the arsenal, so it is the
+       thing this step is for. `effects.heaveOffer` is the one gate — the
+       reducer restates neither the cost nor the empty-arsenal rule. */
+    if(a.heave){
+      const off = E.heaveOffer(g, seat, a.uid);
+      if(!off) return a.uid != null ? "that card cannot be heaved right now"
+                                    : "nothing in hand can be heaved right now";
+      return null;
+    }
     if(a.uid == null) return null;
     return find(at(g, seat).hand, a.uid) < 0 ? "card is not in hand" : null;
   }
@@ -1598,6 +1608,14 @@ function doDefend(g, a, seat){
    cannot fire against a derivation that disagrees with it. */
 function doArsenal(g, a, seat){
   let n = g;
+  if(a.heave){
+    const h = E.heave(n, seat, a.uid);
+    n = h.game;
+    for(const m of h.msgs) n = say(n, m);
+    if(h.ops.length)
+      n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, h.ops, "Heave"));
+    return endPhaseAfterArsenal({...n, arsenalFor: null}, seat);
+  }
   if(a.uid != null){
     const c = at(n, seat).hand.find(x => x.uid === a.uid);
     n = put(n, seat, s => ({...s, hand: s.hand.filter(x => x.uid !== a.uid), arsenal: c}));

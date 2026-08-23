@@ -641,6 +641,16 @@ function makeEffects(ctx){
          printed for the four cards that name a target — go again keeps
          your action point, so it is the most valuable keyword in the game
          to hand to the wrong card. Same split `buffNext` / `buffQ` keep. */
+      /* A ONE-SHOT COST REDUCTION, WAITING FOR THE CARD IT NAMES (v3.32).
+         Seismic Surge's payout, and the third of the qualified single-shot
+         grants — `buffQ` for power, `gaNextQ` for go again, this for cost.
+         All three share one qualifier reader and all three WAIT rather
+         than being spent by a card the printed line does not name. */
+      else if(k==="costOff"){
+        actMut(n).costOff = [...(act(n).costOff||[]), {amt:v, q:op[2]||null}];
+        /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
+        n=L(n,`${act(n).name}: their next ${P.qualLabel(op[2]||null).replace(/^an? /,"")} costs ${v} less.`);
+      }
       else if(k==="gaNext"){
         const gq = op[1] || null;
         if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), gq];
@@ -1082,6 +1092,17 @@ function makeEffects(ctx){
        actually takes the resources (v2.80). Cartilage Crush taxes "their
        FIRST action during their next turn", so marking it spent is what
        keeps it from taxing every card they play. */
+    /* AND SO IS THE ONE-SHOT DISCOUNT (v3.32), for the same reason and at
+       the same moment: `effCost` above has already applied it, and only
+       this read takes resources. Spent at the affordability check instead
+       it would discount a play the seat then never made. Exactly ONE
+       entry is spent — the same one `costOffFor` matched. */
+    { const off = (act(s).costOff || []);
+      const i = off.findIndex(e => e && P.qualMatches(e.q, card));
+      if(i >= 0){
+        exSide.costOff = off.slice(0, i).concat(off.slice(i + 1));
+        n = L(n, `${card.name} cost ${off[i].amt} less — that grant is spent.`);
+      } }
     if(P.nextTurnTax(act(s)) > 0)
       exSide.nextTurn = (act(s).nextTurn || []).map((e, i, arr) =>
         (e && e.ready && !e.spent && e.kind === "firstActionTax"
@@ -2850,6 +2871,87 @@ function optCostSpec(oc, card, side, leaving){
   };
 }
 
+/* HEAVE — THE ARSENAL SET THAT PAYS (v3.32).
+
+   Thunder Quake prints, in reminder text on the card and nowhere in the
+   database:
+
+     At the beginning of your end phase, if Thunder Quake is in your hand
+     and you have an empty arsenal zone, you may pay {r}{r}{r} and put
+     Thunder Quake FACE UP into your arsenal. If you do, create 3 Seismic
+     Surge tokens.
+
+   ONE BODY, BOTH BOARDS. The gate, the payment, the face-up put and the
+   mint are card semantics; WHERE the player is asked is the turn
+   structure's business, and both boards already pause at the arsenal step
+   (judge's `arsenalFor`, the trainer's `mode:"arsenal"`).
+
+   IT IS OFFERED AT THE ARSENAL STEP, NOT AT THE BEGINNING OF THE END
+   PHASE, and that is a deliberate, stated approximation. CR 4.4.1 gives
+   nobody priority in the end phase, so the only place a choice can be put
+   to a player there is a pause the turn structure already owns — and this
+   effect IS an arsenal set: it requires an empty arsenal and it fills the
+   arsenal, so the step it lands in is the one it competes with. The one
+   observable difference is a hand-sweep (Inertia) firing first, which
+   already precedes the ORDINARY arsenal set on both boards, so heave is
+   treated no differently from the thing it is. CR 4.1.8a hands the order
+   of simultaneous triggers to the turn player and this engine does not
+   model that choice; recorded rather than papered over.
+
+   FACE UP IS A DIFFERENT EVENT from the normal face-down set (v2.33), and
+   the stamps are the ones the arsenal machinery already reads. */
+/* `uid` is optional and NAMES A CARD. Without it the first eligible card
+   in hand is offered, which is the whole answer while Thunder Quake is the
+   pool's only heave printing — but a hand holding two of them would then
+   have the second permanently unreachable, and `heave` checks its uid
+   against whatever this returned. A card the player cannot choose is the
+   same defect as a dead button. */
+function heaveOffer(game, seat, uid){
+  const sd = ((game.sides || [])[seat]) || {};
+  if(!P.arsEmpty(sd)) return null;
+  for(const c of (sd.hand || [])){
+    if(uid != null && c.uid !== uid) continue;
+    const h = P.heaveOf(c);
+    if(!h) continue;
+    /* AFFORDABLE FROM FLOATING RESOURCES. Pitching for it is not offered:
+       CR 4.4.3c sends the pitch zone to the bottom of the deck two steps
+       later and CR 4.4.3e fizzles what is left, so a seat that pitched
+       here would be paying with cards for a discount it cannot bank. The
+       resources it CAN spend are ones it is about to lose anyway. */
+    if((sd.res || 0) < h.n) continue;
+    return {card: c, uid: c.uid, n: h.n};
+  }
+  return null;
+}
+
+/* Pays for it and performs the put. Returns `{game, msgs, ops}` — the ops
+   mint the tokens, and the caller runs them, for the reason `sweepArena`
+   and `beginEndPhase` already give: an op is actor-relative and the two
+   boards reach `runOps` differently. */
+function heave(game, seat, uid){
+  const offer = heaveOffer(game, seat, uid);
+  if(!offer) return {game, msgs: [], ops: []};
+  const sides = game.sides.slice();
+  const me = Object.assign({}, sides[seat]);
+  me.res = (me.res || 0) - offer.n;
+  me.hand = (me.hand || []).filter(c => c.uid !== offer.uid);
+  /* THE SAME STAMPS THE FACE-UP ARSENAL MACHINERY ALREADY READS (v2.33).
+     `_upTurn` is what makes "this turn" mean this turn. */
+  me.arsenal = Object.assign({}, offer.card, {_faceUp: true, _upTurn: game.turn});
+  sides[seat] = me;
+  const n = Object.assign({}, game, {sides});
+  return {
+    game: n,
+    /* A COLON, NOT A VERB. The feed names the seat (v2.83) and the seat is
+       called "You" on one board and "Bravo" on the other, so any inflected
+       verb reads wrong for one of them. */
+    msgs: [(me.name || ("seat " + seat)) + ": heave — " + offer.n
+      + " paid, and " + offer.card.name + " is set FACE UP in the arsenal."],
+    /* THE COUNT IS THE KEYWORD'S PARAMETER, not a literal 3. */
+    ops: [["token", "Seismic Surge", offer.n, "self"]]
+  };
+}
+
 function sweepArena(game, seat, when){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -3318,6 +3420,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, beginEndPhase,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, heaveOffer, heave, beginEndPhase,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });
