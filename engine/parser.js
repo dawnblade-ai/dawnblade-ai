@@ -2898,7 +2898,18 @@ function splitCostsAP(card, half, window){
   const hs = splitHalves(card);
   if(!hs) return costsAP(card, window);
   if(half === 0 || half === 1) return costsAP(hs[half], window);
-  return costsAP(hs[0], window) || costsAP(hs[1], window);
+  /* TWO DIFFERENT QUESTIONS, and they take different answers.
+
+     "both" is MELD: the CR plays it as one layer on an empty stack for an
+     action point if EITHER side is an Action, even though the other is an
+     Instant. So: OR.
+
+     NOTHING DECLARED YET is the affordability check asking whether the
+     card can be played at all — and it can, if ANY half is free in this
+     window. Answering it with meld's rule refuses a seat with no action
+     point a card whose instant half costs none. So: AND. */
+  if(half === "both") return costsAP(hs[0], window) || costsAP(hs[1], window);
+  return costsAP(hs[0], window) && costsAP(hs[1], window);
 }
 
 const frontFace = c => String((c && c.tt) || "").split("//")[0];

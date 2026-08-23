@@ -321,3 +321,189 @@ test("the MELD keyword is a noop only because the choice exists", {skip}, () => 
     }
   }
 });
+
+/* ---- 7. THE WINDOW BELONGS TO THE DECLARED HALF (v3.35) -------------- */
+
+test("the card is OFFERED in either window — the union of its halves", {skip}, () => {
+  H.db();
+  const TY = require("../engine/types.js");
+  const c = H.card("Burn Up // Shock", 1);
+  /* `types.playWindows` reads the FRONT face of a `//` card, which v2.39
+     made it do so the whole card would stop reading as an Instant and
+     collecting a free action point. Correct for a card played as one
+     lump — and it also meant the INSTANT half could never be played at
+     instant speed at all, which is a printed line of play. */
+  assert.deepEqual(TY.playWindows(c), ["action"], "the front face alone, as v2.39 left it");
+  const [a, b] = P.splitHalves(c);
+  assert.deepEqual(TY.playWindows(a), ["action"]);
+  assert.deepEqual(TY.playWindows(b), ["instant"]);
+});
+
+const inWindow = (step, prio, turnPlayer) => {
+  P.fxReset();
+  const c = {...H.card("Burn Up // Shock", 1), uid: "s1"};
+  let g = H.state({res: 9, ap: 0}, {res: 9}, {turn: 3, actor: turnPlayer});
+  g.sides = g.sides.slice();
+  g.sides[0] = {...g.sides[0], hand: [c]};
+  return {...g, phase: "action", step, priority: prio, passed: [], firstPlayer: 0,
+          round: 1, over: null, turnPlayer, attacker: turnPlayer,
+          pend: {card: {...H.card("Raging Onslaught", 1), uid: "a1"},
+                 by: turnPlayer, total: 7, ga: false, ops: [], onHit: []}, stack: []};
+};
+
+test("driven: the INSTANT half is playable at instant speed, for no action point", {skip}, () => {
+  H.db();
+  /* Their turn, the reaction step, and seat 0 holds no action point at
+     all. Before v3.35 the card was refused outright — "is an action" —
+     so Shock could never be answered with. */
+  const g = inWindow("reaction", 0, 1);
+  assert.equal(J.legal(g, {t: "play", uid: "s1", from: "hand"}, 0), null,
+    "the card must be OFFERED here, on the strength of its instant half");
+  const asked = J.reduce(g, {t: "play", uid: "s1", from: "hand"}, 0).state;
+  assert.equal(asked.pending.kind, "split");
+
+  const shock = J.reduce(asked, {t: "split", half: 1}, 0);
+  assert.ok(!shock.error, shock.error);
+  assert.equal(shock.state.sides[1].hp, 19, "Shock's 1 arcane lands");
+  assert.equal(shock.state.sides[0].ap, 0, "and CR 8.1.6 — an instant costs no action point");
+});
+
+test("driven: the ACTION half is refused in that same window, by name", {skip}, () => {
+  H.db();
+  const asked = J.reduce(inWindow("reaction", 0, 1), {t: "play", uid: "s1", from: "hand"}, 0).state;
+  /* The OFFER is the union; the DECLARATION is one of them. An Action
+     half cannot ride in on its Instant sibling's window. */
+  assert.match(String(J.legal(asked, {t: "split", half: 0}, 0)), /Burn Up is an action/);
+  assert.match(String(J.legal(asked, {t: "split", half: "both"}, 0)), /melding/,
+    "and melding is an ACTION play whenever either side is one");
+});
+
+test("with NO action point, the card is still offered for its instant half", {skip}, () => {
+  H.db();
+  /* The affordability check runs BEFORE the declaration, so it asks
+     whether ANY half could be played — not what melding would cost. Asking
+     the front face (an Action) refuses a seat with no action point a card
+     whose Instant half costs none, which is the printed play. */
+  P.fxReset();
+  const c = {...H.card("Burn Up // Shock", 1), uid: "s1"};
+  let g = H.state({hand: [c], res: 9, ap: 0}, {hp: 20}, {turn: 3, actor: 0});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: [],
+       firstPlayer: 0, round: 1, over: null, turnPlayer: 0};
+  assert.equal(J.legal(g, {t: "play", uid: "s1", from: "hand"}, 0), null,
+    "offered with zero action points — Shock costs none");
+  const asked = J.reduce(g, {t: "play", uid: "s1", from: "hand"}, 0).state;
+  const shock = J.reduce(asked, {t: "split", half: 1}, 0);
+  assert.ok(!shock.error, shock.error);
+  assert.equal(shock.state.sides[0].ap, 0, "and it stays at zero");
+  /* AND MELD IS THE OTHER ANSWER: an action play, so it needs the point. */
+  assert.equal(P.splitCostsAP(H.card("Burn Up // Shock", 1), "both", "action"), true);
+  assert.equal(P.splitCostsAP(H.card("Burn Up // Shock", 1), undefined, "action"), false,
+    "…while the undeclared card is affordable, because one half is free");
+
+  /* THE CALL SITE IS PINNED BY READING IT, and the reason is worth
+     writing down: `typeCostsAP` and `splitCostsAP` give the SAME answer
+     in every state reachable today, because `speedAllowed` opens the
+     instant window alongside the action one in the action phase, and the
+     `some` finds the free one either way. That coincidence is not a rule
+     — it is one change to `priority.js` away from being false — so the
+     site asks the reader that is CORRECT rather than the one that
+     currently agrees. Same call v3.26 made for `defSelfMet`'s unreachable
+     default: where no fixture can tell two readings apart, assert the
+     reader by name. */
+  const jud = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(jud, /const free = open\.some\(w => !PR\.splitCostsAP\(c, g\._half, w\)\);/,
+    "the affordability check must ask the split reader");
+});
+
+test("v2.39's free action point cannot come back through a declared half", {skip}, () => {
+  H.db();
+  /* The whole reason `playWindows` reads the front face: a card typed
+     both Action and Instant picks the FREE window and the action half
+     rides along for nothing. The declaration closes it — Burn Up
+     declared alone has only the action window to be played in. */
+  const c = H.card("Burn Up // Shock", 1);
+  const J2 = require("../engine/judge.js");
+  let g = H.state({hand: [{...c, uid: "s1"}], res: 9, ap: 1}, {hp: 20}, {turn: 3, actor: 0});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: [],
+       firstPlayer: 0, round: 1, over: null, turnPlayer: 0};
+  const asked = J2.reduce(g, {t: "play", uid: "s1", from: "hand"}, 0).state;
+  for(const [half, want] of [[0, 1], [1, 1], ["both", 1]]){
+    const r = J2.reduce(asked, {t: "split", half}, 0);
+    assert.ok(!r.error, "half " + half + ": " + r.error);
+    assert.equal(r.state.sides[0].ap, want,
+      "half " + half + ": ap must be " + want + " — 2 would be v2.39's free point");
+    assert.equal(r.state.sides[0].grave.length, 1, "and ONE card reaches the graveyard");
+  }
+});
+
+/* ---- 8. THE PENDING IS DEMUXED BY WHITELIST ------------------------- */
+
+test("every pending kind judge can open has a branch at the table", () => {
+  /* REPORTED FROM A REAL TABLE, turn 1. The board read `kind !== "boost"`
+     and treated everything else as a PAYMENT, so the split declaration
+     opened a pitch sheet reading "covered ✓" for a card costing 0 — and
+     Pitch & play then sent `payConfirm`, which `legal` refuses. A screen
+     whose only exit was Cancel.
+
+     A BLACKLIST IS THE BUG. The next kind added walks into the same
+     fallback, so the census is the guard rather than the memory. */
+  const kinds = J.PENDING_KINDS;
+  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "pay", "split"]);
+  const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
+  const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
+  const i = htm.indexOf("const kindIs = k =>");
+  assert.ok(i > 0, "the table's pending demux moved — re-anchor this drill");
+  const demux = htm.slice(i, i + 400);
+  for(const k of kinds)
+    assert.ok(demux.indexOf('kindIs("' + k + '")') > 0,
+      'the table must demux "' + k + '" explicitly — a kind with no branch is a screen with no exit');
+  /* AND IT MUST NOT BE A BLACKLIST. */
+  assert.ok(!/kind\s*!==/.test(demux),
+    "whitelist, never blacklist — that is what made a split declaration open a pitch sheet");
+  /* AND EVERY KIND NEEDS A BRANCH IN THE ACTION BAR. Demuxing it into a
+     variable nothing renders is the same dead end wearing a tidier name. */
+  /* ANCHOR FORWARD FROM THE DEMUX, not from the first `actbar` in the
+     file — that one is the TRAINER's, and slicing it looks exactly like
+     the table missing a branch. Fourth time today a guard has pointed at
+     the wrong scope; the fix is always to anchor on something unique to
+     the thing under test. */
+  const bar = htm.slice(i);
+  const branches = bar.slice(0, bar.indexOf("End turn"));
+  for(const k of kinds){
+    const v = k === "pay" ? "pay" : k;
+    assert.ok(new RegExp("[:?]\\s*" + v + "\\s*\\?").test(branches),
+      "the action bar must have a branch for " + k + " — a kind demuxed and never rendered "
+      + "is the same screen with no exit");
+  }
+});
+
+test("every pending kind judge can open is one it also names in ACTIONS", () => {
+  /* A kind with no answering action is a pending nothing can clear. */
+  for(const k of J.PENDING_KINDS)
+    if(k !== "pay") assert.ok(J.ACTIONS.indexOf(k) >= 0, k + " must be an action too");
+  for(const t of ["paySel", "payConfirm", "payCancel"])
+    assert.ok(J.ACTIONS.indexOf(t) >= 0, "and a payment is answered by " + t);
+});
+
+/* ---- 9. THE FACE IS TURNED TO BE READ ------------------------------- */
+
+test("a split card is rendered rotated, and only a split card", () => {
+  /* The database ships the art PORTRAIT with its content sideways, so it
+     is turned to be read. -90deg (counter-clockwise) is upright; +90deg
+     comes out upside down, which was checked by rendering both rather
+     than reasoned about. */
+  const htm = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(htm, /const hz = DawnParser\.isSplit\(card\);/,
+    "CardFrame must ask the ONE reader — nothing here may test for `//`");
+  assert.match(htm, /\.cfw\.hz>img[^}]*rotate\(-90deg\)/,
+    "counter-clockwise: +90deg renders the card upside down");
+  /* THE ASPECT AND THE TWO CALCS MUST AGREE, or the face is cropped: the
+     image box is the frame's own dimensions swapped. */
+  const m = htm.match(/\.cfw\.hz\{--hzr:([\d.]+);aspect-ratio:var\(--hzr\)/);
+  assert.ok(m, "the rotated frame must set --hzr and use it as the aspect");
+  assert.ok(Math.abs(+m[1] - 763 / 546) < 0.005,
+    "--hzr is the card's real aspect the other way up (546x763)");
+  assert.match(htm, /width:calc\(100% \/ var\(--hzr\)\);height:calc\(100% \* var\(--hzr\)\)/,
+    "and both derive from it, or the two drift and the art crops");
+});

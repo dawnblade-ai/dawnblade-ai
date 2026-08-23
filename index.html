@@ -310,6 +310,23 @@ img{display:block;max-width:100%}
 .b-typ{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:.07em;text-transform:uppercase;background:rgba(16,12,10,.9);color:var(--bone-dim);padding:1px 4px;border:1px solid var(--line);white-space:nowrap;pointer-events:none}
 .cfw.sm .b-pit,.cfw.sm .b-cost,.cfw.sm .b-atk,.cfw.sm .b-def{font-size:9px;padding:1px 3px}
 .cfw.sm .b-typ{font-size:6px;padding:0 3px}
+/* A SPLIT CARD IS PRINTED SIDEWAYS, so it is TURNED to be read (v3.35).
+   The database ships the art portrait with its content rotated; upright
+   needs -90deg, which was checked by rendering both directions rather
+   than reasoned about — 90deg comes out upside down.
+
+   `--hzr` is the card's real aspect the other way up (546x763 -> 1.3974),
+   and the two calcs derive the image box from it: `width` is 100/1.3974%
+   of the frame's WIDTH, which equals the frame's height, and `height` is
+   1.3974x the frame's HEIGHT, which equals its width. Rotated, that fills
+   the landscape frame exactly with no crop. Keep the three in step. */
+.cfw.hz{--hzr:1.3974;aspect-ratio:var(--hzr);overflow:hidden}
+.cfw.hz>img,.cfw.hz>.ccfall{position:absolute;top:50%;left:50%;display:block;
+  width:calc(100% / var(--hzr));height:calc(100% * var(--hzr));
+  transform:translate(-50%,-50%) rotate(-90deg)}
+/* the corner badges stay UPRIGHT — they are the engine's overlay, not
+   part of the printed face, and a rotated pitch pip is unreadable */
+.cfw.hz .b-atk,.cfw.hz .b-def{display:none}
 .hand{gap:5px}
 .gearrow .g{width:62px}
 .boardrow .b{width:62px}
@@ -760,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.34"; /* v3.34 — Bravo is COMPLETE (Staunch Response's optional additional cost, asked before the card resolves like boost), and three faults surfaced under it: the trainer's own DEFENDING wall never called defendValue, so every defensive self-buff worked when the dummy blocked and did nothing when you did; at the table no "this turn" grant ever expired; and both SPLIT cards ran BOTH halves for free with nothing asked, which had Burn Up // Shock dealing five arcane on play where it prints a delayed four. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.35"; /* v3.35 — reported from a real table: the split-card declaration opened a PITCH sheet, because the board demuxed `pending` by BLACKLIST and treated every kind that was not boost as a payment; it is a whitelist now and judge exports PENDING_KINDS so a kind with no branch is a drill failure rather than a screen with no exit. The dive also found the INSTANT half unplayable at instant speed — the declared half decides the window now, without reopening v2.39's free action point — and split cards are turned counter-clockwise to be read. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1921,8 +1938,12 @@ function ChainLink({l}){
 }
 function CardFrame({card,className,noType,zone}){
   const t = noType ? "" : typeAbbr(card);
+  /* A SPLIT CARD IS TURNED TO BE READ (v3.35) — one card, printed
+     horizontally, so the frame goes landscape and the face rotates with
+     it. `isSplit` is the one reader; nothing here asks about `//`. */
+  const hz = DawnParser.isSplit(card);
   return (
-    <div className={"cfw"+(className?" "+className:"")}>
+    <div className={"cfw"+(hz?" hz":"")+(className?" "+className:"")}>
       <CardImg card={card}/>
       {zone && <span className="b-zone">{zone}</span>}
       {card.pitch>=1 && card.pitch<=3 && <span className={"b-pit p"+card.pitch}>{card.pitch}</span>}
@@ -2952,6 +2973,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       /* naming the refusal, not a dead tap — the hand dims these, but a tap
          that lands on one should still say why */
       if(isRx(c)) return L(s, `${c.name} is ${isAR(c)?"an attack":"a defense"} reaction — this is the ${inAtk?"attacking":"defending"} player's window.`);
+      /* A SPLIT CARD WHOSE OTHER HALF IS AN INSTANT (v3.35). The table can
+         play it here — declare the Instant half and it resolves at instant
+         speed for no action point. THIS BOARD CANNOT YET, and the reason
+         is structural rather than missing: everything played through this
+         path is filed as a DEFENDER (`blockRx`), which is right for a
+         defence reaction and wrong for a plain instant. Untangling that is
+         its own change, so the refusal NAMES the real reason instead of
+         claiming the card has no instant on it — a refusal a player cannot
+         believe is worse than one they cannot act on. */
+      if(DawnParser.isSplit(c)){
+        const inst = (DawnParser.splitHalves(c)||[]).find(h => DawnParser.isInstantT(h));
+        if(inst) return L(s, `${c.name}: ${inst.name} is an instant and the table can answer with it here — `
+          + `this board files anything played in the reaction step as a defender, so it can't yet. Play it in your action phase.`);
+      }
       return L(s, `${c.name} isn't a reaction or an instant — it can't be played in the reaction step.`);
     }
     /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER.
@@ -5776,13 +5811,26 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const mine = a => DawnJudge.legal(g, a, mySeat) === null;
   const fire = a => { const why = sess.current.submit(a); setNote(why||null); };
   const over = g.over;
-  /* A PENDING IS ONE FIELD AND NOW TWO KINDS (v2.84), so it is split by
-     kind here rather than at each reader. A boost pending reaching the
-     pay branch renders "need NaN more" — `p.need` belongs to a payment
-     and boost has no such number. */
+  /* A PENDING IS ONE FIELD AND FOUR KINDS (v3.35), so it is split by kind
+     here rather than at each reader.
+
+     WHITELIST, NEVER BLACKLIST. This read `kind !== "boost"` and every
+     other kind therefore rendered as a PAYMENT — so the split-card
+     declaration opened a pitch sheet that said "covered ✓" for a card
+     costing 0, and Pitch & play then sent `payConfirm`, which `legal`
+     refuses with "declare which half first". A dead end the player could
+     only leave by cancelling: reported from a real table on turn 1.
+
+     The same shape as the migration's own rule about which holders may be
+     rewritten, and the reason the fix is a whitelist is that the next
+     kind added would have walked into it too. `judge.PENDING_KINDS` is
+     the list; a kind with no branch here is a screen with no exit. */
   const myPend = g.pending && g.pending.seat === mySeat ? g.pending : null;
-  const pay   = myPend && myPend.kind !== "boost" ? myPend : null;
-  const boost = myPend && myPend.kind === "boost" ? myPend : null;
+  const kindIs = k => myPend && myPend.kind === k ? myPend : null;
+  const pay    = kindIs("pay");
+  const boost  = kindIs("boost");
+  const addPay = kindIs("addPay");
+  const split  = kindIs("split");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -6166,6 +6214,21 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           : boost ? <>
               <button className="a go" onClick={()=>fire({t:"boost",yes:true})}>⚡ Boost</button>
               <button className="a" onClick={()=>fire({t:"boost",yes:false})}>No boost</button>
+            </>
+          /* WHICH HALF OF A SPLIT CARD (v3.35). Asked before the payment,
+             because melding doubles the base cost — and it is the card's
+             whole mechanic, so it is a real choice rather than a sheet. */
+          : split ? <>
+              {(split.halves||[]).map((h,i)=>
+                <button key={i} className="a go" onClick={()=>fire({t:"split",half:i})}>{h}</button>)}
+              {DawnParser.hasKw(split.card,"meld") &&
+                <button className="a" onClick={()=>fire({t:"split",half:"both"})}>Meld both</button>}
+            </>
+          /* AN OPTIONAL ADDITIONAL COST. No Cancel, for boost's reason:
+             the play is committed and "no" is a complete answer. */
+          : addPay ? <>
+              <button className="a go" onClick={()=>fire({t:"addPay",yes:true})}>Pay {addPay.cost} more</button>
+              <button className="a" onClick={()=>fire({t:"addPay",yes:false})}>Decline</button>
             </>
           : pay ? <>
               <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>

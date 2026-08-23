@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.34 · PHASE C · BRAVO IS COMPLETE
+# Handoff — Dawnblade, at v3.35 · PHASE C · BRAVO IS COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1370 drills**
+> the card semantics run on both boards.** `npm test` is **1378 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.34: coverage **326 full / 66 part / 13 none**, fairness
+> Current at v3.35: coverage **326 full / 66 part / 13 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -71,6 +71,25 @@
 > sits on the board doing nothing but counting as an aura (which is
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
+>
+> ### v3.35 — THE SPLIT-CARD DIVE, AND ONE GAP LEFT
+>
+> A player report ("making me pitch for burn up shock", cost 0) found the
+> table demuxing `pending` by BLACKLIST — every kind that was not `boost`
+> rendered as a PAYMENT, so the declaration opened a pitch sheet whose
+> only exit was Cancel. `judge.PENDING_KINDS` is the census now.
+>
+> The dive also found the INSTANT half unplayable at instant speed. The
+> DECLARED HALF decides the window now (union before you choose, that
+> half's after, ACTION for meld), which reopens the printed line without
+> reopening v2.39's free action point.
+>
+> **STILL OPEN — the trainer's reaction window.** `Shock` and `Life` can be
+> played at instant speed at the TABLE and not in the trainer, because
+> everything played through `playRx` is filed as a DEFENDER (`blockRx`) —
+> right for a defence reaction, wrong for a plain instant. Untangling that
+> is its own change; the refusal names the real reason meanwhile. This is
+> the one place the two boards disagree about a split card.
 >
 > ### SPLIT CARDS ARE BUILT (v3.34) — and were playing themselves
 >

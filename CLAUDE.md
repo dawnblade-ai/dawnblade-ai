@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.34
+**Current version:** v3.35
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1370 drills**.
+This is `node --test "test/*.test.js"` — currently **1378 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,51 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A PENDING IS ONE FIELD AND FOUR KINDS — WHITELIST IT (v3.35)
+
+The table demuxed `pending` as `kind !== "boost"`, so **every other kind
+rendered as a PAYMENT**. Reported from a real table on turn 1: the
+split-card declaration opened a pitch sheet reading *"covered ✓"* for a
+card costing **0**, and Pitch & play then sent `payConfirm`, which `legal`
+refuses. **A screen whose only exit was Cancel.** `addPay` would have done
+the same.
+
+`judge.PENDING_KINDS` is the census now, and a kind with no branch in the
+demux **or in the action bar** fails a drill. A blacklist is the bug: the
+next kind added walks into the same fallback.
+
+### THE DECLARED HALF DECIDES THE WINDOW (v3.35)
+
+`types.playWindows` reads a `//` card's FRONT face — v2.39 made it, so the
+whole card would stop reading as an Instant and taking a free action
+point. True while the card was played as one lump, and it also meant **the
+INSTANT half could never be played at instant speed**, which is a printed
+line of play.
+
+| declared | windows |
+|---|---|
+| nothing yet | the UNION — the card is offered in either |
+| half 0 or 1 | that half's only |
+| both (meld) | ACTION if either side is one (CR: empty stack, one action point) |
+
+**v2.39's hazard is closed by the DECLARATION, not by pretending.** Burn
+Up declared alone has only the action window, so `typeCostsAP` can never
+be asked about it in a free one.
+
+**"AFFORDABLE" IS A DIFFERENT QUESTION BEFORE YOU DECLARE.** The check runs
+ahead of the choice and asks whether ANY half could be played; meld is
+`OR` across the halves, an undeclared card is `AND`. Asking the front face
+refuses a seat with no action point a card whose instant half costs none.
+The two readings coincide in every state reachable today only because
+`speedAllowed` opens the instant window beside the action one — a
+coincidence, not a rule, so the site asks the correct reader and a drill
+pins it BY NAME (v3.26's call for an unreachable default).
+
+**A SPLIT CARD IS TURNED TO BE READ** — counter-clockwise; `+90deg` is
+upside down, checked by rendering both. The frame goes landscape at the
+card's real aspect the other way up and the image box is the frame's
+dimensions swapped; a drift between the three crops the art.
 
 ### A SPLIT CARD IS ONE CARD WITH TWO TEXTBOXES (v3.34)
 

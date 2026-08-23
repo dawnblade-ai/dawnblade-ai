@@ -139,6 +139,18 @@ const ACTIONS = [
   "promptConfirm",/*              resolve it                             */
   "promptDecline" /*              the declining half of an OPTIONAL sheet */
 ];
+
+/* EVERY KIND `pending` CAN HOLD (v3.35). One field, four kinds — and a UI
+   that demuxes it by BLACKLIST renders an unknown kind as whatever the
+   fallback branch happens to be. The table read `kind !== "boost"` and
+   treated everything else as a PAYMENT, so the split-card declaration
+   opened a pitch sheet that read "covered \u2713" for a card costing 0,
+   and Pitch & play then sent `payConfirm`, which `legal` refuses. A screen
+   with no exit but Cancel, reported from a real table on turn 1.
+
+   Exported so a board can be held to covering all of them rather than to
+   remembering — the next kind added walks into the same fallback. */
+const PENDING_KINDS = ["pay", "boost", "addPay", "split"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline"];
 
 /* ---- reading and writing ---------------------------------------------
@@ -529,6 +541,17 @@ function legal(g, a, seat){
     if([0, 1, "both"].indexOf(a.half) < 0) return "that is not a half of this card";
     if(a.half === "both" && !PR.hasKw(p.card, "meld"))
       return p.card.name + " has no meld — one half or the other";
+    /* AND THE DECLARED HALF MUST FIT THE WINDOW IT IS BEING PLAYED IN.
+       An Action half cannot be declared during a reaction window just
+       because the card was offered there for its Instant half — the
+       offer is the UNION, the declaration is one of them. */
+    { const hs = PR.splitHalves(p.card) || [];
+      const w = cardWindows(p.card, a.half);
+      if(!P.speedAllowed(g, seat).some(x => w.indexOf(x) >= 0)){
+        const nm = a.half === "both" ? "melding " + p.card.name
+                 : (hs[a.half] || {}).name || "that half";
+        return nm + " is an " + w.join("/") + " — not legal in this window";
+      } }
     return null;
   }
   if(a.t === "split") return "nothing is asking which half";
@@ -787,7 +810,7 @@ function playableWhy(g, seat, c, win){
      Den of the Spider is legal in the action phase AND in the defence
      window, and a reader that picks one type and stops refuses it half
      the time. */
-  const mine = c._instant ? ["instant"] : TY.playWindows(c);
+  const mine = c._instant ? ["instant"] : cardWindows(c, g._half);
   const open = win.filter(w => mine.indexOf(w) >= 0);
 
   if(!open.length){
@@ -812,7 +835,7 @@ function playableWhy(g, seat, c, win){
      window is an argument: Den of the Spider costs an action point in
      the action phase and none as a defence reaction. If any open window
      is free, the play is affordable. */
-  const free = open.some(w => !TY.typeCostsAP(c, w));
+  const free = open.some(w => !PR.splitCostsAP(c, g._half, w));
   if(!free && !(sd.ap > 0)) return "no action point left";
 
   /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER (v3.11).
@@ -1301,7 +1324,7 @@ function doPlay(g, a, seat){
      through the payment. It matters for a dual-typed card: Den of the
      Spider costs an action point as an Action and none as a Defense
      Reaction, and the answer must not change while the player pitches. */
-  const window = playWindowFor(g, seat, card);
+  const window = playWindowFor(g, seat, card, g._half);
 
   /* PITCHING IS ON DEMAND, NEVER PROACTIVE (ruling, 2026-08-01): you
      cannot pitch to bank resources. The pool is filled only when a cost
@@ -1330,11 +1353,42 @@ function doPlay(g, a, seat){
    dual-typed card fits both, prefer the FREE one — a player who could
    have played it as a reaction should not be charged an action point for
    the engine's choice of label. */
-function playWindowFor(g, seat, card){
+/* WHICH WINDOWS A CARD MAY BE PLAYED IN, split cards included (v3.35).
+
+   `types.playWindows` reads the FRONT face of a `//` card, which v2.39
+   made it do so the whole card would stop reading as an Instant and
+   collecting a free action point. That was right while the card was
+   played as one lump — and it also meant the INSTANT half could never be
+   played at instant speed at all, which is a printed line of play.
+
+   The declaration is what makes both true at once:
+
+     no half declared   the UNION, so the card is offered in either window
+     half 0 or 1        that half's windows, and nothing else
+     both (meld)        ACTION if either side is one — CR: a melded card
+                        with an Action side is played on an empty stack
+                        and costs an action point even though the other
+                        side is an Instant
+
+   v2.39's hazard is closed by the declaration rather than by pretending
+   the card is not an instant: Burn Up declared alone can only ever be
+   played in the action window, so `typeCostsAP` cannot be asked about it
+   in a free one. */
+function cardWindows(card, half){
+  if(!PR.isSplit(card)) return TY.playWindows(card);
+  const hs = PR.splitHalves(card) || [];
+  if(!hs.length) return TY.playWindows(card);
+  if(half === 0 || half === 1) return TY.playWindows(hs[half]);
+  const union = [...new Set([].concat(...hs.map(h => TY.playWindows(h))))];
+  if(half === "both") return union.indexOf("action") >= 0 ? ["action"] : union;
+  return union;
+}
+
+function playWindowFor(g, seat, card, half){
   if(card && card._instant) return "instant";
-  const open = P.speedAllowed(g, seat).filter(w => TY.playWindows(card).indexOf(w) >= 0);
+  const open = P.speedAllowed(g, seat).filter(w => cardWindows(card, half).indexOf(w) >= 0);
   if(!open.length) return null;
-  return open.find(w => !TY.typeCostsAP(card, w)) || open[0];
+  return open.find(w => !PR.splitCostsAP(card, half, w)) || open[0];
 }
 
 /* A WEAPON SWING IS AN ATTACK THAT COMES FROM THE GEAR ZONE.
@@ -1962,5 +2016,5 @@ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
-        setDb, effectsFor, withEffects, openPrompt, autoAnswer};
+        setDb, effectsFor, withEffects, openPrompt, autoAnswer, PENDING_KINDS};
 });

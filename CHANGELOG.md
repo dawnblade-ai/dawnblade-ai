@@ -9,6 +9,87 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.35 — the split-card dive: a pitch sheet with no exit, and a lost line of play
+
+Reported from a real table on turn 1, with the note *"Making me pitch for
+burn up shock"* — for a card that costs **0**.
+
+### A BLACKLIST, where the rule is whitelist
+
+```js
+const pay = myPend && myPend.kind !== "boost" ? myPend : null;
+```
+
+`pending` is one field with **four** kinds, and everything that was not
+`boost` rendered as a **payment**. So the split-card declaration opened a
+pitch sheet that read *"covered ✓"* for a cost-0 card, and **Pitch & play**
+then sent `payConfirm`, which `legal` refuses with *"declare which half
+first."* The only way out was Cancel. `addPay` (Staunch Response, shipped
+the same day) would have done exactly the same thing.
+
+Now a whitelist, with `judge.PENDING_KINDS` exported so the census is the
+guard rather than the memory: a kind with no branch in the demux **or in
+the action bar** fails a drill. The next kind added walks into the same
+fallback otherwise.
+
+### The dive: the INSTANT half could never be played at instant speed
+
+`types.playWindows` reads the **front face** of a `//` card — v2.39 made
+it do that so the whole card would stop reading as an Instant and
+collecting a free action point. Correct while the card was played as one
+lump, and it also meant `Shock` and `Life` were unreachable at instant
+speed. A printed line of play, gone.
+
+**The declaration is what makes both true at once:**
+
+| declared | windows |
+|---|---|
+| nothing yet | the **union** — so the card is offered in either window |
+| half 0 or 1 | that half's, and nothing else |
+| both (meld) | **action** if either side is one — the CR plays a melded card with an Action side on an empty stack for an action point even though the other side is an Instant |
+
+Driven, on the opponent's turn with **zero action points**: the card is
+offered, `Shock` resolves for 1 arcane and costs nothing, and declaring
+`Burn Up` there is refused **by name** — *"Burn Up is an action — not
+legal in this window."* v2.39's hazard is closed by the declaration rather
+than by pretending the card is not an instant: Burn Up declared alone has
+only the action window to be played in.
+
+**And "affordable" is a different question before you have declared.** The
+check runs ahead of the choice, so it asks whether *any* half could be
+played — not what melding would cost. Asking the front face refuses a seat
+with no action point a card whose Instant half costs none. Meld is `OR`
+across the halves; an undeclared card is `AND`.
+
+### The face is turned to be read
+
+The database ships the art portrait with its content sideways. Split cards
+now render rotated **counter-clockwise** in every frame — hand, peek,
+modal, arena. Checked by rendering both directions and looking: `+90deg`
+comes out upside down. The frame goes landscape at the card's real aspect
+the other way up (546×763 → 1.3974) and the image box is the frame's own
+dimensions swapped, so the face fills it with no crop; a drill pins the
+three numbers together, because a drift between them crops the art.
+
+### One gap, recorded rather than half-built
+
+**The trainer still cannot play the instant half in its reaction window.**
+Everything played through that path is filed as a **defender** (`blockRx`),
+which is right for a defence reaction and wrong for a plain instant —
+untangling it is its own change. The refusal now names that reason instead
+of claiming the card has no instant on it: *a refusal a player cannot
+believe is worse than one they cannot act on.*
+
+**And a guard pointed at the wrong scope for the fourth time this week** —
+it sliced the **trainer's** action bar looking for the table's branches.
+Anchor on something unique to the thing under test, every time.
+
+**Measured:** 1370 → **1378 drills**, 0 skipped. Coverage unchanged at
+**326 full / 66 part / 13 none**. Fairness clean, 0 UNFAIR. 11 sabotages,
+all biting.
+
+---
+
 ## v3.34 — Bravo is complete, and the split cards were playing themselves
 
 ### Staunch Response — an optional additional cost
