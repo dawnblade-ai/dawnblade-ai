@@ -25,6 +25,8 @@ const E = require("../engine/effects.js");
 const P = require("../engine/parser.js");
 const H = require("./helpers/judged.js");
 
+const skip = !H.hasDb() && "no cached DB — run: node tools/audit.js";
+
 const atk = (u, pw) => ({name: "Swing" + u, tt: "Generic Action - Attack",
   ty: ["Generic", "Action", "Attack"], tx: "", kw: [], power: pw, pitch: 1, cost: 0, uid: u});
 const nonAtk = u => ({name: "Ritual" + u, tt: "Runeblade Action",
@@ -84,6 +86,177 @@ test("their first action costs an extra {r}; the next does not", () => {
   const after = H.execute(play, nonAtk("a"), "hand", 0, {});
   assert.equal(after.sides[1].res, 6, "9 - (2 printed + 1 tax)");
   assert.equal(P.effCost(nonAtk("b"), after.sides[1]), 2, "and the tax is spent");
+});
+
+/* ---- 3b. THE TWO RESTRICTIONS (v3.30) -----------------------------
+
+   A restriction is a different SHAPE from a debuff, and the difference is
+   not cosmetic:
+
+     a debuff      carries an amount, is consumed by the FIRST thing it
+                   touches, and the printed word is "first"
+     a restriction carries no amount, is NEVER spent, and the printed
+                   window is "during their next action phase"
+
+   Reading either as the other has a direction. A debuff that lasts the
+   phase is stronger than printed; a restriction spent on one play is
+   weaker. ------------------------------------------------------------- */
+
+const armedFoe = (kind, amt) => E.armNextTurn(
+  armedOnFoe([["foeNextTurn", kind, amt]]), 1).game;
+/* seat 1 with resources, an action point and no build — ready to swing */
+const seat1Ready = g => {
+  const n = {...g, actor: 1, builds: [{}, {}], pend: null, stack: []};
+  n.sides = g.sides.slice();
+  n.sides[1] = {...g.sides[1], res: 9, ap: 1};
+  return n;
+};
+
+test("Chokeslam: an attack action card CANNOT gain {p} — capped at printed", () => {
+  const g = seat1Ready(armedFoe("noPump", 0));
+  g.sides[1] = {...g.sides[1], buffNext: 3};
+  const out = H.execute(g, atk("s1", 5), "hand", 0, {});
+  assert.equal(out.pend.total, 5,
+    "5 printed and +3 in hand: it resolves for 5, and the label says 5");
+});
+
+test("Chokeslam is NOT spent — the whole action phase is barred", () => {
+  let g = seat1Ready(armedFoe("noPump", 0));
+  g.sides[1] = {...g.sides[1], buffNext: 3};
+  const first = H.execute(g, atk("s1", 5), "hand", 0, {});
+  assert.equal(first.pend.total, 5);
+
+  let mid = seat1Ready(first);
+  mid.sides[1] = {...mid.sides[1], buffNext: 4};
+  const second = H.execute(mid, atk("s2", 5), "hand", 0, {});
+  assert.equal(second.pend.total, 5,
+    "it prints no FIRST — a restriction spent on one attack is weaker than printed");
+});
+
+test("Chokeslam names ATTACK ACTION CARDS, so a weapon swing is untouched", () => {
+  const g = seat1Ready(armedFoe("noPump", 0));
+  g.sides[1] = {...g.sides[1], buffNext: 3,
+    gear: [{name: "Sledge", tt: "Guardian Weapon - Hammer", ty: ["Guardian", "Weapon"],
+            tx: "", kw: [], power: 4, pitch: 0, uid: "w1"}]};
+  const out = H.execute(g, g.sides[1].gear[0], "weapon", 0, {});
+  assert.equal(out.pend.total, 7,
+    "a weapon is not an attack action card — barring it is stronger than printed");
+});
+
+test("Chokeslam holds through the WALL, not only at declaration", () => {
+  /* `linkPumps` re-adds every `{k:"rx"}` layer after the declaration, so a
+     cap applied only at declaration is undone by any attack reaction. Two
+     sites, one rule — and dropping either failed no drill until this one. */
+  const g = seat1Ready(armedFoe("noPump", 0));
+  const declared = H.execute(g, atk("s1", 5), "hand", 0, {});
+  assert.equal(declared.pend.total, 5, "declared at printed");
+
+  const withRx = {...declared, stack: [...(declared.stack || []), {k: "rx", pump: 4}]};
+  const out = H.fx(withRx, (f, n) => f.linkPumps(n, {handBlockers: 0}));
+  /* READ THE RETURNED TOTAL, not `pend.total` — `linkPumps` hands the wall
+     a fresh number and leaves the pend alone, so an assertion on the pend
+     measures the declaration a second time and says nothing about here. */
+  assert.equal(out.pumps, 4, "the reaction layer really is on the stack");
+  assert.equal(out.total, 5,
+    "a +4 reaction layer must not lift it — 'can't gain {p}' is not 'can't gain {p} first'");
+});
+
+test("Chokeslam CAPS, it never subtracts — a weakened attack stays weakened", () => {
+  /* "can't gain {p}" forbids GAINING. An attack already below its printed
+     power (frailty, Debilitate) must not be lifted back up to it. */
+  let g = armedOnFoe([["foeNextTurn", "firstAtkMinus", 2]]);
+  g = H.runOps(g, [["foeNextTurn", "noPump", 0]], "Chokeslam");
+  g = seat1Ready(E.armNextTurn(g, 1).game);
+  const out = H.execute(g, atk("s1", 6), "hand", 0, {});
+  assert.equal(out.pend.total, 4, "6 printed, Debilitate takes 2 — the cap does not give it back");
+});
+
+test("Crush the Weak bars the PLAY, and the threshold is the card's number", () => {
+  const sd = armedFoe("noSmallAtk", 3).sides[1];
+  const aac = pw => ({name: "A" + pw, tt: "Generic Action - Attack",
+    ty: ["Generic", "Action", "Attack"], tx: "", kw: [], power: pw, pitch: 1, cost: 0});
+  assert.match(P.nextTurnBars(sd, aac(3)) || "", /3 or less base power/, "3 is barred");
+  assert.equal(P.nextTurnBars(sd, aac(4)), null, "4 clears the line");
+  /* AND THE NUMBER IS READ, not a literal 3 */
+  const five = armedFoe("noSmallAtk", 5).sides[1];
+  assert.match(P.nextTurnBars(five, aac(4)) || "", /5 or less base power/);
+});
+
+test("Crush the Weak reads ATTACK ACTION CARD, never a substring of it", () => {
+  const sd = armedFoe("noSmallAtk", 3).sides[1];
+  /* "Reaction" CONTAINS "action". A `tt`-substring predicate bars an
+     attack reaction the card never names — and `isAttack` is exactly such
+     a predicate, which is why this asks `isAtkActionCard`. */
+  assert.equal(P.nextTurnBars(sd, {name: "Rx", tt: "Warrior Attack Reaction",
+    ty: ["Warrior", "Attack Reaction"], tx: "", kw: [], power: 3}), null,
+    "an attack REACTION is not an attack action card");
+  assert.equal(P.nextTurnBars(sd, {name: "Sword", tt: "Warrior Weapon - Sword",
+    ty: ["Warrior", "Weapon"], tx: "", kw: [], power: 3}), null, "nor is a weapon");
+  assert.equal(P.nextTurnBars(sd, {name: "Rite", tt: "Runeblade Action",
+    ty: ["Runeblade", "Action"], tx: "", kw: [], cost: 2}), null, "nor a non-attack action");
+});
+
+test("an UNARMED restriction bars nothing — armed is not live", () => {
+  const cold = armedOnFoe([["foeNextTurn", "noSmallAtk", 3]]).sides[1];   /* ready:false */
+  assert.equal(P.nextTurnBars(cold, {name: "A", tt: "Generic Action - Attack",
+    ty: ["Generic", "Action", "Attack"], tx: "", kw: [], power: 3}), null,
+    "it was created on the attacker's turn — firing now is a whole turn early");
+
+  /* AND THE SAME FOR THE CAP. Asking `nextTurnHas` for a kind that is not
+     in the list at all answers false whatever the `ready` test does, so
+     the entry here must be the RIGHT kind and merely unarmed — otherwise
+     this passes on an engine that ignores `ready` entirely. */
+  const coldPump = armedOnFoe([["foeNextTurn", "noPump", 0]]);
+  assert.equal(coldPump.sides[1].nextTurn[0].kind, "noPump", "the right kind, unarmed");
+  assert.equal(P.nextTurnHas(coldPump.sides[1], "noPump"), false, "not live yet");
+  const g = seat1Ready(coldPump);
+  g.sides[1] = {...g.sides[1], buffNext: 3};
+  assert.equal(H.execute(g, atk("s1", 5), "hand", 0, {}).pend.total, 8,
+    "the cap is a whole turn away — capping now would delete a buff they are owed");
+});
+
+test("BOTH boards refuse the barred play, and out of the ONE reader", () => {
+  /* A route is per board (v3.04). judge.legal refuses it; the trainer's
+     `tryPlay` must too, or the same card is legal on one board and not the
+     other. Comments stripped — a grep is satisfied by a comment. */
+  const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const jud = strip(fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8"));
+  const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
+  assert.match(jud, /PR\.nextTurnBars\(/, "judge must ask before the card leaves the hand");
+  assert.match(htm, /DawnParser\.nextTurnBars\(/, "and so must the trainer");
+  /* and NEITHER may restate the rule */
+  for(const [nm, src] of [["judge.js", jud], ["index.html", htm]])
+    assert.ok(!/noSmallAtk/.test(src),
+      nm + " must not re-derive the restriction — one reader, in parser.js");
+});
+
+test("driven: judge refuses the barred card and it stays in the hand", {skip}, () => {
+  H.db();
+  const J = require("../engine/judge.js");
+  /* Wounding Blow prints 2 at blue and 4 at red — one card, one side of the
+     line each, so the CONTROL differs from the subject only in the number
+     the rule reads. Without it this drill passes just as well on an engine
+     that can play nothing at all. */
+  const small = {...H.card("Wounding Blow", 3), uid: "c1"};
+  const big   = {...H.card("Wounding Blow", 1), uid: "c2"};
+  assert.ok(small.power <= 3 && big.power > 3, "fixture must straddle the line");
+
+  const bar = [{kind: "noSmallAtk", amt: 3, ready: true, spent: false}];
+  let g = H.state({hand: [small, big], res: 9, ap: 1, nextTurn: bar}, {}, {turn: 3, actor: 0});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+
+  /* ASSERT THE REASON, NOT MERELY A REFUSAL (the fuzz lesson). A drill that
+     accepts any refusal passes on an engine refusing for priority. */
+  assert.match(J.legal(g, {t: "play", uid: "c1", from: "hand"}, 0) || "",
+    /can't be played this phase/, "refused, and the reason names the rule");
+  assert.equal(J.legal(g, {t: "play", uid: "c2", from: "hand"}, 0), null,
+    "and the control is genuinely playable — the bar is the only thing refusing");
+
+  const out = J.reduce(g, {t: "play", uid: "c1", from: "hand"}, 0);
+  assert.equal(out.state.sides[0].hand.length, 2,
+    "a play the rules never allowed must not cost the player the card");
+  assert.equal(out.state.sides[0].res, 9, "and must charge nothing");
+  assert.equal(out.state.sides[0].ap, 1, "nor the action point");
 });
 
 /* ---- 4. it expires with the turn, fired or not -------------------- */

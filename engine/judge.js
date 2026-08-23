@@ -745,6 +745,12 @@ function playableWhy(g, seat, c, win){
   const noPlay = TY.noPlayReason(c);
   if(noPlay && !c._instant) return c.name + ": " + noPlay;
 
+  /* A RESTRICTION ARMED AGAINST THIS PHASE (v3.30). Refused BEFORE the
+     card leaves the hand — a play the rules never allowed must not cost
+     the player the card. */
+  const barred = PR.nextTurnBars(sd, c);
+  if(barred) return c.name + ": " + barred;
+
   /* WHICH WINDOW IS THIS CARD BEING PLAYED IN?
      A card can print TWO types — `Assassin / Warrior Action Defense
      Reaction - Trap` is both — so this is an intersection, not a match.

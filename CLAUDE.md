@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.29
+**Current version:** v3.30
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1197 drills**.
+This is `node --test "test/*.test.js"` — currently **1283 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -348,11 +348,51 @@ none.
 desync), and `report.js`'s `seat()`. The symmetry ledger moved 39 → 40,
 deliberately: a field arriving is as deliberate an edit as one leaving.
 
-**THREE OF THE FIVE STILL REFUSE**, each for its own reason: Chokeslam
-and Crush the Weak are RESTRICTIONS ("can't gain {p}", "can't play") that
-belong in `legal` and in every pump path, and Walk in My Shoes halves
-base {p} and {d} for a turn. Claiming one would file a card `full` that
-does nothing.
+**THREE OF THE FIVE STILL REFUSED** at v3.29 — the two RESTRICTIONS
+landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
+halves base {p} and {d} for a turn. Claiming it would file a card `full`
+that does nothing.
+
+### A RESTRICTION IS NOT A DEBUFF (v3.30)
+
+The other two crush riders on that schedule, and the difference is easy
+to get backwards in a direction that matters:
+
+| | carries | consumed by | printed window |
+|---|---|---|---|
+| a **debuff** | an amount | the FIRST thing it touches | *"their first attack during their next turn"* |
+| a **restriction** | nothing | **nothing — never spent** | *"during their next action phase"* |
+
+A debuff lasting the phase is stronger than printed; a restriction spent
+on one play is weaker. **`nextTurnHas` asks by kind; `nextTurnDebuff`
+sums.** Asking the summer for a restriction gives 0, and every `>= 0`
+around it is a gate that gates nothing.
+
+**CHOKESLAM CAPS, IT NEVER SUBTRACTS.** *"Can't gain {p}"* forbids
+GAINING, so an attack already below its printed power (frailty,
+Debilitate's own rider) must not be lifted back to it — `Math.min`, not
+an assignment.
+
+**TWO SITES, ONE RULE.** The cap is applied at declaration AND in
+`linkPumps`, which re-adds every `{k:"rx"}` layer afterwards; a cap
+applied once is undone by any attack reaction. Dropping either failed NO
+drill until the sabotage pass said so — and the drill that covers the
+second reads `linkPumps`'s **returned** total, because the pend it leaves
+alone is the declaration measured a second time.
+
+**AND THE CAP GOES LAST** of the declaration-time modifiers. Ahead of
+Courage's pop or Debilitate's debuff it caps a number that is not the one
+being declared; it happened to give the right answer there, which is
+worse than giving the wrong one.
+
+**CRUSH THE WEAK IS A LEGALITY, NOT A MODIFIER.** `parser.nextTurnBars`
+is the one reader and both boards ask it before the card leaves the hand
+— refusing after it has left costs the player a card for a play the rules
+never allowed (v3.11's shape). It reads **`isAtkActionCard`, never
+`isAttack`**: the latter tests `tt`, and **"Reaction" contains
+"action"**, so an attack REACTION would be barred by a card that never
+names one. The threshold and the BASE power are both the card's own
+numbers.
 
 ### PREVENTED IS NOT DEALT, AND THE CREDIT MOVES WITH IT (v3.28)
 

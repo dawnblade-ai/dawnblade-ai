@@ -483,25 +483,36 @@ test("classifyClause — a crush rider is the CARD'S OWN payload, not one card's
     [["crushRider", 4, [["foeGearDef", -1]]]], "and Buckling Blow's");
   /* THE THRESHOLD IS PRINTED, not a literal 4. */
   assert.equal(cc("Crush - When this deals 6 or more damage to a hero, they discard a card.").ops[0][1], 6);
-  /* A NEXT-TURN RIDER IS BUILT WHERE A SCHEDULE EXISTS (v3.29). Two of the
-     five now do: the side carries a `nextTurn` list, armed at the start of
-     that side's turn and expiring with it. */
+  /* A NEXT-TURN RIDER IS BUILT WHERE A SCHEDULE EXISTS (v3.29). The side
+     carries a `nextTurn` list, armed at the start of that side's turn and
+     expiring with it. Two DEBUFFS landed there in v3.29 and the two
+     RESTRICTIONS in v3.30 — a different shape, because nothing consumes a
+     restriction: one caps a total, one refuses a play. */
   assert.deepEqual(
     cc("Crush - When this deals 4 or more damage to a hero, their first attack during their next turn gets -2{p}.").ops,
     [["crushRider", 4, [["foeNextTurn", "firstAtkMinus", 2]]]]);
   assert.deepEqual(
     cc("Crush - When this deals 4 or more damage to a hero, their first action during their next turn costs an additional {r} to play or activate.").ops,
     [["crushRider", 4, [["foeNextTurn", "firstActionTax", 1]]]]);
-  /* AN UNREADABLE PAYLOAD STILL REFUSES THE WHOLE CLAUSE, and three of the
-     five still are: a RESTRICTION ("can't gain {p}", "can't play") needs
-     gates in `legal` and in every pump path, and a noop would hide them
-     again — which is precisely what it did. */
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.").ops,
+    [["crushRider", 4, [["foeNextTurn", "noPump", 0]]]], "Chokeslam's pump bar");
+  /* THE THRESHOLD IS THE CARD'S NUMBER HERE TOO — read off the clause, so a
+     reprint at a different base power does not need a code change. */
+  assert.deepEqual(
+    cc("Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase.").ops,
+    [["crushRider", 4, [["foeNextTurn", "noSmallAtk", 3]]]], "Crush the Weak's play bar");
   assert.equal(
-    cc("Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase."),
-    null, "a restriction with no gate — say so by refusing");
+    cc("Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 5 or less base {p} during their next action phase.")
+      .ops[0][2][0][2], 5, "and it is not a literal 3");
+  /* AN UNREADABLE PAYLOAD STILL REFUSES THE WHOLE CLAUSE, and one of the
+     five still is: Walk in My Shoes halves base {p} AND base {d} for a whole
+     turn, which is a modifier on every attack action card they control
+     rather than a cap or a gate. A noop would hide it again — which is
+     precisely what one did for twelve cards. */
   assert.equal(
-    cc("Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase."),
-    null);
+    cc("Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."),
+    null, "a whole-turn halving with nowhere to live — say so by refusing");
 });
 
 test("classifyClause — target-attack pump folds into self (the reaction pump)", () => {

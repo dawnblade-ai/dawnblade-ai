@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.29 · PHASE C · EFFECTS CAN REACH THE NEXT TURN
+# Handoff — Dawnblade, at v3.30 · PHASE C · EFFECTS CAN REACH THE NEXT TURN
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1273 drills**
+> the card semantics run on both boards.** `npm test` is **1283 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.29: coverage **311 full / 72 part / 22 none**, fairness
+> Current at v3.30: coverage **318 full / 72 part / 15 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -71,6 +71,29 @@
 > sits on the board doing nothing but counting as an aura (which is
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
+>
+> ### THE FIVE CRUSH RIDERS — four built, one refusing
+>
+> `nextTurn` on the side (v3.29) is the schedule; v3.30 built the two
+> RESTRICTIONS on it. **A restriction is not a debuff**, and the drills
+> assert the difference off the printed words: a debuff carries an amount
+> and is spent by the FIRST thing it touches (*"their first attack"*); a
+> restriction carries none and is **never spent** (*"during their next
+> action phase"*).
+>
+> | card | shape |
+> |---|---|
+> | Debilitate | debuff — first attack, -2{p} |
+> | Cartilage Crush | debuff — first action, +{r} |
+> | Chokeslam | restriction — CAPS an attack action card at printed {p}, never subtracts |
+> | Crush the Weak | restriction — refuses the PLAY, before the card leaves the hand |
+> | **Walk in My Shoes** | **still refuses** — halving base {p} AND {d} for a turn is neither a cap nor a gate |
+>
+> **Two lessons worth carrying.** The cap is applied at declaration AND in
+> `linkPumps` (which re-adds reaction layers afterwards) — dropping either
+> failed no drill until the sabotage pass. And `nextTurnBars` reads
+> `isAtkActionCard`, never `isAttack`: **"Reaction" contains "action"**,
+> so a `tt` predicate bars an attack reaction the card never names.
 >
 > ### v3.25 FOUND SOMETHING BIGGER UNDERNEATH THAT FAMILY
 >

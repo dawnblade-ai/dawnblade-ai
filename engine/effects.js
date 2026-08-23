@@ -1547,6 +1547,14 @@ function makeEffects(ctx){
           }
         }
       }
+      /* AND THEY CANNOT GAIN {p} AT ALL (v3.30) — Chokeslam. LAST of the
+         declaration-time modifiers, because it is a CAP: applied before
+         Courage's pop or Debilitate's debuff it would be capping a number
+         that is not the one being declared. Applied here AND in
+         `linkPumps`, so the label on the chain is the number that
+         resolves rather than a pumped one the wall quietly reduces. */
+      total = capNoPump(n, card, total);
+
       n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
@@ -2210,10 +2218,25 @@ function makeEffects(ctx){
      `equipDefenders` is a COUNT the caller supplies, because how a seat
      holds its declared defenders is the caller's business: the trainer
      files them as layers on the stack, judge.js as uid lists on the side. */
+  /* CHOKESLAM'S RESTRICTION (v3.30). "Attack action cards they control
+     can't gain {p}" — a CAP at the card's printed power, never a
+     subtraction: something that made the attack weaker must not be undone
+     by a rule that only forbids GAINING. It reads the card being resolved
+     rather than the actor's whole hand, because the restriction names
+     attack action cards and a weapon swing is not one. */
+  const capNoPump = (n, card, total) => {
+    if(!card || !isAtkActionCard(card)) return total;
+    /* A RESTRICTION IS A FLAG, NOT A SUM — `nextTurnDebuff` adds amounts
+       and `noPump` carries none, so asking it here would be a condition
+       that is always true. Ask whether one is live instead. */
+    if(!P.nextTurnHas(act(n), "noPump")) return total;
+    return Math.min(total, card.power || 0);
+  };
+
   const linkPumps = (s, info) => {
     let n = {...s};
     const pumps = (n.stack||[]).filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
-    let total = n.pend.total + pumps;
+    let total = capNoPump(n, n.pend.card, n.pend.total + pumps);
     /* RULING (Fender Bender): +1 per separate equipment the opponent defended
        with — only knowable once defenders are declared, so it lands here. */
     for(const op of (n.pend.lateOps||[])){

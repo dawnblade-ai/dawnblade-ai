@@ -110,37 +110,50 @@ test("the threshold is the card's printed number, not a literal 4", {skip}, () =
     "a card printing 6 must carry 6");
 });
 
-test("TWO of the five next-turn riders are built; THREE still refuse", {skip}, () => {
+test("FOUR of the five next-turn riders are built; ONE still refuses", {skip}, () => {
   H.db();
   /* All five reach into the OPPONENT'S NEXT TURN. v3.16 refused all five
      because no such schedule existed; `nextTurn` on the side is that
-     schedule now, and two of the payloads map onto readers that already
-     exist — a power debuff and a cost tax.
+     schedule (v3.29), and v3.30 added the two RESTRICTIONS — which are a
+     different shape from a debuff, because nothing consumes them: one caps
+     a total and one refuses a play.
 
-     THE OTHER THREE STILL REFUSE, and each for its own reason rather than
-     a shared shrug. Claiming one here would file a card `full` that does
-     nothing, which is the tier lie this project keeps finding. */
+     THE LAST ONE STILL REFUSES, and for its own reason rather than a shared
+     shrug. Claiming it here would file a card `full` that does nothing,
+     which is the tier lie this project keeps finding. */
   assert.deepEqual(crushOf("Debilitate"), {n: 4, ops: [["foeNextTurn", "firstAtkMinus", 2]]},
     "a deferred power debuff — the amount read off the clause");
   assert.deepEqual(crushOf("Cartilage Crush"), {n: 4, ops: [["foeNextTurn", "firstActionTax", 1]]},
     "a deferred cost tax");
+  assert.deepEqual(crushOf("Chokeslam"), {n: 4, ops: [["foeNextTurn", "noPump", 0]]},
+    "a deferred PUMP BAR — attack action cards they control can't gain {p}");
+  assert.deepEqual(crushOf("Crush the Weak"), {n: 4, ops: [["foeNextTurn", "noSmallAtk", 3]]},
+    "a deferred PLAY BAR, with the threshold read off the clause rather than a literal");
 
-  for(const nm of ["Chokeslam", "Crush the Weak", "Walk in My Shoes"])
-    assert.equal(crushOf(nm), undefined,
-      nm + " must not claim a rider it cannot run — a RESTRICTION ('can't gain {p}', "
-      + "'can't play') or a whole-turn halving needs gates this does not have");
+  assert.equal(crushOf("Walk in My Shoes"), undefined,
+    "Walk in My Shoes must not claim a rider it cannot run — halving base {p} AND base {d} "
+    + "for a whole turn is a modifier on every attack action card they control, which is "
+    + "neither a cap nor a gate and has nowhere to live");
 });
 
-test("both built riders are FIRST-only, never a whole-turn debuff", {skip}, () => {
-  /* "their FIRST attack during their next turn" and "their FIRST action".
-     A blanket debuff for the whole turn is strictly stronger than printed,
-     which is the direction that steals games — so the entry is spent by
-     whatever consumes it. */
+test("the DEBUFFS are FIRST-only; the RESTRICTIONS are whole-phase — by print", {skip}, () => {
+  /* Two shapes, and reading either as the other is a bug with a direction.
+     A blanket debuff for the whole turn is strictly stronger than printed;
+     a restriction spent by the first play is strictly weaker. The printed
+     words are what separate them, so they are asserted off the card. */
   H.db();
   for(const nm of ["Debilitate", "Cartilage Crush"]){
     const c = H.card(nm, 1);
     assert.match((c.tx || "").toLowerCase(), /their first (attack|action) during their next turn/,
       nm + ": the printed word is FIRST");
+  }
+  for(const nm of ["Chokeslam", "Crush the Weak"]){
+    const c = H.card(nm, 1);
+    const tx = (c.tx || "").toLowerCase();
+    assert.match(tx, /during their next action phase/,
+      nm + ": the printed window is the whole action phase");
+    assert.ok(!/\bfirst\b/.test(tx),
+      nm + ": it prints no FIRST — spending it on one play is weaker than printed");
   }
 });
 
@@ -216,11 +229,12 @@ test("driven: below the printed threshold, no rider fires", {skip}, () => {
   assert.equal(under.hand.length, 1);
 });
 
-test("driven: a card whose rider is unbuilt does nothing at all", {skip}, () => {
+test("driven: a rider runs ITS OWN payload and no other card's", {skip}, () => {
   H.db();
   /* Debilitate reaches into the opponent's next turn. It must not quietly
      borrow another card's payload, which is what it did for twelve
-     versions — that is the whole point of this file. */
+     versions — that is the whole point of this file. Its own payload lands
+     on `nextTurn` (drilled in test/nextturn.test.js); NOTHING here moves. */
   const s = strike("Debilitate", 6).sides[1];
   assert.equal(s.hand.length, 1, "nothing leaves the hand");
   assert.equal(s.arsenal.uid, "fa1", "nothing leaves the arsenal");

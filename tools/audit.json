@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-22T14:58:27.857Z",
- "appVer": "3.28",
+ "generated": "2026-08-23T03:11:16.308Z",
+ "appVer": "3.29",
  "dataVer": "sage-v11",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 315,
+  "full": 318,
   "part": 72,
-  "none": 18
+  "none": 15
  },
  "heroes": {
   "kayo": {
@@ -4810,18 +4810,16 @@
    "mentions": [
     "crush"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
@@ -5115,18 +5113,16 @@
    "mentions": [
     "crush"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, attack action cards they control can't gain {p} during their next action phase.",
@@ -5183,18 +5179,16 @@
    "mentions": [
     "crush"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crush - When this deals 4 or more damage to a hero, they can't play attack action cards with 3 or less base {p} during their next action phase.",

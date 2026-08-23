@@ -636,6 +636,22 @@ function classifyClause(raw){
     return R([["foeNextTurn", "firstAtkMinus", +m[1]]]);
   if(/^their first action during their next turn costs an additional \{r\} to play or activate$/.test(c))
     return R([["foeNextTurn", "firstActionTax", 1]]);
+  /* CHOKESLAM — a RESTRICTION rather than a debuff, and it lasts the whole
+     phase rather than one attack: "attack action cards they control CAN'T
+     GAIN {p} during their next action phase". So the entry is never spent;
+     it expires with the turn like the rest.
+
+     It caps rather than subtracts: something that made the attack WEAKER
+     (frailty, Debilitate) must not be undone by a rule that only forbids
+     gaining. */
+  if(/^attack action cards they control can'?t gain \{p\} during their next action phase$/.test(c))
+    return R([["foeNextTurn", "noPump", 0]]);
+  /* CRUSH THE WEAK — a play RESTRICTION, and the threshold is printed.
+     "3 or less base {p}" is read off the clause rather than hardcoded:
+     the card names its own number, and a literal here is inventing card
+     text one level up. Like Chokeslam it lasts the whole phase. */
+  if(m=c.match(/^they can'?t play attack action cards with (\d+) or less base \{p\} during their next action phase$/))
+    return R([["foeNextTurn", "noSmallAtk", +m[1]]]);
 
   if(/^they put a card from their hand on top of their deck$/.test(c))
     return R([["foeHandToDeck", 1]]);
@@ -2287,6 +2303,41 @@ function nextTurnTax(sd){
     .filter(e => e && e.ready && !e.spent && e.kind === "firstActionTax")
     .reduce((a, e) => a + (e.amt || 0), 0);
 }
+/* IS A RESTRICTION LIVE? (v3.30) A restriction carries no AMOUNT, so
+   asking `nextTurnDebuff` for one gives 0 and every `>= 0` test around it
+   is true forever — a gate a reviewer reads as a gate and that gates
+   nothing. Restrictions are asked by kind, never summed. */
+function nextTurnHas(sd, kind){
+  return ((sd && sd.nextTurn) || [])
+    .some(e => e && e.ready && !e.spent && e.kind === kind);
+}
+/* CAN THIS SIDE PLAY THIS CARD RIGHT NOW? (v3.30)
+
+   Crush the Weak forbids "attack action cards with N or less base {p}"
+   for a whole action phase. It is a LEGALITY, not a modifier: refusing
+   after the card has left the hand costs the player a card for a play the
+   rules never allowed — the same reasoning that put the attack-reaction
+   target restriction in `judge.legal` at v3.11.
+
+   TWO THINGS THE PRINTED WORDS DECIDE, and each is a way to be wrong:
+
+     ATTACK ACTION CARD    `isAtkActionCard`, never `isAttack` — the
+                           latter tests `tt` and "Reaction" CONTAINS
+                           "action", so an attack REACTION would be
+                           barred by a card that never names one.
+     BASE {p}              the printed number. A buff must not lift a
+                           card over the line, and a debuff must not
+                           push one under it. */
+function nextTurnBars(sd, card){
+  if(!card || !isAtkActionCard(card)) return null;
+  for(const e of ((sd && sd.nextTurn) || [])){
+    if(!e || !e.ready || e.spent || e.kind !== "noSmallAtk") continue;
+    if((card.power || 0) <= (e.amt || 0))
+      return "the crush still holds — attack action cards with "
+           + e.amt + " or less base power can't be played this phase";
+  }
+  return null;
+}
 function nextTurnDebuff(sd, kind){
   return ((sd && sd.nextTurn) || [])
     .filter(e => e && e.ready && !e.spent && e.kind === kind)
@@ -2744,7 +2795,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        nextTurnTax, nextTurnDebuff,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,

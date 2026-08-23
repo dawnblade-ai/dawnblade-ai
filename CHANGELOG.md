@@ -9,6 +9,80 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.30 — a restriction is not a debuff
+
+v3.29 built the schedule and two of the five crush riders that ride on
+it. The two it left were the RESTRICTIONS, and they are a different shape
+in a way that is easy to get backwards:
+
+|  | carries | consumed by | printed window |
+|---|---|---|---|
+| a **debuff** | an amount | the FIRST thing it touches | *"their first attack during their next turn"* |
+| a **restriction** | nothing | **nothing — it is never spent** | *"during their next action phase"* |
+
+Reading either as the other has a direction. A debuff that lasts the
+whole phase is stronger than printed; a restriction spent by the first
+play is weaker. The printed words are what separate them, so the drills
+assert them off the card rather than off the code.
+
+### Chokeslam — *"attack action cards they control can't gain {p}"*
+
+It **CAPS at the card's printed power. It never subtracts.** The clause
+forbids GAINING, so an attack already below its printed power — frailty,
+Debilitate's own rider — must not be lifted back up to it. `Math.min`,
+not an assignment, and a drill arms Debilitate and Chokeslam together to
+prove a 6-power attack still resolves for 4.
+
+**Two sites, one rule.** The cap is applied at declaration *and* in
+`linkPumps`, because `linkPumps` re-adds every `{k:"rx"}` layer after the
+declaration — so a cap applied only once is undone by any attack
+reaction. Dropping either site failed **no drill** until the sabotage
+pass said so; the second one now drives a real reaction layer and reads
+`linkPumps`'s **returned** total, because the pend it leaves alone is the
+declaration measured a second time.
+
+**And it is applied LAST of the declaration-time modifiers.** Placed
+before Courage's pop or Debilitate's debuff it caps a number that is not
+the one being declared. It happened to give the right answer there, which
+is worse than giving the wrong one.
+
+### Crush the Weak — *"they can't play attack action cards with 3 or less base {p}"*
+
+A **LEGALITY, not a modifier.** `parser.nextTurnBars` is the one reader
+and both boards ask it before the card leaves the hand — refusing after
+it has left costs the player a card for a play the rules never allowed,
+which is the reasoning that put v3.11's reaction-target restriction in
+`judge.legal`.
+
+Three things the printed words decide, each a way to be wrong:
+
+- **`isAtkActionCard`, never `isAttack`.** The latter tests `tt`, and
+  **"Reaction" contains "action"** — so an attack REACTION would be
+  barred by a card that never names one. That is the trap CLAUDE.md has
+  named since v2.44, and the sabotage pass caught it here.
+- **BASE {p}.** A buff must not lift a card over the line and a debuff
+  must not push one under it.
+- **The threshold is read off the clause**, not a literal 3. A literal is
+  inventing card text one level up.
+
+### The two ledgers were updated deliberately
+
+`test/crush.test.js`'s *"TWO of the five are built; THREE still refuse"*
+and the matching assertions in `test/parser.test.js` are pins, so they go
+red on purpose when the count moves — the same discipline as the symmetry
+gap and the coverage baseline. They now read **four built, one refusing**.
+
+**Walk in My Shoes still refuses**, and for its own reason rather than a
+shared shrug: halving base {p} AND base {d} for a whole turn is a
+modifier on every attack action card they control, which is neither a cap
+nor a gate and has nowhere to live. Claiming it would file a card `full`
+that does nothing, which is the tier lie this project keeps finding.
+
+**Measured:** 315 → **318 full**, 18 → **15 none**. Fairness clean.
+1273 → **1283 drills**, 0 skipped.
+
+---
+
 ## v3.29 — an effect armed against their next turn
 
 Bravo's deck holds the pool's biggest unreadable block, and it is one
