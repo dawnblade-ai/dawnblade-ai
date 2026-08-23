@@ -651,6 +651,24 @@ function makeEffects(ctx){
         /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
         n=L(n,`${act(n).name}: their next ${P.qualLabel(op[2]||null).replace(/^an? /,"")} costs ${v} less.`);
       }
+      /* A ONE-SHOT SPEED GRANT, WAITING FOR THE CARD IT NAMES (v3.37).
+         Stir the Aetherwinds, and the FOURTH of the qualified single-shot
+         grants — `buffQ` power, `gaNextQ` go again, `costOff` cost, this
+         the WINDOW. All four share one qualifier reader and all four WAIT
+         rather than being spent by a card the printed line does not name.
+
+         THE AMP RIDES WITH IT because the card's two sentences are about
+         the same card — see the pairing in `fxParse`. Carried on the
+         grant rather than added to `sd.amp` here, or it leaks onto the
+         next arcane from any card at all, which is what it used to do. */
+      else if(k==="instantNext"){
+        const iq = op[1] || null;
+        if(!iq) return;
+        actMut(n).instantNextQ = [...(act(n).instantNextQ||[]), iq];
+        /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
+        n=L(n,`${act(n).name}: their next ${P.qualLabel(iq).replace(/^an? /,"")} may be played at instant speed`
+             + (iq.amp ? ` and deals +${iq.amp} arcane.` : "."));
+      }
       else if(k==="gaNext"){
         const gq = op[1] || null;
         if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), gq];
@@ -1183,6 +1201,15 @@ function makeEffects(ctx){
     const attacking = isAttack(card) || from==="weapon";
     let ga = fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
+    /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
+       IT IS TAKEN HERE, AHEAD OF THE CARD'S OWN OPS, because the payload
+       it carries is an AMP and `arcane` reads `sd.amp` as it resolves
+       (see the op above). Taken after, the grant would be spent on the
+       very card its bonus was printed for and pay nothing. */
+    { const _iq = takeInstantNext(n, card, {from});
+      if(_iq && _iq.amp){ actMut(n).amp = act(n).amp + _iq.amp;
+        n = L(n, `${card.name} is what that grant was waiting for — +${_iq.amp} arcane.`); }
+      else if(_iq) n = L(n, `${card.name} is what that grant was waiting for.`); }
     /* CHARGE (Boltyn) — "As an additional cost to play this, you may charge
        your hero's soul." A real additional cost paid BEFORE the rest of the
        card resolves, so it has to happen here, ahead of the conds loop below
@@ -2397,6 +2424,27 @@ function makeEffects(ctx){
     return q[i];
   };
 
+  /* SPEND A QUALIFIED NEXT-INSTANT GRANT, and only on a play that
+     MATCHES (v3.37). `playsAsInstant` READS the same list to decide
+     whether the window is open; this is the one place that consumes it,
+     because the reader is asked on every dim and every legality check
+     and a grant burned by looking at your hand is not a grant.
+
+     SPENT WHATEVER WINDOW IT WAS PLAYED IN. The card names "your NEXT
+     Wizard non-attack action card this turn" — that card was your next
+     one whether or not you exercised the instant-speed permission, and
+     the amp rider is printed about the same card. Holding the grant back
+     for a later card would be strictly stronger than printed.
+
+     A grant that does not match is NOT spent: it waits (v2.30). */
+  const takeInstantNext = (n, card, ctx) => {
+    const q = act(n).instantNextQ || [];
+    const i = q.findIndex(x => qualMatches(x, card, ctx));
+    if(i < 0) return null;
+    actMut(n).instantNextQ = q.slice(0, i).concat(q.slice(i + 1));
+    return q[i];
+  };
+
   /* IS THIS PLAY A BOOST? (v3.31) One reader, because two sites ask it and
      the answer decides a rule in both: the declaration pays the cost, and
      a "your next attack YOU BOOST this turn" buff only lands on a play
@@ -2705,7 +2753,7 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
           linkPumps, linkPayload, attackRx, autoPitch, applyAnswer,
-          activateHandAbility, foeTurnIce};
+          activateHandAbility, foeTurnIce, takeInstantNext};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------
@@ -3526,11 +3574,12 @@ function beginEndPhase(game, seat){
   for(const i of [0, 1]){
     const sd = (n.sides || [])[i] || {};
     const held = (sd.buffNext || 0) + (sd.buffQ || []).length
-               + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length;
+               + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length
+               + (sd.instantNextQ || []).length;
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
-      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: []});
+      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: []});
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");

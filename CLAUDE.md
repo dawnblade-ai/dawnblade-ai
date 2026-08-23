@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.36
+**Current version:** v3.37
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1390 drills**.
+This is `node --test "test/*.test.js"` — currently **1400 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,59 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### FOUR QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.37)
+
+| field | grants | since |
+|---|---|---|
+| `buffQ` | power | v2.30 |
+| `gaNextQ` | go again | v3.31 |
+| `costOff` | cost | v3.32 |
+| `instantNextQ` | the **WINDOW** | v3.37 |
+
+All four **wait** for the card the printed line names, all four ask
+`qualMatches`, and building the fourth invented no vocabulary — the third
+time that has been true of this family. Symmetry ledger 42 → 43.
+
+**TWO SENTENCES ABOUT ONE CARD MUST BE PAIRED.** Stir the Aetherwinds
+prints *"your next Wizard non-attack action card … as though it were an
+instant"* and then *"if **it** has an arcane damage effect, instead it
+deals that much arcane damage plus 1."* They arrive as separate clauses —
+the splitter breaks on the period — so they are folded in `fxParse` where
+the whole card is visible, the same place and reason `optCost` pairs its
+halves.
+
+**UNPAIRED, THE AMP LEAKS ONTO A CARD THE LINE NEVER NAMED.** `amp` is a
+bare number on the side meaning "the next arcane, whatever it is". Driven,
+Stir's +1 amped **Sigil of Suffering** — a Runeblade *Defense Reaction*,
+neither Wizard nor a non-attack action card. RESTRICTION-DROPPED, and the
+fairness sweep is blind to it because that check does not model `amp`.
+v2.30's arrow-buff-on-a-sword, one op further down.
+
+**AND THE BARE OP IS STILL RIGHT FOR ITS OWN CARD.** Cindering Foresight
+prints *"THE NEXT CARD you play this turn with an arcane damage effect"* —
+genuinely unqualified. Two cards, one op, two printed scopes; fold only
+where a grant is present.
+
+**READ, NEVER SPENT.** `playsAsInstant` consults the held grants on every
+dim and every legality check, so consuming there burns the grant on
+*looking at your hand*. `takeInstantNext` spends it, once, at the play.
+Same read/spend split `effCost` keeps for `costOff` (v3.32).
+
+**SPENT WHATEVER WINDOW IT WAS PLAYED IN** — the card was your "next" one
+either way, and the amp is printed about that same card. Holding it back
+for a later card is stronger than printed.
+
+**THE TAKE PRECEDES THE OPS**, because `arcane` reads `sd.amp` as it
+resolves. Taken after, the grant is spent on the very card its bonus was
+printed for and pays nothing.
+
+**AN UNREADABLE TAIL REFUSES THE WHOLE CLAUSE** (v3.31, fourth member).
+`attackQual` returning false means "a restriction I cannot read", not
+"nothing restricts this"; collapsing them yields a grant qualified only by
+`nonAtk`, which frees every non-attack action card at instant speed. **Its
+drill uses synthetic text**, because no pool card prints that shape — the
+same situation as `asInstantMet`'s unknown-`when`, one layer out.
 
 ### A SPEED GRANT IS A WINDOW, AND THE WINDOW PAYS THE COST (v3.36)
 
@@ -672,6 +725,10 @@ if filed earlier. `tools/ledger.js` is the discriminator: heave is `live`
 there, so `failstates.js` grades it against the claim, not a grep.
 
 ### THREE QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.32)
+
+> **SUPERSEDED BY v3.37 — there are FOUR.** `instantNextQ` joined them;
+> see the section of that name above. Kept because the argument below for
+> why a grant WAITS, and why `effCost` is pure, is unchanged.
 
 | field | grants | since |
 |---|---|---|

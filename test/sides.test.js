@@ -330,9 +330,20 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      `costOff` qualified cost. All three are single-shot grants that WAIT
      for the card the printed line names, and all three ask one qualifier
      reader. Seismic Surge is the pool's only printing of the third. */
-  assert.equal(gap.fields, 42);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32 */
-  assert.equal(gap.player.length, 42);
-  assert.equal(gap.opponent.length, 42);
+  /* 42 -> 43 AT v3.37, the FOURTH of that family and the one that grants
+     a WINDOW: `instantNextQ` holds Stir the Aetherwinds' "you may play
+     your next Wizard non-attack action card this turn as though it were
+     an instant". It is a DELIBERATE edit, like every move of this number.
+
+     IT CARRIES ITS OWN AMP, which is what makes it a field rather than a
+     flag. The card's two sentences are about the SAME card, and while the
+     amp sat loose on `sd.amp` it leaked onto the next arcane from any
+     card at all — driven, Stir's +1 landed on a Runeblade Defense
+     Reaction. Cindering Foresight keeps the bare `amp` because it really
+     does print "THE NEXT CARD you play this turn". */
+  assert.equal(gap.fields, 43);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37 */
+  assert.equal(gap.player.length, 43);
+  assert.equal(gap.opponent.length, 43);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -342,8 +353,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 42);   /* … +gaNextQ v3.31, +costOff v3.32 */
-  assert.equal(gap.nativeForOpponent.length, 42);
+  assert.equal(gap.nativeForPlayer.length, 43);   /* … +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37 */
+  assert.equal(gap.nativeForOpponent.length, 43);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

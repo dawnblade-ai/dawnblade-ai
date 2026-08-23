@@ -1419,7 +1419,11 @@ function windowsNow(g, seat, card, half, zone){
     notYourTurn:    g.turnPlayer !== seat,
     board:          at(g, seat).board,
     zone:           zone || "hand",
-    arsenalInstant: !!bOf(g, seat).arsenalInstant
+    arsenalInstant: !!bOf(g, seat).arsenalInstant,
+    /* A GRANT THE SIDE IS ALREADY HOLDING (v3.37) — Stir the
+       Aetherwinds. Read here, never spent: `effects.takeInstantNext`
+       consumes it when the card is actually played. */
+    grants:         at(g, seat).instantNextQ || []
   });
   return grant ? base.concat(["instant"]) : base;
 }

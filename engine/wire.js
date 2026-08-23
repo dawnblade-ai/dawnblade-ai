@@ -112,7 +112,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
    every SIDE_FIELD is accounted for one way or the other. */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
-  "res","ap","wasted","counters","weaponUsed","buffNext","buffQ","gaNext","gaNextQ","costOff",
+  "res","ap","wasted","counters","weaponUsed","buffNext","buffQ","gaNext","gaNextQ","costOff","instantNextQ",
   "runeHitNext","amp","ward","awd","rune","arcShield",
   "lifeLock","namedBuff","dracNext","marked","fatigue","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",

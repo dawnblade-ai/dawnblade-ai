@@ -1083,6 +1083,28 @@ function classifyClause(raw){
     if(rn) o.push(["runeHitNext", num(rn[1])]);
     return R(o);
   }
+  /* "YOU MAY PLAY YOUR NEXT <x> THIS TURN AS THOUGH IT WERE AN INSTANT"
+     — Stir the Aetherwinds, and the FOURTH qualified single-shot grant
+     beside `buffQ` (power), `gaNextQ` (go again) and `costOff` (cost).
+
+     It reuses `attackQual` and the `non-attack` unpicking verbatim from
+     the go-again reader above, which is the third time this family has
+     been extended without inventing vocabulary. The same trap applies:
+     "action card" in the tail belongs to the SUBJECT, so on the
+     non-attack reading it must not also set `aac` — a card cannot be
+     both an attack action card and a non-attack one, and asking for both
+     is a qualifier that matches nothing.
+
+     UNQUALIFIED IS REFUSED, not defaulted to "any card". No pool card
+     prints that wording, and a grant that frees EVERY card at instant
+     speed is the strongest thing on this list to get wrong. */
+  if(m = c.match(/^you may play (?:your|the) next([^.]*?)\b(non-attack|attack)\b([^.]*?)\s*as though (?:it|they) (?:were|was) an instant$/)){
+    const q = attackQual(m[1], m[3]);
+    if(!q) return null;
+    let full = Object.assign({}, q);
+    if(m[2] === "non-attack"){ delete full.aac; full.nonAtk = true; }
+    return R([["instantNext", full]]);
+  }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
@@ -2149,6 +2171,41 @@ function fxParse(card){
       else fx.ops.push(op);
     });
   });
+
+  /* ---- "IT" IS THE CARD THE GRANT NAMES (v3.37) --------------------
+     Stir the Aetherwinds prints TWO sentences about ONE card:
+
+       "You may play your next WIZARD NON-ATTACK ACTION CARD this turn as
+        though it were an instant. If IT has an arcane damage effect,
+        instead it deals that much arcane damage plus 1."
+
+     They arrive as separate clauses — the splitter breaks on the period —
+     so they are paired HERE, where the whole card is visible, which is
+     the same place and the same reason `optCost` pairs its two halves.
+
+     UNPAIRED, THE AMP LEAKS. `amp` is a bare number on the side meaning
+     "the next arcane, whatever it is", and driven that way Stir's +1
+     landed on Sigil of Suffering — a Runeblade DEFENSE REACTION, which is
+     neither Wizard nor a non-attack action card. RESTRICTION-DROPPED, and
+     the fairness sweep could not see it because that check does not model
+     `amp`. Same shape as v2.30's arrow buff landing on a sword, and the
+     same fix: the qualifier rides WITH the payload.
+
+     THE BARE OP STAYS RIGHT FOR ITS OWN CARD. Cindering Foresight prints
+     "THE NEXT CARD you play this turn with an arcane damage effect" —
+     genuinely unqualified — so it keeps the loose `amp` it has always
+     had. Two cards, one op, two printed scopes; folding only where a
+     grant is present is what keeps both faithful. */
+  {
+    const gi = fx.ops.findIndex(o => o[0] === "instantNext");
+    if(gi >= 0){
+      const ai = fx.ops.findIndex(o => o[0] === "amp");
+      if(ai >= 0){
+        fx.ops[gi] = ["instantNext", Object.assign({}, fx.ops[gi][1], {amp: fx.ops[ai][1]})];
+        fx.ops.splice(ai, 1);
+      }
+    }
+  }
   applyOverride(card, fx);
   const tl = clean(card.tx||"").toLowerCase();
   /* TWO THINGS MADE THIS MISS SAVAGE FEAST, and both are in one line of
@@ -3268,6 +3325,13 @@ const playsAsInstant = (c, o) => {
      not an Action and is correctly left alone — it needs no grant. */
   if(o.arsenalInstant && o.zone === "arsenal" && o.notYourTurn
      && isNonAtkActionCard(c) && (c.pitch || 0) >= 3) return true;
+  /* A GRANT THE SIDE IS ALREADY HOLDING (v3.37) — Stir the Aetherwinds.
+     READ, NEVER SPENT: this is asked on every dim and every legality
+     check, so consuming here would burn the grant on merely LOOKING at
+     the hand. `takeInstantNext` in effects.js spends it, once, when the
+     card is actually played. Same read/spend split `effCost` keeps for
+     `costOff` (v3.32), and for the same reason. */
+  if((o.grants || []).some(gq => qualMatches(gq, c, o))) return true;
   return asInstantMet(fxParse(c).asInstant, o);
 };
 

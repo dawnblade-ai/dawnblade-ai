@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-23T21:05:37.922Z",
- "appVer": "3.36",
+ "generated": "2026-08-23T21:58:26.646Z",
+ "appVer": "3.37",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 329,
-  "part": 64,
+  "full": 330,
+  "part": 63,
   "none": 12
  },
  "heroes": {
@@ -2471,22 +2471,20 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "You may play your next Wizard non-attack action card this turn as though it were an instant",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If it has an arcane damage effect, instead it deals that much arcane damage plus 1.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "You may play your next Wizard non-attack action card this turn as though it were an instant"
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "You may play your next Wizard non-attack action card this turn as though it were an instant. If it has an arcane damage effect, instead it deals that much arcane damage plus 1.",

@@ -7,6 +7,87 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.37 — Stir the Aetherwinds, and an amp that was landing on the wrong card
+
+The fourth qualified single-shot grant, and the last card standing between
+Iyslander and a finished deck. `buffQ` holds qualified power, `gaNextQ`
+qualified go again, `costOff` qualified cost — **`instantNextQ` holds a
+qualified WINDOW**. All four wait for the card the printed line names, all
+four ask one qualifier reader, and building the fourth invented no
+vocabulary at all, which is the third time that has been true of this family.
+
+**TWO SENTENCES, ONE CARD.**
+
+> "You may play your next **Wizard non-attack action card** this turn as
+> though it were an instant. If **it** has an arcane damage effect,
+> instead it deals that much arcane damage plus 1."
+
+Both are about the same card, and they arrive as separate clauses because
+the splitter breaks on the period. They are paired in `fxParse`, where the
+whole card is visible — the same place and the same reason `optCost` pairs
+its two halves (v2.28).
+
+**UNPAIRED, THE AMP LEAKED.** `amp` is a bare number on the side meaning
+*"the next arcane, whatever it is"*, so Stir's +1 applied to any next
+arcane at all. Driven: it amped **Sigil of Suffering**, a Runeblade
+*Defense Reaction* — neither Wizard nor a non-attack action card.
+`RESTRICTION-DROPPED`, stronger than printed, and the fairness sweep could
+not see it because that check does not model `amp`. Same shape as v2.30's
+arrow buff landing on a sword, and the same fix: **the qualifier rides
+with the payload.**
+
+**THE BARE OP IS STILL RIGHT FOR ITS OWN CARD.** Cindering Foresight
+prints *"THE NEXT CARD you play this turn with an arcane damage effect"* —
+genuinely unqualified — so it keeps the loose `amp` it has always had. Two
+cards, one op, two printed scopes; folding only where a grant is present
+is what keeps both faithful.
+
+**READ, NEVER SPENT.** `playsAsInstant` consults the held grants to decide
+whether the window is open, and it is asked on every dim and every
+legality check — so a grant consumed there would be burned by *looking at
+your hand*. `takeInstantNext` is the one place that spends it, when the
+card is actually played. Same read/spend split `effCost` keeps for
+`costOff` (v3.32).
+
+**AND IT IS SPENT WHATEVER WINDOW IT WAS PLAYED IN.** The card names *"your
+NEXT Wizard non-attack action card this turn"* — that card was your next
+one whether or not you exercised the instant-speed permission, and the amp
+rider is printed about the same card. Holding the grant back for a later
+card would be strictly stronger than printed.
+
+**THE TAKE PRECEDES THE OPS**, because the payload is an amp and `arcane`
+reads `sd.amp` as it resolves. Taken after, the grant would be spent on the
+very card its bonus was printed for and pay nothing.
+
+**AN UNREADABLE TAIL REFUSES THE WHOLE CLAUSE** (v3.31's rule, on the
+fourth member): `attackQual` returning false means *"there is a restriction
+here I cannot read"*, which is a different answer from *"nothing restricts
+this"*. Collapsing them yields a grant qualified only by `nonAtk` — one
+that frees every non-attack action card at instant speed. Drilled with
+synthetic text, because no pool card prints that shape and so no fixture
+can reach the branch.
+
+**Side field, three places** (v3.29's rule): `SIDE_FIELDS`, `wire.js` and
+`report.js`'s `seat()`. The symmetry ledger moves **42 → 43**, deliberately,
+and it expires in `beginEndPhase` with the other five "this turn" grants —
+for both seats.
+
+**Both boards.** `judge` passes the held grants into the reader; the
+trainer's two bespoke opponent-turn routes reach `runOps` directly and
+never pass through `execute`, so they take the grant themselves — the same
+reason they call `foeTurnIce`. Asking only about the printed type refused a
+granted card in the trainer's hand window, which is the half-built shape
+v3.36 found in the arsenal route beside it.
+
+**IYSLANDER IS DONE.** 29 of 30 cards full; **Ice Eternal** is the pool's
+only X-cost card and stays honestly refused, with the reason written down.
+Her hero ability runs on both boards as of v3.36.
+
+Measured: **329 → 330 full, 64 → 63 part**. 1390 → 1400 drills, 0 failed,
+0 skipped. Fairness clean, 0 UNFAIR. **11 sabotages, all biting** — one of
+which found a missing drill rather than a missing rule: nothing covered the
+unreadable-tail refusal, because no card in the pool can reach it.
+
 ## v3.36 — Iyslander acts on your turn, and 14 cards learn how
 
 **Her whole identity is one mechanic, and neither clause was fully

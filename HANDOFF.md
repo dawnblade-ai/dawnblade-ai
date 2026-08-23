@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.36 · PHASE C · IYSLANDER ACTS ON YOUR TURN
+# Handoff — Dawnblade, at v3.37 · PHASE C · IYSLANDER IS DONE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,17 +12,17 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1390 drills**
+> the card semantics run on both boards.** `npm test` is **1400 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.36: coverage **329 full / 64 part / 12 none**, fairness
+> Current at v3.37: coverage **330 full / 63 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
-> **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai and Bravo are
-> complete; **Iyslander's hero ability landed in v3.36** (see below). **Briar is in progress**: her hero ability is BUILT (v3.21) and
+> **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
+> **Iyslander** are complete (she finished at v3.37 — see below). **Briar is in progress**: her hero ability is BUILT (v3.21) and
 > her 8 `part` cards are the remaining work — see below.
 >
 > ### v3.36 — IYSLANDER'S HERO ABILITY WAS HALF-BUILT, AND THIS FILE SAID SHE WAS DONE
@@ -44,7 +44,7 @@
 >
 > | card | why it stays |
 > |---|---|
-> | Stir the Aetherwinds x3 | grants to a FUTURE card — the FOURTH qualified single-shot grant beside `buffQ` / `gaNextQ` / `costOff`. Needs a side field, so `SIDE_FIELDS` + `wire.js` + `report.js`'s `seat()` (v3.29's three places) and a symmetry-ledger move. **This is the next obvious build and it is hers.** |
+> | ~~Stir the Aetherwinds~~ | **BUILT at v3.37** — `instantNextQ`, the fourth qualified single-shot grant. Building it also found its amp landing on a card the line never named |
 > | Snapback x3 (Blaze) | needs a CLASS-AWARE turn history — `hist` counts non-attacks and records no class. Building it would also unblock Quick Clicks' "played a Nimblism this turn" |
 > | Ice Eternal | X-cost + Ice Fusion. Unchanged, still honestly refused |
 >
@@ -52,6 +52,21 @@
 > with `@babel/standalone` after any `index.html` edit — bracket balance
 > is not a parse, and v2.27 shipped a page that was balanced and broken.
 > Deliberately not a drill: no dependencies, so a fresh clone stays green.
+
+> ### v3.37 — IYSLANDER IS FINISHED: 29 of 30 cards, one written refusal
+>
+> **Ice Eternal** is the only card left and it is a recorded decision, not
+> work: the pool's only X-cost card. Her hero ability runs on both boards
+> (v3.36), her deck resolves, and that is the bar — **a hero is finished
+> when the ABILITY runs on both boards and every card is either built or
+> has a written reason.**
+>
+> **The next heroes are the eight untouched ones.** Leave Arakni last
+> (stealth-as-qualifier is filed `noop` by ruling). Blaze is the cheapest
+> next step, because v3.36/v3.37 already built two of the three things his
+> deck wants: his Cindering Foresight is `full`, and **Snapback** is the
+> one remaining shape — it needs a CLASS-AWARE TURN HISTORY, which would
+> also unblock Quick Clicks' "played a Nimblism this turn".
 
 > ### Viserai — DONE at v3.20
 >
