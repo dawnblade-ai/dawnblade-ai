@@ -330,14 +330,82 @@ test("the end-phase thaw is DRIVEN by the shared beginning-of-end-phase body", {
     "and NOT on seat 0's — the expiry is the controller's end phase, not any end phase");
 });
 
-test("the hero ability mints a real token, not a counter", {skip}, () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const code = html.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  const m = code.match(/function foeTurnIce\(n, c\)\{[\s\S]*?\n  \}/);
-  assert.ok(m, "foeTurnIce moved — re-anchor this drill");
-  assert.ok(!/\.frost\b/.test(m[0]),
-    "the one hardcoded `frost++` in the project lived here and incremented a number nothing read");
-  assert.match(m[0], /runOps\([\s\S]*token[\s\S]*Frostbite/,
-    "it goes through the same token op every card uses, so the token is RESOLVED from the " +
-    "database rather than described — the golden rule at the hero-ability level");
+/* ---- IYSLANDER'S CLAUSE 2, DRIVEN (v3.36) ---------------------------
+   This was a SOURCE SCAN of `index.html` — it matched `function
+   foeTurnIce(n, c)` and read the body for a `frost++`. Two things wrong
+   with that, and the second is the reason it is being replaced rather
+   than re-anchored:
+
+     * the body LEFT that file in v3.36, and a source guard aimed at the
+       wrong file passes by finding nothing. This one failed loudly,
+       which is the lucky direction;
+     * it never once asked whether the ability FIRES. A grep for
+       `runOps(... token ... Frostbite)` is satisfied by a body gated on
+       a condition that is never true — and that is exactly what the
+       table had for three versions: the build carried `iceFrostbite`,
+       the trainer had the body, and no route at the table called it.
+
+   So it is driven now, and it pins the three gates the scan could not
+   see: the hero, the turn, and the talent. */
+const iysB   = {arsenalInstant: true,  iceFrostbite: true};
+const plainB = {arsenalInstant: false, iceFrostbite: false};
+
+/* Play a card with a given build, on a given turn-player, and count what
+   landed on the OPPONENT'S board. */
+function icePlay(c, build, turnPlayer){
+  H.db();
+  const g = H.state({res: 9, hand: [c]}, {},
+                    {actor: 0, turnPlayer, turn: 3, builds: [build, {}], seed: "frost"});
+  const n = H.execute(g, c, "hand", 0, {});
+  return {
+    game: n,
+    frost: (n.sides[1].board || []).filter(P.isFrostbite).length
+  };
+}
+
+test("clause 2 mints a REAL token under THEIR control, and only for her", {skip}, () => {
+  const spike = H.card("Frost Spike", 3);          /* Ice Wizard Instant */
+  assert.ok((spike.ty || []).some(t => /^ice$/i.test(t)),
+    "fixture check: Frost Spike must carry the Ice talent in its structured array");
+
+  /* Frost Spike's OWN text creates one; her ability adds a second. Pinning
+     the difference rather than the total is what makes this a test of the
+     ABILITY instead of a test of the card. */
+  const own  = icePlay(spike, plainB, 1).frost;
+  const hers = icePlay(spike, iysB,   1).frost;
+  assert.equal(hers, own + 1,
+    "Iyslander playing an Ice card on the opponent's turn creates one MORE Frostbite " +
+    "than the same card played by anyone else — that difference is the hero ability");
+
+  /* THE TOKEN IS RESOLVED FROM THE DATABASE, not described. A counter — the
+     `frost++` this replaced — carries no text and no type, so it can never
+     be counted as an aura, destroyed by "destroy an aura", or taxed. */
+  const ent = (icePlay(spike, iysB, 1).game.sides[1].board || []).filter(P.isFrostbite).pop();
+  assert.ok(ent && ent.card, "the ability put a board ENTRY there, not a number");
+  assert.match(ent.card.tt || "", /aura/i, "and the entry is the printed Aura token");
+  assert.match(ent.card.tx || "", /cost you an additional/i,
+    "carrying its own printed rules text — which is what makes the tax real");
+  assert.equal(H.state({}, {}, {}).sides[0].frost, undefined,
+    "and no `frost` counter came back with it");
+});
+
+test("clause 2 is gated on the TURN and on the TALENT", {skip}, () => {
+  const spike = H.card("Frost Spike", 3);            /* Ice     */
+  const vein  = H.card("Aether Icevein", 3);         /* NOT Ice */
+  assert.ok(!(vein.ty || []).some(t => /^ice$/i.test(t)),
+    "fixture check: Aether Icevein is Elemental Wizard, not Ice — the discriminator " +
+    "only bites if the control card genuinely lacks the talent");
+
+  /* THE TURN. "During an opponent's turn" is the whole of what makes her
+     slippery; fired on her own turn it would be a free Frostbite a turn. */
+  assert.equal(icePlay(spike, iysB, 1).frost, icePlay(spike, plainB, 1).frost + 1,
+    "on the OPPONENT'S turn it fires");
+  assert.equal(icePlay(spike, iysB, 0).frost, icePlay(spike, plainB, 0).frost,
+    "on HER OWN turn it must not — the clause names the opponent's turn");
+
+  /* THE TALENT, read off `ty`. Aether Icevein is a blue non-attack she can
+     play on their turn through clause 1, so it travels the identical route
+     and differs only in the talent — which is the point. */
+  assert.equal(icePlay(vein, iysB, 1).frost, icePlay(vein, plainB, 1).frost,
+    "a non-Ice card played on their turn creates nothing — the clause says Ice");
 });

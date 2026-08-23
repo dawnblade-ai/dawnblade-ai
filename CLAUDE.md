@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.35
+**Current version:** v3.36
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1378 drills**.
+This is `node --test "test/*.test.js"` — currently **1390 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,106 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A SPEED GRANT IS A WINDOW, AND THE WINDOW PAYS THE COST (v3.36)
+
+**14 pool records print *"as though it were an instant"* and not one was
+read**, across three heroes. It is Iyslander's whole identity — both
+sentences of Essence of Ice are about acting on the opponent's turn — and
+finding it took reading the hero ability before the cards, which is the
+Kayo method paying out for the second time.
+
+`playsAsInstant(c, o)` is the ONE reader, pure, with the game's half
+supplied by the caller, exactly as `playableFromZone` is. It answers for
+TWO printed sources because they are the same question: the CARD's own
+line (`fx.asInstant`) and the HERO's standing grant over a zone, which is
+a build passive and cannot be read off a card at all.
+
+**WIDENING THE WINDOW IN ONE PLACE PUT HER ON A NEGATIVE ACTION POINT.**
+
+| | decides |
+|---|---|
+| `playableWhy` | whether the play is LEGAL |
+| `playWindowFor` | which window it HAPPENS in — so whether an action point is charged |
+
+Widened in the first and not the second, the play was allowed in the
+instant window and then charged as an action: driven, `ap: -1`, which is
+`NEGATIVE-AP` (CR 4.4.3e — points are lost, never owed) and is also the
+`legal`/`reduce` agreement `fuzz.test.js` exists to hold. **`windowsNow`
+is the one body both ask.**
+
+**THE ACTION POINT THEN FOLLOWS FOR FREE.** `costsAP` charges one only in
+the `action` window, so a card played through the grant is charged
+nothing — the recorded ruling (user, 2026-08-10) rather than a special
+case. And it could not be otherwise: a seat holds NO action point during
+the opponent's turn (CR 4.4.3e takes it, CR 4.3.2 issues the next at the
+start of their own action phase), so **a grant that still charged one
+would be a grant nobody could ever use.**
+
+**THE ZONE IS THE CALLER'S ANSWER**, like the wall and the incoming
+attack. Her line frees blue non-attack action cards from her ARSENAL; by
+the time the reader is asked, the card is just a card. A caller that says
+nothing gets `"hand"`, which denies the grant — weaker than printed and
+visible. A drill checks every call site names its zone.
+
+**AN INSTANT NEEDS NO GRANT (CR 8.1.6).** The first draft of the
+trainer's de-duplication asked about the grant ALONE, and so refused a
+blue Instant set in the arsenal — Frost Spike, out of her own deck — with
+*"is an attack"*: a lost line of play and a wrong message, out of a change
+that was otherwise pure removal of a duplicate. Ask both reasons.
+
+**WHAT REFUSES, AND WHY EACH REFUSAL IS HONEST.** Snapback's *"if you
+have played another WIZARD non-attack action card this turn"* needs a
+class-aware turn history; `hist` counts non-attacks (`non`) and records
+no class. Reading it as the bare count grants the window off ANY
+non-attack, which is stronger than the card's own text. An unknown
+condition answers **FALSE** in `asInstantMet` (v3.26's rule) — and its
+drill asks the function BY NAME, because the parser only emits conditions
+the evaluator knows, so no card fixture can reach that default.
+
+### THE DATABASE PRINTS BOTH WORDINGS AT ONCE (v3.36)
+
+v3.00 said upstream expands contractions and moves under you. The sharper
+form: **it prints both spellings simultaneously, today.** Ten pool clauses
+say *"if it's blue"* and two say *"if it is Draconic"* — so the anchors
+had drifted to match whichever they were written against, `/^it'?s blue$/`
+on one line and `/^it is draconic$/` three lines below it. Either stops
+dead the moment upstream levels the other way.
+
+`it's` → `it is` is a SYNONYMS entry now, and the two anchors spelling the
+contraction were retargeted. **Measured over all 788 records before and
+after: zero cards moved** — which is the correct result and is also
+indistinguishable from a change that never applied, so both wordings were
+driven through `classifyClause` to prove the levelling actually fires.
+
+**A RAW-CLAUSE SCAN MUST LEVEL FOR ITSELF.** `defSelf`, `asInstant` and
+their neighbours scan `clauses[ci]` RAW with `/i`, not the lowercased text
+`classifyClause` works on — so SYNONYMS does not reach them and every
+contraction would have to be spelled twice. `asInstantCond` calls
+`levelIdiom` itself. That is the drift the table exists to delete.
+
+### SABOTAGE FOUND TWO DEFECTS IN THIS VERSION'S OWN DRILLS (v3.36)
+
+Both are the shapes this file already names, which is the point:
+
+- **a fixture that could not tell two gates apart.** The non-attack gate
+  was drilled with Wounded Bull — a RED attack — so the BLUE gate refused
+  it and dropping the non-attack gate changed nothing. The drill passed
+  against a sabotaged engine. Brothers in Arms is blue AND an attack, out
+  of her own deck, so only the half under test can refuse it. v3.31's
+  *"pick a fixture that tells the two halves apart"*, cost a second time.
+- **a source guard with no word boundary.** `/const playArsenalInstant[\s\S]*?/`
+  matched `playArsenalInstantRENAMED` perfectly, so the anchor-moved
+  assertion could never fire. **Sabotage the guard, not just the code** —
+  and rename the thing it anchors on, which is the sabotage that finds it.
+
+**A COMPILE CHECK SEES WHAT BRACKET BALANCE CANNOT.** `html-balance.test.js`
+proves the brackets balance, and v2.27 shipped a page that was balanced
+AND broken. Compiling both `text/babel` blocks with `@babel/standalone`
+(`presets:["react"], sourceType:"script"`) catches a real syntax slip in
+one second. It is a MANUAL pre-ship step, deliberately not a drill: the
+project has no dependencies and `npm test` must stay green on a fresh
+clone with no `npm install` (v3.00). Run it after any `index.html` edit.
 
 ### A PENDING IS ONE FIELD AND FOUR KINDS — WHITELIST IT (v3.35)
 

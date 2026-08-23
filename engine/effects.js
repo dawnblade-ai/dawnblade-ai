@@ -1850,6 +1850,12 @@ function makeEffects(ctx){
           n.promptQ = [...(n.promptQ||[]), payCostSpec(px, w, actorOf(n))];
       }
     }
+    /* IYSLANDER, CLAUSE 2 — "Whenever you play an ICE card during an
+       opponent's turn, create a Frostbite token under their control."
+       One body, three callers: here, and the trainer's two bespoke
+       opponent-turn routes, which reach `runOps` directly and never pass
+       through `execute` at all. See `foeTurnIce`. */
+    n = foeTurnIce(n, card);
     const delta = preHP - foe(n).hp;
     if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).
@@ -2659,9 +2665,47 @@ function makeEffects(ctx){
     return openPrompt(winCheck(n));
   };
 
+  /* ---- IYSLANDER, CLAUSE 2 (v3.36) ---------------------------------
+     "Whenever you play an ICE card during an opponent's turn, create a
+     Frostbite token under their control."
+
+     IT WAS A CLOSURE INSIDE `Battle`, so the table had none of it: an
+     Ice card played on the opponent's turn created nothing at all, which
+     is half of Iyslander's hero ability missing on the board she is
+     meant to be played on. `execute` calls it, and so do the trainer's
+     two bespoke opponent-turn routes — those reach `runOps` directly and
+     never pass through `execute`, so a body that lived only in `execute`
+     would have taken the rule AWAY from the board that had it.
+
+     THE TALENT IS READ OFF `ty`, THE STRUCTURED ARRAY (v2.44). The
+     trainer asked `/ice/i.test(c.tt)`, which is clean across this pool
+     only by accident — nothing stops a future type line carrying "ice"
+     inside another word, and that is the "Reaction contains action" trap
+     with a different substring. The array names the talent exactly.
+
+     "DURING AN OPPONENT'S TURN" IS `turnPlayer`, which both boards
+     genuinely maintain — the trainer derives it through `withPriority`
+     and it reads 1 in `block` and `foeturn` alike, verified rather than
+     assumed (v2.83: a field that is present, plausible and never updated
+     reads as an answer). It is not a phase, so asking it does not make
+     `effects.js` phase-aware.
+
+     THE TOKEN IS RESOLVED FROM THE DATABASE, never described here — the
+     golden rule at the hero-ability level. That is what makes it
+     countable by "3 or more auras", destroyable by "destroy an aura",
+     and taxing through `frostCount`. */
+  function foeTurnIce(n, card){
+    if(!card || !bAct(n).iceFrostbite) return n;
+    if(n.turnPlayer == null || n.turnPlayer === actorOf(n)) return n;
+    const ty = card.ty || [];
+    if(!ty.some(t => /^ice$/i.test(String(t)))) return n;
+    return runOps(n, [["token", "Frostbite", 1, "foe", null]],
+                  `${act(n).name}'s winter`);
+  }
+
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
           linkPumps, linkPayload, attackRx, autoPitch, applyAnswer,
-          activateHandAbility};
+          activateHandAbility, foeTurnIce};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------

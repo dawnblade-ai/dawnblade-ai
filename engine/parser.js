@@ -59,6 +59,15 @@ const SYNONYMS = [
   [/\byou've\b/g,          "you have"],
   [/\bthey've\b/g,         "they have"],
   [/\byou'd\b/g,           "you would"],
+  /* `it's` -> `it is`, and it was levelled LATE (v3.36) because the
+     database prints BOTH FORMS TODAY: ten clauses say "if it's blue",
+     two say "if it is Draconic". So the anchors had drifted to match
+     whichever one they were written against — `/^it'?s blue$/` on one
+     line and `/^it is draconic$/` three lines below it — and either
+     would stop dead the moment upstream levelled the other way, which
+     is v3.00's whole lesson wearing a contraction.
+     `\bit's\b` cannot match the possessive `its`. */
+  [/\bit's\b/g,            "it is"],
   /* self-reference. `fxParse` already rewrites a card's own NAME to
      "this"/"this's" before we get here, so these two land on that form. */
   [/\bthis card's\b/g,     "this's"],
@@ -189,7 +198,7 @@ function classifyClause(raw){
      single unit, same rule that keeps other if/when patterns off the
      generic splitter — checks the SAME n.revealed the reveal op just set,
      in the same declOps pass. */
-  if(m=c.match(/^if it'?s (red|yellow|blue), pitch it$/))
+  if(m=c.match(/^if it is (red|yellow|blue), pitch it$/))
     return R([["revColorPitch", {red:1,yellow:2,blue:3}[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))
     return NOOP("clash payoff — the defence step applies this when you win");
@@ -405,7 +414,7 @@ function classifyClause(raw){
     /* "{p} greater than its base" — the pump is known once the total is struck */
     if(/^this has \{p\} greater than its base$/.test(cond))
       return Object.assign(rest,{cond:"pumped"});
-    if(/^it'?s blue$/.test(cond)) return Object.assign(rest,{cond:"revBlue"});
+    if(/^it is blue$/.test(cond)) return Object.assign(rest,{cond:"revBlue"});
     /* "if it is Draconic" — a question about the card's own printed talent,
        which may also be granted for the chain by dracNext. */
     if(/^it is draconic$/.test(cond)) return Object.assign(rest,{cond:"isDraconic"});
@@ -1839,6 +1848,50 @@ function fxParse(card){
     break;
   }
 
+  /* ---- "AS THOUGH IT WERE AN INSTANT" — A SPEED GRANT (v3.36) --------
+     14 pool records print one and NOT ONE OF THEM WAS READ, across three
+     heroes — Iyslander, Blaze and Enigma. It is Iyslander's whole
+     identity: both clauses of her hero ability are about acting on the
+     opponent's turn, and this is the half that lets her.
+
+     WHAT THE GRANT CHANGES IS THE WINDOW, AND THE ACTION POINT WITH IT.
+     RULING (user, 2026-08-10), recorded in the trainer since v2.71: "as
+     though they were an instant" is more than dropping the action point —
+     an instant may be played ANY TIME the player has priority, where an
+     action is confined to its own action phase. The action point is
+     deliberately never charged (CR 8.1.6), and the reductio is that it
+     could not be: a seat holds no action point during the opponent's turn
+     (CR 4.4.3e takes it, CR 4.3.2 issues the next one at the start of
+     their OWN action phase), so a grant that still charged one would be a
+     grant that can never once be used.
+
+     IT IS A CARD FACT, NOT AN OP — nothing resolves. So it is read here
+     beside `defSelf` and answered at the PLAY site by `playsAsInstant`,
+     which is pure and takes the game's half from its caller, exactly as
+     `playableFromZone` does. `handled` counts the clause as consumed so
+     the audit stops reporting it unread.
+
+     AN UNREADABLE CONDITION IS LEFT UNREAD, not defaulted. `asInstantMet`
+     answers FALSE for a `when` it does not know (v3.26's rule), so a
+     condition added here and forgotten there confines the card to its
+     printed window — weaker than printed and visible. The other direction
+     opens an instant-speed window nobody built. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const cl = clauses[ci];
+    /* The subject is THIS card. Iyslander's hero line grants over a ZONE
+       ("blue non-attack action cards from your arsenal") and is a build
+       passive rather than a clause; Stir the Aetherwinds grants to a
+       FUTURE card and is a different shape again — see `instantNextQ`. */
+    const m = cl.match(
+      /^(?:if (.+?), )?you may play this as though it were an instant\.?$/i);
+    if(!m) continue;
+    const when = asInstantCond(m[1]);
+    if(!when) continue;          /* unreadable gate — the clause stays unread */
+    fx.asInstant = when;
+    handled.add(ci);
+    break;
+  }
+
   /* ---- THE ATTACK-PLAY AURA TRIGGER (v3.22) --------------------------
      "When you play an attack action card[ or activate a weapon attack],
       destroy this and X."
@@ -3134,6 +3187,90 @@ const playableFromZone = (c, zone, o) => {
   return false;
 };
 
+/* ---- THE SPEED GRANT'S CONDITION, READ AND ANSWERED (v3.36) ---------
+   Two halves, deliberately apart. `asInstantCond` reads the printed gate
+   off the card and is a pure statement about TEXT; `asInstantMet` answers
+   it against the game and is a pure statement about STATE, with the state
+   supplied by the caller. Same split `defSelf` / `defSelfMet` keep, and
+   for the same reason: neither board can answer these from the card.
+
+   THE CONDITION VOCABULARY IS CLOSED, and each entry is one printed
+   wording rather than a family. A gate this cannot read returns null, the
+   clause stays unread, and the card keeps its printed window. */
+function asInstantCond(gate){
+  /* NO GATE AT ALL is a grant that always applies. No pool card prints
+     one today; it is read because the sentence is grammatical without the
+     if-clause and refusing it would be refusing the simplest form. */
+  if(gate == null) return {when: "always"};
+  /* LEVELLED HERE, because this loop scans RAW clauses (like `defSelf`
+     beside it) rather than the lowercased text `classifyClause` works on
+     — so without this the gates would have to spell every contraction
+     twice, which is the drift SYNONYMS exists to delete. */
+  const g = levelIdiom(String(gate).trim().toLowerCase());
+  /* "if it is not your turn" — Cindering Foresight x3, and the same gate
+     Iyslander's hero line prints. Levelled from "it's" by SYNONYMS. */
+  if(/^it is not your turn$/.test(g)) return {when: "notYourTurn"};
+  /* "if you control a Spectral Shield" — Astral Etchings x3. The NAME is
+     captured off the card rather than listed here: a table of names is
+     card text written into the engine, which is the golden rule's whole
+     point. Answered against the caller's board. */
+  let m = g.match(/^you control an? (.+)$/);
+  if(m) return {when: "controls", name: m[1].trim()};
+  /* NOT READ: "if you have played another Wizard non-attack action card
+     this turn" — Snapback x3. `hist` counts non-attacks (`non`) but
+     records no CLASS, so "another WIZARD non-attack" cannot be asked
+     without a class-aware turn history. Reading it as the bare count
+     would grant the window off any non-attack at all, which is stronger
+     than printed on the card's own text. Left unread and visible. */
+  return null;
+}
+
+function asInstantMet(g, o){
+  if(!g) return false;
+  o = o || {};
+  switch(g.when){
+    case "always":      return true;
+    case "notYourTurn": return !!o.notYourTurn;
+    /* A BOARD SCAN BY THE CARD'S OWN PRINTED NAME. The board is entries,
+       not cards — `b.card.name` — which is the shape every other board
+       reader here takes. */
+    case "controls":
+      return (o.board || []).some(b => b && b.card
+        && String(b.card.name || "").toLowerCase() === g.name);
+  }
+  /* AN UNKNOWN `when` RETURNS FALSE (v3.26). A condition added to
+     `asInstantCond` and forgotten here leaves the card in its printed
+     window: weaker than printed and visible, where the other direction
+     opens a window nobody built. */
+  return false;
+}
+
+/* ---- MAY THIS CARD BE PLAYED AS AN INSTANT, RIGHT NOW? (v3.36) ------
+   The ONE question, asked by both boards at the play site. It answers
+   for TWO printed sources, because they are the same question and
+   building only one leaves the same gap wearing the other's name:
+
+     * the CARD's own line   — `fx.asInstant`, above
+     * the HERO's standing grant over a zone — Iyslander's clause 1,
+       which is a build passive (`arsenalInstant`) rather than a clause
+       and so cannot be read off the card at all.
+
+   Pure, and the game's half arrives in `o`: whose turn it is, the board,
+   the zone the card sits in, and whether the acting hero grants the
+   arsenal window. `playableFromZone` is the model. */
+const playsAsInstant = (c, o) => {
+  if(!c) return false;
+  o = o || {};
+  /* IYSLANDER: "If it's not your turn, you may play BLUE NON-ATTACK
+     ACTION CARDS FROM YOUR ARSENAL as though they were instants."
+     Every one of those four words is a gate, and `isNonAtkActionCard`
+     reads the STRUCTURED ARRAY, so an Instant already in the arsenal is
+     not an Action and is correctly left alone — it needs no grant. */
+  if(o.arsenalInstant && o.zone === "arsenal" && o.notYourTurn
+     && isNonAtkActionCard(c) && (c.pitch || 0) >= 3) return true;
+  return asInstantMet(fxParse(c).asInstant, o);
+};
+
 /* ---- WHICH CARD FITS WHICH WINDOW (CR 8.1.2a / 8.1.3a / 8.1.6) ------
    CR 8.1.2a — an attack reaction "can only be played/activated by a
    player who controls the attack during the Reaction Step of combat."
@@ -3276,7 +3413,7 @@ const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
+        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,

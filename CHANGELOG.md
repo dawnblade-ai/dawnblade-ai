@@ -7,6 +7,96 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.36 — Iyslander acts on your turn, and 14 cards learn how
+
+**Her whole identity is one mechanic, and neither clause was fully
+built.** Both sentences of Essence of Ice are about acting on the
+opponent's turn, and reading the hero ability first — the Kayo method —
+found that the thing they need is shared by two other heroes' cards.
+
+**14 POOL RECORDS PRINT "AS THOUGH IT WERE AN INSTANT" AND NOT ONE WAS
+READ.** Iyslander, Cindering Foresight ×3, Snapback ×3, Astral Etchings
+×3, Stir the Aetherwinds ×3, and Blaze's hero ability. `playsAsInstant`
+is the one reader now: pure, with the game's half supplied by the caller,
+exactly as `playableFromZone` is. `asInstantCond` reads the printed gate
+off the card and `asInstantMet` answers it against the state — the same
+split `defSelf`/`defSelfMet` keep, because neither board can answer these
+from the card alone. An unknown condition answers FALSE (v3.26's rule):
+the card keeps its printed window, which is weaker than printed and
+visible, where the other direction opens a window nobody built.
+
+**CLAUSE 1 WAS TRAINER-ONLY, AND THE TABLE REFUSED IT BY NAME.** Driven:
+*"Aether Icevein is an action — it cannot be played during an
+instant-speed window."* A refusal that reads perfectly correct, on the
+board she is meant to be played on, for every version she has existed.
+Her line frees blue non-attack ACTION CARDS from her ARSENAL when it is
+not her turn, and every one of those words is a gate — each pinned by a
+drill, each proven by sabotage.
+
+**WIDENING THE WINDOW IN ONE PLACE PUT HER ON A NEGATIVE ACTION POINT.**
+`playableWhy` decides whether the play is legal; `playWindowFor` decides
+which window it happens in, and therefore whether an action point is
+charged. Widened in the first and not the second, the play was ALLOWED in
+the instant window and then CHARGED as an action — driven, `ap: -1`,
+which is `NEGATIVE-AP` (CR 4.4.3e: points are lost, never owed) and is
+also the `legal`/`reduce` agreement `fuzz.test.js` exists to hold.
+`windowsNow` is the one body both ask.
+
+The action point then follows for free: `costsAP` charges one only in the
+`action` window, so a card played through the grant is charged nothing.
+That is the recorded ruling (user, 2026-08-10) rather than a special case
+— and the reductio is that it could not be otherwise, since a seat holds
+NO action point during the opponent's turn, so a grant that still charged
+one could never once be used.
+
+**CLAUSE 2 LEFT `Battle`.** "Whenever you play an Ice card during an
+opponent's turn, create a Frostbite token under their control" was a
+closure in `index.html`, so the table had none of it. `execute` calls the
+shared body, and so do the trainer's two bespoke opponent-turn routes —
+those reach `runOps` directly and never pass through `execute`, so a body
+living only in `execute` would have taken the rule AWAY from the board
+that had it. The talent is read off `ty`, the structured array: the
+trainer asked `/ice/i.test(tt)`, which is clean across this pool only by
+accident, and that is the "Reaction contains action" trap with a
+different substring.
+
+**`it's` IS LEVELLED TO `it is`, AND IT WAS LEVELLED LATE.** The database
+prints BOTH FORMS TODAY — ten clauses say "if it's blue", two say "if it
+is Draconic" — so the anchors had drifted to match whichever they were
+written against, `/^it'?s blue$/` on one line and `/^it is draconic$/`
+three lines below it. Either would stop dead the moment upstream levelled
+the other way, which is v3.00's whole lesson wearing a contraction.
+Measured over all 788 records before and after: **zero cards moved**, and
+both wordings now read for both anchors.
+
+**ONE READER, BOTH BOARDS — the trainer had a second copy.** Its arsenal
+route hand-rolled her printed line as `isAttack(c)` plus a pitch test,
+beside the table's copy in `judge.legal`, and the two read DIFFERENT
+FIELDS: `tt` against the structured array. It asks the shared reader now.
+The first draft of that de-duplication asked about the grant ALONE and so
+refused a blue INSTANT set in the arsenal — Frost Spike, out of her own
+deck — with *"is an attack"*: a lost line of play and a wrong message,
+out of a change that was otherwise pure. An instant needs no grant
+(CR 8.1.6); both reasons are asked, and it is drilled.
+
+**WHAT IS DELIBERATELY LEFT UNREAD, and why each is honest:**
+
+| | |
+|---|---|
+| Snapback ×3 | *"if you have played another WIZARD non-attack action card this turn"* needs a class-aware turn history; `hist` counts non-attacks but records no class. Reading it as the bare count would grant the window off any non-attack at all — stronger than the card's own text |
+| Stir the Aetherwinds ×3 | grants to a FUTURE card, which is the fourth qualified single-shot grant (`buffQ`, `gaNextQ`, `costOff`) and needs a side field and a symmetry-ledger move — its own diff |
+| Ice Eternal | the pool's only X-cost card, and Ice Fusion. Unchanged, and still honestly refused |
+
+Measured: **326 → 329 full, 66 → 64 part, 13 → 12 none** — Cindering
+Foresight ×3 part → full, Astral Etchings none → part, and the diff was
+read card by card rather than inferred from the totals. 1378 → 1390
+drills, 0 failed, 0 skipped. Fairness clean, 0 UNFAIR. **18 sabotages,
+all biting** — including two that found real defects in this version's
+own work: a non-attack gate whose fixture was a RED attack (so the blue
+gate refused it and the drill passed against a sabotaged engine), and a
+source guard with no word boundary, which a rename walked straight
+through.
+
 ---
 
 ## v3.35 — the split-card dive: a pitch sheet with no exit, and a lost line of play

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.35 · PHASE C · BRAVO IS COMPLETE
+# Handoff — Dawnblade, at v3.36 · PHASE C · IYSLANDER ACTS ON YOUR TURN
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,19 +12,47 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1378 drills**
+> the card semantics run on both boards.** `npm test` is **1390 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.35: coverage **326 full / 66 part / 13 none**, fairness
+> Current at v3.36: coverage **329 full / 64 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
-> **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Iyslander and Viserai are
-> complete. **Briar is in progress**: her hero ability is BUILT (v3.21) and
+> **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai and Bravo are
+> complete; **Iyslander's hero ability landed in v3.36** (see below). **Briar is in progress**: her hero ability is BUILT (v3.21) and
 > her 8 `part` cards are the remaining work — see below.
 >
+> ### v3.36 — IYSLANDER'S HERO ABILITY WAS HALF-BUILT, AND THIS FILE SAID SHE WAS DONE
+>
+> She was listed complete because her CARDS were. Her HERO was not:
+> **clause 1 was trainer-only** and the table refused it by name —
+> *"Aether Icevein is an action — it cannot be played during an
+> instant-speed window"* — and **clause 2 was a closure in `Battle`**, so
+> the table created no Frostbite when she played an Ice card on your turn.
+> A hero is finished when the ABILITY runs on both boards, not when the
+> deck parses. Check the other "complete" heroes against that bar.
+>
+> **The mechanic was worth more than the hero.** 14 pool records print
+> "as though it were an instant" across three heroes and not one was read.
+> `parser.playsAsInstant` is the one reader; see CLAUDE.md's "A SPEED
+> GRANT IS A WINDOW, AND THE WINDOW PAYS THE COST".
+>
+> **STILL OPEN ON HER, and each is a recorded decision:**
+>
+> | card | why it stays |
+> |---|---|
+> | Stir the Aetherwinds x3 | grants to a FUTURE card — the FOURTH qualified single-shot grant beside `buffQ` / `gaNextQ` / `costOff`. Needs a side field, so `SIDE_FIELDS` + `wire.js` + `report.js`'s `seat()` (v3.29's three places) and a symmetry-ledger move. **This is the next obvious build and it is hers.** |
+> | Snapback x3 (Blaze) | needs a CLASS-AWARE turn history — `hist` counts non-attacks and records no class. Building it would also unblock Quick Clicks' "played a Nimblism this turn" |
+> | Ice Eternal | X-cost + Ice Fusion. Unchanged, still honestly refused |
+>
+> **A MANUAL PRE-SHIP STEP EXISTS NOW.** Compile both `text/babel` blocks
+> with `@babel/standalone` after any `index.html` edit — bracket balance
+> is not a parse, and v2.27 shipped a page that was balanced and broken.
+> Deliberately not a drill: no dependencies, so a fresh clone stays green.
+
 > ### Viserai — DONE at v3.20
 >
 > **Sigil of Silphidae is built** (`notSelf` + `notUid`, and the

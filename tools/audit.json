@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-23T19:01:52.630Z",
- "appVer": "3.35",
+ "generated": "2026-08-23T21:05:37.922Z",
+ "appVer": "3.36",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 326,
-  "part": 66,
-  "none": 13
+  "full": 329,
+  "part": 64,
+  "none": 12
  },
  "heroes": {
   "kayo": {
@@ -8623,7 +8623,7 @@
    "mentions": [
     "ward"
    ],
-   "tier": "none",
+   "tier": "part",
    "approx": false,
    "playable": false,
    "clauses": [
@@ -8633,12 +8633,11 @@
     },
     {
      "t": "If you control a Spectral Shield, you may play this as though it were an instant.",
-     "st": "skip"
+     "st": "run"
     }
    ],
    "skipped": [
-    "Put three +1{p} counters on target aura with ward you control.",
-    "If you control a Spectral Shield, you may play this as though it were an instant."
+    "Put three +1{p} counters on target aura with ward you control."
    ],
    "weaponCost": null,
    "eqAbility": null,
@@ -10451,13 +10450,13 @@
    "mentions": [
     "opt"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "If it's not your turn, you may play this as though it were an instant.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "The next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.",
@@ -10468,9 +10467,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's not your turn, you may play this as though it were an instant."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If it's not your turn, you may play this as though it were an instant.\nThe next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.\nOpt 3",
@@ -10656,13 +10653,13 @@
    "mentions": [
     "opt"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "If it's not your turn, you may play this as though it were an instant.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "The next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.",
@@ -10673,9 +10670,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's not your turn, you may play this as though it were an instant."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If it's not your turn, you may play this as though it were an instant.\nThe next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.\nOpt 2",
@@ -10834,13 +10829,13 @@
    "mentions": [
     "opt"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "If it's not your turn, you may play this as though it were an instant.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "The next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.",
@@ -10851,9 +10846,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's not your turn, you may play this as though it were an instant."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If it's not your turn, you may play this as though it were an instant.\nThe next card you play this turn with an arcane damage effect, instead deals that much arcane damage plus 1.\nOpt 1",

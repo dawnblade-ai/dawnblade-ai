@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.35"; /* v3.35 — reported from a real table: the split-card declaration opened a PITCH sheet, because the board demuxed `pending` by BLACKLIST and treated every kind that was not boost as a payment; it is a whitelist now and judge exports PENDING_KINDS so a kind with no branch is a drill failure rather than a screen with no exit. The dive also found the INSTANT half unplayable at instant speed — the declared half decides the window now, without reopening v2.39's free action point — and split cards are turned counter-clockwise to be read. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.36"; /* v3.36 — Iyslander: 14 pool records print "as though it were an instant" and NOT ONE was read, across three heroes; the speed grant is one reader now (`playsAsInstant`), pure and asked by both boards, and her hero clause 1 went from trainer-only to live at the table — where it had been refused as "an action ... during an instant-speed window" for every version she has existed. Widening the window in `legal` alone put her on a NEGATIVE action point, so `windowsNow` is the one body both the legality and the charge ask. Clause 2 (the Ice trigger) left `Battle` for `effects.js`, and `it's` is levelled to `it is` because the database prints BOTH TODAY. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3094,10 +3094,35 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        action phase. So the gate is "not your turn and you hold priority",
        and the action point is deliberately never charged (CR 8.1.6). */
     const onFoeTurn = (s.mode==="block" && s.bphase==="react") || s.mode==="foeturn";
-    if(!onFoeTurn || !act(s).arsenal || !bAct(s).arsenalInstant) return s;
+    if(!onFoeTurn || !act(s).arsenal) return s;
     const c = act(s).arsenal; const fx = fxParse(c);
-    if(isAttack(c)) return L(s, `${c.name} is an attack — her ability frees blue non-attacks only.`);
-    if((c.pitch||0) < 3) return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
+    /* ONE READER, BOTH BOARDS (v3.36). These two lines were a hand-rolled
+       copy of her printed line — `isAttack` (which reads `tt`) plus a
+       pitch test — sitting beside the table's copy in `judge.legal`. Two
+       descriptions of one rule that can disagree about a card is the
+       no-mirror hazard, and here they read DIFFERENT FIELDS: the shared
+       reader asks `isNonAtkActionCard`, which reads the structured array
+       (v2.44's ruling), so it is the one that is right where the two
+       differ. The refusal still names which word of the line refused.
+
+       AN INSTANT NEEDS NO GRANT (CR 8.1.6), and asking only about the
+       grant would have LOST a line of play the trainer already had: her
+       line frees "blue non-attack ACTION CARDS", so a blue Instant set in
+       the arsenal — Frost Spike, out of her own deck — is not covered by
+       it and is playable here on its own printed type. Driven at the
+       table, `judge.legal` allows exactly that for any hero. Two reasons,
+       one route, and the refusals below are reached only when neither
+       holds. */
+    const _mayInstant = isInstantT(c.tt||"")
+      || DawnParser.playsAsInstant(c, {zone:"arsenal", notYourTurn:true,
+                                       board:act(s).board,
+                                       arsenalInstant:bAct(s).arsenalInstant});
+    if(!_mayInstant){
+      if(!bAct(s).arsenalInstant) return s;
+      if(!DawnParser.isNonAtkActionCard(c))
+        return L(s, `${c.name} is an attack — her ability frees blue non-attack action cards only.`);
+      return L(s, `${c.name} isn't blue — only blue non-attacks may strike at instant speed.`);
+    }
     const cost = c.cost||0;
     let n = autoPitch(s, cost);
     if(!n) return L(s, `${c.name} costs ${cost} — not enough in hand to pitch for it.`);
@@ -3117,19 +3142,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      playArsenalInstant, which made it a property of one route rather than
      of the event — an Ice instant played from hand triggered nothing at
      all. The event is what the card prints, so every route that plays a
-     card on their turn asks here. */
-  function foeTurnIce(n, c){
-    if(!bAct(n).iceFrostbite || !/ice/i.test(c.tt||"")) return n;
-    /* THE ONE HARDCODED `frost++` IN THE PROJECT USED TO LIVE HERE (v2.74).
-       It incremented a counter nothing read — not `effCost`, not
-       effects.js — so Iyslander's second clause produced a number on the
-       hero row and no rule. It mints a real token through the SAME op
-       every other card uses, which is what makes it countable by "3 or
-       more auras", destroyable by "destroy an aura", and taxing through
-       `frostCount`. Resolving the token from the database rather than
-       describing it here is the golden rule at the hero-ability level. */
-    return runOps(n, [["token","Frostbite",1,"foe",null]], `${act(n).name}'s winter`);
-  }
+     card on their turn asks here.
+
+     THE BODY IS `effects.js`'s AS OF v3.36. It was a closure in this file,
+     so the TABLE had no second clause at all; moving it made her hero
+     ability one rule instead of one board's rule, and `execute` picked up
+     the ordinary play routes for free. The two routes below still call it
+     because they reach `runOps` directly and never pass through
+     `execute` — see the shared body's comment. */
+  const foeTurnIce = _EFX.foeTurnIce;
   /* THE PLAYER'S WINDOW ON THE OPPONENT'S TURN (v2.71). Instants only, and
      `speedAllowed` is asked rather than restated — five hand-rolled copies
      of "may this be played here" is exactly what `rxAllowed` was extracted

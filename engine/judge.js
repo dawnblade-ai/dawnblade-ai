@@ -679,7 +679,7 @@ function legal(g, a, seat){
       return c.name + " cannot be played from your " + zone;
     const win = P.speedAllowed(g, seat);
     if(!win.length) return "no window is open for you";
-    return playableWhy(g, seat, c, win) || targetWhy(g, seat, c, a.target);
+    return playableWhy(g, seat, c, win, zone) || targetWhy(g, seat, c, a.target);
   }
 
   if(a.t === "activate"){
@@ -785,7 +785,7 @@ function legal(g, a, seat){
    that looks playable and does nothing when tapped is the failure mode
    this codebase cares most about, and it is caused by a second copy of
    this test drifting from the first. There is one copy. */
-function playableWhy(g, seat, c, win){
+function playableWhy(g, seat, c, win, zone){
   win = win || P.speedAllowed(g, seat);
   const sd = at(g, seat);
 
@@ -810,7 +810,20 @@ function playableWhy(g, seat, c, win){
      Den of the Spider is legal in the action phase AND in the defence
      window, and a reader that picks one type and stops refuses it half
      the time. */
-  const mine = c._instant ? ["instant"] : cardWindows(c, g._half);
+  /* A SPEED GRANT WIDENS THE WINDOW (v3.36), and `windowsNow` is the one
+     body that says so — see its comment for why widening it here alone
+     put Iyslander on a negative action point. The ACTION POINT then
+     follows for free: `costsAP` charges one only in the `action` window,
+     so a card played through the grant is charged nothing, which is the
+     recorded ruling (CR 8.1.6) rather than a special case bolted on.
+
+     THE ZONE IS THE CALLER'S ANSWER, like the wall and the incoming
+     attack: Iyslander's grant is over her ARSENAL specifically, and by
+     the time this is asked the card is just a card. A caller that says
+     nothing gets "hand", which denies her grant — weaker than printed and
+     visible, where the other direction frees a card from a zone the hero
+     never named. A drill checks every call site names its zone. */
+  const mine = windowsNow(g, seat, c, g._half, zone);
   const open = win.filter(w => mine.indexOf(w) >= 0);
 
   if(!open.length){
@@ -1324,7 +1337,7 @@ function doPlay(g, a, seat){
      through the payment. It matters for a dual-typed card: Den of the
      Spider costs an action point as an Action and none as a Defense
      Reaction, and the answer must not change while the player pitches. */
-  const window = playWindowFor(g, seat, card, g._half);
+  const window = playWindowFor(g, seat, card, g._half, zone);
 
   /* PITCHING IS ON DEMAND, NEVER PROACTIVE (ruling, 2026-08-01): you
      cannot pitch to bank resources. The pool is filled only when a cost
@@ -1384,9 +1397,37 @@ function cardWindows(card, half){
   return union;
 }
 
-function playWindowFor(g, seat, card, half){
+/* ---- THE WINDOWS THIS CARD MAY BE PLAYED IN, RIGHT NOW (v3.36) ------
+   `cardWindows` answers from the card's TYPE. A speed grant — "you may
+   play this as though it were an instant" — adds one the type does not
+   carry, and it depends on the GAME (whose turn it is, the board, the
+   zone), so it cannot live in the type reader.
+
+   IT IS ONE BODY BECAUSE TWO CALLERS ASK IT AND THEY MUST NOT DISAGREE.
+   `playableWhy` decides whether the play is legal; `playWindowFor`
+   decides which window it happens in, and therefore whether an action
+   point is charged. Widened in the first and not the second, the play was
+   ALLOWED in the instant window and then CHARGED as an action: driven,
+   Iyslander went to `ap: -1`, which is `NEGATIVE-AP` — CR 4.4.3e, points
+   are lost and never owed. That is also the `legal`/`reduce` agreement
+   `fuzz.test.js` exists to hold. */
+function windowsNow(g, seat, card, half, zone){
+  if(card && card._instant) return ["instant"];
+  const base = cardWindows(card, half);
+  if(base.indexOf("instant") >= 0) return base;
+  const grant = PR.playsAsInstant(card, {
+    notYourTurn:    g.turnPlayer !== seat,
+    board:          at(g, seat).board,
+    zone:           zone || "hand",
+    arsenalInstant: !!bOf(g, seat).arsenalInstant
+  });
+  return grant ? base.concat(["instant"]) : base;
+}
+
+function playWindowFor(g, seat, card, half, zone){
   if(card && card._instant) return "instant";
-  const open = P.speedAllowed(g, seat).filter(w => cardWindows(card, half).indexOf(w) >= 0);
+  const mine = windowsNow(g, seat, card, half, zone);
+  const open = P.speedAllowed(g, seat).filter(w => mine.indexOf(w) >= 0);
   if(!open.length) return null;
   return open.find(w => !PR.splitCostsAP(card, half, w)) || open[0];
 }
