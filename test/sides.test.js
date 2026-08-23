@@ -316,10 +316,18 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      It is not a per-token counter and it is not derivable from the
      board: the whole point is that it survives the moment `hist` is
      cleared for the incoming seat (CR 4.4.4), which is precisely when
-     such an effect has to still be there. */
-  assert.equal(gap.fields, 40);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29 */
-  assert.equal(gap.player.length, 40);
-  assert.equal(gap.opponent.length, 40);
+     such an effect has to still be there.
+
+     40 -> 41 AT v3.31, and it is `buffQ`'s twin. "Your next attack WITH 3
+     OR LESS BASE {p} gets go again" was granted to any attack at all,
+     because `gaNext` is a bare boolean spent by whatever comes next —
+     right for the unqualified wording and strictly stronger than printed
+     for the four cards that name a target. `gaNextQ` holds the qualified
+     grants so an unmatched one WAITS rather than being spent, exactly as
+     `buffQ` does beside `buffNext`. */
+  assert.equal(gap.fields, 41);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31 */
+  assert.equal(gap.player.length, 41);
+  assert.equal(gap.opponent.length, 41);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -329,8 +337,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 40);   /* -frost v2.74, -rot -fra v3.09, +nextTurn v3.29 */
-  assert.equal(gap.nativeForOpponent.length, 40);
+  assert.equal(gap.nativeForPlayer.length, 41);   /* -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31 */
+  assert.equal(gap.nativeForOpponent.length, 41);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

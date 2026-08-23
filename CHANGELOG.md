@@ -9,6 +9,119 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.31 — the restriction after the subject
+
+> **Target attack action card WITH COST 1 OR LESS gets +3{p}.**
+
+Every reader of that family captured the words *before* the word
+"attack" and let `[^.]*` swallow everything after it. **Thirteen pool
+cards printed a restriction there and applied to any attack at all.**
+Lightning Press pumped a **cost-3** attack where it prints "cost 1 or
+less" — driven, confirmed, not inferred.
+
+**All of them read `tier: full`,** because the clause *was* consumed.
+Coverage counts consumption, never faithfulness. And the fairness sweep
+was blind for the same reason the parser was: its captures stopped at the
+same word.
+
+### The five atoms the tail prints
+
+| printed | read as | cards |
+|---|---|---|
+| `action card` | `aac` — `isAtkActionCard` | Prime the Crowd, Rise from the Ashes, Take Aim, Weave Lightning, Nimblism, Scout the Periphery, Mauvrion Skies |
+| `with stealth` | `kw` — `printedKw` | Spike with Bloodrot, Stains of the Redback, Orb-Weaver Spinneret |
+| `with cost N or less/more` | `costLe` / `costGe` | Lightning Press, Nimblism, Pummel |
+| `with N or less base {p}` | `powLe` | Nip at the Heels, Trot Along |
+| `you play from arsenal` · `you boost` | `from` / `boosted` | Scout the Periphery, Re-Charge!, Teklo Trebuchet 2000 |
+
+**A window is not a restriction.** "this turn" and "this combat chain"
+say how long a buff waits, never which attack it may land on, so they are
+consumed and dropped rather than refused.
+
+**An unreadable tail refuses the whole clause.** The atoms are stripped in
+turn and anything left over means the restriction is not understood —
+`attackQual` returns `false`, which is a different answer from `null`
+("nothing restricts this"). Collapsing those two is how the bug shipped.
+Refusing is weaker than printed and visible; pumping an illegal target is
+the direction that steals games. Same call v2.04 made for unpayable costs.
+
+### "NON-ATTACK" CONTAINS "ATTACK"
+
+Mage Master Boots prints *"the next **non-attack action card** you play
+this turn gets go again"*, and the `gaNext` rule tested for the bare
+substring — so the grant went to the next **attack**. Go again keeps your
+action point, which makes it the most valuable keyword in the game to
+hand to the wrong card. It is the Reaction-contains-action trap (v2.44) on
+the worst possible payload.
+
+`gaNext` was also a bare boolean, spent by whatever came next — right for
+the unqualified wording and strictly stronger than printed for the four
+cards that name a target. **`gaNextQ` is its `buffQ`**: a qualified grant
+that does not match is **not spent**, it waits for the card it names
+(v2.30's rule). The symmetry ledger moved 40 → 41, deliberately.
+
+**One taker, two branches.** An attack settles on the combat chain and a
+non-attack settles at the action point, and Mage Master Boots grants to a
+non-attack — so a taker in the attack branch alone would have built half
+the rule.
+
+### One shape, one matcher, one namer
+
+The qualifier used to BE an array of word groups. The tail atoms have
+nowhere to live in an array, and an array that sometimes carries extra
+properties is the same-name-different-meaning trap `KNOWN_COLLISIONS`
+polices — so it is one object, `{g, aac, nonAtk, kw, costLe, costGe,
+powLe, powGe, from, boosted}`.
+
+- **`qualMatches` is the one matcher**, and a bare array now matches
+  **nothing**: every field test passes vacuously on one, so a stale caller
+  would silently get "matches everything". It refuses instead, and does
+  not throw — `reduce` is fed by JSON off a wire, and one bad qualifier
+  must cost a buff, never a session.
+- **`qualLabel` is the one namer.** Five sites formatted the qualifier by
+  hand as `q.map(g => g.join(" ")).join(" or ")` — a second reader of the
+  shape, and it threw the moment the shape gained a field.
+- **Two atoms are about the PLAY, not the card**, so `qualMatches` takes
+  them from the caller: an absent answer is "no", and the buff waits. The
+  same split `defendValue` keeps.
+- **A card printing no cost satisfies no cost comparison.** Equipment,
+  Weapons and Blocks carry `cost: null`; reading that as 0 hands every
+  "cost 1 or less" buff to a weapon swing.
+- **Stealth asks `printedKw`, per the 2026-07-25 ruling** that it "does
+  nothing on its own — other cards check to see if an attack HAS stealth".
+  Seven pool cards carry it on its own line and seven only name it in a
+  sentence; `hasKw` says yes to both.
+
+### The sweep learned to see it, and was verified by sabotage
+
+Check **3c** reads the grant CLAUSE (not the whole card) and asks whether
+the parse carries each atom the text names. Reintroducing the three halves
+of the bug makes it report **10 / 13 / 3** findings. Two things it had to
+learn not to say:
+
+- *"If it's **defended by** an attack action card"* (Agile Engagement) is a
+  condition about the wall, not a restriction on the target.
+- A clause behind an **activation cost** goes to the equipment reader and
+  is filed a noop, so nothing is granted — Mage Master Boots and Stalker's
+  Steps are the audit's business, and flagging them would be the tool
+  reporting its own model rather than the engine.
+
+### A drill that was passing because of the bug
+
+`test/reactions.test.js` used Stains of the Redback as its *"+3, no
+qualifier"* fixture. The card prints *"target attack **with stealth**"*;
+the fixture was only valid while the restriction was being dropped. It
+drives a real stealth attack now, with a vanilla one as the control.
+
+Pummel's second mode became selectable for the same reason, so the modal
+refusal drill needed a fixture that clears **neither** printed line.
+
+**Measured:** coverage unchanged at **318 full / 72 part / 15 none** —
+which is the point: the clauses were already consumed. What changed is
+that they are now true. 1284 → **1305 drills**, 0 skipped. Fairness clean.
+
+---
+
 ## v3.30 — a restriction is not a debuff
 
 v3.29 built the schedule and two of the five crush riders that ride on

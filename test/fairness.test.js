@@ -33,6 +33,62 @@ test("the sweep is CLEAN on the current engine", () => {
     r.findings.map(f=>`  [${f.code}] ${f.name} — ${f.why}`).join("\n"));
 });
 
+/* ---- v3.31: THE RESTRICTION AFTER THE SUBJECT ----------------------
+   Check 3c. Checks 3 and 3b read the words BEFORE "attack", which is the
+   only place a restriction could live while `attackQual` took one
+   argument — so thirteen pool cards dropped a printed restriction with
+   the sweep reporting CLEAN, exactly as eleven did before 3b existed.
+
+   A CHECK IS ONLY WORTH ADDING IF IT WOULD HAVE SHOUTED, so the three
+   halves of the bug are reintroduced here rather than argued about. The
+   counts are pinned: a check that quietly stopped matching would
+   otherwise pass by finding nothing, which is this project's most
+   frequent tool defect. */
+test("3c exists, and each atom it names is one the parser can carry", () => {
+  /* The sweep runs as a subprocess over the real pool, so a fixture card
+     cannot reach it. What IS pinnable is that the check is there and that
+     its vocabulary matches the parser's — a check naming an atom nothing
+     produces would be quiet forever and look exactly like a clean sweep.
+
+     REINTRODUCING THE BUG MAKES IT REPORT 10 / 13 / 3 findings for the
+     three halves (target-attack tail, buffNext tail, gaNext qualifier).
+     Verified by sabotage, not assumed. */
+  const src = require("fs").readFileSync(
+    require("path").join(ROOT, "tools", "fairness.js"), "utf8");
+  const i = src.indexOf("3c. A RESTRICTION IN THE TAIL");
+  assert.ok(i > 0, "check 3c moved — re-anchor this drill");
+  const body = src.slice(i, src.indexOf("3b. A MODAL CHOICE", i));
+  assert.ok(body.length > 800, "slice too small to be the check");
+  for(const atom of ["aac", "kw", "costLe", "costGe", "powLe", "powGe", "from", "boosted"])
+    assert.ok(body.indexOf('"' + atom + '"') > 0, "3c must know about " + atom);
+  /* AND EVERY ONE OF THOSE IS A KEY THE PARSER ACTUALLY EMITS. */
+  const emitted = new Set();
+  for(const t of [
+    "Target attack action card with cost 1 or less gets +3{p}.",
+    "Target attack action card with cost 2 or more gets +3{p}.",
+    "Target attack with 3 or less base {p} gets +1{p}.",
+    "Target attack with 3 or more base {p} gets +1{p}.",
+    "Target attack with stealth gets +3{p}.",
+    "Your next attack action card you play from arsenal this turn gets +2{p}.",
+    "Your next attack you boost this turn gets +4{p}."
+  ]) for(const k of Object.keys(P.classifyClause(t).ops[0][2])) emitted.add(k);
+  for(const atom of ["aac", "kw", "costLe", "costGe", "powLe", "powGe", "from", "boosted"])
+    assert.ok(emitted.has(atom), "the parser must emit " + atom + " or 3c guards nothing");
+});
+
+test("3c: a condition about the DEFENDER is not a target restriction", () => {
+  /* Agile Engagement prints "if it's DEFENDED BY an attack action card".
+     A whole-text scan read that as a dropped restriction and accused a
+     card that is read correctly — the tool's model going stale, which
+     looks identical to a real finding in a report (v3.12's lesson). It is
+     a pool card, so the CLEAN drill above is what holds the line; this
+     pins the parser half, which is what makes the card innocent. */
+  const fx = P.fxParse({name: "FS defended-by", pitch: 1, tt: "Warrior Attack Reaction",
+    def: 3, cost: 1,
+    tx: "Target Warrior attack gets +3{p}. If it's defended by an attack action card, create an Agility token."});
+  assert.deepEqual(fx.selfQ, {g: [["warrior"]]}, "the TARGET restriction is the head only");
+});
+
 /* ---- each check has a real card behind it -------------------------- */
 
 test("go again stays gated — the v2.31 class", () => {
@@ -96,7 +152,7 @@ test("a gated pump is not ALSO granted unconditionally — the v2.66 class", () 
     "from their hand this chain link, target weapon attack gains +3{p}."});
   assert.equal(fx.self, 0, "the pump belongs to the condition, and only to it");
   assert.equal(fx.conds.length, 1);
-  assert.deepEqual(fx.conds[0].op, ["self", 3, [["weapon"]]],
+  assert.deepEqual(fx.conds[0].op, ["self", 3, {g: [["weapon"]]}],
     "and it keeps the printed 'weapon' target restriction (v2.69)");
 });
 

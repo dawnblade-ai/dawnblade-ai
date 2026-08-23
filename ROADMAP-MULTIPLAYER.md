@@ -182,6 +182,42 @@ and it validates the entire rules core before any networking risk is added.
 
 ---
 
+## Phase D — the broadcast view (recorded 2026-08-23, not scheduled)
+
+From a Calling Hamburg stream the user was watching: two hero panels with
+records and flags, a top-down table with both boards laid out, a life
+counter between them, the card currently being resolved shown large at the
+side, a turn/round/clock strip — and a chat rail beside it.
+
+**Why it is worth writing down rather than doing.** Almost every piece of
+data on that screen already exists in this engine: `report.js` names every
+zone for both seats, `priority.js` owns turn/phase/step, `pend` holds the
+card being resolved, and the table already renders both boards. What is
+missing is a **spectator seat** — a third connection that receives state
+and sends nothing — and that is a Phase C question, not a rendering one:
+today both peers hold full state including the opponent's hand, so a
+spectator view built now would be a cheat panel wearing a broadcast coat.
+
+So the honest order is:
+
+1. **Phase C's authoritative state first.** A spectator gets a redacted
+   view or it gets nothing. Same rule that gates hidden information.
+2. **Then the layout**, which is mostly a third arrangement of components
+   the table already has (`ArmorGrid`, `InPlayRow`, `GravePane`,
+   `CardFrame`) rather than new drawing code.
+3. **Then chat**, which is one more `{ch:"chat"}` on the existing demuxed
+   channel — the lobby/net split already proved that seam.
+4. **Then, maybe, 3D.** Animated cards, hands, webcams or avatars. This is
+   the only item that is genuinely new engineering, and it is the only one
+   that risks the no-build-step rule — a WebGL library that ships UMD and
+   loads from a CDN keeps it (the PeerJS-over-Trystero precedent); an
+   ESM-only one does not. **Pick on that basis, not on features.**
+
+**None of this is a card.** It does not compete with Phase C's heroes for
+a session; it competes with the ladder.
+
+---
+
 ## What not to do
 
 - **Do not build a deck-piloting AI.** Decided 2026-07-25 and still right. The

@@ -620,7 +620,7 @@ function makeEffects(ctx){
            handed it over. */
         if(op[2] || op[3]){
           actMut(n).buffQ = [...(act(n).buffQ||[]), {amt:v, q:op[2]||null, rider:op[3]||null}];
-          const who = op[2] ? op[2].map(g=>g.join(" ")).join(" or ")+" attack" : "attack";
+          const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
           n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
@@ -635,7 +635,18 @@ function makeEffects(ctx){
         actMut(n).gear = act(n).gear.map(x => x.uid===v ? {...x, destroyed:true} : x);
         n=L(n,`${g2.name} is destroyed — the cost is paid.`);
       }
-      else if(k==="gaNext"){ actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
+      /* A QUALIFIED "your next X gets go again" waits for an X (v3.31).
+         `gaNext` is a bare boolean spent by whatever comes next, which is
+         right for the unqualified wording and strictly stronger than
+         printed for the four cards that name a target — go again keeps
+         your action point, so it is the most valuable keyword in the game
+         to hand to the wrong card. Same split `buffNext` / `buffQ` keep. */
+      else if(k==="gaNext"){
+        const gq = op[1] || null;
+        if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), gq];
+                n=L(n,`Your next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again.`); }
+        else  { actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
+      }
       /* A COUNT, NOT A FLAG (v3.10). Mauvrion Skies prints 3 Runechants at
          red, 2 at yellow and 1 at blue; this was a boolean, so it could
          not have carried 3 even when it fired — and it only ever fired on
@@ -1352,16 +1363,25 @@ function makeEffects(ctx){
       if(pb){ const add = pb*(n.boostChain||0);
         n._condSelf = (n._condSelf||0)+add;
         n = L(n, `${card.name}: ${n.boostChain||0} boost${(n.boostChain||0)===1?"":"es"} on this chain — +${add} power.`); }
-      /* qualified buffs only apply to an attack whose printed type line
-         matches — qualMatches reads fields, never rules text */
-      const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card)).reduce((a2,b)=>a2+b.amt,0);
-      const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card));
+      /* qualified buffs only apply to an attack the printed restriction
+         allows — qualMatches reads printed fields and printed keyword
+         lines, never free rules text.
+
+         TWO OF THE ATOMS ARE ABOUT THE PLAY, NOT THE CARD (v3.31), so
+         they are handed in from here: Scout the Periphery restricts to an
+         attack "you play FROM ARSENAL" and Re-Charge! to one "YOU BOOST",
+         and neither is knowable from the card alone. A caller that does
+         not say answers no and the buff waits — the same direction
+         `defendValue` takes with an absent condition. */
+      const qCtx = {from, boosted: isBoostPlay(n, card)};
+      const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card, qCtx)).reduce((a2,b)=>a2+b.amt,0);
+      const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card, qCtx));
       /* AND ANY ABILITY THOSE BUFFS GRANTED comes with them. Warrior's
          Valor's `and "When this hits, it gets go again."` belongs to the
          attack that collects the pump, so it is gathered here, from the
          entries that actually matched, and joins this attack's own on-hit
          ops below. A buff that did NOT match keeps its rider and waits. */
-      const qRider = (act(n).buffQ||[]).filter(b=>b.rider && qualMatches(b.q, card))
+      const qRider = (act(n).buffQ||[]).filter(b=>b.rider && qualMatches(b.q, card, qCtx))
         .reduce((a2,b)=>a2.concat(b.rider.onHit||[]), []);
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* what a face-up arsenal trigger stamped on this card, and only for
@@ -1422,6 +1442,8 @@ function makeEffects(ctx){
            rule CLAUDE.md spends a section on, in the file that should be
            the last place to break it. */
       if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, "The rite empowers this swing — go again."); }
+      { const _gq = takeGaNext(n, card, qCtx);
+        if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`); } }
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
@@ -1443,7 +1465,7 @@ function makeEffects(ctx){
         n=L(n,`${card.name}: no additional-cost discard to feed — bonus skips.`);
       }
       let declNote = "";
-      if(n._doBoost && printedKw(card,"boost") && act(n).deck.length){
+      if(isBoostPlay(n, card)){
         const top = act(n).deck[0];
         actMut(n).deck = act(n).deck.slice(1); actMut(n).banish = [...act(n).banish, top];
         n.boostChain = (n.boostChain||0)+1;
@@ -1768,6 +1790,12 @@ function makeEffects(ctx){
                so for an action it is spend-then-gain (the familiar "kept")
                and for an instant it is a genuine +1.
        For every action card this is the identical arithmetic to before. */
+    /* THE NON-ATTACK HALF of the same grant. Mage Master Boots prints
+       "the next NON-ATTACK action card you play this turn gets go again";
+       nothing here ever asked, and the old parser handed it to the next
+       attack instead. */
+    { const _gq = takeGaNext(n, card, {from});
+      if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`); } }
     const apCost = costsAP(card, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
@@ -2139,9 +2167,9 @@ function makeEffects(ctx){
     if(!pend || !pend.card) return {game: s, pump: 0, why: c.name + " has no attack to react to."};
     /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER. */
     if(fx.selfQ && !qualMatches(fx.selfQ, pend.card)){
-      const want = fx.selfQ.map(g => g.join(" ")).join(" or ");
+      const want = P.qualLabel(fx.selfQ);
       return {game: s, pump: 0,
-              why: `${c.name} targets a ${want} attack — ${pend.card.name} isn't one.`};
+              why: `${c.name} targets ${want} — ${pend.card.name} isn't one.`};
     }
     let n = {...s};
     /* A MODAL REACTION: THE BOARD PICKS THE MODE (v3.12). "Choose 1;" was
@@ -2205,8 +2233,8 @@ function makeEffects(ctx){
         n.pend = {...n.pend, ga: true};
         n = L(n, `${c.name}: ${n.pend.card.name} goes again.`);
       } else {
-        const want = (fx.gaQ || []).map(g => g.join(" ")).join(" or ");
-        n = L(n, `${c.name} grants go again to a ${want} attack — ${n.pend.card.name} isn't one.`);
+        const want = P.qualLabel(fx.gaQ);
+        n = L(n, `${c.name} grants go again to ${want} — ${n.pend.card.name} isn't one.`);
       }
     }
     n = runOps(n, (eff.ops || []).filter(op => op[0] !== "buffNext"), c.name);
@@ -2232,6 +2260,28 @@ function makeEffects(ctx){
     if(!P.nextTurnHas(act(n), "noPump")) return total;
     return Math.min(total, card.power || 0);
   };
+
+  /* SPEND A QUALIFIED NEXT-GO-AGAIN, and only on a play that MATCHES.
+     One taker, because two branches of `execute` reach it — an attack
+     settles on the chain and a non-attack settles at the action point —
+     and Mage Master Boots grants it to a NON-attack, so a taker in the
+     attack branch alone would have built half the rule. A grant that does
+     not match is NOT spent: it waits for the card it names (v2.30). */
+  const takeGaNext = (n, card, ctx) => {
+    const q = act(n).gaNextQ || [];
+    const i = q.findIndex(x => qualMatches(x, card, ctx));
+    if(i < 0) return null;
+    actMut(n).gaNextQ = q.slice(0, i).concat(q.slice(i + 1));
+    return q[i];
+  };
+
+  /* IS THIS PLAY A BOOST? (v3.31) One reader, because two sites ask it and
+     the answer decides a rule in both: the declaration pays the cost, and
+     a "your next attack YOU BOOST this turn" buff only lands on a play
+     that actually paid it. `printedKw` is the predicate — a card that
+     merely MENTIONS boost is not offered it (v2.84). */
+  const isBoostPlay = (n, card) =>
+    !!(n._doBoost && printedKw(card, "boost") && act(n).deck.length);
 
   const linkPumps = (s, info) => {
     let n = {...s};

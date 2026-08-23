@@ -71,7 +71,7 @@ test("classifyClause — op vocabulary", () => {
   /* The qualifier is CARRIED now. This line used to assert a bare
      [["buffNext",1]], which pinned the bug: a "weapon attack" buff was
      applied to any next attack at all. op[2] is the type-line matcher. */
-  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1,[["weapon"]]]]);
+  assert.deepEqual(cc("Your next weapon attack this turn gains +1 {p}.").ops, [["buffNext",1,{g:[["weapon"]]}]]);
   assert.deepEqual(cc("Your next attack this turn gains +1 {p}.").ops, [["buffNext",1]],
     "a genuinely unqualified buff must stay unqualified");
   assert.deepEqual(cc("This attack gains +3 {p}.").ops, [["self",3]]);
@@ -88,18 +88,30 @@ test("classifyClause — op vocabulary", () => {
 });
 
 test("classifyClause — gaNext, and the runechant rider carries its PRINTED count", () => {
-  assert.deepEqual(cc("The next attack action card you play this turn gains go again.").ops, [["gaNext"]]);
+  /* THE SUBJECT AND THE TAIL ARE BOTH READ (v3.31). "attack action card"
+     restricts the grant; the bare op means genuinely unrestricted. */
+  assert.deepEqual(cc("The next attack action card you play this turn gains go again.").ops,
+    [["gaNext", {aac: true}]]);
+  assert.deepEqual(cc("Your next attack this turn gets go again.").ops, [["gaNext"]],
+    "unqualified stays the bare op it has always been");
+  /* "NON-ATTACK" CONTAINS "ATTACK", and the old substring test handed Mage
+     Master Boots' grant to the next ATTACK — go again on the wrong card is
+     the most expensive keyword mistake available. */
+  assert.deepEqual(cc("The next non-attack action card you play this turn gets go again.").ops,
+    [["gaNext", {nonAtk: true}]], "and it must not also claim `aac` — nothing is both");
+  assert.deepEqual(cc("Your next attack with 3 or less base {p} this turn gets go again.").ops,
+    [["gaNext", {powLe: 3}]], "Trot Along's printed limit");
   /* v3.10: `runeHitNext` was a bare flag and the test for it was the
      literal string "create a runechant" — so of Mauvrion Skies' three
      pitches only the BLUE copy matched, and it forged one Runechant
      because one was all a boolean could say. Red prints 3 and yellow 2,
      and both forged nothing at all. */
   assert.deepEqual(cc("The next attack action card you play this turn gains go again, and if it hits create a Runechant.").ops,
-    [["gaNext"],["runeHitNext",1]]);
+    [["gaNext",{aac:true}],["runeHitNext",1]]);
   assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 3 Runechant tokens.\"").ops,
-    [["gaNext"],["runeHitNext",3]], "the printed count, not a flag");
+    [["gaNext",{aac:true,g:[["runeblade"]]}],["runeHitNext",3]], "the printed count, not a flag");
   assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 2 Runechant tokens.\"").ops,
-    [["gaNext"],["runeHitNext",2]]);
+    [["gaNext",{aac:true,g:[["runeblade"]]}],["runeHitNext",2]]);
 });
 
 test("classifyClause — soul: self-entombing and soul spend", () => {
@@ -522,16 +534,18 @@ test("classifyClause — target-attack pump folds into self (the reaction pump)"
      v2.30 fixed for buffNext, in the op that never got it. Asserted rather
      than tolerated: a bare ["self",N] here means the restriction is gone. */
   assert.deepEqual(cc("Target weapon attack gains +4{p}"),
-    {status:"run", ops:[["self",4,[["weapon"]]]]});
+    {status:"run", ops:[["self",4,{g:[["weapon"]]}]]});
   assert.deepEqual(cc("Target sword or dagger attack gains +3{p} and piercing 1."),
-    {status:"run", ops:[["self",3,[["sword"],["dagger"]]]]});
+    {status:"run", ops:[["self",3,{g:[["sword"],["dagger"]]}]]});
   assert.deepEqual(cc("Target attack gains +2{p}"),
     {status:"run", ops:[["self",2,null]]}, "an unqualified target really is unqualified");
 });
 
 test("classifyClause — 'the next ... attack' buffs, not just 'your next'", () => {
+  /* "ACTION CARD" IS PART OF THE TARGET (v3.31). The old reader let
+     `[^+]*` swallow it, so this buff landed on a weapon swing too. */
   assert.deepEqual(cc("The next attack action card you play this turn gets +4{p}"),
-    {status:"run", ops:[["buffNext",4]]});
+    {status:"run", ops:[["buffNext",4,{aac:true}]]});
   assert.deepEqual(cc("Your next attack this turn gets go again"),
     {status:"run", ops:[["gaNext"]]});
 });
@@ -609,7 +623,7 @@ test("rulings — transcend flips the card to Inner Chi", () => {
 test("rulings — reprise reads the dummy's hand blockers (live since v2.05)", () => {
   const r = cc("Reprise - If the defending hero has defended with a card from their hand this chain link, target weapon attack gains +3{p}.");
   assert.equal(r.cond, "reprise");
-  assert.deepEqual(r.ops, [["self",3,[["weapon"]]]],
+  assert.deepEqual(r.ops, [["self",3,{g:[["weapon"]]}]],
     "the reprise payload keeps its printed 'weapon' restriction (v2.69)");
   const r2 = cc("Reprise - If the defending hero has defended with a card from their hand this chain link, instead it gains +6{p}.");
   assert.deepEqual(r2.ops, [["self",6]]);
@@ -1006,8 +1020,8 @@ test("look-alike — the payload's SUBJECT differs between siblings", () => {
    =================================================================== */
 test("qualified buff — the qualifier is carried, not swallowed", () => {
   const q = t => P.classifyClause(t).ops[0];
-  assert.deepEqual(q("your next arrow attack this turn gets +3{p}"),  ["buffNext",3,[["arrow"]]]);
-  assert.deepEqual(q("your next runeblade attack this turn gets +3{p}"), ["buffNext",3,[["runeblade"]]]);
+  assert.deepEqual(q("your next arrow attack this turn gets +3{p}"),  ["buffNext",3,{g:[["arrow"]]}]);
+  assert.deepEqual(q("your next runeblade attack this turn gets +3{p}"), ["buffNext",3,{g:[["runeblade"]]}]);
   assert.deepEqual(q("your next attack this turn gets +3{p}"), ["buffNext",3],
     "an unqualified buff must stay unqualified — it really does hit anything");
 });
@@ -1016,9 +1030,13 @@ test("qualified buff — 'X or Y' is OR, 'X Y' is AND", () => {
   /* These two shapes look alike and mean different things. "Brute or
      Warrior" matches either type; "Pirate ally" needs BOTH words on the
      type line, because it means an ally that is also a Pirate. */
-  assert.deepEqual(P.attackQual(" Brute or Warrior "), [["brute"],["warrior"]]);
-  assert.deepEqual(P.attackQual(" Pirate ally "), [["pirate","ally"]]);
+  assert.deepEqual(P.attackQual(" Brute or Warrior "), {g:[["brute"],["warrior"]]});
+  assert.deepEqual(P.attackQual(" Pirate ally "), {g:[["pirate","ally"]]});
   assert.equal(P.attackQual(""), null, "no qualifier at all is null, not an empty matcher");
+  /* AND `false` IS NOT `null`. They are opposite answers: null says
+     nothing restricts this, false says something does and the reader
+     cannot say what — which makes the caller refuse the whole clause. */
+  assert.equal(P.attackQual("", " with something unreadable"), false);
 });
 
 test("qualified buff — matching reads the printed type line", () => {
@@ -1070,7 +1088,7 @@ test("double-count — a buffNext op suppresses the fallback self-pump", () => {
   const buffs = fx.ops.filter(o=>o[0]==="buffNext");
   assert.equal(buffs.length, 1, "and the buff is counted exactly once");
   assert.equal(buffs[0][1], 3);
-  assert.deepEqual(buffs[0][2], [["arrow"]], "with its qualifier");
+  assert.deepEqual(buffs[0][2], {g:[["arrow"]]}, "with its qualifier");
   /* op[3] is the GRANTED ABILITY (v2.69). This fixture happens to print one,
      and it used to be thrown away with the rest of the tail — the same shape
      that cost Warrior's Valor half its text on six physical cards. */

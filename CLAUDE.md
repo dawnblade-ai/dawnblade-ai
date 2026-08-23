@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.30
+**Current version:** v3.31
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1283 drills**.
+This is `node --test "test/*.test.js"` — currently **1305 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,58 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### THE RESTRICTION CAN COME AFTER THE SUBJECT (v3.31)
+
+> **Target attack action card WITH COST 1 OR LESS gets +3{p}.**
+
+Every reader of that family captured the words BEFORE "attack" and let
+`[^.]*` swallow the rest, so **13 pool cards applied to any attack at
+all** — Lightning Press pumped a cost-3 attack, driven and confirmed.
+**All read `tier: full`**, because the clause WAS consumed; and the
+fairness sweep was blind for the same reason the parser was — its
+captures stopped at the same word.
+
+Five atoms live in the tail: `action card` (`isAtkActionCard`), `with
+stealth` (`printedKw`, per the 2026-07-25 ruling), `with cost N or
+less/more`, `with N or less base {p}`, and the two about the PLAY —
+`you play from arsenal` and `you boost`.
+
+**A WINDOW IS NOT A RESTRICTION.** *"this turn"* and *"this combat
+chain"* say how long a buff waits, never which attack it may land on.
+
+**AN UNREADABLE TAIL REFUSES THE WHOLE CLAUSE.** `attackQual` returns
+**`false`**, which is a different answer from `null` ("nothing restricts
+this") — collapsing those two is how the bug shipped.
+
+**"NON-ATTACK" CONTAINS "ATTACK."** Mage Master Boots' *"the next
+non-attack action card you play this turn gets go again"* handed the
+grant to the next ATTACK. That is v2.44's Reaction-contains-action trap
+on the most valuable keyword in the game to get wrong. `gaNextQ` is
+`gaNext`'s `buffQ`: a qualified grant that does not match is **not
+spent**, it waits (v2.30). **One taker, two branches** — an attack
+settles on the chain and a non-attack at the action point, so a taker in
+the attack branch alone builds half the rule. Ledger 40 → 41.
+
+**ONE SHAPE, ONE MATCHER, ONE NAMER.** The qualifier is an object, not an
+array: the atoms have nowhere to live in an array, and an array carrying
+extra properties is the same-name-different-meaning trap. `qualMatches`
+is the one matcher and **a bare array now matches NOTHING** — every field
+test passes vacuously on one, so a stale caller would silently get
+"matches everything". It refuses rather than throwing, because `reduce`
+is fed by JSON off a wire. `qualLabel` is the one namer; five sites had
+hand-rolled `q.map(g=>g.join(" ")).join(" or ")` and every one of them
+threw the moment the shape grew a field.
+
+**A CARD PRINTING NO COST SATISFIES NO COST COMPARISON.** Equipment,
+Weapons and Blocks carry `cost: null`; reading it as 0 hands every "cost
+1 or less" buff to a weapon swing.
+
+**AND A DRILL WAS PASSING BECAUSE OF THE BUG.** `reactions.test.js` used
+Stains of the Redback as its *"+3, no qualifier"* fixture; the card
+prints *"target attack with stealth"*, so the fixture was valid only
+while the restriction was dropped. **When a fix breaks a drill, read the
+fixture before reshaping the assertion.**
 
 ### A RESTRICTION IS NOT A DEBUFF (v3.30)
 

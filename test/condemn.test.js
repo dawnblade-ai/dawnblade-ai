@@ -68,8 +68,8 @@ test("all three pitches read the optional cost, out of the ARENA", () => {
 
 test("the head still reads its own pitch-scaled pump, qualified to Runeblade", () => {
   P.fxReset();
-  assert.deepEqual(P.fxParse(CONDEMN(1)).ops, [["buffNext", 3, [["runeblade"]]]]);
-  assert.deepEqual(P.fxParse(CONDEMN(3)).ops, [["buffNext", 1, [["runeblade"]]]],
+  assert.deepEqual(P.fxParse(CONDEMN(1)).ops, [["buffNext", 3, {g: [["runeblade"]]}]]);
+  assert.deepEqual(P.fxParse(CONDEMN(3)).ops, [["buffNext", 1, {g: [["runeblade"]]}]],
     "the qualifier must survive — v2.30's arrow buff landed on a sword without it");
 });
 

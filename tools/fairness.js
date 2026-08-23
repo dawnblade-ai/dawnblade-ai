@@ -186,6 +186,83 @@ for(const c of Object.values(audit.cards)){
         "it will apply to any attack at all");
   }
 
+  /* ---- 3c. A RESTRICTION IN THE TAIL (v3.31) ------------------------
+     Checks 3 and 3b both read the words BEFORE "attack" — the only place
+     a restriction could live while `attackQual` took one argument. Five
+     kinds of restriction are printed AFTER it:
+
+       target attack ACTION CARD WITH COST 1 OR LESS gets +3{p}
+       target attack WITH 3 OR LESS BASE {p} gets +1{p}
+       target attack WITH STEALTH gets go again
+       your next attack action card YOU PLAY FROM ARSENAL this turn ...
+       your next attack YOU BOOST this turn ...
+
+     Every reader let `[^.]*` swallow that, so THIRTEEN pool cards applied
+     to any attack at all — Lightning Press pumped a cost-3 attack where
+     it prints "cost 1 or less". All of them read `tier: full`, because
+     the clause WAS consumed; coverage counts consumption, never
+     faithfulness. Neither 3 nor 3b could see it: their captures stop at
+     the word "attack".
+
+     This asks the PRINTED TEXT which atoms it names and the PARSE whether
+     it carries each one, so it is a comparison rather than a restatement.
+     Verified by sabotage: dropping the tail read makes it report all
+     thirteen. */
+  {
+    /* THE CLAUSE, NOT THE WHOLE CARD. Agile Engagement prints "if it's
+       DEFENDED BY an attack action card" — a condition about the wall,
+       not a restriction on the target — and a whole-text scan read it as
+       a dropped restriction. Slice the grant clause and ask only of it. */
+    const GRANT = /(?:target|your next|the next)[^.]{0,110}?(?:gets?|gains?|has)[^.]{0,24}?(?:\+\d+\s*(?:\{p\}|power)|go again)/g;
+    /* AND THE PARSE MUST ACTUALLY GRANT SOMETHING. Stalker's Steps and
+       Mage Master Boots print this shape inside an ACTIVATED ability that
+       `fxParse` files as a noop — nothing is granted, so nothing can be
+       granted too widely. A tool that flags an unbuilt card is reporting
+       its own model, not the engine (v3.12's lesson). */
+    const qOf = o => o && (o[0] === "gaNext" ? o[1] : o[2]);
+    const carriers = [fx.selfQ, fx.gaQ,
+      ...((fx.modes||[]).map(md => md && md.q)),
+      ...[...(fx.ops||[]), ...(fx.conds||[]).map(x => x.op)]
+          .filter(o => o && /^(buffNext|gaNext|self|ga)$/.test(o[0]))
+          .map(qOf)
+    ].filter(Boolean).filter(q => !Array.isArray(q));
+    const grantsParsed = fx.self > 0 || fx.ga
+      || [...(fx.ops||[]), ...(fx.conds||[]).map(x => x.op)]
+           .some(o => o && /^(buffNext|gaNext|self|ga)$/.test(o[0]));
+    /* AN ACTIVATED ABILITY IS NOT THIS RULE'S CLAUSE. Mage Master Boots
+       and Stalker's Steps print the shape behind an activation cost, so
+       `fxParse` hands the line to the equipment reader and files a noop —
+       and the card's own printed "Go again" keyword then makes `fx.ga`
+       true, which looks exactly like a grant with its restriction
+       dropped. Both already carry the audit's "no parsed grant path"
+       flag, which is the honest place for them. */
+    const ACTIVATED = /^\s*(?:once per turn\s+)?(?:action|instant|attack reaction|defense reaction)\s*[-\u2014][^:]{0,40}:/i;
+    const activated = new Set(String(c.tx || "").toLowerCase().split("\n")
+      .filter(l => ACTIVATED.test(l)).map(l => l.trim()));
+    const inActivated = cl => [...activated].some(l => l.indexOf(cl) >= 0);
+    const ATOMS = [
+      [/\b(?:non-)?attack action cards?\b/,           "aac",    "attack ACTION CARD"],
+      [/\bwith stealth\b/,                            "kw",     "with stealth"],
+      [/\bwith cost \d+ or less\b/,                   "costLe", "with cost N or less"],
+      [/\bwith cost \d+ or more\b/,                   "costGe", "with cost N or more"],
+      [/\bwith \d+ or less base \{p\}/,               "powLe",  "with N or less base {p}"],
+      [/\bwith \d+ or more base \{p\}/,               "powGe",  "with N or more base {p}"],
+      [/\byou play from arsenal\b/,                   "from",   "you play FROM ARSENAL"],
+      [/\byou boost\b/,                               "boosted","you BOOST"]
+    ];
+    if(grantsParsed) for(const clause of (tl.match(GRANT) || [])){
+      if(inActivated(clause)) continue;
+      for(const [re, key, printed] of ATOMS){
+        if(!re.test(clause)) continue;
+        if(key === "aac" && carriers.some(q => q.aac != null || q.nonAtk != null)) continue;
+        if(carriers.some(q => q[key] != null)) continue;
+        flag(2, "RESTRICTION-DROPPED", c,
+          `it targets an attack "${printed}" and nothing carries that restriction`,
+          "the grant will reach an attack the card cannot legally target");
+      }
+    }
+  }
+
   /* ---- 3b. A MODAL CHOICE APPLIED AS A SUM (v3.12) -------------------
      "Choose 1;" means ONE mode. Pummel prints +4 in each of its two modes
      and the clause loop added both, granting +8; Two Sides to the Blade

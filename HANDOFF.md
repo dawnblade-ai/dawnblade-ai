@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.30 · PHASE C · EFFECTS CAN REACH THE NEXT TURN
+# Handoff — Dawnblade, at v3.31 · PHASE C · THE QUALIFIER READS ITS TAIL
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1283 drills**
+> the card semantics run on both boards.** `npm test` is **1305 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.30: coverage **318 full / 72 part / 15 none**, fairness
+> Current at v3.31: coverage **318 full / 72 part / 15 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -71,6 +71,40 @@
 > sits on the board doing nothing but counting as an aura (which is
 > correct — seven pool cards count auras); Lightning does nothing yet.
 > Neither is stronger than printed, which is the direction that matters.
+>
+> ### v3.31 — 13 CARDS WERE PUMPING WHATEVER WAS SWINGING
+>
+> `attackQual` read the words BEFORE "attack" and `[^.]*` ate the rest, so
+> "target attack action card **with cost 1 or less**" restricted nothing.
+> All 13 read `tier: full`. The qualifier is one object now
+> (`{g, aac, nonAtk, kw, costLe, costGe, powLe, powGe, from, boosted}`),
+> `qualMatches` is the one matcher and `qualLabel` the one namer, and an
+> unreadable tail REFUSES the clause rather than matching anything.
+>
+> **Two things worth carrying forward.** "non-attack" contains "attack",
+> which handed Mage Master Boots' go again to the next attack — v2.44's
+> trap on the keyword that keeps your action point. And a drill was
+> **passing because of the bug**: `reactions.test.js` used Stains of the
+> Redback as its "no qualifier" fixture, which was only true while the
+> restriction was being dropped. When a fix breaks a drill, read the
+> FIXTURE before reshaping the assertion.
+>
+> ### STILL OPEN IN THIS FAMILY
+>
+> | card | what it needs |
+> |---|---|
+> | Night's Embrace | "your attacks with stealth get +1{p} **this turn**" — a turn-wide qualified buff, not a next-attack one. `gaNextQ`/`buffQ` are both single-shot. Its ruling is recorded. |
+> | Mage Master Boots · Stalker's Steps | the clause sits behind an activation cost, so it goes to the equipment reader and is filed a noop. Both carry the audit's "no parsed grant path" flag. |
+>
+> ### BRAVO — five gaps, and each is a named mechanism
+>
+> | card | what it needs |
+> |---|---|
+> | Thunder Quake | **heave**, and its ruling is already recorded (2026-07-25): at end of turn, instead of arsenaling it, offer to pay 3 resources for 3 Seismic Surge tokens. The arsenal step is a real interactive pause on both boards, which is the window it needs. |
+> | Crash and Bash | a `defends` optCost trigger + a REVEAL cost kind. `optFilter` can express "a card with crush" now that `printedKw` exists. |
+> | Magmatic Carapace | "whenever you play an aura" trigger + a tap-and-pay cost (the `pay` prompt variant). |
+> | Pummel | **DONE at v3.31** — its second mode is selectable now that the cost restriction can be read. |
+> | Staunch Response | an optional additional cost paying into `defSelf.cost`. |
 >
 > ### THE FIVE CRUSH RIDERS — four built, one refusing
 >

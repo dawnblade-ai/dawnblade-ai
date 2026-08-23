@@ -686,20 +686,28 @@ function classifyClause(raw){
      "attack" and no more. `attackQual` is the same reader buffNext uses,
      so "sword or dagger" is an OR of two groups and "Pirate ally" is one
      group of two words. */
-  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/)){
+  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/)){
     /* AND ITS GRANTED ABILITY RIDES ALONG (v3.12) — the same `quotedOnHit`
        the next-attack pump and the self-grant already share. Scar Tissue
        and Spike with Bloodrot print "…and \"When this hits a hero, mark
        them.\"", and the rider belongs to the ATTACK being pumped, not to
        the reaction: a reaction never hits anything itself. `attackRx`
        stamps it onto the open link. */
+    /* THE TAIL IS PART OF THE TARGET (v3.31) — `[^.]*` used to eat it, so
+       "with cost 1 or less" restricted nothing. An unreadable tail refuses
+       the whole clause rather than pumping an illegal target. */
+    const q1 = attackQual(m[1], m[2]);
+    if(q1 === false) return null;
     const rider = quotedOnHit(c);
-    return rider ? R([["self", +m[2], attackQual(m[1])]], {riderOnHit: rider})
-                 : R([["self", +m[2], attackQual(m[1])]]);
+    return rider ? R([["self", +m[3], q1]], {riderOnHit: rider})
+                 : R([["self", +m[3], q1]]);
   }
   /* the go-again twin of the target-attack pump, restriction and all */
-  if(m=c.match(/^target ([^.]*?)\battack\b[^.]* (?:gets?|gains?) go again$/))
-    return R([["ga", 1, attackQual(m[1])]]);
+  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?) go again$/)){
+    const q2 = attackQual(m[1], m[2]);
+    if(q2 === false) return null;
+    return R([["ga", 1, q2]]);
+  }
   /* "they lose N{h}" is damage to the opposing hero */
   if(m=c.match(/^(?:they|the defending hero|target hero) loses? (\d+)\s*\{h\}$/)) return R([["dmg",+m[1]]]);
   /* BLOODROT POX PRINTS AN ESCAPE HATCH (v3.09) — "…then it deals 2 damage
@@ -921,8 +929,12 @@ function classifyClause(raw){
     const rider = quotedOnHit(c);
     return rider ? R([head], {riderOnHit: rider}) : R([head]);
   }
-  if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack[^+]*\+(\d+)\s*(?:\{p\}|power)/)){
-    const q = attackQual(m[1]);
+  if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack([^+]*)\+(\d+)\s*(?:\{p\}|power)/)){
+    /* THE TAIL RESTRICTS TOO (v3.31). Nimblism's "action card with cost 1
+       or less", Scout the Periphery's "you play from arsenal" and
+       Re-Charge!'s "you boost" all sat inside the old `[^+]*`. */
+    const q = attackQual(m[1], m[2]);
+    if(q === false) return null;
     /* A GRANTED ABILITY RIDES ALONG WITH THE PUMP, and it was silently
        dropped. Warrior's Valor prints
 
@@ -944,7 +956,7 @@ function classifyClause(raw){
        still reports the clause honestly. */
     const ro = quotedOnHit(c);
     const rider = ro ? {onHit: ro} : null;
-    const op = ["buffNext", +m[2]];
+    const op = ["buffNext", +m[3]];
     if(q || rider) op[2] = q || null;
     if(rider) op[3] = rider;
     return R([op]);
@@ -956,8 +968,31 @@ function classifyClause(raw){
      forged NOTHING and blue forged one by accident. `runeHitNext` was a
      boolean, so it could not have carried 3 even if it had matched.
      Viserai's own card, and runechants are his engine. */
-  if(/(?:your|the) next[^.]*attack[^.]*go again/.test(c)){
-    const o=[["gaNext"]];
+  /* "YOUR NEXT <x> ATTACK … GETS GO AGAIN" — and the subject and the tail
+     were BOTH unread until v3.31.
+
+     "NON-ATTACK" CONTAINS "ATTACK". The old test was a bare substring, so
+     Mage Master Boots' "the next NON-ATTACK action card you play this turn
+     gets go again" handed the grant to the next ATTACK instead. That is the
+     Reaction-contains-action trap (v2.44) on the single most valuable
+     keyword in the game to get wrong — go again keeps your action point.
+
+     AND THE RESTRICTION WAS DROPPED. Trot Along prints "with 3 or less base
+     {p}" and Mauvrion Skies "Runeblade attack ACTION CARD you play"; both
+     granted go again to any attack at all, reading `tier: full`. */
+  if(m = c.match(/(?:your|the) next([^.]*?)\b(non-attack|attack)\b([^.]*?)\s*(?:gets?|gains?|has)\s*go again/)){
+    const q = attackQual(m[1], m[3]);
+    if(q === false) return null;
+    /* "action card" in the tail belongs to the SUBJECT phrase, so on the
+       non-attack reading it must not also set `aac` — a card cannot be an
+       attack action card and a non-attack one, and asking for both is a
+       qualifier that matches nothing. */
+    let full = q;
+    if(m[2] === "non-attack"){
+      full = Object.assign({}, q || {}); delete full.aac; full.nonAtk = true;
+    }
+    /* An unqualified grant stays the bare op it has always been. */
+    const o=[full ? ["gaNext", full] : ["gaNext"]];
     const rn = c.match(/create (a|an|one|two|three|\d+) runechants?/);
     if(rn) o.push(["runeHitNext", num(rn[1])]);
     return R(o);
@@ -1195,22 +1230,141 @@ const FXMEMO = new Map();
 
    Returns null when there is no qualifier at all ("your next attack"),
    which is the honest unqualified case and must stay unqualified. */
-function attackQual(phrase){
+/* WHAT COMES AFTER THE WORD "ATTACK" IS ALSO A RESTRICTION (v3.31).
+
+   Every reader of this family captured the words BEFORE "attack" and let
+   `[^.]*` swallow everything after it, so
+
+     target attack action card WITH COST 1 OR LESS gets +3{p}
+
+   parsed as an unqualified pump and Lightning Press buffed a cost-3
+   attack. Thirteen pool cards printed a restriction in the tail and every
+   one of them applied to any attack at all — all reading `tier: full`,
+   because the clause WAS consumed. v3.00's rule, in the oldest matcher
+   here: an unanchored match hides an unbuilt clause.
+
+   THE TAIL IS AN ALL-OR-NOTHING READ. Each atom is stripped in turn and
+   whatever is left over means the restriction is not understood — so this
+   returns `null` and the CALLER REFUSES THE WHOLE CLAUSE. Treating an
+   unreadable restriction as "matches anything" is the direction that
+   steals games; refusing is weaker than printed and visible, the same
+   call v2.04 made for unpayable costs and v3.12 for an unreadable mode.
+
+   A WINDOW IS NOT A RESTRICTION. "this turn" and "this combat chain" say
+   how long a buff waits, never which attack it may land on, so they are
+   consumed and dropped rather than refused. */
+function attackTail(raw){
+  let t = String(raw||"").toLowerCase().replace(/[\u2019]/g, "'")
+            .replace(/\s+/g, " ").trim();
+  const f = {};
+  /* PUNCTUATION IS NOT A RESTRICTION, and upstream moves it: this pool
+     prints "…you play this turn gains +3{p}" while the same card has been
+     printed with a comma before the verb. A stray comma left in the tail
+     would read as unreadable and refuse a card that is perfectly clear —
+     v3.00's drift, one layer down. */
+  const drop = () => { t = t.replace(/^[,;]\s*/, "").replace(/[,;]\s*$/, "").trim(); };
+  drop();
+  /* a trailing verb belongs to the sentence, not to the target */
+  t = t.replace(/\b(?:gets?|gains?|has)$/, "").trim(); drop();
+  t = t.replace(/\bthis (?:turn|combat chain)$/, "").trim(); drop();
+  let m;
+  /* "attack ACTION CARD" — a weapon attack is not one, which is the whole
+     point of the words. `isAtkActionCard` is the one predicate for it. */
+  if(/^action cards?\b/.test(t)){ f.aac = true; t = t.replace(/^action cards?\b/, "").trim(); }
+  /* RULING 2026-07-25: stealth "does nothing on its own — other cards
+     check to see if an attack HAS stealth as a qualifier". This is that
+     check, and it asks `printedKw`: seven pool cards CARRY stealth on its
+     own line and seven only mention it in a sentence. */
+  if(m = t.match(/^with stealth\b/)){ f.kw = "stealth"; t = t.slice(m[0].length).trim(); }
+  if(m = t.match(/^with cost (\d+) or (less|more)\b/)){
+    f[m[2] === "less" ? "costLe" : "costGe"] = +m[1]; t = t.slice(m[0].length).trim(); }
+  if(m = t.match(/^with (\d+) or (less|more) base \{p\}/)){
+    f[m[2] === "less" ? "powLe" : "powGe"] = +m[1]; t = t.slice(m[0].length).trim(); }
+  /* THESE TWO ARE ABOUT THE PLAY, NOT THE CARD, so `qualMatches` takes
+     them from the caller — the same split `defendValue` keeps. A caller
+     that does not say answers no, and the buff simply does not apply. */
+  if(m = t.match(/^you play from arsenal\b/)){ f.from = "arsenal"; t = t.slice(m[0].length).trim(); }
+  else if(m = t.match(/^you play\b/)){ t = t.slice(m[0].length).trim(); }
+  if(m = t.match(/^you boost\b/)){ f.boosted = true; t = t.slice(m[0].length).trim(); }
+  drop();
+  t = t.replace(/\bthis (?:turn|combat chain)$/, "").trim(); drop();
+  return t ? null : f;
+}
+
+/* THE QUALIFIER IS ONE OBJECT, NEVER TWO SHAPES (v3.31). It used to be a
+   bare array of word-groups; the tail atoms above have nowhere to live in
+   an array, and an array that sometimes carries extra properties is the
+   same-name-different-meaning trap `KNOWN_COLLISIONS` polices. `g` holds
+   the word groups, everything else is a printed field.
+
+   Returns `false` — not `null` — when the tail cannot be read, because
+   the two answers are opposites: `null` means "nothing restricts this"
+   and `false` means "something does and we cannot say what". */
+function attackQual(phrase, tail){
+  const t = attackTail(tail);
+  if(t === null) return false;
   const p = String(phrase||"").toLowerCase()
     .replace(/[^a-z ]+/g, " ")
     .replace(/\b(a|an|the|your|this|turn|other|another)\b/g, " ")
     .replace(/\s+/g, " ").trim();
-  if(!p) return null;
-  const groups = p.split(/\s+or\s+/).map(g => g.split(/\s+/).filter(Boolean)).filter(g => g.length);
-  return groups.length ? groups : null;
+  const groups = p ? p.split(/\s+or\s+/).map(g => g.split(/\s+/).filter(Boolean)).filter(g => g.length) : [];
+  const q = Object.assign({}, t);
+  if(groups.length) q.g = groups;
+  return Object.keys(q).length ? q : null;
 }
 
-/* Does a card satisfy such a qualifier? Reads the printed type line only —
-   never rules text — so it stays inside the golden rule. */
-function qualMatches(qual, card){
-  if(!qual || !qual.length) return true;          /* unqualified buffs hit everything */
-  const tt = String((card && card.tt) || "").toLowerCase();
-  return qual.some(group => group.every(word => tt.indexOf(word) >= 0));
+/* HOW TO SAY A QUALIFIER OUT LOUD. Five sites formatted it by hand as
+   `q.map(g => g.join(" ")).join(" or ")`, which knew the qualifier was an
+   array of word groups — a second reader of the shape, and it threw the
+   moment the shape gained a field. One namer, beside the one matcher. */
+function qualLabel(qual){
+  if(!qual) return "an attack";
+  const pre = qual.g ? qual.g.map(g => g.join(" ")).join(" or ") + " " : "";
+  const post = [];
+  if(qual.kw) post.push("with " + qual.kw);
+  if(qual.costLe != null) post.push("with cost " + qual.costLe + " or less");
+  if(qual.costGe != null) post.push("with cost " + qual.costGe + " or more");
+  if(qual.powLe  != null) post.push("with " + qual.powLe + " or less base {p}");
+  if(qual.powGe  != null) post.push("with " + qual.powGe + " or more base {p}");
+  if(qual.from)    post.push("played from your " + qual.from);
+  if(qual.boosted) post.push("you boost");
+  const noun = pre + (qual.nonAtk ? "non-attack action card"
+                    : qual.aac ? "attack action card" : "attack")
+             + (post.length ? " " + post.join(" ") : "");
+  return (/^[aeiou]/.test(noun) ? "an " : "a ") + noun;
+}
+
+/* Does a card satisfy such a qualifier? Reads printed FIELDS and printed
+   KEYWORD LINES — never free rules text — so it stays inside the golden
+   rule. `opts` carries what only the play site knows. */
+function qualMatches(qual, card, opts){
+  if(!qual) return true;                          /* unqualified buffs hit everything */
+  /* A BARE ARRAY IS THE OLD SHAPE, AND IT MATCHES NOTHING (v3.31). Every
+     field test below passes vacuously on an array, so a stale caller
+     would silently get "matches everything" — the exact direction that
+     steals games. Refusing is weaker than printed and visible. It does
+     not THROW, because `reduce` is fed by JSON off a wire and one bad
+     qualifier must cost a buff, never a session. */
+  if(Array.isArray(qual)) return false;
+  opts = opts || {};
+  const c = card || {};
+  if(qual.g){
+    const tt = String(c.tt || "").toLowerCase();
+    if(!qual.g.some(group => group.every(word => tt.indexOf(word) >= 0))) return false;
+  }
+  if(qual.aac && !isAtkActionCard(c)) return false;
+  if(qual.nonAtk && !isNonAtkActionCard(c)) return false;
+  if(qual.kw && !printedKw(c, qual.kw)) return false;
+  /* A CARD THAT PRINTS NO COST CANNOT SATISFY A PRINTED COST COMPARISON.
+     Equipment, Weapons and Blocks carry `cost: null`, and reading that as
+     0 would hand every "cost 1 or less" buff to a weapon swing. */
+  if(qual.costLe != null && !(c.cost != null && +c.cost <= qual.costLe)) return false;
+  if(qual.costGe != null && !(c.cost != null && +c.cost >= qual.costGe)) return false;
+  if(qual.powLe != null && !(c.power != null && +c.power <= qual.powLe)) return false;
+  if(qual.powGe != null && !(c.power != null && +c.power >= qual.powGe)) return false;
+  if(qual.from && opts.from !== qual.from) return false;
+  if(qual.boosted && !opts.boosted) return false;
+  return true;
 }
 
 function optFilter(phrase){
@@ -2501,6 +2655,14 @@ const isAtkActionCard = c => {
   const ff = frontFace(c);
   return /attack/i.test(ff) && /action/i.test(ff) && !/reaction/i.test(ff);
 };
+/* ITS TWIN, and the two are NOT complements: a Defense Reaction carries
+   no Action at all and is neither. Lived in effects.js until v3.31, where
+   `qualMatches` also needed it — so it moved rather than being copied. */
+const isNonAtkActionCard = c => {
+  const ty = (c && c.ty) || [];
+  return ty.some(t => /^action$/i.test(String(t)))
+      && !ty.some(t => /^attack$/i.test(String(t)));
+};
 const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
   + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
 const pow6 = (c, b) => zonePow(c, b) >= 6;
@@ -2795,7 +2957,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
-        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isNonAtkActionCard,
         classifyClause, fxParse, fxReset, playableFromZone, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,

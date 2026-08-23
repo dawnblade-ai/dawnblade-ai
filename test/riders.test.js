@@ -105,7 +105,8 @@ test("Mauvrion Skies forges the number of Runechants it prints", {skip}, () => {
      string "create a runechant", so only BLUE matched — and `runeHitNext`
      was a boolean, which could not have carried 3 even if it had. */
   for(const [p, want] of [[1, 3], [2, 2], [3, 1]])
-    assert.deepEqual(fx("Mauvrion Skies", p).ops, [["gaNext"], ["runeHitNext", want]], `pitch ${p}`);
+    assert.deepEqual(fx("Mauvrion Skies", p).ops,
+      [["gaNext", {aac: true, g: [["runeblade"]]}], ["runeHitNext", want]], `pitch ${p}`);
 });
 
 test("driven: the count reaches the side, not a flag", {skip}, () => {

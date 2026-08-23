@@ -62,7 +62,7 @@ test("a pump the parser routed to fx.conds is NOT read again into fx.self", () =
   assert.strictEqual(fx.self, 0,
     "the entire clause is gated; an unconditional +3 means the fallback read it twice");
   assert.deepStrictEqual((fx.conds || []).map(c => [c.cond, c.op]),
-    [["reprise", ["self", 3, [["weapon"]]]]],
+    [["reprise", ["self", 3, {g: [["weapon"]]}]]],
     "and the printed 'weapon' restriction rides with it (v2.69)");
 });
 
@@ -736,13 +736,16 @@ test("the REAL Dawnblade loses its counters through the shared end-phase body", 
 const codeOf = s => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
 
 test("the printed restriction is captured, not swallowed", {skip}, () => {
+  /* `g` holds the TYPE WORDS; a qualifier is one object since v3.31, so
+     the tail atoms (cost, base power, stealth, arsenal, boost) have a
+     home rather than being swallowed by the matcher's `[^.]*`. */
   const want = {
-    "Puncture|1": [["sword"], ["dagger"]],
-    "Overpower|1": [["weapon"]],
-    "Ironsong Response|1": [["weapon"]],
-    "Agile Engagement|1": [["warrior"]],
-    "Out for Blood|1": [["weapon"]],
-    "Stroke of Foresight|1": [["weapon"]]
+    "Puncture|1": {g: [["sword"], ["dagger"]]},
+    "Overpower|1": {g: [["weapon"]]},
+    "Ironsong Response|1": {g: [["weapon"]]},
+    "Agile Engagement|1": {g: [["warrior"]]},
+    "Out for Blood|1": {g: [["weapon"]]},
+    "Stroke of Foresight|1": {g: [["weapon"]]}
   };
   const b = buildOf("dorinthea");
   for(const [key, q] of Object.entries(want)){
@@ -764,18 +767,25 @@ test("qualMatches reads the printed TYPE LINE, and answers for real cards", {ski
   const bow = buildOf("azalea").gear.find(g => /bow/i.test(g.tt || ""));
   assert.ok(bow, "Azalea's bow is the control — without it this proves nothing");
 
-  const puncture = [["sword"], ["dagger"]];
+  const puncture = {g: [["sword"], ["dagger"]]};
   assert.strictEqual(P.qualMatches(puncture, blade), true, "a sword is a sword");
   assert.strictEqual(P.qualMatches(puncture, bow), false,
     "THE BUG: Puncture's +3 and piercing used to land on a bow");
-  assert.strictEqual(P.qualMatches([["weapon"]], blade), true);
+  assert.strictEqual(P.qualMatches({g: [["weapon"]]}, blade), true);
   assert.strictEqual(P.qualMatches(null, bow), true, "an unqualified buff hits everything");
+  /* THE OLD SHAPE MATCHES NOTHING (v3.31). A qualifier used to BE the
+     array of word groups; every field test in the object reader passes
+     vacuously on one, so a stale caller would get "matches everything"
+     rather than an error. That is the direction that steals games, so a
+     bare array is refused outright. */
+  assert.strictEqual(P.qualMatches([["sword"]], blade), false,
+    "a bare array is the retired shape — it must refuse, not match all");
 });
 
 test("the go-again twin carries its restriction too", {skip}, () => {
   const rt = buildOf("dorinthea").deck.find(x => x.name === "Run Through");
   const fx = P.fxParse(rt);
-  assert.deepStrictEqual(fx.gaQ, [["sword"]],
+  assert.deepStrictEqual(fx.gaQ, {g: [["sword"]]},
     "'Target sword attack gains go again' is restricted to swords");
   assert.strictEqual(fx.ga, true);
 });
@@ -841,7 +851,7 @@ test("the quoted granted ability is read, not dropped", {skip}, () => {
     assert.ok(c, "Warrior's Valor pitch " + pitch);
     const op = P.fxParse(c).ops.find(o => o[0] === "buffNext");
     assert.strictEqual(op[1], amt, "the printed pump");
-    assert.deepStrictEqual(op[2], [["weapon"]], "the printed restriction");
+    assert.deepStrictEqual(op[2], {g: [["weapon"]]}, "the printed restriction");
     assert.deepStrictEqual(op[3], {onHit: [["ga"]]},
       "and the granted on-hit ability — this is the half that used to vanish");
   }
@@ -874,7 +884,7 @@ test("an unquoted next-attack buff gains no rider", {skip}, () => {
      not acquire one */
   const ss = buildOf("dorinthea").deck.find(x => x.name === "Sharpen Steel");
   const op = P.fxParse(ss).ops.find(o => o[0] === "buffNext");
-  assert.deepStrictEqual(op, ["buffNext", 3, [["weapon"]]], "no rider printed, none granted");
+  assert.deepStrictEqual(op, ["buffNext", 3, {g: [["weapon"]]}], "no rider printed, none granted");
 });
 
 /* THE WHOLE LINE OF PLAY, TAPPED OUT. Play the buff, swing the weapon
@@ -912,7 +922,7 @@ function valorLine(o){
 test("the granted ability reaches the attack that collects the buff", {skip}, () => {
   const r = valorLine({});
   assert.deepStrictEqual(r.afterBuff.sides[0].buffQ,
-    [{amt: 3, q: [["weapon"]], rider: {onHit: [["ga"]]}}],
+    [{amt: 3, q: {g: [["weapon"]]}, rider: {onHit: [["ga"]]}}],
     "the rider waits on the buff, not on the card that granted it");
 
   assert.strictEqual(r.declared.pend.total, (r.blade.power || 0) + 3, "the pump landed");

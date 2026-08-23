@@ -45,8 +45,13 @@ function reacting(handCards, atkName){
 
 test("the pump reaches the attack on the chain, not the next one", {skip}, () => {
   H.db();
-  const rx = H.card("Stains of the Redback", 1);          /* +3, no qualifier */
-  const {g, atk} = reacting([rx]);
+  /* THIS FIXTURE WAS CHOSEN BECAUSE OF A BUG, and the comment beside it
+     used to read "+3, no qualifier". Stains of the Redback prints "target
+     attack WITH STEALTH"; the reader let `[^.]*` eat the tail, so it
+     really did pump anything (v3.31). The attack is a stealth card now,
+     which is what the card has always required. */
+  const rx = H.card("Stains of the Redback", 1);          /* target attack with stealth */
+  const {g, atk} = reacting([rx], "Mark the Prey");
   assert.equal(g.step, "reaction", "standing in the right window");
   assert.equal(g.pend.total, atk.power, "base before the reaction");
 
@@ -73,11 +78,19 @@ test("a printed target restriction refuses the PLAY, before the card is spent", 
     "a play the rules never allowed must not cost the player the card");
 });
 
-test("an unqualified reaction is still allowed", {skip}, () => {
+test("a reaction whose printed restriction is MET is allowed", {skip}, () => {
   H.db();
-  const {g} = reacting([H.card("Stains of the Redback", 1)]);
-  assert.equal(J.legal(g, {t: "play", uid: "h0", from: "hand"}, 0), null,
-    "the restriction must gate only the cards that print one");
+  /* THE CONTROL FOR THE DRILL ABOVE. Without it a gate that refuses
+     EVERYTHING passes the refusal drill perfectly — the fuzz lesson. The
+     same card, the same seat, and the only thing that differs is whether
+     the attack on the chain carries the keyword it names. */
+  const yes = reacting([H.card("Stains of the Redback", 1)], "Mark the Prey").g;
+  assert.equal(J.legal(yes, {t: "play", uid: "h0", from: "hand"}, 0), null,
+    "a stealth attack is exactly what it prints");
+
+  const no = reacting([H.card("Stains of the Redback", 1)], "Raging Onslaught").g;
+  assert.match(String(J.legal(no, {t: "play", uid: "h0", from: "hand"}, 0)), /stealth/,
+    "and a vanilla attack is refused BY NAME rather than pumped");
 });
 
 /* ---- THE SHARED BODY ------------------------------------------------- */
@@ -153,18 +166,46 @@ test("the board picks the mode, and an unreadable restriction is not selectable"
     "driven: 6 -> 10. It was 14 before v3.12");
 });
 
+const pummelAt = card => {
+  const g = {...H.state({res: 9}, {}, {turn: 3, actor: 0}),
+             pend: {card: {...card, uid: "a1"}, by: 0, total: card.power, ga: false, ops: [], onHit: []},
+             stack: []};
+  return J.withEffects(g, (fx, s) => {
+    const r = fx.attackRx(s, H.card("Pummel", 1), {handBlockers: 0});
+    return {why: r.why, pump: r.pump};
+  });
+};
+
 test("a modal reaction with no legal mode is refused, not silently applied", {skip}, () => {
   H.db();
-  const plain = {...H.card("Raging Onslaught", 1), uid: "a1"};   /* neither hammer nor stealth */
-  const g = {...H.state({res: 9}, {}, {turn: 3, actor: 0}),
-             pend: {card: plain, by: 0, total: plain.power, ga: false, ops: [], onHit: []},
-             stack: []};
-  J.withEffects(g, (fx, s) => {
-    const r = fx.attackRx(s, H.card("Pummel", 1), {handBlockers: 0});
-    assert.match(String(r.why), /no mode/, "refused by name");
-    assert.equal(r.pump, 0);
-    return s;
-  });
+  /* NEITHER MODE. Pummel prints "club or hammer WEAPON attack" and
+     "attack action card with COST 2 OR MORE"; Wounding Blow is a
+     cost-0 attack action card, so it clears neither line.
+
+     Raging Onslaught used to stand here and stopped being a valid
+     fixture at v3.31: it costs 3, so mode 2 — whose cost restriction
+     was previously unreadable and therefore never selectable — now
+     legitimately fires for it. */
+  const r = pummelAt(H.card("Wounding Blow", 3));
+  assert.match(String(r.why), /no mode/, "refused by name");
+  assert.equal(r.pump, 0);
+});
+
+test("Pummel's SECOND mode fires once its cost restriction can be read", {skip}, () => {
+  H.db();
+  /* The other half, and the reason the fixture above had to move. The
+     mode was parked with `q: null` — an unreadable restriction — and
+     `attackRx` will not select one of those, so for three versions
+     Pummel could only ever fire its weapon mode. */
+  const big = H.card("Raging Onslaught", 1);
+  assert.ok(big.cost >= 2, "the fixture must actually clear the printed line");
+  const hit = pummelAt(big);
+  assert.ok(!hit.why, "no refusal");
+  assert.equal(hit.pump, 4, "the printed +4, once — never both modes summed");
+
+  const small = H.card("Wounding Blow", 3);
+  assert.ok(small.cost < 2, "and the control must actually fail it");
+  assert.equal(pummelAt(small).pump, 0);
 });
 
 /* ---- THE GRANTED RIDER LANDS ON THE ATTACK, NOT THE REACTION -------- */

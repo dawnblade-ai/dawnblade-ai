@@ -798,8 +798,8 @@ function playableWhy(g, seat, c, win){
   if(open.indexOf("attack-reaction") >= 0 && PR.isAR(c)){
     const q = PR.fxParse(c).selfQ;
     if(q && !PR.qualMatches(q, g.pend && g.pend.card)){
-      const want = q.map(gr => gr.join(" ")).join(" or ");
-      return c.name + " targets a " + want + " attack — "
+      const want = PR.qualLabel(q);
+      return c.name + " targets " + want + " — "
            + ((g.pend && g.pend.card) ? g.pend.card.name : "this attack") + " isn't one";
     }
   }

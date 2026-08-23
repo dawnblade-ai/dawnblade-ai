@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-23T03:11:16.308Z",
- "appVer": "3.29",
+ "generated": "2026-08-23T03:54:56.893Z",
+ "appVer": "3.30",
  "dataVer": "sage-v11",
  "dbCount": 788,
  "poolUnique": 405,
@@ -5461,7 +5461,7 @@
     "Attack Reaction - {r}, destroy this: Target arrow attack with {p} greater than its base gets go again."
    ],
    "weaponCost": null,
-   "eqAbility": "destroy: Target arrow attack with {p} greater than its base gets go again [1r]",
+   "eqAbility": null,
    "tx": "Attack Reaction - {r}, destroy this: Target arrow attack with {p} greater than its base gets go again.\nBattleworn",
    "flags": [
     "granted go-again with no parsed grant path",
