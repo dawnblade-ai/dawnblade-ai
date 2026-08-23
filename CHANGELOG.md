@@ -9,6 +9,116 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.33 — Bravo's last two minters, and two faults underneath them
+
+Both of his remaining cards create Seismic Surge, which v3.32 made real.
+Each needed one small thing the engine could not yet say — and each is a
+habitat rather than a cage, because the thing it needed is now available
+to every card that prints the same shape.
+
+| card | what it needed |
+|---|---|
+| **Crash and Bash** | a **reveal** cost, a `with <keyword>` filter, and the **defends** trigger |
+| **Magmatic Carapace** | a **{t}** inside a pay-cost, and the **playAura** trigger |
+
+### A reveal is a cost that moves nothing
+
+The card is shown and stays exactly where it was — the cost is the
+information. That makes it the one member of the optional-cost family
+with **no destination**, so `to` is omitted rather than defaulted:
+sending it to the graveyard would spend a card the printed text never
+spends. `prompts.js` has treated a pick with no `to` as a reveal since
+v2.17; this is the first card to use it.
+
+### "With crush" is a printed field, not free rules text
+
+`optFilter` refused this phrase, and the pin gave the reason: *"a
+rules-text qualifier; promptFilter reads fields only."* That was honest
+while nothing could answer it. `printedKw` can, and it asks the precise
+question — does the card **carry** the keyword as printed rules text.
+`hasKw` stays the wrong predicate: it is deliberately loose, and a card
+that merely *names* crush in a sentence must not be a legal reveal.
+
+**The keyword list is closed.** Widening it to any word after "with"
+would re-open exactly the hole the old refusal was protecting — a dynamic
+limit would read as a keyword and be silently dropped.
+
+### THE FAULT UNDERNEATH: printedKw was FALSE for every crush card
+
+`printedKw`'s layout rule demanded the keyword be *the whole line*. The
+database writes a **triggered** keyword with its rider on the same line:
+
+```
+Crush - When this deals 4 or more damage to a hero, …
+```
+
+So `printedKw(c, "crush")` was false for all twelve crush cards, and the
+same for reprise, high tide, surge and heave — **21 answers wrong**. The
+widening is the dash, not a substring: the keyword must still start the
+line, so *"when you boost a card"* and *"your attacks with stealth"* —
+the references the function exists to exclude — are untouched. Measured
+across the pool and every keyword before the change: 21 answers move, all
+of them cards that genuinely carry the keyword, none for boost, go again,
+stealth or dominate.
+
+### The tap is part of the cost
+
+*"You may {t} this and pay {r}"* — reading only the {r} makes the ability
+repeatable, and a tapped permanent does not untap until CR 4.4.3d. That
+is what makes Magmatic Carapace **once per turn on a card that never
+prints "Once per Turn"**: the Scorpio-vs-Sledge shape from v2.42.
+
+`taps` rides on the spec, and it had to be added to `buildPrompt`
+explicitly — **a spec only carries fields `buildPrompt` knows about**
+(the `arsStamp` lesson, v2.34). Without that the {t} is free.
+
+### Two triggers, each out of ONE body
+
+- **defends** fires from `effects.afterDefenders`, which is where phantasm
+  already lives, already takes the wall as the **caller's** answer, and is
+  already called by both boards. It is addressed to the **defender**:
+  inside a link the actor is the *attacker*, so billing `actorOf` would
+  offer the attacking hero a choice printed on their opponent's blocker.
+- **playAura** fires in `execute`, and the watcher is **not the card being
+  played** — every other trigger there asks the resolving card about
+  itself, while this one asks what is watching. Magmatic Carapace is a
+  Chest piece, so a scan of the board alone finds nothing.
+
+**And it drains only what it queued.** A blanket `openPrompt` in
+`afterDefenders` opened whatever else was waiting, mid-combat, and stalled
+three drills at the damage step on cards printing no defends trigger at
+all. A prompt is drained by whoever queued it.
+
+### THE OTHER FAULT: every minted token was lowercased
+
+`classifyClause` works on the lowercased clause and `resolveEntry` returns
+the **entry's** name by design (v2.48), so every token the parser minted
+reached the board as `"seismic surge"`, `"might"`, `"frostbite"` — **12
+token names across a dozen cards**, including Kayo's Might, Iyslander's
+Frostbite and Briar's Embodiments. Shown to the player. It is v3.21's
+shape exactly: a lowercased capture riding onto the board.
+
+`resolveEntry` now also answers `dbName` — what the **database** calls the
+card — and the token mint uses it. `name` still means the entry's name,
+because a deck list names its own cards and v2.48 pins that.
+
+### And a heading is not a clause
+
+`Choose 1;` reported unread on both modal cards while **both of their
+modes were built**, the same way Briar's *"Essence of Earth and
+Lightning"* does. Filed as a `noop` — which is only honest because the
+modes exist and a mode whose restriction cannot be read is still refused
+(v3.12). Filed earlier it would have been the no-op blind spot.
+
+**Bravo is down to ONE card.** Staunch Response needs an *optional
+additional cost* decided at play time — the timing wall Charge and Fusion
+already hit — which is its own piece of machinery, not a reader.
+
+**Measured:** 319 → **323 full**, 14 → **13 none**, 72 → **69 part**.
+1323 → **1339 drills**, 0 skipped. Fairness clean, 0 UNFAIR.
+
+---
+
 ## v3.32 — heave, and Bravo's keystone
 
 **Bravo's ONE mechanic is the arsenal.** His hero ability turns a

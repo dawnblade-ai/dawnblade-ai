@@ -570,6 +570,19 @@ function classifyClause(raw){
      line is genuinely a no-op; what matters is the state it leaves behind,
      which the mark/aim effect clauses below actually set. */
   if(/^(?:stealth|cloaked)$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  /* "CHOOSE 1;" IS A HEADING, NOT A CLAUSE (v3.33). The audit splits text
+     on newlines and a modal header looks like a sentence, so Pummel and
+     Two Sides to the Blade reported `part` with BOTH of their modes read.
+     Same shape as Briar's "Essence of Earth and Lightning" and
+     Iyslander's "Essence of Ice" — a line that names the thing below it.
+
+     THIS IS ONLY HONEST BECAUSE THE MODES ARE BUILT. `fx.modes` carries
+     them, `attackRx` picks one, and a mode whose restriction cannot be
+     read is still refused (v3.12) — so the header genuinely does nothing
+     on its own. Filed before the modes existed it would have been the
+     no-op blind spot: a line counted as accounted for with the card's
+     whole choice unbuilt. */
+  if(/^choose \d+;?$/.test(c)) return NOOP("modal heading — the modes are the clauses below it");
   /* SUSPENSE — same shape as stealth/mark: a bare qualifier tag on certain
      Guardian auras ("Aura of Suspense") that another card (Full of
      Bravado) checks for generically via cond "suspenseAura" below. Does
@@ -1439,6 +1452,21 @@ function optFilter(phrase){
       rest = (rest.slice(0, ce.index) + " " + rest.slice(ce.index + ce[0].length)).trim(); }
   }
 
+  /* "WITH <KEYWORD>" IS A PRINTED FIELD, NOT FREE TEXT (v3.33). This
+     phrase was REFUSED while nothing could answer it honestly — the pin
+     read "a rules-text qualifier; promptFilter reads fields only" — and
+     `printedKw` answers it precisely: does the card CARRY the keyword as
+     printed rules text. `hasKw` is deliberately loose and would offer a
+     card that merely NAMES crush in a sentence, which is why the loose
+     one stays the wrong predicate. Same call v3.31 made for stealth.
+
+     THE KEYWORD MUST BE ONE THE ENGINE KNOWS. An unrecognised word after
+     "with" is still a dynamic or rules-text limit and still refuses —
+     widening this to any word would re-open exactly the hole the pin was
+     protecting. */
+  const km = rest.match(/\s*\bwith (crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost)\b/i);
+  if(km){ f.kw = km[1].toLowerCase(); rest = (rest.slice(0, km.index) + " " + rest.slice(km.index + km[0].length)).trim(); }
+
   /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of
      these EXACTLY — not as a substring.
 
@@ -1463,6 +1491,16 @@ function optFilter(phrase){
   if(/^yellow cards?$/.test(low))         { f.pitch = 2;       return f; }
   if(/^blue cards?$/.test(low))           { f.pitch = 3;       return f; }
   if(/^red cards?$/.test(low))            { f.pitch = 1;       return f; }
+  /* A BARE "CARD", but ONLY behind a printed KEYWORD. Crash and Bash
+     reveals "a card with crush", and once the keyword is consumed the
+     subject really is any card carrying it.
+
+     NARROWED TO `kw` ON PURPOSE. "A card with cost 0" is equally
+     readable in principle and NO POOL CARD PRINTS IT, so claiming it
+     would be parsing ahead of wiring — the rule that exists because
+     reading a clause raises a card's tier and makes the audit say it
+     works. Widen this when a card asks for it. */
+  if(/^cards?$/.test(low) && f.kw) return f;
   /* A NAMED card — "a Nimblism", "a Phoenix Flame". Only when what remains
      is a bare proper noun, so "a card" never becomes a name filter. */
   if(/^[A-Z][A-Za-z'\-]*(?: [A-Z][A-Za-z'\-]*)*$/.test(rest) && !/^cards?$/i.test(rest)){
@@ -1811,7 +1849,7 @@ function fxParse(card){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
     const cm = clauses[i].match(
-      /^(?:when(?:ever)? (this attacks|this defends|this hits|this enters or leaves the arena|you play an aura),\s*)?you may (banish|discard|destroy) (.+)$/i);
+      /^(?:when(?:ever)? (this attacks|this defends|this hits|this enters or leaves the arena|you play an aura),\s*)?you may (banish|discard|destroy|reveal) (.+)$/i);
     if(!cm) continue;
     let subject = cm[3].trim();
     let zone = null;
@@ -1830,6 +1868,14 @@ function fxParse(card){
       zone = "board";
       subject = subject.replace(/\s+you control$/i, "").trim();
     }
+    /* A REVEAL IS AN INFORMATION COST (v3.33). The card is SHOWN and stays
+       exactly where it was — nothing is spent, so the "cost" is that both
+       players now know you hold it. That makes it the one member of this
+       family with no destination, which is why `to` is omitted rather
+       than defaulted: `prompts.js` already treats a pick with no `to` as
+       a reveal that moves nothing. Its natural zone is the hand, because
+       revealing from anywhere public is not a cost at all. */
+    if(cm[2].toLowerCase() === "reveal") zone = zone || "hand";
     /* NOT end-anchored: "an attack action card from your hand with cost 2
        or less" puts the zone in the MIDDLE. Anchoring it missed that and
        silently fell back to the wrong zone — banishing from the graveyard
@@ -1875,14 +1921,21 @@ function fxParse(card){
     if(handled.has(i) || handled.has(i+1)) continue;
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
-    const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may pay ((?:\{r\})+|\d+)$/i);
+    /* "YOU MAY {t} THIS AND PAY {r}" — Magmatic Carapace (v3.33). The tap
+       is part of the cost, not decoration: a tapped permanent does not
+       untap until its controller's untap step (CR 4.4.3d), which is what
+       makes this once per turn without the card printing "Once per Turn".
+       Reading only the {r} would make it repeatable and strictly stronger
+       than printed — the same shape as Scorpio vs the Sledge (v2.42). */
+    const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (\{t\} this and )?pay ((?:\{r\})+|\d+)$/i);
     if(!cm) continue;
     const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
     if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — do not claim the card */
-    const cost = /^\d+$/.test(cm[2]) ? +cm[2] : (cm[2].match(/\{r\}/g)||[]).length;
+    const cost = /^\d+$/.test(cm[3]) ? +cm[3] : (cm[3].match(/\{r\}/g)||[]).length;
     fx.payCost = {
       trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
       cost,
+      taps: !!cm[2],
       ops: rr.ops
     };
     handled.add(i); handled.add(i+1);
@@ -2830,7 +2883,24 @@ const printedKw = (c, k) => {
   const esc = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   /* READ THE RAW TEXT, NOT THE CLEANED ONE — `clean` collapses the very
      newlines this rule depends on. Same trap kwGated documents above. */
-  if(raw.split(/\n+/).some(l => new RegExp("^\\**" + esc + "\\**\\.?$", "i").test(l.trim())))
+  /* A KEYWORD LINE MAY CARRY A RIDER (v3.33), and 21 pool cards print one:
+     the database writes a TRIGGERED keyword as "Crush - When this deals 4
+     or more damage to a hero, …" — still its own line, still the layout
+     rule this function is built on, and the old test demanded the line be
+     the keyword and NOTHING else. So `printedKw(c,"crush")` was FALSE for
+     every crush card in the pool, and the same for reprise, high tide,
+     surge and heave.
+
+     THE WIDENING IS THE DASH, NOT A SUBSTRING. The keyword must still
+     START the line, so "when you boost a card" and "your attacks with
+     stealth" — the references this function exists to exclude — are
+     untouched. Measured across the pool and every keyword: 21 answers
+     move, all of them cards that genuinely carry the keyword, and none
+     for boost, go again, stealth or dominate.
+
+     A PARAMETER IS PART OF THE KEYWORD. "Heave 3" is one line. */
+  if(raw.split(/\n+/).some(l => new RegExp(
+        "^\\**" + esc + "(?:\\s*\\d+)?\\**\\.?(?:\\s*[-\u2014]\\s|$)", "i").test(l.trim())))
     return true;
   if(!new RegExp("\\b" + esc + "\\b", "i").test(raw))
     return (c.kw || []).some(x => String(x).toLowerCase().includes(kw));

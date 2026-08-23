@@ -1608,7 +1608,13 @@ test("the second-person debt in the shared semantics does not grow", () => {
      the seat "you" names. The FEED half of this card stays seat-neutral:
      `sweepArena`'s own message says "<card> crumbles at the top of the
      turn", with no second person in it. */
-  assert.ok(lits.length <= 47,
+  /* 47 -> 48 AT v3.33, DELIBERATELY, and for the reason the two moves
+     above give: it is a PROMPT HINT, and a prompt is addressed to ONE
+     SIDE (`spec.side` has meant that since v2.17). Crash and Bash reveals
+     a card from the asked seat's own hand, so "your hand" is that seat's
+     hand and the second person is correct here for the same reason it is
+     correct in a refusal. The feed half of the card names the seat. */
+  assert.ok(lits.length <= 48,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

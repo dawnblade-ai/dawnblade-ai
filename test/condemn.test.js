@@ -98,8 +98,22 @@ test("only 'you control' is consumed — every other qualifier still refuses", (
   assert.ok(!variant("an aura you control with cost less than the number of Draconic chain links you control", "v3"),
     "a DYNAMIC limit must still refuse — Mounting Anger's bug was exactly this " +
     "phrase being dropped silently");
-  assert.ok(!variant("a card with crush you control", "v4"),
-    "a RULES-TEXT qualifier must still refuse — promptFilter reads printed fields");
+  /* DELIBERATE CHANGE AT v3.33, and for the same reason v3.20 changed the
+     line above: the refusal was honest only while nothing could answer the
+     phrase. `printedKw` can, and it asks the precise question — does the
+     card CARRY the keyword as printed rules text, which is a printed
+     KEYWORD LINE rather than free rules text. So "with crush" is read.
+
+     WHAT MUST STILL REFUSE is a keyword the engine does not know, because
+     that is still an unreadable limit; and the dynamic limit above, which
+     no printed field can express at all. */
+  const v4 = variant("a card with crush you control", "v4");
+  assert.ok(v4 && v4.filter.kw === "crush",
+    "a PRINTED KEYWORD is a printed field — printedKw answers it exactly");
+  assert.ok(!variant("a card with sparkles you control", "v5"),
+    "an unknown keyword is still an unreadable limit, and still refuses");
+  assert.ok(!variant("a card you control", "v6"),
+    "and a bare 'card' restricts nothing — a filter that filters nothing is not a read");
 });
 
 /* ---- the cost is offered, and declining costs the opponent nothing -- */

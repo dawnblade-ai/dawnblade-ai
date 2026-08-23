@@ -74,6 +74,19 @@ function resolveEntry(db, e, prefer){
   const dbImg = card ? (pickPrinting(card, null, prefer) || card.pr._first || null) : null;
   return {
     name:e.name, q:e.q||1, code:e.code,
+    /* WHAT THE DATABASE CALLS THIS CARD (v3.33). `name` is the ENTRY's
+       name and stays that way — a deck list names its own cards and v2.48
+       pins that. But a TOKEN's "entry" is a name captured out of another
+       card's rules text, and `classifyClause` works on the lowercased
+       clause, so every token the parser mints was reaching the board as
+       "seismic surge" / "might" / "frostbite". Twelve token names across a
+       dozen cards, and it is the v3.21 shape exactly: a lowercased capture
+       riding onto the board and being shown to the player.
+
+       Answered ONCE here rather than by each caller reaching into
+       `db.byName`, and it is null when the card did not resolve, so a
+       caller must still choose its fallback deliberately. */
+    dbName: card ? card.n : null,
     pitch: card&&card.p!=null ? card.p : (e.p||0),
     cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
     /* An ally's LIFE. The database calls it `health` (mapDbCard puts it on

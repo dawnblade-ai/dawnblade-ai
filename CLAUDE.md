@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.32
+**Current version:** v3.33
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1323 drills**.
+This is `node --test "test/*.test.js"` — currently **1339 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,75 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A KEYWORD LINE MAY CARRY A RIDER (v3.33)
+
+`printedKw`'s layout rule demanded the keyword be THE WHOLE LINE. The
+database writes a **triggered** keyword with its rider attached:
+
+> `Crush - When this deals 4 or more damage to a hero, …`
+
+So `printedKw(c,"crush")` was **FALSE for all twelve crush cards**, and
+the same for reprise, high tide, surge and heave — 21 answers wrong.
+
+**THE WIDENING IS THE DASH, NOT A SUBSTRING.** The keyword must still
+START the line, so *"when you boost a card"* and *"your attacks with
+stealth"* — the references this predicate exists to exclude — are
+untouched. Measured across the pool and every keyword before changing it:
+21 answers move, all cards that genuinely carry the keyword, **none** for
+boost, go again, stealth or dominate. Measure the blast radius of a
+predicate change; do not reason about it.
+
+### A REVEAL IS A COST THAT MOVES NOTHING (v3.33)
+
+Crash and Bash reveals a card and the card **stays in the hand** — the
+cost is the information. It is the one member of the optional-cost family
+with **no destination**, so `to` is OMITTED rather than defaulted; filing
+it to the graveyard spends a card the text never spends.
+
+**"WITH <KEYWORD>" IS A PRINTED FIELD** once `printedKw` can answer it,
+and the old refusal ("a rules-text qualifier") was honest only while
+nothing could. **The keyword list is CLOSED** — widening it to any word
+after "with" re-opens the hole the refusal was protecting, because a
+dynamic limit would read as a keyword and be dropped.
+
+**A {t} INSIDE A PAY-COST IS PART OF THE COST.** Magmatic Carapace's
+*"you may {t} this and pay {r}"* is once per turn on a card that never
+prints "Once per Turn" — a tapped permanent does not untap until CR
+4.4.3d (v2.42's Scorpio-vs-Sledge). `taps` had to be added to
+`buildPrompt` EXPLICITLY: a spec only carries fields it knows about
+(v2.34's `arsStamp`), and a dropped one makes the tap free.
+
+**TWO TRIGGERS, EACH OUT OF ONE BODY.** `defends` fires from
+`afterDefenders` — where phantasm already lives, already taking the wall
+as the CALLER's answer — and is addressed to the **defender**, because
+inside a link the actor is the ATTACKER. `playAura` fires in `execute`,
+and **the watcher is not the card being played**: every other trigger
+there asks the resolving card about itself, while this one asks what is
+WATCHING, and Magmatic Carapace is a Chest piece, so a board-only scan
+finds nothing.
+
+**AND IT DRAINS ONLY WHAT IT QUEUED.** A blanket `openPrompt` in
+`afterDefenders` opened whatever else was waiting, mid-combat, and
+stalled three drills at the damage step on cards printing no such
+trigger. A prompt is drained by whoever queued it.
+
+### A MINTED TOKEN WORE A LOWERCASED NAME (v3.33)
+
+`classifyClause` works on the LOWERCASED clause and `resolveEntry`
+returns the ENTRY's name by design (v2.48) — so every token the parser
+minted reached the board as *"seismic surge"*, *"might"*, *"frostbite"*.
+**12 token names across a dozen cards**, Kayo's Might and Iyslander's
+Frostbite among them, shown to the player. v3.21's shape exactly.
+
+`resolveEntry` answers **`dbName`** now — what the DATABASE calls the
+card — and the mint uses it. `name` still means the entry's name, because
+a deck list names its own cards.
+
+**AND A HEADING IS NOT A CLAUSE.** `Choose 1;` reported unread on both
+modal cards while both modes were built, like Briar's *"Essence of Earth
+and Lightning"*. Filed `noop` — honest ONLY because the modes exist and
+an unreadable mode is still refused (v3.12).
 
 ### THE PRINTED CARD IS THE ORACLE FOR A KEYWORD (v3.32)
 

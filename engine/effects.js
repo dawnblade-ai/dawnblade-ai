@@ -708,7 +708,7 @@ function makeEffects(ctx){
          everything else and stand it up on the correct player's board —
          never describe it, never hardcode what it does. */
       else if(k==="token"){
-        const rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
+        let rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database — token not created.`); return; }
         const side = op[3]==="foe" ? "foe" : "self";
         /* A PLACEMENT INTO AN EXPOSED ARMOUR ZONE CAN FIZZLE, and that is
@@ -732,6 +732,13 @@ function makeEffects(ctx){
            the board. Read from the token's own printed text, so nothing
            here names a token. */
         const _tsd = ((P.fxParse(rec).ops || []).find(o => o[0] === "selfDestruct") || [])[1] || null;
+        /* THE PRINTED NAME, NOT THE CAPTURE (v3.33). The op carries a name
+           read out of a lowercased clause, and `resolveEntry` returns the
+           ENTRY's name by design — so every token minted from card text
+           reached the board as "seismic surge". The database is the
+           authority for what a card is called, exactly as it is for
+           everything else on it. */
+        if(rec.dbName) rec = {...rec, name: rec.dbName};
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
           if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
@@ -1793,6 +1800,29 @@ function makeEffects(ctx){
       if(fx.optCost && (fx.optCost.trigger === "play"
           || (fx.optCost.trigger === "entersLeaves" && fx.perm)))
         n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
+      /* "WHENEVER YOU PLAY AN AURA, …" (v3.33) — Magmatic Carapace.
+
+         THE WATCHER IS NOT THE CARD BEING PLAYED. Every other trigger in
+         this block asks the resolving card about itself; this one asks the
+         actor's BOARD AND GEAR whether anything is watching for an aura,
+         and Magmatic Carapace is a Chest piece, so a scan of the board
+         alone would find nothing. Same reason `sweepArena` had to re-derive
+         its teardown flags over gear as well (v3.07).
+
+         THE TAP IS PART OF THE COST. `payCost.taps` says so, and a tapped
+         permanent does not untap until CR 4.4.3d — which is what makes
+         this once per turn on a card that never prints "Once per Turn".
+         A piece already spent this turn is not offered. */
+      if(fx.perm === "aura"){
+        const watchers = [...(act(n).gear||[]), ...((act(n).board||[]).map(b => b && b.card))]
+          .filter(Boolean)
+          .map(w => ({w, px: fxParse(w).payCost}))
+          .filter(({w, px}) => px && px.trigger === "playAura"
+                            && !(px.taps && (act(n).weaponUsed||{})[w.uid])
+                            && !w.destroyed);
+        for(const {w, px} of watchers)
+          n.promptQ = [...(n.promptQ||[]), payCostSpec(px, w, actorOf(n))];
+      }
     }
     const delta = preHP - foe(n).hp;
     if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
@@ -1974,6 +2004,16 @@ function makeEffects(ctx){
       if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
     }
+    /* THE TAP IS PAID BEFORE THE RIDER RUNS (v3.33), for the reason
+       Frostbite's order is a whole ruling: the permanent that pays is
+       tapped by the very activation it pays for. `weaponUsed` is the
+       existing per-permanent spent flag and `perTurnCleared` already
+       unpicks a TAP (lifted only at the controller's untap step, CR
+       4.4.3d) from a per-turn allowance, so nothing new is stored. */
+    if(r.tap != null){
+      const ps = actMut(n);
+      ps.weaponUsed = {...(ps.weaponUsed||{}), [r.tap]: true};
+    }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
@@ -2119,6 +2159,35 @@ function makeEffects(ctx){
         n._fizzled = true;
         return openPrompt(winCheck(n));
       }
+    }
+    /* "WHEN THIS DEFENDS, …" FIRES HERE, ON BOTH BOARDS (v3.33).
+
+       This is the moment the wall is FINAL and both boards already reach
+       it — which is the whole reason the trigger lives here rather than at
+       the declaration toggle, where a defender can still be withdrawn.
+       The wall is the CALLER's answer, exactly as phantasm's is.
+
+       IT IS ADDRESSED TO THE DEFENDER, not the actor. Inside a link the
+       actor is the ATTACKER (judge sets it from `link.by`, and the
+       trainer's block path keeps seat 0 for the swing), so billing
+       `actorOf(n)` here would offer the attacking hero a choice printed on
+       their opponent's blocker — the self/foe pairing `selfPayOr` and
+       `payOr` already keep apart. */
+    {
+      const defSeat = 1 - actorOf(n);
+      let queued = 0;
+      for(const dc of (wall || [])){
+        const oc = fxParse(dc).optCost;
+        if(!oc || oc.trigger !== "defends") continue;
+        n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
+        queued++;
+      }
+      /* DRAIN ONLY IF THIS FIRED. A blanket `openPrompt` here opens
+         whatever else happened to be waiting in the queue, mid-combat, and
+         a live sheet stops the game for both seats — three drills stalled
+         at the damage step on cards that print no defends trigger at all.
+         A prompt is drained by whoever queued it. */
+      if(queued) n = openPrompt(n);
     }
     return n;
   };
@@ -2859,16 +2928,49 @@ function defendValue(defSide, card, opts){
    `fxParse` memoizes on name|pitch, so the parse cannot carry a uid; and
    setting `notUid` unconditionally would quietly exclude the source from
    the cards whose text never prints "another". */
-function optCostSpec(oc, card, side, leaving){
-  const verb = oc.kind === "banish" ? "Banish" : oc.kind === "destroy" ? "Destroy" : "Discard";
+/* THE PAY-COST TWIN OF `optCostSpec` (v3.33). One description of the
+   offer, so the two queue sites that raise it cannot drift — the same
+   reason v3.20 collapsed three optCost literals into one builder.
+
+   `avail` is deliberately LEFT OUT: `openPrompt` fills it from the asked
+   seat's own resources, which is what keeps the sheet honest about who is
+   paying. `pay` is what `applyPrompt` returns for the caller to charge —
+   this module runs no effects and takes no resources. */
+function payCostSpec(px, card, side){
   return {
+    tag:"pay", side, src:card.name,
+    cost:px.cost, ops:px.ops,
+    taps:!!px.taps, tapUid:px.taps ? card.uid : undefined,
+    title:"Pay " + px.cost + " to power " + card.name + "?",
+    hint: px.taps
+      /* SEAT-NEUTRAL ON PURPOSE. A hint CAN be second person (a prompt is
+         addressed to one side) but it does not have to be, and the debt
+         ledger is a budget rather than a licence. */
+      ? "Optional — it taps, so it will not untap until CR 4.4.3d."
+      : "Optional — decline and the rider does not resolve."
+  };
+}
+
+function optCostSpec(oc, card, side, leaving){
+  const verb = oc.kind === "banish" ? "Banish" : oc.kind === "destroy" ? "Destroy"
+             : oc.kind === "reveal" ? "Reveal" : "Discard";
+  /* A REVEAL MOVES NOTHING (v3.33). The card is shown and stays where it
+     was — the cost is the information, not the card. `prompts.js` already
+     treats a pick with no `to` as a reveal that moves nothing, so the
+     field is OMITTED rather than defaulted: sending it to the graveyard
+     would spend a card the text never spends. */
+  const spec = {
     tag:"pick", side, src:card.name,
-    zone:oc.zone, to:(oc.kind === "banish" ? "banish" : "grave"),
+    zone:oc.zone,
     filter:(oc.filter && oc.filter.notSelf) ? {...oc.filter, notUid:card.uid} : oc.filter,
     min:0, max:1, ops:oc.ops,
     title:verb + " to power " + card.name + (leaving ? " as it goes?" : "?"),
-    hint:"Optional — choose none to decline. The rider only resolves if you pay."
+    hint: oc.kind === "reveal"
+      ? "Optional — choose none to decline. The card is shown and stays in your hand."
+      : "Optional — choose none to decline. The rider only resolves if you pay."
   };
+  if(oc.kind !== "reveal") spec.to = (oc.kind === "banish" ? "banish" : "grave");
+  return spec;
 }
 
 /* HEAVE — THE ARSENAL SET THAT PAYS (v3.32).

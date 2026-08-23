@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.32 · PHASE C · BRAVO'S KEYSTONE
+# Handoff — Dawnblade, at v3.33 · PHASE C · BRAVO IS DOWN TO ONE CARD
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1323 drills**
+> the card semantics run on both boards.** `npm test` is **1339 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.32: coverage **319 full / 72 part / 14 none**, fairness
+> Current at v3.33: coverage **323 full / 69 part / 13 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -101,8 +101,8 @@
 > | card | what it needs |
 > |---|---|
 > | Thunder Quake | **DONE at v3.32.** Built from the card's PRINTED reminder text, which the database does not carry and which is more precise than the July ruling — an empty-arsenal gate and a FACE-UP put, and it performs the arsenal action rather than replacing it. |
-> | Crash and Bash | a `defends` optCost trigger + a REVEAL cost kind. `optFilter` can express "a card with crush" now that `printedKw` exists. |
-> | Magmatic Carapace | "whenever you play an aura" trigger + a tap-and-pay cost (the `pay` prompt variant). |
+> | Crash and Bash | **DONE at v3.33** — a reveal is a cost that moves nothing, "with crush" is a printed field, and the `defends` trigger fires from `afterDefenders`. |
+> | Magmatic Carapace | **DONE at v3.33** — the {t} is part of the pay-cost, and `playAura` fires in `execute` off the actor's GEAR as well as the board. |
 > | Pummel | **DONE at v3.31** — its second mode is selectable now that the cost restriction can be read. |
 >
 > **AND SEISMIC SURGE IS DONE (v3.32)**, which was the real keystone: four
@@ -117,7 +117,7 @@
 > there face up. His remaining two cards (Crash and Bash, Magmatic
 > Carapace) both mint Seismic Surge, so they are now readers rather than
 > new machinery.
-> | Staunch Response | an optional additional cost paying into `defSelf.cost`. |
+> | Staunch Response | **the last one.** "As an additional cost to play this, you MAY pay {r}{r}{r}{r}" — an OPTIONAL additional cost decided at play time, which is the timing wall Charge and Fusion already hit: a cost has to be settled before the card resolves, and `openPrompt` drains after. It then needs a `defSelf` condition (`addCostPaid`) whose answer belongs to the PLAY, not the card — so it rides on the `blockRx` entry and reaches the wall through `defendValue`'s `opts`, the way every other caller-supplied fact does. Machinery, not a reader. |
 >
 > ### THE FIVE CRUSH RIDERS — four built, one refusing
 >

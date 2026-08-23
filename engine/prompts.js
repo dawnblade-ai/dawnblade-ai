@@ -31,7 +31,7 @@
   else root.DawnPrompts = factory(root.DawnParser);
 })(typeof self!=="undefined" ? self : this, function(P){
 
-const {isAttack} = P;
+const {isAttack, printedKw} = P;
 
 /* Zones a prompt may draw from. `arsenal` is a single card and `board`
    holds wrappers rather than cards, so both are normalised on read. */
@@ -87,6 +87,16 @@ function promptFilter(spec){
     if(spec.powerGe != null && (c.power||0) < spec.powerGe) return false;
     if(spec.powerLe != null && (c.power||0) > spec.powerLe) return false;
     if(spec.defGe != null && (c.def||0) < spec.defGe) return false;
+    /* A PRINTED KEYWORD LINE IS A PRINTED FIELD (v3.33). "A card WITH
+       CRUSH" was refused as a rules-text qualifier while nothing could
+       answer it honestly; `printedKw` can, and it asks the precise
+       question — does the card CARRY the keyword as printed rules text,
+       not does the word appear somewhere in a sentence. That distinction
+       is the whole reason `hasKw` is the wrong predicate here: it is
+       deliberately loose, and a card that merely REFERENCES crush would
+       otherwise be a legal thing to reveal. Same call v3.31 made for
+       stealth in a target qualifier. */
+    if(spec.kw != null && !printedKw(c, spec.kw)) return false;
     if(spec.name != null && !new RegExp(spec.name, "i").test(c.name||"")) return false;
     return true;
   };
@@ -184,6 +194,13 @@ function buildPrompt(game, spec){
          consequence of NOT paying, or declining silently does nothing and
          the card is strictly weaker than printed in the other direction. */
       elseOps: spec.elseOps || [],
+      /* AND THE TAP, WHERE THE COST PRINTS ONE (v3.33). A SPEC ONLY
+         CARRIES FIELDS `buildPrompt` KNOWS ABOUT — the `arsStamp` lesson
+         (v2.34) — so a field threaded through the spec and forgotten here
+         is silently dropped. Without it Magmatic Carapace's {t} is free
+         and the ability is repeatable every time an aura is played, which
+         is strictly stronger than printed. */
+      taps: !!spec.taps, tapUid: spec.tapUid,
       choice:null,
       title: spec.title || ("Pay " + cost + "?"),
       hint: spec.hint || "You may pay this. If you do, the rider resolves."};
@@ -412,7 +429,11 @@ function applyPrompt(game, prompt){
     }
     out.pay = prompt.cost;
     out.ops = prompt.ops || [];
-    out.msgs.push(who + " paid " + prompt.cost + " — the rider resolves.");
+    /* The TAP leaves as data, like the payment: this module runs no
+       effects and touches no state. The caller marks the permanent spent. */
+    if(prompt.taps && prompt.tapUid != null) out.tap = prompt.tapUid;
+    out.msgs.push(who + " paid " + prompt.cost
+      + (prompt.taps ? " and tapped " + prompt.src : "") + " — the rider resolves.");
     return out;
   }
   /* SOAK. This module runs no effects and touches no resources, so the

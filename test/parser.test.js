@@ -970,16 +970,33 @@ test("'ANOTHER aura' is an exclusion, and it is carried rather than dropped", ()
   assert.deepEqual(P.optFilter("an aura"), {tt:"aura"}, "the plain form is still read");
   assert.ok(!P.optFilter("an aura").notSelf,
     "and a card that does NOT print 'another' must not acquire the exclusion");
-  /* the exclusion does not rescue an otherwise unreadable subject */
-  assert.equal(P.optFilter("another card with crush"), null,
-    "'another' + a rules-text qualifier is still unreadable and must still refuse");
+  /* the exclusion COMBINES with a subject that is readable, and does not
+     rescue one that is not. "with crush" became readable at v3.33
+     (`printedKw`), so the pin moved to a phrase that is still unreadable. */
+  assert.deepEqual(P.optFilter("another card with crush"), {notSelf:true, kw:"crush"});
+  assert.equal(P.optFilter("another card with sparkles"), null,
+    "'another' + an unreadable qualifier is still unreadable and must still refuse");
 });
 
-test("look-alike — a RULES-TEXT qualifier is refused", () => {
-  /* Crash and Bash: "a card with crush from your hand". `crush` is a
-     keyword in the card's text, not a printed field, and promptFilter
-     reads fields only. */
-  assert.equal(P.optFilter("a card with crush"), null);
+test("a PRINTED KEYWORD is a printed field; an unknown one still refuses", () => {
+  /* DELIBERATE CHANGE AT v3.33. This asserted a refusal, and the reason it
+     gave — "`crush` is a keyword in the card's text, not a printed field"
+     — stopped being true once `printedKw` existed. It asks the precise
+     question: does the card CARRY the keyword as printed rules text, off
+     its own keyword LINE, which is a field in exactly the sense
+     `card_keywords` is. `hasKw` is the loose one and stays the wrong
+     predicate here — a card that merely NAMES crush in a sentence must
+     not be a legal thing to reveal. */
+  assert.deepEqual(P.optFilter("a card with crush"), {kw: "crush"});
+  assert.deepEqual(P.optFilter("an aura with stealth"), {tt: "aura", kw: "stealth"});
+  /* AND THE LIST IS CLOSED. Widening this to any word after "with" would
+     re-open the hole the old refusal was protecting: a dynamic or
+     rules-text limit would read as a keyword and be silently dropped. */
+  assert.equal(P.optFilter("a card with sparkles"), null);
+  assert.equal(P.optFilter("a card with cost less than the number of Draconic chain links you control"), null);
+  /* A BARE "CARD" IS NOT A FILTER. It restricts nothing, so reading it
+     would make every optional cost payable with anything. */
+  assert.equal(P.optFilter("a card"), null);
 });
 
 test("look-alike — Mounting Anger and Rising Resentment are BOTH unclaimed", () => {
@@ -1619,14 +1636,24 @@ test("cold snap — the pair reads as payOr with the FREEZE as its else", () => 
 test("payCost — pairs 'you may pay X' with its 'if you do' rider, same as optCost", () => {
   const fx = P.fxParse({name:"Brothers in Arms", pitch:3, tt:"Generic Action - Attack", power:4, def:2, kw:[],
     tx:"When this defends, you may pay {r}. If you do, it gets +2{d}."});
-  assert.deepEqual(fx.payCost, {trigger:"defends", cost:1, ops:[["defBuff",2]]});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:1, taps:false, ops:[["defBuff",2]]});
   assert.equal(fx.tier, "full");
+  /* THE TAP IS PART OF THE COST WHERE IT IS PRINTED (v3.33). Magmatic
+     Carapace reads "you may {t} this and pay {r}", and a tapped permanent
+     does not untap until CR 4.4.3d — which is what makes it once per turn
+     without the card printing "Once per Turn". Reading only the {r} makes
+     it repeatable and strictly stronger than printed. */
+  const tapped = P.fxParse({name:"payCost Drill Tap", pitch:0, tt:"Guardian Equipment - Chest", def:2, kw:[],
+    tx:"Whenever you play an aura, you may {t} this and pay {r}. If you do, create a Runechant token."});
+  assert.equal(tapped.payCost.taps, true);
+  assert.equal(tapped.payCost.trigger, "playAura");
+  assert.equal(tapped.payCost.cost, 1);
 });
 
 test("payCost — a numeric cost is read too, not just {r} pips", () => {
   const fx = P.fxParse({name:"payCost Drill Numeric", pitch:1, tt:"Action - Attack", power:4, def:1, kw:[],
     tx:"When this defends, you may pay 2. If you do, it gets +1{d}."});
-  assert.deepEqual(fx.payCost, {trigger:"defends", cost:2, ops:[["defBuff",1]]});
+  assert.deepEqual(fx.payCost, {trigger:"defends", cost:2, taps:false, ops:[["defBuff",1]]});
 });
 
 test("payCost — an unreadable rider leaves the card unclaimed rather than guessed", () => {
