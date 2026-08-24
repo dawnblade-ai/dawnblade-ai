@@ -1105,6 +1105,24 @@ function classifyClause(raw){
     const o=[full ? ["gaNext", full] : ["gaNext"]];
     const rn = c.match(/create (a|an|one|two|three|\d+) runechants?/);
     if(rn) o.push(["runeHitNext", num(rn[1])]);
+    /* A GRANTED ABILITY CAN RIDE WITH GO AGAIN TOO (v3.42) — Avast Ye!:
+       "Your next Pirate ally attack this turn gets go again and \"When
+       this hits a hero, create a Gold token.\"" The quoted half parsed
+       fine — `quotedOnHit` is the one reader every other shape in this
+       family already shares — and was simply never asked here, so the
+       rider was dropped even though a reader exists for it. That is the
+       one card v3.41's `fx.quotedUnread` flag cannot see: it asks "is
+       there a reader", and there is.
+
+       MUTUALLY EXCLUSIVE WITH THE RUNECHANT COUNT ABOVE. Mauvrion Skies'
+       rider is already read, by name, into `runeHitNext` — asking
+       `quotedOnHit` there too would mint the same runechants twice. Only
+       a QUALIFIED grant carries a rider: `gaNext`'s bare boolean form has
+       no side field to hold one, and no pool card needs it to. */
+    if(!rn && full){
+      const ro = quotedOnHit(c);
+      if(ro) o[0] = ["gaNext", full, {onHit: ro}];
+    }
     return R(o);
   }
   /* "YOU MAY PLAY YOUR NEXT <x> THIS TURN AS THOUGH IT WERE AN INSTANT"

@@ -688,8 +688,15 @@ function makeEffects(ctx){
       }
       else if(k==="gaNext"){
         const gq = op[1] || null;
-        if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), gq];
-                n=L(n,`Your next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again.`); }
+        /* THE RIDER TRAVELS WITH THE QUALIFIER (v3.42), same split
+           `buffNext`/`buffQ` keep for their own granted ability (op[3]
+           there, since op[1] there is an amount). It waits with the
+           grant and is applied only to the attack that actually collects
+           the go again — see `takeGaNext` and its call site. */
+        const rider = op[2] || null;
+        if(gq){ actMut(n).gaNextQ = [...(act(n).gaNextQ||[]), {q: gq, rider}];
+                n=L(n,`Your next ${P.qualLabel(gq).replace(/^an? /,"")} this turn will carry go again`
+                     +`${rider?", and its hit carries a granted ability":""}.`); }
         else  { actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
       }
       /* A COUNT, NOT A FLAG (v3.10). Mauvrion Skies prints 3 Runechants at
@@ -1580,8 +1587,16 @@ function makeEffects(ctx){
            rule CLAUDE.md spends a section on, in the file that should be
            the last place to break it. */
       if(act(n).gaNext){ ga = true; actMut(n).gaNext = false; n = L(n, "The rite empowers this swing — go again."); }
+      /* AND ANY ABILITY THE GRANT CARRIED comes with it (v3.42) — Avast
+         Ye!'s "…gets go again and \"When this hits a hero, create a Gold
+         token.\"" `qRider` above gathers the same shape off `buffQ`; this
+         is its `gaNextQ` twin, joined into the same `pend.onHit` below so
+         neither list has to know the other exists. */
+      let gaRider = [];
       { const _gq = takeGaNext(n, card, qCtx);
-        if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`); } }
+        if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`);
+          if(_gq.rider && _gq.rider.onHit){ gaRider = _gq.rider.onHit;
+            n = L(n, `${card.name} carries a granted ability into the chain.`); } } }
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
@@ -1715,7 +1730,7 @@ function makeEffects(ctx){
          resolves rather than a pumped one the wall quietly reduces. */
       total = capNoPump(n, card, total);
 
-      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
@@ -2518,10 +2533,18 @@ function makeEffects(ctx){
      settles on the chain and a non-attack settles at the action point —
      and Mage Master Boots grants it to a NON-attack, so a taker in the
      attack branch alone would have built half the rule. A grant that does
-     not match is NOT spent: it waits for the card it names (v2.30). */
+     not match is NOT spent: it waits for the card it names (v2.30).
+
+     ENTRIES ARE `{q, rider}` (v3.42), not a bare qualifier — the same
+     shape `buffQ` uses for the same reason: a granted ability can ride
+     with the go again (Avast Ye!) and has to travel with the ENTRY that
+     matched, not the card that handed it over. The caller reads
+     `.rider.onHit` off the return; a grant with no rider returns one with
+     `rider: null`, same as it always did for the takers that only checked
+     truthiness. */
   const takeGaNext = (n, card, ctx) => {
     const q = act(n).gaNextQ || [];
-    const i = q.findIndex(x => qualMatches(x, card, ctx));
+    const i = q.findIndex(x => qualMatches(x.q, card, ctx));
     if(i < 0) return null;
     actMut(n).gaNextQ = q.slice(0, i).concat(q.slice(i + 1));
     return q[i];

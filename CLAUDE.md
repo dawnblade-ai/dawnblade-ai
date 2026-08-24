@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.41
+**Current version:** v3.42
 
 ---
 
@@ -357,6 +357,40 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A QUALIFIED GRANT NEEDS A RIDER FIELD BEFORE IT CAN CARRY ONE (v3.42)
+
+v3.41's `fx.quotedUnread` flag asks "is there a reader", so it cannot see
+Avast Ye!'s rider — `quotedOnHit` reads it fine. The bug was one layer
+in: `gaNextQ` (the qualified go-again grant, v3.31) had no FIELD to carry
+a rider on, so `quotedOnHit` was never even asked at that call site and
+the parsed rider had nowhere to go. `buffQ` (v3.10) solved the identical
+problem for its own family with `{amt, q, rider}`; `gaNextQ` just never
+got the same treatment. Entries are `{q, rider}` now, and `takeGaNext`
+returns the whole entry so the caller can join `.rider.onHit` into
+`pend.onHit` beside `buffQ`'s own `qRider` — the exact shape, because it
+is the exact same question asked of the sibling grant.
+
+**A LOOK-ALIKE CARD IS THE HAZARD, AGAIN.** Mauvrion Skies prints the
+identical wrapper ("…gets go again and \"When this hits, create N
+Runechant tokens.\"") and its rider was already read, by NAME, into a
+dedicated `runeHitNext` counter (v3.10). Reading it a second time through
+the new generic path would mint the same runechants twice —
+`VALUE-DOUBLED` on the fairness sweep's own terms. The two readers are
+mutually exclusive by construction (the generic rider is only attempted
+when the runechant-count match fails) and a drill pins Mauvrion Skies'
+parsed ops unchanged.
+
+**THE FIXTURE HAS TO PROVE THE READER, NOT THE WIRING.** Real Pirate
+allies attack through an activated ability that neither board wires yet
+(see "allies do not attack" under Known approximations) — so a driven
+test against the real card alone would prove nothing ever fires. The
+drill uses a synthetic Pirate-ally-attack fixture, same discipline as
+`test/qualifier.test.js`'s own `atkCard`, and resolves the hit all the
+way through `resolveStack` to see the Gold token actually land. Testing
+the mechanism and testing the ally-combat gap are two different claims;
+conflating them would either overclaim the fix or hide that the reader
+now works.
 
 ### A REFUSAL NOBODY IS TOLD ABOUT IS A LIE (v3.41)
 

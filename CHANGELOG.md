@@ -7,6 +7,54 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.42 — Avast Ye!, and the rider `fx.quotedUnread` could not see
+
+HANDOFF.md named this one directly: "the ONE card v3.41's new audit flag
+deliberately cannot see, because that flag asks 'is there a reader' and
+here there is."
+
+> Your next Pirate ally attack this turn gets go again and "When this
+> hits a hero, create a Gold token."
+
+The quoted half parses fine — `quotedOnHit` is the one reader every other
+granted-ability shape in this family already shares (v3.10, v3.12). It was
+just never ASKED at this call site: the go-again head consumed the whole
+clause and the rider was silently thrown away. Driven, the card granted
+go again and nothing else, forever `tier: full`.
+
+**`gaNextQ` had no field to carry a rider.** `buffQ` (the qualified power
+grant) has carried one since v3.10 — `{amt, q, rider}` — but its cousin
+`gaNextQ` (the qualified go-again grant, v3.31) only ever stored the bare
+qualifier. Entries are `{q, rider}` now, same shape, same reason: a
+granted ability rides with the grant, not with the card that handed it
+over, because it has to wait for whatever attack actually collects the go
+again. `takeGaNext` returns the whole entry; the caller in `execute` reads
+`.rider.onHit` and joins it into `pend.onHit` beside `buffQ`'s own
+`qRider` — two lists, one place they both land.
+
+**Mutually exclusive with Mauvrion Skies' `runeHitNext` count on purpose.**
+Mauvrion Skies prints the identical shape ("…gets go again and \"When
+this hits, create N Runechant tokens.\"") and its rider was already read,
+by name, into a dedicated counter. Asking `quotedOnHit` there too would
+mint the same runechants twice — `VALUE-DOUBLED`, the fairness sweep's own
+category. The two paths are guarded to be exclusive and a drill pins that
+Mauvrion Skies' parsed ops are unchanged.
+
+**Driven end to end.** `test/riders.test.js` arms the grant off the real
+card, plays a synthetic Pirate-ally attack that matches its qualifier, and
+resolves the hit through `resolveStack` — the Gold token really lands on
+the board. Real Pirate allies attack through an activated ability neither
+board wires yet (CLAUDE.md's "allies do not attack"), so the fixture
+proves the READER, the same thing `test/qualifier.test.js`'s own synthetic
+`atkCard` already does for this family. Both new drills were sabotaged
+(the rider-storage line, and the parser's rider-attach guard) and caught
+the regression before being trusted.
+
+The granted-rider census in `test/riders.test.js` moves 19 → 20 of the
+28 pool cards that print a quoted ability — the eight left are honest
+refusals (an `attacks` trigger rather than a hit, or a payload with no
+reader), not gaps of this shape.
+
 ## v3.41 — housekeeping, and what the docs were lying about
 
 A pass over the standing claims in `CLAUDE.md` and the engine comments,

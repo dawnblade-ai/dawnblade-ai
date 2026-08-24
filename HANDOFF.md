@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.41 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
+# Handoff — Dawnblade, at v3.42 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,13 +12,14 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1423 drills**
+> the card semantics run on both boards.** `npm test` is **1425 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.41: coverage **332 full / 61 part / 12 none**, fairness
-> **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
+> Current at v3.42: coverage **332 full / 61 part / 12 none** (unchanged —
+> v3.42 fixed a rider no coverage tool could see), fairness **clean**,
+> `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
@@ -113,17 +114,18 @@
 > v3.28 — this is the other direction and is a new field); Turn to
 > Mindfire needs a {t} cost on the HERO plus a Ponder token.
 
-> ### START HERE — the four things a new thread should pick up
+> ### START HERE — the things a new thread should pick up
 >
-> **1. Avast Ye! p3 — a READ rider that is dropped.** *"Your next Pirate
-> ally attack this turn gets go again and \"When this hits a hero, create a
-> Gold token.\""* The quoted half parses perfectly
-> (`["token","gold",1,"self"]` with `onHit`), and the `gaNext` path carries
-> a qualifier and no rider, so it is discarded. Fixing it means letting the
-> qualified single-shot grants carry an on-hit rider and having
-> `takeGaNext` apply it — the same shape `buffQ` already manages. It is the
-> ONE card v3.41's new audit flag deliberately cannot see, because that
-> flag asks "is there a reader" and here there is.
+> **1. ~~Avast Ye! p3~~ BUILT at v3.42.** `gaNextQ` entries are `{q,
+> rider}` now, same shape `buffQ` has carried since v3.10, and
+> `takeGaNext` hands the rider's on-hit ops onto the pend beside `buffQ`'s
+> own. Mauvrion Skies' look-alike wrapper is unaffected — its rider still
+> reads through the dedicated `runeHitNext` count, and the two paths are
+> mutually exclusive by construction. Driven end to end in
+> `test/riders.test.js` against a synthetic fixture, because real Pirate
+> allies attack through an activated ability neither board wires yet (see
+> "allies do not attack"). See the CHANGELOG and CLAUDE.md's "A QUALIFIED
+> GRANT NEEDS A RIDER FIELD BEFORE IT CAN CARRY ONE".
 >
 > **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
 > them general: the `hits` optional-cost trigger (unwired since v3.20), a

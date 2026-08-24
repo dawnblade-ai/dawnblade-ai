@@ -118,6 +118,56 @@ test("driven: the count reaches the side, not a flag", {skip}, () => {
   }
 });
 
+/* ---- AVAST YE! — THE ONE `fx.quotedUnread` COULD NOT SEE (v3.42) ------
+
+   Its rider parsed fine all along; nothing ever asked `quotedOnHit` for
+   it, so it was consumed by the card's HEAD and dropped in silence —
+   `tier: full` with a printed ability doing nothing. `gaNextQ`'s taker is
+   the `buffQ` shape one card family over: the rider rides with the
+   qualifier and is spent only by the attack that actually collects the
+   go again. ------------------------------------------------------------ */
+
+test("Avast Ye!'s rider is read, and nothing is flagged unread any more", {skip}, () => {
+  H.db();
+  const f = fx("Avast Ye!", 3);
+  assert.deepEqual(f.ops, [["gaNext", {g: [["pirate", "ally"]]},
+                            {onHit: [["token", "gold", 1, "self"]]}]]);
+  assert.deepEqual(f.quotedUnread || [], [],
+    "a reader exists for this rider — the audit must not flag it as unread");
+});
+
+test("driven: the grant waits on the side and mints its Gold token on the hit it names", {skip}, () => {
+  H.db();
+  const avast = H.card("Avast Ye!", 3);
+  let g = H.state({hand: [avast], res: 9}, {}, {turn: 3, actor: 0});
+  g = H.execute(g, avast, "hand", 0, {});
+  assert.equal(g.sides[0].gaNextQ.length, 1, "the grant waits on the side, rider and all");
+  assert.ok(g.sides[0].gaNextQ[0].rider && g.sides[0].gaNextQ[0].rider.onHit,
+    "carrying its granted ability, not just the go again");
+
+  /* A Pirate Ally attack, told apart by its printed type line the same
+     way every other qualifier in this family is — `qualMatches` reads
+     fields, never a card's name. Real Pirate allies (Swabbie and kin)
+     attack through an activated ability nothing wires yet on either
+     board (CLAUDE.md's "allies do not attack"), so this is a synthetic
+     fixture proving the READER, same as `test/qualifier.test.js`'s own
+     `atkCard` — with "Attack" added so `execute` takes the attack branch
+     that actually builds a `pend` to carry the rider on. */
+  const pirate = {name: "Test Pirate Ally", tt: "Pirate Necromancer Action - Ally - Attack",
+    ty: ["Pirate", "Necromancer", "Action", "Ally", "Attack"], tx: "", kw: [],
+    power: 5, cost: 0, pitch: 1, uid: "pa1"};
+  const hit = H.execute(g, pirate, "hand", 0, {});
+  assert.equal(hit.pend.ga, true, "the grant fires — go again");
+  assert.deepEqual(hit.pend.onHit, [["token", "gold", 1, "self"]],
+    "and its rider rides with it, onto the pend — not dropped");
+  assert.equal((hit.sides[0].gaNextQ || []).length, 0, "spent by what it named");
+
+  const landed = H.fx(hit, (f2, n) => f2.resolveStack(n));
+  assert.equal(landed.sides[1].hp, 20 - 5, "the swing actually hit");
+  assert.ok(landed.sides[0].board.some(b => /gold/i.test(b.card.name)),
+    "and the Gold token the rider promised is really on the board");
+});
+
 /* ---- AN UNREADABLE RIDER REFUSES; IT DOES NOT GUESS ------------------ */
 
 test("a rider the reader cannot honestly read is dropped, and the head still lands", {skip}, () => {
@@ -149,12 +199,20 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
     if(!full) continue;
     total++;
     const f = fx(c.name, c.pitch);
-    if((f.ops || []).some(o => o[3] && o[3].onHit) || (f.onHit || []).length
+    /* `buffNext`'s rider rides at op[3] (op[1] is an amount, op[2] its
+       qualifier); `gaNext`'s rides at op[2] (op[1] IS the qualifier —
+       there is no amount). Two positions, one family — see CLAUDE.md's
+       "FOUR QUALIFIED SINGLE-SHOT GRANTS". */
+    if((f.ops || []).some(o => (o[0]==="buffNext" && o[3] && o[3].onHit)
+                             || (o[0]==="gaNext" && o[2] && o[2].onHit))
+       || (f.onHit || []).length
        || (f.condOnHit || []).length || (f.ops || []).some(o => o[0] === "runeHitNext")
        || (f.modes || []).some(m => m.riderOnHit)) carried++;
   }
   assert.equal(total, 28, "pool cards granting a quoted ability");
-  assert.equal(carried, 19, "carrying their rider — 7 before v3.10, 15 after it, " +
-    "and the targeted and modal shapes at v3.12. The nine that do not are honest " +
-    "refusals: an `attacks` trigger rather than a hit, or a payload with no reader.");
+  assert.equal(carried, 20, "carrying their rider — 7 before v3.10, 15 after it, " +
+    "the targeted and modal shapes at v3.12, and Avast Ye! at v3.42, whose rider " +
+    "read fine all along and was simply never asked for. The eight that remain " +
+    "unread are honest refusals: an `attacks` trigger rather than a hit, or a " +
+    "payload with no reader.");
 });
