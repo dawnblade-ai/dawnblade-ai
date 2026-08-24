@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-24T14:36:54.390Z",
- "appVer": "3.39",
+ "generated": "2026-08-24T15:12:46.039Z",
+ "appVer": "3.41",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -5799,6 +5799,7 @@
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p} and \"When this hits a hero, {t} them and all allies they control.\"\nGo again",
    "flags": [
+    "granted ability in quotes has NO reader: \"when this hits a hero, {t} them and all allies they control.\" — the head parses, this does not",
     "tap cost {t} — not enforced (see ledger)"
    ]
   },
@@ -6186,7 +6187,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p} and \"Defense reactions can't be played from arsenal this chain link.\"\nGo again",
-   "flags": []
+   "flags": [
+    "granted ability in quotes has NO reader: \"defense reactions can't be played from arsenal this chain link.\" — the head parses, this does not"
+   ]
   },
   "ridge rider shot|1": {
    "name": "Ridge Rider Shot",
@@ -7854,7 +7857,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 2 or more Draconic chain links, this gets go again and \"When this attacks a hero, create a Fealty token.\"",
-   "flags": []
+   "flags": [
+    "granted ability in quotes has NO reader: \"when this attacks a hero, create a fealty token.\" — the head parses, this does not"
+   ]
   },
   "enflame the firebrand|1": {
    "name": "Enflame the Firebrand",
@@ -14576,7 +14581,9 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 3 or more auras, this gets +3{p} and \"When this hits a hero, destroy the top card of their deck.\"",
-   "flags": []
+   "flags": [
+    "granted ability in quotes has NO reader: \"when this hits a hero, destroy the top card of their deck.\" — the head parses, this does not"
+   ]
   },
   "mocking blow|3": {
    "name": "Mocking Blow",

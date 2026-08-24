@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.40
+**Current version:** v3.41
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1417 drills**.
+This is `node --test "test/*.test.js"` — currently **1423 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -310,9 +310,14 @@ intellect swing (Knucklehead), and printed defender limits (Put in Context).
 ruling to a prompt" below. Fusion reveals, meld, retrieve, reload, graveyard
 picks and Look Tuff's pay-or-shrink are no longer blocked on machinery; each is
 now a spec object plus whatever parser work its card text needs. Still genuinely
-open: Hope Merchant's Hood's shuffle-and-redraw and Quick Clicks' "played a
-Nimblism this turn" macro, which need deck manipulation and a turn-history
-predicate rather than a choice.
+open: Hope Merchant's Hood's shuffle-and-redraw (deck manipulation) and Quick
+Clicks' *"activate this only if you've played a Nimblism this turn"*.
+
+**NIMBLISM IS A CARD NAME, NOT A TYPE** — three printings of a Generic
+Action — so `hist.playTy` (v3.38) can never answer it however class-aware
+it is. It needs a NAME history, the non-attack twin of `hist.atkNames`.
+Recorded because the opposite was written down at v3.38 and would have sent
+the next reader building the wrong record.
 
 ### AN EFFECT CAN BE ARMED AGAINST A SIDE'S NEXT TURN (v3.29)
 
@@ -352,6 +357,57 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A REFUSAL NOBODY IS TOLD ABOUT IS A LIE (v3.41)
+
+v3.10 built `quotedOnHit` to REFUSE a granted ability it cannot read — the
+head still lands, the card is weaker than printed rather than guessed at,
+and its note says *"that leaves the gap visible in the audit"*. The first
+half was true. The second was not: the clause is still consumed by its
+HEAD, so it reports `run` and the card comes out **`tier: full` with a
+printed ability doing nothing**. Four pool records, for ten versions.
+
+**NO TOOL COULD SEE IT.** Coverage counts the clause consumed; the fairness
+sweep is deliberately one-sided toward too-strong and all four are WEAKER
+than printed. The no-op blind spot with a quote around it.
+
+**A REFUSAL IS ONLY HONEST IF SOMETHING REPORTS IT.** `fx.quotedUnread`
+carries the unread riders and `tools/audit.js` flags each by name. When you
+write "this refuses, so the gap stays visible", go and check that something
+actually makes it visible.
+
+**RECORDED, NOT DOWNGRADED.** Marking the clause unread lies the other way
+— Display Loyalty's go again really does work and the card reported `none`.
+The tier stays accurate about the HEAD and the flag carries the rider.
+
+**"IS THERE A READER" IS ANSWERABLE; "DID IT LAND" IS NOT.** A rider can
+ride somewhere other than `fx.onHit` — Mauvrion Skies' Runechants are the
+count `runeHitNext` — so a landing-check demotes cards that work, and
+enumerating the carriers puts card knowledge in a generic guard. Avast Ye!
+is the case this cannot see: its payload READS and is dropped by the
+`gaNext` path, which carries a qualifier and no rider. A missing feature,
+recorded in HANDOFF.md rather than papered over by a tier.
+
+**AND THE MATCHER WAS WRITTEN TWICE**, so sabotaging one copy left the
+other correct and the drill stayed green. `quotedText` is the one body.
+Its closing quote is BACKREFERENCED to the opening one — a bare character
+class let a mid-word apostrophe close the quote, and the audit printed the
+truncation as its finding.
+
+### WHEN YOU CLOSE A RECORDED GAP, DELETE THE RECORD (v3.41)
+
+Three standing claims had gone stale, and each would have cost the next
+reader real time:
+
+| claim | truth |
+|---|---|
+| Cold Snap "IS UNREAD ON PURPOSE", with a list of what it would need | BUILT several versions ago. A long confident note saying a card is deliberately unbuilt, sitting directly above the code that builds it, is worse than no note |
+| a `pick` "reports only in `msgs`" | `out.picked` exists and v3.39 relies on it |
+| a class-aware turn history "would also unblock Quick Clicks" | **wrong** — *Nimblism* is a card NAME, so `hist.playTy` can never answer it. It needs a NAME history, the twin of `hist.atkNames` |
+
+**A doc claim is a test with no assertion.** Sweep them the way you sweep
+the pool: take each sentence that says something is unbuilt, and ask the
+code.
 
 ### TWO DIRECTIONS OF ONE EVENT ARE TWO RECORDS (v3.40)
 

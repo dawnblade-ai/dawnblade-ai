@@ -144,6 +144,13 @@ function analyzeCard(rc){
   for(const k of gkws) if(!KEYWORDS[kwBase(k)]) flags.push(`UNDOCUMENTED granted keyword: "${k}"`);
   for(const k of [...kws, ...gkws].map(kwBase))
     if(KEYWORDS[k] && KEYWORDS[k].status==="unreviewed") flags.push(`unreviewed keyword: "${k}"`);
+  /* A QUOTED GRANTED ABILITY THE PARSER COULD NOT READ (v3.40). The
+     clause's HEAD parses, so the tier says `full` and says it honestly —
+     what was invisible is the ability riding in quotes beside it. Flagged
+     by name rather than folded into the tier, because downgrading the
+     clause claims the head does not work either. */
+  for(const q of (fx.quotedUnread || []))
+    flags.push(`granted ability in quotes has NO reader: "${q}" — the head parses, this does not`);
   if((rc.tx||"").includes("{t}")) flags.push("tap cost {t} — not enforced (see ledger)");
   if((rc.tx||"").includes("{u}")) flags.push("untap {u} — not parsed (see ledger)");
   /* the Kayo nuance: a granted keyword must be wired to a parsed grant

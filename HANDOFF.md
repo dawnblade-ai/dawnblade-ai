@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.40 · PHASE C · BLAZE IS DONE BAR ONE CARD
+# Handoff — Dawnblade, at v3.41 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1417 drills**
+> the card semantics run on both boards.** `npm test` is **1423 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.40: coverage **332 full / 61 part / 12 none**, fairness
+> Current at v3.41: coverage **332 full / 61 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -45,7 +45,7 @@
 > | card | why it stays |
 > |---|---|
 > | ~~Stir the Aetherwinds~~ | **BUILT at v3.37** — `instantNextQ`, the fourth qualified single-shot grant. Building it also found its amp landing on a card the line never named |
-> | Snapback x3 (Blaze) | needs a CLASS-AWARE turn history — `hist` counts non-attacks and records no class. Building it would also unblock Quick Clicks' "played a Nimblism this turn" |
+> | Snapback x3 (Blaze) | needs a CLASS-AWARE turn history — `hist` counts non-attacks and records no class. **BUILT at v3.38** (`hist.playTy`) |
 > | Ice Eternal | X-cost + Ice Fusion. Unchanged, still honestly refused |
 >
 > **A MANUAL PRE-SHIP STEP EXISTS NOW.** Compile both `text/babel` blocks
@@ -66,7 +66,10 @@
 > next step, because v3.36/v3.37 already built two of the three things his
 > deck wants: his Cindering Foresight is `full`, and **Snapback** is the
 > one remaining shape — it needs a CLASS-AWARE TURN HISTORY, which would
-> also unblock Quick Clicks' "played a Nimblism this turn".
+> **NOT** unblock Quick Clicks: Nimblism is a card NAME, not a type, so
+> that one needs a name history (the non-attack twin of `hist.atkNames`)
+> and `hist.playTy` cannot answer it. The v3.38 note claiming otherwise was
+> wrong and is corrected in CLAUDE.md.
 
 > ### v3.38 — BLAZE: his DECK is 22 of 23, and his HERO is entirely unbuilt
 >
@@ -109,6 +112,66 @@
 > DEALT arcane damage this turn" (`hist.arc` records arcane DEALT BY you,
 > v3.28 — this is the other direction and is a new field); Turn to
 > Mindfire needs a {t} cost on the HERO plus a Ponder token.
+
+> ### START HERE — the four things a new thread should pick up
+>
+> **1. Avast Ye! p3 — a READ rider that is dropped.** *"Your next Pirate
+> ally attack this turn gets go again and \"When this hits a hero, create a
+> Gold token.\""* The quoted half parses perfectly
+> (`["token","gold",1,"self"]` with `onHit`), and the `gaNext` path carries
+> a qualifier and no rider, so it is discarded. Fixing it means letting the
+> qualified single-shot grants carry an on-hit rider and having
+> `takeGaNext` apply it — the same shape `buffQ` already manages. It is the
+> ONE card v3.41's new audit flag deliberately cannot see, because that
+> flag asks "is there a reader" and here there is.
+>
+> **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
+> them general: the `hits` optional-cost trigger (unwired since v3.20), a
+> TAP as a cost kind, a tapped HERO as a state, and the Ponder token. Full
+> write-up in the v3.40 CHANGELOG entry. **It would be free in this pool
+> and that is not a reason to fake it.**
+>
+> **3. The remaining heroes.** Dash, Azalea, Fai, Enigma, Boltyn, Gravy
+> Bones, Lyath, and Briar's 8 `part` cards. **Lyath is cheapest**: v3.39
+> un-truncated his hero powCard, so his second sentence ("Defending action
+> cards you control get +1{d} this turn") now reaches `fxParse` and needs
+> only a READER — it is close to `fx.defGrant` (v3.23). Leave **Arakni**
+> last (stealth-as-qualifier is filed `noop` by ruling).
+>
+> **4. Read the method before the cards.** `CLAUDE.md` is long because
+> every section is a bug that shipped. The four that pay off most often:
+> *find the hero's ONE mechanic first*; *a hero ability is finished when it
+> runs on BOTH boards*; *sabotage every new drill, and sabotage the guard
+> too*; and *when you close a recorded gap, delete the record of it*
+> (v3.41 — three stale claims, one of them hiding a real gap).
+>
+> ### THE SHIPPING LOOP, as actually run this cycle
+>
+> ```
+> npm test                      # 1423 drills · 0 fail · 0 SKIPPED (read the skip count)
+> npm run fairness              # must say "Nothing found"
+> node tools/failstates.js      # UNFAIR must be 0
+> npm run audit                 # read the diff card by card, never the totals
+> node tools/audit.js --write-baseline    # only after reviewing that diff
+> <babel compile check>         # MANUAL — see below; brackets balancing is not a parse
+> # bump APP_VER · CHANGELOG entry · CLAUDE.md lesson · this file
+> git push origin main          # that IS the deploy
+> ```
+>
+> **The babel check is not a drill and cannot become one** — the project has
+> no dependencies and `npm test` must stay green on a fresh clone with no
+> `npm install`. Run it in a scratch dir after any `index.html` edit:
+>
+> ```js
+> const Babel = require("@babel/standalone");   // npm i --no-save in /tmp
+> for(const [,code] of html.matchAll(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/g))
+>   Babel.transform(code, {presets:["react"], sourceType:"script"});
+> ```
+>
+> **Verifying the deploy from a sandbox:** the Pages URL is often blocked by
+> the agent proxy (403 on CONNECT). Check the `pages build and deployment`
+> workflow run for your commit SHA through the GitHub tools instead, and say
+> plainly that the live URL was not fetched.
 
 > ### v3.39 — BLAZE'S HERO IS BUILT; his deck has two cards left
 >

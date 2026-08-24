@@ -86,6 +86,45 @@ const SYNONYMS = [
 ];
 const levelIdiom = c => SYNONYMS.reduce((s, [re, to]) => s.replace(re, to), c);
 
+/* ---- A GRANTED ABILITY RIDING IN QUOTES ------------------------------
+   FaB prints a granted ability in QUOTES, which is what makes it readable
+   rather than guessable: the quoted text is a clause in its own right and
+   goes back through `classifyClause`.
+
+   IT RETURNS NULL ON A PAYLOAD IT CANNOT READ, deliberately (v3.10) — an
+   unreadable rider refuses and the head still lands, which is weaker than
+   printed and honest. `fxParse` asks it a SECOND time, to mark the clause
+   unread when that happens, so the gap reaches the audit instead of the
+   card reporting `full` with a printed ability doing nothing (v3.40).
+
+   AT MODULE SCOPE so both callers share one matcher. It was nested inside
+   `classifyClause`, and re-testing "is there a quoted ability here" in
+   `fxParse` with a second regex would be two descriptions of one question
+   — free to disagree about which clauses have one. */
+/* THE QUOTED TEXT ITSELF, and ONE matcher for it. The closing quote is
+   BACKREFERENCED to the opening one: a bare character class for either end
+   lets a mid-word apostrophe close the quote, so "defense reactions can't
+   be played…" captured `defense reactions can` — a capture that then fails
+   to parse for a reason that is not the card's, and which the audit
+   printed as its finding.
+
+   ONE BODY BECAUSE TWO CALLERS ASK IT. `quotedOnHit` reads the payload and
+   `fxParse` records the ones with no reader; writing the regex twice made
+   them free to disagree about where a quote ends, and a sabotage of one
+   left the other correct — which is how this was found. */
+function quotedText(txt){
+  const g = txt.match(/\band (["\u201c\u2018'])(.+?)\1/) || txt.match(/\band ["\u201c](.+?)["\u201d]/);
+  if(!g) return null;
+  return g[2] != null ? g[2] : g[1];
+}
+
+function quotedOnHit(txt){
+  const q = quotedText(txt);
+  if(q == null) return null;
+  const sub = classifyClause(q);
+  return (sub && sub.status === "run" && sub.onHit && sub.ops.length) ? sub.ops : null;
+}
+
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
   const c = levelIdiom(clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
@@ -152,43 +191,27 @@ function classifyClause(raw){
      silently claim clauses this exact wording was never written for. */
   if(/^if you do, create a runechant token$/.test(c))
     return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
-  /* COLD SNAP / FREEZE IS UNREAD ON PURPOSE (v3.02), and it used to be a
-     `noop` for reasons that stopped being true in v2.71.
+  /* COLD SNAP — BUILT, and this comment used to say it was not (v3.40).
 
-     The old notes said "the dummy pays no costs, so target hero may pay
-     always resolves to declining" and "Freeze taxes a play/activation the
-     dummy's scripted swing never makes". Seat 1 has paid costs and taken a
-     real action phase since v2.71, so both were facts about a training
-     prop that no longer exists — and a `noop` COUNTS AS ACCOUNTED FOR, so
-     Cold Snap reported `tier: full` while doing nothing at all. That is
-     the no-op blind spot on Iyslander's signature card, and it is exactly
-     what v2.74 removed for Frostbite ("a fact about the old training prop
-     and not about the rules"). This is the last card that carried it.
+     It was a `noop` until v3.02 for reasons that had already stopped being
+     true in v2.71 ("the dummy pays no costs"; "freeze taxes a play the
+     dummy never makes") — facts about a training prop rather than about
+     the rules. **A `noop` COUNTS AS ACCOUNTED FOR**, so Cold Snap reported
+     `tier: full` while doing nothing at all: the no-op blind spot, on
+     Iyslander's signature card. That lesson is why this note survives.
 
-     UNREAD, NOT APPROXIMATED. The ruling is recorded and precise —
+     WHAT REPLACED IT is the recorded ruling, in full — "target hero may
+     pay {r}; if they don't, freeze a card in their arsenal or an ally they
+     control until the start of your next turn" — as `payOr` with `freeze`
+     as its else-payload, a `_frozenBy` stamp honoured by
+     `playableFromZone` and by the activation gate on both boards, and a
+     thaw at the start of the freezing seat's next turn.
 
-       "this gives the opponent a pop up that allows them to pay 1
-        resource to avoid the negative effect of the card. if they don't
-        pay the player gets a pop up and they can choose the arsenal or an
-        ally - whatever they choose cannot be played or activated until
-        the start of your next turn."
-
-     — and every piece of it is a real question. `payOr` already asks the
-     opponent to pay (Winter's Bite uses it), but emitting it here with an
-     unbuilt else-payload would ASK A QUESTION WITH NO CONSEQUENCE, which
-     makes paying strictly a waste and is worse than not asking. So both
-     clauses fall through and the card reports `part`, which is the truth.
-
-     WHAT IT NEEDS, and none of it is machinery that has to be invented:
-       1. `payOr` with the freeze as its `elseOps` — the offer exists
-       2. a `pick` that REPORTS the chosen object structurally (today it
-          reports only in `msgs`) over a candidate list spanning the
-          opponent's arsenal AND their allies — two zones, so the
-          candidates are the caller's, the way `target` already works
-       3. a `_frozen` stamp honoured by `playableFromZone` and by the
-          activation gate, on BOTH boards
-       4. a thaw at "the start of your next turn" — beside
-          `effects.tickSuspense`, which is that schedule */
+     THE COMMENT OUTLIVED THE GAP BY SEVERAL VERSIONS, which is its own
+     lesson: a long confident note saying a card is deliberately unbuilt,
+     sitting directly above the code that builds it, is worse than no note
+     — it sends the next reader looking for work that is done. When you
+     close a recorded gap, delete the record of it. */
   /* RULING (Saltwater Swell): "reveal the top card of your deck" and "if
      it's blue, pitch it" are two SEPARATE printed clauses, but reading them
      apart breaks on an ATTACK card — the generic conds loop that would
@@ -993,12 +1016,6 @@ function classifyClause(raw){
      its own position in this file (the targeted pump at "target … attack
      gets +N{p}"), and a `const` arrow is in the temporal dead zone there.
      Hoisting is the point rather than an accident. */
-  function quotedOnHit(txt){
-    const g = txt.match(/\band ["\u201c'](.+?)["\u201d']/);
-    if(!g) return null;
-    const sub = classifyClause(g[1]);
-    return (sub && sub.status === "run" && sub.onHit && sub.ops.length) ? sub.ops : null;
-  }
   /* "this gets <keyword-or-pump> and \"<granted ability>\"" — the SELF
      grant, four pool cards across two heroes, and the worst-behaved of the
      shapes because the head was lost too:
@@ -2128,10 +2145,36 @@ function fxParse(card){
   /* Does this card print a MODAL choice? Asked once, off the whole text,
      because a single mode line cannot tell you it is one of several. */
   const modal = /\bchoose \d/i.test(clean(card.tx||"").toLowerCase());
+  /* Does this clause carry a quoted granted ability the reader dropped?
+     Asked of the SAME matcher `quotedOnHit` uses — see the note below and
+     at that function. Hoisted above the loop because BOTH exits need it:
+     a clause consumed by a dedicated reader (`handled`) took an early
+     return that pushed `run` without ever asking, which is how Avast Ye!
+     kept reporting `full` after the other three were fixed. */
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
+    /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
+
+       `quotedOnHit` returns null on a payload it cannot read, and v3.10
+       chose that deliberately — an unreadable rider REFUSES and the head
+       still lands, which is the honest direction. What it did NOT do is
+       tell the audit: the clause was consumed by its head, reported `run`,
+       and the card came out `tier: full` with a printed ability doing
+       nothing. Measured across the pool: FOUR records — Avast Ye!,
+       Display Loyalty, Drop the Anchor and Goon Tactics — and v3.10's own
+       note claims this case "leaves the gap visible in the audit", which
+       is exactly what was not happening.
+
+       This is v3.00's Stir the Aetherwinds remedy: an unanchored match
+       hides an unbuilt clause, so the clause's TIER is made honest rather
+       than the reader made to guess. Coverage cannot see it otherwise
+       (the clause IS consumed) and neither can the fairness sweep (all
+       four are WEAKER than printed, and it is one-sided).
+
+       Asked of the SAME matcher `quotedOnHit` uses, so the two cannot
+       disagree about what counts as a quoted ability. */
     fx.clauses.push({t:raw, st:r.status});
     if(r.approx) fx.approx = true;
     /* A GRANTED ABILITY RIDING ALONGSIDE THE CLAUSE'S OWN HEAD (v3.10).
@@ -2272,6 +2315,36 @@ function fxParse(card){
       }
     }
   }
+  /* ---- A QUOTED ABILITY WITH NO READER (v3.40) ----------------------
+     FaB prints a granted ability in quotes, and `quotedOnHit` returns null
+     on a payload it cannot read — v3.10's deliberate refusal, so the head
+     still lands and the card is weaker than printed rather than guessed
+     at. What it did NOT do is tell anyone: the clause is consumed by its
+     head, reports `run`, and the card comes out `tier: full` with a
+     printed ability doing nothing. v3.10's own note claims this "leaves
+     the gap visible in the audit"; measured across the pool it left four
+     records claiming to work.
+
+     RECORDED, NOT DOWNGRADED. Marking the clause unread was the first
+     attempt and it lies in the other direction — Display Loyalty's go
+     again really does work, and the card reported `none`. The tier stays
+     accurate about the HEAD and `fx.quotedUnread` carries the riders, so
+     `tools/audit.js` flags them by name. Both facts, neither hidden.
+
+     IT ASKS "IS THERE A READER", not "did it land": a rider can ride
+     somewhere other than `fx.onHit` — Mauvrion Skies' Runechants are the
+     COUNT `runeHitNext` — so a landing-check demotes cards that work, and
+     enumerating the carriers here would put card knowledge in a generic
+     guard. Avast Ye! is the one this cannot see (its payload READS and is
+     then dropped by the `gaNext` path); that is a missing feature, it is
+     recorded in HANDOFF.md, and a tier check should not paper over it. */
+  fx.clauses.forEach(cl => {
+    if(cl.st !== "run") return;
+    const low = levelIdiom(clean(cl.t).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
+    const q = quotedText(low);
+    if(q == null || quotedOnHit(low)) return;
+    fx.quotedUnread = [...(fx.quotedUnread || []), q];
+  });
   applyOverride(card, fx);
   const tl = clean(card.tx||"").toLowerCase();
   /* TWO THINGS MADE THIS MISS SAVAGE FEAST, and both are in one line of

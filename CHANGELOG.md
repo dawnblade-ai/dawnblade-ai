@@ -7,6 +7,67 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.41 — housekeeping, and what the docs were lying about
+
+A pass over the standing claims in `CLAUDE.md` and the engine comments,
+checking each against what the code actually does rather than trusting it.
+Three had gone stale, and one of them was hiding a real gap.
+
+**THE REAL FIND: v3.10 claimed a refusal was visible, and it was not.**
+
+> *"An unreadable rider **refuses** and the head still lands … That leaves
+> the gap visible in the audit instead of behind a guess."*
+
+`quotedOnHit` returns null on a payload it cannot read — that half is true
+and right. But the clause is still consumed by its HEAD, so it reports
+`run` and the card comes out **`tier: full` with a printed ability doing
+nothing**. Measured across the pool: **four records** — Display Loyalty,
+Drop the Anchor, Goon Tactics, Release the Tension.
+
+No tool could see it, by construction. Coverage counts the clause consumed;
+the fairness sweep is deliberately one-sided toward too-strong and all four
+are **weaker** than printed. It is the no-op blind spot with a quote around
+it.
+
+`fx.quotedUnread` records them and `tools/audit.js` flags each by name.
+
+**RECORDED, NOT DOWNGRADED — and the first attempt lied the other way.**
+Marking the clause unread makes Display Loyalty report `none`, which says
+its go again does not work either. It does. The tier stays accurate about
+the HEAD and the flag carries the rider: both facts, neither hidden.
+
+**IT ASKS "IS THERE A READER", NOT "DID IT LAND."** A rider can ride
+somewhere other than `fx.onHit` — Mauvrion Skies' Runechants are the COUNT
+`runeHitNext` (v3.10) — so a landing-check demoted three cards that work,
+and enumerating the carriers would put card knowledge inside a generic
+guard. **Avast Ye! is the one this deliberately cannot see:** its "create a
+Gold token" READS perfectly and is then dropped by the `gaNext` path, which
+carries a qualifier and no rider. That is a missing feature, it is recorded
+in `HANDOFF.md`, and a tier check should not paper over it.
+
+**ONE MATCHER, FOUND BY SABOTAGE.** The quoted text was matched by two
+copies of one regex — `quotedOnHit` and the recorder — so sabotaging one
+left the other correct and the drill stayed green. `quotedText` is the one
+body now. The closing quote is also BACKREFERENCED to the opening one: a
+bare character class let a mid-word apostrophe close the quote, so
+*"defense reactions can't be played…"* captured `defense reactions can`,
+and the audit printed that truncation as its finding.
+
+**The two other stale claims:**
+
+| claim | truth |
+|---|---|
+| `parser.js`: **Cold Snap** "IS UNREAD ON PURPOSE", with a four-item list of what it would need | it has been BUILT for several versions — `payOr` with `freeze` as its else-payload, the `_frozenBy` stamp on both boards, and the thaw. A long confident note saying a card is deliberately unbuilt, sitting directly above the code that builds it, sends the next reader looking for finished work |
+| `parser.js`: a `pick` "REPORTS the chosen object structurally (today it reports only in `msgs`)" | `out.picked` exists and this version relies on it |
+| `HANDOFF.md` (v3.38): a class-aware turn history "would also unblock Quick Clicks" | **wrong.** *Nimblism* is a card NAME — three printings of a Generic Action — so `hist.playTy` can never answer it however class-aware it is. It needs a NAME history, the non-attack twin of `hist.atkNames` |
+
+**When you close a recorded gap, delete the record of it.** Every one of
+these cost nothing to write and would have cost the next reader real time.
+
+1417 → 1423 drills, 0 failed, 0 skipped. Coverage unmoved at 332 / 61 / 12
+— deliberately, since the tiers were already telling the truth about the
+heads. Flagged 63 → 66. Fairness clean, 0 UNFAIR.
+
 ## v3.40 — the other direction of arcane
 
 `hist.arc` records what the **dealer** did (v3.28). Arcane Polarity asks
