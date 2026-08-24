@@ -7,6 +7,97 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.44 — allies attack, and the parser had been ready for years
+
+Went down the Avast Ye! rabbit hole. It bottoms out here: the card names
+a *Pirate ally attack*, and **no ally could attack on either board**.
+
+**"Allies do not attack" was half true, and the half that was false was
+worse than the half that was true.** The table genuinely could not: there
+was no arena branch in `judge.legal` at all, so `find(sd.gear, uid)`
+missed and it answered *"no such equipment"* — v3.04's shape for the third
+time (a route that exists on one board because `Battle` built it as UI).
+The trainer *could*, through `allySwing`, and that was a **fabrication** in
+the same family as `foeSwing`'s `[3,4,5]`:
+
+| it did | the card prints |
+|---|---|
+| `oppMut(n).hp -= b.card.power` — straight off the hero's life | an attack, which goes to a **defend step** |
+| charged nothing | `{r}{r}` for Swabbie, `{r}` for Limpit and Riggermortis |
+| one blanket `spent` | `{t}` on six, `Once per Turn` on four — **two limits that expire differently** |
+| dropped the go again | Limpit and Cintari Sellsword print `Attack. Go again` |
+| took no action point, and said so in the log | an activated ability costs one (CR 8.1.1) |
+
+So a 7-power Swabbie was **unblockable, free and repeatable every turn**.
+No tool here could see it: the fairness sweep does not model board
+activations, and coverage read every ally `full` because its ability line
+was correctly NOOP'd by the weapon-cost reader.
+
+**THE PARSER WAS NEVER THE GAP.** Every ally that attacks prints a
+weapon's grammar exactly —
+
+```
+Swabbie             Action - {r}{r}, {t}: Attack
+Limpit, Hop-a-long  Action - {r}, {t}: Attack. Go again
+Cintari Sellsword   Once per Turn Action - {r}: Attack. Go again
+```
+
+— so `weaponCost` already answered cost, `taps` and `oncePerTurn`
+correctly for all eleven, and had done for years while nothing asked it.
+`parser.allyAttack` is the named question rather than a second parse of
+the same line, and it keeps `parser.isWeapon` false for an ally, which is
+the two-names-two-questions split pinned since v2.44.
+
+**`execute` LEARNED `from: "ally"` AND THE REST CAME FREE.** The whole
+combat path is shared: a real `pend`, the wall, on-hit text, CR 1.4.5
+targeting, the action point (charged at resolution, kept on go again), and
+every next-attack grant that names the ally — including `atk: true`, the
+atom v3.43 added. `fileAttack` needed no change at all: it files nothing
+on an activation route, so an ally stays in the arena exactly as a weapon
+stays equipped. Driven, Swabbie's 7 into a 3-defence wall is now 4
+through, where the fabrication dealt all 7.
+
+**A KEYWORD ON AN ABILITY LINE IS THE ABILITY'S, NOT THE CARD'S.** Limpit
+prints `Action - {r}, {t}: Attack. Go again`; the clause splitter breaks
+on the period, so `Go again` arrives as a clause of its own and set
+`fx.ga` — the CARD's. Driven, **deploying Limpit kept its action point**: a
+free ally out of Gravy Bones' own deck. The fix is **route-aware**, not a
+blanket change: a weapon is never played from hand, so Mark of the
+Huntsman's identical line must keep setting `fx.ga` or a real card
+silently loses its keyword. And on the ally *attack* route the answer is
+the attack ability's own line, never `fx.ga` — Cutty Shark prints its go
+again on a **different** ability, and handing that to the attack would be
+reading one ability's text onto another.
+
+**THE COST IS THE ABILITY'S TOO.** `build.js` folds a weapon's activation
+cost onto its gear entry's `.cost`, which is how `effCost` charges a swing
+without `effects.js` knowing what a weapon is. An ally's `.cost` is its
+**play** cost — Swabbie 3, already spent deploying it. The first cut
+charged both and took 5 for a 2-cost attack; there is one charge site now.
+
+**THE PAYOFF.** Avast Ye! → deploy a Pirate ally → attack with it: the
+grant fires, the rider rides, Swabbie's 7 lands and the Gold token
+appears. v3.42 built the rider, v3.43 stopped a deploy eating the grant,
+and this is the first version where all three halves meet — drilled with
+the real cards out of the deck they share, not a synthetic fixture.
+**Yo Ho Ho!** becomes real by the same route.
+
+`allySwing` is **deleted**, and its anchor removed from
+`test/actor.test.js`'s ledger as a deliberate edit — the rule it bounded
+did not vanish, it moved into `tryPlay`, which that ledger already covers.
+
+13 new drills in `test/allies.test.js`; seven sabotages, and **one of them
+found a hole in a drill of mine** — reading `fx.ga` on the ally route
+failed nothing until the Cutty Shark case was *driven* rather than asked
+of the parser.
+
+**Found, recorded, NOT fixed:** judge routes **Cosmo, Scroll of Ancestral
+Tapestry** as a swinging weapon though it prints no power, because
+`weaponCost` matches a *quoted granted ability* inside its text and
+judge's weapon branch tests `types.isWeaponType` where the swing needs a
+printed power. `allyAttack` guards `power > 0` deliberately for exactly
+this reason. Written up in HANDOFF.md rather than half-fixed mid-thread.
+
 ## v3.43 — what v3.42 left behind, in the grant it had just reshaped
 
 v3.42 built Avast Ye!'s rider and shipped two defects doing it. Both are

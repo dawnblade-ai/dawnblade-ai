@@ -51,6 +51,7 @@
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
+       allyAttack, abilityGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
        pow6, zonePow, isAtkActionCard} = P;
 const {resolveEntry} = C;
@@ -1184,7 +1185,17 @@ function makeEffects(ctx){
        states no phase at all and a second caller can bring its own. */
     let n = {...s};
     const exSide = actMut(n);
-    exSide.res = act(s).res - effCost(card, act(s)); exSide.paySel = [];
+    /* THE ONE PLACE A COST IS CHARGED (v2.80), and on the ALLY route the
+       cost is the ABILITY's, not the card's (v3.44). `build.js` folds a
+       weapon's activation cost onto its gear entry's `.cost`, so `effCost`
+       charges a swing without this file knowing what a weapon is. An
+       ally's `.cost` is its PLAY cost — Swabbie 3 — already spent
+       deploying it, while its attack prints {r}{r}. Charging `effCost`
+       here as well took 5 for a 2-cost attack, driven, before this line
+       existed. */
+    const _allyCost = from === "ally" ? ((allyAttack(card) || {}).cost || 0) : null;
+    exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s)));
+    exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
        cost, because that is what "as an additional cost to play this"
        means (v3.34). The ANSWER rides on the state as `_addPaid`, the
@@ -1254,14 +1265,65 @@ function makeEffects(ctx){
     if(from==="grave"){ actMut(n).grave = act(n).grave.filter((_,i)=>i!==idx); }
     if(from==="banish"){ actMut(n).banish = act(n).banish.filter((_,i)=>i!==idx); }
     if(from==="weapon"||from==="hero"){ actMut(n).weaponUsed = {...act(n).weaponUsed,[card.uid]:true}; }
+    /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
+       Nothing is spliced out of a zone: the ally is a permanent and it
+       stays on the board, exactly as a weapon stays equipped —
+       `fileAttack` already files nothing for an activation route, so it
+       needs no change.
+
+       THE ATTACK'S COST IS NOT THE CARD'S COST. `build.js` folds a
+       weapon's activation cost onto the gear entry's `.cost`, which is
+       why `effCost` charges a swing without this file knowing anything
+       about weapons. An ALLY's `.cost` is its PLAY cost — Swabbie 3 —
+       and that was spent deploying it; the attack costs {r}{r} on top.
+       Reading `.cost` here would charge the deploy price a second time,
+       so the ability's own printed cost is charged explicitly.
+
+       TWO LIMITS, EXPIRING DIFFERENTLY — the Sledge/Scorpio rule (v2.46)
+       applied to allies. `{t}` is a STATE the permanent is in and only
+       its controller's untap step lifts it (CR 4.4.3d, already built for
+       the arena); `Once per Turn` is a per-turn ALLOWANCE that comes back
+       at the turn boundary. Six pool allies tap, four are once-per-turn
+       without tapping, and the trainer's old `allySwing` set a blanket
+       `spent` for all of them. */
+    if(from==="ally"){
+      const aa = allyAttack(card);
+      if(aa){
+        /* the COST is charged at the single site above, never here — see
+           the note there. Two charge sites is how this first came out at
+           9 -> 4 for a 2-cost attack on a 3-cost ally. */
+        if(aa.taps) actMut(n).board = act(n).board.map(b =>
+          b && b.uid === card.uid ? {...b, spent: true} : b);
+        if(aa.oncePerTurn) actMut(n).weaponUsed =
+          {...act(n).weaponUsed, ["ally" + card.uid]: true};
+      }
+    }
     if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;
     /* colour is pitch: red 1, yellow 2, blue 3 — several rulings key off
        "another blue/red card this turn" */
     if(card.pitch===3) actMut(n).hist = {...act(n).hist, blue:(act(n).hist.blue||0)+1};
     if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
-    const attacking = isAttack(card) || from==="weapon";
-    let ga = fx.ga;
+    const attacking = isAttack(card) || from==="weapon" || from==="ally";
+    /* THE GO AGAIN ON AN ACTIVATED-ABILITY LINE IS THE ABILITY'S (v3.44).
+       Limpit prints "Action - {r}, {t}: Attack. Go again"; the clause
+       splitter breaks on the period, so "Go again" arrives as a clause of
+       its own and sets `fx.ga` — the CARD's. For a weapon that is exactly
+       right and is how Mark of the Huntsman's swing goes again, because a
+       weapon is never played. An ALLY is played, and driven before this
+       fix DEPLOYING Limpit kept its action point: a free ally out of
+       Gravy Bones' own deck.
+
+       On the ALLY ATTACK route the answer is the attack ability's own
+       line, never `fx.ga` — Cutty Shark prints go again on its OTHER
+       ability ("Once per Turn Action - {r}: Your next ally attack ... Go
+       again"), and handing that to the attack would be reading one
+       ability's text onto another. */
+    const _activation = from==="weapon" || from==="hero" || from==="board" || from==="ally";
+    const _allyAtk = from==="ally" ? allyAttack(card) : null;
+    let ga = _allyAtk ? !!_allyAtk.ga
+           : (!_activation && abilityGa(card)) ? false
+           : fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
     /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
        IT IS TAKEN HERE, AHEAD OF THE CARD'S OWN OPS, because the payload
@@ -1824,7 +1886,7 @@ function makeEffects(ctx){
       const _printed = card.power || 0;
       /* seat 0 is called "You", so the verb has to agree with it */
       const _s = /^you$/i.test(act(n).name || "") ? "" : "s";
-      n = L(n, `${act(n).name} ${from==="weapon" ? "swing"+_s : "play"+_s} ${card.name}`
+      n = L(n, `${act(n).name} ${from==="weapon" ? "swing"+_s : from==="ally" ? "send"+_s : "play"+_s} ${card.name}`
              + ` — ${total} power on the chain`
              + (total !== _printed ? ` (printed ${_printed})` : "")
              + (ga ? ", and it goes again" : "") + ".");
@@ -1977,7 +2039,7 @@ function makeEffects(ctx){
         playTy: [...(act(n).hist.playTy || []), _ty]};
     }
     const delta = preHP - foe(n).hp;
-    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
+    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon"||from==="ally")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).
        This used to read `ga ? keep : -1`, which charges every non-attack
        that resolves here — and an instant has no such cost, so playing one

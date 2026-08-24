@@ -3040,6 +3040,72 @@ function weaponCost(tx){
           taps: /\{t\}/i.test(cs),
           oncePerTurn: !!m[1]};
 }
+/* ---- AN ALLY IS A PERMANENT THAT ATTACKS (v3.44) --------------------
+
+   Every ally in the pool that can attack prints the SAME grammar a weapon
+   does:
+
+     Swabbie            Action - {r}{r}, {t}: Attack
+     Limpit, Hop-a-long Action - {r}, {t}: Attack. Go again
+     Cintari Sellsword  Once per Turn Action - {r}: Attack. Go again
+
+   So `weaponCost` — which is really the one reader of "Action - <cost>:
+   Attack" — already answers cost, `taps` and `oncePerTurn` correctly for
+   all eleven, and did so for years while nothing asked it. The parser was
+   never the gap; the ROUTE was, on both boards (v3.04's shape, a third
+   time). This is the named question, not a second parse of the same line.
+
+   `parser.isWeapon` deliberately stays false for an ally (its type line
+   says no Weapon), which is why this needs its own name rather than
+   widening that one — the same two-names-two-questions split
+   `types.isWeaponType` vs `parser.isWeapon` has been pinned to since
+   v2.44.
+
+   THE GO AGAIN ON THE LINE BELONGS TO THE ABILITY. Limpit prints
+   "Action - {r}, {t}: Attack. Go again" and the clause splitter breaks on
+   the period, so "Go again" arrives as a clause of its own and sets
+   `fx.ga` — the CARD's go again. For a weapon that is exactly right and
+   is how Mark of the Huntsman's swing goes again, because a weapon is
+   never played from hand. An ALLY is: driven before the fix, DEPLOYING
+   Limpit kept its action point, which is a free ally out of Gravy Bones'
+   own deck and stronger than printed. `printedKw` is the discriminator
+   and already answered correctly (the keyword is mid-line, not its own
+   paragraph); nothing was asking it. */
+function allyAttack(c){
+  if(!c) return null;
+  const wc = weaponCost(c.tx || "");
+  if(!wc) return null;
+  if(!(c.power != null && c.power !== "" && +c.power > 0)) return null;
+  return {cost: wc.cost, taps: wc.taps, oncePerTurn: wc.oncePerTurn, ga: attackLineGa(c)};
+}
+
+/* THE GO AGAIN ON *THIS* ABILITY, not on a sibling. Cutty Shark prints
+   TWO activated abilities — "Action - {r}, {t}: Attack" and "Once per
+   Turn Action - {r}: Your next ally attack this turn gets +1{p}. Go
+   again" — and only the second carries the keyword. Granting it to the
+   attack would be reading one ability's text onto another. */
+function attackLineGa(c){
+  if(!c || printedKw(c, "go again")) return false;
+  return String(c.tx || "").split(/\n+/).some(l =>
+    /^(?:once per turn\s+)?(?:action|instant)\s*[-\u2014][^\n]*:\s*attack\b[^\n]*\bgo again\b/i.test(l.trim()));
+}
+
+/* Is this card's go again the TAIL OF AN ACTIVATED-ABILITY LINE rather
+   than its own printed keyword line? One reader, asked by `fxParse` (to
+   flag it) and by `allyAttack` (to grant it to the attack it belongs to).
+
+   15 pool cards answer yes and 13 of them are Equipment or Weapons, which
+   are never played from hand — so for those the distinction is invisible
+   and `fx.ga` must keep working exactly as it does, or Mark of the
+   Huntsman's swing silently loses its go again. The two that are neither
+   are Limpit and Cutty Shark: allies, played from hand. */
+function abilityGa(c){
+  if(!c) return false;
+  if(printedKw(c, "go again")) return false;       /* a real keyword line is the card's */
+  return String(c.tx || "").split(/\n+/).some(l =>
+    /^(?:once per turn\s+)?(?:action|instant)\s*[-\u2014][^\n]*\bgo again\b/i.test(l.trim()));
+}
+
 /* TWO LIMITS LIVE IN `weaponUsed` AND THEY EXPIRE DIFFERENTLY (CR 4.4.3d).
    Drop every entry whose limit is a per-turn ALLOWANCE — it comes back at
    every turn boundary, for both seats — and keep every entry that records
@@ -3722,7 +3788,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        weaponCost, allyAttack, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,

@@ -76,7 +76,16 @@ const ANCHORS = [
   ["playRx",       "  const playRx = (i, addPaid) => setG(s=>{"],
   ["tryPlay",      "  const tryPlay = (card,from,idx,half) => setG(s=>{"],
   ["confirmPay",   "  const confirmPay = () => setG(s=>{"],
-  ["allySwing",    "  const allySwing = bi => setG(s=>{"],
+  /* `allySwing` LEFT THE LEDGER AT v3.44, and it left by being DELETED
+     rather than migrated. It was a fabrication — it took the ally's
+     printed power straight off the opposing hero's life, charged no cost,
+     collapsed `{t}` and `Once per Turn` into one blanket `spent`, dropped
+     Limpit's printed go again and opened no defend step. An ally attack
+     is an activated ability now and goes through `tryPlay(card, "ally",
+     i)`, which is already anchored below, so the body this line bounded
+     no longer exists to scan. Removing an anchor is a deliberate edit:
+     the rule it guarded is not gone, it moved into a body the ledger
+     already covers. */
   /* THE END PHASE IS A RULES FUNCTION AND IT IS MIGRATED (v2.71). It runs
      CR 4.4.3 (c)-(f) for WHICHEVER seat is ending, so it is actor-relative
      throughout and `foeEnd` drives it with the actor borrowed to seat 1.

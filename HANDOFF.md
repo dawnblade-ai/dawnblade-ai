@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.43 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
+# Handoff — Dawnblade, at v3.44 · PHASE C · ALLIES ATTACK
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,13 +12,13 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1429 drills**
+> the card semantics run on both boards.** `npm test` is **1442 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.43: coverage **332 full / 61 part / 12 none** (unchanged
-> across v3.42-43 — both fixed things no coverage tool can see), fairness
+> Current at v3.44: coverage **332 full / 61 part / 12 none** (unchanged
+> across v3.42-44 — all three fixed things no coverage tool can see), fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -116,23 +116,36 @@
 
 > ### START HERE — the things a new thread should pick up
 >
-> **1. ~~Avast Ye! p3~~ BUILT at v3.42, FIXED at v3.43.** The rider landed
-> at v3.42 (`gaNextQ` entries are `{q, rider}`, same shape `buffQ` has
-> carried since v3.10). v3.43 then found two defects that shipped with it:
-> the retired bare-qualifier shape had no guard, so a stale grant off a
-> wire matched EVERY card; and the qualifier could not say "attack", so
-> **deploying** any of the six Pirate allies in Avast Ye!'s own deck ate
-> the grant. Both fixed, both drilled, all four sabotages bite. The card
-> now WAITS correctly — it still cannot fire, because ally combat is
-> unwired on both boards, which is the honest gap. See CLAUDE.md's "A
-> RETIRED SHAPE TAKES ITS GUARD WITH IT, AND AN ANCHOR IS NOT AN ATOM".
+> **1. ~~Avast Ye!~~ DONE — and it bottomed out in ally combat (v3.44).**
+> v3.42 built its rider, v3.43 stopped a DEPLOY eating the grant, and
+> v3.44 built the thing it was actually waiting for: **allies can attack,
+> on both boards.** `parser.allyAttack` is the reader (it is `weaponCost`
+> — an ally prints a weapon's grammar exactly, and had parsed correctly
+> for years while nothing asked), `from: "ally"` is the route, and the
+> whole combat path came free. Avast Ye! and Yo Ho Ho! are real cards now.
+> Also fixed on the way: an activated ability's go again was leaking onto
+> the ally's DEPLOY (deploying Limpit kept its action point).
 >
-> **1b. Ally combat is the thing that would make three cards real.**
-> Avast Ye!, Yo Ho Ho! and the six Pirate allies all point at it, and it
-> is listed under "Known approximations" as unbuilt on BOTH boards. It
-> needs an activation cost, a target (CR 1.4.5 — `judge.targets` exists),
-> and an attack that declares itself as one so `atk` answers true. That is
-> a Phase-1-shaped job, not a card job.
+> **1b. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
+> weapon.** `judge.doActivate`/`legal` take the weapon branch on
+> `TY.isWeaponType`, which is type-accurate and does not ask for a printed
+> POWER. Cosmo, Scroll of Ancestral Tapestry prints none, and
+> `weaponCost` matches a **quoted granted ability** inside its rules text
+> (*"auras you control … are weapons with \"Once per Turn Action - {r}:
+> Attack\""*), so the table lets you "swing" it for nothing. The other
+> three powerless weapons (Death Dealer, Plasma Barrel Shot, Crucible of
+> Aetherweave) are in the same family and need the ABILITY route, which
+> CLAUDE.md's `isWeaponType` vs `isWeapon` section already describes.
+> `parser.allyAttack` guards `power > 0` for exactly this reason; judge's
+> weapon branch does not. Small, well-understood, and deliberately left
+> out of a version that was already deep in one thread.
+>
+> **1c. The trainer still cannot CHOOSE an ally as an attack-target.**
+> judge has done CR 1.4.5 since v2.45 (`J.targets`); the trainer's
+> `execute` declares and calls `dummyDefence` in one pass, so a target
+> choice has to land before that — the boost precedent (`maybeBoost`
+> pauses and re-enters `execute`) is the shape. Now that allies attack,
+> this is the other half of ally combat and the natural next step.
 >
 > **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
 > them general: the `hits` optional-cost trigger (unwired since v3.20), a

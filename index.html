@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.43"; /* v3.43 — the two defects v3.42 left behind, both in the qualified go-again grant: it retired the bare-qualifier entry shape without carrying over the guard v3.31 wrote for the same move one shape earlier (a stale entry has no `q`, and `qualMatches` answers TRUE for an absent qualifier by design, so a pre-v3.42 grant off a wire or a replay handed go again to ANY card and spent itself doing it); and the qualifier still could not say "attack", because that printed word is the ANCHOR these readers match on rather than a captured atom — so Avast Ye!'s "next Pirate ally ATTACK" was collected by DEPLOYING any of the six Pirate allies in its own deck, rider and all. `atk` is the caller's answer, never derived, because a weapon's type line carries no "Attack" and deriving it would refuse every weapon swing. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.44"; /* v3.44 — ALLIES ATTACK, on both boards. "Allies do not attack" was half true: the table had no arena branch in `judge.legal` at all and answered "no such equipment", while the trainer had `allySwing` — a FABRICATION in `foeSwing`'s family that took the printed power straight off the opposing hero's life, so a 7-power Swabbie was unblockable, free and repeatable, with no cost charged, `{t}` and `Once per Turn` collapsed into one blanket flag, and Limpit's printed go again dropped. The parser was never the gap: an ally prints a weapon's grammar exactly, so `weaponCost` had answered cost/taps/oncePerTurn correctly for all eleven for years while nothing asked. `parser.allyAttack` is the named reader, `execute` learned `from:"ally"` so the whole combat path comes free, and the ability line's go again stopped leaking onto the DEPLOY (deploying Limpit kept its action point). Avast Ye! and Yo Ho Ho! are real cards now. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3409,14 +3409,34 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(from==="hand" && isAttack(card) && isArrow(card)) return L(s,"Arrows fire from the arsenal. Set it at end of turn.");
     if(from!=="weapon" && from!=="hero" && !isAttack(card) && !fx.playable) return L(s,`${card.name}: no scripted effect yet — pitch it, block with it, or ℹ to read it.`);
     if((from==="weapon"||from==="hero") && act(s).weaponUsed[card.uid]) return L(s, from==="hero" ? "Already used this turn." : `${card.name} already swung this turn.`);
-    if(s.chainOpen && from!=="weapon" && !isAttack(card) && !isInstantT(card) && !card._instant)
+    /* AN ALLY ATTACK IS AN ATTACK (v3.44) — `isAttack` reads the type
+       line and an ally's says "Action - Ally", never "Attack", exactly as
+       a weapon's never does. Both are told apart by the ROUTE, so both
+       are exempt here or a second ally could not join an open chain. */
+    if(s.chainOpen && from!=="weapon" && from!=="ally" && !isAttack(card) && !isInstantT(card) && !card._instant)
       return L(s, "Combat chain is open — close it (⛓) before playing a non-attack action.");
     if(fx.addCost && fx.addCost.discard){
       const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
     }
     if(from==="weapon" && card.needSteam && !((act(s).counters[card.uid]||{}).steam>0)) return L(s, `${card.name} needs a steam counter to fire — build steam first (tap its ⚡).`);
-    const cost = effCost(card, act(s));
+    /* AN ALLY ATTACK IS AN ACTIVATED ABILITY (v3.44), and its two limits
+       expire differently — the Sledge/Scorpio rule. `{t}` is the arena's
+       `spent`, lifted at CR 4.4.3d; `Once per Turn` is an allowance that
+       returns at the turn boundary. `allySwing` used to set a blanket
+       spent for both and charge nothing at all. */
+    if(from==="ally"){
+      const _aa = DawnParser.allyAttack(card);
+      if(!_aa) return L(s, `${card.name} prints no attack to activate.`);
+      const _b = act(s).board.find(x => x && x.uid === card.uid);
+      if(!_b) return L(s, `${card.name} is not in the arena.`);
+      if(_aa.taps && _b.spent) return L(s, `${card.name} is tapped until your end phase.`);
+      if(_aa.oncePerTurn && act(s).weaponUsed["ally"+card.uid]) return L(s, `${card.name} has already attacked this turn.`);
+    }
+    /* THE ATTACK'S COST IS NOT THE CARD'S. An ally's `.cost` is what it
+       cost to DEPLOY; its attack prints its own. */
+    const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
+                               : effCost(card, act(s));
     if(act(s).res>=cost) return maybeBoost(s,card,from,idx);
     const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
@@ -3445,9 +3465,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      did, so an item with "Action - Destroy this: …" was decoration. Built
      lazily rather than stamped on at play time so nothing new has to be
      carried through every board write, and keyed "bp"+uid so it cannot
-     collide with gear's "gp"+uid. Allies keep allySwing for now — their
-     attacks are costed ({r}, {t}) and belong with the attack-target wiring
-     (CR 1.4.5), which is a bigger job than this one. */
+     collide with gear's "gp"+uid. AN ALLY IS NOT ONE OF THESE: its attack
+     is an activated ability read by `parser.allyAttack` and routed through
+     `tryPlay(card, "ally", i)` as of v3.44, so `boardPow` deliberately
+     returns null for an ally and the cell tries the ally route first. */
   const boardPow = b => {
     if(!b || !b.card || b.kind==="ally" || !b.card.tx) return null;
     const pw = parseHeroPower(b.card.tx, true);
@@ -3503,21 +3524,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     }
     return winCheck(openPrompt(n));
   });
-  const allySwing = bi => setG(s=>{
-    if(s.over||s.mode!=="act") return s;
-    const b = you(s).board[bi];
-    if(!b || b.kind!=="ally" || b.spent || !(b.card.power>0)) return s;
-    let n = {...s};
-    youMut(n).board = you(s).board.map((x,i)=>i===bi?{...x,spent:true}:x);
-    oppMut(n).hp -= b.card.power;
-    n.chain=[...n.chain,{n:b.card.name,img:b.card.img,dbImg:b.card.dbImg,dmg:b.card.power,ga:false,drac:/draconic/i.test(b.card.tt||""),kind:"atk"}];
-    n.hitSeq=n.hitSeq+1; n.lastDmg=b.card.power;
-    n.chainOpen = true;
-    n.featured = {card:{name:b.card.name,img:b.card.img,dbImg:b.card.dbImg,pitch:0}, chip:`LINK ${n.chain.length} — ${b.card.power} DMG`};
-    n = L(n, `${b.card.name} attacks for ${b.card.power} (ally — simplified, no action point).`);
-    return winCheck(n);
-  });
+  /* AN ALLY ATTACKS THROUGH THE ONE COMBAT PATH (v3.44).
 
+     This used to be a FABRICATION, in the same family as `foeSwing`'s
+     [3,4,5]: it took the ally's printed power straight off the opposing
+     hero's life. No cost was charged though every ally prints one, `{t}`
+     and `Once per Turn` were collapsed into one blanket `spent`, the
+     printed go again on Limpit was dropped, and — the expensive part —
+     there was NO DEFEND STEP, so a 7-power Swabbie was unblockable, free
+     and repeatable every turn. The log even said "(ally — simplified, no
+     action point)".
+
+     It is `tryPlay(card, "ally", …)` now, which is the same door a weapon
+     swing goes through, so the ally gets a real `pend`, a real wall, its
+     on-hit text, its action point (charged at resolution, kept on go
+     again) and every next-attack grant that names it — which is what
+     makes Avast Ye! and Yo Ho Ho! real cards. */
   const closeChain = () => setG(s=>{
     if(s.mode!=="act" || !s.chainOpen) return s;
     const hEntry = s.chain.length ? [{turn:s.turn, links:s.chain}, ...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
@@ -4616,7 +4638,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
                   onClick={()=>{
                     if(g.inspect) return setZoom(b.card);
-                    if(b.kind==="ally") return allySwing(i);
+                    /* AN ALLY ATTACK IS AN ACTIVATION LIKE ANY OTHER
+                       (v3.44) — two-tap, then the shared route. It used
+                       to call `allySwing`, which fabricated the damage. */
+                    if(b.kind==="ally" && DawnParser.allyAttack(b.card))
+                      return tapTwice(b.card, "attack", ()=>tryPlay(b.card,"ally",i));
                     const bp = boardPow(b);
                     if(bp) return tapTwice(bp, "activate", ()=>tryPlay(bp,"board",i));
                     return setZoom(b.card);

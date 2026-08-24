@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.43
+**Current version:** v3.44
 
 ---
 
@@ -383,8 +383,8 @@ parsed ops unchanged.
 
 **THE FIXTURE HAS TO PROVE THE READER, NOT THE WIRING.** Real Pirate
 allies attack through an activated ability that neither board wires yet
-(see "allies do not attack" under Known approximations) — so a driven
-test against the real card alone would prove nothing ever fires. The
+(unbuilt on both boards until v3.44) — so a driven test against the real
+card alone would have proved nothing ever fires. The
 drill uses a synthetic Pirate-ally-attack fixture, same discipline as
 `test/qualifier.test.js`'s own `atkCard`, and resolves the hit all the
 way through `resolveStack` to see the Gold token actually land. Testing
@@ -401,6 +401,64 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### AN ALLY IS A PERMANENT THAT ATTACKS (v3.44)
+
+`weaponCost` is not a weapon reader. It is the one reader of **"Action -
+<cost>: Attack"**, and every ally in the pool that can attack prints that
+grammar exactly — so it had been answering cost, `taps` and `oncePerTurn`
+correctly for all eleven **for years, while nothing asked it**. The parser
+was never the gap; the ROUTE was, on both boards. `parser.allyAttack` is
+the named question, and `parser.isWeapon` stays false for an ally (its
+type line says no Weapon) — the two-names-two-questions split, again.
+
+**A FABRICATION IS WORSE THAN A MISSING FEATURE, because it looks
+finished.** `judge.legal` had no arena branch and said *"no such
+equipment"* — visibly broken. The trainer's `allySwing` took the ally's
+printed power straight off the opposing hero's life: no cost, no defend
+step, one blanket `spent` for two limits that expire differently, and
+Limpit's printed go again dropped. A 7-power Swabbie was **unblockable,
+free and repeatable**. Neither sweep can see it — fairness does not model
+board activations, and coverage reads every ally `full` because its
+ability line is correctly NOOP'd.
+
+**`from` IS THE SEAM, AND EVERYTHING ELSE CAME FREE.** Adding `from:
+"ally"` to `execute`'s `attacking` bought the whole combat path: `pend`,
+the wall, on-hit text, CR 1.4.5 targeting, the action point charged at
+resolution and kept on go again, and every next-attack grant. **`fileAttack`
+needed no change** — it files nothing on an activation route, so an ally
+stays in the arena exactly as a weapon stays equipped. When a new source
+of attacks appears, ask what `from` already buys before writing anything.
+
+**A KEYWORD ON AN ACTIVATED-ABILITY LINE BELONGS TO THE ABILITY.** The
+clause splitter breaks on the period, so Limpit's *"…: Attack. Go again"*
+arrives as a clause of its own and set `fx.ga` — the CARD's. Driven,
+**deploying Limpit kept its action point**. `printedKw` was already the
+right discriminator (the keyword is mid-line, not its own paragraph) and
+nothing was asking it.
+
+**THE FIX IS ROUTE-AWARE, NOT A BLANKET CHANGE.** Measured first: 15 pool
+cards set `fx.ga` without a printed keyword line and **13 are Equipment or
+Weapons, never played from hand** — so suppressing it card-wide silently
+costs Mark of the Huntsman its swing's go again. A weapon and an ally are
+told apart by the ROUTE, not by the card. And on the ally *attack* route
+the answer is the attack ability's OWN line, never `fx.ga`: Cutty Shark
+prints its go again on a **different** ability, and reading one ability's
+text onto another is its own bug.
+
+**THE COST IS THE ABILITY'S, AND `.cost` IS NOT IT.** `build.js` folds a
+weapon's activation cost onto its gear entry's `.cost`, which is how
+`effCost` charges a swing without `effects.js` knowing what a weapon is —
+so the trick does not generalise. An ally's `.cost` is its PLAY cost,
+already spent deploying it. Charging both took 5 for a 2-cost attack.
+**One charge site** (v2.80), and it asks which route it is on.
+
+**A POWERLESS CARD IS NOT A SWING.** `allyAttack` requires a printed
+`power > 0`, because `weaponCost` will happily match a **quoted granted
+ability** inside a card's rules text — Cosmo's *"auras you control … are
+weapons with \"Once per Turn Action - {r}: Attack\""*. judge's weapon
+branch has no such guard and does route Cosmo as a swing; recorded in
+HANDOFF.md rather than half-fixed.
 
 ### A RETIRED SHAPE TAKES ITS GUARD WITH IT, AND AN ANCHOR IS NOT AN ATOM (v3.43)
 
@@ -2309,10 +2367,12 @@ Still deliberately not modelled, and each is honest rather than hidden:
   start phase, so the only thing that can happen in it is a start-of-turn
   trigger, and this reducer models no card effects. It becomes a real
   pause when one exists.
-- **allies do not attack.** They are attackABLE; swinging one needs the
-  activation cost and a target of its own. **CR 4.4.3d's arena untap is
-  built ahead of it** (a board permanent's `spent` clears at the turn
-  player's untap step), because the untap has to exist before the tap.
+- ~~**allies do not attack.**~~ **BUILT at v3.44.** `parser.allyAttack` is
+  the reader, `from: "ally"` is the route, and both boards share it — see
+  "AN ALLY IS A PERMANENT THAT ATTACKS". The arena untap (CR 4.4.3d) was
+  built ahead of it and is what `{t}` now rests on. What is still missing
+  is an ally being CHOSEN as an attack-target in the TRAINER; judge has
+  done CR 1.4.5 since v2.45.
 - **`index.html` still carries the invented fatigue loss.** Left alone on
   purpose: the dummy reshuffles its graveyard rather than decking out, so
   changing it is a decision about solo play, not a rules fix.

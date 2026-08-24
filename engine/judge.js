@@ -765,6 +765,40 @@ function legal(g, a, seat){
       }
       return null;
     }
+    /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
+       The third time this exact shape has turned up: a route that exists
+       on one board only because `Battle` built it as UI (v3.04's 17 dead
+       equipment abilities, v3.36's hero ability). There was no arena
+       branch here at all, so `find(sd.gear, uid)` missed and every ally
+       attack at the table was refused with "no such equipment".
+
+       The trainer had one, and it was a FABRICATION in the same family as
+       `foeSwing`'s [3,4,5]: `allySwing` took the printed power straight
+       off the hero's life, charging no cost, ignoring `{t}` versus `Once
+       per Turn`, dropping the printed go again, and never opening a
+       defend step — an unblockable 7 from Swabbie, every turn, for free.
+
+       `parser.allyAttack` is the reader and it is `weaponCost`'s body,
+       because an ally prints a weapon's grammar exactly. */
+    const bi = (sd.board || []).findIndex(b => b && b.uid === a.uid);
+    if(bi >= 0){
+      const b = sd.board[bi];
+      const aa = PR.allyAttack(b.card);
+      if(!aa) return b.card.name + " prints no attack to activate";
+      /* A TAP AND AN ALLOWANCE EXPIRE DIFFERENTLY — the Sledge/Scorpio
+         rule (v2.46). `spent` is the arena's tap and is lifted at CR
+         4.4.3d; `Once per Turn` comes back at the turn boundary. */
+      if(aa.taps && b.spent) return b.card.name + " is tapped until your end phase";
+      if(aa.oncePerTurn && (sd.weaponUsed || {})["ally" + a.uid])
+        return b.card.name + " has already attacked this turn";
+      if(!(GM.allyLife(b) > 0)) return b.card.name + " is not on the battlefield";
+      const win = P.speedAllowed(g, seat);
+      if(win.indexOf("action") < 0) return "no action-speed window — an ally cannot attack here";
+      if(!(sd.ap > 0)) return "no action point left";
+      if((aa.cost || 0) > sd.res + payCeiling(sd, null))
+        return b.card.name + " costs " + aa.cost + " to attack and you cannot raise it";
+      return null;
+    }
     const gi = find(sd.gear, a.uid);
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
@@ -1511,6 +1545,24 @@ function doActivate(g, a, seat){
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
+  }
+  /* THE ARENA (v3.44) — an ally's attack is an activated ability, so it
+     takes the same commit path a weapon swing does. `commitPlay` sets the
+     actor, calls `execute`, and `execute` declares the attack; the ally
+     is a permanent so nothing is spliced out of a zone and `fileAttack`
+     already files nothing for an activation route. */
+  {
+    const bi = (sd.board || []).findIndex(b => b && b.uid === a.uid);
+    if(bi >= 0){
+      const b = sd.board[bi];
+      const aa = PR.allyAttack(b.card) || {cost: 0};
+      const target = targetOf(g, seat, a.target);
+      if((aa.cost || 0) > sd.res)
+        return say({...g, pending: {kind: "pay", seat, card: b.card, from: "ally", need: aa.cost, target}},
+          b.card.name + " costs " + aa.cost + " to attack and " + sd.name
+          + " holds " + sd.res + " — pitch, or cancel.");
+      return commitPlay(g, b.card, "ally", seat, null, target);
+    }
   }
   const piece = sd.gear[find(sd.gear, a.uid)];
   /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the
