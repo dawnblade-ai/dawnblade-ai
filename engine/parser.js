@@ -3273,12 +3273,18 @@ function asInstantCond(gate){
      point. Answered against the caller's board. */
   let m = g.match(/^you control an? (.+)$/);
   if(m) return {when: "controls", name: m[1].trim()};
-  /* NOT READ: "if you have played another Wizard non-attack action card
-     this turn" — Snapback x3. `hist` counts non-attacks (`non`) but
-     records no CLASS, so "another WIZARD non-attack" cannot be asked
-     without a class-aware turn history. Reading it as the bare count
-     would grant the window off any non-attack at all, which is stronger
-     than printed on the card's own text. Left unread and visible. */
+  /* "IF YOU HAVE PLAYED ANOTHER <class> NON-ATTACK ACTION CARD THIS TURN"
+     — Snapback x3, REFUSED at v3.36 for want of a class-aware turn
+     history. `hist.playTy` is that history (v3.38): the structured type
+     words of every card played this turn, so the class and the type can
+     be asked TOGETHER. Reading it as the bare `non` count would have
+     granted the window off any non-attack at all — stronger than the
+     card's own text, which is why it waited for the record rather than
+     being approximated.
+
+     THE CLASS IS CAPTURED off the card, never listed here. */
+  m = g.match(/^you have played another ([a-z]+) non-attack action card this turn$/);
+  if(m) return {when: "playedAnotherCls", cls: m[1]};
   return null;
 }
 
@@ -3294,6 +3300,13 @@ function asInstantMet(g, o){
     case "controls":
       return (o.board || []).some(b => b && b.card
         && String(b.card.name || "").toLowerCase() === g.name);
+    /* THE CLASS AND THE TYPE ARE ASKED TOGETHER, off ONE recorded entry.
+       A flat set of words would answer TRUE for a Wizard ATTACK plus an
+       unrelated non-attack — two cards contributing half the condition
+       each, which is not what the card asks. */
+    case "playedAnotherCls":
+      return ((o.hist || {}).playTy || []).some(ty =>
+        ty.indexOf(g.cls) >= 0 && ty.indexOf("action") >= 0 && ty.indexOf("attack") < 0);
   }
   /* AN UNKNOWN `when` RETURNS FALSE (v3.26). A condition added to
      `asInstantCond` and forgotten here leaves the card in its printed

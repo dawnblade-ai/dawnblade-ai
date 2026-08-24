@@ -779,7 +779,8 @@ function makeEffects(ctx){
            than opened inline: opt only touches the deck, so it is safe to ask
            after the action finishes resolving. */
         if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
-        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:Math.min(v, act(n).deck.length), src:srcName}];
+        const looked = Math.min(v, act(n).deck.length);
+        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, src:srcName}];
       }
       /* pickPrompt — a GENERIC mandatory-or-optional targeted pick, carrying
          its own zone/to/filter/min/max as data rather than a bespoke op per
@@ -1883,6 +1884,23 @@ function makeEffects(ctx){
        opponent-turn routes, which reach `runOps` directly and never pass
        through `execute` at all. See `foeTurnIce`. */
     n = foeTurnIce(n, card);
+    /* THE CLASS-AWARE PLAY RECORD (v3.38). `hist.non` counts non-attacks
+       and records no CLASS, so "if you have played another WIZARD
+       non-attack action card this turn" could not be asked at all.
+
+       RECORDED AFTER THE CARD RESOLVES, in the same breath as `hist.non`
+       above and for the same reason: "ANOTHER" must not count the card
+       asking the question. The speed grant is asked at LEGALITY time —
+       before the card is played — so there is no self-counting subtlety
+       there either way, and this keeps both readings honest.
+
+       THE STRUCTURED ARRAY, lowercased (v2.44). `tt` calls Den of the
+       Spider an "Action Defense Reaction"; the array does not. */
+    {
+      const _ty = (card.ty || []).map(t => String(t).toLowerCase());
+      if(_ty.length) actMut(n).hist = {...act(n).hist,
+        playTy: [...(act(n).hist.playTy || []), _ty]};
+    }
     const delta = preHP - foe(n).hp;
     if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).

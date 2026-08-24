@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.37 · PHASE C · IYSLANDER IS DONE
+# Handoff — Dawnblade, at v3.38 · PHASE C · BLAZE IS NEXT, AND HIS HERO IS THE WORK
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1400 drills**
+> the card semantics run on both boards.** `npm test` is **1403 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.37: coverage **330 full / 63 part / 12 none**, fairness
+> Current at v3.38: coverage **331 full / 62 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -67,6 +67,48 @@
 > deck wants: his Cindering Foresight is `full`, and **Snapback** is the
 > one remaining shape — it needs a CLASS-AWARE TURN HISTORY, which would
 > also unblock Quick Clicks' "played a Nimblism this turn".
+
+> ### v3.38 — BLAZE: his DECK is 22 of 23, and his HERO is entirely unbuilt
+>
+> Same shape as Iyslander: the cards are nearly done and the hero is the
+> work. **Neither of his clauses exists** — no build passive, no
+> `HERO_STATICS` entry, so the audit reports all three of his hero-text
+> clauses unrecognised, honestly.
+>
+> ```
+> Whenever you opt, put energy counters on Blaze equal to the number of
+> cards looked at this way.
+> Once per Turn Instant - Remove X energy counters from Blaze: Banish a
+> Wizard non-attack action card from your hand with an effect that deals
+> arcane damage equal to X. You may play it this turn as though it were
+> an instant.
+> ```
+>
+> **BOTH CLAUSES OR NEITHER.** Clause 1 was written in this cycle and
+> deliberately REVERTED: energy counters that nothing can spend are
+> v2.74's Frostbite bug exactly — a number on the hero row and no rule.
+> Clause 2 is what spends them.
+>
+> **What clause 2 needs, and every piece has precedent:**
+>
+> | piece | precedent |
+> |---|---|
+> | `parseHeroPower` accepting a "remove N counters" cost | it refuses one today BY DESIGN ("never parse ahead of wiring") — relax it only once the route exists |
+> | a `pick` over the hand with an arcane-amount filter | `promptFilter` reads printed FIELDS; this is a PARSED fact (`fxParse(c).ops`), so it is a deliberate, documented extension |
+> | X coupled to the chosen card | the player picks the card, X is that card's arcane, the cost is X counters — so X is not a free variable and needs no X-cost machinery |
+> | the dynamic bound (arcane <= counters held) | supplied at the QUEUE SITE, exactly as `notUid` is for `notSelf` (v3.20) |
+> | banish + "playable this turn" | Crouching Tiger's `_playTurn`, already honoured by `playableFromZone` |
+> | "as though it were an instant" | `playsAsInstant` (v3.36) — this would be a FIFTH printed source for the one reader |
+>
+> **`CARD_OVERRIDES` IS STILL EMPTY** and should stay that way if the
+> generic route can take this. It was weighed for Blaze and declined: the
+> only genuinely non-generic part is X binding the cost to the card's
+> parsed effect, and the queue-site pattern covers it.
+>
+> **His other two `part` cards:** Arcane Polarity needs "if you have been
+> DEALT arcane damage this turn" (`hist.arc` records arcane DEALT BY you,
+> v3.28 — this is the other direction and is a new field); Turn to
+> Mindfire needs a {t} cost on the HERO plus a Ponder token.
 
 > ### Viserai — DONE at v3.20
 >

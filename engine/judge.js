@@ -1423,7 +1423,11 @@ function windowsNow(g, seat, card, half, zone){
     /* A GRANT THE SIDE IS ALREADY HOLDING (v3.37) — Stir the
        Aetherwinds. Read here, never spent: `effects.takeInstantNext`
        consumes it when the card is actually played. */
-    grants:         at(g, seat).instantNextQ || []
+    grants:         at(g, seat).instantNextQ || [],
+    /* THE TURN HISTORY (v3.38) — Snapback asks whether another Wizard
+       non-attack action card has been played this turn, which only the
+       game can answer. */
+    hist:           at(g, seat).hist || {}
   });
   return grant ? base.concat(["instant"]) : base;
 }

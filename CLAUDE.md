@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.37
+**Current version:** v3.38
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1400 drills**.
+This is `node --test "test/*.test.js"` — currently **1403 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,36 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A TURN HISTORY THAT KNOWS THE CLASS (v3.38)
+
+`hist.non` counts non-attacks and records no CLASS, so Snapback's *"if you
+have played another **Wizard** non-attack action card this turn"* could not
+be asked at all. v3.36 REFUSED it rather than reading it as the bare count,
+which would have granted the instant-speed window off any non-attack —
+stronger than the card's own text. `hist.playTy` is the record that removed
+the reason.
+
+**ONE ENTRY PER PLAY, NOT A FLAT SET OF WORDS.** The question pairs a class
+with a type — Wizard AND action AND not attack — so a flat set answers TRUE
+for a Wizard *attack* plus an unrelated non-attack: **two cards
+contributing half the condition each**. That is the whole reason the record
+has the shape it has, and the sabotage that flattens it fails a drill.
+
+**THE STRUCTURED ARRAY, lowercased** (v2.44). `tt` calls Den of the Spider
+an "Action Defense Reaction"; the array does not.
+
+**RECORDED AFTER THE CARD RESOLVES**, beside `hist.non` and for its reason:
+*"another"* must not count the card asking. The speed grant is asked at
+LEGALITY time — before the play — so neither reading self-counts.
+
+**A REFUSAL WITH A WRITTEN REASON IS A DEBT, AND IT CAME DUE.** The pin in
+`asinstant.test.js` carried the reason in its own assertion text, so when
+the reason stopped being true the drill failed and the edit was forced to
+be deliberate. That is what a recorded refusal is FOR — the alternative is
+a gap nobody revisits. Keep the refusal property alive with a separate
+probe when you retire one: the vocabulary stays closed, and a gate with no
+reader still leaves the card in its printed window.
 
 ### FOUR QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.37)
 

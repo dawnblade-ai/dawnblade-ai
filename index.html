@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.37"; /* v3.37 — Stir the Aetherwinds, the FOURTH qualified single-shot grant (`buffQ` power, `gaNextQ` go again, `costOff` cost, `instantNextQ` the WINDOW) and the last card standing between Iyslander and a finished deck. Its two sentences are about ONE card, so they are paired in fxParse: unpaired, the amp sat loose on the side and landed on ANY next arcane — driven, Stir's +1 amped a Runeblade Defense Reaction, which is RESTRICTION-DROPPED and invisible to the fairness sweep because that check does not model `amp`. Cindering Foresight keeps the bare op, because it really does print "the next card". Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.38"; /* v3.38 — the CLASS-AWARE turn history: `hist` counted non-attacks and recorded no class, so Snapback's "if you have played another WIZARD non-attack action card this turn" could not be asked at all — v3.36 refused it rather than reading it as the bare count, which would have granted the instant-speed window off ANY non-attack. `hist.playTy` records the STRUCTURED type words of every card played, as one entry per play rather than a flat set, so two cards contributing half the condition each cannot satisfy it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3117,6 +3117,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       || DawnParser.playsAsInstant(c, {zone:"arsenal", notYourTurn:true,
                                        board:act(s).board,
                                        grants:act(s).instantNextQ||[],
+                                       hist:act(s).hist||{},
                                        arsenalInstant:bAct(s).arsenalInstant});
     if(!_mayInstant){
       if(!bAct(s).arsenalInstant) return s;
@@ -3171,6 +3172,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const _freed = DawnParser.playsAsInstant(c, {zone:"hand", notYourTurn:true,
                                                  board:act(s).board,
                                                  grants:act(s).instantNextQ||[],
+                                                 hist:act(s).hist||{},
                                                  arsenalInstant:bAct(s).arsenalInstant});
     if(!isInstantT(c.tt||"") && !_freed)
       return L(s, `${c.name} isn't an instant — only instants may be played during ${foe(s).name}'s turn.`);

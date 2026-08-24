@@ -54,14 +54,21 @@ test("the printed grant is READ, and an unreadable gate is left unread", {skip},
     "the NAME is captured off the card — a table of names here would be card text " +
     "written into the engine");
 
-  /* SNAPBACK IS DELIBERATELY UNREAD. "If you've played another WIZARD
-     non-attack action card this turn" needs a class-aware turn history;
-     `hist` counts non-attacks but records no class. Reading it as the
-     bare count would grant the window off ANY non-attack, which is
-     stronger than the card's own text. Left unread and visible. */
-  assert.equal(read("Snapback", 1), undefined,
-    "Snapback's gate needs a class-aware turn history and must stay UNREAD rather " +
-    "than be approximated by the bare non-attack count — that would be stronger than printed");
+  /* SNAPBACK WAS DELIBERATELY UNREAD AT v3.36 and is READ at v3.38 — a
+     deliberate edit to this drill, not a drift. The recorded reason was
+     "`hist` counts non-attacks but records no class", and `hist.playTy`
+     removed it; approximating it with the bare count would have granted
+     the window off ANY non-attack, which is why it waited for the record
+     rather than being guessed. */
+  assert.deepEqual(read("Snapback", 1), {when: "playedAnotherCls", cls: "wizard"},
+    "Snapback's gate is read off a class-aware turn history (v3.38). The CLASS is " +
+    "captured off the card rather than listed in the engine");
+
+  /* AND A GATE WITH NO READER STILL REFUSES. The vocabulary is closed on
+     purpose: an unrecognised condition leaves the clause unread and the
+     card in its printed window, which is weaker than printed and visible. */
+  assert.equal(P.asInstantCond("you have three hats"), null,
+    "a condition with no reader must refuse — the alternative is a window nobody built");
 });
 
 test("an unknown condition answers FALSE, so a forgotten gate is WEAKER than printed", {skip}, () => {
@@ -281,4 +288,71 @@ test("the TRAINER's arsenal route asks the SHARED reader, not a second copy", {s
   assert.match(body, /isInstantT\(/,
     "the trainer's arsenal route must let an INSTANT through on its own printed type — " +
     "asking only about the grant loses a line of play the table still allows");
+});
+
+/* ---- THE CLASS-AWARE TURN HISTORY (v3.38) ---------------------------
+   `hist.non` counts non-attacks and records no CLASS, so Snapback's "if
+   you have played another WIZARD non-attack action card this turn" could
+   not be asked at all — and reading it as the bare count would have
+   granted the window off ANY non-attack, which is stronger than the
+   card's own text. That is why v3.36 refused it rather than guessing.
+   `hist.playTy` is the record that removed the reason. */
+
+const S = require("../engine/sides.js");
+const hist = played => Object.assign(S.freshHist(), {playTy: played});
+const tyOf = c => (c.ty || []).map(t => String(t).toLowerCase());
+
+test("every play records its STRUCTURED type words, after it resolves", {skip}, () => {
+  const bolt = H.card("Ice Bolt", 1);
+  let g = H.state({res: 19, ap: 3, hand: [bolt]}, {}, {actor: 0, turnPlayer: 0, turn: 3});
+  assert.deepEqual(g.sides[0].hist.playTy, [], "a fresh turn records nothing");
+
+  g = H.execute(g, bolt, "hand", 0, {});
+  assert.deepEqual(g.sides[0].hist.playTy, [["ice", "wizard", "action"]],
+    "the whole structured array, lowercased — `tt` calls Den of the Spider an " +
+    '"Action Defense Reaction" and the array does not (v2.44)');
+});
+
+test("the class and the type are asked TOGETHER, off one entry", {skip}, () => {
+  const q = {when: "playedAnotherCls", cls: "wizard"};
+  const met = h => P.asInstantMet(q, {hist: hist(h)});
+
+  assert.equal(met([]), false, "nothing played — the gate is shut");
+  assert.equal(met([["ice", "wizard", "action"]]), true,
+    "a Wizard non-attack action card opens it");
+  assert.equal(met([["wizard", "action", "attack"]]), false,
+    "a Wizard ATTACK action card does not — the line says non-attack");
+  assert.equal(met([["runeblade", "action"]]), false,
+    "a non-Wizard non-attack does not — the line names the class");
+
+  /* THE REASON THE RECORD IS AN ARRAY OF ENTRIES rather than a flat set
+     of words: two cards contributing half the condition each must not
+     satisfy it. A flat set would answer TRUE here. */
+  assert.equal(met([["wizard", "action", "attack"], ["generic", "action"]]), false,
+    "a Wizard ATTACK plus an unrelated non-attack is two cards contributing half the " +
+    "condition each — a flat set of type words would wrongly answer true");
+});
+
+test("Snapback is playable at instant speed once, and only once, it is earned", {skip}, () => {
+  const snap = H.card("Snapback", 1);
+  const bolt = H.card("Ice Bolt", 1);       /* Ice Wizard Action — non-attack */
+  const bull = H.card("Wounded Bull", 1);   /* Generic Action - Attack        */
+  const at = played => {
+    const g = H.state({res: 19, ap: 0, hand: [snap], hist: hist(played)}, {},
+                      {actor: 1, turnPlayer: 1, turn: 3, builds: [{}, {}]});
+    return {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  };
+  const act = {t: "play", uid: snap.uid, from: "hand"};
+
+  assert.ok(J.legal(at([]), act, 0),
+    "with nothing played this turn Snapback is an ordinary action and is refused");
+  assert.equal(J.legal(at([tyOf(bolt)]), act, 0), null,
+    "after a Wizard non-attack action card, its own line frees it on the opponent's turn");
+  assert.ok(J.legal(at([tyOf(bull)]), act, 0),
+    "an ATTACK does not earn it — the discriminator is the card TYPE, not the count");
+
+  /* AND NO ACTION POINT IS CHARGED — the seat has none on their turn. */
+  const out = J.reduce(at([tyOf(bolt)]), act, 0);
+  assert.equal(out.error, null, "reduce must agree with legal");
+  assert.equal(out.state.sides[0].ap, 0, "no action point charged (CR 8.1.6)");
 });

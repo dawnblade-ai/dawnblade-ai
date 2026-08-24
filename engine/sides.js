@@ -81,7 +81,17 @@ const SIDE_FIELDS = [
   "nextTurn"
 ];
 
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[]});
+/* `playTy` — THE TYPE WORDS OF EVERY CARD PLAYED THIS TURN (v3.38), one
+   entry per play, lowercased, straight off the STRUCTURED array. It exists
+   because `non` counts non-attacks and records no CLASS, so "if you have
+   played another WIZARD non-attack action card this turn" (Snapback x3)
+   could not be asked at all — and reading it as the bare count would grant
+   the window off ANY non-attack, which is stronger than the card's text.
+
+   THE WHOLE ARRAY, not a set of flags: the question pairs a class with a
+   type ("Wizard" AND "action" AND not "attack"), and a flat set of words
+   loses that pairing the moment two different cards contribute halves. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],playTy:[]});
 
 function makeSide(o){
   o = o || {};

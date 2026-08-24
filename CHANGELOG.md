@@ -7,6 +7,55 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.38 — a turn history that knows what CLASS you played
+
+**Snapback was the one condition v3.36 refused**, and the reason was
+recorded rather than guessed at:
+
+> *"If you have played another **Wizard** non-attack action card this turn,
+> you may play this as though it were an instant."*
+
+`hist` counts non-attacks (`non`) and records no CLASS, so the question
+could not be asked at all. Reading it as the bare count would have granted
+the instant-speed window off **any** non-attack — stronger than the card's
+own text, on the most valuable kind of permission in the game — so it
+waited for the record instead of being approximated. This is that record.
+
+**`hist.playTy` — one entry per play, the STRUCTURED type words.** Not
+`tt`: the display string calls Den of the Spider an "Action Defense
+Reaction" and the array does not (v2.44's ruling).
+
+**AN ARRAY OF ENTRIES, NOT A FLAT SET OF WORDS**, and that is the whole
+design. The question pairs a class with a type — Wizard **and** action
+**and** not attack — so a flat set answers TRUE for a Wizard *attack* plus
+an unrelated non-attack: two cards contributing half the condition each.
+Drilled explicitly, and the sabotage that flattens the set fails it.
+
+**RECORDED AFTER THE CARD RESOLVES**, in the same breath as `hist.non` and
+for the same reason: *"another"* must not count the card asking the
+question. The speed grant is asked at LEGALITY time — before the card is
+played — so there is no self-counting subtlety there either way, which
+keeps both readings honest.
+
+**A DELIBERATE LEDGER EDIT.** `test/asinstant.test.js` pinned Snapback as
+UNREAD with the reason written into the assertion; that reason is gone, so
+the drill now pins the read. The refusal property it was protecting is
+kept by a separate probe with a gate that has no reader — the vocabulary
+stays closed, and an unrecognised condition still leaves the card in its
+printed window.
+
+**Blaze's HERO ability is deliberately not in this version.** Both his
+clauses are unbuilt — no build passive, no ledger entry — and clause 1
+("whenever you opt, put energy counters on Blaze") was written and then
+**reverted**, because clause 2 is what spends them and is a version's work
+on its own. Energy counters that nothing can spend are v2.74's Frostbite
+bug exactly: *a number on the hero row and no rule*. It gets its own
+version rather than half of this one.
+
+Measured: **330 → 331 full, 63 → 62 part** (Snapback ×1 in the pool).
+1400 → 1403 drills, 0 failed, 0 skipped. Fairness clean, 0 UNFAIR.
+**7 sabotages, all biting.**
+
 ## v3.37 — Stir the Aetherwinds, and an amp that was landing on the wrong card
 
 The fourth qualified single-shot grant, and the last card standing between
