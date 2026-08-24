@@ -158,6 +158,13 @@
 > git push origin main          # that IS the deploy
 > ```
 >
+> **`npm run audit` REWRITES ITS ARTIFACTS EVERY RUN.** `AUDIT.md` and
+> `tools/audit.json` carry a `generated` timestamp, so running the audit as
+> a final *check* — after committing — leaves the tree dirty with a
+> timestamp-only diff and nothing else. Confirm with `git diff` that the
+> only change is that line, then `git checkout` the two files rather than
+> committing the churn. Run the audit BEFORE you commit, not after.
+>
 > **The babel check is not a drill and cannot become one** — the project has
 > no dependencies and `npm test` must stay green on a fresh clone with no
 > `npm install`. Run it in a scratch dir after any `index.html` edit:
