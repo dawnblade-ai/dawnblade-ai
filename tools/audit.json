@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-24T00:07:38.255Z",
- "appVer": "3.37",
+ "generated": "2026-08-24T12:43:34.729Z",
+ "appVer": "3.38",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -253,25 +253,26 @@
    "int": 4,
    "tt": "Wizard Hero - Young",
    "tx": "Whenever you opt, put energy counters on Blaze equal to the number of cards looked at this way.\nOnce per Turn Instant - Remove X energy counters from Blaze: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X. You may play it this turn as though it were an instant.",
-   "statics": [],
-   "power": null,
+   "statics": [
+    "Blaze — opt fills the energy pool, by cards LOOKED AT rather than the printed number",
+    "Blaze — the banished card is stamped playable-this-turn at instant speed (no passive: it rides on the ability's own pick spec)"
+   ],
+   "power": "once/turn: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X",
    "clauses": [
     {
      "t": "Whenever you opt, put energy counters on Blaze equal to the number of cards looked at this way.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Once per Turn Instant - Remove X energy counters from Blaze: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X",
-     "covered": false
+     "covered": true
     },
     {
      "t": "You may play it this turn as though it were an instant.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "boltyn": {
    "name": "Boltyn",

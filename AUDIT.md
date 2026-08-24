@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-24T00:07:38.255Z · app v3.37 · data sage-v12 · db 788 records
+Generated 2026-08-24T12:43:34.729Z · app v3.38 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -136,10 +136,9 @@ Generated 2026-08-24T00:07:38.255Z · app v3.37 · data sage-v12 · db 788 recor
 - 🚩 2 hero-text clause(s) not recognized by any ability reader
 
 ### Blaze, Firemind (Wizard)
-- ⚠ unrecognized: "Whenever you opt, put energy counters on Blaze equal to the number of cards looked at this way."
-- ⚠ unrecognized: "Once per Turn Instant - Remove X energy counters from Blaze: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X"
-- ⚠ unrecognized: "You may play it this turn as though it were an instant."
-- 🚩 3 hero-text clause(s) not recognized by any ability reader
+- hero power: once/turn: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X
+- static: Blaze — opt fills the energy pool, by cards LOOKED AT rather than the printed number
+- static: Blaze — the banished card is stamped playable-this-turn at instant speed (no passive: it rides on the ability's own pick spec)
 
 ### Boltyn (Light Warrior)
 - ⚠ unrecognized: "If you've charged this turn, your attacks get +1{p} while defended by an attack action card."

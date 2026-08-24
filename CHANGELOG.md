@@ -7,6 +7,81 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.39 — Blaze's engine: opt fills the pool, the pool banishes a spell
+
+**Neither clause of his hero ability existed** — no build passive, no
+ledger entry, no route — so the audit reported all three of his hero-text
+clauses unrecognised. Honestly, for once: nothing claimed to work.
+
+> **Whenever you opt**, put energy counters on Blaze equal to the number of
+> cards **looked at** this way.
+>
+> **Once per Turn Instant - Remove X energy counters from Blaze:** Banish a
+> Wizard non-attack action card from your hand with an effect that deals
+> arcane damage **equal to X**. You may play it this turn as though it were
+> an instant.
+
+**BOTH CLAUSES OR NEITHER.** Clause 1 was written in v3.38 and deliberately
+reverted, because clause 2 is what spends the counters and energy nothing
+can spend is v2.74's Frostbite bug exactly — *a number on the hero row and
+no rule*.
+
+**THE COUNT IS CARDS LOOKED AT, NOT THE PRINTED NUMBER.** Opt 3 into a
+two-card deck looks at two and pays two. The `Math.min` was already at the
+opt site for the prompt; reading the printed number would pay above rate on
+exactly the turns a deck is running out, which is when the ability matters
+most. One site, so the trigger cannot exist on one board only.
+
+**X IS NOT A FREE VARIABLE, and that is why this needed no X-cost
+machinery.** The player picks a card and X is that card's own arcane
+damage, so the coupling lives in the FILTER: the ability offers only what
+the pool can pay for, and the price is settled by the choice.
+
+**THE POOL BOUND IS SUPPLIED AT THE QUEUE SITE**, never baked into the
+parse — `fxParse` memoizes on `name|pitch`, so one parse serves every copy
+in a match and a number stored there would freeze at whatever the counters
+were the first time. Exactly the rule `notUid` follows for `notSelf`
+(v3.20), and a drill asserts the parse carries no bound at all.
+
+**`arcAmount` READS THE UNCONDITIONAL OPS ONLY**, because this number is
+the PRICE. Emeritus Scolding prints 4 with a conditional 6; charging 6 for
+a card that deals 4 is the wrong direction, and a gated amount is not one
+the engine can promise. One copy, in `parser.js`, because the filter and
+the cost both ask it.
+
+**Three things found on the way, none of them Blaze's:**
+
+| | |
+|---|---|
+| the HERO powCard was truncated at the first period | v2.34 fixed this for EQUIPMENT and never here. **Lyath Goldmane's ability lost a whole sentence** — "Defending action cards you control get +1{d} this turn" — and carried only the boo. Latent rather than live, because that clause still has no reader, and now recorded |
+| the table had NO route to an activated hero ability | `doActivate` handled hand abilities and gear and had no `"hero"` branch. Same one-board shape v3.04 found for the 17 equipment abilities; Blaze is the pool's only such hero, which is why nothing noticed |
+| the trainer gated ⚡ USE on `mode === "act"` | the ACTION phase only — so a hero ability printed **Instant** could not be used on the opponent's turn, which for Blaze is half of what it is for |
+
+**A DEAD TAP IS REFUSED BY NAME.** With an empty pool the filter admits
+nothing, `buildPrompt` returns null and the sheet skips itself — having
+already burned the once-per-turn. `legal` asks the same filter the queue
+site will build, so the two cannot disagree about which cards are legal.
+
+**AND THE COUNTER IS ON SCREEN, both boards.** An ability whose entire cost
+is a pool the player cannot see is a cost they cannot plan around.
+
+**A PROMPT SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT** (v2.34,
+paid again): `ctrSpend` and `playThisTurn` were dropped the first time this
+was driven, so the banish was FREE and the card was never marked playable.
+
+`optFilter` learned a **leading class word** — "a WIZARD non-attack action
+card" — and `ty` now takes a LIST so the class and the type are asked
+together. **The whole phrase is tried FIRST**: ordered the other way,
+"ATTACK ACTION CARD" splits as class *attack* plus *action card*, a subject
+the reader already knows read as two things it is not. Three existing
+drills caught that immediately, which is the whole-phrase discipline
+working on a change to itself.
+
+1403 → 1413 drills, 0 failed, 0 skipped. Fairness clean, 0 UNFAIR.
+**17 sabotages, all biting** — two of which found fixtures that could not
+discriminate: an action-point gate drilled with a seat holding one, and a
+once-per-turn guard never asked a second time.
+
 ## v3.38 — a turn history that knows what CLASS you played
 
 **Snapback was the one condition v3.36 refused**, and the reason was

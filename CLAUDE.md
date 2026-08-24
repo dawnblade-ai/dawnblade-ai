@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.38
+**Current version:** v3.39
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1403 drills**.
+This is `node --test "test/*.test.js"` — currently **1413 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,56 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A COST COUPLED TO THE CHOICE NEEDS NO X MACHINERY (v3.39)
+
+Blaze prints *"Remove **X** energy counters: banish a Wizard non-attack
+action card with an effect that deals arcane damage **equal to X**"*, and X
+looks like the X-cost family this project refuses (Ice Eternal). It is not.
+**The player picks a card and X is that card's own arcane**, so the
+coupling lives in the FILTER — offer only what the pool can pay for — and
+the price is settled by the choice. Nothing asks for a number.
+
+**THE POOL BOUND IS THE QUEUE SITE'S, NEVER THE PARSE'S.** `fxParse`
+memoizes on `name|pitch`, so one parse serves every copy in a match; a
+number stored there freezes at whatever the counters were the first time it
+was read. Same rule `notUid` follows for `notSelf` (v3.20), and a drill
+asserts the parse carries no bound.
+
+**`arcAmount` COUNTS THE UNCONDITIONAL OPS ONLY, because it is the PRICE.**
+Emeritus Scolding prints 4 with a conditional 6. Charging 6 for a card that
+deals 4 is the wrong direction, and a gated amount is not one the engine
+can promise. One copy, in `parser.js` — the filter and the cost both ask.
+
+**A DEAD TAP IS REFUSED BY NAME.** An empty pool means the filter admits
+nothing, `buildPrompt` returns null and the sheet skips itself — after
+burning the once-per-turn. `legal` asks the SAME filter the queue site will
+build, so the two cannot disagree about what is a legal choice.
+
+**AND A COUNTER THE ABILITY SPENDS MUST BE ON SCREEN.** A pool the player
+cannot see is a cost they cannot plan around.
+
+### THREE ROUTES A HERO ABILITY DID NOT HAVE (v3.39)
+
+Found while building Blaze, and none of them his:
+
+| | |
+|---|---|
+| the HERO powCard was **truncated at the first period** | v2.34 made exactly this fix for EQUIPMENT (`_effFull`) and never here, so **Lyath Goldmane's ability lost a whole sentence**. Latent — that clause still has no reader — and now recorded rather than waiting to surprise someone |
+| the TABLE had no `"hero"` branch in `doActivate` | an ACTIVATED hero ability was unreachable there. The same one-board shape v3.04 found for 17 equipment abilities |
+| the trainer gated ⚡ USE on `mode === "act"` | the ACTION phase only, so an ability printed **Instant** could not be used on the opponent's turn — which for Blaze is half of what it is for (CR 8.1.6) |
+
+**A HERO ABILITY IS FINISHED WHEN IT RUNS ON BOTH BOARDS.** The deck
+parsing is a different question, and Blaze's deck was 22 of 23 while his
+hero did nothing at all.
+
+**AND `optFilter` LEARNED A CLASS WORD.** "A WIZARD non-attack action card"
+— `ty` takes a LIST now so the class and the type are asked together, since
+*action* alone offers a Runeblade action and *wizard* alone offers a Wizard
+attack. **The whole phrase is tried FIRST**: ordered the other way, "ATTACK
+ACTION CARD" splits as class *attack* plus *action card* — a subject the
+reader already knows, read as two things it is not. Three existing drills
+caught it, which is the whole-phrase rule working on a change to itself.
 
 ### A TURN HISTORY THAT KNOWS THE CLASS (v3.38)
 

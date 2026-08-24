@@ -719,6 +719,52 @@ function legal(g, a, seat){
       if(want !== "instant" && !(sd.ap > 0)) return "no action point left";
       return null;
     }
+    /* ---- THE HERO'S OWN ACTIVATED ABILITY (v3.39) -------------------
+       Same shape as the equipment route below, and the same gap: the
+       trainer offers `built.HPOW` behind a `weaponUsed["hpow"]` guard and
+       this board had no route at all, so a hero ability that is an
+       ACTIVATED one could not be used at the table. Blaze's is the pool's
+       only such hero today, which is why nothing noticed.
+
+       The uid is the literal "hpow" that `build.js` stamps — namespaced
+       the way "gp"+uid and "bp"+uid are, so it cannot collide with a
+       card's uid. */
+    if(a.from === "hero" || a.uid === "hpow"){
+      const ab = bOf(g, seat).HPOW;
+      if(!ab) return "your hero prints no activated ability";
+      if((sd.weaponUsed||{})["hpow"]) return ab.name + " is spent for this turn";
+      const gate = PR.fxParse(ab).activateIf;
+      if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
+        return ab.name + " can't be activated — " + gate.why;
+      const want = ab._instant ? "instant" : "action";
+      if(P.speedAllowed(g, seat).indexOf(want) < 0)
+        return "no " + want + "-speed window for " + ab.name;
+      /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
+         instant does not. Blaze's is an Instant, so it costs none. */
+      if(!ab._instant && !(sd.ap > 0)) return "no action point left";
+      if((ab.cost || 0) > sd.res + payCeiling(sd, null))
+        return ab.name + " costs " + ab.cost + " to activate and you cannot raise it";
+      /* A COUNTER-SPENDING ABILITY WITH NOTHING IT CAN AFFORD IS A DEAD
+         TAP (v3.39). Blaze's spends the chosen card's own arcane, so with
+         an empty pool the filter admits nothing, `buildPrompt` returns
+         null and the sheet politely skips itself — having already burned
+         the once-per-turn. Refusing by NAME is the difference between a
+         rule and a broken screen, and it is the same call `rxAllowed`
+         makes about arming a tap that does nothing.
+
+         Asked of the SAME filter the queue site will build, so the two
+         cannot disagree about which cards are legal choices. */
+      {
+        const pk = (PR.fxParse(ab).ops || []).find(op => op[0] === "pickPrompt" && op[1] && op[1].ctrSpend);
+        if(pk){
+          const held = ((sd.counters || {}).hero || {})[pk[1].ctrSpend] || 0;
+          const f = PM.promptFilter(Object.assign({}, pk[1].filter, {arcLe: held}));
+          if(!(sd[pk[1].zone || "hand"] || []).some(f))
+            return ab.name + ": no card in hand costs " + held + " or less " + pk[1].ctrSpend;
+        }
+      }
+      return null;
+    }
     const gi = find(sd.gear, a.uid);
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
@@ -1454,6 +1500,17 @@ function doActivate(g, a, seat){
       return r.why ? say(s, r.why + ".") : r.game;
     });
     return settle(out);
+  }
+  /* THE HERO'S OWN ABILITY (v3.39) — same commit path as an equipment
+     ability, and the per-turn flag is stamped by `execute` off the
+     powCard's uid ("hpow") exactly as it is for "gp"+uid. */
+  if(a.from === "hero" || a.uid === "hpow"){
+    const ab = bOf(g, seat).HPOW;
+    const acost = ab.cost || 0;
+    if(acost > sd.res)
+      return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
+        ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
+    return commitPlay(g, ab, "hero", seat, null, null);
   }
   const piece = sd.gear[find(sd.gear, a.uid)];
   /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the

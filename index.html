@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.38"; /* v3.38 — the CLASS-AWARE turn history: `hist` counted non-attacks and recorded no class, so Snapback's "if you have played another WIZARD non-attack action card this turn" could not be asked at all — v3.36 refused it rather than reading it as the bare count, which would have granted the instant-speed window off ANY non-attack. `hist.playTy` records the STRUCTURED type words of every card played, as one entry per play rather than a flat set, so two cards contributing half the condition each cannot satisfy it. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.39"; /* v3.39 — BLAZE: neither clause of his hero ability existed, so the audit reported all three of his hero-text clauses unrecognised; both are built now and it is both or neither, because energy counters nothing can spend are v2.74's Frostbite bug. X is not a free variable — the player picks a card and X is that card's own arcane, so the COUPLING lives in the filter and the QUEUE SITE bounds it by the pool actually held, never the memoized parse. Found on the way: the HERO powCard was truncated at the first period (v2.34's equipment fix, never made here — Lyath lost a whole sentence), the table had no route to an activated hero ability at all, and the trainer gated its USE button on the ACTION phase so an Instant ability could not be used on the opponent's turn. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4633,7 +4633,25 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   <span className="hname">{h.n.split(",")[0]}</span>
                   <b className="hlife2">{you(g).hp}</b>
                   <span className="hlbl">life</span>
-                  {built.heroPow && <button className="hact clip-sm" style={{padding:"5px 8px",fontSize:11}} disabled={!!you(g).weaponUsed["hpow"]||g.mode!=="act"||!!g.over}
+                  {/* A COUNTER THE ABILITY SPENDS MUST BE ON SCREEN (v3.39).
+                      Blaze's whole cost is his energy pool, and a pool the
+                      player cannot see is a cost they cannot plan around —
+                      the ability may as well not exist. Rendered off the
+                      hero's own counters, so any future hero counter shows
+                      here without another edit. */}
+                  {(()=>{ const ct=you(g).counters.hero||{};
+                    const ks=Object.keys(ct).filter(k=>ct[k]>0);
+                    if(!ks.length) return null;
+                    return <span className="ctr">{ks.map(k=>
+                      <span key={k} className="cc steam" title={k}>{k[0].toUpperCase()}{ct[k]}</span>)}</span>; })()}
+                  {/* AN INSTANT ABILITY IS LEGAL IN AN INSTANT WINDOW (CR
+                      8.1.6). This was gated on `mode==="act"`, which is the
+                      ACTION phase only — so a hero ability printed
+                      "Instant -" could not be used on the opponent's turn,
+                      which for Blaze is half of what it is for. */}
+                  {built.heroPow && <button className="hact clip-sm" style={{padding:"5px 8px",fontSize:11}}
+                    disabled={!!you(g).weaponUsed["hpow"]||!!g.over||!(g.mode==="act"
+                      || (built.heroPow.kind==="instant" && DawnPriority.speedAllowed(g,0).includes("instant")))}
                     onClick={()=>tryPlay(built.HPOW,"hero",0)}>{you(g).weaponUsed["hpow"]?"USED":"⚡ USE"}</button>}
                 </div>
                 <div className={"wslot clip-sm"+(handGear[1]?" filled":"")}>
@@ -6211,6 +6229,24 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   <span className="hname">{me.name.split(",")[0]}</span>
                   <b className="hlife2">{Math.max(0,me.hp)}</b>
                   <span className="hlbl">life</span>
+                  {/* THE SAME CHIP THE TRAINER DRAWS (v3.39) — a counter
+                      the ability spends has to be visible on the board the
+                      ability is played on. */}
+                  {(()=>{ const ct=(me.counters||{}).hero||{};
+                    const ks=Object.keys(ct).filter(k=>ct[k]>0);
+                    if(!ks.length) return null;
+                    return <span className="ctr">{ks.map(k=>
+                      <span key={k} className="cc steam" title={k}>{k[0].toUpperCase()}{ct[k]}</span>)}</span>; })()}
+                  {/* AND THE HERO POWER ITSELF, which this board never
+                      offered: `doActivate` had no "hero" route until v3.39,
+                      so an ACTIVATED hero ability was unreachable here.
+                      Dimmed off `legal`, like every other tap at this
+                      table, so the button and the rule cannot disagree. */}
+                  {myBuild.heroPow && (()=>{ const A={t:"activate",from:"hero",uid:"hpow"};
+                    const ok=mine(A);
+                    return <button className="hact clip-sm" style={{padding:"5px 8px",fontSize:11}}
+                      disabled={!ok} title={ok?"":String(DawnJudge.legal(g,A,mySeat)||"")}
+                      onClick={()=>fire(A)}>{(me.weaponUsed||{})["hpow"]?"USED":"⚡ USE"}</button>; })()}
                 </div>
                 <div className={"wslot clip-sm"+(myHands[1]?" filled":"")}>
                   {myHands[1] ? gearTile(true)(myHands[1])

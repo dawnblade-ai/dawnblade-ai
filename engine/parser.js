@@ -1187,6 +1187,35 @@ function classifyClause(raw){
     return R([["pickPrompt", {zone:"grave", to:"deckTop", filter, min:1, max:1,
       title:"Put a card from your graveyard on top of your deck"}]]);
   }
+  /* ---- BANISH-FOR-COUNTERS, AND PLAY IT AT INSTANT SPEED (v3.39) ----
+     Blaze's hero ability, whose cost is "Remove X energy counters":
+
+       "Banish a Wizard non-attack action card from your hand with an
+        effect that deals arcane damage equal to X. You may play it this
+        turn as though it were an instant."
+
+     X IS NOT A FREE VARIABLE. The player picks a card and X is that
+     card's OWN arcane damage, so the amount is settled by the choice —
+     which is why this needs no X-cost machinery and why the filter, not
+     a number prompt, is where the coupling lives. The QUEUE SITE bounds
+     it by the counters actually held (`arcLe`), the same way `notUid` is
+     supplied there for `notSelf` (v3.20): a bound that depends on the
+     game cannot come from a memoized parse.
+
+     THE SUBJECT MUST BE CONSUMED WHOLE, as everywhere `optFilter` is
+     used — an unreadable subject refuses the clause and leaves the card
+     unclaimed rather than banishing something the text never named. */
+  if(m=c.match(/^banish (.+?) from your hand with an effect that deals arcane damage equal to x$/)){
+    const filter = optFilter(m[1]);
+    if(!filter) return null;
+    /* `arcGe:1` is the printed "WITH an effect that deals arcane damage":
+       a card the engine cannot count arcane on is not a legal choice,
+       because that number is the COST. */
+    return R([["pickPrompt", {zone:"hand", to:"banish",
+      filter: Object.assign({}, filter, {arcGe: 1}),
+      min:0, max:1, ctrSpend:"energy", playThisTurn:true,
+      title:"Banish a card — it costs its own arcane in energy"}]]);
+  }
   /* "Your first attack each turn gets +1{p}" — a standing buff while in play */
   if(/^your first attack each turn gets \+(\d+)\s*\{p\}$/.test(c))
     return R([["firstAtkBuff", +c.match(/\+(\d+)/)[1]]]);
@@ -1475,6 +1504,11 @@ function qualMatches(qual, card, opts){
   return true;
 }
 
+/* The subjects a leading CLASS word may qualify. Kept beside `optFilter`
+   as one list so the "try the whole phrase first" rule and the fallback
+   cannot drift apart about what counts as a subject. */
+const CLS_SUBJECTS = /^(?:non-attack action cards?|attack action cards?|action cards?)$/;
+
 function optFilter(phrase){
   let rest = String(phrase||"").trim();
   if(!rest) return null;
@@ -1543,16 +1577,41 @@ function optFilter(phrase){
      attack card at all and make the card strictly better than printed.
      A dynamic limit like that is genuinely unreadable here, so the honest
      answer is null and the card stays unclaimed. */
-  const low = rest.toLowerCase();
+  let low = rest.toLowerCase();
+  /* A LEADING CLASS WORD (v3.39) — "a WIZARD non-attack action card".
+     Consumed here and added to `ty`, which now takes a LIST so the class
+     and the type are asked TOGETHER: asking "action" alone offers a
+     Runeblade action and asking "wizard" alone offers a Wizard attack.
+
+     Only ever consumed when what REMAINS is a subject this reader
+     already knows — the whole phrase must still be consumed, so an
+     unreadable remainder refuses as it always did rather than being
+     rescued by dropping the class. */
+  /* THE WHOLE PHRASE IS TRIED FIRST, and the class prefix only if that
+     fails. Ordered the other way "ATTACK ACTION CARD" splits as class
+     "attack" plus "action card" — a subject the reader already knows,
+     read as two things it is not. Three drills caught it, which is the
+     whole-phrase discipline doing its job on a change to itself. */
+  let cls = null;
+  if(!CLS_SUBJECTS.test(low)){
+    const cm2 = low.match(/^([a-z]+) (.+)$/);
+    if(cm2 && CLS_SUBJECTS.test(cm2[2])){ cls = cm2[1]; low = cm2[2]; }
+  }
+  const withCls = (o) => { if(cls) o.ty = [cls].concat(o.ty ? [].concat(o.ty) : []); return o; };
   if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
-  if(/^attack action cards?$/.test(low))  { f.type = "attack"; return f; }
+  if(/^attack action cards?$/.test(low))  { f.type = "attack"; return withCls(f); }
+  /* "A NON-ATTACK ACTION CARD" — the pair, off the STRUCTURED array. An
+     attack action card carries Action AND Attack, so excluding Attack is
+     what makes this non-attack; a Defense Reaction carries no Action at
+     all and is correctly left out (v3.23's subject rule). */
+  if(/^non-attack action cards?$/.test(low)){ f.ty = "action"; f.type = "nonAttack"; return withCls(f); }
   /* "AN ACTION CARD" — read off the STRUCTURED type array, never `tt`.
      The display string calls Den of the Spider and Lair of the Spider
      "Action Defense Reaction" and both are in this pool, so a `tt` read
      would offer a defence reaction as an action card. An attack action IS
      an action card, which is why this is a wider filter than the line
      above rather than a rival to it. */
-  if(/^action cards?$/.test(low))         { f.ty = "action";   return f; }
+  if(/^action cards?$/.test(low))         { f.ty = "action";   return withCls(f); }
   if(/^yellow cards?$/.test(low))         { f.pitch = 2;       return f; }
   if(/^blue cards?$/.test(low))           { f.pitch = 3;       return f; }
   if(/^red cards?$/.test(low))            { f.pitch = 1;       return f; }
@@ -2456,6 +2515,27 @@ function parseHeroPower(tx, allowDestroy){
   if(!m) return null;
   const costStr = (m[3]||"").trim();
   const sd = allowDestroy && /\bdestroy\b/i.test(costStr);
+  /* A COUNTER COST IS THE ONE "REMOVE" THIS READER ACCEPTS (v3.39), and
+     it is narrow for the same reason the arsenal put is (v2.34): a broad
+     relaxation would raise the tier of cards nothing wires, which is the
+     "never parse ahead of wiring" rule that has already cost a real bug.
+
+     Blaze prints "Remove X energy counters from Blaze:", and X is not a
+     free variable — the player picks a card and X is that card's own
+     arcane damage, so the amount is settled by the CHOICE rather than
+     asked for up front. `ctr` names the counter; the cost in RESOURCES is
+     zero, because counters are what it spends. */
+  const ctrM = costStr.match(/^remove (x|\d+) ([a-z]+) counters? from /i);
+  if(ctrM){
+    const eff0 = classifyClause(m[4]);
+    if(!eff0 || eff0.status !== "run") return null;
+    const after0 = t.slice(m.index + m[0].length);
+    return {cost: 0, ga: /^\.?\s*go again/i.test(after0), sd: false,
+            kind: m[2].toLowerCase(),
+            ctr: {kind: ctrM[2].toLowerCase(), x: /^x$/i.test(ctrM[1]) ? "x" : +ctrM[1]},
+            eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + m[4].trim()};
+  }
   if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
@@ -3074,6 +3154,21 @@ const isNonAtkActionCard = c => {
   return ty.some(t => /^action$/i.test(String(t)))
       && !ty.some(t => /^attack$/i.test(String(t)));
 };
+/* ---- HOW MUCH ARCANE DAMAGE THIS CARD'S EFFECT DEALS (v3.39) --------
+   Blaze's ability asks it twice — once as a FILTER ("with an effect that
+   deals arcane damage equal to X") and once as the COST — so it lives in
+   one place rather than being computed at each site.
+
+   THE UNCONDITIONAL OPS ONLY. A gated arcane ("if you've dealt arcane
+   damage this turn, deal 6 instead") is not an amount the engine can
+   promise, and this number IS the price: Emeritus Scolding prints 4 with a
+   conditional 6, and charging 6 for a card that deals 4 is the wrong
+   direction. A card with no readable arcane answers 0 and is simply never
+   offered — weaker than printed and visible. */
+const arcAmount = c => !c ? 0 : (fxParse(c).ops || [])
+  .filter(o => o && o[0] === "arcane" && typeof o[1] === "number")
+  .reduce((a, o) => a + o[1], 0);
+
 const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
   + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
 const pow6 = (c, b) => zonePow(c, b) >= 6;
@@ -3336,6 +3431,12 @@ const playsAsInstant = (c, o) => {
      Every one of those four words is a gate, and `isNonAtkActionCard`
      reads the STRUCTURED ARRAY, so an Instant already in the arsenal is
      not an Action and is correctly left alone — it needs no grant. */
+  /* A STAMP ON ONE CARD INSTANCE (v3.39) — Blaze banishes a card and it
+     "may be played this turn as though it were an instant". A stamp
+     rather than a grant because it names THAT COPY rather than a
+     qualifier, and it rides on the card the way `_playTurn` does. The
+     zone check is `playableFromZone`'s job; this answers only the SPEED. */
+  if(c._asInstant) return true;
   if(o.arsenalInstant && o.zone === "arsenal" && o.notYourTurn
      && isNonAtkActionCard(c) && (c.pitch || 0) >= 3) return true;
   /* A GRANT THE SIDE IS ALREADY HOLDING (v3.37) — Stir the Aetherwinds.
@@ -3490,7 +3591,7 @@ const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
-        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
+        classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,

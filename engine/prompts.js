@@ -31,7 +31,7 @@
   else root.DawnPrompts = factory(root.DawnParser);
 })(typeof self!=="undefined" ? self : this, function(P){
 
-const {isAttack, printedKw} = P;
+const {isAttack, printedKw, arcAmount} = P;
 
 /* Zones a prompt may draw from. `arsenal` is a single card and `board`
    holds wrappers rather than cards, so both are normalised on read. */
@@ -79,14 +79,41 @@ function promptFilter(spec){
        them as a legal choice; `ty` says Defense Reaction and a reaction is
        not an action. (`\baction\b` also keeps "Reaction" from matching as
        a substring, which is the other half of the same trap.) */
-    if(spec.ty != null && !(c.ty||[]).some(t => String(t).toLowerCase() === String(spec.ty).toLowerCase()))
-      return false;
+    /* `ty` ACCEPTS A LIST, AND EVERY WORD MUST BE PRESENT (v3.39).
+       "A Wizard non-attack ACTION CARD" is two type words at once, and a
+       single-word `ty` can only ask one of them — asking "action" alone
+       offers a Runeblade action, asking "wizard" alone offers a Wizard
+       attack. A string still means one word, so every existing caller is
+       untouched. */
+    if(spec.ty != null){
+      const want = Array.isArray(spec.ty) ? spec.ty : [spec.ty];
+      const have = (c.ty||[]).map(t => String(t).toLowerCase());
+      if(!want.every(w => have.indexOf(String(w).toLowerCase()) >= 0)) return false;
+    }
     if(spec.pitch != null && (c.pitch||0) !== spec.pitch) return false;
     if(spec.costLe != null && (c.cost||0) > spec.costLe) return false;
     if(spec.costGe != null && (c.cost||0) < spec.costGe) return false;
     if(spec.powerGe != null && (c.power||0) < spec.powerGe) return false;
     if(spec.powerLe != null && (c.power||0) > spec.powerLe) return false;
     if(spec.defGe != null && (c.def||0) < spec.defGe) return false;
+    /* ---- "AN EFFECT THAT DEALS ARCANE DAMAGE" (v3.39) ---------------
+       A PARSED FACT, NOT A PRINTED FIELD, and that is a deliberate
+       widening of this reader rather than an accident. Every other key
+       here reads a printed value; Blaze's ability asks about what the
+       card's TEXT DOES, and `fxParse` is the one thing that can answer
+       it. It is honest because the question has an exact answer — the
+       card's unconditional arcane op — rather than being a free-text
+       match, which is what `optFilter` still refuses.
+
+       AN UNPARSED OR CONDITIONAL ARCANE ANSWERS 0, so such a card is not
+       offered. Weaker than printed and visible; offering a card whose
+       arcane the engine cannot count would make X wrong, and X is the
+       COST. */
+    if(spec.arcGe != null || spec.arcLe != null){
+      const amt = arcAmount(c);
+      if(spec.arcGe != null && amt < spec.arcGe) return false;
+      if(spec.arcLe != null && amt > spec.arcLe) return false;
+    }
     /* A PRINTED KEYWORD LINE IS A PRINTED FIELD (v3.33). "A card WITH
        CRUSH" was refused as a rules-text qualifier while nothing could
        answer it honestly; `printedKw` can, and it asks the precise
@@ -145,6 +172,16 @@ function buildPrompt(game, spec){
          hand it to runOps, which would apply it to the source. It rides on
          the prompt as data so the trainer can stamp the card that moved. */
       arsStamp: spec.arsStamp || null,
+      /* THE COUNTER COST AND ITS STAMP (v3.39), and they are here for the
+         reason `arsStamp` is: A PROMPT SPEC ONLY CARRIES FIELDS THIS
+         FUNCTION KNOWS ABOUT (v2.34). Dropped, Blaze's ability banishes
+         the card for FREE and the banished copy is never marked playable
+         — which is exactly what happened the first time it was driven.
+         Data, not ops: this module runs no effects and spends no
+         resources, so `applyAnswer` pays and stamps. */
+      ctrSpend: spec.ctrSpend || null,
+      ctrHeld: spec.ctrHeld != null ? spec.ctrHeld : null,
+      playThisTurn: !!spec.playThisTurn,
       /* WHICH SEAT'S FREEZE THIS IS. Like `arsStamp` it is DATA, not ops:
          this module runs no effects, and the stamp belongs to the object
          that was chosen rather than to the source. `applyAnswer` reads it

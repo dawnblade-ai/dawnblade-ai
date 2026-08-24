@@ -781,6 +781,27 @@ function makeEffects(ctx){
         if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to opt.`); return; }
         const looked = Math.min(v, act(n).deck.length);
         n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, src:srcName}];
+        /* BLAZE, CLAUSE 1 (v3.39) — "Whenever you opt, put energy
+           counters on Blaze equal to the number of cards LOOKED AT this
+           way."
+
+           THE COUNT IS `looked`, NOT THE PRINTED NUMBER. Opt 3 into a
+           two-card deck looks at two and pays two. The `Math.min` was
+           already here for the prompt; reading the printed `v` would pay
+           above rate on exactly the turns a deck is running out, which is
+           when the ability matters most.
+
+           ONE SITE, BOTH BOARDS — this is the only place an opt is
+           issued, so the trigger cannot exist on one board only (v3.01).
+           It fires at the QUEUE rather than at the answer, a stated
+           approximation: the sheet is guaranteed to show, because the
+           empty-deck case returned above. */
+        if(bAct(n).energyOnOpt){
+          const cur = act(n).counters.hero || {};
+          actMut(n).counters = {...act(n).counters,
+            hero: {...cur, energy: (cur.energy || 0) + looked}};
+          n = L(n, `${act(n).name} burns bright — ${looked} energy counter${looked>1?"s":""} (now ${(cur.energy||0)+looked}).`);
+        }
       }
       /* pickPrompt — a GENERIC mandatory-or-optional targeted pick, carrying
          its own zone/to/filter/min/max as data rather than a bespoke op per
@@ -808,7 +829,23 @@ function makeEffects(ctx){
           hint:`It leaves their hand and becomes the next card they draw.`}];
       }
       else if(k==="pickPrompt"){
-        n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName, ...v}];
+        const spec = {tag:"pick", side:actorOf(n), src:srcName, ...v};
+        /* A BOUND THAT DEPENDS ON THE GAME IS SUPPLIED AT THE QUEUE SITE
+           (v3.39), never baked into the parse — `fxParse` memoizes on
+           `name|pitch`, so one parse serves every copy in the match and a
+           number stored there would freeze at whatever the counters were
+           the first time. Same rule `notUid` follows for `notSelf`.
+
+           Blaze's ability spends the CHOSEN card's arcane in counters, so
+           a card he cannot pay for is not a legal choice at all. With no
+           counters the filter admits nothing and `buildPrompt` returns
+           null, so the sheet politely skips itself. */
+        if(v && v.ctrSpend){
+          const held = ((act(n).counters.hero||{})[v.ctrSpend]) || 0;
+          spec.filter = Object.assign({}, spec.filter, {arcLe: held});
+          spec.ctrHeld = held;
+        }
+        n.promptQ = [...(n.promptQ||[]), spec];
       }
       /* RELOAD — CR: only legal while the arsenal is EMPTY, and no type
          filter (any card in hand). A real choice, so it queues a `pick`
@@ -2108,6 +2145,35 @@ function makeEffects(ctx){
        the thaw needs no turn arithmetic: it lifts at the start of that
        seat's next turn, which is what the card prints, and the two boards
        count `turn` differently. */
+    /* ---- BANISH-FOR-COUNTERS: PAY X, AND STAMP THE CARD (v3.39) -----
+       Blaze. `prompts.js` runs no effects and touches no resources, so it
+       reports WHICH card was chosen and this pays for it — the same split
+       the freeze stamp below keeps.
+
+       X IS THE CHOSEN CARD'S OWN ARCANE, which is why no number was ever
+       asked for: the filter at the queue site already refused anything he
+       could not afford, so the price is settled by the choice.
+
+       TWO STAMPS, BOTH ALREADY HONOURED. `_playTurn` is Crouching Tiger's
+       (playable from banish, this turn only) and `playableFromZone`
+       reads it; `_asInstant` is the FIFTH printed source for
+       `playsAsInstant`, and it is a stamp rather than a grant because it
+       names ONE card instance rather than a qualifier. */
+    if(p.tag === "pick" && p.ctrSpend && (r.picked||[]).length){
+      const chosen = r.picked[0];
+      const cost = P.arcAmount(chosen);
+      const ps = actMut(n);
+      const cur = ps.counters.hero || {};
+      ps.counters = {...ps.counters,
+        hero: {...cur, [p.ctrSpend]: Math.max(0, (cur[p.ctrSpend]||0) - cost)}};
+      ps.banish = (act(n).banish||[]).map(c => c && c.uid === chosen.uid
+        ? {...c, _playTurn: p.playThisTurn ? n.turn : c._playTurn, _asInstant: !!p.playThisTurn}
+        : c);
+      /* THE FEED IS READ BY BOTH SEATS, so it NAMES one (v2.83) — and it
+         is phrased so the verb does not have to agree with the name. */
+      n = L(n, `${act(n).name}: ${cost} ${p.ctrSpend} spent — ${chosen.name} is banished`
+             + (p.playThisTurn ? ", and may be played this turn at instant speed." : "."));
+    }
     if(p.tag === "pick" && p.freezeSide != null && (r.picked||[]).length){
       /* The actor is borrowed to the ASKED side for this whole body, and
          the asked side is the freezing player — so the frozen side is

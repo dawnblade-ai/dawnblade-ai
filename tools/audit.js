@@ -39,6 +39,22 @@ const HERO_STATICS = [
    note:"Iyslander — Ice on opponent's turn → Frostbite"},
   {key:"viseraiPassive", re:/whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/,
    note:"Viserai — Runeblade after a non-attack → Runechant"},
+  /* BLAZE's clause 1, built v3.39. Clause 2 is his activated ability and
+     is recognised by `parseHeroPower` rather than by a static, which is
+     why only one entry appears here. */
+  {key:"energyOnOpt",
+   re:/whenever you opt, put energy counters on [a-z, ]+ equal to the number of cards looked at this way/,
+   note:"Blaze — opt fills the energy pool, by cards LOOKED AT rather than the printed number"},
+  /* THE RIDER ON BLAZE'S ABILITY LINE, and it is a LEDGER entry rather
+     than a second passive because it is BUILT as part of the ability
+     itself: `playThisTurn` on the pick spec stamps the banished card, and
+     `playsAsInstant` reads the stamp. The audit splits hero text on
+     sentences, so this half arrives on its own and would report
+     unrecognised while working perfectly — v3.21's exact shape, and the
+     reason that entry says a hero ability is finished when the clause is
+     BUILT *and* the ledger has been told. */
+  {key:"blazeBanishInstant", re:/you may play it this turn as though it were an instant/, build:false,
+   note:"Blaze — the banished card is stamped playable-this-turn at instant speed (no passive: it rides on the ability's own pick spec)"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,

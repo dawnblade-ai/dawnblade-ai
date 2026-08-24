@@ -136,8 +136,19 @@ function buildSide(h, d, db, opts, rng, ctr){
   const o = opts || {};
   const heroRec = resolveHero(db, d.hero) || {};
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
+  /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
+     fix v2.34 made for EQUIPMENT and never made here. `parseHeroPower`
+     stops at the first period, so a hero ability with a second sentence
+     lost it — Lyath Goldmane's "Instant - {r}{r}, {t}: The crowd boos
+     you. DEFENDING ACTION CARDS YOU CONTROL GET +1{d} THIS TURN." carried
+     only the boo. Identical treatment to `_effFull` below: find the
+     printed ability LINE and strip the cost prefix, so `execute`'s
+     re-read with `fxParse` sees the riders too. */
+  const _hLine = (heroRec.tx||"").split(/\n+/).map(l=>clean(l))
+    .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+  const _hEffFull = (_hLine.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : ""));
   const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:heroPow.eff, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
+    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
   const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
     tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
   const cuts = o.cuts||{};
@@ -209,6 +220,12 @@ function buildSide(h, d, db, opts, rng, ctr){
   const arsenalInstant = /play blue[^.]*non-attack[^.]*action cards from your arsenal as though/.test(_htx);
   const iceFrostbite = /ice card during an opponent.{0,4}turn.{0,4}create a frostbite/.test(_htx);
   const viseraiPassive = /whenever you play a runeblade card, if you.{0,15}played another.{0,8}non-attack.{0,8}action card this turn, create a runechant/.test(_htx);
+  /* BLAZE, CLAUSE 1 (v3.39) — "Whenever you opt, put energy counters on
+     Blaze equal to the number of cards looked at this way." A boolean:
+     the COUNT is the number the opt itself looked at, which only the opt
+     site knows. Clause 2 is his activated ability and is read by
+     `parseHeroPower` off the same printed text. */
+  const energyOnOpt = /whenever you opt, put energy counters on [a-z, ]+ equal to the number of cards looked at this way/.test(_htx);
   /* RULING 2026-07-25: "gravy bones' hero ability allows you to play watery
      grave cards" — and his printed text names the condition exactly:
      a blue card must have hit your graveyard this turn. */
@@ -286,7 +303,7 @@ function buildSide(h, d, db, opts, rng, ctr){
     if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
   }
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
-    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,
+    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,energyOnOpt,
     earthOnFirstHeroDmg,lightningOnSecondNonAtk,
     atkPowOffChain,mightOnFirst6Discard,weaponRefresh,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
@@ -420,7 +437,7 @@ function buildMatch(spec, o){
    reading as a silent `false` on a real hero's turn. */
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
-                  "earthOnFirstHeroDmg","lightningOnSecondNonAtk"];
+                  "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -432,6 +449,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
 const PASSIVE_TYPE = {
   arsenalInstant: "boolean", iceFrostbite: "boolean", viseraiPassive: "boolean",
   wateryGrave: "boolean", lyathBoo: "boolean", mightOnFirst6Discard: "boolean",
+  energyOnOpt: "boolean",
   weaponRefresh: "boolean", atkPowOffChain: "number",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site

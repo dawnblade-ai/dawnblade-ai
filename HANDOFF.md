@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.38 · PHASE C · BLAZE IS NEXT, AND HIS HERO IS THE WORK
+# Handoff — Dawnblade, at v3.39 · PHASE C · BLAZE'S HERO IS BUILT
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1403 drills**
+> the card semantics run on both boards.** `npm test` is **1413 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.38: coverage **331 full / 62 part / 12 none**, fairness
+> Current at v3.39: coverage **331 full / 62 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -109,6 +109,30 @@
 > DEALT arcane damage this turn" (`hist.arc` records arcane DEALT BY you,
 > v3.28 — this is the other direction and is a new field); Turn to
 > Mindfire needs a {t} cost on the HERO plus a Ponder token.
+
+> ### v3.39 — BLAZE'S HERO IS BUILT; his deck has two cards left
+>
+> Both clauses run on both boards, the ledger knows about all three of his
+> printed sentences, and the energy pool is on screen. **X needed no
+> X-cost machinery** — see CLAUDE.md, "A COST COUPLED TO THE CHOICE".
+>
+> **His two remaining `part` cards, and each needs its own thing:**
+>
+> | card | what it needs |
+> |---|---|
+> | Arcane Polarity | *"if you have been DEALT arcane damage this turn"*. `hist.arc` records arcane **dealt BY** you (v3.28); this is the other direction and is a new field. Shared with Fai and Briar, so it pays out beyond Blaze |
+> | Turn to Mindfire | a `{t}` cost on the **HERO** (the tap symbol is `{t}`, and AUDIT.md still flags tap costs as unenforced), plus a Ponder token |
+>
+> **Also recorded, and not his:** the hero-powCard truncation fix
+> un-truncated **Lyath Goldmane's** ability, whose second sentence
+> ("Defending action cards you control get +1{d} this turn") still has no
+> reader. It is close to `fx.defGrant` (v3.23) — "non-attack action cards
+> you control get +1{d} while defending" — so it is a READER, not new
+> machinery, and it is the cheapest thing left on Lyath.
+>
+> **Remaining untouched heroes:** Dash, Azalea, Fai, Enigma, Boltyn, Gravy
+> Bones, Lyath, and Briar's 8 `part` cards. Leave **Arakni** last
+> (stealth-as-qualifier is filed `noop` by ruling).
 
 > ### Viserai — DONE at v3.20
 >
