@@ -106,7 +106,7 @@ test("Mauvrion Skies forges the number of Runechants it prints", {skip}, () => {
      was a boolean, which could not have carried 3 even if it had. */
   for(const [p, want] of [[1, 3], [2, 2], [3, 1]])
     assert.deepEqual(fx("Mauvrion Skies", p).ops,
-      [["gaNext", {aac: true, g: [["runeblade"]]}], ["runeHitNext", want]], `pitch ${p}`);
+      [["gaNext", {aac: true, g: [["runeblade"]], atk: true}], ["runeHitNext", want]], `pitch ${p}`);
 });
 
 test("driven: the count reaches the side, not a flag", {skip}, () => {
@@ -130,8 +130,10 @@ test("driven: the count reaches the side, not a flag", {skip}, () => {
 test("Avast Ye!'s rider is read, and nothing is flagged unread any more", {skip}, () => {
   H.db();
   const f = fx("Avast Ye!", 3);
-  assert.deepEqual(f.ops, [["gaNext", {g: [["pirate", "ally"]]},
-                            {onHit: [["token", "gold", 1, "self"]]}]]);
+  assert.deepEqual(f.ops, [["gaNext", {g: [["pirate", "ally"]], atk: true},
+                            {onHit: [["token", "gold", 1, "self"]]}]],
+    "`atk` (v3.43) is what stops the grant being collected by DEPLOYING a "
+    + "Pirate ally — the card names an ally's ATTACK");
   assert.deepEqual(f.quotedUnread || [], [],
     "a reader exists for this rider — the audit must not flag it as unread");
 });
@@ -166,6 +168,54 @@ test("driven: the grant waits on the side and mints its Gold token on the hit it
   assert.equal(landed.sides[1].hp, 20 - 5, "the swing actually hit");
   assert.ok(landed.sides[0].board.some(b => /gold/i.test(b.card.name)),
     "and the Gold token the rider promised is really on the board");
+});
+
+test("driven: DEPLOYING a Pirate ally does not eat the grant (v3.43)", {skip}, () => {
+  H.db();
+  /* THE HALF A SYNTHETIC FIXTURE CANNOT SEE. v3.42 drilled this card with
+     a hand-built Pirate-ally-ATTACK, which proved the reader and could not
+     ask the question that matters at a real table: Avast Ye! and six
+     Pirate allies are in the SAME deck (Gravy Bones), and the natural
+     follow-up to the card is deploying one of them.
+
+     An ally card is an `Action - Ally` — a NON-attack — and its type line
+     says "Pirate" and "Ally", so it matched `{g:[["pirate","ally"]]}`
+     exactly. The non-attack taker (v3.31, added for Mage Master Boots)
+     spent the grant on the deploy and dropped the rider, and the card
+     reported `tier: full` throughout. RESTRICTION-DROPPED: the printed
+     word is "attack". */
+  const avast = H.card("Avast Ye!", 3);
+  let g = H.state({hand: [avast], res: 9}, {}, {turn: 3, actor: 0});
+  g = H.execute(g, avast, "hand", 0, {});
+  assert.equal(g.sides[0].gaNextQ.length, 1, "armed");
+
+  for(const nm of ["Swabbie", "Riggermortis", "Barnacle"]){
+    const ally = H.card(nm, 2);
+    if(!ally) continue;
+    assert.equal(P.isAttack(ally), false, nm + " is the premise: an ally card is no attack");
+    const after = H.execute(g, ally, "hand", 0, {});
+    assert.equal((after.sides[0].gaNextQ || []).length, 1,
+      nm + " must NOT collect a grant printed for an ally's ATTACK");
+  }
+});
+
+test("driven: a stale pre-v3.42 grant is refused, not handed to any card", {skip}, () => {
+  H.db();
+  /* `reduce` is a public surface fed by JSON off a wire (fuzz.test.js's
+     own framing), so the shape v3.42 retired is reachable: an older peer,
+     or a replay from before it. Refusing costs a keyword; matching
+     everything costs games. */
+  let g = H.state({res: 9, ap: 1, gaNextQ: [{g: [["pirate", "ally"]]}]},
+                  {}, {turn: 3, actor: 0});
+  g.builds = [{}, {}];
+  const unrelated = {name: "Unrelated Swing", tt: "Guardian Action - Attack",
+    ty: ["Guardian", "Action", "Attack"], tx: "", kw: [],
+    power: 4, cost: 0, pitch: 1, uid: "u1"};
+  const out = H.execute(g, unrelated, "hand", 0, {});
+  assert.equal(out.pend.ga, false,
+    "a stale entry must grant nothing — `qualMatches(undefined)` is TRUE, which "
+    + "is what made this match every card in the game");
+  assert.equal((out.sides[0].gaNextQ || []).length, 1, "and it must not be spent either");
 });
 
 /* ---- AN UNREADABLE RIDER REFUSES; IT DOES NOT GUESS ------------------ */

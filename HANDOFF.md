@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.42 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
+# Handoff — Dawnblade, at v3.43 · PHASE C · BLAZE DONE BAR ONE · HOUSEKEEPING PASS
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,14 +12,14 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1425 drills**
+> the card semantics run on both boards.** `npm test` is **1429 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.42: coverage **332 full / 61 part / 12 none** (unchanged —
-> v3.42 fixed a rider no coverage tool could see), fairness **clean**,
-> `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
+> Current at v3.43: coverage **332 full / 61 part / 12 none** (unchanged
+> across v3.42-43 — both fixed things no coverage tool can see), fairness
+> **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
@@ -116,16 +116,23 @@
 
 > ### START HERE — the things a new thread should pick up
 >
-> **1. ~~Avast Ye! p3~~ BUILT at v3.42.** `gaNextQ` entries are `{q,
-> rider}` now, same shape `buffQ` has carried since v3.10, and
-> `takeGaNext` hands the rider's on-hit ops onto the pend beside `buffQ`'s
-> own. Mauvrion Skies' look-alike wrapper is unaffected — its rider still
-> reads through the dedicated `runeHitNext` count, and the two paths are
-> mutually exclusive by construction. Driven end to end in
-> `test/riders.test.js` against a synthetic fixture, because real Pirate
-> allies attack through an activated ability neither board wires yet (see
-> "allies do not attack"). See the CHANGELOG and CLAUDE.md's "A QUALIFIED
-> GRANT NEEDS A RIDER FIELD BEFORE IT CAN CARRY ONE".
+> **1. ~~Avast Ye! p3~~ BUILT at v3.42, FIXED at v3.43.** The rider landed
+> at v3.42 (`gaNextQ` entries are `{q, rider}`, same shape `buffQ` has
+> carried since v3.10). v3.43 then found two defects that shipped with it:
+> the retired bare-qualifier shape had no guard, so a stale grant off a
+> wire matched EVERY card; and the qualifier could not say "attack", so
+> **deploying** any of the six Pirate allies in Avast Ye!'s own deck ate
+> the grant. Both fixed, both drilled, all four sabotages bite. The card
+> now WAITS correctly — it still cannot fire, because ally combat is
+> unwired on both boards, which is the honest gap. See CLAUDE.md's "A
+> RETIRED SHAPE TAKES ITS GUARD WITH IT, AND AN ANCHOR IS NOT AN ATOM".
+>
+> **1b. Ally combat is the thing that would make three cards real.**
+> Avast Ye!, Yo Ho Ho! and the six Pirate allies all point at it, and it
+> is listed under "Known approximations" as unbuilt on BOTH boards. It
+> needs an activation cost, a target (CR 1.4.5 — `judge.targets` exists),
+> and an attack that declares itself as one so `atk` answers true. That is
+> a Phase-1-shaped job, not a card job.
 >
 > **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
 > them general: the `hits` optional-cost trigger (unwired since v3.20), a

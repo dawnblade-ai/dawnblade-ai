@@ -175,6 +175,39 @@ test("the play context is the CALLER's answer, and absent means no", () => {
   assert.equal(P.qualMatches({boosted: true}, aac(4, 0), {boosted: false}), false);
 });
 
+test("`atk` is the CALLER's answer, and a weapon swing satisfies it", () => {
+  /* THE ATOM CANNOT BE DERIVED HERE, and deriving it is the tempting bug:
+     `isAttack` reads the type line, and a WEAPON's line carries no
+     "Attack" at all — so `isAttack(Dawnblade)` is false and a derived
+     atom would refuse every weapon swing, which is the whole of Hit and
+     Run. `execute` decides it once to pick its branch and hands it down. */
+  const wpn = mk({tt: "Warrior Weapon - Sword (2H)", power: 4});
+  assert.equal(P.isAttack(wpn), false, "the premise: a weapon's type line says no");
+  assert.equal(P.qualMatches({atk: true}, wpn, {from: "weapon", atk: true}), true,
+    "and the caller saying yes is what lets the swing collect the grant");
+  assert.equal(P.qualMatches({atk: true}, aac(4, 1), {atk: true}), true);
+  assert.equal(P.qualMatches({atk: true}, aac(4, 1), {}), false,
+    "a caller that does not say answers no — weaker than printed and visible");
+  assert.equal(P.qualMatches({atk: true}, aac(4, 1)), false, "and absent opts is the same answer");
+});
+
+test("a bare qualifier is the shape v3.42 retired, and it matches NOTHING", () => {
+  /* THE SAME MOVE, ONE SHAPE LATER. v3.31 retired the bare ARRAY and wrote
+     the guard; v3.42 retired the bare QUALIFIER (entries became
+     `{q, rider}`) and did not. On a stale entry `x.q` is undefined, and
+     `qualMatches` answers TRUE for an absent qualifier BY DESIGN — so a
+     pre-v3.42 entry off a wire or a replay granted go again to any card at
+     all and spent itself doing it.
+
+     The guard lives in `takeGaNext` rather than here, because "an absent
+     qualifier hits everything" is correct for `qualMatches` and wrong only
+     for an ENTRY that should always carry one. This drill pins the premise
+     the guard depends on, so the two cannot drift apart. */
+  assert.equal(P.qualMatches(undefined, aac(4, 1)), true,
+    "the premise: an absent qualifier really does hit everything, which is "
+    + "why a stale entry must be refused before it ever reaches this matcher");
+});
+
 test("qualLabel names a qualifier once, so five sites cannot disagree", () => {
   assert.equal(P.qualLabel(null), "an attack");
   assert.equal(P.qualLabel({g: [["sword"], ["dagger"]]}), "a sword or dagger attack");
@@ -275,7 +308,11 @@ test("every pool card printing a tail restriction now carries it", {skip}, () =>
     "Scout the Periphery":   {aac: true, from: "arsenal"},
     "Teklo Trebuchet 2000":  {boosted: true},
     "Re-Charge!":            {boosted: true},
-    "Trot Along":            {powLe: 3}
+    /* +`atk` at v3.43: this is the census's one `gaNext` entry, and
+       `gaNext` is the one grant whose qualifier had to learn the atom. The
+       other eleven read `buffNext`/`selfQ`/modes and are unmoved — which
+       is the measured blast radius, not an assumption. */
+    "Trot Along":            {powLe: 3, atk: true}
   };
   for(const [nm, q] of Object.entries(want)){
     let got = null;

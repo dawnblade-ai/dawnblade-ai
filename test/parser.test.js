@@ -90,28 +90,35 @@ test("classifyClause — op vocabulary", () => {
 test("classifyClause — gaNext, and the runechant rider carries its PRINTED count", () => {
   /* THE SUBJECT AND THE TAIL ARE BOTH READ (v3.31). "attack action card"
      restricts the grant; the bare op means genuinely unrestricted. */
+  /* `atk` JOINED THE QUALIFIER AT v3.43 — the printed word "attack" is the
+     anchor these readers match on, and until then no qualifier could SAY
+     it, so Avast Ye!'s "Pirate ally attack" was collected by deploying a
+     Pirate ally. Only `gaNextQ` needs it: it is the one grant in the
+     family with a non-attack taker. */
   assert.deepEqual(cc("The next attack action card you play this turn gains go again.").ops,
-    [["gaNext", {aac: true}]]);
+    [["gaNext", {aac: true, atk: true}]]);
   assert.deepEqual(cc("Your next attack this turn gets go again.").ops, [["gaNext"]],
-    "unqualified stays the bare op it has always been");
+    "unqualified stays the bare op it has always been — and gains no atom, "
+    + "because the bare boolean is spent in the attack branch alone");
   /* "NON-ATTACK" CONTAINS "ATTACK", and the old substring test handed Mage
      Master Boots' grant to the next ATTACK — go again on the wrong card is
      the most expensive keyword mistake available. */
   assert.deepEqual(cc("The next non-attack action card you play this turn gets go again.").ops,
-    [["gaNext", {nonAtk: true}]], "and it must not also claim `aac` — nothing is both");
+    [["gaNext", {nonAtk: true}]], "and it must not also claim `aac` — nothing is both, "
+    + "nor `atk`, which would be the same contradiction wearing v3.43's atom");
   assert.deepEqual(cc("Your next attack with 3 or less base {p} this turn gets go again.").ops,
-    [["gaNext", {powLe: 3}]], "Trot Along's printed limit");
+    [["gaNext", {powLe: 3, atk: true}]], "Trot Along's printed limit");
   /* v3.10: `runeHitNext` was a bare flag and the test for it was the
      literal string "create a runechant" — so of Mauvrion Skies' three
      pitches only the BLUE copy matched, and it forged one Runechant
      because one was all a boolean could say. Red prints 3 and yellow 2,
      and both forged nothing at all. */
   assert.deepEqual(cc("The next attack action card you play this turn gains go again, and if it hits create a Runechant.").ops,
-    [["gaNext",{aac:true}],["runeHitNext",1]]);
+    [["gaNext",{aac:true,atk:true}],["runeHitNext",1]]);
   assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 3 Runechant tokens.\"").ops,
-    [["gaNext",{aac:true,g:[["runeblade"]]}],["runeHitNext",3]], "the printed count, not a flag");
+    [["gaNext",{aac:true,g:[["runeblade"]],atk:true}],["runeHitNext",3]], "the printed count, not a flag");
   assert.deepEqual(cc("The next Runeblade attack action card you play this turn gets go again and \"When this hits, create 2 Runechant tokens.\"").ops,
-    [["gaNext",{aac:true,g:[["runeblade"]]}],["runeHitNext",2]]);
+    [["gaNext",{aac:true,g:[["runeblade"]],atk:true}],["runeHitNext",2]]);
 });
 
 test("classifyClause — soul: self-entombing and soul spend", () => {

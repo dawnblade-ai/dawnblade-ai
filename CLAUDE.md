@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.42
+**Current version:** v3.43
 
 ---
 
@@ -391,6 +391,62 @@ way through `resolveStack` to see the Gold token actually land. Testing
 the mechanism and testing the ally-combat gap are two different claims;
 conflating them would either overclaim the fix or hide that the reader
 now works.
+
+> **AND THAT FIXTURE HID A LIVE BUG — see v3.43 below.** The paragraph
+> above is true about what the drill *proved* and wrong about what it was
+> therefore safe to skip. The fixture was built by adding "Attack" to a
+> Pirate ally's type line so `execute` would take the attack branch: the
+> fixture shaped to fit the code. The question a real game asks — what
+> happens when you DEPLOY one of the six Pirate allies in the same deck —
+> was the one it could not ask, and the answer was that the deploy ate the
+> grant. **A synthetic fixture proves a reader; only the real card in the
+> real deck proves the card.** Drill both.
+
+### A RETIRED SHAPE TAKES ITS GUARD WITH IT, AND AN ANCHOR IS NOT AN ATOM (v3.43)
+
+Two defects, both introduced by v3.42 in the grant it had just reshaped,
+and both are shapes this file already names.
+
+**A GUARD BELONGS TO THE SHAPE, NOT TO THE VERSION THAT WROTE IT.** v3.31
+retired the bare ARRAY qualifier and wrote the guard in as many words:
+*every field test passes vacuously on one, so a stale caller silently gets
+"matches everything".* v3.42 made the identical move one shape later —
+`gaNextQ` entries went from a bare qualifier to `{q, rider}` — and left the
+guard behind. On a stale entry `x.q` is `undefined`, and `qualMatches`
+answers **TRUE** for an absent qualifier *by design*. A pre-v3.42 grant off
+a wire or a replay granted go again to every card and spent itself doing
+it. **When you retire a shape, go and read the guard the last retirement
+wrote, and ask whether it now needs a sibling.**
+
+The guard goes in `takeGaNext`, not in `qualMatches`: *absent means
+everything* is CORRECT for the matcher and wrong only for an ENTRY that
+must always carry one. Putting it in the matcher would break every
+genuinely unqualified caller. A drill pins the premise so the two cannot
+drift.
+
+**THE PRINTED WORD A REGEX MATCHES *ON* IS INVISIBLE TO THE QUALIFIER IT
+BUILDS.** These readers anchor on "attack"; `attackQual` captures what
+surrounds it. So `nonAtk` existed and `atk` did not, and **`qualLabel` was
+already saying "a pirate ally attack" out loud while nothing tested it** —
+the one namer and the one matcher, disagreeing about the same object. When
+a namer asserts something, check the matcher enforces it.
+
+**ONLY THE GRANT WITH TWO TAKERS NEEDED IT.** `gaNextQ` is the one whose
+qualifier can meet a non-attack, because v3.31 gave it a non-attack taker
+for Mage Master Boots; `buffQ`, `instantNextQ` and `costOff` are
+attack-only by WHERE THEY ARE READ. That is why Yo Ho Ho! prints the
+identical *"Pirate ally attack"* phrase into `buffQ` and is safe, and it
+is a property of the call sites rather than of the cards — **add a second
+taker to any of the three and that family needs the atom the same day.**
+
+**AND IT IS THE CALLER'S ANSWER, NEVER DERIVED.** `isAttack` reads the
+type line and a **WEAPON's line carries no "Attack"** — `isAttack` is
+false for every weapon in the pool — so a derived atom refuses every
+weapon swing, which is the whole of Hit and Run. `execute` already decides
+it once to pick its branch (`isAttack(card) || from === "weapon"`) and
+hands the verdict down beside `from` and `boosted`. A caller that does not
+say answers **no**: weaker than printed and visible. The derived version
+is a sabotage a drill catches.
 
 ### A REFUSAL NOBODY IS TOLD ABOUT IS A LIE (v3.41)
 

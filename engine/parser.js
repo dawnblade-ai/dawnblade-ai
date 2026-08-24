@@ -1101,7 +1101,25 @@ function classifyClause(raw){
     if(m[2] === "non-attack"){
       full = Object.assign({}, q || {}); delete full.aac; full.nonAtk = true;
     }
-    /* An unqualified grant stays the bare op it has always been. */
+    /* AND THE "ATTACK" ANCHOR IS A RESTRICTION TOO (v3.43), symmetric with
+       the `non-attack` unpicking directly above. `gaNextQ` is the ONE
+       grant in this family with a NON-attack taker (v3.31 added it for
+       Mage Master Boots), so it is the one whose qualifier has to be able
+       to say "an attack" — its three siblings are attack-only by where
+       they are read, which is why Yo Ho Ho! prints the identical "Pirate
+       ally attack" phrase into `buffQ` and is safe.
+
+       Two of the six pool grants carried NOTHING that excluded a
+       non-attack: Avast Ye! and Hit and Run. Avast Ye! was live — playing
+       any of the six Pirate allies in its own deck ate the grant, since
+       an ally card is an `Action - Ally` and matches "pirate ally" on the
+       type line. Hit and Run escaped only because a powCard carries no
+       type line for `{g:[["weapon"]]}` to match: an accident, not a rule.
+       Both read `tier: full`. */
+    else if(full) full = Object.assign({}, full, {atk: true});
+    /* An unqualified grant stays the bare op it has always been — and the
+       bare boolean is spent in the attack branch alone, so it needs no
+       atom to say what it already cannot reach. */
     const o=[full ? ["gaNext", full] : ["gaNext"]];
     const rn = c.match(/create (a|an|one|two|three|\d+) runechants?/);
     if(rn) o.push(["runeHitNext", num(rn[1])]);
@@ -1543,6 +1561,20 @@ function qualMatches(qual, card, opts){
   if(qual.powGe != null && !(c.power != null && +c.power >= qual.powGe)) return false;
   if(qual.from && opts.from !== qual.from) return false;
   if(qual.boosted && !opts.boosted) return false;
+  /* IS THIS PLAY AN ATTACK AT ALL? (v3.43) The printed word "attack" is the
+     ANCHOR the readers below match on, not a captured atom, so until now no
+     qualifier could say it — and `qualLabel` was already claiming it out
+     loud ("a pirate ally attack") while nothing tested it. One namer, one
+     matcher, and they disagreed.
+
+     IT IS THE CALLER'S ANSWER, never re-derived here. `isAttack` reads the
+     type line and a WEAPON's line carries no "Attack" at all, so deriving
+     it would refuse every weapon swing — Hit and Run's whole card.
+     `execute` already decides this once (`isAttack(card) || from ===
+     "weapon"`) to pick its branch, and hands the verdict down. A caller
+     that does not say answers NO: weaker than printed and visible, the
+     same direction `defendValue` takes with an absent condition. */
+  if(qual.atk && !opts.atk) return false;
   return true;
 }
 

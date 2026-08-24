@@ -7,6 +7,79 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.43 — what v3.42 left behind, in the grant it had just reshaped
+
+v3.42 built Avast Ye!'s rider and shipped two defects doing it. Both are
+shapes this file already names, which is the point of writing them down.
+
+**1. IT RETIRED A SHAPE AND LEFT THE GUARD BEHIND.** v3.31 changed the
+qualifier from a bare array to an object and wrote the guard in as many
+words — *"a bare array is the old shape, and it matches NOTHING … every
+field test passes vacuously on one, so a stale caller would silently get
+'matches everything', the exact direction that steals games."* v3.42 made
+the identical move one shape later — `gaNextQ` entries went from a bare
+qualifier to `{q, rider}` — and did not carry the guard across. On a stale
+entry `x.q` is `undefined`, and `qualMatches` answers **TRUE** for an
+absent qualifier *by design* ("unqualified buffs hit everything"). So a
+pre-v3.42 grant arriving off a wire or a replay granted go again to any
+card in the game and spent itself doing it. Driven and confirmed before
+the fix.
+
+The guard belongs in `takeGaNext`, not in `qualMatches`: "absent means
+everything" is *correct* for the matcher and wrong only for an ENTRY that
+must always carry one. A drill pins that premise so the two cannot drift.
+
+**2. THE ANCHOR IS NOT AN ATOM.** These readers match ON the printed word
+"attack" — it is the regex anchor, not a captured qualifier — so no
+qualifier could ever *say* it. `attackQual` unpicks `non-attack` into
+`nonAtk: true` and had no symmetric case for `attack`.
+
+Two of the pool's six qualified go-again grants therefore carried nothing
+that excluded a non-attack:
+
+| card | printed | collected by |
+|---|---|---|
+| **Avast Ye!** | your next Pirate ally **attack** | **DEPLOYING** a Pirate ally |
+| Hit and Run | your next weapon **attack** | latent — see below |
+
+Avast Ye! was live and in the worst possible place: it and **six Pirate
+allies sit in the same deck**, and deploying one is the natural follow-up
+to the card. An ally card is an `Action - Ally` whose type line reads
+"Pirate … Ally", so it matched `{g:[["pirate","ally"]]}` exactly. The
+non-attack taker (v3.31, added for Mage Master Boots) spent the grant on
+the deploy and discarded the rider v3.42 had just built. **The card read
+`tier: full` before and after.**
+
+Hit and Run escaped only because a powCard carries no type line for
+`{g:[["weapon"]]}` to match — an accident, not a rule, exactly like the
+`maybeBoost` escape recorded at v2.84.
+
+**`gaNextQ` IS THE ONLY GRANT THAT NEEDED THIS**, and that is the whole
+explanation: it is the one with a **non-attack taker**. Its three siblings
+are attack-only by *where they are read* — which is why Yo Ho Ho! prints
+the identical "Pirate ally attack" phrase into `buffQ` and is safe. Six
+`gaNext` ops, two moved; the other four families measured and unmoved.
+
+**`atk` IS THE CALLER'S ANSWER, NEVER DERIVED** — and deriving it is the
+tempting bug. `isAttack` reads the type line, and a **weapon's line
+carries no "Attack" at all** (`isAttack(Dawnblade)` is false), so a
+derived atom refuses every weapon swing, which is the whole of Hit and
+Run. `execute` already decides this once to pick its branch
+(`isAttack(card) || from === "weapon"`) and hands the verdict down, the
+same way it hands down `from` and `boosted`. A caller that does not say
+answers **no**. That sabotage is a drill.
+
+**AND A SYNTHETIC FIXTURE PROVED THE READER, NOT THE TABLE.** v3.42's
+drill built a Pirate-ally fixture *with "Attack" added to its type line*
+so `execute` would take the attack branch — the fixture shaped to fit the
+code. It proved the reader honestly and could not ask the question a real
+game asks. The drill now plays the **real allies out of the real deck**
+and asserts the grant survives, which is the half that was missing.
+
+Avast Ye! still does not *fire* today, because ally combat is unwired on
+both boards — but it now **waits** instead of being eaten, which is the
+honest gap rather than a wrong answer.
+
 ## v3.42 — Avast Ye!, and the rider `fx.quotedUnread` could not see
 
 HANDOFF.md named this one directly: "the ONE card v3.41's new audit flag

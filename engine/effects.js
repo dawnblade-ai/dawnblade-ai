@@ -1518,7 +1518,11 @@ function makeEffects(ctx){
          and neither is knowable from the card alone. A caller that does
          not say answers no and the buff waits — the same direction
          `defendValue` takes with an absent condition. */
-      const qCtx = {from, boosted: isBoostPlay(n, card)};
+      /* `atk: true` — THIS PLAY IS AN ATTACK, which is the branch we are
+         in (`attacking`, above). A qualifier that names one asks the
+         CALLER rather than re-deriving it from the card, because a
+         weapon's type line carries no "Attack" (v3.43). */
+      const qCtx = {from, atk: true, boosted: isBoostPlay(n, card)};
       const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card, qCtx)).reduce((a2,b)=>a2+b.amt,0);
       const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card, qCtx));
       /* AND ANY ABILITY THOSE BUFFS GRANTED comes with them. Warrior's
@@ -1994,7 +1998,15 @@ function makeEffects(ctx){
        nothing here ever asked, and the old parser handed it to the next
        attack instead. */
     { const _gq = takeGaNext(n, card, {from});
-      if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`); } }
+      if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`);
+        /* A RIDER TAKEN HERE HAS NOWHERE TO RIDE: a non-attack settles at
+           the action point and never opens a `pend`, so there is no hit
+           for an on-hit ability to hang off. Unreachable for today's pool
+           — the only rider-carrying grant (Avast Ye!) names an attack, and
+           `atk` now enforces that — but a refusal nobody is told about is
+           a lie (v3.41), so it says so rather than dropping it quietly. */
+        if(_gq.rider && _gq.rider.onHit)
+          n = L(n, `${card.name} isn't an attack — the granted on-hit ability has no hit to fire on.`); } }
     const apCost = P.splitCostsAP(card, _half, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
@@ -2542,9 +2554,22 @@ function makeEffects(ctx){
      `.rider.onHit` off the return; a grant with no rider returns one with
      `rider: null`, same as it always did for the takers that only checked
      truthiness. */
+  /* A BARE QUALIFIER IS THE RETIRED SHAPE, AND IT MATCHES NOTHING (v3.43).
+     v3.42 changed these entries from a bare qualifier to `{q, rider}` and
+     did not carry over the guard v3.31 wrote for the same move one shape
+     earlier. On a stale entry `x.q` is `undefined`, and `qualMatches`
+     answers TRUE for an absent qualifier by design ("unqualified buffs hit
+     everything") — so a pre-v3.42 entry off a wire or a replay granted go
+     again to ANY card, and spent itself doing it. That is the exact
+     direction that steals games, on the most valuable keyword in the game
+     to get wrong.
+
+     It REFUSES rather than throwing, for `qualMatches`'s own reason:
+     `reduce` is fed by JSON off a wire and one stale grant must cost a
+     keyword, never a session. */
   const takeGaNext = (n, card, ctx) => {
     const q = act(n).gaNextQ || [];
-    const i = q.findIndex(x => qualMatches(x.q, card, ctx));
+    const i = q.findIndex(x => x && x.q && qualMatches(x.q, card, ctx));
     if(i < 0) return null;
     actMut(n).gaNextQ = q.slice(0, i).concat(q.slice(i + 1));
     return q[i];
