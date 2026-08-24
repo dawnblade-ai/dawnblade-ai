@@ -7,6 +7,59 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.40 — the other direction of arcane
+
+`hist.arc` records what the **dealer** did (v3.28). Arcane Polarity asks
+the mirror question — *"if you've **been dealt** arcane damage this turn,
+instead gain N{h}"* — and nothing could answer it. Reading it as `arcDealt`
+would pay a hero for burning the opponent rather than for being burned,
+which is the card backwards.
+
+`hist.arcTaken` is the record, and **both halves are credited from ONE
+body**, so CR 7.5.5's *prevented is not dealt* governs them together: a hit
+turned entirely aside by a shield, a ward or a barrier credits **neither**
+side. That falls out of the existing `if(left > 0)` guard rather than being
+restated, which is the point of putting it in one place.
+
+**The amount is the CARD'S OWN** — red 4, yellow 3, blue 2 — and `instead`
+REPLACES (v2.32), so the card gains N rather than 1 + N.
+
+**The victim's seat is the awkward one, and only on the deferred path.**
+When the threatened hero holds a barrier the damage rides out on the soak
+answer, which is given by the side being HIT — so there the actor *is* the
+victim, the exact inversion the dealer's half already documents, read from
+the other end.
+
+Shared by **Blaze, Fai and Briar**, so it pays out past the hero that
+motivated it.
+
+**BLAZE STOPS AT 22 OF 23, with one written reason.** Turn to Mindfire is
+recorded rather than half-built — see below and `HANDOFF.md`.
+
+Measured: **331 → 332 full, 62 → 61 part**. 1413 → 1417 drills, 0 failed,
+0 skipped. Fairness clean, 0 UNFAIR. 6 sabotages, all biting.
+
+### What Turn to Mindfire needs, and why it is not in this version
+
+> "Deal 5 arcane damage to any target. If this deals damage, you may **{t}
+> your hero**. If you do, create a **Ponder** token."
+
+Four pieces, three of them general, and none of them present:
+
+| piece | state |
+|---|---|
+| the `hits` trigger for an optional cost | `optCost` is wired for `attacks`, `play` and `entersLeaves` only — v3.20 named `hits` as outstanding and it still is |
+| a TAP as an optional-cost KIND | the kinds are banish / discard / destroy (v3.18) / reveal (v3.33). A tap is none of them |
+| a tapped **HERO** as a state | taps are modelled per-permanent by uid through `weaponUsed`, and `perTurnCleared` looks the uid up in `sd.gear` — a hero is in neither. `weaponUsed["hpow"]` is *the ability was used*, which is a different fact: tapping Blaze's hero must not lock an ability that costs counters rather than `{t}` |
+| the Ponder token | trivial once the rest exists — it is a real database record whose own text ("at the beginning of your end phase, destroy this and draw a card") the `sd:"end"` reader already handles |
+
+**It would be free in this pool and that is not a reason to fake it.** Turn
+to Mindfire is a Wizard card, so only Blaze and Iyslander can deck it, and
+neither hero's ability costs `{t}` — so the tap costs them nothing
+observable. Building it as "the tap is free" would be a fact about this
+pool rather than about the rules, which is exactly the shape v2.74 removed
+from Frostbite. It waits for the real state.
+
 ## v3.39 — Blaze's engine: opt fills the pool, the pool banishes a spell
 
 **Neither clause of his hero ability existed** — no build passive, no

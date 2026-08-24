@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-24T12:43:34.729Z",
- "appVer": "3.38",
+ "generated": "2026-08-24T14:36:54.390Z",
+ "appVer": "3.39",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 331,
-  "part": 62,
+  "full": 332,
+  "part": 61,
   "none": 12
  },
  "heroes": {
@@ -7717,7 +7717,7 @@
     "{h}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -7727,12 +7727,10 @@
     },
     {
      "t": "If you've been dealt arcane damage this turn, instead gain 4{h}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've been dealt arcane damage this turn, instead gain 4{h}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Gain 1{h}\nIf you've been dealt arcane damage this turn, instead gain 4{h}.",

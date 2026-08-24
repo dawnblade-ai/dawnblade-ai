@@ -247,3 +247,76 @@ test("an empty pool refuses BY NAME rather than opening an empty sheet", {skip},
   assert.ok(J.legal(tableGame(9, [bull]), ACT, 0),
     "a hand of attacks offers no legal choice either");
 });
+
+/* ---- ARCANE POLARITY — THE OTHER DIRECTION OF ARCANE (v3.40) --------
+   "Gain 1{h}. If you've BEEN DEALT arcane damage this turn, instead gain
+   N{h}." `hist.arc` is what the DEALER did (v3.28); this asks what the
+   hero SUFFERED, which is a different record and could not be answered
+   at all. Reading it as `arcDealt` would pay Blaze for burning the
+   opponent rather than for being burned — the card backwards. */
+
+test("the clause reads, with each pitch's own number and INSTEAD", {skip}, () => {
+  for(const [pitch, amt] of [[1, 4], [2, 3], [3, 2]]){
+    P.fxReset();
+    const fx = P.fxParse(H.card("Arcane Polarity", pitch));
+    assert.deepEqual(fx.ops, [["life", 1]], "the unconditional gain is the printed 1");
+    assert.equal(fx.conds.length, 1);
+    assert.deepEqual(fx.conds[0].op, ["life", amt],
+      "pitch " + pitch + " prints " + amt + " — the amount is the CARD'S OWN, not a constant");
+    assert.equal(fx.conds[0].cond, "arcTakenTurn");
+    assert.equal(fx.conds[0].instead, true,
+      "`instead` REPLACES (v2.32) — added, this would gain 1+" + amt);
+  }
+});
+
+test("it pays the bigger number only after YOU have taken arcane", {skip}, () => {
+  const pol = p => uid(H.card("Arcane Polarity", p), "ap" + p);
+  const run = (pitch, burned) => {
+    const c = pol(pitch);
+    let g = H.state({res: 9, ap: 3, hp: 10, hand: [c]}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3});
+    if(burned){
+      /* The OPPONENT deals it: the actor is seat 1 while it lands, which
+         is the inversion `creditArc` exists to get right. */
+      g = H.runOps({...g, actor: 1}, [["arcane", 2]], "their spell");
+      g = {...g, actor: 0};
+    }
+    const hp0 = g.sides[0].hp;
+    return H.execute(g, c, "hand", 0, {}).sides[0].hp - hp0;
+  };
+  for(const [pitch, amt] of [[1, 4], [2, 3], [3, 2]]){
+    assert.equal(run(pitch, false), 1, "untouched, it gains the printed 1");
+    assert.equal(run(pitch, true), amt,
+      "after taking arcane it gains " + amt + " INSTEAD — not 1 + " + amt);
+  }
+});
+
+test("the two directions of arcane are separate records", {skip}, () => {
+  /* Crediting one from the other is the whole bug this avoids: a hero who
+     has DEALT arcane has not been dealt any. */
+  let g = H.state({hp: 10}, {hp: 10}, {actor: 0, turnPlayer: 0, turn: 3});
+  g = H.runOps(g, [["arcane", 2]], "my spell");     /* seat 0 burns seat 1 */
+  assert.equal((g.sides[0].hist.arc || 0), 1, "seat 0 DEALT one instance");
+  assert.equal((g.sides[0].hist.arcTaken || 0), 0, "and has taken none");
+  assert.equal((g.sides[1].hist.arcTaken || 0), 1, "seat 1 TOOK one instance");
+  assert.equal((g.sides[1].hist.arc || 0), 0, "and dealt none");
+});
+
+test("PREVENTED IS NOT DEALT, in both directions (CR 7.5.5)", {skip}, () => {
+  /* One body credits both, so the prevention rule governs them together —
+     which is the only reading consistent with the ruling recorded for the
+     dealer's half (user, 2026-08-22). */
+  const hit = shield => {
+    let g = H.state({hp: 10, arcShield: shield}, {hp: 10}, {actor: 1, turnPlayer: 1, turn: 3});
+    return H.runOps(g, [["arcane", 2]], "their spell");
+  };
+  const through = hit(0), stopped = hit(5);
+  assert.equal(through.sides[0].hp, 8);
+  assert.equal(through.sides[0].hist.arcTaken, 1, "damage that lands is taken");
+  assert.equal(through.sides[1].hist.arc, 1, "and dealt");
+
+  assert.equal(stopped.sides[0].hp, 10, "the shield turned all of it aside");
+  assert.equal(stopped.sides[0].hist.arcTaken || 0, 0,
+    "a hit turned ENTIRELY aside was not dealt, so it was not taken either");
+  assert.equal(stopped.sides[1].hist.arc || 0, 0, "and the dealer is credited nothing");
+});

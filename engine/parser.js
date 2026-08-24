@@ -366,6 +366,13 @@ function classifyClause(raw){
     if(/(?:is|was) played during an opponent'?s? turn/.test(cond)) return Object.assign(rest,{cond:"foeTurn"});
     /* RULING (Sigil of Suffering): +{d} once you've already dealt arcane */
     if(/you have dealt arcane damage this turn/.test(cond)) return Object.assign(rest,{cond:"arcDealt"});
+    /* THE OTHER DIRECTION (Arcane Polarity x3, v3.40) — "if you have BEEN
+       DEALT arcane damage this turn". A different question from the line
+       above and it needed a different record: `hist.arc` is what the
+       DEALER did, `hist.arcTaken` what the hero SUFFERED. Reading this as
+       `arcDealt` would pay Blaze for burning the opponent rather than for
+       being burned, which is the card backwards. */
+    if(/you have been dealt arcane damage this turn/.test(cond)) return Object.assign(rest,{cond:"arcTakenTurn"});
     /* RULING (auras): non-attack actions that stay in play — so "played or
        created an aura this turn" is a countable fact about the board. */
     if(/you'?(?:ve| have) played or created an aura this turn/.test(cond)) return Object.assign(rest,{cond:"auraTurn"});

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.39
+**Current version:** v3.40
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1413 drills**.
+This is `node --test "test/*.test.js"` — currently **1417 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -352,6 +352,29 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### TWO DIRECTIONS OF ONE EVENT ARE TWO RECORDS (v3.40)
+
+`hist.arc` is what the DEALER did (v3.28). *"If you have **been dealt**
+arcane damage this turn"* (Arcane Polarity x3) is the mirror question and
+could not be asked at all — and reading it as `arcDealt` pays a hero for
+burning the opponent rather than for being burned, which is the card
+backwards. `hist.arcTaken` is the other record.
+
+**BOTH ARE CREDITED FROM ONE BODY**, so CR 7.5.5's *prevented is not dealt*
+governs them together: a hit turned entirely aside credits **neither**
+side. That falls out of the existing `if(left > 0)` guard rather than being
+restated — which is the whole reason to put the second credit there rather
+than at a call site, and is how the first one went wrong in v3.28.
+
+**THE VICTIM IS THE ACTOR ON THE DEFERRED PATH, and only there.** When the
+threatened hero holds a barrier the damage rides out on the soak answer,
+which is given by the side being HIT — the exact inversion the dealer's
+half already documents, read from the other end.
+
+**When a card asks about an event, ask WHOSE event it is.** Dealt/taken,
+played/put, created/destroyed: each pair is two records, and the one that
+already exists is the tempting wrong answer.
 
 ### A COST COUPLED TO THE CHOICE NEEDS NO X MACHINERY (v3.39)
 

@@ -91,7 +91,7 @@ const SIDE_FIELDS = [
    THE WHOLE ARRAY, not a set of flags: the question pairs a class with a
    type ("Wizard" AND "action" AND not "attack"), and a flat set of words
    loses that pairing the moment two different cards contribute halves. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],playTy:[]});
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],playTy:[],arcTaken:0});
 
 function makeSide(o){
   o = o || {};

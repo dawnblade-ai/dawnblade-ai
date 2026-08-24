@@ -327,9 +327,22 @@ function makeEffects(ctx){
      The DEALER is credited, never the hero being hit. On the deferred
      path that distinction is load-bearing: a soak prompt is answered by
      the THREATENED side, so at `arcTaken` time the actor is the victim. */
-  const creditArc = (n, dealer) => {
+  /* AND THE OTHER DIRECTION (v3.40). "If you have BEEN DEALT arcane
+     damage this turn" (Arcane Polarity x3) is the mirror question, and
+     `hist.arc` cannot answer it: that field is the DEALER's record. Both
+     are credited from this one body so the "prevented is not dealt" rule
+     above governs them together — a hit turned entirely aside credits
+     neither, which is the only reading consistent with CR 7.5.5.
+
+     `victim` is optional because one caller genuinely does not know it:
+     nothing else has ever needed the other side of this. */
+  const creditArc = (n, dealer, victim) => {
     const sd = dealer === actorOf(n) ? actMut(n) : foeMut(n);
     sd.hist = {...sd.hist, arc: ((sd.hist || {}).arc || 0) + 1};
+    if(victim != null){
+      const vd = victim === actorOf(n) ? actMut(n) : foeMut(n);
+      vd.hist = {...vd.hist, arcTaken: ((vd.hist || {}).arcTaken || 0) + 1};
+    }
     return n;
   };
 
@@ -378,7 +391,7 @@ function makeEffects(ctx){
     }
     if(left > 0){
       mut().hp -= left;
-      n = creditArc(n, 1 - seat);
+      n = creditArc(n, 1 - seat, seat);
       n = L(n, `${srcName}: ${left} arcane damage.`);
     } else {
       /* PREVENTED IS NOT DEALT (CR 7.5.5, and RULING user 2026-08-22:
@@ -603,7 +616,11 @@ function makeEffects(ctx){
           /* THE DEALER IS op[3], not the actor. The actor here is the side
              that was ASKED — it borrowed `p.side` at prompt-confirm — so
              crediting `act` would hand the arcane to the hero taking it. */
-          if(op[3] != null) n = creditArc(n, op[3]);
+          /* THE VICTIM IS THE ACTOR HERE, and only here: this answer was
+             given by the side being HIT, which borrowed `p.side` at
+             prompt-confirm. That is the same inversion the dealer comment
+             above describes, read from the other end. */
+          if(op[3] != null) n = creditArc(n, op[3], actorOf(n));
           n = L(n, `${op[2]||srcName}: ${v} arcane damage lands on ${act(n).name}.`);
         }
         else n = L(n, `${op[2]||srcName}: all of it soaked — no damage.`);
@@ -1359,6 +1376,8 @@ function makeEffects(ctx){
            is every drill that hand-rolls one. */
         : cond==="foeTurn" ? foeTurnNow(s)
         : cond==="arcDealt" ? (act(n).hist.arc||0)>0
+        /* THE HERO'S OWN SUFFERING, not the opponent's (v3.40). */
+        : cond==="arcTakenTurn" ? (act(n).hist.arcTaken||0)>0
         : cond==="auraTurn" ? (act(n).hist.aura||0)>0
         : cond==="madeCard" ? (act(n).hist.made||0)>0
         : cond==="booed" ? (act(n).hist.booed||0)>0

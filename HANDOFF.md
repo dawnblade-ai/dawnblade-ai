@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.39 · PHASE C · BLAZE'S HERO IS BUILT
+# Handoff — Dawnblade, at v3.40 · PHASE C · BLAZE IS DONE BAR ONE CARD
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,12 +12,12 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1413 drills**
+> the card semantics run on both boards.** `npm test` is **1417 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.39: coverage **331 full / 62 part / 12 none**, fairness
+> Current at v3.40: coverage **332 full / 61 part / 12 none**, fairness
 > **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -116,12 +116,25 @@
 > printed sentences, and the energy pool is on screen. **X needed no
 > X-cost machinery** — see CLAUDE.md, "A COST COUPLED TO THE CHOICE".
 >
-> **His two remaining `part` cards, and each needs its own thing:**
+> **Arcane Polarity was built at v3.40** (`hist.arcTaken` — see CLAUDE.md,
+> "TWO DIRECTIONS OF ONE EVENT ARE TWO RECORDS"). **Turn to Mindfire is
+> the one card left, and it is THE NEXT THING TO BUILD** — its four pieces
+> are written up in the v3.40 CHANGELOG entry, and three of them are
+> general rather than his:
 >
-> | card | what it needs |
+> | piece | state |
 > |---|---|
-> | Arcane Polarity | *"if you have been DEALT arcane damage this turn"*. `hist.arc` records arcane **dealt BY** you (v3.28); this is the other direction and is a new field. Shared with Fai and Briar, so it pays out beyond Blaze |
-> | Turn to Mindfire | a `{t}` cost on the **HERO** (the tap symbol is `{t}`, and AUDIT.md still flags tap costs as unenforced), plus a Ponder token |
+> | the `hits` trigger for an optional cost | `optCost` is wired for `attacks`, `play` and `entersLeaves` only. v3.20 named `hits` as outstanding and it still is |
+> | a TAP as an optional-cost KIND | the kinds are banish / discard / destroy / reveal. A tap is none of them |
+> | a tapped **HERO** as a state | taps are per-permanent by uid through `weaponUsed`, and `perTurnCleared` looks the uid up in `sd.gear`. `weaponUsed["hpow"]` means *the ability was used*, which is a DIFFERENT fact — tapping Blaze's hero must not lock an ability that costs counters rather than `{t}` |
+> | the Ponder token | trivial once the rest exists — a real database record whose `sd:"end"` text the existing reader already handles |
+>
+> **It would be free in this pool, and that is not a reason to fake it.**
+> Turn to Mindfire is a Wizard card, so only Blaze and Iyslander can deck
+> it and neither hero's ability costs `{t}` — so the tap costs them nothing
+> observable. Building it as "the tap is free" is a fact about this pool
+> rather than about the rules, which is the shape v2.74 removed from
+> Frostbite.
 >
 > **Also recorded, and not his:** the hero-powCard truncation fix
 > un-truncated **Lyath Goldmane's** ability, whose second sentence
