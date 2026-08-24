@@ -1592,8 +1592,12 @@ function makeEffects(ctx){
          attack that collects the pump, so it is gathered here, from the
          entries that actually matched, and joins this attack's own on-hit
          ops below. A buff that did NOT match keeps its rider and waits. */
-      const qRider = (act(n).buffQ||[]).filter(b=>b.rider && qualMatches(b.q, card, qCtx))
-        .reduce((a2,b)=>a2.concat(b.rider.onHit||[]), []);
+      const _qr = (act(n).buffQ||[]).filter(b=>b.rider && qualMatches(b.q, card, qCtx));
+      const qRider = _qr.reduce((a2,b)=>a2.concat(b.rider.onHit||[]), []);
+      /* AND WHOSE HIT IT ASKS ABOUT COMES WITH IT (v3.45). Yo Ho Ho!
+         grants "When this hits a HERO, create a Gold token"; landing that
+         on an ally hit is the same bug one grant further out. */
+      const qRiderHero = _qr.reduce((a2,b)=>a2.concat(b.rider.onHitHero||[]), []);
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
@@ -1658,11 +1662,14 @@ function makeEffects(ctx){
          token.\"" `qRider` above gathers the same shape off `buffQ`; this
          is its `gaNextQ` twin, joined into the same `pend.onHit` below so
          neither list has to know the other exists. */
-      let gaRider = [];
+      let gaRider = [], gaRiderHero = [];
       { const _gq = takeGaNext(n, card, qCtx);
         if(_gq){ ga = true; n = L(n, `${card.name} is what that grant was waiting for — go again.`);
-          if(_gq.rider && _gq.rider.onHit){ gaRider = _gq.rider.onHit;
-            n = L(n, `${card.name} carries a granted ability into the chain.`); } } }
+          if(_gq.rider){
+            gaRider = _gq.rider.onHit || [];
+            gaRiderHero = _gq.rider.onHitHero || [];
+            if(gaRider.length || gaRiderHero.length)
+              n = L(n, `${card.name} carries a granted ability into the chain.`); } } }
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
@@ -1796,7 +1803,7 @@ function makeEffects(ctx){
          resolves rather than a pumped one the wall quietly reduces. */
       total = capNoPump(n, card, total);
 
-      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
@@ -2736,12 +2743,30 @@ function makeEffects(ctx){
     if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
     n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} reactions)`:""}.${blkNote}${runeMsg}`);
     n = runOps(n, n.pend.ops, pc.name);
+    /* ---- WHOSE HIT WAS IT? (CR 1.4.5, v3.45) ------------------------
+       `heroHit` is the CALLER's answer, exactly as the wall is: judge
+       routes an attack at an ally away from the hero entirely and knows
+       the target kind, and the trainer wires no ally targeting at all, so
+       a guess made here would be right on one board and wrong on the
+       other. Absent, it falls back to "any damage is a hero hit", which
+       is the trainer's truth today and preserves it exactly.
+
+       19 pool records print "when this hits a HERO" and 13 print a bare
+       "when this hits". Driven before this gate existed, Infecting Shot
+       created its Bloodrot Pox off a hit on Barnacle — an ALLY. */
+    const heroHit = info.heroHit != null ? info.heroHit : (total > 0);
     if(total>0) n = runOps(n, n.pend.onHit, pc.name);
     else if(n.pend.onHit.length) n = L(n, "Fully blocked — on-hit effects fizzle.");
+    const _oh = n.pend.onHitHero || [];
+    if(_oh.length){
+      if(heroHit) n = runOps(n, _oh, pc.name);
+      else if(total>0) n = L(n, `${pc.name} hit an ally — its "when this hits a hero" ability does not fire.`);
+      else n = L(n, "Fully blocked — on-hit effects fizzle.");
+    }
     /* BOTH BOARDS GET THIS, because it lives in the shared body rather
        than in either caller's damage step. `heroHit` is the caller's
        answer — see `briarEarth`. */
-    n = briarEarth(n, info.heroHit != null ? info.heroHit : (total > 0));
+    n = briarEarth(n, heroHit);
     /* CHARGE'S CONDITIONALLY GRANTED on-hit abilities (see fx.condOnHit in
        parser.js) — re-checked here, at the actual trigger point, rather than
        at declaration, because "if this hits" only fires on a connected
@@ -2749,7 +2774,9 @@ function makeEffects(ctx){
        execute() so the two can never silently disagree about what "charged"
        means. */
     if(total>0 && n.pend.condOnHit && n.pend.condOnHit.length){
-      n.pend.condOnHit.forEach(({cond,op})=>{
+      n.pend.condOnHit.forEach(({cond,op,heroOnly})=>{
+        if(heroOnly && !heroHit){
+          n = L(n, `${pc.name} hit an ally — its granted "hits a hero" bonus does not fire.`); return; }
         const met = cond==="charged" ? (act(n).hist.charged||0)>0
           : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
           : cond==="marked" ? !!foe(n).marked
@@ -2825,7 +2852,12 @@ function makeEffects(ctx){
 
        The threshold is the card's own printed number, not a literal 4. */
     { const cr = fxParse(pc).crush;
-      if(cr && total >= cr.n) n = runOps(n, cr.ops, pc.name + " — crush");
+      /* CRUSH PRINTS "damage to a HERO" on all 15 pool cards, and the
+         reader's own anchor requires those words — so an ally hit never
+         crushes, however large it is (v3.45). */
+      if(cr && total >= cr.n && (!cr.heroOnly || heroHit)) n = runOps(n, cr.ops, pc.name + " — crush");
+      else if(cr && total >= cr.n && cr.heroOnly && !heroHit)
+        n = L(n, `${pc.name} crushed an ally — crush asks for damage to a hero.`);
       else if(hasKw(pc,"crush") && total >= 4 && !cr)
         n = L(n, `Crush lands, but ${pc.name}'s rider is not built — it needs a schedule for the opponent's next turn.`); }
     /* A CARD THAT ASCENDS MUST LEAVE WHATEVER HOLDS IT. It is in the

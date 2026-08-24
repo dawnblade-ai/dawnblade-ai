@@ -48,9 +48,15 @@ test("all nine creators mint a real token under the right hero's control", {skip
     const c = H.card(nm, +p);
     P.fxReset && P.fxReset();
     const fx = P.fxParse(c);
+    /* v3.45 SPLIT THE ON-HIT LIST BY ITS PRINTED SUBJECT. Every one of
+       these prints "when this hits a HERO", so their payloads live in
+       `onHitHero` and must not fire off an ally hit — which is the whole
+       point of the split, and why reading `onHit` alone would now find
+       nothing. The rider carriers move the same way. */
+    const rider = where === "rider" ? fx.ops.find(o => o[0] === "buffNext")[3] : null;
     const op = where === "cond" ? fx.conds[0].op
-             : where === "rider" ? fx.ops.find(o => o[0] === "buffNext")[3].onHit[0]
-             : fx.onHit[0];
+             : where === "rider" ? (rider.onHitHero || rider.onHit)[0]
+             : (fx.onHitHero[0] || fx.onHit[0]);
     assert.deepEqual(op, ["token", name, 1, "foe"],
       `${nm}: a real token, on the opponent — never a side counter`);
   }

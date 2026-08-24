@@ -875,7 +875,11 @@ test("the rider is parsed as a CLAUSE, so it is not one card's special case", {s
     if(!c) continue;                       // not in any default loadout
     const op = P.fxParse(c).ops.find(o => o[0] === "buffNext");
     assert.ok(op && op[3], nm + " must carry its granted ability");
-    assert.deepStrictEqual(op[3].onHit, ops, nm);
+    /* v3.45: the rider carries its printed SUBJECT, so it lands in
+       `onHitHero` when the quoted trigger names a hero (all three of
+       these do) and in `onHit` when it does not. Reading one slot only
+       would report a working rider as missing. */
+    assert.deepStrictEqual(op[3].onHitHero || op[3].onHit, ops, nm);
   }
 });
 

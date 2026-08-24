@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.44
+**Current version:** v3.45
 
 ---
 
@@ -401,6 +401,71 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### WHOSE HIT WAS IT? THE ATTACK-TARGET DECIDES (v3.45)
+
+CR 1.4.5 makes an ally an attack-target, and the moment one can be
+attacked, *"hits"* and *"hits a **hero**"* stop being the same event.
+Nothing was asking. Driven: Infecting Shot's *"When this hits a HERO,
+create a Bloodrot Pox token under their control"* fired off a hit on
+Barnacle, an ally. **34 records** were doing this — 19 on-hit payloads and
+all 15 crush riders.
+
+**THE GATE ALREADY EXISTED AND HAD ONE CONSUMER.** `heroHit` has been the
+caller's answer since v3.21 and was read by Briar's Earth latch alone. It
+gates four sites now, from one named local. **When you add a caller's
+answer, grep for who else should be asking it** — a fact plumbed for one
+reader is a fact the next reader will re-derive or ignore.
+
+**TWO LISTS, NEVER A TAG ON THE OP.** An op is a bare array, so a flag on
+it sits exactly where another reader expects a parameter. `fx.onHitHero`
+mirrors `condOnHit`, which is a separate list for the same reason. The
+subject travels with **riders** too — Avast Ye! and Yo Ho Ho! grant
+*"when this hits a hero"*, so the grant they hand over is gated as well.
+
+**BOTH HALVES OR THE DRILL PROVES NOTHING.** A gate that refuses
+everything passes the ally half perfectly. Drive the same card at the same
+board twice, once at the ally and once at the hero — written as two
+fixtures first, the seeds picked different cards and the halves were not
+comparable.
+
+**AND COUNTING THE BOARD CANNOT SEE IT.** The ally leaves as the token
+arrives, so `board.length` is unchanged and a naive check passes on a
+broken engine. That is how the first probe missed it; the FEED is what
+showed it. Ask for the thing by name.
+
+### THE SPLITTER MUST NOT CUT INSIDE A QUOTE (v3.45)
+
+FaB prints a granted ability in quotes precisely to delimit it, and the
+clause splitter broke on `". "` regardless — leaving clause 1 holding an
+**unterminated** quote, so `quotedText` found no closing mark and the
+payload fell through to the loose matchers. Loot the Hold discarded a card
+**on play** (no attack, no ally, no hit) and Loot the Arsenal minted its
+**Gold token** with the destroy it is printed to pay for dropped — the
+reward without the cost. Both read `tier: part`.
+
+**A TRAILING PERIOD IS NOT A SENTENCE BREAK.** The rule replaced was
+`split(/\.\s+/)`, which needs real whitespace after the dot; treating
+end-of-string as a break ate the final `.` and an existing drill pinning
+an override's exact clause text caught it.
+
+**A GRANT MUST BE READ BEFORE THE LOOSE PAYLOAD MATCHERS.** A grant's
+quoted payload is made of payload language *by construction*, so read late
+it is stolen by its own rider — the `foeDiscard` matcher took Loot the
+Hold. The rider-only reader sits with the WHOLE-CLAUSE patterns, and its
+anchor is a quote IMMEDIATELY after gets/gains, which is what "rider-only"
+means; a headed grant has its head in the way and keeps its own reader.
+
+**AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE** — v2.29's rule, applied
+to a rider. Half a payload is not a cheap approximation when the half that
+reads is the REWARD.
+
+**AND `quotedText` NO LONGER NEEDS THE WORD "and".** A rider-only grant
+has no head, so the anchor every other shape leans on is simply absent.
+Widened to double quotes only — v3.41's mid-word-apostrophe hazard lives
+in the other branch — and measured over the pool first: **22 extractions
+identical, 6 newly found, 0 changed.** Measure a matcher change; do not
+reason about it.
 
 ### AN ALLY IS A PERMANENT THAT ATTACKS (v3.44)
 

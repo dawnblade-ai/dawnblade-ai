@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.44 · PHASE C · ALLIES ATTACK
+# Handoff — Dawnblade, at v3.45 · PHASE C · ALLY COMBAT, BOTH HALVES
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,14 +12,15 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1442 drills**
+> the card semantics run on both boards.** `npm test` is **1449 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.44: coverage **332 full / 61 part / 12 none** (unchanged
-> across v3.42-44 — all three fixed things no coverage tool can see), fairness
-> **clean**, `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
+> Current at v3.45: coverage **332 full / 61 part / 12 none** (unchanged
+> across v3.42-45 — every one of them fixed something no coverage tool can
+> see, which is the point), fairness **clean**,
+> `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
@@ -116,36 +117,38 @@
 
 > ### START HERE — the things a new thread should pick up
 >
-> **1. ~~Avast Ye!~~ DONE — and it bottomed out in ally combat (v3.44).**
-> v3.42 built its rider, v3.43 stopped a DEPLOY eating the grant, and
-> v3.44 built the thing it was actually waiting for: **allies can attack,
-> on both boards.** `parser.allyAttack` is the reader (it is `weaponCost`
-> — an ally prints a weapon's grammar exactly, and had parsed correctly
-> for years while nothing asked), `from: "ally"` is the route, and the
-> whole combat path came free. Avast Ye! and Yo Ho Ho! are real cards now.
-> Also fixed on the way: an activated ability's go again was leaking onto
-> the ally's DEPLOY (deploying Limpit kept its action point).
+> **1. ~~Avast Ye!~~ / ~~ally combat~~ DONE (v3.44-45), and it was the
+> right rabbit hole.** v3.44 built ally ATTACKS on both boards; v3.45 built
+> the other half — **an ally can be attacked, so the attack-target now
+> decides which triggers fire.** 34 records were firing a hero-gated
+> trigger off an ally hit (19 on-hit payloads, all 15 crush riders), and
+> chasing the riders turned up a structural defect underneath: the clause
+> splitter was cutting INSIDE quoted granted abilities, which is why Loot
+> the Hold discarded on play and Loot the Arsenal minted Gold with its
+> printed cost dropped. See CLAUDE.md's "WHOSE HIT WAS IT?" and "THE
+> SPLITTER MUST NOT CUT INSIDE A QUOTE".
 >
-> **1b. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
-> weapon.** `judge.doActivate`/`legal` take the weapon branch on
-> `TY.isWeaponType`, which is type-accurate and does not ask for a printed
-> POWER. Cosmo, Scroll of Ancestral Tapestry prints none, and
-> `weaponCost` matches a **quoted granted ability** inside its rules text
-> (*"auras you control … are weapons with \"Once per Turn Action - {r}:
-> Attack\""*), so the table lets you "swing" it for nothing. The other
-> three powerless weapons (Death Dealer, Plasma Barrel Shot, Crucible of
-> Aetherweave) are in the same family and need the ABILITY route, which
-> CLAUDE.md's `isWeaponType` vs `isWeapon` section already describes.
-> `parser.allyAttack` guards `power > 0` for exactly this reason; judge's
-> weapon branch does not. Small, well-understood, and deliberately left
-> out of a version that was already deep in one thread.
+> **1b. STILL OPEN — "when this ATTACKS a hero" (5 records).** The
+> on-attack twin of what v3.45 fixed, and deliberately deferred: only
+> **Mocking Blow** (×3) is live (Display Loyalty's rider and Path of Same
+> Ends' clause are already honest refusals). The blocker is real — the
+> attack-TARGET is not known inside `execute` at declaration time, because
+> `commitPlay` adds it in `declareAttack` afterwards. Gating it means
+> threading the target into `execute`'s contract, which is the same job
+> as 1c and should be done with it.
 >
-> **1c. The trainer still cannot CHOOSE an ally as an attack-target.**
-> judge has done CR 1.4.5 since v2.45 (`J.targets`); the trainer's
-> `execute` declares and calls `dummyDefence` in one pass, so a target
-> choice has to land before that — the boost precedent (`maybeBoost`
-> pauses and re-enters `execute`) is the shape. Now that allies attack,
-> this is the other half of ally combat and the natural next step.
+> **1c. The TRAINER still cannot choose an attack-target.** judge has done
+> CR 1.4.5 since v2.45 (`J.targets`); the trainer's `execute` declares and
+> calls `dummyDefence` in one pass, so the choice has to land before that
+> — the boost precedent (`maybeBoost` pauses and re-enters `execute`) is
+> the shape, and `mode:"targetpick"` is the seam. Until then the trainer
+> passes `heroHit: total > 0`, which is TRUE for it and is why v3.45
+> changed nothing there. Doing 1b and 1c together is the natural next
+> cycle: both need the target earlier.
+>
+> **1d. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
+> weapon.** Unchanged from v3.44; see that entry below. `parser.allyAttack`
+> guards `power > 0`, judge's weapon branch does not.
 >
 > **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
 > them general: the `hits` optional-cost trigger (unwired since v3.20), a

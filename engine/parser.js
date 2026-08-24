@@ -114,15 +114,57 @@ const levelIdiom = c => SYNONYMS.reduce((s, [re, to]) => s.replace(re, to), c);
    left the other correct — which is how this was found. */
 function quotedText(txt){
   const g = txt.match(/\band (["\u201c\u2018'])(.+?)\1/) || txt.match(/\band ["\u201c](.+?)["\u201d]/);
-  if(!g) return null;
-  return g[2] != null ? g[2] : g[1];
+  if(g) return g[2] != null ? g[2] : g[1];
+  /* A RIDER-ONLY GRANT HAS NO "and" (v3.45). "Your next Pirate ally attack
+     this turn gets \"…\"" is the whole card, so the anchor every other
+     shape leans on is simply absent — and this returned null, which meant
+     the two Loot cards' riders could not be read OR reported, and the
+     quoted-unread audit flag was blind to them.
+
+     DOUBLE QUOTES ONLY on this fallback. v3.41 found that a bare character
+     class lets a mid-word apostrophe close the quote, and dropping the
+     "and" anchor removes the very thing that kept that rare. The
+     backreferenced apostrophe branch above still serves the shapes that
+     need it. Measured over the pool before widening: 22 extractions
+     identical, 6 newly found, and ZERO changed. */
+  const d = txt.match(/(["\u201c])(.+?)["\u201d]/);
+  return d ? d[2] : null;
 }
 
-function quotedOnHit(txt){
+/* THE QUOTED RIDER, AND WHOSE HIT IT ASKS ABOUT — ONE BODY (v3.45).
+
+   The granted ability is a clause in its own right, so `classifyClause`
+   already answers both questions in one pass: what it does, and whether
+   its trigger names a HERO. Avast Ye!, Yo Ho Ho!, Loot the Hold and Loot
+   the Arsenal all print "When this hits a hero, …", so their riders must
+   not fire off an ally hit either.
+
+   Asking a second regex here would be the matcher written twice — the
+   defect v3.41 found in `quotedText` itself, where sabotaging one copy
+   left the other correct and the drill stayed green. */
+function quotedRider(txt){
   const q = quotedText(txt);
   if(q == null) return null;
+  /* THE WHOLE QUOTED PAYLOAD MUST BE CONSUMED, OR IT REFUSES (v3.45) —
+     v2.29's rule for optional-cost filters, applied to a rider. The two
+     Loot cards print a payload in two sentences, and `classifyClause`
+     reads ONE of them: Loot the Hold gave the discard and dropped the
+     Gold, and Loot the Arsenal gave the GOLD and dropped the destroy it
+     is printed to pay for — the reward without the cost, which is the
+     direction that steals games.
+
+     "If you do, …" is the family this project deliberately does not read
+     (see Known approximations), so a quoted payload carrying one is not
+     fully readable and must claim nothing rather than claim half. */
+  if(/\bif (?:you|they) do\b/i.test(q)) return null;
   const sub = classifyClause(q);
-  return (sub && sub.status === "run" && sub.onHit && sub.ops.length) ? sub.ops : null;
+  if(!(sub && sub.status === "run" && sub.onHit && sub.ops.length)) return null;
+  return {ops: sub.ops, heroOnly: !!sub.heroOnly};
+}
+/* the ops alone, for the callers that only ask "is there a reader" */
+function quotedOnHit(txt){
+  const r = quotedRider(txt);
+  return r ? r.ops : null;
 }
 
 function classifyClause(raw){
@@ -176,6 +218,47 @@ function classifyClause(raw){
      off, leaving a payload that means nothing on its own. */
   if(m=c.match(/^if it has an arcane damage effect, instead it deals that much arcane damage plus (\d+)$/))
     return R([["amp",+m[1]]]);
+
+  /* IT SITS WITH THE WHOLE-CLAUSE PATTERNS, and that placement is the
+     rule rather than a convenience: the loose payload matchers further
+     down recognise words like "they discard a card", and a GRANT's quoted
+     payload is made of payload language by construction — so read late,
+     the grant is stolen by its own rider. Loot the Hold was: the discard
+     matcher at the top of the loose block took it and fired on play.
+
+     The anchor is unambiguous — a quote IMMEDIATELY after gets/gains/has,
+     which is what "rider-only" means. A headed grant ("gets +3{p} and
+     \"…\"", "gets go again and \"…\"") has its head in the way and is
+     left to its own reader further down. */
+  /* "YOUR NEXT <x> ATTACK THIS TURN GETS \"<granted ability>\"" — the
+     RIDER-ONLY member of the qualified single-shot grant family (v3.45).
+     Loot the Hold and Loot the Arsenal print no head at all: no pump for
+     `buffNext` to read and no go again for `gaNext`, so neither reader
+     matched and the quoted payload fell through to the loose matchers and
+     fired ON PLAY.
+
+     It reuses `buffQ` whole, as a grant of ZERO power carrying a rider —
+     the entry shape is already `{amt, q, rider}`, the taker already
+     gathers riders from the entries that matched, and the expiry is
+     already there. A fifth side field would be a second description of
+     one thing.
+
+     AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE, which is the point:
+     both pool cards carry an "if you do" tail this project does not read,
+     so they claim nothing — and, critically, nothing fires on play. The
+     shape is still recognised, so the audit can see the clause was read
+     and `quotedUnread` names the rider that was not. */
+  if(m = c.match(/^(?:your|the) next([^.]*?)\b(non-attack|attack)\b([^.]*?)\s*(?:gets?|gains?|has)\s*["\u201c\u2018']/)){
+    const q0 = attackQual(m[1], m[3]);
+    if(!q0) return null;
+    let full = Object.assign({}, q0);
+    if(m[2] === "non-attack"){ delete full.aac; full.nonAtk = true; }
+    else full.atk = true;
+    const ro = quotedRider(c);
+    if(!ro) return null;
+    return R([["buffNext", 0, full, ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}]]);
+  }
+
   if(/^when this is discarded at random, put it on the bottom of (?:its owner'?s?|your) deck$/.test(c))
     return NOOP("discard redirect — honoured by the discard path, not on resolution");
   if(/^when you win a clash revealing this, deal \d+ damage to the other hero$/.test(c))
@@ -326,8 +409,22 @@ function classifyClause(raw){
        opposite mistake). */
     if(/\bleaves the arena\b/.test(cond))
       return Object.assign(rest, /\benters?\b/.test(cond) ? {onLeave:true, onEnter:true} : {onLeave:true});
-    if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true});
-    if(/\bhits?\b/.test(cond)) return Object.assign(rest,{onHit:true});
+    if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true, heroOnly:true});
+    /* ---- WHOSE HIT? (v3.45) --------------------------------------------
+       CR 1.4.5 makes an ALLY an attack-target, so "hits" and "hits a HERO"
+       stopped being the same event the moment an ally could be attacked.
+       The pool partitions cleanly: 19 records print "hits a hero" (or
+       "hits them", the same claim with the noun resolved) and 13 print a
+       bare "when this hits" — Illuminate goes to the soul on ANY hit,
+       Mauvrion Skies forges its Runechants on any hit.
+
+       Driven before this existed: Infecting Shot's "When this hits a
+       HERO, create a Bloodrot Pox token under their control" fired off a
+       hit on Barnacle, an ALLY. Stronger than printed, live at the table,
+       and invisible to every tool here — coverage counts the clause
+       consumed and the fairness sweep does not model attack-targets. */
+    if(/\bhits?\b/.test(cond))
+      return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
@@ -1036,8 +1133,8 @@ function classifyClause(raw){
      `condOnHit`, an ungated one is `onHit`. */
   if(m=c.match(/^(?:this|it) (?:gains?|gets|has) (go again|\+\d+\s*\{p\}) and ["\u201c'].+["\u201d']$/)){
     const head = /go again/.test(m[1]) ? ["ga"] : ["self", +m[1].match(/\d+/)[0]];
-    const rider = quotedOnHit(c);
-    return rider ? R([head], {riderOnHit: rider}) : R([head]);
+    const rider = quotedRider(c);
+    return rider ? R([head], {riderOnHit: rider.ops, riderHeroOnly: rider.heroOnly}) : R([head]);
   }
   if(m=c.match(/(?:your|the) next([^.+]{0,70}?)attack([^+]*)\+(\d+)\s*(?:\{p\}|power)/)){
     /* THE TAIL RESTRICTS TOO (v3.31). Nimblism's "action card with cost 1
@@ -1064,8 +1161,8 @@ function classifyClause(raw){
        already reads as an on-hit `ga`. If the quoted half cannot be read
        the rider is simply absent — the pump still lands, and the audit
        still reports the clause honestly. */
-    const ro = quotedOnHit(c);
-    const rider = ro ? {onHit: ro} : null;
+    const ro = quotedRider(c);
+    const rider = ro ? (ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}) : null;
     const op = ["buffNext", +m[3]];
     if(q || rider) op[2] = q || null;
     if(rider) op[3] = rider;
@@ -1138,8 +1235,8 @@ function classifyClause(raw){
        a QUALIFIED grant carries a rider: `gaNext`'s bare boolean form has
        no side field to hold one, and no pool card needs it to. */
     if(!rn && full){
-      const ro = quotedOnHit(c);
-      if(ro) o[0] = ["gaNext", full, {onHit: ro}];
+      const ro = quotedRider(c);
+      if(ro) o[0] = ["gaNext", full, ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}];
     }
     return R(o);
   }
@@ -1816,7 +1913,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
+    self:0, ops:[], onHit:[], onHitHero:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -1843,8 +1940,37 @@ function fxParse(card){
   /* Split on the printed line breaks FIRST: the database puts keyword
      lines in their own paragraph, and clean() collapses newlines, so
      splitting after it would glue "Stealth" onto the rules text. */
+  /* ---- THE SPLITTER DOES NOT CUT INSIDE A QUOTE (v3.45) --------------
+     FaB prints a granted ability in QUOTES precisely to delimit it, and
+     splitting on ". " cut straight through one — leaving clause 1 holding
+     an UNTERMINATED quote, so `quotedText` found no closing mark and the
+     payload fell to the loose matchers instead. Driven, that made Loot
+     the Hold discard a card ON PLAY (no attack, no ally, no hit) and Loot
+     the Arsenal mint its Gold token unconditionally, dropping the destroy
+     it is printed to pay for. Both read `tier: part`, so no coverage tool
+     was looking.
+
+     Only a quoted span with a sentence break inside it is affected — the
+     other 26 quoted riders in the pool are single sentences and split
+     identically either way. */
+  const splitSentences = seg => {
+    const out = []; let buf = "", q = null;
+    for(let i = 0; i < seg.length; i++){
+      const ch = seg[i];
+      if(q){ if(ch === q) q = null; }
+      else if(ch === '"' || ch === "\u201c"){ q = ch === "\u201c" ? "\u201d" : ch; }
+      /* A TRAILING period is not a sentence BREAK. The rule this replaces
+         was `split(/\.\s+/)`, which needs real whitespace after the dot —
+         treating end-of-string as a break silently ate the final "." and
+         a drill pinning an override's exact clause text caught it. */
+      else if(ch === "." && seg[i+1] !== undefined && /\s/.test(seg[i+1])){ out.push(buf); buf = ""; continue; }
+      buf += ch;
+    }
+    if(buf.trim()) out.push(buf);
+    return out;
+  };
   let clauses = (card.tx||"").split(/\n+/).map(seg=>clean(seg)).filter(Boolean)
-    .reduce((acc,seg)=>acc.concat(seg.split(/\.\s+/)),[]).map(s=>s.trim()).filter(Boolean);
+    .reduce((acc,seg)=>acc.concat(splitSentences(seg)),[]).map(s=>s.trim()).filter(Boolean);
   /* FaB text names the card instead of saying "this": "Sigil of Suffering
      gains +1{d}", "Bare Fangs gains +2{p}". Rewrite the card's own name to
      "this" so every self-reference rule below sees the form it expects.
@@ -2270,8 +2396,8 @@ function fxParse(card){
     }
     if(r.riderOnHit)
       for(const rop of r.riderOnHit)
-        if(r.cond) fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op:rop}];
-        else       fx.onHit.push(rop);
+        if(r.cond) fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op:rop, heroOnly: !!r.riderHeroOnly}];
+        else       (r.riderHeroOnly ? fx.onHitHero : fx.onHit).push(rop);
     r.ops.forEach(op=>{
       /* An arsenal-face-up payload is not an on-play effect: it fires when
          the card ENTERS the arsenal, and is stamped onto the card to be
@@ -2288,7 +2414,11 @@ function fxParse(card){
          `fx.ops` it would fire at declaration for every crush card — which
          is how Short Shrift briefly discarded on play while this was being
          built. `linkPayload` reads `fx.crush` once the damage is struck. */
-      if(op[0]==="crushRider"){ fx.crush = {n:op[1], ops:op[2]}; return; }
+      /* CRUSH IS HERO-GATED BY ITS OWN ANCHOR (v3.45). The pattern that
+         produces this op REQUIRES the printed words "damage to a hero",
+         so every one of the pool's 15 crush riders is gated — that is
+         read off the card, not assumed about the keyword. */
+      if(op[0]==="crushRider"){ fx.crush = {n:op[1], ops:op[2], heroOnly:true}; return; }
       if(op[0]==="wipePowIfIdle"){ fx.wipePowIfIdle = true; return; }
       /* A SCHEDULE, NOT AN OP. Left in `fx.ops` it would shatter the piece
          the moment it was equipped; `beginEndPhase` reads `fx.rustDestroy`
@@ -2318,14 +2448,22 @@ function fxParse(card){
          exists to catch: a printed condition decorating an op the engine
          also runs for free. condOnHit keeps the gate attached so the trigger
          site (resolveStack) can re-check it before the op fires. */
-      if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op}]; return; }
+      /* A GATED on-hit carries the subject too, so "if you charged AND
+         this hits a HERO" is not silently widened to any hit (v3.45). */
+      if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]),
+        {cond:r.cond, op, heroOnly: !!r.heroOnly}]; return; }
       if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op];
         /* "enters OR leaves" — the entry half is an ordinary on-play op
            for a permanent, which is where every other "when this enters
            the arena" payload already lands. */
         if(r.onEnter) fx.ops.push(op);
         return; }
-      if(r.onHit) fx.onHit.push(op);
+      /* TWO LISTS, NOT A TAG ON THE OP (v3.45). An op is a bare array —
+         `["token","gold",1,"self"]` — so there is nowhere on it for a
+         flag to live that some other reader will not mistake for a
+         parameter. The split mirrors `condOnHit`, which is already a
+         separate list for the same reason. */
+      if(r.onHit){ (r.heroOnly ? fx.onHitHero : fx.onHit).push(op); return; }
       else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
       else fx.ops.push(op);
     });
@@ -2634,7 +2772,15 @@ function fxParse(card){
   }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
-  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onLeave||[]).length>0
+  /* `onHitHero` COUNTS TOO (v3.45). Splitting the on-hit list by its
+     printed subject left this asking only half the question, and six
+     cards whose ONLY payload is hero-gated — Strongest Survive x3, Drill
+     Shot, Searing Shot, Rush of Power — flipped to `playable: false`.
+     That is the trainer's "no scripted effect yet" refusal, and it was
+     caught by the audit diff rather than by a drill. When you split a
+     list, grep for everyone who was reading the whole of it. */
+  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onHitHero||[]).length>0
+             || (fx.onLeave||[]).length>0
              || fx.conds.length>0 || !!fx.perm || fx.ga;
   FXMEMO.set(key,fx);
   return fx;

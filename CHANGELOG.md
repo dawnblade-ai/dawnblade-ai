@@ -7,6 +7,111 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.45 — whose hit was it? the attack-target decides which triggers fire
+
+v3.44 let allies attack. This is the other half of the same mechanism, and
+it is the bigger one: **an ally can be attacked**, and the moment that is
+true, *"hits"* and *"hits a **hero**"* stop being the same event.
+
+**DRIVEN AT THE TABLE, BEFORE ANY CODE.** Infecting Shot prints *"When
+this hits a HERO, create a Bloodrot Pox token under their control."* Aimed
+at Barnacle — an ALLY — the feed read:
+
+```
+Barnacle takes 5 and goes down — face-down in the graveyard…
+Bloodrot Pox created on Gravy Bones's board
+```
+
+The pool partitions cleanly, and **both halves matter**:
+
+| trigger | printed | count | was |
+|---|---|---|---|
+| on-hit | **"hits a hero"** / "hits them" | 19 | ✗ fired on an ally hit |
+| on-hit | bare "when this hits" | 13 | ✓ correct — Illuminate ascends on ANY hit |
+| crush | *"damage to a **hero**"* | **15 of 15** | ✗ crushed allies |
+| on-attack | "attacks a hero" | 5 | deferred — see below |
+
+**34 records were firing a hero-gated trigger off an ally hit.** No tool
+here could see it: coverage counts the clause consumed either way, and the
+fairness sweep does not model attack-targets at all.
+
+**THE GATE ALREADY EXISTED — NOTHING WAS ASKING IT.** `heroHit` has been
+the caller's answer since v3.21 (judge routes CR 1.4.5 damage and knows
+the target kind; the trainer wires no ally targeting and answers "any
+damage is a hero hit", which is true *for it*). It was consumed by exactly
+one reader — Briar's Earth latch. It now gates four, from one named local,
+and the trainer's behaviour is unchanged by construction.
+
+**TWO LISTS, NOT A TAG ON THE OP.** An op is a bare array
+(`["token","gold",1,"self"]`), so a flag on it sits where another reader
+expects a parameter. `fx.onHitHero` mirrors `condOnHit`, which is already
+a separate list for the same reason. `condOnHit` entries and the quoted
+**riders** carry the subject too — Avast Ye! and Yo Ho Ho! both print
+*"When this hits a hero, create a Gold token"*, so the grant they hand
+over is gated as well.
+
+**CRUSH IS GATED BY ITS OWN ANCHOR, NOT BY A CLAIM ABOUT THE KEYWORD.**
+The reader's pattern already *requires* the printed words "damage to a
+hero", so every card reaching `fx.crush` printed them. A drill pins the
+anchor, because widening it would silently turn the read into an
+assumption.
+
+### And the splitter was cutting inside quoted abilities
+
+Chasing the ally-attack riders turned up a structural defect one layer
+down. The clause splitter broke on `". "` — **including inside a quoted
+granted ability**, which FaB prints in quotes precisely to delimit it. So
+clause 1 ended holding an *unterminated* quote, `quotedText` found no
+closing mark, and the payload fell through to the loose matchers:
+
+| card | did | prints |
+|---|---|---|
+| **Loot the Hold** | opponent discards **on play** — no attack, no ally, no hit | a rider on your next Pirate ally attack |
+| **Loot the Arsenal** | minted its **Gold token** on play | Gold only *if* the destroy happens |
+
+Loot the Arsenal is the worse direction: the reward with the printed cost
+dropped. Both read `tier: part`, so nothing was looking.
+
+Three things came out of it, and each is measured:
+
+* **the splitter is quote-aware.** Only a quoted span containing a
+  sentence break is affected; the other 26 quoted riders in the pool are
+  single sentences and split identically. Coverage moved **not at all**
+  (332/61/12 before and after), which is the correct result and is also
+  exactly why this class hides.
+* **a trailing period is not a sentence break.** The first cut treated
+  end-of-string as one and ate the final `.` — caught by an existing drill
+  pinning an override's exact clause text.
+* **`quotedText` no longer needs the word "and".** A rider-only grant has
+  no head, so the anchor every other shape leans on is absent. Widened to
+  double quotes only (v3.41's apostrophe hazard lives in the other
+  branch); measured across the pool first: **22 extractions identical, 6
+  newly found, 0 changed.**
+
+**THE RIDER-ONLY GRANT is the family's fifth member**, and it reuses
+`buffQ` whole as a grant of ZERO power carrying a rider — the entry shape
+is already `{amt, q, rider}`. It sits with the WHOLE-CLAUSE patterns, and
+that placement is the rule rather than a convenience: the loose payload
+matchers run first and a grant's quoted payload is made of payload
+language by construction, so read late a grant is stolen by its own rider.
+
+**AND AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE.** Both Loot cards
+carry an *"if you do"* tail, the family this project deliberately does not
+read, so they claim **nothing** — which is weaker than printed and honest,
+where reading half was stronger than printed and silent.
+
+### Deferred, with the reason
+
+**"When this attacks a HERO"** — 5 records, of which only Mocking Blow
+(×3) is live; the other two are already-honest refusals. The target is not
+known inside `execute` at declaration time, so gating it means changing
+that contract. Written up in HANDOFF.md rather than half-built.
+
+Two new drill files' worth of coverage; **six sabotages, and two found
+holes in my own drills** — removing the crush gate and accepting an
+unreadable payload each failed nothing until the missing case was *driven*
+rather than asked of the parser.
+
 ## v3.44 — allies attack, and the parser had been ready for years
 
 Went down the Avast Ye! rabbit hole. It bottoms out here: the card names

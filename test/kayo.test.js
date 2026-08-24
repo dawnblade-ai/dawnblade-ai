@@ -588,7 +588,10 @@ test("Strongest Survive reads its 'unless they reveal' half", {skip}, () => {
   for(const p of [1, 2, 3]){
     const c = C.resolveEntry(DB(), {name: "Strongest Survive", p, code: null, q: 1}, "SKA");
     const fx = P.fxParse(c);
-    assert.deepEqual(fx.onHit, [["foeDiscardUnlessReveal", 1]],
+    /* `onHitHero` at v3.45 — Strongest Survive prints "when this hits a
+       HERO", so an ally hit makes nobody discard. The clause is read the
+       same way; only which list it lands in changed. */
+    assert.deepEqual(fx.onHitHero, [["foeDiscardUnlessReveal", 1]],
       `pitch ${p}: classifyClause returned BYTE-IDENTICAL output with and without the ` +
       `"unless they reveal…" clause, so all six copies discarded unconditionally — ` +
       `stronger than printed`);

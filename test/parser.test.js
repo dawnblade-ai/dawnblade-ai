@@ -181,7 +181,11 @@ test("fxParse — Pummel's second clause: on-hit discard rides along", () => {
   const fx = P.fxParse({name:"pummel-drill-full", pitch:2, tt:"Instant - Attack Reaction", power:null,
     kw:[], tx:"Target attack action card gains +1/2/3 {p}. When this hits a hero, they discard a card."});
   assert.equal(fx.self, 2);
-  assert.deepEqual(fx.onHit, [["foeDiscard",1]]);
+  /* `onHitHero` at v3.45: the clause reads "when this hits a HERO", and an
+     ally hit must not make anyone discard. The bare-"hits" list is a
+     different list now, not a different card. */
+  assert.deepEqual(fx.onHit, []);
+  assert.deepEqual(fx.onHitHero, [["foeDiscard",1]]);
 });
 
 test("fxParse — explicit +N{p} pump on a non-attack", () => {
@@ -1116,8 +1120,12 @@ test("double-count — a buffNext op suppresses the fallback self-pump", () => {
   /* op[3] is the GRANTED ABILITY (v2.69). This fixture happens to print one,
      and it used to be thrown away with the rest of the tail — the same shape
      that cost Warrior's Valor half its text on six physical cards. */
-  assert.ok(buffs[0][3] && buffs[0][3].onHit.length,
+  /* The rider lands in the HERO-gated slot at v3.45 — the quoted trigger
+     names a hero, and the subject travels with the rider. */
+  assert.ok(buffs[0][3] && (buffs[0][3].onHitHero || []).length,
     "and the quoted granted ability rides along with it rather than being dropped");
+  assert.ok(!(buffs[0][3].onHit || []).length,
+    "and it is not ALSO in the any-hit list — one subject, one slot");
 });
 
 test("double-count — the fallback still catches a genuine self-pump", () => {
@@ -1388,20 +1396,22 @@ test("charge — a CONDITIONALLY GRANTED on-hit ability lands in condOnHit, neve
   const fx = P.fxParse({name:"Bolt of Courage Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
     tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, draw a card.\""});
   assert.deepEqual(fx.onHit, [], "must NOT be unconditional");
-  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["draw",1]}]);
+  /* +heroOnly at v3.45 — Bolt of Courage prints a BARE "when this hits",
+     so its gated rider fires on an ally hit too. */
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["draw",1], heroOnly:false}]);
 });
 
 test("charge — a conditionally granted on-hit ability with a colour gate (Light the Way)", () => {
   const fx = P.fxParse({name:"Light the Way Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
     tx:"As an additional cost to play this, you may charge your hero's soul. When this hits, if a yellow card was charged this way, this gets go again."});
   assert.deepEqual(fx.onHit, []);
-  assert.deepEqual(fx.condOnHit, [{cond:"chargedPitch2", op:["ga"]}]);
+  assert.deepEqual(fx.condOnHit, [{cond:"chargedPitch2", op:["ga"], heroOnly:false}]);
 });
 
 test("charge — a conditionally granted on-hit ability reuses the existing soulSelf op (Engulfing Light)", () => {
   const fx = P.fxParse({name:"Engulfing Light Drill", pitch:1, tt:"Action - Attack", power:3, kw:[],
     tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains \"If this hits, put it into your hero's soul.\""});
-  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["soulSelf"]}]);
+  assert.deepEqual(fx.condOnHit, [{cond:"charged", op:["soulSelf"], heroOnly:false}]);
 });
 
 test("charge — 'gains \"...\"' with an unparsed inner clause is refused, not guessed", () => {
@@ -1529,7 +1539,8 @@ test("marked — Mark of the Black Widow resolves to full, and its banish lands 
   const fx = P.fxParse({name:"Mark of the Black Widow", pitch:1, tt:"Assassin Action - Attack", power:4, kw:["Stealth"],
     tx:"Stealth\nWhen this hits a marked hero, they banish a card from their hand."});
   assert.deepEqual(fx.onHit, []);
-  assert.deepEqual(fx.condOnHit, [{cond:"marked", op:["foeBanish",1]}]);
+  /* heroOnly TRUE — "when this hits a MARKED HERO" names one. */
+  assert.deepEqual(fx.condOnHit, [{cond:"marked", op:["foeBanish",1], heroOnly:true}]);
   assert.equal(fx.tier, "full");
 });
 

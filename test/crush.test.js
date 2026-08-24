@@ -112,6 +112,10 @@ test("the threshold is the card's printed number, not a literal 4", {skip}, () =
 
 test("FOUR of the five next-turn riders are built; ONE still refuses", {skip}, () => {
   H.db();
+  /* `heroOnly` joined `fx.crush` at v3.45. It is READ, not assumed: the
+     reader's own anchor requires the printed words "damage to a hero", so
+     every crush rider in the pool is gated and an ally hit never crushes
+     however large it is. */
   /* All five reach into the OPPONENT'S NEXT TURN. v3.16 refused all five
      because no such schedule existed; `nextTurn` on the side is that
      schedule (v3.29), and v3.30 added the two RESTRICTIONS — which are a
@@ -121,13 +125,13 @@ test("FOUR of the five next-turn riders are built; ONE still refuses", {skip}, (
      THE LAST ONE STILL REFUSES, and for its own reason rather than a shared
      shrug. Claiming it here would file a card `full` that does nothing,
      which is the tier lie this project keeps finding. */
-  assert.deepEqual(crushOf("Debilitate"), {n: 4, ops: [["foeNextTurn", "firstAtkMinus", 2]]},
+  assert.deepEqual(crushOf("Debilitate"), {n: 4, ops: [["foeNextTurn", "firstAtkMinus", 2]], heroOnly: true},
     "a deferred power debuff — the amount read off the clause");
-  assert.deepEqual(crushOf("Cartilage Crush"), {n: 4, ops: [["foeNextTurn", "firstActionTax", 1]]},
+  assert.deepEqual(crushOf("Cartilage Crush"), {n: 4, ops: [["foeNextTurn", "firstActionTax", 1]], heroOnly: true},
     "a deferred cost tax");
-  assert.deepEqual(crushOf("Chokeslam"), {n: 4, ops: [["foeNextTurn", "noPump", 0]]},
+  assert.deepEqual(crushOf("Chokeslam"), {n: 4, ops: [["foeNextTurn", "noPump", 0]], heroOnly: true},
     "a deferred PUMP BAR — attack action cards they control can't gain {p}");
-  assert.deepEqual(crushOf("Crush the Weak"), {n: 4, ops: [["foeNextTurn", "noSmallAtk", 3]]},
+  assert.deepEqual(crushOf("Crush the Weak"), {n: 4, ops: [["foeNextTurn", "noSmallAtk", 3]], heroOnly: true},
     "a deferred PLAY BAR, with the threshold read off the clause rather than a literal");
 
   assert.equal(crushOf("Walk in My Shoes"), undefined,

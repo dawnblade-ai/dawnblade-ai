@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-24T23:13:38.601Z · app v3.44 · data sage-v12 · db 788 records
+Generated 2026-08-24T23:54:53.577Z · app v3.45 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -370,14 +370,12 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ### Loot the Arsenal (pitch 3) — part · [gravy]
 - type: Pirate Necromancer Action · printed: Go again
-- — Your next Pirate ally attack this turn gets "When this hits a hero, destroy a card in their arsenal
-- — If you do, create a Gold token."
+- — Your next Pirate ally attack this turn gets "When this hits a hero, destroy a card in their arsenal. If you do, create a Gold token."
 - ▶ Go again
 
 ### Loot the Hold (pitch 3) — part · [gravy]
 - type: Pirate Necromancer Action · printed: Go again
-- ▶ Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card
-- — If they do, create a Gold token."
+- — Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. If they do, create a Gold token."
 - ▶ Go again
 
 ### Mark of the Funnel Web (pitch 1) — part · [arakni]

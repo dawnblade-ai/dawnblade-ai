@@ -227,7 +227,9 @@ test("Avast Ye! finally fires: its grant AND its rider reach a real ally attack"
 
   const hit = H.execute(g, swab, "ally", 0, {});
   assert.equal(hit.pend.ga, true, "a Pirate ally ATTACK is what the line named");
-  assert.deepEqual(hit.pend.onHit, [["token", "gold", 1, "self"]], "and the rider rides with it");
+  assert.deepEqual(hit.pend.onHitHero, [["token", "gold", 1, "self"]],
+    "and the rider rides with it — in the HERO-gated list, because the quoted "
+    + "trigger reads \"when this hits a hero\" (v3.45)");
 
   const landed = H.fx(hit, (f, n) => f.resolveStack(n));
   assert.equal(landed.sides[1].hp, 13, "Swabbie's 7 lands");

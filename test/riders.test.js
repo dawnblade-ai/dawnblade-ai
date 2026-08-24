@@ -53,7 +53,7 @@ test("gains, gets and has all read a quoted granted ability", () => {
 test("Bolt of Courage's draw is a GATED on-hit rider, not an on-play op", {skip}, () => {
   H.db();
   const f = fx("Bolt of Courage", 1);
-  assert.deepEqual(f.condOnHit, [{cond: "charged", op: ["draw", 1]}],
+  assert.deepEqual(f.condOnHit, [{cond: "charged", op: ["draw", 1], heroOnly: false}],
     "gated on the charge AND deferred to the hit — two separate mistakes if either is lost");
   assert.ok(!f.ops.some(o => o[0] === "draw"), "nothing draws on play");
 });
@@ -65,7 +65,7 @@ test("driven: playing Bolt of Courage uncharged draws no card", {skip}, () => {
                     {}, {turn: 3, actor: 0});
   const n = H.execute(g, c, "hand", 0, {});
   assert.equal(n.sides[0].hand.length, 0, "the card left to attack and nothing replaced it");
-  assert.deepEqual(n.pend.condOnHit, [{cond: "charged", op: ["draw", 1]}],
+  assert.deepEqual(n.pend.condOnHit, [{cond: "charged", op: ["draw", 1], heroOnly: false}],
     "the rider rides on the pend, for the hit to re-check");
 });
 
@@ -78,7 +78,8 @@ test("Hot on Their Heels keeps its go again AND gates its mark on the hit", {ski
      was thrown away (weaker than printed) and the mark fired on play
      (stronger than printed). One clause, wrong in both directions. */
   assert.deepEqual(f.conds.map(x => [x.cond, x.op]), [["drac2", ["ga"]]], "the head");
-  assert.deepEqual(f.condOnHit, [{cond: "drac2", op: ["mark", 1]}], "the rider");
+  assert.deepEqual(f.condOnHit, [{cond: "drac2", op: ["mark", 1], heroOnly: true}],
+    "the rider — and it names a HERO, so an ally hit must not mark (v3.45)");
 });
 
 test("driven: Hot on Their Heels marks nobody on play", {skip}, () => {
@@ -93,7 +94,7 @@ test("Goon Beatdown keeps its pump and gates its boo on the hit", {skip}, () => 
   H.db();
   const f = fx("Goon Beatdown", 3);
   assert.deepEqual(f.conds.map(x => [x.cond, x.op]), [["auras3", ["self", 3]]]);
-  assert.deepEqual(f.condOnHit, [{cond: "auras3", op: ["boo", 1]}],
+  assert.deepEqual(f.condOnHit, [{cond: "auras3", op: ["boo", 1], heroOnly: true}],
     "and for Lyath a boo is a Might token, so losing it is losing his engine");
 });
 
@@ -130,8 +131,11 @@ test("driven: the count reaches the side, not a flag", {skip}, () => {
 test("Avast Ye!'s rider is read, and nothing is flagged unread any more", {skip}, () => {
   H.db();
   const f = fx("Avast Ye!", 3);
+  /* `onHitHero` at v3.45 — the quoted trigger reads "When this hits a
+     HERO", so the Gold token must not be minted off an ally hit either.
+     The subject travels with the rider, not just with the card. */
   assert.deepEqual(f.ops, [["gaNext", {g: [["pirate", "ally"]], atk: true},
-                            {onHit: [["token", "gold", 1, "self"]]}]],
+                            {onHitHero: [["token", "gold", 1, "self"]]}]],
     "`atk` (v3.43) is what stops the grant being collected by DEPLOYING a "
     + "Pirate ally — the card names an ally's ATTACK");
   assert.deepEqual(f.quotedUnread || [], [],
@@ -144,8 +148,8 @@ test("driven: the grant waits on the side and mints its Gold token on the hit it
   let g = H.state({hand: [avast], res: 9}, {}, {turn: 3, actor: 0});
   g = H.execute(g, avast, "hand", 0, {});
   assert.equal(g.sides[0].gaNextQ.length, 1, "the grant waits on the side, rider and all");
-  assert.ok(g.sides[0].gaNextQ[0].rider && g.sides[0].gaNextQ[0].rider.onHit,
-    "carrying its granted ability, not just the go again");
+  assert.ok(g.sides[0].gaNextQ[0].rider && g.sides[0].gaNextQ[0].rider.onHitHero,
+    "carrying its granted ability, not just the go again — and its SUBJECT");
 
   /* A Pirate Ally attack, told apart by its printed type line the same
      way every other qualifier in this family is — `qualMatches` reads
@@ -160,7 +164,7 @@ test("driven: the grant waits on the side and mints its Gold token on the hit it
     power: 5, cost: 0, pitch: 1, uid: "pa1"};
   const hit = H.execute(g, pirate, "hand", 0, {});
   assert.equal(hit.pend.ga, true, "the grant fires — go again");
-  assert.deepEqual(hit.pend.onHit, [["token", "gold", 1, "self"]],
+  assert.deepEqual(hit.pend.onHitHero, [["token", "gold", 1, "self"]],
     "and its rider rides with it, onto the pend — not dropped");
   assert.equal((hit.sides[0].gaNextQ || []).length, 0, "spent by what it named");
 
@@ -253,9 +257,13 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
        qualifier); `gaNext`'s rides at op[2] (op[1] IS the qualifier —
        there is no amount). Two positions, one family — see CLAUDE.md's
        "FOUR QUALIFIED SINGLE-SHOT GRANTS". */
-    if((f.ops || []).some(o => (o[0]==="buffNext" && o[3] && o[3].onHit)
-                             || (o[0]==="gaNext" && o[2] && o[2].onHit))
-       || (f.onHit || []).length
+    /* v3.45: a rider carries its printed SUBJECT, so it lands in
+       `onHit` OR `onHitHero`; a census that asked only the first would
+       report every hero-gated rider as missing. */
+    const rd = o => o && (o.onHit || o.onHitHero);
+    if((f.ops || []).some(o => (o[0]==="buffNext" && rd(o[3]))
+                             || (o[0]==="gaNext" && rd(o[2])))
+       || (f.onHit || []).length || (f.onHitHero || []).length
        || (f.condOnHit || []).length || (f.ops || []).some(o => o[0] === "runeHitNext")
        || (f.modes || []).some(m => m.riderOnHit)) carried++;
   }

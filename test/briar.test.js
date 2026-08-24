@@ -157,7 +157,16 @@ test("Earth carries the destroy schedule IT prints, read off its own text", {ski
 test("the mint lives in linkPayload, so the table gets it too", {skip}, () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-  assert.match(src, /briarEarth\(n,\s*info\.heroHit/,
+  /* v3.45 gave `linkPayload` a NAMED local for this, because four fire
+     sites now ask the same question (the on-hit-hero list, the gated
+     riders, crush, and this). The guard therefore checks the two halves
+     that matter rather than one spelling: the value is DERIVED from the
+     caller's `info.heroHit`, and Earth is minted with that value. Replace
+     the derivation with a bare `total > 0` and this fails, which is the
+     sabotage it exists to catch. */
+  assert.match(src, /const heroHit = info\.heroHit != null \? info\.heroHit : \(total > 0\)/,
+    "the shared body must DERIVE heroHit from the caller's answer, never guess it");
+  assert.match(src, /briarEarth\(n,\s*heroHit\)/,
     "Earth must be minted from the SHARED body — a schedule written into one "
     + "caller's damage step is a rule the other board does not have");
   /* and called from exactly ONE place: two mint sites is the same rule
