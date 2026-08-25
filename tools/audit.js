@@ -152,7 +152,18 @@ function analyzeCard(rc){
   for(const q of (fx.quotedUnread || []))
     flags.push(`granted ability in quotes has NO reader: "${q}" — the head parses, this does not`);
   if((rc.tx||"").includes("{t}")) flags.push("tap cost {t} — not enforced (see ledger)");
-  if((rc.tx||"").includes("{u}")) flags.push("untap {u} — not parsed (see ledger)");
+  /* `{u}` IS PARSED WHERE IT IS BUILT (v3.47). Scuttle Toes' "{u} target
+     ally you control" reads now that an untap buys something — allies tap
+     to attack since v3.44 — so a blanket flag here is a claim that stopped
+     being true. The test is the CLAUSE, not the ops: Scuttle Toes' untap
+     lives on its powCard, and what changed about the card is that its
+     ability line went from `skip` (no reader, so `build.js` gave it no
+     powCard at all) to `noop` (read by the equipment reader). Jack Be
+     Quick still flags — its `{u}` unTAPS an OPPOSING ally and then steals
+     it, which is a control change nothing models. */
+  if((rc.tx||"").includes("{u}")
+     && (fx.clauses||[]).some(cl => cl.st === "skip" && String(cl.t).includes("{u}")))
+    flags.push("untap {u} — not parsed (see ledger)");
   /* the Kayo nuance: a granted keyword must be wired to a parsed grant
      (condition, on-hit, or a next-attack grant), never treated as printed */
   if(gkws.includes("go again")){

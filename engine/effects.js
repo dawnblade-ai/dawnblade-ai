@@ -1001,6 +1001,47 @@ function makeEffects(ctx){
          skips it, which is the card doing nothing rather than the seat
          declining. The feed says which, because "nothing happened" and
          "they chose not to" are different lessons. */
+      /* ---- UNTAP AN ALLY YOU CONTROL (v3.47) ------------------------
+         `{t}` is what an ally spends to attack (v3.44), so an untap buys
+         a SECOND attack and is the only way an ally swings twice.
+
+         "IT" IS THE ALLY. op[2] carries the schedule the card's second
+         sentence prints — "destroy IT at the beginning of the end phase"
+         — because the source (Scuttle Toes) was already destroyed to pay
+         the cost, so a `selfDestruct` there would land on nothing and the
+         drawback would be free. The parser holds it back for exactly
+         this, the same way `arsenalPut.stamp` does (v2.33).
+
+         A DEAD TAP IS REFUSED BY NAME (v3.39). With no ally to untap the
+         ability does nothing and says so, rather than opening an empty
+         sheet after spending the cost. */
+      else if(k==="untapAlly"){
+        const mine = (act(n).board||[]).filter(b => b && b.card && G.isAlly(b));
+        if(!mine.length){ n = L(n, `${act(n).name} controls no ally — nothing to untap.`); }
+        else {
+          /* CALLER-SUPPLIED CANDIDATES, NOT A ZONE + FILTER. `prompts.js`
+             says a zone it was not really read from "is a feed line that
+             lies" — with `zone:"board"` and no `to` the sheet reported
+             "Swabbie revealed from board", and this is a TARGET choice,
+             not a reveal. Cold Snap's freeze supplies candidates for the
+             same reason.
+
+             It is also more precise: `G.isAlly` reads the board ENTRY's
+             kind, which is the authority, where a `{tt:"ally"}` filter
+             re-asks the question of the printed type line. */
+          n.promptQ = [...(n.promptQ||[]), {
+            tag:"pick", side:actorOf(n), src:srcName,
+            cards: mine.map(b => b.card), min:1, max:v||1,
+            /* NO `to` — the ally stays in the arena. `untapStamp` is DATA
+               the answer applies, the `arsStamp` lesson: a spec only
+               carries fields `buildPrompt` knows about. */
+            untapStamp: op[2] || {},
+            title:`Choose an ally to untap`,
+            hint:(op[2]||{}).sd === "end"
+              ? `It can attack again, and is destroyed at the beginning of the end phase.`
+              : `It can attack again this turn.`}];
+        }
+      }
       else if(k==="foeDestroyAura"){
         const fs = 1 - actorOf(n);
         const auras = (n.sides[fs].board||[]).filter(b => b && b.card && /aura/i.test(b.card.tt||""));
@@ -2331,6 +2372,30 @@ function makeEffects(ctx){
       n = L(n, `${act(n).name}: ${cost} ${p.ctrSpend} spent — ${chosen.name} is banished`
              + (p.playThisTurn ? ", and may be played this turn at instant speed." : "."));
     }
+    /* ---- THE UNTAP LANDS ON THE ALLY THAT WAS CHOSEN (v3.47) --------
+       `prompts.js` runs no effects, so it reports WHICH object was picked
+       and this applies it — the same split the freeze stamp below and
+       `arsStamp` above both keep.
+
+       `spent` is the arena's tap: it is what an ally sets to attack
+       (v3.44) and what CR 4.4.3d lifts in the end phase, so clearing it
+       here is precisely "untap". The stamp is the card's OWN second
+       sentence, riding on the op because "it" names the ally rather than
+       the source (v2.33). */
+    if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
+      const chosen = r.picked[0];
+      const st = p.untapStamp || {};
+      let found = null;
+      actMut(n).board = (act(n).board||[]).map(b => {
+        if(!b || b.uid !== chosen.uid) return b;
+        found = b;
+        return Object.assign({}, b, {spent: false}, st.sd ? {sd: st.sd} : {});
+      });
+      if(found){
+        n = L(n, `${p.src}: ${chosen.name} untaps and can attack again`
+               + (st.sd ? " — it is destroyed at the beginning of the end phase." : "."));
+      }
+    }
     if(p.tag === "pick" && p.freezeSide != null && (r.picked||[]).length){
       /* The actor is borrowed to the ASKED side for this whole body, and
          the asked side is the freezing player — so the frozen side is
@@ -3535,6 +3600,24 @@ function sweepArena(game, seat, when){
     const oc = f.optCost;
     if(oc && oc.trigger === "entersLeaves")
       pay.push(["pickPrompt", optCostSpec(oc, b.card, seat, true)]);
+    /* ---- A DESTROYED ALLY HAS DIED (v3.47) --------------------------
+       "Destroy" and "dies" are the same event for a living object: the
+       ally is put into the graveyard, so "when this dies" fires. Oysten
+       is the pool's only death trigger and this became reachable the
+       moment something could stamp an ally with a clock — Scuttle Toes
+       untaps one and destroys it at the beginning of the end phase, which
+       is exactly this sweep.
+
+       GATED ON `isAlly`, not on the op's presence. "Dies" is printed
+       about a LIVING object; an aura or an item on the same clock is
+       destroyed but does not die, and reading the trigger off anything
+       that happened to print one would be inventing a rule the CR does
+       not have. The parser only sets `onDeath` where a card says so, so
+       this is belt and braces — and the belt is the one the rules use.
+
+       No seat is borrowed here: the sweep runs in the CONTROLLER's own
+       end phase, so the actor is already the right one. */
+    if(G.isAlly(b) && (f.onDeath || []).length) pay.push(...f.onDeath);
     ops.push(...pay);
     msgs.push(b.card.name + (when === "turn"
       ? " crumbles at the top of the turn."

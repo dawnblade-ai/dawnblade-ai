@@ -1289,6 +1289,19 @@ function classifyClause(raw){
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
   /* RULING: opt X — look at the top X, then put them back on top or bottom
      in any order. The trainer reorders by advisor value and says so. */
+  /* ---- UNTAP, AND WHY IT ONLY MEANS SOMETHING NOW (v3.47) -----------
+     "{u} target ally you control" — Scuttle Toes, Gravy Bones' Legs.
+     `{u}` was flagged "not parsed" in the ledger for as long as the flag
+     has existed, and REFUSING it was right the whole time: until v3.44
+     allies did not tap, so untapping one bought nothing and reading it
+     would have been a card doing nothing dressed as a card that works.
+     Now `{t}` is what an ally spends to attack, so an untap buys a second
+     attack — and it is the ally's ONLY way to swing twice in a turn.
+
+     The scope is the printed one: an ally, controlled by YOU. Widening it
+     to any permanent would hand a weapon a second swing, which is the
+     Sledge/Scorpio distinction (v2.46) undone from the other end. */
+  if(/^\{u\} target ally you control$/.test(c)) return R([["untapAlly",1]]);
   if(m=c.match(/^opt (\d+|x)\b/)) return R([["opt", m[1]==="x"?1:+m[1]]]);
   /* RULING (Ravenous Rabble): reveal the top card, then the attack shifts by
      that card's PITCH — red 1, yellow 2, blue 3. The reveal itself is
@@ -2527,6 +2540,30 @@ function fxParse(card){
       if(ai >= 0){
         fx.ops[gi] = ["instantNext", Object.assign({}, fx.ops[gi][1], {amp: fx.ops[ai][1]})];
         fx.ops.splice(ai, 1);
+      }
+    }
+  }
+  /* ---- "IT" IS THE ALLY, NOT THE SOURCE (v3.47) ---------------------
+     Scuttle Toes prints "{u} target ally you control. Destroy IT at the
+     beginning of the end phase." The splitter breaks on the period, so
+     the second sentence arrives on its own and reads as `selfDestruct
+     end` — which destroys the SOURCE. The source is Scuttle Toes, already
+     destroyed to pay for the ability, so the printed drawback would land
+     on nothing at all and the untapped ally would live for free.
+
+     That is v2.33's Bull's Eye Bracers trap exactly — "it" naming the
+     card that was acted on rather than the card doing the acting — and
+     the fix is the same: hold the schedule back and let it ride on the
+     op that knows which card "it" is. Paired HERE because this is the
+     only place that can see both sentences, the same reason `optCost`
+     and Stir the Aetherwinds' amp are paired here. */
+  {
+    const ui = fx.ops.findIndex(o => o[0] === "untapAlly");
+    if(ui >= 0){
+      const di = fx.ops.findIndex(o => o[0] === "selfDestruct" && o[1] === "end");
+      if(di >= 0){
+        fx.ops[ui] = ["untapAlly", fx.ops[ui][1], {sd: "end"}];
+        fx.ops.splice(di, 1);
       }
     }
   }

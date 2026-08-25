@@ -7,6 +7,75 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.47 — untap, and why refusing it was right until now
+
+`{u}` has been flagged *"not parsed (see ledger)"* for as long as that flag
+has existed, and **refusing it was correct the whole time**: until v3.44
+allies did not tap, so untapping one bought nothing, and reading it would
+have been a card doing nothing dressed as a card that works.
+
+`{t}` is now what an ally spends to attack. So **Scuttle Toes** — Gravy
+Bones' Legs piece, in the deck list — went from a card with no route to
+the only way an ally swings twice in a turn.
+
+> **Instant - {r}{r}, destroy this: {u} target ally you control. Destroy
+> it at the beginning of the end phase.**
+
+**READING THE PAYLOAD IS WHAT CREATED THE ROUTE.** `parseHeroPower`
+refuses a line whose payload has no reader — v3.04's "never parse ahead of
+wiring" — so `build.js` gave the piece **no `powCard` at all** and neither
+board could activate it. It read `tier: part` with its whole ability
+unread. One reader, and the existing v3.04 equipment route picked it up on
+both boards with no wiring at all.
+
+**"IT" IS THE ALLY, NOT THE SOURCE.** The splitter breaks on the period,
+so *"Destroy it at the beginning of the end phase"* arrives alone and
+reads as `selfDestruct end` — which destroys the SOURCE. The source is
+Scuttle Toes, already destroyed to pay the cost, so the printed drawback
+would land on nothing and the untapped ally would live for free. That is
+**v2.33's Bull's Eye Bracers trap** exactly, and it takes the same fix: the
+clock is held back in `fxParse` and rides on the op that knows which card
+"it" is. An ordinary self-destruct is untouched, and a drill pins that.
+
+**A DESTROYED ALLY HAS DIED.** "Destroy" and "dies" are the same event for
+a living object, so the sweep now fires `onDeath` — which closes a chain
+built across four versions:
+
+```
+an ally attacks and taps        (v3.44)
+Scuttle Toes untaps it, stamped for the end phase   (v3.47)
+it attacks again — 14 from one ally in a turn
+the sweep destroys it          (v3.47)
+"when this dies" pays out      (v3.46)
+```
+
+**Gated on `isAlly`, not on the op's presence.** "Dies" is printed about a
+LIVING object; an aura or item on the same clock is destroyed but does not
+die, and reading the trigger off anything that happened to print one would
+be inventing a rule the CR does not have. A drill holds both halves.
+
+**AND THE PICK SUPPLIES ITS OWN CANDIDATES.** Written first as
+`zone:"board"` + a `{tt:"ally"}` filter, the sheet reported *"Swabbie
+revealed from board"* — and `prompts.js`'s own comment says a zone it was
+not really read from "is a feed line that lies". This is a TARGET choice,
+not a reveal. Cold Snap's freeze supplies candidates for the same reason,
+and it is more precise besides: `G.isAlly` reads the board ENTRY's kind,
+where a `tt` filter re-asks the question of the printed type line.
+
+`untapStamp` is DATA the answer applies, not ops — the `arsStamp` lesson
+(v2.34), and a drill checks it survives `buildPrompt`, because a field the
+sheet has never heard of is dropped in silence.
+
+**THE AUDIT FLAG IS ACCURATE AGAIN.** `{u}` was flagged unconditionally,
+which stopped being true for Scuttle Toes. The test is now the CLAUSE
+rather than the ops — the card's untap lives on its powCard, and what
+changed is that its ability line went from `skip` (no reader, hence no
+powCard) to `noop` (read by the equipment reader). **Jack Be Quick still
+flags**, honestly: its `{u}` untaps an OPPOSING ally and then steals it,
+which is a control change nothing models.
+
+Coverage **333 → 334 full**. Seven sabotages, all biting.
+
 ## v3.46 — the on-attack twin, and the last live ally gap
 
 Two pieces, both finishing what v3.44/45 started, and **one scoping

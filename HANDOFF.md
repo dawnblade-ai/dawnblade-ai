@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.46 · PHASE C · ALLY COMBAT COMPLETE
+# Handoff — Dawnblade, at v3.47 · PHASE C · ALLY COMBAT COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,16 +12,16 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1458 drills**
+> the card semantics run on both boards.** `npm test` is **1467 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.46: coverage **333 full / 60 part / 12 none** (Oysten
-> earned the +1 at v3.46; v3.42-45 all fixed things no coverage tool can
-> see, which is the point), fairness **clean**, `tools/failstates.js`
-> **0 UNFAIR**, `npm run crindex` **50 of
-> 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
+> Current at v3.47: coverage **334 full / 59 part / 12 none** (Oysten
+> earned +1 at v3.46 and Scuttle Toes +1 at v3.47; v3.42-45 all fixed
+> things no coverage tool can see), fairness **clean**,
+> `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of 63 CR
+> rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
 > **Iyslander** are complete (she finished at v3.37 — see below). **Briar is in progress**: her hero ability is BUILT (v3.21) and
@@ -117,7 +117,7 @@
 
 > ### START HERE — the things a new thread should pick up
 >
-> **1. ~~ALLY COMBAT~~ COMPLETE (v3.44-46).** Allies attack (v3.44), an
+> **1. ~~ALLY COMBAT~~ COMPLETE (v3.44-47).** Allies attack (v3.44), an
 > attack on one decides which triggers fire (v3.45), and an ally that dies
 > does what it prints (v3.46). Along the way: 34 records were firing
 > hero-gated on-HIT triggers off an ally hit, 4 more were firing
@@ -138,9 +138,12 @@
 >
 > | card | what it needs |
 > |---|---|
+> | Cutty Shark's SECOND ability | reads perfectly (`buffNext 1 {g:[["ally"]]}` — an ally-attack buff, and ally attacks now exist) and has NO ROUTE: an ally with two activated abilities cannot be told apart by uid alone. `boardPow` returns null for allies and judge's arena branch only does `allyAttack`. The `"bp"+uid` powCard pattern is the seam |
 > | Mournful Casket, Basalt Boots | the AT-REST display pass — a defensive buff true while sitting on the board would put a number on screen that disagrees with the number that blocked (v3.27's boundary) |
-> | Silent Stilettos | an ally-death trigger for the CONTROLLER's own attacking ally, plus an "if you do" payload — the family this project does not read |
-> | Cold Snap's freeze on an ally, Drop the Anchor's `{t}` on allies, Scuttle Toes' `{u}` | ally-targeting EFFECTS, distinct from attack-targeting; none is wired |
+> | Silent Stilettos | a death trigger for the CONTROLLER's own attacking ally, plus an "if you do" payload — the family this project does not read |
+> | Jack Be Quick | `{u}` an OPPOSING ally and STEAL it — a control change nothing models. Still flagged by the audit, honestly |
+> | Carrion Crown | "Discard an ally" as a COST — the optional-cost family reads zones, not board entries |
+> | Goldkiss Rum, Entangling Shot, Drop the Anchor | tapping a HERO. **This needs a RULING before it needs code** — the card text does not say what a tapped hero cannot do, and guessing is the golden rule broken at the keyword level |
 >
 > **1d. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
 > weapon.** Unchanged from v3.44; `parser.allyAttack` guards `power > 0`,

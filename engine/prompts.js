@@ -172,6 +172,11 @@ function buildPrompt(game, spec){
          hand it to runOps, which would apply it to the source. It rides on
          the prompt as data so the trainer can stamp the card that moved. */
       arsStamp: spec.arsStamp || null,
+      /* THE SAME LESSON, ONE CARD LATER (v3.47). `untapStamp` is DATA the
+         answer applies to the board entry that was chosen — the ally is
+         untapped where it stands, so there is no `to` and nothing moves.
+         Dropped here it vanishes silently, exactly as `arsStamp` did. */
+      untapStamp: spec.untapStamp || null,
       /* THE COUNTER COST AND ITS STAMP (v3.39), and they are here for the
          reason `arsStamp` is: A PROMPT SPEC ONLY CARRIES FIELDS THIS
          FUNCTION KNOWS ABOUT (v2.34). Dropped, Blaze's ability banishes

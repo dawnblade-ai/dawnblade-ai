@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.46
+**Current version:** v3.47
 
 ---
 
@@ -401,6 +401,42 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### A REFUSAL CAN BE RIGHT FOR YEARS AND THEN STOP BEING (v3.47)
+
+`{u}` was flagged *"not parsed"* for as long as that flag existed, and
+refusing it was CORRECT the whole time: until v3.44 allies did not tap, so
+untapping one bought nothing and reading it would have been a card doing
+nothing dressed as a card that works. `{t}` is now what an ally spends to
+attack, so the same words buy a SECOND attack.
+
+**When you build a mechanic, sweep the refusals that were waiting on it.**
+A recorded refusal is a debt (v3.38), and the thing that discharges it is
+usually somewhere else entirely.
+
+**READING THE PAYLOAD IS WHAT CREATES THE ROUTE.** `parseHeroPower`
+refuses a line whose payload has no reader, so `build.js` gave Scuttle
+Toes **no `powCard` at all** and neither board could reach it. One reader,
+and the v3.04 equipment route picked it up on both boards with no wiring.
+That is the shape to expect for any equipment ability: the gap is the
+payload, not the plumbing.
+
+**"IT" IS THE CARD ACTED ON, NOT THE SOURCE** — v2.33's Bull's Eye
+Bracers trap, in a second card. The source was already destroyed to pay
+the cost, so a `selfDestruct` read from the second sentence lands on
+nothing and the printed drawback is free. Hold the schedule back in
+`fxParse` and let it ride on the op that knows what "it" is.
+
+**A DESTROYED ALLY HAS DIED**, so the arena sweep fires `onDeath` — gated
+on `isAlly`, because "dies" is printed about a LIVING object and an aura
+on the same clock is destroyed without dying. Reading the trigger off
+anything that prints one would be inventing a rule the CR does not have.
+
+**AND A PICK THAT IS A TARGET CHOICE SUPPLIES ITS OWN CANDIDATES.** With
+`zone` set and no `to`, `applyPrompt` says "revealed from <zone>" — which
+`prompts.js`'s own comment calls a feed line that lies. Cold Snap's freeze
+supplies candidates for the same reason, and `G.isAlly` on the board ENTRY
+is a better authority than a `tt` filter re-asking the printed type line.
 
 ### AN ATTACKS-TRIGGER IS NOT A HIT-TRIGGER (v3.46)
 

@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-25T03:30:53.725Z",
- "appVer": "3.46",
+ "generated": "2026-08-25T14:13:10.275Z",
+ "appVer": "3.47",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 333,
-  "part": 60,
+  "full": 334,
+  "part": 59,
   "none": 12
  },
  "heroes": {
@@ -12794,13 +12794,13 @@
    "mentions": [
     "arcane barrier"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Instant - {r}{r}, destroy this: {u} target ally you control",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Destroy it at the beginning of the end phase.",
@@ -12811,15 +12811,11 @@
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Instant - {r}{r}, destroy this: {u} target ally you control"
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: {u} target ally you control [2r]",
    "tx": "Instant - {r}{r}, destroy this: {u} target ally you control. Destroy it at the beginning of the end phase.\nArcane Barrier 1",
-   "flags": [
-    "untap {u} — not parsed (see ledger)"
-   ]
+   "flags": []
   },
   "washed up wave|0": {
    "name": "Washed Up Wave",
