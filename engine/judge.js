@@ -1233,6 +1233,10 @@ function strike(g){
      declared for it, so it always connects, and it kills. That is what
      makes fielding an ally a real decision rather than a free body. */
   if(link.target && link.target.kind === "ally"){
+    /* the entry is captured BEFORE the damage, because `damageAlly`
+       reports the corpse by NAME and the death trigger needs the card. */
+    const dying = ((at(n, link.target.side).board) || [])
+      .find(b => b && b.uid === link.target.uid);
     const out = GM.damageAlly(n, link.target.side, link.target.uid, total);
     n = out.game;
     (out.msgs || []).forEach(m => { n = say(n, m); });
@@ -1243,6 +1247,14 @@ function strike(g){
        unstamped card does not go wrong loudly; it goes wrong quietly. */
     if(out.killed) n = put(n, link.target.side, s => ({...s,
       grave: (s.grave || []).map(c => c._gy == null ? {...c, _gy: n.turn} : c)}));
+    /* AND THE CORPSE DOES WHAT IT PRINTS (v3.46). `effects.allyDeath` is
+       the one body and it borrows the CONTROLLER's seat for the payload —
+       the actor here is the attacker, and Oysten's Gold belongs to the
+       player who lost the ally, not the one who shot it. */
+    if(out.killed && dying){
+      const dth = withEffects(n, (fx, st) => fx.allyDeath(st, dying.card, link.target.side).game);
+      n = dth;
+    }
   } else {
     n = put(n, def, s => ({...s, hp: s.hp - total}));
   }
@@ -1764,8 +1776,12 @@ function commitPlay(g, card, zone, seat, window, target){
      inside effects.js reads it, and a hardcoded seat in a rules call is
      the bug class v2.25 named (popRunechants popped seat 0's runechants
      whoever was swinging). */
+  /* THE TARGET RIDES INTO `execute` TOO (v3.46). It was already known
+     here and applied AFTER the fact in `declareAttack`; a trigger that
+     asks "am I attacking a hero" has to be told before it fires, at
+     declaration. `heroHit` answers the other question, later. */
   let n = withEffects({...g, actor: seat},
-    (fx, s) => fx.execute(s, card, zone, idx, {window}));
+    (fx, s) => fx.execute(s, card, zone, idx, {window, target}));
 
   if(n._declared){
     const d = n._declared; delete n._declared;

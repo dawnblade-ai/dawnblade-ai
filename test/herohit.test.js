@@ -29,6 +29,7 @@ const PRI = require("../engine/priority.js");
 const B = require("../engine/build.js");
 const RNG = require("../engine/rng.js");
 const {loadData} = require("./helpers/extract.js");
+const INV = require("../engine/invariants.js");
 
 const skip = !H.hasDb() && "no cached DB — run: node tools/audit.js";
 const W = loadData();
@@ -99,8 +100,8 @@ test("a card whose ONLY payload is hero-gated is still playable", {skip}, () => 
 /* ---- 2. DRIVEN, AT THE TABLE, BOTH WAYS ------------------------------ */
 
 const heroBy = re => W.HEROES.find(h => re.test(h.n) || re.test(h.k));
-function match(seed){
-  const h0 = heroBy(/azalea/i), h1 = heroBy(/gravy/i);
+function match(seed, atkHero){
+  const h0 = heroBy(atkHero || /azalea/i), h1 = heroBy(/gravy/i);
   const ctr = {n: 0}; let rng = RNG.make(seed);
   const b0 = B.buildSideDefault(h0, G.parseDeck(W.DECKS[h0.k]), H.db(), rng, ctr); rng = b0.rng;
   const b1 = B.buildSideDefault(h1, G.parseDeck(W.DECKS[h1.k]), H.db(), rng, ctr); rng = b1.rng;
@@ -281,4 +282,71 @@ test("a HEADED grant is untouched by the rider-only reader", {skip}, () => {
   assert.deepEqual(P.fxParse(H.card("Avast Ye!", 3)).ops,
     [["gaNext", {g: [["pirate", "ally"]], atk: true},
       {onHitHero: [["token", "gold", 1, "self"]]}]]);
+});
+
+/* ---- 5. THE JUDGE WIRING (v3.46) -------------------------------------
+   Sabotage found these missing: every drill for v3.46 called the shared
+   bodies directly, so removing judge's two call sites — the target it
+   passes into `execute`, and the death trigger it fires after a kill —
+   failed NOTHING. A drill that constructs its own fixture proves the
+   fixture. Drive the real entry point. ------------------------------- */
+
+function allyBoard(seed, allyRe, pick, atkHero){
+  /* the attacking hero is a PARAMETER: these cards live in specific
+     precons — Path of Same Ends is Briar's, Mocking Blow is Lyath's — and
+     a drill that searched Azalea's deck failed for a reason that was not
+     the engine. */
+  let g = match(seed, atkHero);
+  const seat = g.turnPlayer, def = PRI.other(seat);
+  const ally = g.sides[def].deck.find(c => TY.isAllyCard(c) && allyRe.test(c.name));
+  assert.ok(ally, "no matching ally in this precon");
+  g = J.put(g, def, s => ({...s,
+    board: [{card: ally, kind: "ally", spent: false, uid: ally.uid, life: ally.life}],
+    deck: s.deck.filter(c => c.uid !== ally.uid)}));
+  const atk = g.sides[seat].deck.find(c => pick(c, ally));
+  assert.ok(atk, "no suitable attack in this precon");
+  g = J.put(g, seat, s => ({...s, res: 9,
+    hand: [atk, ...s.hand.filter(c => c.uid !== atk.uid)],
+    deck: s.deck.filter(c => c.uid !== atk.uid)}));
+  return {g, ally, atk, seat, def};
+}
+
+test("driven at the TABLE: Oysten's Gold goes to the player who lost it", {skip}, () => {
+  const {g, ally, atk, seat, def} =
+    allyBoard("oysten", /Oysten/, (c, a) => P.isAttack(c) && (c.power || 0) >= a.life);
+  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state;
+  n = toResolution(n);
+  const gold = si => (n.sides[si].board || []).filter(b => /gold/i.test(b.card.name)).length;
+  assert.equal(gold(def), 1, "the ally's controller gets the token its card prints");
+  assert.equal(gold(seat), 0, "and the player who shot it down gets nothing");
+  assert.deepEqual(INV.errors(n), [], "no invariant broken by the borrowed seat");
+  /* the feed is read by BOTH seats, so it must name one (v2.83) */
+  assert.ok((n.feed || []).some(m => /Gold created on .+'s board/.test(m)),
+    "the feed said \"your board\" for a token on the opponent's side");
+});
+
+test("driven at the TABLE: judge hands the target to execute", {skip}, () => {
+  /* Path of Same Ends prints "When this attacks a HERO, deal 1 arcane
+     damage to them". If judge stops passing `target` into `execute`, the
+     trigger sees the default (a hero) and burns a hero it never attacked. */
+  let {g, ally, atk, seat, def} =
+    allyBoard("pathsame", /./, c => /Path of Same Ends/.test(c.name), /briar/i);
+
+  /* STRIP THE DEFENDER'S IRON, or this drill cannot tell the two halves
+     apart. Gravy Bones wears Nullrune Gloves — Arcane Barrier 1 — which
+     soaks this card's single point of arcane completely, so the hero's
+     life moves by the ATTACK either way and the trigger is invisible.
+     Written without this, the drill passed against a sabotaged engine:
+     its "hero half" was measuring the 3 power, not the 1 arcane. */
+  g = J.put(g, def, s => ({...s, gear: []}));
+  const hp0 = g.sides[def].hp;
+
+  let n = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
+  assert.equal(n.sides[def].hp, hp0,
+    "attacking an ALLY, the hero took damage — the target never reached the trigger");
+
+  let h = toResolution(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);
+  /* the attack AND the arcane, so the 1 point is isolated */
+  assert.equal(h.sides[def].hp, hp0 - (atk.power || 0) - 1,
+    "at the hero: the swing lands AND the printed arcane fires");
 });

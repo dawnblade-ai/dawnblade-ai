@@ -7,6 +7,93 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.46 — the on-attack twin, and the last live ally gap
+
+Two pieces, both finishing what v3.44/45 started, and **one scoping
+decision that deleted a planned job**.
+
+### The planned job that turned out to be dead code
+
+HANDOFF listed "the trainer cannot choose an attack-target" as the next
+step. Measured before building it: the trainer's opponent is
+`DUMMY_DECK` — **12 vanilla attack actions, no allies** — and its swing is
+`foeSwing`'s `[3,4,5]` fabrication with no target choice in it. So the
+trainer can never field an ally against you, and can never choose to
+attack one of yours. A target picker there would be **dead code**, and its
+`heroHit: total > 0` is not an approximation waiting to be fixed — it is
+complete and correct *for that board*. Recorded rather than built.
+
+### "When this attacks a HERO" — the twin of v3.45
+
+v3.45 gated the on-HIT triggers. The on-ATTACK ones were deferred with a
+reason, and the reason is now discharged.
+
+| card | did | prints |
+|---|---|---|
+| **Path of Same Ends** | dealt 1 arcane to the hero while attacking an **ally** | *"deal 1 arcane damage to **them**"* |
+| **Mocking Blow** ×3 | booed the crowd off an attack on an ally | *"when this attacks a **hero**"* |
+
+The wrapper was being consumed and thrown away — `classifyClause` split on
+the first comma, recursed into the inner gate, and the subject went with
+it. It survives as `atkHero` now, set before the cond dispatch so every
+branch carries it. **32 pool clauses print a bare "when this attacks" and
+are untouched**: a bare trigger fires on any target, which is v2.12's "a
+trigger is not a gate".
+
+**IT IS A DIFFERENT QUESTION FROM `heroHit`.** An attacks-trigger fires
+when the attack is **declared**, whether or not it goes on to connect — so
+a swing blocked to nothing still attacked a hero. `heroTarget` is its own
+answer, derived once at the top of `execute` from the caller's target, and
+judge now hands that target in (it already had it, and was applying it
+*after* the fact in `declareAttack`).
+
+The payload fires **at declaration**, which is where the Runechant pop
+already sits and for the same stated reason: a triggered ability goes on
+the stack above the attack that triggered it, so it resolves first.
+
+### An ally that dies does what it prints
+
+**Oysten, Heart of Gold** — *"When this dies, create a Gold token."* The
+pool's **only** death trigger, in the Gravy Bones deck, and unreachable
+until allies could attack (v3.44) and be attacked (v3.45). It read
+`tier: part` with the clause skipped.
+
+**THE TRIGGER BELONGS TO THE ALLY'S CONTROLLER, NOT TO WHOEVER KILLED
+IT.** Inside a combat link the actor is the ATTACKER, so running the ops
+as they stand hands Oysten's Gold to the player who just shot it down.
+`effects.allyDeath` borrows the controller's seat for the payload and
+**gives it back** — the same inversion `arcTaken` documents on the
+deferred soak path (v3.28). `game.js` still owns the zone move and reports
+the corpse; this owns what the card says.
+
+Coverage **332 → 333 full**, and it is exactly Oysten — the first earned
+tier move in five versions, because everything since v3.42 fixed things
+coverage cannot see.
+
+### And a feed line that became a lie the moment a seat could be borrowed
+
+`runOps`' token message read *"created on **your** board"*, which is the
+v2.83 second-person debt. Harmless while the actor was always the player;
+actively misleading the instant a token could be minted under a borrowed
+actor, because Oysten's Gold appeared in a shared feed as the attacker's.
+It names the seat now (and still reads "your board" in the trainer, whose
+seat 0 is literally named "You"). The pinned ledger is a ceiling, so it
+went down rather than needing an edit.
+
+### Sabotage found three holes in my own drills
+
+Nine sabotages, and the first pass caught only six:
+
+* removing judge's `target` hand-off failed nothing — every drill called
+  the shared bodies directly. **Drive the real entry point.**
+* removing judge's death-trigger call site: the same.
+* and the worst one — the drill written to catch the first was **passing
+  against a sabotaged engine**, because Gravy Bones wears **Nullrune
+  Gloves** and Arcane Barrier 1 soaks Path of Same Ends' single point of
+  arcane completely. Its "hero half" was measuring the 3-power swing, not
+  the 1 arcane. The drill strips the defender's iron now and asserts
+  `hp0 - power - 1`, which isolates the trigger.
+
 ## v3.45 — whose hit was it? the attack-target decides which triggers fire
 
 v3.44 let allies attack. This is the other half of the same mechanism, and

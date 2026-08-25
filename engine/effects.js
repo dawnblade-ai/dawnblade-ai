@@ -789,7 +789,15 @@ function makeEffects(ctx){
         }
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
-        const who = side==="foe" ? foe(n).name+"'s" : "your";
+        /* NAME THE SEAT (v2.83's rule, v3.46's occasion). The feed is read
+           by BOTH seats, and this line became actively misleading the
+           moment a token could be minted under a borrowed actor: Oysten's
+           death trigger creates a Gold for the player who LOST the ally,
+           and "your board" read as the attacker's. The trainer names seat
+           0 "You", so it still reads "your board" there. */
+        const _self = act(n).name || "";
+        const who = side==="foe" ? foe(n).name+"'s"
+                  : (/^you$/i.test(_self) ? "your" : _self+"'s");
         n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
         /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
            "pays no costs and takes no action phase, so anything that taxes
@@ -1142,6 +1150,15 @@ function makeEffects(ctx){
      it. Nothing else in this body may read `opts`: the moment a card's
      EFFECT depends on the caller, there are two engines again. */
   const execute = (s,card,from,idx,opts) => {
+    /* WAS THIS ATTACK AIMED AT A HERO? (CR 1.4.5, v3.46) — the caller's
+       answer, like the wall and `heroHit`. It is a DIFFERENT question from
+       `heroHit`: an attacks-trigger fires when the attack is DECLARED,
+       whether or not it goes on to connect, so a swing blocked to nothing
+       still attacked a hero. judge knows the target here; the trainer
+       wires no ally targeting and can never field one against you, so
+       absent means "the hero" — true for it, and the default keeps its
+       behaviour identical. */
+    const heroTarget = !(opts && opts.target && opts.target.kind === "ally");
     /* WHICH HALF OF A SPLIT CARD IS BEING PLAYED (v3.34). `_half` is the
        declared answer and rides on the state, the same seam `_doBoost`
        and `_addPaid` use — a declaration is settled BEFORE the card
@@ -1400,7 +1417,15 @@ function makeEffects(ctx){
       n = runOps(n, pre, card.name);
       pre.forEach(o=>preRan.add(o));
     }
-    fx.conds.forEach(({cond,op,instead})=>{
+    fx.conds.forEach(({cond,op,instead,atkHero})=>{
+      /* "WHEN THIS ATTACKS A HERO, IF …" is a trigger with a subject
+         wrapped around a gate (v3.46). Mocking Blow booed the crowd off an
+         attack on an ally, which is a hero's reaction to being hit by a
+         card that never touched them. */
+      if(atkHero && !heroTarget){
+        n = L(n, `${card.name} is attacking an ally — its "attacks a hero" trigger does not fire.`);
+        return;
+      }
       if(cond==="defLt2") return; // resolved after blocks
       if(cond==="discard6"){
         /* RULING: check the graveyard for a 6+ power card added THIS turn */
@@ -1805,6 +1830,23 @@ function makeEffects(ctx){
 
       n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
+      /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
+         An attacks-trigger goes on the stack ABOVE the attack that
+         triggered it, so it resolves FIRST — before the defend step. That
+         is the same reasoning, and the same site, as the Runechant pop
+         directly below; Path of Same Ends' "deal 1 arcane damage to them"
+         is exactly the shape that precedent was written for.
+
+         Gated on the ATTACK-TARGET rather than on the hit: the trigger
+         fires whether or not the swing connects, but "them" is the hero
+         being attacked, and against an ally there is no them. */
+      if((fx.onAtkHero||[]).length){
+        if(heroTarget){
+          n = runOps(n, fx.onAtkHero, card.name);
+          n = winCheck(n);
+          if(n.over) return n;
+        } else n = L(n, `${card.name} is attacking an ally — its "attacks a hero" ability does not fire.`);
+      }
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
          a weapon attack", and a triggered ability goes onto the stack ABOVE
@@ -2609,6 +2651,30 @@ function makeEffects(ctx){
     return Math.min(total, card.power || 0);
   };
 
+  /* ---- AN ALLY THAT DIES DOES WHAT IT PRINTS (v3.46) ----------------
+     Oysten, Heart of Gold: "When this dies, create a Gold token." One
+     pool record prints a death trigger, it is in a real deck, and it only
+     became reachable when allies started attacking (v3.44) and being
+     attacked (v3.45).
+
+     THE TRIGGER BELONGS TO THE ALLY'S CONTROLLER, NOT TO WHOEVER KILLED
+     IT. Inside a combat link the actor is the ATTACKER, so running these
+     ops as they stand would hand Oysten's Gold token to the player who
+     just shot it down. The seat is borrowed for the payload and restored
+     afterwards — the same inversion `arcTaken` documents on the deferred
+     soak path (v3.28), where the answer is given by the side being hit.
+
+     Pure, and it takes the side as an argument rather than reading a
+     phase: `game.js` owns the zone move and reports the corpse, this owns
+     what the card SAYS, and the caller knows whose ally it was. */
+  const allyDeath = (s, card, side) => {
+    const fx = fxParse(card);
+    if(!card || !(fx.onDeath || []).length) return {game: s, fired: false};
+    const prev = s.actor;
+    let n = runOps({...s, actor: side}, fx.onDeath, card.name);
+    return {game: {...n, actor: prev}, fired: true};
+  };
+
   /* SPEND A QUALIFIED NEXT-GO-AGAIN, and only on a play that MATCHES.
      One taker, because two branches of `execute` reach it — an attack
      settles on the chain and a non-attack settles at the action point —
@@ -2996,7 +3062,7 @@ function makeEffects(ctx){
                   `${act(n).name}'s winter`);
   }
 
-  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack,
+  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, autoPitch, applyAnswer,
           activateHandAbility, foeTurnIce, takeInstantNext};
 }

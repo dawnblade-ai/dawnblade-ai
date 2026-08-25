@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-24T23:54:53.577Z · app v3.45 · data sage-v12 · db 788 records
+Generated 2026-08-25T03:30:53.725Z · app v3.46 · data sage-v12 · db 788 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 332 |
-| Partially scripted | 61 |
+| Fully scripted | 333 |
+| Partially scripted | 60 |
 | Text-only (nothing parsed) | 12 |
 | Cards with audit flags | 66 |
 
@@ -404,13 +404,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ▶ Your next attack with stealth this turn gets +3{p}.
 - ▶ Go again
 
-### Oysten, Heart of Gold (pitch 2) — part · [gravy]
-- type: Pirate Necromancer Action - Ally · printed: Watery Grave
-- ○ Action - {t}: Attack
-- — When this dies, create a Gold token.
-- ○ Watery Grave
-- 🚩 tap cost {t} — not enforced (see ledger)
-
 ### Pass Over (pitch 3) — part · [enigma]
 - type: Mystic Instant · printed: Legendary, Transcend
 - ○ Legendary
@@ -647,6 +640,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Magmatic Carapace** (pitch 0): tap cost {t} — not enforced (see ledger)
 - **Mandible Claw** (pitch 0): text mentions go again but no clause parses it
 - **Open the Flood Gates** (pitch 3): unreviewed keyword: "surge"
+- **Oysten, Heart of Gold** (pitch 2): tap cost {t} — not enforced (see ledger)
 - **Polar Cap** (pitch 1): unreviewed keyword: "ice fusion"
 - **Puncture** (pitch 1): unreviewed keyword: "piercing"
 - **Puncture** (pitch 3): unreviewed keyword: "piercing"

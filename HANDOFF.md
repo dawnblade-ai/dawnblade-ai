@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.45 · PHASE C · ALLY COMBAT, BOTH HALVES
+# Handoff — Dawnblade, at v3.46 · PHASE C · ALLY COMBAT COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,15 +12,15 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1449 drills**
+> the card semantics run on both boards.** `npm test` is **1458 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.45: coverage **332 full / 61 part / 12 none** (unchanged
-> across v3.42-45 — every one of them fixed something no coverage tool can
-> see, which is the point), fairness **clean**,
-> `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of
+> Current at v3.46: coverage **333 full / 60 part / 12 none** (Oysten
+> earned the +1 at v3.46; v3.42-45 all fixed things no coverage tool can
+> see, which is the point), fairness **clean**, `tools/failstates.js`
+> **0 UNFAIR**, `npm run crindex` **50 of
 > 63 CR rules guarded** (the 3 UNGUARDED are section pointers).
 >
 > **YOUR JOB IS PHASE C — THE HEROES.** Kayo, Viserai, Bravo and
@@ -117,38 +117,34 @@
 
 > ### START HERE — the things a new thread should pick up
 >
-> **1. ~~Avast Ye!~~ / ~~ally combat~~ DONE (v3.44-45), and it was the
-> right rabbit hole.** v3.44 built ally ATTACKS on both boards; v3.45 built
-> the other half — **an ally can be attacked, so the attack-target now
-> decides which triggers fire.** 34 records were firing a hero-gated
-> trigger off an ally hit (19 on-hit payloads, all 15 crush riders), and
-> chasing the riders turned up a structural defect underneath: the clause
-> splitter was cutting INSIDE quoted granted abilities, which is why Loot
-> the Hold discarded on play and Loot the Arsenal minted Gold with its
-> printed cost dropped. See CLAUDE.md's "WHOSE HIT WAS IT?" and "THE
-> SPLITTER MUST NOT CUT INSIDE A QUOTE".
+> **1. ~~ALLY COMBAT~~ COMPLETE (v3.44-46).** Allies attack (v3.44), an
+> attack on one decides which triggers fire (v3.45), and an ally that dies
+> does what it prints (v3.46). Along the way: 34 records were firing
+> hero-gated on-HIT triggers off an ally hit, 4 more were firing
+> hero-gated on-ATTACK triggers, the clause splitter was cutting inside
+> quoted granted abilities, and Oysten's Gold was going to whoever killed
+> it. See CLAUDE.md's four sections from "AN ALLY IS A PERMANENT THAT
+> ATTACKS" through "AN ALLY THAT DIES DOES WHAT IT PRINTS".
 >
-> **1b. STILL OPEN — "when this ATTACKS a hero" (5 records).** The
-> on-attack twin of what v3.45 fixed, and deliberately deferred: only
-> **Mocking Blow** (×3) is live (Display Loyalty's rider and Path of Same
-> Ends' clause are already honest refusals). The blocker is real — the
-> attack-TARGET is not known inside `execute` at declaration time, because
-> `commitPlay` adds it in `declareAttack` afterwards. Gating it means
-> threading the target into `execute`'s contract, which is the same job
-> as 1c and should be done with it.
+> **1b. A PLANNED JOB WAS DELETED, NOT DONE.** "The trainer cannot choose
+> an attack-target" sat on this list for three versions. Measured: the
+> trainer's opponent is `DUMMY_DECK` — 12 vanilla attacks, NO allies — and
+> its swing is the `[3,4,5]` fabrication with no target choice. It can
+> never field an ally against you nor attack one of yours, so a picker
+> there is dead code and `heroHit: total > 0` is complete for that board.
+> **Measure a list item before building it.**
 >
-> **1c. The TRAINER still cannot choose an attack-target.** judge has done
-> CR 1.4.5 since v2.45 (`J.targets`); the trainer's `execute` declares and
-> calls `dummyDefence` in one pass, so the choice has to land before that
-> — the boost precedent (`maybeBoost` pauses and re-enters `execute`) is
-> the shape, and `mode:"targetpick"` is the seam. Until then the trainer
-> passes `heroHit: total > 0`, which is TRUE for it and is why v3.45
-> changed nothing there. Doing 1b and 1c together is the natural next
-> cycle: both need the target earlier.
+> **1c. STILL OPEN, and each has a written reason:**
+>
+> | card | what it needs |
+> |---|---|
+> | Mournful Casket, Basalt Boots | the AT-REST display pass — a defensive buff true while sitting on the board would put a number on screen that disagrees with the number that blocked (v3.27's boundary) |
+> | Silent Stilettos | an ally-death trigger for the CONTROLLER's own attacking ally, plus an "if you do" payload — the family this project does not read |
+> | Cold Snap's freeze on an ally, Drop the Anchor's `{t}` on allies, Scuttle Toes' `{u}` | ally-targeting EFFECTS, distinct from attack-targeting; none is wired |
 >
 > **1d. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
-> weapon.** Unchanged from v3.44; see that entry below. `parser.allyAttack`
-> guards `power > 0`, judge's weapon branch does not.
+> weapon.** Unchanged from v3.44; `parser.allyAttack` guards `power > 0`,
+> judge's weapon branch does not.
 >
 > **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
 > them general: the `hits` optional-cost trigger (unwired since v3.20), a

@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-24T23:54:53.577Z",
- "appVer": "3.45",
+ "generated": "2026-08-25T03:30:53.725Z",
+ "appVer": "3.46",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 332,
-  "part": 61,
+  "full": 333,
+  "part": 60,
   "none": 12
  },
  "heroes": {
@@ -13194,7 +13194,7 @@
    "mentions": [
     "watery grave"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13204,16 +13204,14 @@
     },
     {
      "t": "When this dies, create a Gold token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Watery Grave",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "When this dies, create a Gold token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {t}: Attack\nWhen this dies, create a Gold token.\nWatery Grave",

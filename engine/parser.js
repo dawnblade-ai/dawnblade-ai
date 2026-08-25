@@ -372,6 +372,18 @@ function classifyClause(raw){
        parsed as an addition that is 2 + 4 = 6 when the card prints 4. Flag
        it here; execute suppresses the base op when the condition fires. */
     if(/\binstead\b/i.test(m[2])) rest.instead = true;
+    /* WHOSE ATTACK? (v3.46) — the on-ATTACK twin of v3.45's `heroOnly`.
+       "When this ATTACKS A HERO" is a trigger with a printed subject, and
+       the wrapper was consumed and thrown away: Mocking Blow booed the
+       crowd and Path of Same Ends dealt its arcane "to them" while
+       attacking an ALLY, where there is no them.
+
+       It is set BEFORE the cond dispatch below, so whichever branch
+       returns carries it — every one of them `Object.assign`s onto this
+       same object. 32 pool clauses print a BARE "when this attacks" and
+       are untouched: a bare trigger fires on any attack, which is the
+       distinction v2.12 named (a trigger is not a gate). */
+    if(/\battacks?\s+a\s+hero\b/.test(cond)) rest.atkHero = true;
     /* ARSENAL FACE-UP. Azalea's arrows fire when put FACE UP into the
        arsenal, which is NOT the end-of-turn arsenal step (that sets face
        DOWN). Three printed phrasings, one trigger:
@@ -409,6 +421,16 @@ function classifyClause(raw){
        opposite mistake). */
     if(/\bleaves the arena\b/.test(cond))
       return Object.assign(rest, /\benters?\b/.test(cond) ? {onLeave:true, onEnter:true} : {onLeave:true});
+    /* ---- AN ALLY DYING IS AN EVENT (v3.46) ----------------------------
+       Exactly ONE pool record prints a death trigger — Oysten, Heart of
+       Gold, "When this dies, create a Gold token" — and it sat unread
+       because until v3.44 no ally could attack and until v3.45 nothing
+       decided what an attack on one meant. It is in the Gravy Bones deck,
+       so it is reachable now rather than hypothetical.
+
+       Tagged rather than run, exactly like `onHit` and `onLeave`, so the
+       site that files the corpse fires it. */
+    if(/^this dies$/.test(cond)) return Object.assign(rest,{onDeath:true});
     if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true, heroOnly:true});
     /* ---- WHOSE HIT? (v3.45) --------------------------------------------
        CR 1.4.5 makes an ALLY an attack-target, so "hits" and "hits a HERO"
@@ -1913,7 +1935,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -2464,7 +2486,12 @@ function fxParse(card){
          parameter. The split mirrors `condOnHit`, which is already a
          separate list for the same reason. */
       if(r.onHit){ (r.heroOnly ? fx.onHitHero : fx.onHit).push(op); return; }
-      else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead});
+      else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead, atkHero:!!r.atkHero});
+      /* AN UNGATED "when this attacks a HERO" PAYLOAD gets its own list
+         (v3.46), for the reason `onHitHero` does: an op is a bare array
+         and a flag on it sits where a reader expects a parameter. */
+      else if(r.atkHero){ fx.onAtkHero.push(op); return; }
+      else if(r.onDeath){ fx.onDeath.push(op); return; }
       else fx.ops.push(op);
     });
   });
@@ -2780,6 +2807,7 @@ function fxParse(card){
      caught by the audit diff rather than by a drill. When you split a
      list, grep for everyone who was reading the whole of it. */
   fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onHitHero||[]).length>0
+             || (fx.onAtkHero||[]).length>0 || (fx.onDeath||[]).length>0
              || (fx.onLeave||[]).length>0
              || fx.conds.length>0 || !!fx.perm || fx.ga;
   FXMEMO.set(key,fx);

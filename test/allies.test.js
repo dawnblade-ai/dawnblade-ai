@@ -236,3 +236,92 @@ test("Avast Ye! finally fires: its grant AND its rider reach a real ally attack"
   assert.ok(landed.sides[0].board.some(b => /gold/i.test(b.card.name)),
     "and the Gold token the rider promised is really on the board");
 });
+
+/* ---- 6. AN ALLY THAT DIES DOES WHAT IT PRINTS (v3.46) ---------------- */
+
+test("the death trigger is read, and it belongs to the ally's CONTROLLER", {skip}, () => {
+  H.db();
+  /* Exactly ONE pool record prints a death trigger, and it only became
+     reachable when allies started attacking (v3.44) and being attacked
+     (v3.45). Before this it read `tier: part` with the clause skipped. */
+  P.fxReset();
+  const f = P.fxParse(H.card("Oysten, Heart of Gold", 2));
+  assert.deepEqual(f.onDeath, [["token", "gold", 1, "self"]]);
+  assert.equal(f.tier, "full", "its printed clause is read now");
+});
+
+test("the death payload runs for the loser, and the actor is restored", {skip}, () => {
+  H.db();
+  /* INSIDE A COMBAT LINK THE ACTOR IS THE ATTACKER. Running these ops as
+     they stand would hand Oysten's Gold to the player who shot it down —
+     the same inversion `arcTaken` documents on the deferred soak path.
+     The seat is BORROWED and put back; a body that leaves the actor moved
+     corrupts every rule after it in the same resolution. */
+  const oy = H.card("Oysten, Heart of Gold", 2);
+  let g = H.state({name: "Attacker"}, {name: "Owner"}, {turn: 3, actor: 0});
+  g.builds = [{}, {}];
+  const out = H.fx(g, (f, st) => f.allyDeath(st, oy, 1));
+  assert.equal(out.fired, true);
+  assert.equal(out.game.sides[1].board.length, 1, "the Gold goes to the ally's controller");
+  assert.equal(out.game.sides[0].board.length, 0, "and never to whoever killed it");
+  assert.equal(out.game.actor, 0, "the borrowed seat must be given back");
+});
+
+test("a card with no death trigger fires nothing", {skip}, () => {
+  H.db();
+  const out = H.fx(H.state({}, {}, {turn: 3, actor: 0}),
+                   (f, st) => f.allyDeath(st, H.card("Swabbie", 2), 1));
+  assert.equal(out.fired, false, "Swabbie prints no death trigger");
+});
+
+/* ---- 7. "WHEN THIS ATTACKS A HERO" (v3.46) --------------------------- */
+
+test("the attacks-trigger carries its printed subject", {skip}, () => {
+  H.db();
+  /* The on-ATTACK twin of v3.45's `heroOnly`. It is a DIFFERENT question
+     from `heroHit`: an attacks-trigger fires when the attack is DECLARED,
+     whether or not it goes on to connect. */
+  P.fxReset();
+  assert.deepEqual(P.fxParse(H.card("Path of Same Ends", 1)).onAtkHero, [["arcane", 1]]);
+  P.fxReset();
+  const mb = P.fxParse(H.card("Mocking Blow", 1));
+  assert.equal(mb.conds.find(x => x.cond === "lifeGt").atkHero, true, "the boo names a hero");
+  assert.equal(mb.conds.find(x => x.cond === "booed").atkHero, false,
+    "…and its OTHER clause has no attacks-trigger at all");
+  /* 32 pool clauses print a BARE "when this attacks" — a trigger, not a
+     gate (v2.12) — and must fire on any target. */
+  assert.equal(P.classifyClause("when this attacks, intimidate").atkHero, undefined);
+});
+
+test("driven: the attacks-a-hero payload fires at a hero and not at an ally", {skip}, () => {
+  H.db();
+  /* ONE CARD, TWO TARGETS — a gate that refuses everything passes the
+     ally half perfectly. Path of Same Ends prints "deal 1 arcane damage
+     to THEM", and against an ally there is no them. */
+  const c = H.card("Path of Same Ends", 1);
+  const mk = () => { const g = H.state({hand: [c], res: 9, ap: 1}, {hp: 20}, {turn: 3, actor: 0});
+                     g.builds = [{}, {}]; return g; };
+  P.fxReset();
+  assert.equal(H.execute(mk(), c, "hand", 0, {}).sides[1].hp, 19,
+    "at the hero: the arcane fires at declaration");
+  P.fxReset();
+  const ally = H.execute(mk(), c, "hand", 0, {target: {kind: "ally", uid: "a1", side: 1}});
+  assert.equal(ally.sides[1].hp, 20, "at an ally: the hero takes nothing");
+  assert.ok((ally.feed || []).some(m => /attacking an ally/i.test(m)), "and the feed says why");
+});
+
+test("driven: Mocking Blow's boo does not fire off an attack on an ally", {skip}, () => {
+  H.db();
+  /* Lyath's boo is a Might token, so losing it or gaining it wrongly is
+     his engine either way. The condition (more life than them) is held
+     TRUE in both halves so only the target differs. */
+  const c = H.card("Mocking Blow", 1);
+  const mk = () => { const g = H.state({hand: [c], res: 9, ap: 1, hp: 20}, {hp: 5}, {turn: 3, actor: 0});
+                     g.builds = [{lyathBoo: true}, {}]; return g; };
+  const booed = st => (st.sides[0].board || []).some(b => /might/i.test(b.card.name));
+  P.fxReset();
+  assert.ok(booed(H.execute(mk(), c, "hand", 0, {})), "at the hero: the crowd boos");
+  P.fxReset();
+  assert.ok(!booed(H.execute(mk(), c, "hand", 0, {target: {kind: "ally", uid: "a1", side: 1}})),
+    "at an ally: it must not");
+});

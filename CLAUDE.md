@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.45
+**Current version:** v3.46
 
 ---
 
@@ -401,6 +401,60 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### AN ATTACKS-TRIGGER IS NOT A HIT-TRIGGER (v3.46)
+
+v3.45 gated the on-HIT triggers on `heroHit`. The on-ATTACK ones ask a
+**different question**: an attacks-trigger fires when the attack is
+DECLARED, whether or not it connects, so a swing blocked to nothing still
+attacked a hero. `heroTarget` is its own answer — derived once at the top
+of `execute` from the caller's target — and reusing `heroHit` there would
+silently make every attacks-trigger conditional on connecting.
+
+**THE WRAPPER WAS BEING EATEN.** `classifyClause` splits an if/when clause
+on the first comma and recurses into the inner gate; the subject went with
+it. So *"When this attacks a HERO, if you have more {h} than them…"* became
+a bare `lifeGt`, and Mocking Blow booed the crowd off an attack on an ally.
+`atkHero` is set BEFORE the cond dispatch, because every branch there
+`Object.assign`s onto the same object.
+
+**32 POOL CLAUSES PRINT A BARE "when this attacks" AND MUST NOT MOVE** —
+a bare trigger fires on any target (v2.12: a trigger is not a gate). Only
+the three that name a hero are gated.
+
+**AND JUDGE ALREADY HAD THE TARGET** — it was applying it *after* the
+fact, in `declareAttack`. A trigger that asks "am I attacking a hero" has
+to be told before it fires. One extra key in `execute`'s opts.
+
+### AN ALLY THAT DIES DOES WHAT IT PRINTS (v3.46)
+
+Oysten, Heart of Gold is the pool's ONLY death trigger, and it was
+unreachable until allies could attack (v3.44) and be attacked (v3.45) —
+a card whose text became live because two other things were built.
+
+**THE TRIGGER BELONGS TO THE ALLY'S CONTROLLER, NOT TO WHOEVER KILLED
+IT.** Inside a combat link the actor is the ATTACKER, so running the
+payload as it stands hands the Gold to the player who shot the ally down.
+`effects.allyDeath` borrows the controller's seat and **gives it back**;
+a body that leaves the actor moved corrupts every rule after it in the
+same resolution. Same inversion `arcTaken` documents from the other end.
+
+**AND A BORROWED SEAT MAKES A SECOND-PERSON FEED LINE A LIE.** The token
+message read *"created on YOUR board"* — harmless while the actor was
+always the player, and actively wrong the moment a token could be minted
+under a borrowed one. Name the seat (v2.83's rule, and this is the
+occasion that proves why it is a rule).
+
+### MEASURE BEFORE BUILDING A PLANNED JOB — IT MAY BE DEAD CODE (v3.46)
+
+HANDOFF listed "the trainer cannot choose an attack-target" as the next
+step for three versions. The trainer's opponent is `DUMMY_DECK` — **12
+vanilla attacks, no allies** — and its swing is the `[3,4,5]` fabrication
+with no target choice. It can never field an ally against you and never
+choose to attack one of yours, so a target picker there is **dead code**,
+and its `heroHit: total > 0` is complete rather than an approximation.
+**A task that has sat on a list for three versions is worth measuring
+before it is worth doing.**
 
 ### WHOSE HIT WAS IT? THE ATTACK-TARGET DECIDES (v3.45)
 
@@ -2435,9 +2489,11 @@ Still deliberately not modelled, and each is honest rather than hidden:
 - ~~**allies do not attack.**~~ **BUILT at v3.44.** `parser.allyAttack` is
   the reader, `from: "ally"` is the route, and both boards share it — see
   "AN ALLY IS A PERMANENT THAT ATTACKS". The arena untap (CR 4.4.3d) was
-  built ahead of it and is what `{t}` now rests on. What is still missing
-  is an ally being CHOSEN as an attack-target in the TRAINER; judge has
-  done CR 1.4.5 since v2.45.
+  built ahead of it and is what `{t}` now rests on. Choosing an ally as an
+  attack-target is judge's (CR 1.4.5, since v2.45) and is **deliberately
+  absent from the trainer**: its opponent is 12 vanilla attacks with no
+  allies and a fabricated swing, so there is never a target to choose —
+  see "MEASURE BEFORE BUILDING A PLANNED JOB".
 - **`index.html` still carries the invented fatigue loss.** Left alone on
   purpose: the dummy reshuffles its graveyard rather than decking out, so
   changing it is a decision about solo play, not a rules fix.

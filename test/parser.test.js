@@ -164,7 +164,11 @@ test("fxParse — conditional go again stays conditional, not printed", () => {
   /* `instead` rides along from v2.32 — a conditional payload that REPLACES
      the printed value rather than adding to it. False here, and that is
      the point: this card adds go again, it does not replace anything. */
-  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"], instead:false}]);
+  /* +`atkHero` at v3.46 — a cond now carries whether its trigger named a
+     HERO ("when this attacks a hero, if …"). False here: this clause has
+     no attacks-trigger at all, and 32 pool clauses print a BARE "when this
+     attacks", which fires on any target. */
+  assert.deepEqual(fx.conds, [{cond:"pitch6", op:["ga"], instead:false, atkHero:false}]);
 });
 
 test("fxParse — the {p} pump drill: +1/2/3{p} reads the copy's pitch", () => {
@@ -1377,13 +1381,13 @@ test("charge — the additional cost is hoisted whether the card says 'this' or 
 test("charge — 'if a yellow card is charged this way' reads as chargedPitch2 (Beaming Bravado)", () => {
   const fx = P.fxParse({name:"Beaming Bravado Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
     tx:"As an additional cost to play this, you may charge your hero's soul. If a yellow card is charged this way, this gets +1{p}"});
-  assert.deepEqual(fx.conds, [{cond:"chargedPitch2", op:["self",1], instead:false}]);
+  assert.deepEqual(fx.conds, [{cond:"chargedPitch2", op:["self",1], instead:false, atkHero:false}]);
 });
 
 test("charge — 'if you've charged this turn, gains go again' reads as a plain conditional GA (Take Flight)", () => {
   const fx = P.fxParse({name:"Take Flight Drill", pitch:1, tt:"Action - Attack", power:4, kw:[],
     tx:"As an additional cost to play this, you may charge your hero's soul. If you've charged this turn, this gains go again."});
-  assert.deepEqual(fx.conds, [{cond:"charged", op:["ga"], instead:false}]);
+  assert.deepEqual(fx.conds, [{cond:"charged", op:["ga"], instead:false, atkHero:false}]);
   assert.equal(fx.condOnHit, undefined, "a plain (non on-hit) grant belongs in conds, not condOnHit");
 });
 
@@ -1456,14 +1460,14 @@ test("fusion — 'if this was fused, it gains go again' reads as a plain conditi
   const fx = P.fxParse({name:"Entwine Lightning", pitch:1, tt:"Elemental Action - Attack", power:3, kw:[],
     tx:"Lightning Fusion\n\nIf Entwine Lightning was fused, it gains go again."});
   assert.deepEqual(fx.fusionCost, {types:["lightning"]});
-  assert.deepEqual(fx.conds, [{cond:"fused", op:["ga"], instead:false}]);
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["ga"], instead:false, atkHero:false}]);
   assert.equal(fx.tier, "full");
 });
 
 test("fusion — 'when you attack with this, if it was fused, deal N arcane' reads as an immediate conditional, not on-hit (Arcanic Shockwave)", () => {
   const fx = P.fxParse({name:"Arcanic Shockwave", pitch:1, tt:"Elemental Runeblade Action - Attack", power:4, kw:[],
     tx:"Lightning Fusion\n\nWhen you attack with Arcanic Shockwave, if it was fused, deal 1 arcane damage to target hero."});
-  assert.deepEqual(fx.conds, [{cond:"fused", op:["arcane",1], instead:false}]);
+  assert.deepEqual(fx.conds, [{cond:"fused", op:["arcane",1], instead:false, atkHero:false}]);
   assert.equal(fx.tier, "full");
 });
 
