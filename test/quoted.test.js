@@ -84,7 +84,7 @@ test("the audit FLAGS every recorded one, by name", {skip}, () => {
     "and it must flag it by name");
 
   const md = fs.readFileSync(path.join(__dirname, "..", "AUDIT.md"), "utf8");
-  for(const nm of ["Display Loyalty", "Drop the Anchor", "Goon Tactics", "Release the Tension"])
+  for(const nm of ["Display Loyalty", "Goon Tactics", "Release the Tension"])
     assert.ok(new RegExp("\\*\\*" + nm + "\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
       nm + " must be flagged in the generated AUDIT.md — run `npm run audit` if this is stale");
 });
@@ -102,13 +102,19 @@ test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {ski
     P.fxReset();
     if((P.fxParse(c).quotedUnread || []).length) found.push(m.n + " p" + m.p);
   }
-  /* SIX RECORDS, not four: this scans the whole PINNED POOL FILE, where
+  /* FIVE RECORDS, not three: this scans the whole PINNED POOL FILE, where
      Release the Tension exists at all three pitches, while AUDIT.md counts
      the 405 cards the decks actually reach and so shows p1 alone. Both
-     numbers are right; a census has to say which one it is counting. */
+     numbers are right; a census has to say which one it is counting.
+
+     SIX UNTIL v3.48. Drop the Anchor left, deliberately: its rider is
+     `"When this hits a hero, {t} them and all allies they control"`, and
+     the RULING (user, 2026-08-25) on what tapping a hero means gave that
+     payload a reader. The flag asks "is there a reader" (v3.41), so
+     building one is exactly how a record leaves this list. */
   assert.deepEqual(found.sort(), [
-    "Display Loyalty p1", "Drop the Anchor p1", "Goon Tactics p3",
+    "Display Loyalty p1", "Goon Tactics p3",
     "Release the Tension p1", "Release the Tension p2", "Release the Tension p3"
-  ], "six records print a quoted ability with no reader. A SEVENTH means upstream added one " +
-     "or a reader regressed; a FIFTH means one was built — either way, a deliberate edit here.");
+  ], "five records print a quoted ability with no reader. A SIXTH means upstream added one " +
+     "or a reader regressed; a FOURTH means one was built — either way, a deliberate edit here.");
 });

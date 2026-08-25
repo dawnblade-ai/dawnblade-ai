@@ -7,6 +7,97 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.48 — a tapped hero, and the one thing it means
+
+**RULING (user, 2026-08-25), verbatim:**
+
+> "Tapping a hero doesn't mean much on its own — when tapped it mainly
+>  means it cannot be tapped again to pay a cost. The tapping mechanism
+>  was added in later sets and older heroes are often unaffected by being
+>  tapped."
+
+**THE NARROWNESS IS THE RULING, NOT A SHORTCUT.** A tapped hero keeps its
+life, its intellect, its defence and its windows. Inventing a penalty here
+would be the golden rule broken at the keyword level — and the ruling says
+in as many words that most heroes are unaffected. Measured against the
+pool: exactly **three of fifteen heroes** print a `{t}` cost on themselves
+(Bravo, Gravy Bones, Lyath), so for the other twelve the tap is a
+correctly-read **no-op**, and the feed says which — *"nothing happened"*
+and *"nothing was supposed to happen"* are different lessons.
+
+**IT IS A DIFFERENT RECORD FROM `weaponUsed["hpow"]`**, which is v2.46's
+"two limits that expire differently" one zone further in:
+
+| | is | lifted by |
+|---|---|---|
+| `weaponUsed["hpow"]` | a per-turn **ALLOWANCE** | every turn boundary, for both seats |
+| `heroTapped` | the **STATE** | the controller's own untap step (CR 4.4.3d) |
+
+They coincide for a hero using its own ability and **come apart the moment
+an OPPONENT taps you** — which is exactly what the two cards this
+unblocked do. So a hero tapped during your turn stays tapped for the rest
+of it and no longer, and a drill drives a whole turn to prove the
+allowance comes back while the tap does not.
+
+**TWO CARDS, AND NEITHER NEEDED NEW MACHINERY:**
+
+| card | was | is |
+|---|---|---|
+| **Entangling Shot** | `tier: none` | `full` — *"you may {t} target hero"* on its arsenal-up trigger. `parseHeroPower` refuses a line whose payload has no reader (v3.04), so **reading the payload is what created the route**, for the second version running |
+| **Drop the Anchor** | rider in `quotedUnread` | read, and **hero-gated** — *"When this hits a **hero**, {t} them and all allies they control"* must not fire off a hit on an ally (v3.45) |
+
+**THE ALLY HALF IS WHY THE CARD IS PLAYED.** Allies tap to attack (v3.44),
+so tapping theirs stops a swing where tapping the hero mostly does not.
+One printed sentence naming two targets is **one op with a flag**, not two
+clauses — and Entangling Shot prints no ally half, so it gets none.
+
+**AND THE BUILD READ MUST BE THE TAPPED SIDE'S.** `tapFoeHero` taps the
+OTHER seat, so `bAct` there asks whether the **tapper's** hero has a `{t}`
+ability — the wrong hero, and right by accident only in the self branch.
+That is `arcTaken`'s inversion (v3.40) in a feed line, and the sabotage
+that finds it is Blaze tapping Lyath rather than the reverse.
+
+### A LIVE BUG, FOUND ON THE WAY — `clean` COLLAPSES THE NEWLINES
+
+`tapsToActivate` split `clean(tx)` on `/\n+/`, and **`clean` collapses the
+very newlines the split depends on** — the same trap `printedKw` and
+`kwGated` each carry a comment about. The whole card arrived as one line,
+so the `.find` only ever matched a card whose activated ability is its
+**FIRST printed line**, and answered FALSE for any other.
+
+Two live casualties: **Lyath Goldmane**, whose `Instant - {r}{r}, {t}:`
+sits under his halving static, and **Concealed Object**, whose tap sits
+under its own destroy clock. For both, the flag was filed as a per-turn
+**allowance** instead of a **tap**, so `perTurnCleared` lifted it at the
+turn boundary rather than at the controller's untap step. Split the raw
+text, clean each line.
+
+### A BLANKET AUDIT FLAG IS A CLAIM THAT CAN STOP BEING TRUE
+
+The audit flagged *"tap cost {t} — not enforced (see ledger)"* on **every
+card whose text contains the symbol**, and by this version it was wrong
+about **fourteen of the pool's seventeen**: an ally's tap has been charged
+since v3.44, a weapon's since v2.46, an equipment or item ability's by
+`tapsToActivate` + `perTurnCleared`, a triggered *"you may {t} this"* since
+v3.33, and a hero's as of now.
+
+It asks the **CLAUSE** now, exactly as the `{u}` flag beside it does —
+and `noop` is the right state for an activation LINE, because the tap is
+charged by the **ROUTE**, not by an op. Three cards keep the flag and all
+three are one shape: the ability's **payload** has no reader, so there is
+no ability for a tap to be charged against (Bravo's *"turn a face-down
+card face-up"*, Goldkiss Rum, Turn to Mindfire's Ponder rider). Flagged
+cards **65 → 54**.
+
+`tools/ledger.js`'s `{t}` and `{u}` entries both still said *"not
+parsed"*. That is not prose — `failstates.js` grades a keyword's severity
+against its **status** rather than a grep (v3.00), so a stale `pending` is
+load-bearing. Both are corrected: **v3.41's rule, that when you close a
+recorded gap you delete the record.**
+
+**Coverage 334 → 335 full, 12 → 11 none.** Fairness clean, UNFAIR 0.
+Symmetry ledger 43 → 44. 21 new drills, every one sabotaged.
+
 ## v3.47 — untap, and why refusing it was right until now
 
 `{u}` has been flagged *"not parsed (see ledger)"* for as long as that flag

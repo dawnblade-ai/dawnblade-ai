@@ -1289,6 +1289,25 @@ function classifyClause(raw){
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
   /* RULING: opt X — look at the top X, then put them back on top or bottom
      in any order. The trainer reorders by advisor value and says so. */
+  /* ---- TAPPING A HERO (v3.48) ---------------------------------------
+     RULING (user, 2026-08-25): "Tapping a hero doesn't mean much on its
+     own — when tapped it mainly means it cannot be tapped again to pay a
+     cost. The tapping mechanism was added in later sets and older heroes
+     are often unaffected by being tapped."
+
+     So the op sets ONE state and nothing else. The narrowness is the
+     ruling, not a shortcut: inventing a defence or speed penalty for a
+     tapped hero would be the golden rule broken at the keyword level, and
+     the ruling says in as many words that most heroes are unaffected.
+
+     "THEM AND ALL ALLIES THEY CONTROL" is one printed sentence naming two
+     targets, so it is one op with a flag rather than two clauses — and
+     the ally half is what the card is FOR now that allies tap to attack
+     (v3.44): a tapped ally cannot swing. */
+  if(/^(?:you may )?\{t\} (?:target hero|them)$/.test(c)) return R([["tapFoeHero",1]]);
+  if(/^(?:you may )?\{t\} them and all allies they control$/.test(c))
+    return R([["tapFoeHero",1,{allies:true}]]);
+  if(/^(?:you may )?\{t\} your hero$/.test(c)) return R([["tapSelfHero",1]]);
   /* ---- UNTAP, AND WHY IT ONLY MEANS SOMETHING NOW (v3.47) -----------
      "{u} target ally you control" — Scuttle Toes, Gravy Bones' Legs.
      `{u}` was flagged "not parsed" in the ledger for as long as the flag
@@ -3339,7 +3358,19 @@ function abilityGa(c){
    reads as null there and would be treated as a plain allowance. Two
    shapes, one question, asked of the cost segment before the colon. */
 function tapsToActivate(tx){
-  const line = clean(tx || "").split(/\n+/)
+  /* SPLIT THE RAW TEXT, THEN CLEAN EACH LINE (v3.48). This called
+     `clean(tx).split(/\n+/)`, and `clean` COLLAPSES the very newlines the
+     split depends on — the same trap `printedKw` and `kwGated` each carry
+     a comment about. The whole card arrived as one line, so the `.find`
+     only ever matched a card whose activated ability is its FIRST printed
+     line, and answered FALSE for any other.
+
+     Two live casualties: Lyath Goldmane, whose "Instant - {r}{r}, {t}:"
+     sits under his halving static, and Concealed Object, whose tap sits
+     under its own destroy clock. For those two the flag was filed as a
+     per-turn ALLOWANCE instead of a TAP, so `perTurnCleared` lifted it at
+     the turn boundary rather than at the controller's untap step. */
+  const line = String(tx || "").split(/\n+/).map(l => clean(l))
     .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
   const cost = (line.split(":")[0] || "");
   return /\{t\}/i.test(cost);

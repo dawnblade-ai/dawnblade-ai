@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.47 · PHASE C · ALLY COMBAT COMPLETE
+# Handoff — Dawnblade, at v3.48 · PHASE C · ALLY COMBAT COMPLETE
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -12,14 +12,15 @@
 > because breaking that rule cost a real bug.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
-> the card semantics run on both boards.** `npm test` is **1467 drills**
+> the card semantics run on both boards.** `npm test` is **1488 drills**
 > and **0 skipped**. Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >
-> Current at v3.47: coverage **334 full / 59 part / 12 none** (Oysten
-> earned +1 at v3.46 and Scuttle Toes +1 at v3.47; v3.42-45 all fixed
-> things no coverage tool can see), fairness **clean**,
+> Current at v3.48: coverage **335 full / 59 part / 11 none** (Oysten
+> earned +1 at v3.46, Scuttle Toes +1 at v3.47 and Entangling Shot +1 at
+> v3.48; v3.42-45 all fixed things no coverage tool can see), fairness
+> **clean**,
 > `tools/failstates.js` **0 UNFAIR**, `npm run crindex` **50 of 63 CR
 > rules guarded** (the 3 UNGUARDED are section pointers).
 >
@@ -113,7 +114,37 @@
 > **His other two `part` cards:** Arcane Polarity needs "if you have been
 > DEALT arcane damage this turn" (`hist.arc` records arcane DEALT BY you,
 > v3.28 — this is the other direction and is a new field); Turn to
-> Mindfire needs a {t} cost on the HERO plus a Ponder token.
+> Mindfire needed a tapped HERO as a state, which **v3.48 built**, and
+> still needs the `hits` optional-cost trigger and a Ponder token.
+
+> ### v3.48 — A TAPPED HERO, AND THE ONE THING IT MEANS
+>
+> **RULING (user, 2026-08-25): a tapped hero "cannot be tapped again to
+> pay a cost", and is otherwise largely unaffected.** So `heroTapped` gates
+> exactly that. Three of fifteen pool heroes print a `{t}` cost, so for the
+> other twelve the tap is a correctly-read no-op and the feed says so.
+> **When a ruling tells you a mechanic mostly does nothing, build the
+> nothing** — inventing a penalty is the golden rule broken at the keyword
+> level.
+>
+> It is a **different record** from `weaponUsed["hpow"]`: an allowance
+> comes back at every turn boundary for both seats, a TAP waits for the
+> controller's untap step (CR 4.4.3d). They come apart the moment an
+> OPPONENT taps you, which is the whole of what the two cards do.
+>
+> **Two things found on the way, and both are shapes CLAUDE.md already
+> names:**
+>
+> - **`tapsToActivate` split `clean(tx)`**, and `clean` collapses the very
+>   newlines the split depends on — so it only ever matched a card whose
+>   activated ability is its FIRST printed line. **Lyath Goldmane** and
+>   **Concealed Object** were filing a TAP as a per-turn allowance.
+> - **The audit's blanket `{t}` flag was wrong about 14 of 17 cards.** A
+>   tap is charged by the **ROUTE**, so `noop` is correct for an activation
+>   line and only a `skip` means nothing enforces it. Flagged cards 65 →
+>   54. `tools/ledger.js`'s `{t}` and `{u}` entries both still said "not
+>   parsed"; `failstates.js` grades severity against that STATUS, so a
+>   stale `pending` is load-bearing, not prose.
 
 > ### START HERE — the things a new thread should pick up
 >
@@ -143,15 +174,18 @@
 > | Silent Stilettos | a death trigger for the CONTROLLER's own attacking ally, plus an "if you do" payload — the family this project does not read |
 > | Jack Be Quick | `{u}` an OPPOSING ally and STEAL it — a control change nothing models. Still flagged by the audit, honestly |
 > | Carrion Crown | "Discard an ally" as a COST — the optional-cost family reads zones, not board entries |
-> | Goldkiss Rum, Entangling Shot, Drop the Anchor | tapping a HERO. **This needs a RULING before it needs code** — the card text does not say what a tapped hero cannot do, and guessing is the golden rule broken at the keyword level |
+> | ~~Entangling Shot, Drop the Anchor~~ | **BUILT at v3.48** off the RULING (user, 2026-08-25). Entangling Shot went `none` → `full`; Drop the Anchor's rider left `quotedUnread`. See below |
+> | Goldkiss Rum | still open, and **unreachable**: nothing in the pool creates the token. Its `{t} your hero` is an activation COST rather than a payload, which is the one shape the v3.48 reader does not cover |
 >
 > **1d. FOUND, RECORDED, NOT FIXED — Cosmo is routed as a swinging
 > weapon.** Unchanged from v3.44; `parser.allyAttack` guards `power > 0`,
 > judge's weapon branch does not.
 >
-> **2. Turn to Mindfire — the last card on Blaze.** Four pieces, three of
-> them general: the `hits` optional-cost trigger (unwired since v3.20), a
-> TAP as a cost kind, a tapped HERO as a state, and the Ponder token. Full
+> **2. Turn to Mindfire — the last card on Blaze, and now HALF built.**
+> Of the four pieces, **v3.48 supplied two**: a tapped HERO is a real state
+> (`heroTapped`) and `{t} your hero` reads as `tapSelfHero`. What is left
+> is the `hits` optional-cost trigger (unwired since v3.20) and the
+> **Ponder token**, whose printed text nothing has looked at. Full
 > write-up in the v3.40 CHANGELOG entry. **It would be free in this pool
 > and that is not a reason to fake it.**
 >
@@ -172,7 +206,7 @@
 > ### THE SHIPPING LOOP, as actually run this cycle
 >
 > ```
-> npm test                      # 1423 drills · 0 fail · 0 SKIPPED (read the skip count)
+> npm test                      # 1488 drills · 0 fail · 0 SKIPPED (read the skip count)
 > npm run fairness              # must say "Nothing found"
 > node tools/failstates.js      # UNFAIR must be 0
 > npm run audit                 # read the diff card by card, never the totals

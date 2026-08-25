@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.47
+**Current version:** v3.48
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1423 drills**.
+This is `node --test "test/*.test.js"` — currently **1488 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -401,6 +401,73 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### A RULING'S NARROWNESS IS THE RULING (v3.48)
+
+**RULING (user, 2026-08-25): a tapped hero "cannot be tapped again to pay
+a cost", and "older heroes are often unaffected by being tapped."**
+
+So `heroTapped` gates exactly that and nothing else. A tapped hero keeps
+its life, intellect, defence and windows — anything more would be
+inventing a rule at the keyword level, which is the golden rule broken one
+layer above the card. Measured: **three of fifteen pool heroes** print a
+`{t}` cost (Bravo, Gravy Bones, Lyath), so for the other twelve the tap is
+a correctly-read **no-op** and the FEED says which. When a ruling tells you
+a mechanic mostly does nothing, build the nothing.
+
+**IT IS A DIFFERENT RECORD FROM THE ALLOWANCE** — v2.46's "two limits that
+expire differently", one zone further in:
+
+| | is | lifted by |
+|---|---|---|
+| `weaponUsed["hpow"]` | a per-turn **ALLOWANCE** | every turn boundary, both seats |
+| `heroTapped` | the **STATE** | the controller's own untap step (CR 4.4.3d) |
+
+They coincide for a hero using its own ability and **come apart the moment
+an OPPONENT taps you**. Drive a whole turn to tell them apart: the
+allowance comes back and the tap does not.
+
+**THE BUILD READ MUST BE THE TAPPED SIDE'S.** `tapFoeHero` taps the OTHER
+seat, so `bAct` there asks whether the **tapper's** hero has a `{t}`
+ability — the wrong hero, and right by accident only in the self branch.
+`arcTaken`'s inversion (v3.40) in a feed line; the sabotage that finds it
+is Blaze tapping Lyath rather than the reverse.
+
+**AND READING THE PAYLOAD CREATED THE ROUTE, AGAIN** (v3.47's shape, two
+versions running). Entangling Shot went `none` → `full` with no wiring:
+`parseHeroPower` refuses a line whose payload has no reader, so the
+arsenal-up trigger simply appeared. Drop the Anchor's rider left
+`quotedUnread` the same way — and is **hero-gated**, because *"when this
+hits a hero"* must not fire off a hit on an ally (v3.45). One printed
+sentence naming two targets (*"them and all allies they control"*) is
+**one op with a flag**, not two clauses; Entangling Shot prints no ally
+half and gets none.
+
+**`clean` COLLAPSES THE NEWLINES A SPLIT DEPENDS ON.** `tapsToActivate`
+split `clean(tx)` on `/\n+/`, so the whole card arrived as one line and
+the `.find` only ever matched a card whose activated ability is its FIRST
+printed line. Two live casualties — **Lyath Goldmane** (his ability sits
+under the halving static) and **Concealed Object** (under its own destroy
+clock) — filed a TAP as a per-turn allowance, so `perTurnCleared` lifted
+it at the wrong boundary. `printedKw` and `kwGated` each carry a comment
+about this trap; it is worth reading before any new line-wise scan. Split
+the RAW text, clean each line.
+
+**A BLANKET FLAG IS A CLAIM THAT CAN STOP BEING TRUE.** The audit flagged
+*"tap cost {t} — not enforced"* on every card whose text contains the
+symbol, and it was wrong about **14 of 17**: a tap is charged by the
+**ROUTE** — an ally's attack (v3.44), a weapon swing (v2.46), an equipment
+ability (`tapsToActivate` + `perTurnCleared`), a triggered *"you may {t}
+this"* (v3.33), a hero's own (v3.48) — so `noop` is the correct state for
+an activation LINE and only a `skip` means nothing enforces it. Three keep
+the flag, all one shape: the ability's **payload** has no reader. Flagged
+cards 65 → 54.
+
+**AND `tools/ledger.js` IS NOT PROSE.** Its `{t}` and `{u}` entries both
+still said *"not parsed"*. `failstates.js` grades a keyword's severity
+against its **status** rather than a grep (v3.00), so a stale `pending` is
+load-bearing — v3.41's rule, that when you close a recorded gap you delete
+the record, applied to the file that gets graded.
 
 ### A REFUSAL CAN BE RIGHT FOR YEARS AND THEN STOP BEING (v3.47)
 

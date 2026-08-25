@@ -1001,6 +1001,46 @@ function makeEffects(ctx){
          skips it, which is the card doing nothing rather than the seat
          declining. The feed says which, because "nothing happened" and
          "they chose not to" are different lessons. */
+      /* ---- TAP A HERO (v3.48) ----------------------------------------
+         RULING (user, 2026-08-25): a tapped hero "cannot be tapped again
+         to pay a cost", and that is the WHOLE consequence — the ruling
+         adds that most heroes are otherwise unaffected, so anything more
+         would be inventing a rule the card does not print.
+
+         Of the pool's fifteen heroes only three print a `{t}` cost on
+         themselves — Bravo, Gravy Bones and Lyath — so for the other
+         twelve this is deliberately a no-op that still reads correctly.
+         The feed says so, because "nothing happened" and "nothing was
+         supposed to happen" are different lessons. */
+      else if(k==="tapFoeHero" || k==="tapSelfHero"){
+        const side = k==="tapSelfHero" ? actorOf(n) : 1-actorOf(n);
+        const mut = side===actorOf(n) ? actMut : foeMut;
+        const who = n.sides[side];
+        /* THE BUILD OF THE TAPPED SIDE, not the actor's. `tapFoeHero`
+           taps the OTHER seat, so `bAct` here would ask whether the
+           tapper's hero has a {t} ability — the wrong hero, and right by
+           accident only in the `tapSelfHero` branch. */
+        const wb = side===actorOf(n) ? bAct(n) : bFoe(n);
+        if(who.heroTapped) n = L(n, `${srcName}: ${who.name} is already tapped.`);
+        else {
+          mut(n).heroTapped = true;
+          n = L(n, `${srcName}: ${who.name} taps`
+                 + (P.tapsToActivate((wb.heroRec||{}).tx || "")
+                    ? ` — their {t} ability is locked until they untap.`
+                    : ` — which for ${who.name} costs them nothing they were using.`));
+        }
+        /* THE ALLY HALF IS WHY THE CARD IS PLAYED. Allies tap to attack
+           (v3.44), so tapping theirs stops a swing — where tapping the
+           hero mostly does not. One printed sentence, one op. */
+        if(op[2] && op[2].allies){
+          const board = (n.sides[side].board||[]);
+          const live = board.filter(b => b && G.isAlly(b) && !b.spent);
+          if(live.length){
+            mut(n).board = board.map(b => (b && G.isAlly(b)) ? {...b, spent:true} : b);
+            n = L(n, `${srcName}: ${live.length} all${live.length===1?"y is":"ies are"} tapped — they cannot attack this turn.`);
+          } else n = L(n, `${srcName}: ${who.name} controls no untapped ally.`);
+        }
+      }
       /* ---- UNTAP AN ALLY YOU CONTROL (v3.47) ------------------------
          `{t}` is what an ally spends to attack (v3.44), so an untap buys
          a SECOND attack and is the only way an ally swings twice.
@@ -1323,6 +1363,20 @@ function makeEffects(ctx){
     if(from==="grave"){ actMut(n).grave = act(n).grave.filter((_,i)=>i!==idx); }
     if(from==="banish"){ actMut(n).banish = act(n).banish.filter((_,i)=>i!==idx); }
     if(from==="weapon"||from==="hero"){ actMut(n).weaponUsed = {...act(n).weaponUsed,[card.uid]:true}; }
+    /* A HERO THAT PAYS {t} IS TAPPED, and that is a DIFFERENT record from
+       the allowance above (v3.48, and v2.46's lesson one zone further in).
+       `weaponUsed["hpow"]` says the ability was USED — a per-turn
+       allowance that comes back at the turn boundary. `heroTapped` says
+       the hero is TAPPED, which only its controller's untap step lifts
+       (CR 4.4.3d). They coincide for a hero using its own ability and
+       come apart the moment an OPPONENT taps you, which is exactly what
+       Entangling Shot and Drop the Anchor do.
+
+       READ THE HERO'S OWN PRINTED LINE, never the powCard's: `build.js`
+       strips the cost prefix off the ability when it builds HPOW, so the
+       `{t}` this asks about lives in the half that was removed. */
+    if(from==="hero" && P.tapsToActivate(((bAct(n).heroRec)||{}).tx || ""))
+      actMut(n).heroTapped = true;
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
        stays on the board, exactly as a weapon stays equipped —

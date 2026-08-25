@@ -151,7 +151,23 @@ function analyzeCard(rc){
      clause claims the head does not work either. */
   for(const q of (fx.quotedUnread || []))
     flags.push(`granted ability in quotes has NO reader: "${q}" — the head parses, this does not`);
-  if((rc.tx||"").includes("{t}")) flags.push("tap cost {t} — not enforced (see ledger)");
+  /* `{t}` IS ENFORCED WHEREVER ITS CLAUSE IS READ (v3.48). A blanket flag
+     here was a claim that stopped being true in stages, and by v3.48 it
+     was wrong about FOURTEEN of the pool's seventeen `{t}` cards: an
+     ally's tap since v3.44, a weapon's since v2.46, an equipment ability's
+     since `tapsToActivate`, a triggered `you may {t} this` since v3.33,
+     and a HERO's since the RULING (user, 2026-08-25).
+
+     The test is the CLAUSE, exactly as for `{u}` beside it. `noop` is the
+     right state for an activation LINE — the tap is charged by the ROUTE,
+     not by an op (v3.44) — so only a `skip` means nothing enforces it.
+     Three remain and all three are the same shape: the ability's PAYLOAD
+     has no reader, so there is no ability to charge a tap for. Bravo's
+     "turn a face-down card face-up", Goldkiss Rum's (a token nothing
+     creates) and Turn to Mindfire's Ponder rider. */
+  if((rc.tx||"").includes("{t}")
+     && (fx.clauses||[]).some(cl => cl.st === "skip" && String(cl.t).includes("{t}")))
+    flags.push("tap cost {t} — not enforced: its clause has no reader");
   /* `{u}` IS PARSED WHERE IT IS BUILT (v3.47). Scuttle Toes' "{u} target
      ally you control" reads now that an untap buys something — allies tap
      to attack since v3.44 — so a blanket flag here is a claim that stopped

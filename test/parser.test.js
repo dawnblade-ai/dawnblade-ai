@@ -1308,13 +1308,27 @@ test("arsenal — the reader is NOT loosened for other conditional abilities", (
 });
 
 test("arsenal — an unreadable payload leaves the card unclaimed", () => {
-  /* Entangling Shot taps a hero (not modelled) and Spire Sniping's "put
-     them back in any order" is a REORDER, which opt is not — opt lets you
-     bottom cards, which would be strictly more powerful. */
-  assert.equal(ars("ARS tap", "When this is put face-up into your arsenal, you may {t} target hero.").arsenalUp,
-    undefined);
+  /* THE TAP HALF OF THIS DRILL CAME DUE AT v3.48, and the reason was
+     carried in this comment, which is what a recorded refusal is FOR
+     (v3.38). It used to read "Entangling Shot taps a hero (not
+     modelled)"; the RULING (user, 2026-08-25) settled what tapping a hero
+     means, so the payload has a reader and the route opens by itself —
+     `parseHeroPower` refuses a line whose payload has none (v3.04).
+
+     Spire Sniping is unchanged and still refuses: "put them back in any
+     order" is a REORDER, which opt is not — opt lets you BOTTOM cards,
+     which is strictly more powerful than the card prints. */
+  assert.deepEqual(ars("ARS tap", "When this is put face-up into your arsenal, you may {t} target hero.").arsenalUp,
+    [["tapFoeHero", 1]]);
   assert.equal(ars("ARS reorder",
     "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
+    undefined);
+  /* KEEP THE REFUSAL PROPERTY ALIVE WITH ITS OWN PROBE. The vocabulary is
+     closed, so a payload nothing reads must still leave the card
+     unclaimed — retiring the last card that proved it would otherwise
+     retire the rule with it. */
+  assert.equal(ars("ARS unread",
+    "When ARS unread is put face-up into your arsenal, transmogrify target hero into a goat.").arsenalUp,
     undefined);
 });
 

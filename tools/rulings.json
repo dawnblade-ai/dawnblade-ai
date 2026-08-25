@@ -1234,5 +1234,20 @@
    "Aether Quickening (3)"
   ],
   "ruling": "If this deals more than its own printed damage, it gains go again. Amp (the parser's own 'amp' op / bonus-arcane-pool mechanic) is the only thing in this pool that can push a non-attack arcane effect above its printed base, so 'did this deal more than base' reduces to 'is an Amp bonus live right now', checked before the arcane op consumes it. classifyClause captures the printed N into cond surgeOverN for future cards; wired in index.html's execute() cond switch as act(n).amp>0."
+ },
+ "hero-tapped": {
+  "at": "2026-08-25",
+  "mechanic": "a tapped hero",
+  "status": "ruled",
+  "cards": [
+   "Entangling Shot (1)",
+   "Drop the Anchor (1)",
+   "Goldkiss Rum (0)",
+   "Turn to Mindfire (1)",
+   "Bravo, Flattering Showman (0)",
+   "Gravy Bones (0)",
+   "Lyath Goldmane (0)"
+  ],
+  "ruling": "Tapping a hero doesn't mean much on its own — when tapped it mainly means it cannot be tapped again to pay a cost. The tapping mechanism was added in later sets and older heroes are often unaffected by being tapped."
  }
 }

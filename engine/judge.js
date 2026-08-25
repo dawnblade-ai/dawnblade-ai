@@ -733,6 +733,26 @@ function legal(g, a, seat){
       const ab = bOf(g, seat).HPOW;
       if(!ab) return "your hero prints no activated ability";
       if((sd.weaponUsed||{})["hpow"]) return ab.name + " is spent for this turn";
+      /* ---- A TAPPED HERO CANNOT PAY A {t} COST AGAIN (v3.48) ---------
+         RULING (user, 2026-08-25): "Tapping a hero doesn't mean much on
+         its own — when tapped it mainly means it cannot be tapped again
+         to pay a cost." That is the WHOLE consequence, and the narrowness
+         is the point: nothing else about the hero changes, so inventing a
+         defence or speed penalty here would be the golden rule broken at
+         the keyword level.
+
+         It is a DIFFERENT question from `weaponUsed["hpow"]`, which
+         records that the ability was USED — a per-turn allowance cleared
+         at the turn boundary. A tap is a STATE only the controller's
+         untap step lifts (CR 4.4.3d). The two coincide for a hero's own
+         ability and come apart the moment an OPPONENT taps you, which is
+         exactly what Entangling Shot and Drop the Anchor do. */
+      /* READ THE HERO'S OWN PRINTED LINE, not the powCard's. `build.js`
+         strips the cost prefix off the ability when it builds HPOW, so
+         `tapsToActivate(HPOW.tx)` is false for every hero — the `{t}` it
+         asks about lives in the half that was removed. */
+      if(sd.heroTapped && PR.tapsToActivate((bOf(g, seat).heroRec || {}).tx || ""))
+        return sd.name + " is tapped — that ability costs {t}, and a tapped hero cannot pay it again";
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -2029,12 +2049,17 @@ function endPhaseAfterArsenal(g, seat){
      "All permanents" is the whole arena, not just the gear zone. An ally
      that taps to swing is a permanent in the arena, and it untaps here
      like anything else; leaving `spent` set would retire it after one
-     use. Nothing taps an ally yet — allies are attackABLE and do not
-     attack (see the module header) — so this is the step being complete
-     rather than a bug being fixed, and it is the half that has to exist
-     before the other half can be built. */
+     use. This was written before allies could attack and said so —
+     allies DO tap to attack as of v3.44, so the step this comment
+     described as "complete rather than a bug being fixed" is now load
+     bearing, and Scuttle Toes' untap (v3.47) is the only other lift.
+
+     THE HERO UNTAPS TOO (v3.48). RULING (user, 2026-08-25): a tapped hero
+     "cannot be tapped again to pay a cost", and this is the step that
+     lifts it — the turn-player's own, so a hero tapped by an opponent
+     stays tapped through the rest of that turn and no longer. */
   n = put(n, seat, s => ({...s,
-    weaponUsed: {},
+    weaponUsed: {}, heroTapped: false,
     board: (s.board || []).map(b => b.spent ? {...b, spent: false} : b)}));
   n = say(n, "(d) " + at(n, seat).name + " untaps.");
 

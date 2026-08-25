@@ -341,9 +341,16 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      card at all — driven, Stir's +1 landed on a Runeblade Defense
      Reaction. Cindering Foresight keeps the bare `amp` because it really
      does print "THE NEXT CARD you play this turn". */
-  assert.equal(gap.fields, 43);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37 */
-  assert.equal(gap.player.length, 43);
-  assert.equal(gap.opponent.length, 43);
+  /* 43 -> 44 AT v3.48, DELIBERATELY. `heroTapped` is a tapped HERO, and it
+     had to be its own field rather than another `weaponUsed` key: that map
+     records "this ability was USED", which is a per-turn allowance cleared
+     at the turn boundary, while a tap is a STATE only the controller's
+     untap step lifts (CR 4.4.3d). The two coincide for a hero's own
+     ability and come apart the moment an OPPONENT taps you — which is the
+     whole of what the ruling (user, 2026-08-25) says a tapped hero means. */
+  assert.equal(gap.fields, 44);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48 */
+  assert.equal(gap.player.length, 44);
+  assert.equal(gap.opponent.length, 44);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -353,8 +360,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 43);   /* … +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37 */
-  assert.equal(gap.nativeForOpponent.length, 43);
+  assert.equal(gap.nativeForPlayer.length, 44);   /* … +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48 */
+  assert.equal(gap.nativeForOpponent.length, 44);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

@@ -95,8 +95,15 @@ const SYMBOLS = {
   "{i}": {status:"display", note:"intellect — stat display only, no parsed ops use it"},
   "{p}": {status:"live", note:"power / pitch pips — pump parser reads +N{p} and the +1/2/3{p} shorthand"},
   "{r}": {status:"live", note:"resource — costs and gains"},
-  "{t}": {status:"pending", note:"TAP cost symbol. AUDIT FINDING 2026-07-22: no pool text spells the word 'tap', so the trainer's /\\btap\\b/ rotation checks never fire — tap detection must key on {t}; parser does not enforce tap costs"},
-  "{u}": {status:"pending", note:"UNTAP — seen on Jack Be Quick, Scuttle Toes; not parsed"},
+  /* WHEN YOU CLOSE A RECORDED GAP, DELETE THE RECORD (v3.41). Both of
+     these said "not parsed" and both had stopped being true — and this
+     ledger is not prose: `failstates.js` grades a keyword's severity
+     against its STATUS rather than a grep, so a stale `pending` is
+     load-bearing. The 2026-07-22 finding underneath the {t} note is kept
+     because it is still the reason tap detection keys on the symbol and
+     never on the word. */
+  "{t}": {status:"live", note:"TAP cost symbol. AUDIT FINDING 2026-07-22: no pool text spells the word 'tap', so tap detection keys on {t} and never on the word. Charged by the ROUTE, per source: an ally's attack (v3.44), a weapon swing (v2.46 weaponCost.taps), an equipment or item ability (tapsToActivate + perTurnCleared), a triggered `you may {t} this` (v3.33), and a HERO's own ability (v3.48). RULING (user, 2026-08-25): a tapped hero cannot be tapped again to pay a cost, and is otherwise unaffected. 14 of the pool's 17 {t} cards enforce it; the 3 that do not have no reader for the ability's PAYLOAD"},
+  "{u}": {status:"partial", note:"UNTAP — BUILT v3.47 for Scuttle Toes (`{u} target ally you control`), which buys a second ally attack now that allies tap to attack. Jack Be Quick still refuses: its {u} untaps an OPPOSING ally and then steals it, and nothing models a control change"},
   "{x}": {status:"display", note:"variable X cost (Beckoning Haunt) — no parsed ops"},
 };
 

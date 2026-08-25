@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-25T14:13:10.275Z",
+ "generated": "2026-08-25T15:53:51.183Z",
  "appVer": "3.47",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 334,
+  "full": 335,
   "part": 59,
-  "none": 12
+  "none": 11
  },
  "heroes": {
   "kayo": {
@@ -4588,9 +4588,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Whenever you play an aura, you may {t} this and pay {r}. If you do, create a Seismic Surge token.\nGuardwell",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "sledge of anvilheim|0": {
    "name": "Sledge of Anvilheim",
@@ -5798,10 +5796,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p} and \"When this hits a hero, {t} them and all allies they control.\"\nGo again",
-   "flags": [
-    "granted ability in quotes has NO reader: \"when this hits a hero, {t} them and all allies they control.\" — the head parses, this does not",
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "dry powder shot|1": {
    "name": "Dry Powder Shot",
@@ -5844,24 +5839,20 @@
     "{t}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this is put face-up into your arsenal, you may {t} target hero.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is put face-up into your arsenal, you may {t} target hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put face-up into your arsenal, you may {t} target hero.",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "infecting shot|1": {
    "name": "Infecting Shot",
@@ -10573,7 +10564,7 @@
    "eqAbility": null,
    "tx": "Deal 5 arcane damage to any target.\nIf this deals damage, you may {t} your hero. If you do, create a Ponder token.",
    "flags": [
-    "tap cost {t} — not enforced (see ledger)"
+    "tap cost {t} — not enforced: its clause has no reader"
    ]
   },
   "voltic bolt|1": {
@@ -11878,9 +11869,7 @@
    },
    "eqAbility": null,
    "tx": "Action - {t}: Attack. Activate this only if you control a Lightning attack.\nWhen this hits a hero, deal 1 arcane damage to them.",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "star fall|0": {
    "name": "Star Fall",
@@ -12699,7 +12688,6 @@
    "eqAbility": "Look at the top card of your deck",
    "tx": "Instant - {t}: Look at the top card of your deck.\nThe first card with watery grave you play from your graveyard each turn gets go again.",
    "flags": [
-    "tap cost {t} — not enforced (see ledger)",
     "granted go-again with no parsed grant path",
     "text mentions go again but no clause parses it"
    ]
@@ -13038,9 +13026,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {t}: Attack\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "cutty shark quick clip|2": {
    "name": "Cutty Shark, Quick Clip",
@@ -13087,9 +13073,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {r}, {t}: Attack\nOnce per Turn Action - {r}: Your next ally attack this turn gets +1{p}. Go again\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "golden tipple|2": {
    "name": "Golden Tipple",
@@ -13169,9 +13153,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {r}, {t}: Attack. Go again\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "oysten heart of gold|2": {
    "name": "Oysten, Heart of Gold",
@@ -13211,9 +13193,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {t}: Attack\nWhen this dies, create a Gold token.\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "riggermortis|2": {
    "name": "Riggermortis",
@@ -13250,9 +13230,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {r}, {t}: Attack\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "swabbie|2": {
    "name": "Swabbie",
@@ -13289,9 +13267,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Action - {r}{r}, {t}: Attack\nWatery Grave",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "avast ye|3": {
    "name": "Avast Ye!",
@@ -14476,9 +14452,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this enters the arena, the crowd boos you.\nInstant - {t}: Target attack gets +1{p}.\nAt the beginning of your end phase, destroy this.",
-   "flags": [
-    "tap cost {t} — not enforced (see ledger)"
-   ]
+   "flags": []
   },
   "full of bravado|3": {
    "name": "Full of Bravado",

@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.47"; /* v3.47 — untap, and why it only means something now: `{u}` was flagged "not parsed" in the ledger for as long as the flag has existed, and refusing it was RIGHT the whole time — until v3.44 allies did not tap, so untapping one bought nothing. Now {t} is what an ally spends to attack, so Scuttle Toes' "{u} target ally you control" buys a SECOND attack, and reading the payload is what gives the piece a powCard at all (`parseHeroPower` refuses a line it cannot read, so the card had no route on either board and sat at tier `part`). "Destroy IT at the beginning of the end phase" names the ALLY, not the source — the source was already destroyed to pay the cost — so the clock rides on the untap op, v2.33's Bull's Eye Bracers trap. And a destroyed ally has DIED, so the sweep fires Oysten's Gold (v3.46), which closes the chain. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.48"; /* v3.48 — a tapped hero, and the one thing it means: RULING (user, 2026-08-25) — "when tapped it mainly means it cannot be tapped again to pay a cost", and the NARROWNESS is the ruling, so `heroTapped` gates exactly that and nothing else. Three of fifteen pool heroes print a {t} cost, so for the other twelve the tap is a correctly read no-op and the feed says so. It is a different record from `weaponUsed["hpow"]` — an allowance comes back at every turn boundary for both seats, a TAP waits for the controller's untap step (CR 4.4.3d) — and they come apart the moment an OPPONENT taps you, which is what Entangling Shot (none -> full) and Drop the Anchor (its rider left `quotedUnread`) do. Found on the way: `tapsToActivate` split `clean(tx)`, and `clean` collapses the newlines the split depends on, so it only ever saw a card whose ability is its FIRST printed line — Lyath Goldmane and Concealed Object were filing a TAP as a per-turn allowance. And the audit's blanket "{t} not enforced" flag was wrong about 14 of 17 cards; it asks the clause now. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3707,6 +3707,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        second seat has a turn between yours. */
     const tapped = Object.keys(act(n).weaponUsed||{}).length;
     actMut(n).weaponUsed = {};
+    /* THE HERO UNTAPS HERE TOO (v3.48). RULING (user, 2026-08-25): a
+       tapped hero "cannot be tapped again to pay a cost", and this is the
+       step that lifts it — the turn-player's own, so a hero tapped by an
+       opponent stays tapped for the rest of that turn and no longer. */
+    if(act(n).heroTapped) actMut(n).heroTapped = false;
     n = L(n, tapped ? `(d) ${_me()} untap${_you()?"":"s"} ${tapped} permanent${tapped>1?"s":""}.`
                     : `(d) Nothing of ${_you()?"yours":_me()+"'s"} is tapped.`);
     /* THE OTHER SEAT KEEPS ITS TAPS AND LOSES ITS ALLOWANCE. CR 4.4.3d
@@ -4655,7 +4660,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   {handGear[0] ? gearBtn(handGear[0].gr, handGear[0].i) : <span className="wempty">weapon 1</span>}
                 </div>
                 <div className="heromid clip-sm">
-                  <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+((you(g).weaponUsed["hpow"]&&/\btap\b|\{t\}/i.test(built.heroRec.tx||""))?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
+                  <button className="hport2" onClick={()=>setZoom(built.HZOOM)}><span className={"tapwrap"+(you(g).heroTapped?" tapped":"")}><HeroArt h={h} db={db}/></span></button>
                   <span className="hname">{h.n.split(",")[0]}</span>
                   <b className="hlife2">{you(g).hp}</b>
                   <span className="hlbl">life</span>
