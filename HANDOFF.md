@@ -5,6 +5,28 @@
 > they win. The older sections are kept because each records a bug shape
 > that can come back, not because their numbers are live.
 
+## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.48 ARE ON A BRANCH
+
+**`git push origin main` IS the deploy** (GitHub Pages serves `main` at the
+repo root). These seven versions live on
+**`claude/dawnblade-ai-card-logic-jp8wi9`**, pushed and green but **not
+merged**, so **none of it is live** and the site still serves v3.41.
+
+```
+v3.42  Avast Ye!'s rider — gaNextQ had no field to carry one
+v3.43  the two defects v3.42 left in the grant it had just reshaped
+v3.44  ALLIES ATTACK — the parser had been ready for years, the ROUTE had not
+v3.45  whose hit was it — 34 records fired hero-gated triggers off an ally hit
+v3.46  the on-attack twin, and an ally that dies does what it prints
+v3.47  untap — {u} refused correctly for years, then stopped being right
+v3.48  a tapped hero, and the one thing it means (ruling, 2026-08-25)
+```
+
+Merging is a decision, not a step: **the trainer is the regression harness
+and none of this has been played on a phone yet** (CLAUDE.md's validation
+item 7). Ally combat is the largest behaviour change in this stretch and
+the one most worth a play session before it reaches a player.
+
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
 > Read `CLAUDE.md` in full, then **`FINISH.md`** — the blueprint to done —
@@ -189,12 +211,37 @@
 > write-up in the v3.40 CHANGELOG entry. **It would be free in this pool
 > and that is not a reason to fake it.**
 >
-> **3. The remaining heroes.** Dash, Azalea, Fai, Enigma, Boltyn, Gravy
-> Bones, Lyath, and Briar's 8 `part` cards. **Lyath is cheapest**: v3.39
-> un-truncated his hero powCard, so his second sentence ("Defending action
-> cards you control get +1{d} this turn") now reaches `fxParse` and needs
-> only a READER — it is close to `fx.defGrant` (v3.23). Leave **Arakni**
-> last (stealth-as-qualifier is filed `noop` by ruling).
+> **3. The remaining heroes — and LYATH IS NOW THE OBVIOUS NEXT ONE.**
+> Dash, Azalea, Fai, Enigma, Boltyn, Gravy Bones, Lyath, and Briar's 8
+> `part` cards. Three separate versions have converged on Lyath without
+> anyone aiming at him:
+>
+> | | |
+> |---|---|
+> | v3.39 | un-truncated his hero powCard, so his **second sentence** ("Defending action cards you control get +1{d} this turn") reaches `fxParse` at all |
+> | v3.48 | fixed `tapsToActivate`, which had been answering FALSE for him — his ability sits under his halving static — so his `{t}` cost is now charged and lifted at the right boundary |
+> | v3.23 | `fx.defGrant` is the shape that second sentence wants; it needs a READER, not new machinery |
+>
+> **Measured at v3.48, so nobody has to re-derive it.** `AUDIT.md` names
+> both of his remaining hero clauses by name, and his build carries
+> `lyathBoo` alone:
+>
+> ```
+> HPOW ops:  [["boo",1]]
+> clauses:   run[The crowd boos you]
+>            skip[Defending action cards you control get +1{d} this turn.]
+> AUDIT.md:  ⚠ unrecognized: "The base {p} and {d} of cards you control are halved, rounded up."
+>            ⚠ unrecognized: "Defending action cards you control get +1{d} this turn."
+> ```
+>
+> **The halving static is the hero's ONE mechanic** and it is worth reading
+> before any of his cards — the Kayo method, whose clause 2 was worth half
+> that deck. Note that halving a BASE value is a stronger claim than a
+> buff: it has to reach `zonePow`/`gearDef` and every display that reads
+> them, or the number on screen disagrees with the number that fought,
+> which is v3.23's sev-2 boundary. **Do not half-build it.**
+>
+> Leave **Arakni** last (stealth-as-qualifier is filed `noop` by ruling).
 >
 > **4. Read the method before the cards.** `CLAUDE.md` is long because
 > every section is a bug that shipped. The four that pay off most often:
