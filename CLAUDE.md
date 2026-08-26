@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.48
+**Current version:** v3.49
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1488 drills**.
+This is `node --test "test/*.test.js"` — currently **1496 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -401,6 +401,70 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### PLAY THE GAME. IT FINDS WHAT NO TOOL HERE CAN (v3.49)
+
+```
+npm run play                    # all 15 heroes, 210 games, ~4 minutes
+npm run play kayo,gravy '' 3    # a slice, 3 seeds each
+```
+
+`tools/selfplay.js` puts `sparring.act` in **both** seats and drives
+`judge.reduce`, running `invariants.check` against **every intermediate
+state** — a game that finishes clean can still have passed through a
+broken board. The first session it ran found a bug that had survived
+1488 drills, three sweeps and a coverage audit.
+
+**READ THE TOP THREE NUMBERS: refusals, violations, STALLS.** A refusal is
+always a bug in the policy (sparring.js's own contract); a violation is a
+broken board; and the **stall count is the cheapest livelock detector this
+project has.** 210 games came back with 0 refusals and 0 violations — and
+**14 games that ran past turn 1900 without ending**, which is what found
+Knucklehead.
+
+**A DEGENERATE GAME IS A BUG REPORT.** Both stalls were real and neither
+was visible to any tool here: one an engine bug, one a policy gap.
+
+**IT IS AN INSTRUMENT, NOT A DRILL.** It asserts nothing; it reports.
+Anything it proves that should STAY proven belongs in `test/` —
+`test/intellect.test.js` is the worked example.
+
+**AND ROUTE COVERAGE IS PART OF THE READING.** The report counts how often
+each new route fired. `death 0, gold 0` across 210 games is how the ally
+gap announced itself: **a feature with no caller looks exactly like a
+feature that works, until you count.** See `PLAYNOTES.md`.
+
+### A SCHEDULE'S SHARED HOME IS DECIDED BY WHAT MUST COME AFTER (v3.49)
+
+Knucklehead prints *"**until end of turn**, your base {i} is the number
+rolled"*. `intRoll` stashed the printed value on `intWas`, the trainer read
+it back inline, and **judge.js never did** — so at the table the rolled
+value was PERMANENT. A roll of 1 crippled the hero for the rest of the
+game; a roll of 6 was a permanent +2, the direction that steals games.
+v3.01's rule again: **a schedule is written per board, so ask which one
+runs it.**
+
+**`beginEndPhase` WAS THE OBVIOUS HOME AND WOULD HAVE BEEN WRONG.** The
+rolled value has to govern the **(f) draw** — that is the whole of what the
+card does, and `intRoll`'s own feed line says so. `beginEndPhase` runs
+*before* (a)-(f), so restoring there hands the draw the printed value and
+makes the card do nothing at all. `effects.settleIntellect` is called by
+both boards **after** the draw, on the turn-player's own end phase. **When
+you move a schedule into a shared body, check what it has to happen
+AFTER** — "one body" and "the right moment" are two requirements, and
+satisfying only the first is how a fix breaks a card in the other
+direction.
+
+**`lastRoll` IS CLEARED WITH IT.** A die left on the state is a later
+`intRoll` setting intellect from a roll nobody made this turn.
+
+**NO TOOL COULD SEE IT, AND EACH FOR ITS OWN REASON.** Coverage reads the
+clause consumed. The fairness sweep is one-sided and models no schedules —
+on a 5 or 6 this genuinely *is* stronger than printed. `failstates.js` has
+a *"no schedule to fire on"* category and fills it from **UNREAD** text,
+so a schedule that parses and then evaporates is the one case it cannot
+reach. And no drill caught it because **the trainer had the restore**, so
+anything measuring that board passed.
 
 ### A RULING'S NARROWNESS IS THE RULING (v3.48)
 
@@ -1841,6 +1905,9 @@ nor the card database defines it: the database carries no reminder text for
 any of them, so guessing the semantics would break the golden rule at the
 keyword level. Answer one, then teach the parser and re-run the audit.
 
+6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
+   games in about four minutes. Read refusals / violations / **stalls**;
+   see "PLAY THE GAME" below. It found a bug 1488 drills had not.
 Always, regardless of what the tests say:
 7. **On a real phone.** Type checking and drills verify the parser is
    correct, not that the feature is fun or legible — validate on-device

@@ -2094,6 +2094,20 @@ function endPhaseAfterArsenal(g, seat){
   n = say(n, "(f) " + seats.map(i => at(n, i).name).join(" and ") + " draw" + (seats.length > 1 ? "" : "s") + " to intellect."
     + (first && seats.length > 1 ? " (CR 4.4.3f — first turn only.)" : ""));
 
+  /* THE ROLLED INTELLECT SETTLES BACK, AFTER THE DRAW IT GOVERNED (v3.49).
+     Knucklehead's "until end of turn" was stashed on `intWas` by
+     `effects.intRoll` and read back by the TRAINER alone, so a table game
+     kept the rolled value for the rest of the game. A schedule is written
+     per board (v3.01) and this one was written on one board.
+
+     AFTER the draw, never before: the rolled value is what (f) draws to,
+     which is the whole of what the card does. */
+  {
+    const si = E.settleIntellect(n, seat);
+    n = si.game;
+    for(const m of si.msgs) n = say(n, m);
+  }
+
   /* CR 4.4.4 — "effects that last until end of turn end". `hist` is the
      per-turn ledger ("attacks played", "blues pitched"), so BOTH seats'
      clear, not only the incoming one: a card asking "have you pitched a

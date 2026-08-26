@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.48"; /* v3.48 — a tapped hero, and the one thing it means: RULING (user, 2026-08-25) — "when tapped it mainly means it cannot be tapped again to pay a cost", and the NARROWNESS is the ruling, so `heroTapped` gates exactly that and nothing else. Three of fifteen pool heroes print a {t} cost, so for the other twelve the tap is a correctly read no-op and the feed says so. It is a different record from `weaponUsed["hpow"]` — an allowance comes back at every turn boundary for both seats, a TAP waits for the controller's untap step (CR 4.4.3d) — and they come apart the moment an OPPONENT taps you, which is what Entangling Shot (none -> full) and Drop the Anchor (its rider left `quotedUnread`) do. Found on the way: `tapsToActivate` split `clean(tx)`, and `clean` collapses the newlines the split depends on, so it only ever saw a card whose ability is its FIRST printed line — Lyath Goldmane and Concealed Object were filing a TAP as a per-turn allowance. And the audit's blanket "{t} not enforced" flag was wrong about 14 of 17 cards; it asks the clause now. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.49"; /* v3.49 — the rolled intellect settles back: FOUND BY PLAYING. 210 self-play games through judge.reduce, and 14 of them ran past turn 1900 without ending. Knucklehead prints "until end of turn, your base {i} is the number rolled"; `intRoll` stashes the printed value on `intWas` and the TRAINER read it back while judge.js never did, so at the table the rolled value was PERMANENT — a 1 crippled the hero for the rest of the game and a 6 was a permanent +2. A schedule is written per board (v3.01) and this one was written on one board. It is NOT a beginEndPhase step: the rolled value has to govern the (f) DRAW, which is the whole of what the card does, so `effects.settleIntellect` is called AFTER the draw on the turn-player's own end phase, where the trainer always had it. No tool here could see it — coverage reads the clause consumed, the fairness sweep is one-sided and models no schedules, and failstates fills "no schedule to fire on" from UNREAD text. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3760,9 +3760,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n = L(n, drawn.length ? `(f) ${_me()} draw${_you()?"":"s"} ${drawn.length} back up to intellect ${act(n).int}.`
                           : `(f) Hand is already at intellect ${act(n).int} — no draw.`);
     /* RULING (Knucklehead): the rolled intellect governs THIS draw, then the
-       lingering macro clears — restore the printed value once cards are in. */
-    if(act(n).intWas!=null){ n = L(n, `Intellect settles back to ${act(n).intWas}.`); actMut(n).int = act(n).intWas; actMut(n).intWas = null; }
-    n.lastRoll = null; n.revealed = null;
+       lingering macro clears — restore the printed value once cards are in.
+       ONE BODY, BOTH BOARDS (v3.49). This was written out here and nowhere
+       else, so at the table the rolled value never came back at all. */
+    { const _si = DawnEffects.settleIntellect(n, actorOf(n));
+      n = _si.game; for(const m of _si.msgs) n = L(n, m); }
+    n.revealed = null;
 
     /* CR 4.4.3f, second sentence — "If it is the first turn of the game,
        ALL OTHER PLAYERS draw cards until the number of cards in their

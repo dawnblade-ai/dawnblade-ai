@@ -7,6 +7,73 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.49 — the rolled intellect settles back, and how playing found it
+
+**This one was found by PLAYING, not by a drill.** 210 self-play games —
+every hero against every other, `sparring.act` in both seats, driven
+through `judge.reduce` with the invariant judge auditing every
+intermediate state. The engine came through clean: **0 policy refusals, 0
+invariant violations, 0 malformed feed lines** across 210 complete games.
+
+**But 14 of them ran past turn 1900 and never ended.** Pulling one apart:
+
+```
+turn 1955   Iyslander hp 5, hand 4, deck 40
+            Kayo      hp 19, hand 1, deck 42   ← intellect 1
+both seats: pass, endTurn, pass, endTurn, forever
+```
+
+**Kayo's intellect was 1.** Knucklehead prints:
+
+> Action - Destroy this: Roll a 6 sided die. **Until end of turn**, your
+> base {i} is the number rolled.
+
+`effects.intRoll` stashes the printed value on `intWas`, and **nothing at
+the table ever read it back.** The trainer restored it inline in
+`index.html`; `judge.js` did not. So at a table the rolled value was
+**permanent** — a roll of 1 crippled the hero for the rest of the game,
+and a roll of 6 was a permanent +2 intellect, which is the direction that
+steals games.
+
+**A SCHEDULE IS WRITTEN PER BOARD (v3.01), and this one was written on one
+board.** Same family as phantasm's pop, the graveyard-play gate and the
+three end-phase events v3.17 pulled into `beginEndPhase`.
+
+**IT IS NOT A `beginEndPhase` STEP, and that is the whole of getting it
+right.** The rolled value has to govern the **(f) draw** — that is what
+the card is FOR, and `intRoll`'s own feed line says so ("that many cards
+at the draw step"). `beginEndPhase` runs *before* (a)-(f), so restoring
+there would hand the draw the printed value and make Knucklehead do
+nothing at all. `effects.settleIntellect(game, seat)` is the one body and
+both boards call it **after** the draw, on the turn-player's own end
+phase, exactly where the trainer always had it. `lastRoll` is cleared with
+it — a die left on the state is a later `intRoll` reading a roll nobody
+made this turn.
+
+**NO TOOL HERE COULD SEE IT.** Coverage reads Knucklehead's clause
+consumed. The fairness sweep is deliberately one-sided and models no
+schedules — and on a roll of 5-6 this genuinely IS stronger than printed.
+`failstates.js` has a "no schedule to fire on" category and fills it by
+looking for UNREAD text, so a schedule that parses and then evaporates is
+the one case it cannot reach. And no drill caught it because the trainer
+had the restore, so anything measuring that board passed.
+
+**The fix is worth 4 wins.** Kayo went 23 → 27 across the same 210
+matchups, and one stalled game (`iyslander-kayo`) now finishes.
+
+### WHAT ELSE THE SELF-PLAY FOUND — recorded, not fixed
+
+See `PLAYNOTES.md` for the full session. The three that matter:
+
+| finding | shape |
+|---|---|
+| **`sparring.act` has no arena branch** | v3.44-48 built ally combat and **nothing drives it**. 0 ally attacks across 549 opportunities; `death` and `gold` triggers never fired once in 210 games. The policy also proposes **0** hero-ability activations |
+| **`sparring.act` cannot pilot a control hero** | Iyslander scored **0 wins in 210 games** and is in all 13 remaining stalls. Driven: she holds four LEGAL cards and an action point, and the policy proposes `endTurn` — it plays attacks, and her deck is nearly all non-attacks |
+| **Cosmo swings for 0 power, 413 times** | judge routes on `types.isWeaponType` where `build.js` routes on `parser.isWeapon`. The pinned split says the powerless four take the ABILITY route. Tested as a fix and it did **not** help the stalls, so it is recorded rather than rushed |
+
+**1496 drills, 0 fail, 4 skipped.** 8 new drills, every one sabotaged
+seven ways. Fairness clean, coverage unchanged.
+
 ## v3.48 — a tapped hero, and the one thing it means
 
 **RULING (user, 2026-08-25), verbatim:**

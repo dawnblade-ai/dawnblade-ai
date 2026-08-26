@@ -1,11 +1,30 @@
-# Handoff — Dawnblade, at v3.48 · PHASE C · ALLY COMBAT COMPLETE
+# Handoff — Dawnblade, at v3.49 · PHASE C · THE TABLE HAS NOW BEEN PLAYED
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
 > they win. The older sections are kept because each records a bug shape
 > that can come back, not because their numbers are live.
 
-## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.48 ARE ON A BRANCH
+## ⚠ READ `PLAYNOTES.md` FIRST — THE TABLE HAS NOW BEEN PLAYED
+
+v3.49 added `npm run play`: `sparring.act` in **both** seats through
+`judge.reduce`, invariants checked on every intermediate state. The first
+run was **210 games, 0 policy refusals, 0 invariant violations, 0
+malformed feed lines** — and **14 games that never ended**, which found a
+bug 1488 drills had not (Knucklehead's intellect never settling back at
+the table; fixed in v3.49).
+
+**Two findings are OPEN and both are recorded rather than half-fixed:**
+
+| | |
+|---|---|
+| **ally combat has no driver** | `sparring.js` contains zero occurrences of `board`, `arena` or `ally`. **0 ally attacks in 549 opportunities**; the `death`/`gold` triggers of v3.46 fired **0 times in 210 games**. It also proposes **0** hero-ability activations. v3.44-48 built the route and nothing calls it |
+| **the policy cannot pilot a control hero** | Iyslander: **0 wins in 210 games**, and all 13 remaining stalls. Driven, she holds four LEGAL cards plus an action point and the policy proposes `endTurn` |
+
+**The hero ladder in `PLAYNOTES.md` measures the POLICY, not the decks.**
+Do not tune from it until the second finding is fixed.
+
+## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.49 ARE ON A BRANCH
 
 **`git push origin main` IS the deploy** (GitHub Pages serves `main` at the
 repo root). These seven versions live on
@@ -20,6 +39,7 @@ v3.45  whose hit was it — 34 records fired hero-gated triggers off an ally hit
 v3.46  the on-attack twin, and an ally that dies does what it prints
 v3.47  untap — {u} refused correctly for years, then stopped being right
 v3.48  a tapped hero, and the one thing it means (ruling, 2026-08-25)
+v3.49  the rolled intellect settles back — FOUND BY PLAYING
 ```
 
 Merging is a decision, not a step: **the trainer is the regression harness
@@ -35,7 +55,7 @@ the one most worth a play session before it reaches a player.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
 > the card semantics run on both boards.** `npm test` is **1488 drills**
-> and **0 skipped**. Read the SKIP count, not just the fails — a fresh
+> and **0 skipped** (1496 at v3.49). Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >

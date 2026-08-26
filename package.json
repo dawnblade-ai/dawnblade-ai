@@ -11,6 +11,7 @@
     "sweep": "node tools/sweep.js",
     "fairness": "node tools/fairness.js",
     "progress": "node tools/progress.js",
-    "crindex": "node tools/crindex.js"
+    "crindex": "node tools/crindex.js",
+    "play": "node tools/tourney.js"
   }
 }

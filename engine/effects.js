@@ -3886,6 +3886,44 @@ function thawFreeze(game, seat){
    Returns `{game, msgs, ops, fired}` — the same contract `sweepArena`
    already keeps, and for its reason: an op is actor-relative and the two
    boards reach `runOps` differently, so the caller runs them. */
+/* ---- THE ROLLED INTELLECT SETTLES BACK (v3.49) -----------------------
+
+   Knucklehead prints "Roll a 6 sided die. UNTIL END OF TURN, your base
+   {i} is the number rolled", and `intRoll` stashes the printed value on
+   `intWas`. **Nothing at the table ever read it back.** The trainer
+   restored it inline and `judge.js` did not, so a table game kept the
+   rolled value FOREVER — a 1 crippled the hero for the rest of the game
+   and a 6 was a permanent +2 intellect, which is the direction that
+   steals games.
+
+   FOUND BY PLAYING, not by a drill, and nothing here could have seen it:
+   coverage reads the clause consumed, the fairness sweep is one-sided and
+   models no schedules, and `failstates.js` fills its "no schedule to fire
+   on" category from UNREAD text while this text reads perfectly. It
+   surfaced as 14 of 210 self-play games running past turn 1900 without
+   ending, because a hero on intellect 1 draws one card a turn and can
+   never assemble a play.
+
+   IT IS NOT A `beginEndPhase` STEP, and that distinction is the whole of
+   getting it right. The rolled value has to govern the (f) DRAW — that is
+   what the card is FOR, and the feed says so ("that many cards at the
+   draw step"). `beginEndPhase` runs BEFORE (a)-(f), so restoring there
+   would hand the draw the printed value and make the card do nothing.
+   Restored AFTER the draw, on the turn-player's own end phase, exactly
+   where the trainer has always done it.
+
+   `lastRoll` is cleared with it: a die left on the state is a later
+   `intRoll` setting intellect from a roll nobody made this turn. */
+function settleIntellect(game, seat){
+  const sd = (game.sides || [])[seat] || {};
+  const n = Object.assign({}, game, {lastRoll: null});
+  if(sd.intWas == null) return {game: n, msgs: [], restored: null};
+  const sides = n.sides.slice();
+  sides[seat] = Object.assign({}, sd, {int: sd.intWas, intWas: null});
+  return {game: Object.assign({}, n, {sides}), restored: sd.intWas,
+          msgs: [(sd.name || ("seat " + seat)) + "'s intellect settles back to " + sd.intWas + "."]};
+}
+
 function beginEndPhase(game, seat){
   let n = game;
   const msgs = [], ops = [], fired = [];
@@ -4125,6 +4163,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, heaveOffer, heave, beginEndPhase,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, heaveOffer, heave, beginEndPhase, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });
