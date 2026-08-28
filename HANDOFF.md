@@ -24,12 +24,11 @@ the table; fixed in v3.49).
 **The hero ladder in `PLAYNOTES.md` measures the POLICY, not the decks.**
 Do not tune from it until the second finding is fixed.
 
-## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.50 ARE ON A BRANCH
+## ✅ LIVE — v3.50 IS DEPLOYED (2026-08-28)
 
-**`git push origin main` IS the deploy** (GitHub Pages serves `main` at the
-repo root). These seven versions live on
-**`claude/dawnblade-ai-card-logic-jp8wi9`**, pushed and green but **not
-merged**, so **none of it is live** and the site still serves v3.41.
+`main` is at **6ee5672** and GitHub Pages serves it at
+https://dawnblade-ai.github.io/dawnblade-ai/ . Nine versions shipped in one
+stretch, all of ally combat among them:
 
 ```
 v3.42  Avast Ye!'s rider — gaNextQ had no field to carry one
@@ -43,10 +42,27 @@ v3.49  the rolled intellect settles back — FOUND BY PLAYING
 v3.50  the seat learns to use its allies, and that found a two-zone bug
 ```
 
-Merging is a decision, not a step: **the trainer is the regression harness
-and none of this has been played on a phone yet** (CLAUDE.md's validation
-item 7). Ally combat is the largest behaviour change in this stretch and
-the one most worth a play session before it reaches a player.
+**THE ON-DEVICE PASS IS STILL OWED, and this is the record of it.** The
+whole stretch was verified by drills and by `npm run play`; it has **not**
+been played on a phone (CLAUDE.md's validation item 7). Ally combat is the
+largest behaviour change here and the first thing to exercise: deploy a
+Gravy Bones ally, tap it to swing, and watch the defend step, the action
+point and the go again. **A tap that does nothing is the failure mode this
+project cares most about**, and only a phone can find it.
+
+**AND `curl` CANNOT REACH THE SITE FROM THE CLOUD SANDBOX** — the agent
+proxy answers 403 to `dawnblade-ai.github.io:443`, so the HTTP half of the
+ship check ("the URL returns 200 *and* so do all the engine scripts")
+could not be run from here and was verified against the pushed TREE
+instead: all 21 `<script src>` files are present in the deployed commit.
+Run the real check from a machine that can reach it:
+
+```sh
+U=https://dawnblade-ai.github.io/dawnblade-ai
+curl -s -o /dev/null -w "%{http_code} index\n" $U/
+grep -o '<script src="engine/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' \
+  | while read f; do curl -s -o /dev/null -w "%{http_code} $f\n" $U/$f; done
+```
 
 ## THE PROMPT — paste this into a fresh Claude Code thread in this repo
 
