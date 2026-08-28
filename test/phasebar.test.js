@@ -120,3 +120,52 @@ test("the trainer keeps its own, because there `mode` is the live one", () => {
     "`mode`/`bphase` are authoritative in Battle — the derived phase/step " +
     "there is the v2.27 shadow, which is the mirror image of the table");
 });
+
+/* ============================================================
+   THE TWO FIGHT BUTTONS SAY WHAT A PLAYER GETS (v3.51)
+
+   The loadout screen offers both boards, and the second one read
+   **"Fight at the table — one engine"**. "One engine" is the Phase 1
+   rebuild's ARCHITECTURE — the merged judge.js / effects.js path — and it
+   is true, and it tells a player nothing about what happens when they tap
+   it. Reported from a real table as simply confusing, together with
+   "things don't work quite as well", which is the OTHER half: the trainer
+   swings the tuned `[3,4,5]` escalation and the table seats
+   `sparring.act`, which is untuned and wins most games.
+
+   A label is not decoration here. A player who loses nine straight is
+   owed the reason BEFORE the game rather than after it.
+   ============================================================ */
+test("the fight buttons describe the OPPONENT, not the architecture", () => {
+  const bar = HTML.slice(HTML.indexOf('onClick={startTable}') - 3000,
+                         HTML.indexOf('onClick={startTable}') + 800);
+  assert.ok(!/>\s*Fight at the table — one engine/.test(HTML),
+    "\"one engine\" is an architecture note wearing a button's clothes");
+  assert.match(bar, /harder/,
+    "the untuned board must say so on the button — measured 29 of 45 at v3.51");
+  /* SCOPED TO THE TRAINER'S OWN REGION, because "untuned" CONTAINS
+     "tuned" — a whole-block match stayed green with the trainer's note
+     deleted, which is v2.44's Reaction-contains-action trap in a drill
+     rather than in the parser. The sabotage that finds it is deleting the
+     word from the first note only. */
+  const trainerNote = bar.slice(bar.indexOf("<span>Fight</span>"), bar.indexOf("onClick={startTable}"));
+  assert.ok(/(?:^|[^u])tuned/.test(trainerNote),
+    "the trainer's own note must call it the tuned one: " + JSON.stringify(trainerNote.slice(0, 300)));
+});
+
+test("a failed table build is never silent", () => {
+  /* v2.51's clipboard rule — never dress a failure as a success — in the
+     one place the two boards are hardest to tell apart. Falling through
+     to the trainer is right; doing it QUIETLY means the player tapped one
+     board, got the other, and attributes every difference to the wrong
+     thing. */
+  const i = HTML.indexOf("FALL THROUGH TO THE TRAINER RATHER THAN DEAD-ENDING");
+  assert.ok(i > 0, "the fall-through must still be there — dead-ending is worse");
+  const blk = HTML.slice(i, i + 1400);
+  assert.match(blk, /console\.warn/, "it must log which board they ended up on");
+  assert.match(blk, /alert\(/, "…and say it on screen, not only in a console nobody opens");
+  /* Pin that it is the TABLE's catch, so the drill cannot drift onto some
+     other try/catch that happens to warn. */
+  assert.ok(HTML.slice(Math.max(0, i - 2200), i).includes("cfg.table"),
+    "this must be the catch on the table build");
+});

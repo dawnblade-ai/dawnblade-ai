@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.50"; /* v3.50 — the seat learns to use its allies, and that found a two-zone bug: `sparring.js` had never heard of the arena, so v3.44-48's ally combat had NO DRIVER — 0 ally attacks in 549 opportunities across 210 self-play games, and v3.46's death and Gold triggers fired 0 times. Allies are ranked WITH the hand rather than after it (both cost the turn's one action point) and the hero's own ability is proposed last; `GM.isAlly` reads the board ENTRY's kind, so the no-card-text contract holds. GIVING IT A DRIVER IMMEDIATELY LIT THE GUARD RAILS: 3761 CARD-IN-TWO-ZONES violations, an attacking ally on the board AND in `chainCards`. `declareAttack` already excluded a WEAPON ("a weapon stays equipped, so it never leaves the gear zone") and v3.44 added a second activation route without giving it the sibling guard — v3.43's rule, that a guard belongs to the SHAPE rather than to the version that wrote it. Gravy Bones 5 -> 19 wins, stalls 13 -> 10, violations 3761 -> 0. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.51"; /* v3.51 — the two fight buttons say what a PLAYER gets: reported from a real table as confusing, and it was — the second one read "Fight at the table - one engine", which is the Phase 1 rebuild's ARCHITECTURE (the merged judge.js/effects.js path) described to somebody who never asked, and tells a player nothing about what happens when they tap it. What actually differs is the OPPONENT'S BRAIN: the trainer swings the tuned [3,4,5] escalation, the table seats sparring.act, which holds a hand, pays costs and blocks like a person and is UNTUNED — measured this version at 29 of 45 against the policy piloting each hero, nine of fifteen going 0-3. So both buttons carry a one-line note and the second says "harder", because a player who loses nine straight is owed the reason before the game rather than after it. And the table build's catch no longer falls through to the trainer SILENTLY (v2.51's never-dress-a-failure-as-a-success, in the one place the two boards are hardest to tell apart). Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5175,10 +5175,33 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
           ? <button className="battlebtn clip" style={{marginTop:0}} onClick={start}>
               <span>Lock the sideboard</span></button>
           : <>
+              {/* TWO BOARDS, AND THE LABELS MUST SAY WHAT A PLAYER GETS
+                  (v3.51). The second one read "Fight at the table — one
+                  engine", which is the PHASE 1 REBUILD's architecture
+                  described to somebody who never asked: "one engine" is
+                  true, means the merged judge.js/effects.js path, and
+                  tells a player nothing about what will happen when they
+                  tap it. Reported from a real table as simply confusing.
+
+                  What actually differs is the OPPONENT'S BRAIN. The
+                  trainer swings the tuned `[3,4,5]` escalation; the table
+                  seats `sparring.act`, which plays real cards from a real
+                  hand and is UNTUNED — measured at v3.51 it wins 29 of 45
+                  against the policy piloting each hero. So the label says
+                  "harder", because a player who loses nine straight is
+                  owed the reason before the game rather than after it. */}
               <button className="battlebtn clip" style={{marginTop:0}} onClick={start}><span>Fight</span></button>
-              <button className="bigbtn alt" style={{marginTop:6}} onClick={startTable}>
-                Fight at the table — one engine
+              <p className="note" style={{marginTop:8,marginBottom:0}}>
+                The training dummy — a scripted, tuned opponent. Start here.
+              </p>
+              <button className="bigbtn alt" style={{marginTop:8}} onClick={startTable}>
+                Fight the new engine — harder
               </button>
+              <p className="note" style={{marginTop:6,marginBottom:0}}>
+                The same 30-card pile, but played as a real seat: it holds a hand,
+                pays costs and blocks like a person. <b>Untuned and currently
+                winning most games.</b> This is the engine a second player will sit at.
+              </p>
             </>}
       </div>
       <CardModal card={zoom} onClose={()=>setZoom(null)}/>
@@ -6512,7 +6535,20 @@ function App(){
                 heroKeys:m.heroKeys, first:m.first, seed:m.seed})});
               setSeating(null);
               return;
-            } catch(e){ /* fall through to the trainer rather than dead-ending */ }
+            } catch(e){
+              /* FALL THROUGH TO THE TRAINER RATHER THAN DEAD-ENDING — but
+                 SAY SO (v3.51). Silently seating the player at the OTHER
+                 board is the "never dress a failure as a success" rule
+                 (v2.51's clipboard lesson) in the one place where the two
+                 boards are hardest to tell apart: the player taps "the new
+                 engine", gets the trainer, and every difference they then
+                 notice is attributed to the wrong thing. Not dead-ending
+                 is still right; doing it quietly is not. */
+              console.warn("[dawnblade] table build failed — seating you at the trainer instead:", e);
+              try { window.__dawnTableFail = {when: Date.now(), why: String(e && e.message || e)}; } catch(_){}
+              alert("The new engine could not deal this match, so you are at the trainer instead.\n\n"
+                    + String(e && e.message || e));
+            }
           }
           setFighting({h:seating.h, cfg:{...cfg, seed:seating.seed}, first:seating.first}); setSeating(null);}}/>}
       {localTable && <TableBoard match={localTable} mySeat={0} host={true} code="solo" db={db}

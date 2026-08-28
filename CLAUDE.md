@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.50
+**Current version:** v3.51
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1505 drills**.
+This is `node --test "test/*.test.js"` — currently **1507 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -401,6 +401,37 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### A LABEL IS NOT A PLACE FOR AN ENGINEERING MILESTONE (v3.51)
+
+The loadout screen offers both boards and the second button read **"Fight
+at the table — one engine"**. *One engine* is the Phase 1 rebuild's merged
+`judge.js`/`effects.js` path: true, hard-won, and an answer to a question
+no player asked. Reported from a real table as simply confusing.
+
+**AND THE SECOND HALF OF THAT REPORT — "things don't work quite as well" —
+WAS ALSO RIGHT.** What differs is the opponent's brain: the trainer swings
+the tuned `[3,4,5]` escalation, the table seats `sparring.act`, which
+holds a hand and blocks like a person and is UNTUNED. Measured over the
+exact build the button makes: **the dummy wins 29 of 45**, nine of fifteen
+heroes going 0-3. **That state had been recorded in this file since v2.81
+and never once on the SCREEN.** A doc the player cannot read is not a
+disclosure — put it on the button.
+
+**MEASURE THE THING THE BUTTON ACTUALLY BUILDS.** The number above is not
+`npm run play`'s hero-vs-hero ladder; it is hero-vs-the-vanilla-dummy
+through `buildMatch({heroes:[k, null]})`, which is what the tap does. A
+neighbouring measurement is not the measurement.
+
+**AND A FALL-THROUGH MUST SAY SO.** The table build's `catch` seated the
+player at the OTHER board in silence, so every difference they then
+noticed was attributed to the wrong thing — v2.51's *never dress a failure
+as a success*, in the one place the two boards are hardest to tell apart.
+
+**"UNTUNED" CONTAINS "TUNED".** The drill asserting the trainer says it is
+tuned matched the *other* note and stayed green with the trainer's own
+deleted — v2.44's Reaction-contains-action trap, in a drill this time.
+Scope a word-match to the region that must contain it.
 
 ### BUILD THE DRIVER, THEN THE GUARD RAILS CAN SPEAK (v3.50)
 

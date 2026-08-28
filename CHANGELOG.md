@@ -7,6 +7,58 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.51 — the two fight buttons say what a player gets
+
+**Reported from a real table**, on the first session after going live:
+*"there are 2 buttons on the sideboard, a red 'fight' and a brown 'fight at
+the table — one engine' — confused by what's going on, but when I hit the
+brown button things don't work quite as well."*
+
+Both halves of that were right, and they are two different problems.
+
+**THE LABEL DESCRIBED THE ARCHITECTURE.** *"One engine"* is the Phase 1
+rebuild's merged `judge.js` / `effects.js` path — it is true, it is the
+thing this project spent twenty versions building, and it answers a
+question no player asked. A button label is not a place to put an
+engineering milestone.
+
+**AND THE OTHER HALF IS REAL, MEASURED, AND WAS UNDOCUMENTED ON SCREEN.**
+What differs between the two boards is the opponent's brain:
+
+| button | opponent |
+|---|---|
+| **Fight** | the trainer — the scripted, **tuned** `[3,4,5]` escalation |
+| **Fight the new engine — harder** | `sparring.act` — the same 30-card pile played as a real seat: it holds a hand, pays costs and blocks like a person, and is **untuned** |
+
+Measured this version over the exact build the button makes (hero vs the
+vanilla dummy, three seeds each, both seatings): **the dummy wins 29 of
+45**, and nine of fifteen heroes go 0–3 against it. CLAUDE.md has recorded
+that state since v2.81; the SCREEN never did. A player who loses nine
+straight is owed the reason before the game rather than after it, so both
+buttons now carry a one-line note and the second says *harder* on its
+face.
+
+*(That number is an upper bound on the difficulty a person faces: it has
+`sparring.act` piloting the hero seat too, and PLAYNOTES.md's finding 3 is
+that the policy plays attack decks well and control decks not at all.)*
+
+**AND THE TABLE BUILD FELL THROUGH TO THE TRAINER IN SILENCE.** If
+`buildMatch` threw, the player tapped one board and was seated at the
+other with no indication — so every difference they then noticed was
+attributed to the wrong thing. Not dead-ending is still right; doing it
+quietly is **v2.51's "never dress a failed copy as a success"** in the one
+place the two boards are hardest to tell apart. It warns, records
+`window.__dawnTableFail`, and says so on screen.
+
+**A DRILL CAUGHT ITSELF ON "UNTUNED" CONTAINING "TUNED"** — the
+whole-block assertion stayed green with the trainer's note deleted, which
+is v2.44's *Reaction-contains-action* trap in a drill rather than in the
+parser. Scoped to the trainer's own region, and the sabotage that finds it
+is deleting the word from the first note only.
+
+**1507 drills, 0 fail, 4 skipped.** Two new drills, three sabotages, all
+biting.
+
 ## v3.50 — the seat learns to use its allies, and that found a two-zone bug
 
 v3.49's self-play run reported the gap and this closes it. **`sparring.js`
