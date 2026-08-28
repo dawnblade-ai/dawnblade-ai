@@ -7,6 +7,97 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.50 — the seat learns to use its allies, and that found a two-zone bug
+
+v3.49's self-play run reported the gap and this closes it. **`sparring.js`
+contained zero occurrences of `board`, `arena` or `ally`** — so everything
+v3.44 through v3.48 built had **no driver**:
+
+```
+states with an untapped ally on the acting board   1077
+ally attacks PROPOSED by the policy                   0
+hero-ability activations proposed                     0
+v3.46's death / Gold triggers fired                    0
+```
+
+**A feature with no caller looks exactly like a feature that works, until
+you count.**
+
+**ALLIES ARE RANKED WITH THE HAND, NOT AFTER IT.** An ally's swing and a
+card from hand both cost the turn's one action point, so they compete for
+the same thing; a blanket "allies last" would be a rule this file has no
+business inventing. Printed power decides, exactly as it does for a card.
+The hero's own ability goes last, behind the attacks, because every
+printed hero ability in this pool digs or buffs rather than dealing
+damage — and deciding otherwise would mean reading the card.
+
+**THE ENTRY IS NOT THE CARD.** A board entry is `{card, kind, uid, …}`, so
+the power lives on `.card` and the uid on the **entry**. Reading
+`num(b,"power")` returns 0 for every ally and silently ranks them last —
+the same bug wearing a different hat. `GM.isAlly` reads the entry's kind
+rather than a printed type line, which is what keeps this inside
+sparring.js's founding no-card-text contract.
+
+### GIVING IT A DRIVER IMMEDIATELY LIT THE GUARD RAILS
+
+The first 210-game run with the arena branch reported **3761
+`CARD-IN-TWO-ZONES` violations**:
+
+```
+"Barnacle" (uid 65) is in 2 zones at once: sides[1].board + chain
+```
+
+An attacking ally was on the **board** and in **`chainCards`** at the same
+time. `declareAttack` already excluded a weapon from that list, and its
+comment states the rule correctly:
+
+> *Equipment is NOT filed here: a weapon stays equipped and is spent, so
+> it never leaves the gear zone.*
+
+An ally is the identical case — v3.44 says so in as many words, *"an ally
+stays in the arena exactly as a weapon stays equipped"* — and that version
+added the second activation route **without giving this guard its
+sibling**. That is **v3.43's lesson exactly: a guard belongs to the SHAPE,
+not to the version that wrote it.** `fileAttack` was checked and needed no
+change; `chainCards` is a different list with the same requirement, and
+nobody asked it.
+
+**Nothing could have caught it**, because until this version nothing in a
+self-play game ever attacked with an ally. The invariant judge has been
+wired into every state change since v2.21 and had never once been given
+the state that breaks.
+
+**The guard excludes the two activation routes and nothing else.** Widening
+it to every attack loses the chain zone entirely — and a card in NO zone
+falls silently out of the census, which is worse than the bug. A drill
+pins both directions.
+
+### Measured over the same 210 matchups
+
+| | before | after |
+|---|---|---|
+| invariant violations | 3761 | **0** |
+| stalls | 13 | **10** |
+| Gravy Bones wins | 5 | **19** |
+| policy refusals | 0 | 0 |
+
+Driven, in one game: *"Gravy Bones attacks with Swabbie for 7"* — costed,
+blockable and repeatable, seventeen times.
+
+**`death` and `gold` are still 0, and now for a stated reason.** The policy
+always names the hero as its attack-target: CR 1.4.5 makes the choice
+mandatory, the hero is the one answer always available, and choosing an
+ally instead is a judgement about playing well — allies heal every turn
+(CR 4.4.3a), so it is a per-turn race rather than attrition. A policy that
+reads no card text should not be guessing at it. Recorded in
+`PLAYNOTES.md` rather than faked.
+
+**1505 drills, 0 fail, 4 skipped.** 9 new drills, every one sabotaged —
+and **four of the eight sabotages found a weak drill rather than a weak
+engine**, including a tie-break fixture whose entry and card uids
+coincided, so it could not tell `byUid(a,b)` from `byUid(a.c,b.c)` and
+passed against both.
+
 ## v3.49 — the rolled intellect settles back, and how playing found it
 
 **This one was found by PLAYING, not by a drill.** 210 self-play games —

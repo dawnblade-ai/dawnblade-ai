@@ -72,7 +72,7 @@ draw. Full write-up in the v3.49 CHANGELOG entry. Worth 4 wins to Kayo
 
 ---
 
-## FINDING 2 — ally combat has no driver (OPEN)
+## FINDING 2 — ally combat has no driver (**FIXED, v3.50** — and it found a bug)
 
 `engine/sparring.js` contains **zero** occurrences of `board`, `arena` or
 `ally`. Measured over five ally-heavy matchups:
@@ -104,11 +104,27 @@ how the measurement was possible at all:
   12  Swabbie costs 2 to attack and you cannot raise it
 ```
 
-**Next step:** `sparring.act` needs an arena branch and a `from:"hero"` branch.
-Both are proposals, not rules — the policy reads printed numbers and asks
-`legal` for everything else, so ranking an ally swing by printed power beside
-a weapon swing is the whole job. Keep the no-card-text discipline: a drill
-fails on `require("./parser")`.
+**FIXED IN v3.50.** `sparring.act` got an arena branch and a hero branch —
+allies ranked WITH the hand rather than after it, because both cost the turn's
+one action point. Driven: *"Gravy Bones attacks with Swabbie for 7"*,
+seventeen times in one game, and his win rate went **5 → 19** over the same
+210 matchups.
+
+**AND THE FIRST RUN WITH A DRIVER REPORTED 3761 INVARIANT VIOLATIONS** — an
+attacking ally on the board AND in `chainCards`. `declareAttack` already
+excluded a weapon from that list and v3.44 added the second activation route
+without giving the guard its sibling. **The invariant judge had been correct
+and silent since v2.21 because nothing had ever handed it the state that
+breaks.** That is the argument for this harness, stated from the other end:
+a guard rail is only as good as the states that reach it.
+
+**`death` and `gold` are STILL 0, and now for a stated reason.** The policy
+always names the hero as its attack-target — CR 1.4.5 makes the choice
+mandatory and the hero is the one answer always available. Choosing an ally
+is a judgement about playing well (allies heal every turn under CR 4.4.3a, so
+it is a per-turn race rather than attrition) and a policy that reads no card
+text should not guess at it. **Oysten's death trigger therefore still has no
+driver** — the remaining half of this finding.
 
 ---
 

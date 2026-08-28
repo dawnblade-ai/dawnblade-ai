@@ -218,20 +218,61 @@ function offence(g, seat, o){
   (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
   if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
 
+  /* ---- AN ALLY IS A THIRD SOURCE OF ATTACKS (v3.50) ------------------
+     Allies have attacked since v3.44 and this policy had never heard of
+     them: measured over 210 self-play games, ZERO ally attacks across 549
+     opportunities, and v3.46's death and Gold triggers fired ZERO times.
+     A feature with no caller looks exactly like a feature that works,
+     until you count (PLAYNOTES.md, finding 2).
+
+     THEY ARE RANKED IN THE SAME ORDER AS EVERYTHING ELSE, not appended
+     after it. An ally's swing and a card from hand both cost the turn's
+     one action point, so they are competing for the same thing and a
+     blanket "allies last" would be a rule this file has no business
+     inventing. Printed power decides, exactly as it does for a card.
+
+     THE ENTRY IS NOT THE CARD. A board entry is `{card, kind, uid, ...}`,
+     so the power lives on `.card` and the uid on the ENTRY — reading
+     `num(b, "power")` returns 0 for every ally and silently ranks them
+     last, which is the same bug wearing a different hat. `GM.isAlly`
+     reads the entry's kind rather than a printed type line, so this stays
+     inside the no-card-text contract.
+
+     THE TARGET IS THE HERO, always. CR 1.4.5 makes the choice mandatory
+     and `judge.targets` offers the alternatives; choosing between them is
+     a judgement about playing well that this policy does not make, and
+     naming the hero is the one answer that is always available. */
+  const allies = (sd.board || [])
+    .filter(b => b && GM.isAlly(b))
+    .map(b => ({c: b.card, uid: b.uid, ally: true}));
+
   const pick = from
+    .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+    .concat(allies)
     .filter(x => x.c && num(x.c, "power") > 0)
-    .filter(x => affordableWithin(sd, x.c, o))
+    .filter(x => x.ally || affordableWithin(sd, x.c, o))
     .sort((a, b) => num(b.c, "power") - num(a.c, "power")
-                 || num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c))
-    .find(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat));
-  if(pick) return {t: "play", uid: pick.c.uid, from: pick.from};
+                 || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
+    .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: "hero"}
+                               : {t: "play", uid: x.uid, from: x.from}, seat));
+  if(pick) return pick.ally ? {t: "activate", uid: pick.uid, target: "hero"}
+                            : {t: "play", uid: pick.uid, from: pick.from};
 
   /* A weapon swing is an attack that comes from the gear zone. `legal`
      owns both of its limits — the printed `Once per Turn` and the tap —
      so the policy just asks. */
   const w = (sd.gear || []).slice().sort(byUid)
     .find(x => legal(g, {t: "activate", uid: x.uid}, seat));
-  return w ? {t: "activate", uid: w.uid} : null;
+  if(w) return {t: "activate", uid: w.uid};
+
+  /* THE HERO'S OWN ABILITY, last, and for the same reason it was missing:
+     nothing proposed one in 210 games. It goes after the attacks because
+     it is the only source here that is not one — every printed hero
+     ability in this pool draws, digs or buffs rather than dealing damage,
+     so spending the action point on it ahead of a swing would be a
+     judgement this file cannot make without reading the card. */
+  return legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)
+    ? {t: "activate", from: "hero", uid: "hpow"} : null;
 }
 
 /* WOULD THIS COST MORE OF THE HAND THAN IT IS WORTH?

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.49
+**Current version:** v3.50
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1496 drills**.
+This is `node --test "test/*.test.js"` — currently **1505 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -401,6 +401,44 @@ now works.
 > was the one it could not ask, and the answer was that the deploy ate the
 > grant. **A synthetic fixture proves a reader; only the real card in the
 > real deck proves the card.** Drill both.
+
+### BUILD THE DRIVER, THEN THE GUARD RAILS CAN SPEAK (v3.50)
+
+`sparring.js` contained **zero** occurrences of `board`, `arena` or
+`ally`, so everything v3.44-v3.48 built had no caller: **0 ally attacks
+in 549 opportunities**, 0 hero-ability activations, and v3.46's death and
+Gold triggers fired **0 times in 210 games**. Giving the policy an arena
+branch was ~15 lines, and the first run with it reported **3761
+`CARD-IN-TWO-ZONES` violations**.
+
+**AN ACTIVATION ROUTE LEAVES ITS CARD WHERE IT IS.** An attacking ally was
+on the board AND in `chainCards`. `declareAttack` already excluded a
+weapon — *"a weapon stays equipped, so it never leaves the gear zone"* —
+and v3.44 added a second activation route **without giving that guard its
+sibling**. v3.43's rule, a third time: **a guard belongs to the SHAPE, not
+to the version that wrote it.** `fileAttack` was checked at v3.44 and
+needed no change; `chainCards` is a DIFFERENT list with the same
+requirement, and nobody asked it.
+
+**THE INVARIANT JUDGE HAD BEEN RIGHT AND SILENT SINCE v2.21**, because
+nothing had ever handed it the state that breaks. A guard rail is only as
+good as the states that reach it — which is the argument for `npm run
+play` stated from the other end.
+
+**RANK A NEW SOURCE WITH THE OLD ONES, NOT AFTER THEM.** An ally's swing
+and a card from hand both cost the turn's one action point, so they
+compete for the same thing; "allies last" is a rule the policy has no
+business inventing. And **the ENTRY is not the CARD** — power lives on
+`.card`, the uid on the entry, and `num(b,"power")` on an entry returns 0
+and silently ranks every ally last anyway.
+
+**FOUR OF EIGHT SABOTAGES FOUND A WEAK DRILL, NOT A WEAK ENGINE.** The
+worst was a tie-break fixture whose entry uid and card uid were the same
+number, so it could not tell `byUid(a,b)` from `byUid(a.c,b.c)` and passed
+against both. **A fixture where two things coincide has tested neither** —
+v3.26's rule, and it costs a drill every time it is forgotten. Two others
+were false negatives in the sabotage HARNESS (bash swallowed the `&&`), so
+**check that a sabotage applied before believing the drill is weak.**
 
 ### PLAY THE GAME. IT FINDS WHAT NO TOOL HERE CAN (v3.49)
 

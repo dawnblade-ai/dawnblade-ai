@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.49 · PHASE C · THE TABLE HAS NOW BEEN PLAYED
+# Handoff — Dawnblade, at v3.50 · PHASE C · THE TABLE HAS NOW BEEN PLAYED
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and
 > `FINISH.md` are current; where they disagree with the older sections,
@@ -18,13 +18,13 @@ the table; fixed in v3.49).
 
 | | |
 |---|---|
-| **ally combat has no driver** | `sparring.js` contains zero occurrences of `board`, `arena` or `ally`. **0 ally attacks in 549 opportunities**; the `death`/`gold` triggers of v3.46 fired **0 times in 210 games**. It also proposes **0** hero-ability activations. v3.44-48 built the route and nothing calls it |
+| ~~ally combat has no driver~~ | **FIXED at v3.50** — and giving it a driver immediately found **3761 `CARD-IN-TWO-ZONES` violations**: an attacking ally on the board AND in `chainCards`. Gravy Bones 5 → 19 wins. **Still open: nothing attacks an ALLY**, so Oysten's death trigger has no driver — the policy always names the hero (CR 1.4.5), which is a deliberate refusal to guess |
 | **the policy cannot pilot a control hero** | Iyslander: **0 wins in 210 games**, and all 13 remaining stalls. Driven, she holds four LEGAL cards plus an action point and the policy proposes `endTurn` |
 
 **The hero ladder in `PLAYNOTES.md` measures the POLICY, not the decks.**
 Do not tune from it until the second finding is fixed.
 
-## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.49 ARE ON A BRANCH
+## ⚠ NOT DEPLOYED — v3.42 THROUGH v3.50 ARE ON A BRANCH
 
 **`git push origin main` IS the deploy** (GitHub Pages serves `main` at the
 repo root). These seven versions live on
@@ -40,6 +40,7 @@ v3.46  the on-attack twin, and an ally that dies does what it prints
 v3.47  untap — {u} refused correctly for years, then stopped being right
 v3.48  a tapped hero, and the one thing it means (ruling, 2026-08-25)
 v3.49  the rolled intellect settles back — FOUND BY PLAYING
+v3.50  the seat learns to use its allies, and that found a two-zone bug
 ```
 
 Merging is a decision, not a step: **the trainer is the regression harness
@@ -55,7 +56,7 @@ the one most worth a play session before it reaches a player.
 >
 > **The two engines are merged, the pool is PINNED, Phase B is DONE, and
 > the card semantics run on both boards.** `npm test` is **1488 drills**
-> and **0 skipped** (1496 at v3.49). Read the SKIP count, not just the fails — a fresh
+> and **0 skipped** (1505 at v3.50). Read the SKIP count, not just the fails — a fresh
 > clone once skipped 304 drills silently, which is how 22 broken cards
 > survived a green suite.
 >

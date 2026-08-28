@@ -1870,6 +1870,18 @@ function commitPlay(g, card, zone, seat, window, target){
 
 function declareAttack(g, card, seat, fromZone, target, declared){
   const fromWeapon = fromZone === "weapon";
+  /* AN ACTIVATION ROUTE LEAVES ITS CARD WHERE IT IS (v3.50). A weapon
+     stays equipped and an ALLY stays in the arena — v3.44 says so in as
+     many words — so neither is "in" the combat chain as an object. The
+     rule below was written for weapons and v3.44 added a second route
+     without giving it the sibling guard, which is v3.43's lesson exactly:
+     a guard belongs to the SHAPE, not to the version that wrote it.
+
+     Driven, an attacking ally was on the board AND in `chainCards` —
+     `CARD-IN-TWO-ZONES`, the census's loudest error. It was invisible
+     until v3.50 gave the sparring policy an arena branch, because until
+     then nothing in a self-play game ever attacked with an ally. */
+  const inPlay = fromWeapon || fromZone === "ally";
   const tgt = target || {kind: "hero", side: P.other(seat), uid: null};
   /* THE TOTAL COMES FROM THE CARD, NOT FROM ITS PRINTED POWER (v2.77).
      `execute` has already applied every pump the card and the board
@@ -1914,8 +1926,8 @@ function declareAttack(g, card, seat, fromZone, target, declared){
        so it never leaves the gear zone. `from` rides along because WHERE
        the card goes at the close step depends on where it came from, and
        `effects.fileAttack` is the one thing that knows. */
-    chainCards: fromWeapon ? (g.chainCards || [])
-                           : [...(g.chainCards || []), {by: seat, card, from: fromZone}],
+    chainCards: inPlay ? (g.chainCards || [])
+                       : [...(g.chainCards || []), {by: seat, card, from: fromZone}],
     featured: {card, chip: "LINK " + ((g.chain || []).length + 1)}};
   n = P.declareAttack(n, seat);
   n = say(n, at(n, seat).name + (fromWeapon ? " swings " : " attacks with ") + card.name + " for " + total + ".");
