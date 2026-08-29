@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.51
+**Current version:** v3.52
 
 ---
 
@@ -161,7 +161,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1507 drills**.
+This is `node --test "test/*.test.js"` — currently **1513 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -239,6 +239,42 @@ node tools/audit.js --write-baseline   # only once you've reviewed the diff —
 `test/coverage.test.js` then checks every pool card still resolves and no
 card's `fxParse` tier dropped below the pinned baseline (skips cleanly if
 `tools/.cache/card.json` / `tools/coverage-baseline.json` aren't present).
+
+### `npm run gaps` — WHAT ONE READER CLOSES THE MOST CARDS? (v3.52)
+
+```
+npm run gaps              # the families, ranked
+npm run gaps -- Astral    # the dossier for one card
+```
+
+The audit answers *how much of this card is read*; the stack answers
+*which RULING is missing*. **Neither answers the question a session opens
+with**, and that question turned out to have the most useful answer in the
+project: 70 cards unfinished, **52 of them ONE clause away**, clustering
+into five families that cut across the hero list.
+
+**FOUR OF THE FIVE FAMILIES ARE MACHINERY THAT WAS BUILT AND NEVER WIRED
+TO A READER** — `prompts.js` has had the `pick` variant since v2.17 and no
+parser rule emits the spec; `optCost.trigger` has named `hits` and
+`defends` "still to wire" for thirty versions. **v3.50's lesson at the
+level of a whole phase: a feature with no caller looks exactly like a
+feature that works, until you count.** Before building anything, check
+whether it already exists.
+
+**SO PHASE C GOES FAMILY-BY-FAMILY, NOT HERO-BY-HERO.** One hero at a time
+was right for Kayo, who was the pilot; the remaining work does not sort by
+hero. See `WEEK.md`.
+
+**IT IS A REPORT, NOT A CLAIM.** A card lands in the FIRST family it
+matches, `unclustered` is an honest answer, and the counts are printed —
+so a pattern that rots shows up as a family collapsing rather than as a
+clean sweep. The drills pin that the families **partition** the unfinished
+set (a family matching twice double-counts; one matching nothing moves its
+cards to `unclustered` — either way the sum stops equalling the total,
+which is the one check that cannot be satisfied by finding nothing), and
+that a **stale read is visible**: it compares its own `appVer` against
+`index.html`, because a report older than the code is a confident answer
+about a codebase that no longer exists.
 
 ### The fairness sweep — is any card STRONGER than printed? (v2.32)
 

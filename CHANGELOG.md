@@ -7,6 +7,73 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.52 — `npm run gaps`, and the week planned from it
+
+**The tools answered two questions and not the one a session opens with.**
+The audit says how much of a card is read; the stack says which *ruling* is
+missing. Neither says **what one reader would finish the most cards** —
+and that turned out to be the most useful view of the remaining work in the
+project.
+
+**Measured over the 405-card pool:** 70 cards are unfinished, and **52 of
+them are ONE clause away.** Those clauses cluster into five families that
+cut straight across the hero list:
+
+| cards | family | machinery |
+|---|---|---|
+| 12 | pick from a zone (graveyard / deck / banish) | **built** — `prompts.js`, v2.17 |
+| 10 | counters on a permanent | half — `counters` exist, keyed by uid |
+| 9 | create a token on a trigger | **built** — v3.33 |
+| 8 | *"you may …, if you do …"* | **built** — `optCost`, two queue sites unwired since v3.20 |
+| 5 | a granted / conditional keyword | **built** |
+| 26 | unclustered one-offs | — |
+
+**Four of the five are machinery that was built, documented, and never
+wired to a reader.** That is v3.50's lesson at the level of a whole phase:
+*a feature with no caller looks exactly like a feature that works, until
+you count.* `prompts.js` has had the `pick` variant since v2.17 and no
+parser rule emits the spec; `optCost.trigger` has named `hits` and
+`defends` as "still to wire" for thirty versions.
+
+**So Phase C stops going hero-by-hero and goes family-by-family** — see
+`WEEK.md`. Four readers close roughly 46 of the 70, and the rulings are
+effectively done: `npm run stack` reports **4 open, 5 cards.** The distance
+left is the one CLAUDE.md has always named — *understood ≠ built* — and it
+is engineering, not rules questions.
+
+### The tool
+
+`tools/gaps.js` reads `tools/audit.json` and ranks the families, with a
+per-card dossier (`npm run gaps -- Astral`). It is a **report, not a
+claim**: a card lands in the first family it matches, `unclustered` is an
+honest answer, and the counts are printed — so a pattern that rots shows up
+as a family collapsing rather than as a clean sweep.
+
+Four properties are drilled, each because of a failure this project has
+already had:
+
+- **the families PARTITION the unfinished set.** A family that stopped
+  matching moves its cards to `unclustered`; one that matched twice
+  double-counts. Either way the sum stops equalling the total — the one
+  check that cannot be satisfied by finding nothing.
+- **it finds something.** A scan aimed at the wrong shape passes by
+  finding nothing (v2.80, v3.21, v3.36 — three times now).
+- **a stale read is VISIBLE.** It reads a build artifact, so it compares
+  its own `appVer` against `index.html` and warns. A report a month older
+  than the code is a confident answer about a codebase that no longer
+  exists.
+- **two printings of one card are named apart** — the audit is keyed
+  `name|pitch`, so a bare list printed *"Crankshaft · Crankshaft"* and read
+  as a bug in the report itself.
+
+**And it honours `NO_COLOR` and a pipe.** Hardcoded escape codes made the
+output unparseable by anything but a human — found by a drill that could
+not read its own tool.
+
+**1513 drills, 0 fail, 4 skipped.** Six new drills, five sabotages, all
+biting after the first was found too weak to bite (it broke one alternation
+of five).
+
 ## v3.51 — the two fight buttons say what a player gets
 
 **Reported from a real table**, on the first session after going live:

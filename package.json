@@ -12,6 +12,7 @@
     "fairness": "node tools/fairness.js",
     "progress": "node tools/progress.js",
     "crindex": "node tools/crindex.js",
-    "play": "node tools/tourney.js"
+    "play": "node tools/tourney.js",
+    "gaps": "node tools/gaps.js"
   }
 }

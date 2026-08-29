@@ -1,6 +1,6 @@
 # THE STACK — rulings Dawnblade is waiting on
 
-Generated 2026-08-01T20:56:59.366Z from `tools/audit.json`.
+Generated 2026-08-29T00:02:06.881Z from `tools/audit.json`.
 
 Every gap below is charged to the *mechanic* that causes it, so one
 answer lights up every card in its list. Nothing here is guessed:
@@ -30,9 +30,16 @@ Decks affected: Boltyn
   - ↳ **Courage** (Generic Token - Aura) — When you play an attack action card or activate a weapon attack, destroy this and the attack gets +1{p}.
 - **V of the Vanguard** (pitch 2, Light Warrior Action - Attack)  
   Boltyn Specialization  
-  As an additional cost to play V of the Vanguard, you may charge your hero's soul any number of times.  
-  Attacks on this combat chain gain +1{p} for each Light card charged this way.
-  - ⛔ unread: Attacks on this combat chain gain +1{p} for each Light card charged this way.
+  As an additional cost to play this, you may charge your soul any number of times.  
+  Your attacks this combat chain get +1{p} for each Light card charged this way.
+  - ⛔ unread: Your attacks this combat chain get +1{p} for each Light card charged this way.
 
-## One-off cards — 0 cards whose own text needs a reading
+## One-off cards — 3 cards whose own text needs a reading
 
+- **Halo of Illumination** (pitch 0, Light Equipment - Head) — Boltyn
+  - ⛔ Instant - {r}, destroy this: Put a card from your hand into your soul
+  - ⛔ If it's Light, draw a card.
+- **Radiant Touch** (pitch 0, Light Equipment - Arms) — Boltyn
+  - ⛔ Instant - Banish this and a card from your soul: Prevent the next 2 damage that would be dealt to you this turn.
+- **Walk in My Shoes** (pitch 2, Reviled Guardian Action - Attack) — Lyath Goldmane
+  - ⛔ Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
