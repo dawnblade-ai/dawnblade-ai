@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.57
+**Current version:** v3.58
 
 ---
 
@@ -393,6 +393,54 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### AN INLINE READER IS A CARD SPECIAL-CASED BY NAME (v3.58)
+
+Two cards this version were **already firing and still reported unread**,
+because a private regex read the clause instead of the parser:
+
+| | was |
+|---|---|
+| Phantasmal Haze | *"when this is destroyed"* read by a regex over raw text inside the phantasm pop site |
+| Mandible Claw | *"this card's attacks get go again"* read by a `from === "weapon"` regex in `execute`, with a `noop` in the parser whose REASON POINTED AT THAT LINE |
+
+The second is the golden rule broken twice over — a card handled by name,
+and a `noop` filed for text that has real behaviour — and it cost the two
+other pool weapons printing the identical shape, which were simply dead.
+
+**MEASURE THE INLINE REGEX BEFORE REPLACING IT.** The destroy one matched
+exactly one pool card, so `fx.onDestroy` is an exact swap rather than a
+widening. **A tier that reports `part` on a card that works is a lead**:
+something is reading the clause somewhere the ledger cannot see.
+
+**AND NOTHING NEW RAN THE WEAPON STATIC.** `execute`'s condition loop
+already treats `ga` and `self` specially, and a weapon swing goes through
+`execute` with `attacking` true — so the payload reads as ordinary ops
+and the EXISTING gate applies them at the swing. Before building
+machinery for a shape, check whether the machinery is the shape you
+already have.
+
+**`wpnOnly` RIDES ON THE CLAUSE.** *"This card's ATTACKS get …"* is not
+*"this card"*: the same piece can be activated for a non-attack ability
+and the bonus must not follow it there. `from` is the route — v3.44's
+ally distinction, one card type over.
+
+**A FLAG GOES ON A COND ENTRY ONLY WHEN TRUE.** `instead` and `atkHero`
+are always present, so a fourth always-present key changes the SHAPE of
+every cond in the pool; five drills that `deepEqual` `fx.conds` went red
+on cards printing no weapon static at all. Those drills are right to
+compare the whole object — make the new field opt-in instead.
+
+### GO AGAIN IS AN ACTION POINT, AND THAT IS WHAT TO ASSERT ON (v3.58)
+
+A drill for the `wpnOnly` gate asserted that the feed carried no "goes
+again" line on the ability route — and passed with **the gate removed**,
+because that route prints no such line either way.
+
+Go again is a **GAIN** (CR 5.3.5), so the observable is `ap`: with the
+gate gone the met case keeps a point the unmet case spends, and the two
+diverge. **Fourth weak drill this cycle and the third caught by asserting
+on the log** — assert on hands, life, zones and points, never on prose.
 
 ### A GATE CAN VANISH, AND THE SWEEP CANNOT SEE THAT (v3.57)
 

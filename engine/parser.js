@@ -383,9 +383,41 @@ function classifyClause(raw){
      text at declaration and routes the token to whoever won. */
   if(/^the winner creates? (?:a|an|\d+) [a-z' -]+ tokens?$/.test(c))
     return NOOP("clash payoff — the clash block creates this for whoever wins");
-  /* Mandible Claw's rider is read off the weapon when it swings. */
-  if(/^if you have discarded a card with \d+ or more \{p\} this turn, this'?s attacks? (?:get )?go again$/.test(c))
-    return NOOP("weapon rider — read from the graveyard stamp when the weapon swings");
+  /* ---- A CONDITIONAL WEAPON STATIC (v3.58) --------------------------
+     "If <condition>, this card's attacks get <payload>." THREE pool cards
+     print it and all three are weapons:
+
+       Mandible Claw      if you've discarded a 6+ {p} card this turn
+       Searing Emberblade if you control 2 or more Draconic chain links
+       Star Fall          if you've played a Lightning card this turn
+
+     Until v3.58 Mandible Claw's was a NOOP here whose reason named an
+     inline `from==="weapon"` regex in `execute` — one card's rider,
+     hand-written, with the other two unread. That is the golden rule
+     broken twice over: a card special-cased by name, and a `noop` filed
+     for a clause that has real behaviour.
+
+     NOTHING NEW IS NEEDED TO RUN IT. `execute`'s condition loop already
+     handles `ga` and `self` specially, and a weapon swing goes through
+     `execute` with `attacking` true — so the payload reads as ordinary
+     ops and the EXISTING gate machinery applies them at the swing, which
+     is exactly when the card says. The conditions were already there too
+     (`discard6`, `drac2`); only Star Fall's needed writing.
+
+     `wpnOnly` RIDES ON THE CLAUSE, because "this card's ATTACKS" is not
+     "this card". Without it the bonus would also fire when the same piece
+     is activated for a non-attack ability — the wrong route, and the
+     distinction v3.44 had to make for allies. */
+  if(m=c.match(/^this'?s attacks? (?:gets?|gains?|has|have) (.+)$/)){
+    const tail = m[1].trim();
+    const ops = [];
+    const pm = tail.match(/^\+(\d+)\s*\{p\}(?:\s+and\s+go again)?$/);
+    if(pm){ ops.push(["self", +pm[1]]); if(/go again/.test(tail)) ops.push(["ga"]); }
+    else if(/^go again$/.test(tail)) ops.push(["ga"]);
+    /* an unreadable payload refuses rather than claiming the clause */
+    if(!ops.length) return null;
+    return R(ops, {wpnOnly:true});
+  }
   /* ---- THE "+1{p} COUNTER" FAMILY ------------------------------------
      Eight pool cards move +1{p} counters around, and the Dawnblade is the
      one that EARNS them:
@@ -550,6 +582,19 @@ function classifyClause(raw){
     if(/6 or more \{p\}[^.]*discard/.test(cond) && /this way|that cost|as an additional cost/.test(cond))
       return Object.assign(rest,{cond:"discard6way"});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
+    /* THE OTHER PRINTED ORDER (v3.58). Every other card in the pool says
+       "a card WITH 6 or more {p} IS DISCARDED"; Mandible Claw says
+       "you've DISCARDED a card WITH 6 or more {p} this turn" — the same
+       turn-history question with the two halves swapped, which the
+       pattern above cannot see. Measured: it is the only card printing
+       this order that reaches the condition reader (Run Roughshod prints
+       it too and goes through `fx.playIf` instead).
+
+       ANCHORED ON 6, not on `\d+`, because `discard6` names its threshold
+       in the cond itself — a "4 or more" card mapped here would be
+       answered against the wrong number, which is the silent direction. */
+    if(/discarded a card with 6 or more \{p\} this turn/.test(cond))
+      return Object.assign(rest,{cond:"discard6"});
     if(/^you attack with /.test(cond)) return rest;
     /* Arena triggers: the trainer has no leaves/enters-the-arena schedule,
        so the payload fires when the card is played — early, but the value
@@ -622,6 +667,17 @@ function classifyClause(raw){
        PLAYED. Pitched and played are two ways to spend a card and a card
        does only one of them — v3.40's rule that two directions of one
        event are two records, here as two fates of one card. */
+    /* "IF YOU'VE PLAYED A <CLASS> CARD THIS TURN" (v3.58) — Star Fall.
+       `hist.playTy` (v3.38) is the structured type words of every card
+       played this turn, so the class is CAPTURED off the card rather than
+       listed here — the same discipline `playedAnotherCls` follows.
+
+       It is deliberately WIDER than `blue`/`red` beside it: those ask
+       about a pitch VALUE and say "another", where this asks about a
+       class and does not exclude the card being played. Read as one of
+       those the card would be wrong in both directions. */
+    if(m=cond.match(/^you'?(?:ve| have) played an? ([a-z]+) card this turn$/))
+      return Object.assign(rest,{cond:"playedCls:"+m[1]});
     if(/you'?(?:ve| have) pitched a blue card this turn/.test(cond)) return Object.assign(rest,{cond:"pitchBlue1"});
     if(/you'?(?:ve| have) played another blue card this turn/.test(cond)) return Object.assign(rest,{cond:"blue"});
     if(/you'?(?:ve| have) played another red card this turn/.test(cond)) return Object.assign(rest,{cond:"red"});
@@ -2593,6 +2649,38 @@ function fxParse(card){
     break;                                /* one such trigger per card in the pool */
   }
 
+  /* ---- "WHEN THIS IS DESTROYED, …" (v3.58) --------------------------
+     ONE READER REPLACING AN INLINE ONE. The phantasm pop site in
+     `effects.js` has read this trigger since v3.01 — with its own regex
+     over the card's raw text, which is the cached-card-fact shape v3.22
+     names ("the pop asks each token's own printed line instead"). The
+     clause therefore fired correctly and still reported UNREAD, so
+     Phantasmal Haze sat at `part` with a mechanic that works: the same
+     under-reporting Call in the Big Guns had at v3.53.
+
+     Measured before replacing it: the inline regex matches exactly one
+     pool card (Phantasmal Haze, three printings), so this reader is an
+     exact swap rather than a widening.
+
+     HELD OFF `fx.ops`, like every other schedule. Phantasmal Haze is an
+     ATTACK card — left in `ops` the token would be minted every time the
+     card was PLAYED, which is the v3.07 shape. The payload goes back
+     through `classifyClause`, and an unreadable one refuses. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const dm = clauses[ci].match(/^when this is destroyed, (.+)$/i);
+    if(!dm) continue;
+    const sub = classifyClause(dm[1]);
+    if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length) continue;
+    /* a gated destroy payload would need the condition carried too, and
+       no pool card prints one — refuse rather than dropping the gate,
+       the call v3.57 made for the leave-trigger. */
+    if(sub.cond) continue;
+    fx.onDestroy = sub.ops;
+    handled.add(ci);
+    break;
+  }
+
   /* ---- "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) -------------
      Boost banishes the top card of your deck to pay for the card you are
      playing — so this trigger fires from the DECK, on a card its
@@ -2868,7 +2956,16 @@ function fxParse(card){
          parameter. The split mirrors `condOnHit`, which is already a
          separate list for the same reason. */
       if(r.onHit){ (r.heroOnly ? fx.onHitHero : fx.onHit).push(op); return; }
-      else if(r.cond) fx.conds.push({cond:r.cond, op, instead:!!r.instead, atkHero:!!r.atkHero});
+      /* `wpnOnly` IS ADDED ONLY WHEN TRUE (v3.58). `instead` and `atkHero`
+         are always present because every cond entry has had them since
+         they were introduced; a fourth always-present key changes the
+         SHAPE of every cond in the pool, and five drills that deepEqual
+         `fx.conds` went red on cards that print no weapon static at all.
+         Those drills are right to compare the whole object — so the flag
+         appears only on the entries that carry it. */
+      else if(r.cond) fx.conds.push(Object.assign(
+        {cond:r.cond, op, instead:!!r.instead, atkHero:!!r.atkHero},
+        r.wpnOnly ? {wpnOnly:true} : {}));
       /* AN UNGATED "when this attacks a HERO" PAYLOAD gets its own list
          (v3.46), for the reason `onHitHero` does: an op is a bare array
          and a flag on it sits where a reader expects a parameter. */

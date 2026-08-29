@@ -1580,7 +1580,13 @@ function makeEffects(ctx){
       n = runOps(n, pre, card.name);
       pre.forEach(o=>preRan.add(o));
     }
-    fx.conds.forEach(({cond,op,instead,atkHero})=>{
+    fx.conds.forEach(({cond,op,instead,atkHero,wpnOnly})=>{
+      /* "THIS CARD'S ATTACKS GET …" IS ABOUT THE SWING, NOT THE CARD
+         (v3.58). Three pool weapons print a conditional static on their
+         own attacks; the same piece can also be activated for a non-attack
+         ability, and the bonus must not follow it there. `from` is the
+         route, exactly as it is for an ally (v3.44). */
+      if(wpnOnly && from !== "weapon") return;
       /* "WHEN THIS ATTACKS A HERO, IF …" is a trigger with a subject
          wrapped around a gate (v3.46). Mocking Blow booed the crowd off an
          attack on an ally, which is a hero's reaction to being hit by a
@@ -1638,6 +1644,17 @@ function makeEffects(ctx){
         : cond==="auraTurn" ? (act(n).hist.aura||0)>0
         : cond==="madeCard" ? (act(n).hist.made||0)>0
         : cond==="booed" ? (act(n).hist.booed||0)>0
+        /* "IF YOU'VE PLAYED A <CLASS> CARD THIS TURN" (v3.58) — Star Fall.
+           Answered off `hist.playTy`, the structured type words of every
+           card played this turn (v3.38), so the CLASS comes off the card
+           rather than from a list here. Lowercased on the way in, which is
+           what `playTy` stores.
+
+           IT IS A WIDER QUESTION THAN `blue`/`red` above: those count a
+           pitch VALUE and say "another", where this asks about a class and
+           does not exclude the card being played. */
+        : /^playedCls:/.test(cond) ? ((act(n).hist.playTy||[])
+            .some(ty => (ty||[]).indexOf(cond.replace(/^playedCls:/, "")) >= 0))
         : cond==="blue" ? (act(n).hist.blue||0)>0
         : cond==="red" ? (act(n).hist.red||0)>0
         : cond==="transcended" ? (act(n).hist.trans||0)>0
@@ -1728,6 +1745,10 @@ function makeEffects(ctx){
         || (/^auras(\d+)$/.test(cond) ? `fewer than ${cond.slice(5)} auras on your board` : null)
         || (/^pitchCost(\d+)$/.test(cond) ? `no card costing ${cond.slice(9)} or more in your pitch zone` : null)
         || (/^pitchBlue(\d+)$/.test(cond) ? `fewer than ${cond.match(/\d+/)[0]} blue cards in your pitch zone` : null)
+        /* NAME THE CONDITION IN THE PLAYER'S WORDS, not the engine's. The
+           feed is the lesson in a training sim, and "condition not met
+           (playedCls:lightning)" teaches nobody anything. */
+        || (/^playedCls:/.test(cond) ? `no ${cond.replace(/^playedCls:/, "")} card played this turn` : null)
         || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
         || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
         || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
@@ -1944,10 +1965,12 @@ function makeEffects(ctx){
           declNote += ` ${top.name}'s boost trigger fires.`;
         }
       }
-      if(from==="weapon" && /discarded a card with 6 or more \{p\} this turn, this card'?s attacks? go again/i.test(card.tx||"")){
-        if(had6ThisTurn(n)){ ga = true; declNote += " A 6+ power card is in the graveyard — the claw goes again."; }
-        else declNote += " (No 6+ power card discarded yet — no go again.)";
-      }
+      /* MANDIBLE CLAW'S RIDER IS THE PARSER'S NOW (v3.58). It used to be
+         an inline regex here — one card special-cased by name, with the
+         two other pool weapons printing the same shape unread, and a
+         `noop` in `classifyClause` whose reason pointed at this line.
+         `fx.conds` carries it with `wpnOnly`, so the existing gate
+         machinery applies it at the swing. */
       if(from==="weapon" && card.addRust){ const cur=(act(n).counters[card.uid]||{}); actMut(n).counters={...act(n).counters,[card.uid]:{...cur,rust:(cur.rust||0)+1}}; declNote += ` Rust counter placed — now ${(cur.rust||0)+1}.`; }
       if(from==="weapon" && card.needSteam){ const cur=(act(n).counters[card.uid]||{}); actMut(n).counters={...act(n).counters,[card.uid]:{...cur,steam:Math.max(0,(cur.steam||0)-1)}}; declNote += ` Steam counter spent.`; }
       /* WHERE A DECLARED ATTACK LIVES IS THE CALLER'S (v2.77) — the same
@@ -2757,9 +2780,14 @@ function makeEffects(ctx){
         n.pend = null; n.stack = [];
         actMut(n).ap = act(n).ap - 1;
         n = L(n, `${popper.name} has ${popper.power} power — ${card.name} is popped by phantasm and destroyed. No go again, no refund.`);
-        /* a phantasm card may pay off on being popped — read its own text */
-        const pm = clean(card.tx||"").toLowerCase().match(/when (?:this|[a-z' ]+) is destroyed, (.+?)(?:\.|$)/);
-        if(pm){ const eff = classifyClause(pm[1]); if(eff && eff.status==="run") n = runOps(n, eff.ops, card.name); }
+        /* A PHANTASM CARD MAY PAY OFF ON BEING POPPED, and the trigger is
+           `fxParse`'s to read (v3.58). This used to be an inline regex
+           over the card's raw text — a second reader for a printed
+           clause, which is the cached-card-fact shape v3.22 deletes. It
+           fired correctly and the clause still reported UNREAD, so
+           Phantasmal Haze sat at `part` with a mechanic that works. */
+        const dOps = fxParse(card).onDestroy || [];
+        if(dOps.length) n = runOps(n, dOps, card.name);
         n._fizzled = true;
         return openPrompt(winCheck(n));
       }

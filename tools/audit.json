@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T15:41:17.415Z",
- "appVer": "3.56",
+ "generated": "2026-08-29T16:22:14.256Z",
+ "appVer": "3.57",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 348,
-  "part": 46,
+  "full": 351,
+  "part": 43,
   "none": 11
  },
  "heroes": {
@@ -672,7 +672,7 @@
     },
     {
      "t": "If you've discarded a card with 6 or more {p} this turn, this card's attacks get go again.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -685,9 +685,7 @@
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}: Attack\nIf you've discarded a card with 6 or more {p} this turn, this card's attacks get go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "nullrune gloves|0": {
    "name": "Nullrune Gloves",
@@ -7623,7 +7621,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -7633,12 +7631,10 @@
     },
     {
      "t": "If you control 2 or more Draconic chain links, this card's attacks get go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you control 2 or more Draconic chain links, this card's attacks get go again."
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 2,
     "addRust": false,
@@ -7648,9 +7644,7 @@
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}{r}: Attack\nIf you control 2 or more Draconic chain links, this card's attacks get go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "tearing shuko|0": {
    "name": "Tearing Shuko",
@@ -9076,7 +9070,7 @@
    "mentions": [
     "phantasm"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -9086,12 +9080,10 @@
     },
     {
      "t": "When this is destroyed, create a Spectral Shield token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is destroyed, create a Spectral Shield token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Phantasm\nWhen this is destroyed, create a Spectral Shield token.",
@@ -11859,7 +11851,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11869,12 +11861,10 @@
     },
     {
      "t": "If you've played a Lightning card this turn, this card's attacks get +1{p} and go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you've played a Lightning card this turn, this card's attacks get +1{p} and go again."
-   ],
+   "skipped": [],
    "weaponCost": {
     "cost": 1,
     "addRust": false,
@@ -11884,9 +11874,7 @@
    },
    "eqAbility": null,
    "tx": "Once per Turn Action - {r}: Attack\nIf you've played a Lightning card this turn, this card's attacks get +1{p} and go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "swiftstrike bracers|0": {
    "name": "Swiftstrike Bracers",

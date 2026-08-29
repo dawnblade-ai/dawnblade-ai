@@ -7,6 +7,79 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.58 — two readers that each replaced an inline one
+
+Both of this version's cards were **already firing**. Both reported unread.
+Both were read by a private regex rather than by the parser — which is the
+cached-card-fact shape v3.22 named, twice over.
+
+### "WHEN THIS IS DESTROYED, …" — Phantasmal Haze
+
+The phantasm pop site has read this trigger since v3.01, with **its own
+regex over the card's raw text**. So the token was minted correctly and the
+clause still reported UNREAD, leaving the card at `part` with a mechanic
+that works — the same under-reporting Call in the Big Guns had at v3.53.
+
+Measured before replacing it: that inline regex matches **exactly one pool
+card** (Phantasmal Haze, three printings), so `fx.onDestroy` is an exact
+swap rather than a widening. Held off `fx.ops` like every schedule — the
+card is an ATTACK, and a payload left in `ops` would mint the token every
+time it was *played*.
+
+### "IF X, THIS CARD'S ATTACKS GET Y" — a card special-cased BY NAME
+
+Three pool cards print this and all three are weapons:
+
+| card | condition |
+|---|---|
+| Mandible Claw | you've discarded a 6+ {p} card this turn |
+| Searing Emberblade | you control 2 or more Draconic chain links |
+| Star Fall | you've played a Lightning card this turn |
+
+**Mandible Claw's was an inline `from === "weapon"` regex in `execute`**,
+with a matching `noop` in `classifyClause` whose *reason pointed at that
+line*. The golden rule broken twice: a card handled by name, and a `noop`
+filed for text that has real behaviour. The other two were dead.
+
+**NOTHING NEW RUNS IT.** `execute`'s condition loop already treats `ga` and
+`self` specially, and a weapon swing goes through `execute` with
+`attacking` true — so the payload reads as ordinary ops and the existing
+gate machinery applies them at the swing, which is exactly when the card
+says. Two of the three conditions already existed; only Star Fall's needed
+writing, and `hist.playTy` (v3.38) already held the answer.
+
+**`wpnOnly` rides on the clause**, because *"this card's ATTACKS"* is not
+*"this card"* — the same piece can be activated for a non-attack ability,
+and the bonus must not follow it there. `from` is the route, the
+distinction v3.44 had to make for allies.
+
+**And it is added to a cond entry only when TRUE.** `instead` and
+`atkHero` are always present, so a fourth always-present key changes the
+shape of *every* cond in the pool — five drills that `deepEqual`
+`fx.conds` went red on cards printing no weapon static at all. Those
+drills are right to compare the whole object.
+
+### `discard6` LEARNED THE OTHER PRINTED ORDER
+
+Every other pool card says *"a card **with 6 or more {p}** is
+**discarded**"*; Mandible Claw says *"you've **discarded** a card **with 6
+or more {p}** this turn"* — the same question with the halves swapped,
+which the existing pattern could not see. Anchored on **6**, not `\d+`,
+because `discard6` names its threshold in the cond itself.
+
+### Measured
+
+- **348 → 351 full**, 46 → 43 `part`. Flagged cards 52 → 49.
+- `npm test` **1561 drills, 0 fail, 4 skipped**. Fairness clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Eight sabotages, all eight bite.** One only after the drill stopped
+  asserting on feed prose: removing the `wpnOnly` gate left it green,
+  because the ability route prints no "goes again" line either way. Go
+  again is a GAIN (CR 5.3.5), so the observable is the **action point** —
+  with the gate gone, the met and unmet cases diverge there. **Fourth weak
+  drill this cycle, and the third caught by asserting on the log.**
+
 ## v3.57 — a condition, a dropped gate the sweep cannot see, and a reader that stole a clause
 
 ### THE CONDITION MAPS ONTO AN EVALUATOR THAT ALREADY EXISTED

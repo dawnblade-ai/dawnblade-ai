@@ -41,8 +41,8 @@
 
 > ### WHERE THE WEEK GOT TO — v3.52 → v3.55
 >
-> **335 → 348 full · 59 → 46 `part`.** Thirteen cards closed, and four of the
-> seven findings were not cards at all:
+> **335 → 351 full · 59 → 43 `part`.** Sixteen cards closed, and five of the
+> nine findings were not cards at all:
 >
 > | ver | what |
 > |---|---|
@@ -51,6 +51,7 @@
 > | **3.55** | the **targeted counter put** — kind, amount and target all off the printed line, kind vocabulary closed to what something reads |
 > | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played |
 > | **3.57** | the Illusionist `pitchBlue1` condition and the gated enters-with counter — and a **latent dropped gate the fairness sweep cannot see** |
+> | **3.58** | two readers that each replaced an **inline** one — a destroy trigger read by a private regex, and a weapon static that had Mandible Claw special-cased BY NAME while two other cards printing the same shape were dead |
 >
 > **What is left, honestly** — see `npm run gaps`, whose family lines now
 > say it: nine token-on-a-trigger cards each needing their own condition;
