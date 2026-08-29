@@ -7,6 +7,57 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.61 — the trace v3.60 built already existed
+
+**`_discWay` has recorded "what this resolution discarded" since
+`discard6way` was written.** It is cleared per resolution in `execute`, at
+the same point and for the same stated reason — *"leaving it to accumulate
+would silently turn 'this way' back into 'this turn'"*.
+
+v3.60 added a private `_thisWay` beside it. **Two records of one fact —
+the no-mirror rule broken inside a single file**, and by exactly the habit
+this fortnight keeps paying for: *before building anything, check whether
+it already exists.* Four findings came from that check and this one was
+missed.
+
+Unified onto `_discWay`, which is strictly better: one trace, two readers
+(`discard6way` and the new colour condition).
+
+### AND IT CLOSED A GAP THAT WAS ALREADY WRITTEN DOWN
+
+The comment on `creditDiscard` says it in as many words:
+
+> Every discard path should call this. Today that is `discardRandom`; an
+> additional-cost discard is the other one and is not wired yet, **which is
+> a gap rather than a decision.**
+
+`selfDiscard` was not feeding `_discWay` either — so a card with 6 or more
+{p} discarded by one could never satisfy `discard6way`. Now it does. **A
+recorded gap is a debt, and this one came due sideways**, through a
+refactor that was not looking for it.
+
+### THE LATE PASS STAYS, AND HERE IS WHY
+
+The existing answer to "conditions run before ops" is a **pre-run**:
+`execute` runs a card's `draw`/`discardRandom` ops ahead of the condition
+loop and filters them out of the later lists. That works when the fact is a
+DISCARD.
+
+It does not generalise. Path of Same Ends asks *"if damage is dealt this
+way"* about an arcane that fires from `fx.onAtkHero` at declaration —
+pre-running that would deal damage before the attack is properly declared.
+So the two mechanisms cover different shapes and both earn their place:
+**pre-run when the op can safely move; the late pass when it cannot.**
+
+### Measured
+
+- No tier movement (351 full) — this is a correction, not a feature.
+- `npm test` **1577 drills, 0 fail, 4 skipped**. Fairness clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Eight sabotages re-targeted at the unified code; all eight bite.** A
+  sabotage written against the old shape proves nothing about the new one.
+
 ## v3.60 — a card that drew for free, and the "…this way" record
 
 First item of the new week's plan, and the mechanism turned out to be

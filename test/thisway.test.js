@@ -127,12 +127,18 @@ test("AN UNKNOWN `way:` CONDITION ANSWERS FALSE", () => {
      the default passes silently against every driven drill. Exactly the
      situation v3.26 records for `defSelfMet` and v3.36 for
      `asInstantMet` — which is why this is a named function at all. */
-  assert.equal(E.thisWayMet("way:somethingNobodyBuilt", {discarded: [{pitch: 2}]}), false,
+  /* THE TRACE IS `_discWay` — the EXISTING per-resolution discard record
+     that `discard6way` has read since it was built, not a second one.
+     Written first as a private `_thisWay`, this was two records of one
+     fact; unifying them also wired `selfDiscard` into `_discWay`, which
+     the `creditDiscard` comment had recorded as an open gap. */
+  assert.equal(E.thisWayMet("way:somethingNobodyBuilt", [{pitch: 2}]), false,
     "a condition added to the parser and forgotten here must leave the " +
     "card at its printed value, not grant a bonus nobody built");
-  assert.equal(E.thisWayMet("way:discardPitch2", {discarded: [{pitch: 2}]}), true);
-  assert.equal(E.thisWayMet("way:discardPitch2", {discarded: [{pitch: 1}]}), false);
-  assert.equal(E.thisWayMet("way:discardPitch2", {}), false, "an empty trace answers no");
+  assert.equal(E.thisWayMet("way:discardPitch2", [{pitch: 2}]), true);
+  assert.equal(E.thisWayMet("way:discardPitch2", [{pitch: 1}]), false);
+  assert.equal(E.thisWayMet("way:discardPitch2", []), false, "an empty trace answers no");
+  assert.equal(E.thisWayMet("way:discardPitch2", undefined), false, "and so does no trace at all");
 });
 
 test("the trace is CLEARED with the resolution", {skip}, () => {

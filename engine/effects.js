@@ -469,12 +469,19 @@ function makeEffects(ctx){
         else {
           actMut(n).hand = act(n).hand.slice(0, act(n).hand.length-take.length);
           actMut(n).grave = [...gyDisc(n.turn, ...take), ...act(n).grave];
-          /* THE TRACE FOR "…DISCARDED THIS WAY" (v3.60). "This way" means
-             the effect that just resolved, not the turn's history — so it
-             is recorded HERE, where the cards are known, and read by the
-             LATE condition pass in `execute` once the ops have run. */
-          n._thisWay = Object.assign({}, n._thisWay,
-            {discarded: [...((n._thisWay||{}).discarded||[]), ...take]});
+          /* THE EXISTING TRACE, NOT A SECOND ONE. `_discWay` has recorded
+             "what this resolution discarded" since `discard6way` was
+             built, and it is cleared per resolution in `execute` for
+             exactly the reason this needs. Written first as a private
+             `_thisWay`, this was two records of one fact — the no-mirror
+             rule broken inside one file, and the very "check whether it
+             already exists" lesson this week keeps paying for.
+
+             It also closes a gap the comment on `creditDiscard` names:
+             "every discard path should call this. Today that is
+             `discardRandom`" — `selfDiscard` was not wired, so a 6+ power
+             card discarded by one could never satisfy `discard6way`. */
+          n._discWay = [...(n._discWay||[]), ...take];
           n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
         }
       }
@@ -2224,17 +2231,12 @@ function makeEffects(ctx){
          leaves the card at its printed value — weaker than printed and
          visible, where the other direction grants a bonus nobody built. */
       {
-        const tw = n._thisWay || {};
         for(const {cond, op} of fx.conds){
           if(!/^way:/.test(cond)) continue;
-          if(thisWayMet(cond, tw)) n = runOps(n, [op], card.name);
+          if(thisWayMet(cond, n._discWay)) n = runOps(n, [op], card.name);
           else n = L(n, `${card.name}: nothing matching was done this way — the bonus skips.`);
         }
       }
-      /* CLEARED WITH THE RESOLUTION. "This way" is one card's own doing, so
-         a trace left on the state is the NEXT card's condition reading a
-         discard it never made. */
-      delete n._thisWay;
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
       /* AN ATTACK REACTION PUMPS THE ATTACK IT IS PLAYED ON, NOT THE NEXT
          ONE (v3.11). Falling through to `buffNext` is how the table came to
@@ -4225,10 +4227,10 @@ function settleIntellect(game, seat){
    parser and forgotten here leaves the card at its printed value —
    weaker than printed and visible. The other direction hands out a bonus
    nobody built. */
-function thisWayMet(cond, trace){
-  const tw = trace || {};
+function thisWayMet(cond, discWay){
+  const seen = discWay || [];
   const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
-  if(pm) return (tw.discarded||[]).some(c => c && (c.pitch||0) === +pm[1]);
+  if(pm) return seen.some(c => c && (c.pitch||0) === +pm[1]);
   return false;
 }
 

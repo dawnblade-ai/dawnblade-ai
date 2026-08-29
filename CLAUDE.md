@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.60
+**Current version:** v3.61
 
 ---
 
@@ -410,6 +410,32 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### CHECK FOR THE TRACE BEFORE YOU BUILD ONE (v3.61)
+
+`_discWay` has recorded *"what this resolution discarded"* since
+`discard6way` was written, cleared per resolution at the same point and
+for the same stated reason. v3.60 added a private `_thisWay` beside it —
+**two records of one fact, the no-mirror rule broken inside a single
+file**, and by the very habit that found four other things this
+fortnight.
+
+**AND UNIFYING THEM CLOSED A GAP THAT WAS ALREADY WRITTEN DOWN.**
+`creditDiscard`'s comment says *"every discard path should call this.
+Today that is `discardRandom`… which is a gap rather than a decision."*
+`selfDiscard` was not feeding `_discWay` either, so a 6-power card
+discarded by one could never satisfy `discard6way`. **A recorded gap is a
+debt, and this one came due sideways** — through a refactor that was not
+looking for it.
+
+**TWO MECHANISMS, TWO SHAPES, BOTH EARNED.** The pre-existing answer to
+"conditions run before ops" is a PRE-RUN: `execute` runs a card's
+`draw`/`discardRandom` ahead of the condition loop and filters them out
+of the later lists. That works when the fact is a discard. It does not
+generalise — an arcane that fires from `fx.onAtkHero` at declaration
+cannot be moved earlier without dealing damage before the attack is
+declared. **Pre-run when the op can safely move; the late pass when it
+cannot.**
 
 ### "…THIS WAY" IS THE CARD'S OWN RESOLUTION, AND THE CONDS RUN TOO EARLY (v3.60)
 
