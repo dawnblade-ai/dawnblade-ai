@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T14:00:46.726Z",
- "appVer": "3.54",
+ "generated": "2026-08-29T14:13:57.206Z",
+ "appVer": "3.55",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 341,
-  "part": 53,
+  "full": 344,
+  "part": 50,
   "none": 11
  },
  "heroes": {
@@ -3966,13 +3966,13 @@
     "boost",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Put a steam counter on a Hyper Driver you control.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "The next attack you boost this turn gets +4{p}.",
@@ -3983,9 +3983,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Put a steam counter on a Hyper Driver you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Put a steam counter on a Hyper Driver you control.\nThe next attack you boost this turn gets +4{p}.\nGo again",
@@ -8570,7 +8568,7 @@
     "cloaked",
     "ward"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -8580,18 +8578,16 @@
     },
     {
      "t": "Instant - {r}, turn this face-up: Put a +1{p} counter on an aura you control with ward.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Ward 1",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Instant - {r}, turn this face-up: Put a +1{p} counter on an aura you control with ward."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "Put a +1{p} counter on an aura you control with ward [1r]",
    "tx": "Cloaked\nInstant - {r}, turn this face-up: Put a +1{p} counter on an aura you control with ward.\nWard 1",
    "flags": [
     "unreviewed keyword: \"cloaked\""
@@ -8612,22 +8608,20 @@
    "mentions": [
     "ward"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Put three +1{p} counters on target aura with ward you control.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you control a Spectral Shield, you may play this as though it were an instant.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Put three +1{p} counters on target aura with ward you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Put three +1{p} counters on target aura with ward you control.\nIf you control a Spectral Shield, you may play this as though it were an instant.",

@@ -1181,6 +1181,54 @@ function makeEffects(ctx){
         if(tgt){ const cur=(act(n).counters[tgt]||{}); actMut(n).counters={...act(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
         n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
       }
+      /* A TARGETED COUNTER PUT (v3.53) — the general form of `aim`.
+
+         THE CANDIDATES ARE THE ACTOR'S PERMANENTS: board entries and
+         equipped gear, which are the two places a counter can sit. Gear
+         is where a steam counter goes (a Hyper Driver is equipment) and
+         the board is where an aura is, so a scan of either alone finds
+         nothing for half the family — the same lesson v3.33 records for
+         Magmatic Carapace, where a board-only scan missed a Chest piece.
+
+         A DESTROYED PIECE IS NOT THERE, so it is not a legal target.
+
+         WITH ONE CANDIDATE IT JUST HAPPENS. A sheet offering a single
+         forced choice is a tap that teaches nothing; with two or more the
+         choice is real and is put to the player. Addressed to the ACTOR,
+         because the permanents are theirs. */
+      else if(k==="ctrPut"){
+        const spec = v || {};
+        const kind = spec.kind, amt = spec.n || 1;
+        const label = spec.label || kind;
+        const filt = promptFilter(spec.filter);
+        const cands = [
+          ...((act(n).board||[]).map(b => b && b.card).filter(Boolean)),
+          ...((act(n).gear||[]).filter(g => g && !g.destroyed))
+        ].filter(Boolean).filter(filt);
+        const many = amt > 1;
+        if(!cands.length){
+          n = L(n, `${srcName}: ${act(n).name} controls nothing that can take ${many ? amt + " " + label + " counters" : "a " + label + " counter"}.`);
+          return;
+        }
+        if(cands.length === 1){
+          const t = cands[0], cur = act(n).counters[t.uid] || {};
+          actMut(n).counters = Object.assign({}, act(n).counters,
+            {[t.uid]: Object.assign({}, cur, {[kind]: (cur[kind] || 0) + amt})});
+          n = L(n, `${t.name} takes ${many ? amt + " " + label + " counters" : "a " + label + " counter"} — now ${(cur[kind]||0) + amt}.`);
+          return;
+        }
+        /* CALLER-SUPPLIED CANDIDATES AND NO `to` — nothing moves, the
+           counters land where the permanent already stands. `ctrStamp` is
+           DATA the answer applies, which is `untapStamp`'s shape (v3.47)
+           and `arsStamp`'s rule (v2.34): a spec only carries fields
+           `buildPrompt` knows about. */
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"pick", side:actorOf(n), src:srcName,
+          cards:cands, min:1, max:1,
+          ctrStamp:{kind, n:amt, label},
+          title:`Where do the ${label} counters go?`,
+          hint:`${many ? amt + " counters" : "One counter"} — choose which permanent takes ${many ? "them" : "it"}.`}];
+      }
       /* `rot` AND `fra` ARE GONE (v3.09). Both were side counters standing
          in for a printed `Generic Token - Aura`, and each was read in
          exactly one place inside the trainer — so at the table neither did
@@ -2481,6 +2529,17 @@ function makeEffects(ctx){
        here is precisely "untap". The stamp is the card's OWN second
        sentence, riding on the op because "it" names the ally rather than
        the source (v2.33). */
+    /* THE COUNTERS LAND ON THE PERMANENT THAT WAS CHOSEN (v3.53), and
+       nothing moves — `ctrStamp` is data for the same reason `untapStamp`
+       is. The counters map is keyed by uid, which is what lets a board
+       entry and a piece of gear share one store. */
+    if(p.tag === "pick" && p.ctrStamp && (r.picked||[]).length){
+      const st = p.ctrStamp, got = r.picked[0];
+      const cur = act(n).counters[got.uid] || {};
+      actMut(n).counters = Object.assign({}, act(n).counters,
+        {[got.uid]: Object.assign({}, cur, {[st.kind]: (cur[st.kind] || 0) + (st.n || 1)})});
+      n = L(n, `${got.name} takes ${(st.n||1) > 1 ? st.n + " " + st.label + " counters" : "a " + st.label + " counter"} — now ${(cur[st.kind]||0) + (st.n||1)}.`);
+    }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
       const st = p.untapStamp || {};

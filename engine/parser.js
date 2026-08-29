@@ -180,6 +180,27 @@ const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|botto
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
 const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
 
+/* PUTTING COUNTERS ON A PERMANENT YOU CONTROL.
+
+   THE KIND IS READ OFF THE PRINTED LINE and mapped to the storage key the
+   engine ALREADY reads — never invented, and never widened to "whatever
+   word came before 'counter'". A counter kind nothing reads is a counter
+   that does nothing, filed `full`, which is the no-op blind spot at its
+   purest; an unrecognised kind REFUSES and leaves the card unclaimed.
+
+   Each of these four is genuinely consumed somewhere:
+     steam  a weapon's `needSteam` activation, and Plasma Barrel Shot
+     rust   `rustedThrough` — the piece shatters at its printed threshold
+     aim    the `aim` condition, and Drill Shot's piercing
+     pow    `powCtr` on a weapon swing, and the idle-counter wipe
+
+   `+1{p}` IS THE PRINTED SPELLING OF `pow`. Mapping a printed form onto
+   an existing field is reading; adding a fifth key here without a reader
+   would be parsing ahead of wiring. */
+const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow"};
+const CTR_WORDS = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6};
+const RX_CTR_PUT = /^put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (.+)$/;
+
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
   const c = levelIdiom(clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
@@ -1489,6 +1510,52 @@ function classifyClause(raw){
                  : "Return a card from your graveyard to your hand",
       hint: may ? "Optional — choose none to decline." : undefined}]]);
   }
+  /* A TARGETED COUNTER PUT (v3.53) — "put a steam counter on a Hyper
+     Driver you control", "put three +1{p} counters on target aura with
+     ward you control".
+
+     `counters` has been a per-side map keyed by uid for a long time and
+     `aim` was the one worked example of putting one on a chosen object.
+     This is the general form: a KIND, an AMOUNT and a TARGET read from a
+     printed filter, with the choice offered when more than one permanent
+     qualifies.
+
+     BOTH NUMBERS COME OFF THE LINE. Astral Etchings prints three / two /
+     one across its three pitches, so a hardcoded amount would be right
+     for one printing and silently wrong for the other two — the same
+     reason `rustDestroy` reads its threshold (v3.17) and Thunder Quake's
+     heave reads both of its (v3.32).
+
+     "YOU CONTROL" IS CONSUMED, and it is the one phrase that may be:
+     the op is actor-relative and searches the ACTOR's own permanents, so
+     the words restate what the target zone already says. v3.18 settled
+     exactly this for `optFilter`'s destroy costs. Everything else in the
+     subject still has to be read whole, so "target aura with ward" keeps
+     its ward and an unreadable subject refuses the clause.
+
+     WHAT THIS DELIBERATELY DOES NOT CLOSE: Crankshaft and Big Bertha
+     print the same payload behind *"when this is banished from
+     boosting"*, and no such trigger exists. The when-handler's trigger
+     vocabulary is CLOSED, so those clauses still refuse as a whole and
+     the two cards stay `part` — a payload that parses with no schedule to
+     fire on is the one shape `failstates.js` cannot see (v3.07), and it
+     is avoided here by the wrapper refusing rather than by anything this
+     reader does. */
+  if(m=c.match(RX_CTR_PUT)){
+    const kind = CTR_KINDS[m[2]];
+    if(!kind) return null;
+    const n = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
+    if(!(n > 0)) return null;
+    /* the SUBJECT keeps its printed capitalisation — "a Hyper Driver" is
+       a NAME, and `optFilter`'s name branch is anchored on a proper noun */
+    let subj = String(cased(RX_CTR_PUT, 3, m[3]) || "").trim()
+                 .replace(/\s+you control\b/i, " ")
+                 .replace(/^target\s+/i, "")
+                 .replace(/\s+/g, " ").trim();
+    const filter = pickSubject(subj);
+    if(!filter) return null;
+    return R([["ctrPut", {kind, n, filter, label:m[2]}]]);
+  }
   /* RETRIEVE — and THE PRINTED CARD IS THE ORACLE FOR A KEYWORD (v3.32),
      for the third time. The database carries no reminder text for any
      keyword and upstream's own `keyword.json` lists Retrieve with an
@@ -1925,7 +1992,13 @@ function optFilter(phrase){
      "with" is still a dynamic or rules-text limit and still refuses —
      widening this to any word would re-open exactly the hole the pin was
      protecting. */
-  const km = rest.match(/\s*\bwith (crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost)\b/i);
+  /* `ward` JOINED THE LIST AT v3.53, and the blast radius was measured
+     rather than reasoned about (v3.33): exactly THREE pool cards print
+     "with ward" — Astral Etchings and Uphold Tradition, which are the two
+     the counter reader exists for, and Cosmo, whose clause is a different
+     shape entirely. A keyword the engine already carries, on a phrase
+     almost nothing prints. */
+  const km = rest.match(/\s*\bwith (crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward)\b/i);
   if(km){ f.kw = km[1].toLowerCase(); rest = (rest.slice(0, km.index) + " " + rest.slice(km.index + km[0].length)).trim(); }
 
   /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of

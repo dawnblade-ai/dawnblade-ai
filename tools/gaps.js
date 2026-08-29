@@ -35,16 +35,29 @@ if(!fs.existsSync(AUDIT)){
 const A = JSON.parse(fs.readFileSync(AUDIT, "utf8"));
 
 /* Each family is [label, pattern, what it needs]. Ordered: a card lands in
-   the FIRST that matches, so the more specific shapes come first. */
+   the FIRST that matches, so the more specific shapes come first.
+
+   THE PATTERN IS TEXT AND THE `needs` IS A CLAIM ABOUT MACHINERY, and
+   those are not the same kind of statement. The clustering can only see
+   what a card SAYS; whether the family shares one fix is something only
+   the PARSER can answer. v3.53 checked all five by asking which records
+   actually carry the field each family names, and two of the `needs`
+   lines did not survive — the "you may" family named two queue sites,
+   one of which had been wired since v3.33 and the other of which has no
+   pool cards at all, while its eight cards turned out to need five
+   different COST shapes.
+
+   So: before building a family, ask the parser which records set the
+   field. It is a two-minute script and it moved two of five. */
 const FAMILIES = [
   ["pick from a zone", /from your graveyard|from an opposing hero's graveyard|search your deck|from your (?:hand|deck) (?:into|face-up)|shuffle .* into your deck/i,
-   "a reader emitting a `pick` spec — prompts.js has had the variant since v2.17"],
+   "the graveyard readers landed in v3.53/v3.54; what is left is a deck SEARCH, an X-cost (refused), a two-target pick, a hand->soul put and a shuffle-redraw"],
   ["counters on a permanent", /counter[s]? on\b|has an? \w+ counter|enters the arena with a \+/i,
-   "a TARGETED counter put — `aim` (v3.39) is the worked example"],
+   "the targeted put landed in v3.53 (`ctrPut`); what is left is a TRIGGER each — boost-banish, arrow-put, enters-with, and a reader for 'if this has an aim counter'"],
   ["create a token on a trigger", /create an? [A-Z]/,
-   "wire the trigger; the mint is generic since v3.33"],
+   "the mint is generic since v3.33; each card needs its OWN condition, so nine readings rather than one lever"],
   ["\"you may …, if you do …\"", /\byou may\b/i,
-   "the `hits` and `defends` queue sites — unwired since v3.20"],
+   "NOT one fix — measured v3.53: none of these sets `fx.optCost`. Five cost shapes: destroy-this, pay {r}{r}{r}, a modal cost, a dynamic filter (refused), one-off"],
   ["a granted / conditional keyword", /\b(?:it|this) (?:gets|gains|has) \b/i,
    "rider plumbing — hasKwNow / quotedRider"],
 ];

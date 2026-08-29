@@ -177,6 +177,11 @@ function buildPrompt(game, spec){
          untapped where it stands, so there is no `to` and nothing moves.
          Dropped here it vanishes silently, exactly as `arsStamp` did. */
       untapStamp: spec.untapStamp || null,
+      /* THE COUNTER STAMP (v3.53) — same rule, third time: a spec only
+         carries fields THIS function knows about. Dropped here, a targeted
+         counter put opens the right sheet, names the right permanent and
+         places nothing. */
+      ctrStamp: spec.ctrStamp || null,
       /* THE COUNTER COST AND ITS STAMP (v3.39), and they are here for the
          reason `arsStamp` is: A PROMPT SPEC ONLY CARRIES FIELDS THIS
          FUNCTION KNOWS ABOUT (v2.34). Dropped, Blaze's ability banishes

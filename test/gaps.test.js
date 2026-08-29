@@ -77,8 +77,19 @@ test("two printings of one card are named apart", {skip}, () => {
 });
 
 test("the dossier answers for one card", {skip}, () => {
-  const out = run("Astral");
-  assert.match(out, /Astral Etchings/);
+  /* THE FIXTURE IS TAKEN FROM THE LIVE REPORT, not hardcoded. It named
+     Astral Etchings until v3.55 closed that card, and the drill then
+     failed for the best possible reason — which is still a drill rotting
+     every time the project does its job. A dossier is about whatever is
+     UNFINISHED, so ask the report which cards those are and pick one. */
+  /* NOT the `needs:` line, which is indented identically — matching it
+     picked up prose, and `out.includes(...)` then passed against the
+     report's own header while the real assertion failed. */
+  const listed = run().match(/^      (?!needs:)(\S.*)$/m);
+  assert.ok(listed, "the report must list at least one unfinished card");
+  const first = listed[1].split(" · ")[0].replace(/\*$/, "").replace(/ p\d$/, "").trim();
+  const out = run(first.slice(0, 12));
+  assert.ok(out.includes(first), "the dossier must name the card it was asked for: " + first);
   assert.match(out, /unread:/, "it must print the clause, not just the name");
 });
 

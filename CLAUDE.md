@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.54
+**Current version:** v3.55
 
 ---
 
@@ -393,6 +393,72 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A COUNTER KIND WITH NO READER IS A NO-OP WEARING A NUMBER (v3.55)
+
+`ctrPut` is the general form of `aim` — a KIND, an AMOUNT and a TARGET,
+all read off the printed line. The safety property is that **the kind
+vocabulary is CLOSED** to the four counters something actually consumes:
+
+| kind | consumed by |
+|---|---|
+| `steam` | a weapon's `needSteam` activation, Plasma Barrel Shot |
+| `rust` | `rustedThrough` — the piece shatters at its printed threshold |
+| `aim` | the `aim` condition, Drill Shot's piercing |
+| `pow` | `powCtr` on a weapon swing, and the idle-counter wipe |
+
+**`+1{p}` IS THE PRINTED SPELLING OF `pow`.** Mapping a printed form onto
+a field that already exists is READING; adding a fifth key with no reader
+is parsing ahead of wiring. An unrecognised kind refuses, because a
+counter nothing consumes is a counter that does nothing, filed `full` —
+the no-op blind spot at its purest.
+
+**BOTH NUMBERS COME OFF THE LINE.** Astral Etchings prints three / two /
+one across its pitches, so a hardcoded amount is right for one printing
+and silently wrong for two. Same rule as `rustDestroy` (v3.17) and
+Thunder Quake's heave (v3.32).
+
+**CANDIDATES COME FROM THE BOARD *AND* THE GEAR.** A steam counter goes
+on a Hyper Driver, which is an **Item** on the board; rust and +1{p}
+counters go on **Equipment**. A scan of either zone alone finds nothing
+for half the family — v3.33's Magmatic Carapace, where a board-only scan
+missed a Chest piece.
+
+**WITH ONE LEGAL TARGET IT JUST HAPPENS.** A sheet offering a single
+forced choice is a tap that teaches nothing.
+
+**AND THE WRAPPER IS WHAT KEEPS IT HONEST.** Crankshaft and Big Bertha
+print the same payload behind *"when this is banished from boosting"*,
+and no such trigger exists. The when-handler's trigger vocabulary is
+CLOSED, so those clauses refuse whole and both cards stay `part`. A
+payload that parses with no schedule to fire on is the one shape
+`failstates.js` cannot reach (v3.07) — **when you build a payload, check
+what its trigger does with an unknown verb.**
+
+### A FAMILY LABEL IS A CLAIM ABOUT MACHINERY (v3.53-v3.55)
+
+`npm run gaps` clusters unfinished cards by what their TEXT says, and
+each family carries a `needs:` line saying what one fix would close it.
+**Those are two different kinds of statement**, and the second is a claim
+a doc makes — which is a test with no assertion (v3.41).
+
+All five were re-measured by asking the PARSER which records actually
+carry the field the family names. **Two did not survive:**
+
+| family | said | measured |
+|---|---|---|
+| *"you may …, if you do"* | the `hits`/`defends` queue sites | **none of the 8 sets `fx.optCost`.** `defends` was wired in v3.33 and `hits` has ZERO pool cards. The 8 need five different COST shapes |
+| token on a trigger | wire the trigger | the mint is generic; each card needs its own CONDITION — nine readings, not one lever |
+
+**BEFORE BUILDING A FAMILY, ASK THE PARSER WHICH RECORDS SET THE FIELD.**
+It is a two-minute script and it moved two of five. The `needs:` lines in
+`tools/gaps.js` now say what is actually left, and its header says why.
+
+**AND A DRILL THAT NAMES A CARD ROTS WHEN YOU FIX THAT CARD.** The
+dossier drill hardcoded *Astral Etchings* and failed the moment it was
+closed — for the best possible reason, which is still a drill breaking
+every time the project does its job. It takes its fixture from the live
+report now.
 
 ### A DESTROYED PERMANENT GOES TO THE GRAVEYARD (v3.54)
 

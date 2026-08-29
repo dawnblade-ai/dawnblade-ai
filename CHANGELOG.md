@@ -7,6 +7,101 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.55 — a targeted counter put, and the tool stops overselling its families
+
+`counters` has been a per-side map keyed by uid for a long time, and `aim`
+was the one worked example of putting one on a chosen object. This is the
+general form — the family label `npm run gaps` reported that **survived
+being re-measured against the parser**.
+
+| card | printed |
+|---|---|
+| Re-Charge! | *"Put a steam counter on a Hyper Driver you control."* |
+| Astral Etchings | *"Put three +1{p} counters on target aura with ward you control."* |
+| Uphold Tradition | *"Instant - {r}, turn this face-up: Put a +1{p} counter on an aura you control with ward."* |
+
+### BOTH NUMBERS COME OFF THE LINE
+
+Astral Etchings prints **three / two / one** across its three pitches, so a
+hardcoded amount is right for one printing and silently wrong for the other
+two — the same reason `rustDestroy` reads its threshold (v3.17) and Thunder
+Quake's heave reads both of its (v3.32).
+
+### THE KIND VOCABULARY IS CLOSED, AND THAT IS THE SAFETY PROPERTY
+
+`steam`, `rust`, `aim` and `pow` — each is genuinely consumed somewhere
+(`needSteam`, `rustedThrough`, the `aim` condition, `powCtr` and the idle
+wipe). **`+1{p}` is the printed spelling of `pow`**; mapping a printed form
+onto an existing field is reading, and adding a fifth key with no reader
+would be parsing ahead of wiring.
+
+**An unrecognised kind REFUSES.** A counter nothing consumes is a counter
+that does nothing, filed `full` — the no-op blind spot at its purest.
+
+### CANDIDATES COME FROM THE BOARD *AND* THE GEAR
+
+A steam counter goes on a Hyper Driver, which is an **Item** and lives on
+the board; rust and +1{p} counters go on **Equipment**. A scan of either
+zone alone finds nothing for half the family — v3.33's Magmatic Carapace
+lesson, where a board-only scan missed a Chest piece.
+
+**With one legal target it just happens**; with two or more the choice is
+real and is put to the player. A sheet offering a single forced choice is a
+tap that teaches nothing.
+
+**`ctrStamp` is DATA the answer applies** — `untapStamp`'s shape (v3.47),
+`arsStamp`'s rule (v2.34): a spec only carries fields `buildPrompt` knows
+about. That is now the third time this release cycle.
+
+### "YOU CONTROL" IS CONSUMED — AND ONLY THAT
+
+The op is actor-relative and searches the actor's own permanents, so the
+words restate what the target zone already says (v3.18 settled exactly this
+for `optFilter`'s destroy costs). Everything else still has to be read
+whole, so *"target aura **with ward**"* keeps its ward. `ward` joined
+`optFilter`'s keyword list, and the blast radius was **measured**: exactly
+three pool cards print "with ward", two of which are the cards this reader
+exists for.
+
+### CRANKSHAFT AND BIG BERTHA STILL REFUSE, AND THAT IS THE POINT
+
+They print the same payload behind *"when this is banished from boosting"*,
+and **no such trigger exists**. The when-handler's trigger vocabulary is
+CLOSED, so the whole clause refuses and both cards stay `part`. A payload
+that parses with no schedule to fire on is the one shape `failstates.js`
+cannot reach (v3.07) — and here it is avoided by the wrapper refusing
+rather than by anything the new reader does.
+
+### THE TOOL STOPS OVERSELLING ITS OWN FAMILIES
+
+`gaps.js`'s `needs:` line is a **claim about machinery**, and the clustering
+can only see what a card SAYS. All five were re-measured against the parser
+in v3.53 and two did not survive. Every `needs:` line now says what is
+actually left, and the header says why the check matters:
+
+> the pattern is text and the `needs` is a claim about machinery, and those
+> are not the same kind of statement.
+
+**And the dossier drill stopped rotting.** It hardcoded *Astral Etchings*
+as its fixture — so closing that card failed the drill, for the best
+possible reason. It takes its fixture from the live report now. (Written
+carelessly the first time: the regex matched the identically-indented
+`needs:` line, and `includes()` then passed against the report's own header
+while the real assertion failed. Fixed.)
+
+### Measured
+
+- **341 → 344 full**, 53 → 50 `part`. The counters family drops 10 → 7.
+- `npm test` **1542 drills, 0 fail, 4 skipped**. Fairness sweep clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Nine sabotages, all nine bite** — including "the chosen target is
+  ignored and the first candidate takes it", which is why the driven drill
+  picks the SECOND of two identical Hyper Drivers.
+- One sabotage did not apply on the first attempt (regex escaping) and was
+  re-run rather than believed: **check that a sabotage applied before
+  concluding a drill is weak.**
+
 ## v3.54 — destroyed gear reaches the graveyard, and `retrieve` with it
 
 **RULING (user, 2026-08-29): a destroyed piece of gear goes to the
