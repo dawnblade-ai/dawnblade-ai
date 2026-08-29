@@ -851,15 +851,28 @@ function makeEffects(ctx){
          `buildPrompt` returns null with fewer than two candidates, so a
          single legal card is taken without a sheet and an empty hand
          asks nothing. */
-      else if(k==="foePickTop"){
-        const filt = promptFilter((v||{}).filter);
-        const cands = (foe(n).hand||[]).filter(filt);
-        if(!cands.length){ n = L(n, `${srcName}: nothing in ${foe(n).name}'s hand matches.`); return; }
+      /* ONE BODY FOR EVERY CROSS-SEAT PICK. Brain Freeze reaches into their
+         HAND and puts a card on their deck; Pass Over reaches into their
+         GRAVEYARD and banishes. Same shape — candidates from over there,
+         the choice made here, the move performed there — so the zone and
+         the destination are DATA on the op rather than two near-identical
+         bodies. A sibling written separately is the drift this engine has
+         paid for repeatedly (v3.41, v3.50).
+
+         THE ZONE IS READ OFF THE SIDE BY NAME, so a spec naming a zone
+         that seat does not have finds nothing and says so, rather than
+         throwing inside a reducer whose contract is that it never does. */
+      else if(k==="foePick"){
+        const spec = v || {};
+        const zone = spec.zone || "hand";
+        const filt = promptFilter(spec.filter);
+        const cands = ((foe(n)[zone]) || []).filter(filt);
+        if(!cands.length){ n = L(n, `${srcName}: nothing in ${foe(n).name}'s ${zone === "grave" ? "graveyard" : zone} matches.`); return; }
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:srcName, cards:cands, min:1, max:1,
-          moveFoe:{from:"hand", to:"deckTop"},
-          title:`Put one of ${foe(n).name}'s cards on top of their deck`,
-          hint:`It leaves their hand and becomes the next card they draw.`}];
+          moveFoe:{from:zone, to:spec.to || "deckTop"},
+          title: spec.title || `Choose one of ${foe(n).name}'s cards`,
+          hint: spec.hint || ""}];
       }
       else if(k==="pickPrompt"){
         const spec = {tag:"pick", side:actorOf(n), src:srcName, ...v};
@@ -1670,6 +1683,44 @@ function makeEffects(ctx){
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
       else n = runOps(n,[op],card.name);
     });
+    /* THE ARSENAL FACE-UP PUT, AS ONE BODY CALLED FROM BOTH BRANCHES.
+
+       It used to live inside `if(attacking)` alone — and NOT ONE CARD IN
+       THE POOL THAT PRINTS IT IS AN ATTACK. Measured: three distinct
+       cards set `fx.arsenalPut`, and all three are non-attacks (Call in
+       the Big Guns, a Ranger Action; Bull's Eye Bracers, Arms equipment;
+       Death Dealer, a Bow). So the whole v2.33/v2.34 face-up mechanism —
+       `_faceUp`/`_upTurn`, `arsenalUp`, the Bracers' `arsStamp` — was
+       built, drilled, documented as live, and unreachable from `execute`.
+
+       THIS IS v3.20's BUG, VERBATIM, ONE MECHANIC OVER. Its note says it
+       in as many words: "the only queue site was inside `if(attacking)`
+       while every card that needed it was a non-attack". A fix written
+       for one mechanic is not a fix for the shape, and the shape is what
+       recurs — v3.43's rule that a guard belongs to the SHAPE, not to the
+       version that wrote it.
+
+       KEPT AS TWO CALL SITES RATHER THAN MOVED, following the `optCost`
+       precedent: an attack that printed an arsenal put would work, and
+       there is still exactly one body deciding what the put does. The
+       else-branch is why this cannot be two copies — it is the line that
+       tells the player their arsenal was full, and a second copy of a
+       message is a second copy of a rule. */
+    const arsPutQueue = (nn) => {
+      if(!fx.arsenalPut) return nn;
+      if(fx.arsenalPut.needEmpty ? arsEmpty(act(nn)) : arsFree(act(nn)) > 0){
+        nn.promptQ = [...(nn.promptQ||[]), {
+          tag:"pick", side:actorOf(nn), src:card.name,
+          zone:"hand", to:"arsenal", filter:fx.arsenalPut.filter, min:0, max:1,
+          ops:fx.arsenalPut.ops, arsStamp:fx.arsenalPut.stamp,
+          title:"Put an arrow face up in your arsenal?",
+          hint:"Optional — it goes FACE UP, so its arsenal trigger fires."}];
+        return nn;
+      }
+      return L(nn, fx.arsenalPut.needEmpty
+        ? `${card.name}: it needs an empty arsenal — the rest of the card still resolves.`
+        : `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
+    };
     if(attacking){
       /* Declaration-time ops. An attack's own ops normally wait for
          resolveStack, but a reveal that changes THIS attack's power has to
@@ -1984,18 +2035,7 @@ function makeEffects(ctx){
          in this pool; ARS_CAP is the seam rather than a hardcoded 1.
          `min:0` keeps it optional, and buildPrompt returns null on an empty
          hand so a put with nothing to put skips itself. */
-      if(fx.arsenalPut && (fx.arsenalPut.needEmpty ? arsEmpty(act(n)) : arsFree(act(n)) > 0)){
-        n.promptQ = [...(n.promptQ||[]), {
-          tag:"pick", side:actorOf(n), src:card.name,
-          zone:"hand", to:"arsenal", filter:fx.arsenalPut.filter, min:0, max:1,
-          ops:fx.arsenalPut.ops, arsStamp:fx.arsenalPut.stamp,
-          title:"Put an arrow face up in your arsenal?",
-          hint:"Optional — it goes FACE UP, so its arsenal trigger fires."}];
-      } else if(fx.arsenalPut){
-        n = L(n, fx.arsenalPut.needEmpty
-          ? `${card.name}: it needs an empty arsenal — the rest of the card still resolves.`
-          : `${card.name}: your arsenal is occupied — the rest of the card still resolves.`);
-      }
+      n = arsPutQueue(n);
       /* THE `play` TRIGGER JOINS `attacks` (v3.18). Condemn to Slaughter
          prints its optional cost with no trigger prefix at all, so it is
          offered when the card is played. `hits` and `defends` are still
@@ -2135,6 +2175,11 @@ function makeEffects(ctx){
       if(fx.optCost && (fx.optCost.trigger === "play"
           || (fx.optCost.trigger === "entersLeaves" && fx.perm)))
         n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
+      /* THE ARSENAL PUT ON A NON-ATTACK — the site that was missing, and
+         the only one any pool card can actually reach. See `arsPutQueue`
+         above for the measurement; this is the sibling call, placed here
+         beside v3.20's for the identical reason. */
+      n = arsPutQueue(n);
       /* "WHENEVER YOU PLAY AN AURA, …" (v3.33) — Magmatic Carapace.
 
          THE WATCHER IS NOT THE CARD BEING PLAYED. Every other trigger in
@@ -2467,11 +2512,32 @@ function makeEffects(ctx){
        The actor is borrowed to the asked side for this whole body, so the
        hand being reached into is `foe`. */
     if(p.tag === "pick" && p.moveFoe && (r.picked||[]).length){
-      const got = r.picked[0];
-      if((foe(n).hand||[]).some(x => x.uid === got.uid)){
-        foeMut(n).hand = foe(n).hand.filter(x => x.uid !== got.uid);
-        foeMut(n).deck = [got, ...(foe(n).deck||[])];
-        n = L(n, `${got.name} is pushed out of ${foe(n).name}'s hand onto the top of their deck.`);
+      const got  = r.picked[0];
+      /* THE SPEC'S OWN FIELDS, READ. `moveFoe` has carried `{from, to}`
+         since v3.03 and this body ignored both, moving hand -> deck top
+         whatever it was told — correct for the one card that existed and
+         silently a no-op for the next one. Pass Over banishes from their
+         GRAVEYARD: against the hardcoded lookup the sheet opened, the
+         right card was offered, the feed said it was banished, and
+         nothing moved. That is v2.34's `arsStamp` exactly — A SPEC ONLY
+         CARRIES FIELDS ITS CONSUMER READS — and the reason to fix it here
+         rather than at the queue site is that the queue site was already
+         telling the truth. */
+      const from = p.moveFoe.from || "hand";
+      const to   = p.moveFoe.to   || "deckTop";
+      if(((foe(n)[from])||[]).some(x => x.uid === got.uid)){
+        const fs = foeMut(n);
+        fs[from] = (fs[from]||[]).filter(x => x.uid !== got.uid);
+        if(to === "deckTop")         fs.deck = [got, ...(fs.deck||[])];
+        else if(to === "deckBottom") fs.deck = [...(fs.deck||[]), got];
+        else                         fs[to]  = [got, ...(fs[to]||[])];
+        /* NAME THE SEAT (v2.83). This line goes to the shared feed, which
+           both seats read, so "their deck" is only right from one chair. */
+        const where = to === "deckTop"    ? `on top of ${foe(n).name}'s deck`
+                    : to === "deckBottom" ? `on the bottom of ${foe(n).name}'s deck`
+                    : to === "banish"     ? `out of the game`
+                    : `into ${foe(n).name}'s ${to}`;
+        n = L(n, `${act(n).name} takes ${got.name} from ${foe(n).name}'s ${from === "grave" ? "graveyard" : from} — ${where}.`);
       }
     }
     if(p.tag === "pick" && p.to === "arsenal"){

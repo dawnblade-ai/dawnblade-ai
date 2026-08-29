@@ -7,6 +7,138 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.53 — the readers the week asked for, and a mechanic with no caller
+
+**Four cards closed, and the interesting half is what the hunt turned up.**
+`WEEK.md` said the remaining work is "readers nobody has written" over
+machinery that already exists. That was right — and the first family had a
+worse case hiding inside it than the one it was scoped for.
+
+### THE ARSENAL FACE-UP PUT HAS NEVER FIRED FROM `execute`
+
+v2.33/v2.34 built the whole face-up arsenal mechanism: `_faceUp`/`_upTurn`,
+the `arsenalUp` triggers an arrow fires when it is set face up, the Bull's
+Eye Bracers `arsStamp` that rides on top, `arsCap`/`arsFree`/`arsEmpty` and
+the two-gates ruling behind them. `CLAUDE.md` has said **"all three enablers
+are live"** ever since.
+
+**The queue site was inside `if(attacking)`, and not one card in the pool
+that prints an arsenal put is an attack.** Measured — three distinct cards
+set `fx.arsenalPut`:
+
+| card | type |
+|---|---|
+| Call in the Big Guns | Ranger **Action** (non-attack), 3 printings |
+| Bull's Eye Bracers | Ranger **Equipment** — Arms |
+| Death Dealer | Ranger **Weapon** — Bow |
+
+So the prompt was never once offered. **This is v3.20's defect verbatim,
+one mechanic over** — its own note reads *"the only queue site was inside
+`if(attacking)` while every card that needed it was a non-attack"*. A fix
+written for one mechanic is not a fix for the shape, and the shape is what
+recurs (v3.43: a guard belongs to the SHAPE, not to the version that wrote
+it).
+
+**Kept as two call sites over one body, following the `optCost` precedent.**
+An attack that printed an arsenal put would work, and the else-branch — the
+line that tells the player their arsenal was full — exists once. A drill
+pins the measurement itself, so if an attack ever prints one it fails and
+asks for the attacking-branch site to be re-checked rather than silently
+relying on it.
+
+**No tool here could see it.** Coverage reads Bull's Eye Bracers and Death
+Dealer `full` — their ability line is correctly `noop` — and the fairness
+sweep is one-sided toward cards that are too STRONG, while this is a printed
+choice never offered. The drills could not either: they proved the reader
+and they proved the sheet, and nothing asked whether anything opened one.
+
+### `moveFoe` CARRIED `{from, to}` AND ITS CONSUMER IGNORED BOTH
+
+The cross-seat move has taken a `{from, to}` spec since v3.03 and
+`applyAnswer` moved **hand → deck top whatever it was told** — correct for
+Brain Freeze, the only card that existed, and silently a no-op for the next
+one. Pass Over banishes from the opponent's *graveyard*: against that body
+the sheet opened, the right card was offered, the feed said it was banished,
+and nothing moved.
+
+**That is v2.34's `arsStamp` rule from the other end — a spec only carries
+fields its consumer READS.** Fixed in the consumer, because the queue site
+was already telling the truth.
+
+### THREE PRINTED WORDINGS, THREE READERS, NO NEW MACHINERY
+
+| card | printed | reads as |
+|---|---|---|
+| Preserve Tradition | *"put target action card from your graveyard on the bottom of your deck"* | `pickPrompt` → `deckBottom` |
+| Rise from the Ashes | *"you may return a Phoenix Flame from your graveyard to your hand"* | `pickPrompt` → `hand`, `min:0` |
+| Pass Over | *"banish target card from an opposing hero's graveyard"* | `foePick` → their `banish` |
+
+**The destination is the printed half that varies**, so Memorial Ground's
+"on top" and Preserve Tradition's "on the bottom" are one reader with one
+word read, not two readers waiting to drift.
+
+**`foePickTop` became `foePick`, one body for every cross-seat pick.** A
+`foePickBanish` beside a `foePickTop` is two bodies for one shape, and the
+second one drifts — v3.41's matcher written twice, v3.50's guard without its
+sibling.
+
+### THE SUBJECT KEEPS ITS PRINTED CAPITALISATION
+
+`classifyClause` works on the **lowercased** clause; `optFilter`'s
+NAMED-CARD branch is anchored on a **proper noun**, because that is the only
+thing separating a name from a common noun. Handed lowercased text it
+answers `null` — so Rise from the Ashes refused, and looked exactly like a
+pattern that had not matched. The shape is matched on the levelled clause
+and the SUBJECT recovered from the raw one, with the pattern declared once
+so the two reads cannot drift.
+
+v3.33's lesson from the other end: there, lowercasing put a mis-named token
+on the board; here it silently REFUSES.
+
+### A ZONE PICK'S SUBJECT IS NOT A COST'S SUBJECT
+
+`optFilter` refuses a bare *"card"*, and that is right where it lives — its
+callers read the subject of a **cost**. Pass Over prints *"banish target
+CARD"*, where an empty filter is the faithful reading rather than a widened
+guess. `pickSubject` adds exactly that one phrase and defers everything else,
+so there is still one subject reader.
+
+**The widening is deliberately not in `optFilter`, and the blast radius was
+measured rather than reasoned about** (v3.33's rule): a bare "card" subject
+appears **19 times across 11 pool cards**, most of them costs on hero
+abilities — Boltyn's and Blasmophet's charges, Nasreth's banish, Azalea's
+put. Widening `optFilter` would claim every one for readers nobody has
+wired.
+
+### Beckoning Haunt still refuses, on purpose
+
+It prints *"return target aura **with cost X**"* against an `{x}{x}{r}`
+cost. `optFilter` cannot consume "with cost x", so the whole subject fails
+and the clause stays unclaimed. Flattening it to "an aura" would drop a
+printed restriction — v3.31's shape, and the direction that steals games.
+X-costs are refused across this engine on purpose (Ice Eternal); this is
+that refusal arriving through the subject reader rather than as a special
+case. Pinned by a drill.
+
+### `npm run play` no longer throws away its own report
+
+`tools/.cache/` is gitignored, so on a fresh clone the 210-game run finished,
+printed its summary, and **then** died with `ENOENT` writing `games.json`.
+Four minutes of work and the machine-readable half lost to a missing mkdir.
+
+### Measured
+
+- **335 → 339 full**, 59 → 55 `part` (Preserve Tradition, Rise from the
+  Ashes, Pass Over, Call in the Big Guns).
+- `npm test` **1527 drills, 0 fail, 4 skipped** (the drift drills, as designed).
+- Fairness sweep clean. `npm run play`: 210 games, **0 refusals, 0 invariant
+  violations, 0 malformed feed**.
+- **Ten sabotages run against the two new drill files; all ten bite.** One
+  of them found a weak drill rather than a weak engine — the arsenal fixture
+  held nothing but the arrow, so dropping the filter entirely left the
+  candidate list identical and the drill green. A fixture where two things
+  coincide has tested neither (v3.26).
+
 ## v3.52 — `npm run gaps`, and the week planned from it
 
 **The tools answered two questions and not the one a session opens with.**

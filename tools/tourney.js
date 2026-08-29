@@ -50,4 +50,14 @@ for(const k of ["tap","ally","death","gold"]){
 const longest = games.filter(g=>g.turn).sort((a,b)=>b.turn-a.turn)[0];
 const shortest= games.filter(g=>g.turn).sort((a,b)=>a.turn-b.turn)[0];
 console.log(`\nlongest ${longest&&longest.turn} turns (${longest&&longest.seed}) · shortest ${shortest&&shortest.turn} (${shortest&&shortest.seed})`);
-require("fs").writeFileSync(require("path").join(__dirname,"..","tools",".cache","games.json"), JSON.stringify({games, refusals, viols, evts:Object.fromEntries(Object.entries(evts).map(([k,v])=>[k,[...new Set(v)].slice(0,40)]))}, null, 1));
+/* THE REPORT SURVIVES A FRESH CLONE. `tools/.cache/` is gitignored, so on
+   a clone that has never run `npm run audit --refresh` this directory does
+   not exist — and this write threw ENOENT *after* the whole 210-game run
+   had finished and printed. Four minutes of work, the summary on screen,
+   and the machine-readable half lost to a missing mkdir. Same family as
+   the skip count nobody read: the tool did its job and the failure was in
+   the reporting. */
+const _fs = require("fs"), _path = require("path");
+const _out = _path.join(__dirname, "..", "tools", ".cache");
+_fs.mkdirSync(_out, {recursive: true});
+_fs.writeFileSync(_path.join(_out, "games.json"), JSON.stringify({games, refusals, viols, evts:Object.fromEntries(Object.entries(evts).map(([k,v])=>[k,[...new Set(v)].slice(0,40)]))}, null, 1));

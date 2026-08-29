@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T00:05:35.042Z",
- "appVer": "3.51",
+ "generated": "2026-08-29T00:37:17.225Z",
+ "appVer": "3.53",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 335,
-  "part": 59,
+  "full": 339,
+  "part": 55,
   "none": 11
  },
  "heroes": {
@@ -184,7 +184,7 @@
    "tt": "Draconic Ninja Hero - Young",
    "tx": "You may start the game with a Phoenix Flame in your graveyard.\nOnce per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand. This ability costs {r} less to activate for each Draconic chain link you control.",
    "statics": [],
-   "power": null,
+   "power": "once/turn: Return a Phoenix Flame from your graveyard to your hand [3r]",
    "clauses": [
     {
      "t": "You may start the game with a Phoenix Flame in your graveyard.",
@@ -192,7 +192,7 @@
     },
     {
      "t": "Once per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand",
-     "covered": false
+     "covered": true
     },
     {
      "t": "This ability costs {r} less to activate for each Draconic chain link you control.",
@@ -200,7 +200,7 @@
     }
    ],
    "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
+    "2 hero-text clause(s) not recognized by any ability reader"
    ]
   },
   "enigma": {
@@ -5696,7 +5696,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -5706,16 +5706,14 @@
     },
     {
      "t": "You may put an arrow from your hand face-up into your arsenal.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "You may put an arrow from your hand face-up into your arsenal."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p}.\nYou may put an arrow from your hand face-up into your arsenal.\nGo again",
@@ -8160,7 +8158,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -8170,16 +8168,14 @@
     },
     {
      "t": "You may return a Phoenix Flame from your graveyard to your hand.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "You may return a Phoenix Flame from your graveyard to your hand."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "The next Draconic or Ninja attack action card you play this turn gets +3{p}.\nYou may return a Phoenix Flame from your graveyard to your hand.\nGo again",
@@ -9056,7 +9052,7 @@
     "legendary",
     "transcend"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -9066,16 +9062,14 @@
     },
     {
      "t": "Banish target card from an opposing hero's graveyard.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you've played another blue card this turn, transcend.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Banish target card from an opposing hero's graveyard."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Legendary\nBanish target card from an opposing hero's graveyard.\nIf you've played another blue card this turn, transcend.",
@@ -9134,7 +9128,7 @@
     "legendary",
     "transcend"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -9144,16 +9138,14 @@
     },
     {
      "t": "Put target action card from your graveyard on the bottom of your deck.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you've played another blue card this turn, transcend.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Put target action card from your graveyard on the bottom of your deck."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Legendary\nPut target action card from your graveyard on the bottom of your deck.\nIf you've played another blue card this turn, transcend.",

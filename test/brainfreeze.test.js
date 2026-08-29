@@ -58,8 +58,17 @@ test("the rider reads as a FUSED-gated pick, and the card resolves in full", {sk
   assert.equal(fx.tier, "full");
   assert.deepEqual(fx.conds.map(x => x.cond), ["fused"],
     "the payload hangs off the printed condition, not off the play");
-  assert.deepEqual(fx.conds[0].op,
-    ["foePickTop", {filter: {costLe: 0, costGe: 0, ty: "action"}}]);
+  /* THE ZONE AND THE DESTINATION ARE PINNED, not just the filter. They are
+     DATA on the op (v3.53 made `foePick` one body for every cross-seat
+     pick) and the consumer ignored both for three versions — it moved
+     hand -> deck top whatever it was told, which was right for this card
+     and silently a no-op for the next one. Asserting the filter alone
+     cannot tell a spec that says where from a spec that is obeyed. */
+  const op = fx.conds[0].op;
+  assert.equal(op[0], "foePick");
+  assert.deepEqual(op[1].filter, {costLe: 0, costGe: 0, ty: "action"});
+  assert.equal(op[1].zone, "hand", "it reaches into their HAND");
+  assert.equal(op[1].to, "deckTop", "and puts the card on TOP of their deck");
   P.fxReset();
 });
 

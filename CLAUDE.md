@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.52
+**Current version:** v3.53
 
 ---
 
@@ -393,6 +393,99 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A FIX FOR ONE MECHANIC IS NOT A FIX FOR THE SHAPE (v3.53)
+
+v3.20 found its only `optCost` queue site inside `if(attacking)` while
+every card that needed it was a NON-ATTACK, and wrote that down. **The
+arsenal FACE-UP put was sitting in the same branch with the same
+problem, and the v3.20 fix did not look for siblings.**
+
+Measured: **three pool cards set `fx.arsenalPut` and all three are
+non-attacks** — Call in the Big Guns (a Ranger Action, 3 printings),
+Bull's Eye Bracers (Arms equipment), Death Dealer (a Bow). So v2.33 and
+v2.34's whole face-up mechanism — `_faceUp`/`_upTurn`, `arsenalUp`, the
+Bracers' `arsStamp`, the two-gates ruling behind `arsFree`/`arsEmpty` —
+**was unreachable from `execute`**, while this file said in as many words
+that all three enablers were live.
+
+**A DOC CLAIM IS A TEST WITH NO ASSERTION** (v3.41), and this is the
+second time that sentence has cost something. *"All three enablers are
+live"* was written when they were built, not when they were last driven.
+
+**KEPT AS TWO CALL SITES OVER ONE BODY**, following `optCost`'s
+precedent: an attack that printed one would work, and the else-branch —
+the line that tells the player their arsenal was full — exists once. **A
+drill pins the MEASUREMENT**, so an attack printing an arsenal put fails
+it and asks for the attacking-branch site to be re-checked, rather than
+that site quietly being load-bearing again.
+
+**WHEN YOU FIND A QUEUE SITE IN THE WRONG BRANCH, GREP THE BRANCH.**
+The bug is never one mechanic's; it belongs to the branch, and v3.43's
+rule — a guard belongs to the SHAPE, not to the version that wrote it —
+is the same sentence about guards.
+
+**AND NO TOOL HERE COULD SEE IT.** Coverage reads the two equipment
+cards `full`, because their ability line is correctly `noop`; the
+fairness sweep is one-sided toward too-STRONG and this is a printed
+choice never offered; and the drills proved the READER and proved the
+SHEET while nothing asked whether anything opened one — v3.20's
+`condemn.test.js` lesson, unlearned.
+
+### A SPEC ONLY CARRIES FIELDS ITS CONSUMER READS — FROM THE OTHER END (v3.53)
+
+v2.34 states this as a rule about the queue site: `arsStamp` had to be
+added to `buildPrompt` explicitly or it vanished. **`moveFoe` is the same
+rule broken at the CONSUMER.** It has carried `{from, to}` since v3.03
+and `applyAnswer` moved **hand → deck top whatever it was told** — right
+for Brain Freeze, the only card that existed, and silently a no-op for
+the next one.
+
+Pass Over banishes from the opponent's GRAVEYARD. Against that body the
+sheet opened, the right card was offered, the feed said it was banished,
+and **nothing moved** — a lie in the one place a player cannot check.
+
+**FIX IT WHERE THE LIE IS.** The queue site was already telling the
+truth, so the consumer is what changed. And the drill now pins the ZONE
+and the DESTINATION rather than the filter alone: **asserting the filter
+cannot tell a spec that says where from a spec that is obeyed.**
+
+### THE SUBJECT KEEPS ITS PRINTED CAPITALISATION (v3.53)
+
+`classifyClause` works on the **lowercased** clause. `optFilter`'s
+NAMED-CARD branch is anchored on a **proper noun**, because that is the
+only thing that separates a name from a common noun — so handed
+lowercased text it answers `null`, and Rise from the Ashes refused while
+looking exactly like a pattern that had not matched.
+
+So the SHAPE is matched on the levelled clause (the idiom table must
+still reach it) and the SUBJECT is recovered from the raw one. **The
+pattern is a named constant read by both**, because two spellings of one
+pattern is v3.41's `quotedText` written twice, where sabotaging one copy
+left the other correct.
+
+v3.33 is the same lowercasing seen from the other end: there it put a
+mis-named token on the board; here it silently REFUSES. **When a reader
+needs a printed NAME, ask where the case went.**
+
+### A ZONE PICK'S SUBJECT IS NOT A COST'S SUBJECT (v3.53)
+
+`optFilter` refuses a bare *"card"*, and that refusal is correct where it
+lives: its callers read the subject of a **COST**, and a cost whose
+subject the reader cannot pin is a cost a player could pay wrongly.
+
+A ZONE PICK asks a different question. Pass Over prints *"banish target
+CARD from an opposing hero's graveyard"* — the subject genuinely is any
+card in that zone, so an empty filter is the FAITHFUL reading rather than
+a widened guess. `pickSubject` adds exactly that one phrase and defers
+everything else to `optFilter`, so there is still ONE subject reader.
+
+**THE WIDENING IS NOT IN `optFilter`, AND THE BLAST RADIUS WAS MEASURED**
+(v3.33's rule): a bare "card" subject appears **19 times across 11 pool
+cards**, most of them costs on hero abilities — Boltyn's and Blasmophet's
+charges, Nasreth's banish, Azalea's put. Widening `optFilter` would claim
+every one of them for readers nobody has wired, which is the
+never-parse-ahead-of-wiring rule.
 
 ### A QUALIFIED GRANT NEEDS A RIDER FIELD BEFORE IT CAN CARRY ONE (v3.42)
 
@@ -3275,7 +3368,11 @@ fewer blockers, and does not yet lose for it.
 
 The trainer's end-of-turn arsenal sets cards **face DOWN**. Azalea's arrows
 trigger on **face UP**, which is a different event reached only by an enabler
-that says so. All three enablers are live; the face-up card carries
+that says so. All three enablers are live **and, as of v3.53, actually
+reachable** — the queue site sat inside `if(attacking)` and every card that
+prints an arsenal put is a non-attack, so from v2.33 until v3.53 this
+sentence was true about the parser and false about the game (see "A FIX FOR
+ONE MECHANIC IS NOT A FIX FOR THE SHAPE"). The face-up card carries
 `_faceUp`/`_upTurn` and the payload is **stamped** onto it (`_arsPow`,
 `_arsGA`) so "+2{p} this turn" survives until the arrow is actually played.
 

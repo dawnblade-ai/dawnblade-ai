@@ -167,6 +167,18 @@ function quotedOnHit(txt){
   return r ? r.ops : null;
 }
 
+/* THE PICK SHAPES, NAMED ONCE. Each is matched twice — against the
+   lowercased clause for the shape, and against the raw clause to recover
+   the subject's printed capitalisation (see `cased` inside
+   `classifyClause`). Two spellings of one pattern is exactly the drift
+   this project keeps paying for — v3.41's `quotedText` was written twice
+   and sabotaging one copy left the other correct — so the pattern is a
+   constant and both reads share it. */
+const RX_FOE_TOP  = /^put (.+) from their hand on top of their deck$/;
+const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
+const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
+const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
+
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
   const c = levelIdiom(clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
@@ -188,6 +200,27 @@ function classifyClause(raw){
     if(!sub || sub.status!=="run") return null;
     if(/\binstead\b/i.test(payload)) sub.instead = true;
     return Object.assign(sub, {cond});
+  };
+  /* THE SUBJECT KEEPS ITS PRINTED CAPITALISATION, and it has to.
+     `classifyClause` works on the LOWERCASED clause, but `optFilter`'s
+     NAMED-CARD branch is anchored on a proper noun — "a Phoenix Flame",
+     "a Nimblism" — because that is the only thing that tells a name from
+     a common noun. Handed the lowercased text it answers `null`, so a
+     reader that passes `c` straight through refuses every card whose
+     subject is a name, and looks for all the world like the shape simply
+     was not matched.
+
+     v3.33's lesson from the other end: `classifyClause` lowercases, and a
+     minted token wore the lowercased name to the board. Here the same
+     lowercasing silently REFUSES instead of mis-naming. So the shape is
+     matched on `c` (levelled, so the idiom table still reaches it) and the
+     SUBJECT is recovered from the raw clause with the same pattern; a raw
+     match that fails falls back to the lowercased capture, which is
+     correct for every subject that is not a name. */
+  const CASED = clean(raw).replace(/\.$/, "").replace(/^-\s*/, "");
+  const cased = (rx, gi, fallback) => {
+    const mm = CASED.match(new RegExp(rx.source, rx.flags.replace("i","") + "i"));
+    return (mm && mm[gi] != null) ? mm[gi] : fallback;
   };
   let m;
   /* Activated abilities first. "Instant - Destroy this: Gain {r}" is a cost
@@ -1379,10 +1412,35 @@ function classifyClause(raw){
      cards are in the other seat's hand. Supplying the candidates and doing
      the move in the caller is the pattern v3.03's freeze already
      established, and it is what keeps the prompt module data-driven. */
-  if(m=c.match(/^put (.+) from their hand on top of their deck$/)){
-    const filter = optFilter(m[1]);
+  if(m=c.match(RX_FOE_TOP)){
+    const filter = pickSubject(cased(RX_FOE_TOP, 1, m[1]));
     if(!filter) return null;
-    return R([["foePickTop", {filter}]]);
+    return R([["foePick", {zone:"hand", to:"deckTop", filter,
+      title:"Put one of their cards on top of their deck",
+      hint:"It leaves their hand and becomes the next card they draw."}]]);
+  }
+  /* THE SAME CROSS-SEAT SHAPE, READING A ZONE BOTH PLAYERS CAN SEE (Pass
+     Over): "banish target card from an opposing hero's graveyard". The
+     CHOICE is the caster's — the card says "banish target", not "they
+     banish" — and the card is in the other seat's zone, which is exactly
+     what `foePick` is: candidates from over there, chosen here, moved
+     there.
+
+     IT IS THE SAME OP AS BRAIN FREEZE'S, deliberately. A `foePickBanish`
+     beside a `foePickTop` would be two bodies for one shape, and the
+     lesson this project keeps paying for is that the second one drifts
+     (v3.41's matcher written twice, v3.50's guard without its sibling).
+     The zone and the destination are DATA on the op.
+
+     `pickSubject` rather than `optFilter`, because the printed subject is
+     a bare "card" — genuinely unrestricted, and `optFilter` refuses that
+     for the cost readers it serves. */
+  if(m=c.match(RX_FOE_GY)){
+    const filter = pickSubject(cased(RX_FOE_GY, 1, m[1]));
+    if(!filter) return null;
+    return R([["foePick", {zone:"grave", to:"banish", filter,
+      title:"Banish a card from their graveyard",
+      hint:"Their graveyard is public — this removes it from the game."}]]);
   }
   /* RETRIEVE (Memorial Ground): a MANDATORY target pick from the graveyard
      back onto the deck — reads the subject the same way optFilter already
@@ -1392,11 +1450,43 @@ function classifyClause(raw){
      optional cost. Written generically (zone/to are data, not hardcoded to
      this one card) so a future "put target X from your Y on top of your
      deck" reuses it rather than growing its own op. */
-  if(m=c.match(/^put target (.+) from your graveyard on top of your deck$/)){
-    const filter = optFilter(m[1]);
+  /* THE DESTINATION IS THE PRINTED HALF THAT VARIES, so it is read rather
+     than fixed: Memorial Ground says "on top", Preserve Tradition says "on
+     the bottom". Written as one reader because they are one sentence with
+     one word different — two readers here is the drift this file names on
+     nearly every page. */
+  if(m=c.match(RX_GY_DECK)){
+    const filter = pickSubject(cased(RX_GY_DECK, 1, m[1]));
     if(!filter) return null;
-    return R([["pickPrompt", {zone:"grave", to:"deckTop", filter, min:1, max:1,
-      title:"Put a card from your graveyard on top of your deck"}]]);
+    const top = m[2] === "top";
+    return R([["pickPrompt", {zone:"grave", to: top ? "deckTop" : "deckBottom",
+      filter, min:1, max:1,
+      title:"Put a card from your graveyard on " + (top ? "top" : "the bottom") + " of your deck"}]]);
+  }
+  /* RETURNING FROM THE GRAVEYARD TO HAND — the same pick with a third
+     destination, and the "you may" is what makes it OPTIONAL rather than a
+     second shape. `min` carries that: 1 for a printed "return target …",
+     0 for "you may return …", which is what gives prompts.js its "Choose
+     none" button and stops a mandatory sheet appearing for a card that
+     printed a choice.
+
+     BECKONING HAUNT REFUSES HERE AND THAT IS CORRECT. It prints "return
+     target aura WITH COST X from your graveyard to your hand" against an
+     {x}{x}{r} cost; `optFilter` cannot consume "with cost x", so the whole
+     subject fails to read and the clause stays unclaimed. Reading it as a
+     bare "aura" would drop a printed restriction — the v3.31 shape, and
+     the direction that steals games. X-costs are refused across this
+     engine on purpose (Ice Eternal); this is that refusal arriving through
+     the subject reader rather than as a special case. */
+  if(m=c.match(RX_GY_HAND)){
+    const filter = pickSubject(cased(RX_GY_HAND, 2, m[2]));
+    if(!filter) return null;
+    const may = !!m[1];
+    return R([["pickPrompt", {zone:"grave", to:"hand", filter,
+      min: may ? 0 : 1, max:1,
+      title: may ? "Return a card from your graveyard to your hand?"
+                 : "Return a card from your graveyard to your hand",
+      hint: may ? "Optional — choose none to decline." : undefined}]]);
   }
   /* ---- BANISH-FOR-COUNTERS, AND PLAY IT AT INSTANT SPEED (v3.39) ----
      Blaze's hero ability, whose cost is "Remove X energy counters":
@@ -1857,6 +1947,36 @@ function optFilter(phrase){
     return f;
   }
   return null;
+}
+
+/* THE SUBJECT OF A ZONE PICK — `optFilter`'s question with exactly ONE
+   printed phrase added, and the narrowness is the point.
+
+   `optFilter` REFUSES a bare "card" unless a keyword follows it, and that
+   refusal is correct where it lives: its callers read the subject of a
+   COST ("banish an attack action card from your hand"), and a cost whose
+   subject the reader cannot pin is a cost a player could pay wrongly.
+
+   A ZONE PICK asks a different question. Pass Over prints "banish target
+   CARD from an opposing hero's graveyard" — the subject genuinely is any
+   card in that zone, so an empty filter is the FAITHFUL reading rather
+   than a widened guess. Everything else defers to `optFilter`, so there is
+   still one subject reader and the two cannot drift about what "an aura"
+   or "an action card" means.
+
+   THE WIDENING IS DELIBERATELY NOT IN `optFilter` ITSELF, and the blast
+   radius was measured rather than reasoned about (v3.33's rule). A bare
+   "card" subject appears **19 times across 11 pool cards**, and most of
+   them are COSTS on hero abilities — Boltyn's and Blasmophet's charges,
+   Nasreth's banish, Azalea's put. Widening `optFilter` would claim every
+   one of them for readers nobody has wired, which is the "never parse
+   ahead of wiring" rule: reading a clause raises a card's tier and makes
+   the audit say it works. Only the pick sites ask this question, so only
+   the pick sites get the answer. */
+function pickSubject(phrase){
+  const rest = String(phrase||"").trim().replace(/^(?:a|an|one)\s+/i, "");
+  if(/^cards?$/i.test(rest)) return {};
+  return optFilter(phrase);
 }
 
 /* THE ARSENAL FACE-UP PUT (v2.34). Two shapes that must be read together,
@@ -2755,6 +2875,23 @@ function fxParse(card){
     const subj = apm[1].trim();
     if(/^arrows?$/.test(subj)){
       fx.arsenalPut = {filter:{tt:"arrow"}};
+      /* THE CLAUSE LEDGER, TOLD. This reader runs over the whole card
+         AFTER the clause router has already filed "You may put an arrow
+         from your hand face-up into your arsenal" as `skip`, so Call in
+         the Big Guns sat at `part` with a mechanic that is genuinely
+         built and now genuinely fires. Same correction the "If you do"
+         rider below makes, and made for the same reason: the ledger
+         should say what the engine does.
+
+         ONLY EVER FLIPPED WHERE THE PUT WAS ACTUALLY CLAIMED — inside
+         this branch, after `fx.arsenalPut` is set. A blanket flip would
+         mark the clause read on a card whose subject this reader
+         refused, which is the audit lying in the expensive direction.
+         Equipment and weapons reach the same mechanic through their
+         ability line, which the router already files `noop`, so this
+         only ever matches the plain printed sentence. */
+      const pc = fx.clauses.find(c => c.st === "skip" && ARS_PUT.test(c.t));
+      if(pc) pc.st = "run";
       /* TWO DIFFERENT GATES, and they are not the same question. Call in the
          Big Guns just puts, so it needs a FREE SLOT. Bull's Eye Bracers and
          Death Dealer both print "if you have no cards in your arsenal", which
