@@ -1,285 +1,180 @@
-# The week — finish the card logic by building READERS, not heroes
+# The week — two MECHANISMS, measured against the parser first
 
-> **Written 2026-08-29, at v3.51. REVISED at v3.53**, after the first family
-> was built and the other four were re-measured against the parser rather
-> than against card text. Every number here was measured, with the command
-> to re-derive it. Read `CLAUDE.md` first, then this.
-
-> ### WHAT v3.53 CHANGED IN THIS PLAN
->
-> **The families are TEXT-PATTERN clusters, and two of the "needs:" lines
-> did not survive contact with the parser.** `gaps.js` says so itself — *a
-> card lands in the FIRST family it matches* — but the `needs:` line is a
-> CLAIM about machinery, and a claim is a test with no assertion (v3.41).
-> Checked one at a time:
->
-> | family | the plan said | measured |
-> |---|---|---|
-> | pick from a zone (12) | one reader | **3 were one reader** and shipped; the other 9 are a deck SEARCH, an X-cost, a two-target pick, a hand→soul put, a shuffle-redraw, a per-turn go-again, and one that was already BUILT |
-> | *"you may …, if you do"* (8) | the `hits`/`defends` queue sites | **none of the 8 is an `optCost` card.** Each needs a different COST shape — destroy-this, pay `{r}{r}{r}`, a modal "discard a card OR destroy the top of your deck" |
-> | token on a trigger (9) | wire the trigger | the mint is generic, but each card needs its own **condition** — *"if a yellow card is discarded this way"*, *"if you prevent damage this way"*, *"when this is destroyed"* — so it is nine readings, not one lever |
-> | counters on a permanent (10) | a targeted counter put | **holds up.** The one family whose label survived |
->
-> **`defends` WAS ALREADY WIRED — v3.33 built it**, and `hits` has **zero**
-> pool cards. So "two unwired queue sites" was one site with no customers.
-> `CLAUDE.md`'s *"Still to wire: the `hits` and `defends` triggers"* was
-> stale in the same way; both are corrected.
->
-> **AND THE FIRST FAMILY HID A WORSE BUG THAN THE ONE IT WAS SCOPED FOR.**
-> The arsenal FACE-UP put's queue site sat inside `if(attacking)` and not
-> one of the three pool cards that prints one is an attack — v3.20's defect
-> verbatim, one mechanic over. See CLAUDE.md, "A FIX FOR ONE MECHANIC IS
-> NOT A FIX FOR THE SHAPE".
->
-> **THE LESSON FOR THE REST OF THE WEEK:** `npm run gaps` is the right
-> place to start and the wrong place to stop. Before building a family,
-> ask the PARSER which cards actually carry the field the family names —
-> `fx.optCost`, `fx.arsenalPut` — rather than trusting the label. That
-> check is a two-minute script and it moved two of five families.
-> **`tools/gaps.js`'s own `needs:` lines were corrected at v3.55**, so the
-> tool no longer oversells them.
-
-> ### WHERE THE WEEK GOT TO — v3.52 → v3.55
->
-> **335 → 350 full · 59 → 43 `part`.** Sixteen cards closed and two
-> over-reporting cards corrected; six of the ten findings were not cards at all:
->
-> | ver | what |
-> |---|---|
-> | **3.53** | three `pick` readers (Preserve Tradition, Rise from the Ashes, Pass Over) — and the **arsenal face-up put had never fired from `execute`**, its queue site inside `if(attacking)` while all three cards that print one are non-attacks. `moveFoe` had carried `{from,to}` for three versions with a consumer that ignored both |
-> | **3.54** | **destroyed gear goes to the graveyard** (RULING, user) — an approximation invisible only because the one thing that would read it was unbuilt. Then `retrieve`, settled by READING THE PRINTING: *"(Pay {r} to equip it.)"* |
-> | **3.55** | the **targeted counter put** — kind, amount and target all off the printed line, kind vocabulary closed to what something reads |
-> | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played |
-> | **3.57** | the Illusionist `pitchBlue1` condition and the gated enters-with counter — and a **latent dropped gate the fairness sweep cannot see** |
-> | **3.58** | two readers that each replaced an **inline** one — a destroy trigger read by a private regex, and a weapon static that had Mandible Claw special-cased BY NAME while two other cards printing the same shape were dead |
-> | **3.59** | **an unguarded activation prefix** — "Attack Reaction - …" was eaten by a loose matcher, so Prey Spotters read `full` and could not be activated at all |
->
-> **What is left, honestly** — see `npm run gaps`, whose family lines now
-> say it: nine token-on-a-trigger cards each needing their own condition;
-> eight *"you may"* cards needing five different cost shapes; seven
-> counters cards each needing a TRIGGER (boost-banish, arrow-put,
-> enters-with) plus a reader for *"if this has an aim counter"*; and six
-> pick cards that are a deck search, an X-cost, a two-target pick, a
-> hand→soul put and a shuffle-redraw.
->
-> **The standing work below is untouched and still the highest-value
-> non-card item** — above all the phone pass, which nothing in these three
-> releases could substitute for.
+> **Written 2026-08-29, at v3.59, with v3.53–v3.59 LIVE on `main`.** Every
+> number here was measured, with the command to re-derive it. Read
+> `CLAUDE.md` first, then this. The previous week's plan and its outcome
+> are in `CHANGELOG.md` (v3.53–v3.59) and `HANDOFF.md`.
 
 ---
 
-## THE REFRAME — the remaining work does not sort by hero
+## WHERE LAST WEEK LANDED
 
-Phase C was scoped **one hero at a time**, and that was right for Kayo: he was
-the pilot, and the method was the deliverable. It is the wrong shape for what
-is left.
+**335 → 350 full · 59 → 43 `part`.** Sixteen cards closed, two
+over-reporting cards deliberately corrected, and seven versions shipped.
 
-**Measured:** 70 of 405 pool cards are not `full` (59 `part`, 11 `none`), and
-**52 of those 70 are ONE clause away.** Those clauses cluster into five
-families that cut straight across the hero list:
-
-| cards | family | what it needs | machinery? |
-|---|---|---|---|
-| **12** | **pick from a zone** — graveyard, deck, banish | a reader that emits a `pick` spec | **BUILT** (`prompts.js`, v2.17) |
-| **10** | **counters on a permanent** — steam, +1{p}, aim | a *targeted* counter put | half — `counters` exist, keyed by uid |
-| **9** | **create a token on a trigger** | wire the trigger; the mint is generic | **BUILT** (v3.33 gave tokens their real names) |
-| **8** | **"you may …, if you do …"** | two unwired queue sites | **BUILT** (`optCost`, v3.20) |
-| **7** | a granted/conditional keyword | `hasKwNow` / rider plumbing | **BUILT** |
-| 24 | unclustered one-offs | each its own reading | — |
-
-**Four readers close roughly 46 of 70 cards.** None of them is new machinery:
-`prompts.js` has had the `pick` variant since v2.17 and `optCost` has had two
-queue sites marked "still to wire" since v3.20. **The gap is not
-understanding and it is not plumbing — it is readers nobody has written.**
-
-**And the rulings are effectively done.** `npm run stack` reports **4 open, 5
-cards** (`charge`, plus three one-offs). 119 rulings recorded, and the
-distance left is the one CLAUDE.md names: *understood ≠ built.* **You should
-expect to answer almost no new rules questions this week.**
-
-Re-derive all of it:
-
-```sh
-npm run audit && npm run stack        # 335 full / 59 part / 11 none · 4 open
-node -e '…'                           # the family clustering — see below
-```
-
----
-
-## THE ORDER — highest cards-per-hour first
-
-### 1. `pick` from a zone — ~~12 cards~~ **DONE at v3.53 (4 closed)**
-
-Twelve cards say some version of *"return / put / banish target card from
-your graveyard."* `prompts.js` has done this since v2.17 and no parser rule
-emits the spec.
-
-```
-Beckoning Haunt · Crown of Dichotomy · Hope Merchant's Hood · Call in the Big
-Guns · Flamecall Awakening · Rise from the Ashes · Pass Over · Preserve
-Tradition · Pick Up the Point · Up Sticks and Run · Halo of Illumination ·
-Compass of Sunken Depths
-```
-
-**The whole job is `optFilter`'s sibling on the OTHER side of the cost.**
-`optFilter` already reads a subject phrase into a prompts filter from printed
-fields only, and **refuses what it cannot read honestly** (v2.29). Reuse it —
-do not write a second subject reader, or the two will drift.
-
-**BUILT at v3.53.** Preserve Tradition (grave → deck bottom), Rise from the
-Ashes (grave → hand, optional), Pass Over (their grave → banish), and Call
-in the Big Guns — which turned out to be **already built and mis-reported**,
-its `arsenalPut` unreachable because the queue site was in the wrong branch.
-`pickSubject` is the subject reader, deferring to `optFilter` for everything
-but a bare "card". `foePickTop` generalised to `foePick`.
-
-**WHAT IS LEFT OF THIS FAMILY, honestly:**
-
-| card | what it actually needs |
-|---|---|
-| Pick Up the Point · Up Sticks and Run | `retrieve` — **settled at v3.53**: the SAR017 printing reads *"(Pay {r} to equip it.)"*, and it needed destroyed gear to reach the graveyard first (RULING, user, 2026-08-29) |
-| Beckoning Haunt | an **X-cost** — refused on purpose, pinned by a drill |
-| Crown of Dichotomy | **two** targets with different filters, ordered |
-| Halo of Illumination | hand → **soul**, with a rider on the picked card's class |
-| Hope Merchant's Hood | shuffle-any-number and redraw — deck manipulation, still genuinely open |
-| Flamecall Awakening | a deck **SEARCH** — a hidden zone, not a graveyard pick |
-| Compass of Sunken Depths | **not a pick at all** — a per-turn go-again on watery-grave plays |
-
-**Watch for:** `to` is the destination and accepts `deckTop`/`deckBottom`;
-omit it and the pick is a reveal that moves nothing (v3.33's Crash and Bash).
-`Pass Over` reads an **opposing** graveyard, so the zone carries a side.
-
-### 2. Counters on a permanent — ~~10 cards~~ **the PUT landed at v3.55 (3 closed)**
-
-*"Put a steam counter on a Hyper Driver you control", "three +1{p} counters
-on target aura with ward", "if this has an aim counter, it gets piercing 1."*
-
-`counters` is already a per-side map keyed by **uid**, and `aim` (v3.39) is
-the worked example of a targeted put. What is missing is the general one: a
-counter KIND, an amount, and a target chosen from a filter.
-
-**Do NOT invent counter kinds.** Read the kind off the printed line, the way
-`fx.rustDestroy` reads its threshold off the card (v3.17). A hardcoded list is
-the no-op blind spot waiting to happen.
-
-**Watch for:** a counter the ability SPENDS must be on screen (v3.39) — the
-display half is part of the job, not a follow-up. *(Checked at v3.55: the
-BOARD already renders counters generically on both boards, and gear renders
-steam/rust/pow, so this was already satisfied for everything `ctrPut`
-emits.)*
-
-**BUILT at v3.55 — `ctrPut`.** Re-Charge!, Astral Etchings and Uphold
-Tradition. The kind, the amount and the target all come off the printed
-line; the kind vocabulary is CLOSED to the four counters something actually
-reads. **What is left in this family is a TRIGGER each**, not a put:
-
-| card | needs |
-|---|---|
-| ~~Crankshaft ×2 · Big Bertha~~ | **BUILT at v3.56** — the boost-banish trigger, `fx.boostBanish`, fired at the one site that banishes a card for boosting |
-| Crow's Nest | *"whenever an arrow is put face-up into your arsenal from your deck"* |
-| ~~Waxing Specter~~ | **BUILT at v3.57** — `ctrSelf`, gated on the new `pitchBlue1` condition |
-| Drill Shot | a READER, not a put: *"if this has an aim counter, it gets piercing 1"* |
-| Plasma Barrel Shot | a self-targeted put behind *"if this has no steam counters"* |
-
-### 3. ~~Two unwired `optCost` queue sites — 8 cards~~ — **THE LABEL WAS WRONG**
-
-**Re-measured at v3.53 by asking the parser instead of the card text.** Every
-pool card that sets `fx.optCost`, by trigger:
-
-```
-attacks: Fire that Burns Within · Golden Tipple · Jack Be Quick · Runic Fellingsong
-defends: Crash and Bash            (WIRED — v3.33, in afterDefenders)
-play:    Condemn to Slaughter       entersLeaves: Sigil of Silphidae
-hits:    (none)
-```
-
-**`defends` has been wired since v3.33 and `hits` has no pool cards at all**,
-so there is no queue-site work here. And **none of the eight cards the family
-listed is an `optCost` card** — they match the *"you may …, if you do"* text
-and each needs a different COST shape:
-
-| shape | cards |
-|---|---|
-| *"you may destroy **this**"* — the source, not a filtered pick | Beaten Trackers, Refraction Bolters |
-| *"you may pay {r}{r}{r}"* — the `pay` variant | Silent Stilettos |
-| *"discard a card **or** destroy the top card of your deck"* — a **modal** cost | Washed Up Wave, Jittery Bones |
-| a **dynamic** filter (*"cost less than the number of Draconic chain links"*) | Mounting Anger, Rising Resentment — refused on purpose |
-| its own reading | Wreck Havoc |
-
-**The generalisable piece here is `optCost` learning a `self` cost kind**
-(*"you may destroy this"*), which is two cards and is not a queue site.
-
-### 4. Token-on-a-trigger — 9 cards
-
-The mint is generic and correct since v3.33. What is missing is the trigger:
-*"if it's defended by an attack action card, create an Agility token"*, *"when
-this is destroyed, create a Spectral Shield token."*
-
-**`defends` and `destroyed` are schedules — ask which board runs each** (v3.01),
-and put the body in `effects.js` where both callers reach it.
-
-### 5. Then, and only then, the one-offs
-
-24 cards, each its own reading. Several are already recorded decisions rather
-than work — **Ice Eternal** (X-cost, refused on purpose), **Cosmo** (see
-below), **Walk in My Shoes** (halves base {p} and {d}, no reader).
-
----
-
-## THE STREAMLINING — three things that would pay for themselves
-
-These are the "simplify the process" half of the brief, and each is small.
-
-**1. `npm run gaps` — the family clustering as a tool.** The analysis at the
-top of this file was a one-off `node -e` script. It is the single most useful
-view of the remaining work and it should be a command beside `audit` /
-`stack` / `fairness`, so the next session opens with *"what closes the most
-cards"* instead of re-deriving it. ~40 lines, reads `tools/audit.json`.
-
-**2. A `readers` checklist in the audit.** Every one of the five families is
-"a clause shape with no reader." The audit already lists skipped clauses per
-card; grouping them by shape and printing the top ten would make the next
-family obvious without any clustering script at all.
-
-**3. Stop hand-rolling the ship loop.** Nine versions shipped this month and
-every one ran the same sequence by hand: `npm test` → fairness → failstates →
-audit diff → babel compile → bump → CHANGELOG → CLAUDE.md → HANDOFF → commit.
-**The babel compile is the one that is deliberately not a drill** (no
-dependencies on a fresh clone) — but it can still be a script that documents
-the order. A `tools/ship.js` that RUNS the checks and PRINTS the remaining
-manual steps would remove the only part of this project that is genuinely
-tedious.
-
----
-
-## STANDING WORK — carried, with reasons
+**Five of the ten findings were not cards at all** — they were machinery
+that existed and had no caller, or a reader that lied:
 
 | | |
 |---|---|
-| **the phone pass** | v3.42-v3.51 shipped on drills and self-play; **ally combat has never been played on a phone**. Deploy an ally, tap it to swing, watch the defend step and the action point. A tap that does nothing is this project's worst failure mode and only a phone finds it |
-| **tuning the table seat** | the brown button's opponent wins **29 of 45** (v3.51, measured). `npm run play` makes this measurable for the first time — the levers are `sparring.js`'s `DEFAULTS` (`takeUpTo`, `maxPitch`). **A play session, not a drill** |
-| **`sparring.act` cannot pilot a control hero** | Iyslander: 0 wins in 210 games, and all remaining stalls. It ranks attacks and her deck has none. See PLAYNOTES.md finding 3 |
-| **nothing attacks an ALLY** | so Oysten's death trigger still has no driver. The policy always names the hero (CR 1.4.5) — a deliberate refusal to guess, not an oversight |
-| **Cosmo swings for 0 power** | judge routes on `types.isWeaponType` where `build.js` routes on `parser.isWeapon`. Tested as a fix at v3.49 and it did **not** help the stalls, so it is recorded rather than shipped on a guess. It makes a card inert, which is a decision |
-| **Lyath** | the cheapest remaining hero — three versions converged on him without anyone aiming. `HANDOFF.md` carries his measured state |
+| the arsenal FACE-UP put | queue site inside `if(attacking)`; **all three cards that print one are non-attacks**, so it had never fired |
+| `moveFoe` | carried `{from,to}` for three versions with a consumer that ignored both |
+| destroyed gear | never reached a graveyard, so `retrieve` could never find a dagger |
+| a gated leave-trigger | **dropped its condition entirely**, and `npm run fairness` structurally cannot see that |
+| `Attack Reaction - …` | an unguarded activation prefix, so Prey Spotters read `full` and could not be activated at all |
 
 ---
 
-## THE BAR — unchanged, and it is why this works
+## THE ONE RULE THIS WEEK INHERITS
 
-Every entry in `CLAUDE.md` is a bug that shipped. The four that pay off most
-often on this kind of work:
+> **A family label is a claim about MACHINERY. The clustering can only see
+> what a card SAYS. Before building a family, ask the PARSER which records
+> carry the field the family names.**
+
+Last week that check moved **two of five** families. This week it moved a
+**third**: `npm run gaps` files five cards under *"a granted / conditional
+keyword — needs rider plumbing"*, and measured, they need five different
+things (a `pumped` gate, an unmodelled `overpower`, a cross-seat arsenal
+put, a "this way" record, and a rider on a `buffQ` grant).
+
+**So this plan is organised by MECHANISM, not by text pattern**, and each
+item below states what was measured and how.
+
+---
+
+## 1. THE "…THIS WAY" RECORD — 7 cards, one mechanism · **start here**
+
+*"If a yellow card is discarded **this way**"*, *"if damage is dealt **this
+way**"*, *"if you prevent damage **this way**"*. The phrase means **what
+this card's own resolution just did** — not the turn's history.
+
+**Measured: 17 pool cards print it. 8 already read, 7 are unfinished, 2
+are heroes.**
+
+```sh
+node -e 'const p=require("./data/pool.json");const arr=Array.isArray(p)?p:(p.cards||Object.values(p));
+const s=new Set();for(const c of arr){const t=c.functional_text_plain||"";
+for(const m of t.matchAll(/[^.\n]*\bthis way\b[^.\n]*/gi))s.add(c.name)}console.log(s.size,[...s])'
+```
+
+| card | tier | what "this way" refers to |
+|---|---|---|
+| Portside Exchange | part | the card its own `selfDiscard` just discarded — is it yellow? |
+| Path of Same Ends | part | did its own preceding arcane actually LAND (CR 7.5.5) |
+| Toe the Line | part | did the prevention it set up actually prevent — **delayed** |
+| V of the Vanguard | part | how many Light cards its own charge charged |
+| Throw Caution to the Wind | part | the pitch of the card it revealed — **delayed** |
+| Concoct Disorder | none | how many cards its own cross-seat arsenal put moved |
+| Danger Digits | none | did the dagger's 1 damage land |
+
+**THE EIGHT THAT WORK WERE EACH HAND-BUILT** — `discard6way`,
+`chargedPitch`, the reveal ops — one card at a time, with its own
+condition name. A general record would unify them, and that is the
+argument for doing this as a mechanism rather than seven readings.
+
+### THE STRUCTURAL BLOCKER, FOUND AND NOT YET SOLVED
+
+**`fx.conds` is evaluated BEFORE `fx.ops` runs.** In `effects.js`,
+`fx.conds.forEach` is at ~line 1583 and `runOps(n, fx.ops…)` at ~line
+2175. So a condition asking "what did my own ops just do" is **always
+answered against an empty trace**.
+
+This needs a **late-cond pass** — conditions evaluated after the card's
+own ops. There is precedent: `pend.lateConds` already exists for the
+attack path (`defLt2`, `pumped`), evaluated in `linkPumps`. The
+non-attack path has no equivalent.
+
+**Do the two immediate cards first** (Portside Exchange, Path of Same
+Ends) and leave the two DELAYED ones (Toe the Line, Throw Caution to the
+Wind) — their "this way" refers to an effect that resolves on a later
+turn-event, which is a different and larger problem. Say so rather than
+half-building them.
+
+---
+
+## 2. THE ATTACK-REACTION ABILITY ROUTE — 5 cards, fully scoped
+
+Five pool records print `Attack Reaction - <cost>: <effect>` and **none
+has a route**. v3.59 made them refuse honestly rather than report `full`
+while inert; building the route is this job.
+
+```
+Prey Spotters · Stalker's Steps · Bolt'n Boots · Danger Digits · Boltyn (hero)
+```
+
+Every step was measured last week:
+
+1. `parseHeroPower` to accept the prefix, returning `kind:"attackRx"`;
+2. **`build.js`'s `_abLine` matches `action|instant` only** — without this
+   no powCard is built at all, which is why the cards are currently
+   unreachable;
+3. a `_attackRx` flag on the powCard. **`_instant` is the exact shape to
+   copy** — see `judge.js`'s `playWindows` / `playWindowFor`;
+4. `speedAllowed` has distinguished the `attack-reaction` window since
+   v2.27, so the window itself already exists;
+5. the payloads — *"target attack with &lt;qualifier&gt; gets go again"* —
+   onto the open link via **`effects.attackRx`** (v3.11), which already
+   does exactly this for attack-reaction CARDS. `attackQual` reads the
+   qualifiers (`arrow`, `with stealth`) and `pumped` is the cond for
+   *"with {p} greater than its base"*;
+6. **the trainer's own offering path in `index.html`** — the half no drill
+   can validate, and the reason this was not built in v3.59.
+
+**THE RISK IS STEP 6, AND IT IS A REAL ONE.** An ability offered in the
+wrong window is *"illegal play allowed"* — sev-3, the direction that
+steals games. Drive `judge.legal` for the window in a drill, and get the
+trainer half onto a phone before calling it done.
+
+---
+
+## 3. STANDING WORK — carried, and one item is now overdue
+
+| | |
+|---|---|
+| **the phone pass — NOW THE TOP NON-CARD RISK** | last week added **six sheets a player must TAP**: the graveyard pick, retrieve, the counter target, the boost-banish counter, the arsenal put and the Waxing Specter enters-with. **The arsenal put has never been offered in a real game before this week.** A tap that does nothing is this project's worst failure mode and only a phone finds it |
+| **tuning the table seat** | the brown button's opponent wins **29 of 45** (v3.51, measured). Levers are `sparring.js`'s `DEFAULTS` (`takeUpTo`, `maxPitch`). A play session, not a drill |
+| **`sparring.act` cannot pilot a low-aggression hero** | **Re-measured 2026-08-29 from `tools/.cache/games.json`, and the carried claim was wrong.** It said Iyslander accounts for "all remaining stalls"; she is in **7 of 10**, and the stalls cluster across three heroes — **iyslander 7, blaze 5, enigma 4** (a stall names two heroes, so these overlap). Iyslander still wins **0 of 210**. The policy ranks ATTACKS and these decks are short of them, so this is a policy gap rather than one hero's. See `PLAYNOTES.md`, and re-derive with: `node -e 'const g=require("./tools/.cache/games.json");…'` |
+| **nothing attacks an ALLY** | so Oysten's death trigger still has no driver. A deliberate refusal to guess (CR 1.4.5), not an oversight |
+| **Cosmo swings for 0 power** | judge routes on `types.isWeaponType`, `build.js` on `parser.isWeapon`. Tested as a fix at v3.49 and it did **not** help the stalls, so it is recorded rather than shipped on a guess. It also gates the payoff for Astral Etchings' and Uphold Tradition's +1{p} counters, which land correctly and have nothing to spend themselves on until Cosmo works |
+
+---
+
+## 4. KNOWN REFUSALS — do not "fix" these without a ruling
+
+Each is deliberate, and each would be a card doing something the text does
+not say if read:
+
+| | |
+|---|---|
+| **Ice Eternal** | the pool's only X-cost card. Reading `create X tokens` as one token is quietly weaker than printed |
+| **Beckoning Haunt** | *"target aura **with cost X**"* — the subject cannot be consumed whole, so the clause stays unclaimed rather than dropping a printed limit |
+| **Mounting Anger · Rising Resentment** | a **dynamic** filter (*"cost less than the number of Draconic chain links"*) that no printed field expresses |
+| **Waning Vengeance** | a gated leave-trigger whose schedule cannot fire — `fx.onLeave`'s only caller is `tickSuspense`, and the card prints no suspense |
+| **Crankshaft-style unknown triggers** | the when-handler's vocabulary is CLOSED on purpose; an unknown trigger refuses the whole clause |
+| **`piercing`, `overpower`** | not modelled at all. Drill Shot and Spectral Rider refuse for want of the keyword, not the condition — these need a ruling before they need code |
+
+---
+
+## THE BAR — unchanged, and last week is why
 
 1. **Never invent card effects.** Teach the parser to read the text.
 2. **A reader that cannot read the whole subject REFUSES.** Weaker than
-   printed and visible beats stronger than printed and silent (v2.29).
-3. **Sabotage every new drill — and sabotage the guard too.** Four of eight
-   sabotages last week found a weak drill rather than a weak engine.
-4. **When you close a recorded gap, delete the record** (v3.41).
+   printed and visible beats stronger than printed and silent.
+3. **Sabotage every new drill — and sabotage the guard too.** Last week ran
+   **48 sabotages across six new drill files**; **five found a WEAK DRILL**
+   rather than a weak engine, and two more were errors in the sabotage
+   HARNESS that would have read as "the drill is fine". The engine was
+   right every time. **Check that a sabotage APPLIED before believing the
+   drill is strong** — one of last week's changed no behaviour at all.
+4. **When you close a recorded gap, delete the record** — and when a
+   recorded gap turns out to be EMPTY, say so.
 
-And the newest one, which this plan exists because of:
+And the two newest, both of which cost something last week:
 
-> **A feature with no caller looks exactly like a feature that works, until
-> you count.** Four of the five families above are machinery that was built,
-> documented, and never wired to a reader. Before building anything new this
-> week, check whether it already exists.
+> **A `noop` is a CLAIM that something reads the clause; `null` is the
+> claim that nothing does.** Filing a `noop` that names a reader which does
+> not run is how a card goes from `part` to `full` while staying inert.
+
+> **A probe must ask the function that holds the reader.** Two refusal
+> probes asked `classifyClause` about a whole-card reader living in
+> `fxParse`, and passed green against a sabotaged engine — twice.
