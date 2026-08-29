@@ -1,3 +1,41 @@
+# Handoff — Dawnblade, at v3.55 · PHASE C · FAMILY-BY-FAMILY
+
+## ⚠ WHERE THINGS STAND — v3.52 → v3.55 (2026-08-29)
+
+**335 → 344 full · 59 → 50 `part`.** Three releases, on the branch
+`claude/dawnblade-weekly-plan-zg61nm`, each validated with `npm test` +
+fairness + 210 self-play games (0 refusals, 0 invariant violations,
+0 malformed feed throughout).
+
+| ver | what, in one line |
+|---|---|
+| **3.53** | three `pick`-from-a-zone readers — **and the arsenal face-up put had never fired from `execute`** (queue site inside `if(attacking)`; all three cards that print one are non-attacks). `moveFoe` had carried `{from,to}` for three versions with a consumer that ignored both |
+| **3.54** | **destroyed gear now goes to the graveyard** (RULING, user, 2026-08-29), then `retrieve` — settled by reading the SAR017 PRINTING: *"(Pay {r} to equip it.)"* |
+| **3.55** | the **targeted counter put** (`ctrPut`); `gaps.js`'s family `needs:` lines corrected |
+
+**THE METHOD FINDING, which is worth more than the nine cards:**
+`npm run gaps` clusters by what a card's TEXT says, but its `needs:` line
+is a CLAIM ABOUT MACHINERY. Re-measured against the parser, **two of five
+families did not survive** — the *"you may"* family sets no `fx.optCost`
+at all, and `defends` had been wired since v3.33 while `hits` has zero
+pool cards. **Before building a family, ask the parser which records set
+the field.** Two-minute script; it moved two of five. `WEEK.md` and
+`tools/gaps.js` both now say what is actually left.
+
+**NOT DEPLOYED.** These three versions are on the feature branch, not
+`main`. Merging to `main` IS the deploy (GitHub Pages serves it) — and
+per CLAUDE.md, verify the URL returns 200 *and* that all 15 `engine/*.js`
+files do, not just that the tests were green.
+
+**THE PHONE PASS IS STILL OWED, and it grew.** v3.42-v3.51 shipped on
+drills and self-play; these three add prompt sheets that a player has to
+TAP — the graveyard pick, the retrieve sheet, the counter-target sheet
+and the arsenal put, which has *never once been offered in a real game
+before now*. A tap that does nothing is this project's worst failure
+mode and only a phone finds it.
+
+---
+
 # Handoff — Dawnblade, at v3.50 · PHASE C · THE TABLE HAS NOW BEEN PLAYED
 
 > **EVERYTHING ABOVE v3.05 IN THE PROSE BELOW IS HISTORY.** This block and

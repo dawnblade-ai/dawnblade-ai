@@ -36,6 +36,31 @@
 > ask the PARSER which cards actually carry the field the family names —
 > `fx.optCost`, `fx.arsenalPut` — rather than trusting the label. That
 > check is a two-minute script and it moved two of five families.
+> **`tools/gaps.js`'s own `needs:` lines were corrected at v3.55**, so the
+> tool no longer oversells them.
+
+> ### WHERE THE WEEK GOT TO — v3.52 → v3.55
+>
+> **335 → 344 full · 59 → 50 `part`.** Nine cards closed, and three of the
+> four findings were not cards at all:
+>
+> | ver | what |
+> |---|---|
+> | **3.53** | three `pick` readers (Preserve Tradition, Rise from the Ashes, Pass Over) — and the **arsenal face-up put had never fired from `execute`**, its queue site inside `if(attacking)` while all three cards that print one are non-attacks. `moveFoe` had carried `{from,to}` for three versions with a consumer that ignored both |
+> | **3.54** | **destroyed gear goes to the graveyard** (RULING, user) — an approximation invisible only because the one thing that would read it was unbuilt. Then `retrieve`, settled by READING THE PRINTING: *"(Pay {r} to equip it.)"* |
+> | **3.55** | the **targeted counter put** — kind, amount and target all off the printed line, kind vocabulary closed to what something reads |
+>
+> **What is left, honestly** — see `npm run gaps`, whose family lines now
+> say it: nine token-on-a-trigger cards each needing their own condition;
+> eight *"you may"* cards needing five different cost shapes; seven
+> counters cards each needing a TRIGGER (boost-banish, arrow-put,
+> enters-with) plus a reader for *"if this has an aim counter"*; and six
+> pick cards that are a deck search, an X-cost, a two-target pick, a
+> hand→soul put and a shuffle-redraw.
+>
+> **The standing work below is untouched and still the highest-value
+> non-card item** — above all the phone pass, which nothing in these three
+> releases could substitute for.
 
 ---
 
@@ -120,7 +145,7 @@ but a bare "card". `foePickTop` generalised to `foePick`.
 omit it and the pick is a reveal that moves nothing (v3.33's Crash and Bash).
 `Pass Over` reads an **opposing** graveyard, so the zone carries a side.
 
-### 2. Counters on a permanent — 10 cards
+### 2. Counters on a permanent — ~~10 cards~~ **the PUT landed at v3.55 (3 closed)**
 
 *"Put a steam counter on a Hyper Driver you control", "three +1{p} counters
 on target aura with ward", "if this has an aim counter, it gets piercing 1."*
@@ -134,7 +159,23 @@ counter KIND, an amount, and a target chosen from a filter.
 the no-op blind spot waiting to happen.
 
 **Watch for:** a counter the ability SPENDS must be on screen (v3.39) — the
-display half is part of the job, not a follow-up.
+display half is part of the job, not a follow-up. *(Checked at v3.55: the
+BOARD already renders counters generically on both boards, and gear renders
+steam/rust/pow, so this was already satisfied for everything `ctrPut`
+emits.)*
+
+**BUILT at v3.55 — `ctrPut`.** Re-Charge!, Astral Etchings and Uphold
+Tradition. The kind, the amount and the target all come off the printed
+line; the kind vocabulary is CLOSED to the four counters something actually
+reads. **What is left in this family is a TRIGGER each**, not a put:
+
+| card | needs |
+|---|---|
+| Crankshaft ×2 · Big Bertha | *"when this is banished from boosting"* — no such trigger exists, and the payload already reads |
+| Crow's Nest | *"whenever an arrow is put face-up into your arsenal from your deck"* |
+| Waxing Specter | *"this **enters the arena with** a +1{p} counter"* |
+| Drill Shot | a READER, not a put: *"if this has an aim counter, it gets piercing 1"* |
+| Plasma Barrel Shot | a self-targeted put behind *"if this has no steam counters"* |
 
 ### 3. ~~Two unwired `optCost` queue sites — 8 cards~~ — **THE LABEL WAS WRONG**
 
