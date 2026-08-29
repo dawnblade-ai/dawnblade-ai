@@ -7,6 +7,107 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.54 — destroyed gear reaches the graveyard, and `retrieve` with it
+
+**RULING (user, 2026-08-29): a destroyed piece of gear goes to the
+graveyard, as the CR says of any destroyed permanent.**
+
+Until now it was flagged `destroyed:true` and left in the gear zone
+**forever**. That approximation was invisible for the best possible
+reason — measured, the only pool cards that read gear in a graveyard are
+the two `retrieve` cards themselves, and `retrieve` was unbuilt. So the
+gap and the card that would expose it were hiding each other.
+
+### THE PRINTING ANSWERED A QUESTION THAT LOOKED LIKE IT HAD TO BE ASKED
+
+The database carries no reminder text for any keyword, and upstream's own
+`keyword.json` lists **Retrieve with an empty description**. The recorded
+ruling (user, 2026-07-25) gave the price — *"a player will need to pitch if
+they do not have 1 resource"* — and never named the destination, which is
+the one thing a reader cannot guess.
+
+The SAR017 face of Pick Up the Point prints it in parentheses:
+
+> When this attacks, you may **retrieve** a dagger from your graveyard.
+> *(Pay {r} to equip it.)*
+
+So retrieve is a graveyard pick costing {r} whose destination is the **gear
+zone** — it comes back *equipped*, not to hand. **Third time reading the
+printing has closed a booked question** (Clash of Agility, Thunder Quake,
+this), and it is now the first thing to try, not the last.
+
+And the loop is designed: **Mark of the Huntsman destroys ITSELF** to mark
+a hero, which is exactly what puts a dagger in the graveyard for these two
+cards to fetch. Against the old model that graveyard was always empty of
+daggers and the ability could never do anything.
+
+### IT IS A SWEEP, AND THAT IS THE WHOLE SAFETY ARGUMENT
+
+**The two boards hold their wall differently.** The trainer's `blockG` is
+a list of INDICES into `gear`; the table's is a list of uids. Removing an
+entry while a wall is declared renumbers the defenders underneath it — and
+`gearBlockApply` destroys a battleworn piece during exactly that
+resolution.
+
+So marking stays where it is, every existing wear and display read is
+untouched, and the FILING is one shared body called from one point where
+no wall can be live:
+
+```
+effects.sweepGear(game, seat) -> {game, msgs, moved}
+```
+
+Pure and seat-relative, the same contract `sweepArena` keeps, called from
+step (4b) of `beginEndPhase` — so both boards get it without either
+restating it. **The order inside that body is load-bearing:** it runs after
+rust (which sets `destroyed` this turn) and after the idle wipe (which
+reads `gear` by uid), the same specific-before-generic rule step (2)
+states for Frostbite.
+
+**WHEN it happens is a stated approximation.** The CR files a destroyed
+permanent immediately; this files it at the beginning of the controller's
+end phase. The observable difference is a destroy and a retrieve inside one
+turn cycle. Recorded rather than hidden — the alternative was an inline
+move that can renumber a live wall, which is a rules bug in a place no card
+text would explain.
+
+**Turn-stamped on the way in.** `_gy` is what answers the whole *"…this
+turn"* family, and CLAUDE.md says in as many words that a new path into the
+graveyard which forgets it makes those cards quietly wrong.
+
+### THE PICK LEARNED A PRICE
+
+`prompts.js` gained `cost` and `equipStamp` on a `pick`, declared
+explicitly because **a spec only carries fields `buildPrompt` knows about**
+— v2.34's `arsStamp` rule, and v3.53 had just been bitten by its mirror
+image at the consumer. The cost is returned as `out.pay` **only when a card
+actually moved**, so declining pays nothing: the v2.04 rule, applied to a
+pick that carries its own cost.
+
+**The re-equip fixup clears `destroyed` and `curDef`** — paying {r} for a
+shield that still blocks for zero is the card doing nothing. **`weaponUsed`
+is deliberately NOT cleared**: it is a per-turn allowance keyed by uid and
+this engine keeps the piece's uid across the trip, so clearing it would
+hand back a Once-per-Turn swing already spent. Weaker than printed and
+visible, which is the direction v2.04 settled.
+
+### Measured
+
+- **339 → 341 full**, 55 → 53 `part` (Pick Up the Point, Up Sticks and Run).
+- `npm test` **1533 drills, 0 fail, 4 skipped**. Fairness sweep clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**, and the win distribution is unchanged from before the
+  gear model moved — which is the evidence that it did not perturb balance.
+- **Eight sabotages against the new drill; all eight bite.** One found a
+  weak drill rather than a weak engine, for the second time this week: the
+  seat-relative check asserted on the *other* seat's GEAR, which a
+  cross-seat leak into *this* seat's graveyard passes perfectly. Assert the
+  destination, not only the source.
+- Three existing rust drills were edited deliberately: they asserted
+  `gear[0].destroyed`, which is the old model. They now assert the piece
+  **left the gear zone and arrived in the graveyard**, which a flag set in
+  place cannot satisfy.
+
 ## v3.53 — the readers the week asked for, and a mechanic with no caller
 
 **Four cards closed, and the interesting half is what the hunt turned up.**

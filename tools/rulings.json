@@ -371,12 +371,12 @@
  "retrieve": {
   "at": "2026-07-25",
   "mechanic": "retrieve",
-  "status": "unreviewed",
+  "status": "answered",
   "cards": [
    "Pick Up the Point (1)",
    "Up Sticks and Run (1)"
   ],
-  "ruling": "the 'retrieve' pop up will show all available daggers in grave - if one is selected a player will be need to pitch if they do not have 1 resource to be consumed."
+  "ruling": "the 'retrieve' pop up will show all available daggers in grave - if one is selected a player will be need to pitch if they do not have 1 resource to be consumed.\n\nSETTLED v3.53 from the SAR017 printing, whose reminder text reads \"(Pay {r} to equip it.)\" — so the destination is the GEAR zone (it comes back equipped, not to hand) and the price is {r}, which matches the pitch note above. Built: a graveyard pick, min:0, cost 1, equipStamp clearing `destroyed`/`curDef`. It required destroyed gear to reach the graveyard at all (RULING 2026-08-29 — see effects.sweepGear)."
  },
  "meld": {
   "at": "2026-07-25",

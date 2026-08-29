@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T00:37:17.225Z",
- "appVer": "3.53",
+ "generated": "2026-08-29T14:00:46.726Z",
+ "appVer": "3.54",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 339,
-  "part": 55,
+  "full": 341,
+  "part": 53,
   "none": 11
  },
  "heroes": {
@@ -9966,28 +9966,24 @@
     "go again",
     "retrieve"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this attacks, you may retrieve a dagger from your graveyard.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may retrieve a dagger from your graveyard."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may retrieve a dagger from your graveyard.\nGo again",
-   "flags": [
-    "unreviewed keyword: \"retrieve\""
-   ]
+   "flags": []
   },
   "scar tissue|1": {
    "name": "Scar Tissue",
@@ -10154,13 +10150,13 @@
     "go again",
     "retrieve"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "You may retrieve a dagger from your graveyard.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Your next dagger attack this turn gets +4{p}.",
@@ -10171,15 +10167,11 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "You may retrieve a dagger from your graveyard."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "You may retrieve a dagger from your graveyard.\nYour next dagger attack this turn gets +4{p}.\nGo again",
-   "flags": [
-    "unreviewed keyword: \"retrieve\""
-   ]
+   "flags": []
   },
   "art of desire mind|3": {
    "name": "Art of Desire: Mind",

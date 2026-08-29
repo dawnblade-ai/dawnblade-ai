@@ -202,6 +202,22 @@ function buildPrompt(game, spec){
          same way: the sheet opened, the right card was offered, and
          nothing moved. */
       moveFoe: spec.moveFoe || null,
+      /* A PICK THAT COSTS SOMETHING (v3.53). `retrieve` prints its price in
+         reminder text — "(Pay {r} to equip it.)" — so the choice and the
+         payment are one act. Carried as DATA, like every other field here:
+         this module runs no effects and spends no resources, so it reports
+         the cost as `out.pay` and `applyAnswer` charges it (pitching if the
+         seat is short, which is the recorded ruling for retrieve).
+
+         Declared explicitly because a spec only carries fields THIS
+         function knows about — `arsStamp` had to be added the same way in
+         v2.34, and until it was the Bracers' +1{p} was silently dropped. */
+      cost: spec.cost || 0,
+      /* THE RE-EQUIP FIXUP, and it belongs to the card that MOVED rather
+         than to the source — the same reason `arsStamp` is data. A piece
+         coming back out of the graveyard is equipped fresh: its `destroyed`
+         flag and its battleworn `curDef` are cleared by `applyAnswer`. */
+      equipStamp: !!spec.equipStamp,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
@@ -452,6 +468,11 @@ function applyPrompt(game, prompt){
       (prompt.zone ? " from " + prompt.zone : "") + ".");
     /* PAID. The cards moved, so the rider resolves. */
     out.ops = prompt.ops || [];
+    /* AND THE PRICE IS ONLY CHARGED WHEN SOMETHING WAS ACTUALLY TAKEN.
+       The decline path above returns early, so this is unreachable on a
+       "choose none" — which is the v2.04 rule the `pay` variant already
+       enforces, applied to a pick that carries its own cost. */
+    if(prompt.cost) out.pay = prompt.cost;
     return out;
   }
   if(prompt.tag === "modal"){

@@ -178,6 +178,7 @@ const RX_FOE_TOP  = /^put (.+) from their hand on top of their deck$/;
 const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
 const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
+const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
 
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
@@ -1487,6 +1488,52 @@ function classifyClause(raw){
       title: may ? "Return a card from your graveyard to your hand?"
                  : "Return a card from your graveyard to your hand",
       hint: may ? "Optional — choose none to decline." : undefined}]]);
+  }
+  /* RETRIEVE — and THE PRINTED CARD IS THE ORACLE FOR A KEYWORD (v3.32),
+     for the third time. The database carries no reminder text for any
+     keyword and upstream's own `keyword.json` lists Retrieve with an
+     EMPTY description, so this looked like a question that had to be
+     booked. The SAR017 printing of Pick Up the Point answers it in
+     parentheses:
+
+       "When this attacks, you may retrieve a dagger from your graveyard.
+        (Pay {r} to equip it.)"
+
+     So retrieve is a graveyard pick whose price is {r} and whose
+     destination is the GEAR zone — it comes back equipped, not to hand.
+     That matches the recorded ruling (user, 2026-07-25) exactly, which
+     said a player "will need to pitch if they do not have 1 resource to
+     be consumed" and never named the destination.
+
+     IT NEEDED THE GEAR ZONE TO REACH THE GRAVEYARD FIRST. Until v3.53 a
+     destroyed piece was flagged in place and filed nowhere, so the pool's
+     only daggers could never be in a graveyard and this reader would have
+     been a card that does nothing. RULING (user, 2026-08-29) moved them;
+     see `effects.sweepGear`. Mark of the Huntsman destroys ITSELF to
+     mark, which is the loop these two cards are printed for.
+
+     THE SUBJECT IS AN EQUIPMENT SUBTYPE, and it is read off the printed
+     TYPE LINE rather than guessed — `optFilter` is tried first so a
+     retrieve that ever named a subject it already knows keeps one reader,
+     and only a single bare word falls through to the subtype branch. A
+     word is either consumed whole or the clause refuses, same discipline
+     as everywhere else: "a dagger with cost 1 or less" fails the
+     single-word test and stays unclaimed rather than dropping the limit. */
+  if(m=c.match(RX_RETRIEVE)){
+    const raw2 = String(cased(RX_RETRIEVE, 2, m[2]) || "").trim();
+    const may  = !!m[1];
+    let filter = pickSubject(raw2);
+    if(!filter){
+      const sub = raw2.replace(/^(?:a|an|one)\s+/i, "");
+      if(!/^[A-Za-z][A-Za-z-]*$/.test(sub)) return null;
+      filter = {tt: "\\b" + sub.toLowerCase() + "\\b"};
+    }
+    return R([["pickPrompt", {zone:"grave", to:"gear", filter,
+      min: may ? 0 : 1, max:1,
+      /* THE PRICE IS THE KEYWORD'S, off the printed reminder text. */
+      cost:1, equipStamp:true,
+      title:"Retrieve from your graveyard?",
+      hint:"Pay {r} to equip it."}]]);
   }
   /* ---- BANISH-FOR-COUNTERS, AND PLAY IT AT INSTANT SPEED (v3.39) ----
      Blaze's hero ability, whose cost is "Remove X energy counters":

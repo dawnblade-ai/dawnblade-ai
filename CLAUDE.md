@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.53
+**Current version:** v3.54
 
 ---
 
@@ -393,6 +393,62 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A DESTROYED PERMANENT GOES TO THE GRAVEYARD (v3.54)
+
+**RULING (user, 2026-08-29): destroyed gear goes to the graveyard**, as
+the CR says of any destroyed permanent. Until v3.54 it was flagged
+`destroyed:true` and left in the gear zone **forever**.
+
+**THE GAP AND THE CARD THAT WOULD EXPOSE IT WERE HIDING EACH OTHER.**
+Measured: the only pool cards that read gear in a graveyard are the two
+`retrieve` cards — and `retrieve` was unbuilt. An approximation is
+invisible exactly as long as nothing asks, which is why *"nothing depends
+on this yet"* is a statement about today and never about the model.
+
+**IT IS A SWEEP, NOT AN INLINE MOVE, AND THAT IS THE WHOLE SAFETY
+ARGUMENT.** The two boards hold their wall differently — **the trainer's
+`blockG` is INDICES into `gear`, the table's is uids** — so removing an
+entry while a wall is declared renumbers the defenders underneath it, and
+`gearBlockApply` destroys a battleworn piece during exactly that
+resolution. Marking stays where it is, every existing wear and display
+read is untouched, and `effects.sweepGear` does the filing at one point
+where no wall can be live. **When a change removes something from an
+array, ask who is holding an INDEX into it.**
+
+**WHEN it happens is a STATED APPROXIMATION** — the CR files immediately,
+this files at the beginning of the controller's end phase. The observable
+difference is a destroy and a retrieve inside one turn cycle.
+
+**THE ORDER INSIDE `beginEndPhase` IS LOAD-BEARING.** It runs after rust
+(which sets `destroyed` this turn) and after the idle wipe (which reads
+`gear` by uid to find the counters it clears). Specific readers first,
+the generic sweep last — the same rule step (2) states for Frostbite.
+
+**AND IT IS TURN-STAMPED.** `_gy` answers the whole *"…this turn"*
+family; a new path into the graveyard that forgets it makes those cards
+quietly wrong.
+
+### TRY THE PRINTING BEFORE BOOKING A QUESTION — THIRD TIME (v3.54)
+
+The database carries no reminder text for keywords, and upstream's own
+`keyword.json` lists **Retrieve with an EMPTY description**. The recorded
+ruling gave the price and never named the DESTINATION, which is the one
+thing a reader cannot guess. The SAR017 face of Pick Up the Point prints
+it in parentheses:
+
+> *"…you may **retrieve** a dagger from your graveyard. (Pay {r} to
+> equip it.)"*
+
+So retrieve is a graveyard pick costing {r} into the **GEAR** zone — it
+comes back equipped, not to hand. Clash of Agility, Thunder Quake, and
+now this: **reading the printed card is the FIRST thing to try, not the
+last.** `card.printings[].image_url` is in the pool record already.
+
+**AND THE LOOP IS DESIGNED.** Mark of the Huntsman destroys ITSELF to
+mark a hero, which is what puts a dagger in the graveyard for these two
+cards to fetch. A keyword whose enabler is another card in the same deck
+is a good sign the model underneath it is missing something.
 
 ### A FIX FOR ONE MECHANIC IS NOT A FIX FOR THE SHAPE (v3.53)
 
@@ -3549,9 +3605,27 @@ picking for them. That works because **`applyAnswer` ends in
 `openPrompt`** — a prompt queued from inside a rider's ops opens like any
 other. `min:1`, because there is no "you may" in the rider.
 
-**Still to wire:** the `hits` and `defends` triggers (`play` and `attacks`
-are live). The parser reads them already — `fx.optCost.trigger` names
-which — so each is a queue site, not new machinery.
+**~~Still to wire: the `hits` and `defends` triggers.~~ RETIRED at v3.53,
+and it was stale in both halves.** `defends` was wired in v3.33 (the site
+is in `afterDefenders`, addressed to the DEFENDER), and **`hits` has zero
+pool cards** — measured by asking the parser which records actually set
+`fx.optCost`, rather than by reading card text:
+
+```
+attacks: Fire that Burns Within · Golden Tipple · Jack Be Quick · Runic Fellingsong
+defends: Crash and Bash          play: Condemn to Slaughter
+entersLeaves: Sigil of Silphidae hits: (none)
+```
+
+So there was one unwired site with no customers, and a note telling the
+next reader it was worth eight cards. **WHEN A NOTE SAYS A TRIGGER IS
+UNWIRED, ASK WHICH CARDS SET IT** — a trigger with no card is not work,
+and v3.41's rule (when you close a recorded gap, delete the record) has a
+twin: when a recorded gap turns out to be empty, say so. The eight cards
+`npm run gaps` files under this family are NOT `optCost` cards at all;
+each needs a different COST shape — *"destroy **this**"*, *"pay
+{r}{r}{r}"*, or a modal *"discard a card **or** destroy the top card of
+your deck"*. See `WEEK.md`.
 
 **Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong and
 Mounting Anger went none/part → full; Golden Tipple (×3) and Fire that Burns

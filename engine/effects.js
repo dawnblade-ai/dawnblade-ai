@@ -2540,6 +2540,28 @@ function makeEffects(ctx){
         n = L(n, `${act(n).name} takes ${got.name} from ${foe(n).name}'s ${from === "grave" ? "graveyard" : from} — ${where}.`);
       }
     }
+    /* THE RE-EQUIP FIXUP (v3.53). A piece retrieved out of the graveyard is
+       equipped FRESH: `destroyed` is what put it there, and `curDef` is
+       battleworn wear from the life it already had. Both are cleared, or
+       the player pays {r} to equip a shield that still blocks for zero.
+
+       `weaponUsed` IS DELIBERATELY NOT CLEARED. It is a per-turn ALLOWANCE
+       keyed by uid on the side (v2.46 unpicks it from a TAP for exactly
+       this kind of reason), and this engine keeps the piece's uid across
+       the trip. Clearing it would hand back a Once-per-Turn swing the seat
+       had already spent this turn — stronger than printed. Leaving it is
+       weaker than printed and visible, which is the direction v2.04
+       settled for costs. */
+    if(p.tag === "pick" && p.to === "gear" && p.equipStamp){
+      const back = new Set((r.picked || []).map(c => c.uid));
+      if(back.size){
+        const ps = actMut(n);
+        ps.gear = (ps.gear || []).map(gr => back.has(gr.uid)
+          ? Object.assign({}, gr, {destroyed: false, curDef: null}) : gr);
+        for(const c of (r.picked || []))
+          n = L(n, `${c.name} is retrieved and equipped again.`);
+      }
+    }
     if(p.tag === "pick" && p.to === "arsenal"){
       const put = act(n).arsenal;
       if(put && !put._faceUp){
@@ -3990,6 +4012,60 @@ function settleIntellect(game, seat){
           msgs: [(sd.name || ("seat " + seat)) + "'s intellect settles back to " + sd.intWas + "."]};
 }
 
+/* ---- DESTROYED GEAR GOES TO THE GRAVEYARD ------------------------------
+   RULING (user, 2026-08-29): a destroyed piece of gear goes to the
+   graveyard, as the CR says of any destroyed permanent.
+
+   Until v3.53 it was flagged `destroyed:true` and left in the gear zone
+   FOREVER — an approximation that was invisible because nothing in the
+   pool read gear in a graveyard. `retrieve` is what made it visible: the
+   printed reminder on Pick Up the Point's SAR017 face reads *"(Pay {r} to
+   equip it.)"*, so the card pulls a dagger OUT OF THE GRAVEYARD, and
+   Mark of the Huntsman destroys ITSELF to mark — which is the whole loop
+   the two cards are printed for. Against the old model the graveyard was
+   always empty of daggers and the ability could never do anything.
+
+   IT IS A SWEEP, NOT AN INLINE MOVE, AND THAT IS THE WHOLE SAFETY
+   ARGUMENT. The trainer's wall holds `blockG` as INDICES into `gear`
+   (the table holds uids — the two boards genuinely differ here), so
+   removing an entry while a wall is declared renumbers the defenders
+   underneath it. `gearBlockApply` destroys a battleworn piece during
+   exactly that resolution. Marking in place stays where it is, every
+   existing wear and display read is untouched, and the FILING happens at
+   one point where no wall can be live.
+
+   WHEN it happens is a STATED APPROXIMATION: the CR files a destroyed
+   permanent immediately, and this files it at the beginning of the
+   controller's end phase. The observable difference is a piece destroyed
+   and retrieved within the same turn, which needs both a destroy and a
+   retrieve in one turn cycle. Recorded rather than hidden — and the
+   alternative was an inline move that can renumber a live wall, which is
+   a rules bug in a place no card text would explain.
+
+   Pure, seat-relative, and returns `{game, msgs, moved}` — the same
+   contract `sweepArena` keeps, so both boards get it through
+   `beginEndPhase` without either restating it. */
+function sweepGear(game, seat){
+  const sd = (game.sides || [])[seat] || {};
+  const gone = (sd.gear || []).filter(g => g && g.destroyed);
+  if(!gone.length) return {game, msgs: [], moved: []};
+  const sides = game.sides.slice();
+  const me = Object.assign({}, sd);
+  me.gear = (sd.gear || []).filter(g => !(g && g.destroyed));
+  /* TURN-STAMPED, like every other path into the graveyard. `_gy` is what
+     answers the whole "…this turn" family, and a new path that forgets it
+     makes those cards quietly wrong (CLAUDE.md says so in as many words).
+     Stamped inline because this function is pure — the same thing
+     `sweepArena` does, rather than reaching for the trainer's `gy()`. */
+  me.grave = [...gone.map(g => Object.assign({}, g, {_gy: game.turn})), ...(sd.grave || [])];
+  sides[seat] = me;
+  const who = ((game.sides || [])[seat] || {}).name || ("seat " + seat);
+  return {
+    game: Object.assign({}, game, {sides}),
+    msgs: gone.map(g => `${g.name} is destroyed — it goes to ${who}'s graveyard.`),
+    moved: gone.map(g => g.uid)};
+}
+
 function beginEndPhase(game, seat){
   let n = game;
   const msgs = [], ops = [], fired = [];
@@ -4060,6 +4136,23 @@ function beginEndPhase(game, seat){
       }
       me.counters = ctr; sides[seat] = me; n = Object.assign({}, n, {sides});
     }
+  }
+
+  /* (4b) THE SHATTERED IRON IS FILED (v3.53). RULING (user, 2026-08-29):
+     destroyed gear goes to the graveyard.
+
+     IT RUNS AFTER (3) AND (4) AND THE ORDER IS LOAD-BEARING. Rust sets
+     `destroyed` on a piece THIS turn, so filing before it would leave the
+     newly-shattered piece in the gear zone for another whole turn; and
+     the idle wipe reads `gear` by uid to find the counters it clears, so
+     filing before that silently stops it finding a piece that rusted
+     through in the same end phase. Specific readers first, the generic
+     sweep last — the same rule step (2) states for Frostbite. */
+  {
+    const sg = sweepGear(n, seat);
+    n = sg.game;
+    for(const m of sg.msgs) msgs.push(m);
+    if(sg.moved.length) fired.push("gear");
   }
 
   /* (5) INTIMIDATE RETURNS. An attack is declared by the turn-player, so
@@ -4229,6 +4322,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, heaveOffer, heave, beginEndPhase, settleIntellect,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, heaveOffer, heave, beginEndPhase, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

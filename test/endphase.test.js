@@ -88,8 +88,20 @@ test("CR 4.4.2 — rust shatters the piece at the beginning of the end phase", (
   g.sides[0].counters = {sw: {rust: 3}};
 
   const out = E.beginEndPhase(g, 0);
-  assert.equal(out.game.sides[0].gear[0].destroyed, true,
+  /* THE PIECE IS NOW FILED, NOT FLAGGED IN PLACE (v3.53). RULING (user,
+     2026-08-29): destroyed gear goes to the graveyard, as the CR says of
+     any destroyed permanent. This drill used to read `gear[0].destroyed`,
+     which is the OLD model — the assertion is stronger now, because "it
+     left the gear zone AND arrived in the graveyard" is a claim that a
+     flag set in place cannot satisfy. */
+  assert.equal(out.game.sides[0].gear.length, 0,
     "Talishar prints its own death; at the table it swung on past it forever");
+  const gv = out.game.sides[0].grave;
+  assert.equal(gv.length, 1, "and the shattered piece is in the graveyard");
+  assert.equal(gv[0].uid, "sw");
+  assert.equal(gv[0]._gy, g.turn,
+    "turn-stamped like every other path into the graveyard, or the " +
+    "'…this turn' family goes quietly wrong");
 });
 
 test("…and only at ITS controller's end phase", () => {
@@ -98,10 +110,16 @@ test("…and only at ITS controller's end phase", () => {
   g.sides[1].gear = [RUSTER(3, "sw")];
   g.sides[1].counters = {sw: {rust: 3}};
 
-  assert.ok(!E.beginEndPhase(g, 0).game.sides[1].gear[0].destroyed,
+  const other = E.beginEndPhase(g, 0).game.sides[1];
+  assert.equal(other.gear.length, 1,
     "seat 1's piece must not shatter on seat 0's end phase — the clause reads " +
     "'YOUR end phase', and a seat-relative body is the whole point");
-  assert.equal(E.beginEndPhase(g, 1).game.sides[1].gear[0].destroyed, true);
+  assert.ok(!other.gear[0].destroyed);
+  assert.ok(!(other.grave || []).length, "and it must not be filed either");
+
+  const own = E.beginEndPhase(g, 1).game.sides[1];
+  assert.equal(own.gear.length, 0, "on its OWN controller's end phase it shatters");
+  assert.equal(own.grave[0].uid, "sw", "and is filed to that seat's graveyard");
 });
 
 test("under the threshold the piece survives — the drill above is not passing by finding nothing", () => {
@@ -109,7 +127,10 @@ test("under the threshold the piece survives — the drill above is not passing 
   const g = H.state([], [], {});
   g.sides[0].gear = [RUSTER(3, "sw")];
   g.sides[0].counters = {sw: {rust: 2}};
-  assert.ok(!E.beginEndPhase(g, 0).game.sides[0].gear[0].destroyed);
+  const out = E.beginEndPhase(g, 0);
+  assert.ok(!out.game.sides[0].gear[0].destroyed);
+  assert.equal(out.game.sides[0].gear.length, 1, "and it is still equipped");
+  assert.ok(!(out.game.sides[0].grave || []).length, "and not in the graveyard");
 });
 
 /* ---- the idle counter wipe ------------------------------------------ */
@@ -302,11 +323,22 @@ test("driven: Dash's Talishar shatters at the table, through judge.reduce", {ski
   if(n.phase === "action" && n.priority != null) n = J.reduce(n, {t: "pass"}, n.priority).state;
   while(n.arsenalFor != null) n = J.reduce(n, {t: "arsenal", uid: null}, n.arsenalFor).state;
 
-  const after = (n.sides[0].gear || []).find(x => x.uid === tal.uid);
-  assert.ok(after, "the piece must still be IN the gear list — destroyed, not vanished");
-  assert.equal(after.destroyed, true,
+  /* IT LEAVES THE GEAR ZONE FOR THE GRAVEYARD (v3.53). This assertion used
+     to read "the piece must still be IN the gear list — destroyed, not
+     vanished", which was the old model: gear was flagged in place and
+     never filed anywhere. RULING (user, 2026-08-29) made it CR-accurate,
+     and this drill is the one that proves the REDUCER reaches it rather
+     than only that the body is right. */
+  assert.ok(!(n.sides[0].gear || []).some(x => x.uid === tal.uid),
+    "the shattered piece leaves the gear zone");
+  const filed = (n.sides[0].grave || []).find(x => x.uid === tal.uid);
+  assert.ok(filed,
     "the table ran no beginning-of-end-phase rule of its own until v3.17, so " +
-    "Talishar accrued counters forever and swung on past the death it prints");
+    "Talishar accrued counters forever and swung on past the death it prints — " +
+    "and until v3.53 the death filed it nowhere");
+  assert.ok(filed._gy != null,
+    "turn-stamped like every other path into the graveyard, or the " +
+    "'…this turn' family goes quietly wrong");
 });
 
 test("driven: and a Talishar under the threshold survives the same end phase", {skip}, () => {

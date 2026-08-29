@@ -1,7 +1,41 @@
 # The week — finish the card logic by building READERS, not heroes
 
-> **Written 2026-08-29, at v3.51.** Every number here was measured, with the
-> command to re-derive it. Read `CLAUDE.md` first, then this.
+> **Written 2026-08-29, at v3.51. REVISED at v3.53**, after the first family
+> was built and the other four were re-measured against the parser rather
+> than against card text. Every number here was measured, with the command
+> to re-derive it. Read `CLAUDE.md` first, then this.
+
+> ### WHAT v3.53 CHANGED IN THIS PLAN
+>
+> **The families are TEXT-PATTERN clusters, and two of the "needs:" lines
+> did not survive contact with the parser.** `gaps.js` says so itself — *a
+> card lands in the FIRST family it matches* — but the `needs:` line is a
+> CLAIM about machinery, and a claim is a test with no assertion (v3.41).
+> Checked one at a time:
+>
+> | family | the plan said | measured |
+> |---|---|---|
+> | pick from a zone (12) | one reader | **3 were one reader** and shipped; the other 9 are a deck SEARCH, an X-cost, a two-target pick, a hand→soul put, a shuffle-redraw, a per-turn go-again, and one that was already BUILT |
+> | *"you may …, if you do"* (8) | the `hits`/`defends` queue sites | **none of the 8 is an `optCost` card.** Each needs a different COST shape — destroy-this, pay `{r}{r}{r}`, a modal "discard a card OR destroy the top of your deck" |
+> | token on a trigger (9) | wire the trigger | the mint is generic, but each card needs its own **condition** — *"if a yellow card is discarded this way"*, *"if you prevent damage this way"*, *"when this is destroyed"* — so it is nine readings, not one lever |
+> | counters on a permanent (10) | a targeted counter put | **holds up.** The one family whose label survived |
+>
+> **`defends` WAS ALREADY WIRED — v3.33 built it**, and `hits` has **zero**
+> pool cards. So "two unwired queue sites" was one site with no customers.
+> `CLAUDE.md`'s *"Still to wire: the `hits` and `defends` triggers"* was
+> stale in the same way; both are corrected.
+>
+> **AND THE FIRST FAMILY HID A WORSE BUG THAN THE ONE IT WAS SCOPED FOR.**
+> The arsenal FACE-UP put's queue site sat inside `if(attacking)` and not
+> one of the three pool cards that prints one is an attack — v3.20's defect
+> verbatim, one mechanic over. See CLAUDE.md, "A FIX FOR ONE MECHANIC IS
+> NOT A FIX FOR THE SHAPE".
+>
+> **THE LESSON FOR THE REST OF THE WEEK:** `npm run gaps` is the right
+> place to start and the wrong place to stop. Before building a family,
+> ask the PARSER which cards actually carry the field the family names —
+> `fx.optCost`, `fx.arsenalPut` — rather than trusting the label. That
+> check is a two-minute script and it moved two of five families.
 
 ---
 
@@ -45,7 +79,7 @@ node -e '…'                           # the family clustering — see below
 
 ## THE ORDER — highest cards-per-hour first
 
-### 1. `pick` from a zone — 12 cards · **start here**
+### 1. `pick` from a zone — ~~12 cards~~ **DONE at v3.53 (4 closed)**
 
 Twelve cards say some version of *"return / put / banish target card from
 your graveyard."* `prompts.js` has done this since v2.17 and no parser rule
@@ -62,6 +96,25 @@ Compass of Sunken Depths
 `optFilter` already reads a subject phrase into a prompts filter from printed
 fields only, and **refuses what it cannot read honestly** (v2.29). Reuse it —
 do not write a second subject reader, or the two will drift.
+
+**BUILT at v3.53.** Preserve Tradition (grave → deck bottom), Rise from the
+Ashes (grave → hand, optional), Pass Over (their grave → banish), and Call
+in the Big Guns — which turned out to be **already built and mis-reported**,
+its `arsenalPut` unreachable because the queue site was in the wrong branch.
+`pickSubject` is the subject reader, deferring to `optFilter` for everything
+but a bare "card". `foePickTop` generalised to `foePick`.
+
+**WHAT IS LEFT OF THIS FAMILY, honestly:**
+
+| card | what it actually needs |
+|---|---|
+| Pick Up the Point · Up Sticks and Run | `retrieve` — **settled at v3.53**: the SAR017 printing reads *"(Pay {r} to equip it.)"*, and it needed destroyed gear to reach the graveyard first (RULING, user, 2026-08-29) |
+| Beckoning Haunt | an **X-cost** — refused on purpose, pinned by a drill |
+| Crown of Dichotomy | **two** targets with different filters, ordered |
+| Halo of Illumination | hand → **soul**, with a rider on the picked card's class |
+| Hope Merchant's Hood | shuffle-any-number and redraw — deck manipulation, still genuinely open |
+| Flamecall Awakening | a deck **SEARCH** — a hidden zone, not a graveyard pick |
+| Compass of Sunken Depths | **not a pick at all** — a per-turn go-again on watery-grave plays |
 
 **Watch for:** `to` is the destination and accepts `deckTop`/`deckBottom`;
 omit it and the pick is a reveal that moves nothing (v3.33's Crash and Bash).
@@ -83,16 +136,33 @@ the no-op blind spot waiting to happen.
 **Watch for:** a counter the ability SPENDS must be on screen (v3.39) — the
 display half is part of the job, not a follow-up.
 
-### 3. Two unwired `optCost` queue sites — 8 cards
+### 3. ~~Two unwired `optCost` queue sites — 8 cards~~ — **THE LABEL WAS WRONG**
 
-`fx.optCost.trigger` already names which trigger a card wants. **`play` and
-`attacks` are live; `hits` and `defends` are not** — v3.20 says so in as many
-words and the note has been sitting there for thirty versions.
+**Re-measured at v3.53 by asking the parser instead of the card text.** Every
+pool card that sets `fx.optCost`, by trigger:
 
-Each is a queue site, not new machinery. **v3.20's own lesson applies:** its
-only queue site sat inside `if(attacking)` while every card that needed it was
-a non-attack, so the feature existed and was never once offered. **Drive the
-real entry point** — a drill that builds its own spec proves the fixture.
+```
+attacks: Fire that Burns Within · Golden Tipple · Jack Be Quick · Runic Fellingsong
+defends: Crash and Bash            (WIRED — v3.33, in afterDefenders)
+play:    Condemn to Slaughter       entersLeaves: Sigil of Silphidae
+hits:    (none)
+```
+
+**`defends` has been wired since v3.33 and `hits` has no pool cards at all**,
+so there is no queue-site work here. And **none of the eight cards the family
+listed is an `optCost` card** — they match the *"you may …, if you do"* text
+and each needs a different COST shape:
+
+| shape | cards |
+|---|---|
+| *"you may destroy **this**"* — the source, not a filtered pick | Beaten Trackers, Refraction Bolters |
+| *"you may pay {r}{r}{r}"* — the `pay` variant | Silent Stilettos |
+| *"discard a card **or** destroy the top card of your deck"* — a **modal** cost | Washed Up Wave, Jittery Bones |
+| a **dynamic** filter (*"cost less than the number of Draconic chain links"*) | Mounting Anger, Rising Resentment — refused on purpose |
+| its own reading | Wreck Havoc |
+
+**The generalisable piece here is `optCost` learning a `self` cost kind**
+(*"you may destroy this"*), which is two cards and is not a queue site.
 
 ### 4. Token-on-a-trigger — 9 cards
 
