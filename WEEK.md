@@ -41,8 +41,8 @@
 
 > ### WHERE THE WEEK GOT TO — v3.52 → v3.55
 >
-> **335 → 347 full · 59 → 47 `part`.** Twelve cards closed, and three of the
-> five findings were not cards at all:
+> **335 → 348 full · 59 → 46 `part`.** Thirteen cards closed, and four of the
+> seven findings were not cards at all:
 >
 > | ver | what |
 > |---|---|
@@ -50,6 +50,7 @@
 > | **3.54** | **destroyed gear goes to the graveyard** (RULING, user) — an approximation invisible only because the one thing that would read it was unbuilt. Then `retrieve`, settled by READING THE PRINTING: *"(Pay {r} to equip it.)"* |
 > | **3.55** | the **targeted counter put** — kind, amount and target all off the printed line, kind vocabulary closed to what something reads |
 > | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played |
+> | **3.57** | the Illusionist `pitchBlue1` condition and the gated enters-with counter — and a **latent dropped gate the fairness sweep cannot see** |
 >
 > **What is left, honestly** — see `npm run gaps`, whose family lines now
 > say it: nine token-on-a-trigger cards each needing their own condition;
@@ -174,7 +175,7 @@ reads. **What is left in this family is a TRIGGER each**, not a put:
 |---|---|
 | ~~Crankshaft ×2 · Big Bertha~~ | **BUILT at v3.56** — the boost-banish trigger, `fx.boostBanish`, fired at the one site that banishes a card for boosting |
 | Crow's Nest | *"whenever an arrow is put face-up into your arsenal from your deck"* |
-| Waxing Specter | *"this **enters the arena with** a +1{p} counter"* |
+| ~~Waxing Specter~~ | **BUILT at v3.57** — `ctrSelf`, gated on the new `pitchBlue1` condition |
 | Drill Shot | a READER, not a put: *"if this has an aim counter, it gets piercing 1"* |
 | Plasma Barrel Shot | a self-targeted put behind *"if this has no steam counters"* |
 

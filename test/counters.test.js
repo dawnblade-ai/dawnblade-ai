@@ -63,6 +63,36 @@ test("AN UNKNOWN COUNTER KIND REFUSES — the no-op blind spot, closed", () => {
     "and an unreadable SUBJECT refuses too — the whole phrase or nothing");
 });
 
+test("…BUT IT MUST NOT STEAL THE CLAUSE FROM A READER THAT KNOWS IT", {skip}, () => {
+  /* Written as match-then-refuse, the enters-with reader swallowed
+     Malefic Incantation's "this enters the arena with 3 VERSE counters" —
+     a kind it does not know — and returned null, killing a clause an
+     existing verse reader further down was already handling. The card
+     went `full` -> `part`, and `coverage.test.js`'s pinned baseline is
+     what caught it, which is exactly what that baseline is for.
+
+     The kind is tested in the GUARD now, so an unknown kind falls
+     through. Both properties survive: nothing else claims "glitter", so
+     that still refuses, and "verse" reaches the reader that wants it. */
+  P.fxReset();
+  const fx = P.fxParse(H.card("Malefic Incantation", 1));
+  assert.equal(fx.tier, "full",
+    "the verse-counter reader must still get its clause");
+  assert.ok(!fx.ops.some(o => o[0] === "ctrSelf"),
+    "and the counter reader must not have claimed it");
+  P.fxReset();
+  /* THE VERSE READER OWNS THIS PHRASE, and it is the one that must get it:
+     `enterCounters` is the verse mechanic's own op, wired to the board
+     entry's `verse` field. The fall-through hands it over intact. */
+  assert.deepEqual(cc("This enters the arena with 3 verse counters"),
+    {status: "run", ops: [["enterCounters", 3]]},
+    "the verse reader still claims its own clause");
+  /* AND A KIND NOBODY OWNS STILL REFUSES — the fall-through is not a
+     licence, it just stops this reader answering for shapes it cannot
+     read. */
+  assert.equal(cc("This enters the arena with 3 glitter counters"), null);
+});
+
 test("the amount is per PRINTING, not hardcoded", {skip}, () => {
   for(const [pitch, want] of [[1, 3], [2, 2], [3, 1]]){
     P.fxReset();
@@ -249,4 +279,95 @@ test("GEAR IS A LEGAL HOME TOO — a counter can sit on either zone", {skip}, ()
   g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
   const n = J.reduce(g, {t: "play", uid: "src1", from: "hand"}, 0).state;
   assert.equal((n.sides[0].counters.hd9 || {}).steam, 1, "gear takes the counter too");
+});
+
+/* ---- 4. "ENTERS WITH A COUNTER", AND THE GATE THAT NEARLY VANISHED ----
+   Waxing Specter: "If you've pitched a blue card this turn, this enters
+   the arena with a +1{p} counter."
+
+   THE CONDITION MAPS ONTO AN EVALUATOR THAT ALREADY EXISTED. `pitchBlue<N>`
+   has been there since High Tide, reachable only through that keyword's
+   wording. CR 4.4.3c sends the pitch zone to the bottom of the deck in the
+   end phase, so during a turn that zone holds exactly the cards pitched
+   this turn — "pitched a blue card this turn" and "a blue card is in your
+   pitch zone" are one question asked twice, which is why this reuses the
+   evaluator rather than adding a second record of one fact.
+   ---------------------------------------------------------------- */
+
+test("the printed 'pitched a blue card' wording reads, and is not 'played'", () => {
+  const r = cc("If you've pitched a blue card this turn, draw a card");
+  assert.equal(r.cond, "pitchBlue1");
+  /* PITCHED AND PLAYED ARE TWO FATES OF ONE CARD, and the engine has kept
+     them apart since before this reader existed. Collapsing them would pay
+     Waxing Specter for a blue card that was spent the other way. */
+  assert.equal(cc("If you've played another blue card this turn, draw a card").cond, "blue");
+});
+
+test("the counter it enters with is GATED, not automatic", {skip}, () => {
+  P.fxReset();
+  const fx = P.fxParse(H.card("Waxing Specter", 1));
+  assert.ok(!fx.ops.some(o => o[0] === "ctrSelf"),
+    "an unconditional op would make the printed gate decoration");
+  assert.deepEqual(fx.conds.map(x => [x.cond, x.op[0]]), [["pitchBlue1", "ctrSelf"]]);
+  P.fxReset();
+});
+
+function specter(pitchZone){
+  H.db();
+  const spec = Object.assign({}, H.card("Waxing Specter", 1), {uid: "ws1"});
+  let g = H.state({name: "Iyslander", res: 9, ap: 3, hand: [spec], board: [],
+                   counters: {}, pitch: pitchZone, deck: [{uid: "d1", name: "T"}]},
+                  {name: "Them", deck: [{uid: "d2", name: "T2"}]},
+                  {actor: 0, turnPlayer: 0, seed: "ws", turn: 4});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  return J.reduce(g, {t: "play", uid: "ws1", from: "hand"}, 0).state;
+}
+
+test("driven: a blue card in the pitch zone earns the counter", {skip}, () => {
+  const n = specter([{uid: "pz1", name: "A Blue", pitch: 3}]);
+  assert.ok((n.sides[0].board || []).some(b => b.uid === "ws1"), "the aura lands either way");
+  assert.equal((n.sides[0].counters.ws1 || {}).pow, 1);
+});
+
+test("driven: a RED card in the pitch zone does not — the gate is real", {skip}, () => {
+  /* A RED CARD RATHER THAN AN EMPTY ZONE. An empty pitch zone cannot tell
+     "the gate checked the colour" from "the gate checked for anything at
+     all" — a fixture where two things coincide has tested neither. */
+  const n = specter([{uid: "pz2", name: "A Red", pitch: 1}]);
+  assert.ok((n.sides[0].board || []).some(b => b.uid === "ws1"),
+    "the aura still enters — only the counter is conditional");
+  assert.ok(!n.sides[0].counters.ws1, "and it brings no counter");
+});
+
+/* ---- 5. A GATED LEAVE-TRIGGER REFUSES ---------------------------- */
+
+test("a gated 'when this leaves the arena' clause is REFUSED", {skip}, () => {
+  /* Found by building `pitchBlue1`, which made Waning Vengeance's gate
+     readable for the first time. `fxParse`'s op dispatcher files an
+     onLeave payload into `fx.onLeave` and has NO branch for a condition
+     riding with it, so the gate was silently DROPPED and the token minted
+     unconditionally — COND-BYPASSED, and **the fairness sweep does not
+     catch it**: its model wants a condition gating an effect the engine
+     ALSO grants unconditionally, and here the condition simply vanishes,
+     leaving no unconditional twin to compare against.
+
+     `fx.onLeave` also has exactly one caller (`tickSuspense`), and this
+     card prints no suspense, so reading the clause would file it `full`
+     with a dropped gate on a trigger that cannot fire. */
+  assert.equal(cc("When this leaves the arena, if you've pitched a blue card this turn, create a Spectral Shield token"),
+    null);
+  P.fxReset();
+  const fx = P.fxParse(H.card("Waning Vengeance", 1));
+  assert.ok(!(fx.onLeave || []).length, "no ungated payload may be manufactured from a gated clause");
+  assert.equal(fx.tier, "part", "the card stays honestly unfinished");
+  P.fxReset();
+});
+
+test("an UNGATED leave-trigger still reads — the refusal is narrow", {skip}, () => {
+  assert.equal(cc("When this leaves the arena, draw a card").onLeave, true);
+  P.fxReset();
+  const booze = P.fxParse(H.card("Booze!", 3));
+  assert.ok((booze.onLeave || []).length, "Booze!'s boo must survive");
+  assert.equal(booze.tier, "full");
+  P.fxReset();
 });

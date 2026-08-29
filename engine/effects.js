@@ -922,6 +922,13 @@ function makeEffects(ctx){
          ward/awd which is one draining pool. Runechants are separate sources. */
       else if(k==="arcShield"){ actMut(n).arcShield = (act(n).arcShield||0)+v; n = L(n, `Arcane shield ${act(n).arcShield} — that much off EVERY arcane source, not a pool.`); }
       else if(k==="selfDestruct"){ n._selfDestruct = v; }
+      /* "…ENTERS THE ARENA WITH A +1{p} COUNTER" (v3.57). STASHED, NOT
+         APPLIED: the card is not on the board yet when this runs, so the
+         board-placement site stamps it — the same shape `_selfDestruct`
+         has used since v3.07. Applying it here would key the counters map
+         by a uid whose permanent never arrives if the play is refused
+         further down. */
+      else if(k==="ctrSelf"){ n._ctrSelf = v; }
       /* RULING (Under Loop): recycles on hit instead of hitting the graveyard;
          the combat chain stays open either way. */
       else if(k==="bottomSelf"){
@@ -2209,6 +2216,18 @@ function makeEffects(ctx){
            (Booze!, Goon Beatdown, Pyroglyphic Protection). Carry the schedule
            on the board entry so newTurn can sweep them. */
         const _sd = n._selfDestruct || null; delete n._selfDestruct;
+        /* THE COUNTER IT ENTERS WITH (v3.57), read off the stash the same
+           way the destroy schedule is. Gated cards reach here only when
+           `execute`'s condition loop actually ran the op, so the printed
+           "if you've pitched a blue card this turn" is honoured by the op
+           never being queued rather than by a second check here. */
+        const _cs = n._ctrSelf || null; delete n._ctrSelf;
+        if(_cs){
+          const cur = act(n).counters[card.uid] || {};
+          actMut(n).counters = Object.assign({}, act(n).counters,
+            {[card.uid]: Object.assign({}, cur, {[_cs.kind]: (cur[_cs.kind]||0) + (_cs.n||1)})});
+          n = L(n, `${card.name} enters with ${(_cs.n||1) > 1 ? _cs.n + " " + _cs.label + " counters" : "a " + _cs.label + " counter"}.`);
+        }
         /* SUSPENSE ALWAYS ENTERS WITH 2 COUNTERS. RULING 2026-07-25:
            "suspense always comes in with 2 counters - that number is in
            the rules text and is the same for every suspense card". The

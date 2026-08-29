@@ -7,6 +7,89 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.57 — a condition, a dropped gate the sweep cannot see, and a reader that stole a clause
+
+### THE CONDITION MAPS ONTO AN EVALUATOR THAT ALREADY EXISTED
+
+*"If you've pitched a blue card this turn"* is the Illusionist package's
+own gate, and `pitchBlue<N>` has been in the engine since High Tide —
+reachable only through that keyword's wording.
+
+**The equivalence is the CR, not an approximation.** CR 4.4.3c sends the
+pitch zone to the bottom of the deck in the end phase, so during a turn
+that zone holds exactly the cards pitched **this** turn. "Pitched a blue
+card this turn" and "a blue card is in your pitch zone" are one question
+asked twice — which is why this reuses the evaluator rather than adding a
+`hist` field. A second record of one fact is a second thing to keep in
+step.
+
+**It is a different question from `blue`**, which asks what you PLAYED.
+Pitched and played are two fates of one card.
+
+### AND IT EXPOSED A GATE THAT VANISHES
+
+Building the condition made **Waning Vengeance**'s gate readable for the
+first time — *"when this leaves the arena, if you've pitched a blue card
+this turn, create a Spectral Shield token."*
+
+`fxParse`'s op dispatcher files an `onLeave` payload into `fx.onLeave` and
+has **no branch for a condition riding with it**. The gate was silently
+DROPPED and the token minted unconditionally.
+
+**The fairness sweep does not catch this**, and that is worth recording:
+`COND-BYPASSED` looks for a condition gating an effect the engine ALSO
+grants unconditionally, so it needs an unconditional twin to compare
+against. Here the condition simply *vanishes*, leaving nothing to compare.
+The sweep reported clean.
+
+**Measured before acting:** Waning Vengeance is the ONLY pool card
+printing a gated leave-trigger, so nothing had shipped wrong — this is a
+latent hole closed before a card fell into it.
+
+**And `fx.onLeave` has exactly one caller** — `tickSuspense`, for an aura
+whose suspense counters run out. This card prints no suspense, and its
+Ward is a side-level pool rather than counters on the aura, so nothing in
+this engine can make it leave the arena at all. Reading the clause would
+file it `full` with a dropped gate on a trigger that cannot fire: **two
+ways wrong at once.** It refuses, and the card stays honestly `part`. The
+ungated wording is untouched — Booze!, Lyath's boo and the
+enters-or-leaves pair all still read.
+
+### WAXING SPECTER — THE GATED ENTERS-WITH COUNTER
+
+*"If you've pitched a blue card this turn, this enters the arena with a
++1{p} counter."* An **op, not an `fx` field**, because a field would land
+unconditionally and make the printed gate decoration. **Stashed, not
+applied** — the card is not on the board when the op runs, so the
+board-placement site stamps it, the pattern `_selfDestruct` has followed
+since v3.07.
+
+### A READER THAT CANNOT READ ITS OWN MATCH MUST NOT CONSUME THE CLAUSE
+
+Written as match-then-refuse, the enters-with rule matched Malefic
+Incantation's *"this enters the arena with 3 **verse** counters"* — a kind
+it does not know — and returned `null`, **killing a clause the existing
+verse reader further down was already handling.** The card went `full` →
+`part`.
+
+**`coverage.test.js`'s pinned baseline is what caught it**, which is
+exactly what that baseline is for: no tool that only counts totals would
+have flagged one card moving down while others moved up.
+
+The kind is tested in the **guard** now, so an unknown kind falls through
+and both properties survive — "glitter" still refuses because nothing else
+claims it, and "verse" reaches the reader that wants it.
+
+### Measured
+
+- **347 → 348 full**, 47 → 46 `part`. The counters family drops 4 → 3.
+- `npm test` **1553 drills, 0 fail, 4 skipped**. Fairness clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Six sabotages, all six bite** — one only after being rewritten, because
+  the first version appended a comment and changed no behaviour. A
+  sabotage that does not apply proves nothing.
+
 ## v3.56 — a trigger that fires from the deck, and two probes that asked the wrong function
 
 Boost banishes the top card of your deck to pay for the card you are

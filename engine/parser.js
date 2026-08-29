@@ -474,8 +474,38 @@ function classifyClause(raw){
        `fx.onLeave` alike — one printed trigger, two occasions it fires
        on, not one value read by two rules (which is v2.30's bug and the
        opposite mistake). */
-    if(/\bleaves the arena\b/.test(cond))
+    if(/\bleaves the arena\b/.test(cond)){
+      /* A GATED LEAVE-TRIGGER REFUSES (v3.57), and it is worth saying why
+         at length because the clause LOOKS readable and both halves parse.
+
+         The op dispatcher in `fxParse` files an `onLeave` payload into
+         `fx.onLeave` and has NO branch for a condition riding with it —
+         so the gate is silently DROPPED and the payload fires
+         unconditionally. That is the COND-BYPASSED shape `npm run
+         fairness` exists to catch, and **the sweep does not catch it**:
+         its model looks for a condition gating an effect the engine ALSO
+         grants unconditionally, and here the condition simply vanishes,
+         leaving no unconditional twin to compare against.
+
+         Found by building the `pitchBlue1` condition, which made Waning
+         Vengeance's gate readable for the first time. Measured: it is the
+         ONLY pool card printing a gated leave-trigger, so nothing was
+         shipped wrong — this is a latent hole being closed before a card
+         could fall into it.
+
+         AND `fx.onLeave` HAS EXACTLY ONE CALLER: `tickSuspense`, for an
+         aura whose SUSPENSE counters run out. Waning Vengeance prints no
+         suspense and its Ward is a side-level pool rather than counters
+         on the aura, so nothing in this engine can make it leave the
+         arena at all. Reading the clause would file the card `full` with
+         a dropped gate on a trigger that cannot fire — two ways wrong at
+         once. Refusing leaves it `part`, which is the truth.
+
+         The UNGATED wording is untouched: Booze!, Lyath's boo and the
+         enters-or-leaves pair all still read. */
+      if(rest.cond) return null;
       return Object.assign(rest, /\benters?\b/.test(cond) ? {onLeave:true, onEnter:true} : {onLeave:true});
+    }
     /* ---- AN ALLY DYING IS AN EVENT (v3.46) ----------------------------
        Exactly ONE pool record prints a death trigger — Oysten, Heart of
        Gold, "When this dies, create a Gold token" — and it sat unread
@@ -576,6 +606,23 @@ function classifyClause(raw){
     if(/you'?(?:ve| have) created a card this turn/.test(cond)) return Object.assign(rest,{cond:"madeCard"});
     /* RULING: being booed is a per-turn state other cards test for */
     if(/you'?(?:ve| have) been booed this turn/.test(cond)) return Object.assign(rest,{cond:"booed"});
+    /* "IF YOU'VE PITCHED A BLUE CARD THIS TURN" (v3.57) — the Illusionist
+       package's own condition, and it maps EXACTLY onto the `pitchBlue<N>`
+       evaluator that has existed since High Tide.
+
+       THE EQUIVALENCE IS THE CR, NOT AN APPROXIMATION. CR 4.4.3c sends
+       the pitch zone to the bottom of the deck in the end phase, so
+       during a turn that zone holds exactly the cards pitched THIS turn —
+       "pitched a blue card this turn" and "a blue card is in your pitch
+       zone" are the same question asked twice. That is why this reuses
+       the existing evaluator rather than adding a `hist` field: a second
+       record of one fact is a second thing to keep in step.
+
+       IT IS A DIFFERENT QUESTION FROM `blue` BELOW, which asks what you
+       PLAYED. Pitched and played are two ways to spend a card and a card
+       does only one of them — v3.40's rule that two directions of one
+       event are two records, here as two fates of one card. */
+    if(/you'?(?:ve| have) pitched a blue card this turn/.test(cond)) return Object.assign(rest,{cond:"pitchBlue1"});
     if(/you'?(?:ve| have) played another blue card this turn/.test(cond)) return Object.assign(rest,{cond:"blue"});
     if(/you'?(?:ve| have) played another red card this turn/.test(cond)) return Object.assign(rest,{cond:"red"});
     if(/you'?(?:ve| have) transcended this turn/.test(cond)) return Object.assign(rest,{cond:"transcended"});
@@ -1510,6 +1557,35 @@ function classifyClause(raw){
                  : "Return a card from your graveyard to your hand",
       hint: may ? "Optional — choose none to decline." : undefined}]]);
   }
+  /* "THIS ENTERS THE ARENA WITH A +1{p} COUNTER" (v3.57) — the same
+     counter vocabulary as `ctrPut`, aimed at the card itself as it
+     lands. Waxing Specter prints it behind "if you've pitched a blue card
+     this turn", so it arrives here as a GATED op and `execute`'s
+     condition loop is what decides whether it runs — which is why it is
+     an op rather than an `fx` field: a field would land unconditionally
+     and the printed gate would be decoration.
+
+     IT IS STASHED, NOT APPLIED, exactly as `selfDestruct` is. The card is
+     not on the board when the op runs, so the op records the intent and
+     the board-placement site stamps it — the pattern `_selfDestruct` and
+     the suspense counters already follow. */
+  /* A READER THAT CANNOT READ ITS OWN MATCH MUST NOT CONSUME THE CLAUSE.
+     `CTR_KINDS` is tested in the GUARD, not in the body: written as a
+     match-then-refuse this rule swallowed Malefic Incantation's "this
+     enters the arena with 3 VERSE counters" — a kind it does not know —
+     and returned null, which killed a clause an existing verse reader
+     further down was already handling. The card went `full` -> `part`
+     and `coverage.test.js`'s pinned baseline is what caught it.
+
+     Falling through keeps BOTH properties: an unknown kind still refuses
+     if nothing else claims the clause (classifyClause returns null at the
+     end), and a reader that does know the shape still gets its turn. */
+  if((m=c.match(/^this enters the arena with (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters?$/))
+     && CTR_KINDS[m[2]]){
+    const kind = CTR_KINDS[m[2]];
+    const cn = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
+    if(cn > 0) return R([["ctrSelf", {kind, n:cn, label:m[2]}]]);
+  }
   /* A TARGETED COUNTER PUT (v3.53) — "put a steam counter on a Hyper
      Driver you control", "put three +1{p} counters on target aura with
      ward you control".
@@ -1541,9 +1617,11 @@ function classifyClause(raw){
      fire on is the one shape `failstates.js` cannot see (v3.07), and it
      is avoided here by the wrapper refusing rather than by anything this
      reader does. */
-  if(m=c.match(RX_CTR_PUT)){
+  /* THE KIND IS TESTED IN THE GUARD, for the reason spelled out at
+     `ctrSelf` below: a match-then-refuse steals the clause from any
+     reader further down that DOES know the shape. */
+  if((m=c.match(RX_CTR_PUT)) && CTR_KINDS[m[2]]){
     const kind = CTR_KINDS[m[2]];
-    if(!kind) return null;
     const n = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
     if(!(n > 0)) return null;
     /* the SUBJECT keeps its printed capitalisation — "a Hyper Driver" is

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.56
+**Current version:** v3.57
 
 ---
 
@@ -393,6 +393,52 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A GATE CAN VANISH, AND THE SWEEP CANNOT SEE THAT (v3.57)
+
+`fxParse`'s op dispatcher has a branch for a gated ON-HIT (`condOnHit`,
+v3.10) and **none for a gated ON-LEAVE**. A conditional leave-payload
+therefore lost its condition entirely and fired unconditionally.
+
+**`npm run fairness` REPORTS CLEAN ON IT.** `COND-BYPASSED` looks for a
+condition gating an effect the engine ALSO grants unconditionally — it
+needs an unconditional TWIN to compare against. A gate that simply
+disappears leaves nothing to compare, so the sweep's model does not
+reach it. **When a condition is dropped rather than duplicated, no tool
+here is looking.**
+
+Found only because building a new CONDITION made an existing clause
+readable for the first time. **Measured before acting:** one pool card
+prints a gated leave-trigger, so nothing had shipped wrong.
+
+**IT REFUSES RATHER THAN CARRYING THE GATE, and the second reason is the
+stronger one:** `fx.onLeave` has exactly ONE caller, `tickSuspense`, and
+that card prints no suspense — its Ward is a side-level pool, not
+counters on the aura, so nothing in this engine can make it leave the
+arena. Reading the clause would file it `full` with a dropped gate on a
+trigger that cannot fire. Two ways wrong at once; `part` is the truth.
+
+**When you build a CONDITION, ask what it just made readable.** A new
+gate does not only unlock cards — it can expose payload paths that were
+never asked to carry one.
+
+### A READER THAT CANNOT READ ITS OWN MATCH MUST NOT CONSUME THE CLAUSE (v3.57)
+
+Written `if(m = c.match(RX)){ if(!KNOWN[m[2]]) return null; … }`, the
+enters-with-counters rule matched Malefic Incantation's *"this enters the
+arena with 3 VERSE counters"* — a kind it does not know — and returned
+null, **killing a clause the existing verse reader further down already
+handled.** The card went `full` → `part`.
+
+**Test the vocabulary in the GUARD, not the body:**
+`if((m = c.match(RX)) && KNOWN[m[2]])`. Both properties then survive — a
+kind nobody owns still refuses at the end of `classifyClause`, and a kind
+someone else owns reaches them.
+
+**`coverage.test.js`'s PINNED BASELINE IS WHAT CAUGHT IT.** The pool
+total went UP that run; one card moving down was invisible to every
+count-based check. That baseline exists for exactly this, and it is the
+reason to re-run `npm run audit` rather than trusting a green suite.
 
 ### A SCHEDULE THAT FIRES FROM THE DECK (v3.56)
 

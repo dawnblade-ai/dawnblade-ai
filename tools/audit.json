@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T15:30:23.451Z",
- "appVer": "3.55",
+ "generated": "2026-08-29T15:41:17.415Z",
+ "appVer": "3.56",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 347,
-  "part": 47,
+  "full": 348,
+  "part": 46,
   "none": 11
  },
  "heroes": {
@@ -8802,22 +8802,20 @@
    "mentions": [
     "ward"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "If you've pitched a blue card this turn, this enters the arena with a +1{p} counter.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Ward 3",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If you've pitched a blue card this turn, this enters the arena with a +1{p} counter."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you've pitched a blue card this turn, this enters the arena with a +1{p} counter.\nWard 3",
