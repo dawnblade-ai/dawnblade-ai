@@ -469,6 +469,12 @@ function makeEffects(ctx){
         else {
           actMut(n).hand = act(n).hand.slice(0, act(n).hand.length-take.length);
           actMut(n).grave = [...gyDisc(n.turn, ...take), ...act(n).grave];
+          /* THE TRACE FOR "…DISCARDED THIS WAY" (v3.60). "This way" means
+             the effect that just resolved, not the turn's history — so it
+             is recorded HERE, where the cards are known, and read by the
+             LATE condition pass in `execute` once the ops have run. */
+          n._thisWay = Object.assign({}, n._thisWay,
+            {discarded: [...((n._thisWay||{}).discarded||[]), ...take]});
           n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
         }
       }
@@ -1587,6 +1593,12 @@ function makeEffects(ctx){
          ability, and the bonus must not follow it there. `from` is the
          route, exactly as it is for an ally (v3.44). */
       if(wpnOnly && from !== "weapon") return;
+      /* A "…THIS WAY" CONDITION CANNOT BE ANSWERED YET (v3.60). This loop
+         runs BEFORE `fx.ops`, so the trace it asks about is empty — every
+         such condition would read false, on every card, forever. They are
+         skipped here and evaluated by the LATE pass below, after the
+         card's own ops have actually run. */
+      if(/^way:/.test(cond)) return;
       /* "WHEN THIS ATTACKS A HERO, IF …" is a trigger with a subject
          wrapped around a gate (v3.46). Mocking Blow booed the crowd off an
          attack on an ally, which is a hero's reaction to being hit by a
@@ -2196,6 +2208,33 @@ function makeEffects(ctx){
          trace of having been played at all */
       n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
       n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      /* ---- THE LATE CONDITION PASS (v3.60) ---------------------------
+         "…this way" asks what THIS card's own resolution just did, so it
+         can only be answered here — after `fx.ops` have run. The main
+         condition loop above fires before them and skips these on
+         purpose.
+
+         `pend.lateConds` is the precedent on the ATTACK path (`defLt2`,
+         `pumped`, settled in `linkPumps`); this is its non-attack twin,
+         and it is deliberately the narrower of the two: an attack's ops
+         ride to resolution, so a this-way condition on an attack card is
+         a different problem and is left refusing rather than half-built.
+
+         AN UNKNOWN `way:` CONDITION ANSWERS FALSE (v3.26's rule), which
+         leaves the card at its printed value — weaker than printed and
+         visible, where the other direction grants a bonus nobody built. */
+      {
+        const tw = n._thisWay || {};
+        for(const {cond, op} of fx.conds){
+          if(!/^way:/.test(cond)) continue;
+          if(thisWayMet(cond, tw)) n = runOps(n, [op], card.name);
+          else n = L(n, `${card.name}: nothing matching was done this way — the bonus skips.`);
+        }
+      }
+      /* CLEARED WITH THE RESOLUTION. "This way" is one card's own doing, so
+         a trace left on the state is the NEXT card's condition reading a
+         discard it never made. */
+      delete n._thisWay;
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
       /* AN ATTACK REACTION PUMPS THE ATTACK IT IS PLAYED ON, NOT THE NEXT
          ONE (v3.11). Falling through to `buffNext` is how the table came to
@@ -4170,6 +4209,29 @@ function settleIntellect(game, seat){
    Pure, seat-relative, and returns `{game, msgs, moved}` — the same
    contract `sweepArena` keeps, so both boards get it through
    `beginEndPhase` without either restating it. */
+/* WAS IT DONE **THIS WAY**? (v3.60)
+
+   `defSelfMet`'s shape, one condition family over: the cond carries a
+   QUESTION and this answers it against the per-resolution trace `execute`
+   built while running the card's own ops.
+
+   IT IS A NAMED FUNCTION SO ITS DEFAULT IS REACHABLE. The parser only
+   emits conditions this evaluator knows, so no card fixture can drive the
+   unknown branch — exactly the situation v3.26 records for `defSelfMet`
+   and v3.36 for `asInstantMet`, where a drill has to ask the function
+   directly or the sabotage passes silently.
+
+   AN UNKNOWN CONDITION ANSWERS FALSE. A `way:` condition added to the
+   parser and forgotten here leaves the card at its printed value —
+   weaker than printed and visible. The other direction hands out a bonus
+   nobody built. */
+function thisWayMet(cond, trace){
+  const tw = trace || {};
+  const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
+  if(pm) return (tw.discarded||[]).some(c => c && (c.pitch||0) === +pm[1]);
+  return false;
+}
+
 function sweepGear(game, seat){
   const sd = (game.sides || [])[seat] || {};
   const gone = (sd.gear || []).filter(g => g && g.destroyed);
@@ -4447,6 +4509,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, heaveOffer, heave, beginEndPhase, settleIntellect,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -7,6 +7,86 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.60 — a card that drew for free, and the "…this way" record
+
+First item of the new week's plan, and the mechanism turned out to be
+sitting on top of a live bug.
+
+### THE DISCARD WAS BEING DROPPED
+
+`classifyClause` has compound rules for a **random** draw-and-discard, and
+the comment above them says why in as many words:
+
+> the unanchored plain-draw rule below claimed the whole clause, returned
+> `[["draw",1]]` and filed it `run` — tier `full`, with the cost silently
+> deleted. **Five Kayo rows drew for free and never paid.**
+
+**There was no rule for the non-random wording**, so the same unanchored
+rule claimed it the same way. Portside Exchange's *"Discard a card, then
+draw a card"* returned the **draw alone**, and so did Gravy Bones' hero
+ability. A dropped drawback is strictly stronger than printed.
+
+**The clause read `run` the whole time**, so no coverage number ever
+moved and the fairness sweep stayed clean: read, and read wrong — the same
+blind spot as v2.30's arrow buff.
+
+**The printed ORDER is read, not normalised.** Which card you may discard
+depends on whether you have drawn yet, and the two printings genuinely
+differ.
+
+### "…THIS WAY" IS THIS CARD'S OWN RESOLUTION
+
+**Measured: 17 pool cards print the phrase. 8 already read** — each
+hand-built with its own condition name (`discard6way`, `chargedPitch`, the
+reveal ops) — **7 unfinished, 2 heroes.** This is the first to go through a
+shared per-resolution TRACE rather than a bespoke condition.
+
+**THE STRUCTURAL BLOCKER, AND IT IS THE WHOLE DESIGN.** `execute`
+evaluates `fx.conds` **before** it runs `fx.ops` — the loop is at ~1583
+and the ops at ~2175. So a condition asking what its own ops just did
+reads an empty trace: **false on every card, forever.**
+
+The `way:` prefix is what lets the main loop skip these and a **late pass**
+answer them once the ops have run. `pend.lateConds` is the precedent on the
+attack path (`defLt2`, `pumped`); this is its non-attack twin, and
+deliberately the narrower of the two — an attack's ops ride to resolution,
+so a this-way condition on an attack card is a different problem and is
+left refusing rather than half-built.
+
+**`thisWayMet` IS A NAMED FUNCTION SO ITS DEFAULT IS REACHABLE.** The
+parser only emits conditions the evaluator knows, so no card fixture can
+drive the unknown branch — exactly what v3.26 records for `defSelfMet` and
+v3.36 for `asInstantMet`. An unknown condition answers FALSE: weaker than
+printed and visible.
+
+**And the trace is cleared with the resolution.** "This way" is one card's
+own doing; a trace left on the state is the *next* card's condition reading
+a discard it never made.
+
+### THREE OF EIGHT SABOTAGES FOUND WEAK DRILLS
+
+- **the trace not cleared** — a drill that plays ONE card cannot see a
+  leak. It plays two now, and the second must earn nothing.
+- **the unknown-condition default** — unreachable from any fixture, which
+  is why the evaluator was extracted and is asked by name.
+- **the main loop not skipping** — the state comes out *identical* (the
+  late pass still fires), so every zone assertion passed. What differs is
+  that the player is told **"condition not met"** and then handed the bonus
+  anyway. In a training sim the sequence is the lesson and a feed that
+  contradicts itself is the sev-2 category the player TRUSTS — so that one
+  drill asserts on prose, deliberately, and says why.
+
+### Measured
+
+- **350 → 351 full**, 43 → 42 `part`. Portside Exchange closes; Gravy
+  Bones' hero ability stops drawing for free.
+- `npm test` **1577 drills, 0 fail, 4 skipped**. Fairness clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Eight sabotages, all eight bite** — after three were rewritten and two
+  re-targeted at the extracted function. A sabotage that no longer applies
+  proves nothing.
+
 ## v3.59 — a card that reported finished and could not be activated at all
 
 `classifyClause` guards `action` and `instant` activation prefixes for a

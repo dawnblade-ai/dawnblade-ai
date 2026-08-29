@@ -59,7 +59,7 @@ for(const m of t.matchAll(/[^.\n]*\bthis way\b[^.\n]*/gi))s.add(c.name)}console.
 
 | card | tier | what "this way" refers to |
 |---|---|---|
-| Portside Exchange | part | the card its own `selfDiscard` just discarded — is it yellow? |
+| ~~Portside Exchange~~ | **BUILT v3.60** | the card its own `selfDiscard` just discarded — and the discard was being DROPPED entirely, so the card drew for free |
 | Path of Same Ends | part | did its own preceding arcane actually LAND (CR 7.5.5) |
 | Toe the Line | part | did the prevention it set up actually prevent — **delayed** |
 | V of the Vanguard | part | how many Light cards its own charge charged |
@@ -72,17 +72,22 @@ for(const m of t.matchAll(/[^.\n]*\bthis way\b[^.\n]*/gi))s.add(c.name)}console.
 condition name. A general record would unify them, and that is the
 argument for doing this as a mechanism rather than seven readings.
 
-### THE STRUCTURAL BLOCKER, FOUND AND NOT YET SOLVED
+### THE STRUCTURAL BLOCKER — **SOLVED at v3.60**, and the shape is reusable
 
 **`fx.conds` is evaluated BEFORE `fx.ops` runs.** In `effects.js`,
 `fx.conds.forEach` is at ~line 1583 and `runOps(n, fx.ops…)` at ~line
 2175. So a condition asking "what did my own ops just do" is **always
 answered against an empty trace**.
 
-This needs a **late-cond pass** — conditions evaluated after the card's
-own ops. There is precedent: `pend.lateConds` already exists for the
-attack path (`defLt2`, `pumped`), evaluated in `linkPumps`. The
-non-attack path has no equivalent.
+This needed a **late-cond pass** — conditions evaluated after the card's
+own ops. `pend.lateConds` was the precedent on the attack path (`defLt2`,
+`pumped`, in `linkPumps`); v3.60 built its non-attack twin.
+
+**The shape is now in place for the rest of the family:** a `way:`-prefixed
+condition is skipped by the main loop and answered by `thisWayMet` against
+`n._thisWay`, a trace the ops populate as they run. Adding a card means
+recording the fact its own op produced (`selfDiscard` records the cards it
+discarded) and teaching `thisWayMet` one more question.
 
 **Do the two immediate cards first** (Portside Exchange, Path of Same
 Ends) and leave the two DELAYED ones (Toe the Line, Throw Caution to the

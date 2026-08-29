@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.59
+**Current version:** v3.60
 
 ---
 
@@ -410,6 +410,63 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### "…THIS WAY" IS THE CARD'S OWN RESOLUTION, AND THE CONDS RUN TOO EARLY (v3.60)
+
+**`execute` evaluates `fx.conds` BEFORE it runs `fx.ops`** — the loop is
+at ~1583, the ops at ~2175. So a condition asking *what my own ops just
+did* is answered against an empty record: **false on every card,
+forever.** That is why `way:`-prefixed conditions are SKIPPED by the main
+loop and answered by a **late pass** after the ops have run.
+
+`pend.lateConds` is the precedent on the ATTACK path (`defLt2`,
+`pumped`, settled in `linkPumps`); this is its non-attack twin, and
+deliberately narrower — an attack's ops ride to resolution, so a this-way
+condition on an attack card is a different problem, left refusing.
+
+**MEASURED: 17 pool cards print "…this way", and 8 already read** — each
+hand-built with its own condition name (`discard6way`, `chargedPitch`,
+the reveal ops). The trace is what lets the rest share one reader.
+
+**`thisWayMet` IS A NAMED FUNCTION SO ITS DEFAULT IS REACHABLE** — the
+parser emits only conditions the evaluator knows, so no card fixture can
+drive the unknown branch. Same call as `defSelfMet` (v3.26) and
+`asInstantMet` (v3.36). Unknown answers FALSE.
+
+**AND THE TRACE IS CLEARED WITH THE RESOLUTION.** It is one card's own
+doing; left on the state it is the NEXT card's condition reading a
+discard it never made. **A drill that plays ONE card cannot see that.**
+
+### THE SAME UNANCHORED RULE, ONE WORDING OVER (v3.60)
+
+The compound draw-and-discard rules carry a comment about the plain-draw
+rule below them stealing the clause and dropping the cost — *"five Kayo
+rows drew for free and never paid"*. **There was no rule for the
+NON-random wording**, so the identical theft happened to Portside
+Exchange and Gravy Bones' hero ability.
+
+**A FIXED WORDING IS NOT A FIXED SHAPE.** When you anchor a rule to stop
+a loose one stealing a clause, ask which OTHER printed wordings of the
+same shape the loose rule still reaches. This is v3.53's
+"a fix for one mechanic is not a fix for the shape", inside a single
+matcher.
+
+**AND IT MOVED NO COVERAGE NUMBER.** The clause read `run` throughout —
+read, and read wrong — so the audit and the one-sided fairness sweep were
+both blind, as they were for v2.30's arrow buff.
+
+### THE FEED IS THE OBSERVABLE WHEN THE STATE IS IDENTICAL (v3.60)
+
+Removing the main loop's `way:` skip changes NO state — the late pass
+still fires and the token still lands, so every zone assertion passes.
+What differs is that the player is told **"condition not met"** and then
+handed the bonus anyway.
+
+In a training sim the sequence IS the lesson, and a feed that contradicts
+itself is the sev-2 category the player TRUSTS. **So that one drill
+asserts on prose deliberately, and says why in the drill.** It is the
+exception that proves the rule, not a licence: everywhere the state can
+answer, assert on the state.
 
 ### AN ACTIVATION PREFIX MUST BE GUARDED, OR ITS COST IS EATEN (v3.59)
 

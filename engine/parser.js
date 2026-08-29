@@ -615,6 +615,20 @@ function classifyClause(raw){
        discard this card itself just made, not the turn's history. */
     if(/6 or more \{p\}[^.]*discard/.test(cond) && /this way|that cost|as an additional cost/.test(cond))
       return Object.assign(rest,{cond:"discard6way"});
+    /* ---- "…THIS WAY" IS THIS CARD'S OWN RESOLUTION (v3.60) ------------
+       Not the turn's history: the phrase means "by the effect I just
+       resolved". Seventeen pool cards print it and eight already read —
+       each hand-built with its own condition name (`discard6way`,
+       `chargedPitch`, the reveal ops). This is the first one to go
+       through a shared per-resolution TRACE instead.
+
+       THE `way:` PREFIX IS LOAD-BEARING. `execute` evaluates `fx.conds`
+       BEFORE it runs `fx.ops`, so a condition asking what its own ops did
+       is otherwise answered against an empty trace — always false, on
+       every card. The prefix is what lets the condition loop skip these
+       and a LATE pass pick them up after the ops have run. */
+    if(m=cond.match(/^an? (yellow|blue|red) card is discarded this way$/))
+      return Object.assign(rest,{cond:"way:discardPitch" + ({red:1, yellow:2, blue:3})[m[1]]});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});
     /* THE OTHER PRINTED ORDER (v3.58). Every other card in the pool says
        "a card WITH 6 or more {p} IS DISCARDED"; Mandible Claw says
@@ -1301,6 +1315,26 @@ function classifyClause(raw){
   if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) random cards?/))
     return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
   if(m=c.match(/^discards? (a|an|one|two|three|\d+) random cards?$/)) return R([["discardRandom",num(m[1])]]);
+  /* THE SAME BUG AS THE COMMENT ABOVE, ONE WORDING OVER (v3.60). The
+     compound rules above cover a RANDOM discard; the non-random form had
+     none, so the unanchored plain-draw rule below claimed the clause and
+     returned the draw ALONE — Portside Exchange's "Discard a card, then
+     draw a card" drew for free, and so did Gravy Bones' hero ability.
+     A dropped drawback is strictly stronger than printed.
+
+     THE ORDER IS OBSERVABLE, so it is read rather than normalised: which
+     card you may discard depends on whether you have drawn yet, and the
+     two printings genuinely differ. Both must also sit BEFORE the plain
+     draw, which is what the comment above already says and is the whole
+     reason that rule keeps biting.
+
+     `random` cannot leak in here: these patterns require the count word
+     to be followed immediately by "card", and the random wording puts
+     "random" between the two. */
+  if(m=c.match(/^draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) cards?$/))
+    return R([["draw",num(m[1])],["selfDiscard",num(m[2])]]);
+  if(m=c.match(/^discards? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)draws? (a|an|one|two|three|\d+) cards?$/))
+    return R([["selfDiscard",num(m[1])],["draw",num(m[2])]]);
   if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
   if(m=c.match(/gains? (\d+)\s*(?:\{r\}|resource)/)) return R([["res",+m[1]]]);
   /* Bare pip costs: "Gain {r}{r}" is two resources — count the symbols. */

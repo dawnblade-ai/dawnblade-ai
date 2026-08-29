@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T19:13:33.018Z",
+ "generated": "2026-08-29T19:24:57.979Z",
  "appVer": "3.59",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 350,
-  "part": 43,
+  "full": 351,
+  "part": 42,
   "none": 12
  },
  "heroes": {
@@ -13499,7 +13499,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -13509,16 +13509,14 @@
     },
     {
      "t": "If a yellow card is discarded this way, create a Gold token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If a yellow card is discarded this way, create a Gold token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Discard a card, then draw a card. If a yellow card is discarded this way, create a Gold token.\nGo again",
