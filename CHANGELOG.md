@@ -7,6 +7,76 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.56 — a trigger that fires from the deck, and two probes that asked the wrong function
+
+Boost banishes the top card of your deck to pay for the card you are
+playing. **Three pool records print a trigger on that event** — Crankshaft
+at two pitches and Big Bertha — *"when this is banished from boosting, put
+a steam counter on a Hyper Driver you control."*
+
+The payload has read correctly since v3.55. **What was missing was the
+SCHEDULE**, and it fires from the DECK, on a card its controller never
+played.
+
+### IT IS HELD OFF `fx.ops`, AND THAT IS THE WHOLE POINT
+
+Crankshaft is an **attack card**. Left in `ops`, its steam counter would
+land every time the card was PLAYED — a printed delay collected as a bonus,
+which is v3.07's suspense bug exactly. `fx.boostBanish` is read at the one
+site that banishes a card for boosting.
+
+**The payload goes back through `classifyClause`**, so it shares every
+reader rather than growing its own vocabulary, and **an unreadable payload
+refuses** the whole trigger — `atkTrigger` makes the same call one shape
+over.
+
+### THE TRIGGER BELONGS TO THE BANISHED CARD, NOT THE PLAYED ONE
+
+Read off `card` instead of `top`, it would fire every time Big Bertha was
+*boosted with* — the opposite card. **Crankshaft prints Boost itself**, so
+it can be the card being played while something else pays, and that is the
+fixture the drill uses: in the straightforward test Crankshaft is both
+halves and the two readings are indistinguishable.
+
+The actor needs no borrowing: the card came off this seat's deck and *"a
+Hyper Driver you control"* is this seat's.
+
+### A RECORDED REFUSAL CAME DUE, ON PURPOSE
+
+v3.55 shipped a drill asserting **"Crankshaft still REFUSES — its trigger
+does not exist"**, with the reason written into the assertion. Building the
+trigger turned it red, and retiring it had to be a deliberate edit rather
+than a quiet one. That is what a recorded refusal is FOR (v3.38) — and per
+that same rule the refusal PROPERTY is kept alive as its own probe: an
+unknown trigger and an unreadable payload both still refuse.
+
+### AND TWO OF THOSE PROBES WERE ASKING THE WRONG FUNCTION
+
+Written first as `classifyClause("When this is destroyed, put a steam
+counter…") === null`, they passed against a **sabotaged engine that claimed
+every "when this is …" trigger**. The boost-banish reader is a WHOLE-CARD
+reader living in `fxParse`, so `classifyClause` returns null for those
+shapes no matter what the reader does: the probes were asserting a
+different function's refusal.
+
+**Sabotage is the only reason anyone found out** — both were green, twice,
+against a broken engine. They drive `fxParse` over synthetic fixtures now
+(unique names, because it memoizes on `name|pitch`).
+
+**Third weak drill this cycle**, after the arsenal fixture whose only hand
+card was the arrow and the seat-relative sweep check that asserted on the
+wrong side's zone. The engine has been right every time; the drills have
+not.
+
+### Measured
+
+- **344 → 347 full**, 50 → 47 `part`. The counters family drops 7 → 4.
+- `npm test` **1546 drills, 0 fail, 4 skipped**. Fairness sweep clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Five sabotages; all five bite** — two only after the probes were
+  repointed at the function that actually holds the reader.
+
 ## v3.55 — a targeted counter put, and the tool stops overselling its families
 
 `counters` has been a per-side map keyed by uid for a long time, and `aim`

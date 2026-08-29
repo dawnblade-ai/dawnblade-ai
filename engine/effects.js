@@ -1917,6 +1917,25 @@ function makeEffects(ctx){
         const mech = /mechanologist/i.test(top.tt||"");
         if(mech) ga = true;
         declNote += ` Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`;
+        /* "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) — a trigger that
+           fires from the DECK, on a card its controller never played.
+           Three pool records print it and their payload has read since
+           v3.55; this is the schedule that was missing.
+
+           IT IS THE BANISHED CARD'S TRIGGER, NOT THE PLAYED CARD'S, so it
+           is parsed off `top`. Reading it off `card` would fire Big
+           Bertha's counter every time Big Bertha was BOOSTED WITH, which
+           is the opposite card.
+
+           THE ACTOR IS ALREADY RIGHT: the card came off this seat's deck
+           and "a Hyper Driver you control" is this seat's, so no seat is
+           borrowed. Run AFTER the banish and the chain increment, because
+           the trigger is printed about a boost that has happened. */
+        const bb = (fxParse(top).boostBanish) || [];
+        if(bb.length){
+          n = runOps(n, bb, top.name);
+          declNote += ` ${top.name}'s boost trigger fires.`;
+        }
       }
       if(from==="weapon" && /discarded a card with 6 or more \{p\} this turn, this card'?s attacks? go again/i.test(card.tx||"")){
         if(had6ThisTurn(n)){ ga = true; declNote += " A 6+ power card is in the graveyard — the claw goes again."; }

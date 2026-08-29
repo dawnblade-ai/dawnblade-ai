@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T14:13:57.206Z",
+ "generated": "2026-08-29T15:30:23.451Z",
  "appVer": "3.55",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 344,
-  "part": 50,
+  "full": 347,
+  "part": 47,
   "none": 11
  },
  "heroes": {
@@ -3755,7 +3755,7 @@
    "mentions": [
     "boost"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3765,12 +3765,10 @@
     },
     {
      "t": "When this is banished from boosting, put a steam counter on a Hyper Driver you control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is banished from boosting, put a steam counter on a Hyper Driver you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Boost\nWhen this is banished from boosting, put a steam counter on a Hyper Driver you control.",
@@ -4260,7 +4258,7 @@
    "mentions": [
     "boost"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -4270,12 +4268,10 @@
     },
     {
      "t": "When this is banished from boosting, put a steam counter on a Hyper Driver you control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is banished from boosting, put a steam counter on a Hyper Driver you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Boost\nWhen this is banished from boosting, put a steam counter on a Hyper Driver you control.",
@@ -4296,7 +4292,7 @@
    "mentions": [
     "boost"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -4306,12 +4302,10 @@
     },
     {
      "t": "When this is banished from boosting, put a steam counter on a Hyper Driver you control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is banished from boosting, put a steam counter on a Hyper Driver you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Boost\nWhen this is banished from boosting, put a steam counter on a Hyper Driver you control.",

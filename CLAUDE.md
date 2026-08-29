@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.55
+**Current version:** v3.56
 
 ---
 
@@ -393,6 +393,50 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A SCHEDULE THAT FIRES FROM THE DECK (v3.56)
+
+Boost banishes your top card to pay for the card you are playing, so
+*"when this is banished from boosting"* fires **on a card its controller
+never played**, out of a zone nothing else triggers from. Three pool
+records print it; their payload has read since v3.55, and the SCHEDULE
+was the whole gap.
+
+**IT IS HELD OFF `fx.ops`.** Crankshaft is an ATTACK card — left in
+`ops`, its steam counter lands every time the card is PLAYED, which is
+v3.07's suspense bug (a printed delay collected as a bonus). A whole-card
+reader sets `fx.boostBanish` and marks the clause handled, exactly as
+`atkTrigger` does.
+
+**THE TRIGGER IS THE BANISHED CARD'S, NOT THE PLAYED CARD'S.** Read off
+the played card it fires whenever Big Bertha is *boosted with* — the
+opposite card. **Crankshaft prints Boost itself**, which is what makes a
+drill able to tell them apart: play Crankshaft and let something else pay.
+In the straightforward fixture Crankshaft is both halves and the two
+readings are indistinguishable — v3.26's rule about a fixture that cannot
+tell two halves apart.
+
+**AND THE PAYLOAD GOES BACK THROUGH `classifyClause`**, so it shares every
+reader; an unreadable payload refuses the whole trigger.
+
+### A PROBE MUST ASK THE FUNCTION THAT HOLDS THE READER (v3.56)
+
+Two refusal probes were written as `classifyClause(…) === null` for a
+reader that lives in **`fxParse`** — a whole-card scan over `clauses`. So
+`classifyClause` answers null for those shapes *whatever the reader does*,
+and both probes passed against a sabotaged engine that claimed every
+`when this is …` trigger and every unreadable payload.
+
+**They were asserting a different function's refusal.** Sabotage is the
+only reason anyone found out; they were green, twice, against a broken
+engine.
+
+**When you write a refusal probe, ask which function you are actually
+testing** — a whole-card reader and a clause reader refuse for different
+reasons, and only one of them is the one you built. Drive the whole-card
+reader with a synthetic fixture, and give it a unique name: `fxParse`
+memoizes on `name|pitch`, so a reused name silently returns the previous
+answer.
 
 ### A COUNTER KIND WITH NO READER IS A NO-OP WEARING A NUMBER (v3.55)
 

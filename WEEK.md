@@ -41,14 +41,15 @@
 
 > ### WHERE THE WEEK GOT TO — v3.52 → v3.55
 >
-> **335 → 344 full · 59 → 50 `part`.** Nine cards closed, and three of the
-> four findings were not cards at all:
+> **335 → 347 full · 59 → 47 `part`.** Twelve cards closed, and three of the
+> five findings were not cards at all:
 >
 > | ver | what |
 > |---|---|
 > | **3.53** | three `pick` readers (Preserve Tradition, Rise from the Ashes, Pass Over) — and the **arsenal face-up put had never fired from `execute`**, its queue site inside `if(attacking)` while all three cards that print one are non-attacks. `moveFoe` had carried `{from,to}` for three versions with a consumer that ignored both |
 > | **3.54** | **destroyed gear goes to the graveyard** (RULING, user) — an approximation invisible only because the one thing that would read it was unbuilt. Then `retrieve`, settled by READING THE PRINTING: *"(Pay {r} to equip it.)"* |
 > | **3.55** | the **targeted counter put** — kind, amount and target all off the printed line, kind vocabulary closed to what something reads |
+> | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played |
 >
 > **What is left, honestly** — see `npm run gaps`, whose family lines now
 > say it: nine token-on-a-trigger cards each needing their own condition;
@@ -171,7 +172,7 @@ reads. **What is left in this family is a TRIGGER each**, not a put:
 
 | card | needs |
 |---|---|
-| Crankshaft ×2 · Big Bertha | *"when this is banished from boosting"* — no such trigger exists, and the payload already reads |
+| ~~Crankshaft ×2 · Big Bertha~~ | **BUILT at v3.56** — the boost-banish trigger, `fx.boostBanish`, fired at the one site that banishes a card for boosting |
 | Crow's Nest | *"whenever an arrow is put face-up into your arsenal from your deck"* |
 | Waxing Specter | *"this **enters the arena with** a +1{p} counter"* |
 | Drill Shot | a READER, not a put: *"if this has an aim counter, it gets piercing 1"* |

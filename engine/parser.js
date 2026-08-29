@@ -2515,6 +2515,38 @@ function fxParse(card){
     break;                                /* one such trigger per card in the pool */
   }
 
+  /* ---- "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) -------------
+     Boost banishes the top card of your deck to pay for the card you are
+     playing — so this trigger fires from the DECK, on a card its
+     controller never played. Three pool records print it (Crankshaft at
+     two pitches, Big Bertha), all with the same payload, and that payload
+     has read correctly since v3.55: what was missing was the SCHEDULE.
+
+     IT IS HELD OFF `fx.ops`, WHICH IS THE WHOLE POINT. Crankshaft is an
+     attack card; left in `ops` its steam counter would land every time
+     the card was PLAYED, which is v3.07's suspense bug — a printed delay
+     collected as a bonus. `fx.boostBanish` is read at the one site that
+     banishes a card for boosting.
+
+     THE PAYLOAD GOES BACK THROUGH `classifyClause`, so it shares every
+     reader rather than growing its own vocabulary, and AN UNREADABLE
+     PAYLOAD REFUSES — the clause stays unclaimed and the card stays
+     `part`, rather than the trigger firing a guess (v2.29's rule, and
+     `atkTrigger` above makes the same call one shape over). */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const bm = clauses[ci].match(/^when this is banished from boosting, (.+)$/i);
+    if(!bm) continue;
+    const sub = classifyClause(bm[1]);
+    if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length) continue;
+    /* a CONDITIONAL payload would need the gate carried too, and no pool
+       card prints one — refuse rather than dropping the condition. */
+    if(sub.cond) continue;
+    fx.boostBanish = sub.ops;
+    handled.add(ci);
+    break;
+  }
+
   for(let i = 0; i < clauses.length - 1; i++){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
