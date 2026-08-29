@@ -1,13 +1,13 @@
 {
- "generated": "2026-08-29T16:22:14.256Z",
- "appVer": "3.57",
+ "generated": "2026-08-29T16:28:52.660Z",
+ "appVer": "3.58",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 351,
+  "full": 350,
   "part": 43,
-  "none": 11
+  "none": 12
  },
  "heroes": {
   "kayo": {
@@ -9314,13 +9314,13 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
-     "st": "run"
+     "st": "skip"
     },
     {
      "t": "If damage is dealt this way, the dagger has hit",
@@ -9332,6 +9332,7 @@
     }
    ],
    "skipped": [
+    "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
     "If damage is dealt this way, the dagger has hit",
     "Destroy the dagger."
    ],
@@ -9408,20 +9409,22 @@
     "battleworn",
     "mark"
    ],
-   "tier": "full",
+   "tier": "part",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Attack Reaction - Destroy this: Mark target opposing hero.",
-     "st": "run"
+     "st": "skip"
     },
     {
      "t": "Battleworn",
      "st": "noop"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Attack Reaction - Destroy this: Mark target opposing hero."
+   ],
    "weaponCost": null,
    "eqAbility": "destroy: Mark target opposing hero",
    "tx": "Attack Reaction - Destroy this: Mark target opposing hero.\nBattleworn",

@@ -249,11 +249,45 @@ function classifyClause(raw){
      you pay, not an effect that fires on its own — matching it against the
      generic effect rules below would hand out the resource for free. The
      cost/effect split belongs to weaponCost and parseHeroPower. */
+  /* A REACTION WINDOW IS AN ACTIVATION PREFIX TOO (v3.59). The guard
+     listed `action` and `instant`; the pool also prints
+     "Attack Reaction - <cost>: <effect>" on five records, and without
+     them here the generic matchers below ate the whole line INCLUDING
+     ITS COST. Prey Spotters' "Attack Reaction - Destroy this: Mark
+     target opposing hero" was claimed by the loose `mark` matcher and
+     filed `tier: full` — while `parseHeroPower` refuses the line, so
+     `build.js` gives the piece NO powCard and neither board can reach
+     it. A card that reports finished and cannot be activated at all is
+     the no-op blind spot, and this is the unanchored-match half of it
+     (v3.00's Stir the Aetherwinds, on an activation line).
+
+     ANCHORED ON THE DASH, exactly like the existing prefixes: Widowmaker
+     and Wreck Havoc print "Defense reactions can't be played to this
+     chain link", which is a RESTRICTION and not an activation, and it
+     has no dash to match.
+
+     These four cards now report `part`, which is the truth. Building the
+     route is a real job — see HANDOFF.md — and reading the payload
+     before it exists is the never-parse-ahead-of-wiring rule. */
   if(/^(?:once per turn )?(?:action|instant)\s*[-—]/.test(c)){
     if(weaponCost(raw)) return NOOP("weapon attack ability — cost read by the weapon reader");
     if(parseHeroPower(raw, true)) return NOOP("activated ability — read by the equipment reader");
     return null;
   }
+  /* AND IT REFUSES OUTRIGHT, rather than deferring to the equipment
+     reader like the two prefixes above. `parseHeroPower`'s PROBE form
+     answers truthily for these lines, but `build.js` builds a powCard
+     only from an `action`/`instant` line — so filing them `noop` as
+     "read by the equipment reader" names a reader that does not run, and
+     Stalker's Steps went straight from `part` to `full` while staying
+     completely inert. That is the blind spot this guard exists to close,
+     re-created one line further down.
+
+     `null` is the truth: nothing reads these yet. Building the route is a
+     real job across parser, build.js, judge and the trainer's offering
+     path — see HANDOFF.md — and reading the payload first is the
+     never-parse-ahead-of-wiring rule. */
+  if(/^(?:once per turn )?(?:attack|defense) reaction\s*[-—]/.test(c)) return null;
   /* ---- whole-clause patterns -----------------------------------------
      These all begin with If/When but must be read as ONE unit. The if/when
      handler below splits on the first comma and would either fail to read

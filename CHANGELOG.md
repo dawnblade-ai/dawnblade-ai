@@ -7,6 +7,74 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.59 — a card that reported finished and could not be activated at all
+
+`classifyClause` guards `action` and `instant` activation prefixes for a
+precise reason: *"Instant - Destroy this: Gain {r}" is a cost you pay, not
+an effect that fires on its own — matching it against the generic effect
+rules below would hand out the resource for free.*
+
+**The pool prints a third prefix on five records and it was never
+guarded.**
+
+| card | line |
+|---|---|
+| Prey Spotters | Attack Reaction - Destroy this: **Mark target opposing hero** |
+| Stalker's Steps | Attack Reaction - Destroy this: Target attack with stealth gets go again |
+| Bolt'n Boots | Attack Reaction - {r}, destroy this: Target arrow attack … gets go again |
+| Danger Digits | Attack Reaction - Destroy this: Target dagger … deals 1 damage … |
+| Boltyn (hero) | Attack Reaction - Banish a card from your soul: … |
+
+**Prey Spotters read `tier: full` and could not be activated at all.** The
+loose `mark` matcher claimed the whole line — cost included — so the audit
+counted the clause as read. Meanwhile `parseHeroPower` refuses the line, so
+`build.js` builds **no powCard**, and neither board offers the ability.
+
+A card that reports finished and is inert is the no-op blind spot, and this
+is its unanchored-match half: v3.00's Stir the Aetherwinds, on an
+activation line.
+
+### IT REFUSES OUTRIGHT, AND THE FIRST ATTEMPT PROVED WHY
+
+Written to defer to the equipment reader like the two prefixes above it,
+this made things **worse**: `parseHeroPower`'s PROBE form answers truthily
+for these lines, but `build.js` builds a powCard only from an
+`action`/`instant` line — so the `noop` said *"read by the equipment
+reader"* about a reader that does not run, and **Stalker's Steps went from
+`part` straight to `full` while staying completely inert.** The same blind
+spot, re-created one line further down.
+
+`null` is the truth: nothing reads these yet.
+
+**Anchored on the dash**, exactly like the existing prefixes. Widowmaker
+and Wreck Havoc print *"Defense reactions can't be played to this chain
+link"* — a restriction on the opponent, not an activation, and it must
+still be read. A drill pins that.
+
+### THE BASELINE WAS REVIEWED, NOT WIDENED
+
+Two cards degrade deliberately — `prey spotters full → part` and `danger
+digits part → none` — and `coverage.test.js` failed exactly as designed.
+The diff was read card by card before `--write-baseline`, which is what
+that flag is for: a downgrade that corrects over-reporting is a decision,
+not a regression.
+
+**Building the route is a real job** — parser, `build.js`, `judge`'s window
+gating, and the trainer's own offering path, none of which can be validated
+without a phone. `_instant` already shows the shape a `_attackRx` flag
+would take, and `speedAllowed` has distinguished the attack-reaction window
+since v2.27. Recorded in HANDOFF.md rather than half-built.
+
+### Measured
+
+- **352 → 350 full**, and that is the number improving: two cards stopped
+  claiming what they cannot do.
+- `npm test` **1566 drills, 0 fail, 4 skipped**. Fairness clean, UNFAIR 0.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Three sabotages, all three bite** — including the one that restores the
+  lying `noop`.
+
 ## v3.58 — two readers that each replaced an inline one
 
 Both of this version's cards were **already firing**. Both reported unread.

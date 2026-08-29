@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.58
+**Current version:** v3.59
 
 ---
 
@@ -393,6 +393,41 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### AN ACTIVATION PREFIX MUST BE GUARDED, OR ITS COST IS EATEN (v3.59)
+
+`classifyClause` guards `action` and `instant` prefixes so the generic
+matchers below cannot claim a line INCLUDING ITS COST. The pool prints a
+third — **"Attack Reaction - <cost>: <effect>"**, on five records — and
+it was not guarded.
+
+Prey Spotters' *"Attack Reaction - Destroy this: Mark target opposing
+hero"* was claimed whole by the loose `mark` matcher, so the audit
+counted the clause read and filed the card **`full`** — while
+`parseHeroPower` refuses the line, `build.js` therefore builds **no
+powCard**, and neither board can offer the ability. **A card that reports
+finished and cannot be activated at all**, which is the no-op blind spot
+wearing v3.00's unanchored-match disguise.
+
+**IT REFUSES OUTRIGHT, and the first attempt is why.** Written to defer
+to the equipment reader like the two prefixes above it, the guard made
+things WORSE: `parseHeroPower`'s PROBE form answers truthily for these
+lines, but `build.js` only ever builds a powCard from an `action` or
+`instant` line — so a `noop` there names a reader that does not run, and
+Stalker's Steps went from `part` straight to `full` while staying
+completely inert. **A `noop` is a CLAIM that something reads the clause;
+`null` is the claim that nothing does.** Only one of them was true.
+
+**ANCHORED ON THE DASH.** Widowmaker and Wreck Havoc print *"Defense
+reactions can't be played to this chain link"* — a RESTRICTION on the
+opponent, not an activation — and swallowing it would lose a real printed
+rule. Same discipline as `printedKw`'s dash rule (v3.33).
+
+**A DOWNGRADE THAT CORRECTS OVER-REPORTING IS A DECISION.**
+`coverage.test.js` failed on two cards, the diff was read card by card,
+and only then `--write-baseline`. That flag exists for exactly this;
+running it without reading the diff is how a real regression gets pinned
+as the new floor.
 
 ### AN INLINE READER IS A CARD SPECIAL-CASED BY NAME (v3.58)
 

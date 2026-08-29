@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.57 · PHASE C · FAMILY-BY-FAMILY
+# Handoff — Dawnblade, at v3.59 · PHASE C · FAMILY-BY-FAMILY
 
-## ⚠ WHERE THINGS STAND — v3.52 → v3.57 (2026-08-29)
+## ⚠ WHERE THINGS STAND — v3.52 → v3.59 (2026-08-29)
 
-**335 → 348 full · 59 → 46 `part`.** Five releases, on the branch
+**335 → 350 full · 59 → 43 `part`.** Seven releases, on the branch
 `claude/dawnblade-weekly-plan-zg61nm`, each validated with `npm test` +
 fairness + 210 self-play games (0 refusals, 0 invariant violations,
 0 malformed feed throughout).
@@ -14,6 +14,29 @@ fairness + 210 self-play games (0 refusals, 0 invariant violations,
 | **3.55** | the **targeted counter put** (`ctrPut`); `gaps.js`'s family `needs:` lines corrected |
 | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played. Two of its own refusal probes were asking `classifyClause` about a reader that lives in `fxParse`, and passed against a sabotaged engine |
 | **3.57** | the Illusionist `pitchBlue1` condition and a gated enters-with counter — **and a latent dropped gate `npm run fairness` structurally cannot see**: a condition that VANISHES leaves no unconditional twin for `COND-BYPASSED` to compare against |
+| **3.58** | two readers that each replaced an **inline** one — a destroy trigger read by a private regex, and a weapon static with Mandible Claw special-cased BY NAME while two other cards printing the same shape were dead |
+| **3.59** | **"Attack Reaction - …" was an unguarded activation prefix**, so Prey Spotters read `full` and could not be activated at all. Four cards report honestly now; the baseline was reviewed and repinned |
+
+### THE NEXT JOB, SCOPED — the attack-reaction ability route
+
+Five pool records print `Attack Reaction - <cost>: <effect>` and none has
+a route. What it needs, all of it measured this session:
+
+1. `parseHeroPower` to accept the prefix and return `kind:"attackRx"`;
+2. `build.js`'s `_abLine` (it matches `action|instant` only) so a powCard
+   is built at all;
+3. a `_attackRx` flag on the powCard — `_instant` already shows the shape,
+   and `judge.js`'s `playWindows`/`playWindowFor` are where it slots in;
+4. `speedAllowed` already distinguishes `attack-reaction` (v2.27), so the
+   window itself exists;
+5. the payloads — *"target attack with <qualifier> gets go again"* — onto
+   the open link via `effects.attackRx` (v3.11), which already does this
+   for attack reaction CARDS;
+6. the trainer's own offering path in `index.html`, which is the half no
+   drill can validate. **This is why it was not built in v3.59.**
+
+It closes Prey Spotters, Stalker's Steps, Bolt'n Boots, Danger Digits and
+**Boltyn's hero ability**.
 
 **THE METHOD FINDING, which is worth more than the thirteen cards:**
 `npm run gaps` clusters by what a card's TEXT says, but its `needs:` line

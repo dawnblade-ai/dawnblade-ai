@@ -41,8 +41,8 @@
 
 > ### WHERE THE WEEK GOT TO — v3.52 → v3.55
 >
-> **335 → 351 full · 59 → 43 `part`.** Sixteen cards closed, and five of the
-> nine findings were not cards at all:
+> **335 → 350 full · 59 → 43 `part`.** Sixteen cards closed and two
+> over-reporting cards corrected; six of the ten findings were not cards at all:
 >
 > | ver | what |
 > |---|---|
@@ -52,6 +52,7 @@
 > | **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played |
 > | **3.57** | the Illusionist `pitchBlue1` condition and the gated enters-with counter — and a **latent dropped gate the fairness sweep cannot see** |
 > | **3.58** | two readers that each replaced an **inline** one — a destroy trigger read by a private regex, and a weapon static that had Mandible Claw special-cased BY NAME while two other cards printing the same shape were dead |
+> | **3.59** | **an unguarded activation prefix** — "Attack Reaction - …" was eaten by a loose matcher, so Prey Spotters read `full` and could not be activated at all |
 >
 > **What is left, honestly** — see `npm run gaps`, whose family lines now
 > say it: nine token-on-a-trigger cards each needing their own condition;
