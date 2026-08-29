@@ -144,7 +144,24 @@ A non-attack that genuinely printed Boost would be wrong there.
   about a minute. There is no build and no upload step.
   **Verify the push, not just the tests:** a Pages site can serve `index.html`
   and 404 every script, which looks fine until a tap does nothing. Check the
-  URL returns 200 *and* that all 15 `engine/*.js` files do.
+  URL returns 200 *and* that **every script the page actually loads** does.
+
+  **DERIVE THE COUNT, NEVER STATE IT.** This line read "all 15 `engine/*.js`
+  files" for a long time and the real number was 21 — the ledger grew and
+  the sentence did not, which is a doc claim rotting (v3.41). The page loads
+  every module except the HEADLESS ones, so ask the file:
+
+  ```sh
+  grep -o '<script src="engine/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u
+  ```
+
+  **AND WHEN THE LIVE URL IS UNREACHABLE, SAY SO** rather than reporting the
+  deploy verified. A sandbox whose egress policy denies `github.io` can still
+  check the half that causes those 404s — that every script tag resolves to a
+  file in the PUSHED commit (`git cat-file -e origin/main:<path>`), and that
+  `.nojekyll` is present, which is what makes Pages serve the files as-is.
+  That is a real subset of the check, not the whole of it, and the difference
+  belongs in the report.
   (Until 2026-08-03 this repo had no remote and the file was hand-uploaded
   through GitHub's web UI, which is why 55 commits read "Add files via upload".)
 - **The per-version summary lives in `CHANGELOG.md`, not in `index.html`.** Until

@@ -47,10 +47,21 @@ pool cards. **Before building a family, ask the parser which records set
 the field.** Two-minute script; it moved two of five. `WEEK.md` and
 `tools/gaps.js` both now say what is actually left.
 
-**NOT DEPLOYED.** These three versions are on the feature branch, not
-`main`. Merging to `main` IS the deploy (GitHub Pages serves it) — and
-per CLAUDE.md, verify the URL returns 200 *and* that all 15 `engine/*.js`
-files do, not just that the tests were green.
+**DEPLOYED 2026-08-29 — `main` is at `b37d753`.** All seven versions
+(v3.53–v3.59) are on `main`, fast-forwarded from the feature branch with
+`origin/main` confirmed as an ancestor first, so nothing on the remote was
+lost.
+
+**THE LIVE CHECK IS PARTIAL, AND THAT IS STATED RATHER THAN GLOSSED.**
+The session's egress policy denies `github.io`, so the URL itself could
+not be fetched from here. What WAS verified against the pushed commit:
+all **21** `<script src="engine/…">` tags resolve to real files in
+`origin/main`, `index.html` is present, and `.nojekyll` is there (which
+is what makes Pages serve the files as-is rather than running them
+through Jekyll). That is the subset of the check that catches the
+"serves the page and 404s every script" failure; **the actual 200s are
+still unconfirmed.** First person with a browser should load the page and
+check the footer reads **v3.59**.
 
 **THE PHONE PASS IS STILL OWED, and it grew.** v3.42-v3.51 shipped on
 drills and self-play; these three add prompt sheets that a player has to
