@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.55 · PHASE C · FAMILY-BY-FAMILY
+# Handoff — Dawnblade, at v3.57 · PHASE C · FAMILY-BY-FAMILY
 
-## ⚠ WHERE THINGS STAND — v3.52 → v3.55 (2026-08-29)
+## ⚠ WHERE THINGS STAND — v3.52 → v3.57 (2026-08-29)
 
-**335 → 344 full · 59 → 50 `part`.** Three releases, on the branch
+**335 → 348 full · 59 → 46 `part`.** Five releases, on the branch
 `claude/dawnblade-weekly-plan-zg61nm`, each validated with `npm test` +
 fairness + 210 self-play games (0 refusals, 0 invariant violations,
 0 malformed feed throughout).
@@ -12,8 +12,10 @@ fairness + 210 self-play games (0 refusals, 0 invariant violations,
 | **3.53** | three `pick`-from-a-zone readers — **and the arsenal face-up put had never fired from `execute`** (queue site inside `if(attacking)`; all three cards that print one are non-attacks). `moveFoe` had carried `{from,to}` for three versions with a consumer that ignored both |
 | **3.54** | **destroyed gear now goes to the graveyard** (RULING, user, 2026-08-29), then `retrieve` — settled by reading the SAR017 PRINTING: *"(Pay {r} to equip it.)"* |
 | **3.55** | the **targeted counter put** (`ctrPut`); `gaps.js`'s family `needs:` lines corrected |
+| **3.56** | the **boost-banish trigger** — a schedule that fires from the DECK, on a card its controller never played. Two of its own refusal probes were asking `classifyClause` about a reader that lives in `fxParse`, and passed against a sabotaged engine |
+| **3.57** | the Illusionist `pitchBlue1` condition and a gated enters-with counter — **and a latent dropped gate `npm run fairness` structurally cannot see**: a condition that VANISHES leaves no unconditional twin for `COND-BYPASSED` to compare against |
 
-**THE METHOD FINDING, which is worth more than the nine cards:**
+**THE METHOD FINDING, which is worth more than the thirteen cards:**
 `npm run gaps` clusters by what a card's TEXT says, but its `needs:` line
 is a CLAIM ABOUT MACHINERY. Re-measured against the parser, **two of five
 families did not survive** — the *"you may"* family sets no `fx.optCost`
