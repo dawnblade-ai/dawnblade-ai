@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.63"; /* v3.63 — "Attack Reaction - <cost>:" is an activation prefix, and `parseHeroPower` could not anchor on it because `clean` collapses the newlines — so the match found the `action` inside RE-ACTION and built three abilities at ACTION SPEED, offered in the action phase with no link to target: sev-3 illegal-play-allowed, live, and a refusal this project had asserted in one function and never driven in the other. Anchored (no lookbehind, the preceding character is consumed), the prefix is now read as its own window: `_attackRx` rides the powCard beside `_instant`, `abWindow` is the one reader all four sites ask, the ability costs no action point, its printed target is a LEGALITY refused before the piece is destroyed, and it resolves through `effects.attackRx` onto the open link. Danger Digits refuses because its damage clause names a SUBJECT the engine would drop along with a printed drawback, and Bait because "this" on a reaction route is the source rather than the attack. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.64"; /* v3.64 — how many cards may defend an attack was enforced on NEITHER board properly: `judge.legal`'s defend branch mentioned dominate nowhere at all, so at the table any number of cards could be declared against it, and the trainer's only cap was the dummy's own tuned heuristic. `parser.defCap` is the one reader and it combines two printed sources that count DIFFERENT SETS — dominate's recorded 1-card-from-hand reading, and Confidence's "no more than 2 non-block cards", where Block is a TYPE so a declared piece of equipment counts. `defCapNext` is the fifth qualified single-shot grant beside buffQ / gaNextQ / costOff / instantNextQ, taken at declaration and riding on `pend` because the wall is built from it on both boards; the rule CAPS the dummy's heuristic rather than replacing it, or a tuned opponent silently changes. Confidence was inert in lyath's live deck behind a card reporting `full`. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2884,7 +2884,21 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `hasKwNow` drops a keyword the text only grants under an if/unless;
        `_kwGrant` is how the clause hands it over when the gate DOES fire. */
     const dominating = hasKwNow(card,"dominate") || (n._kwGrant||[]).indexOf("dominate")>=0;
-    const cap = dominating ? 1 : 2;
+    /* TWO DIFFERENT NUMBERS LIVE HERE, and folding them together is how
+       the tuned dummy would silently change (v3.64).
+
+         2                 a HEURISTIC — how many cards this dummy chooses
+                           to spend on one swing. Tuned, and not a rule.
+         `defCap`          the RULE — dominate, and Confidence's one-shot
+                           grant, which rides on `pend`. `judge.legal`
+                           enforces the same reader at the table, where it
+                           was enforced by NOTHING before v3.64.
+
+       So the rule CAPS the heuristic rather than replacing it: `Math.min`,
+       never an assignment. Raising the heuristic to the rule's limit would
+       make the dummy block harder than it was tuned to. */
+    const _cap = DawnParser.defCap(card, n.pend && n.pend.defCap, {kwGrant: n._kwGrant});
+    const cap = _cap ? Math.min(2, _cap.n) : 2;
     const pick = opp(n).hand.map((c,i)=>({c,i})).filter(x=>(x.c.def||0)>0)
       .sort((a,b)=>((b.c.def||0)-(a.c.def||0)) || ((a.c.power||0)-(b.c.power||0)));
     const chosen = [];

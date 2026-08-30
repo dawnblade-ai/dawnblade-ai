@@ -609,25 +609,62 @@ function legal(g, a, seat){
       return "an attack on an ally cannot be blocked (CR 7.3.2a)";
     const sd = at(g, seat);
     const gi = find(sd.gear, a.uid);
+    const ci = gi >= 0 ? -1 : find(sd.hand, a.uid);
+    if(gi < 0 && ci < 0) return "card is not in hand or gear";
+    const c = gi >= 0 ? sd.gear[gi] : sd.hand[ci];
     if(gi >= 0){
-      const piece = sd.gear[gi];
-      if(gearDef(piece) <= 0) return piece.name + " has no defence left";
+      if(gearDef(c) <= 0) return c.name + " has no defence left";
       /* CR 7.3.2b — a piece already spent on THIS chain cannot block
          again. It clears when the chain breaks, not when the turn ends. */
-      if((sd.chainBlocked || []).indexOf(a.uid) >= 0) return piece.name + " already blocked this chain";
-      return null;
+      if((sd.chainBlocked || []).indexOf(a.uid) >= 0) return c.name + " already blocked this chain";
+    } else {
+      if(c.def == null) return c.name + " prints no defence";
+      /* CR 8.1.3a — a defence reaction "can only be played/activated by a
+         player who controls a hero as an attack-target during the Reaction
+         Step", so it is never DECLARED as a defending card. Cite the
+         SUBRULE: `tools/crindex.js` scores each rule by whether a drill
+         cites it too, and the drill that drives this over all fifteen of
+         the pool's defence reactions is filed under 8.1.3a. */
+      if(PR.isDR(c)) return c.name + " is a defence reaction — play it in the reaction step";
     }
-    const ci = find(sd.hand, a.uid);
-    if(ci < 0) return "card is not in hand or gear";
-    const c = sd.hand[ci];
-    if(c.def == null) return c.name + " prints no defence";
-    /* CR 8.1.3a — a defence reaction "can only be played/activated by a
-       player who controls a hero as an attack-target during the Reaction
-       Step", so it is never DECLARED as a defending card. Cite the
-       SUBRULE: `tools/crindex.js` scores each rule by whether a drill
-       cites it too, and the drill that drives this over all fifteen of
-       the pool's defence reactions is filed under 8.1.3a. */
-    if(PR.isDR(c)) return c.name + " is a defence reaction — play it in the reaction step";
+
+    /* THE DEFENDER CAP (v3.64), and it was enforced on NEITHER board here.
+       `dummyDefence` capped the dummy's own PICK at `dominating ? 1 : 2`
+       — a heuristic about how many cards it chooses to spend — and this
+       branch mentioned dominate nowhere at all, so at the table any number
+       of cards could be declared against a dominate attack. v3.01's shape:
+       a rule that exists on one board.
+
+       `sparring.act` reads no card text by contract, so it cannot know
+       about dominate and relies on `legal` to refuse — which makes this
+       the right place rather than a policy fix.
+
+       IT SITS BELOW BOTH BRANCHES ON PURPOSE. The gear branch used to
+       `return null` on its own, so a cap that counts EQUIPMENT —
+       Confidence's "non-block cards", and equipment is not a Block card —
+       was bypassed entirely by the one kind of defender it needed to
+       count. `defCounts` decides which declarations count against which
+       cap; the check must see them all.
+
+       WITHDRAWING IS ALWAYS LEGAL: the cap limits how many may be
+       DECLARED, so a toggle that REMOVES a defender can never breach it.
+       Without this the defender is locked into their first choice, which
+       is a dead tap wearing a rule. */
+    const already = gi >= 0 ? (sd.blockG || []) : (sd.blockH || []);
+    if(already.indexOf(a.uid) < 0){
+      const cap = PR.defCap(g.pend && g.pend.card, g.pend && g.pend.defCap);
+      if(cap && PR.defCounts(cap, c, gi >= 0)){
+        const declared = (sd.blockH || []).map(u => sd.hand.find(x => x.uid === u))
+                           .filter(x => x && PR.defCounts(cap, x, false)).length
+                       + (sd.blockG || []).map(u => sd.gear.find(x => x.uid === u))
+                           .filter(x => x && PR.defCounts(cap, x, true)).length;
+        if(declared >= cap.n)
+          return ((g.pend.card || {}).name || "that attack") + " can't be defended by more than "
+               + cap.n + (cap.count === "nonBlock" ? " non-block" : "") + " card"
+               + (cap.n === 1 ? "" : "s")
+               + (cap.count === "hand" ? " from hand" : "");
+      }
+    }
     return null;
   }
 

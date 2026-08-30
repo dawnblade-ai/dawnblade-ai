@@ -718,6 +718,23 @@ function makeEffects(ctx){
                      +`${rider?", and its hit carries a granted ability":""}.`); }
         else  { actMut(n).gaNext=true; n=L(n,"Your next attack this turn will carry go again."); }
       }
+      /* THE FIFTH QUALIFIED SINGLE-SHOT GRANT (v3.64), and it restricts the
+         OPPONENT rather than buffing you: Confidence's "your next attack
+         action card this turn can't be defended by more than 2 non-block
+         cards". It waits for the card the printed line names — a grant
+         that does not match is not spent (v2.30) — and the COUNTED SET
+         rides with it, because dominate's cap counts hand cards and this
+         one counts non-block cards. Two caps, two sets, one reader in
+         `parser.defCap`. */
+      else if(k==="defCapNext"){
+        const cq = op[2] || null, cnt = op[3] || "hand";
+        actMut(n).defCapNext = [...(act(n).defCapNext||[]), {n: op[1], count: cnt, q: cq}];
+        /* NAME THE SEAT (v2.83). `say`/`L` writes the SHARED feed, which
+           both seats read, so "your next attack" is a lie to one of them
+           the moment seat 1 plays a card. The `gaNext` line above is part
+           of that ledger's 44-line debt; this one does not join it. */
+        n = L(n, `${act(n).name}: the next ${P.qualLabel(cq).replace(/^an? /,"")} played this turn can't be defended by more than ${op[1]} ${cnt==="nonBlock"?"non-block":"hand"} card${op[1]===1?"":"s"}.`);
+      }
       /* A COUNT, NOT A FLAG (v3.10). Mauvrion Skies prints 3 Runechants at
          red, 2 at yellow and 1 at blue; this was a boolean, so it could
          not have carried 3 even when it fired — and it only ever fired on
@@ -1972,6 +1989,14 @@ function makeEffects(ctx){
             gaRiderHero = _gq.rider.onHitHero || [];
             if(gaRider.length || gaRiderHero.length)
               n = L(n, `${card.name} carries a granted ability into the chain.`); } } }
+      /* THE DEFENDER CAP RIDES ON `pend` (v3.64), taken here for the same
+         reason `takeGaNext` is: the grant names "your NEXT attack", and
+         this is the play that either matches it or does not. It goes onto
+         the link because the WALL is built from `pend` on both boards, and
+         `parser.defCap` is the one reader that combines it with the card's
+         own dominate. */
+      const _cap = takeDefCap(n, card, qCtx);
+      if(_cap) n = L(n, `${card.name} is what that restriction was waiting for — no more than ${_cap.n} ${_cap.count==="nonBlock"?"non-block":"hand"} card${_cap.n===1?"":"s"} may defend it.`);
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
@@ -2140,7 +2165,7 @@ function makeEffects(ctx){
          which was FALSE with `by` absent and is FALSE now for your own
          swing — and the dummy's swing is the `[3,4,5]` scalar on
          `n.incoming` with no pend at all. */
-      n.pend = {card, from, by: actorOf(n), total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -3165,6 +3190,19 @@ function makeEffects(ctx){
      It REFUSES rather than throwing, for `qualMatches`'s own reason:
      `reduce` is fed by JSON off a wire and one stale grant must cost a
      keyword, never a session. */
+  /* SPEND A QUALIFIED DEFENDER-CAP GRANT (v3.64) — same shape and same
+     rule as `takeGaNext` directly below: a grant whose qualifier does not
+     match the attack being declared is NOT spent, it waits. Taken at
+     DECLARATION, because that is when the wall is about to be built and
+     `pend` is what both boards ask for the cap. */
+  const takeDefCap = (n, card, ctx) => {
+    const q = act(n).defCapNext || [];
+    const i = q.findIndex(x => x && qualMatches(x.q, card, ctx));
+    if(i < 0) return null;
+    actMut(n).defCapNext = q.slice(0, i).concat(q.slice(i + 1));
+    return q[i];
+  };
+
   const takeGaNext = (n, card, ctx) => {
     const q = act(n).gaNextQ || [];
     const i = q.findIndex(x => x && x.q && qualMatches(x.q, card, ctx));
@@ -4500,11 +4538,11 @@ function beginEndPhase(game, seat){
     const sd = (n.sides || [])[i] || {};
     const held = (sd.buffNext || 0) + (sd.buffQ || []).length
                + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length
-               + (sd.instantNextQ || []).length;
+               + (sd.instantNextQ || []).length + (sd.defCapNext || []).length;
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
-      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: []});
+      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: []});
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");

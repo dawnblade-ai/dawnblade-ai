@@ -9,6 +9,94 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.64 — how many cards may defend, and dominate was enforced by nothing at the table
+
+**`judge.legal`'s defend branch mentioned dominate NOWHERE AT ALL.** At the
+table any number of cards could be declared against a dominate attack — an
+illegal play allowed, in the direction that makes the attacker weaker than
+printed. The trainer's only cap was `dummyDefence`'s `dominating ? 1 : 2`,
+which is the DUMMY'S OWN HEURISTIC about how many cards it chooses to spend.
+v3.01's shape: a rule that exists on one board, and barely on that one.
+
+No tool here could see it. Coverage reads Macho Grande `full` — the keyword
+IS read; the fairness sweep is one-sided toward cards STRONGER than printed;
+and `sparring.act` reads no card text by contract, so it cannot know about
+dominate and relies on `legal` to refuse. **That is why the gap is `legal`'s
+and not the policy's.**
+
+### Two printed sources, two counted sets, one reader
+
+`parser.defCap` combines them and the TIGHTEST wins — two restrictions do not
+cancel:
+
+| | caps | counts |
+|---|---|---|
+| **dominate** | 1 | cards **from hand**. The database prints no reminder text for any keyword (which is why `tools/rulings.json` exists); this project's recorded reading is the hand limit, and changing it is a RULING |
+| **Confidence** | 2 | **non-block** cards — and Block is a TYPE, so a declared piece of EQUIPMENT counts against it |
+
+The counted set is read off the printed word rather than defaulted to
+dominate's, because they genuinely differ and defaulting either way changes
+what may block.
+
+**A GRANTED dominate is the CALLER'S ANSWER.** Pulping prints *"if a card
+with 6 or more {p} is discarded this way, this gets dominate"* — `hasKwNow`
+correctly drops it and `_kwGrant` is how the clause hands it over when the
+gate fires, which is a fact about the resolution no reader of the card alone
+can see. A caller that does not say answers no.
+
+### `defCapNext` — the fifth qualified single-shot grant
+
+Beside `buffQ` (power), `gaNextQ` (go again), `costOff` (cost) and
+`instantNextQ` (the window). Same `attackQual` tail reader, same "a grant that
+does not match WAITS rather than being spent" rule, same expiry in the shared
+end phase. Building it invented no vocabulary — the fourth time that has been
+true of this family.
+
+Taken at DECLARATION and riding on `pend`, because the wall is built from
+`pend` on both boards.
+
+### The rule CAPS the heuristic, it does not replace it
+
+Two different numbers live in `dummyDefence` and folding them together would
+silently change a TUNED opponent: `Math.min(2, cap.n)`, never an assignment.
+
+### The check sits BELOW both branches, and that is the whole of it
+
+The gear branch used to `return null` on its own — so a cap that counts
+EQUIPMENT was bypassed by the one kind of defender it needed to count.
+`defCounts` decides which declarations count against which cap, and the check
+must see them all. **Withdrawing a declared defender is always legal**: the
+cap limits how many may be DECLARED, so a toggle that removes one can never
+breach it.
+
+### Three weak drills, all found by sabotage
+
+- the equipment case declared the **hand card first**, so a cap of 1 was
+  already full and the drill could not tell whether the tally ever looked at
+  `blockG`. **A fixture where two things coincide has tested neither** (v3.26).
+- the same case needed its **mirror**: one drill proves the tally COUNTS
+  gear, another that the check APPLIES to gear. Sabotaging the check to skip
+  equipment was silent against the first alone.
+- *"a grant that does not match is not spent"* used a **non-attack**, which
+  never reaches `takeDefCap` at all — so it passed against a sabotaged
+  matcher. It has to be an attack the QUALIFIER rejects.
+
+**And restructuring the branch found a rule with no drill anywhere in 1618.**
+`gearDef <= 0` — a battleworn piece worn to zero cannot be declared — was
+silent under sabotage while its neighbour `chainBlocked` (CR 7.3.2b) was
+covered. Silver Age equipment is nearly all battleworn, so that is reachable
+rather than theoretical. Both are drilled now.
+
+**Confidence went `none` → `full`, and it was inert in a LIVE DECK**: Full of
+Bravado sits in lyath's deck reading `tier: full`, and its entire payoff is
+this token. The no-op blind spot with a token on the end.
+
+1620 drills, 0 fail. Fairness clean. 210 self-play games: 0 refusals, 0
+violations. 19 sabotages. Both `text/babel` blocks compile.
+
+
+---
+
 ## v3.63 — REACTION CONTAINS ACTION, and three abilities were live in the wrong window
 
 Six pool records print `Attack Reaction - <cost>:` as an **activated

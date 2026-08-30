@@ -1531,6 +1531,32 @@ function classifyClause(raw){
     if(m[2] === "non-attack"){ delete full.aac; full.nonAtk = true; }
     return R([["instantNext", full]]);
   }
+  /* "YOUR NEXT <x> THIS TURN CAN'T BE DEFENDED BY MORE THAN N <kind>
+     CARDS" — Confidence, and the FIFTH qualified single-shot grant beside
+     `buffQ` (power), `gaNextQ` (go again), `costOff` (cost) and
+     `instantNextQ` (the window). Same `attackQual` tail reader, same
+     "waits rather than being spent" rule; building it invented no
+     vocabulary, which is the fourth time that has been true here.
+
+     THE COUNTED SET IS READ OFF THE LINE, never assumed. Confidence
+     prints "non-block cards" and Block is a TYPE (`types.js`: Test of
+     Might, Test of Strength, On the Horizon, Crash and Bash), so a
+     declared piece of EQUIPMENT is a non-block card and counts. That is
+     the literal reading and it is stronger for the attacker than counting
+     hand cards alone — which is exactly why it is read off the printed
+     word rather than defaulted to dominate's set.
+
+     DOMINATE IS NOT THIS OP. The database prints no reminder text for any
+     keyword (which is why the ruling file exists), and this project's
+     recorded reading of dominate is "the defender is limited to 1 card
+     from hand". Two caps, two counted sets, one reader — `parser.defCap`
+     is where they meet. */
+  if(m = c.match(/^the next([^.]*?)\battack\b([^.]*?) can'?t be defended by more than (\d+) (non-block|non-equipment) cards?$/)){
+    const q = attackQual(m[1], m[2]);
+    if(q === false) return null;          /* an unreadable tail refuses the whole clause */
+    return R([["defCapNext", +m[3], Object.assign({}, q || {}),
+               m[4] === "non-block" ? "nonBlock" : "hand"]]);
+  }
   if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
@@ -4582,6 +4608,65 @@ function rxAllowed(c, win){
 const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
                      : ab && ab._instant  ? "instant" : "action";
 
+/* HOW MANY CARDS MAY DEFEND THIS ATTACK (v3.64) — the ONE reader.
+
+   Two printed sources cap the wall and they count DIFFERENT SETS, which
+   is the whole reason this is a function rather than a number:
+
+     dominate         1 card FROM HAND. The database prints no reminder
+                      text for any keyword — which is why `tools/rulings.json`
+                      exists — and this project's recorded reading (see
+                      CLAUDE.md, "Key implemented rules") is the hand limit.
+                      Changing it is a RULING, not an engineering call.
+     `defCapNext`     Confidence's grant, and its counted set is read off
+                      the printed word: "non-block cards". Block is a TYPE,
+                      so a declared piece of EQUIPMENT is a non-block card
+                      and counts against it.
+
+   IT WAS ENFORCED ON ONE BOARD. `dummyDefence` capped the dummy's own
+   pick at `dominating ? 1 : 2` — the 2 being a HEURISTIC, how many cards
+   it chooses to spend — and `judge.legal`'s defend branch mentioned
+   dominate nowhere at all, so at the table any number of cards could be
+   declared against a dominate attack. v3.01's shape: a rule that exists
+   on one board.
+
+   THE GRANT IS THE CALLER'S ANSWER, like the wall and the incoming
+   attack: only the site holding `pend` knows which one-shot restriction
+   this attack took. Absent, the answer is the card's own dominate, and
+   that is weaker than printed rather than stronger.
+
+   Returns `{n, count}` or null. The TIGHTEST cap wins when both apply —
+   two restrictions do not cancel. */
+function defCap(card, held, opts){
+  const caps = [];
+  /* A GRANTED dominate IS THE CALLER'S ANSWER. `hasKwNow` drops a keyword
+     the text only grants under an if/unless (v2.31's rule, applied to
+     `hasKw` at v2.84), and `_kwGrant` is how the clause hands it over when
+     the gate DOES fire — a fact about this resolution that no reader of
+     the card alone can see. A caller that does not say answers no: weaker
+     than printed and visible. */
+  const granted = ((opts && opts.kwGrant) || []).indexOf("dominate") >= 0;
+  if(granted || (card && hasKwNow(card, "dominate"))) caps.push({n: 1, count: "hand"});
+  if(held && held.n != null) caps.push({n: held.n, count: held.count || "hand"});
+  if(!caps.length) return null;
+  /* THE TIGHTEST CAP WINS — two restrictions do not cancel, and taking
+     the looser one would let a card through that either alone forbids. */
+  return caps.reduce((a, b) => b.n < a.n ? b : a);
+}
+
+/* Does a declared defender COUNT against a cap? `hand` is the recorded
+   dominate reading — equipment is declared separately and freely.
+   `nonBlock` is Confidence's printed word, and a Block card is the one
+   thing it excludes; `types.js` is the authority on what a Block is, but
+   parser.js loads before it, so the printed line is read here the same
+   way `isAttack` reads it. */
+const isBlockCard = c => /\bblock\b/i.test((c && c.tt) || "");
+function defCounts(cap, card, fromGear){
+  if(!cap) return false;
+  if(cap.count === "hand") return !fromGear;
+  return !isBlockCard(card);          /* nonBlock — equipment counts too */
+}
+
 const costsAP = (c, window) => {
   /* An ACTIVATED ATTACK REACTION is never played in the action window
      (v3.63), so it never carries CR 8.1.1's point — the same reading this
@@ -4673,7 +4758,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, allyAttack, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,

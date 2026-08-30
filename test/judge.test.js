@@ -113,10 +113,21 @@ function drive(g, o){
       const d = P.defendingPlayer(g), sd = g.sides[d];
       const wall = (sd.blockH || []).length + (sd.blockG || []).length;
       if(wall < (o.blockers == null ? 2 : o.blockers)){
+        /* ASK LEGAL, LIKE BOTH BRANCHES BELOW ALREADY DO. This one read
+           only the printed defence, so once a DEFENDER CAP existed (v3.64
+           — dominate, and Confidence's grant) the driver proposed a
+           second blocker the rules forbid and then recorded its own
+           optimism as an engine refusal. Macho Grande is the pool's one
+           printed-dominate card and this walk seats Bravo, so it bit
+           immediately. A driver is a policy, and a policy proposes what
+           the judge will accept. */
+        const ok = u => !J.legal(g, {t: "defend", uid: u}, d);
         const gr = (sd.gear || []).find(x => G.gearDef(x) > 0
-          && !(sd.chainBlocked || []).includes(x.uid) && !(sd.blockG || []).includes(x.uid));
+          && !(sd.chainBlocked || []).includes(x.uid) && !(sd.blockG || []).includes(x.uid)
+          && ok(x.uid));
         if(gr && send({t: "defend", uid: gr.uid}, d)) continue;
-        const c = (sd.hand || []).find(x => x.def > 0 && !PR.isDR(x) && !(sd.blockH || []).includes(x.uid));
+        const c = (sd.hand || []).find(x => x.def > 0 && !PR.isDR(x)
+          && !(sd.blockH || []).includes(x.uid) && ok(x.uid));
         if(c && send({t: "defend", uid: c.uid}, d)) continue;
       }
     }

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.63
+**Current version:** v3.64
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1602 drills**.
+This is `node --test "test/*.test.js"` — currently **1620 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,45 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### HOW MANY CARDS MAY DEFEND — TWO SOURCES, TWO COUNTED SETS (v3.64)
+
+`judge.legal`'s defend branch mentioned dominate **nowhere at all**, so at
+the table any number of cards could be declared against a dominate attack.
+The trainer's only cap was `dummyDefence`'s `dominating ? 1 : 2` — the
+DUMMY'S OWN HEURISTIC about how many cards it chooses to spend. v3.01's
+shape, and barely present on the board that had it.
+
+**`parser.defCap` is the one reader, and the TIGHTEST cap wins** — two
+restrictions do not cancel:
+
+| | caps | counts |
+|---|---|---|
+| **dominate** | 1 | cards **from hand** — this project's RECORDED reading. The database prints no reminder text for any keyword, so changing it is a ruling, not an engineering call |
+| **Confidence** | 2 | **non-block** cards. Block is a TYPE, so a declared piece of EQUIPMENT counts |
+
+**THE COUNTED SET IS READ OFF THE PRINTED WORD**, never defaulted to the
+other's — they genuinely differ, and either default changes what may block.
+
+**A GRANTED KEYWORD IS THE CALLER'S ANSWER.** `hasKwNow` drops a dominate
+the text only grants under an `if`; `_kwGrant` is how the clause hands it
+over when the gate fires, which is a fact about the resolution that no
+reader of the card alone can see.
+
+**THE RULE CAPS THE HEURISTIC, IT DOES NOT REPLACE IT.** `Math.min(2,
+cap.n)`, never an assignment — the 2 is TUNED and folding the two numbers
+together changes the opponent silently.
+
+**AND THE CHECK SITS BELOW BOTH BRANCHES.** The gear branch used to
+`return null` on its own, so a cap that counts EQUIPMENT was bypassed by
+the one kind of defender it needed to count. **Withdrawing is always
+legal** — the cap limits how many may be DECLARED.
+
+**RESTRUCTURING THAT BRANCH FOUND A RULE WITH NO DRILL IN 1618.**
+`gearDef <= 0` was silent under sabotage while its neighbour
+`chainBlocked` (CR 7.3.2b) was covered. **When you move a rule, sabotage
+the rules you moved past** — a refactor inherits their coverage, or their
+lack of it.
 
 ### A REFUSAL ASSERTED IN ONE FUNCTION IS NOT A REFUSAL (v3.63)
 
@@ -1694,6 +1733,14 @@ be deliberate. That is what a recorded refusal is FOR — the alternative is
 a gap nobody revisits. Keep the refusal property alive with a separate
 probe when you retire one: the vocabulary stays closed, and a gate with no
 reader still leaves the card in its printed window.
+
+### FIVE QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.37, v3.64)
+
+> **`defCapNext` JOINED THEM AT v3.64** — Confidence's *"your next attack
+> action card this turn can't be defended by more than 2 non-block
+> cards"*. Same `attackQual` tail reader, same waits-rather-than-spent
+> rule, same expiry; building it invented no vocabulary, which is now the
+> fourth time that has been true of this family. Symmetry ledger 44 → 45.
 
 ### FOUR QUALIFIED SINGLE-SHOT GRANTS, ONE READER (v3.37)
 
@@ -5489,6 +5536,12 @@ Key implemented rules:
 - Arcane damage bypasses equipment; only ward/arcane barrier stops it.
 - Runechants pop **all at once and mandatorily** on any attack, each a separate source.
 - Crush = "deals 4+ damage to a hero"; dominate = defender limited to 1 card from hand.
+  **`parser.defCap` is the one reader of that limit as of v3.64**, and it is
+  enforced on both boards — `judge.legal` mentioned dominate nowhere at all
+  before then. The hand-card reading is RECORDED rather than derived (the
+  database prints no reminder text for any keyword), so changing it is a
+  ruling. Confidence's *"no more than 2 non-block cards"* is the same reader's
+  other source and counts a DIFFERENT set — equipment is not a Block card.
 - Tapping is a High Seas cost (the down-arrow symbol) — **not** a generic "weapon used"
   state. Only rotate cards whose text actually uses tap.
 

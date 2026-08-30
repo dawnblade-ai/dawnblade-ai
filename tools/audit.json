@@ -1,5 +1,5 @@
 {
- "generated": "2026-08-30T01:17:30.318Z",
+ "generated": "2026-08-30T12:42:24.858Z",
  "appVer": "3.63",
  "dataVer": "sage-v12",
  "dbCount": 788,
@@ -405,7 +405,7 @@
    "tx": "At the start of your turn, destroy this, then the next attack action card you play this turn can't be defended by more than 2 non-block cards.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "full"
   },
   "Courage": {
    "found": true,
