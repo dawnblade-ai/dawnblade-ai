@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.64
+**Current version:** v3.65
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1620 drills**.
+This is `node --test "test/*.test.js"` — currently **1628 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,42 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A FIXED WORDING IS NOT A FIXED SHAPE — AT FAMILY LEVEL (v3.65)
+
+v3.22 built `fx.atkTrigger` for the ONE printed subject it found and never
+asked which others the pool gives the same shape. **Three more tokens
+print it, read `tier: none`, and did nothing at all** — Blade Dance and
+Flurry (*"when you **activate a weapon attack**"*, no play half) and
+Eloquence (*"when you play a **non-attack** action card"*).
+
+The trigger carries **`on`, a list of ROUTES read off the printed words**,
+in place of the single `weaponToo` boolean. v3.60 states this rule about a
+MATCHER; this is the same sentence about a FAMILY.
+
+**THE PAYLOAD'S SUBJECT MUST MATCH THE TRIGGER'S.** *"The attack"* and
+*"the card"* name the same object on their own route, and reading either
+onto the other is v2.33's and v3.47's wrong-subject shape. An unreadable
+payload refuses.
+
+**AN ALLY ATTACK MATCHES NO ROUTE.** `weaponToo || from !== "weapon"`
+answers TRUE for `from === "ally"`, so an ally's activated attack popped
+every one of these. **Latent, and measured before changing it** — no deck
+holds both a minter and an attacking ally — but the route has existed
+since v3.44.
+
+**AND THE NON-ATTACK BRANCH HAD NO POP SITE**, so a `nonAtk` trigger could
+never fire: v3.53's shape a third time. **When you widen a reader's
+subject, ask which BRANCH each new subject resolves in.**
+
+**FLURRY'S PAYLOAD WAS ALREADY BUILT** — it is Dorinthea's `weaponRefresh`,
+which lifts the weapon's Once-per-Turn allowance and nothing else, so the
+extra swing pays its printed cost and an action point. *"That weapon"* is
+literal.
+
+**IT WORKS AND CANNOT YET BE CREATED.** Both minters are `part`; the
+token's tier is about the token's own text, and saying so is the honest
+report rather than a claim the card is playable.
 
 ### HOW MANY CARDS MAY DEFEND — TWO SOURCES, TWO COUNTED SETS (v3.64)
 

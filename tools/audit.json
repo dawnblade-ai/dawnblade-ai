@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-30T12:42:24.858Z",
- "appVer": "3.63",
+ "generated": "2026-08-30T20:01:15.016Z",
+ "appVer": "3.64",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -429,7 +429,7 @@
    "tx": "When you activate a weapon attack, destroy this and you may attack with the weapon twice this turn.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "full"
   },
   "Frailty": {
    "found": true,

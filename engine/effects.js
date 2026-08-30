@@ -2101,7 +2101,13 @@ function makeEffects(ctx){
          Courage and Quicken fire on a weapon swing; the Embodiment fires
          only on an attack action card, so it must not pop for one. */
       if(atkTrigAt.length){
-        const fire = atkTrigAt.filter(x => x.trig.weaponToo || from !== "weapon");
+        /* THE ROUTE THE TRIGGER NAMES (v3.65), read off the printed
+           subject rather than v3.22's single boolean. `from === "ally"`
+           matches NONE of them: an ally's activated attack is neither an
+           attack action card nor a weapon attack, and the old test
+           (`weaponToo || from !== "weapon"`) answered TRUE for it. */
+        const route = from === "weapon" ? "weapon" : from === "ally" ? "ally" : "atk";
+        const fire = atkTrigAt.filter(x => (x.trig.on || []).indexOf(route) >= 0);
         if(fire.length){
           const uids = new Set(fire.map(x => x.b.uid));
           /* A token that leaves the arena ceases to exist — it is not a
@@ -2112,6 +2118,22 @@ function makeEffects(ctx){
             for(const op of x.trig.ops){
               if(op[0] === "ga"){ ga = true; declNote += ` ${x.b.card.name} pops — the attack goes again.`; }
               else if(op[0] === "pump"){ total += op[1]; declNote += ` ${x.b.card.name} pops for +${op[1]} power.`; }
+              /* FLURRY — the same mechanic Dorinthea's hero ability is,
+                 and it was already built (`weaponRefresh`): lift the
+                 weapon's Once-per-Turn allowance and nothing else, so the
+                 extra swing walks the ordinary path and pays its printed
+                 cost and an action point like any other activation. A free
+                 action point here would be strictly stronger than printed.
+
+                 "THAT WEAPON" IS LITERAL — only the piece being activated,
+                 which on this route is the card in hand. `card.uid` is the
+                 gear entry's own uid, which is what `weaponUsed` is keyed
+                 on for a swing. */
+              else if(op[0] === "wpnAgain"){
+                const wu = {...(act(n).weaponUsed || {})}; delete wu[card.uid];
+                actMut(n).weaponUsed = wu;
+                declNote += ` ${x.b.card.name} pops — ${card.name} may swing once more this turn.`;
+              }
               else if(op[0] === "arcane"){ arcCount++; arcDmg += op[1]; arcName = x.b.card.name;
                 /* EACH TOKEN IS ITS OWN SOURCE — said here since v2.23, and
                    until v2.74 they were pooled into one `hp -=` because
@@ -2326,6 +2348,32 @@ function makeEffects(ctx){
          visible, where the other direction grants a bonus nobody built. */
       n = runWayConds(n, () => { ga = true; });
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
+      /* ELOQUENCE — THE POP SITE'S SIBLING (v3.65). The attack branch has
+         had one since v3.22 and this branch had none, so a token whose
+         trigger is "when you play a NON-ATTACK action card" could never
+         fire. That is v3.53's shape exactly: a site inside `if(attacking)`
+         and a card that never attacks.
+
+         `atkTrigAt` is captured at the top of `execute` for both branches
+         and for the same reason — the auras that trigger are the ones in
+         the arena at this instant, so one this card itself conjures was
+         not there when it was played.
+
+         MEASURED: the only payload a `nonAtk` trigger can carry is go
+         again. The parser matches the payload's SUBJECT against the
+         trigger's, so "the card gets go again" is the one shape that
+         parses on this route; a pump or an arcane names "the attack" and
+         refuses. A drill pins that measurement, so a token printing
+         something else fails it rather than quietly doing nothing here. */
+      { const fire = atkTrigAt.filter(x => (x.trig.on || []).indexOf("nonAtk") >= 0);
+        if(fire.length && !isAttack(card)){
+          const uids = new Set(fire.map(x => x.b.uid));
+          /* a token that leaves the arena ceases to exist */
+          actMut(n).board = act(n).board.filter(b => !uids.has(b.uid));
+          for(const x of fire) for(const op of x.trig.ops){
+            if(op[0] === "ga"){ ga = true; n = L(n, `${x.b.card.name} pops — ${card.name} goes again.`); }
+          }
+        } }
       /* AN ATTACK REACTION PUMPS THE ATTACK IT IS PLAYED ON, NOT THE NEXT
          ONE (v3.11). Falling through to `buffNext` is how the table came to
          hand Dorinthea's whole reaction game to her FOLLOWING swing — and

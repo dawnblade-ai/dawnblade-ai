@@ -9,6 +9,71 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.65 — a fixed wording is not a fixed shape, at the level of a family
+
+v3.22 built `fx.atkTrigger` for four tokens printing *"when you play an
+attack action card[ or activate a weapon attack], destroy this and X"* —
+and never asked which OTHER printed subjects the pool gives that shape.
+**Three more tokens print it and read `tier: none`. They did nothing at
+all:**
+
+| token | trigger | payload |
+|---|---|---|
+| **Blade Dance** | *"when you **activate a weapon attack**"* — no play half | the attack gets go again |
+| **Flurry** | the same | *"you may attack with the weapon twice this turn"* |
+| **Eloquence** | *"when you play a **non-attack** action card"* | the card gets go again |
+
+That is v3.60's rule ("when you anchor a reader to a wording, ask which
+other printed wordings of that shape it still has to reach") one level up:
+about a FAMILY rather than a matcher.
+
+The trigger now carries **`on`, a list of routes read off the printed
+words**, in place of v3.22's single `weaponToo` boolean.
+
+**THE PAYLOAD'S SUBJECT MUST MATCH THE TRIGGER'S.** *"The attack"* and
+*"the card"* name the same object on their own route, but a non-attack
+trigger cannot pay out to "the attack" and an attack one cannot pay out to
+"the card". Reading either onto the other is the wrong-subject shape v2.33
+and v3.47 both name; an unreadable payload refuses instead.
+
+**AN ALLY ATTACK MATCHES NO ROUTE.** The fire test was `weaponToo || from
+!== "weapon"`, which answers TRUE for `from === "ally"` — so an ally's
+activated attack popped every one of these as though an attack action card
+had been played. **Latent rather than live, and that was measured across
+all fifteen decks before it was changed**: none holds both a minter and an
+attacking ally. The route has existed since v3.44 all the same.
+
+**ELOQUENCE NEEDED THE POP SITE'S SIBLING.** The attack branch has had one
+since v3.22 and the non-attack branch had none, so a `nonAtk` trigger could
+never fire — v3.53's shape exactly. The site dispatches go again and
+nothing else, which is complete *because* of the subject rule above, and a
+drill pins that measurement so a token printing something else fails there
+rather than quietly doing nothing.
+
+**FLURRY'S PAYLOAD IS A MECHANIC THIS ENGINE ALREADY HAS.** Dorinthea's
+hero ability is *"you may attack an additional time with that weapon this
+turn"*, and `weaponRefresh` models it by lifting the weapon's Once-per-Turn
+allowance and nothing else — so the extra swing walks the ordinary path and
+pays its printed cost and an action point like any other activation. A free
+action point would be strictly stronger than printed. *"That weapon"* is
+literal: lifting the whole map hands a hero holding two weapons a free
+swing with the other. **Before building machinery for a shape, check
+whether the machinery is the shape you already have** (v3.58, again).
+
+**FLURRY WORKS AND STILL CANNOT BE CREATED**, and that is stated rather
+than glossed: its two minters — Edict of Steel and Toe the Line, both in
+boltyn's deck — are `part`. Edict needs **Sharpen**, which has a recorded
+ruling (2026-07-25) and is `unreviewed` in the ledger; that is the next
+job. Blade Dance and Eloquence have no minter in this pool at all, which is
+a fact about the pool rather than about the engine — the route exists on
+both boards, so reading them is honest.
+
+1628 drills, 0 fail. Fairness clean. 210 self-play games: 0 refusals, 0
+violations. 11 sabotages, all biting. Both `text/babel` blocks compile.
+
+
+---
+
 ## v3.64 — how many cards may defend, and dominate was enforced by nothing at the table
 
 **`judge.legal`'s defend branch mentioned dominate NOWHERE AT ALL.** At the

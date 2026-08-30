@@ -2751,24 +2751,66 @@ function fxParse(card){
      trigger with "remove a verse counter from this" instead of a destroy,
      so it never reaches here — and anything whose payload has no reader
      leaves the card unclaimed rather than firing a guess. */
+  /* A FIXED WORDING IS NOT A FIXED SHAPE (v3.65). v3.22 built this reader
+     for the one printed SUBJECT it found and never asked which others the
+     pool prints. Three more tokens print the identical shape with a
+     different subject and read `tier: none` — they do nothing at all:
+
+       Blade Dance   "when you ACTIVATE A WEAPON ATTACK, destroy this and
+                      the attack gets go again"          (no play half)
+       Flurry        same trigger, "…and you may attack with the weapon
+                      twice this turn"
+       Eloquence     "when you play a NON-ATTACK action card, destroy this
+                      and the card gets go again"
+
+     So the trigger carries `on`, a list of ROUTES read off the printed
+     subject, rather than v3.22's single `weaponToo` boolean. Same rule as
+     v3.60's draw-and-discard matcher one level up: when you anchor a
+     reader to a wording, ask which other printed wordings of that shape
+     it still has to reach.
+
+     AN ALLY ATTACK IS NEITHER (v3.44). `weaponToo || from !== "weapon"`
+     answered TRUE for `from === "ally"`, so an ally's activated attack
+     popped every one of these as though an attack action card had been
+     played. Latent rather than live — measured across all fifteen decks,
+     none holds both a minter and an attacking ally — but the route has
+     existed since v3.44 and the routes are named now. */
   for(let ci = 0; ci < clauses.length; ci++){
     const cl = clauses[ci];
     const m = cl.match(
-      /^when you play an attack action card( or activate a weapon attack)?, destroy (?:this|it) and (.+)$/i);
+      /^when you (?:play an? (attack|non-attack) action card( or activate a weapon attack)?|activate a weapon attack), destroy (?:this|it) and (.+)$/i);
     if(!m) continue;
-    const tail = m[2].trim().replace(/\.$/, "");
+    const on = !m[1] ? ["weapon"]
+             : m[1].toLowerCase() === "non-attack" ? ["nonAtk"]
+             : (m[2] ? ["atk", "weapon"] : ["atk"]);
+    const tail = m[3].trim().replace(/\.$/, "");
     let ops = null;
-    if(/^the attack (?:gains?|gets?|has) go again$/i.test(tail)) ops = [["ga"]];
+    /* "THE ATTACK" and "THE CARD" name the same thing on their own route —
+       the object just played or activated — so they share an op. Read off
+       the printed word all the same: a token whose trigger is a non-attack
+       cannot say "the attack", and one whose trigger is an attack cannot
+       say "the card". */
+    const subj = on[0] === "nonAtk" ? "card" : "attack";
+    if(new RegExp("^the " + subj + " (?:gains?|gets?|has) go again$", "i").test(tail)) ops = [["ga"]];
     else {
       const pm = tail.match(/^the attack (?:gains?|gets?|has) \+(\d+)\{p\}$/i);
       if(pm) ops = [["pump", +pm[1]]];
       else {
         const am = tail.match(/^deal (\d+) arcane damage to target opposing hero$/i);
         if(am) ops = [["arcane", +am[1]]];
+        /* FLURRY'S PAYLOAD IS A MECHANIC THIS ENGINE ALREADY HAS.
+           Dorinthea's hero ability is "you may attack an additional time
+           with that weapon this turn", and `weaponRefresh` models it by
+           lifting the weapon's Once-per-Turn allowance and nothing else.
+           "Twice this turn" counts the activation that TRIGGERED this, so
+           one extra swing is the whole of it. Before building machinery
+           for a shape, check whether the machinery is the shape you
+           already have (v3.58). */
+        else if(/^you may attack with the weapon twice this turn$/i.test(tail)) ops = [["wpnAgain"]];
       }
     }
     if(!ops) continue;                    /* unreadable payload — do not claim it */
-    fx.atkTrigger = {weaponToo: !!m[1], ops};
+    fx.atkTrigger = {on, ops};
     /* MARK IT CONSUMED, because it is WIRED. Rule 2 forbids parsing ahead
        of wiring — reading a clause raises the card's tier and makes the
        audit claim it works — and the other side of that rule is that a
