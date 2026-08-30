@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-30T00:00:45.101Z",
- "appVer": "3.61",
+ "generated": "2026-08-30T01:17:30.318Z",
+ "appVer": "3.63",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 352,
-  "part": 41,
+  "full": 355,
+  "part": 38,
   "none": 12
  },
  "heroes": {
@@ -5417,24 +5417,22 @@
     "battleworn",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Attack Reaction - {r}, destroy this: Target arrow attack with {p} greater than its base gets go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Battleworn",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Attack Reaction - {r}, destroy this: Target arrow attack with {p} greater than its base gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Target arrow attack with {p} greater than its base gets go again [1r]",
    "tx": "Attack Reaction - {r}, destroy this: Target arrow attack with {p} greater than its base gets go again.\nBattleworn",
    "flags": [
     "granted go-again with no parsed grant path",
@@ -9337,7 +9335,7 @@
     "Destroy the dagger."
    ],
    "weaponCost": null,
-   "eqAbility": "destroy: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
+   "eqAbility": null,
    "tx": "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero. If damage is dealt this way, the dagger has hit. Destroy the dagger.",
    "flags": []
   },
@@ -9409,22 +9407,20 @@
     "battleworn",
     "mark"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Attack Reaction - Destroy this: Mark target opposing hero.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Battleworn",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Attack Reaction - Destroy this: Mark target opposing hero."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": "destroy: Mark target opposing hero",
    "tx": "Attack Reaction - Destroy this: Mark target opposing hero.\nBattleworn",
@@ -9449,22 +9445,20 @@
     "go again",
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Attack Reaction - Destroy this: Target attack with stealth gets go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Arcane Barrier 1",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Attack Reaction - Destroy this: Target attack with stealth gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": "destroy: Target attack with stealth gets go again",
    "tx": "Attack Reaction - Destroy this: Target attack with stealth gets go again.\nArcane Barrier 1",

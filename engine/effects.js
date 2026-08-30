@@ -2126,7 +2126,21 @@ function makeEffects(ctx){
          resolves rather than a pumped one the wall quietly reduces. */
       total = capNoPump(n, card, total);
 
-      n.pend = {card, from, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      /* WHO DECLARED IT (v3.63). `pend.by` was written by `judge.declareAttack`
+         and by nothing else, so on the TRAINER it was undefined — and every
+         reader of it (`atkMinus`'s hostile test, `defGA`/`defPumped`, and
+         `execute`'s own attack-reaction branch) guards on `by != null`, so
+         the reaction branch below was simply unreachable on that board. The
+         actor at declaration IS the declarer, and judge's own `by: seat`
+         comes after the spread and still wins, so this changes nothing at
+         the table and makes the trainer's answer exist.
+
+         It changes no trainer behaviour today either, and that was measured
+         rather than assumed: both `hostile` tests ask `by !== actorOf(n)`,
+         which was FALSE with `by` absent and is FALSE now for your own
+         swing — and the dummy's swing is the `[3,4,5]` scalar on
+         `n.incoming` with no pend at all. */
+      n.pend = {card, from, by: actorOf(n), total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -2261,7 +2275,15 @@ function makeEffects(ctx){
          PLAY was not, so a card that resolved to nothing visible left no
          trace of having been played at all */
       n = L(n, `${act(n).name} ${/^you$/i.test(act(n).name||"") ? "play" : "plays"} ${card.name}${from==="weapon"||from==="hero"||from==="board" ? " — activated" : ""}.`);
-      n = runOps(n, fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      /* AN ACTIVATED ATTACK-REACTION ABILITY RESOLVES ONTO THE OPEN LINK,
+         SO ITS OPS ARE NOT RUN HERE (v3.63). `attackRx` runs them itself,
+         against the attack the ability names — running them here as well
+         would be VALUE-DOUBLED on the fairness sweep's own terms, and
+         running them here INSTEAD would fire Prey Spotters' mark with no
+         target check and Stalker's Steps' go again onto the card's own
+         (nonexistent) attack. One place, and it is the one that knows
+         what the link is. */
+      n = runOps(n, card._attackRx ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       /* ---- THE LATE CONDITION PASS (v3.60) ---------------------------
          "…this way" asks what THIS card's own resolution just did, so it
          can only be answered here — after `fx.ops` have run. The main
@@ -2290,7 +2312,29 @@ function makeEffects(ctx){
          ownership test `atkMinus` and the Traps make. Without a live pend
          there is nothing to react to, so the printed `buffNext` reading
          stays as the honest fallback rather than the card doing nothing. */
-      if(fx.self && !isAttack(card) && isAR(card) && n.pend && n.pend.by === actorOf(n)){
+      /* THE SAME RESOLUTION, REACHED BY ACTIVATION RATHER THAN BY PLAY
+         (v3.63). Six pool records print "Attack Reaction - <cost>:" as an
+         ACTIVATED ability, and until now `parseHeroPower`'s unanchored
+         match read the `action` inside RE-ACTION and built them as
+         action-speed abilities — offered in the action phase, resolving
+         with no link to target. Three were live and wrong; the other three
+         refuse for their own reasons (see the parser).
+
+         The powCard's `tt` is "Equipment Ability", so `isAR` is FALSE for
+         it and the branch above can never claim it — the flag is the
+         window, exactly as `_instant` is. And there is no `fx.self` test:
+         these grant `mark` and go again rather than a pump, and requiring
+         a pump is what makes the branch above an attack-reaction CARD's. */
+      if(card._attackRx){
+        if(!(n.pend && n.pend.by === actorOf(n)))
+          n = L(n, `${card.name}: no attack of yours to react to.`);
+        else {
+          const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0});
+          if(rx.why) n = L(n, rx.why);
+          else { n = rx.game; if(rx.pump) n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
+        }
+      }
+      else if(fx.self && !isAttack(card) && isAR(card) && n.pend && n.pend.by === actorOf(n)){
         const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0});
         if(rx.why) n = L(n, rx.why);
         else { n = rx.game; n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
@@ -2970,7 +3014,12 @@ function makeEffects(ctx){
     const pend = s.pend;
     if(!pend || !pend.card) return {game: s, pump: 0, why: c.name + " has no attack to react to."};
     /* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER. */
-    if(fx.selfQ && !qualMatches(fx.selfQ, pend.card)){
+    /* THE QUALIFIER ATOMS THAT ARE NOT PRINTED FIELDS (v3.63). `pumped`
+       is a fact about the LINK, so it rides in as an opt the way `from`
+       and `boosted` do — an absent one answers NO, which leaves the
+       reaction with no legal target rather than a free grant. */
+    const qo = {pumped: pendPumped(s), atk: true};
+    if(fx.selfQ && !qualMatches(fx.selfQ, pend.card, qo)){
       const want = P.qualLabel(fx.selfQ);
       return {game: s, pump: 0,
               why: `${c.name} targets ${want} — ${pend.card.name} isn't one.`};
@@ -2991,7 +3040,7 @@ function makeEffects(ctx){
        instead, the same call v2.04 made for unpayable costs. */
     let mode = null;
     if(fx.modes && fx.modes.length){
-      mode = fx.modes.find(md => md.q && qualMatches(md.q, pend.card)) || null;
+      mode = fx.modes.find(md => md.q && qualMatches(md.q, pend.card, qo)) || null;
       if(!mode) return {game: s, pump: 0,
         why: `${c.name}: no mode of it can target ${pend.card.name}.`};
       n = L(n, `${c.name}: ${mode.label}.`);
@@ -3033,7 +3082,7 @@ function makeEffects(ctx){
     /* `fx.ga` on an attack reaction can only mean the TARGET's go again —
        no attack reaction in the pool prints the keyword for itself. */
     if(fx.ga && n.pend){
-      if(qualMatches(fx.gaQ, n.pend.card)){
+      if(qualMatches(fx.gaQ, n.pend.card, qo)){
         n.pend = {...n.pend, ga: true};
         n = L(n, `${c.name}: ${n.pend.card.name} goes again.`);
       } else {
@@ -4504,6 +4553,26 @@ function thawFrost(game, seat){
    Returns INDICES into `live.options`, in the order they were taken, with
    no reliance on `game.rng` — the options are already a total order with
    ties broken on uid, so two peers and a replay decide identically. */
+/* IS THE OPEN LINK ALREADY ABOVE ITS PRINTED POWER? (v3.63)
+
+   `linkPumps` asks this at SETTLE time, off its own running total. A
+   reaction asks it at REACTION time, when everything applied so far is
+   still `{k:"rx"}` layers waiting on the stack — so the two moments need
+   the same answer from ONE body, or `judge.legal` and `attackRx` disagree
+   about whether Bolt'n Boots has a legal target: the ability is offered,
+   the piece is destroyed to pay for it, and then it refuses itself.
+
+   PURE, AND OUT HERE, FOR THE SAME REASON `thawFrost` IS — judge.js asks
+   it from `legal`, which holds no effects context, so a copy built inside
+   `makeEffects` would be reachable from exactly one of the two callers
+   that must agree. */
+function pendPumped(s){
+  const p = s && s.pend;
+  if(!p || !p.card) return false;
+  const rx = (s.stack || []).filter(x => x.k === "rx").reduce((a, x) => a + (x.pump || 0), 0);
+  return ((p.total || 0) + rx) > (p.card.power || 0);
+}
+
 function soakPolicy(live, sd){
   if(!live || !live.options) return [];
   const lethal = ((sd && sd.hp) || 0) - (live.amount || 0) <= 0;
@@ -4553,6 +4622,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, settleIntellect,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

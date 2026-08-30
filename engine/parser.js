@@ -1305,9 +1305,25 @@ function classifyClause(raw){
   if(m=c.match(/^(?:this|it) (?:gets|gains|has) (dominate|intimidate|overpower|crush|phantasm)$/))
     return R([["gainKw",m[1]]]);
   if(m=c.match(/deals? (\d+) arcane damage/)) return R([["arcane",+m[1]]]);
-  /* plain (non-arcane) damage from an effect — "deal 2 damage to any target" */
-  if(m=c.match(/deals? (\d+) damage to (?:any target|target hero|them|the other hero|the defending hero)/))
-    return R([["dmg",+m[1]]]);
+  /* plain (non-arcane) damage from an effect — "deal 2 damage to any target"
+
+     A DAMAGE CLAUSE CAN NAME A SUBJECT, AND DROPPING IT IS THREE BUGS AT
+     ONCE. This match is unanchored, so Danger Digits' "target dagger you
+     control THAT ISN'T ON THE ACTIVE CHAIN LINK deals 1 damage to the
+     defending hero" reads as a bare [["dmg",1]] from the EQUIPMENT — the
+     chosen dagger, the "the dagger has hit" fiction and the printed
+     "Destroy the dagger" all silently gone, and the last of those is a
+     DRAWBACK. Measured over the pool: exactly two records print the
+     third-person "deals", and Bloodrot Pox's subject is "it", which IS the
+     resolving card. Everything else is imperative. So a third-person
+     subject that is not this/it refuses — v3.00's unanchored-match rule,
+     and the reason it matters here is that nothing reached this clause
+     until the reaction-ability route did. */
+  if(m=c.match(/(deals?) (\d+) damage to (?:any target|target hero|them|the other hero|the defending hero)/)){
+    const subj = c.slice(0, m.index).trim();
+    if(m[1] === "deals" && !/\b(this|it)$/.test(subj)) return null;
+    return R([["dmg",+m[2]]]);
+  }
   /* "DRAW A CARD THEN DISCARD A RANDOM CARD" IS TWO OPS, AND ONLY THE
      FIRST WAS READ. The match below is unanchored, so it consumed the
      clause, returned [["draw",1]] and filed it `run` — tier `full`, with
@@ -2039,6 +2055,16 @@ function attackTail(raw){
     f[m[2] === "less" ? "costLe" : "costGe"] = +m[1]; t = t.slice(m[0].length).trim(); }
   if(m = t.match(/^with (\d+) or (less|more) base \{p\}/)){
     f[m[2] === "less" ? "powLe" : "powGe"] = +m[1]; t = t.slice(m[0].length).trim(); }
+  /* "WITH {p} GREATER THAN ITS BASE" IS NOT A FIELD — it is a fact about
+     the OPEN LINK, so it joins `from` and `boosted` as an atom the caller
+     answers. Four pool records print the phrase; the two TRAPS
+     (Den of the Spider, Inertia Trap) ask it of the attack they defend and
+     have their own `defPumped` condition, and these two ask it of the
+     attack they are buffing: Bolt'n Boots and Boltyn. `pumped` is already
+     the name of that question in `linkPumps`, so this reuses it rather
+     than inventing a second word for one fact. */
+  if(m = t.match(/^with \{p\} greater than (?:its|their) base/)){
+    f.pumped = true; t = t.slice(m[0].length).trim(); }
   /* THESE TWO ARE ABOUT THE PLAY, NOT THE CARD, so `qualMatches` takes
      them from the caller — the same split `defendValue` keeps. A caller
      that does not say answers no, and the buff simply does not apply. */
@@ -2087,6 +2113,7 @@ function qualLabel(qual){
   if(qual.powGe  != null) post.push("with " + qual.powGe + " or more base {p}");
   if(qual.from)    post.push("played from your " + qual.from);
   if(qual.boosted) post.push("you boost");
+  if(qual.pumped)  post.push("with {p} above its base");
   const noun = pre + (qual.nonAtk ? "non-attack action card"
                     : qual.aac ? "attack action card" : "attack")
              + (post.length ? " " + post.join(" ") : "");
@@ -2123,6 +2150,10 @@ function qualMatches(qual, card, opts){
   if(qual.powGe != null && !(c.power != null && +c.power >= qual.powGe)) return false;
   if(qual.from && opts.from !== qual.from) return false;
   if(qual.boosted && !opts.boosted) return false;
+  /* THE CALLER'S ANSWER, and an absent one is NO. Only the site holding the
+     open link can compare a total against a base, and a reaction that
+     buffed an unpumped attack would be stronger than printed. */
+  if(qual.pumped && !opts.pumped) return false;
   /* IS THIS PLAY AN ATTACK AT ALL? (v3.43) The printed word "attack" is the
      ANCHOR the readers below match on, not a captured atom, so until now no
      qualifier could say it — and `qualLabel` was already claiming it out
@@ -3390,6 +3421,26 @@ function fxParse(card){
     const HA = /^(?:once per turn )?instant\s*[-—]/i;
     fx.clauses.forEach(cl => { if(cl.st === "skip" && HA.test(cl.t)) cl.st = "run"; });
   }
+  /* AN ACTIVATED ATTACK REACTION IS READ BY `parseHeroPower`, NOT HERE
+     (v3.63) — `classifyClause` refuses the line on purpose, so the generic
+     matchers below cannot claim it INCLUDING ITS COST (v3.59). Now that
+     the route exists on both boards, leaving the clause `skip` under-reports
+     a card that works: v3.21's one-sided ledger, and "under-reporting is the
+     safe direction only while somebody is looking".
+
+     THE CREDIT IS CONDITIONAL ON THE READER ANSWERING, which is the whole
+     difference between this and a `noop`. Danger Digits' payload refuses
+     (its subject is a chosen dagger and it prints a drawback) and Boltyn's
+     cost is a soul banish nothing builds — `parseHeroPower` returns null
+     for both, so neither is credited and both stay honestly unfinished.
+     Same shape and same guard as `handAbility` directly above. */
+  {
+    const rxAb = parseHeroPower(card.tx || "", true);
+    if(rxAb && rxAb.kind === "attackRx"){
+      const RA = /^(?:once per turn )?attack reaction\s*[-—]/i;
+      fx.clauses.forEach(cl => { if(cl.st === "skip" && RA.test(cl.t)) cl.st = "run"; });
+    }
+  }
   const runs = fx.clauses.filter(x=>x.st!=="skip").length;
   fx.tier = fx.clauses.length===0 ? "full" : runs===fx.clauses.length ? "full" : runs>0 ? "part" : "none";
   /* `onHitHero` COUNTS TOO (v3.45). Splitting the on-hit list by its
@@ -3408,9 +3459,33 @@ function fxParse(card){
 }
 function parseHeroPower(tx, allowDestroy){
   const t = clean(tx);
-  const m = t.match(/(once per turn )?(action|instant)\s*[-—]*\s*([^:]{0,40}?):\s*([^.]+)/i);
+  /* "REACTION" CONTAINS "ACTION", AND THIS MATCH WAS UNANCHORED (v3.63).
+     `clean` collapses the newlines, so the reader cannot anchor on `^`
+     and never did — which meant "Attack Reaction - Destroy this: …"
+     matched on the `action` inside RE-ACTION and came back
+     `kind: "action"`. Driven through `build.js`: Prey Spotters and
+     Stalker's Steps were BUILT as action-speed abilities and offered in
+     the action phase, where their printed window is the attack-reaction
+     step. Sev-3 "illegal play allowed", and Stalker's Steps granted go
+     again — an action point — off an ability with no attack to target.
+
+     v2.44 named this trap and v3.30 hit it again in `nextTurnBars`; here
+     it had been live since equipment abilities got a route. The guard
+     v3.59 put in `classifyClause` kept the COVERAGE TIER honest and could
+     never reach this, because this reader runs its own regex over the raw
+     text — a refusal asserted in one function and not driven in the other.
+
+     No lookbehind: this ships to a phone as authored, so the preceding
+     character is CONSUMED instead. `[^a-z]` under /i excludes upper case
+     too, which is the point — the `e` of "Reaction" must not qualify. */
+  const m = t.match(/(?:^|[^a-z])(once per turn )?(attack reaction|action|instant)\s*[-—]*\s*([^:]{0,40}?):\s*([^.]+)/i);
   if(!m) return null;
   const costStr = (m[3]||"").trim();
+  /* ONE NAME FOR THE WINDOW. "attack reaction" is the printed spelling and
+     `attackRx` is what build.js stamps and judge.js gates on, so it is
+     normalised HERE rather than at each of the three consumers — two
+     spellings of one fact is the drift this project names on every page. */
+  const kind = m[2].toLowerCase() === "attack reaction" ? "attackRx" : m[2].toLowerCase();
   const sd = allowDestroy && /\bdestroy\b/i.test(costStr);
   /* A COUNTER COST IS THE ONE "REMOVE" THIS READER ACCEPTS (v3.39), and
      it is narrow for the same reason the arsenal put is (v2.34): a broad
@@ -3428,11 +3503,25 @@ function parseHeroPower(tx, allowDestroy){
     if(!eff0 || eff0.status !== "run") return null;
     const after0 = t.slice(m.index + m[0].length);
     return {cost: 0, ga: /^\.?\s*go again/i.test(after0), sd: false,
-            kind: m[2].toLowerCase(),
+            kind,
             ctr: {kind: ctrM[2].toLowerCase(), x: /^x$/i.test(ctrM[1]) ? "x" : +ctrM[1]},
             eff: m[4].trim(),
             label: (m[1] ? "once/turn: " : "") + m[4].trim()};
   }
+  /* "THIS" IS THE SOURCE, AND ON A REACTION ROUTE THE SOURCE IS NOT THE
+     ATTACK (v3.63). An activated attack reaction resolves onto the OPEN
+     LINK, so a payload whose subject is the card itself has no reading
+     this engine can give: Bait prints "Once per Turn Attack Reaction - 0:
+     THIS gets +1{p} and go again" on a Ranger Token AURA, and pumping the
+     link with it would be deciding what "this" refers to — the golden rule
+     broken on an activation line. v2.33's Bull's Eye Bracers and v3.47's
+     Scuttle Toes are the same sentence about "it".
+
+     Measured: it refuses Bait alone. The three built cards print "Target
+     …" / "Mark target …", and Bait is a token NOTHING IN THE POOL CAN
+     CREATE — so this costs no card today and stops `fxParse` crediting a
+     line whose meaning nobody has ruled on. */
+  if(kind === "attackRx" && /^(?:this|it)\b/i.test((m[4]||"").trim())) return null;
   if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
@@ -3455,7 +3544,7 @@ function parseHeroPower(tx, allowDestroy){
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
-  return {cost, ga, sd:!!sd, kind:m[2].toLowerCase(), eff:m[4].trim(),
+  return {cost, ga, sd:!!sd, kind, eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
 }
 /* ---- A CARD IN YOUR HAND WITH AN ACTIVATED ABILITY -------------------
@@ -4478,7 +4567,27 @@ function rxAllowed(c, win){
    agree on every case that can actually reach this line — the disagreement
    is only for a reaction card in the ACTION window, which `playWindowFor`
    never returns. */
+/* WHICH WINDOW AN ACTIVATED ABILITY HAPPENS IN (v3.63).
+
+   Three flavours, and the FLAG is the answer: `build.js` stamps `_instant`
+   and `_attackRx` onto the powCard because its `tt` reads "Equipment
+   Ability" / "Hero Ability" and carries no printed type at all.
+
+   ONE BODY BECAUSE FOUR SITES ASK IT — judge's hero branch, judge's
+   equipment branch, and both of the trainer's gear taps. Two of those were
+   already hand-rolled ternaries kept in step by hand, which is how
+   `rxAllowed` came to exist: five copies of "may this be played here" had
+   drifted, and the drift showed up as a card that looked playable and did
+   nothing when tapped. */
+const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
+                     : ab && ab._instant  ? "instant" : "action";
+
 const costsAP = (c, window) => {
+  /* An ACTIVATED ATTACK REACTION is never played in the action window
+     (v3.63), so it never carries CR 8.1.1's point — the same reading this
+     function already gives a reaction CARD one line down, stated for the
+     flag because a powCard has no printed type line to read it off. */
+  if(c && c._attackRx) return false;
   if(c && c._instant) return false;
   if(window && window !== "action") return false;
   return !isInstantT(c);
@@ -4564,7 +4673,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, allyAttack, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,

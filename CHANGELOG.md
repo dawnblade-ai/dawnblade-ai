@@ -7,6 +7,114 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+---
+
+## v3.63 — REACTION CONTAINS ACTION, and three abilities were live in the wrong window
+
+Six pool records print `Attack Reaction - <cost>:` as an **activated
+ability**. v3.59 guarded `classifyClause` so the loose matchers could not
+eat the line including its cost, and asserted here that *"none has a
+route"*. **That assertion was about the wrong function.**
+
+`parseHeroPower` runs its OWN regex over the raw text; `clean` collapses
+the newlines, so it cannot anchor on `^` and never did — and **"REACTION"
+contains "ACTION"**. Three abilities were therefore BUILT as action-speed
+and offered in the action phase:
+
+| card | what it did |
+|---|---|
+| Prey Spotters | marked a hero for free, any time |
+| Stalker's Steps | granted **go again** — an action point — with no attack to target |
+| Danger Digits | dealt 1 damage from nothing, its printed *"Destroy the dagger"* dropped with its subject |
+
+Sev-3 *illegal play allowed*. v2.44 named the Reaction-contains-action
+trap and v3.30 hit it again in `nextTurnBars`; this is its third outing,
+and the first where the refusal had been **asserted in one function and
+never driven in the other**.
+
+**No lookbehind.** This ships to a phone as authored, so the preceding
+character is CONSUMED instead: `(?:^|[^a-z])`, which under `/i` excludes
+upper case too — the `e` of "Reaction" must not qualify.
+
+### The route, since the anchor had to read the prefix anyway
+
+`_attackRx` rides the powCard beside `_instant`, because a powCard's `tt`
+is *"Equipment Ability"* and carries no printed type at all.
+
+- **`parser.abWindow` is the ONE reader** of which window an activated
+  ability happens in. Four sites ask it — judge's hero branch, judge's
+  equipment branch and both of the trainer's gear taps — and two of them
+  were already hand-rolled ternaries kept in step by hand.
+- **It costs no action point.** CR 8.1.1 charges the point to an ACTION,
+  and `costsAP`'s own note already said *"a card played in a reaction
+  window is not being played as one"* — the reading that makes Den of the
+  Spider cost a point as an Action and none as a Defense Reaction.
+- **The printed target is a LEGALITY** (v3.11's rule, one route over),
+  refused **before** the piece is destroyed to pay for it.
+- **It resolves through `effects.attackRx`**, which already did everything
+  these payloads need — target legality, the go-again grant onto
+  `pend.card`, riders, modes. Its ops are held back from `execute`'s own
+  run, or they fire twice.
+
+### `with {p} greater than its base` — the atom the LINK answers
+
+Four records print it. The two TRAPS ask it of the attack they defend and
+have `defPumped`; **Bolt'n Boots and Boltyn ask it of the attack they are
+buffing**, and no qualifier could say so. `pumped` joins `from` and
+`boosted` as an atom the caller supplies — **an absent one answers NO**.
+
+`effects.pendPumped` is the one body, and it counts the `{k:"rx"}` layers
+still waiting on the stack: `linkPumps` folds those in at SETTLE time, so
+read off `pend.total` alone a link pumped by one reaction reads unpumped
+to the next.
+
+### Two refusals, each for its own reason
+
+- **Danger Digits.** *"Target dagger you control that isn't on the active
+  chain link **deals** 1 damage…"* — the unanchored `dmg` matcher read
+  that as a bare `[["dmg",1]]` from the EQUIPMENT: the chosen dagger, the
+  *"has hit"* fiction and a printed **drawback** all gone. Measured over
+  the pool, exactly two records print the third-person *"deals"* and
+  Bloodrot Pox's subject is *"it"*, which IS the resolving card. So a
+  third-person subject that is not this/it refuses.
+- **Bait.** *"This gets +1{p} and go again"* on a Ranger Token **Aura**.
+  On a reaction route *"this"* is the SOURCE, not the attack, so pumping
+  the link with it decides what "this" refers to — v2.33's Bull's Eye
+  Bracers and v3.47's Scuttle Toes, on an activation line. It refuses, and
+  nothing in the pool can create Bait anyway.
+
+Boltyn's ability line still refuses too: its cost is a **soul banish**,
+a cost shape nothing builds.
+
+### `pend.by` existed on one board
+
+Written by `judge.declareAttack` and by nothing else — so on the TRAINER
+it was `undefined`, and every reader guards on `by != null`, which made
+`execute`'s own attack-reaction branch **unreachable there**. The actor at
+declaration IS the declarer. Measured before changing it: both `hostile`
+tests ask `by !== actorOf(n)`, false with `by` absent and false now for
+your own swing, and the dummy's swing opens no pend at all — so no trainer
+behaviour moves.
+
+### The tier says read only when something reads it
+
+`fxParse` credits the `Attack Reaction - …` clause **conditionally on
+`parseHeroPower` answering**, the same shape and guard as `handAbility`.
+Under-reporting a card that works is v3.21's one-sided ledger; crediting
+one that does not is the no-op blind spot, and the guard is the whole
+difference.
+
+**AND THE DRILL FOR THAT WAS WRITTEN AGAINST `fx.tier` FIRST, AND WAS
+SILENT UNDER SABOTAGE** — all three refusing cards carry ANOTHER unread
+clause that pins them at `part` whatever the credit does. **A derived
+aggregate that other facts also determine cannot see a change to one of
+them.** Asserting the CLAUSE STATUS bites, and rewriting it that way is
+what found that Bait was being credited.
+
+**Measured:** 352 → **355 full**, 41 → **38 part**. 20 sabotages, all
+biting. Both `text/babel` blocks compile.
+
+
 ## v3.62 — the late "this way" pass reaches the attack branch
 
 Path of Same Ends: *"When this attacks a hero, deal 1 arcane damage to

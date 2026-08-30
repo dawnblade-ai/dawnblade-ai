@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.62
+**Current version:** v3.63
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1513 drills**.
+This is `node --test "test/*.test.js"` — currently **1602 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -411,6 +411,122 @@ landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
 
+### A REFUSAL ASSERTED IN ONE FUNCTION IS NOT A REFUSAL (v3.63)
+
+v3.59 guarded `classifyClause` against the **"Attack Reaction - <cost>:"**
+prefix, and this file said the cards therefore had no route: *"`build.js`
+builds no powCard, and neither board can offer the ability."* A drill
+asserted it. **Both were about the wrong function.**
+
+`parseHeroPower` runs its OWN regex over the raw text, `clean` collapses
+the newlines so it cannot anchor on `^`, and **"REACTION" CONTAINS
+"ACTION"** — so the match landed on the `action` inside RE-ACTION and
+three abilities were BUILT as action-speed and offered in the action
+phase:
+
+| card | did |
+|---|---|
+| Prey Spotters | marked a hero for free, any time |
+| Stalker's Steps | granted **go again** — an action point — with no attack to target |
+| Danger Digits | dealt 1 damage from nothing, its printed *"Destroy the dagger"* dropped |
+
+Sev-3 *illegal play allowed*, live. v2.44 named this trap and v3.30 hit it
+again in `nextTurnBars`; **third outing, and the first found by driving a
+claim rather than reading one.** When you write "X refuses, so nothing
+reaches Y", go and ask Y.
+
+**NO LOOKBEHIND — THE PAGE SHIPS AS AUTHORED.** The preceding character is
+CONSUMED instead (`(?:^|[^a-z])`), which under `/i` excludes upper case
+too. That is the point: the `e` of "Reaction" must not qualify.
+
+**AND `boardPow` HAD THE SAME HOLE ONE ROUTE OVER.** It stamps `_instant`
+and stamped no window for the new flag, so an arena permanent printing the
+prefix would be offered at action speed — the identical sev-3, waiting in a
+third place. **When you add a flag to one powCard builder, grep for the
+others.**
+
+### AN ACTIVATED ABILITY HAS A WINDOW, AND THE FLAG IS IT (v3.63)
+
+A powCard's `tt` is *"Equipment Ability"* / *"Hero Ability"* / *"Arena
+Ability"* and carries **no printed type at all**, so the window cannot be
+read off it. `parser.abWindow` is the one reader — `_attackRx` →
+attack-reaction, `_instant` → instant, else action — and **four sites ask
+it**, two of which were already hand-rolled ternaries kept in step by hand.
+
+- **It costs NO action point.** CR 8.1.1 charges the point to an ACTION,
+  and `costsAP`'s own note already said *"a card played in a reaction
+  window is not being played as one"* — the reading that makes Den of the
+  Spider cost a point as an Action and none as a Defense Reaction. The
+  rule was already written down; only the flag was missing.
+- **The printed target is a LEGALITY** (v3.11, one route over), refused
+  **before** the piece is destroyed. Refusing after costs the player the
+  piece for a play the rules never allowed.
+- **`effects.attackRx` already did all of it** — target legality, the
+  go-again grant onto `pend.card`, riders, modes. The whole build was a
+  window and a flag. **Before building machinery for a shape, check
+  whether the machinery is the shape you already have** (v3.58, again).
+- **Its ops are held back from `execute`'s own run**, or they fire twice:
+  `VALUE-DOUBLED` on the fairness sweep's own terms.
+
+### `pend.by` EXISTED ON ONE BOARD (v3.63)
+
+Written by `judge.declareAttack` and by nothing else. Every reader guards
+on `by != null`, so on the TRAINER `execute`'s own attack-reaction branch
+was **unreachable** — not a missing rule, a missing FIELD, which reads as
+wired because the rule is right there.
+
+The actor at declaration IS the declarer. **Measured before changing it:**
+both `hostile` tests ask `by !== actorOf(n)`, which was false with `by`
+absent and is false now for your own swing, and the dummy's swing opens no
+pend at all — so no trainer behaviour moves. v3.01's *ask which board runs
+it*, asked of a field instead of a schedule.
+
+### A DERIVED AGGREGATE CANNOT SEE A CHANGE TO ONE OF ITS INPUTS (v3.63)
+
+`fxParse` credits the reaction clause **conditionally on `parseHeroPower`
+answering** — the same shape and guard as `handAbility`. Under-reporting a
+card that works is v3.21's one-sided ledger; crediting one that does not is
+the no-op blind spot, and that guard is the whole difference.
+
+**THE DRILL FOR IT WAS WRITTEN AGAINST `fx.tier` AND WAS SILENT UNDER
+SABOTAGE.** All three refusing cards carry ANOTHER unread clause that pins
+them at `part` whatever the credit does. Assert on the **clause status** —
+the thing the change writes — not on a number several other facts also
+determine. Rewriting it that way is what found that **Bait was being
+credited**: *"This gets +1{p}"* on a Ranger Token Aura, where on a reaction
+route *"this"* is the SOURCE and not the attack. Reading it onto the link
+decides what "this" refers to, which is v2.33's Bull's Eye Bracers and
+v3.47's Scuttle Toes on an activation line. It refuses.
+
+### A DAMAGE CLAUSE CAN NAME A SUBJECT (v3.63)
+
+Danger Digits prints *"Target dagger you control that isn't on the active
+chain link **deals** 1 damage to the defending hero. … **Destroy the
+dagger.**"* The `dmg` matcher is unanchored, so it read a bare
+`[["dmg",1]]` **from the equipment** — the chosen dagger, the *"has hit"*
+fiction and a printed **DRAWBACK**, all gone at once.
+
+**Measured before narrowing it:** exactly two pool records print the
+third-person *"deals"*, and Bloodrot Pox's subject is *"it"*, which IS the
+resolving card. Everything else is imperative. So a third-person subject
+that is not this/it refuses, and nothing else moves.
+
+### THE COMPILE CHECK CAN BE RUN (v3.63)
+
+`html-balance.test.js` proves the brackets balance and v2.27 shipped a page
+that was balanced AND broken, so compiling both `text/babel` blocks with
+`@babel/standalone` is the stated manual pre-ship step. It stays out of
+`npm test` because the project has no dependencies — but it can be
+installed into a **scratch directory** and run against `index.html` from
+there in about a second, which keeps `npm test` green on a fresh clone and
+removes every excuse for skipping it:
+
+```sh
+npm install --no-save --prefix "$SCRATCH" @babel/standalone
+# then transform each <script type="text/babel"> body with
+# {presets:["react"], sourceType:"script"}
+```
+
 ### A TRACE BELONGS WHERE THE FACT BECOMES TRUE (v3.62)
 
 *"If damage is dealt this way"* is recorded **inside `arcaneHit`, in the
@@ -537,11 +653,17 @@ it was not guarded.
 
 Prey Spotters' *"Attack Reaction - Destroy this: Mark target opposing
 hero"* was claimed whole by the loose `mark` matcher, so the audit
-counted the clause read and filed the card **`full`** — while
-`parseHeroPower` refuses the line, `build.js` therefore builds **no
-powCard**, and neither board can offer the ability. **A card that reports
-finished and cannot be activated at all**, which is the no-op blind spot
-wearing v3.00's unanchored-match disguise.
+counted the clause read and filed the card **`full`**, which is the no-op
+blind spot wearing v3.00's unanchored-match disguise.
+
+> **THE SENTENCE THAT USED TO FOLLOW HERE WAS FALSE, AND IT COST v3.63.**
+> It read *"`parseHeroPower` refuses the line, `build.js` therefore builds
+> no powCard, and neither board can offer the ability."* `parseHeroPower`
+> runs its OWN unanchored regex over the raw text and matched the `action`
+> inside **RE-ACTION** — so three of these were BUILT, at action speed,
+> and offered in the action phase. A refusal asserted in one function and
+> never driven in the other. See "A REFUSAL ASSERTED IN ONE FUNCTION IS
+> NOT A REFUSAL"; the route is built now and the prefix is a real window.
 
 **IT REFUSES OUTRIGHT, and the first attempt is why.** Written to defer
 to the equipment reader like the two prefixes above it, the guard made

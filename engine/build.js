@@ -189,10 +189,15 @@ function buildSide(h, d, db, opts, rng, ctr){
        stops at the period, which orphaned the rider so it never fired.
        Strip the cost prefix off the line and keep the rest. */
     const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-      .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+      .find(l=>/^(?:once per turn )?(?:attack reaction|action|instant)\s*[-—]/i.test(l)) || "";
     const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
+    /* `_attackRx` IS THE WINDOW, and it is the third flag of its kind
+       beside `_instant` and `sd`. It is not a printed type — the powCard's
+       `tt` is "Equipment Ability" — so judge.js and the trainer ask it
+       separately rather than reading it off a type line that does not
+       carry it, exactly as they do for `_instant`. */
     gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
+      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
   const _atk = deck.filter(isAttack);
   const _ga = deck.filter(c=>fxParse(c).ga).length;
   const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;

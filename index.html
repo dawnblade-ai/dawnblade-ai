@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.62"; /* v3.62 — the late "this way" pass reaches the ATTACK branch, which is where the second half of the family lives: Path of Same Ends asks whether the arcane its own preceding clause just dealt actually landed, and the trace is recorded where the damage LANDS so CR 7.5.5's prevented-is-not-dealt governs it without being restated — a hit turned entirely aside records nothing and grants nothing. `pend` is built BEFORE the on-attack trigger fires and carries its own copy of ga, so a grant that set only the local would never reach the resolution; it goes to both. One body serves both branches with the difference expressed as a grantGa callback and nothing else, because two copies of a condition loop is the drift this file names on nearly every page. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.63"; /* v3.63 — "Attack Reaction - <cost>:" is an activation prefix, and `parseHeroPower` could not anchor on it because `clean` collapses the newlines — so the match found the `action` inside RE-ACTION and built three abilities at ACTION SPEED, offered in the action phase with no link to target: sev-3 illegal-play-allowed, live, and a refusal this project had asserted in one function and never driven in the other. Anchored (no lookbehind, the preceding character is consumed), the prefix is now read as its own window: `_attackRx` rides the powCard beside `_instant`, `abWindow` is the one reader all four sites ask, the ability costs no action point, its printed target is a LEGALITY refused before the piece is destroyed, and it resolves through `effects.attackRx` onto the open link. Danger Digits refuses because its damage clause names a SUBJECT the engine would drop along with a printed drawback, and Bait because "this" on a reaction route is the source rather than the attack. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1441,6 +1441,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     rxPump = DawnParser.rxPump,
     isInstantT = DawnParser.isInstantT, costsAP = DawnParser.costsAP,
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
+    abWindow = DawnParser.abWindow,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
     isAura = DawnParser.isAura, auraCount = DawnParser.auraCount,
     isFrostbite = DawnParser.isFrostbite, frostCount = DawnParser.frostCount,
@@ -3413,8 +3414,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        line and an ally's says "Action - Ally", never "Attack", exactly as
        a weapon's never does. Both are told apart by the ROUTE, so both
        are exempt here or a second ally could not join an open chain. */
-    if(s.chainOpen && from!=="weapon" && from!=="ally" && !isAttack(card) && !isInstantT(card) && !card._instant)
+    /* AN ACTIVATED ATTACK REACTION IS PLAYED WITH THE CHAIN OPEN — that is
+       the only time it is legal at all (v3.63), so it joins the exemptions
+       here rather than being told to close the chain first. */
+    if(s.chainOpen && from!=="weapon" && from!=="ally" && !isAttack(card) && !isInstantT(card) && !card._instant && !card._attackRx)
       return L(s, "Combat chain is open — close it (⛓) before playing a non-attack action.");
+    /* …AND IT IS REFUSED WITHOUT ONE. The trainer's `stack` mode IS the
+       attack-reaction window (priority.js's `fromTrainer` maps it to
+       reaction / attacker you), so a tap outside it is a play the rules
+       never allowed — and refusing here, before the piece is destroyed to
+       pay for it, is the difference between a rule and a lost card. It
+       says WHICH window rather than dead-tapping, the same call
+       `rxAllowed` makes. */
+    if(card._attackRx && !(s.mode==="stack" && s.pend && s.pend.by===actorOf(s)))
+      return L(s, `${card.name} is an attack reaction — declare an attack first, then use it before the damage step.`);
     if(fx.addCost && fx.addCost.discard){
       const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
@@ -3475,7 +3488,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(!pw) return null;
     return {name:b.card.name+" — ability", pitch:0, cost:pw.cost, power:null, def:null,
       tt:"Arena Ability", kw:pw.ga?["Go again"]:[], tx:pw.eff, sd:pw.sd,
-      _instant:pw.kind==="instant", img:b.card.img, dbImg:b.card.dbImg,
+      /* THE WINDOW FLAG BELONGS ON EVERY ROUTE THAT BUILDS A POWCARD
+         (v3.63). Left off here, an arena permanent printing an
+         "Attack Reaction - …" ability is built with no window at all and
+         is therefore offered at ACTION speed — the exact sev-3 the anchor
+         fix removed from `build.js`, waiting in a third place. Bait is the
+         pool's only such token and nothing can create it, so this is a
+         guard rather than a fix; `fxParse` credits the clause as read, and
+         a credit with no route is the no-op blind spot. */
+      _instant:pw.kind==="instant", _attackRx:pw.kind==="attackRx",
+      img:b.card.img, dbImg:b.card.dbImg,
       _gearArt:true, uid:"bp"+b.uid};
   };
   /* ---- A CARD IN HAND WITH AN ACTIVATED ABILITY (v2.61) ----------------
@@ -4310,7 +4332,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           }
           if(w) return tapTwice(gr, "tap again to swing", ()=>tryPlay(gr,"weapon",i));
           if(gr.pow && !gr.destroyed)
-            return tapTwice(gr.powCard, "tap again to activate", ()=>tryPlay(gr.powCard,"hero",i));
+            return tapTwice(gr.powCard,
+              abWindow(gr.powCard)==="attack-reaction" ? "tap again — attack reaction" : "tap again to activate",
+              ()=>tryPlay(gr.powCard,"hero",i));
           /* nothing to commit to — a second tap opens the full card instead */
           return tapTwice(gr, "tap again for full card", ()=>setZoom(gr));
         })()}>

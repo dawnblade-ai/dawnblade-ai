@@ -111,6 +111,25 @@ const {gearDef, gearBlockApply} = GM;
    than leaving a shorter name next to the right one. */
 const isAttack = c => TY.isAttack(c);
 
+const abWindow = ab => PR.abWindow(ab);
+
+/* A PRINTED TARGET RESTRICTION IS A LEGALITY, NOT A MODIFIER (v3.11) —
+   and an ACTIVATED reaction has one just as a reaction CARD does. Stalker's
+   Steps targets "attack with stealth"; activating it into a swing that has
+   none costs the player the piece for a play the rules never allowed, which
+   is the worst kind of dead tap. `effects.pendPumped` is the one reader of
+   "already above its printed power", so this check and `attackRx`'s own
+   cannot disagree and offer an ability that then refuses itself. */
+function rxTargetWhy(g, ab, want){
+  if(want !== "attack-reaction") return null;
+  const q = PR.fxParse(ab).selfQ || PR.fxParse(ab).gaQ;
+  if(!q) return null;
+  const tgt = g.pend && g.pend.card;
+  if(PR.qualMatches(q, tgt, {pumped: E.pendPumped(g), atk: true})) return null;
+  return ab.name + " targets " + PR.qualLabel(q) + " — "
+       + (tgt ? tgt.name : "this attack") + " isn't one";
+}
+
 /* Every action a seat can take. Serializable by construction: a uid, a
    zone name, an index — never a card object and never a closure. That is
    what lets the same action drive a local tap, a replay and a peer. */
@@ -756,12 +775,13 @@ function legal(g, a, seat){
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
-      const want = ab._instant ? "instant" : "action";
+      const want = abWindow(ab);
       if(P.speedAllowed(g, seat).indexOf(want) < 0)
         return "no " + want + "-speed window for " + ab.name;
       /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
          instant does not. Blaze's is an Instant, so it costs none. */
-      if(!ab._instant && !(sd.ap > 0)) return "no action point left";
+      if(want === "action" && !(sd.ap > 0)) return "no action point left";
+      { const why = rxTargetWhy(g, ab, want); if(why) return why; }
       if((ab.cost || 0) > sd.res + payCeiling(sd, null))
         return ab.name + " costs " + ab.cost + " to activate and you cannot raise it";
       /* A COUNTER-SPENDING ABILITY WITH NOTHING IT CAN AFFORD IS A DEAD
@@ -846,12 +866,16 @@ function legal(g, a, seat){
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, piece))
         return piece.name + " can't be activated — " + gate.why;
-      const want = ab._instant ? "instant" : "action";
+      const want = abWindow(ab);
       if(P.speedAllowed(g, seat).indexOf(want) < 0)
         return "no " + want + "-speed window for " + piece.name;
       /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
-         instant does not. `costsAP` is the one reader of that rule. */
-      if(!ab._instant && !(sd.ap > 0)) return "no action point left";
+         instant does not, and neither does one activated in a REACTION
+         window: "a card played in a reaction window is not being played as
+         one", which is `costsAP`'s own note and the reason Den of the
+         Spider costs a point as an Action and none as a Defense Reaction. */
+      if(want === "action" && !(sd.ap > 0)) return "no action point left";
+      { const why = rxTargetWhy(g, ab, want); if(why) return why; }
       if((ab.cost || 0) > sd.res + payCeiling(sd, null))
         return piece.name + " costs " + ab.cost + " to activate and you cannot raise it";
       return null;
@@ -1524,6 +1548,7 @@ function cardWindows(card, half){
    are lost and never owed. That is also the `legal`/`reduce` agreement
    `fuzz.test.js` exists to hold. */
 function windowsNow(g, seat, card, half, zone){
+  if(card && card._attackRx) return ["attack-reaction"];
   if(card && card._instant) return ["instant"];
   const base = cardWindows(card, half);
   if(base.indexOf("instant") >= 0) return base;
@@ -1545,6 +1570,7 @@ function windowsNow(g, seat, card, half, zone){
 }
 
 function playWindowFor(g, seat, card, half, zone){
+  if(card && card._attackRx) return "attack-reaction";
   if(card && card._instant) return "instant";
   const mine = windowsNow(g, seat, card, half, zone);
   const open = P.speedAllowed(g, seat).filter(w => mine.indexOf(w) >= 0);
