@@ -1102,11 +1102,12 @@
  "sharpen": {
   "at": "2026-07-25",
   "mechanic": "sharpen",
-  "status": "unreviewed",
+  "status": "answered",
   "cards": [
    "Edict of Steel (1)"
   ],
-  "ruling": "POP UP - SHOW EQUIPPED WEAPONS - CHOOSE 1 - ADD +1 ATTACK POWER COUNTER - ADD 'AT END OF TURN, REMOVE ALL +1 ATTACK POWER COUNTERS\n\nEXTRA CONDITIONAL ABILITY - CHECK SELECTED SWORD FOR +1 ATTACK POWER COUNTER - IF YES 'CREATE' FLURRY TOKEN AND ADD IT TO PLAYER'S BOARD"
+  "ruling": "POP UP - SHOW EQUIPPED WEAPONS - CHOOSE 1 - ADD +1 ATTACK POWER COUNTER - ADD 'AT END OF TURN, REMOVE ALL +1 ATTACK POWER COUNTERS\n\nEXTRA CONDITIONAL ABILITY - CHECK SELECTED SWORD FOR +1 ATTACK POWER COUNTER - IF YES 'CREATE' FLURRY TOKEN AND ADD IT TO PLAYER'S BOARD",
+  "built": "v3.66 — read as ctrPut{kind:'pow',n:1,filter:{tt:'sword'},wipeEnd:true} with Edict of Steel's second sentence folded onto the spec as `then`. The MPW103 PRINTING settled the end-of-turn wipe the database omits and is more precise than this ruling: 'Remove all +1{p} counters FROM IT at end of turn' — all of them, and only from the sharpened sword. The threshold is read off the printed line (1/2/3 by pitch)."
  },
  "card-star-fall-0": {
   "at": "2026-07-25",

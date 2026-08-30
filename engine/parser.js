@@ -1791,6 +1791,38 @@ function classifyClause(raw){
   /* THE KIND IS TESTED IN THE GUARD, for the reason spelled out at
      `ctrSelf` below: a match-then-refuse steals the clause from any
      reader further down that DOES know the shape. */
+  /* SHARPEN — AND THE PRINTED CARD IS THE ORACLE FOR A KEYWORD, FOURTH
+     TIME (v3.66). The database carries no reminder text for any keyword,
+     and the ruling recorded 2026-07-25 said "ADD +1 ATTACK POWER COUNTER
+     … AT END OF TURN, REMOVE ALL +1 ATTACK POWER COUNTERS". The MPW103
+     printing of Edict of Steel prints it in parentheses and is more
+     precise than the ruling in the way that matters:
+
+       Sharpen target sword you control. (Put a +1{p} counter on it.
+       REMOVE ALL +1{p} COUNTERS FROM IT at end of turn.)
+
+     All of them, and only from IT — so a sword sharpened after Glisten
+     has distributed counters loses those too. Clash of Agility, Thunder
+     Quake, Pick Up the Point and now this: reading the printing is the
+     FIRST thing to try, not the last.
+
+     IT IS `ctrPut`, NOT NEW MACHINERY (v3.58's rule). The kind is `pow`,
+     which is the printed spelling `+1{p}` already maps to; the candidate
+     scan already covers the board AND the gear, which is where a sword
+     lives; and the pick sheet already exists for two or more. What the
+     keyword adds is the WIPE, which rides on the spec because it belongs
+     to the sharpen rather than to the sword — the sword's own text says
+     nothing about it, which is exactly why `idleCounterWipes` (whose
+     predicate is the PIECE's printed line) cannot answer for it. */
+  if(m = c.match(/^sharpen (.+)$/)){
+    let subj = String(cased(/^sharpen (.+)$/, 1, m[1]) || "").trim()
+                 .replace(/\s+you control\b/i, " ")
+                 .replace(/^target\s+/i, "")
+                 .replace(/\s+/g, " ").trim();
+    const filter = pickSubject(subj);
+    if(!filter) return null;
+    return R([["ctrPut", {kind:"pow", n:1, filter, label:"+1{p}", wipeEnd:true}]]);
+  }
   if((m=c.match(RX_CTR_PUT)) && CTR_KINDS[m[2]]){
     const kind = CTR_KINDS[m[2]];
     const n = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
@@ -2201,6 +2233,9 @@ function qualMatches(qual, card, opts){
    as one list so the "try the whole phrase first" rule and the fallback
    cannot drift apart about what counts as a subject. */
 const CLS_SUBJECTS = /^(?:non-attack action cards?|attack action cards?|action cards?)$/;
+/* The printed weapon subtypes the pool names as a TARGET. Closed on
+   purpose — see `optFilter`. */
+const WPN_SUBTYPES = /^(?:swords?|daggers?)$/;
 
 function optFilter(phrase){
   let rest = String(phrase||"").trim();
@@ -2298,6 +2333,19 @@ function optFilter(phrase){
   }
   const withCls = (o) => { if(cls) o.ty = [cls].concat(o.ty ? [].concat(o.ty) : []); return o; };
   if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
+  /* A PRINTED WEAPON SUBTYPE (v3.66) — "target SWORD you control". It is
+     read off `tt`, where the database keeps the subtype ("Warrior Weapon
+     - Sword (2H)"), and the vocabulary is CLOSED for the same reason
+     `CTR_KINDS` and the keyword list are: an open "any word before
+     `you control`" would claim every dynamic or rules-text subject this
+     reader exists to refuse.
+
+     MEASURED BEFORE ADDING IT (v3.33's rule): across the whole pool the
+     printed subjects of this shape are "sword" (Edict of Steel), "dagger"
+     (Danger Digits) and "ally" (Scuttle Toes, which has its own reader).
+     So this claims exactly one live card and one that refuses earlier for
+     its own reasons — no cost or pick anywhere else changes answer. */
+  if(WPN_SUBTYPES.test(low))              { f.tt = low.replace(/s$/, ""); return f; }
   if(/^attack action cards?$/.test(low))  { f.type = "attack"; return withCls(f); }
   /* "A NON-ATTACK ACTION CARD" — the pair, off the STRUCTURED array. An
      attack action card carries Action AND Attack, so excluding Attack is
@@ -3178,6 +3226,53 @@ function fxParse(card){
       if(ai >= 0){
         fx.ops[gi] = ["instantNext", Object.assign({}, fx.ops[gi][1], {amp: fx.ops[ai][1]})];
         fx.ops.splice(ai, 1);
+      }
+    }
+  }
+  /* ---- SHARPEN'S SECOND SENTENCE IS ABOUT THE SHARPENED SWORD (v3.66)
+
+     "Sharpen target sword you control. IF IT HAS N OR MORE +1{p}
+     COUNTERS, create a Flurry token."
+
+     "It" is the sword the first clause targeted, not the card resolving —
+     v2.33's Bull's Eye Bracers and v3.47's Scuttle Toes for the third
+     time. So the rider is folded onto the `ctrPut` spec here, where the
+     whole card is visible, which is the same place and reason `optCost`
+     and Stir the Aetherwinds pair their halves. Read alone the clause
+     refuses, because nothing else can say what "it" is.
+
+     THE THRESHOLD IS THE CARD'S OWN NUMBER. Upstream prints "1 or more"
+     on the red MPW103 face and "3 or more" elsewhere, so a hardcoded
+     number is right for one printing and silently wrong for the others —
+     `rustDestroy` (v3.17), Thunder Quake's heave (v3.32) and `ctrPut`'s
+     own amount (v3.55) are the same rule.
+
+     IT IS COUNTED AFTER THE COUNTER LANDS, which is what makes "1 or
+     more" satisfiable by the sharpen itself. */
+  {
+    const ci = fx.ops.findIndex(o => o[0] === "ctrPut" && o[1] && o[1].wipeEnd);
+    if(ci >= 0){
+      for(let k = 0; k < clauses.length; k++){
+        if(handled.has(k)) continue;
+        const rm = clauses[k].match(
+          /^if it has (\d+) or more \+1\{p\} counters?, (.+)$/i);
+        if(!rm) continue;
+        const sub = classifyClause(rm[2]);
+        /* an unreadable payload refuses the rider and leaves the clause
+           unread — the head still lands, and the gap stays visible */
+        if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length || sub.cond) continue;
+        fx.ops[ci] = ["ctrPut", Object.assign({}, fx.ops[ci][1],
+          {then: {min: +rm[1], ops: sub.ops}})];
+        /* THE CLAUSE LEDGER IS BUILT DURING THE WALK, and this pairing
+           runs after it — `handled` is already spent by then. So the
+           clause's own status is corrected here, the same fixup and the
+           same guard `handAbility` uses: only ever a clause this reader
+           actually folded, so a rider that refused stays `skip` and the
+           card stays honestly unfinished. */
+        const RIDER = /^if it has \d+ or more \+1\{p\} counters?,/i;
+        fx.clauses.forEach(cl => { if(cl.st === "skip" && RIDER.test(clean(cl.t))) cl.st = "run"; });
+        handled.add(k);
+        break;
       }
     }
   }

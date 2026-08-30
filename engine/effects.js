@@ -1240,6 +1240,7 @@ function makeEffects(ctx){
          because the permanents are theirs. */
       else if(k==="ctrPut"){
         const spec = v || {};
+
         const kind = spec.kind, amt = spec.n || 1;
         const label = spec.label || kind;
         const filt = promptFilter(spec.filter);
@@ -1257,6 +1258,7 @@ function makeEffects(ctx){
           actMut(n).counters = Object.assign({}, act(n).counters,
             {[t.uid]: Object.assign({}, cur, {[kind]: (cur[kind] || 0) + amt})});
           n = L(n, `${t.name} takes ${many ? amt + " " + label + " counters" : "a " + label + " counter"} — now ${(cur[kind]||0) + amt}.`);
+          n = ctrLanded(n, t, spec, srcName);
           return;
         }
         /* CALLER-SUPPLIED CANDIDATES AND NO `to` — nothing moves, the
@@ -1267,7 +1269,19 @@ function makeEffects(ctx){
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:srcName,
           cards:cands, min:1, max:1,
-          ctrStamp:{kind, n:amt, label},
+          /* A SPEC ONLY CARRIES FIELDS ITS CONSUMER READS (v2.34's
+             `arsStamp` rule). Left off here, Sharpen's wipe and its
+             Flurry rider would fire on the single-candidate path and
+             silently vanish the moment a second sword was equipped.
+
+             AND THE TWO NEW FIELDS ARE OPT-IN (v3.58's rule). Always
+             present, they change the SHAPE of every `ctrStamp` in the
+             pool, and a drill that `deepEqual`s the whole stamp — which
+             it is right to do — goes red on a card printing no sharpen at
+             all. */
+          ctrStamp:Object.assign({kind, n:amt, label},
+                                 spec.wipeEnd ? {wipeEnd:true} : {},
+                                 spec.then    ? {then:spec.then} : {}),
           title:`Where do the ${label} counters go?`,
           hint:`${many ? amt + " counters" : "One counter"} — choose which permanent takes ${many ? "them" : "it"}.`}];
       }
@@ -2799,6 +2813,7 @@ function makeEffects(ctx){
       actMut(n).counters = Object.assign({}, act(n).counters,
         {[got.uid]: Object.assign({}, cur, {[st.kind]: (cur[st.kind] || 0) + (st.n || 1)})});
       n = L(n, `${got.name} takes ${(st.n||1) > 1 ? st.n + " " + st.label + " counters" : "a " + st.label + " counter"} — now ${(cur[st.kind]||0) + (st.n||1)}.`);
+      n = ctrLanded(n, got, st, p.src || "");
     }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
@@ -3081,6 +3096,36 @@ function makeEffects(ctx){
      printed target restriction reads the same on both boards: "target
      sword attack" cannot be played onto a dagger at all, and that is a
      legality rather than a modifier. */
+  /* WHAT HAPPENS WHERE A COUNTER LANDS (v3.66) — ONE BODY, because it has
+     TWO call sites: `runOps`'s `ctrPut` when a single candidate needs no
+     choice, and `applyAnswer` when a sheet was opened. Written twice they
+     drift, and what they carry is Sharpen's whole second sentence.
+
+       `wipeEnd`  the KEYWORD's reminder text — "remove all +1{p} counters
+                  FROM IT at end of turn". Stamped on the piece rather
+                  than derived, because the SWORD's own text says nothing
+                  about it: `idleCounterWipes` asks the PIECE's printed
+                  line and so structurally cannot answer for this.
+       `then`     "if IT has N or more +1{p} counters, …" — "it" is the
+                  sharpened sword, not the resolving card (v2.33, v3.47),
+                  and it is counted AFTER the counter lands, which is what
+                  makes the red printing's "1 or more" satisfiable at all. */
+  const ctrLanded = (nn, t, st, srcName) => {
+    let g2 = nn;
+    if(st.wipeEnd){
+      const mark = e => (e && e.uid === t.uid) ? Object.assign({}, e, {_powEnd: true}) : e;
+      actMut(g2).gear  = (act(g2).gear  || []).map(mark);
+      actMut(g2).board = (act(g2).board || []).map(mark);
+      g2 = L(g2, `${t.name} keeps its +1{p} counters only until the end of the turn.`);
+    }
+    if(st.then){
+      const have = ((act(g2).counters || {})[t.uid] || {}).pow || 0;
+      if(have >= st.then.min) g2 = runOps(g2, st.then.ops, srcName || t.name);
+      else g2 = L(g2, `${t.name} has ${have} +1{p} counter${have === 1 ? "" : "s"} — ${st.then.min} were needed.`);
+    }
+    return g2;
+  };
+
   const attackRx = (s, c, o) => {
     o = o || {};
     const fx = fxParse(c);
@@ -4500,6 +4545,45 @@ function beginEndPhase(game, seat){
         ctr[uid] = Object.assign({}, ctr[uid], {pow:0});
         msgs.push(gr.name + " never landed a blow this turn — its +" + lost + "{p} in counters falls away.");
       }
+      me.counters = ctr; sides[seat] = me; n = Object.assign({}, n, {sides});
+    }
+  }
+
+  /* (4a) SHARPEN'S COUNTERS FALL AWAY (v3.66). The MPW103 printing of
+     Edict of Steel prints it in the keyword's own reminder text —
+     "Remove all +1{p} counters FROM IT at end of turn" — so ALL of them
+     go, and only from the piece that was sharpened. A sword that already
+     carried counters from Glisten loses those too.
+
+     IT IS A STAMP, NOT A PREDICATE, and that is the whole reason it is a
+     separate step from the idle wipe directly above. `idleCounterWipes`
+     asks the PIECE's own printed line (`wipePowIfIdle`), and a sharpened
+     sword's text says nothing about sharpen at all — the schedule belongs
+     to the card that sharpened it. Deriving it from the piece would
+     answer false forever.
+
+     IT RUNS BESIDE THE IDLE WIPE AND BEFORE THE SWEEP, for the order this
+     step already states: specific readers first, the generic filing last. */
+  {
+    const sd = (n.sides || [])[seat] || {};
+    const marked = [...(sd.gear || []), ...(sd.board || [])]
+      .filter(e => e && e._powEnd);
+    if(marked.length){
+      const sides = n.sides.slice(), me = Object.assign({}, sides[seat]);
+      const ctr = Object.assign({}, me.counters);
+      for(const e of marked){
+        const lost = (ctr[e.uid] || {}).pow || 0;
+        if(lost) ctr[e.uid] = Object.assign({}, ctr[e.uid], {pow: 0});
+        msgs.push((e.name || (e.card && e.card.name) || "a sharpened weapon")
+          + " was sharpened this turn — its +" + lost + "{p} in counters falls away.");
+      }
+      /* THE STAMP IS CLEARED WITH THE COUNTERS. Left on, the piece is
+         wiped again every end phase for the rest of the game, which turns
+         a one-turn buff into a permanent ban on ever holding a counter —
+         the same rule `_discWay` and `lastRoll` follow. */
+      const strip = e => (e && e._powEnd) ? Object.assign({}, e, {_powEnd: false}) : e;
+      me.gear  = (me.gear  || []).map(strip);
+      me.board = (me.board || []).map(strip);
       me.counters = ctr; sides[seat] = me; n = Object.assign({}, n, {sides});
     }
   }

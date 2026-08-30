@@ -9,6 +9,89 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.66 — Sharpen, and the printed card is the oracle for the fourth time
+
+The database carries no reminder text for any keyword. The ruling recorded
+2026-07-25 said *"ADD +1 ATTACK POWER COUNTER … AT END OF TURN, REMOVE ALL
++1 ATTACK POWER COUNTERS"*. **The MPW103 printing of Edict of Steel prints
+it in parentheses and is more precise in the way that matters:**
+
+> **Sharpen** target sword you control. *(Put a +1{p} counter on it.
+> **Remove all +1{p} counters from it** at end of turn.)*
+
+**All** of them, and only **from it** — so a sword sharpened after Glisten
+has distributed counters loses those too. Clash of Agility, Thunder Quake,
+Pick Up the Point and now this: **reading the printing is the FIRST thing
+to try, not the last.**
+
+### It is `ctrPut`, not new machinery
+
+v3.55 built the targeted counter put: the kind is `pow`, which is the
+printed spelling `+1{p}` already maps to; the candidate scan already covers
+the board AND the gear, which is where a sword lives; and the pick sheet
+already exists for two or more. **Before building machinery for a shape,
+check whether the machinery is the shape you already have** (v3.58, again).
+
+What the keyword adds is the **wipe**, and it is a STAMP rather than a
+predicate. `idleCounterWipes` asks the PIECE's own printed line
+(`wipePowIfIdle`), and a sharpened sword's text says nothing about sharpen
+— the schedule belongs to the card that sharpened it, so deriving it from
+the piece answers false forever. **The stamp is cleared with the counters**,
+or a one-turn buff becomes a permanent ban on ever holding one (the same
+rule `_discWay` and `lastRoll` follow).
+
+### "It" is the sharpened sword
+
+*"Sharpen target sword you control. **If it has N or more +1{p} counters**,
+create a Flurry token."* — "it" is the sword the first clause targeted, not
+the resolving card: v2.33's Bull's Eye Bracers and v3.47's Scuttle Toes for
+the third time. So the rider is folded onto the spec in `fxParse`, where the
+whole card is visible, which is where `optCost` and Stir the Aetherwinds
+pair their halves too.
+
+**THE THRESHOLD IS THE CARD'S OWN NUMBER** — upstream prints 1 / 2 / 3
+across the three pitches, so a literal is right for one printing and
+silently wrong for two. A drill asserts the printings actually differ,
+because a hardcoded 1 would otherwise pass a test written against the red
+face alone.
+
+**ONE BODY, TWO LANDING SITES.** The counter lands on the direct path when
+one candidate needs no choice, and in `applyAnswer` when a sheet opened.
+Dropped from `ctrStamp`, the wipe and the rider fire on the first and
+silently vanish the moment a second sword is equipped — v2.34's `arsStamp`
+rule. And the two new stamp fields are **opt-in** (v3.58): always present
+they change the shape of every `ctrStamp` in the pool and a drill that
+`deepEqual`s the whole stamp — which it is right to do — goes red on a card
+printing no sharpen at all.
+
+### A closed subtype vocabulary, measured
+
+`optFilter` had no reading for *"target **sword** you control"*. Added as a
+**closed** list, because an open "any word before `you control`" would claim
+every dynamic and rules-text subject this reader exists to refuse — and
+would do it silently. Measured across the pool: the printed subjects of that
+shape are **sword** (Edict of Steel), **dagger** (Danger Digits, which
+refuses earlier for its own reasons) and **ally** (Scuttle Toes, which has
+its own reader). Exactly three records changed parse, all Edict of Steel.
+Sabotaging the list open was **silent against every other drill in the
+file**, which is why the closure has one of its own.
+
+### The chain closes
+
+v3.65 read Flurry's trigger and payload and reported honestly that the token
+**worked and could not be created**. It can now: Edict of Steel sharpens,
+the token lands, and a driven drill spends the sword and watches Flurry free
+it for one more swing. `tools/ledger.js` moves sharpen `unreviewed` → `live`
+and the ruling is marked answered — **when you close a recorded gap, delete
+the record** (v3.41).
+
+356 full / 37 part. Flagged cards 48 → 47. 1640 drills, 0 fail. Fairness
+clean. 210 self-play games: 0 refusals, 0 violations. 15 sabotages, all
+biting. Both `text/babel` blocks compile.
+
+
+---
+
 ## v3.65 — a fixed wording is not a fixed shape, at the level of a family
 
 v3.22 built `fx.atkTrigger` for four tokens printing *"when you play an

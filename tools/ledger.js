@@ -63,7 +63,7 @@ const KEYWORDS = {
    "reprise":             {status:"live",     note:"RULED 2026-07-25: live since the dummy blocks from hand — counts the non-equipment defenders declared this chain link"},
    "retrieve":            {status:"live",        note:"RULED 2026-07-25 + the SAR017 PRINTING (v3.53): 'you may retrieve a dagger from your graveyard. (Pay {r} to equip it.)' — a graveyard pick costing {r} whose destination is the GEAR zone. Needed destroyed gear to reach the graveyard first (RULING 2026-08-29, effects.sweepGear)"},
    "rupture":             {status:"unreviewed",  note:"seen in pool; hero package TBD"},
-   "sharpen":             {status:"unreviewed",  note:"seen in pool; hero package TBD"},
+   "sharpen":             {status:"live",        note:"v3.66 — ctrPut{kind:pow,n:1}; the MPW103 PRINTING carries the reminder text the database omits: put a +1{p} counter on the target, remove ALL +1{p} counters from IT at end of turn"},
    "solflare":            {status:"unreviewed",  note:"Boltyn package"},
    "specialization":      {status:"info",        note:"hero-locked card (normalized from '<Hero> Specialization')"},
    "spellvoid":           {status:"inert-dummy", note:"destroy this to prevent N arcane — the dummy deals only physical"},

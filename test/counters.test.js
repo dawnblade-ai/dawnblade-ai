@@ -371,3 +371,218 @@ test("an UNGATED leave-trigger still reads — the refusal is narrow", {skip}, (
   assert.equal(booze.tier, "full");
   P.fxReset();
 });
+
+/* ============================================================
+   SHARPEN — AND THE PRINTED CARD IS THE ORACLE, FOURTH TIME (v3.66)
+
+   The database carries no reminder text for any keyword, and the ruling
+   recorded 2026-07-25 said "ADD +1 ATTACK POWER COUNTER … AT END OF TURN,
+   REMOVE ALL +1 ATTACK POWER COUNTERS". The MPW103 printing of Edict of
+   Steel prints it and is more precise in the way that matters:
+
+     Sharpen target sword you control. (Put a +1{p} counter on it.
+     REMOVE ALL +1{p} COUNTERS FROM IT at end of turn.)
+
+   All of them, and only from IT. Clash of Agility, Thunder Quake, Pick Up
+   the Point and now this: reading the printing is the FIRST thing to try.
+
+   It is `ctrPut`, not new machinery — the kind is `pow`, the candidate
+   scan already covers gear, and the sheet already exists for two or more.
+   ============================================================ */
+
+const sword = (uid, name) => ({uid, name: name || "Probe Sword",
+  tt: "Warrior Weapon - Sword (2H)", ty: ["Warrior", "Weapon"], kw: [], tx: "",
+  power: 4, def: null, pitch: 0, cost: 0, gi: 0});
+
+function playEdict(gear, pitch){
+  H.db();
+  P.fxReset();
+  let g = H.state({name: "Boltyn", res: 9, ap: 3,
+                   hand: [mk("Edict of Steel", pitch == null ? 1 : pitch, "ed1")],
+                   gear, board: [], counters: {}, deck: [{uid: "d1", name: "T"}]},
+                  {name: "Them", deck: [{uid: "d2", name: "T2"}]},
+                  {actor: 0, turnPlayer: 0, seed: "sharp", turn: 4});
+  g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  return J.reduce(g, {t: "play", uid: "ed1", from: "hand"}, 0).state;
+}
+
+test("Sharpen reads as `ctrPut`, with the keyword's own wipe", {skip}, () => {
+  P.fxReset();
+  const r = cc("Sharpen target sword you control");
+  assert.deepEqual(r && r.ops, [["ctrPut",
+    {kind: "pow", n: 1, filter: {tt: "sword"}, label: "+1{p}", wipeEnd: true}]]);
+});
+
+test("the THRESHOLD is the card's own number, not a literal", {skip}, () => {
+  /* Upstream prints "1 or more" on the red face and "3 or more" elsewhere,
+     so a hardcoded number is right for one printing and silently wrong for
+     the others — `rustDestroy` (v3.17), heave (v3.32) and `ctrPut`'s own
+     amount (v3.55) are the same rule. */
+  const pool = require("../data/pool.json");
+  const mkc = r => ({name: r.name + "|thr|" + r.pitch, tx: r.functional_text || "",
+                     tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
+                     pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
+  const mins = new Set();
+  for(const r of pool.filter(x => x.name === "Edict of Steel")){
+    P.fxReset();
+    const op = (P.fxParse(mkc(r)).ops || []).find(o => o[0] === "ctrPut");
+    assert.ok(op && op[1].then, "pitch " + r.pitch + ": the rider must be folded onto the spec");
+    const printed = (r.functional_text || "").match(/if it has (\d+) or more/i);
+    assert.equal(op[1].then.min, +printed[1], "pitch " + r.pitch + ": threshold must match the print");
+    mins.add(op[1].then.min);
+  }
+  assert.ok(mins.size > 1,
+    "the printings must actually differ, or a hardcoded number would pass this");
+  P.fxReset();
+});
+
+test("DRIVEN: one sword takes the counter and the Flurry token lands", {skip}, () => {
+  /* The red printing's threshold is 1, so the sharpen's own counter
+     satisfies it — which is why the rider is counted AFTER the put. */
+  const n = playEdict([sword("sw1")], 1);
+  assert.ok(!n.prompt, "one legal sword is a forced choice — no sheet");
+  assert.equal((n.sides[0].counters.sw1 || {}).pow, 1, "the sword takes a +1{p} counter");
+  assert.ok(n.sides[0].board.some(b => /flurry/i.test(b.card.name)),
+    "1 counter meets the printed threshold of 1 — the token must be created");
+});
+
+test("…and the threshold REFUSES when it is not met", {skip}, () => {
+  /* The blue printing prints 3. One sharpen puts one counter, so the
+     rider must not fire — a drill that only ever tests the met case
+     cannot tell a threshold from an unconditional mint. */
+  const n = playEdict([sword("sw1")], 3);
+  assert.equal((n.sides[0].counters.sw1 || {}).pow, 1, "the counter still lands");
+  assert.ok(!n.sides[0].board.some(b => /flurry/i.test(b.card.name)),
+    "1 of 3 counters is not enough — no token");
+});
+
+test("the SUBJECT is a sword, and a non-sword takes nothing", {skip}, () => {
+  const hammer = Object.assign(sword("h1", "Probe Hammer"),
+                               {tt: "Guardian Weapon - Hammer (2H)"});
+  const n = playEdict([hammer], 1);
+  assert.ok(!n.sides[0].counters.h1, "'target SWORD' is a printed subtype, not any weapon");
+  assert.ok(!n.sides[0].board.some(b => /flurry/i.test(b.card.name)));
+});
+
+test("DRIVEN: two swords is a real choice, and the rider follows the CHOICE", {skip}, () => {
+  /* THE RIDER AND THE WIPE HAVE TWO LANDING SITES — the direct path and
+     `applyAnswer` — and a spec only carries fields its consumer reads
+     (v2.34). Dropped from `ctrStamp`, this path places the counter and
+     silently loses both halves of the card's second sentence. */
+  let n = playEdict([sword("sw1"), sword("sw2", "Other Sword")], 1);
+  assert.ok(n.prompt, "two legal swords must open a sheet");
+  /* PICK THE SECOND. Choosing index 0 cannot tell "the choice was applied"
+     from "the first candidate was taken". */
+  n = J.reduce(n, {t: "promptSel", i: 1}, n.prompt.side).state;
+  n = J.reduce(n, {t: "promptConfirm"}, n.prompt.side).state;
+  assert.equal((n.sides[0].counters.sw2 || {}).pow, 1, "the chosen sword takes it");
+  assert.ok(!n.sides[0].counters.sw1, "…and the other does not");
+  assert.ok(n.sides[0].board.some(b => /flurry/i.test(b.card.name)),
+    "the rider must fire on the answer path too");
+});
+
+test("DRIVEN: the counters fall away at end of turn — ALL of them, from IT only", {skip}, () => {
+  const E = require("../engine/effects.js");
+  let n = playEdict([sword("sw1"), sword("sw2", "Other Sword")], 1);
+  n = J.reduce(n, {t: "promptSel", i: 0}, n.prompt.side).state;
+  n = J.reduce(n, {t: "promptConfirm"}, n.prompt.side).state;
+  /* give the sharpened sword a SECOND counter from another source, and the
+     untouched one a counter too — the printed word is "remove ALL +1{p}
+     counters FROM IT", so one goes to zero and the other is untouched. */
+  const sides = n.sides.slice();
+  sides[0] = {...sides[0], counters: {...sides[0].counters,
+    sw1: {pow: 3}, sw2: {pow: 2}}};
+  n = {...n, sides, phase: "end"};
+  const out = E.beginEndPhase(n, 0);
+  assert.equal((out.game.sides[0].counters.sw1 || {}).pow, 0,
+    "ALL of the sharpened sword's counters go, not just the one sharpen added");
+  assert.equal((out.game.sides[0].counters.sw2 || {}).pow, 2,
+    "…and only from IT — an untouched sword keeps what it has");
+});
+
+test("…and the stamp is cleared with them", {skip}, () => {
+  /* Left on, the piece is wiped every end phase for the rest of the game —
+     a one-turn buff turned into a permanent ban on holding a counter. The
+     same rule `_discWay` (v3.60) and `lastRoll` (v3.49) follow. */
+  const E = require("../engine/effects.js");
+  let n = playEdict([sword("sw1")], 1);
+  n = E.beginEndPhase({...n, phase: "end"}, 0).game;
+  assert.ok(!(n.sides[0].gear || []).some(g => g._powEnd), "the stamp must be cleared");
+  /* a counter placed on a LATER turn must survive its own end phase */
+  const sides = n.sides.slice();
+  sides[0] = {...sides[0], counters: {...sides[0].counters, sw1: {pow: 2}}};
+  const later = E.beginEndPhase({...n, sides, phase: "end"}, 0).game;
+  assert.equal((later.sides[0].counters.sw1 || {}).pow, 2,
+    "a stale stamp would wipe a counter nothing sharpened");
+});
+
+test("the idle wipe is a DIFFERENT rule and still asks the piece's own line", {skip}, () => {
+  /* `idleCounterWipes` reads `wipePowIfIdle` off the PIECE. A sharpened
+     sword's text says nothing about sharpen, so deriving the schedule from
+     the piece answers false forever — which is why sharpen stamps instead.
+     The control: an unstamped, unsharpened sword keeps its counters. */
+  const E = require("../engine/effects.js");
+  const g = H.state({name: "Boltyn", gear: [sword("sw9")], board: [],
+                     counters: {sw9: {pow: 2}}, deck: [{uid: "d1", name: "T"}]},
+                    {name: "Them", deck: [{uid: "d2", name: "T2"}]},
+                    {actor: 0, turnPlayer: 0, turn: 4});
+  const out = E.beginEndPhase({...g, phase: "end"}, 0);
+  assert.equal((out.game.sides[0].counters.sw9 || {}).pow, 2,
+    "nothing sharpened it, so nothing removes its counters");
+});
+
+test("the weapon-subtype vocabulary is CLOSED, and the closure is the guard", () => {
+  /* Same discipline as `CTR_KINDS` (v3.55) and `optFilter`'s keyword list
+     (v3.33): an OPEN "any word before `you control`" would claim every
+     dynamic and rules-text subject this reader exists to refuse, and would
+     do it silently — the clause parses, the tier rises, and the sheet
+     offers nothing. Sabotaging the list to /^[a-z]+$/ was silent against
+     every other drill in this file, which is exactly why this one exists. */
+  assert.deepEqual(P.optFilter("sword"),  {tt: "sword"});
+  assert.deepEqual(P.optFilter("dagger"), {tt: "dagger"});
+  for(const bogus of ["hammer", "staff", "thing", "gun", "bow", "claw"])
+    assert.equal(P.optFilter(bogus), null,
+      "\"" + bogus + "\" is not a subject any pool card names — claiming it is parsing ahead of wiring");
+});
+
+test("…and adding it moved exactly the card that needed it", () => {
+  /* v3.33's rule: measure a predicate change's blast radius, do not reason
+     about it. Across the whole pool the printed subjects of this shape are
+     sword (Edict of Steel), dagger (Danger Digits, which refuses earlier
+     for its own reasons) and ally (Scuttle Toes, which has its own
+     reader). A drill pins that census, so a future widening has to be a
+     deliberate edit here. */
+  const pool = require("../data/pool.json");
+  const subs = new Set();
+  for(const r of pool)
+    for(const m of (r.functional_text || "").matchAll(/target ([a-z]+) you control/gi))
+      subs.add(m[1].toLowerCase());
+  assert.deepEqual([...subs].sort(), ["ally", "dagger", "sword"],
+    "a new printed subject of this shape needs a decision, not a default");
+});
+
+test("THE WHOLE CHAIN: Edict sharpens, Flurry lands, the sword swings twice", {skip}, () => {
+  /* Three versions of work meet here and nothing measured it end to end:
+     v3.65 read Flurry's trigger and payload, v3.66 read the card that
+     creates it. Until both existed the token was `full` and could never
+     reach a board — which is the honest state that was reported rather
+     than glossed, and this is the drill that closes it.
+
+     ASSERT ON `weaponUsed`, not the feed. Flurry's payload lifts the
+     weapon's once-per-turn allowance and nothing else, so the allowance
+     IS the observable. */
+  const sw = Object.assign(sword("sw1"), {tx: "Once per Turn Action - {r}: Attack"});
+  let n = playEdict([sw], 1);
+  assert.ok(n.sides[0].board.some(b => /flurry/i.test(b.card.name)),
+    "the chain starts with a Flurry token actually on the board");
+
+  /* spend the weapon, then swing it: the token fires on the ACTIVATION */
+  const sides = n.sides.slice();
+  sides[0] = {...sides[0], weaponUsed: {sw1: true}};
+  n = {...n, sides};
+  const out = H.execute(n, sw, "weapon", 0, {});
+  assert.deepEqual(out.sides[0].board.filter(b => /flurry/i.test(b.card.name)), [],
+    "the token destroys itself on the swing");
+  assert.equal(out.sides[0].weaponUsed.sw1, undefined,
+    "…and the sword is freed for one more swing this turn");
+});

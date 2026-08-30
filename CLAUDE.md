@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.65
+**Current version:** v3.66
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1628 drills**.
+This is `node --test "test/*.test.js"` — currently **1640 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,47 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### TRY THE PRINTING BEFORE BOOKING A QUESTION — FOURTH TIME (v3.66)
+
+The database carries no reminder text for any keyword. The ruling recorded
+2026-07-25 for **Sharpen** was right about the end-of-turn wipe; the
+MPW103 printing of Edict of Steel is more precise in the way that matters:
+
+> *"Sharpen target sword you control. (Put a +1{p} counter on it.
+> **Remove all +1{p} counters from it** at end of turn.)"*
+
+**All** of them, and only **from it** — a sword sharpened after Glisten
+has distributed counters loses those too. Clash of Agility, Thunder Quake,
+Pick Up the Point and now this. `card.printings[].image_url` is in the pool
+record; fetching and reading one takes a minute.
+
+**IT IS `ctrPut`, NOT NEW MACHINERY.** The kind is `pow`, the candidate
+scan already covers gear, and the sheet already exists for two or more.
+What the keyword adds is a **WIPE**, and it is a **STAMP rather than a
+predicate**: `idleCounterWipes` asks the PIECE's own printed line, and a
+sharpened sword's text says nothing about sharpen — the schedule belongs
+to the card that sharpened it. **The stamp is cleared with the counters**,
+or a one-turn buff becomes a permanent ban on holding one.
+
+**"IT" IS THE SHARPENED SWORD** (v2.33, v3.47 — third time), so the second
+sentence folds onto the spec in `fxParse` where the whole card is visible.
+**The threshold is the card's own number** — 1 / 2 / 3 across the three
+printings — and a drill asserts the printings actually DIFFER, because a
+hardcoded 1 passes a test written against the red face alone.
+
+**ONE BODY, TWO LANDING SITES.** The direct path and `applyAnswer`. Dropped
+from `ctrStamp`, the wipe and the rider fire on the first and vanish the
+moment a second sword is equipped (v2.34). The two new stamp fields are
+**opt-in** (v3.58), or every `deepEqual` on the shape breaks.
+
+**A CLOSED SUBTYPE VOCABULARY, MEASURED.** *"Target SWORD you control"* is
+read off `tt`, from a closed list — an open "any word before `you control`"
+claims every dynamic subject this reader exists to refuse, silently. The
+pool's printed subjects of that shape are **sword**, **dagger** and
+**ally**; exactly three records changed parse. **Sabotaging the list open
+was silent against every other drill in the file**, which is why the
+closure has one of its own.
 
 ### A FIXED WORDING IS NOT A FIXED SHAPE — AT FAMILY LEVEL (v3.65)
 

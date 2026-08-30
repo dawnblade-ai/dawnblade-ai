@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-30T20:01:15.016Z",
- "appVer": "3.64",
+ "generated": "2026-08-30T20:15:19.953Z",
+ "appVer": "3.65",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 355,
-  "part": 38,
+  "full": 356,
+  "part": 37,
   "none": 12
  },
  "heroes": {
@@ -11207,33 +11207,28 @@
     "go again",
     "sharpen"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Sharpen target sword you control.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If it has 1 or more +1{p} counters, create a Flurry token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "Sharpen target sword you control.",
-    "If it has 1 or more +1{p} counters, create a Flurry token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Sharpen target sword you control.\nIf it has 1 or more +1{p} counters, create a Flurry token.\nGo again",
-   "flags": [
-    "unreviewed keyword: \"sharpen\""
-   ]
+   "flags": []
   },
   "engulfing light|1": {
    "name": "Engulfing Light",
