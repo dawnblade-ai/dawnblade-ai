@@ -627,6 +627,11 @@ function classifyClause(raw){
        is otherwise answered against an empty trace — always false, on
        every card. The prefix is what lets the condition loop skip these
        and a LATE pass pick them up after the ops have run. */
+    /* "IF DAMAGE IS DEALT THIS WAY" (v3.62) — Path of Same Ends, asking
+       whether the arcane its OWN preceding clause just dealt actually
+       landed. CR 7.5.5: prevented is not dealt, and the trace is recorded
+       where the damage lands so that rule governs it without restating. */
+    if(/^damage is dealt this way$/.test(cond)) return Object.assign(rest,{cond:"way:dealt"});
     if(m=cond.match(/^an? (yellow|blue|red) card is discarded this way$/))
       return Object.assign(rest,{cond:"way:discardPitch" + ({red:1, yellow:2, blue:3})[m[1]]});
     if(/6 or more \{p\}[^.]*discard/.test(cond)) return Object.assign(rest,{cond:"discard6"});

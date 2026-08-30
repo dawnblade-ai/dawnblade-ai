@@ -132,13 +132,16 @@ test("AN UNKNOWN `way:` CONDITION ANSWERS FALSE", () => {
      Written first as a private `_thisWay`, this was two records of one
      fact; unifying them also wired `selfDiscard` into `_discWay`, which
      the `creditDiscard` comment had recorded as an open gap. */
-  assert.equal(E.thisWayMet("way:somethingNobodyBuilt", [{pitch: 2}]), false,
+  assert.equal(E.thisWayMet("way:somethingNobodyBuilt", {disc: [{pitch: 2}], dmg: 3}), false,
     "a condition added to the parser and forgotten here must leave the " +
     "card at its printed value, not grant a bonus nobody built");
-  assert.equal(E.thisWayMet("way:discardPitch2", [{pitch: 2}]), true);
-  assert.equal(E.thisWayMet("way:discardPitch2", [{pitch: 1}]), false);
-  assert.equal(E.thisWayMet("way:discardPitch2", []), false, "an empty trace answers no");
-  assert.equal(E.thisWayMet("way:discardPitch2", undefined), false, "and so does no trace at all");
+  assert.equal(E.thisWayMet("way:discardPitch2", {disc: [{pitch: 2}]}), true);
+  assert.equal(E.thisWayMet("way:discardPitch2", {disc: [{pitch: 1}]}), false);
+  assert.equal(E.thisWayMet("way:dealt", {dmg: 1}), true);
+  assert.equal(E.thisWayMet("way:dealt", {dmg: 0}), false,
+    "prevented is not dealt (CR 7.5.5)");
+  assert.equal(E.thisWayMet("way:discardPitch2", {}), false, "an empty trace answers no");
+  assert.equal(E.thisWayMet("way:dealt", undefined), false, "and so does no trace at all");
 });
 
 test("the trace is CLEARED with the resolution", {skip}, () => {
@@ -190,4 +193,76 @@ test("the main condition loop SKIPS these, so the feed never contradicts itself"
     "premise: the bonus really did fire");
   assert.ok(!(n.feed || []).some(l => /Portside Exchange: condition not met/i.test(l)),
     "so nothing may have told the player it did not");
+});
+
+/* ---- 5. THE ATTACK BRANCH — "IF DAMAGE IS DEALT THIS WAY" -------- */
+
+test("the damage wording reads, and is a different question from the discard one", () => {
+  assert.equal(cc("If damage is dealt this way, this gets go again").cond, "way:dealt");
+  assert.deepEqual(cc("If damage is dealt this way, this gets go again").ops, [["ga"]]);
+});
+
+function pathSwing(shield){
+  H.db();
+  const src = Object.assign({}, H.card("Path of Same Ends", 1), {uid: "po1"});
+  const g = H.state({name: "Viserai", res: 9, ap: 3, hand: [src],
+                     deck: [{uid: "d1", name: "T"}]},
+                    {name: "Them", hp: 20, arcShield: shield,
+                     deck: [{uid: "d2", name: "T2"}]},
+                    {actor: 0, turnPlayer: 0, seed: "po", turn: 4});
+  return H.execute(g, src, "hand", 0, {heroTarget: true});
+}
+
+test("driven: the arcane LANDS, so the attack goes again", {skip}, () => {
+  const n = pathSwing(0);
+  assert.equal(n.sides[1].hp, 19, "premise: the arcane actually landed");
+  /* `pend` IS BUILT BEFORE the on-attack trigger fires, and it carries its
+     own copy of `ga` — so a grant that set only the local would never
+     reach the resolution. Assert on `pend`, which is what the chain link
+     resolves on. */
+  assert.equal(n.pend.ga, true, "the grant must reach `pend`, not just the local");
+});
+
+test("driven: PREVENTED IS NOT DEALT (CR 7.5.5) — no go again", {skip}, () => {
+  /* The trace is recorded where the damage LANDS, so this rule governs it
+     without being restated — the same guard `creditArc` already relies on.
+     A drill that only tested the landing case would pass against a trace
+     recorded at the call site instead, which is v3.28's exact bug. */
+  const n = pathSwing(9);
+  assert.equal(n.sides[1].hp, 20, "premise: every point was turned aside");
+  assert.equal(n.pend.ga, false, "so the condition is not met and nothing is granted");
+});
+
+test("Path of Same Ends resolves in full", {skip}, () => {
+  P.fxReset();
+  assert.equal(P.fxParse(H.card("Path of Same Ends", 1)).tier, "full");
+  P.fxReset();
+});
+
+test("the DAMAGE trace is cleared with the resolution too", {skip}, () => {
+  /* The discard trace has its own version of this drill above. The damage
+     one needs its own, and for the same reason: a drill that resolves ONE
+     card cannot see a leak. Here the second card's arcane is fully
+     prevented, so a trace carried over from the first would grant it go
+     again off damage it never dealt. */
+  H.db();
+  const first  = Object.assign({}, H.card("Path of Same Ends", 1), {uid: "po1"});
+  const second = Object.assign({}, H.card("Path of Same Ends", 1), {uid: "po2"});
+  let g = H.state({name: "Viserai", res: 9, ap: 3, hand: [first, second],
+                   deck: [{uid: "d1", name: "T"}]},
+                  {name: "Them", hp: 20, arcShield: 0,
+                   deck: [{uid: "d2", name: "T2"}]},
+                  {actor: 0, turnPlayer: 0, seed: "po", turn: 4});
+
+  const a = H.execute(g, first, "hand", 0, {heroTarget: true});
+  assert.equal(a.pend.ga, true, "premise: the first one's arcane landed");
+
+  /* now shield the opponent completely and resolve the second */
+  const shielded = {...a, sides: a.sides.map((s, i) => i === 1 ? {...s, arcShield: 9} : s),
+                    pend: null};
+  const b = H.execute(shielded, second, "hand", 0, {heroTarget: true});
+  assert.equal(b.sides[1].hp, a.sides[1].hp, "premise: the second was fully prevented");
+  assert.equal(b.pend.ga, false,
+    "a leaked trace would hand the second card go again off the FIRST " +
+    "card's damage");
 });

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.61
+**Current version:** v3.62
 
 ---
 
@@ -410,6 +410,40 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### A TRACE BELONGS WHERE THE FACT BECOMES TRUE (v3.62)
+
+*"If damage is dealt this way"* is recorded **inside `arcaneHit`, in the
+`left > 0` branch** — not at the call site. That is what makes CR 7.5.5's
+*prevented is not dealt* govern it **without being restated**: a hit
+turned entirely aside records nothing and grants nothing.
+
+`creditArc` leans on the same guard one line up, and v3.28 is the version
+that had to MOVE it there after a fully prevented hit was credited from
+the call site. **Same rule, same function, second time.**
+
+**`pend` IS BUILT BEFORE THE ON-ATTACK TRIGGER FIRES**, and it carries
+its own copy of `ga`. A grant that set only the local is invisible to the
+resolution the chain link runs on, so it goes to both — and the drill
+asserts on `pend`, because that is what resolves.
+
+**ONE BODY, TWO BRANCHES.** A non-attack's ops run late; an attack's
+trigger fires earlier. The difference is expressed as a `grantGa`
+callback and nothing else, because two copies of a condition loop is the
+drift this file names on nearly every page. Go again is the one op that
+cannot simply `runOps` — it is a GAIN (CR 5.3.5) tracked in a local.
+
+### A SABOTAGE THAT CANNOT EXPRESS THE BUG PROVES NOTHING (v3.62)
+
+The sabotage for "the damage trace is recorded even when PREVENTED" was
+written by changing `+ left` to `+ 1` — **inside the `left > 0` guard**,
+so it altered only the amount and never reached the prevented case at
+all. It reported SILENT, which reads exactly like a weak drill.
+
+Re-targeted to move the record onto the `else` branch, it bites. **Second
+time this fortnight the HARNESS rather than the drill was at fault** —
+check that a sabotage can actually express the bug it is named for, not
+merely that it applied.
 
 ### CHECK FOR THE TRACE BEFORE YOU BUILD ONE (v3.61)
 

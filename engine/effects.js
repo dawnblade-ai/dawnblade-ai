@@ -393,6 +393,11 @@ function makeEffects(ctx){
     if(left > 0){
       mut().hp -= left;
       n = creditArc(n, 1 - seat, seat);
+      /* THE TRACE FOR "…DEALT THIS WAY" (v3.62), recorded where the damage
+         actually LANDS — so CR 7.5.5's "prevented is not dealt" governs it
+         for free, exactly as `creditArc` above relies on the same guard.
+         A hit turned entirely aside records nothing. */
+      n._dmgWay = (n._dmgWay || 0) + left;
       n = L(n, `${srcName}: ${left} arcane damage.`);
     } else {
       /* PREVENTED IS NOT DEALT (CR 7.5.5, and RULING user 2026-08-22:
@@ -1587,6 +1592,7 @@ function makeEffects(ctx){
        second time on resolution. */
     n._discWay = [];
     n._kwGrant = [];        // cleared with _discWay, and for the same reason
+    n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
     const preRan = new Set();
     if(fx.ops.some(o=>o[0]==="discardRandom")){
       const pre = fx.ops.filter(o=>o[0]==="draw"||o[0]==="discardRandom");
@@ -1778,6 +1784,36 @@ function makeEffects(ctx){
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
       else n = runOps(n,[op],card.name);
     });
+    /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
+       `execute` evaluates `fx.conds` BEFORE it runs the card's ops, so a
+       condition asking what its own resolution just did reads an empty
+       trace — false on every card, forever. These are skipped by the main
+       loop and answered here, once the facts exist.
+
+       IT IS ONE BODY BECAUSE THERE ARE TWO BRANCHES. A non-attack's ops
+       run at ~2230; an attack's on-attack trigger fires at ~2150 and its
+       `pend` was built BEFORE that. Two copies of this loop is the
+       drift this file names on nearly every page — so the difference
+       between the branches is expressed as the `grantGa` callback and
+       nothing else.
+
+       GO AGAIN IS THE ONE OP THAT CANNOT JUST `runOps`. It is a GAIN of
+       an action point (CR 5.3.5) that the surrounding code tracks in a
+       local, and on the attack path it has already been copied into
+       `pend` — so each caller says how to apply it. */
+    const runWayConds = (nn, grantGa) => {
+      for(const {cond, op} of fx.conds){
+        if(!/^way:/.test(cond)) continue;
+        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay})){
+          nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
+          continue;
+        }
+        if(op[0] === "ga"){ grantGa(); nn = L(nn, `${card.name}: it happened this way — go again.`); }
+        else nn = runOps(nn, [op], card.name);
+      }
+      return nn;
+    };
+
     /* THE ARSENAL FACE-UP PUT, AS ONE BODY CALLED FROM BOTH BRANCHES.
 
        It used to live inside `if(attacking)` alone — and NOT ONE CARD IN
@@ -2109,6 +2145,17 @@ function makeEffects(ctx){
           if(n.over) return n;
         } else n = L(n, `${card.name} is attacking an ally — its "attacks a hero" ability does not fire.`);
       }
+      /* THE ATTACK BRANCH'S LATE PASS (v3.62). Path of Same Ends prints
+         "when this attacks a hero, deal 1 arcane damage to them. If damage
+         is dealt this way, this gets go again" — so the question can only
+         be answered after `onAtkHero` above has actually run.
+
+         `pend` WAS BUILT BEFORE THIS POINT, and it already carries a copy
+         of `ga`. Setting the local alone would be a grant the resolution
+         never sees, so the grant goes to BOTH — the local for anything
+         downstream that still reads it, and `pend.ga`, which is what the
+         chain link resolves on. */
+      n = runWayConds(n, () => { ga = true; if(n.pend) n.pend = {...n.pend, ga: true}; });
       /* ---- RUNECHANTS POP HERE, AT DECLARATION ------------------------
          The token triggers "when you play an attack action card or activate
          a weapon attack", and a triggered ability goes onto the stack ABOVE
@@ -2230,13 +2277,7 @@ function makeEffects(ctx){
          AN UNKNOWN `way:` CONDITION ANSWERS FALSE (v3.26's rule), which
          leaves the card at its printed value — weaker than printed and
          visible, where the other direction grants a bonus nobody built. */
-      {
-        for(const {cond, op} of fx.conds){
-          if(!/^way:/.test(cond)) continue;
-          if(thisWayMet(cond, n._discWay)) n = runOps(n, [op], card.name);
-          else n = L(n, `${card.name}: nothing matching was done this way — the bonus skips.`);
-        }
-      }
+      n = runWayConds(n, () => { ga = true; });
       if(n._gaGrant){ ga = true; delete n._gaGrant; }
       /* AN ATTACK REACTION PUMPS THE ATTACK IT IS PLAYED ON, NOT THE NEXT
          ONE (v3.11). Falling through to `buffNext` is how the table came to
@@ -4227,10 +4268,11 @@ function settleIntellect(game, seat){
    parser and forgotten here leaves the card at its printed value —
    weaker than printed and visible. The other direction hands out a bonus
    nobody built. */
-function thisWayMet(cond, discWay){
-  const seen = discWay || [];
+function thisWayMet(cond, trace){
+  const t = trace || {};
   const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
-  if(pm) return seen.some(c => c && (c.pitch||0) === +pm[1]);
+  if(pm) return (t.disc||[]).some(c => c && (c.pitch||0) === +pm[1]);
+  if(cond === "way:dealt") return (t.dmg||0) > 0;
   return false;
 }
 

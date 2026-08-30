@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-29T21:19:25.921Z",
- "appVer": "3.60",
+ "generated": "2026-08-30T00:00:45.101Z",
+ "appVer": "3.61",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 351,
-  "part": 42,
+  "full": 352,
+  "part": 41,
   "none": 12
  },
  "heroes": {
@@ -12277,7 +12277,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -12287,22 +12287,18 @@
     },
     {
      "t": "If damage is dealt this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Instant - {r}: This gets go again.",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "If damage is dealt this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks a hero, deal 1 arcane damage to them. If damage is dealt this way, this gets go again.\nInstant - {r}: This gets go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "rush of power|1": {
    "name": "Rush of Power",

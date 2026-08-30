@@ -60,7 +60,7 @@ for(const m of t.matchAll(/[^.\n]*\bthis way\b[^.\n]*/gi))s.add(c.name)}console.
 | card | tier | what "this way" refers to |
 |---|---|---|
 | ~~Portside Exchange~~ | **BUILT v3.60** | the card its own `selfDiscard` just discarded — and the discard was being DROPPED entirely, so the card drew for free |
-| Path of Same Ends | part | did its own preceding arcane actually LAND (CR 7.5.5) |
+| ~~Path of Same Ends~~ | **BUILT v3.62** | its own preceding arcane, recorded where the damage LANDS so CR 7.5.5 governs it for free |
 | Toe the Line | part | did the prevention it set up actually prevent — **delayed** |
 | V of the Vanguard | part | how many Light cards its own charge charged |
 | Throw Caution to the Wind | part | the pitch of the card it revealed — **delayed** |
@@ -89,11 +89,19 @@ condition is skipped by the main loop and answered by `thisWayMet` against
 recording the fact its own op produced (`selfDiscard` records the cards it
 discarded) and teaching `thisWayMet` one more question.
 
-**Do the two immediate cards first** (Portside Exchange, Path of Same
-Ends) and leave the two DELAYED ones (Toe the Line, Throw Caution to the
-Wind) — their "this way" refers to an effect that resolves on a later
-turn-event, which is a different and larger problem. Say so rather than
-half-building them.
+~~**Do the two immediate cards first**~~ **BOTH DONE (v3.60, v3.62).**
+The late pass now serves BOTH branches from one body — a non-attack's ops
+run late, an attack's on-attack trigger fires earlier and its `pend` is
+already built, and the only difference is a `grantGa` callback.
+
+**WHAT IS LEFT OF THIS FAMILY, and why each is where it is:**
+
+| card | needs |
+|---|---|
+| V of the Vanguard | a COUNT of Light cards its own charge charged, plus a buff scoped to the combat chain |
+| Concoct Disorder | a cross-seat arsenal put, then a count of what it moved |
+| Danger Digits | blocked on **item 2** — it is an `Attack Reaction - …` ability with no route |
+| Toe the Line · Throw Caution to the Wind | **DELAYED** — their "this way" refers to a prevention that resolves on a later turn-event, not during this card's own resolution. A different and larger problem; left rather than half-built |
 
 ---
 

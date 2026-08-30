@@ -7,6 +7,64 @@ version and a one-line summary; the history lives here.
 
 Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
+## v3.62 — the late "this way" pass reaches the attack branch
+
+Path of Same Ends: *"When this attacks a hero, deal 1 arcane damage to
+them. **If damage is dealt this way**, this gets go again."*
+
+### THE TRACE IS RECORDED WHERE THE DAMAGE LANDS
+
+Not at the call site — **inside `arcaneHit`, in the `left > 0` branch.**
+That is what makes CR 7.5.5's *prevented is not dealt* govern it without
+being restated: a hit turned entirely aside records nothing and grants
+nothing. `creditArc` already leans on the same guard one line up, and
+v3.28 is the version that had to move it there after crediting a fully
+prevented hit.
+
+Driven both ways: the arcane lands → `pend.ga` true; the arcane is fully
+turned aside by an arcane shield → hp unchanged, `pend.ga` false.
+
+### `pend` IS BUILT BEFORE THE TRIGGER FIRES
+
+`n.pend` is constructed at ~2086 and the `onAtkHero` trigger runs at
+~2150 — and `pend` already carries **its own copy of `ga`**. A grant that
+set only the local would be invisible to the resolution the chain link
+actually runs on, so it goes to both. A drill asserts on `pend`, not the
+local, because that is what resolves.
+
+### ONE BODY, TWO BRANCHES
+
+A non-attack's ops run late; an attack's on-attack trigger fires earlier
+and its `pend` is already built. Two copies of the condition loop is the
+drift this file names on nearly every page, so **the difference between
+the branches is expressed as a `grantGa` callback and nothing else**.
+
+Go again is the one op that cannot simply `runOps`: it is a GAIN of an
+action point (CR 5.3.5) that the surrounding code tracks in a local, and
+on the attack path it has already been copied. Each caller says how to
+apply it.
+
+### TWO OF TEN SABOTAGES FOUND WEAK DRILLS — AND ONE WAS MY OWN HARNESS
+
+- **"the damage trace is recorded even when prevented"** applied *inside*
+  the `left > 0` guard, so it changed only the amount and never the
+  prevented case. Re-targeted to move the record onto the `else` branch —
+  where it bites. **A sabotage that cannot express the bug proves
+  nothing**, and this is the second time this fortnight the harness rather
+  than the drill was at fault.
+- **the damage trace's per-resolution clear** had no drill: resolving ONE
+  card cannot see a leak. It resolves two now, the second fully
+  prevented, so a carried-over trace would grant go again off the first
+  card's damage.
+
+### Measured
+
+- **351 → 352 full**, 42 → 41 `part`. Flagged cards 49 → 48.
+- `npm test` **1582 drills, 0 fail, 4 skipped**. Fairness clean.
+- `npm run play`: 210 games, **0 refusals, 0 invariant violations, 0
+  malformed feed**.
+- **Ten sabotages, all ten bite** after two were re-targeted.
+
 ## v3.61 — the trace v3.60 built already existed
 
 **`_discWay` has recorded "what this resolution discarded" since
