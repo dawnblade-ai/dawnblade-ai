@@ -1,6 +1,8 @@
 # The week — two MECHANISMS, measured against the parser first
 
-> **Written 2026-08-29, at v3.59, with v3.53–v3.59 LIVE on `main`.** Every
+> **Written 2026-08-29 at v3.59. UPDATED 2026-08-30 at v3.63 — both
+> mechanisms are DONE and live on `main`; items 3 and 4 are what remain,
+> and item 3's phone pass is now the top risk in the project.** Every
 > number here was measured, with the command to re-derive it. Read
 > `CLAUDE.md` first, then this. The previous week's plan and its outcome
 > are in `CHANGELOG.md` (v3.53–v3.59) and `HANDOFF.md`.
@@ -42,7 +44,7 @@ item below states what was measured and how.
 
 ---
 
-## 1. THE "…THIS WAY" RECORD — 7 cards, one mechanism · **start here**
+## 1. THE "…THIS WAY" RECORD — **DONE at v3.60–v3.62**
 
 *"If a yellow card is discarded **this way**"*, *"if damage is dealt **this
 way**"*, *"if you prevent damage **this way**"*. The phrase means **what
@@ -105,38 +107,46 @@ already built, and the only difference is a `grantGa` callback.
 
 ---
 
-## 2. THE ATTACK-REACTION ABILITY ROUTE — 5 cards, fully scoped
+## 2. THE ATTACK-REACTION ABILITY ROUTE — **DONE at v3.63**, and it was a live bug
 
-Five pool records print `Attack Reaction - <cost>: <effect>` and **none
-has a route**. v3.59 made them refuse honestly rather than report `full`
-while inert; building the route is this job.
+Scoped here as six steps against five cards with *"none has a route"*.
+**Step 2 of that plan was wrong, and being wrong about it is what found a
+sev-3 that was shipping.**
 
-```
-Prey Spotters · Stalker's Steps · Bolt'n Boots · Danger Digits · Boltyn (hero)
-```
+`build.js`'s `_abLine` only picks the LINE for `_effFull`; the powCard is
+built whenever `parseHeroPower` answers. And `parseHeroPower`'s match was
+**unanchored** — `clean` collapses the newlines so it cannot anchor on
+`^` — so it matched the `action` inside **RE-ACTION**. Three of the five
+were already built, at ACTION speed, and offered in the action phase:
 
-Every step was measured last week:
+| card | did |
+|---|---|
+| Prey Spotters | marked a hero for free, any time |
+| Stalker's Steps | granted **go again** — an action point — with no attack to target |
+| Danger Digits | dealt 1 damage from nothing, its printed *"Destroy the dagger"* dropped |
 
-1. `parseHeroPower` to accept the prefix, returning `kind:"attackRx"`;
-2. **`build.js`'s `_abLine` matches `action|instant` only** — without this
-   no powCard is built at all, which is why the cards are currently
-   unreachable;
-3. a `_attackRx` flag on the powCard. **`_instant` is the exact shape to
-   copy** — see `judge.js`'s `playWindows` / `playWindowFor`;
-4. `speedAllowed` has distinguished the `attack-reaction` window since
-   v2.27, so the window itself already exists;
-5. the payloads — *"target attack with &lt;qualifier&gt; gets go again"* —
-   onto the open link via **`effects.attackRx`** (v3.11), which already
-   does exactly this for attack-reaction CARDS. `attackQual` reads the
-   qualifiers (`arrow`, `with stealth`) and `pumped` is the cond for
-   *"with {p} greater than its base"*;
-6. **the trainer's own offering path in `index.html`** — the half no drill
-   can validate, and the reason this was not built in v3.59.
+What shipped: the anchor (character-consuming, **no lookbehind** — the
+page runs on a phone as authored), `_attackRx` on the powCard beside
+`_instant`, `parser.abWindow` as the one window reader for all four sites,
+no action point (CR 8.1.1 as `costsAP` already read it), the printed
+target as a **legality** refused before the piece is destroyed, resolution
+through `effects.attackRx`, and the `pumped` qualifier atom with
+`effects.pendPumped` as its one body.
 
-**THE RISK IS STEP 6, AND IT IS A REAL ONE.** An ability offered in the
-wrong window is *"illegal play allowed"* — sev-3, the direction that
-steals games. Drive `judge.legal` for the window in a drill, and get the
-trainer half onto a phone before calling it done.
+Two cards refuse and both refusals are the point: **Danger Digits'** damage
+clause names a SUBJECT that the unanchored matcher dropped along with a
+printed drawback, and **Bait's** *"this"* on a reaction route is the source
+rather than the attack. **Boltyn** still refuses on its cost — a soul
+banish, a cost shape nothing builds. That is the next card here, and it is
+a COST job rather than a window one.
+
+**STEP 6 IS STILL THE RISK, AND IT IS NOT DISCHARGED.** The trainer's
+offering path is a React closure; the drill for it is a SOURCE SCAN and
+says so in its own body. What a scan proves is that the gate exists and
+names the window. **It cannot prove the tap reaches it on a phone** — see
+item 3.
+
+**352 → 355 full, 41 → 38 part.** Twenty sabotages, all biting.
 
 ---
 
@@ -144,7 +154,7 @@ trainer half onto a phone before calling it done.
 
 | | |
 |---|---|
-| **the phone pass — NOW THE TOP NON-CARD RISK** | last week added **six sheets a player must TAP**: the graveyard pick, retrieve, the counter target, the boost-banish counter, the arsenal put and the Waxing Specter enters-with. **The arsenal put has never been offered in a real game before this week.** A tap that does nothing is this project's worst failure mode and only a phone finds it |
+| **the phone pass — NOW THE TOP NON-CARD RISK, AND OVERDUE** | this week added **seven sheets a player must TAP** plus, at v3.63, **a gear tap that opens in a new window** (the attack-reaction ability — its trainer gate is only source-scanned). Last week's six were: the graveyard pick, retrieve, the counter target, the boost-banish counter, the arsenal put and the Waxing Specter enters-with. **The arsenal put has never been offered in a real game before this week.** A tap that does nothing is this project's worst failure mode and only a phone finds it |
 | **tuning the table seat** | the brown button's opponent wins **29 of 45** (v3.51, measured). Levers are `sparring.js`'s `DEFAULTS` (`takeUpTo`, `maxPitch`). A play session, not a drill |
 | **`sparring.act` cannot pilot a low-aggression hero** | **Re-measured 2026-08-29 from `tools/.cache/games.json`, and the carried claim was wrong.** It said Iyslander accounts for "all remaining stalls"; she is in **7 of 10**, and the stalls cluster across three heroes — **iyslander 7, blaze 5, enigma 4** (a stall names two heroes, so these overlap). Iyslander still wins **0 of 210**. The policy ranks ATTACKS and these decks are short of them, so this is a policy gap rather than one hero's. See `PLAYNOTES.md`, and re-derive with: `node -e 'const g=require("./tools/.cache/games.json");…'` |
 | **nothing attacks an ALLY** | so Oysten's death trigger still has no driver. A deliberate refusal to guess (CR 1.4.5), not an oversight |

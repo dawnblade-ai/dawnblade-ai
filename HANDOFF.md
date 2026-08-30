@@ -1,3 +1,74 @@
+# Handoff — Dawnblade, at v3.63 · PHASE C · FAMILY-BY-FAMILY
+
+## ⚠ WHERE THINGS STAND — v3.60 → v3.63 (2026-08-30)
+
+**350 → 355 full · 43 → 38 `part`.** Four releases, committed straight to
+`main` (the user authorised "commit to live"), each validated with
+`npm test` + fairness + 210 self-play games (0 refusals, 0 invariant
+violations, 0 malformed feed throughout).
+
+| ver | what, in one line |
+|---|---|
+| **3.60** | the late `way:` condition pass — `execute` evaluates `fx.conds` BEFORE `fx.ops`, so *"…this way"* was answered against an empty record and was **false on every card, forever**. Also: the same unanchored draw-and-discard rule stealing a clause **one wording over** |
+| **3.61** | `_discWay` already recorded the fact v3.60 had just built a second record for — **the no-mirror rule broken inside a single file**, and unifying them closed a gap `creditDiscard`'s own comment had recorded as a debt |
+| **3.62** | the this-way pass reaches the ATTACK branch. The trace is recorded **inside `arcaneHit`'s `left > 0` branch**, so CR 7.5.5's *prevented is not dealt* governs it without being restated. **A sabotage that cannot express its bug proves nothing** — the first one applied inside the guard it was testing |
+| **3.63** | **`Attack Reaction - <cost>:` was live in the WRONG WINDOW.** `parseHeroPower`'s match was unanchored and found the `action` inside RE-ACTION, so three abilities were built at ACTION speed. Sev-3, fixed, and the route built |
+
+### THE FINDING THAT MATTERS MOST — v3.63
+
+v3.59 guarded `classifyClause` against this prefix and **this repo then
+recorded that "neither board can offer the ability."** That sentence was
+about a different function. `parseHeroPower` runs its own regex over the
+raw text, `clean` collapses the newlines so it cannot anchor on `^`, and
+**"REACTION" contains "ACTION"**:
+
+| card | did |
+|---|---|
+| Prey Spotters | marked a hero for free, any time |
+| Stalker's Steps | granted **go again** — an action point — with no attack to target |
+| Danger Digits | dealt 1 damage from nothing, its printed *"Destroy the dagger"* dropped |
+
+**A REFUSAL ASSERTED IN ONE FUNCTION IS NOT A REFUSAL.** When you write
+"X refuses, so nothing reaches Y", go and ask Y. Third outing for the
+Reaction-contains-action trap (v2.44, v3.30) and the first found by
+driving a claim rather than reading one.
+
+### THE NEXT JOB — and it is NOT a card
+
+**THE PHONE PASS, and it is now the top risk in the project.** Since the
+last on-device session this has added **seven prompt sheets a player must
+TAP** (the graveyard pick, retrieve, the counter target, the boost-banish
+counter, the arsenal put, the Waxing Specter enters-with, and the
+cross-seat destroy) **and, at v3.63, a gear tap that opens in a window it
+never opened in before.**
+
+The v3.63 trainer gate is validated by a **SOURCE SCAN**, and the drill
+says so in its own body: a scan proves the gate exists and names the
+window; it cannot prove the tap reaches it. `judge.legal` is driven, the
+trainer is not. **A tap that does nothing is this project's worst failure
+mode and only a phone finds it.**
+
+After that, the card work left in `WEEK.md` item 2 is **Boltyn**, whose
+attack-reaction ability refuses on its COST — a soul banish, a cost shape
+nothing builds. That is a cost job, not a window one.
+
+**DEPLOYED 2026-08-30 — `main` is at `07172a4` (v3.63).**
+
+**THE LIVE CHECK IS PARTIAL, AND THAT IS STATED RATHER THAN GLOSSED.**
+The session's egress policy denies `github.io` (403 on CONNECT), so the
+URL could not be fetched from here. What WAS verified against the pushed
+commit: all **21** `<script src="engine/…">` tags resolve to real files in
+`origin/main`, `index.html` is present, and `.nojekyll` is there. That is
+the subset that catches the "serves the page and 404s every script"
+failure; **the actual 200s are still unconfirmed.** First person with a
+browser should load the page and check the footer reads **v3.63**.
+
+Both `text/babel` blocks were compiled with `@babel/standalone` installed
+into a scratch directory — see CLAUDE.md, "THE COMPILE CHECK CAN BE RUN".
+It takes a second and there is no longer a reason to skip it.
+
+---
+
 # Handoff — Dawnblade, at v3.59 · PHASE C · FAMILY-BY-FAMILY
 
 ## ⚠ WHERE THINGS STAND — v3.52 → v3.59 (2026-08-29)
@@ -18,6 +89,11 @@ fairness + 210 self-play games (0 refusals, 0 invariant violations,
 | **3.59** | **"Attack Reaction - …" was an unguarded activation prefix**, so Prey Spotters read `full` and could not be activated at all. Four cards report honestly now; the baseline was reviewed and repinned |
 
 ### THE NEXT JOB, SCOPED — the attack-reaction ability route
+
+> **BUILT AT v3.63 — and step 2 below was WRONG, which is how the sev-3
+> was found. Three of these five already HAD a route, at the wrong speed.
+> Kept verbatim as the record of what was believed. See the v3.63 section
+> at the top of this file.**
 
 Five pool records print `Attack Reaction - <cost>: <effect>` and none has
 a route. What it needs, all of it measured this session:
