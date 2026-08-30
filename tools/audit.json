@@ -1,12 +1,12 @@
 {
- "generated": "2026-08-30T20:15:19.953Z",
- "appVer": "3.65",
+ "generated": "2026-08-30T23:42:02.678Z",
+ "appVer": "3.66",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 356,
-  "part": 37,
+  "full": 357,
+  "part": 36,
   "none": 12
  },
  "heroes": {
@@ -11409,7 +11409,7 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11419,12 +11419,10 @@
     },
     {
      "t": "If you prevent damage this way, create a Flurry token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If you prevent damage this way, create a Flurry token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "The next time you would be dealt damage this turn, prevent 2 of that damage. If you prevent damage this way, create a Flurry token.",

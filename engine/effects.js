@@ -347,6 +347,70 @@ function makeEffects(ctx){
     return n;
   };
 
+  /* PLAIN WARD, AND IT WAS INERT AT THE TABLE (v3.67).
+
+     `ward` is added by a shared op (`runOps`) and was consumed in exactly
+     one place: `index.html`'s `takeIt`. `judge.js` applies `hp - total`
+     and reads `.ward` nowhere at all — so five pool cards that print a
+     prevention did NOTHING there: Cloud Cover, Oasis Respite, Seeker's
+     Mitts, Toe the Line and (through its ability) Radiant Touch. v3.01's
+     shape for the fifth time this cycle, and the arcane twin has been
+     shared since `arcaneHit` was written, which is what made it look
+     wired.
+
+     IT REDUCES WHAT IS **DEALT**, NOT ONLY WHAT LIFE LOSES. CR 7.5.5:
+     if prevention means no damage is dealt, IT IS NO LONGER A HIT — so a
+     caller that subtracts ward from life while passing the unprevented
+     number to its on-hit clauses fires every rider off damage that never
+     landed. The number this returns is the one the whole resolution must
+     use, which is why it returns `dealt` rather than mutating life.
+
+     THE RIDER FIRES WHERE THE PREVENTION HAPPENS, for the same reason
+     `hist.arc`'s credit lives inside `arcaneHit` (v3.28): a prevention
+     that turns nothing aside must trigger nothing, and putting the test
+     at the call site is how that went wrong the first time.
+
+     WHOSE PREVENTION IS IT? The pool is one number, so a side holding two
+     wards cannot say which absorbed — and it does not have to: both are
+     soaking from the same pool at the same moment, so a rider held while
+     ANY of it drains really was prevented "this way". Stated as an
+     approximation rather than derived. */
+  const preventDamage = (n, seat, amount, srcName) => {
+    let left = Math.max(0, amount | 0);
+    const sd = n.sides[seat] || {};
+    const pool = sd.ward || 0;
+    /* THIS EARLY RETURN IS WHAT MAKES "A PREVENTION THAT PREVENTS NOTHING
+       TRIGGERS NOTHING" TRUE — CR 7.5.5's shape, and the property the
+       rider below depends on. An empty pool or a swing already blocked to
+       nothing leaves the rider waiting, which is what the card's "the NEXT
+       time" prints. A second `off > 0` guard around the rider read as
+       belt-and-braces and was DEAD: past this line both numbers are
+       positive, so `off` is always at least 1. Dead rules code is worse
+       than dead code elsewhere — it is a second description of a rule
+       nobody can reach and everybody can read. */
+    if(!(pool > 0) || left <= 0) return {game: n, dealt: left, prevented: 0};
+    const off = Math.min(pool, left);
+    left -= off;
+    const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
+    mut().ward = pool - off;
+    n = L(n, `${srcName || "The attack"}: ward soaks ${off}`
+           + (pool - off > 0 ? ` (${pool - off} left).` : " and is spent."));
+    /* WHAT THE PREVENTION TRIGGERS (v3.67) — Toe the Line's "if you
+       prevent damage this way, create a Flurry token". The grant was made
+       on an earlier resolution and fires here, which is why it cannot be
+       a `way:` condition (those are cleared with the resolution that set
+       them). Spent when it fires: the card prints "the NEXT time". */
+    const rid = (n.sides[seat] || {}).wardRider || [];
+    if(rid.length){
+      mut().wardRider = [];
+      const prev = actorOf(n);
+      n = Object.assign({}, n, {actor: seat});
+      for(const r of rid) n = runOps(n, r.ops || [], r.src || srcName || "prevention");
+      n = Object.assign({}, n, {actor: prev});
+    }
+    return {game: n, dealt: left, prevented: off};
+  };
+
   const arcaneHit = (n, seat, amount, srcName) => {
     const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
     const sd  = () => n.sides[seat];
@@ -744,7 +808,22 @@ function makeEffects(ctx){
       else if(k==="runeHitNext"){ const many=Math.max(1,v||1); actMut(n).runeHitNext=many;
         n=L(n,`Your next attack: if it hits, ${many>1?`${many} Runechants are`:"a Runechant is"} forged.`); }
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
-      else if(k==="ward"){ actMut(n).ward+=v; n=L(n,`Ward ${v}.`); }
+      else if(k==="ward"){
+        actMut(n).ward+=v;
+        n=L(n,`Ward ${v}.`);
+        /* THE RIDER WAITS WITH THE POOL (v3.67). Toe the Line prints
+           "The next time you would be dealt damage this turn, prevent 2
+           of that damage. IF YOU PREVENT DAMAGE THIS WAY, create a
+           Flurry token." The two halves arrive as separate clauses and
+           are paired in `fxParse`; the second cannot be a `way:`
+           condition because the prevention happens on a LATER
+           resolution, and those traces are cleared with the resolution
+           that set them (v3.60). It is fired by `preventDamage`. */
+        if(op[2] && op[2].ops && op[2].ops.length){
+          actMut(n).wardRider = [...(act(n).wardRider||[]), {ops: op[2].ops, src: srcName}];
+          n = L(n, `${srcName}: and something waits on that prevention.`);
+        }
+      }
       else if(k==="awd"){ actMut(n).awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="soulSelf"){ n._soulSelf = true; }
       else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
@@ -3657,7 +3736,7 @@ function makeEffects(ctx){
   }
 
   return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
-          linkPumps, linkPayload, attackRx, autoPitch, applyAnswer,
+          linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, foeTurnIce, takeInstantNext};
 }
 

@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.66"; /* v3.66 — SHARPEN, and the printed card is the oracle for a keyword for the FOURTH time: the database carries no reminder text for any keyword and the ruling recorded 2026-07-25 was right about the end-of-turn wipe, while the MPW103 printing of Edict of Steel is more precise in the way that matters — "remove ALL +1{p} counters FROM IT at end of turn", so a sword sharpened after Glisten loses those too. It is `ctrPut` rather than new machinery (the kind is `pow`, the candidate scan already covers gear, the sheet already exists for two or more); what the keyword adds is a WIPE stamped on the piece, because the sword's own text says nothing about sharpen and `idleCounterWipes` asks the PIECE's printed line. Edict's second sentence is about the SHARPENED SWORD, so it folds onto the spec where the whole card is visible, and its threshold is read off the line — 1 / 2 / 3 across the three printings. One body serves both landing sites, or the answer path silently loses the card's second half. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.67"; /* v3.67 — PLAIN WARD WAS INERT AT THE TABLE: the op that adds it is shared and it was consumed in exactly one place, `takeIt`, while judge.js applied `hp - total` and read `.ward` nowhere at all — so five pool cards that print a prevention did nothing there, v3.01's shape for the fifth time this cycle, and the ARCANE twin has been shared since `arcaneHit` was written, which is what made it look wired. `effects.preventDamage` is the one body both boards call, and it reduces what is DEALT rather than only what life loses: CR 7.5.5 says prevention that stops all the damage means it is no longer a hit, so a caller that subtracts ward from life alone fires every on-hit rider, crush and the soul off damage that never landed. Toe the Line's "if you prevent damage this way" cannot be a `way:` condition — those are cleared with the resolution that sets them and this prevention happens later — so the rider WAITS with the pool and fires from inside the shared body, where a prevention that turns nothing aside triggers nothing. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4068,13 +4068,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     let through = Math.max(0, s.incoming-dh-dg-drx-clashDef);
-    let wardNote = "";
-    let ward = act(s).ward;
-    if(through>0 && ward>0){ const use=Math.min(ward,through); through-=use; ward-=use; wardNote=` Ward soaks ${use}.`; }
     const drNames = bcards.filter(c=>fxParse(c).dr).map(c=>c.name);
     let n = {...s};
+    /* WARD IS `effects.preventDamage`'S NOW (v3.67). It was four inline
+       lines here and NOTHING at the table — judge.js read `.ward` nowhere
+       at all, so five pool cards that print a prevention did nothing
+       there. One body, both boards, and the rider Toe the Line hangs on
+       the prevention fires from inside it rather than from either caller.
+       The pool is the ACTOR's here: `takeIt` resolves an attack against
+       the side that is defending, which is the actor on this path. */
+    { const pv = _EFX.preventDamage(n, actorOf(n), through, "The attack");
+      n = pv.game; through = pv.dealt; }
     const defSide = actMut(n);
-    defSide.ward = ward;
     defSide.hist = {...act(s).hist, blueGY:(act(s).hist.blueGY||0)+bcards.filter(c=>c.pitch===3).length};
     defSide.blockH = []; defSide.blockG = []; defSide.blockRx = [];
     /* the wall has done its job, so the bonuses raised onto it go with the
@@ -4085,7 +4090,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     defSide.hand = act(s).hand.filter(c=>!act(s).blockH.includes(c.uid));
     defSide.grave = [...gy(s.turn, ...bcards),...act(s).grave];
     defSide.gear = act(s).gear.map((gr,i)=>act(s).blockG.includes(i)?gearBlockApply(gr):gr);
-    n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${wardNote}${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
+    n = L(n, `Blocked ${dh+dg+drx}, took ${through}.${drNames.length?` (${drNames.join(", ")} as defense reaction${drNames.length>1?"s":""}.)`:""}`);
     if(act(n).hp<=5 && act(n).hp>0 && !n.flags.p5) n = L({...n, flags:{...n.flags, p5:true}}, "On the ropes — every block counts now.");
     if(act(n).hp<=0){ n.over={win:false}; return L(n,`You hit the boards. ${foe(n).name} remains standing.`); }
     /* THE CHAIN LINK IS OVER, NOT THE TURN (v2.71). This used to go

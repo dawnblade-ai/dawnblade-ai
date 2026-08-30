@@ -3229,6 +3229,46 @@ function fxParse(card){
       }
     }
   }
+  /* ---- "IF YOU PREVENT DAMAGE THIS WAY" (v3.67) ---------------------
+
+     Toe the Line prints "The next time you would be dealt damage this
+     turn, prevent 2 of that damage. IF YOU PREVENT DAMAGE THIS WAY,
+     create a Flurry token."
+
+     IT IS NOT A `way:` CONDITION, and the difference is the whole reason
+     it needed building. v3.60's late pass answers "what did THIS
+     resolution just do", and its traces are cleared with the resolution
+     that set them — correctly, or the next card reads a discard it never
+     made. The prevention here happens on a LATER resolution, possibly on
+     the opponent's turn, so the rider has to WAIT with the ward. It rides
+     on the op, is held beside the pool, and is fired by
+     `effects.preventDamage` where the damage is actually turned aside —
+     the same place and the same reason `hist.arc`'s credit lives inside
+     `arcaneHit` (v3.28): a prevention that turns nothing aside must
+     trigger nothing.
+
+     PAIRED IN `fxParse`, where the whole card is visible, because the
+     splitter breaks on the period — the same place and reason `optCost`,
+     Stir the Aetherwinds and Sharpen pair their halves. Read alone the
+     second clause refuses, because nothing else can say what "this way"
+     refers to. */
+  {
+    const wi = fx.ops.findIndex(o => o[0] === "ward");
+    if(wi >= 0){
+      for(let k = 0; k < clauses.length; k++){
+        if(handled.has(k)) continue;
+        const pm = clauses[k].match(/^if you prevent damage this way, (.+)$/i);
+        if(!pm) continue;
+        const sub = classifyClause(pm[1]);
+        if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length || sub.cond) continue;
+        fx.ops[wi] = ["ward", fx.ops[wi][1], {ops: sub.ops}];
+        const RIDER = /^if you prevent damage this way,/i;
+        fx.clauses.forEach(cl => { if(cl.st === "skip" && RIDER.test(clean(cl.t))) cl.st = "run"; });
+        handled.add(k);
+        break;
+      }
+    }
+  }
   /* ---- SHARPEN'S SECOND SENTENCE IS ABOUT THE SHARPENED SWORD (v3.66)
 
      "Sharpen target sword you control. IF IT HAS N OR MORE +1{p}

@@ -1307,7 +1307,31 @@ function strike(g){
   const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length}));
   n = pre.game;
 
-  const total = Math.max(0, (pre.total || 0) - wall);
+  let total = Math.max(0, (pre.total || 0) - wall);
+
+  /* WARD WAS INERT AT THIS BOARD (v3.67). `runOps` adds it — shared — and
+     it was consumed only in `index.html`'s `takeIt`; this file read
+     `.ward` nowhere at all, so five pool cards that print a prevention did
+     nothing here. v3.01's shape: a rule written for one board.
+
+     IT REDUCES `total` ITSELF, before anything downstream sees it. CR
+     7.5.5 — if prevention means no damage is dealt, IT IS NO LONGER A
+     HIT — so subtracting ward from life alone would leave `pend.dealt`,
+     every on-hit clause, crush and the soul all firing off damage that
+     never landed. `effects.preventDamage` is the one body both boards
+     call, and what it returns IS the number the rest of the resolution
+     uses.
+
+     IT SITS BEFORE THE CR 1.4.5 ROUTING, because an attack on an ALLY is
+     damage dealt to the ally's controller's board and their hero's ward
+     does not stand in front of it — so the prevention is applied to the
+     hero branch only. */
+  if(!(link.target && link.target.kind === "ally")){
+    const pv = withEffects(n, (fx, st) =>
+      fx.preventDamage(st, def, total, (link.card || {}).name));
+    n = pv.game;
+    total = pv.dealt;
+  }
 
   /* CR 1.4.5 — THE ATTACK-TARGET DECIDES WHERE THE DAMAGE LANDS. An
      attack on an ally never touches the hero: CR 7.3.2a lets no cards be

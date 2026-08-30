@@ -9,6 +9,80 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.67 — plain ward was inert at the table
+
+`ward` is added by a **shared** op and was consumed in exactly one place:
+`index.html`'s `takeIt`. `judge.js` applies `hp - total` and read `.ward`
+**nowhere at all** — so five pool cards that print a prevention did nothing
+there:
+
+> Cloud Cover · Oasis Respite · Seeker's Mitts · Toe the Line
+> · Radiant Touch (through its ability)
+
+v3.01's shape for the fifth time this cycle, and the **arcane** twin has
+been shared since `arcaneHit` was written, which is exactly what made this
+look wired: half the mechanic was in the right place.
+
+No tool here could see it. Coverage reads Cloud Cover `full` — the clause
+IS read; the fairness sweep is one-sided toward cards STRONGER than printed
+and this is a defence being too weak; and `failstates.js` grades unread
+text, not a value that evaporates.
+
+### It reduces what is DEALT, not only what life loses
+
+CR 7.5.5 — if prevention means no damage is dealt, **it is no longer a
+hit**. A caller that subtracts ward from life while handing the
+unprevented number downstream fires `pend.dealt`, every on-hit clause,
+crush and the soul off damage that never landed. So `preventDamage`
+returns the number, and that number is what the rest of the resolution
+uses. `effects.preventDamage` is the one body; neither board keeps its own
+arithmetic, and a drill fails on an inline `Math.min(ward, …)` in either.
+
+**It sits before CR 1.4.5's routing**: an attack on an ALLY is damage to a
+board object, and the hero's ward does not stand in front of it.
+
+### "If you prevent damage this way" is not a `way:` condition
+
+Toe the Line prints *"The next time you would be dealt damage this turn,
+prevent 2 of that damage. **If you prevent damage this way**, create a
+Flurry token."*
+
+v3.60's late pass answers *what did THIS resolution just do*, and its
+traces are cleared with the resolution that set them — correctly, or the
+next card reads a discard it never made. **This prevention happens on a
+LATER resolution**, possibly on the opponent's turn, so the rider waits
+with the pool and fires from inside `preventDamage`, where the damage is
+actually turned aside. Same place and same reason `hist.arc`'s credit
+lives inside `arcaneHit` (v3.28).
+
+**A prevention that prevents nothing triggers nothing**, and the guard for
+that is the early return rather than a second test beside the rider — that
+second test read as belt-and-braces and was **dead**: past the early
+return both numbers are positive, so the amount soaked is always at least
+1. Sabotage is what showed it; dead rules code is worse than dead code
+elsewhere.
+
+**Whose prevention was it?** The pool is one number, so a side holding two
+wards cannot say which absorbed — and does not have to: both soak from the
+same pool at the same moment. Stated as an approximation rather than
+derived.
+
+### Two drills of mine that passed by finding nothing
+
+The rider drill never registered the card database, so the token mint
+resolved nothing whatever the engine did — and its **negative** twin
+("nothing prevented triggers nothing") passed for the same reason, which
+is the worse half. A negative assertion needs the positive control to run
+in the same state, or it is satisfied by the fixture rather than by the
+rule.
+
+Toe the Line: `part` → **full**. 357 full / 36 part. 1652 drills, 0 fail.
+Fairness clean. 210 self-play games: 0 refusals, 0 violations. 11
+sabotages, all biting. Both `text/babel` blocks compile.
+
+
+---
+
 ## v3.66 — Sharpen, and the printed card is the oracle for the fourth time
 
 The database carries no reminder text for any keyword. The ruling recorded

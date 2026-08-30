@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.66
+**Current version:** v3.67
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1640 drills**.
+This is `node --test "test/*.test.js"` — currently **1652 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,39 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### PLAIN WARD WAS INERT AT THE TABLE (v3.67)
+
+The op that adds it is SHARED; it was consumed in exactly one place,
+`index.html`'s `takeIt`. `judge.js` applies `hp - total` and read `.ward`
+**nowhere at all** — five pool cards printing a prevention did nothing
+there. v3.01's shape for the fifth time this cycle, and **the ARCANE twin
+has been shared since `arcaneHit` was written**, which is what made it
+look wired: half the mechanic was already in the right place.
+
+**IT REDUCES WHAT IS DEALT, NOT ONLY WHAT LIFE LOSES.** CR 7.5.5 — if
+prevention stops all of it, it is no longer a hit. Subtract ward from life
+alone and `pend.dealt`, every on-hit clause, crush and the soul all fire
+off damage that never landed. `effects.preventDamage` RETURNS the number,
+and that number is what the rest of the resolution uses.
+
+**A `way:` CONDITION CANNOT ANSWER A LATER RESOLUTION.** v3.60's late pass
+clears its traces with the resolution that set them — correctly. Toe the
+Line's prevention happens on a *later* one, possibly on the opponent's
+turn, so its rider WAITS with the pool and fires from inside the shared
+body. **When a trigger's event is not this resolution's, it is a schedule,
+not a trace.**
+
+**A PREVENTION THAT PREVENTS NOTHING TRIGGERS NOTHING**, and the guard is
+the early return — a second `off > 0` beside the rider read as
+belt-and-braces and was DEAD, because past that return both numbers are
+positive. Sabotage found it. Dead rules code is worse than dead code
+elsewhere: a second description of a rule nobody can reach.
+
+**AND A NEGATIVE DRILL NEEDS ITS POSITIVE CONTROL IN THE SAME STATE.** The
+rider drill never registered the database, so the mint resolved nothing
+whatever the engine did — and the "nothing triggers" twin passed for that
+reason rather than for the rule.
 
 ### TRY THE PRINTING BEFORE BOOKING A QUESTION — FOURTH TIME (v3.66)
 
