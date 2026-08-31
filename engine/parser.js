@@ -1604,6 +1604,25 @@ function classifyClause(raw){
   if(/^look at the top card of (?:your|target hero'?s?) deck$/.test(c)) return R([["reveal",1]]);
   if(m=c.match(/this gets ([+-])x\s*\{p\}, where x is the pitch value of the card revealed/))
     return R([["revPitch", m[1]==="-" ? -1 : 1]]);
+  /* THE SAME REVEAL, A DIFFERENT CONSUMER (v3.68). Three pool records
+     print "X is the pitch value of the card revealed this way": the two
+     Rabbles spend it on the attack's power (`revPitch`, above) and Throw
+     Caution to the Wind spends it on a PREVENTION.
+
+     NO X MACHINERY IS NEEDED, which is v3.39's rule about Blaze: X here
+     is not a free variable the player chooses, it is settled by the card
+     the reveal turns up. The reveal op runs first and leaves `n.revealed`
+     on the state; this reads it. Two names because they feed two
+     different pools — folding them into one op would make the consumer a
+     parameter of a card's text, which is exactly what `revPitch` and
+     `revColorPitch` already stay apart to avoid.
+
+     NO RIDER HERE. `ward`'s third element carries Toe the Line's "if you
+     prevent damage this way" (v3.67); measured, no pool card prints a
+     rider on the revealed-X form, so claiming one would be parsing ahead
+     of wiring. */
+  if(/^the next time you would be dealt damage this turn, prevent x of that damage, where x is the pitch value of the card revealed/.test(c))
+    return R([["revWard", 1]]);
   /* RULING (Knucklehead): roll a d6, and your base intellect becomes the
      roll until end of turn — intellect is the end-of-turn draw, so this is
      a real swing. Two ops, because they are two printed sentences. */

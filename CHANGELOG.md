@@ -9,6 +9,47 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.68 — the same reveal, a different pool
+
+Three pool records print *"X is the pitch value of the card revealed this
+way"*. Two of them — Murderous Rabble and Ravenous Rabble — spend it on the
+attack's power and have read since `revPitch` was written. **Throw Caution
+to the Wind spends it on a PREVENTION and read `part`**: the reveal
+resolved, and the whole second sentence was dropped.
+
+**NO X MACHINERY IS NEEDED** — v3.39's rule about Blaze, one card over. X
+here is not a free variable the player chooses, it is **settled by the card
+the reveal turns up**, so the reader is the reveal that already ran and left
+`n.revealed` on the state. Nothing is asked for, and the pool's only genuine
+X-cost card (Ice Eternal) stays refused for its own reasons.
+
+**TWO OPS, NOT ONE.** `revPitch` feeds the attack's power and `revWard`
+feeds the prevention pool. Folding them into one op with a destination
+parameter would make a card's text decide where a value lands, which is
+exactly what `revPitch` and `revColorPitch` already stay apart to avoid.
+
+**A reveal that turned up nothing grants nothing** — an empty deck leaves
+`n.revealed` unset and a ward of 0 is the honest answer rather than a
+default. Same guard `revPitch` keeps one branch up.
+
+**NO RIDER ON THIS FORM.** `ward`'s third element carries Toe the Line's
+*"if you prevent damage this way"* (v3.67); measured, no pool card prints a
+rider on the revealed-X shape, so claiming one would be parsing ahead of
+wiring.
+
+**And it only does anything because of v3.67.** Before that the pool sat on
+the side doing nothing at the table, which is the bug that version fixed —
+a driven drill takes the granted ward all the way through
+`effects.preventDamage` so the two halves are proven together rather than
+each in isolation.
+
+Throw Caution to the Wind: `part` → **full**. 358 full / 35 part. 1658
+drills, 0 fail. Fairness clean. 210 self-play games: 0 refusals, 0
+violations. 5 sabotages, all biting. Both `text/babel` blocks compile.
+
+
+---
+
 ## v3.67 — plain ward was inert at the table
 
 `ward` is added by a **shared** op and was consumed in exactly one place:

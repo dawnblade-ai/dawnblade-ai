@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.67
+**Current version:** v3.68
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1652 drills**.
+This is `node --test "test/*.test.js"` — currently **1658 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,23 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### THE SAME REVEAL, A DIFFERENT POOL (v3.68)
+
+Three pool records print *"X is the pitch value of the card revealed this
+way"*. The two Rabbles spend it on the attack's power and have read since
+`revPitch` was written; **Throw Caution to the Wind spends it on a
+PREVENTION and read `part`** — the reveal resolved and the second sentence
+was dropped.
+
+**NO X MACHINERY IS NEEDED** (v3.39, one card over): X is not a free
+variable the player picks, it is settled by the card the reveal turns up,
+so the reader is the reveal that already ran.
+
+**TWO OPS, NOT ONE.** `revPitch` feeds power, `revWard` feeds the
+prevention pool. One op with a destination parameter would let a card's
+text decide where a value lands — the thing `revPitch` and
+`revColorPitch` already stay apart to avoid.
 
 ### PLAIN WARD WAS INERT AT THE TABLE (v3.67)
 

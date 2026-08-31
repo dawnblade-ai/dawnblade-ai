@@ -1266,6 +1266,22 @@ function makeEffects(ctx){
         n._condSelf = (n._condSelf||0) + v*p;
         n = L(n, `${n.revealed.name} is pitch ${p} — this attack ${v<0?"drops":"gains"} ${Math.abs(v*p)}.`);
       }
+      /* THE REVEALED PITCH, SPENT ON A PREVENTION (v3.68). Throw Caution
+         to the Wind prints the same "X is the pitch value of the card
+         revealed this way" the two Rabbles do, and spends it on ward
+         rather than on the attack's power. Same reader, different pool —
+         and the reveal is what settles X, so nothing is asked for.
+
+         A REVEAL THAT TURNED UP NOTHING GRANTS NOTHING: an empty deck
+         leaves `n.revealed` unset, and a ward of 0 is the honest answer
+         rather than a default. Same guard `revPitch` keeps one branch up. */
+      else if(k==="revWard"){
+        if(!n.revealed){ n = L(n, `${srcName}: nothing was revealed, so there is no pitch to prevent with.`); return; }
+        const p = n.revealed.pitch || 0;
+        if(p <= 0){ n = L(n, `${n.revealed.name} prints no pitch — nothing is prevented.`); return; }
+        actMut(n).ward = act(n).ward + p;
+        n = L(n, `${n.revealed.name} is pitch ${p} — the next ${p} damage this turn is prevented.`);
+      }
       /* RULING (Saltwater Swell): reads the SAME n.revealed the reveal op
          just set (both ops run together in declOps), and if it matches,
          moves the actual top-of-deck card into the pitch zone — the reveal

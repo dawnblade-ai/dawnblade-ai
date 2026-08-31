@@ -194,3 +194,84 @@ test("BOTH BOARDS ASK THE ONE BODY — neither keeps its own ward arithmetic", (
   assert.ok(!/Math\.min\(ward\s*,/.test(html), "no second copy of the arithmetic in the trainer");
   assert.ok(!/Math\.min\(ward\s*,/.test(judge), "…nor in judge");
 });
+
+/* ============================================================
+   THE SAME REVEAL, A DIFFERENT POOL (v3.68)
+
+   Three pool records print "X is the pitch value of the card revealed
+   this way". The two Rabbles spend it on the attack's power; Throw
+   Caution to the Wind spends it on a PREVENTION and read `part`.
+
+   NO X MACHINERY IS NEEDED — v3.39's rule about Blaze. X is not a free
+   variable the player picks, it is settled by the card the reveal turns
+   up, so the reader is the reveal that already ran.
+   ============================================================ */
+
+test("Throw Caution's X is read off the reveal, not asked for", {skip}, () => {
+  P.fxReset();
+  const pool = require("../data/pool.json");
+  const r = pool.find(x => x.name === "Throw Caution to the Wind");
+  const fx = P.fxParse({name: "tc|x|" + r.pitch, tx: r.functional_text || "",
+                        tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
+                        pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
+  assert.deepEqual(fx.ops, [["reveal", 1], ["revWard", 1]],
+    "the reveal must run first and leave the card for the ward to read");
+  assert.equal(fx.tier, "full");
+  P.fxReset();
+});
+
+test("…and the two Rabbles keep spending it on POWER", {skip}, () => {
+  /* The control. One op for both consumers would make the destination a
+     parameter of a card's text — which is why `revPitch` and
+     `revColorPitch` already stay apart. */
+  P.fxReset();
+  const pool = require("../data/pool.json");
+  for(const [nm, sign] of [["Murderous Rabble", 1], ["Ravenous Rabble", -1]]){
+    const r = pool.find(x => x.name === nm);
+    const fx = P.fxParse({name: nm + "|ctl|" + r.pitch, tx: r.functional_text || "",
+                          tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
+                          pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
+    assert.deepEqual(fx.ops, [["reveal", 1], ["revPitch", sign]], nm);
+  }
+  P.fxReset();
+});
+
+test("DRIVEN: the ward granted IS the revealed card's pitch", {skip}, () => {
+  H.db();
+  const run = topPitch => {
+    const g = H.state({deck: [{uid: "t1", name: "Top Card", pitch: topPitch}]},
+                      {}, {actor: 0, turn: 3});
+    return J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
+  };
+  /* THREE PITCHES, or a hardcoded 1 passes a test written against red
+     alone — the same rule `rustDestroy` and heave follow. */
+  assert.equal(run(1).sides[0].ward, 1);
+  assert.equal(run(2).sides[0].ward, 2);
+  assert.equal(run(3).sides[0].ward, 3);
+});
+
+test("…and it stacks onto a pool that is already there", {skip}, () => {
+  H.db();
+  const g = H.state({ward: 2, deck: [{uid: "t1", name: "Top", pitch: 3}]}, {}, {actor: 0, turn: 3});
+  const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
+  assert.equal(n.sides[0].ward, 5, "ward is one draining pool, not a replacement");
+});
+
+test("a reveal that turned up nothing grants nothing", {skip}, () => {
+  H.db();
+  const g = H.state({deck: []}, {}, {actor: 0, turn: 3});
+  const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
+  assert.equal(n.sides[0].ward, 0, "an empty deck reveals nothing — 0 is the honest answer");
+});
+
+test("DRIVEN: the granted ward actually prevents, through the shared body", {skip}, () => {
+  /* End to end: the two halves of this version meet here. Without v3.67's
+     `preventDamage` the pool would sit on the side doing nothing at the
+     table, which is precisely the bug that version fixed. */
+  H.db();
+  const g = H.state({deck: [{uid: "t1", name: "Top", pitch: 3}]}, {}, {actor: 0, turn: 3});
+  let n = J.withEffects(g, (fx, s) => fx.runOps(s, [["reveal", 1], ["revWard", 1]], "Throw Caution"));
+  const out = J.withEffects(n, (fx, s) => fx.preventDamage(s, 0, 5, "a swing"));
+  assert.equal(out.dealt, 2, "3 of the 5 is prevented");
+  assert.equal(out.game.sides[0].ward, 0, "and the pool is spent");
+});
