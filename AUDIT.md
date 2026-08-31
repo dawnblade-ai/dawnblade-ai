@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-08-31T01:45:52.057Z · app v3.67 · data sage-v12 · db 788 records
+Generated 2026-08-31T01:54:00.948Z · app v3.68 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -55,7 +55,7 @@ Generated 2026-08-31T01:45:52.057Z · app v3.67 · data sage-v12 · db 788 recor
 | phantasm | live — RULED 2026-07-25: a drawback — one blocker with 6+ printed POWER pops the attack; destroyed, so no go again and no action-point refund | Enigma Chimera, Phantasmal Haze, Spears of Surreality, Spectral Rider |
 | piercing | unreviewed — seen in pool; needs CR wording | Drill Shot |
 | quickstrike | unreviewed — seen on Rush of Power | Rush of Power |
-| reload | pending — RULED 2026-07-25 (spec in tools/rulings.json) — roadmap #4 — Azalea | Bolt'n' Shot, Take Aim |
+| reload | live — v3.69 — the parser rule, the op, the arsEmpty gate and the prompt had all existed for versions and the RECORD was stale. The 1HP237 printing of Take Aim carries the reminder text the database omits: FACE DOWN, a different event from the face-UP put Azalea's arrows trigger on | Bolt'n' Shot, Take Aim |
 | reprise | live — RULED 2026-07-25: live since the dummy blocks from hand — counts the non-equipment defenders declared this chain link | Ironsong Response, Out for Blood, Overpower, Stroke of Foresight |
 | retrieve | live — RULED 2026-07-25 + the SAR017 PRINTING (v3.53): 'you may retrieve a dagger from your graveyard. (Pay {r} to equip it.)' — a graveyard pick costing {r} whose destination is the GEAR zone. Needed destroyed gear to reach the graveyard first (RULING 2026-08-29, effects.sweepGear) | Pick Up the Point, Up Sticks and Run |
 | rupture | unreviewed — seen in pool; hero package TBD | Lava Burst |

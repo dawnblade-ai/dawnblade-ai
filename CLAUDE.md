@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.68
+**Current version:** v3.69
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1658 drills**.
+This is `node --test "test/*.test.js"` — currently **1664 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -410,6 +410,37 @@ deliberately: a field arriving is as deliberate an edit as one leaving.
 landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
 halves base {p} and {d} for a turn. Claiming it would file a card `full`
 that does nothing.
+
+### THE FACE OF AN ARSENAL PUT IS THE CALLER'S ANSWER (v3.69)
+
+`applyAnswer` treated **every** `to:"arsenal"` pick as a face-UP put —
+right for the three cards that PRINT *"face up"*, whose whole mechanism is
+the trigger that fires when they do, and wrong for **reload**, whose
+printed reminder text (1HP237 Take Aim) says *"face down"*.
+
+**LIVE, AND IT STOLE REAL VALUE.** Azalea's deck holds Take Aim beside
+Swift Shot (**go again**), Entangling Shot (taps their hero), Dry Powder
+Shot and Ridge Rider Shot. Reloading one fired its face-up trigger — a
+free ACTION POINT off a card that grants none. **And the prompt's own
+title said "face-down"**: the feed and the state disagreeing, which is the
+sev-2 category the player trusts.
+
+Opt-in (v3.58), so an absent flag gets the printed default. **And
+`buildPrompt` had to be told about the field explicitly** or every put
+arrives face DOWN — v2.34's `arsStamp` rule, fourth field to prove it.
+
+### A STALE `pending` IS LOAD-BEARING (v3.69)
+
+`reload` was fully built — parser rule, op, `arsEmpty` gate, optional
+prompt — and `tools/ledger.js` still called it **pending**. That is the
+reverse of the usual failure and just as costly: `failstates.js` grades a
+keyword against its STATUS rather than a grep (v3.00), so the tool was
+scoring a gap that had been closed for versions.
+
+v3.41's rule has a twin. *When you close a recorded gap, delete the
+record* — **and when a record says a thing is unbuilt, go and ask the
+engine.** It is the same two-minute check that moved three `npm run gaps`
+family labels.
 
 ### THE SAME REVEAL, A DIFFERENT POOL (v3.68)
 

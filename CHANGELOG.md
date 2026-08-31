@@ -9,6 +9,67 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.69 — reload put the card face UP, and face up is a different event
+
+The database carries no reminder text for any keyword. The **1HP237
+printing of Take Aim** does:
+
+> **Reload** *(If you have no cards in your arsenal, you may put a card
+> from your hand **face down** into your arsenal.)*
+
+`applyAnswer` treated **every** `to:"arsenal"` pick as a face-UP put. That
+is right for the three cards v2.33/v2.34 built — Call in the Big Guns,
+Bull's Eye Bracers and Death Dealer all print *"face up"*, and the trigger
+that fires when they do is their whole mechanism — and wrong for reload,
+which prints the opposite.
+
+**IT IS LIVE.** Azalea's deck holds Take Aim beside four arrows with
+face-up triggers:
+
+| arrow | trigger |
+|---|---|
+| Swift Shot | **go again** |
+| Entangling Shot | taps the opposing hero |
+| Dry Powder Shot | +2{p} |
+| Ridge Rider Shot | opt 1 |
+
+So reloading Swift Shot handed her a free **action point** and reloading
+Entangling Shot tapped the opposing hero, off a card that grants neither.
+**And the prompt's own title said "face-down" while the code set
+`_faceUp: true`** — the feed and the state disagreeing, which is the sev-2
+category the player TRUSTS.
+
+**THE FACE IS THE CALLER'S ANSWER**, read off the printed word and opt-in
+(v3.58), so a spec that says nothing gets the printed default — face down,
+which is what an ordinary arsenal set is. **And `buildPrompt` had to be
+told about the field explicitly**, or every put arrives face down
+including the three whose mechanism depends on the opposite: v2.34's
+`arsStamp` rule, and the fourth field to prove it.
+
+### The keyword was already built, and the RECORD was stale
+
+`reload`'s parser rule, its op, its `arsEmpty` gate (**not** `arsFree` —
+the printed word is "no cards", and the two coincide at capacity 1, which
+is why the wrong one stays invisible) and its optional prompt had all
+existed for versions. `tools/ledger.js` still called it `pending`.
+
+That is the reverse of the usual failure and just as costly:
+`failstates.js` grades a keyword's severity against its **status** rather
+than a grep (v3.00), so a stale `pending` is load-bearing. Moved to
+`live`, and the ruling marked answered — **when you close a recorded gap,
+delete the record** (v3.41). Its twin: *when a record says a thing is
+unbuilt, go and ask the engine.*
+
+**Fifth time the printing has paid** — Clash of Agility, Thunder Quake,
+Pick Up the Point, Sharpen, and now this.
+
+358 full / 35 part. 1664 drills, 0 fail. Fairness clean. 210 self-play
+games: 0 refusals, 0 violations. 5 sabotages, all biting. Both
+`text/babel` blocks compile.
+
+
+---
+
 ## v3.68 — the same reveal, a different pool
 
 Three pool records print *"X is the pitch value of the card revealed this

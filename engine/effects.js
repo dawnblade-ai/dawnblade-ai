@@ -1969,7 +1969,7 @@ function makeEffects(ctx){
         nn.promptQ = [...(nn.promptQ||[]), {
           tag:"pick", side:actorOf(nn), src:card.name,
           zone:"hand", to:"arsenal", filter:fx.arsenalPut.filter, min:0, max:1,
-          ops:fx.arsenalPut.ops, arsStamp:fx.arsenalPut.stamp,
+          ops:fx.arsenalPut.ops, arsStamp:fx.arsenalPut.stamp, faceUp:true,
           title:"Put an arrow face up in your arsenal?",
           hint:"Optional — it goes FACE UP, so its arsenal trigger fires."}];
         return nn;
@@ -2991,7 +2991,29 @@ function makeEffects(ctx){
           n = L(n, `${c.name} is retrieved and equipped again.`);
       }
     }
-    if(p.tag === "pick" && p.to === "arsenal"){
+    /* THE FACE IS THE CALLER'S ANSWER, NOT THE ZONE'S (v3.69). This branch
+       treated EVERY `to:"arsenal"` pick as a FACE-UP put — right for the
+       three cards v2.33/v2.34 built, which all print "face up", and wrong
+       for RELOAD, whose printed reminder text says the opposite:
+
+         Reload (If you have no cards in your arsenal, you may put a card
+         from your hand FACE DOWN into your arsenal.)
+
+       Face-up is a DIFFERENT EVENT (v2.33) — it is the one Azalea's arrows
+       trigger on, and her deck holds Take Aim beside four of them. Driven,
+       reloading Swift Shot handed her a free go again and reloading
+       Entangling Shot tapped the opposing hero, off a card that grants
+       neither. The prompt's own title said "face-down" while the code set
+       `_faceUp: true`: the feed and the state disagreeing, which is the
+       sev-2 category the player TRUSTS.
+
+       OPT-IN (v3.58's rule), so a spec that says nothing gets the printed
+       default — face DOWN, which is what an ordinary arsenal set is. */
+    if(p.tag === "pick" && p.to === "arsenal" && !p.faceUp && (act(n).arsenal || {})._faceUp !== true){
+      const put = act(n).arsenal;
+      if(put) n = L(n, `${act(n).name}: ${put.name} goes into the arsenal face down.`);
+    }
+    if(p.tag === "pick" && p.to === "arsenal" && p.faceUp){
       const put = act(n).arsenal;
       if(put && !put._faceUp){
         const pfx = fxParse(put);

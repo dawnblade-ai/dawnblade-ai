@@ -361,12 +361,13 @@
  "reload": {
   "at": "2026-07-25",
   "mechanic": "reload",
-  "status": "pending",
+  "status": "answered",
   "cards": [
    "Bolt'n' Shot (1)",
    "Take Aim (1)"
   ],
-  "ruling": "azelea *needs* to get arrows into her arsenal to attack - these reload cards assist with that - the player should get a 'reload' pop up and choose a card from their hand to put into Arsenal - but only if they don't have a card in there already"
+  "ruling": "azelea *needs* to get arrows into her arsenal to attack - these reload cards assist with that - the player should get a 'reload' pop up and choose a card from their hand to put into Arsenal - but only if they don't have a card in there already",
+  "built": "Already built when reviewed at v3.69 — parser rule, op, arsEmpty gate and prompt. The 1HP237 PRINTING of Take Aim confirms the ruling and sharpens it: 'If you have no cards in your arsenal, you may put a card from your hand FACE DOWN into your arsenal.' Face down is a DIFFERENT event from the face-up put Azalea's arrows trigger on; applyAnswer was treating every to:'arsenal' pick as face UP, so reloading Swift Shot granted a free action point."
  },
  "retrieve": {
   "at": "2026-07-25",

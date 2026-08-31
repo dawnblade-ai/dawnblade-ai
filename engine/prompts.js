@@ -182,6 +182,12 @@ function buildPrompt(game, spec){
          counter put opens the right sheet, names the right permanent and
          places nothing. */
       ctrStamp: spec.ctrStamp || null,
+      /* A SPEC ONLY CARRIES FIELDS THIS FUNCTION KNOWS ABOUT (v2.34's
+         `arsStamp` rule, and this is the fourth field to prove it). Left
+         off, every arsenal put arrives FACE DOWN — including the three
+         cards that print "face up", whose whole mechanism is the trigger
+         that fires when they do. */
+      faceUp: !!spec.faceUp,
       /* THE COUNTER COST AND ITS STAMP (v3.39), and they are here for the
          reason `arsStamp` is: A PROMPT SPEC ONLY CARRIES FIELDS THIS
          FUNCTION KNOWS ABOUT (v2.34). Dropped, Blaze's ability banishes
