@@ -1,6 +1,6 @@
 {
- "generated": "2026-08-31T01:54:00.948Z",
- "appVer": "3.68",
+ "generated": "2026-09-01T01:20:32.064Z",
+ "appVer": "3.69",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -10726,9 +10726,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 2 arcane damage to target hero.\nSurge - If this deals more than 2 damage, it gets go again.",
-   "flags": [
-    "unreviewed keyword: \"surge\""
-   ]
+   "flags": []
   },
   "aether spindle|3": {
    "name": "Aether Spindle",
@@ -10834,9 +10832,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 1 arcane damage to target hero.\nSurge - If this deals more than 1 damage, draw 2 cards.",
-   "flags": [
-    "unreviewed keyword: \"surge\""
-   ]
+   "flags": []
   },
   "whisper of the oracle|3": {
    "name": "Whisper of the Oracle",

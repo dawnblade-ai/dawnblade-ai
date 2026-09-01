@@ -53,7 +53,7 @@
  "charge": {
   "at": "2026-07-25",
   "mechanic": "charge",
-  "status": "pending",
+  "status": "answered",
   "cards": [
    "Beaming Bravado (1)",
    "Bolt of Courage (1)",
@@ -68,7 +68,8 @@
    "Take Flight (2)",
    "V of the Vanguard (2)"
   ],
-  "ruling": "So you first need to evaluate boltyn's hero ability to truly understand this - as a light hero he has a soul - players usually stack this under their hero card - cards in soul can be used for different effects - 'charging' is a mechanic defined by the official rules where you put a card from hand to soul and having done so qualifies you for bonuses on these cards."
+  "ruling": "So you first need to evaluate boltyn's hero ability to truly understand this - as a light hero he has a soul - players usually stack this under their hero card - cards in soul can be used for different effects - 'charging' is a mechanic defined by the official rules where you put a card from hand to soul and having done so qualifies you for bonuses on these cards.",
+  "built": "Built when reviewed at v3.70 — fx.chargeCost, the charge site in `execute`, hist.charged and the chargedPitchN conditions. Found by the ledger drill, which flags a keyword whose status claims it is unbuilt while the engine names it; reload (v3.69) was the same shape."
  },
  "opt": {
   "at": "2026-07-25",

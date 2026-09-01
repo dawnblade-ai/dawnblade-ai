@@ -1,0 +1,102 @@
+# THE CHEAPEST RISK REDUCTION IN THIS PROJECT, AND IT HAD NEVER BEEN DONE.
+#
+# Until v3.70 nothing but a human ran `npm test`. The suite has ZERO
+# dependencies and takes about 30 seconds, so there was never a cost
+# argument — only nobody had written the twenty lines.
+#
+# It runs on a FRESH CLONE with no card-database cache, which is the state
+# v3.00 made green on purpose: `data/pool.json` pins every record the pool
+# can reach, so the suite measures the same engine on every machine. The
+# only drills that skip are the 4 in test/drift.test.js, which read the live
+# database deliberately — and the skip count is ASSERTED below, because
+# v3.00's whole lesson is that a silent skip is not a pass.
+name: drills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # NO `npm install`. The project has no dependencies and must keep
+      # working from a file:// URL with none — an install step here would
+      # quietly make that untrue.
+      - name: npm test
+        run: npm test 2>&1 | tee /tmp/out.txt
+
+      - name: the skip count is part of the result
+        run: |
+          fail=$(grep -oP '^# fail \K[0-9]+' /tmp/out.txt)
+          skip=$(grep -oP '^# skipped \K[0-9]+' /tmp/out.txt)
+          echo "fail=$fail skipped=$skip"
+          [ "$fail" = "0" ] || { echo "::error::$fail drills failed"; exit 1; }
+          # 4 = test/drift.test.js, which reads the live wire on purpose.
+          # ANY other skip means a fixture went missing (v3.00).
+          [ "$skip" = "4" ] || { echo "::error::expected 4 skips (drift), got $skip — a fixture is missing"; exit 1; }
+
+      - name: the page still compiles
+        run: |
+          # html-balance.test.js proves the brackets balance, and v2.27
+          # shipped a page that was balanced AND broken. Compiling both
+          # text/babel blocks is the stated manual pre-ship step; here it is
+          # automatic. Installed to a scratch dir so the repo stays
+          # dependency-free.
+          npm install --no-save --prefix /tmp/babel @babel/standalone
+          node -e '
+            const fs=require("fs");
+            const B=require("/tmp/babel/node_modules/@babel/standalone");
+            const s=fs.readFileSync("index.html","utf8");
+            const rx=/<script[^>]*type="text\/babel"[^>]*>([\s\S]*?)<\/script>/g;
+            let m,i=0,bad=0;
+            while((m=rx.exec(s))){ i++;
+              try{ B.transform(m[1],{presets:["react"],sourceType:"script"}); }
+              catch(e){ bad++; console.log("block "+i+": "+e.message); } }
+            if(!i) { console.log("no text/babel blocks found — the scan is aimed wrong"); process.exit(1); }
+            console.log(i+" blocks, "+bad+" with errors");
+            process.exit(bad?1:0);'
+
+  deploy:
+    # THE HALF A SESSION CANNOT CHECK. The sandbox these releases are built
+    # in denies github.io, so every "shipped" claim has carried an asterisk.
+    # This closes the gap between "pushed" and "live" — and it checks the
+    # SCRIPTS, not just the page, because Pages will happily serve
+    # index.html and 404 every module, which looks fine until a tap does
+    # nothing.
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: wait for Pages, then verify the page AND every script it loads
+        run: |
+          URL=https://dawnblade-ai.github.io/dawnblade-ai
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/")
+            [ "$code" = "200" ] && break
+            echo "attempt $i: $code — waiting for the deploy"; sleep 20
+          done
+          [ "$code" = "200" ] || { echo "::error::index.html is $code"; exit 1; }
+
+          # DERIVE THE COUNT, NEVER STATE IT (CLAUDE.md). This line used to
+          # read "all 15 engine files" when the real number was 21.
+          bad=0
+          for f in $(grep -o '<script src="engine/[a-z]*\.js"' index.html | sed 's/.*src="//;s/"//' | sort -u); do
+            c=$(curl -s -o /dev/null -w '%{http_code}' "$URL/$f")
+            [ "$c" = "200" ] || { echo "::error::$f is $c"; bad=1; }
+          done
+          [ "$bad" = "0" ] || exit 1
+
+          ver=$(curl -s "$URL/index.html" | grep -oP 'APP_VER = "\K[0-9.]+' | head -1)
+          local=$(grep -oP 'APP_VER = "\K[0-9.]+' index.html | head -1)
+          echo "live=$ver repo=$local"
+          [ "$ver" = "$local" ] || { echo "::error::live is $ver, repo is $local"; exit 1; }
+          echo "verified: $URL serves v$ver and every engine module 200s"

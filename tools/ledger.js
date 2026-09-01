@@ -30,7 +30,7 @@ const KEYWORDS = {
    "battleworn":          {status:"live",        note:"-1 counter per block, survives at 0"},
    "blade break":         {status:"live",        note:"equipment destroyed after blocking"},
    "boost":               {status:"live",        note:"per-attack prompt; banish top, Mechanologist grants go again"},
-   "charge":              {status:"pending",     note:"RULED 2026-07-25 (spec in tools/rulings.json) — Boltyn's soul engine"},
+   "charge":              {status:"live",        note:"v3.70 — BUILT, and the record was stale. fx.chargeCost is parsed, `execute` charges the chosen card into the soul and records hist.charged, and the chargedPitchN conditions resolve; Beaming Bravado, Bolt of Courage, Courageous Steelhand and Engulfing Light all read full. Boltyn's own HERO clause is still unread, which is a separate gap (FINISH.md P1)"},
    "clash":               {status:"live",        note:"RULED 2026-07-25: both sides reveal for real, greatest POWER wins, a tie is no winner. Fires when the card DEFENDS, which is how every clash card is printed"},
    "ephemeral":           {status:"live",        note:"from Crouching Tiger's printed reminder text: if it would be put into a graveyard from anywhere, instead it ceases to exist. Enforced in the gy() helper, the single path into the graveyard"},
    "cloaked":             {status:"unreviewed",  note:"Arakni package"},
@@ -69,7 +69,7 @@ const KEYWORDS = {
    "spellvoid":           {status:"inert-dummy", note:"destroy this to prevent N arcane — the dummy deals only physical"},
    "steal":               {status:"unreviewed",  note:"Arakni package"},
    "stealth":             {status:"live",        note:"RULED 2026-07-25: does nothing alone — a qualifier other cards test for"},
-   "surge":               {status:"unreviewed",  note:"bonus when dealing more than printed arcane (Blaze)"},
+   "surge":               {status:"partial",     note:"v3.70 - PARTIAL, and the record said unreviewed. classifyClause reads the Surge dash line into a surgeOverN condition and effects evaluates it; Aether Quickening and Open the Flood Gates both read full. It is partial rather than live because the condition is APPROXIMATED as amp>0 rather than the damage actually dealt - partial counts as built for an upside and never for a drawback (v3.00)"},
    /* BUILT v3.00. The payload used to be queued on PLAY — Act of Glory
       handed you +6{p} the moment the aura landed rather than two turns
       later — so the keyword was a bonus where it prints a DELAY. It ticks
