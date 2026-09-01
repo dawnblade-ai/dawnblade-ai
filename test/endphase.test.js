@@ -244,14 +244,14 @@ test("the trainer holds NO beginning-of-end-phase rule of its own", () => {
     "so does the idle counter wipe — no CALL to it survives here");
   assert.ok(!/intimidated/.test(code),
     "so does intimidate's return");
-  assert.match(code, /DawnEffects\.beginEndPhase\(s, si\)/,
+  assert.match(code, /DawnEffects\.beginEndPhase\(s, si, db\)/,
     "and the trainer's `beginEndPhase` must DELEGATE to it");
 });
 
 test("judge.js calls the shared body rather than restating the event", () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
   const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.match(code, /E\.beginEndPhase\(n, seat\)/);
+  assert.match(code, /E\.beginEndPhase\(n, seat, getDb\(\)\)/);
   assert.ok(!/E\.resolveInertia\(/.test(code),
     "Inertia is inside the shared body now — reaching for it here is the second " +
     "caller growing its own copy of the order, which is what CR 4.1.8a's comment " +
@@ -266,7 +266,7 @@ test("the ORDER is one description — CR 4.1.8a's claim, finally pinned", () =>
      boards make that choice separately. Inertia leads because it is itself
      an aura and the sweep would otherwise race it for the same entry. */
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const i = src.indexOf("function beginEndPhase(game, seat){");
+  const i = src.indexOf("function beginEndPhase(game, seat, db){");
   assert.ok(i > 0, "beginEndPhase moved — re-anchor this drill");
   const body = src.slice(i, src.indexOf("\nfunction ", i + 10));
   assert.ok(body.length > 400, "the slice must actually contain the body");

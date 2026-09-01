@@ -68,6 +68,15 @@ const HERO_STATICS = [
   {key:"stealthMarkedBuff",
    re:/your attacks with stealth that are attacking a marked hero get \+\d+\{p\}/,
    note:"Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again"},
+  /* ARAKNI's clause 2, built v3.76 — the Agents of Chaos. Two entries,
+     because the two halves are printed on DIFFERENT cards: she becomes,
+     an Agent returns. `build:false` on neither — both are real build
+     passives and the census asks the build about each. */
+  {key:"becomeAgent",
+   re:/at the beginning of your end phase, if an opponent is marked, you become a random agent of [a-z]+/,
+   note:"Arakni — her end phase turns her into a random Agent of Chaos while an opponent is marked"},
+  {key:"returnToBrood", re:/at the beginning of your end phase, return to the brood/,
+   note:"an Agent of Chaos — its own end phase sends it home, and Arakni's clause fires again"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,

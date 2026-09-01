@@ -161,6 +161,24 @@ const GAME_KEYS = [
      during the attacker's turn. Shared, not per-side — it names one of the two
      seats, it does not live on either. Default 0 on a single-actor device. */
   "actor",
+  /* THE TWO SEATS' BUILDS — what each hero's printed line says, read once
+     and carried on the state (v3.76). It has always been shared state at
+     the table (`judge.newMatch` puts it there and `bAct` reads
+     `g.builds[actor]`); the TRAINER kept it in a `useMemo` closure, which
+     is immutable by construction — so the first rule that CHANGES a hero
+     could not reach it there at all.
+
+     Arakni prints "you become a random Agent of Chaos", and an Agent has
+     its own ability, its own passives and its own powCard. With the ledger
+     frozen, the feed would have announced the transformation while every
+     passive kept answering for the hero she used to be — the sev-2
+     category where the feed and the state disagree, and v3.01's
+     one-board rule created on purpose rather than found.
+
+     The CONSTRUCTION INPUTS (`deck`, `gear`) are stripped before it goes
+     on the state, the way `judge.newMatch` already strips them: what a
+     build is kept FOR is the printed passives a rules site reads. */
+  "builds",
   /* the SEEDED random source (engine/rng.js). Shared, and it must travel
      WITH the state: a game is its seed plus its action log, so an rng that
      lived outside the state would make the game unreplayable and two

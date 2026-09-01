@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.75
+**Current version:** v3.76
 
 ---
 
@@ -89,7 +89,7 @@ are too STRONG, and `npm test` skipped.
   of it; upstream splitting that sentence in two is the only reason anyone
   found out. Its tier is `part` now, on purpose.
 
-- `DATA_VER` (e.g. `"sage-v6"`) keys the localStorage cache. **Bump it whenever the
+- `DATA_VER` (e.g. `"sage-v13"`) keys the localStorage cache. **Bump it whenever the
   loader's schema or card-field handling changes**, or users will run on stale data.
 - Printed keywords (`card_keywords`) and *granted* keywords (`granted_keywords`) must
   stay separate. Merging them caused the Kayo bug: conditional go-again was granted
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1760 drills**.
+This is `node --test "test/*.test.js"` — currently **1773 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -476,6 +476,70 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### ARAKNI — A HERO THAT CHANGES MID-GAME (v3.76)
+
+> *"At the beginning of your end phase, if an opponent is **marked**, you
+> become a random **Agent of Chaos**."* — and every Agent prints *"At the
+> beginning of your end phase, **return to the brood**."*
+
+**THE DATABASE CANNOT NAME ITS OWN SET.** No `types` entry, no `subtypes`
+entry and no `type_text` anywhere in 4,952 live records contains the word
+"Agent". A hand-written list is inventing card text at the SET level, so
+the set is derived from the two things that ARE printed: the **class** the
+sentence names (captured as a STRING, v3.21's rule) and the **Demi-Hero
+type**, read off the structured array. Exactly six records — the same six
+her own `referenced_cards` lists.
+
+**BECOMING ONE SWAPS THE ABILITY AND NOTHING ELSE**, and that is a
+MEASUREMENT rather than a simplification: every Agent prints `health: "*"`
+and intellect 4, and Arakni prints intellect 4. `build.heroAbilities` is
+that half, extracted so the deal and the swap call one body.
+
+**RETURN RUNS BEFORE BECOME.** Reversed, she becomes an Agent and
+immediately returns, and the mechanic is invisible.
+
+**THE PICK IS SEEDED AND THE SET IS SORTED.** "Random" has to be
+reproducible: two peers replaying one log pick the same index out of the
+same stream, and an unstable order makes them different Agents (v2.26).
+
+**AND READ THE CLASS BEFORE THE SWAP** — the swap overwrites the very
+field that named the set, because an Agent carries no `becomeAgent` of its
+own. The first draft read it for the feed line afterwards and threw.
+
+### A CLOSURE CANNOT HOLD A THING THAT CHANGES (v3.76)
+
+The trainer read its build ledger out of `built.both`, a `useMemo`
+constant — **immutable by construction**. Every rule up to now asked a
+build a question whose answer never moved, so nothing noticed; the first
+rule that CHANGES a hero could not reach that board at all. The feed would
+have announced the transformation while every passive kept answering for
+the hero she used to be: v3.01's one-board shape, created deliberately
+rather than found.
+
+`builds` is a `GAME_KEY` now — it has always been shared state at the
+TABLE, where `judge.newMatch` puts it there — the trainer seeds it with the
+construction inputs stripped exactly as judge strips them, and **all three
+build helpers take the state**. `bOf` used to close over `g`, which inside
+a `setG` reducer is the PREVIOUS state: harmless while the only thing it
+read was `_dummy`, and a stale read waiting for the day a build moves.
+
+**WHEN A NEW KIND OF THING BECOMES MUTABLE, GREP FOR WHO HOLDS IT.**
+
+### A DEMI-HERO IS KEPT BY ITS TYPE, LIKE A TOKEN (v3.76)
+
+The six Agents are records no deck lists. `tools/pin-pool.js` keeps them by
+type and `index.html`'s loader keeps them by the identical test — one rule,
+two readers, because a pool the Node tools can see and the phone cannot is
+v3.21's fixture-and-production split. **`DATA_VER` moves with it**: a warm
+cache has no Agent to become.
+
+**THEIR ABILITIES STILL REFUSE, AND THAT IS THE POINT OF PUTTING THEM IN
+THE POOL.** Five print `Discard an Assassin card` — a cost
+`parseHeroPower` declines by design — and Trap-Door's is a deck search. A
+transformation into an ability nothing reads is the no-op blind spot if it
+ships quietly, and the opposite of it once the audit counts those clauses
+every run.
 
 ### AZALEA — THE HERO ABILITY *IS* THE DECK (v3.71)
 

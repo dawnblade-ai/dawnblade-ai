@@ -239,7 +239,7 @@ test("the trainer's end phase delegates the whole event, restating none of it", 
   const stop = html.indexOf("\n  function ", start + 10);
   assert.ok(stop > start, "beginEndPhase's end anchor moved");
   const body = html.slice(start, stop).replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(body, /DawnEffects\.beginEndPhase\(s, si\)/,
+  assert.match(body, /DawnEffects\.beginEndPhase\(s, si, db\)/,
     "the trainer's half is to log the messages and run the ops, nothing more");
   assert.ok(!/DawnEffects\.(sweepArena|resolveInertia|thawFrost)\(/.test(body),
     "a board reaching past the shared body for one step of the event is that " +
@@ -251,7 +251,7 @@ test("the trainer's end phase delegates the whole event, restating none of it", 
 
 test("the shared body still runs every schedule the table never had", {skip}, () => {
   const eff = fs.readFileSync(path.join(ROOT, "engine", "effects.js"), "utf8");
-  const i = eff.indexOf("function beginEndPhase(game, seat){");
+  const i = eff.indexOf("function beginEndPhase(game, seat, db){");
   assert.ok(i > 0, "beginEndPhase moved — re-anchor this drill");
   const body = eff.slice(i, eff.indexOf("\nfunction ", i + 10)).replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(body.length > 400, "the slice must actually contain the body");
@@ -262,5 +262,5 @@ test("the shared body still runs every schedule the table never had", {skip}, ()
     assert.ok(new RegExp(fn + "\\(").test(body), fn + " must run at the table too");
   const judge = fs.readFileSync(path.join(ROOT, "engine", "judge.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.ok(/E\.beginEndPhase\(n, seat\)/.test(judge), "and judge must call the body");
+  assert.ok(/E\.beginEndPhase\(n, seat, getDb\(\)\)/.test(judge), "and judge must call the body");
 });

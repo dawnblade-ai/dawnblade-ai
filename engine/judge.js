@@ -2116,7 +2116,7 @@ function doEndTurn(g, seat){
      it — which is what "the same order on both boards" used to mean and
      could not enforce. */
   {
-    const be = E.beginEndPhase(n, seat);
+    const be = E.beginEndPhase(n, seat, getDb());
     n = be.game;
     for(const m of be.msgs) n = say(n, m);
     if(be.ops.length)

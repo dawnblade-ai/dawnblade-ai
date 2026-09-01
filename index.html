@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.75"; /* v3.75 - ARAKNI, clause 1. "Your attacks with stealth that are attacking a marked hero get +1{p} and \"When this hits, this gets go again.\"" Three gates, all settled at DECLARATION rather than at the wall: the card must PRINT stealth, the opposing hero must be marked, and CR 1.4.5 says an attack on an ALLY is not attacking a hero at all. `printedKw` rather than `hasKw`, and that is measured rather than assumed - 18 pool cards print stealth, seven more only NAME it (Night's Embrace, Stalker's Steps, Stains of the Redback and four others), and NOTHING in the pool grants it, so the loose reading would hand her bonus to seven cards that do not have the keyword. The rider is an ON-HIT go again joined into pend.onHit, so it fires only on a hit and both boards carry it. Clause 2 is the Agent of Chaos transformation and is measured but not built - see HANDOFF.md. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.76"; /* v3.76 - THE AGENTS OF CHAOS. Arakni prints "at the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos", and every Agent prints "return to the brood" - so she is a different hero most turns of the game. THE DATABASE CANNOT NAME THE SET: no type, subtype or type_text in 4,952 records contains the word "Agent", so it is derived from the two things that ARE printed - the CLASS her sentence names and the Demi-Hero type - which is exactly six records, the same six her own referenced_cards lists. Becoming one swaps the ABILITY and nothing else, because every Agent prints life * and intellect 4 and so does she. The pool and the loader now keep a Demi-Hero by its TYPE the way they already keep a token, so DATA_VER moves to sage-v13. And it found a structural gap: the trainer read its build ledger out of a useMemo CLOSURE, immutable by construction, so the first rule that changes a hero could not reach that board at all - the feed would have announced the transformation while every passive kept answering for the hero she used to be. `builds` is a GAME_KEY now and all three build helpers take the state. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -794,7 +794,7 @@ window.APP_VER = "3.75"; /* v3.75 - ARAKNI, clause 1. "Your attacks with stealth
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v12"; /* v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v13"; /* v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1546,6 +1546,19 @@ function useCardDB(){
           if(!c || !c.name) return;
           const nm = norm(c.name);
           const isTok = /token/i.test(c.type_text||"") || /token/i.test((c.types||[]).join(" "));
+          /* A DEMI-HERO IS KEPT BY ITS TYPE (v3.76), the same way a token
+             is, and `tools/pin-pool.js` keeps them by the identical test.
+             Arakni prints "you become a random Agent of Chaos" and the six
+             Agents are Demi-Hero records no deck lists — so without this
+             the PHONE could not mint what the pinned pool can see, which
+             is v3.21's fixture-and-production split with the sign flipped.
+
+             The name-stem test above cannot reach them: `isHero` requires
+             the record's name to CONTAIN a deck hero's full name, and
+             "Arakni, Black Widow" does not contain "Arakni, Web of
+             Deceit". */
+          const isDemi = /demi-hero/i.test(c.type_text||"")
+                      || (c.types||[]).some(t=>/^demi-hero$/i.test(t));
           /* MIRRORS cards.js mapDbCard — see its header note. `bySet` is what
              lets a card wear its Silver Age face instead of whatever printing
              the database listed first; first printing per set wins, which is
@@ -1562,7 +1575,7 @@ function useCardDB(){
           });
           const isHero = /hero/i.test(c.type_text||"") && HERO_STEMS.some(st=>nm.includes(st));
           const hasCode = Object.keys(prints).some(id=>id!=="_first" && CODES.has(id));
-          if(!NEEDED.has(nm) && !isTok && !isHero && !hasCode) return;
+          if(!NEEDED.has(nm) && !isTok && !isDemi && !isHero && !hasCode) return;
           cards.push({
             n:c.name, p:toNum(c.pitch), c:toNum(c.cost), pw:toNum(c.power),
             d:toNum(c.defense), hp:toNum(c.health), int:toNum(c.intelligence),
@@ -2480,8 +2493,26 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      fires for its own hero — and a dead helper sitting next to a live one
      is how `sides.js`'s seat-hardcoded `you`/`foe` came to be deleted in
      v2.24. Add it when a rule actually asks about the other hero. */
-  const bOf  = i => built.both[i];
-  const bAct = s => built.both[actorOf(s)];
+  /* THE LEDGER LIVES ON THE STATE NOW (v3.76), with the closure as the
+     fallback. It was `built.both` alone — a `useMemo` constant, immutable
+     by construction — so a rule that CHANGES a hero could never reach it:
+     Arakni's Agents of Chaos would have been announced in the feed while
+     every passive kept answering for the hero she used to be.
+
+     THE FALLBACK IS NOT DEAD CODE. `built` is created by the same memo
+     that seeds `initial.builds`, so the two agree at deal time; the
+     fallback answers for any state literal that predates the field — a
+     drill fixture, a replayed snapshot — rather than reading `undefined`
+     at a passive call site, which is what v2.41 built this ledger to
+     stop. */
+  /* ALL THREE TAKE THE STATE (v3.76). `bOf` used to close over `g`, which
+     inside a `setG` reducer is the PREVIOUS state — harmless while the only
+     thing it read was `_dummy`, which never changes, and a stale read
+     waiting to matter the moment a build does. Now one does: a hero can
+     BECOME an Agent of Chaos mid-game. */
+  const _blds = s => (s && s.builds) || built.both;
+  const bOf  = (s, i) => _blds(s)[i] || built.both[i];
+  const bAct = s => _blds(s)[actorOf(s)] || built.both[actorOf(s)];
   /* THE FIRST RULE THAT ASKS ABOUT THE OTHER HERO'S BUILD (v2.56), which is
      the condition CLAUDE.md set for this helper existing at all. CLASH
      compares the power of the top card of BOTH decks, and a hero's static
@@ -2490,7 +2521,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      the top of his deck, so his 6 reveals as a 7 — against an opponent
      whose card is read with the opponent's own build. One shared helper
      would silently apply the revealer's buff to both cards. */
-  const bFoe = s => built.both[1-actorOf(s)];
+  const bFoe = s => _blds(s)[1-actorOf(s)] || built.both[1-actorOf(s)];
 
   /* L is declared ahead of the state so the opening-swing initializer below
      can reach it — it is a pure (state, message) function with no dependency
@@ -2506,6 +2537,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       `const base = {` of its own into this file, higher up. */
    const initial = {
     turn:1, actor:0, rng:built.rng, mode:"act", bphase:"defend", pending:null, incoming:0,
+    /* THE BUILD LEDGER, ON THE STATE (v3.76) — see `bAct` above. The
+       CONSTRUCTION INPUTS are stripped exactly as `judge.newMatch` strips
+       them: `deck` and `gear` are dealt into `sides` already, and a second
+       stale copy on the game object is a card in two places waiting to be
+       read by mistake. */
+    builds: built.both.map(b => { const {deck, gear, ...rest} = b || {}; return rest; }),
     log:[foeFirst ? "It won the throw and took the first turn. Iron up." : `${FoeName} stirs. ${built.both[1].hp} to carve away — go.`],
     feed:["Tonight in the hall: "+h.n+" versus the Dummy.", built.read,
       foeFirst ? `${FoeName} won the throw and elected to swing first.` : "You won the seating and took the first turn.",
@@ -3661,7 +3698,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      and intimidate's return. Seat 0, one board. Anything added here goes
      in the shared body, not beside the call. */
   function beginEndPhase(s, si){
-    const r = DawnEffects.beginEndPhase(s, si);
+    /* THE DATABASE IS THIS BOARD'S ANSWER (v3.76). The shared body is
+       module-level and pure, so it holds none — and Arakni's Agents of
+       Chaos are records no deck lists, which have to be resolved out of
+       one. Passed here, once, so both of this file's call sites get it. */
+    const r = DawnEffects.beginEndPhase(s, si, db);
     let n = r.game;
     r.msgs.forEach(m => { n = L(n, m); });
     if(r.ops.length) n = _EFX.runOps(n, r.ops, r.fired.join(", "));
@@ -3810,7 +3851,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        for the rest of the game and an unseeded shuffle there breaks
        replay exactly when the game gets interesting. */
     let need = Math.max(0, act(n).int - act(n).hand.length);
-    if(need > 0 && act(n).deck.length < need && (act(n).grave||[]).length && bOf(si)._dummy){
+    if(need > 0 && act(n).deck.length < need && (act(n).grave||[]).length && bOf(n, si)._dummy){
       const _gs = rngShuffle(n.rng, act(n).grave); n.rng = _gs.rng;
       const rc = actMut(n); rc.deck = [...act(n).deck, ..._gs.arr]; rc.grave = [];
       n = L(n, "The dummy gathers its spent cards and shuffles them back — it never tires.");

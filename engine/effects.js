@@ -43,9 +43,9 @@
    test/effects.test.js fails if the trainer’s literal drifts.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"), require("./cards.js"), require("./rng.js"), require("./game.js"), require("./advisor.js"), require("./prompts.js"));
-  else root.DawnEffects = factory(root.DawnParser, root.DawnCards, root.DawnRNG, root.DawnGame, root.DawnAdvisor, root.DawnPrompts);
-})(typeof self!=="undefined" ? self : this, function(P, C, R, G, A, PR){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"), require("./cards.js"), require("./rng.js"), require("./game.js"), require("./advisor.js"), require("./prompts.js"), require("./build.js"));
+  else root.DawnEffects = factory(root.DawnParser, root.DawnCards, root.DawnRNG, root.DawnGame, root.DawnAdvisor, root.DawnPrompts, root.DawnBuild);
+})(typeof self!=="undefined" ? self : this, function(P, C, R, G, A, PR, BD){
 
 /* Engine-side dependencies, taken as factory arguments — the same
    treatment advisor.js, cards.js and prompts.js already get. */
@@ -5051,7 +5051,13 @@ function sweepGear(game, seat){
     moved: gone.map(g => g.uid)};
 }
 
-function beginEndPhase(game, seat){
+/* `db` IS THE CALLER'S ANSWER (v3.76), the way the wall and the
+   attack-target already are. This function is module-level and pure, so
+   it holds no card database of its own — judge.js registers one with
+   `setDb` and the trainer holds the loaded one, and neither is reachable
+   from here. A caller that says nothing finds no Agent to become: weaker
+   than printed and visible, which is the safe direction (v3.24). */
+function beginEndPhase(game, seat, db){
   let n = game;
   const msgs = [], ops = [], fired = [];
   const nameOf = i => ((n.sides||[])[i]||{}).name || "seat " + i;
@@ -5252,6 +5258,82 @@ function beginEndPhase(game, seat){
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");
+  }
+
+  /* (9) THE BROOD — ARAKNI'S AGENTS OF CHAOS (v3.76) ------------------
+     Two printed lines, one cycle, and both fire at the beginning of the
+     SAME end phase:
+
+       Arakni    "if an opponent is marked, you become a random Agent of
+                  Chaos"
+       an Agent  "return to the brood"
+
+     SO YOU RETURN FIRST AND BECOME SECOND, which is what makes it a cycle
+     rather than a one-way door: an Agent goes home, Arakni's own clause
+     fires, and a NEW Agent takes the seat. Reversed, you would become an
+     Agent and immediately return, and the mechanic would be invisible.
+     CR 4.1.8a's trigger ordering is not modelled here (it is a stated
+     approximation, like every other order in this function).
+
+     WHAT CHANGES IS THE ABILITY AND NOTHING ELSE. Every Agent prints
+     `health: "*"` and intellect 4, and Arakni prints intellect 4 — so
+     life, intellect, deck and gear are untouched, and only the half of
+     the build that comes off the printed line is replaced. That half is
+     `build.heroAbilities`, called here and at deal time, so the two
+     answers cannot drift.
+
+     THE PICK COMES OUT OF THE SEEDED STREAM and the rng is stored back
+     (v2.26): two peers replaying one log must become the same Agent, and
+     a forgotten store-back repeats the last draw forever.
+
+     `_brood` REMEMBERS WHO YOU WERE. It is on the BUILD rather than the
+     side, because everything it restores is a build field — and a side
+     field would need three more ledgers to carry one string. */
+  {
+    const b = ((n.builds || [])[seat]) || null;
+    if(b && (b.returnToBrood || b.becomeAgent)){
+      let cur = b, changed = false;
+      if(cur.returnToBrood && cur._brood){
+        const home = cur._brood;
+        cur = Object.assign({}, cur, BD.heroAbilities(home, home.n), {_brood: null});
+        /* A COLON, NOT AN INFLECTED VERB. `nameOf` is literally "You" on
+           the trainer and a hero name at the table, so "You returns" reads
+           wrong on exactly one of the two boards — heave's own note, and
+           the four older sites in this file that still say it (HANDOFF). */
+        msgs.push(nameOf(seat) + ": back to the brood — " + (home.n || "themself") + " again.");
+        changed = true;
+      }
+      /* "IF AN OPPONENT IS MARKED" — the gate is on the OTHER seat, and a
+         seat that is currently an Agent has no `becomeAgent` of its own,
+         so this only ever fires from the brood. */
+      /* READ THE CLASS BEFORE THE SWAP, because the swap OVERWRITES the
+         very field that named the set: an Agent carries no `becomeAgent`
+         of its own, so `cur.becomeAgent` is null the instant the ability
+         half is replaced. The first draft read it for the feed line
+         afterwards and threw. */
+      const _cls = cur.becomeAgent;
+      if(_cls && (((n.sides || [])[1 - seat] || {}).marked)){
+        const pool = BD.agentsOf(db, _cls);
+        if(pool.length){
+          const r = R.int(n.rng, pool.length);
+          n = Object.assign({}, n, {rng: r.rng});
+          const pick = pool[r.v];
+          cur = Object.assign({}, cur, BD.heroAbilities(pick, pick.n),
+                              {_brood: cur._brood || cur.heroRec});
+          msgs.push(nameOf(seat) + ": the web shifts — now " + pick.n
+            + ", a random Agent of " + _cls.replace(/^./, c => c.toUpperCase()) + ".");
+          changed = true;
+          fired.push("agent");
+        } else {
+          msgs.push(nameOf(seat) + ": no Agent of " + _cls + " to become.");
+        }
+      }
+      if(changed){
+        const builds = (n.builds || []).slice();
+        builds[seat] = cur;
+        n = Object.assign({}, n, {builds});
+      }
+    }
   }
 
   return {game: n, msgs, ops, fired};

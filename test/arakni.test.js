@@ -57,17 +57,34 @@ test("NOTHING IN THE POOL GRANTS STEALTH, which is why `printedKw` is right", {s
   const mk = r => ({name: r.name, pitch: r.pitch, tt: r.tt || r.type_text,
                     ty: r.ty || r.types, tx: r.tx || r.functional_text,
                     kw: r.kw || r.card_keywords || [], power: r.power});
-  let printed = 0, mentionOnly = 0, granted = [];
+  let printed = 0, mentionOnly = 0;
+  const granted = [], asked = [];
   for(const r of pool){
     const c = mk(r);
     if(P.printedKw(c, "stealth")) printed++;
     else if(P.hasKw(c, "stealth")) mentionOnly++;
-    if(/\b(?:gets?|gains?|has)\s+stealth\b/i.test(P.clean(c.tx || ""))) granted.push(c.name);
+    const t = P.clean(c.tx || "");
+    /* GETS/GAINS IS THE GRANT FORM. "HAS" IS THE QUESTION FORM, and this
+       drill's first draft did not tell them apart — it flagged three of
+       Arakni's own Agents for printing "IF IT HAS stealth", which is a
+       test, not a grant. `SYNONYMS` already makes exactly this
+       discrimination for pumps ("`has` is levelled only where it governs
+       a pump and never where it asks a question"). */
+    if(/\b(?:gets?|gains?)\s+stealth\b/i.test(t)) granted.push(c.name);
+    for(const m of t.matchAll(/(.{0,14})\bhas (?:crush|dominate|go again|stealth|reprise|intimidate)\b/gi))
+      if(!/\bif\b/i.test(m[1])) asked.push(c.name + ": …" + m[0] + "…");
   }
   assert.ok(printed > 0 && mentionOnly > 0,
     "both sets must be non-empty or the predicate choice is untested");
   assert.deepEqual([...new Set(granted)], [],
     "a card that GRANTS stealth means this passive needs `hasKwNow`, not `printedKw`");
+  /* AND THE POOL-WIDE FACT BEHIND THE DISCRIMINATION, measured: EVERY
+     "has <keyword>" in the pool is preceded by "if". A future card that
+     grants one with "has" fails here and forces the decision rather than
+     sliding past it. */
+  assert.deepEqual([...new Set(asked)], [],
+    "every `has <keyword>` in this pool is interrogative — one that is not "
+    + "changes what `has` means for every reader that levels it");
 });
 
 function swing(o){
@@ -189,4 +206,233 @@ test("DRIVEN: the same bonus lands at the TABLE", {skip}, () => {
   }
   assert.equal(g.pend, null, "the link never resolved — the drill would prove nothing");
   assert.equal(20 - g.sides[1].hp, (s.power || 0) + 1);
+});
+
+/* ============================================================
+   CLAUSE 2 — THE AGENTS OF CHAOS (v3.76)
+
+     Arakni   "At the beginning of your end phase, if an opponent is
+               marked, you become a random Agent of Chaos."
+     an Agent "At the beginning of your end phase, return to the brood."
+
+   THE DATABASE CANNOT NAME "AGENT OF CHAOS". No `types` entry, no
+   `subtypes` entry and no `type_text` in 4,952 live records contains the
+   word "Agent" — so the set is derived from the two things that ARE
+   printed: the CLASS the sentence names, and the Demi-Hero TYPE.
+
+   BECOMING ONE SWAPS THE ABILITY AND NOTHING ELSE. Every Agent prints
+   `health: "*"` and intellect 4, and Arakni prints intellect 4.
+   ============================================================ */
+
+const E = require("../engine/effects.js");
+
+test("the two halves are read off the printed lines", {skip}, () => {
+  H.db();
+  const b = build("arakni");
+  assert.equal(b.becomeAgent, "chaos", "the CLASS comes off the sentence");
+  assert.equal(b.returnToBrood, false, "…and she is not an Agent herself");
+  const agent = B.heroAbilities(B.agentsOf(H.db(), "chaos")[0], "x");
+  assert.equal(agent.returnToBrood, true);
+  assert.equal(agent.becomeAgent, "", "an Agent names no set of its own");
+});
+
+test("the Agent set is exactly six, and derived rather than listed", {skip}, () => {
+  /* A HAND-WRITTEN LIST WOULD BE INVENTING CARD TEXT AT THE SET LEVEL.
+     The rule is `Demi-Hero` (the structured type array, v2.44's authority)
+     intersected with the class the printed sentence names. Measured over
+     the whole live database: exactly six Demi-Heroes carry Chaos, and they
+     are exactly the six Arakni's own `referenced_cards` names. */
+  const six = B.agentsOf(H.db(), "chaos");
+  assert.deepEqual(six.map(c => c.n), [
+    "Arakni, Black Widow", "Arakni, Funnel Web", "Arakni, Orb-Weaver",
+    "Arakni, Redback", "Arakni, Tarantula", "Arakni, Trap-Door"]);
+  /* THE ORDER IS STABLE, because "random" must be reproducible: two peers
+     replaying one log pick the same index out of the same seeded stream,
+     and an unstable order would make them different Agents (v2.26). */
+  assert.deepEqual(six.map(c => c.n).slice().sort(), six.map(c => c.n));
+  /* and the class is really being read — a different one gives a
+     different set, not the same one */
+  const shadow = B.agentsOf(H.db(), "shadow").map(c => c.n);
+  assert.ok(shadow.length > 0 && !shadow.some(n => six.some(x => x.n === n)),
+    "the class word selects, so it cannot be decoration");
+  assert.deepEqual(B.agentsOf(H.db(), ""), [], "and an absent class names nobody");
+});
+
+test("every Agent is life-`*` and intellect 4, which is why only the ABILITY swaps", {skip}, () => {
+  /* THE MEASUREMENT THE WHOLE BUILD RESTS ON. If an Agent printed its own
+     life, becoming one would be a different and much larger mechanic. */
+  const b = build("arakni");
+  for(const a of B.agentsOf(H.db(), "chaos")){
+    assert.equal(a.hp, null, a.n + " prints life `*`");
+    assert.equal(a.int, 4, a.n + " prints intellect 4");
+  }
+  assert.equal(b.int, 4, "…and so does Arakni, so the swap changes neither");
+});
+
+function broodBoard(marked, seed){
+  return H.state({}, {marked: marked ? 1 : 0}, {actor: 0, turnPlayer: 0, turn: 3,
+    builds: [build("arakni"), {}], seed: seed || "brood"});
+}
+const endPhase = g => E.beginEndPhase(g, 0, H.db());
+
+test("DRIVEN: a marked opponent turns her into an Agent", {skip}, () => {
+  H.db();
+  const out = endPhase(broodBoard(true));
+  const now = out.game.builds[0];
+  assert.match(now.heroRec.n, /^Arakni, /);
+  assert.notEqual(now.heroRec.n, "Arakni, Web of Deceit");
+  assert.equal(now.returnToBrood, true, "and it knows how to go home");
+  assert.equal(now._brood.n, "Arakni, Web of Deceit", "…and who home is");
+  assert.ok(out.fired.includes("agent"));
+});
+
+test("DRIVEN: nobody marked, nothing happens", {skip}, () => {
+  /* THE GATE. Without it she cycles every turn of every game, which is
+     strictly stronger than printed and would make the mark — the thing
+     half her deck is built to apply — worth nothing. */
+  H.db();
+  const out = endPhase(broodBoard(false));
+  assert.equal(out.game.builds[0].heroRec.n, "Arakni, Web of Deceit");
+  assert.equal(out.game.builds[0]._brood, undefined);
+  assert.ok(!out.fired.includes("agent"));
+});
+
+test("DRIVEN: RETURN comes before BECOME, which is what makes it a cycle", {skip}, () => {
+  /* Both lines fire at the beginning of the same end phase. Return first
+     and an Agent goes home, Arakni's clause fires and a NEW Agent takes
+     the seat. Reversed, she would become one and immediately return, and
+     the mechanic would be invisible. */
+  H.db();
+  let g = broodBoard(true, "cycle");
+  const seen = [];
+  for(let t = 0; t < 6; t++){
+    const out = endPhase(g); g = out.game;
+    seen.push(g.builds[0].heroRec.n);
+  }
+  assert.equal(seen.length, 6);
+  assert.ok(seen.every(n => n !== "Arakni, Web of Deceit"),
+    "she is an Agent at the END of every end phase, never resting in the brood");
+  assert.ok(new Set(seen).size > 1, "and not the same Agent every time");
+  assert.equal(g.builds[0]._brood.n, "Arakni, Web of Deceit",
+    "the brood is remembered throughout, never overwritten by an Agent");
+});
+
+test("the brood survives a swap that did NOT return first", {skip}, () => {
+  /* A SYNTHETIC BUILD, because no reachable state produces one. In play
+     RETURN always runs first, so by the time BECOME fires `heroRec` is
+     already the brood and `cur._brood || cur.heroRec` picks the same card
+     either way — which is exactly why sabotaging the `||` away was SILENT
+     against every driven drill above.
+
+     THE GUARD IS STILL REAL, and this is what it guards: `builds` crosses
+     the wire, and `reduce` is fed by JSON off it (v2.48). A state that
+     arrives mid-transformation — an Agent in `heroRec` with the brood
+     still recorded — must not have its brood overwritten by the Agent,
+     because that is Arakni lost for the rest of the game with no way
+     home. Dead-looking rules code with a reachable bad state behind it is
+     worth a drill rather than a deletion. */
+  H.db();
+  const six = B.agentsOf(H.db(), "chaos");
+  const home = build("arakni").heroRec;
+  const hybrid = Object.assign({}, build("arakni"),
+    B.heroAbilities(six[0], six[0].n),
+    {_brood: home, becomeAgent: "chaos", returnToBrood: false});
+  const g = H.state({}, {marked: 1}, {actor: 0, turnPlayer: 0, turn: 3,
+    builds: [hybrid, {}], seed: "hybrid"});
+  const out = endPhase(g);
+  assert.equal(out.game.builds[0]._brood.n, "Arakni, Web of Deceit",
+    "the brood is who she WAS, not the Agent she was standing in when it fired");
+});
+
+test("DRIVEN: the pick is SEEDED and the rng is stored back", {skip}, () => {
+  /* v2.26. Two peers replaying one log must become the same Agent, and a
+     forgotten store-back repeats the last draw forever — `rng.n` is the
+     canary that says the stream moved. */
+  H.db();
+  const a = endPhase(broodBoard(true, "seed-a"));
+  const b2 = endPhase(broodBoard(true, "seed-a"));
+  const c = endPhase(broodBoard(true, "seed-z"));
+  assert.equal(a.game.builds[0].heroRec.n, b2.game.builds[0].heroRec.n,
+    "same seed, same Agent");
+  assert.ok(a.game.rng.n > broodBoard(true, "seed-a").rng.n,
+    "the draw counter moved — the rng was stored back");
+  const names = new Set();
+  for(const s of ["s1","s2","s3","s4","s5","s6","s7","s8"])
+    names.add(endPhase(broodBoard(true, s)).game.builds[0].heroRec.n);
+  assert.ok(names.size > 1, "and different seeds really do give different Agents");
+  assert.ok(c.game.builds[0].heroRec.n, "the control seed produced one at all");
+});
+
+test("DRIVEN: the ability swaps and the rest of the build does NOT", {skip}, () => {
+  /* THE WHOLE CLAIM, in one assertion each way. Her stealth passive is
+     GONE while she is an Agent — which is what the cards say: you have the
+     Agent's ability, not your own — and her life, intellect and deck are
+     untouched. */
+  H.db();
+  const before = build("arakni");
+  const after = endPhase(broodBoard(true)).game.builds[0];
+  assert.equal(before.stealthMarkedBuff, 1);
+  assert.equal(after.stealthMarkedBuff, 0, "an Agent does not print her passive");
+  assert.equal(after.becomeAgent, "", "…nor her transformation");
+  assert.equal(after.hp, before.hp, "life is untouched");
+  assert.equal(after.int, before.int, "and so is intellect");
+  assert.equal(after.HZOOM.name, after.heroRec.n,
+    "and the card the hero row shows follows the Agent, or the swap is invisible");
+});
+
+test("the db is the CALLER's answer, and an absent one becomes nobody", {skip}, () => {
+  /* v3.24's direction: a caller that says nothing gets the weaker,
+     visible outcome rather than a guess. `beginEndPhase` is module-level
+     and pure — judge registers a database with `setDb`, the trainer holds
+     the loaded one, and neither is reachable from inside. */
+  H.db();
+  const out = E.beginEndPhase(broodBoard(true), 0);
+  assert.equal(out.game.builds[0].heroRec.n, "Arakni, Web of Deceit");
+  assert.ok(out.msgs.some(m => /no Agent of chaos/.test(m)),
+    "…and it says so rather than failing silently");
+});
+
+test("the trainer's build ledger is on the STATE, not in a closure", {skip}, () => {
+  /* THE FIRST RULE THAT EVER CHANGED A HERO (v3.76), and it exposed that
+     one board could not express it. `bAct` read `built.both` — a `useMemo`
+     constant, immutable by construction — so the transformation would have
+     been announced in the feed while every passive kept answering for the
+     hero she used to be. That is v3.01's one-board shape, created
+     deliberately rather than found, and the sev-2 category where the feed
+     and the state disagree.
+
+     ALL THREE HELPERS TAKE THE STATE NOW. `bOf` used to close over `g`,
+     which inside a `setG` reducer is the PREVIOUS state — harmless while
+     the only thing it read was `_dummy` and a stale read waiting to matter
+     the moment a build does. */
+  const html = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /const _blds = s => \(s && s\.builds\) \|\| built\.both;/,
+    "one reader for the ledger, taking the state");
+  for(const h of ["bOf", "bAct", "bFoe"])
+    assert.match(html, new RegExp("const " + h + "\\s+=\\s+\\(?s"),
+      h + " must take the state rather than closing over it");
+  assert.match(html, /builds: built\.both\.map\(b => \{ const \{deck, gear, \.\.\.rest\} = b/,
+    "…and the state is seeded with the construction inputs stripped, the way "
+    + "`judge.newMatch` strips them");
+  const S = require("../engine/sides.js");
+  assert.ok(S.GAME_KEYS.indexOf("builds") >= 0,
+    "a new top-level state field must have a home in sides.js, or the census "
+    + "reports it unclassified");
+});
+
+test("the pinned pool carries the Agents at all", {skip}, () => {
+  /* THE POOL AND THE PHONE MUST AGREE ON WHAT A CARD IS (v3.21).
+     `tools/pin-pool.js` keeps a Demi-Hero by TYPE and `index.html`'s
+     loader keeps one by the identical test — so the Node tools and the
+     browser can both see what Arakni becomes. Without it the fixture and
+     production reason about different pools, each internally consistent. */
+  const pool = require("../data/pool.json");
+  const demi = pool.filter(c => /demi-hero/i.test(c.type_text || ""));
+  assert.ok(demi.length >= 6, "the pool must carry the Demi-Heroes");
+  const html = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /const isDemi = \/demi-hero\/i\.test\(c\.type_text\|\|""\)/,
+    "the loader keeps them by the same rule, or the phone cannot mint one");
+  assert.match(html, /!isDemi/, "…and actually consults it");
 });

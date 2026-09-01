@@ -116,7 +116,21 @@ function build(db, W){
      and it cannot be defeated by how a name is spelled. */
   const isTok = c => /token/i.test(c.type_text || "")
                   || /token/i.test((c.types || []).join(" "));
-  const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || isTok(c)));
+  /* A DEMI-HERO IS KEPT BY ITS TYPE TOO (v3.76), and for the identical
+     reason. Arakni prints "you become a random Agent of Chaos", and the
+     six Agents are Demi-Hero records no deck lists — so without this the
+     pool cannot express the thing her hero ability does, exactly as it
+     could not express Briar's Embodiments before v3.21.
+
+     ONE RULE, TWO READERS: `index.html`'s loader keeps them by the same
+     test. A pool the Node tools can see and the phone cannot is the
+     fixture and production reasoning about different games.
+
+     It costs 9 records: the six Arakni Agents plus Blasmophet, Levia
+     Redeemed and Teklovossen, which no hero in this pool can become. */
+  const isDemi = c => /demi-hero/i.test(c.type_text || "")
+                   || (c.types || []).some(t => /^demi-hero$/i.test(t));
+  const keep = db.filter(c => c && c.name && (need.has(norm(c.name)) || isTok(c) || isDemi(c)));
   /* Stable order, so a re-pin against an unchanged upstream is an empty
      diff rather than a reshuffle nobody can review. */
   keep.sort((a, b) => (a.name === b.name)

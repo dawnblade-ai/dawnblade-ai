@@ -275,7 +275,7 @@ test("it fires at the BEGINNING of the end phase, ahead of the arsenal step", {s
     "seat 0's end phase runs it before (a)/(b)");
   assert.match(code, /n = beginEndPhase\(n, 1\);[\s\S]{0,200}n = endPhaseAllies\(n\);/,
     "and so does seat 1's");
-  assert.match(code, /DawnEffects\.beginEndPhase\(s, si\)/,
+  assert.match(code, /DawnEffects\.beginEndPhase\(s, si, db\)/,
     "one description, taking the seat — not two copies that can drift. Inertia " +
     "moved inside `effects.beginEndPhase` in v3.17, where it leads the event: it " +
     "is itself an aura, so the arena sweep that shares this moment would race it " +

@@ -124,120 +124,59 @@ function defaultPicks(list){
   return sel;
 }
 
-/* ---- the build --------------------------------------------------------
-   `h` is the hero entry (name, key, printed code), `d` is its parsed deck
-   definition, `db` the card database, `opts` the loadout choices, `rng`
-   the seeded stream and `ctr` the shared uid counter.
+/* ---- THE AGENTS OF CHAOS (v3.76) ------------------------------------
+   "You become a random Agent of CHAOS." The set is derived from two
+   printed things and a list nobody wrote down:
 
-   `d` is a PARAMETER rather than a lookup because that is the difference
-   between a pure function and one that reads the trainer's module scope.
-   Two seats, two decks, one function. */
-/* THE PRINTED ABILITY LINE, COST PREFIX STRIPPED — the powCard's `tx`.
-   Exported (v3.71) because `tools/audit.js` has to ask the SAME question
-   when it decides whether a hero clause is read: `parseHeroPower` answers
-   about the FIRST sentence only, and everything after it is read by
-   `fxParse` over this line. An audit that re-derived the line would be the
-   no-mirror rule broken between a tool and the engine — and one that did
-   not ask at all reports a built ability as unread, which is v3.21's
-   one-sided ledger exactly. */
-function heroAbilityLine(heroRec, heroPow){
-  const line = ((heroRec && heroRec.tx) || "").split(/\n+/).map(l => clean(l))
-    .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
-  return line.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : "");
+     the CLASS   named by the sentence itself, and carried on the build
+                 as `becomeAgent` rather than hardcoded here
+     Demi-Hero   the printed TYPE, read off the STRUCTURED ARRAY, which
+                 is this project's stated authority over `tt` (v2.44)
+
+   THE DATABASE CANNOT NAME "AGENT OF CHAOS" — no type, no subtype and no
+   `type_text` in 4,952 records contains the word "Agent" — so a hand-list
+   would be inventing card text at the SET level. Measured over the whole
+   live database: exactly six Demi-Heroes carry Chaos, and they are
+   exactly the six Arakni's own `referenced_cards` names.
+
+   SORTED BY NAME, because "random" must be reproducible: the caller picks
+   an index out of the seeded stream, and an unstable order would make two
+   peers replaying one log become different Agents (v2.26). */
+function agentsOf(db, cls){
+  if(!db || db.status !== "ready" || !cls) return [];
+  const want = String(cls).toLowerCase();
+  const out = [];
+  for(const k of Object.keys(db.byName || {}))
+    for(const c of (db.byName[k] || [])){
+      const ty = (c.ty || []).map(t => String(t).toLowerCase());
+      if(ty.indexOf("demi-hero") < 0) continue;
+      if(ty.indexOf(want) < 0) continue;
+      if(out.some(x => x.n === c.n)) continue;
+      out.push(c);
+    }
+  return out.sort((a, b) => String(a.n).localeCompare(String(b.n)));
 }
 
-function buildSide(h, d, db, opts, rng, ctr){
-  const o = opts || {};
-  const heroRec = resolveHero(db, d.hero) || {};
-  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
-  /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
-     fix v2.34 made for EQUIPMENT and never made here. `parseHeroPower`
-     stops at the first period, so a hero ability with a second sentence
-     lost it — Lyath Goldmane's "Instant - {r}{r}, {t}: The crowd boos
-     you. DEFENDING ACTION CARDS YOU CONTROL GET +1{d} THIS TURN." carried
-     only the boo. Identical treatment to `_effFull` below: find the
-     printed ability LINE and strip the cost prefix, so `execute`'s
-     re-read with `fxParse` sees the riders too. */
-  const _hEffFull = heroAbilityLine(heroRec, heroPow);
-  /* THE SOUL COST RIDES ON THE POWCARD (v3.74), the way `sd` does for an
-     equipment ability: `build.js` strips the cost prefix off the ability
-     line, so a cost not carried here is a cost nothing can charge.
+/* ---- THE HALF OF A BUILD THAT COMES OFF THE HERO'S PRINTED LINE ------
+   Extracted at v3.76 because a hero can now CHANGE mid-game: Arakni
+   prints "you become a random Agent of Chaos", and an Agent is a
+   Demi-Hero with its own ability, its own passives and its own powCard.
 
-     OPT-IN (v3.58's rule) — only a hero that prints one gets the field, so
-     every `deepEqual` on a powCard's shape is untouched. */
-  const HPOW = heroPow ? Object.assign({name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
-    _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
-    heroPow.soul ? {_soulCost: heroPow.soul} : {}) : null;
-  const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
-    tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
-  const cuts = o.cuts||{};
-  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
-     SAZ). Passed to every resolveEntry so a card wears the face it has in
-     this deck's own precon rather than whatever printing the database
-     happened to list first. See cards.js `pickPrinting`. */
-  const saSet = (h.code||"").slice(0,3) || null;
-  const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
-    const q = Math.max(0, e.q - (cuts[ei]||0));
-    if(!q) return [];
-    const c = resolveEntry(db,e,saSet);
-    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
-  }));
-  rng = _pd.rng;
-  const deck = _pd.arr;
-  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
-  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
-  gear.forEach(gr=>{
-    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
-      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
-      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
-      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
-    }
-    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
-       Dealer is a Bow whose printed ability puts an arrow face up into your
-       arsenal — it is not a weapon attack, so `weaponCost` (which requires
-       ": attack") never claimed it and the `!isWeapon` gate below skipped
-       it, leaving the ability inert. The extra door is deliberately narrow:
-       only an ability the arsenal reader actually recognises, so no other
-       weapon quietly grows a second button nothing is wired to run. */
-    const _armed = isWeapon(gr) && gr.tx && ARS_PUT.test(gr.tx);
-    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
-    if(pw){ gr.pow=pw;
-    /* The ability's WHOLE printed line, not just its first sentence.
-       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
-       end of turn, your base {i} is the number rolled." — parseHeroPower
-       stops at the period, which orphaned the rider so it never fired.
-       Strip the cost prefix off the line and keep the rest. */
-    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-      .find(l=>/^(?:once per turn )?(?:attack reaction|action|instant)\s*[-—]/i.test(l)) || "";
-    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
-    /* `_attackRx` IS THE WINDOW, and it is the third flag of its kind
-       beside `_instant` and `sd`. It is not a printed type — the powCard's
-       `tt` is "Equipment Ability" — so judge.js and the trainer ask it
-       separately rather than reading it off a type line that does not
-       carry it, exactly as they do for `_instant`. */
-    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
-  const _atk = deck.filter(isAttack);
-  const _ga = deck.filter(c=>fxParse(c).ga).length;
-  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
-  const _blue = deck.filter(c=>c.pitch===3).length;
-  const _perm = deck.filter(c=>fxParse(c).perm).length;
-  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
-  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
-    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
-      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
-      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
-      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
-      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
-        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
-        soul:"Line: land hits to charge the soul, then spend it to break through.",
-        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
-        arcane:"Line: amp first, spell second — arcane ignores the iron.",
-        ally:"Line: crew up early — every ally is free damage each turn after."};
-      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
-    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
-  const hasBoost = deck.some(c=>hasKw(c,"boost"));
+   Everything else about the build — the deck, the gear, the life, the
+   intellect — survives the change untouched, which is what the printed
+   cards say: every Agent carries `health: "*"` and `intelligence: 4`, and
+   Arakni prints intellect 4, so becoming one swaps the ABILITY and
+   nothing else.
+
+   ONE BODY, TWO CALLERS. `buildSide` calls it once at deal time and the
+   transformation calls it again on the swap — a second copy of the
+   passive readers is the no-mirror rule broken in the one place where the
+   two answers would be about different heroes.
+
+   `startItem` is deliberately NOT here: it mutates the deck, so it is a
+   deal-time thing and an Agent cannot bring one. */
+function heroAbilities(heroRec, displayName, code){
+  heroRec = heroRec || {};
   /* THE HERO PASSIVES ARE PER-SIDE, and that is the point of this whole
      function. Read off THIS hero's printed text, so seat 1's Viserai
      conjures seat 1's runechants. */
@@ -355,16 +294,172 @@ function buildSide(h, d, db, opts, rng, ctr){
   const _arakni = _htx.match(
     /your attacks with stealth that are attacking a marked hero get \+(\d+)\{p\}/);
   const stealthMarkedBuff = _arakni ? +_arakni[1] : 0;
+  /* ---- ARAKNI CLAUSE 2 — THE AGENTS OF CHAOS (v3.76) ----------------
+     "At the beginning of your end phase, if an opponent is marked, you
+      become a random Agent of Chaos."
+     …and every Agent prints "At the beginning of your end phase, return
+     to the brood."
+
+     THE CLASS COMES OFF THE PRINTED LINE. "Agent of CHAOS" names the
+     class, and the six Agents are the pool's `Chaos … Demi-Hero`
+     records — measured over the whole 4,952-record database: exactly
+     six, and no other Demi-Hero carries Chaos.
+
+     THE DATABASE CANNOT NAME "AGENT OF CHAOS" AS A TYPE. No `types`
+     entry, no `subtypes` entry and no `type_text` anywhere contains the
+     word "Agent". So the set is derived from the two things that ARE
+     printed — the class the sentence names, and the Demi-Hero type —
+     rather than from a list somebody wrote down, which is the same rule
+     `pin-pool.js` follows for tokens.
+
+     `becomeAgent` is the CLASS WORD, not a boolean, for the reason
+     Briar's token name is a string (v3.21): storing `true` would move
+     "Chaos" into `effects.js`, which is inventing card text one level
+     up. */
+  const _agent = _htx.match(
+    /at the beginning of your end phase, if an opponent is marked, you become a random agent of ([a-z]+)/);
+  /* THE EMPTY STRING, NOT NULL, for absent — `typeof null` is "object"
+     and the ledger says this passive answers a string. Briar's two token
+     names take the same shape for the same reason. */
+  const becomeAgent = _agent ? _agent[1] : "";
+  const returnToBrood = /at the beginning of your end phase, return to the brood/.test(_htx);
+  const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
+  /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
+     fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
+     stops at the first period, so a hero ability with a second sentence
+     lost it.
+
+     THE SOUL COST RIDES ON IT (v3.74), the way `sd` does for an equipment
+     ability — `heroAbilityLine` strips the cost prefix, so a cost not
+     carried here is a cost nothing can charge. OPT-IN (v3.58). */
+  const _hEffFull = heroAbilityLine(heroRec, heroPow);
+  const _nm = String(displayName || heroRec.n || "Hero").split(",")[0];
+  /* THE CARD THE HERO ROW SHOWS. It is part of the ability half because a
+     hero who has BECOME an Agent must show the Agent — its name, its type
+     line and its printed text — or the mechanic is invisible and the
+     zoomed card contradicts the ability the engine is running (v3.60's
+     sev-2 category, where the feed and the state disagree).
+
+     `code` is the DECK's printed code and an Agent has none, so the art
+     falls back to the record's own first printing. */
+  const HZOOM = {name: displayName || heroRec.n || "Hero", pitch:0, cost:null,
+    power:null, def:null, tt:heroRec.tt||"Hero", kw:[], tx:heroRec.tx||"",
+    img: code ? cdnImg(code) : null,
+    dbImg: heroRec.pr ? heroRec.pr._first : null};
+  const HPOW = heroPow ? Object.assign({name:_nm+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
+    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
+    _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
+    heroPow.soul ? {_soulCost: heroPow.soul} : {}) : null;
+  return {heroRec, heroPow, HPOW, HZOOM,
+    arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
+    earthOnFirstHeroDmg, lightningOnSecondNonAtk,
+    atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
+    becomeAgent, returnToBrood};
+}
+
+/* ---- the build --------------------------------------------------------
+   `h` is the hero entry (name, key, printed code), `d` is its parsed deck
+   definition, `db` the card database, `opts` the loadout choices, `rng`
+   the seeded stream and `ctr` the shared uid counter.
+
+   `d` is a PARAMETER rather than a lookup because that is the difference
+   between a pure function and one that reads the trainer's module scope.
+   Two seats, two decks, one function. */
+/* THE PRINTED ABILITY LINE, COST PREFIX STRIPPED — the powCard's `tx`.
+   Exported (v3.71) because `tools/audit.js` has to ask the SAME question
+   when it decides whether a hero clause is read: `parseHeroPower` answers
+   about the FIRST sentence only, and everything after it is read by
+   `fxParse` over this line. An audit that re-derived the line would be the
+   no-mirror rule broken between a tool and the engine — and one that did
+   not ask at all reports a built ability as unread, which is v3.21's
+   one-sided ledger exactly. */
+function heroAbilityLine(heroRec, heroPow){
+  const line = ((heroRec && heroRec.tx) || "").split(/\n+/).map(l => clean(l))
+    .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+  return line.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : "");
+}
+
+function buildSide(h, d, db, opts, rng, ctr){
+  const o = opts || {};
+  const heroRec = resolveHero(db, d.hero) || {};
+  /* ONE BODY FOR THE ABILITY HALF (v3.76) — see `heroAbilities`. It is
+     read here at deal time and again whenever the hero CHANGES. */
+  const _ab = heroAbilities(heroRec, d.hero.name, d.hero.code);
+  const heroPow = _ab.heroPow, HPOW = _ab.HPOW;
+  const cuts = o.cuts||{};
+  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
+     SAZ). Passed to every resolveEntry so a card wears the face it has in
+     this deck's own precon rather than whatever printing the database
+     happened to list first. See cards.js `pickPrinting`. */
+  const saSet = (h.code||"").slice(0,3) || null;
+  const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
+    const q = Math.max(0, e.q - (cuts[ei]||0));
+    if(!q) return [];
+    const c = resolveEntry(db,e,saSet);
+    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
+  }));
+  rng = _pd.rng;
+  const deck = _pd.arr;
+  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
+  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
+  gear.forEach(gr=>{
+    if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
+      if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
+      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
+      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
+    }
+    /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
+       Dealer is a Bow whose printed ability puts an arrow face up into your
+       arsenal — it is not a weapon attack, so `weaponCost` (which requires
+       ": attack") never claimed it and the `!isWeapon` gate below skipped
+       it, leaving the ability inert. The extra door is deliberately narrow:
+       only an ability the arsenal reader actually recognises, so no other
+       weapon quietly grows a second button nothing is wired to run. */
+    const _armed = isWeapon(gr) && gr.tx && ARS_PUT.test(gr.tx);
+    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+    if(pw){ gr.pow=pw;
+    /* The ability's WHOLE printed line, not just its first sentence.
+       Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
+       end of turn, your base {i} is the number rolled." — parseHeroPower
+       stops at the period, which orphaned the rider so it never fired.
+       Strip the cost prefix off the line and keep the rest. */
+    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
+      .find(l=>/^(?:once per turn )?(?:attack reaction|action|instant)\s*[-—]/i.test(l)) || "";
+    const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
+    /* `_attackRx` IS THE WINDOW, and it is the third flag of its kind
+       beside `_instant` and `sd`. It is not a printed type — the powCard's
+       `tt` is "Equipment Ability" — so judge.js and the trainer ask it
+       separately rather than reading it off a type line that does not
+       carry it, exactly as they do for `_instant`. */
+    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
+      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
+  const _atk = deck.filter(isAttack);
+  const _ga = deck.filter(c=>fxParse(c).ga).length;
+  const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
+  const _blue = deck.filter(c=>c.pitch===3).length;
+  const _perm = deck.filter(c=>fxParse(c).perm).length;
+  const _avg = _atk.length ? _atk.reduce((a,c)=>a+(c.power||0),0)/_atk.length : 0;
+  const read = "Claude's read: "+_atk.length+" attacks avg "+_avg.toFixed(1)+" power, "+_ga+" go-again, "+_blue+" blue fuel"
+    +(_arc?", "+_arc+" arcane":"")+(_perm?", "+_perm+" permanents":"")+". "+(function(){
+      const cnt = k => deck.filter(c=>hasKw(c,k)).length;
+      const soulN = deck.filter(c=>/into your (?:hero'?s? )?soul/i.test(c.tx||"")).length;
+      const m = [["boost",cnt("boost")],["clash",cnt("clash")],["soul",soulN],["rune",deck.filter(c=>/runechant/i.test(c.tx||"")).length],["arcane",_arc],["ally",deck.filter(c=>fxParse(c).perm==="ally").length]].sort((a,b)=>b[1]-a[1])[0];
+      const T = {boost:"Line: boost everything — each banish digs the deck and chains go again.",
+        clash:"Line: bank blues, clash with fat tops, cash wins into free tempo.",
+        soul:"Line: land hits to charge the soul, then spend it to break through.",
+        rune:"Line: stack runechants on non-attacks, pop them all on one clean swing.",
+        arcane:"Line: amp first, spell second — arcane ignores the iron.",
+        ally:"Line: crew up early — every ally is free damage each turn after."};
+      return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
+    })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
+  const hasBoost = deck.some(c=>hasKw(c,"boost"));
   let startItem = null;
-  if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
+  if(/start the game with a mechanologist item with cost 2 or less/.test(clean(heroRec.tx||"").toLowerCase())){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
     if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
   }
-  return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
-    arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,energyOnOpt,
-    earthOnFirstHeroDmg,lightningOnSecondNonAtk,
-    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,chargedDefBuff,stealthMarkedBuff,
-    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
+  return {b:Object.assign({deck,gear,hasBoost,read,startItem,
+    hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, _ab), rng};
 }
 
 /* Equip a hero to a legal default loadout and build it. The two seats
@@ -496,7 +591,7 @@ function buildMatch(spec, o){
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
-                  "chargedDefBuff","stealthMarkedBuff"];
+                  "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -513,6 +608,11 @@ const PASSIVE_TYPE = {
   /* A NUMBER for Kayo's reason: Boltyn's clause names its own magnitude
      ("+1{p}"), and storing `true` would hardcode the 1 in `effects.js`. */
   chargedDefBuff: "number", stealthMarkedBuff: "number",
+  /* A STRING for Briar's reason (v3.21): the printed line NAMES the class
+     ("Agent of CHAOS"), so the passive carries that word and `effects.js`
+     names nothing. `returnToBrood` is a plain flag — the Agent's line
+     names no set at all, it just goes home. */
+  becomeAgent: "string", returnToBrood: "boolean",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into
@@ -523,5 +623,6 @@ const PASSIVE_TYPE = {
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
-        buildSeed, buildMatch, buildVanilla, heroAbilityLine, PASSIVES, PASSIVE_TYPE};
+        buildSeed, buildMatch, buildVanilla, heroAbilityLine, heroAbilities,
+        agentsOf, PASSIVES, PASSIVE_TYPE};
 });

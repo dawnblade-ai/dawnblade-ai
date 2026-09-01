@@ -137,6 +137,13 @@ function build(g, ctx){
               mode: g.mode, bphase: g.bphase, incoming: g.incoming,
               phase: g.phase, step: g.step, priority: g.priority,
               passed: g.passed, arsenalFor: g.arsenalFor},
+    /* WHO EACH SEAT CURRENTLY IS (v3.76). A hero can CHANGE mid-game —
+       Arakni becomes a random Agent of Chaos at the beginning of her end
+       phase — and a report that shows the deck's hero while the engine is
+       running an Agent's ability sends the reader hunting a bug that is
+       not there. `_brood` is who they go home as. */
+    heroes: list(g.builds).map(b => (b && b.heroRec && b.heroRec.n)
+      + (b && b._brood ? " (as an Agent; brood: " + b._brood.n + ")" : "")),
     chainOpen: g.chainOpen,
     chain: list(g.chain).map(l => l.n || l.label || l.k || "link"),
     chainCards: list(g.chainCards).map(x => (x.by != null ? "s" + x.by + " " : "") + nm(x.card)),

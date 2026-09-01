@@ -9,6 +9,96 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.76 — the Agents of Chaos
+
+> **Arakni** *"At the beginning of your end phase, if an opponent is
+> **marked**, you become a random **Agent of Chaos**."*
+> **an Agent** *"At the beginning of your end phase, **return to the
+> brood**."*
+
+Two printed lines, one cycle: her end phase turns her into an Agent, she
+holds it through the opponent's turn and her own, and her next end phase
+sends it home — where her own clause fires again and a **different** Agent
+takes the seat. She is somebody else for most of the game.
+
+### THE DATABASE CANNOT NAME ITS OWN SET
+
+No `types` entry, no `subtypes` entry and **no `type_text` anywhere in
+4,952 live records** contains the word "Agent". A hand-written list would
+be inventing card text at the SET level — the golden rule broken one layer
+above the card.
+
+So the set is derived from the two things that ARE printed:
+
+| | |
+|---|---|
+| the **class** | *"Agent of **Chaos**"* — captured off the sentence and carried on the build as a string, the way Briar's token names are (v3.21). A boolean would move "Chaos" into `effects.js` |
+| the **type** | `Demi-Hero`, read off the STRUCTURED ARRAY, this project's stated authority over `tt` (v2.44) |
+
+Measured over the whole live database: **exactly six** Demi-Heroes carry
+Chaos, and they are exactly the six Arakni's own `referenced_cards` names.
+
+### BECOMING ONE SWAPS THE ABILITY AND NOTHING ELSE
+
+Every Agent prints `health: "*"` and **intellect 4**; Arakni prints life 20
+and intellect 4. So life, intellect, deck and gear are untouched, and what
+changes is the printed ability line — which means the build's passives, its
+powCard and the card the hero row shows.
+
+`build.heroAbilities` is that half, extracted so the deal and the swap call
+**one body**. Her own stealth passive is GONE while she is an Agent, which
+is what the cards say: you have the Agent's ability, not your own.
+
+**THE PICK COMES OUT OF THE SEEDED STREAM** and the rng is stored back
+(v2.26), and `agentsOf` returns the set **sorted** — "random" has to be
+reproducible, or two peers replaying one log become different Agents.
+
+**RETURN RUNS BEFORE BECOME**, which is what makes it a cycle rather than a
+one-way door. Reversed, she would become an Agent and immediately return,
+and the mechanic would be invisible.
+
+### THE POOL AND THE PHONE KEEP A DEMI-HERO BY ITS TYPE
+
+The six Agents are records no deck lists. `tools/pin-pool.js` keeps them by
+type the way it already keeps a token, and `index.html`'s loader keeps them
+by the identical test — one rule, two readers, because a pool the Node
+tools can see and the phone cannot is v3.21's fixture-and-production split.
+**`DATA_VER` moves to `sage-v13`**: a warm cache has no Agent to become.
+
+Their own activated abilities still **refuse** — five print `Discard an
+Assassin card`, a cost `parseHeroPower` declines by design, and Trap-Door's
+is a deck search. That is deliberately visible rather than quiet: the
+Agents are in the POOL now, so the audit counts their unread text every
+run. Two of the six carry a readable STATIC that is not yet built —
+Tarantula's dagger drain and Orb-Weaver's Chelicera discount — and both are
+recorded in HANDOFF.md.
+
+### THE TRAINER'S BUILD LEDGER WAS A CLOSURE
+
+**The first rule that ever CHANGED a hero, and it found a board that could
+not express one.** `bAct` read `built.both` — a `useMemo` constant,
+immutable by construction — so the swap on `game.builds` was invisible
+there. The feed would have announced the transformation while every passive
+kept answering for the hero she used to be: v3.01's one-board shape,
+created deliberately rather than found, and the sev-2 category where the
+feed and the state disagree.
+
+`builds` is a `GAME_KEY` now (it has always been shared state at the
+table), the trainer seeds it with the construction inputs stripped exactly
+as `judge.newMatch` strips them, and **all three build helpers take the
+state**. `bOf` used to close over `g`, which inside a `setG` reducer is the
+PREVIOUS state — harmless while the only thing it read was `_dummy`, and a
+stale read waiting to matter.
+
+**Measured:** pool 788 → **797 records**; hero abilities 7 heroes / 10
+unread clauses → **6 / 9**. Six heroes finished. 1773 drills, 0 failing, 4
+skipped. Fairness clean. 29 scenes passing. 210 self-play games: 0
+refusals, 0 violations, 7 stalls. Both babel blocks compile. Eleven
+sabotages; all eleven bite — one was SILENT first, and the drill that fixed
+it needed a synthetic build because no reachable state produces the case.
+
+---
+
 ## v3.75 — Arakni, clause 1: stealth into a marked hero
 
 > *"Your attacks with **stealth** that are attacking a **marked** hero get

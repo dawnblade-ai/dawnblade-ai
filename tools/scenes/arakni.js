@@ -157,6 +157,56 @@ module.exports = [
     "the hit keeps her action point": 1,
     "…and a full block does not": 0
   }
+},
+
+{
+  name: "she becomes a random Agent of Chaos, and returns to the brood",
+  why: "v3.76 — the craziest ability in the pool, and the database cannot " +
+       "name its own set: no type, subtype or type_text in 4,952 records " +
+       "contains \"Agent\". The six are derived from the CLASS her sentence " +
+       "names and the Demi-Hero type, and becoming one swaps the ABILITY " +
+       "and nothing else — every Agent prints life `*` and intellect 4.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const E = require("../../engine/effects.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "arakni");
+    const db = c.H.db();
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.arakni), db, {},
+                          RNG.make("scene-brood"), {n: 0}).b;
+    const board = marked => c.state({}, {marked: marked ? 1 : 0},
+      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}], seed: "scene-brood"});
+    const end = g => E.beginEndPhase(g, 0, db);
+    /* one end phase with a mark, and one without */
+    const on = end(board(true)).game.builds[0];
+    const off = end(board(false)).game.builds[0];
+    /* …and five in a row, to show it CYCLES rather than sticking */
+    let g = board(true); const seen = [];
+    for(let i = 0; i < 5; i++){ g = end(g).game; seen.push(g.builds[0].heroRec.n); }
+    return {
+      "the Agents she can become":    B.agentsOf(db, "chaos").length,
+      "marked: she is someone else":  on.heroRec.n !== "Arakni, Web of Deceit",
+      "…and knows the way home":      on._brood.n,
+      "unmarked: she stays herself":  off.heroRec.n,
+      "five end phases, all Agents":  seen.every(n => n !== "Arakni, Web of Deceit"),
+      "…and not the same one twice running": new Set(seen).size > 1,
+      "her own passive is gone while she is one": on.stealthMarkedBuff,
+      "but her life is untouched":    on.hp
+    };
+  },
+  want: {
+    "the Agents she can become": 6,
+    "marked: she is someone else": true,
+    "…and knows the way home": "Arakni, Web of Deceit",
+    "unmarked: she stays herself": "Arakni, Web of Deceit",
+    "five end phases, all Agents": true,
+    "…and not the same one twice running": true,
+    "her own passive is gone while she is one": 0,
+    "but her life is untouched": 20
+  }
 }
 
 ];

@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-01T19:26:31.670Z · app v3.74 · data sage-v12 · db 788 records
+Generated 2026-09-01T20:04:43.474Z · app v3.76 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -125,8 +125,7 @@ Generated 2026-09-01T19:26:31.670Z · app v3.74 · data sage-v12 · db 788 recor
 
 ### Arakni, Web of Deceit (Chaos Assassin)
 - static: Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again
-- ⚠ unrecognized: "At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos."
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
+- static: Arakni — her end phase turns her into a random Agent of Chaos while an opponent is marked
 
 ### Blaze, Firemind (Wizard)
 - hero power: once/turn: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X
