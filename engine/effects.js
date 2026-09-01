@@ -680,19 +680,31 @@ function makeEffects(ctx){
            face-up into your arsenal" trigger fires here exactly as it does
            on a pick from hand, because there is one body and not two. */
         n = faceUpArsenal(n, [], srcName, "deck");
-        /* "IF IT'S AN ARROW, IT GETS DOMINATE UNTIL END OF TURN." The
-           subject is read off the card's printed TYPE LINE — a stamp, not
-           a rewrite of its keywords, so it expires with `_upTurn` if the
-           arrow is never played (v2.33). `execute` hands it to
-           `parser.defCap` at declaration. */
-        if(grant && grant.tt){
-          const cur = act(n).arsenal;
-          const isIt = new RegExp("\\b" + grant.tt + "\\b", "i").test((cur && cur.tt) || "");
-          if(isIt){
-            actMut(n).arsenal = {...cur, _arsKw: [...(cur._arsKw||[]), grant.kw]};
-            n = L(n, `${cur.name} is ${/^[aeiou]/i.test(grant.tt)?"an":"a"} ${grant.tt} — it gains ${grant.kw} this turn.`);
-          } else if(cur) n = L(n, `${cur.name} is no ${grant.tt} — no ${grant.kw}.`);
-        }
+        n = applyArsGrant(n, grant, srcName);
+      }
+      /* ---- BRAVO'S TURN-UP (v3.72) ----------------------------------
+         "Turn a face-down card in your arsenal face-up. If it has crush,
+          it gets +2{p} and dominate this turn."
+
+         THE SECOND CONSUMER OF THE FACE-UP MACHINERY, and it needed no
+         new machinery at all: `faceUpArsenal` already turns whatever is
+         there and fires its triggers, and `applyArsGrant` already stamps
+         a conditional bonus onto it. What is new is the EVENT.
+
+         TURNING IS NOT PUTTING, and the pool prints the difference: Spire
+         Sniping alone says "put OR TURNED face up", every other arsenal
+         trigger says "put". So the source zone is `"arsenal"` and
+         `faceUpArsenal` skips a put-only trigger. Measured before it was
+         carried: no deck holds both a turn-up and a put-only trigger
+         (Bravo is Guardian, the arrows are Ranger), so it is LATENT — but
+         it is a printed distinction, and a reader that ignores one is
+         reading the card wrong whether or not anything notices today. */
+      else if(k==="arsTurn"){
+        const cur = act(n).arsenal;
+        if(!cur){ n = L(n, `${srcName}: the arsenal is empty — nothing to turn.`); return; }
+        if(cur._faceUp){ n = L(n, `${srcName}: ${cur.name} is already face up.`); return; }
+        n = faceUpArsenal(n, [], srcName, "arsenal");
+        n = applyArsGrant(n, v || null, srcName);
       }
       else if(k==="allArsBottom"){
         /* ALL arsenals — the caster's too. Fault Line prints "all cards in
@@ -2982,6 +2994,44 @@ function makeEffects(ctx){
      is the pool's only heave card — a Guardian/Brute action with no
      arsenal trigger of its own, in no deck that holds an arrow. Latent,
      recorded in HANDOFF.md rather than half-moved. */
+  /* ---- WHAT THE ARSENAL CARD GAINS (v3.72) -------------------------
+     One body for two heroes' printed sentences:
+
+       Azalea  "If it's an ARROW, it gets dominate until end of turn."
+       Bravo   "If it HAS CRUSH, it gets +2{p} and dominate this turn."
+
+     A STAMP, NOT A REWRITE of the card's keywords, so it expires with
+     `_upTurn` if the card is never played (v2.33). `execute` hands the
+     keyword to `parser.defCap` at declaration and reads `_arsPow` into
+     the attack's total.
+
+     `printedKw` IS THE KEYWORD PREDICATE, not `hasKw`. "If it has crush"
+     asks whether the card CARRIES the keyword as printed rules text —
+     `hasKw` answers true for a card that merely mentions it, and the
+     database writes a triggered keyword with its rider attached, which is
+     why `printedKw` learned the dash form at v3.33. */
+  function applyArsGrant(n0, grant, srcName){
+    let n = n0;
+    const cur = act(n).arsenal;
+    if(!grant || !cur) return n;
+    const what = [grant.pow ? `+${grant.pow}{p}` : null, ...grant.kw]
+      .filter(Boolean).join(" and ");
+    const met = grant.ifKw ? printedKw(cur, grant.ifKw)
+              : grant.ifTt ? new RegExp("\\b" + grant.ifTt + "\\b", "i").test(cur.tt || "")
+              : true;
+    if(!met){
+      const subj = grant.ifKw ? `has no ${grant.ifKw}`
+                              : `is no ${grant.ifTt}`;
+      return L(n, `${cur.name} ${subj} — no ${what}.`);
+    }
+    const up = {...cur};
+    if(grant.pow) up._arsPow = (up._arsPow||0) + grant.pow;
+    if(grant.kw.length) up._arsKw = [...(up._arsKw||[]), ...grant.kw];
+    actMut(n).arsenal = up;
+    return L(n, `${cur.name} ${grant.ifKw ? "has " + grant.ifKw : "is " +
+      (/^[aeiou]/i.test(grant.ifTt||"") ? "an" : "a") + " " + grant.ifTt} — it gains ${what} this turn.`);
+  }
+
   /* A FUNCTION DECLARATION, so it is hoisted: `runOps` sits 2,300 lines
      above it in this closure and a `const` arrow would be in the temporal
      dead zone for any reader of the file (v3.12's `quotedOnHit`, same
@@ -2992,7 +3042,16 @@ function makeEffects(ctx){
     if(!put || put._faceUp) return n;
     const pfx = fxParse(put);
     const up = {...put, _faceUp:true, _upTurn:n.turn};
+    /* TURNING IS NOT PUTTING (v3.72). Spire Sniping alone prints "put OR
+       TURNED face up"; every other arsenal trigger in the pool says
+       "put". `from === "arsenal"` is the turn — Bravo's ability, which is
+       the pool's only one — and a put-only trigger sits it out. */
+    const turning = from === "arsenal";
     for(const op of (pfx.arsenalUp||[])){
+      if(turning && !pfx.arsenalUpTurn){
+        n = L(n, `${put.name} was TURNED face up, not put — its trigger reads "put".`);
+        break;
+      }
       if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
         n = L(n, `${put.name} goes face up — +${op[1]} power this turn.`); }
       else if(op[0] === "ga"){ up._arsGA = true;

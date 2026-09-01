@@ -95,8 +95,13 @@ test("the built powCard reads FULL, with the cycle and its grant", {skip}, () =>
   /* BOTH HALVES COME OFF THE PRINTED LINE. A hardcoded "arrow"/"dominate"
      is right for this card and silently wrong for the next one — the same
      rule `rustDestroy` and Thunder Quake's heave follow for their
-     numbers, and Sharpen for its threshold. */
-  assert.deepEqual(cyc[0][1], {tt: "arrow", kw: "dominate"});
+     numbers, and Sharpen for its threshold.
+
+     THE SHAPE IS SHARED WITH BRAVO'S (v3.72). Azalea's grant tests a TYPE
+     and stamps a keyword; his tests a KEYWORD and stamps power AND a
+     keyword. One reader, one spec — the second copy is where the drift
+     starts. */
+  assert.deepEqual(cyc[0][1], {ifTt: "arrow", ifKw: null, pow: 0, kw: ["dominate"]});
 });
 
 test("BOTH HALVES ARE READ, not assumed — a synthetic line proves it", () => {
@@ -109,7 +114,7 @@ test("BOTH HALVES ARE READ, not assumed — a synthetic line proves it", () => {
       + "the top card of your deck face-up into your arsenal. If it's a dagger, it "
       + "gets dominate until end of turn."});
   assert.deepEqual(fx.ops.filter(o => o[0] === "arsCycle")[0][1],
-    {tt: "dagger", kw: "dominate"});
+    {ifTt: "dagger", ifKw: null, pow: 0, kw: ["dominate"]});
 });
 
 test("HALF THE CARD IS NOT THE CARD: sentence 1 alone refuses", () => {
@@ -442,4 +447,245 @@ test("DRIVEN: `if this has an aim counter` asks about THIS card", {skip}, () => 
   assert.equal(swing(800, {}), 4, "the printed base");
   assert.equal(swing(800, {800: {aim: 1}}), 5, "its OWN counter pumps it");
   assert.equal(swing(801, {800: {aim: 1}}), 4, "another card's counter must not");
+});
+
+/* ============================================================
+   BRAVO, FLATTERING SHOWMAN (v3.72)
+
+     "Action - {r}{r}, {t}: Turn a face-down card in your arsenal
+      face-up. If it has crush, it gets +2{p} and dominate this turn.
+      Go again"
+
+   HIS DECK READS 100% AND HIS HERO READ 0% — the sharpest illustration in
+   the pool of why deck coverage was never the binding constraint. And it
+   needed NO new machinery: Azalea's v3.71 build already turns a card face
+   up, fires its triggers and stamps a conditional bonus onto it. What is
+   new is the EVENT (turning is not putting) and the keyword test.
+   ============================================================ */
+
+let _bravo = null;
+function bravo(){
+  if(_bravo) return _bravo;
+  const W = loadData();
+  const h = W.HEROES.find(x => x.k === "bravo");
+  _bravo = B.buildSide(h, G.parseDeck(W.DECKS.bravo), H.db(), {}, RNG.make("arsturn"), {n: 0}).b;
+  return _bravo;
+}
+
+test("Bravo has a hero powCard at all, and it reads FULL", {skip}, () => {
+  const b = bravo();
+  assert.ok(b.HPOW, "without it `build.js` builds nothing and neither board can offer it");
+  const fx = P.fxParse(b.HPOW);
+  assert.equal(fx.tier, "full");
+  assert.ok(fx.ga);
+  assert.deepEqual(fx.ops.filter(o => o[0] === "arsTurn"),
+    [["arsTurn", {ifTt: null, ifKw: "crush", pow: 2, kw: ["dominate"]}]]);
+});
+
+test("ONE reader for two heroes' grant sentence", () => {
+  /* Azalea tests a TYPE and stamps a keyword; Bravo tests a KEYWORD and
+     stamps power AND a keyword. Two nearly-identical regexes is where the
+     drift starts (v3.41's `quotedText`, written twice, where sabotaging
+     one copy left the other correct). */
+  const az = P.fxParse({name: "GRANT-A", pitch: 0, tt: "Hero Ability", kw: [],
+    tx: "Put a card from your arsenal on the bottom of your deck. If you do, put the "
+      + "top card of your deck face-up into your arsenal. If it's an arrow, it gets "
+      + "dominate until end of turn."});
+  const bv = P.fxParse({name: "GRANT-B", pitch: 0, tt: "Hero Ability", kw: [],
+    tx: "Turn a face-down card in your arsenal face-up. If it has crush, it gets "
+      + "+2{p} and dominate this turn."});
+  assert.deepEqual(az.ops.filter(o => o[0] === "arsCycle")[0][1],
+    {ifTt: "arrow", ifKw: null, pow: 0, kw: ["dominate"]});
+  assert.deepEqual(bv.ops.filter(o => o[0] === "arsTurn")[0][1],
+    {ifTt: null, ifKw: "crush", pow: 2, kw: ["dominate"]});
+});
+
+test("the grant is matched on the LEVELLED clause", () => {
+  /* A whole-card reader scans `fx.clauses` RAW, so `SYNONYMS` has not
+     reached it — and `it's` levels to `it is` (v3.36), which the database
+     already prints both ways. An anchor spelling only the contraction
+     works today and dies the moment upstream levels the other way. */
+  for(const line of ["If it's an arrow, it gets dominate until end of turn.",
+                     "If it is an arrow, it gets dominate until end of turn."]){
+    const fx = P.fxParse({name: "GRANT-LV-" + line.length, pitch: 0,
+      tt: "Hero Ability", kw: [],
+      tx: "Turn a face-down card in your arsenal face-up. " + line});
+    assert.deepEqual(fx.ops.filter(o => o[0] === "arsTurn")[0][1],
+      {ifTt: "arrow", ifKw: null, pow: 0, kw: ["dominate"]}, line);
+  }
+});
+
+test("DRIVEN: only a card that HAS crush takes the bonus", {skip}, () => {
+  /* BOTH HALVES OR THE DRILL PROVES NOTHING (v3.45). `printedKw` is the
+     predicate, not `hasKw` — "if it has crush" asks whether the card
+     CARRIES the keyword as printed rules text, and `hasKw` answers true
+     for a card that merely mentions it (v2.84). */
+  H.db();
+  const b = bravo();
+  const crush = b.deck.find(c => P.printedKw(c, "crush"));
+  const plain = b.deck.find(c => !P.printedKw(c, "crush") && P.isAttack(c));
+  assert.ok(crush && plain, "the fixture needs one of each out of his real deck");
+  const turn = card => {
+    const g = H.state({arsenal: Object.assign({}, card, {uid: 800}), deck: [],
+                       res: 9, ap: 1, hand: []}, {},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    return H.execute(g, b.HPOW, "hero", -1, {});
+  };
+  const yes = turn(crush).sides[0].arsenal, no = turn(plain).sides[0].arsenal;
+  assert.equal(yes._faceUp, true);
+  assert.equal(yes._arsPow, 2);
+  assert.deepEqual(yes._arsKw, ["dominate"]);
+  assert.equal(no._faceUp, true, "…and the non-crush card still turns up");
+  assert.equal(no._arsPow, undefined);
+  assert.equal(no._arsKw, undefined);
+});
+
+test("DRIVEN: a card that MENTIONS crush does not have it", {skip}, () => {
+  /* `printedKw` IS THE PREDICATE, NOT `hasKw` (v2.84's three questions).
+     "If it has crush" asks whether the card CARRIES the keyword as printed
+     rules text; `hasKw` is deliberately loose and answers true for a card
+     that merely names it.
+
+     THE FIXTURE IS THE ONE POOL CARD THAT TELLS THEM APART: Crash and
+     Bash prints "you may reveal a card WITH CRUSH from your hand" and
+     carries no crush of its own. Written with an ordinary non-crush card
+     the drill is SILENT under sabotage — the two predicates agree on
+     every other card in the pool, so it would have tested neither
+     (v3.26). */
+  H.db();
+  const b = bravo();
+  const bait = H.card("Crash and Bash", 1);
+  assert.equal(P.hasKw(bait, "crush"), true, "it does mention crush…");
+  assert.equal(P.printedKw(bait, "crush"), false, "…and it does not carry it");
+  const g = H.state({arsenal: Object.assign({}, bait, {uid: 807}), deck: [],
+                     res: 9, ap: 1, hand: []}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const a = H.execute(g, b.HPOW, "hero", -1, {}).sides[0].arsenal;
+  assert.equal(a._faceUp, true, "it still turns face up");
+  assert.equal(a._arsPow, undefined, "…and gains nothing");
+  assert.equal(a._arsKw, undefined);
+});
+
+test("an unreadable half of the grant refuses the whole grant", () => {
+  /* v2.29. "It gets +2{p} and lifesteal" — half a payload is not a cheap
+     approximation when the half that reads is the REWARD, and a grant
+     filed with its keyword quietly dropped reports the card as read.
+
+     THE TURN-UP SURVIVES, because it is the mechanism and stands on its
+     own; only the grant refuses, and its clause stays `skip` so the audit
+     still says so. */
+  const fx = P.fxParse({name: "GRANT-HALF", pitch: 0, tt: "Hero Ability", kw: [],
+    tx: "Turn a face-down card in your arsenal face-up. If it has crush, it gets "
+      + "+2{p} and lifesteal this turn."});
+  const t = fx.ops.filter(o => o[0] === "arsTurn");
+  assert.equal(t.length, 1, "the turn-up still reads");
+  assert.equal(t[0][1], null, "…and the grant does not");
+  assert.ok(fx.clauses.some(c => c.st === "skip" && /lifesteal/.test(c.t)),
+    "the gap must stay visible in the audit");
+});
+
+test("DRIVEN: the +2{p} is not ALSO queued as a pump for his next attack", {skip}, () => {
+  /* v2.33's Bull's Eye Bracers trap, one hero over. "IT gets +2{p}" is
+     about the card in the ARSENAL, and `fxParse`'s whole-text self-pump
+     fallback read the same +2 a second time and queued it as a buffNext —
+     whether or not the card had crush. VALUE-DOUBLED on the fairness
+     sweep's own terms.
+
+     AND NO TOOL HERE WOULD HAVE SEEN IT: a hero powCard is not a pool
+     card, so neither the audit nor the sweep ever looks at one. */
+  H.db();
+  const b = bravo();
+  const plain = b.deck.find(c => !P.printedKw(c, "crush") && P.isAttack(c));
+  const g = H.state({arsenal: Object.assign({}, plain, {uid: 801}), deck: [],
+                     res: 9, ap: 1, hand: []}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const n = H.execute(g, b.HPOW, "hero", -1, {});
+  assert.equal(n.sides[0].buffNext, 0, "no card had crush — nothing may be queued");
+  assert.deepEqual(n.sides[0].buffQ, []);
+  assert.equal(P.fxParse(b.HPOW).self, 0, "…and the fallback must not read it at all");
+});
+
+test("DRIVEN: the stamps are spent at the swing — power AND the wall", {skip}, () => {
+  /* GO ALL THE WAY TO THE OBSERVABLE. `_arsPow` and `_arsKw` on the card
+     are stamps nobody reads; `pend.total` and `pend.defCap` are what the
+     chain and BOTH walls are built from. */
+  H.db();
+  const b = bravo();
+  const crush = b.deck.find(c => P.printedKw(c, "crush"));
+  let g = H.state({arsenal: Object.assign({}, crush, {uid: 802}), deck: [],
+                   res: 9, ap: 1, hand: []}, {},
+                  {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const up = H.execute(g, b.HPOW, "hero", -1, {});
+  const arm = Object.assign({}, up, {sides: up.sides.map((s, i) => i ? s : {...s, ap: 1, res: 9})});
+  const n = H.execute(arm, up.sides[0].arsenal, "arsenal", -1, {});
+  assert.equal(n.pend.total, (crush.power || 0) + 2);
+  assert.deepEqual(n.pend.defCap, {n: 1, count: "hand"});
+});
+
+test("DRIVEN: he pays {r}{r} and TAPS, and keeps the action point", {skip}, () => {
+  /* Three separate rules, and each has been wrong somewhere before: the
+     resource cost, the tap (a STATE only his own untap step lifts, v3.48
+     — a different record from the per-turn allowance) and go again as a
+     GAIN (CR 5.3.5). */
+  H.db();
+  const b = bravo();
+  const crush = b.deck.find(c => P.printedKw(c, "crush"));
+  const g = H.state({arsenal: Object.assign({}, crush, {uid: 803}), deck: [],
+                     res: 9, ap: 1, hand: []}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const n = H.execute(g, b.HPOW, "hero", -1, {});
+  assert.equal(n.sides[0].res, 7);
+  assert.equal(n.sides[0].heroTapped, true);
+  assert.equal(n.sides[0].ap, 1, "go again is a GAIN, so the point is kept");
+});
+
+test("DRIVEN: an empty or already-up arsenal does nothing", {skip}, () => {
+  H.db();
+  const b = bravo();
+  const crush = b.deck.find(c => P.printedKw(c, "crush"));
+  const board = ars => H.state({arsenal: ars, deck: [], res: 9, ap: 1, hand: []}, {},
+                               {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+  const empty = H.execute(board(null), b.HPOW, "hero", -1, {});
+  const already = H.execute(board(Object.assign({}, crush,
+    {uid: 804, _faceUp: true, _upTurn: 3})), b.HPOW, "hero", -1, {});
+  assert.equal(empty.sides[0].arsenal, null);
+  assert.equal(already.sides[0].arsenal._arsPow, undefined,
+    "a card already face up is not turned again, so it gains nothing");
+});
+
+test("TURNING IS NOT PUTTING — a put-only trigger sits it out", {skip}, () => {
+  /* THE POOL PRINTS THE DIFFERENCE. Spire Sniping alone says "put OR
+     TURNED face up"; every other arsenal trigger says "put", and Bravo's
+     ability is the pool's only card that TURNS one.
+
+     MEASURED BEFORE IT WAS CARRIED: no deck holds both a turn-up and a
+     put-only trigger (Bravo is Guardian, the arrows are Ranger), so this
+     is LATENT — and it is a printed distinction, so a reader that ignores
+     it is reading the card wrong whether or not anything notices today.
+     Same treatment v3.65 gave the ally-attack route. */
+  H.db();
+  const b = bravo();
+  assert.equal(P.fxParse(H.card("Spire Sniping", 2)).arsenalUpTurn, true,
+    "it is the one card that says TURNED");
+  assert.equal(P.fxParse(H.card("Swift Shot", 1)).arsenalUpTurn, undefined,
+    "…and the control, which says only PUT");
+  const turnUp = card => {
+    const g = H.state({arsenal: Object.assign({}, card, {uid: 805}), deck: [],
+                       res: 9, ap: 1, hand: []}, {},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    return H.execute(g, b.HPOW, "hero", -1, {}).sides[0].arsenal;
+  };
+  assert.equal(turnUp(H.card("Swift Shot", 1))._arsGA, undefined,
+    'Swift Shot reads "when this is PUT face-up" — turning it must grant nothing');
+  /* the positive control, or the assertion above passes against a body
+     that never fires an arsenal trigger at all */
+  const put = H.execute(H.state({arsenal: null, deck: [], res: 9, ap: 1,
+    hand: [Object.assign({}, H.card("Swift Shot", 1), {uid: 806})]}, {},
+    {actor: 0, turn: 3, builds: [b, {}]}), b.HPOW, "hero", -1, {});
+  const g2 = Object.assign({}, put, {promptQ: [{tag: "pick", side: 0, src: "probe",
+    zone: "hand", to: "arsenal", min: 0, max: 1, faceUp: true, title: "up?"}]});
+  const answered = J.reduce(J.reduce(J.openPrompt(g2), {t: "promptSel", i: 0}, 0).state,
+                            {t: "promptConfirm"}, 0).state;
+  assert.equal(answered.sides[0].arsenal._arsGA, true,
+    "PUT face up, the same card's trigger does fire");
 });

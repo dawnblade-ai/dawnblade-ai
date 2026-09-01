@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-01T16:17:46.924Z · app v3.72 · data sage-v12 · db 788 records
+Generated 2026-09-01T16:32:19.047Z · app v3.73 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -104,10 +104,7 @@ Generated 2026-09-01T16:17:46.924Z · app v3.72 · data sage-v12 · db 788 recor
 - static: Dash — pregame item (auto-picked; pick UI pending)
 
 ### Bravo, Flattering Showman (Guardian)
-- ⚠ unrecognized: "Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up"
-- ⚠ unrecognized: "If it has crush, it gets +2{p} and dominate this turn"
-- ⚠ unrecognized: "Go again"
-- 🚩 3 hero-text clause(s) not recognized by any ability reader
+- hero power: Turn a face-down card in your arsenal face-up [2r]
 
 ### Azalea (Ranger)
 - hero power: once/turn: Put a card from your arsenal on the bottom of your deck

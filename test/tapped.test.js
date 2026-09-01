@@ -386,10 +386,15 @@ test("the audit's {t} flag is asked of the CLAUSE, not of the symbol", {skip}, (
     if((P.fxParse(c).clauses || []).some(cl => cl.st === "skip" && String(cl.t).includes("{t}")))
       flagged.push(m.n);
   }
-  /* THREE, and all three are the same shape: the ability's PAYLOAD has no
-     reader, so there is no ability for a tap to be charged against. A
-     FOURTH means a reader regressed; a SECOND means one was built. */
+  /* TWO, and both are the same shape: the ability's PAYLOAD has no reader,
+     so there is no ability for a tap to be charged against. A THIRD means
+     a reader regressed; a FIRST means one was built.
+
+     BRAVO LEFT THIS LIST AT v3.72, which is what a shrinking pin is for.
+     His "turn a face-down card in your arsenal face-up" now reads, so
+     `parseHeroPower` answers, `build.js` builds his powCard and the {t}
+     is charged by the hero route (v3.48) like any other. */
   assert.deepEqual(flagged.sort(),
-    ["Bravo, Flattering Showman", "Goldkiss Rum", "Turn to Mindfire"],
-    "seventeen pool cards print {t} and fourteen of them enforce it");
+    ["Goldkiss Rum", "Turn to Mindfire"],
+    "seventeen pool cards print {t} and fifteen of them enforce it");
 });

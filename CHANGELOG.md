@@ -9,6 +9,94 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.73 — Bravo, and the machinery he needed already existed
+
+> **Action - {r}{r}, {t}:** Turn a face-down card in your arsenal face-up.
+> If it has **crush**, it gets +2{p} and **dominate** this turn. **Go again**
+
+His deck read **100%** and his hero read **0%** — the sharpest illustration
+in the pool of why deck coverage was never the binding constraint. Third
+hero finished end to end.
+
+**AND IT NEEDED NO NEW MACHINERY.** Azalea's v3.71 build already turns a
+card face up, fires its triggers and stamps a conditional bonus onto it;
+the `{t}` route has charged a hero tap since v3.48. What was missing was
+the **event** and the **keyword test**. Before building machinery for a
+shape, check whether the machinery is the shape you already have (v3.58,
+again).
+
+### ONE READER FOR TWO HEROES' GRANT SENTENCE
+
+| | prints |
+|---|---|
+| Azalea | *"If it's an **arrow**, it gets dominate until end of turn."* |
+| Bravo | *"If it **has crush**, it gets +2{p} and dominate this turn."* |
+
+One is a TYPE test and the other a KEYWORD test; the payload is a power
+stamp, a keyword stamp, or both. So it is one matcher with a discriminator
+rather than two nearly-identical regexes — the second copy is where the
+drift starts (v3.41's `quotedText`, written twice, where sabotaging one
+copy left the other correct).
+
+**AND IT IS MATCHED ON THE LEVELLED CLAUSE.** A whole-card reader scans
+`fx.clauses` RAW, so `SYNONYMS` has not reached it — and `it's` levels to
+`it is` (v3.36), which the database already prints **both ways**. An anchor
+spelling only the contraction works today and dies the moment upstream
+levels the other way.
+
+`printedKw` is the keyword predicate, not `hasKw` (v2.84's three
+questions). **Crash and Bash** is the one pool card that tells them apart —
+it prints *"you may reveal a card **with crush** from your hand"* and
+carries no crush of its own. Written against an ordinary non-crush card the
+drill is SILENT under sabotage, because the two predicates agree on every
+other card in the pool.
+
+### TURNING IS NOT PUTTING
+
+Spire Sniping alone prints *"put **or turned** face up"*; every other
+arsenal trigger in the pool says *"put"*, and Bravo's ability is the pool's
+only card that TURNS one. Read off the clause rather than defaulted either
+way: defaulted true, four of Azalea's arrows gain a bonus their text never
+grants; defaulted false, Spire Sniping loses a printed line of play.
+
+**Measured before it was carried:** no deck holds both a turn-up and a
+put-only trigger (Bravo is Guardian, the arrows are Ranger), so it is
+**latent** — and it is a printed distinction, so a reader that ignores it is
+reading the card wrong whether or not anything notices today. Same
+treatment v3.65 gave the ally-attack route.
+
+### THE +2{p} WAS BEING READ TWICE
+
+`fxParse`'s whole-text self-pump fallback scans for `gains/gets +N{p}` and
+read Bravo's grant a **second** time, queueing it as a pump for his next
+attack — **whether or not the card had crush**. v2.33's Bull's Eye Bracers
+trap ("it" is the card in the arsenal, not the source) one hero over, and
+`VALUE-DOUBLED` on the fairness sweep's own terms.
+
+**NO TOOL HERE WOULD HAVE SEEN IT.** A hero powCard is not a pool card, so
+neither the audit nor the fairness sweep ever looks at one. Driving the
+ability is what showed it. The fallback's existing magnitude test is what
+suppresses it, so a card printing two different pumps still gets its unread
+one (v2.30).
+
+### TWO PINS SHRANK, AND ONE STOPPED NAMING A CARD
+
+- `test/tapped.test.js`'s `{t}` flag list went 3 → 2: Bravo's payload has a
+  reader now, so the tap is charged by the hero route like any other.
+- `test/dorinthea.test.js`'s "the census is not vacuous" control **named
+  Bravo**, and a drill that names a card rots the moment you fix that card
+  (v3.55). It is a synthetic hero record now, plus a measurement that
+  *some* hero still reports — neither of which can quietly stop biting.
+
+**Measured:** coverage unchanged at 361 full (his deck was already there);
+the sweep's hero list 9 heroes → **8**, 16 unread clauses → **13**. 1740
+drills, 0 failing, 4 skipped. Fairness clean. 26 scenes passing. 210
+self-play games: 0 refusals, 0 violations, 7 stalls. Both babel blocks
+compile. Ten sabotages against the new drills; all ten bite — two were
+SILENT first and both were weak drills, not weak engine.
+
+---
+
 ## v3.72 — Azalea finished: a reorder that is not an opt, and a Quiver with an event at last
 
 Her deck is **31 of 32** now. The one card left is Drill Shot, blocked on

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.72
+**Current version:** v3.73
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1728 drills**.
+This is `node --test "test/*.test.js"` — currently **1740 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -303,6 +303,65 @@ returned but never checked is a FAILURE rather than a silence.
 argument `pow6` does not take. Check your own fixture before believing a
 new instrument — v3.50's sabotage pass found four weak drills to four real
 bugs.
+
+### BRAVO — AND THE MACHINERY HE NEEDED ALREADY EXISTED (v3.73)
+
+> *"Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up.
+> If it has crush, it gets +2{p} and dominate this turn. Go again"*
+
+His deck read **100%** and his hero read **0%** — the sharpest
+illustration in the pool of why deck coverage was never the binding
+constraint. And Azalea's v3.71 build already turns a card face up, fires
+its triggers and stamps a conditional bonus onto it; the `{t}` route has
+charged a hero tap since v3.48. **What was missing was the EVENT and the
+keyword test.** Before building machinery for a shape, check whether the
+machinery is the shape you already have (v3.58, again).
+
+**ONE READER FOR TWO HEROES' GRANT SENTENCE.** Azalea tests a TYPE and
+stamps a keyword; Bravo tests a KEYWORD and stamps power AND a keyword.
+`arsGrant` is the one matcher with a discriminator — two nearly-identical
+regexes is where the drift starts.
+
+**AND IT IS MATCHED ON THE LEVELLED CLAUSE.** A whole-card reader scans
+`fx.clauses` RAW, so `SYNONYMS` has not reached it, and `it's` levels to
+`it is` (v3.36) — which the database already prints BOTH ways. An anchor
+spelling only the contraction works today and dies the moment upstream
+levels the other way.
+
+**`printedKw`, NEVER `hasKw`** (v2.84's three questions). **Crash and
+Bash is the one pool card that tells them apart** — it prints *"reveal a
+card WITH CRUSH from your hand"* and carries none. Drilled against an
+ordinary non-crush card the assertion is SILENT under sabotage, because
+the two predicates agree on every other card in the pool (v3.26).
+
+### TURNING IS NOT PUTTING (v3.73)
+
+Spire Sniping alone prints *"put **or turned** face up"*; every other
+arsenal trigger in the pool says *"put"*, and Bravo's ability is the
+pool's only card that TURNS one. Read off the clause rather than
+defaulted either way: defaulted true, four of Azalea's arrows gain a
+bonus their text never grants; defaulted false, Spire Sniping loses a
+printed line of play.
+
+**Measured before it was carried** — no deck holds both (Bravo is
+Guardian, the arrows are Ranger), so it is LATENT. It is still a printed
+distinction, and a reader that ignores one is reading the card wrong
+whether or not anything notices today. Same treatment v3.65 gave the
+ally-attack route.
+
+### A HERO POWCARD IS NOT A POOL CARD (v3.73)
+
+`fxParse`'s whole-text self-pump fallback read Bravo's *"it gets +2{p}"* a
+**second** time and queued it as a pump for his next attack — whether or
+not the card had crush. v2.33's Bull's Eye Bracers trap ("it" is the card
+in the ARSENAL) one hero over, and VALUE-DOUBLED on the fairness sweep's
+own terms.
+
+**NO TOOL HERE WOULD HAVE SEEN IT.** The audit and the sweep both walk the
+POOL, and a hero powCard is built by `build.js` out of the hero's printed
+line — it is in neither. **Driving the ability is the only thing that
+looks at one.** The fallback's existing magnitude test is what suppresses
+it, so a card printing two different pumps still gets its unread one.
 
 ### A REORDER IS NOT AN OPT (v3.72)
 

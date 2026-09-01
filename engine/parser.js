@@ -512,7 +512,14 @@ function classifyClause(raw){
          "this is put into your arsenal face up"     (Ridge Rider Shot)
          "this is put or turned face up in arsenal"  (Spire Sniping) */
     if(/\b(?:put|turned)\b/.test(cond) && /\barsenal\b/.test(cond) && /face.?up/.test(cond))
-      return Object.assign(rest,{arsUp:true});
+      /* TURNING IS NOT PUTTING, and the printed word is what says so
+         (v3.72). Spire Sniping alone says "put OR TURNED"; every other
+         arsenal trigger in the pool says "put", and Bravo's ability is
+         the pool's only card that TURNS one face up. Read off the clause
+         rather than defaulted either way: defaulted true, four arrows
+         gain a bonus their text never grants; defaulted false, Spire
+         Sniping loses a printed line of play. */
+      return Object.assign(rest,{arsUp:true, arsUpTurn:/\bturned\b/.test(cond)});
     /* "this hits A MARKED HERO" is a COMPOUND gate — on-hit AND the target
        being marked — and it must be caught before the generic /hits?/
        catch-all just below, or the marked half is silently lost and the
@@ -2486,7 +2493,49 @@ const ARS_PUT   = /put an? [a-z ]+?(?: card)? (?:from your hand )?face.?up into 
    which is the only thing that could tell the two apart. */
 const CYC_BOTTOM = /^put a card from your arsenal on the bottom of your deck\.?$/i;
 const CYC_PUT    = /^if you do, put the top card of your deck face.?up into your arsenal\.?$/i;
-const CYC_GRANT  = /^if it'?s an? ([a-z]+), it (?:gets?|gains?) ([a-z]+) until end of turn\.?$/;
+/* Bravo, Flattering Showman: "Turn a face-down card in your arsenal face-up." */
+const ARS_TURN   = /^turn a face.?down card in your arsenal face.?up\.?$/i;
+
+/* ---- WHAT THE ARSENAL CARD GAINS (v3.72) ----------------------------
+   TWO HEROES PRINT THE SAME SENTENCE ABOUT DIFFERENT SUBJECTS:
+
+     Azalea  "If it's an ARROW,   it gets dominate until end of turn."
+     Bravo   "If it HAS CRUSH,    it gets +2{p} and dominate this turn."
+
+   One is a TYPE test and the other a KEYWORD test; the payload is a
+   power stamp, a keyword stamp, or both. So it is one matcher with a
+   discriminator rather than two nearly-identical regexes — the second
+   copy is where the drift starts (v3.41's `quotedText`, written twice,
+   where sabotaging one copy left the other correct).
+
+   "UNTIL END OF TURN" AND "THIS TURN" ARE THE SAME DURATION in the CR,
+   and both spellings are in the pool; `_upTurn` carries either.
+
+   IT IS MATCHED ON THE LEVELLED CLAUSE. A whole-card reader scans
+   `fx.clauses` RAW, so `SYNONYMS` has not reached it — and `it's` is
+   levelled to `it is` (v3.36), which the database already prints both
+   ways. An anchor spelling only the contraction works today and dies the
+   moment upstream levels the other way. */
+const ARS_GRANT = /^if it (?:is an?|(has)) ([a-z]+), it (?:gets?|gains?) (.+?)(?:\s+(?:until end of turn|this turn))?\.?$/;
+/* THE GRANT VOCABULARY IS CLOSED, for the reason v3.55 gives about
+   counter kinds: a keyword nothing consumes is a no-op wearing a name,
+   and filing the card `full` for it is the blind spot at its purest.
+   `dominate` is the one keyword an arsenal stamp can be spent on —
+   `parser.defCap` is its single reader. */
+const ARS_GRANT_KW = /^dominate$/;
+function arsGrant(rawClause){
+  const m = levelIdiom(String(rawClause||"").toLowerCase()).match(ARS_GRANT);
+  if(!m) return null;
+  const g = {ifTt: m[1] ? null : m[2], ifKw: m[1] ? m[2] : null, pow: 0, kw: []};
+  /* The payload is a list: "+2{p} and dominate", "dominate", "+2{p}". */
+  for(const part of m[3].split(/\s+and\s+/)){
+    const pm = part.trim().match(/^\+(\d+)\s*\{p\}$/);
+    if(pm){ g.pow += +pm[1]; continue; }
+    if(ARS_GRANT_KW.test(part.trim())){ g.kw.push(part.trim()); continue; }
+    return null;      /* an unreadable half refuses the whole grant (v2.29) */
+  }
+  return (g.pow || g.kw.length) ? g : null;
+}
 const ARS_STAMP = /^\s*it (?:gains?|gets?)\s*\+\d+\s*\{p\}\s*until end of turn/i;
 /* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ----------------
    The golden rule stays the default: teach the parser to read text, never
@@ -3185,7 +3234,9 @@ function fxParse(card){
          the card ENTERS the arsenal, and is stamped onto the card to be
          collected when it is later played. Route it first, or "it gets go
          again this turn" would become the card's own printed go again. */
-      if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op]; return; }
+      if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op];
+        if(r.arsUpTurn) fx.arsenalUpTurn = true;
+        return; }
       /* A SCHEDULE, NOT AN ON-PLAY EFFECT. Both of these fire long after
          the activation that reads them — one when the weapon HITS for the
          Nth time this turn, the other at the beginning of an end phase.
@@ -3573,6 +3624,36 @@ function fxParse(card){
      text for "gains +N{p}" and was setting fx.self = 1, so the bracers
      themselves gained the power the arrow is printed to get. That is exactly
      the VALUE-DOUBLED/wrong-subject shape `npm run fairness` exists to catch. */
+  /* ---- BRAVO'S TURN-UP (v3.72) --------------------------------------
+     "Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up.
+      If it has crush, it gets +2{p} and dominate this turn. Go again"
+
+     HIS DECK READS 100% AND HIS HERO READ 0% — the sharpest illustration
+     in the pool of why deck coverage was never the binding constraint.
+     And it needed no new machinery: Azalea's v3.71 build already turns a
+     card face up, fires its triggers and stamps a conditional bonus onto
+     it. What is new is the EVENT and the keyword test.
+
+     A WHOLE-CARD READER for the same reason `arsCycle` is one: "IT" names
+     the card the first sentence turned, and the clause splitter breaks on
+     the period. The grant shares `arsGrant` with Azalea's, so there is
+     one reader of that printed sentence and not two.
+
+     THE GRANT IS OPTIONAL AND THE TURN IS NOT. An unreadable grant leaves
+     the turn-up working and the clause `skip`, so the audit still reports
+     it — where a card whose whole payload is the grant would refuse. */
+  {
+    const ti = fx.clauses.findIndex(c => ARS_TURN.test(c.t.trim()));
+    if(ti >= 0){
+      let grant = null, gi = -1;
+      fx.clauses.forEach((c, i) => {
+        const g2 = arsGrant(c.t);
+        if(g2 && !grant){ grant = g2; gi = i; }
+      });
+      fx.ops = [...fx.ops, ["arsTurn", grant]];
+      [ti, gi].forEach(i => { if(i >= 0 && fx.clauses[i].st === "skip") fx.clauses[i].st = "run"; });
+    }
+  }
   /* ---- CROW'S NEST — HER SPECIALIZATION (v3.72) ---------------------
      "Whenever an arrow is put face-up into your arsenal FROM YOUR DECK,
       you may pay {r}. If you do, put an aim counter on it."
@@ -3643,17 +3724,13 @@ function fxParse(card){
          line; neither is assumed. */
       let grant = null, gi = -1;
       fx.clauses.forEach((c, i) => {
-        const gm = c.t.toLowerCase().match(CYC_GRANT);
-        if(gm && !grant){ grant = {tt: gm[1], kw: gm[2]}; gi = i; }
+        const g2 = arsGrant(c.t);
+        if(g2 && !grant){ grant = g2; gi = i; }
       });
-      /* THE GRANTED-KEYWORD VOCABULARY IS CLOSED, for the reason v3.55
-         states about counter kinds: a keyword nothing consumes is a
-         no-op wearing a name, and filing the card `full` for it is the
-         blind spot at its purest. `dominate` is the one keyword an
-         arsenal stamp can currently be spent on — `parser.defCap` is its
-         single reader. An unknown keyword drops the GRANT and keeps the
-         cycle, because the cycle is the mechanism and reads on its own. */
-      if(grant && !/^dominate$/.test(grant.kw)) { grant = null; gi = -1; }
+      /* An unreadable grant drops the GRANT and keeps the cycle, because
+         the cycle is the mechanism and reads on its own — `arsGrant`
+         refuses rather than guessing, and the clause stays `skip` so the
+         audit still reports the gap. */
       fx.ops = [...fx.ops, ["arsCycle", grant]];
       [ci, pi, gi].forEach(i => { if(i >= 0 && fx.clauses[i].st === "skip") fx.clauses[i].st = "run"; });
     }
@@ -3749,7 +3826,22 @@ function fxParse(card){
   const pumpRead = v => [...fx.ops, ...(fx.onHit||[]), ...(fx.onLeave||[]),
                          ...(fx.conds||[]).map(x=>x.op),
                          ...(fx.condOnHit||[]).map(x=>x.op)]
-    .some(o => o && (o[0]==="self" || o[0]==="buffNext") && o[1]===v);
+    .some(o => o && (o[0]==="self" || o[0]==="buffNext") && o[1]===v)
+    /* AN ARSENAL GRANT HAS ALREADY READ ITS "+N{p}" (v3.72). Bravo prints
+       "if it has crush, IT gets +2{p} and dominate this turn", where "it"
+       is the card in the ARSENAL — so the fallback below read the same
+       +2 a second time and queued it as a pump for his next attack,
+       whether or not the card had crush. v2.33's Bull's Eye Bracers trap,
+       one hero over, and VALUE-DOUBLED on the fairness sweep's own terms.
+
+       AND NO TOOL HERE WOULD HAVE SEEN IT: a hero powCard is not a pool
+       card, so neither the audit nor the sweep ever looks at one. Driving
+       the ability is what showed it.
+
+       THE MAGNITUDE IS MATCHED, not the mere presence of a grant (v2.30),
+       so a card printing two different pumps still gets its unread one. */
+    || [...fx.ops].some(o => o && (o[0]==="arsTurn" || o[0]==="arsCycle")
+                          && o[1] && o[1].pow === v);
   if(!fx.self && !isAttack(card)
      && ![...fx.ops, ...(fx.onLeave||[])].some(o=>o[0]==="buffNext")
      && !(fx.arsenalPut && fx.arsenalPut.stamp)){
@@ -3905,7 +3997,7 @@ function parseHeroPower(tx, allowDestroy){
      `execute` re-reads it, so nothing is lost by this reader answering on
      the first sentence alone. A NAMED pattern, never a relaxation of the
      guard below — that is the never-parse-ahead-of-wiring rule. */
-  const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim());
+  const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim()) || ARS_TURN.test(m[4].trim());
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);

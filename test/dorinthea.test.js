@@ -532,7 +532,7 @@ test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
      Azalea's cycle would have reported three unread clauses to a drill
      that says she is finished. */
   const AUDIT = require("../tools/audit.js");
-  for(const k of ["kayo", "dorinthea", "azalea"]){
+  for(const k of ["kayo", "dorinthea", "azalea", "bravo"]){
     const b = buildOf(k);
     const h = AUDIT.analyzeHero(b.heroRec, k);
     assert.deepStrictEqual(h.clauses.filter(c => !c.covered).map(c => c.t), [],
@@ -540,16 +540,27 @@ test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
   }
 });
 
-test("…and the census is not vacuous: an unfinished hero still reports", {skip}, () => {
+test("…and the census is not vacuous: unread hero text still reports", {skip}, () => {
   /* A COVERED-TEST THAT ANSWERS TRUE FOR EVERYTHING passes the drill above
-     perfectly. Bravo's three clauses are the control — his deck reads 100%
-     and his hero reads 0%, which is the sharpest illustration in the pool
-     of why deck coverage was never the binding constraint. */
+     perfectly, so the census needs its negative half.
+
+     IT USED TO NAME BRAVO, and Bravo was finished at v3.72 — a drill that
+     names a card rots the moment you fix that card (v3.55, the `npm run
+     gaps` dossier). The control is SYNTHETIC now, so it cannot rot and
+     cannot quietly stop biting when the last hero is built. */
   const AUDIT = require("../tools/audit.js");
-  const b = buildOf("bravo");
-  const h = AUDIT.analyzeHero(b.heroRec, "bravo");
-  assert.ok(h.clauses.filter(c => !c.covered).length > 0,
-    "bravo's hero ability is not built — the census must still say so");
+  const h = AUDIT.analyzeHero(
+    {n: "Nobody", tt: "Generic Hero - Young", hp: 20, int: 4,
+     tx: "Transmogrify target hero into a goat. Then eat the goat."}, "nobody");
+  assert.equal(h.clauses.filter(c => !c.covered).length, 2,
+    "unread hero text must report as unread — a census that says everything is "
+    + "covered is a coverage tool wearing a judge's coat");
+  /* and the live half, which is a MEASUREMENT rather than a name: the
+     project is not finished, so somebody must still be reporting. */
+  const open = W.HEROES.filter(x =>
+    AUDIT.analyzeHero(buildOf(x.k).heroRec, x.k).clauses.some(c => !c.covered));
+  assert.ok(open.length > 0,
+    "no hero has unread text left — that is a good day and a deliberate edit here");
 });
 
 /* ============================================================

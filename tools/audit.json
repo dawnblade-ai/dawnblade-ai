@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-01T16:17:46.924Z",
- "appVer": "3.72",
+ "generated": "2026-09-01T16:32:19.047Z",
+ "appVer": "3.73",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -110,24 +110,22 @@
    "tt": "Guardian Hero - Young",
    "tx": "Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up. If it has crush, it gets +2{p} and dominate this turn. Go again",
    "statics": [],
-   "power": null,
+   "power": "Turn a face-down card in your arsenal face-up [2r]",
    "clauses": [
     {
      "t": "Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up",
-     "covered": false
+     "covered": true
     },
     {
      "t": "If it has crush, it gets +2{p} and dominate this turn",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Go again",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "3 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "azalea": {
    "name": "Azalea",
