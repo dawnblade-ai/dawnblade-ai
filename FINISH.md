@@ -1,6 +1,6 @@
 # FINISH — the blueprint to done
 
-**Rewritten 2026-09-01 at v3.69.** Every number below was **measured this
+**Rewritten 2026-09-01 at v3.69, numbers refreshed at v3.70.** Every number below was **measured this
 session**, with the command that produces it, so a future session can
 re-derive rather than trust. Where a number is a judgement call it says so.
 The previous version of this file was written at v2.83 and refreshed at
@@ -63,7 +63,7 @@ actually experiences.
 | **P1** | **the hero you pick plays like the hero** | 0 unread hero-ability clauses | **10 of 15 heroes fail** · 20 clauses |
 | **P2** | **a tap does what it says** | every prompt surface exercised on a device | **13 sites, 0 validated** |
 | **P3** | **a game you start, ends** | 0 stalls in `npm run play` | **10 of 210** |
-| **P4** | **the card does what it prints** | audit `full` **and** a driven scenario asserts the outcome | 358/405 read · **0 driven** |
+| **P4** | **the card does what it prints** | audit `full` **and** a driven scenario asserts the outcome | 358/405 read · **21 scenes driven** |
 | **P5** | **the opponent is worth playing** | a play session says the curve is right — *not a drill* | trainer tuned · **table dummy wins 29/45** |
 | **E1** | **one engine** | `Battle`'s rules gone | **154 `mode` + 27 `bphase` refs** |
 | **E2** | **two humans can finish a game** | lobby ready gate + a networked match, 0 desyncs | gate unbuilt |
@@ -74,18 +74,24 @@ without them is not.**
 
 ---
 
-## 2. WHERE WE ARE — measured at v3.69
+## 2. WHERE WE ARE — measured at v3.70
 
 ```
-npm test          1664 drills · 0 fail · 4 skipped (drift, reads the live
+npm test          1692 drills · 0 fail · 4 skipped (drift, reads the live
                   wire on purpose) · 31 seconds
+npm run scenes    21 scenes · 6 heroes · 0 failing        ← new at v3.70
 npm run audit     405 unique pool cards — 358 full / 35 part / 12 none
 npm run fairness  clean
 npm run sweep     10 heroes with unread ability clauses (20 total)
 tools/failstates  0 UNFAIR · 37 WRONG · 34 LOST VALUE · 2 INERT
 npm run play      210 games · 0 refusals · 0 invariant violations · 10 stalls
-deployed          APP_VER 3.69 on main; all 21 engine/*.js resolve
+deployed          APP_VER 3.70 on main; all 21 engine/*.js resolve
 ```
+
+> **These numbers were refreshed by hand when v3.70 moved them, which is
+> exactly the work `npm run doctor` (§4 C5) exists to delete.** Until it is
+> built, treat every figure here as true-as-of-the-header and re-derive
+> before relying on one.
 
 ### Per-hero deck coverage
 
