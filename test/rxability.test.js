@@ -336,10 +336,15 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
   /* `fxParse` marks the "Attack Reaction - …" clause read because
      `parseHeroPower` reads it, exactly as it does for `handAbility`. Made
      UNCONDITIONAL the credit becomes a lie: Danger Digits' payload drops a
-     printed drawback and Boltyn's cost is a soul banish nothing builds, so
-     both would report their ability read with nothing behind it — the
-     no-op blind spot, created by the very line meant to stop
-     under-reporting.
+     printed drawback, so it would report its ability read with nothing
+     behind it — the no-op blind spot, created by the very line meant to
+     stop under-reporting.
+
+     BOLTYN LEFT THIS LIST AT v3.74, and that is what a recorded refusal is
+     for (v3.38). His cost was "a soul banish nothing builds"; the soul
+     banish is built now, so the credit is earned and he is the POSITIVE
+     control below — without one, this drill passes just as well against a
+     credit that never fires at all.
 
      ASSERT ON THE CLAUSE, NOT THE TIER. Written against `fx.tier` this
      drill was SILENT under sabotage, because all three cards carry ANOTHER
@@ -354,7 +359,7 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
     P.fxReset();
     return (P.fxParse(mk(r)).clauses || []).find(c => /^(?:once per turn )?attack reaction\s*[-—]/i.test(c.t));
   };
-  for(const nm of ["Danger Digits", "Boltyn", "Bait"]){
+  for(const nm of ["Danger Digits", "Bait"]){
     const r = pool.find(x => x.name === nm);
     assert.ok(r, nm + " must be in the pinned pool");
     const cl = rxClause(r);
@@ -362,6 +367,15 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
     assert.equal(cl.st, "skip",
       nm + ": no reader answers for this line, so crediting it is the no-op blind spot"
       + (nm === "Bait" ? " (and nothing in the pool can even create Bait)" : ""));
+  }
+  /* THE POSITIVE CONTROL. A drill that only ever asserts `skip` passes
+     against a credit that was deleted outright. */
+  {
+    const r = pool.find(x => x.name === "Boltyn");
+    const cl = rxClause(r);
+    assert.ok(cl, "Boltyn's attack-reaction line must still be a clause");
+    assert.equal(cl.st, "run",
+      "his soul-banish cost has a reader as of v3.74, so the credit is earned");
   }
   P.fxReset();
 });

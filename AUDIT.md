@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-01T16:32:19.047Z · app v3.73 · data sage-v12 · db 788 records
+Generated 2026-09-01T16:47:35.785Z · app v3.74 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -134,9 +134,8 @@ Generated 2026-09-01T16:32:19.047Z · app v3.73 · data sage-v12 · db 788 recor
 - static: Blaze — the banished card is stamped playable-this-turn at instant speed (no passive: it rides on the ability's own pick spec)
 
 ### Boltyn (Light Warrior)
-- ⚠ unrecognized: "If you've charged this turn, your attacks get +1{p} while defended by an attack action card."
-- ⚠ unrecognized: "Attack Reaction - Banish a card from your soul: Target attack with {p} greater than its base gets go again."
-- 🚩 2 hero-text clause(s) not recognized by any ability reader
+- hero power: banish 1 from your soul: Target attack with {p} greater than its base gets go again
+- static: Boltyn — charged this turn: attacks get +1{p} while an attack action card defends
 
 ### Briar (Elemental Runeblade)
 - static: Briar — first attack action card to damage a hero each turn → Embodiment of Earth

@@ -9,6 +9,89 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.74 — Boltyn, and a free action point three abilities were taking
+
+> *"If you've charged this turn, your attacks get +1{p} while defended by
+> an attack action card.*
+> *Attack Reaction - Banish a card from your soul: Target attack with {p}
+> greater than its base gets go again."*
+
+**HIS ONE MECHANIC IS THE SOUL** (v2.55's rule, third payout). Five cards
+in his deck plus both hero clauses are soul-shaped — Radiant Touch banishes
+from it, Halo of Illumination puts into it, Roaring Beam reads whether it
+is empty, V of the Vanguard counts what was charged into it. And the hero
+read **nothing at all**.
+
+### Clause 1 — two gates, settled in two places
+
+*"You've charged this turn"* is his own turn history. *"While defended by
+an attack action card"* is a fact about the **WALL**, so it can only be
+answered once defenders are declared — `linkPumps`, beside the late
+conditions that moved there at v3.71.
+
+**WHICH CARDS DEFEND IS THE CALLER'S ANSWER** (v3.11, v3.24, v3.27): the
+trainer holds them as `{k:"def"}` stack layers and judge on `blockH`, and a
+body that reads either is a body the other cannot call. A caller that says
+nothing answers NO.
+
+The magnitude comes off the printed line, like Kayo's — and he prints 1, so
+**no pool fixture can tell a read number from a hardcoded one**. Sabotaging
+the capture to a literal was SILENT against every driven drill; it takes a
+synthetic hero record to see it (v3.32's Thunder Quake lesson).
+
+### Clause 2 — a soul banish is a cost
+
+It is **Bolt'n Boots' shape one cost over**: the `pumped` atom and the
+whole attack-reaction route already existed (v3.63). The only thing between
+Boltyn and the ability was `parseHeroPower` refusing a soul cost — a
+refusal recorded in `test/rxability.test.js`'s own assertion text (*"his
+cost is a soul banish nothing builds"*). That is what a recorded refusal is
+FOR (v3.38), and it is the **third** to come due this fortnight.
+
+`parser.abSoulCost` is the one reader, and **both boards refuse an empty
+soul before the ability resolves** (v3.11) — refusing afterwards costs the
+player an activation the rules never allowed. `execute` guards it too, and
+an unpayable cost is INERT rather than free (v2.04), because `reduce` is
+fed by JSON off a wire.
+
+### THE FREE ACTION POINT, WHICH WAS TWO VERSIONS OLD
+
+> *"Target attack with {p} greater than its base **gets go again**."*
+
+That grants it to the **ATTACK**. `fx.ga` read it as the ability's own, so
+activating one handed its controller an **action point** (CR 5.3.5 makes go
+again a GAIN, not a refund). **Three of the pool's four attack-reaction
+abilities print that shape** — Bolt'n Boots, Stalker's Steps and Boltyn's
+hero — and **not one** prints a go again of its own. The first two have
+done it since v3.63 built this route.
+
+Stronger than printed, the direction that steals games, and invisible to
+every tool here: a powCard is built by `build.js` out of a printed line and
+is **not a pool card**, so neither the audit nor the fairness sweep ever
+looks at one (v3.73's lesson, two versions running). The ability's own go
+again arrives as a KEYWORD from `parseHeroPower`, so reading `kw` keeps a
+real one and drops the payload's — and there is a drill with a synthetic
+powCard for exactly that control.
+
+### AND THE TRAINER'S HERO BUTTON WAS DEAD IN BOTH DIRECTIONS
+
+Its enabled test was `kind === "instant"` with no case for an attack
+reaction — so Boltyn's ability was **enabled in the action phase**, where
+`tryPlay` refuses it, and **disabled in the stack window**, where it is the
+only legal play. `parser.abWindow` is the one reader of which window an
+ability has (v3.63); what lives in the trainer now is its mapping from that
+window to its own `mode` vocabulary, stated once. v3.63's *"when you add a
+flag to one powCard builder, grep for the others"*, one site further out:
+there it was the builders, here the places that OFFER what they built.
+
+**Measured:** the sweep's hero list 8 heroes → **7**, 13 unread clauses →
+**11**. 1752 drills, 0 failing, 4 skipped. Fairness clean. 27 scenes
+passing. 210 self-play games: 0 refusals, 0 violations, 7 stalls — Boltyn
+10 wins → **15**. Both babel blocks compile. Ten sabotages; all ten bite
+(one was SILENT first, and it was the hardcoded magnitude).
+
+---
+
 ## v3.73 — Bravo, and the machinery he needed already existed
 
 > **Action - {r}{r}, {t}:** Turn a face-down card in your arsenal face-up.

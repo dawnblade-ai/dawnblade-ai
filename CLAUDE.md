@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.73
+**Current version:** v3.74
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1740 drills**.
+This is `node --test "test/*.test.js"` — currently **1752 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -303,6 +303,66 @@ returned but never checked is a FAILURE rather than a silence.
 argument `pow6` does not take. Check your own fixture before believing a
 new instrument — v3.50's sabotage pass found four weak drills to four real
 bugs.
+
+### AN ATTACK REACTION'S GO AGAIN IS THE TARGET'S (v3.74)
+
+> *"Target attack with {p} greater than its base **gets go again**."*
+
+`fx.ga` read that as the ABILITY's own, so activating one handed its
+controller an **action point** (CR 5.3.5 — go again is a GAIN, not a
+refund). **Three of the pool's four attack-reaction abilities print the
+shape** — Bolt'n Boots, Stalker's Steps, Boltyn's hero — and **not one**
+prints a go again of its own. The first two have done it since v3.63
+built the route.
+
+**INVISIBLE TO EVERY TOOL HERE**, for v3.73's reason two versions
+running: a powCard is built by `build.js` out of a printed line and is
+NOT a pool card, so neither the audit nor the fairness sweep looks at
+one. Driving the ability is the only thing that does.
+
+The ability's OWN go again arrives as a **keyword**, put on the powCard by
+`build.js` from `parseHeroPower`'s trailing read — so reading `kw` keeps a
+real one and drops the payload's. Its ops were already held back one line
+down, for the identical reason.
+
+### A DEAD BUTTON IN BOTH DIRECTIONS AT ONCE (v3.74)
+
+The trainer's hero-power button tested `heroPow.kind === "instant"` and had
+no case for an ATTACK REACTION — so Boltyn's ability was **enabled in the
+action phase**, where `tryPlay` refuses it, and **disabled in the stack
+window**, where it is the only legal play.
+
+`parser.abWindow` is the one reader of which window an ability has (v3.63);
+what belongs in the trainer is its mapping from that window to its own
+`mode` vocabulary, stated once in `heroPowWindowOK`. **v3.63's rule one
+site further out**: there it was the powCard BUILDERS that needed grepping,
+here it is the places that OFFER what they built.
+
+### BOLTYN — THE SOUL, AND A COST NOTHING CHARGED (v3.74)
+
+Five deck cards and both hero clauses are soul-shaped, and the hero read
+nothing.
+
+**CLAUSE 1 IS TWO GATES ANSWERED IN TWO PLACES.** *"You've charged this
+turn"* is his own turn history; *"while defended by an attack action
+card"* is a fact about the WALL, so it lives in `linkPumps` beside the
+late conditions — and **which cards defend is the CALLER's answer**, the
+same split the wall itself keeps. A caller that says nothing answers no.
+
+**HE PRINTS 1, SO NO POOL FIXTURE CAN TELL A READ NUMBER FROM A HARDCODED
+ONE.** Sabotaging the capture to a literal was SILENT against every driven
+drill; a synthetic hero record is what sees it (v3.32).
+
+**CLAUSE 2 IS BOLT'N BOOTS' SHAPE ONE COST OVER.** `parser.abSoulCost` is
+the one reader, both boards refuse an empty soul BEFORE the ability
+resolves (v3.11), and `execute` guards it too — an unpayable cost is
+INERT, never free (v2.04), because `reduce` is fed by JSON off a wire.
+
+**THE REFUSAL WAS RECORDED, AND IT CAME DUE.** `test/rxability.test.js`
+carried the reason in its own assertion text — *"his cost is a soul banish
+nothing builds"*. Third recorded refusal discharged this fortnight, and
+the drill keeps him as its POSITIVE control now: one that only ever
+asserts `skip` passes against a credit that was deleted outright.
 
 ### BRAVO — AND THE MACHINERY HE NEEDED ALREADY EXISTED (v3.73)
 

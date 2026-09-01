@@ -532,7 +532,7 @@ test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
      Azalea's cycle would have reported three unread clauses to a drill
      that says she is finished. */
   const AUDIT = require("../tools/audit.js");
-  for(const k of ["kayo", "dorinthea", "azalea", "bravo"]){
+  for(const k of ["kayo", "dorinthea", "azalea", "bravo", "boltyn"]){
     const b = buildOf(k);
     const h = AUDIT.analyzeHero(b.heroRec, k);
     assert.deepStrictEqual(h.clauses.filter(c => !c.covered).map(c => c.t), [],

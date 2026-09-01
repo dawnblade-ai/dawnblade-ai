@@ -1714,6 +1714,28 @@ function makeEffects(ctx){
        `{t}` this asks about lives in the half that was removed. */
     if(from==="hero" && P.tapsToActivate(((bAct(n).heroRec)||{}).tx || ""))
       actMut(n).heroTapped = true;
+    /* A SOUL BANISH IS PAID ON ACTIVATION (v3.74), beside the tap and the
+       allowance — not after the effect, the way an equipment's destroy
+       cost is. Boltyn prints "Attack Reaction - Banish a card from your
+       soul: …", and the soul is a real zone with real cards in it.
+
+       BOTH BOARDS REFUSE IT FIRST (`parser.abSoulCost`, a legality —
+       v3.11), so reaching here short is a bug rather than a play; it is
+       still guarded, because `execute` is fed by `reduce`, which is fed by
+       JSON off a wire. */
+    { const _sc = P.abSoulCost(card);
+      if(_sc){
+        /* AN UNPAYABLE COST IS INERT, NEVER FREE (v2.04). Both boards
+           refuse it first, so reaching here short means a stale or crafted
+           action off the wire — and running the effect anyway would hand
+           it out for nothing. */
+        if((act(n).soul||[]).length < _sc)
+          return L(n, `${card.name}: ${act(n).name} has ${(act(n).soul||[]).length} in the soul and it costs ${_sc} — nothing happens.`);
+        else {
+          actMut(n).soul = act(n).soul.slice(_sc);
+          n = L(n, `${act(n).name}: ${_sc} banished from the soul — the cost is paid.`);
+        }
+      } }
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
        stays on the board, exactly as a weapon stays equipped —
@@ -1772,6 +1794,28 @@ function makeEffects(ctx){
     const _allyAtk = from==="ally" ? allyAttack(card) : null;
     let ga = _allyAtk ? !!_allyAtk.ga
            : (!_activation && abilityGa(card)) ? false
+           /* ---- AN ATTACK REACTION'S GO AGAIN IS THE TARGET'S (v3.74) --
+              "Target arrow attack with {p} greater than its base GETS GO
+              AGAIN" grants it to the ATTACK, and `fx.ga` reads it as the
+              ability's own — so activating one handed its controller a
+              free ACTION POINT on top of the grant. Three of the pool's
+              four attack-reaction abilities print that shape (Bolt'n
+              Boots, Stalker's Steps, Boltyn's hero) and NOT ONE of them
+              prints a go again of its own; the first two have been live
+              since v3.63 built this route.
+
+              STRONGER THAN PRINTED — the direction that steals games —
+              and invisible to every tool here, because a powCard is built
+              by `build.js` out of a printed line and is not a pool card,
+              so neither the audit nor the fairness sweep looks at one
+              (v3.73, two versions running).
+
+              THE ABILITY'S OWN go again ARRIVES AS A KEYWORD, put there
+              by `build.js` from `parseHeroPower`'s trailing-"Go again"
+              read — so reading `kw` here keeps a real one and drops the
+              payload's. The ops are already held back for exactly the
+              same reason one line down. */
+           : card._attackRx ? (card.kw||[]).some(k=>/^go again$/i.test(String(k)))
            : fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
     /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
@@ -3781,6 +3825,30 @@ function makeEffects(ctx){
        drilled for passing them. */
     const defCount = (info && info.defenders) || 0;
     const handBlk  = (info && info.handBlockers) || 0;
+    /* ---- BOLTYN'S CLAUSE 1 (v3.74) ----------------------------------
+       "If you've charged this turn, your attacks get +1{p} while defended
+        by an attack action card."
+
+       TWO GATES, ANSWERED IN TWO PLACES. "You've charged this turn" is his
+       own turn history; "defended by an attack action card" is a fact
+       about the WALL, so it belongs here with the other late conditions
+       and NOT at declaration, where no defender exists yet.
+
+       WHICH CARDS DEFEND IS THE CALLER'S ANSWER (v3.11, v3.24, v3.27) —
+       the trainer holds defenders as `{k:"def"}` stack layers and judge on
+       `blockH`/`blockG`, and a body that reads either is a body the other
+       cannot call. A caller that says nothing answers NO: weaker than
+       printed and visible, which is the safe direction.
+
+       THE MAGNITUDE IS THE HERO'S, read off his printed line by
+       `build.js`. `bAct` is the acting seat's build, never `built` — a
+       passive read as seat 0's fires for the wrong hero the moment seat 1
+       acts (v2.41). */
+    const _bd = bAct(n).chargedDefBuff || 0;
+    if(_bd && (act(n).hist.charged||0) > 0 && info && info.defAtkAction){
+      total += _bd;
+      n = L(n, `${act(n).name}: charged this turn, and an attack action card defends — ${n.pend.card.name} gets +${_bd} power.`);
+    }
     (n.pend.lateConds||[]).forEach(({cond,op})=>{
       const pump = (why) => {
         if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: ${why} — go again!`); }
@@ -4022,7 +4090,12 @@ function makeEffects(ctx){
        not the loop later finds it. */
     const _pre = linkPumps(n, {equipDefenders: defLs.filter(l=>l.gi!=null).length,
                                defenders: defLs.length,
-                               handBlockers: defLs.filter(l=>l.gi==null).length});
+                               handBlockers: defLs.filter(l=>l.gi==null).length,
+                               /* WHICH CARDS defend is this board's answer
+                                  (v3.74) — the trainer holds them as stack
+                                  layers pointing into the defender's hand. */
+                               defAtkAction: defLs.some(l => l.gi == null
+                                 && isAtkActionCard((foe(n).hand||[]).find(x=>x.uid===l.uid)))});
     n = _pre.game;
     const pumps = _pre.pumps;
     let total = _pre.total;

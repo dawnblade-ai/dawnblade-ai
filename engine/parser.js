@@ -3958,6 +3958,32 @@ function parseHeroPower(tx, allowDestroy){
             eff: m[4].trim(),
             label: (m[1] ? "once/turn: " : "") + m[4].trim()};
   }
+  /* A SOUL BANISH IS THE SECOND COST THIS READER ACCEPTS (v3.74), and it
+     is narrow for the same reason the counter cost is: a broad relaxation
+     raises the tier of cards nothing wires.
+
+     BOLTYN'S ONE MECHANIC IS THE SOUL. "Attack Reaction - Banish a card
+     from your soul: Target attack with {p} greater than its base gets go
+     again" is Bolt'n Boots' shape with a different cost — the `pumped`
+     atom and the whole attack-reaction route already exist (v3.63), and
+     this refusal was the only thing between him and the ability.
+
+     THE COST IS ZERO IN RESOURCES, because it is paid in soul cards. It
+     rides on the powCard as `_soulCost` and is charged on activation —
+     a LEGALITY, refused before the ability resolves (v3.11), because
+     refusing afterwards costs the player an activation the rules never
+     allowed. */
+  const soulM = costStr.match(/^banish (a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul$/i);
+  if(soulM){
+    const eff1 = classifyClause(m[4]);
+    if(!eff1 || eff1.status !== "run" || eff1.cond || eff1.onHit) return null;
+    const after1 = t.slice(m.index + m[0].length);
+    const nSoul = {a:1, an:1, one:1, two:2, three:3}[soulM[1].toLowerCase()] || +soulM[1];
+    return {cost: 0, ga: /^\.?\s*go again/i.test(after1), sd: false, kind,
+            soul: nSoul, eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + "banish " + nSoul
+                 + " from your soul: " + m[4].trim()};
+  }
   /* "THIS" IS THE SOURCE, AND ON A REACTION ROUTE THE SOURCE IS NOT THE
      ATTACK (v3.63). An activated attack reaction resolves onto the OPEN
      LINK, so a payload whose subject is the card itself has no reading
@@ -5068,6 +5094,15 @@ const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
 
    Returns `{n, count}` or null. The TIGHTEST cap wins when both apply —
    two restrictions do not cancel. */
+/* WHAT AN ACTIVATED ABILITY COSTS BEYOND RESOURCES (v3.74). Today that is
+   one thing — a soul banish — and it exists as a named reader rather than
+   two boards each reaching for `ab._soulCost`, because a cost read in one
+   place and forgotten in the other is the v3.01 shape this project pays
+   for on nearly every page. Both boards ask it before the ability resolves
+   (v3.11): refusing afterwards costs the player an activation the rules
+   never allowed. */
+const abSoulCost = ab => (ab && ab._soulCost) || 0;
+
 function defCap(card, held, opts){
   const caps = [];
   /* A GRANTED dominate IS THE CALLER'S ANSWER. `hasKwNow` drops a keyword
@@ -5198,6 +5233,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost,
         CARD_OVERRIDES};
 });

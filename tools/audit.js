@@ -56,6 +56,13 @@ const HERO_STATICS = [
      BUILT *and* the ledger has been told. */
   {key:"blazeBanishInstant", re:/you may play it this turn as though it were an instant/, build:false,
    note:"Blaze — the banished card is stamped playable-this-turn at instant speed (no passive: it rides on the ability's own pick spec)"},
+  /* BOLTYN's clause 1, built v3.74. Clause 2 is his activated attack
+     reaction and is recognised by `parseHeroPower` rather than by a
+     static, which is why only one entry appears here — the same split
+     Blaze's two clauses take. */
+  {key:"chargedDefBuff",
+   re:/if you'?(?:ve| have) charged this turn, your attacks get \+\d+\{p\} while defended by an attack action card/,
+   note:"Boltyn — charged this turn: attacks get +1{p} while an attack action card defends"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,

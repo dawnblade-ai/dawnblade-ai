@@ -159,8 +159,16 @@ function buildSide(h, d, db, opts, rng, ctr){
      printed ability LINE and strip the cost prefix, so `execute`'s
      re-read with `fxParse` sees the riders too. */
   const _hEffFull = heroAbilityLine(heroRec, heroPow);
-  const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
-    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
+  /* THE SOUL COST RIDES ON THE POWCARD (v3.74), the way `sd` does for an
+     equipment ability: `build.js` strips the cost prefix off the ability
+     line, so a cost not carried here is a cost nothing can charge.
+
+     OPT-IN (v3.58's rule) — only a hero that prints one gets the field, so
+     every `deepEqual` on a powCard's shape is untouched. */
+  const HPOW = heroPow ? Object.assign({name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
+    tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
+    _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
+    heroPow.soul ? {_soulCost: heroPow.soul} : {}) : null;
   const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
     tx:heroRec.tx||"", img:cdnImg(d.hero.code), dbImg:heroRec.pr?heroRec.pr._first:null};
   const cuts = o.cuts||{};
@@ -314,6 +322,21 @@ function buildSide(h, d, db, opts, rng, ctr){
      right and only the reader was stale; a player on a warm localStorage
      cache is still holding the old wording, so both are read. */
   const weaponRefresh = /(?:when a weapon you control hits|the first time your weapon attack hits each turn), you may attack an additional time with that weapon this turn/.test(_htx);
+  /* BOLTYN: "If you've charged this turn, your attacks get +1{p} while
+     defended by an attack action card."
+
+     HIS ONE MECHANIC IS THE SOUL, and this is the clause that pays for
+     charging it. Two gates and they are answered in two different places:
+     "you've charged this turn" is his own turn history, and "while
+     defended by an attack action card" is a fact about the WALL, so it
+     can only be settled once defenders are declared — `linkPumps`, beside
+     the other late conditions (v3.71).
+
+     THE NUMBER COMES OFF THE LINE, like Kayo's. A hardcoded 1 is right
+     for this printing and silently wrong for the next one. */
+  const _boltyn = _htx.match(
+    /if you'?(?:ve| have) charged this turn, your attacks get \+(\d+)\{p\} while defended by an attack action card/);
+  const chargedDefBuff = _boltyn ? +_boltyn[1] : 0;
   let startItem = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
@@ -322,7 +345,7 @@ function buildSide(h, d, db, opts, rng, ctr){
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
     arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,energyOnOpt,
     earthOnFirstHeroDmg,lightningOnSecondNonAtk,
-    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,
+    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,chargedDefBuff,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
 }
 
@@ -454,7 +477,8 @@ function buildMatch(spec, o){
    reading as a silent `false` on a real hero's turn. */
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
-                  "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt"];
+                  "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
+                  "chargedDefBuff"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -468,6 +492,9 @@ const PASSIVE_TYPE = {
   wateryGrave: "boolean", lyathBoo: "boolean", mightOnFirst6Discard: "boolean",
   energyOnOpt: "boolean",
   weaponRefresh: "boolean", atkPowOffChain: "number",
+  /* A NUMBER for Kayo's reason: Boltyn's clause names its own magnitude
+     ("+1{p}"), and storing `true` would hardcode the 1 in `effects.js`. */
+  chargedDefBuff: "number",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into

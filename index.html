@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.73"; /* v3.73 - BRAVO, and he needed no new machinery. His deck read 100% and his hero read 0%, which was the sharpest illustration in the pool of why deck coverage was never the binding constraint: "Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up. If it has crush, it gets +2{p} and dominate this turn." Azalea's v3.71 build already turns a card face up, fires its triggers and stamps a conditional bonus onto it, and the {t} route has been charged since v3.48 - what was missing was the EVENT and the keyword test. The grant sentence is now ONE reader for both heroes (a TYPE test or a KEYWORD test, stamping power and/or a keyword), matched on the LEVELLED clause because a whole-card reader scans raw text and the database prints both spellings of "it's". TURNING IS NOT PUTTING: Spire Sniping alone prints "put OR turned", every other arsenal trigger says "put", and Bravo is the only card that turns one - latent today and measured before it was carried. And driving it found the +2{p} being read TWICE, once as the arsenal stamp and once by the whole-text self-pump fallback, whether or not the card had crush - v2.33's Bull's Eye Bracers trap on a card no coverage tool looks at, because a hero powCard is not a pool card. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.74"; /* v3.74 - BOLTYN, and a free action point three abilities were taking. His one mechanic is the SOUL - five deck cards and both hero clauses - and the hero read nothing: clause 1 had no passive, and clause 2 was refused on its cost, a refusal recorded in a drill's own assertion text since v3.63 ("a soul banish nothing builds"). Clause 1 is two gates settled in two places: his own turn history, and whether an ATTACK ACTION CARD is in the wall, which only the caller can answer. Clause 2 is Bolt'n Boots' shape one cost over, so `parser.abSoulCost` is the one reader and BOTH boards refuse an empty soul before the ability resolves. Driving it found a live one two versions old: three of the pool's four attack-reaction abilities print "target attack ... gets go again" as their PAYLOAD, and `fx.ga` read it as the ability's own - so activating one gained its controller an ACTION POINT it does not print. Stronger than printed, and invisible to every tool here because a powCard is not a pool card. And the trainer's hero button was a dead button in both directions at once: enabled in the action phase where tryPlay refuses an attack reaction, disabled in the stack window where it is the only legal play. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3237,6 +3237,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      it sets on the way in (effects.js:511), so restoring the window after
      it returns is sufficient and is honest about what is borrowed. That is
      the same seam step 4 unpicks properly rather than patching. */
+  /* CAN THE HERO ABILITY BE USED RIGHT NOW? Three printed windows, and
+     `parser.abWindow` is the ONE reader of which one this ability has
+     (v3.63). What lives here is the trainer's mapping from that window to
+     its own `mode` vocabulary — stated once, because the site that OFFERS
+     the ability and the site that RESOLVES it disagreeing is a dead button
+     (v3.74), and a dead button reads as a broken screen rather than a
+     rule. `tryPlay` makes the identical attack-reaction test; keep them in
+     step or the ability is enabled where it is refused. */
+  const heroPowWindowOK = (g) => {
+    if(!built.HPOW) return false;
+    const w = abWindow(built.HPOW);
+    if(w === "attack-reaction") return g.mode === "stack" && !!g.pend && g.pend.by === actorOf(g);
+    if(w === "instant") return g.mode === "act" || DawnPriority.speedAllowed(g, 0).includes("instant");
+    return g.mode === "act";
+  };
+
   const activateInstant = (card, from, idx) => setG(s=>{
     if(s.over) return s;
     /* CR 8.1.6 — an instant is legal in any window where you hold
@@ -3442,6 +3458,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `rxAllowed` makes. */
     if(card._attackRx && !(s.mode==="stack" && s.pend && s.pend.by===actorOf(s)))
       return L(s, `${card.name} is an attack reaction — declare an attack first, then use it before the damage step.`);
+    /* A SOUL BANISH IS A COST, SO IT IS A LEGALITY (v3.74). Boltyn's
+       ability reads "Attack Reaction - Banish a card from your soul: …",
+       and refusing AFTER it resolves would cost the player a soul card for
+       an activation the rules never allowed (v3.11). `parser.abSoulCost`
+       is the one reader; `judge.legal` asks the same question. */
+    { const _sc = DawnParser.abSoulCost(card);
+      if(_sc && (act(s).soul||[]).length < _sc)
+        return L(s, `${card.name} costs ${_sc} from your soul, and you hold ${(act(s).soul||[]).length}.`); }
     if(fx.addCost && fx.addCost.discard){
       const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
@@ -4726,9 +4750,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                       ACTION phase only — so a hero ability printed
                       "Instant -" could not be used on the opponent's turn,
                       which for Blaze is half of what it is for. */}
+                  {/* THE WINDOW IS `abWindow`'s ANSWER, NOT A KIND CHECK
+                      (v3.74). Written as `kind==="instant"` this gate had
+                      no case for an ATTACK REACTION — so Boltyn's ability
+                      would be enabled in the action phase, where `tryPlay`
+                      refuses it, and disabled in the stack window, where
+                      it is the only legal play. A dead button in both
+                      directions at once. v3.63's "when you add a flag to
+                      one powCard builder, grep for the others", one site
+                      further out: there it was the BUILDERS, here it is
+                      the places that OFFER what they built. */}
                   {built.heroPow && <button className="hact clip-sm" style={{padding:"5px 8px",fontSize:11}}
-                    disabled={!!you(g).weaponUsed["hpow"]||!!g.over||!(g.mode==="act"
-                      || (built.heroPow.kind==="instant" && DawnPriority.speedAllowed(g,0).includes("instant")))}
+                    disabled={!!you(g).weaponUsed["hpow"]||!!g.over||!heroPowWindowOK(g)}
                     onClick={()=>tryPlay(built.HPOW,"hero",0)}>{you(g).weaponUsed["hpow"]?"USED":"⚡ USE"}</button>}
                 </div>
                 <div className={"wslot clip-sm"+(handGear[1]?" filled":"")}>

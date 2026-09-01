@@ -122,6 +122,62 @@ module.exports = [
     };
   },
   want: {"damage that gets through": 4, "a token was minted": false, "the rider still waits": 1}
+},
+
+{
+  name: "his hero ability, both clauses — the soul pays and the buff lands",
+  why: "v3.74 — his deck's five soul cards and both hero clauses are one " +
+       "mechanic, and the hero read NOTHING: clause 1 had no passive and " +
+       "clause 2 was refused on its cost (\"a soul banish nothing builds\", " +
+       "recorded in a drill's own assertion text since v3.63).",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "boltyn");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.boltyn), c.H.db(), {},
+                          RNG.make("scene-boltyn"), {n: 0}).b;
+    /* CLAUSE 1 — two gates, both settled at the WALL. */
+    const atkDef = {uid: 610, name: "Attack Blocker", tt: "Generic Action - Attack",
+                    ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 1,
+                    power: 2, def: 3, tx: "", kw: []};
+    const swing = charged => {
+      const atk = c.card("Brutal Assault", 1, 600);
+      const g = c.state({hand: [atk], res: 9, ap: 1}, {hand: [atkDef], hp: 20},
+                        {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+      if(charged) g.sides[0].hist = {...g.sides[0].hist, charged: 1};
+      let n = c.exec(g, atk, "hand", 0);
+      n = Object.assign({}, n, {stack: [...n.stack, {k: "def", uid: 610}]});
+      return 20 - c.J.withEffects(n, (fx, st) => fx.resolveStack(st)).sides[1].hp;
+    };
+    /* CLAUSE 2 — the soul as a cost, and the action point it must NOT gain. */
+    const atk = c.card("Brutal Assault", 1, 601);
+    const soul = [{uid: 700, name: "Soul", tt: "Light Action", pitch: 1, tx: "", kw: []}];
+    const g = c.state({hand: [atk], res: 9, ap: 1, soul, buffNext: 2}, {hp: 20},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    const before = c.exec(g, atk, "hand", 0);
+    const after = c.exec(before, b.HPOW, "hero", 0);
+    return {
+      "he has a hero power at all":        !!b.HPOW,
+      "it is an attack reaction":          c.P.abWindow(b.HPOW),
+      "charged, an attack card defends":   swing(true),
+      "…and uncharged it is one lower":   swing(false),
+      "the soul pays for it":              after.sides[0].soul.length,
+      "the attack goes again":             after.pend.ga,
+      "and he gains NO action point":      after.sides[0].ap - before.sides[0].ap
+    };
+  },
+  want: {
+    "he has a hero power at all": true,
+    "it is an attack reaction": "attack-reaction",
+    "charged, an attack card defends": 4,
+    "…and uncharged it is one lower": 3,
+    "the soul pays for it": 0,
+    "the attack goes again": true,
+    "and he gains NO action point": 0
+  }
 }
 
 ];

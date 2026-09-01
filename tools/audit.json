@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-01T16:32:19.047Z",
- "appVer": "3.73",
+ "generated": "2026-09-01T16:47:35.785Z",
+ "appVer": "3.74",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
@@ -276,21 +276,21 @@
    "int": 4,
    "tt": "Light Warrior Hero - Young",
    "tx": "If you've charged this turn, your attacks get +1{p} while defended by an attack action card.\nAttack Reaction - Banish a card from your soul: Target attack with {p} greater than its base gets go again.",
-   "statics": [],
-   "power": null,
+   "statics": [
+    "Boltyn — charged this turn: attacks get +1{p} while an attack action card defends"
+   ],
+   "power": "banish 1 from your soul: Target attack with {p} greater than its base gets go again",
    "clauses": [
     {
      "t": "If you've charged this turn, your attacks get +1{p} while defended by an attack action card.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Attack Reaction - Banish a card from your soul: Target attack with {p} greater than its base gets go again.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "briar": {
    "name": "Briar",

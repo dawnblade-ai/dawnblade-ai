@@ -809,6 +809,13 @@ function legal(g, a, seat){
          asks about lives in the half that was removed. */
       if(sd.heroTapped && PR.tapsToActivate((bOf(g, seat).heroRec || {}).tx || ""))
         return sd.name + " is tapped — that ability costs {t}, and a tapped hero cannot pay it again";
+      /* A SOUL BANISH IS A COST, SO IT IS A LEGALITY (v3.74). Refused
+         before the ability resolves, never after — v3.11's rule one route
+         over. `parser.abSoulCost` is the one reader both boards ask. */
+      { const _sc = PR.abSoulCost(ab);
+        if(_sc && (sd.soul || []).length < _sc)
+          return ab.name + " costs " + _sc + " from the soul, and " + sd.name
+               + " holds " + (sd.soul || []).length; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -1305,7 +1312,12 @@ function strike(g){
      than reading the defenders itself, because how a seat holds its
      declarations is this file's business and not the card's. */
   const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length,
-    defenders: spentGear.length + handBlockers, handBlockers}));
+    defenders: spentGear.length + handBlockers, handBlockers,
+    /* WHICH CARDS defend is this file's answer (v3.74), like the wall
+       above it: this board holds them on `blockH`, the trainer as stack
+       layers, and Boltyn's clause 1 asks whether an ATTACK ACTION CARD is
+       among them. */
+    defAtkAction: spentHand.some(c => PR.isAtkActionCard(c))}));
   n = pre.game;
 
   let total = Math.max(0, (pre.total || 0) - wall);
