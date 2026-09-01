@@ -337,6 +337,24 @@ function buildSide(h, d, db, opts, rng, ctr){
   const _boltyn = _htx.match(
     /if you'?(?:ve| have) charged this turn, your attacks get \+(\d+)\{p\} while defended by an attack action card/);
   const chargedDefBuff = _boltyn ? +_boltyn[1] : 0;
+  /* ARAKNI, WEB OF DECEIT: "Your attacks with stealth that are attacking
+     a marked hero get +1{p} and \"When this hits, this gets go again.\""
+
+     TWO GATES AND A RIDER, all settled at DECLARATION: whether the card
+     PRINTS stealth, and whether the hero being attacked is marked. Neither
+     is a wall-time question, so this is not a late condition — the mark is
+     already on the opposing hero and stealth is a printed fact.
+
+     `printedKw` IS THE PREDICATE, per the 2026-07-25 ruling and the atom
+     `attackQual` already uses for "with stealth". Measured: 18 pool cards
+     print it, 7 more only NAME it, and NOTHING in the pool grants it — so
+     the loose reading would hand the bonus to seven cards that do not have
+     the keyword at all.
+
+     THE NUMBER COMES OFF THE LINE, like Kayo's and Boltyn's. */
+  const _arakni = _htx.match(
+    /your attacks with stealth that are attacking a marked hero get \+(\d+)\{p\}/);
+  const stealthMarkedBuff = _arakni ? +_arakni[1] : 0;
   let startItem = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(_htx)){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
@@ -345,7 +363,7 @@ function buildSide(h, d, db, opts, rng, ctr){
   return {b:{deck,gear,hasBoost,read,heroPow,HPOW,HZOOM,heroRec,
     arsenalInstant,iceFrostbite,viseraiPassive,wateryGrave,lyathBoo,startItem,energyOnOpt,
     earthOnFirstHeroDmg,lightningOnSecondNonAtk,
-    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,chargedDefBuff,
+    atkPowOffChain,mightOnFirst6Discard,weaponRefresh,chargedDefBuff,stealthMarkedBuff,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, rng};
 }
 
@@ -478,7 +496,7 @@ function buildMatch(spec, o){
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
-                  "chargedDefBuff"];
+                  "chargedDefBuff","stealthMarkedBuff"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -494,7 +512,7 @@ const PASSIVE_TYPE = {
   weaponRefresh: "boolean", atkPowOffChain: "number",
   /* A NUMBER for Kayo's reason: Boltyn's clause names its own magnitude
      ("+1{p}"), and storing `true` would hardcode the 1 in `effects.js`. */
-  chargedDefBuff: "number",
+  chargedDefBuff: "number", stealthMarkedBuff: "number",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into

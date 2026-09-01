@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-01T16:47:35.785Z · app v3.74 · data sage-v12 · db 788 records
+Generated 2026-09-01T19:26:31.670Z · app v3.74 · data sage-v12 · db 788 records
 
 ## Summary
 
@@ -124,9 +124,9 @@ Generated 2026-09-01T16:47:35.785Z · app v3.74 · data sage-v12 · db 788 recor
 - 🚩 2 hero-text clause(s) not recognized by any ability reader
 
 ### Arakni, Web of Deceit (Chaos Assassin)
-- ⚠ unrecognized: "Your attacks with stealth that are attacking a marked hero get +1{p} and "When this hits, this gets go again.""
+- static: Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again
 - ⚠ unrecognized: "At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos."
-- 🚩 2 hero-text clause(s) not recognized by any ability reader
+- 🚩 1 hero-text clause(s) not recognized by any ability reader
 
 ### Blaze, Firemind (Wizard)
 - hero power: once/turn: Banish a Wizard non-attack action card from your hand with an effect that deals arcane damage equal to X

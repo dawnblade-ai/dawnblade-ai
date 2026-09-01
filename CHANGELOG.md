@@ -9,6 +9,59 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.75 — Arakni, clause 1: stealth into a marked hero
+
+> *"Your attacks with **stealth** that are attacking a **marked** hero get
+> +1{p} and \"When this hits, this gets **go again**.\""*
+
+Her whole deck is stealth and the mark — 18 pool cards print stealth, and
+Mark of the Huntsman destroys itself to put the mark on a hero — and the
+hero read nothing at all.
+
+**THREE GATES, ALL SETTLED AT DECLARATION**, which is why this is not a
+late condition (v3.71): the mark is already on the opposing hero, stealth
+is a printed fact, and the attack-target is the caller's answer. There is
+nothing here the wall can change.
+
+| gate | reader |
+|---|---|
+| the card CARRIES stealth | `printedKw` |
+| the hero is marked | `foe.marked` |
+| it is attacking a HERO | `heroTarget` (CR 1.4.5) |
+
+**`printedKw`, AND THAT IS MEASURED RATHER THAN ASSUMED.** 18 pool cards
+print stealth; **seven more only NAME it** — Night's Embrace, Stalker's
+Steps, Stains of the Redback, Orb-Weaver Spinneret, Spike with Bloodrot,
+Two Sides to the Blade and her own hero line — and **nothing in the pool
+grants it**. `hasKw` would hand her bonus to all seven. The measurement is
+itself a drill: a card that ever GRANTS stealth fails it, and the answer
+then is `hasKwNow` plus `_kwGrant`, which is a decision rather than a
+silent widening.
+
+**THE RIDER IS AN ON-HIT `ga`**, joined into `pend.onHit` beside the other
+granted riders — so it fires only on a hit, and `linkPayload` folds
+`_gaGrant` onto the link, which means both boards carry it. Filed
+unconditionally it would be a free action point on a swing that was fully
+blocked.
+
+### Clause 2 — the Agents of Chaos, measured
+
+*"At the beginning of your end phase, if an opponent is marked, you become
+a random Agent of Chaos."* Not built this version, and the measurement is
+in `HANDOFF.md` rather than a guess: the six Agents are `Chaos Assassin
+Demi-Hero` records, all Silver Age legal, all **life `*` and intellect 4**
+— the same intellect Arakni prints — so becoming one swaps the hero's
+ABILITY and nothing else. They are named on her own record's
+`referenced_cards`.
+
+**Measured:** hero abilities 7 heroes / 11 unread clauses → 7 / **10**.
+1760 drills, 0 failing, 4 skipped. Fairness clean. 28 scenes passing. 210
+self-play games: 0 refusals, 0 violations, 7 stalls. Both babel blocks
+compile. Nine sabotages; all nine bite — one was SILENT first, and the
+fixture that fixed it pumped itself by 1 on the first attempt.
+
+---
+
 ## v3.74 — Boltyn, and a free action point three abilities were taking
 
 > *"If you've charged this turn, your attacks get +1{p} while defended by

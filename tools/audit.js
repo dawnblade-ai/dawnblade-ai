@@ -63,6 +63,11 @@ const HERO_STATICS = [
   {key:"chargedDefBuff",
    re:/if you'?(?:ve| have) charged this turn, your attacks get \+\d+\{p\} while defended by an attack action card/,
    note:"Boltyn — charged this turn: attacks get +1{p} while an attack action card defends"},
+  /* ARAKNI's clause 1, built v3.75. Clause 2 is the Agent-of-Chaos
+     transformation and is deliberately NOT here — see HANDOFF.md. */
+  {key:"stealthMarkedBuff",
+   re:/your attacks with stealth that are attacking a marked hero get \+\d+\{p\}/,
+   note:"Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,

@@ -1,3 +1,98 @@
+# Handoff — Dawnblade, at v3.75 · PHASE C · HERO BY HERO
+
+## ⚠ THE NEXT THING: ARAKNI'S AGENTS OF CHAOS (measured at v3.75)
+
+> *"At the beginning of your end phase, if an opponent is **marked**, you
+> become a random **Agent of Chaos**."*
+
+Her clause 1 is built (v3.75). This is clause 2, and it is measured
+rather than guessed — everything below was read out of the LIVE database
+(4,952 records) on 2026-09-01, not recalled.
+
+**THE DATABASE CANNOT NAME "AGENT OF CHAOS" AS A TYPE.** No `types`
+entry, no `subtypes` entry and no `type_text` anywhere in 4,952 records
+contains the word "Agent". A reader that guessed the set would be
+inventing card text at the SET level, which is the golden rule broken one
+layer above the card.
+
+**IT CAN NAME THEM TWO OTHER WAYS, AND THEY AGREE.** Arakni's own record
+carries `referenced_cards` — six unique ids — and every one of them is a
+`Chaos Assassin Demi-Hero`. Those two answers are the same six cards:
+
+| Agent | its own ability |
+|---|---|
+| Arakni, Black Widow | Once per Turn Attack Reaction - Discard an Assassin card: … |
+| Arakni, Funnel Web | (the same shape, a different rider) |
+| Arakni, Orb-Weaver | *"Graphene Chelicerae cost you {r} less to activate"* + an Instant |
+| Arakni, Redback | (the same shape again) |
+| Arakni, Tarantula | *"Whenever a dagger you own hits a hero, they lose 1{h}"* + an AR |
+| Arakni, Trap-Door | *"When you become this, you may search your deck…"* |
+
+**BECOMING ONE SWAPS THE ABILITY AND NOTHING ELSE.** Every Agent prints
+`health: "*"` and `intelligence: 4`; Arakni prints life 20 and
+**intellect 4**. So life does not change, intellect does not change, and
+the gear and deck are untouched. What changes is the printed ability
+line — which means the build's `PASSIVES` and its `HPOW` have to be
+recomputed from the new line, and nothing else does.
+
+**AND IT IS A CYCLE, NOT A ONE-WAY DOOR.** Every Agent prints *"At the
+beginning of your end phase, **return to the brood**."* So: your end
+phase turns you into an Agent, you hold it through the opponent's turn
+and your own, and your next end phase returns you — and Arakni's clause
+fires again. You are an Agent for most of the game, and a different one
+each turn.
+
+### WHAT IT COSTS TO BUILD
+
+1. **The six Agents are NOT in `data/pool.json`.** They must go into
+   `NEEDED` in `index.html` (the list of cards the loader fetches though
+   no deck lists them — Crouching Tiger and Inner Chi are the precedent),
+   the pool must be re-pinned, and **`DATA_VER` must be bumped** or a warm
+   cache has no Agent to become.
+2. **A hero-ability swap.** `buildSide` computes the passives and `HPOW`
+   from `heroRec.tx` once; becoming an Agent needs that half as a function
+   both the initial build and the swap call — one body, or the two drift.
+3. **Both boards' end phase.** `effects.beginEndPhase` is the shared body
+   (v3.17); a schedule written per board is v3.01's shape.
+4. **The seeded stream.** *"A random Agent"* must use `rngInt` and store
+   the rng back, or replay and lockstep break (v2.26).
+5. **The hero row must say who you are**, or the mechanic is invisible.
+
+### WHAT WILL STILL REFUSE, AND WHY THAT IS THE POINT
+
+**All six Agents' activated abilities are refused by `parseHeroPower`
+today** — five print `Discard an Assassin card` (a discard cost the
+reader refuses by design, v3.04's never-parse-ahead-of-wiring) and
+Trap-Door's is a deck search. So a player who becomes one gets an ability
+that does nothing.
+
+That is the **no-op blind spot** if it is shipped quietly — and it is the
+opposite of it if the Agents are in the POOL, because then the audit
+counts their unread text and says so every run. **Put them in the pool in
+the same change that builds the transformation.**
+
+Two of the six carry a STATIC clause that is readable and real, and both
+are pointed straight at her deck: **Tarantula's** *"whenever a dagger you
+own hits a hero, they lose 1{h}"* (Mark of the Huntsman ×2 is a dagger)
+and **Orb-Weaver's** *"Graphene Chelicerae cost you {r} less to
+activate"* (Orb-Weaver Spinneret equips one).
+
+**Mask of Deceit** — her printed Specialization, which also transforms
+(*"When this defends, become a random Agent of Chaos"*) — **is not in
+this pool's gear list**. Recorded so nobody goes looking for it.
+
+### ALSO RECORDED, NOT BUILT
+
+**Stains of the Redback** prints *"If the defending hero is marked, this
+costs {r} less to play"* — a cost reduction gated on a fact about the
+OPPONENT. `effCost(c, sd)` takes ONE SIDE by design, so this needs the
+caller's answer threaded through, and **both of its readers must agree**
+(v2.80: `execute` charges and `doPlay` asks affordability — a discount
+one of them can see and the other cannot is a payment screen whose only
+exit is Cancel). Wider blast radius than the Agents; do it deliberately.
+
+---
+
 # Handoff — Dawnblade, at v3.63 · PHASE C · FAMILY-BY-FAMILY
 
 ## ⚠ WHERE THINGS STAND — v3.60 → v3.63 (2026-08-30)

@@ -108,6 +108,55 @@ module.exports = [
     };
   },
   want: {"an ability is parsed": false, "the damage clause reads": false}
+},
+
+{
+  name: "a stealth attack on a MARKED hero hits harder and goes again",
+  why: "v3.75 — her hero read nothing at all, and stealth+marked is the " +
+       "whole deck: 18 pool cards print stealth and Mark of the Huntsman " +
+       "destroys itself to put the mark on. Three gates, and `printedKw` " +
+       "rather than `hasKw` because seven pool cards NAME stealth without " +
+       "carrying it.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "arakni");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.arakni), c.H.db(), {},
+                          RNG.make("scene-arakni"), {n: 0}).b;
+    const stealthy = b.deck.find(x => c.P.printedKw(x, "stealth") && c.P.isAttack(x));
+    const plain    = b.deck.find(x => !c.P.printedKw(x, "stealth") && c.P.isAttack(x));
+    const swing = (card, marked, wallDef) => {
+      const atk = Object.assign({}, card, {uid: 600});
+      const wall = wallDef ? {uid: 610, name: "Wall", tt: "Generic Action", pitch: 1,
+                              cost: 1, power: 0, def: wallDef, tx: "", kw: []} : null;
+      let g = c.state({hand: [atk], res: 9, ap: 1},
+                      {hp: 20, marked: marked ? 1 : 0, hand: wall ? [wall] : []},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+      let n = c.exec(g, atk, "hand", 0);
+      if(wall) n = Object.assign({}, n, {stack: [...n.stack, {k: "def", uid: 610}]});
+      return c.J.withEffects(n, (fx, st) => fx.resolveStack(st));
+    };
+    const base = stealthy.power || 0;
+    return {
+      "she has the passive at all":       b.stealthMarkedBuff,
+      "stealth into a marked hero":       20 - swing(stealthy, true, 0).sides[1].hp,
+      "…and unmarked it is one lower":    20 - swing(stealthy, false, 0).sides[1].hp,
+      "a non-stealth attack gets nothing": 20 - swing(plain, true, 0).sides[1].hp === (plain.power || 0),
+      "the hit keeps her action point":   swing(stealthy, true, 0).sides[0].ap,
+      "…and a full block does not":       swing(stealthy, true, 9).sides[0].ap
+    };
+  },
+  want: {
+    "she has the passive at all": 1,
+    "stealth into a marked hero": 4,
+    "…and unmarked it is one lower": 3,
+    "a non-stealth attack gets nothing": true,
+    "the hit keeps her action point": 1,
+    "…and a full block does not": 0
+  }
 }
 
 ];

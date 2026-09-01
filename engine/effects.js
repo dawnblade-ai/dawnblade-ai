@@ -2258,7 +2258,36 @@ function makeEffects(ctx){
       const frail = frailtyCount(act(n));
       const frailPen = (frail && (from==="weapon" || (from==="arsenal" && isAttack(card)))) ? -frail : 0;
       if(frailPen) n = L(n, `Frailty saps ${card.name} by ${-frailPen}{p} — ${from==="weapon"?"a weapon attack":"an attack action from arsenal"}.`);
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty+frailPen;
+      /* ---- ARAKNI'S CLAUSE 1 (v3.75) --------------------------------
+         "Your attacks with STEALTH that are attacking a MARKED hero get
+          +1{p} and \"When this hits, this gets go again.\""
+
+         THREE GATES, ALL SETTLED AT DECLARATION — which is why this is
+         not a late condition (v3.71): the mark is already on the opposing
+         hero, stealth is a printed fact, and the attack-target is the
+         caller's answer, taken at the top of `execute`.
+
+           printedKw   the card CARRIES stealth as printed rules text.
+                       Measured: 18 pool cards print it, 7 more only NAME
+                       it (Night's Embrace, Stalker's Steps, Stains of
+                       the Redback…) and NOTHING in the pool grants it, so
+                       `hasKw` would hand the bonus to seven cards that do
+                       not have the keyword — v2.84's three questions.
+           foe.marked  the mark is on the hero being attacked
+           heroTarget  CR 1.4.5 — an attack on an ALLY is not attacking a
+                       hero at all, marked or otherwise (v3.46)
+
+         THE RIDER IS AN ON-HIT `ga`, joined into `pend.onHit` beside the
+         other granted riders. `runOps`' `ga` sets `_gaGrant` and
+         `linkPayload` folds it onto the link, so BOTH boards carry it —
+         and it fires only on a hit, which is what "when this hits" says. */
+      const _sm = bAct(n).stealthMarkedBuff || 0;
+      let smBuff = 0, smRider = [];
+      if(_sm && printedKw(card, "stealth") && foe(n).marked && heroTarget){
+        smBuff = _sm; smRider = [["ga"]];
+        n = L(n, `${card.name} strikes from stealth at a marked hero — +${_sm} power, and go again if it lands.`);
+      }
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty+frailPen+smBuff;
       /* +1{p} COUNTERS ARE PART OF THE WEAPON'S POWER, not a bonus on the
          swing. They sit on the piece and travel between turns, so a
          counter-bearing blade is simply a bigger weapon — which is what
@@ -2519,7 +2548,7 @@ function makeEffects(ctx){
          which was FALSE with `by` absent and is FALSE now for your own
          swing — and the dummy's swing is the `[3,4,5]` scalar on
          `n.incoming` with no pend at all. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that

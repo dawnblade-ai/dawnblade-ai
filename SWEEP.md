@@ -6,16 +6,12 @@ axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 7 heroes, 11 unread clauses | never charged by the stack |
+| Hero abilities | 7 heroes, 10 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
 | Ruled but not built | 44 cards | understood ≠ built |
 | **Fail states** | 77 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
-
-### Arakni, Web of Deceit — 2/2 unread
-- ❌ Your attacks with stealth that are attacking a marked hero get +1{p} and "When this hits, this gets go again."
-- ❌ At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos.
 
 ### Enigma — 2/2 unread
 - ❌ Your first Spectral Shield attack each turn costs {r} less to activate.
@@ -31,6 +27,10 @@ axes it never covered.
 - ✅ Instant - {r}{r}, {t}: The crowd boos you
 - ❌ Defending action cards you control get +1{d} this turn.
 - ✅ Whenever the crowd boos you, create a Might token.
+
+### Arakni, Web of Deceit — 1/2 unread
+- ✅ Your attacks with stealth that are attacking a marked hero get +1{p} and "When this hits, this gets go again."
+- ❌ At the beginning of your end phase, if an opponent is marked, you become a random Agent of Chaos.
 
 ### Briar — 1/3 unread
 - ❌ Essence of Earth and Lightning
@@ -127,12 +127,12 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 22 |
+| Earned value denied | 21 |
 | Ability inert — cost not modelled | 20 |
 | No schedule to fire on | 18 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
 | Choice never offered | 16 |
-| Displayed total is wrong | 13 |
+| Displayed total is wrong | 12 |
 | Keyword filed as no-op, but it has meaning | 11 |
 | Unread, effect unknown | 8 |
 | Drawback skipped | 1 |
