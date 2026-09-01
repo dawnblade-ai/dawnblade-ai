@@ -771,8 +771,26 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"defLt2any"});
     if(/^you'?(?:ve| have) dealt damage this turn$/.test(cond))
       return Object.assign(rest,{cond:"dealtDmg"});
-    /* "{p} greater than its base" — the pump is known once the total is struck */
-    if(/^this has \{p\} greater than its base$/.test(cond))
+    /* "{p} greater than its base" — the pump is known once the total is struck.
+
+       TWO PRINTED WORDINGS OF ONE SHAPE (v3.71). The pool spells it both
+       ways at once: three Guardian attacks say "this HAS {p} greater than
+       its base" and Bolt'n' Shot says "this CARD'S {p} IS greater than its
+       base". Anchored to the first alone, Bolt'n' Shot read `tier: none`
+       and its whole card — go again plus a granted "when this hits,
+       reload" — was inert, while the identical condition worked three
+       cards over. v3.65's rule, and v3.36's: the database prints both
+       spellings simultaneously, so an anchor that knows one is a card
+       waiting to be found.
+
+       AND THE ANCHOR IS WRITTEN AGAINST THE LEVELLED TEXT, NOT THE PRINTED
+       TEXT. `SYNONYMS` already rewrites "this card's" to "this's" before
+       `classifyClause` sees a word of it, so a pattern spelling the printed
+       form matches NOTHING and looks exactly like a pattern that is simply
+       wrong. That table is the one place to check when a widening you have
+       verified in isolation does not fire — v3.53 is the same lesson from
+       the other end, where the lowercasing silently ate a printed NAME. */
+    if(/^this(?: has|'s) \{p\} (?:is )?greater than its base$/.test(cond))
       return Object.assign(rest,{cond:"pumped"});
     if(/^it is blue$/.test(cond)) return Object.assign(rest,{cond:"revBlue"});
     /* "if it is Draconic" — a question about the card's own printed talent,
@@ -2436,6 +2454,20 @@ function pickSubject(phrase){
    Kept as named constants so the clause router and the whole-card reader
    below cannot drift apart on what counts as the stamp. */
 const ARS_PUT   = /put an? [a-z ]+?(?: card)? (?:from your hand )?face.?up into your arsenal/i;
+/* The three printed sentences of Azalea's cycle. Anchored whole, because
+   an unanchored "put a card from your arsenal" would claim Iyslander's
+   "play blue non-attack action cards FROM YOUR ARSENAL" — the only other
+   pool record that prints the phrase. */
+/* THE FINAL CLAUSE KEEPS ITS PERIOD. v3.45 stopped the splitter eating the
+   trailing `.` (treating end-of-string as a break lost it), so the LAST
+   sentence of a card arrives with the dot still attached and every earlier
+   one arrives without. Azalea's grant is not her last sentence — "Go again"
+   is — so an anchor that forgot this matched HER and would have refused the
+   same wording on a card that ends with it. Found by a synthetic fixture,
+   which is the only thing that could tell the two apart. */
+const CYC_BOTTOM = /^put a card from your arsenal on the bottom of your deck\.?$/i;
+const CYC_PUT    = /^if you do, put the top card of your deck face.?up into your arsenal\.?$/i;
+const CYC_GRANT  = /^if it'?s an? ([a-z]+), it (?:gets?|gains?) ([a-z]+) until end of turn\.?$/;
 const ARS_STAMP = /^\s*it (?:gains?|gets?)\s*\+\d+\s*\{p\}\s*until end of turn/i;
 /* ---- CARD OVERRIDES — the guarded escape hatch (v2.39) ----------------
    The golden rule stays the default: teach the parser to read text, never
@@ -3522,6 +3554,52 @@ function fxParse(card){
      text for "gains +N{p}" and was setting fx.self = 1, so the bracers
      themselves gained the power the arrow is printed to get. That is exactly
      the VALUE-DOUBLED/wrong-subject shape `npm run fairness` exists to catch. */
+  /* ---- AZALEA'S ARSENAL CYCLE (v3.71) ------------------------------
+     THE HERO ABILITY IS THE DECK. Her whole package is the FACE-UP
+     arsenal — Swift Shot, Dry Powder Shot and Entangling Shot each print
+     "when this is put face-up into your arsenal", Bull's Eye Bracers and
+     Death Dealer are enablers, and Crow's Nest watches for an arrow put
+     face-up FROM YOUR DECK. Nothing in the pool put a card there from the
+     deck, so her specialization had no source and her hero did nothing at
+     all: `parseHeroPower` refused the line, so `build.js` built her no
+     powCard. Read the hero ability before the cards (v2.55, Kayo).
+
+     ONE READER FOR THREE SENTENCES, and it is a whole-card reader because
+     two of them REACH ACROSS the split: "if you DO" names the first
+     sentence's put and "IT" names the second's card. The clause splitter
+     breaks on the period, so `classifyClause` sees one at a time and can
+     answer neither — the same reason `optCost` pairs its halves here and
+     Sharpen folds its wipe here (v3.66).
+
+     IT REFUSES UNLESS BOTH HALVES READ. Sentence 1 alone is a card put on
+     the bottom of the deck for nothing: a DRAWBACK with its payoff
+     dropped, which is worse than an honest refusal (v2.29). */
+  {
+    const ci = fx.clauses.findIndex(c => CYC_BOTTOM.test(c.t));
+    const pi = fx.clauses.findIndex(c => CYC_PUT.test(c.t));
+    if(ci >= 0 && pi >= 0){
+      /* "IF IT'S AN ARROW, IT GETS DOMINATE UNTIL END OF TURN." "It" is
+         the card that was PUT, not the hero and not the card that left —
+         v2.33's Bull's Eye Bracers trap and v3.47's Scuttle Toes, third
+         outing. Both the subject and the keyword come off the printed
+         line; neither is assumed. */
+      let grant = null, gi = -1;
+      fx.clauses.forEach((c, i) => {
+        const gm = c.t.toLowerCase().match(CYC_GRANT);
+        if(gm && !grant){ grant = {tt: gm[1], kw: gm[2]}; gi = i; }
+      });
+      /* THE GRANTED-KEYWORD VOCABULARY IS CLOSED, for the reason v3.55
+         states about counter kinds: a keyword nothing consumes is a
+         no-op wearing a name, and filing the card `full` for it is the
+         blind spot at its purest. `dominate` is the one keyword an
+         arsenal stamp can currently be spent on — `parser.defCap` is its
+         single reader. An unknown keyword drops the GRANT and keeps the
+         cycle, because the cycle is the mechanism and reads on its own. */
+      if(grant && !/^dominate$/.test(grant.kw)) { grant = null; gi = -1; }
+      fx.ops = [...fx.ops, ["arsCycle", grant]];
+      [ci, pi, gi].forEach(i => { if(i >= 0 && fx.clauses[i].st === "skip") fx.clauses[i].st = "run"; });
+    }
+  }
   const apm = tl.match(/you may put an? ([a-z ]+?) (?:card )?from your hand face.?up into your arsenal/)
            || tl.match(/you may put an? ([a-z ]+?) (?:card )?face.?up into your arsenal/);
   if(apm){
@@ -3762,7 +3840,14 @@ function parseHeroPower(tx, allowDestroy){
      deliberately not loosened any further: a broad relaxation would raise the
      tier of cards nothing wires, which is the "never parse ahead of wiring"
      rule that has cost a real bug before. */
-  const arsPut = ARS_PUT.test(m[4]);
+  /* THE ARSENAL CYCLE IS THE SECOND (v3.71), and it is here for exactly
+     the reason the put is: its reader is a WHOLE-CARD one in `fxParse`,
+     because two of Azalea's three sentences reach across the clause split
+     ("if you do", "it"). The powCard carries her whole printed line and
+     `execute` re-reads it, so nothing is lost by this reader answering on
+     the first sentence alone. A NAMED pattern, never a relaxation of the
+     guard below — that is the never-parse-ahead-of-wiring rule. */
+  const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim());
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);

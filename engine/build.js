@@ -132,6 +132,20 @@ function defaultPicks(list){
    `d` is a PARAMETER rather than a lookup because that is the difference
    between a pure function and one that reads the trainer's module scope.
    Two seats, two decks, one function. */
+/* THE PRINTED ABILITY LINE, COST PREFIX STRIPPED — the powCard's `tx`.
+   Exported (v3.71) because `tools/audit.js` has to ask the SAME question
+   when it decides whether a hero clause is read: `parseHeroPower` answers
+   about the FIRST sentence only, and everything after it is read by
+   `fxParse` over this line. An audit that re-derived the line would be the
+   no-mirror rule broken between a tool and the engine — and one that did
+   not ask at all reports a built ability as unread, which is v3.21's
+   one-sided ledger exactly. */
+function heroAbilityLine(heroRec, heroPow){
+  const line = ((heroRec && heroRec.tx) || "").split(/\n+/).map(l => clean(l))
+    .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+  return line.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : "");
+}
+
 function buildSide(h, d, db, opts, rng, ctr){
   const o = opts || {};
   const heroRec = resolveHero(db, d.hero) || {};
@@ -144,9 +158,7 @@ function buildSide(h, d, db, opts, rng, ctr){
      only the boo. Identical treatment to `_effFull` below: find the
      printed ability LINE and strip the cost prefix, so `execute`'s
      re-read with `fxParse` sees the riders too. */
-  const _hLine = (heroRec.tx||"").split(/\n+/).map(l=>clean(l))
-    .find(l=>/^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
-  const _hEffFull = (_hLine.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : ""));
+  const _hEffFull = heroAbilityLine(heroRec, heroPow);
   const HPOW = heroPow ? {name:d.hero.name.split(",")[0]+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
     tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant", img:null, dbImg:null, uid:"hpow"} : null;
   const HZOOM = {name:d.hero.name, pitch:0, cost:null, power:null, def:null, tt:heroRec.tt||"Hero", kw:[],
@@ -466,5 +478,5 @@ const PASSIVE_TYPE = {
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
-        buildSeed, buildMatch, buildVanilla, PASSIVES, PASSIVE_TYPE};
+        buildSeed, buildMatch, buildVanilla, heroAbilityLine, PASSIVES, PASSIVE_TYPE};
 });

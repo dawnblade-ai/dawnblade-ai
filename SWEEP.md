@@ -6,18 +6,12 @@ axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 10 heroes, 20 unread clauses | never charged by the stack |
+| Hero abilities | 9 heroes, 16 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
 | Ruled but not built | 47 cards | understood ≠ built |
-| **Fail states** | 83 entries, 1 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 82 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
-
-### Azalea — 4/4 unread
-- ❌ Once per Turn Action - 0: Put a card from your arsenal on the bottom of your deck
-- ❌ If you do, put the top card of your deck face-up into your arsenal
-- ❌ If it's an arrow, it gets dominate until end of turn
-- ❌ Go again
 
 ### Bravo, Flattering Showman — 3/3 unread
 - ❌ Action - {r}{r}, {t}: Turn a face-down card in your arsenal face-up
@@ -145,9 +139,9 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 27 |
-| Ability inert — cost not modelled | 23 |
-| No schedule to fire on | 22 |
+| Earned value denied | 26 |
+| Ability inert — cost not modelled | 22 |
+| No schedule to fire on | 21 |
 | Choice never offered | 18 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
 | Displayed total is wrong | 15 |
@@ -168,7 +162,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 45 entries
+### WRONG — 44 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -293,7 +287,7 @@ worst thing a trainer can do: it teaches wrong play.
 - **Plasma Barrel Shot** · tier `part` · dash
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
-- … and 20 more (see the station)
+- … and 19 more (see the station)
 
 ### LOST VALUE — 35 entries
 

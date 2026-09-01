@@ -521,19 +521,35 @@ test("every build passive read off hero text has a HERO_STATICS entry", {skip}, 
 });
 
 test("the heroes whose clauses are BUILT report fully covered", {skip}, () => {
-  /* the two heroes Phase 3 has finished. A regression here means either a
-     recognizer or a passive was lost. */
-  const src = fs.readFileSync(path.join(__dirname, "..", "tools", "audit.js"), "utf8");
-  const STATICS = eval(src.match(/const HERO_STATICS = (\[[\s\S]*?\n\]);/)[1]);
-  const uncovered = k => {
-    const tx = buildOf(k).heroRec.tx || "";
-    return tx.split(/\n+/).map(x => P.clean(x)).filter(Boolean)
-      .reduce((a, x) => a.concat(x.split(/\.\s+/)), []).map(x => x.trim()).filter(Boolean)
-      .filter(cl => !(STATICS.some(s => s.re.test(cl.toLowerCase()))
-                      || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl))));
-  };
-  for(const k of ["kayo", "dorinthea"])
-    assert.deepStrictEqual(uncovered(k), [], k + " is a finished hero — every clause must be recognized");
+  /* The heroes Phase 3 has finished. A regression here means a recognizer,
+     a passive or an ability reader was lost.
+
+     IT ASKS THE AUDIT'S OWN FUNCTION (v3.71). This drill used to re-derive
+     the covered-test inline, which is the no-mirror rule broken between a
+     drill and the tool it audits — and it went stale the moment
+     `analyzeHero` learned to ask `fxParse` about an ability's RIDERS, since
+     the copy here still knew only about statics and `parseHeroPower`.
+     Azalea's cycle would have reported three unread clauses to a drill
+     that says she is finished. */
+  const AUDIT = require("../tools/audit.js");
+  for(const k of ["kayo", "dorinthea", "azalea"]){
+    const b = buildOf(k);
+    const h = AUDIT.analyzeHero(b.heroRec, k);
+    assert.deepStrictEqual(h.clauses.filter(c => !c.covered).map(c => c.t), [],
+      k + " is a finished hero — every clause must be recognized");
+  }
+});
+
+test("…and the census is not vacuous: an unfinished hero still reports", {skip}, () => {
+  /* A COVERED-TEST THAT ANSWERS TRUE FOR EVERYTHING passes the drill above
+     perfectly. Bravo's three clauses are the control — his deck reads 100%
+     and his hero reads 0%, which is the sharpest illustration in the pool
+     of why deck coverage was never the binding constraint. */
+  const AUDIT = require("../tools/audit.js");
+  const b = buildOf("bravo");
+  const h = AUDIT.analyzeHero(b.heroRec, "bravo");
+  assert.ok(h.clauses.filter(c => !c.covered).length > 0,
+    "bravo's hero ability is not built — the census must still say so");
 });
 
 /* ============================================================

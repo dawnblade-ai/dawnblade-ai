@@ -31,8 +31,23 @@ const skip = !fs.existsSync(CACHE) && "no cached DB — run: node tools/audit.js
 
 const W = loadData();
 let _db = null;
-const DB = () => _db || (_db = C.buildMaps(
-  JSON.parse(fs.readFileSync(CACHE, "utf8")).filter(c => c && c.name).map(C.mapDbCard)));
+/* AND IT IS REGISTERED WITH THE JUDGE (v3.71). Until now this file built
+   a card map for `buildSideDefault` and never called `J.setDb`, so every
+   game it drove ran with NO database registered — `effects.js` resolves a
+   token through `getDb()`, so Kayo's Might, every Runechant and every
+   Frostbite silently minted nothing. The seats were playing a game that no
+   player can play, and the mirror below was measuring it.
+
+   Same family as v3.00's silent skips and as the two drills this fortnight
+   whose token mints resolved nothing because the fixture never registered
+   the database: a drill that quietly runs a REDUCED engine reports on the
+   reduced one. */
+const DB = () => _db || (_db = (() => {
+  const m = C.buildMaps(JSON.parse(fs.readFileSync(CACHE, "utf8"))
+    .filter(c => c && c.name).map(C.mapDbCard));
+  J.setDb(m);
+  return m;
+})());
 const heroBy = re => W.HEROES.find(h => re.test(h.n));
 
 function match(o){
@@ -195,7 +210,21 @@ test("neither chair is privileged — a mirror splits its wins", {skip}, () => {
      What is NOT emergent is the shape of the failure this guards. A seat
      that is structurally weaker loses all twelve; a chair that is
      privileged takes ten or eleven. Four of twelve to each is well inside
-     what seating alone explains and well outside either of those. */
+     what seating alone explains and well outside either of those.
+
+     AND IT REPORTED EXACTLY THAT FAILURE ONCE, FOR THE WRONG REASON
+     (v3.71). Enforcing Pulping's GRANTED dominate at the table — a printed
+     rule the table had never applied — swung this to 10-2. The cause was
+     not the rule: it was that this file had never registered the card
+     database with the judge, so the mirror was played with every token
+     minting nothing, and in that thinner game one unblockable attack
+     decides everything. With the database registered the same fix moves
+     the split not at all (7-5 either way, measured both ways round).
+
+     A drill that quietly drives a REDUCED engine reports on the reduced
+     one — v3.00's lesson about silent skips, wearing a different hat. When
+     a band like this one breaks, look at what the fixture is playing
+     before you widen it. */
   assert.ok(wins[0] >= 4 && wins[1] >= 4,
     "a mirror match must not favour a chair — it split " + wins[0] + "-" + wins[1] + ". " +
     "Seat 1 is a seat somebody occupies, not a weaker shape wearing a deck; that is the " +

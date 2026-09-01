@@ -9,6 +9,144 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.71 — Azalea, and four things her hero ability was hiding
+
+**READ THE HERO ABILITY BEFORE THE CARDS** (v2.55, Kayo). Her deck read 28
+of 32 `full`; her hero read **nothing at all**, and the hero is the deck.
+
+> **Once per Turn Action - 0:** Put a card from your arsenal on the bottom
+> of your deck. If you do, put the top card of your deck **face-up** into
+> your arsenal. If it's an arrow, it gets **dominate** until end of turn.
+> **Go again**
+
+Swift Shot, Dry Powder Shot and Entangling Shot each print *"when this is
+put face-up into your arsenal"*; Bull's Eye Bracers, Call in the Big Guns
+and Death Dealer are enablers; **Crow's Nest watches for an arrow put
+face-up FROM YOUR DECK**, and nothing in the pool could do that. The whole
+package was waiting on one ability that `parseHeroPower` refused — so
+`build.js` built her no powCard and neither board could offer it.
+
+**THREE SENTENCES, ONE OP.** Two of them reach across the clause split:
+*"if you DO"* names the first sentence's put and *"IT"* names the card the
+second one moved. Three independent ops would need `runOps` to thread "did
+the last one fire" and "which card was it" between them, which is state no
+op carries — so the reader is a whole-card one in `fxParse`, the same place
+`optCost` pairs its halves and Sharpen folds its wipe.
+
+**"IF YOU DO" IS LOAD-BEARING.** With an empty arsenal nothing goes to the
+bottom, so nothing comes off the deck: the ability does nothing and says
+so. Read unconditionally it would be strictly better than printed on the
+one board state where the cost cannot be paid. (With an EMPTY DECK the same
+card comes straight back — face up. That is the literal reading and it is
+right; the first drill written for it expected the opposite.)
+
+**THE FACE-UP WALK IS ONE BODY NOW.** It was written inline in
+`applyAnswer` because a `pick` from hand was the only route that existed.
+A second copy is how one board comes to fire Swift Shot's go again and the
+other does not — v3.17's rule: the event is one body or it is not an event.
+
+**THE GRANTED-KEYWORD VOCABULARY IS CLOSED.** `dominate` is the one keyword
+an arsenal stamp can be spent on (`parser.defCap` is its only reader), so
+an unknown keyword drops the GRANT and keeps the cycle. A keyword nothing
+consumes is a no-op wearing a name — v3.55's rule about counter kinds.
+
+### Bolt'n' Shot: `none` → `full`, on an anchor
+
+> *"If this card's {p} is greater than its base, it gets go again and
+> \"When this hits, **reload**.\""*
+
+The pool prints **two wordings of one shape**: three Guardian attacks say
+*"this HAS {p} greater than its base"* and this one says *"this CARD'S {p}
+IS greater than its base"*. v3.65's rule, and v3.36's — the database prints
+both spellings simultaneously.
+
+**AND THE ANCHOR MUST BE WRITTEN AGAINST THE LEVELLED TEXT.** `SYNONYMS`
+rewrites *"this card's"* to *"this's"* before `classifyClause` sees a word
+of it, so a pattern spelling the printed form matches nothing and looks
+exactly like a pattern that is simply wrong. That table is the first place
+to look when a widening you have verified in isolation does not fire.
+
+The rider had always parsed. `reload` has been live since v3.69. The whole
+card was one alternation away.
+
+### THE LATE CONDITIONS ADDED TO A NUMBER NOBODY SPENT
+
+Three printed shapes cannot be answered when the card is played:
+
+| | |
+|---|---|
+| `pumped` | *"if this has {p} greater than its base"* |
+| `defLt2any` | *"…defended by fewer than 2 cards"* |
+| `defLt2` | *"…by fewer than 2 non-equipment cards"* |
+
+They were evaluated inside **`linkPayload`**, which is handed the damage
+**DEALT** and is called *after* both boards have already subtracted it from
+life. So a `+N{p}` there moved the crush threshold and the on-hit gate and
+**never once touched a hero**:
+
+```
+Short Shrift · Wee Wrecking Ball · Walk in My Shoes   +1{p} when pumped
+Widowmaker  (Azalea's own)                            +3{p} vs one defender
+```
+
+Twelve records, every one **WEAKER than printed** — the direction the
+one-sided fairness sweep is built not to look in — and all reading
+`tier: full`, because the clause really was consumed.
+
+They live in **`linkPumps`** now, whose whole job is the attack's power
+before the wall. The arithmetic is unchanged (`(power + N) - wall`), and it
+is the only placement under which `heroHit` can be right: a swing blocked
+to nothing that the bonus lifts back over the wall has now hit, and the old
+ordering had already decided it had not.
+
+**AND `pumped` ASKED THE WRONG NUMBER.** It compared the dealt damage with
+the printed base, so an attack pumped from 4 to 6 and met by a wall of 3
+was told it was *"not pumped above base"*.
+
+**AND THE FEED CONTRADICTED ITSELF.** `execute`'s condition loop had no
+case for any of the three, so they fell through to the default `false` and
+printed *"condition not met (pumped)"* four lines before *"pumped above
+base — +1 power"*. v3.60's sev-2 category. `LATE_CONDS` is one list with
+two readers now — the skip and `pend.lateConds` — because two copies of it
+drift into a condition that is skipped and then never run.
+
+### A GRANTED dominate NEVER REACHED THE TABLE'S WALL
+
+`parser.defCap` merges a held grant with the card's printed keyword and
+both walls call it — but `_kwGrant` is resolution-scoped and `judge.js`
+calls `defCap` with no `kwGrant` at all. **Pulping** is the pool's only
+such card (*"if a card with 6 or more {p} is discarded this way, this gets
+dominate"*) and its restriction was dropped at the table for as long as the
+table has resolved card text. v3.01's shape.
+
+It is folded onto `pend` at DECLARATION, which is the only moment both
+facts exist, and it is idempotent for a card that prints the keyword.
+
+### TWO LEDGERS TOLD
+
+- **`tools/audit.js` reported a built hero ability as three unread
+  clauses.** `parseHeroPower` answers about the ability's FIRST sentence;
+  everything after it is read by `fxParse` over the powCard's whole printed
+  line. The audit now asks that reader, through `build.heroAbilityLine` —
+  one body, two readers. v3.21's one-sided ledger, and Azalea drops off the
+  sweep's hero list entirely (10 heroes → 9, 19 unread clauses → 16).
+  `analyzeHero` is exported so `test/dorinthea.test.js` can stop
+  re-deriving the covered-test inline, with Bravo as the control that the
+  census is not vacuous.
+- **`test/sparring.test.js` never registered the card database.** Every
+  game it drove ran with tokens minting nothing — Kayo's Might, every
+  Runechant, every Frostbite. The mirror-balance drill was measuring a game
+  no player can play, and it was the failure that surfaced it: enforcing
+  Pulping's dominate swung the reduced game 10-2 and moves the real one not
+  at all (7-5 either way). **When a band breaks, look at what the fixture
+  is playing before you widen it.**
+
+**Measured:** 358 → **359 full**, 12 → **11 none**, flagged 45 → 44.
+1707 drills, 0 failing, 4 skipped. Fairness clean. 210 self-play games:
+0 refusals, 0 violations, 7 stalls (was 10). 23 scenes passing.
+
+---
+
 ## v3.70 — the instrument that drives a card and checks what happened
 
 Every other tool here answers a question about **text**:

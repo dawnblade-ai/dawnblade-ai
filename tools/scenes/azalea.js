@@ -100,6 +100,91 @@ module.exports = [
     "an arrow at its base power goes again": false,
     "an arrow above its base goes again": true
   }
+},
+
+{
+  name: "her hero ability cycles the arsenal and turns the new card FACE UP",
+  why: "v3.71 — her hero did nothing at all: `parseHeroPower` refused the " +
+       "line, so `build.js` built her no powCard and neither board could " +
+       "offer it. Her deck was 28 of 32 `full` while the thing the deck is " +
+       "BUILT AROUND was inert — read the hero ability before the cards.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "azalea");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.azalea), c.H.db(), {},
+                          RNG.make("scene-az"), {n: 0}).b;
+    /* THE TWO CARDS DIFFER, or the scene cannot tell a cycle from a
+       no-op (v3.26). Swift Shot prints "when this is put face-up into
+       your arsenal, it gets go again this turn" — the trigger that makes
+       the face-up/face-down distinction worth anything. */
+    const held = c.card("Take Aim", 1, 900);
+    const top  = c.card("Swift Shot", 1, 901);
+    const g = c.state({arsenal: held, deck: [top, c.card("Nimblism", 1, 902)],
+                       res: 9, ap: 1, hand: []}, {},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    const n = c.exec(g, b.HPOW, "hero", -1);
+    const a = n.sides[0].arsenal;
+    return {
+      "she has a hero power at all":   !!b.HPOW,
+      "the new arsenal card":          a ? a.name : null,
+      "it is face up":                 a ? !!a._faceUp : null,
+      "…so its own trigger fired":     a ? !!a._arsGA : null,
+      "the old one is on the BOTTOM":  n.sides[0].deck[n.sides[0].deck.length - 1].uid,
+      "the action point is kept":      n.sides[0].ap
+    };
+  },
+  want: {
+    "she has a hero power at all": true,
+    "the new arsenal card": "Swift Shot",
+    "it is face up": true,
+    "…so its own trigger fired": true,
+    "the old one is on the BOTTOM": 900,
+    "the action point is kept": 1
+  }
+},
+
+{
+  name: "an ARROW off the top gains dominate, and the wall obeys it",
+  why: "\"If it's an arrow, it gets dominate until end of turn\" — the " +
+       "subject is read off the printed type line, and the grant is only " +
+       "real if it survives all the way to `pend.defCap`, which is what " +
+       "BOTH walls are built from. A stamp nobody reads is a no-op.",
+  run(c){
+    const stamped = Object.assign(c.card("Swift Shot", 1, 800),
+      {_faceUp: true, _upTurn: 3, _arsKw: ["dominate"]});
+    const plain = Object.assign(c.card("Swift Shot", 1, 801),
+      {_faceUp: true, _upTurn: 3});
+    const play = arrow => {
+      const g = c.state({arsenal: arrow, deck: [c.card("Nimblism", 1, 802)],
+                         res: 9, ap: 1, hand: []}, {},
+                        {actor: 0, turnPlayer: 0, turn: 3});
+      return c.exec(g, arrow, "arsenal", -1);
+    };
+    const n = play(stamped);
+    const blk = uid => ({uid, name: "Blocker " + uid, tt: "Guardian Action",
+                         pitch: 1, cost: 1, power: 2, def: 3, tx: "", kw: []});
+    const wall = Object.assign({}, n, {phase: "action", step: "defend", priority: 0,
+      passed: [], attacker: 0, stack: [],
+      pend: Object.assign({}, n.pend, {target: {kind: "hero"}}),
+      sides: [n.sides[0], Object.assign({}, n.sides[1], {hand: [blk(61), blk(62)], gear: []})]});
+    const first = c.reduce(wall, {t: "defend", uid: 61}, 1);
+    return {
+      "the arrow reaches the chain with a cap": (n.pend || {}).defCap,
+      "an unstamped copy caps nothing":         (play(plain).pend || {}).defCap,
+      "one blocker is legal":                   c.J.legal(wall, {t: "defend", uid: 61}, 1),
+      "a second is refused":  /more than 1/.test(String(c.J.legal(first, {t: "defend", uid: 62}, 1)))
+    };
+  },
+  want: {
+    "the arrow reaches the chain with a cap": {n: 1, count: "hand"},
+    "an unstamped copy caps nothing": null,
+    "one blocker is legal": null,
+    "a second is refused": true
+  }
 }
 
 ];

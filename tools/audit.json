@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-01T02:04:57.860Z",
- "appVer": "3.69",
+ "generated": "2026-09-01T16:03:35.604Z",
+ "appVer": "3.70",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 358,
+  "full": 359,
   "part": 35,
-  "none": 12
+  "none": 11
  },
  "heroes": {
   "kayo": {
@@ -136,28 +136,26 @@
    "tt": "Ranger Hero - Young",
    "tx": "Once per Turn Action - 0: Put a card from your arsenal on the bottom of your deck. If you do, put the top card of your deck face-up into your arsenal. If it's an arrow, it gets dominate until end of turn. Go again",
    "statics": [],
-   "power": null,
+   "power": "once/turn: Put a card from your arsenal on the bottom of your deck",
    "clauses": [
     {
      "t": "Once per Turn Action - 0: Put a card from your arsenal on the bottom of your deck",
-     "covered": false
+     "covered": true
     },
     {
      "t": "If you do, put the top card of your deck face-up into your arsenal",
-     "covered": false
+     "covered": true
     },
     {
      "t": "If it's an arrow, it gets dominate until end of turn",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Go again",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "4 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "dorinthea": {
    "name": "Dorinthea",
@@ -5648,24 +5646,20 @@
     "go again",
     "reload"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If this card's {p} is greater than its base, it gets go again and \"When this hits, reload.\"",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If this card's {p} is greater than its base, it gets go again and \"When this hits, reload.\""
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If this card's {p} is greater than its base, it gets go again and \"When this hits, reload.\"",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "call in the big guns|1": {
    "name": "Call in the Big Guns",

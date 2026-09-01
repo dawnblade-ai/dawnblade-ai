@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.70
+**Current version:** v3.71
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1692 drills**.
+This is `node --test "test/*.test.js"` — currently **1707 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -303,6 +303,143 @@ returned but never checked is a FAILURE rather than a silence.
 argument `pow6` does not take. Check your own fixture before believing a
 new instrument — v3.50's sabotage pass found four weak drills to four real
 bugs.
+
+### AZALEA — THE HERO ABILITY *IS* THE DECK (v3.71)
+
+Her deck read **28 of 32 `full`** and her hero read **nothing at all**.
+`parseHeroPower` refused the line, so `build.js` built her no powCard and
+neither board could offer it — while every arrow in the deck triggers on
+being put **face UP** into the arsenal and **Crow's Nest** watches for one
+put face-up **from the DECK**, which nothing in the pool could do. Read
+the hero ability before the cards (v2.55, Kayo), for the second time.
+
+**THREE SENTENCES, ONE OP.** Two of them reach across the clause split —
+*"if you DO"* names the first sentence's put, *"IT"* names the card the
+second one moved. Three independent ops would need `runOps` to thread
+"did the last one fire" and "which card was it" between them, which is
+state no op carries, so the reader is a WHOLE-CARD one in `fxParse`.
+
+**"IF YOU DO" IS LOAD-BEARING.** An empty arsenal puts nothing on the
+bottom, so nothing comes off the deck. Read unconditionally it is
+strictly better than printed on the one state where the cost cannot be
+paid. (With an EMPTY DECK the same card comes straight back, face up —
+the literal reading, and right. The first drill written for it expected
+the opposite: **check your own fixture**, fourth time.)
+
+**THE FACE-UP WALK IS ONE BODY NOW** (`faceUpArsenal`). It was inline in
+`applyAnswer` because a `pick` from hand was the only route that existed;
+a second copy is how one board fires Swift Shot's go again and the other
+does not. `heave` is a THIRD site that sets `_faceUp` and fires no
+trigger — measured (Thunder Quake is Guardian, no arrow deck holds it),
+latent, and recorded rather than half-moved.
+
+**`parseHeroPower` ACCEPTS A SECOND NAMED SHAPE**, never a relaxation.
+The powCard carries the whole printed line and `execute` re-reads it, so
+answering on the first sentence alone costs nothing — the same argument
+v2.34 makes for the arsenal PUT, and the same narrowness.
+
+**AND THE GRANTED-KEYWORD VOCABULARY IS CLOSED.** `dominate` is the one
+keyword an arsenal stamp can be spent on — `parser.defCap` is its single
+reader — so an unknown keyword drops the GRANT and keeps the cycle.
+v3.55's rule about counter kinds, one mechanic over.
+
+### THE LATE CONDITIONS ADDED TO A NUMBER NOBODY SPENT (v3.71)
+
+Three printed shapes cannot be answered when the card is played:
+`pumped` (*"if this has {p} greater than its base"*), `defLt2any`
+(*"defended by fewer than 2 cards"*) and `defLt2` (*"…non-equipment
+cards"*). They were evaluated inside **`linkPayload`**, which is handed
+the damage **DEALT** and is called *after* both boards have already
+subtracted it from life — so a `+N{p}` there moved the crush threshold
+and the on-hit gate and **never once touched a hero**.
+
+| card | printed |
+|---|---|
+| Short Shrift · Wee Wrecking Ball · Walk in My Shoes | +1{p} when pumped |
+| **Widowmaker** (Azalea's) | +3{p} against one defender |
+
+Twelve records, every one **WEAKER than printed** — the direction the
+one-sided sweep is built not to look in — and all `tier: full`.
+
+**THEY LIVE IN `linkPumps`**, whose whole job is the attack's power
+before the wall. The arithmetic is unchanged (`(power + N) - wall`) and
+it is the ONLY placement under which `heroHit` can be right: a swing
+blocked to nothing that the bonus lifts back over the wall has now hit,
+and the old ordering had already decided it had not.
+
+**AND `pumped` ASKED THE WRONG NUMBER** — the dealt damage against the
+printed base, so 4 pumped to 6 and met by a wall of 3 was "not pumped".
+
+**AND THE FEED CONTRADICTED ITSELF.** `execute`'s loop had no case for
+any of the three, so they fell through to `false` and printed *"condition
+not met (pumped)"* four lines before *"pumped above base — +1 power"*.
+**`LATE_CONDS` is one list with two readers** — the skip and
+`pend.lateConds` — because two copies drift into a condition that is
+skipped and then never run.
+
+### AN ANCHOR IS WRITTEN AGAINST THE LEVELLED TEXT (v3.71)
+
+The pool prints **two wordings of `pumped`**: three Guardian attacks say
+*"this HAS {p} greater than its base"*, Bolt'n' Shot says *"this CARD'S
+{p} IS greater than its base"* — v3.65's rule, and v3.36's.
+
+**AND THE WIDENING DID NOT FIRE**, because `SYNONYMS` rewrites *"this
+card's"* to *"this's"* before `classifyClause` sees a word of it. A
+pattern spelling the PRINTED form matches nothing and looks exactly like
+a pattern that is simply wrong. **That table is the first place to look
+when a widening you verified in isolation does nothing.** v3.53 is the
+same lesson from the other end, where the lowercasing ate a printed NAME.
+
+Bolt'n' Shot went `none` → `full` on that alternation alone: its rider
+(*"and \"When this hits, reload.\""*) had always parsed, and `reload` has
+been live since v3.69.
+
+### A GRANTED dominate NEVER REACHED THE TABLE'S WALL (v3.71)
+
+`parser.defCap` merges a held grant with the card's PRINTED keyword and
+both walls call it — but `_kwGrant` is resolution-scoped and `judge.js`
+calls `defCap` with no `kwGrant` at all. **Pulping** is the pool's only
+such card and its restriction was dropped at the table for as long as the
+table has resolved card text. v3.01's shape.
+
+Folded onto `pend` at **DECLARATION** — the only moment both facts exist
+— and idempotent for a card that prints the keyword, so it adds the
+granted case and changes nothing else.
+
+**THE MESSAGE BELONGS TO THE TAKEN GRANT, NOT THE MERGED CAP.** Folded
+together, an attack that simply PRINTS dominate announced itself as
+*"what that restriction was waiting for"* — a feed line about a grant
+that never existed.
+
+### A DRILL THAT DRIVES A REDUCED ENGINE REPORTS ON THE REDUCED ONE (v3.71)
+
+`test/sparring.test.js` built a card map for `buildSideDefault` and never
+called `J.setDb` — so **every game it drove ran with no database
+registered**, and `effects.js` resolves a token through `getDb()`: Kayo's
+Might, every Runechant and every Frostbite silently minted nothing.
+
+It surfaced as the mirror-balance band breaking. Enforcing Pulping's
+dominate swung that thinner game **10-2**; with the database registered
+the same fix moves it **not at all** (7-5 either way, measured both ways
+round). **When a band like that breaks, look at what the fixture is
+PLAYING before you widen it** — v3.00's silent-skip lesson wearing a
+different hat.
+
+### A ONE-SIDED HERO LEDGER, ONE LAYER IN (v3.71)
+
+`tools/audit.js`'s `analyzeHero` asked `HERO_STATICS` and
+`parseHeroPower` — and `parseHeroPower` answers about the ability's FIRST
+sentence only. Everything after it is read by `fxParse` over the
+powCard's whole printed line (v3.39's `_hEffFull`), so a fully built
+ability reported as three unread clauses. v3.21's shape, one layer in.
+
+The line comes from **`build.heroAbilityLine`**, exported for the
+purpose: an audit that re-derived it is the no-mirror rule broken between
+a tool and the engine. `analyzeHero` is exported too, so
+`test/dorinthea.test.js` stops re-deriving the covered-test inline — its
+copy already knew nothing about the riders and would have called Azalea
+unfinished. **Bravo is the control**: his deck reads 100% and his hero
+0%, so the census cannot pass by answering TRUE for everything.
 
 ### A STALE `pending` IS LOAD-BEARING, AND THE LEDGER IS DRILLED NOW (v3.70)
 

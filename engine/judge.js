@@ -1304,7 +1304,8 @@ function strike(g){
      equipment that defended"). It is asked for the equipment COUNT rather
      than reading the defenders itself, because how a seat holds its
      declarations is this file's business and not the card's. */
-  const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length}));
+  const pre = withEffects(n, (fx, s) => fx.linkPumps(s, {equipDefenders: spentGear.length,
+    defenders: spentGear.length + handBlockers, handBlockers}));
   n = pre.game;
 
   let total = Math.max(0, (pre.total || 0) - wall);
@@ -1389,8 +1390,7 @@ function strike(g){
      board and wrong on this one. Briar's Earth reads it. */
   const heroHit = total > 0 && !(link.target && link.target.kind === "ally");
   const paid = withEffects(n, (fx, s) => fx.linkPayload(s, {
-    total, pumps: pre.pumps, handBlockers,
-    defenders: spentGear.length + handBlockers, blkNote, heroHit}));
+    total, pumps: pre.pumps, blkNote, heroHit}));
   n = paid.game;
 
   /* CR 7.5.5 — if prevention means no damage is dealt it is NOT a hit, so

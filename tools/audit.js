@@ -24,6 +24,7 @@ const path = require("path");
 const P = require("../engine/parser");
 const G = require("../engine/game");
 const C = require("../engine/cards");
+const B = require("../engine/build");
 const { KEYWORDS, SYMBOLS } = require("./ledger");
 const { loadData, cardDbPath, hasLiveDb } = require("../test/helpers/extract");
 
@@ -203,16 +204,42 @@ function analyzeCard(rc){
   };
 }
 
+/* Two splitters, one clause. The audit breaks hero text on `/\.\s+/` and
+   `fxParse` keeps the final sentence's period (v3.45), so the two spellings
+   of one sentence are levelled before they are compared. */
+const heroClauseKey = t => String(t).toLowerCase().replace(/\s+/g," ").replace(/\.+$/,"").trim();
+
 function analyzeHero(rec, heroName){
   if(!rec) return {name: heroName, flags:["UNRESOLVED — hero not found in database"], clauses:[], statics:[], power:null};
   const tl = P.clean(rec.tx||"").toLowerCase();
   const statics = HERO_STATICS.filter(s=>s.re.test(tl)).map(s=>s.note);
   const power = P.parseHeroPower(rec.tx||"");
+  /* THE ABILITY'S OWN RIDERS ARE READ BY `fxParse`, NOT BY THIS FUNCTION
+     (v3.71). `parseHeroPower` answers about the ability's FIRST sentence;
+     `build.js` then hands the powCard the WHOLE printed line (v3.39's
+     `_hEffFull`) and `execute` re-reads it, so every sentence after the
+     first is read exactly as a card's would be.
+
+     Without this the audit reported a fully built hero ability as three
+     unread clauses — v3.21's one-sided ledger, which is the reason that
+     entry says a hero ability is finished when the clause is BUILT *and*
+     the ledger has been told. The line comes from `build.heroAbilityLine`
+     rather than being re-derived here: one body, two readers.
+
+     A unique fixture NAME, because `fxParse` memoizes on `name|pitch`. */
+  const abLine = power ? B.heroAbilityLine(rec, P.parseHeroPower(rec.tx||"")) : "";
+  const abRead = new Set();
+  if(abLine){
+    const abFx = P.fxParse({name: "hero-ability|" + (rec.n || heroName), pitch: 0,
+                            tt: "Hero Ability", kw: [], tx: abLine});
+    for(const c of abFx.clauses) if(c.st !== "skip") abRead.add(heroClauseKey(c.t));
+  }
   const clauses = (rec.tx||"").split(/\n+/).map(s=>P.clean(s)).filter(Boolean)
     .reduce((a,s)=>a.concat(s.split(/\.\s+/)),[]).map(s=>s.trim()).filter(Boolean).map(cl=>{
     const cll = cl.toLowerCase();
     const covered = HERO_STATICS.some(s=>s.re.test(cll))
-      || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl));
+      || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl))
+      || abRead.has(heroClauseKey(cl));
     return {t:cl, covered};
   });
   const flags = [];
@@ -379,4 +406,11 @@ async function main(){
   if(undocSym.length) console.log("UNDOCUMENTED symbols:", undocSym.join(", "));
 }
 
-main().catch(e=>{ console.error(e); process.exit(1); });
+/* ONE COPY OF "IS THIS HERO CLAUSE READ", TWO READERS (v3.71).
+   `test/dorinthea.test.js` used to re-derive that test inline — the
+   no-mirror rule broken between a drill and the tool it is auditing, and
+   the drill was silently a version behind the moment the tool learned to
+   ask `fxParse` about the ability's riders. Exported instead, behind a
+   `require.main` guard so requiring this file audits nothing. */
+if(require.main === module) main().catch(e=>{ console.error(e); process.exit(1); });
+module.exports = {analyzeHero, HERO_STATICS, heroClauseKey};

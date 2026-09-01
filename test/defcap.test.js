@@ -200,7 +200,19 @@ test("DRIVEN: Confidence's grant is TAKEN by the attack it names", {skip}, () =>
                     {}, {turn: 3, actor: 0, turnPlayer: 0});
   const atk = {...H.card("Brutal Assault", 1), uid: 40};
   const out = J.withEffects({...g, stack: []}, (fx, s) => fx.execute(s, atk, "hand", 0));
-  assert.deepEqual(out.pend.defCap, {n: 2, count: "nonBlock", q: {aac: true}},
+  /* WHAT THE WALL READS, AND NOTHING ELSE (v3.71). This used to assert the
+     whole entry INCLUDING its `q` — but `pend.defCap` now goes through
+     `parser.defCap`, which merges the held grant with the card's own
+     dominate and rebuilds `{n, count}`. The qualifier had already done its
+     one job by then: it decided that THIS card is the one the grant named,
+     and `takeDefCap` spent it on that basis. Neither wall has ever read
+     `pend.defCap.q` — `defCap` drops it too — so carrying it here was
+     incidental rather than load-bearing.
+
+     The fixture was read before the assertion was reshaped (v3.31's rule);
+     the `q` in the fixture is what makes the grant match, and it is still
+     asserted where it matters, by the grant being SPENT below. */
+  assert.deepEqual(out.pend.defCap, {n: 2, count: "nonBlock"},
     "the cap must ride on the link — the wall is built from `pend` on both boards");
   assert.deepEqual(out.sides[0].defCapNext, [], "…and the grant is spent");
 });

@@ -53,8 +53,24 @@ const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
        allyAttack, abilityGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
-       pow6, zonePow, isAtkActionCard} = P;
+       pow6, zonePow, isAtkActionCard, defCap} = P;
 const {resolveEntry} = C;
+
+/* ---- THE CONDITIONS THAT CANNOT BE ANSWERED AT DECLARATION (v3.71) ----
+   Three printed shapes whose answer is settled at the WALL rather than
+   when the card is played:
+
+     pumped      "if this has {p} greater than its base"
+     defLt2      "…defended by fewer than 2 non-equipment cards"
+     defLt2any   "…defended by fewer than 2 cards"
+
+   ONE LIST, TWO READERS. `execute` skips them (so the feed does not
+   report them unmet and then grant them anyway) and builds `pend.lateConds`
+   from the same names, which `linkPumps` evaluates once the attack's power
+   is settled. Written out twice they drift, and the drift is a condition
+   that is skipped and then never run — a printed bonus that silently
+   vanishes. */
+const LATE_CONDS = ["pumped", "defLt2", "defLt2any"];
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
@@ -624,6 +640,59 @@ function makeEffects(ctx){
         foeMut(n).arsenal = null;
         foeMut(n).deck = [...foe(n).deck, a];
         n = L(n, `${srcName}: ${a.name} goes to the bottom of ${foe(n).name}'s deck.`);
+      }
+      /* ---- AZALEA'S ARSENAL CYCLE (v3.71) ---------------------------
+         "Put a card from your arsenal on the bottom of your deck. If you
+         do, put the top card of your deck face-up into your arsenal. If
+         it's an arrow, it gets dominate until end of turn."
+
+         ONE OP FOR THREE SENTENCES, because two of them reach across the
+         clause split: "if you DO" is conditional on the first actually
+         happening, and "IT" is the card the second put. Three independent
+         ops would need `runOps` to thread "did the last one fire" and
+         "which card was it" between them, which is state no op carries.
+
+         "IF YOU DO" IS LOAD-BEARING. With an empty arsenal nothing is put
+         on the bottom, so nothing comes off the deck — the ability does
+         NOTHING, and the player is told so rather than handed a free
+         face-up card. Reading the second sentence unconditionally would
+         make her hero strictly better than printed on the one board state
+         where the cost cannot be paid. */
+      else if(k==="arsCycle"){
+        const grant = v || null;
+        const out = act(n).arsenal;
+        if(!out){ n = L(n, `${srcName}: the arsenal is empty — nothing to cycle.`); return; }
+        actMut(n).arsenal = null;
+        actMut(n).deck = [...act(n).deck, out];
+        /* THE SEAT IS NAMED BY THE COLON, NOT BY A POSSESSIVE (v2.83's
+           rule, and the reason heave's own note gives). `act(n).name` is
+           literally "You" on the trainer, so "${act(n).name}'s deck"
+           reads "You's deck" there and a hero name at the table — one
+           string that is wrong on exactly one of the two boards. Three
+           older sites in this file still say it; recorded in HANDOFF.md
+           rather than swept in on a card change. */
+        n = L(n, `${act(n).name}: ${srcName} — ${out.name} goes to the bottom of the deck.`);
+        if(!act(n).deck.length){ n = L(n, `${srcName}: the deck is empty — nothing comes back.`); return; }
+        const top = act(n).deck[0];
+        actMut(n).deck = act(n).deck.slice(1);
+        actMut(n).arsenal = top;
+        /* THE SHARED BODY (v3.71) — an arrow's own "when this is put
+           face-up into your arsenal" trigger fires here exactly as it does
+           on a pick from hand, because there is one body and not two. */
+        n = faceUpArsenal(n, [], srcName);
+        /* "IF IT'S AN ARROW, IT GETS DOMINATE UNTIL END OF TURN." The
+           subject is read off the card's printed TYPE LINE — a stamp, not
+           a rewrite of its keywords, so it expires with `_upTurn` if the
+           arrow is never played (v2.33). `execute` hands it to
+           `parser.defCap` at declaration. */
+        if(grant && grant.tt){
+          const cur = act(n).arsenal;
+          const isIt = new RegExp("\\b" + grant.tt + "\\b", "i").test((cur && cur.tt) || "");
+          if(isIt){
+            actMut(n).arsenal = {...cur, _arsKw: [...(cur._arsKw||[]), grant.kw]};
+            n = L(n, `${cur.name} is ${/^[aeiou]/i.test(grant.tt)?"an":"a"} ${grant.tt} — it gains ${grant.kw} this turn.`);
+          } else if(cur) n = L(n, `${cur.name} is no ${grant.tt} — no ${grant.kw}.`);
+        }
       }
       else if(k==="allArsBottom"){
         /* ALL arsenals — the caster's too. Fault Line prints "all cards in
@@ -1737,6 +1806,19 @@ function makeEffects(ctx){
        second time on resolution. */
     n._discWay = [];
     n._kwGrant = [];        // cleared with _discWay, and for the same reason
+    /* A KEYWORD THE ARSENAL STAMPED ON THIS CARD (v3.71). Azalea's hero
+       ability grants dominate to an ARROW it turns face up, and the grant
+       is printed "until end of turn" — so it waits on the card, beside
+       `_arsPow` and `_arsGA`, and is spent when the card is played. It
+       joins `_kwGrant` rather than being a fourth thing to read: that list
+       is already the one answer to "what did this resolution grant", and
+       `parser.defCap` is already its reader. `_upTurn` is what makes "this
+       turn" mean this turn — an arrow held over to the next turn keeps the
+       card and loses the keyword. */
+    if(card._upTurn === n.turn && (card._arsKw||[]).length){
+      n._kwGrant = [...n._kwGrant, ...card._arsKw.map(x => String(x).toLowerCase())];
+      n = L(n, `${card.name} came out of the arsenal with ${card._arsKw.join(" and ")}.`);
+    }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
     const preRan = new Set();
     if(fx.ops.some(o=>o[0]==="discardRandom")){
@@ -1757,6 +1839,18 @@ function makeEffects(ctx){
          skipped here and evaluated by the LATE pass below, after the
          card's own ops have actually run. */
       if(/^way:/.test(cond)) return;
+      /* AND NEITHER CAN A LATE CONDITION (v3.71), for the same reason one
+         step further out: `pumped` and the two defender counts are settled
+         at the WALL, and this loop runs at declaration. They were falling
+         through to the default `false` here, so the feed said "condition
+         not met (pumped)" and then, four lines later, "pumped above base —
+         +1 power". THE FEED CONTRADICTING ITSELF is the sev-2 category the
+         player trusts (v3.60), and the state was right the whole time.
+
+         Only on the attacking route: `pend.lateConds` is built from this
+         same list on that branch alone, so a non-attack printing one has
+         no late pass to reach and keeps its honest refusal here. */
+      if(attacking && LATE_CONDS.indexOf(cond) >= 0) return;
       /* "WHEN THIS ATTACKS A HERO, IF …" is a trigger with a subject
          wrapped around a gate (v3.46). Mocking Blow booed the crowd off an
          attack on an ally, which is a hero's reaction to being hit by a
@@ -2123,8 +2217,28 @@ function makeEffects(ctx){
          the link because the WALL is built from `pend` on both boards, and
          `parser.defCap` is the one reader that combines it with the card's
          own dominate. */
-      const _cap = takeDefCap(n, card, qCtx);
-      if(_cap) n = L(n, `${card.name} is what that restriction was waiting for — no more than ${_cap.n} ${_cap.count==="nonBlock"?"non-block":"hand"} card${_cap.n===1?"":"s"} may defend it.`);
+      /* THE CARD'S OWN DOMINATE IS FOLDED IN HERE, NOT LEFT TO THE WALL
+         (v3.71). `parser.defCap` merges a held grant with the card's
+         printed keyword, and BOTH walls call it — but judge.js calls it
+         with no `kwGrant`, and `_kwGrant` is resolution-scoped, so a
+         dominate the card was GRANTED rather than printed reached the
+         trainer's wall and never the table's. Pulping is the pool's only
+         such card ("if a card with 6 or more {p} is discarded this way,
+         this gets dominate") and its restriction was silently dropped at
+         the table for as long as the table has resolved card text.
+
+         Folding it onto `pend` is idempotent for a card that PRINTS
+         dominate — the wall re-reads the same card and takes the tightest
+         of two identical caps — so this adds the granted case and changes
+         nothing else. Declaration is the only moment both facts exist. */
+      /* THE MESSAGE BELONGS TO THE TAKEN GRANT, NOT TO THE MERGED CAP.
+         Folded together, an attack that simply PRINTS dominate announced
+         itself as "what that restriction was waiting for" — a feed line
+         about a grant that never existed, which is the sev-2 category the
+         player trusts. Two names, two facts. */
+      const _held = takeDefCap(n, card, qCtx);
+      if(_held) n = L(n, `${card.name} is what that restriction was waiting for — no more than ${_held.n} ${_held.count==="nonBlock"?"non-block":"hand"} card${_held.n===1?"":"s"} may defend it.`);
+      const _cap = defCap(card, _held, {kwGrant: n._kwGrant});
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
       /* Verse counters unwind into runechants. The new runechants are minted
          AFTER the board is rebuilt, not during — mkRune appends to the board
@@ -2315,7 +2429,7 @@ function makeEffects(ctx){
          which was FALSE with `by` absent and is FALSE now for your own
          swing — and the dummy's swing is the `[3,4,5]` scalar on
          `n.incoming` with no pend at all. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>x.cond==="defLt2"||x.cond==="defLt2any"||x.cond==="pumped"), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -2811,6 +2925,56 @@ function makeEffects(ctx){
     return {game: n, dbuff, why: null};
   };
 
+  /* ---- TURNING THE ARSENAL CARD FACE UP (v2.33, one body at v3.71) ----
+     THE EVENT IS ONE BODY, OR IT IS NOT AN EVENT (v3.17). This was written
+     inline in `applyAnswer`, which was the only site that existed while the
+     only way a card reached the arsenal face-up was a `pick` from hand.
+     Azalea's hero ability puts one there FROM THE DECK, and a second copy
+     of the trigger walk is how one board comes to fire Swift Shot's go
+     again and the other does not.
+
+     `_upTurn` is what makes "this turn" mean this turn: the stamps expire
+     with the turn if the arrow is never played.
+
+     `stamp` is the SOURCE's own rider — Bull's Eye Bracers prints "It gains
+     +1{p} until end of turn", where "it" is the arrow that was just put
+     (v2.34). It STACKS with the arrow's own trigger, and the parser holds
+     it back from `fx.self` precisely so it lands on the arrow rather than
+     on the equipment.
+
+     KNOWN, AND MEASURED RATHER THAN FIXED BLIND: `heave` (v3.32) is a third
+     site that sets `_faceUp` and fires no trigger. It is module-level and
+     returns `{game,msgs,ops}` rather than threading `n`, and Thunder Quake
+     is the pool's only heave card — a Guardian/Brute action with no
+     arsenal trigger of its own, in no deck that holds an arrow. Latent,
+     recorded in HANDOFF.md rather than half-moved. */
+  /* A FUNCTION DECLARATION, so it is hoisted: `runOps` sits 2,300 lines
+     above it in this closure and a `const` arrow would be in the temporal
+     dead zone for any reader of the file (v3.12's `quotedOnHit`, same
+     reasoning one module over). */
+  function faceUpArsenal(n0, stamp, srcName){
+    let n = n0;
+    const put = act(n).arsenal;
+    if(!put || put._faceUp) return n;
+    const pfx = fxParse(put);
+    const up = {...put, _faceUp:true, _upTurn:n.turn};
+    for(const op of (pfx.arsenalUp||[])){
+      if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+        n = L(n, `${put.name} goes face up — +${op[1]} power this turn.`); }
+      else if(op[0] === "ga"){ up._arsGA = true;
+        n = L(n, `${put.name} goes face up — it will go again this turn.`); }
+      else n = runOps(n, [op], put.name);
+    }
+    for(const op of (stamp||[])){
+      if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
+        n = L(n, `${srcName}: ${put.name} also gains +${op[1]} power this turn.`); }
+    }
+    actMut(n).arsenal = up;
+    if(!(pfx.arsenalUp||[]).length && !(stamp||[]).length)
+      n = L(n, `${put.name} set face up in arsenal.`);
+    return n;
+  }
+
   const applyAnswer = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
@@ -3032,35 +3196,8 @@ function makeEffects(ctx){
       const put = act(n).arsenal;
       if(put) n = L(n, `${act(n).name}: ${put.name} goes into the arsenal face down.`);
     }
-    if(p.tag === "pick" && p.to === "arsenal" && p.faceUp){
-      const put = act(n).arsenal;
-      if(put && !put._faceUp){
-        const pfx = fxParse(put);
-        const up = {...put, _faceUp:true, _upTurn:n.turn};
-        for(const op of (pfx.arsenalUp||[])){
-          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
-            n = L(n, `${put.name} goes face up — +${op[1]} power this turn.`); }
-          else if(op[0] === "ga"){ up._arsGA = true;
-            n = L(n, `${put.name} goes face up — it will go again this turn.`); }
-          else n = runOps(n, [op], put.name);
-        }
-        /* THE SOURCE'S OWN STAMP, on top of the arrow's trigger (v2.34).
-           Bull's Eye Bracers prints "It gains +1{p} until end of turn", where
-           "it" is the arrow that was just put. That is a SECOND stamp, and it
-           stacks with the arrow's own: an arrow set with the Bracers gets
-           both. "Until end of turn" and "this turn" are the same duration, so
-           both ride on _upTurn and expire together if the arrow is not
-           played. The parser holds this back from fx.self precisely so it
-           lands on the arrow instead of on the equipment. */
-        for(const op of (p.arsStamp||[])){
-          if(op[0] === "self"){ up._arsPow = (up._arsPow||0) + op[1];
-            n = L(n, `${p.src}: ${put.name} also gains +${op[1]} power this turn.`); }
-        }
-        actMut(n).arsenal = up;
-        if(!(pfx.arsenalUp||[]).length && !(p.arsStamp||[]).length)
-          n = L(n, `${put.name} set face up in arsenal.`);
-      }
-    }
+    if(p.tag === "pick" && p.to === "arsenal" && p.faceUp)
+      n = faceUpArsenal(n, p.arsStamp || [], p.src);
     n = {...n, actor: pWasActor};
     return openPrompt(winCheck(n));
   };
@@ -3481,6 +3618,70 @@ function makeEffects(ctx){
       total += op[1]*eq;
       n = L(n, `${n.pend.card.name}: ${eq} equipment defending — +${op[1]*eq} power.`);
     }
+    /* ---- THE STRUCK POWER IS RECORDED HERE (v3.71) --------------------
+       "If this has {p} greater than its base" is a question about the
+       attack's POWER, and this is the moment that number is settled — CR
+       7.5 has not happened yet, nothing has been blocked, and `capNoPump`
+       has had its say. `linkPayload` receives the DAMAGE DEALT instead, so
+       every reader over there was comparing a post-wall number against a
+       printed base: Short Shrift, Wee Wrecking Ball and Walk in My Shoes
+       were pumped to 6 over a base of 4, met a wall of 3, and were told
+       they were "not pumped above base".
+
+       WEAKER THAN PRINTED, so the one-sided fairness sweep is blind to it,
+       and all three read `tier: full` — the clause was consumed and then
+       asked the wrong number.
+
+       A TRACE BELONGS WHERE THE FACT BECOMES TRUE (v3.62), and it goes on
+       `pend` rather than into the info object for the reason v3.24 gives:
+       an argument threaded through two call sites is an argument one of
+       them will drop, silently and with a passing drill. */
+    /* `_struck` IS THE POWER BEFORE THE CARD'S OWN LATE BONUS, stamped
+       here rather than after the loop below: `condOnHit`'s `pumped` gate
+       asks "was this attack pumped", and a +1 that only fires BECAUSE it
+       was pumped must not be the evidence that it was. */
+    n.pend = {...n.pend, _struck: total};
+    /* ---- THE LATE CONDITIONS (moved here at v3.71) --------------------
+       Three printed shapes, and every one of them is a question about the
+       attack's POWER that could not be asked at declaration:
+
+         pumped      "if this has {p} greater than its base"   — settled by
+                     the line above, once reactions and caps have had their say
+         defLt2any   "defended by fewer than 2 CARDS"          — equipment counted
+         defLt2      "…fewer than 2 NON-EQUIPMENT cards"       — a different set,
+                     and the pool prints both
+
+       The two defender counts are the CALLER's answer, like the wall
+       itself: how a seat holds its declarations is each board's business
+       and not the card's. A caller that says nothing gets 0, which reads
+       as "nothing defended" — the generous direction, so both callers are
+       drilled for passing them. */
+    const defCount = (info && info.defenders) || 0;
+    const handBlk  = (info && info.handBlockers) || 0;
+    (n.pend.lateConds||[]).forEach(({cond,op})=>{
+      const pump = (why) => {
+        if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: ${why} — go again!`); }
+        else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: ${why} — +${op[1]} power.`); }
+        else n = runOps(n,[op],n.pend.card.name);
+      };
+      if(cond==="defLt2any"){
+        if(defCount >= 2){ n = L(n, `${n.pend.card.name}: two defenders met it — no bonus.`); return; }
+        pump("fewer than 2 defenders"); return;
+      }
+      if(cond==="pumped"){
+        const base = n.pend.card.power||0;
+        /* THE STRUCK POWER, and it is the number this function just
+           computed — never the damage dealt, which is what the old site
+           compared against a printed base: an attack pumped from 4 to 6
+           and met by a wall of 3 was told it was "not pumped above base". */
+        if(total <= base){ n = L(n, `${n.pend.card.name}: not pumped above its base ${base} — no bonus.`); return; }
+        pump("pumped above base"); return;
+      }
+      if(cond==="defLt2"){ // a real count now that both seats block from hand
+        if(handBlk >= 2){ n = L(n, `${n.pend.card.name}: two cards from hand met it — the bonus is denied.`); return; }
+        pump("defended by fewer than 2 non-equipment cards");
+      }
+    });
     return {game:n, total, pumps};
   };
 
@@ -3493,10 +3694,12 @@ function makeEffects(ctx){
                       DEALT, so `total > 0` is what every on-hit clause,
                       the weapon counters and the hero's extra swing all
                       gate on)
-       handBlockers   non-equipment defenders, which is what dominate,
-                      reprise and "defended by fewer than 2" ask about
-       defenders      every defender including equipment — a DIFFERENT
-                      question, and the pool prints both
+       heroHit        whether that damage reached a HERO (CR 1.4.5)
+
+     THE DEFENDER COUNTS MOVED TO `linkPumps` AT v3.71, with the late
+     conditions that were the only thing reading them. They are questions
+     about the attack's POWER, and power is settled before the wall — see
+     the comment on the loop over there.
 
      It does not clear `pend` and does not say what phase follows. Both
      callers do that themselves, because that is the half this split
@@ -3505,35 +3708,26 @@ function makeEffects(ctx){
     let n = {...s};
     let total = info.total;
     const pumps = info.pumps || 0;
-    const handBlockers = info.handBlockers || 0;
-    const defCount = info.defenders || 0;
     const blkNote = info.blkNote || "";
     let rd = 0, runeMsg = "";
-    (n.pend.lateConds||[]).forEach(({cond,op})=>{
-      /* "defended by fewer than 2 CARDS" counts every defender, equipment
-         included — distinct from defLt2, which counts non-equipment only. */
-      if(cond==="defLt2any"){
-        if(defCount >= 2){ n = L(n, `${n.pend.card.name}: two defenders met it — no bonus.`); return; }
-        if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — go again!`); }
-        else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: fewer than 2 defenders — +${op[1]} power.`); }
-        else n = runOps(n,[op],n.pend.card.name);
-        return;
-      }
-      /* "{p} greater than its base" — true once anything has pumped it */
-      if(cond==="pumped"){
-        const base = n.pend.card.power||0;
-        if(total <= base){ n = L(n, `${n.pend.card.name}: not pumped above its base ${base} — no bonus.`); return; }
-        if(op[0]==="ga"){ n.pend={...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: pumped above base — go again!`); }
-        else if(op[0]==="self"){ total += op[1]; n = L(n, `${n.pend.card.name}: pumped above base — +${op[1]} power.`); }
-        else n = runOps(n,[op],n.pend.card.name);
-        return;
-      }
-      if(cond==="defLt2"){ // a real count now that the dummy blocks from hand
-        if(handBlockers >= 2){ n = L(n, `${n.pend.card.name}: two cards from hand met it — the bonus is denied.`); return; }
-        if(op[0]==="ga"){ n.pend = {...n.pend, ga:true}; n = L(n, `${n.pend.card.name}: defended by fewer than 2 non-equipment cards — go again!`); }
-        else n = runOps(n,[op],n.pend.card.name);
-      }
-    });
+    /* THE LATE CONDITIONS RAN HERE UNTIL v3.71, AND THEIR PUMPS WENT
+       NOWHERE. This function is handed the damage DEALT and both callers
+       have already subtracted it from life by the time it is called, so a
+       `+N{p}` added to `total` here moved the crush threshold and the
+       on-hit gate and never once touched a hero. Four unique pool cards
+       print one — Short Shrift, Wee Wrecking Ball, Walk in My Shoes and
+       Azalea's own Widowmaker (+3{p} "if defended by fewer than 2 cards")
+       — twelve records, every one WEAKER than printed, which is the
+       direction the one-sided fairness sweep cannot see, and all reading
+       `tier: full` because the clause really was consumed.
+
+       They live in `linkPumps` now, which is the piece whose whole job is
+       "what is this attack's power before the wall". The arithmetic is
+       unchanged for a bonus that was already reaching life through
+       nothing — `(power + N) - wall` — and it is the ONLY placement under
+       which `heroHit` can be right: a swing blocked to nothing that the
+       bonus lifts back over the wall has now hit, and the old ordering
+       had already decided it had not. */
     const pc = n.pend.card;
     n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!act(n).dracNext, kind:"atk"}];
     if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
@@ -3573,12 +3767,24 @@ function makeEffects(ctx){
       n.pend.condOnHit.forEach(({cond,op,heroOnly})=>{
         if(heroOnly && !heroHit){
           n = L(n, `${pc.name} hit an ally — its granted "hits a hero" bonus does not fire.`); return; }
+        /* `pumped` JOINED THIS VOCABULARY AT v3.71 and it is the reason
+           the vocabulary is worth stating out loud: Bolt'n' Shot grants
+           "when this hits, RELOAD" behind exactly that gate, and an
+           unknown cond answers FALSE (v3.26) — correctly, and silently.
+           The number is the STRUCK power, the same one `linkPumps`
+           records, never the damage that got past the wall. */
         const met = cond==="charged" ? (act(n).hist.charged||0)>0
           : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
           : cond==="marked" ? !!foe(n).marked
+          : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > (pc.power||0)
           : false;
         if(met) n = runOps(n, [op], pc.name);
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":"a differently-coloured charge"} — condition not met.`);
+        /* AND THE REFUSAL NAMES THE RIGHT CONDITION. The `else` here read
+           "needed a differently-coloured charge" for EVERY cond it does not
+           know — so an unknown gate reported itself as a charge problem on
+           a card with no charge in it, which is the feed lying about a rule
+           (v2.83's category, one board over). */
+        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
@@ -3685,7 +3891,15 @@ function makeEffects(ctx){
     if(!s.pend) return s;
     let n = {...s};
     const defLs = n.stack.filter(l=>l.k==="def");
-    const _pre = linkPumps(n, {equipDefenders: defLs.filter(l=>l.gi!=null).length});
+    /* THE DEFENDER COUNTS ARE READ BEFORE THE WALL IS SPENT, and handed to
+       `linkPumps` (v3.71): the late conditions ask about the attack's
+       POWER, which is settled before anything is subtracted. Counting them
+       from the DECLARATIONS rather than from the loop below is also the
+       more faithful reading — a card is declared as a defender whether or
+       not the loop later finds it. */
+    const _pre = linkPumps(n, {equipDefenders: defLs.filter(l=>l.gi!=null).length,
+                               defenders: defLs.length,
+                               handBlockers: defLs.filter(l=>l.gi==null).length});
     n = _pre.game;
     const pumps = _pre.pumps;
     let total = _pre.total;
@@ -3740,8 +3954,7 @@ function makeEffects(ctx){
        the attack on the stack, so they are dealt with at declaration in
        `execute`. `rd` stays 0 so the messages and hitSeq maths below read
        the same shape. */
-    const _out = linkPayload(n, {total, pumps, handBlockers,
-                               defenders: defLs.length, blkNote,
+    const _out = linkPayload(n, {total, pumps, blkNote,
                                /* the trainer has no ally targeting wired, so a
                                   resolved attack always landed on the hero */
                                heroHit: total > 0});
