@@ -13,6 +13,7 @@
     "progress": "node tools/progress.js",
     "crindex": "node tools/crindex.js",
     "play": "node tools/tourney.js",
-    "gaps": "node tools/gaps.js"
+    "gaps": "node tools/gaps.js",
+    "scenes": "node tools/scenes.js"
   }
 }

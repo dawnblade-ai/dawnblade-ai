@@ -552,6 +552,25 @@ function makeEffects(ctx){
              card discarded by one could never satisfy `discard6way`. */
           n._discWay = [...(n._discWay||[]), ...take];
           n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
+          /* AND THE SHARED DISCARD EVENT, which v3.61 left behind (v3.70).
+             That version wired this op into `_discWay` and quoted the gap
+             it was closing — "every discard path should call this" — while
+             `afterDiscard`, the body that mints Kayo's Might, kept its
+             three older call sites and not this one. HALF A GAP CLOSED
+             READS EXACTLY LIKE A WHOLE ONE.
+
+             `{random:false}` is the whole of the distinction the body
+             already draws: Beaten Trackers prints "whenever you discard a
+             RANDOM card" and is gated on it, while Kayo's clause 3 fires
+             on any discard at all. Reading the two as one event would hand
+             out a free action point every time a cost was paid by choice.
+
+             LATENT, AND MEASURED BEFORE WIRING IT: exactly one pool card
+             emits `selfDiscard` (Portside Exchange, in Gravy Bones' deck),
+             so no hero holds both it and a 6-power discard payoff today.
+             The route exists all the same, and the next card that prints a
+             non-random discard would have gone quietly uncredited. */
+          n = afterDiscard(n, take, {random: false});
         }
       }
       /* ---- THE CRUSH PAYLOADS (v3.16) ---------------------------------

@@ -43,6 +43,15 @@ jobs:
           # ANY other skip means a fixture went missing (v3.00).
           [ "$skip" = "4" ] || { echo "::error::expected 4 skips (drift), got $skip — a fixture is missing"; exit 1; }
 
+      - name: does the card DO what it prints
+        run: |
+          # SCENES (v3.70) — the behavioural half. The audit asks whether a
+          # clause was READ; this asks whether the reading was OBEYED, which
+          # is the hole six live defects went through in seven releases.
+          # It runs in `npm test` as drills too; here for its own exit code,
+          # so a CI log names the broken HERO rather than a drill index.
+          npm run scenes
+
       - name: the page still compiles
         run: |
           # html-balance.test.js proves the brackets balance, and v2.27

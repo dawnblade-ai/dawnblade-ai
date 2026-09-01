@@ -9,6 +9,97 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.70 — the instrument that drives a card and checks what happened
+
+Every other tool here answers a question about **text**:
+
+| | asks | reads card text |
+|---|---|---|
+| `npm run audit` | was the clause READ? | yes |
+| `npm run fairness` | is the reading too generous? | yes, one direction |
+| `tools/failstates.js` | is unread text dangerous? | yes |
+| `npm run play` | does the machine stay legal? | **no — by contract** |
+
+**Nothing drove a card and checked what happened.** Six live defects went
+through that hole in seven releases and **five were in cards the audit
+called `full`** — see FINISH.md §0.
+
+### `npm run scenes`
+
+Per-hero scripted scenarios: set up a real judge-shaped board, play the
+hero's actual mechanic, and observe **hands, life, zones, counters and
+action points**. Never the feed — two of v2.45's nine bugs lived under green
+drills that read the log, where the end phase really did print (a) through
+(f) in order while drawing for the wrong hero.
+
+```
+npm run scenes            arakni 4/4 · azalea 4/4 · boltyn 5/5
+npm run scenes azalea     bravo 3/3 · briar 3/3 · kayo 2/2
+```
+
+**The scenes are DATA with two readers** — `tools/scenes.js` prints the
+report and `test/scenes.test.js` runs the same objects as drills, so a green
+suite and a green report cannot disagree. That is the no-mirror rule; this
+repo has the scar that made it one.
+
+**It answers a question the drills cannot.** `test/` is organised per
+MECHANIC, which is right for building a reader and useless for "does Azalea
+work". The hero comes from the FILENAME, so a scene cannot claim to be about
+a hero whose file it is not in.
+
+**Each scene carries its own `why`**, naming the defect it exists for — that
+is a re-sabotage instruction, not documentation. Two rules are drilled: a
+scene observes at least two things (one observation is usually asserting
+that nothing crashed), and an observation returned but never checked is a
+failure, not a silence.
+
+### All eight defects were reintroduced, and all eight were caught
+
+| reintroduced | scenes failing |
+|---|---|
+| reload puts the card face UP (v3.69) | 1 |
+| ward stops reaching the table (v3.67) | 2 |
+| dominate unenforced (v3.64) | 2 |
+| reaction abilities at action speed (v3.63) | 4 |
+| Sharpen loses its reader (v3.66) | 2 |
+| Flurry's payload unread (v3.65) | 1 |
+| the Embodiment pops on a weapon swing (v3.22) | 1 |
+| `selfDiscard` stops crediting the discard event | 1 |
+
+That last one was **found by building the instrument**, which is the point of
+building it.
+
+### `selfDiscard` credited no discard event
+
+v3.61 wired that op into `_discWay` and quoted the gap it was closing —
+*"every discard path should call this"* — while **`afterDiscard`, the body
+that mints Kayo's Might, kept its three older call sites and not this one.**
+Half a gap closed reads exactly like a whole one.
+
+`{random: false}` is the whole of the distinction the shared body already
+draws: Beaten Trackers prints *"whenever you discard a **random** card"* and
+is gated on it, while Kayo's clause 3 fires on any discard at all — reading
+them as one event hands out a free action point every time a cost is paid by
+choice.
+
+**LATENT, AND MEASURED BEFORE WIRING IT.** Exactly one pool card emits
+`selfDiscard` (Portside Exchange, in Gravy Bones' deck), so no hero holds
+both it and a 6-power discard payoff today. The route exists all the same.
+
+### And the first scene I wrote was wrong, not the engine
+
+The Kayo scene invented a `{zone}` argument `pow6` does not take — it takes
+the BUILD, and a site asking about a card that IS the attack passes null,
+which is what makes the passive a threshold rule rather than a damage buff.
+**Check your own fixture before believing a new instrument**: four of eight
+sabotages at v3.50 found a weak drill rather than a weak engine.
+
+CI runs `npm run scenes` on every push. 1692 drills, 0 fail, 4 skipped.
+Fairness clean. 210 self-play games: 0 refusals, 0 violations.
+
+
+---
+
 ## v3.69 — reload put the card face UP, and face up is a different event
 
 The database carries no reminder text for any keyword. The **1HP237

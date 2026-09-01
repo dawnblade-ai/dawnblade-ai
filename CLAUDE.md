@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.69
+**Current version:** v3.70
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1664 drills**.
+This is `node --test "test/*.test.js"` — currently **1692 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -256,6 +256,83 @@ node tools/audit.js --write-baseline   # only once you've reviewed the diff —
 `test/coverage.test.js` then checks every pool card still resolves and no
 card's `fxParse` tier dropped below the pinned baseline (skips cleanly if
 `tools/.cache/card.json` / `tools/coverage-baseline.json` aren't present).
+
+### `npm run scenes` — DOES THE CARD *DO* WHAT IT PRINTS? (v3.70)
+
+```
+npm run scenes            every hero
+npm run scenes azalea     one hero, or any name fragment
+npm run scenes --all      every observation, not just the failures
+```
+
+**EVERY OTHER TOOL HERE ANSWERS A QUESTION ABOUT TEXT.** The audit asks
+whether a clause was READ; the fairness sweep whether the reading is too
+generous; `failstates.js` whether unread text is dangerous; `npm run play`
+watches behaviour and **reads no card text by contract**. Nothing drove a
+card and checked what HAPPENED — and six live defects went through that
+hole in seven releases, **five of them in cards the audit called `full`**
+(reload face-up, ward inert at the table, dominate unenforced, and the two
+reaction abilities offered at action speed).
+
+A scene sets up a real judge-shaped board, plays the mechanic, and returns
+**named observations** — hands, life, zones, counters, action points.
+**Never the feed** (v2.45: two of nine bugs lived under drills that read
+the log, where the end phase really did print (a)–(f) in order while
+drawing for the wrong hero).
+
+**THE SCENES ARE DATA WITH TWO READERS.** `tools/scenes.js` prints the
+report and `test/scenes.test.js` runs the same objects as drills, so a
+green suite and a green report cannot disagree — the no-mirror rule, in
+the place a report would otherwise rot.
+
+**IT ANSWERS A QUESTION THE DRILLS CANNOT.** `test/` is organised per
+MECHANIC, which is right for building a reader and useless for *"does
+Azalea work"*. The hero comes from the **filename**, so a scene cannot
+claim to be about a hero whose file it is not in.
+
+**EACH SCENE CARRIES ITS `why`** — the defect it exists for, which is a
+re-sabotage instruction rather than documentation. All eight defects the
+first scenes were written against were reintroduced and all eight were
+caught.
+
+**TWO RULES ARE DRILLED**: a scene observes at least two things (one
+observation is usually asserting that nothing crashed), and an observation
+returned but never checked is a FAILURE rather than a silence.
+
+**AND THE FIRST SCENE WAS WRONG, NOT THE ENGINE.** It invented a `{zone}`
+argument `pow6` does not take. Check your own fixture before believing a
+new instrument — v3.50's sabotage pass found four weak drills to four real
+bugs.
+
+### A STALE `pending` IS LOAD-BEARING, AND THE LEDGER IS DRILLED NOW (v3.70)
+
+`test/ledger.test.js` pins the SET of keywords whose status claims nothing
+is built, because `failstates.js` grades severity from that status rather
+than from a grep. It found two on its first run, both confirmed by DRIVING
+them rather than counting mentions:
+
+| | was | is |
+|---|---|---|
+| `charge` | `pending` | **live** — `fx.chargeCost` parses, `execute` charges the soul, `hist.charged` records it, four cards read `full` |
+| `surge` | `unreviewed` | **partial** — read into a `surgeOverN` condition and evaluated, but the condition is APPROXIMATED as `amp>0` rather than the damage dealt |
+
+`reload` (v3.69) was the same shape. **A mention count is a signal and never
+a verdict** — "Seismic Surge" is a token's name, not the keyword — so the
+drill pins a SET the way `wire.test.js`'s `HEADLESS` list does, and moving
+one is a deliberate edit.
+
+### CI EXISTS (v3.70)
+
+`.github/workflows/ci.yml`. Until now **nothing but a human ran `npm
+test`** — the project has zero dependencies and the suite takes 31
+seconds, so there was never a cost argument. It runs on a fresh clone with
+no card-database cache (verified by moving `tools/.cache` aside), and it
+**asserts the skip count is 4**, because v3.00's whole lesson is that a
+silent skip is not a pass. It also runs `npm run scenes`, compiles both
+`text/babel` blocks, and — after a push to `main` — curls the live URL,
+every engine module the page loads (count DERIVED from `index.html`, never
+stated) and checks the live `APP_VER` matches the repo. That closes the gap
+between "pushed" and "live" which a session cannot check for itself.
 
 ### `npm run gaps` — WHAT ONE READER CLOSES THE MOST CARDS? (v3.52)
 
@@ -2859,6 +2936,10 @@ nor the card database defines it: the database carries no reminder text for
 any of them, so guessing the semantics would break the golden rule at the
 keyword level. Answer one, then teach the parser and re-run the audit.
 
+6b2. **SCENES** (`npm run scenes`) after any card or rules change — it is
+   in `npm test` as drills and in CI, but run the REPORT when you want the
+   per-hero answer. It is the only tool here that asks whether a reading
+   was OBEYED rather than made; see "DOES THE CARD *DO* WHAT IT PRINTS?".
 6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
    games in about four minutes. Read refusals / violations / **stalls**;
    see "PLAY THE GAME" below. It found a bug 1488 drills had not.

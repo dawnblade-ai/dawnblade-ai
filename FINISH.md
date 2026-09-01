@@ -270,8 +270,8 @@ Not by what is easy to measure, and not by what is nearly done.
 
 | # | phase | why here | size |
 |---|---|---|---|
-| **1** | **C1 + C2 + C4** — CI, deploy check, ledger drill | retires three risk classes permanently, costs under a session, and every later phase inherits the safety | ½ session |
-| **2** | **`npm run scenes`** (§3) + the five scenes from §0 | the missing instrument. Build it while the six defects are fresh, so the scenes are written against known-bad behaviour rather than imagined | 1 session |
+| ~~**1**~~ | ~~**C1 + C2 + C4**~~ **DONE at v3.70** — CI on push, live-deploy verification, the ledger drill. The drill found two stale records on its first run (`charge`, `surge`) | ~~½ session~~ |
+| ~~**2**~~ | ~~**`npm run scenes`**~~ **DONE at v3.70** — 21 scenes across 6 heroes. All eight defects reintroduced and caught; building it found a ninth (`selfDiscard` credited no discard event) | ~~1 session~~ |
 | **3** | **P1 — hero abilities** · 20 clauses, 10 heroes, **Azalea and Bravo first** | the most player-visible gap in the project. Bravo's deck is already 100%; his hero is 0%. The method is proven (Kayo, v2.55–v2.63): read the hero ability *before* the cards | 3–4 sessions |
 | **4** | **P2 — the phone pass** | 13 prompt surfaces, none validated. **Needs a device and therefore needs scheduling** — it cannot be done from a session and has been carried ~25 versions | 1 session, yours |
 | **5** | **P3 — the 10 stalls** | a player can hit this. Concentrated in iyslander/blaze/enigma — low-aggression decks the policy cannot pilot. Fix is likely in `sparring.act`, not the engine | 1 session |
