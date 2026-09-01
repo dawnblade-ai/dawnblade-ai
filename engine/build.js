@@ -323,6 +323,20 @@ function heroAbilities(heroRec, displayName, code){
      names take the same shape for the same reason. */
   const becomeAgent = _agent ? _agent[1] : "";
   const returnToBrood = /at the beginning of your end phase, return to the brood/.test(_htx);
+  /* ARAKNI, TARANTULA — one of the two Agents whose STATIC is readable:
+     "Whenever a dagger you own hits a hero, they lose 1{h}."
+
+     REACHABLE THE DAY IT IS BUILT. Mark of the Huntsman x2 is in Arakni's
+     own gear and is a real swinging Dagger (power 1, "Once per Turn Action
+     - {r}{r}: Attack"), and the Graphene Chelicera is a Token Weapon -
+     Dagger — so the event exists on the board she plays with.
+
+     WITHOUT IT, BECOMING AN AGENT IS A NET DOWNGRADE: she loses her own
+     stealth passive and gains an ability nothing reads, which is faithful
+     to what is built and is not what the cards do. */
+  const _tara = _htx.match(
+    /whenever a dagger you own hits a hero, they lose (\d+)\s*\{h\}/);
+  const daggerDrain = _tara ? +_tara[1] : 0;
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
   /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
      fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
@@ -354,7 +368,7 @@ function heroAbilities(heroRec, displayName, code){
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
-    becomeAgent, returnToBrood};
+    becomeAgent, returnToBrood, daggerDrain};
 }
 
 /* ---- the build --------------------------------------------------------
@@ -591,7 +605,8 @@ function buildMatch(spec, o){
 const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave","lyathBoo",
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
-                  "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood"];
+                  "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
+                  "daggerDrain"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -612,7 +627,7 @@ const PASSIVE_TYPE = {
      ("Agent of CHAOS"), so the passive carries that word and `effects.js`
      names nothing. `returnToBrood` is a plain flag — the Agent's line
      names no set at all, it just goes home. */
-  becomeAgent: "string", returnToBrood: "boolean",
+  becomeAgent: "string", returnToBrood: "boolean", daggerDrain: "number",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into

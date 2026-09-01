@@ -207,6 +207,59 @@ module.exports = [
     "her own passive is gone while she is one": 0,
     "but her life is untouched": 20
   }
+},
+
+{
+  name: "…and as the Tarantula her daggers bite",
+  why: "v3.77 — the first Agent static the engine can run. Before it, every " +
+       "Agent's ability refused, so the transformation cost Arakni her own " +
+       "readable stealth passive and gave nothing back: a mechanic that is " +
+       "a pure DOWNGRADE, shipped quietly. Mark of the Huntsman x2 is in " +
+       "her own gear and is a real swinging Dagger, so the event is on the " +
+       "board she plays with. The sword is matched to the dagger's printed " +
+       "power so the two swings differ by the drain and nothing else.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const db = c.H.db();
+    const h = W.HEROES.find(x => x.k === "arakni");
+    const brood = B.buildSide(h, G.parseDeck(W.DECKS.arakni), db, {},
+                              RNG.make("scene-tara"), {n: 0}).b;
+    const tara = B.agentsOf(db, "chaos").find(a => /Tarantula/.test(a.n));
+    const asTara = Object.assign({}, brood, B.heroAbilities(tara, tara.n),
+                                 {_brood: brood.heroRec});
+    const dagger = Object.assign({},
+      brood.gear.find(g => /\bdagger\b/i.test(g.tt || "")), {uid: 940});
+    const sword = {uid: 941, name: "Plain Sword", tt: "Generic Weapon - Sword (1H)",
+                   ty: ["Generic", "Weapon", "Sword"], power: dagger.power,
+                   cost: null, pitch: 0, def: null, kw: [],
+                   tx: "Once per Turn Action - {r}: Attack"};
+    /* a swing, all the way through the damage step */
+    const swing = (build, piece) => {
+      const g = c.state({gear: [piece], res: 9, ap: 1, hand: []},
+                        {hp: 20, hand: []},
+                        {actor: 0, turnPlayer: 0, turn: 3, builds: [build, {}]});
+      const n = c.H.execute(g, piece, "weapon", 0, {});
+      return 20 - c.J.withEffects(n, (fx, st) => fx.resolveStack(st)).sides[1].hp;
+    };
+    return {
+      "she prints the drain, the brood does not": tara.tx.match(/lose (\d+)\{h\}/)[1],
+      "in the brood, the dagger swings for its printed power": swing(brood, dagger),
+      "as the Tarantula it takes one more":                    swing(asTara, dagger),
+      "a sword of the same power takes none of it":            swing(asTara, sword),
+      "and the brood itself never drains":                     brood.daggerDrain
+    };
+  },
+  want: {
+    "she prints the drain, the brood does not": "1",
+    "in the brood, the dagger swings for its printed power": 1,
+    "as the Tarantula it takes one more": 2,
+    "a sword of the same power takes none of it": 1,
+    "and the brood itself never drains": 0
+  }
 }
 
 ];

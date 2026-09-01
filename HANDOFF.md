@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.76 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.77 · PHASE C · HERO BY HERO
 
 ## ⚠ SIX HEROES FINISHED — WHAT IS LEFT
 
@@ -6,26 +6,57 @@ Kayo, Dorinthea, Azalea, Bravo, Boltyn and Arakni. The sweep's hero list is
 **6 heroes / 9 unread clauses**: Enigma 2/2, Fai 2/3, Lyath 2/4, Briar 1/3,
 Gravy Bones 1/2, Iyslander 1/3.
 
-**THE TWO READABLE AGENT STATICS ARE NOT BUILT** (v3.76 built the
-transformation, not the Agents' own abilities). Both are small and both
-point straight at Arakni's deck:
+### THE NEXT HERO IS LYATH, AND THE SWEEP HAS BEEN SAYING SO FOR 19 VERSIONS
 
-- **Arakni, Tarantula** — *"Whenever a dagger you own hits a hero, they
-  lose 1{h}."* Mark of the Huntsman **×2 is in her gear** and is a real
-  swinging Dagger (power 1, `Once per Turn Action - {r}{r}: Attack`), so
-  the event is reachable today. `linkPayload` is the site, beside
-  `weaponRefresh`, and `heroHit` is already the gate.
+`npm run sweep`'s **UNFAIR** block has read **1** since v3.21, and CLAUDE.md
+said it was 0 the whole time (corrected at v3.77 — a doc claim is a test
+with no assertion). The one entry is:
+
+> **Lyath Goldmane** — *"The base {p} and {d} of cards you control are
+> **halved, rounded up**."*
+
+A real unbuilt **DRAWBACK**, so he plays strictly better than printed —
+the direction that steals games, and the only UNFAIR entry in the project.
+
+**IT IS A WHOLE VERSION, NOT A RIDER.** A base-value change reaches
+`linkPumps`, `defendValue`, `gearDef` and every total shown to the player.
+Half-building it puts a number on screen that disagrees with the number
+that fought, which is v3.23's stated reason for leaving the defensive
+self-buffs alone until they could be done at the wall AND on the display.
+His second unread clause (*"defending action cards you control get +1{d}
+this turn"*) is `defendValue`'s shape and is small once the first is done.
+
+### ARAKNI — WHAT IS STILL OPEN
+
+**Tarantula is BUILT (v3.77)** — *"whenever a dagger you own hits a hero,
+they lose 1{h}"*, in `linkPayload` beside `weaponRefresh`, gated on
+`heroHit` and the piece's printed **Dagger** subtype. Becoming an Agent
+now pays out rather than being a pure downgrade.
+
 - **Arakni, Orb-Weaver** — *"Graphene Chelicerae cost you {r} less to
-  activate."* Orb-Weaver Spinneret equips one, and the Chelicera is a
-  Token Weapon - Dagger that attacks.
+  activate."* Still open, and the blocker is not the discount: **Equip a
+  Graphene Chelicera token** reads `skip` on Orb-Weaver Spinneret ×3, so
+  nothing can put one on the board. The Chelicera is a Token Weapon -
+  Dagger with Stealth and its own attack. **Slot legality is an open
+  ruling** — Arakni already carries two Marks of the Huntsman, i.e. both
+  hands. *Try the printing before booking a question* (v3.54, v3.66):
+  `card.printings[].image_url` is in the pool record.
+- **THE OTHER FIVE AGENTS refuse on their COST** — `Discard an Assassin
+  card`, which `parseHeroPower` declines by design (v3.04). Building that
+  cost shape would open all five at once, and it is the same optional-cost
+  family `npm run gaps` files under *"you may …, if you do"*.
 
-Until one of them is built, **becoming an Agent is a net DOWNGRADE**: she
-loses her own readable stealth passive and gains an ability nothing reads.
-That is faithful to what is built and it is not what the cards do.
+### RECORDED REFUSALS STILL STANDING
 
-**THE OTHER FIVE AGENTS refuse on their COST** — `Discard an Assassin
-card`, which `parseHeroPower` declines by design (v3.04). Building that
-cost shape would open all five at once.
+- **Stains of the Redback** — `effCost` takes ONE side by design (a card's
+  discount belongs to whoever is playing it), and both of its readers must
+  agree (v2.80: the cost is read twice and only one read takes resources).
+  Recorded rather than half-moved.
+- **Walk in My Shoes** — halves base {p} and {d} for a turn. Same machinery
+  Lyath's static needs; do them together.
+- **Thunder Quake's heave** sets `_faceUp` and fires no arsenal trigger —
+  measured latent (Guardian card, no arrow deck holds it), recorded at
+  v3.71 rather than half-moved.
 
 ## ⚠ ARAKNI'S AGENTS OF CHAOS — BUILT AT v3.76 (measured at v3.75)
 

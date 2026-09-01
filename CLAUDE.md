@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.76
+**Current version:** v3.77
 
 ---
 
@@ -476,6 +476,65 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### TARANTULA — AND A TRANSFORMATION THAT WAS A DOWNGRADE (v3.77)
+
+v3.76 gave Arakni six Agents to become and **every one of their abilities
+REFUSED** — five on a `Discard an Assassin card` cost `parseHeroPower`
+declines by design, Trap-Door's on a deck search. So the mechanic worked,
+announced itself in the feed, swapped the hero's whole ability half, and
+made her **strictly worse**: she lost the stealth passive she has and
+gained an ability nothing reads.
+
+**That is the no-op blind spot wearing a hero's face**, and it is worse
+than an unbuilt card, because the game TELLS the player something
+happened.
+
+> *"Whenever a **dagger** you own hits a **hero**, they lose 1{h}."*
+
+**THE EVENT IS ALREADY ON HER BOARD.** Mark of the Huntsman ×2 is in her
+own gear and is a real swinging Dagger, so nothing had to be built for the
+trigger to be reachable — `linkPayload` is the site, beside
+`weaponRefresh`, and `heroHit` has been the caller's answer since v3.45.
+*"Lose {h}"* is read as damage, the reading the parser already gives the
+printed phrase one rule over.
+
+**THE PRINTED SUBJECT IS AN OBJECT, NOT A ROUTE.** The first draft also
+gated on `from === "weapon"`, which the card never says: *"a dagger you
+own hits a hero"* is silent about HOW it hit. `pend.card` is the resolving
+card on every route, so the type test is the only thing the line actually
+restricts. **Measured before dropping it** — the pool prints exactly two
+Dagger records and both are Weapons, so nothing moves today; a
+Dagger-typed ally or attack card would have been silently refused, which
+is v3.65's ally-attack route one card over.
+
+**AND A `total > 0` BESIDE IT WAS DEAD — v3.67, IDENTICALLY.** Both
+callers fold it into `heroHit` already (the trainer `total > 0`, judge
+`total > 0 && not an ally`), so it could never fire on its own: a second
+description of CR 7.5.5 sitting beside the one that governs. Sabotage
+found it, as it found `off > 0`. **Dead RULES code is worse than dead code
+elsewhere** — it reads as a rule somebody can reach.
+
+Removing it also made the OTHER sabotage expressible: with `total > 0`
+gone, dropping `heroHit` fires the drain off a fully blocked swing, so the
+existing blocked-swing drill bites where before it could not. **A
+redundant guard does not only fail to test anything — it hides the drill
+that would.**
+
+**FOUR SILENT SABOTAGES, FOUR BETTER FIXTURES.** Every one is a shape this
+file already names, which is the point of running the pass at all:
+
+| sabotage | silent because | seen by |
+|---|---|---|
+| the magnitude hardcoded to 1 | **she prints 1** | a synthetic Agent printing 3 (v3.32, v3.74) |
+| `heroHit` dropped | the trainer wires no ally targeting | `linkPayload` driven directly, both halves (v3.45) |
+| the route re-invented | no non-weapon Dagger exists | a synthetic Dagger-typed attack card, with a Sword control |
+| the word boundary dropped | nothing real spells one subtype inside another | a *"Daggerfall Sword"* near-miss — v2.44's trap, third outing |
+
+**AND THE FIXTURE WAS WRONG BEFORE THE ENGINE WAS.** The ally drill
+expected the dealt damage in the life total; `linkPayload` is handed the
+damage **already subtracted** — its own header says so — so what comes
+back is the drain alone. Check your own fixture, fifth time.
 
 ### ARAKNI — A HERO THAT CHANGES MID-GAME (v3.76)
 
@@ -3188,10 +3247,29 @@ then have cleared the whole block, including two keywords nobody built. So:
   of the graveyard and **nothing turns a dead ally face-down**, which is the
   entire reason its ruling exists.
 
-UNFAIR is **0** as of v3.01. It went 16 → 11 when the tool stopped
-reading the wrong file, and 11 → 0 when the two keywords that actually
-remained were built (see Phase B in `FINISH.md`). The four phantasm cards
-left first, because they were fixed rather than reclassified.
+UNFAIR went 16 → 11 when the tool stopped reading the wrong file, and
+11 → 0 when the two keywords that actually remained were built (see Phase
+B in `FINISH.md`). The four phantasm cards left first, because they were
+fixed rather than reclassified.
+
+> **THIS PARAGRAPH SAID "UNFAIR IS 0 AS OF v3.01" FOR NINETEEN VERSIONS
+> AND IT WAS NOT (v3.77).** Measured across every commit that touched
+> `SWEEP.md`: it read **17** until v3.21 and has read **1** every version
+> since. The keyword work really did land; what the sentence missed is
+> that the tool's inputs kept moving under it — `analyzeHero` learned to
+> read hero riders, and a hero clause is graded like any other text.
+>
+> The standing entry is **Lyath Goldmane's halving static** — *"the base
+> {p} and {d} of cards you control are halved, rounded up"* — a real
+> unbuilt DRAWBACK, so he plays strictly better than printed. It is the
+> named next hero job and it is a whole version: a base-value change
+> reaches `linkPumps`, `defendValue`, `gearDef` and every total shown to
+> the player, and half-building it puts a number on screen that disagrees
+> with the number that fought (v3.23's rule).
+>
+> **A doc claim is a test with no assertion** (v3.41), third time. Sweep
+> the sentences that state a count the way you sweep the pool: take each
+> one, and go and re-derive it.
 
 #### A NOOP CAN CLAIM A WHOLE FAMILY (v3.16)
 

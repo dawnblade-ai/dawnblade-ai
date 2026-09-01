@@ -4058,6 +4058,53 @@ function makeEffects(ctx){
        the same turn does not refresh again — which is exactly why the
        Dawnblade is printed to reward its SECOND hit each turn and not
        its third. */
+    /* ---- ARAKNI, TARANTULA (v3.77) ---------------------------------
+       "Whenever a DAGGER you own hits a HERO, they lose 1{h}."
+
+       An Agent's own static, and the first thing the transformation
+       actually pays out: Mark of the Huntsman x2 is in her gear and is a
+       real swinging Dagger, so the event exists on the board she plays
+       with. Without a readable Agent static, becoming one was a net
+       DOWNGRADE — she lost her stealth passive and gained an ability
+       nothing reads.
+
+       "LOSE {h}" IS READ AS DAMAGE HERE, which is the reading the parser
+       already gives the printed phrase one rule over ("they lose N{h}" ->
+       `dmg`). The CR distinguishes life loss from damage; nothing in this
+       pool does yet, and inventing a second model for one Agent would be
+       two descriptions of one rule. `runOps`' `dmg` subtracts from the
+       DEFENDER and stands in front of no prevention, which is what a life
+       loss wants anyway.
+
+       THE PIECE MUST BE A DAGGER, read off its printed type line — she
+       also swings nothing else, but a passive that fires on any weapon is
+       a passive that is wrong the moment she equips one.
+
+       AND THE PRINTED SUBJECT IS AN OBJECT, NOT A ROUTE. The first draft
+       gated on `from === "weapon"` too, and that is a restriction the
+       card does not print: "a dagger you own hits a hero" says nothing
+       about HOW it hit. `pc` is the resolving card on every route, so the
+       type test is well defined for all of them and is the only thing the
+       line actually restricts. Measured before dropping it — the pool
+       prints exactly two Dagger records and both are Weapons, so nothing
+       moves today; a Dagger-typed ally or attack card would have been
+       silently refused, which is v3.65's ally-attack route one card over.
+
+       `total > 0` CAME OFF WITH IT, AND THAT ONE WAS DEAD. Both callers
+       derive `heroHit` as a conjunction that already includes it (the
+       trainer `total > 0`, judge `total > 0 && not an ally`), so the
+       extra test could never fire on its own — a second description of
+       CR 7.5.5 sitting beside the one that governs. Sabotage found it, as
+       it found v3.67's identical `off > 0`: dead RULES code is worse than
+       dead code elsewhere, because it reads as a rule somebody can reach. */
+    if(heroHit && bAct(n).daggerDrain && /\bdagger\b/i.test((pc.tt)||"")){
+      const _dd = bAct(n).daggerDrain;
+      /* THE REASON FIRST, THEN THE OP'S OWN LINE. `dmg` reports "1 damage"
+         and says nothing about why; announcing after it reads as a second,
+         separate hit. In a training sim the sequence IS the lesson. */
+      n = L(n, `${pc.name} bites — a dagger of ${act(n).name}'s, and ${act(n).name} is the Tarantula.`);
+      n = runOps(n, [["dmg", _dd]], pc.name);
+    }
     if(total>0 && n.pend.from==="weapon" && bAct(n).weaponRefresh && !act(n).hist.wpnAgain){
       actMut(n).hist = {...act(n).hist, wpnAgain:1};
       const wu = {...(act(n).weaponUsed||{})}; delete wu[pc.uid];

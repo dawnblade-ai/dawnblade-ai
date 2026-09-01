@@ -421,6 +421,157 @@ test("the trainer's build ledger is on the STATE, not in a closure", {skip}, () 
     + "reports it unclassified");
 });
 
+/* ---- AN AGENT'S OWN STATIC (v3.77) ---------------------------------- */
+
+test("Tarantula's dagger drain is read off her line, and only hers", {skip}, () => {
+  H.db();
+  const six = B.agentsOf(H.db(), "chaos");
+  const tara = six.find(a => /Tarantula/.test(a.n));
+  assert.ok(tara, "she must be in the set");
+  assert.equal(B.heroAbilities(tara, tara.n).daggerDrain, 1);
+  assert.equal(build("arakni").daggerDrain, 0, "the brood does not print it");
+  for(const a of six.filter(x => x !== tara))
+    assert.equal(B.heroAbilities(a, a.n).daggerDrain, 0, a.n + " does not either");
+});
+
+function asAgent(name){
+  const a = B.agentsOf(H.db(), "chaos").find(x => new RegExp(name).test(x.n));
+  return Object.assign({}, build("arakni"), B.heroAbilities(a, a.n),
+                       {_brood: build("arakni").heroRec});
+}
+function weaponSwing(bd, piece){
+  const g = H.state({gear: [piece], res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [bd, {}]});
+  const n = H.execute(g, piece, "weapon", 0, {});
+  return 20 - J.withEffects(n, (fx, s) => fx.resolveStack(s)).sides[1].hp;
+}
+const DAGGER = () => Object.assign({},
+  build("arakni").gear.find(g => /dagger/i.test(g.tt || "")), {uid: 900});
+const SWORD = {uid: 901, name: "Plain Sword", tt: "Generic Weapon - Sword (1H)",
+               ty: ["Generic", "Weapon", "Sword"], power: 1, cost: null, pitch: 0,
+               def: null, kw: [], tx: "Once per Turn Action - {r}: Attack"};
+
+test("DRIVEN: as Tarantula a DAGGER drains one more, and a sword does not", {skip}, () => {
+  /* BOTH HALVES OR THE DRILL PROVES NOTHING (v3.45). The sword is matched
+     to the dagger's printed power on purpose, so the two swings differ by
+     the drain alone and nothing else can explain the number. */
+  H.db();
+  const dagger = DAGGER();
+  assert.equal(dagger.power, SWORD.power, "the fixtures must swing for the same base");
+  const tara = asAgent("Tarantula");
+  assert.equal(weaponSwing(build("arakni"), dagger), dagger.power,
+    "in the brood the dagger swings for its printed power");
+  assert.equal(weaponSwing(tara, dagger), dagger.power + 1, "…and one more as Tarantula");
+  assert.equal(weaponSwing(tara, SWORD), SWORD.power,
+    "a sword is not a dagger — a passive that fires on any weapon is wrong "
+    + "the moment she equips one");
+});
+
+test("DRIVEN: a dagger fully blocked drains nothing", {skip}, () => {
+  /* "HITS a hero" — CR 7.5.5, prevented is not dealt. A drain that fires
+     off a blocked swing is a printed trigger turned into an unconditional
+     one, which is the direction that steals games. */
+  H.db();
+  const tara = asAgent("Tarantula");
+  const dagger = DAGGER();
+  const wall = {uid: 910, name: "Wall", tt: "Generic Action", pitch: 1, cost: 1,
+                power: 0, def: 9, tx: "", kw: []};
+  const g = H.state({gear: [dagger], res: 9, ap: 1, hand: []},
+                    {hp: 20, hand: [wall]}, {actor: 0, turnPlayer: 0, turn: 3,
+                                             builds: [tara, {}]});
+  let n = H.execute(g, dagger, "weapon", 0, {});
+  n = {...n, stack: [...n.stack, {k: "def", uid: 910}]};
+  const out = J.withEffects(n, (fx, s) => fx.resolveStack(s));
+  assert.equal(20 - out.sides[1].hp, 0);
+});
+
+test("the drain magnitude is READ, not the 1 she happens to print", {skip}, () => {
+  /* SHE PRINTS 1, SO NO POOL FIXTURE CAN TELL A READ NUMBER FROM A
+     HARDCODED ONE (v3.32, v3.74). Sabotaging the capture to a literal was
+     SILENT against every driven drill in this file; a synthetic hero
+     record is the only thing that sees it. */
+  const three = {n: "Arakni, Synthetic", tt: "Chaos Demi-Hero",
+                 ty: ["Chaos", "Demi-Hero"], health: "*", intellect: 4,
+                 tx: "Whenever a dagger you own hits a hero, they lose 3{h}.\n"
+                   + "At the beginning of your end phase, return to the brood."};
+  assert.equal(B.heroAbilities(three, three.n).daggerDrain, 3);
+  const zero = Object.assign({}, three, {tx: "At the beginning of your end "
+                 + "phase, return to the brood."});
+  assert.equal(B.heroAbilities(zero, zero.n).daggerDrain, 0,
+    "and a line that does not print it grants nothing");
+});
+
+function paid(o){
+  /* THE SHARED BODY, DRIVEN DIRECTLY, because `heroHit` is the CALLER's
+     answer (CR 1.4.5) and only judge can route an attack at an ally. The
+     trainer wires no ally targeting at all, so the ally half of this rule
+     is unreachable through `resolveStack` and asserting on that board
+     alone would prove the hero half twice. Same driver `briar.test.js`
+     uses for the same reason. */
+  H.db();
+  const dagger = DAGGER();
+  const g = H.state({gear: [dagger], res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
+                    {actor: 0, turnPlayer: 0, turn: 3,
+                     builds: [asAgent("Tarantula"), {}]});
+  g.pend = {card: o.card || dagger, from: o.from || "weapon", total: 2, ga: false,
+            ops: [], onHit: [], onHitHero: [], condOnHit: [], lateConds: [],
+            lateOps: []};
+  /* THE 2 IS NOT IN THIS NUMBER. Both callers subtract the damage dealt
+     from life BEFORE calling this body — its own header says so — so what
+     comes back here is the DRAIN alone, which is exactly what is under
+     test. (Written expecting 2 the first time: check your own fixture.) */
+  const out = H.fx(g, (fx, n) => fx.linkPayload(n, {total: 2, pumps: 0,
+    handBlockers: 0, defenders: 0, blkNote: "",
+    heroHit: o.heroHit !== false})).game;
+  return 20 - out.sides[1].hp;
+}
+
+test("DRIVEN: a dagger that hits an ALLY drains no hero — CR 1.4.5", {skip}, () => {
+  /* BOTH HALVES OR THE DRILL PROVES NOTHING (v3.45). A gate that refuses
+     everything passes the ally half perfectly, so the hero half is
+     asserted against the identical fixture one flag over. */
+  assert.equal(paid({}), 1, "the hero half: her printed 1, on top of the 2 dealt");
+  assert.equal(paid({heroHit: false}), 0,
+    "an ally is an attack-target (CR 1.4.5) and is not the hero the line names");
+});
+
+test("DRIVEN: the route is not the restriction — a dagger CARD drains too", {skip}, () => {
+  /* "A DAGGER YOU OWN HITS A HERO" NAMES AN OBJECT, NOT A ROUTE. Measured:
+     the pool prints two Dagger records and both are Weapons, so this is
+     LATENT — and a reader that refuses one is reading the card wrong
+     whether or not anything notices today (v3.73). The negative control
+     is the same swing with a sword's type line. */
+  const asCard = {uid: 902, name: "Synthetic Dirk", tt: "Assassin Attack Action - Dagger",
+                  ty: ["Assassin", "Action", "Attack"], power: 2, pitch: 1,
+                  cost: 1, def: 2, kw: [], tx: ""};
+  assert.equal(paid({card: asCard, from: "hand"}), 1, "her printed 1, off a card");
+  const notDagger = Object.assign({}, asCard, {tt: "Assassin Attack Action - Sword"});
+  assert.equal(paid({card: notDagger, from: "hand"}), 0, "…and a sword is not one");
+  /* THE SUBTYPE IS A WORD, NOT A SUBSTRING. Dropping the word boundary was
+     SILENT against every other fixture here, because nothing real spells
+     one inside another — the same shape as "Reaction" containing "action"
+     (v2.44), which this project has now been bitten by three times. */
+  const nearMiss = Object.assign({}, asCard,
+    {tt: "Assassin Attack Action - Daggerfall Sword"});
+  assert.equal(paid({card: nearMiss, from: "hand"}), 0,
+    "a Daggerfall Sword is not a Dagger");
+});
+
+test("becoming Tarantula is no longer a pure downgrade", {skip}, () => {
+  /* THE POINT OF BUILDING IT. Before v3.77 every Agent's ability refused,
+     so the transformation cost Arakni her own readable passive and gave
+     nothing back — faithful to what was built, and not what the cards do.
+     One of the six pays out now; the other five refuse on their COST
+     (`Discard an Assassin card`), which is recorded in HANDOFF.md. */
+  H.db();
+  const built = B.agentsOf(H.db(), "chaos")
+    .map(a => B.heroAbilities(a, a.n))
+    .filter(ab => ab.daggerDrain > 0 || ab.HPOW);
+  assert.equal(built.length, 1,
+    "exactly one Agent has something the engine can run — when a second "
+    + "arrives, this number is a deliberate edit");
+});
+
 test("the pinned pool carries the Agents at all", {skip}, () => {
   /* THE POOL AND THE PHONE MUST AGREE ON WHAT A CARD IS (v3.21).
      `tools/pin-pool.js` keeps a Demi-Hero by TYPE and `index.html`'s

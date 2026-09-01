@@ -9,6 +9,88 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.77 — Tarantula's daggers, and a transformation that pays out
+
+**v3.76 gave Arakni six Agents to become, and every one of their abilities
+REFUSED.** Five print `Discard an Assassin card` — a cost `parseHeroPower`
+declines by design — and Trap-Door's is a deck search. So the mechanic
+worked, announced itself in the feed, swapped the hero's whole ability
+half, and made her **strictly worse**: she lost the stealth passive she
+has and gained an ability nothing reads.
+
+That is the **no-op blind spot wearing a hero's face**, and it is worse
+than an unbuilt card because the game tells the player something happened.
+
+> **Arakni, Tarantula** — *"Whenever a dagger you own hits a hero, they
+> lose 1{h}."*
+
+**THE EVENT IS ON THE BOARD SHE ALREADY PLAYS WITH.** Mark of the
+Huntsman ×2 is in her own gear and is a real swinging Dagger (power 1,
+`Once per Turn Action - {r}{r}: Attack`), so nothing had to be built for
+the trigger to be reachable — `linkPayload` is the site, beside
+`weaponRefresh`, and `heroHit` has been the caller's answer since v3.45.
+
+**"LOSE {h}" IS READ AS DAMAGE**, which is the reading the parser already
+gives the printed phrase one rule over. The CR distinguishes life loss
+from damage; nothing in this pool does yet, and inventing a second model
+for one Agent would be two descriptions of one rule.
+
+### THE PRINTED SUBJECT IS AN OBJECT, NOT A ROUTE
+
+The first draft gated on `from === "weapon"` as well, and that is a
+restriction the card does not print: *"a dagger you own hits a hero"* says
+nothing about **how** it hit. `pend.card` is the resolving card on every
+route, so the type test is well defined for all of them and is the only
+thing the line actually restricts.
+
+**Measured before dropping it** (v3.33's rule): the pool prints exactly
+**two** Dagger records and both are Weapons, so nothing moves today — a
+Dagger-typed ally or attack card would have been silently refused, which
+is v3.65's ally-attack route one card over. Latent, and a reader that
+refuses one is reading the card wrong whether or not anything notices.
+
+### AND A `total > 0` BESIDE IT WAS DEAD — v3.67, IDENTICALLY
+
+Both callers derive `heroHit` as a conjunction that **already includes
+it**: the trainer `total > 0`, judge `total > 0 && not an ally`. So the
+extra test could never fire on its own — a second description of CR 7.5.5
+sitting beside the one that governs.
+
+**Sabotage found it, exactly as it found v3.67's `off > 0`.** Dropping it
+was SILENT, which reads like a weak drill and was a redundant guard. Dead
+RULES code is worse than dead code elsewhere: it reads as a rule somebody
+can reach.
+
+Removing it also made the OTHER sabotage expressible — with `total > 0`
+gone, dropping `heroHit` fires the drain off a fully blocked swing, so the
+existing blocked-swing drill bites where before it could not.
+
+### FOUR SILENT SABOTAGES, FOUR BETTER FIXTURES
+
+| sabotage | why it was silent | the fixture that sees it |
+|---|---|---|
+| the magnitude hardcoded to 1 | **she prints 1**, so no pool fixture can tell a read number from a literal | a synthetic Agent record printing 3 (v3.32, v3.74) |
+| `heroHit` dropped | the trainer wires no ally targeting, so its board cannot express a non-hero hit | `linkPayload` driven directly, both halves — `briar.test.js`'s driver, for its reason |
+| the route re-invented | no non-weapon Dagger exists in the pool | a synthetic Dagger-typed attack card, with a Sword control |
+| the word boundary dropped | nothing real spells one subtype inside another | a "Daggerfall Sword" near-miss — "Reaction" contains "action" (v2.44), third outing |
+
+### The doc claim that had gone stale
+
+CLAUDE.md has said **"UNFAIR is 0 as of v3.01"** ever since. Measured
+across every commit that touched `SWEEP.md`: it went 17 → **1** at v3.21
+and has been 1 every version since. The entry is **Lyath Goldmane's
+halving static** — *"the base {p} and {d} of cards you control are halved,
+rounded up"* — a real unbuilt DRAWBACK, so the hero plays strictly better
+than printed.
+
+**A doc claim is a test with no assertion** (v3.41), and this is the third
+time that sentence has cost something. Corrected rather than quietly
+carried, and named as the next hero job: it is a whole version's work,
+because a base-value change reaches `linkPumps`, `defendValue`, `gearDef`
+and every total the player is shown.
+
+---
+
 ## v3.76 — the Agents of Chaos
 
 > **Arakni** *"At the beginning of your end phase, if an opponent is
