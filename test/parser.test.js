@@ -1315,14 +1315,20 @@ test("arsenal — an unreadable payload leaves the card unclaimed", () => {
      means, so the payload has a reader and the route opens by itself —
      `parseHeroPower` refuses a line whose payload has none (v3.04).
 
-     Spire Sniping is unchanged and still refuses: "put them back in any
-     order" is a REORDER, which opt is not — opt lets you BOTTOM cards,
-     which is strictly more powerful than the card prints. */
+     AND THE REORDER HALF CAME DUE AT v3.72, the same way. It used to read
+     "Spire Sniping still refuses: 'put them back in any order' is a
+     REORDER, which opt is not — opt lets you BOTTOM cards, which is
+     strictly more powerful than the card prints." That was true and it was
+     a DEBT, and `lookOrder` is what discharges it: its own op, sharing the
+     opt SHEET behind a `keepTop` flag and nothing else, so Blaze's
+     "whenever you OPT" energy trigger cannot fire off a card that does not
+     opt. Two recorded refusals, two versions apart, both closed by
+     building the payload rather than by loosening the reader. */
   assert.deepEqual(ars("ARS tap", "When this is put face-up into your arsenal, you may {t} target hero.").arsenalUp,
     [["tapFoeHero", 1]]);
-  assert.equal(ars("ARS reorder",
+  assert.deepEqual(ars("ARS reorder",
     "When ARS reorder is put or turned face up in arsenal, look at the top 2 cards of your deck, then put them back in any order.").arsenalUp,
-    undefined);
+    [["lookOrder", 2]]);
   /* KEEP THE REFUSAL PROPERTY ALIVE WITH ITS OWN PROBE. The vocabulary is
      closed, so a payload nothing reads must still leave the card
      unclaimed — retiring the last card that proved it would otherwise

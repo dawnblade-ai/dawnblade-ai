@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-01T16:03:35.604Z",
- "appVer": "3.70",
+ "generated": "2026-09-01T16:17:46.924Z",
+ "appVer": "3.72",
  "dataVer": "sage-v12",
  "dbCount": 788,
  "poolUnique": 405,
  "tiers": {
-  "full": 359,
-  "part": 35,
-  "none": 11
+  "full": 361,
+  "part": 34,
+  "none": 10
  },
  "heroes": {
   "kayo": {
@@ -5499,7 +5499,7 @@
    "mentions": [
     "specialization"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -5509,17 +5509,14 @@
     },
     {
      "t": "Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, put an aim counter on it.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}",
-    "If you do, put an aim counter on it."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Azalea Specialization\nWhenever an arrow is put face-up into your arsenal from your deck, you may pay {r}. If you do, put an aim counter on it.",
@@ -6403,18 +6400,16 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this is put or turned face-up in arsenal, look at the top 2 cards of your deck, then put them back in any order.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this is put or turned face-up in arsenal, look at the top 2 cards of your deck, then put them back in any order."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is put or turned face-up in arsenal, look at the top 2 cards of your deck, then put them back in any order.",

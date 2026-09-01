@@ -9,6 +9,73 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.72 — Azalea finished: a reorder that is not an opt, and a Quiver with an event at last
+
+Her deck is **31 of 32** now. The one card left is Drill Shot, blocked on
+`piercing` — a keyword `tools/ledger.js` records as unbuilt, which is an
+honest gap rather than a miss. She is the second hero finished end to end.
+
+### Spire Sniping — a recorded refusal, come due
+
+> *"When this is put or turned face-up in arsenal, look at the top 2 cards
+> of your deck, then put them back **in any order**."*
+
+`test/parser.test.js` had carried the reason in its own assertion text for
+two versions: *"'put them back in any order' is a REORDER, which opt is not
+— opt lets you BOTTOM cards, which is strictly more powerful than the card
+prints."* That is what a recorded refusal is FOR (v3.38), and the drill
+went red the moment the payload got a reader.
+
+**READING IT AS `opt` IS WRONG IN BOTH DIRECTIONS AT ONCE.** Stronger,
+because a card could be buried — and it would fire **Blaze's** *"whenever
+you OPT, put energy counters on Blaze"* off a card that does not opt. A
+card does not opt because it looks.
+
+`lookOrder` is its own op. It shares the opt SHEET behind a `keepTop` flag
+— one line in `applyPrompt` — and nothing else. With one card there is no
+order to choose, so the sheet skips itself (v3.55); unlike an opt there is
+no "or the bottom" alternative to make it a decision.
+
+### Crow's Nest — the specialization that had no event
+
+> *"Whenever an arrow is put face-up into your arsenal **from your deck**,
+> you may pay {r}. If you do, put an aim counter on it."*
+
+**Nothing in the pool could put a card face-up into the arsenal from the
+DECK until v3.71 built her hero ability.** It is also the pool's **only
+source of aim counters**, which Drill Shot, Infecting Shot and Murkmire
+Grapnel all read — a whole family dead behind one hero ability.
+
+- **THE WATCHER IS NOT THE CARD BEING PUT.** It is a Quiver in the gear
+  zone, so a board-only scan finds nothing — v3.33's Magmatic Carapace and
+  v3.55's counter family, third outing. Both zones.
+- **THE SOURCE ZONE IS THE CALLER'S ANSWER**, and a caller that says
+  nothing gets no trigger. `applyAnswer`'s route puts from HAND and so does
+  `heave`; a default of `"deck"` would fire this off every reload, which is
+  the exact shape of the v3.69 bug one trigger over.
+- **"IT" IS THE ARROW THAT WAS PUT**, not the Quiver watching it. Read off
+  the piece alone, `["aim",1]` lands on whatever is on the chain — a
+  different card, on a different turn. The destination is decided in
+  `fxParse`, where the whole card is visible (v3.66, v2.33).
+
+### BUILDING THE SOURCE MADE A CONDITION REACHABLE — AND WRONG
+
+*"If **this** has an aim counter"* was evaluated as *"does ANY counter bag
+on my side hold an aim counter"*. A single aimed arrow would have pumped
+**every other arrow in the deck**.
+
+It was unreachable for as long as it was wrong, because no aim counter
+could exist. **v3.57's rule read from the other end: when you build a
+CONDITION, ask what it just made readable — and when you build a SOURCE,
+ask which conditions it just made reachable.**
+
+**Measured:** 359 → **361 full**, 11 → **10 none**, 35 → **34 part**.
+1728 drills, 0 failing, 4 skipped. Fairness clean. 25 scenes passing.
+210 self-play games: 0 refusals, 0 violations, 7 stalls. Both babel blocks
+compile. Nine sabotages against the new drills; all nine bite.
+
+---
+
 ## v3.71 — Azalea, and four things her hero ability was hiding
 
 **READ THE HERO ABILITY BEFORE THE CARDS** (v2.55, Kayo). Her deck read 28

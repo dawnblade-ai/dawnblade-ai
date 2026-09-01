@@ -1613,6 +1613,25 @@ function classifyClause(raw){
      Sledge/Scorpio distinction (v2.46) undone from the other end. */
   if(/^\{u\} target ally you control$/.test(c)) return R([["untapAlly",1]]);
   if(m=c.match(/^opt (\d+|x)\b/)) return R([["opt", m[1]==="x"?1:+m[1]]]);
+  /* "LOOK AT THE TOP N CARDS OF YOUR DECK, THEN PUT THEM BACK IN ANY
+     ORDER" — Spire Sniping, and it is NOT opt (v3.71).
+
+     Opt lets you send cards to the BOTTOM; this only reorders the top. So
+     reading it as `opt` is wrong in both directions at once — stronger,
+     because a card could be buried, and it would also fire Blaze's
+     "whenever you OPT" energy trigger off a card that does not opt.
+
+     A CARD DOES NOT OPT BECAUSE IT LOOKS. The keyword is a keyword; the
+     printed sentence is a different effect that happens to start the same
+     way, which is why `lookOrder` is its own op rather than a flag on the
+     other one.
+
+     Anchored on "of YOUR deck" and on the put-back half: three other pool
+     records print "look at the top card" — On the Horizon (a bare reveal)
+     and Scout the Periphery x3 (TARGET HERO's deck) — and none of them
+     reorders anything. */
+  if(m=c.match(/^look at the top (\d+|a|one|two|three) cards? of your deck,? then put (?:them|it) back in any order$/))
+    return R([["lookOrder", {a:1, one:1, two:2, three:3}[m[1]] || +m[1]]]);
   /* RULING (Ravenous Rabble): reveal the top card, then the attack shifts by
      that card's PITCH — red 1, yellow 2, blue 3. The reveal itself is
      information both players see; the maths is what the engine needs. */
@@ -3554,6 +3573,45 @@ function fxParse(card){
      text for "gains +N{p}" and was setting fx.self = 1, so the bracers
      themselves gained the power the arrow is printed to get. That is exactly
      the VALUE-DOUBLED/wrong-subject shape `npm run fairness` exists to catch. */
+  /* ---- CROW'S NEST — HER SPECIALIZATION (v3.72) ---------------------
+     "Whenever an arrow is put face-up into your arsenal FROM YOUR DECK,
+      you may pay {r}. If you do, put an aim counter on it."
+
+     THE TRIGGER HAD NO SOURCE UNTIL v3.71. Nothing in the pool put a card
+     face-up into the arsenal from the DECK, so her specialization watched
+     for an event that could not happen — and it is the pool's ONLY source
+     of aim counters, which three of her arrows read. A whole family, dead
+     behind one hero ability.
+
+     A WHOLE-CARD READER, because the two halves arrive as separate clauses
+     ("if you do" names the first one's payment) — the place `optCost` pairs
+     its halves and `arsCycle` folds its grant.
+
+     "IT" IS THE ARROW THAT WAS PUT, not the Quiver watching it. The
+     payload goes back through `classifyClause` so it shares every reader,
+     and the DESTINATION is decided here, where the whole card is visible —
+     v3.66's rule about the sharpened sword, and v2.33's about the Bracers.
+     Read off the piece alone, `["aim",1]` lands on whatever is on the
+     chain, which is a different card on a different turn. */
+  {
+    const tm = fx.clauses.map(c => c.t.toLowerCase().match(
+      /^whenever an? ([a-z]+) is put face.?up into your arsenal from your deck, you may pay ((?:\{r\})+)$/));
+    const ti = tm.findIndex(Boolean);
+    if(ti >= 0){
+      const ri = fx.clauses.findIndex(c => /^if you do,/i.test(c.t));
+      const rc = ri >= 0 ? classifyClause(fx.clauses[ri].t.toLowerCase().replace(/^if you do,\s*/, "")) : null;
+      /* AN UNREADABLE PAYLOAD REFUSES THE WHOLE TRIGGER (v2.29). A cost
+         with its reward missing is a card that charges for nothing. */
+      if(rc && rc.status === "run" && rc.ops && rc.ops.length && !rc.cond){
+        fx.arsUpDeck = {
+          tt: tm[ti][1],
+          pay: (tm[ti][2].match(/\{r\}/g) || []).length,
+          ops: rc.ops.map(op => op[0] === "aim" ? ["aim", op[1], "arsenal"] : op)
+        };
+        [ti, ri].forEach(i => { if(i >= 0 && fx.clauses[i].st === "skip") fx.clauses[i].st = "run"; });
+      }
+    }
+  }
   /* ---- AZALEA'S ARSENAL CYCLE (v3.71) ------------------------------
      THE HERO ABILITY IS THE DECK. Her whole package is the FACE-UP
      arsenal — Swift Shot, Dry Powder Shot and Entangling Shot each print

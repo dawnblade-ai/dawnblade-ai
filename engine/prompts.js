@@ -139,10 +139,24 @@ function buildPrompt(game, spec){
     const n = spec.n || 1;
     const look = promptZone(game, side, "deck").slice(0, n);
     if(!look.length) return null;
-    return {...base, cards:look, n,
-      title: spec.title || ("Opt " + n),
-      hint: spec.hint || ("Top " + (n===1 ? "card" : n + " cards") +
-        " of your deck. Tap any you want on the bottom instead — the rest stay on top in this order.")};
+    /* A REORDER, NOT AN OPT (v3.71). Spire Sniping prints "look at the top
+       2 cards of your deck, then put them back IN ANY ORDER" — nothing may
+       go to the bottom, so the toggle means "this one goes second" instead.
+       Opt-in (v3.58's rule), so an ordinary opt is untouched, and carried
+       explicitly because A SPEC ONLY CARRIES FIELDS THIS FUNCTION KNOWS
+       ABOUT (v2.34's `arsStamp`, the fifth field to prove it).
+
+       WITH ONE CARD THERE IS NO ORDER TO CHOOSE. A sheet offering a single
+       forced choice is a tap that teaches nothing (v3.55), and unlike opt
+       there is no "or the bottom" alternative to make it a real decision. */
+    if(spec.keepTop && look.length < 2) return null;
+    return {...base, cards:look, n, keepTop: !!spec.keepTop,
+      title: spec.title || (spec.keepTop ? ("Reorder the top " + n) : ("Opt " + n)),
+      hint: spec.hint || (spec.keepTop
+        ? ("Top " + n + " cards of your deck. Tap any you want to go UNDER the rest — "
+           + "they all stay on top, in the order you leave them.")
+        : ("Top " + (n===1 ? "card" : n + " cards") +
+        " of your deck. Tap any you want on the bottom instead — the rest stay on top in this order."))};
   }
   if(spec.tag === "pick"){
     const zone = spec.zone || "hand";
@@ -448,12 +462,20 @@ function applyPrompt(game, prompt){
     const bottom = prompt.cards.filter((_,i)=>prompt.down.includes(i));
     const sides = game.sides.slice();
     const s = {...sides[side]};
-    s.deck = [...keep, ...(s.deck||[]).slice(prompt.cards.length), ...bottom];
+    /* THE ONE LINE THAT SEPARATES A REORDER FROM AN OPT (v3.71): the
+       toggled cards go UNDER the kept ones and stay in the top N, rather
+       than to the bottom of the deck. */
+    s.deck = prompt.keepTop
+      ? [...keep, ...bottom, ...(s.deck||[]).slice(prompt.cards.length)]
+      : [...keep, ...(s.deck||[]).slice(prompt.cards.length), ...bottom];
     sides[side] = s;
-    out.game = {...game, sides};
-    out.msgs.push("Opt — " +
+    out.msgs.push(prompt.keepTop
+      ? ((prompt.src ? prompt.src + " — " : "") + "the top " + prompt.cards.length
+         + " go back as " + [...keep, ...bottom].map(c=>c.name).join(", ") + ".")
+      : ("Opt — " +
       (keep.length ? keep.map(c=>c.name).join(", ") + " left on top" : "nothing kept on top") +
-      (bottom.length ? ", " + bottom.map(c=>c.name).join(", ") + " sent to the bottom" : "") + ".");
+      (bottom.length ? ", " + bottom.map(c=>c.name).join(", ") + " sent to the bottom" : "") + "."));
+    out.game = {...game, sides};
     return out;
   }
   if(prompt.tag === "pick"){

@@ -185,6 +185,92 @@ module.exports = [
     "one blocker is legal": null,
     "a second is refused": true
   }
+},
+
+{
+  name: "her specialization finally has an event to watch",
+  why: "v3.72 — Crow's Nest reads \"whenever an arrow is put face-up into " +
+       "your arsenal FROM YOUR DECK\", and until her hero ability was built " +
+       "nothing in the pool could do that. It is also the pool's ONLY source " +
+       "of aim counters, which three of her arrows read — a whole family " +
+       "dead behind one hero ability.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "azalea");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.azalea), c.H.db(), {},
+                          RNG.make("scene-nest"), {n: 0}).b;
+    const board = top => c.state({
+      arsenal: c.card("Take Aim", 1, 900),
+      deck: [c.card(top, 1, 901), c.card("Nimblism", 1, 902)],
+      gear: [c.card("Crow's Nest", 0, 950)], res: 9, ap: 1, hand: []}, {},
+      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    const asked = c.exec(board("Drill Shot"), b.HPOW, "hero", -1);
+    const paid = c.reduce(c.reduce(asked, {t: "promptChoose", choice: "pay"}, 0),
+                          {t: "promptConfirm"}, 0);
+    const plain = c.exec(board("Nimblism"), b.HPOW, "hero", -1);
+    /* the payoff, one card over: an aimed arrow really is bigger */
+    const swing = (uid, counters) => {
+      const arrow = c.card("Murkmire Grapnel", 1, uid);
+      const g = c.state({hand: [arrow], res: 9, ap: 1, deck: [], counters}, {hp: 20},
+                        {actor: 0, turnPlayer: 0, turn: 3});
+      return c.exec(g, arrow, "hand", 0).pend.total;
+    };
+    return {
+      "the Quiver asks when an arrow comes off the deck": !!asked.prompt,
+      "…and stays quiet for anything else":  !(plain.prompt),
+      "paying puts the counter on the ARROW": (paid.sides[0].counters[901] || {}).aim || 0,
+      "…and actually costs a resource":       paid.sides[0].res,
+      "an aimed arrow swings bigger":         swing(800, {800: {aim: 1}}),
+      "an unaimed one does not":              swing(800, {})
+    };
+  },
+  want: {
+    "the Quiver asks when an arrow comes off the deck": true,
+    "…and stays quiet for anything else": true,
+    "paying puts the counter on the ARROW": 1,
+    "…and actually costs a resource": 8,
+    "an aimed arrow swings bigger": 5,
+    "an unaimed one does not": 4
+  }
+},
+
+{
+  name: "Spire Sniping reorders the top two and buries nothing",
+  why: "\"put them back in any order\" is a REORDER, and opt is not — opt " +
+       "lets you send cards to the BOTTOM. Read as opt the card would be " +
+       "stronger than printed AND would fire Blaze's \"whenever you opt\" " +
+       "energy trigger off a card that does not opt.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "azalea");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.azalea), c.H.db(), {},
+                          RNG.make("scene-spire"), {n: 0}).b;
+    const g = c.state({arsenal: c.card("Take Aim", 1, 900),
+      deck: [c.card("Spire Sniping", 2, 901), c.card("Nimblism", 1, 902),
+             c.card("Swift Shot", 1, 903), c.card("Widowmaker", 2, 904)],
+      res: 9, ap: 1, hand: []}, {},
+      {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    const n = c.exec(g, b.HPOW, "hero", -1);
+    const out = c.reduce(c.reduce(n, {t: "promptSel", i: 0}, 0), {t: "promptConfirm"}, 0);
+    return {
+      "the sheet shows the top two":   n.prompt ? n.prompt.cards.map(x => x.uid) : null,
+      "it is a reorder, not an opt":   n.prompt ? n.prompt.keepTop === true : null,
+      "the tapped card goes second":   out.sides[0].deck.map(x => x.uid)
+    };
+  },
+  want: {
+    "the sheet shows the top two": [902, 903],
+    "it is a reorder, not an opt": true,
+    "the tapped card goes second": [903, 902, 904, 900]
+  }
 }
 
 ];

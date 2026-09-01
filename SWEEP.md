@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 9 heroes, 16 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 47 cards | understood ≠ built |
-| **Fail states** | 82 entries, 1 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 44 cards | understood ≠ built |
+| **Fail states** | 79 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -84,15 +84,12 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
 - **Back Alley Breakline** (none, 1/1 unread)
-- **Bolt'n' Shot** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Night's Embrace** (none, 1/1 unread)
 - **Radiant Touch** (none, 1/1 unread)
 - **Shred** (none, 1/1 unread)
-- **Spire Sniping** (none, 1/1 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
-- **Crow's Nest** (part, 2/3 unread)
 - **Halo of Illumination** (part, 2/3 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Mounting Anger** (part, 2/3 unread)
@@ -139,14 +136,14 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 26 |
-| Ability inert — cost not modelled | 22 |
-| No schedule to fire on | 21 |
-| Choice never offered | 18 |
+| Earned value denied | 24 |
+| Ability inert — cost not modelled | 21 |
+| No schedule to fire on | 20 |
+| Choice never offered | 17 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
 | Displayed total is wrong | 15 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Unread, effect unknown | 9 |
+| Unread, effect unknown | 8 |
 | Drawback skipped | 1 |
 
 ### UNFAIR — 1 entries
@@ -162,7 +159,7 @@ worst thing a trainer can do: it teaches wrong play.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Defending action cards you control get +1{d} this turn.
 
-### WRONG — 44 entries
+### WRONG — 43 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -206,15 +203,6 @@ worst thing a trainer can do: it teaches wrong play.
     > During your turn, auras you control with ward are weapons with base {p} equal to their ward and "Once per Turn Action - {r}: Attack"
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Your aura attacks with one or more +1{p} counters get go again.
-- **Crow's Nest** · tier `part`
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}
 - **Danger Digits** · tier `none` · arakni
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
@@ -287,9 +275,12 @@ worst thing a trainer can do: it teaches wrong play.
 - **Plasma Barrel Shot** · tier `part` · dash
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
-- … and 19 more (see the station)
+- **Polar Cap** (1) · tier `full` · iyslander
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
+    > Ice Fusion
+- … and 18 more (see the station)
 
-### LOST VALUE — 35 entries
+### LOST VALUE — 34 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -310,9 +301,6 @@ worst thing a trainer can do: it teaches wrong play.
     > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.
-- **Bolt'n' Shot** (1) · tier `none`
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If this card's {p} is greater than its base, it gets go again and "When this hits, reload."
 - **Carrion Crown** · tier `part` · gravy
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > Action - Discard an ally, destroy this: Draw a card
@@ -384,14 +372,14 @@ worst thing a trainer can do: it teaches wrong play.
 - **Spears of Surreality** (3) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- … and 10 more (see the station)
+- **Spectral Rider** (3) · tier `part` · enigma
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+    > Phantasm
+- … and 9 more (see the station)
 
-### INERT — 2 entries
+### INERT — 1 entries
 
 - **Line Crossers** · tier `part` · lyath
   - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
     > If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.
-- **Spire Sniping** (2) · tier `none` · azalea
-  - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
-    > When this is put or turned face-up in arsenal, look at the top 2 cards of your deck, then put them back in any order.
 

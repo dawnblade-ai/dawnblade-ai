@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.71
+**Current version:** v3.72
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1707 drills**.
+This is `node --test "test/*.test.js"` — currently **1728 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -303,6 +303,60 @@ returned but never checked is a FAILURE rather than a silence.
 argument `pow6` does not take. Check your own fixture before believing a
 new instrument — v3.50's sabotage pass found four weak drills to four real
 bugs.
+
+### A REORDER IS NOT AN OPT (v3.72)
+
+Spire Sniping prints *"look at the top 2 cards of your deck, then put them
+back **in any order**"*. Opt lets you send cards to the **BOTTOM**, so
+reading it as opt is wrong in both directions at once: stronger, because
+a card could be buried — and it would fire **Blaze's** *"whenever you
+OPT"* energy trigger off a card that does not opt. **A card does not opt
+because it looks.**
+
+`lookOrder` is its own op, sharing the opt SHEET behind a `keepTop` flag
+(one line in `applyPrompt`) and nothing else. **With one card there is no
+order to choose**, so the sheet skips itself — and unlike an opt there is
+no "or the bottom" alternative to make it a decision.
+
+**IT WAS A RECORDED REFUSAL, AND THE DRILL WENT RED THE MOMENT IT WAS
+BUILT.** `test/parser.test.js` carried the reason in its own assertion
+text for two versions. That is what a recorded refusal is FOR (v3.38),
+and it is the second one this fortnight to come due by building the
+payload rather than by loosening a reader.
+
+### A TRIGGER WITH NO EVENT, AND THE FAMILY BEHIND IT (v3.72)
+
+Crow's Nest — her SPECIALIZATION — reads *"whenever an arrow is put
+face-up into your arsenal **from your deck**, you may pay {r}. If you do,
+put an aim counter on it."* **Nothing in the pool could do that** until
+v3.71 built her hero ability. It is also the pool's **ONLY source of aim
+counters**, which three of her arrows read: a whole family dead behind
+one hero ability.
+
+- **THE WATCHER IS NOT THE CARD BEING PUT** — a Quiver in the GEAR zone,
+  so a board-only scan finds nothing (v3.33, v3.55: both zones).
+- **THE SOURCE ZONE IS THE CALLER'S ANSWER.** `applyAnswer`'s route puts
+  from HAND and so does `heave`; a default of `"deck"` fires this off
+  every reload, which is v3.69's bug one trigger over. A caller that says
+  nothing gets no trigger — weaker than printed and visible.
+- **"IT" IS THE ARROW THAT WAS PUT**, so the destination is decided in
+  `fxParse` where the whole card is visible. Read off the piece alone,
+  `["aim",1]` lands on whatever is on the chain — a different card, on a
+  different turn.
+
+### WHEN YOU BUILD A SOURCE, ASK WHICH CONDITIONS IT JUST MADE REACHABLE (v3.72)
+
+*"If **this** has an aim counter"* was evaluated as *"does ANY counter bag
+on my side hold an aim counter"* — so one aimed arrow would have pumped
+**every other arrow in the deck**. It was unreachable for exactly as long
+as it was wrong, because Crow's Nest is the only card that can make one
+and its trigger had no event to fire on.
+
+**v3.57 states this rule about a CONDITION** (a new gate can expose
+payload paths that were never asked to carry one). This is the same
+sentence about a SOURCE, and it is the more dangerous direction: a
+condition nobody can reach is an approximation with no cost, right up
+until the turn somebody builds the thing that reaches it.
 
 ### AZALEA — THE HERO ABILITY *IS* THE DECK (v3.71)
 

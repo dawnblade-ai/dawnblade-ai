@@ -282,3 +282,164 @@ test("DRIVEN: a GRANTED dominate rides on the link, not on the resolution", {ski
   assert.deepEqual(n.pend.defCap, {n: 1, count: "hand"},
     "…so the restriction must be on the link, where the table's wall reads it");
 });
+
+/* ============================================================
+   THE REST OF HER PACKAGE (v3.72) — what the cycle unlocked.
+
+   Two cards that had no route at all until something could put a card
+   face-up into the arsenal FROM THE DECK, which is a thing no card in the
+   pool could do until v3.71.
+   ============================================================ */
+
+/* ---- SPIRE SNIPING: a reorder is not an opt -------------------------- */
+
+test("Spire Sniping reads to `lookOrder`, which is NOT `opt`", {skip}, () => {
+  /* Opt lets you send cards to the BOTTOM; this only reorders the top. So
+     reading it as `opt` is wrong in both directions at once — stronger,
+     because a card could be buried, and it would fire Blaze's "whenever
+     you OPT" energy trigger off a card that does not opt.
+
+     A recorded refusal, discharged: `test/parser.test.js` carried the
+     reason in its own assertion text for two versions (v3.38's rule). */
+  H.db();
+  const fx = P.fxParse(H.card("Spire Sniping", 2));
+  assert.equal(fx.tier, "full");
+  assert.deepEqual(fx.arsenalUp, [["lookOrder", 2]]);
+  assert.equal((fx.ops || []).filter(o => o[0] === "opt").length, 0,
+    "it must not read as an opt — Blaze's energy trigger watches that word");
+});
+
+test("DRIVEN: the reorder moves the top two and buries nothing", {skip}, () => {
+  /* THE WHOLE POINT IS WHAT DOES *NOT* HAPPEN. A drill that only checks
+     the new top card passes just as well against an `opt`, which would
+     have sent the toggled card to the bottom of the deck. */
+  H.db();
+  const held = Object.assign({}, H.card("Take Aim", 1), {uid: 900});
+  const deck = [Object.assign({}, H.card("Spire Sniping", 2), {uid: 901}),
+                Object.assign({}, H.card("Nimblism", 1), {uid: 902}),
+                Object.assign({}, H.card("Swift Shot", 1), {uid: 903}),
+                Object.assign({}, H.card("Widowmaker", 2), {uid: 904})];
+  const g = H.state({arsenal: held, deck, res: 9, ap: 1, hand: []}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3, builds: [build(), {}]});
+  const n = H.execute(g, build().HPOW, "hero", -1, {});
+  assert.equal(n.sides[0].arsenal.uid, 901, "Spire Sniping went face up");
+  assert.ok(n.prompt, "…so its trigger opened the reorder sheet");
+  assert.equal(n.prompt.keepTop, true);
+  assert.deepEqual(n.prompt.cards.map(c => c.uid), [902, 903]);
+  const sel = J.reduce(n, {t: "promptSel", i: 0}, 0).state;
+  const out = J.reduce(sel, {t: "promptConfirm"}, 0).state;
+  assert.deepEqual(out.sides[0].deck.map(c => c.uid), [903, 902, 904, 900],
+    "the toggled card goes UNDER the other one and stays in the top two");
+});
+
+test("a one-card look has no order to choose, so no sheet opens", {skip}, () => {
+  /* v3.55: a sheet offering a single forced choice is a tap that teaches
+     nothing — and unlike an opt there is no "or the bottom" alternative to
+     make it a decision. */
+  H.db();
+  const g = H.state({deck: [Object.assign({}, H.card("Nimblism", 1), {uid: 910})],
+                     res: 9, ap: 1}, {}, {actor: 0, turn: 3});
+  const n = J.openPrompt(H.runOps(g, [["lookOrder", 2]], "probe"));
+  assert.equal(n.prompt || null, null, "no sheet — `prompt` is absent, not null");
+  assert.deepEqual(n.sides[0].deck.map(c => c.uid), [910], "…and the deck is untouched");
+});
+
+/* ---- CROW'S NEST: the specialization, and the counters it feeds ------ */
+
+test("Crow's Nest reads FULL, and its counter lands in the ARSENAL", {skip}, () => {
+  /* "IT" IS THE ARROW THAT WAS PUT, not the Quiver watching it. Read off
+     the piece alone, `["aim",1]` lands on whatever is on the chain — a
+     different card, on a different turn. v3.66's sharpened sword and
+     v2.33's Bull's Eye Bracers, third and fourth outings. */
+  H.db();
+  const fx = P.fxParse(H.card("Crow's Nest", 0));
+  assert.equal(fx.tier, "full");
+  assert.deepEqual(fx.arsUpDeck, {tt: "arrow", pay: 1, ops: [["aim", 1, "arsenal"]]});
+});
+
+test("an unreadable reward refuses the whole trigger", () => {
+  /* v2.29. A cost with its reward missing is a card that charges for
+     nothing — and files itself `full` for the privilege. The synthetic
+     fixture is the only way to ask: Crow's Nest is the pool's ONLY card of
+     this shape, so a pool-only drill cannot tell a reader that refuses
+     from one that has nothing to refuse. */
+  const fx = P.fxParse({name: "NEST-UNREAD", pitch: 0, tt: "Ranger Equipment - Quiver", kw: [],
+    tx: "Whenever an arrow is put face-up into your arsenal from your deck, you may pay {r}. "
+      + "If you do, transmogrify target hero into a goat."});
+  assert.equal(fx.arsUpDeck, undefined);
+  assert.ok(fx.clauses.some(c => c.st === "skip"),
+    "…and the gap stays visible rather than being filed as read");
+});
+
+function nestBoard(topName){
+  const nest = Object.assign({}, H.card("Crow's Nest", 0), {uid: 950});
+  const held = Object.assign({}, H.card("Take Aim", 1), {uid: 900});
+  const deck = [Object.assign({}, H.card(topName, 1), {uid: 901}),
+                Object.assign({}, H.card("Nimblism", 1), {uid: 902})];
+  return H.state({arsenal: held, deck, gear: [nest], res: 9, ap: 1, hand: []}, {},
+                 {actor: 0, turnPlayer: 0, turn: 3, builds: [build(), {}]});
+}
+
+test("DRIVEN: paying puts the aim counter on the arrow; declining does not", {skip}, () => {
+  /* v2.04's rule, which this whole family exists downstream of: an
+     optional cost that is not paid must not fire its payload. */
+  H.db();
+  const open = H.execute(nestBoard("Drill Shot"), build().HPOW, "hero", -1, {});
+  assert.ok(open.prompt, "the Quiver must ask");
+  const paid = J.reduce(J.reduce(open, {t: "promptChoose", choice: "pay"}, 0).state,
+                        {t: "promptConfirm"}, 0).state;
+  const said = J.reduce(J.reduce(open, {t: "promptChoose", choice: "decline"}, 0).state,
+                        {t: "promptConfirm"}, 0).state;
+  assert.equal((paid.sides[0].counters[901] || {}).aim, 1, "on the ARROW, by uid");
+  assert.equal(paid.sides[0].res, 8, "…and the resource was actually spent");
+  assert.equal(said.sides[0].counters[901], undefined);
+  assert.equal(said.sides[0].res, 9);
+});
+
+test("DRIVEN: a NON-arrow off the top does not wake the Quiver", {skip}, () => {
+  /* The printed subject, read off the type line. Both halves or the drill
+     proves nothing (v3.45): a trigger that fires on nothing passes the
+     negative half perfectly. */
+  H.db();
+  const n = H.execute(nestBoard("Nimblism"), build().HPOW, "hero", -1, {});
+  assert.equal(n.prompt || null, null);
+  assert.equal(n.sides[0].arsenal.uid, 901, "the control — it really did go face up");
+});
+
+test("DRIVEN: a card put face-up from HAND does not wake it either", {skip}, () => {
+  /* "FROM YOUR DECK" is the printed source and it is the CALLER's answer.
+     `applyAnswer`'s route puts from hand and so does `heave`, so a default
+     of "deck" would fire this off every Call in the Big Guns — which is
+     the exact shape of the v3.69 reload bug, one trigger over. */
+  H.db();
+  const nest = Object.assign({}, H.card("Crow's Nest", 0), {uid: 951});
+  const arrow = Object.assign({}, H.card("Drill Shot", 1), {uid: 905});
+  let g = H.state({hand: [arrow], arsenal: null, gear: [nest], res: 9, ap: 1}, {},
+                  {actor: 0, turn: 3});
+  g = Object.assign({}, g, {promptQ: [{tag: "pick", side: 0, src: "Call in the Big Guns",
+    zone: "hand", to: "arsenal", min: 0, max: 1, faceUp: true, title: "Put it up?"}]});
+  let n = J.openPrompt(g);
+  n = J.reduce(J.reduce(n, {t: "promptSel", i: 0}, 0).state, {t: "promptConfirm"}, 0).state;
+  assert.equal(n.sides[0].arsenal.uid, 905, "the control — it really did go up face up");
+  assert.equal(n.sides[0].arsenal._faceUp, true);
+  assert.equal(n.prompt || null, null, "…and no Quiver trigger fired");
+});
+
+test("DRIVEN: `if this has an aim counter` asks about THIS card", {skip}, () => {
+  /* IT ASKED WHETHER ANY COUNTER BAG ON THE SIDE HELD AN AIM COUNTER — a
+     strictly more generous question: one aimed arrow would have pumped
+     every other arrow in the deck. Unreachable until v3.72, because Crow's
+     Nest is the pool's ONLY source of aim counters and its trigger had no
+     event to fire on. v3.57's rule read from the other end: when you build
+     a SOURCE, ask which conditions it just made reachable. */
+  H.db();
+  const swing = (uid, counters) => {
+    const arrow = Object.assign({}, H.card("Murkmire Grapnel", 1), {uid});
+    const g = H.state({hand: [arrow], res: 9, ap: 1, deck: [], counters}, {hp: 20},
+                      {actor: 0, turnPlayer: 0, turn: 3});
+    return H.execute(g, arrow, "hand", 0, {}).pend.total;
+  };
+  assert.equal(swing(800, {}), 4, "the printed base");
+  assert.equal(swing(800, {800: {aim: 1}}), 5, "its OWN counter pumps it");
+  assert.equal(swing(801, {800: {aim: 1}}), 4, "another card's counter must not");
+});

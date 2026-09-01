@@ -679,7 +679,7 @@ function makeEffects(ctx){
         /* THE SHARED BODY (v3.71) — an arrow's own "when this is put
            face-up into your arsenal" trigger fires here exactly as it does
            on a pick from hand, because there is one body and not two. */
-        n = faceUpArsenal(n, [], srcName);
+        n = faceUpArsenal(n, [], srcName, "deck");
         /* "IF IT'S AN ARROW, IT GETS DOMINATE UNTIL END OF TURN." The
            subject is read off the card's printed TYPE LINE — a stamp, not
            a rewrite of its keywords, so it expires with `_upTurn` if the
@@ -1037,6 +1037,20 @@ function makeEffects(ctx){
             hero: {...cur, energy: (cur.energy || 0) + looked}};
           n = L(n, `${act(n).name} burns bright — ${looked} energy counter${looked>1?"s":""} (now ${(cur.energy||0)+looked}).`);
         }
+      }
+      /* LOOK AND REORDER — Spire Sniping (v3.71). The same sheet, and
+         deliberately NOT the same op: nothing may be sent to the bottom,
+         and Blaze's "whenever you OPT" trigger must not fire off a card
+         that does not opt. `keepTop` is the one difference, and it is
+         opt-in (v3.58) so an ordinary opt is untouched.
+
+         WITH ONE CARD THERE IS NO ORDER TO CHOOSE, so `buildPrompt`
+         returns null and the sheet skips itself rather than showing a
+         forced tap that teaches nothing (v3.55). */
+      else if(k==="lookOrder"){
+        if(!act(n).deck.length){ n = L(n, `${srcName}: deck is empty — nothing to look at.`); return; }
+        const looked = Math.min(v, act(n).deck.length);
+        n.promptQ = [...(n.promptQ||[]), {tag:"opt", n:looked, keepTop:true, src:srcName}];
       }
       /* pickPrompt — a GENERIC mandatory-or-optional targeted pick, carrying
          its own zone/to/filter/min/max as data rather than a bespoke op per
@@ -1402,9 +1416,20 @@ function makeEffects(ctx){
         n = L(n, `Base intellect is ${act(n).int} until end of turn — that many cards at the draw step.`);
       }
       else if(k==="aim"){
-        const tgt = n.pend && n.pend.card ? n.pend.card.uid : null;
+        /* WHERE THE COUNTER GOES IS READ OFF THE OP (v3.72). "Put an aim
+           counter on IT" names a different object depending on the card
+           that printed it, and only a reader that can see the whole card
+           knows which — so `fxParse` decides and this op obeys. Crow's Nest
+           means the arrow it just watched go into the ARSENAL; absent a
+           destination the counter goes on the attack on the chain, which
+           is where the op has always put it. */
+        const where = op[2] || "chain";
+        const tgtCard = where === "arsenal" ? act(n).arsenal
+                      : (n.pend && n.pend.card) || null;
+        const tgt = tgtCard ? tgtCard.uid : null;
         if(tgt){ const cur=(act(n).counters[tgt]||{}); actMut(n).counters={...act(n).counters,[tgt]:{...cur,aim:(cur.aim||0)+v}}; }
-        n = L(n, `Aim counter placed${tgt?"":" — no arrow on the chain to hold it"}.`);
+        n = L(n, tgt ? `${tgtCard.name} takes an aim counter.`
+                     : `Aim counter fizzles — nothing ${where === "arsenal" ? "in the arsenal" : "on the chain"} to hold it.`);
       }
       /* A TARGETED COUNTER PUT (v3.53) — the general form of `aim`.
 
@@ -1923,7 +1948,16 @@ function makeEffects(ctx){
         : cond==="red" ? (act(n).hist.red||0)>0
         : cond==="transcended" ? (act(n).hist.trans||0)>0
         /* conditions added after the deep dive — all read existing state */
-        : cond==="aim" ? Object.values(act(n).counters||{}).some(x=>(x.aim||0)>0)
+        /* "IF THIS HAS AN AIM COUNTER" — THIS card, by uid (v3.72). It
+           asked whether ANY counter bag on the side held an aim counter,
+           which is a different question and a strictly more generous one:
+           one aimed arrow would have pumped every other arrow in the deck.
+           Unreachable until v3.72, because Crow's Nest is the pool's only
+           source of aim counters and its trigger had no event to fire on —
+           so building the SOURCE is what made the approximation live.
+           v3.57's rule, read from the other end: when you build a source,
+           ask which conditions it just made reachable. */
+        : cond==="aim" ? ((act(n).counters[card.uid]||{}).aim||0) > 0
         : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
         : cond==="hasArsenal" ? !!act(n).arsenal
         : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
@@ -2952,7 +2986,7 @@ function makeEffects(ctx){
      above it in this closure and a `const` arrow would be in the temporal
      dead zone for any reader of the file (v3.12's `quotedOnHit`, same
      reasoning one module over). */
-  function faceUpArsenal(n0, stamp, srcName){
+  function faceUpArsenal(n0, stamp, srcName, from){
     let n = n0;
     const put = act(n).arsenal;
     if(!put || put._faceUp) return n;
@@ -2972,6 +3006,36 @@ function makeEffects(ctx){
     actMut(n).arsenal = up;
     if(!(pfx.arsenalUp||[]).length && !(stamp||[]).length)
       n = L(n, `${put.name} set face up in arsenal.`);
+    /* ---- WHAT WAS WATCHING (v3.72) ---------------------------------
+       Crow's Nest: "whenever an arrow is put face-up into your arsenal
+       FROM YOUR DECK, you may pay {r}."
+
+       THE WATCHER IS NOT THE CARD BEING PUT — it is a Quiver in the gear
+       zone, so a scan of the board alone finds nothing. Both zones, the
+       same lesson v3.33 records for Magmatic Carapace and v3.55 for the
+       counter family.
+
+       THE SOURCE ZONE IS THE CALLER'S ANSWER, and a caller that says
+       nothing gets no trigger: `applyAnswer`'s route puts from HAND and
+       `heave` from hand too, so a default of "deck" would fire this off
+       every reload. Weaker than printed and visible is the safe
+       direction (v3.24). */
+    if(from === "deck"){
+      const watchers = [...(act(n).gear||[]).filter(g2 => g2 && !g2.destroyed),
+                        ...(act(n).board||[]).map(b => b && b.card).filter(Boolean)];
+      for(const w of watchers){
+        const wfx = fxParse(w);
+        const t = wfx.arsUpDeck;
+        if(!t) continue;
+        if(t.tt && !new RegExp("\\b" + t.tt + "\\b", "i").test(up.tt || "")) continue;
+        /* A COST WITH NOTHING TO PAY IT IS NOT OFFERED. `buildPrompt`
+           drops an option the hero cannot afford and returns null when
+           there is nothing left to ask, so the sheet skips itself. */
+        n.promptQ = [...(n.promptQ||[]), {tag:"pay", side:actorOf(n), src:w.name,
+          cost:t.pay, ops:t.ops,
+          title:`${w.name} — pay ${t.pay} to aim ${up.name}?`}];
+      }
+    }
     return n;
   }
 
@@ -3197,7 +3261,7 @@ function makeEffects(ctx){
       if(put) n = L(n, `${act(n).name}: ${put.name} goes into the arsenal face down.`);
     }
     if(p.tag === "pick" && p.to === "arsenal" && p.faceUp)
-      n = faceUpArsenal(n, p.arsStamp || [], p.src);
+      n = faceUpArsenal(n, p.arsStamp || [], p.src, p.zone || "hand");
     n = {...n, actor: pWasActor};
     return openPrompt(winCheck(n));
   };
