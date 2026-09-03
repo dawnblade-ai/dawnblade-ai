@@ -344,7 +344,17 @@ test("a card never pitches for itself, and never twice", {skip}, () => {
 test("a hand of non-attacks is played, not passed", {skip}, () => {
   /* THE SHAPE THAT STALLED. Iyslander opens on four Wizard Actions, every
      one of them legal, and the policy used to answer `endTurn`. */
-  const g = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  /* HER GEAR IS STRIPPED, and that is the drill staying about the thing it
+     NAMES. v3.83 made the Crucible of Aetherweave's ability reachable at
+     the table (it is a Weapon-typed piece with no printed power, and
+     judge used to route it as a swing and refuse it), so the policy now
+     correctly prefers an equipment ability — which spends no card — over
+     a non-attack from hand. That is the ordering this file states; it is
+     not what this drill is about. */
+  const g0 = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  const _s = g0.sides.slice();
+  _s[0] = Object.assign({}, _s[0], {gear: []});
+  const g = Object.assign({}, g0, {sides: _s});
   const hand = g.sides[0].hand;
   assert.ok(hand.length > 0);
   assert.ok(hand.every(c => !(c.power > 0)),
@@ -389,7 +399,10 @@ test("the non-attack ranking is a TOTAL order — the uid breaks a real tie", {s
      the uid is the only thing left to decide. Driven in both hand orders,
      because a stable sort hides an absent tie-break when the input order
      already happens to agree. */
-  const g0 = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  const _g = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  const _gs = _g.sides.slice();
+  _gs[0] = Object.assign({}, _gs[0], {gear: []});   /* see the note above — v3.83 */
+  const g0 = Object.assign({}, _g, {sides: _gs});
   const twin = uid => ({uid, name: "Twin " + uid, pitch: 1, cost: 0, power: null,
                         def: 2, tt: "Generic Action", ty: ["Generic", "Action"], kw: [], tx: ""});
   const a = twin(8810), b = twin(8811);

@@ -1,4 +1,22 @@
-# Handoff — Dawnblade, at v3.82 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.83 · PHASE C · HERO BY HERO
+
+## ⚠ COSMO IS THE NEXT REAL BUILD, AND IT IS ENIGMA'S WHOLE ENGINE
+
+> *"During your turn, auras you control with **ward** are weapons with
+> base {p} equal to their **ward** and \"Once per Turn Action - {r}:
+> Attack\"."*
+
+The Spectral Shield token's entire printed text is **"Ward 1"** — it has
+no attack. Cosmo is what gives one to every ward-bearing aura she
+controls, which is what her clause 1 (*"your first Spectral Shield attack
+each turn costs {r} less to activate"*) is discounting. Build Cosmo and
+that clause becomes reachable; her clause 2 stays blocked on the **{c}**
+symbol, which is a ruling and not an engineering call (see the enigma
+scenes).
+
+**v3.83 fixed the ROUTE, not the grant.** Cosmo is now correctly refused
+("prints no activated ability") instead of being swung for 0 — weaker than
+printed and visible, which is the honest state until the grant exists.
 
 ## ⚠ ALL FIFTEEN HEROES HAVE SCENES NOW (v3.82)
 

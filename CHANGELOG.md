@@ -9,6 +9,60 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.83 — which route is this piece on?
+
+CLAUDE.md pins the split in as many words, and has since v2.42:
+
+```
+types.isWeaponType(c)   is this card's TYPE Weapon
+parser.isWeapon(c)      is this a weapon WITH A PRINTED POWER
+```
+
+The second is the question *"does this thing swing"*. **`judge.js` asked
+the first one**, at both of its activation sites.
+
+### Four records, wrong in both directions
+
+| | | |
+|---|---|---|
+| **Cosmo, Scroll of Ancestral Tapestry** | Enigma | swung illegally for 0 |
+| **Plasma Barrel Shot** | Dash | swung illegally for 0 |
+| **Death Dealer** (Bow) | Azalea | ability unreachable |
+| **Crucible of Aetherweave** | Iyslander | ability unreachable |
+
+**Cosmo and Plasma Barrel Shot fell into the SWING branch**, where
+`weaponCost` matched the **quoted granted ability inside their own rules
+text** — Cosmo's is *"auras you control with ward are weapons with base
+{p} equal to their ward and \"Once per Turn Action - {r}: Attack\""*, an
+attack it GRANTS to something else. Measured: **254 illegal 0-power swings
+in five Enigma games**, and it was a stall contributor before v3.80.
+
+**Death Dealer and the Crucible fell there too**, where `weaponCost` found
+nothing and the branch refused them *"prints no weapon attack"* — so
+Azalea's arsenal put and Iyslander's amp were **unreachable at the table**
+while working perfectly in the trainer.
+
+### Judge was the fourth reader asking something else
+
+The trainer gates its swing route on `isWeapon` and its ability route on
+`gr.pow`; `build.js` decides which powCard to build off the same
+predicate. Three readers agreeing and one asking the type — **v3.01's
+shape: a rule that exists on one board**, and the board it was wrong on is
+the CR-exact one.
+
+### Measured
+
+- **Cosmo swings: 254 → 0.**
+- **Iyslander 12 wins → 22 · Blaze 17 → 22** across 210 self-play games,
+  from two abilities becoming reachable.
+- 4 sabotages, 4 bite, 0 silent.
+- Two existing drills had to be edited deliberately: they asserted the
+  policy would *play a card from hand*, and it now correctly prefers
+  Iyslander's newly-reachable equipment ability, which spends no card.
+  Their fixtures strip her gear so each stays about the thing it names.
+
+---
+
 ## v3.82 — eight heroes had no scene, and writing them found two dead readers
 
 `npm run scenes` is the only instrument in this project that asks whether

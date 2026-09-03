@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.82
+**Current version:** v3.83
 
 ---
 
@@ -3978,7 +3978,22 @@ parser.isWeapon(c)      is this a weapon with a printed power
 ```
 
 `test/types.test.js` pins the split at exactly those four cards. A fifth
-means something changed that nobody decided. Renaming parser's belongs
+means something changed that nobody decided.
+
+> **AND `judge.js` ASKED THE WRONG ONE OF THE TWO, AT BOTH ACTIVATION
+> SITES, UNTIL v3.83.** All four came out wrong, in opposite directions:
+> Cosmo and Plasma Barrel Shot fell into the SWING branch, where
+> `weaponCost` matched the **quoted granted ability inside their own rules
+> text** (254 illegal 0-power swings measured in five Enigma games); Death
+> Dealer and the Crucible fell there too and were refused *"prints no
+> weapon attack"*, so **Azalea's arsenal put and Iyslander's amp were
+> unreachable at the table** while working in the trainer.
+>
+> The trainer gates its swing on `isWeapon` and its ability on `gr.pow`,
+> and `build.js` builds the powCard off the same predicate — three readers
+> agreeing and judge asking the type. **When a file names two predicates
+> to keep two questions apart, grep for every caller of each.** Measured
+> after: Iyslander 12 wins → 22, Blaze 17 → 22. Renaming parser's belongs
 with the Phase 3 pass over equipment abilities.
 
 **`types.js` is LOADED but NOT bridged** (v2.49), and the second half is

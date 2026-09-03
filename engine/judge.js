@@ -926,7 +926,28 @@ function legal(g, a, seat){
        path is `tryPlay(gr.powCard, "hero", i)`, so this is the same call
        with the same powCard, and `execute` marks the once-per-turn flag
        (`weaponUsed["gp"+uid]`) for both. */
-    if(!TY.isWeaponType(piece)){
+    /* WHICH ROUTE IS THIS PIECE ON? `parser.isWeapon`, NOT
+       `types.isWeaponType` (v3.83). CLAUDE.md pins the split in as many
+       words — `isWeaponType` asks whether the card's TYPE is Weapon, and
+       `isWeapon` asks whether it is a weapon WITH A PRINTED POWER, which
+       is the question "does this thing swing". This file asked the type
+       one, and four pool records are Weapon-typed with no printed power:
+
+         Cosmo, Scroll of Ancestral Tapestry   Plasma Barrel Shot
+         Death Dealer (Bow)                    Crucible of Aetherweave
+
+       They came out wrong in BOTH directions. Cosmo and Plasma Barrel
+       Shot fell into the swing branch, where `weaponCost` happily matched
+       the QUOTED granted ability inside their rules text — measured, 254
+       illegal 0-power swings in five Enigma games. Death Dealer and the
+       Crucible fell there too, where `weaponCost` found nothing and the
+       branch refused them "prints no weapon attack" — so Azalea's arsenal
+       put and Iyslander's amp were UNREACHABLE at the table.
+
+       The trainer has always asked `isWeapon` here, and `build.js` builds
+       the powCard off the same predicate. v3.01's shape: a rule that
+       exists on one board. */
+    if(!PR.isWeapon(piece)){
       if(!piece.pow || !piece.powCard) return piece.name + " prints no activated ability";
       const ab = piece.powCard;
       /* Matching the trainer, deliberately: an ability is available once
@@ -1770,7 +1791,8 @@ function doActivate(g, a, seat){
   /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the
      powCard's uid ("gp"+uid) for a destroy-cost, so no index is needed —
      the "hero" zone is not a list and nothing splices it. */
-  if(!TY.isWeaponType(piece)){
+  /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
+  if(!PR.isWeapon(piece)){
     const ab = piece.powCard, acost = effCost(ab, sd);   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
