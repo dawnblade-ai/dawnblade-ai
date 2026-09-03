@@ -61,16 +61,21 @@ module.exports = [
       "the token's whole text":        (shield.functional_text || "").replace(/\*/g, ""),
       "…so it prints no attack":       !/attack/i.test(shield.functional_text || ""),
       "Cosmo grants one":              /are weapons with base/i.test(cosmo.functional_text || ""),
-      "…and Cosmo is unread today":    P.fxParse(cx).tier,
-      "a POWERLESS card is not a swing (v3.44)": P.allyAttack(cx) == null
+      "…and Cosmo READS now (v3.84)":  P.fxParse(cx).tier,
+      "a POWERLESS card is still not a swing itself (v3.44)": P.allyAttack(cx) == null,
+      "the Shield's ward is its base {p}":
+        P.auraAttackOf({name: shield.name, tt: shield.type_text, ty: shield.types,
+                        kw: shield.card_keywords, tx: shield.functional_text},
+                       {gear: [cx]}, {yourTurn: true}).power
     };
   },
   want: {
     "the token's whole text": "Ward 1",
     "…so it prints no attack": true,
     "Cosmo grants one": true,
-    "…and Cosmo is unread today": "none",
-    "a POWERLESS card is not a swing (v3.44)": true
+    "…and Cosmo READS now (v3.84)": "full",
+    "a POWERLESS card is still not a swing itself (v3.44)": true,
+    "the Shield's ward is its base {p}": 1
   }
 }
 

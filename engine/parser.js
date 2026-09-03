@@ -3098,6 +3098,29 @@ function fxParse(card){
     break;
   }
 
+  /* ---- AN AURA THAT IS A WEAPON (v3.84) — Cosmo's whole static -------
+     A WHOLE-CARD READER, because the two sentences are one mechanic and
+     the second names the first ("your AURA ATTACKS"): read a clause at a
+     time, the go-again rider is a bare grant with no attack to attach to.
+
+     CREDITED ONLY IF THE GRANT ACTUALLY READS, which is v3.63's rule —
+     `auraWeaponGrant` refuses a quoted ability `weaponCost` cannot parse,
+     and crediting a clause whose reader declined is the no-op blind spot.
+     The route is built on both boards (`parser.auraAttackOf`, judge's
+     arena branch, `execute`'s `from: "aura"`), so this is a real credit
+     rather than a `noop`. */
+  { const g = auraWeaponGrant(card);
+    if(g){
+      fx.auraWeapon = g;
+      for(let ci = 0; ci < clauses.length; ci++){
+        if(handled.has(ci)) continue;
+        const t = clauses[ci].toLowerCase();
+        if(/auras you control with ward are weapons/.test(t)
+           || (g.gaWithCounters && /your aura attacks with one or more/.test(t)))
+          handled.add(ci);
+      }
+    } }
+
   for(let i = 0; i < clauses.length - 1; i++){
     const rider = clauses[i+1];
     if(!/^if you do\b/i.test(rider)) continue;
@@ -3540,6 +3563,16 @@ function fxParse(card){
     const low = levelIdiom(clean(cl.t).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
     const q = quotedText(low);
     if(q == null || quotedOnHit(low)) return;
+    /* A QUOTED ABILITY THE AURA-WEAPON GRANT CONSUMED HAS A READER
+       (v3.84). This flag asks exactly one question — "is there a reader
+       for this quoted ability" — and `auraWeaponGrant` is one: it hands
+       the quoted line to `weaponCost` and `parser.auraAttackOf` offers it
+       on the board. Left unsuppressed, the flag and the clause credit
+       three lines up would contradict each other about the same sentence,
+       and the census in `test/quoted.test.js` would carry a card that
+       works. `fx.auraWeapon` is set only when the grant actually parsed,
+       so an unreadable one still reports. */
+    if(fx.auraWeapon && /are weapons with base/.test(low)) return;
     fx.quotedUnread = [...(fx.quotedUnread || []), q];
   });
   applyOverride(card, fx);
@@ -4483,6 +4516,97 @@ function allyAttack(c){
   return {cost: wc.cost, taps: wc.taps, oncePerTurn: wc.oncePerTurn, ga: attackLineGa(c)};
 }
 
+/* ---- AN AURA THAT IS A WEAPON (v3.84) -------------------------------
+   Cosmo, Scroll of Ancestral Tapestry:
+
+     "During your turn, auras you control with WARD are weapons with base
+      {p} equal to their WARD and \"Once per Turn Action - {r}: Attack\".
+      Your aura attacks with one or more +1{p} counters get go again."
+
+   ENIGMA'S WHOLE ENGINE. The Spectral Shield token's entire printed text
+   is "Ward 1" — it has no attack at all, and her hero's clause 1 prices
+   "your first Spectral Shield ATTACK each turn". Cosmo is what makes that
+   attack exist, so every one of those cards is waiting on this one.
+
+   THE GRANT'S COST IS READ OFF THE QUOTED ABILITY, by `weaponCost`, the
+   same reader that answers for a real weapon and for an ally. Three
+   sources of activated attacks and one reader of the grammar — which is
+   also the reason Cosmo was routed as a swing itself until v3.83:
+   `weaponCost` matches the quoted line whether it belongs to the card or
+   to something the card is talking about, so the ROUTE is decided by
+   `isWeapon`, never by asking it. */
+function auraWeaponGrant(c){
+  if(!c) return null;
+  const t = clean(c.tx || "").toLowerCase();
+  const m = t.match(
+    /auras you control with ward are weapons with base \{p\} equal to their ward and "([^"]+)"/);
+  if(!m) return null;
+  const wc = weaponCost(m[1]);
+  if(!wc) return null;                       /* an unreadable grant refuses */
+  /* THE SECOND SENTENCE IS THE SAME CARD'S and rides with the grant, so
+     one reader answers for the whole static. Enigma's deck is full of
+     +1{p} counter-putters — Astral Etchings, Uphold Tradition, Spectral
+     Manifestations — which is what makes it a real line of play rather
+     than a rider nobody can turn on. */
+  const ga = /your aura attacks with one or more \+1\{p\} counters get go again/.test(t);
+  return {cost: wc.cost, taps: wc.taps, oncePerTurn: wc.oncePerTurn,
+          gaWithCounters: ga, ownTurnOnly: /^during your turn/.test(t)};
+}
+
+/* THE NUMBER AN AURA CARRIES, read off its printed keyword line.
+
+   IT IS A PROPERTY, NOT THE PREVENTION POOL. `fx.ops` gives Spectral
+   Shield `[["ward",1]]`, which is the op that fills a side's prevention
+   pool when a card RESOLVES — and a token minted onto the board never
+   takes that path, so the pool is untouched (verified). Cosmo's own text
+   settles which reading is wanted here: "base {p} equal to their WARD"
+   is a number the aura CARRIES, so this reads the printed line.
+
+   WHETHER A BOARD AURA'S WARD ALSO FEEDS THE PREVENTION POOL IS AN OPEN
+   RULING and is deliberately not decided here — see HANDOFF.md. Reading
+   it as a standing prevention would be inventing a rule; reading it as a
+   number is what the card that talks about it says it is. */
+function wardValue(c){
+  if(!c) return 0;
+  const line = String(c.tx || "").split(/\n+/).map(l => clean(l).trim().toLowerCase())
+    .find(l => /^ward\s+\d+$/.test(l));
+  return line ? +line.split(/\s+/)[1] : 0;
+}
+
+/* CAN THIS BOARD AURA ATTACK RIGHT NOW, AND FOR HOW MUCH? (v3.84)
+
+   The aura's half of Cosmo's static, and the one reader all three callers
+   ask — `judge.legal`, `judge.doActivate` and `effects.execute` — so no
+   two of them can disagree about the cost or the power the way v3.80's
+   three cost readers did.
+
+   THE GRANT COMES FROM A DIFFERENT CARD, which is what makes this unlike
+   `allyAttack`: an ally prints its own attack, and an aura is handed one
+   by whatever is equipped. So the SIDE is an argument.
+
+   "DURING YOUR TURN" IS THE CALLER'S ANSWER and there is no default: a
+   caller that does not say gets NOTHING, which is weaker than printed and
+   visible — the direction v3.24 takes with `defendValue`'s conditions and
+   v3.72 with the arsenal put's source zone. Defaulting the other way
+   would let an aura swing on the opponent's turn, which the card's first
+   three words forbid. */
+function auraAttackOf(card, sd, o){
+  o = o || {};
+  if(!card || !sd) return null;
+  const w = wardValue(card);
+  if(!(w > 0)) return null;                  /* no ward, no weapon */
+  if(o.yourTurn !== true) return null;       /* "during your turn" */
+  /* A DESTROYED PIECE GRANTS NOTHING — `gearDef` already answers 0 for
+     one and `sweepGear` files it at the end phase, so it is still in the
+     array while the grant is being asked for. */
+  const g = (sd.gear || [])
+    .map(x => (x && !x.destroyed) ? auraWeaponGrant(x) : null)
+    .find(Boolean);
+  if(!g) return null;
+  return {cost: g.cost, taps: g.taps, oncePerTurn: g.oncePerTurn,
+          power: w, gaWithCounters: !!g.gaWithCounters};
+}
+
 /* THE GO AGAIN ON *THIS* ABILITY, not on a sibling. Cutty Shark prints
    TWO activated abilities — "Action - {r}, {t}: Attack" and "Once per
    Turn Action - {r}: Your next ally attack this turn gets +1{p}. Go
@@ -5323,7 +5447,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        weaponCost, allyAttack, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,

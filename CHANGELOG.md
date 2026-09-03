@@ -9,6 +9,81 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.84 — an aura that is a weapon
+
+> **Cosmo, Scroll of Ancestral Tapestry** — *"During your turn, auras you
+> control with **ward** are weapons with base {p} equal to their **ward**
+> and \"Once per Turn Action - {r}: Attack\". Your aura attacks with one
+> or more +1{p} counters get **go again**."*
+
+**Enigma's whole engine.** The Spectral Shield token's entire printed text
+is *"Ward 1"* — it has no attack at all — and her hero's clause 1 prices
+*"your first Spectral Shield **attack** each turn"*. Cosmo is what makes
+that attack exist, so everything else of hers was waiting on this card.
+
+### The route is `from: "aura"`, and it is `from: "ally"`'s twin
+
+v3.44's sentence exactly: **`from` is the seam, and everything else came
+free** — `pend`, the wall, on-hit text, CR 1.4.5 targeting, the action
+point charged at resolution and kept on go again.
+
+**What is NEW is that the grant comes from a different card.** An ally
+prints its own attack; an aura is handed one by whatever is equipped. So
+`parser.auraAttackOf` takes the **side**, and *"during your turn"* is the
+caller's answer **with no default** — a caller that does not say gets
+nothing, which is weaker than printed and visible.
+
+- **The cost is read off the QUOTED ability**, by `weaponCost` — one
+  reader of that grammar for all three sources of activated attacks. It is
+  also exactly why Cosmo was routed as a swing *itself* until v3.83.
+- **The power is the printed WARD.** Spectral Shield prints 1 and Waxing
+  Specter prints 3, so a hardcoded 1 is right for one card and wrong for
+  the other (fifth time this fixture rule has been needed).
+- **Cosmo's second sentence** is asked at the swing, off the counter
+  count — an aura pumped by something else and carrying no counter gets
+  nothing.
+- **The once-per-turn key is namespaced `aura<uid>`**, because an ally and
+  an aura share a uid space and an `ally` key would spend the other's
+  allowance.
+
+### AND IT NEEDED TWO THINGS BEYOND THE CARD
+
+**1. `declareAttack`'s `inPlay` guard needed its THIRD sibling.** Written
+for weapons (*"a weapon stays equipped, so it never leaves the gear
+zone"*), told about allies at v3.44, and it had to be told again.
+Measured before it was: **3182 `CARD-IN-TWO-ZONES` violations in 210
+self-play games**, the board and the chain both holding the same aura.
+
+v3.43's rule, third outing: **a guard belongs to the SHAPE, not to the
+version that wrote it.** The shape is *"an activation route leaves its
+card where it is"*, and a drill now asserts the guard names every route.
+
+**2. The POLICY could not propose the route at all.** `sparring.js` reads
+no card text by contract, and an aura's power is its printed **ward**
+rather than a `power` field — so the route existed and nothing could call
+it. **The third time in one cycle** (v3.50's allies, v3.80's non-attacks,
+this). `judge.boardAttackOf` answers for both routes and the policy asks
+judge, which keeps one reader and the contract intact.
+
+### Measured
+
+- **Cosmo: `none` → `full`.** Pool 363 → **364 full**, 8 → **7 none**.
+- **Enigma 3 wins → 24**, second in the table.
+- **210 self-play games with ZERO stalls** — the first fully clean run:
+  0 stalls, 0 refusals, 0 violations, 0 malformed feed.
+- 16 sabotages, 16 bite, 0 silent.
+- The `quotedUnread` census (v3.41) went to six and is back to five: the
+  flag asks *"is there a reader"*, and there is one now — left
+  unsuppressed it would have contradicted the clause credit three lines
+  away about the same sentence.
+- **And a drill measured through unrelated actions.** The resource
+  assertion was taken after driving to resolution, where `resolve()` lets
+  the policy act and spend — so the pool dropped by 2 and the drill blamed
+  the aura for a card the opponent played. It is asserted at the
+  declaration now, where `execute` charges it.
+
+---
+
 ## v3.83 — which route is this piece on?
 
 CLAUDE.md pins the split in as many words, and has since v2.42:

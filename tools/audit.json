@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T02:22:35.113Z",
- "appVer": "3.83",
+ "generated": "2026-09-03T02:37:32.528Z",
+ "appVer": "3.84",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 363,
+  "full": 364,
   "part": 34,
-  "none": 8
+  "none": 7
  },
  "heroes": {
   "kayo": {
@@ -8452,23 +8452,20 @@
     "go again",
     "ward"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "During your turn, auras you control with ward are weapons with base {p} equal to their ward and \"Once per Turn Action - {r}: Attack\"",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Your aura attacks with one or more +1{p} counters get go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "During your turn, auras you control with ward are weapons with base {p} equal to their ward and \"Once per Turn Action - {r}: Attack\"",
-    "Your aura attacks with one or more +1{p} counters get go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "During your turn, auras you control with ward are weapons with base {p} equal to their ward and \"Once per Turn Action - {r}: Attack\"\nYour aura attacks with one or more +1{p} counters get go again.",

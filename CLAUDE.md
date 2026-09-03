@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.83
+**Current version:** v3.84
 
 ---
 
@@ -476,6 +476,60 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### AN AURA THAT IS A WEAPON (v3.84)
+
+> *"During your turn, auras you control with **ward** are weapons with
+> base {p} equal to their **ward** and \"Once per Turn Action - {r}:
+> Attack\". Your aura attacks with one or more +1{p} counters get go
+> again."*
+
+**ENIGMA'S WHOLE ENGINE.** The Spectral Shield token's entire printed text
+is *"Ward 1"* — no attack at all — and her hero's clause 1 prices *"your
+first Spectral Shield ATTACK each turn"*. Cosmo is what makes that attack
+exist.
+
+**THE ROUTE IS `from: "aura"`, `from: "ally"`'s TWIN** (v3.44), so
+everything after the seam came free. What is new is that **the grant comes
+from a DIFFERENT CARD** — an ally prints its own attack, an aura is handed
+one by whatever is equipped — so `parser.auraAttackOf` takes the SIDE, and
+*"during your turn"* is the caller's answer **with no default**.
+
+**THE POWER IS THE PRINTED WARD**, and Cosmo's own text is what settles
+that reading: *"base {p} equal to their WARD"* is a number the aura
+CARRIES, not the side's prevention pool. Spectral Shield prints 1 and
+Waxing Specter prints 3, so a hardcoded 1 is right for one and wrong for
+the other — fifth time that fixture rule has been needed.
+
+**WHETHER A BOARD AURA'S WARD ALSO FEEDS THE PREVENTION POOL IS OPEN** and
+is deliberately not decided — see HANDOFF.md.
+
+### A GUARD BELONGS TO THE SHAPE — THIRD OUTING (v3.84)
+
+`declareAttack`'s `inPlay` guard was written for weapons (*"a weapon stays
+equipped, so it never leaves the gear zone"*), told about allies at v3.44,
+and had to be told a **third** time. Measured before it was: **3182
+`CARD-IN-TWO-ZONES` violations in 210 self-play games**, the board and the
+chain both holding the same aura.
+
+**The shape is "an ACTIVATION route leaves its card where it is"**, and
+every new source of attacks belongs there the day it is built. A drill
+asserts the guard names every route.
+
+### A ROUTE WITH NO CALLER IS NOT BUILT — THIRD TIME IN ONE CYCLE (v3.84)
+
+`sparring.js` reads no card text by contract, and an aura's power is its
+printed WARD rather than a `power` field — so the route existed and
+nothing could propose it. v3.50's allies, v3.80's non-attacks, and now
+this.
+
+**ASKING JUDGE IS IN CONTRACT.** `judge.boardAttackOf` answers for both
+routes and the policy asks judge, which keeps ONE reader (judge asks the
+parser) and leaves `sparring.js` free of card text. **Measured: Enigma 3
+wins → 24, and the first 210-game run with ZERO stalls.**
+
+**WHEN YOU BUILD A ROUTE, GO AND COUNT HOW OFTEN IT FIRES.** Three times
+in one cycle the answer was zero.
 
 ### EPHEMERAL WAS READ THREE WAYS ACROSS TWO FILES (v3.82)
 

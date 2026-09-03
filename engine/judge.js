@@ -894,15 +894,28 @@ function legal(g, a, seat){
     const bi = (sd.board || []).findIndex(b => b && b.uid === a.uid);
     if(bi >= 0){
       const b = sd.board[bi];
-      const aa = PR.allyAttack(b.card);
+      /* AN AURA THAT IS A WEAPON (v3.84) — Cosmo's static. It is asked
+         AFTER the ally reader and never instead of it: an ally prints its
+         own attack, an aura is handed one by whatever is equipped, and a
+         card that is both would be an ally first. One reader, shared with
+         `doActivate` and `execute`. */
+      const aa = PR.allyAttack(b.card)
+        || PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
       if(!aa) return b.card.name + " prints no attack to activate";
       /* A TAP AND AN ALLOWANCE EXPIRE DIFFERENTLY — the Sledge/Scorpio
          rule (v2.46). `spent` is the arena's tap and is lifted at CR
          4.4.3d; `Once per Turn` comes back at the turn boundary. */
       if(aa.taps && b.spent) return b.card.name + " is tapped until your end phase";
-      if(aa.oncePerTurn && (sd.weaponUsed || {})["ally" + a.uid])
+      const _route = PR.allyAttack(b.card) ? "ally" : "aura";
+      if(aa.oncePerTurn && (sd.weaponUsed || {})[_route + a.uid])
         return b.card.name + " has already attacked this turn";
-      if(!(GM.allyLife(b) > 0)) return b.card.name + " is not on the battlefield";
+      /* AN AURA HAS NO LIFE, and `allyLife` answers null for one — so the
+         living-object test is the ALLY's and is asked only of an ally.
+         CR 1.4.5a makes an ally attackable because it has life; an aura
+         is a permanent that has been granted an attack, which is a
+         different fact about a different object. */
+      if(_route === "ally" && !(GM.allyLife(b) > 0))
+        return b.card.name + " is not on the battlefield";
       const win = P.speedAllowed(g, seat);
       if(win.indexOf("action") < 0) return "no action-speed window — an ally cannot attack here";
       if(!(sd.ap > 0)) return "no action point left";
@@ -1148,6 +1161,28 @@ function playableWhy(g, seat, c, win, zone){
    With no ally in the arena there is exactly one target and nothing to
    ask, which is why solo play against the dummy never sees this. */
 const targets = (g, defIdx, heroCard) => GM.attackTargets(g, defIdx, heroCard);
+
+/* WHAT CAN THIS BOARD ENTRY ATTACK FOR, IF ANYTHING? (v3.84)
+
+   The same question `legal`'s arena branch asks, exposed so a POLICY can
+   rank on it. `sparring.js` reads no card text by contract — it may not
+   call the parser at all — so an aura's power, which is its printed WARD
+   rather than a `power` field, was unreachable to it: the route existed
+   and nothing could propose it, which is v3.50's finding for the third
+   time this cycle.
+
+   Asking JUDGE is in contract (the policy already asks `legal`,
+   `pendingOf`, `paySum` and `autoAnswer`), and it keeps one reader:
+   judge asks the parser, the policy asks judge. */
+const boardAttackOf = (g, seat, uid) => {
+  const sd = at(g, seat);
+  const b = (sd.board || []).find(x => x && x.uid === uid);
+  if(!b) return null;
+  const ally = PR.allyAttack(b.card);
+  if(ally) return {cost: ally.cost || 0, power: +b.card.power || 0, kind: "ally"};
+  const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
+  return aura ? {cost: aura.cost || 0, power: aura.power || 0, kind: "aura"} : null;
+};
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
   if(spec == null || spec === "hero") return {kind: "hero", side: def, uid: null};
@@ -1778,13 +1813,23 @@ function doActivate(g, a, seat){
     const bi = (sd.board || []).findIndex(b => b && b.uid === a.uid);
     if(bi >= 0){
       const b = sd.board[bi];
-      const aa = PR.allyAttack(b.card) || {cost: 0};
+      /* THE ROUTE DECIDES THE COST AND THE POWER (v3.84), and it is the
+         same question `legal` asked one function up: an ally prints its
+         own attack, an aura is handed one by whatever is equipped.
+         `commitPlay` carries the route through to `execute`, which reads
+         the grant back from the one shared reader rather than being told
+         a number — so no two of the three can disagree (v3.80). */
+      const _ally = PR.allyAttack(b.card);
+      const _aura = _ally ? null
+        : PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
+      const aa = _ally || _aura || {cost: 0};
+      const route = _ally ? "ally" : _aura ? "aura" : "ally";
       const target = targetOf(g, seat, a.target);
       if((aa.cost || 0) > sd.res)
-        return say({...g, pending: {kind: "pay", seat, card: b.card, from: "ally", need: aa.cost, target}},
+        return say({...g, pending: {kind: "pay", seat, card: b.card, from: route, need: aa.cost, target}},
           b.card.name + " costs " + aa.cost + " to attack and " + sd.name
           + " holds " + sd.res + " — pitch, or cancel.");
-      return commitPlay(g, b.card, "ally", seat, null, target);
+      return commitPlay(g, b.card, route, seat, null, target);
     }
   }
   const piece = sd.gear[find(sd.gear, a.uid)];
@@ -2077,7 +2122,19 @@ function declareAttack(g, card, seat, fromZone, target, declared){
      `CARD-IN-TWO-ZONES`, the census's loudest error. It was invisible
      until v3.50 gave the sparring policy an arena branch, because until
      then nothing in a self-play game ever attacked with an ally. */
-  const inPlay = fromWeapon || fromZone === "ally";
+  /* AND A THIRD ROUTE AT v3.84 — an AURA granted an attack by Cosmo. It
+     stays in the arena exactly as an ally does and a weapon does, so the
+     guard needs its third sibling. Measured before it had one: 3182
+     `CARD-IN-TWO-ZONES` violations in 210 self-play games, the board and
+     the chain both holding the same Waning Vengeance.
+
+     v3.43's rule, third outing: A GUARD BELONGS TO THE SHAPE, NOT TO THE
+     VERSION THAT WROTE IT. This line was written for weapons, v3.44 added
+     the ally and had to be told, and v3.84 added the aura and had to be
+     told again. The shape is "an ACTIVATION route leaves its card where
+     it is" — every new source of attacks belongs here the day it is
+     built. */
+  const inPlay = fromWeapon || fromZone === "ally" || fromZone === "aura";
   const tgt = target || {kind: "hero", side: P.other(seat), uid: null};
   /* THE TOTAL COMES FROM THE CARD, NOT FROM ITS PRINTED POWER (v2.77).
      `execute` has already applied every pump the card and the board
@@ -2434,7 +2491,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, boardAttackOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer, PENDING_KINDS};

@@ -1,4 +1,31 @@
-# Handoff — Dawnblade, at v3.83 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.84 · PHASE C · HERO BY HERO
+
+## ⚠ COSMO IS BUILT (v3.84) — AND ENIGMA IS ALIVE
+
+`from: "aura"` is the third activated-attack route. Enigma goes **3 wins
+→ 24**, and 210 self-play games came back with **zero stalls** for the
+first time.
+
+**HER CLAUSE 1 IS NOW REACHABLE** — *"your first Spectral Shield attack
+each turn costs {r} less to activate"* — because there is finally such an
+attack to discount. It is a `costOff`-shaped grant scoped to the first
+aura attack of the turn.
+
+**HER CLAUSE 2 IS STILL BLOCKED ON `{c}`**, which is a RULING and not an
+engineering call: the symbol appears on exactly one record in 797 (hers),
+the database prints no reminder text for it, and the SEN001 card face
+shows three blue-grey spirals it never names. See `tools/scenes/enigma.js`
+— the scene pins the measurement so nobody re-derives it.
+
+### AN OPEN QUESTION THIS RAISED
+
+**Does a board aura's printed `Ward N` also feed the prevention pool?**
+`fx.ops` gives Spectral Shield `[["ward",1]]` — the op that fills a side's
+pool when a card RESOLVES — and a token minted onto the board never takes
+that path, so today it does not. Cosmo's own text settles that ward is a
+NUMBER the aura carries, which is what v3.84 reads; whether it is *also* a
+standing prevention is unruled. Reading it as one would be inventing a
+rule; the current state is weaker than printed and visible.
 
 ## ⚠ COSMO IS THE NEXT REAL BUILD, AND IT IS ENIGMA'S WHOLE ENGINE
 

@@ -1,15 +1,15 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-03T02:22:35.113Z · app v3.83 · data sage-v13 · db 797 records
+Generated 2026-09-03T02:37:32.528Z · app v3.84 · data sage-v13 · db 797 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 363 |
+| Fully scripted | 364 |
 | Partially scripted | 34 |
-| Text-only (nothing parsed) | 8 |
+| Text-only (nothing parsed) | 7 |
 | Cards with audit flags | 44 |
 
 ## Symbols found in pool text
@@ -224,13 +224,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — If 2 or more cards are put into arsenals this way, this gets go again.
 - 🚩 text mentions go again but no clause parses it
 
-### Cosmo, Scroll of Ancestral Tapestry (pitch 0) — none · [enigma]
-- type: Illusionist Weapon - Scroll (2H) · granted: Go again
-- — During your turn, auras you control with ward are weapons with base {p} equal to their ward and "Once per Turn Action - {r}: Attack"
-- — Your aura attacks with one or more +1{p} counters get go again.
-- 🚩 granted go-again with no parsed grant path
-- 🚩 text mentions go again but no clause parses it
-
 ### Crown of Dichotomy (pitch 0) — part · [viserai, briar]
 - type: Runeblade Equipment - Head · printed: Arcane Barrier 1
 - — Action - {r}, destroy this: Put target Runeblade attack action card and target Runeblade non-attack action card from your graveyard on top of your deck in any order.
@@ -438,6 +431,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Bolt'n Boots** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
 - **Brain Freeze** (pitch 3): unreviewed keyword: "ice fusion"
 - **Burn Up // Shock** (pitch 1): unreviewed keyword: "meld"
+- **Cosmo, Scroll of Ancestral Tapestry** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
 - **Display Loyalty** (pitch 1): granted ability in quotes has NO reader: "when this attacks a hero, create a fealty token." — the head parses, this does not
 - **Enflame the Firebrand** (pitch 1): text mentions go again but no clause parses it
 - **Entwine Lightning** (pitch 1): unreviewed keyword: "lightning fusion"

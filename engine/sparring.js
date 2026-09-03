@@ -309,9 +309,21 @@ function offence(g, seat, o){
      So: take an ally when this attack would KILL it outright and the ally
      prints power of its own (it threatens something). Otherwise the hero,
      which is still the answer that is always available. */
+  /* EVERY BOARD ENTRY THAT CAN ATTACK, not just the allies (v3.84). An
+     AURA can, once Cosmo is equipped — and its power is its printed WARD
+     rather than a `power` field, which this file may not read: it calls
+     no parser by contract. `judge.boardAttackOf` answers both, so the
+     policy ranks on a number judge derived and stays out of card text.
+
+     WITHOUT THIS THE ROUTE HAD NO CALLER, which is the third time in one
+     cycle that a built route sat unproposed (v3.50's allies, v3.80's
+     non-attacks, and now this). A feature with no caller looks exactly
+     like a feature that works, until you count. */
   const allies = (sd.board || [])
-    .filter(b => b && GM.isAlly(b))
-    .map(b => ({c: b.card, uid: b.uid, ally: true}));
+    .map(b => b && ({b, at: J.boardAttackOf(g, seat, b.uid)}))
+    .filter(x => x && x.at)
+    .map(x => ({c: Object.assign({}, x.b.card, {power: x.at.power, cost: x.at.cost}),
+                uid: x.b.uid, ally: true}));
 
   const pick = from
     .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))

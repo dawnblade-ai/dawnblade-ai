@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 5 heroes, 7 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 42 cards | understood ≠ built |
-| **Fail states** | 73 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 41 cards | understood ≠ built |
+| **Fail states** | 72 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -61,7 +61,6 @@ Cards whose ruling exists but which still do not resolve in full.
 
 - **Danger Digits** (none, 3/3 unread)
 - **Concoct Disorder** (none, 2/2 unread)
-- **Cosmo, Scroll of Ancestral Tapestry** (none, 2/2 unread)
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
@@ -116,15 +115,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Ability inert — cost not modelled | 20 |
-| Earned value denied | 20 |
+| Earned value denied | 19 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
 | Choice never offered | 16 |
-| No schedule to fire on | 15 |
+| No schedule to fire on | 14 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Displayed total is wrong | 11 |
+| Displayed total is wrong | 10 |
 | Unread, effect unknown | 8 |
 
-### WRONG — 39 entries
+### WRONG — 38 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -161,13 +160,6 @@ can be overruled. Same discipline as the mention count.
 - **Burn Up // Shock** (1) · tier `full`
   - *Keyword filed as no-op, but it has meaning* — The parser records "Meld" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 12 time(s). Your ruling describes real behaviour: These are tricky - these are 2 cards with the same cost and same pitch but different effects. the 'meld' popup will allow the player to choose 1 or both sides of the card to player - the cost must be paid for each side c
     > Meld
-- **Cosmo, Scroll of Ancestral Tapestry** · tier `none`
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > During your turn, auras you control with ward are weapons with base {p} equal to their ward and "Once per Turn Action - {r}: Attack"
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > During your turn, auras you control with ward are weapons with base {p} equal to their ward and "Once per Turn Action - {r}: Attack"
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Your aura attacks with one or more +1{p} counters get go again.
 - **Danger Digits** · tier `none` · arakni
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
@@ -243,7 +235,14 @@ can be overruled. Same discipline as the mention count.
 - **Polar Cap** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
-- … and 14 more (see the station)
+- **Rising Resentment** (1) · tier `part` · fai
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > If you do, it costs {r} less to play and you may play it this turn.
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
+- … and 13 more (see the station)
 
 ### LOST VALUE — 33 entries
 

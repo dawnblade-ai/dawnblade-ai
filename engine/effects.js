@@ -1637,7 +1637,16 @@ function makeEffects(ctx){
        deploying it, while its attack prints {r}{r}. Charging `effCost`
        here as well took 5 for a 2-cost attack, driven, before this line
        existed. */
-    const _allyCost = from === "ally" ? ((allyAttack(card) || {}).cost || 0) : null;
+    /* AN AURA'S ATTACK COSTS WHAT THE GRANT SAYS (v3.84), and it is read
+       from the same one place both boards ask — never re-derived, which
+       is v3.80's three-cost-readers lesson taken as an instruction rather
+       than a warning. Its `.cost` is the card's PLAY cost like an ally's
+       and is equally already spent, so `effCost` is as wrong here as it
+       is there. */
+    const _auraAtk = from === "aura"
+      ? P.auraAttackOf(card, act(s), {yourTurn: actorOf(s) === s.turnPlayer}) : null;
+    const _allyCost = from === "ally" ? ((allyAttack(card) || {}).cost || 0)
+                    : _auraAtk ? (_auraAtk.cost || 0) : null;
     exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s)));
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
@@ -1797,13 +1806,24 @@ function makeEffects(ctx){
           {...act(n).weaponUsed, ["ally" + card.uid]: true};
       }
     }
+    /* THE AURA'S TWO LIMITS, beside the ally's and for the same reason —
+       a tap is a STATE its controller's untap step lifts (CR 4.4.3d) and
+       "Once per Turn" is an ALLOWANCE that comes back at the boundary
+       (v2.46). The key is namespaced `aura` so it cannot collide with the
+       ally's or a weapon's on the same uid. */
+    if(from === "aura" && _auraAtk){
+      if(_auraAtk.taps) actMut(n).board = act(n).board.map(b =>
+        b && b.uid === card.uid ? {...b, spent: true} : b);
+      if(_auraAtk.oncePerTurn) actMut(n).weaponUsed =
+        {...act(n).weaponUsed, ["aura" + card.uid]: true};
+    }
     if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;
     /* colour is pitch: red 1, yellow 2, blue 3 — several rulings key off
        "another blue/red card this turn" */
     if(card.pitch===3) actMut(n).hist = {...act(n).hist, blue:(act(n).hist.blue||0)+1};
     if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
-    const attacking = isAttack(card) || from==="weapon" || from==="ally";
+    const attacking = isAttack(card) || from==="weapon" || from==="ally" || from==="aura";
     /* THE GO AGAIN ON AN ACTIVATED-ABILITY LINE IS THE ABILITY'S (v3.44).
        Limpit prints "Action - {r}, {t}: Attack. Go again"; the clause
        splitter breaks on the period, so "Go again" arrives as a clause of
@@ -1818,9 +1838,23 @@ function makeEffects(ctx){
        ability ("Once per Turn Action - {r}: Your next ally attack ... Go
        again"), and handing that to the attack would be reading one
        ability's text onto another. */
-    const _activation = from==="weapon" || from==="hero" || from==="board" || from==="ally";
+    const _activation = from==="weapon" || from==="hero" || from==="board" || from==="ally" || from==="aura";
     const _allyAtk = from==="ally" ? allyAttack(card) : null;
-    let ga = _allyAtk ? !!_allyAtk.ga
+    /* COSMO'S SECOND SENTENCE (v3.84): "your aura attacks with ONE OR
+       MORE +1{p} counters get go again". The condition is a fact about
+       the AURA at the moment it swings, not about the grant, so it is
+       asked here rather than folded into `auraAttackOf` — and it is the
+       counter COUNT, not the pumped total: an aura pumped by something
+       else and carrying no counter gets nothing.
+
+       IT IS THE ONLY GO AGAIN ON THIS ROUTE. The quoted granted ability
+       is "Once per Turn Action - {r}: Attack" with no keyword of its own,
+       and `fx.ga` read off a Spectral Shield answers about the TOKEN's
+       printed line, which says only "Ward 1". */
+    const _auraGa = !!(_auraAtk && _auraAtk.gaWithCounters
+      && ((act(n).counters[card.uid] || {}).pow || 0) > 0);
+    let ga = _auraAtk ? _auraGa
+           : _allyAtk ? !!_allyAtk.ga
            : (!_activation && abilityGa(card)) ? false
            /* ---- AN ATTACK REACTION'S GO AGAIN IS THE TARGET'S (v3.74) --
               "Target arrow attack with {p} greater than its base GETS GO
@@ -2321,8 +2355,22 @@ function makeEffects(ctx){
          counter-bearing blade is simply a bigger weapon — which is what
          makes "base {p}" checks elsewhere read it too. Counters only ever
          land on a permanent, so this is asked of the weapon route alone. */
-      const powCtr = from==="weapon" ? ((act(n).counters[card.uid]||{}).pow||0) : 0;
-      const base = card._powBoost ? (1 + (n.boostChain||0)) : (card.power||0) + powCtr;
+      /* AN AURA CARRIES ITS COUNTERS THE SAME WAY A WEAPON DOES (v3.84).
+         `ctrPut`'s candidate scan has covered the BOARD as well as the
+         gear since v3.55, and Enigma's deck is where those counters come
+         from — Astral Etchings, Uphold Tradition and Spectral
+         Manifestations all put +1{p} on an aura with ward. */
+      const powCtr = (from==="weapon" || from==="aura")
+        ? ((act(n).counters[card.uid]||{}).pow||0) : 0;
+      /* AN AURA'S BASE {p} IS ITS WARD (v3.84). The card prints no power
+         at all — Spectral Shield's whole text is "Ward 1" — so reading
+         `card.power` gives 0 and every Spectral Shield swings for
+         nothing, which is what a 0-power weapon looked like before v3.83
+         routed it away. The number comes from the grant, which read it
+         off the aura's own printed keyword line. */
+      const base = card._powBoost ? (1 + (n.boostChain||0))
+                 : _auraAtk ? _auraAtk.power + powCtr
+                 : (card.power||0) + powCtr;
       let total = base + bonus;
       if(powCtr) n = L(n, `${card.name} carries +${powCtr}{p} in counters — it swings at ${base}.`);
       /* a qualified buff that did NOT match is not spent — it waits for an
@@ -2680,11 +2728,20 @@ function makeEffects(ctx){
          mentioned. In a training sim the sequence is the lesson.
          The printed value is shown alongside whenever the total differs,
          because "6 → 8" is exactly what the player is trying to learn. */
-      const _printed = card.power || 0;
+      /* THE PRINTED VALUE OF AN AURA-AS-WEAPON IS ITS WARD (v3.84), not
+         the 0 on its type line — Spectral Shield's whole text is "Ward
+         1". Reading `card.power` here printed "(printed 0)" beside a
+         perfectly correct 1, which is the feed teaching the player that
+         something added a point that never did. */
+      const _printed = _auraAtk ? _auraAtk.power : (card.power || 0);
       /* seat 0 is called "You", so the verb has to agree with it */
       const _s = /^you$/i.test(act(n).name || "") ? "" : "s";
-      n = L(n, `${act(n).name} ${from==="weapon" ? "swing"+_s : from==="ally" ? "send"+_s : "play"+_s} ${card.name}`
-             + ` — ${total} power on the chain`
+      /* AND AN AURA IS ACTIVATED, NOT PLAYED. It is already on the board;
+         "plays" is the verb for a card leaving a hand. */
+      n = L(n, `${act(n).name} ${from==="weapon" ? "swing"+_s : from==="ally" ? "send"+_s
+                                : from==="aura" ? "turn"+_s : "play"+_s} ${card.name}`
+             + (from==="aura" ? " on them — a ward made a weapon," : " —")
+             + ` ${total} power on the chain`
              + (total !== _printed ? ` (printed ${_printed})` : "")
              + (ga ? ", and it goes again" : "") + ".");
       /* THE DECLARATION ENDS HERE (v2.73).
