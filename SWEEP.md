@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 39 cards | understood ≠ built |
-| **Fail states** | 68 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 38 cards | understood ≠ built |
+| **Fail states** | 67 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -54,7 +54,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
-- **Shred** (none, 1/1 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
 - **Halo of Illumination** (part, 2/3 unread)
@@ -106,7 +105,7 @@ can be overruled. Same discipline as the mention count.
 | Ability inert — cost not modelled | 19 |
 | Earned value denied | 17 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| Choice never offered | 15 |
+| Choice never offered | 14 |
 | No schedule to fire on | 13 |
 | Keyword filed as no-op, but it has meaning | 11 |
 | Displayed total is wrong | 8 |
@@ -231,7 +230,7 @@ can be overruled. Same discipline as the mention count.
     > If there are no cards in your soul, return this to its owner's hand, then charge your soul.
 - … and 11 more (see the station)
 
-### LOST VALUE — 31 entries
+### LOST VALUE — 30 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -311,9 +310,6 @@ can be overruled. Same discipline as the mention count.
 - **Riggermortis** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
-- **Shred** (3) · tier `none` · arakni
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Target card defending an Assassin attack gets -2{d} this combat chain.
 - **Spears of Surreality** (3) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
@@ -326,7 +322,10 @@ can be overruled. Same discipline as the mention count.
 - **Tension in the Air** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
     > Suspense
-- … and 6 more (see the station)
+- **The Suspense is Killing Me** (3) · tier `full` · bravo, lyath
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
+    > Suspense
+- … and 5 more (see the station)
 
 ### INERT — 1 entries
 

@@ -2656,7 +2656,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -3273,6 +3273,48 @@ function fxParse(card){
      a clause consumed by a dedicated reader (`handled`) took an early
      return that pushed `run` without ever asking, which is how Avast Ye!
      kept reporting `full` after the other three were fixed. */
+  /* ---- A DEFENDER SHRUNK FOR THE REST OF THE CHAIN (v3.89) ---------
+     "Target card defending an Assassin attack gets -2{d} this combat
+      chain."   — SHRED, and the pool's only defender debuff.
+
+     THE AMOUNT IS READ, AND THE POOL ITSELF PROVES IT: Shred prints
+     **-4 / -3 / -2** across its three pitches, so a hardcoded number is
+     right for one printing and silently wrong for two. Every other time
+     this rule has been needed the discriminator had to be synthetic
+     (v3.32, v3.55, v3.74, v3.77, v3.81, v3.86, v3.88) — here the card
+     does it on its own.
+
+     THE GATE IS ABOUT THE ATTACK, not the defender: "defending an
+     ASSASSIN attack" restricts which swing this may be played on, and
+     `attackQual` is the one reader of that phrase — no new vocabulary,
+     seventh member of the family.
+
+     IT IS A WHOLE-CARD FIELD, NOT AN OP, for `optCost`'s reason: WHICH
+     CARDS DEFEND is the caller's answer (v3.11, v3.24, v3.27) — the
+     trainer holds them as `{k:"def"}` stack layers and judge on
+     `blockH`/`blockG` — and `runOps` is handed neither. The queue site is
+     `attackRx`, which is already the one body both boards call for a
+     played attack reaction and is already given the wall. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    /* TWO CAPTURES, BECAUSE THE PRINTED RESTRICTION CAN SIT ON EITHER
+       SIDE OF THE WORD (v3.31) — "an ASSASSIN attack" is a leading class
+       group and "an attack WITH STEALTH" is a tail. `attackQual` is the
+       one reader of both, and without the tail the refusal below is DEAD
+       CODE that reads like a rule (v3.67, v3.77). */
+    const sh = clauses[ci].match(
+      /^target card defending (?:an?\s+)?(.*?)attack\b(.*?) gets -(\d+)\{d\} this combat chain\.?$/i);
+    if(!sh) continue;
+    const q = attackQual(sh[1] || "", sh[2] || "");
+    /* `false` is "a restriction I cannot read" and is NOT `null`
+       ("nothing restricts this") — `qualMatches` answers TRUE for a falsy
+       qualifier, so collapsing them lets the card be played on any swing
+       in the game (v3.31). */
+    if(q === false) continue;
+    fx.defDebuff = {amt: +sh[3], q: q || null};
+    handled.add(ci);
+    break;
+  }
+
   /* ---- EACH HERO PUTS THEIR TOP CARD IN THEIR ARSENAL (v3.88) ------
      Concoct Disorder, and it is the pool's only card of the shape:
 

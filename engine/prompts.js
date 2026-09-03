@@ -191,6 +191,12 @@ function buildPrompt(game, spec){
          untapped where it stands, so there is no `to` and nothing moves.
          Dropped here it vanishes silently, exactly as `arsStamp` did. */
       untapStamp: spec.untapStamp || null,
+      /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34,
+         v3.53). `defStamp` is Shred's chain-scoped defender debuff — data
+         the answer applies to the card that was CHOSEN, on the DEFENDING
+         side, and nothing moves. Dropped here it vanishes silently and
+         the sheet asks a question with no consequence. */
+      defStamp: spec.defStamp || null,
       /* THE COUNTER STAMP (v3.53) — same rule, third time: a spec only
          carries fields THIS function knows about. Dropped here, a targeted
          counter put opens the right sheet, names the right permanent and

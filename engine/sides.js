@@ -47,7 +47,7 @@ const SIDE_FIELDS = [
   /* economy: floating resources, action points, fizzled resources */
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
-  "counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider","runeHitNext",
+  "counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defDebuff","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider","runeHitNext",
   /* `frost` RETIRED in v2.74, `rot` and `fra` in v3.09 — and `rune` in
      v3.82, which is the one this comment was CITING AS ALREADY GONE. Each
      is an Aura on `board` and each count is derived (`parser.runeCount`,
@@ -129,7 +129,7 @@ function makeSide(o){
        field arrives with no reader (this file's own lesson at v3.82). */
     pitch: [], grave: o.grave || [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
-    counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], atkBuff: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
+    counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], atkBuff: [], defDebuff: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
     amp: 0, ward: 0, awd: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,

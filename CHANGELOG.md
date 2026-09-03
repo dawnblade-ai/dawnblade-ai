@@ -9,6 +9,99 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.89 — Shred, and two live two-board defects it uncovered
+
+> *"Target card defending an **Assassin** attack gets **-2{d}** this
+> combat chain."* — SHRED, the pool's only defender debuff
+
+### The amount is read, and for once the pool proves it
+
+Shred prints **-4 / -3 / -2** across its three pitches. Every other time
+this rule has been needed the discriminator had to be a synthetic card
+(v3.32, v3.55, v3.74, v3.77, v3.81, v3.86, v3.88) — the **eighth** outing
+is the first that came free.
+
+- **`defendValue` WAS ALREADY THE ONE READER** of what a defender is worth
+  (v3.23), and `defSide` is already the CONTROLLER of the card being
+  valued — so no caller can forget to say.
+- **KEYED BY UID, because the card is TARGETED.** A second defender of the
+  same name is a different object and keeps its printed value.
+- **FLOORED AT ZERO.** A defender blocking for a negative number would ADD
+  damage to the swing, which no printed text grants.
+- **IT ACCUMULATES**, or a second Shred on the same defender is dropped.
+- **IT EXPIRES WITH THE CHAIN**, through `effects.closeChainGrants` —
+  v3.87's shared body, which both boards already call, rather than a
+  schedule of its own (v3.01).
+- **WITH ONE LEGAL TARGET IT JUST HAPPENS** (v3.55); with two or more it
+  opens a real sheet whose candidates are the caller's wall and whose
+  answer moves nothing (`defStamp` is data, exactly as `untapStamp` is —
+  v3.47).
+
+### Defect 1: seven attack reactions never reached the link at the table
+
+`execute` routed a **played** attack reaction to `attackRx` only when it
+carried an UNCONDITIONAL pump (`fx.self`). **Seven of the pool's twenty
+carry none** — Ironsong Response ×2, Courageous Steelhand, Run Through,
+Roaring Beam, Night's Embrace, Shred — so at the table they fell through
+to the plain resolution while the TRAINER routed every one of them.
+
+Driven, same card, same state: **Ironsong Response** (*"Reprise - … target
+weapon attack gets +3{p}"*) pumped the swing by **3** on the trainer and by
+**nothing** at the table, where `execute`'s generic condition loop has no
+case for `reprise` — it needs the hand-blocker count, which only that
+route is given — and printed *"condition not met"* before dropping the
+bonus on the floor.
+
+**The test is now what the rule is**: a played attack reaction, in the
+reaction window of an attack this seat controls (CR 8.1.2a). `_attackRx`
+is the ACTIVATED twin and has been routed on its WINDOW rather than its
+payload since v3.63 — this is the same correction one route over.
+
+### Defect 2: judge handed `execute` no wall at all
+
+So `attackRx` saw `handBlockers: 0` and **reprise could never fire at the
+table** even once the routing was fixed. `judge.declaredWall` is that
+answer now, beside the trainer's own.
+
+**Both defects are WEAKER than printed**, so the one-sided fairness sweep
+is blind; both affected cards read `tier: full`, because the clause IS
+consumed. **Only driving the same card at both boards sees either.**
+
+### `RX_CONDS` is one list with two readers
+
+`reprise` and `charged` are the two conditions only `attackRx` can answer,
+and `execute`'s generic loop now SKIPS exactly those — the same shape as
+the `way:` and `LATE_CONDS` skips, and one list rather than two, for
+v3.71's reason: two copies drift into a condition that is skipped and then
+never run.
+
+The state was identical either way; what differed is that the player was
+told the condition failed and then handed the bonus. **That is v3.60's
+sev-2 category**, so one drill asserts on prose deliberately.
+
+### And every unit drill was green while the card did nothing
+
+`execute` threaded the hand-blocker count into `attackRx` and **silently
+dropped the defender list**, so Shred said *"nothing is defending"* in
+every real game — while sixteen drills that called `attackRx` directly all
+passed. v3.20's condemn lesson: **drive the real entry point, or pin
+nothing.** The drill that catches it plays two real precons at each other.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| pool coverage | 366 full / **5 none** | **367 full** / 34 part / **4 none** |
+| drills | 1951 | **1970** |
+| symmetry ledger | 47 | **48** (`defDebuff`), `WIRE_V` → 4 |
+| sabotages | — | **18 bite; 1 latent and pinned by a source guard** |
+
+Driven: a 3-power stealth attack into a 3-defence blocker deals **0**;
+with Shred it deals **2**. Self-play 210 games · 0 stalls · 0 refusals ·
+0 violations; `npm run fairness` clean.
+
+---
+
 ## v3.88 — the pool's only cross-seat zone move
 
 > *"When this attacks, **each hero** puts the top card of **their** deck

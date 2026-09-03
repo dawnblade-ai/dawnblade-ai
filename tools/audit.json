@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T17:35:58.854Z",
- "appVer": "3.87",
+ "generated": "2026-09-03T17:58:04.813Z",
+ "appVer": "3.88",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 366,
+  "full": 367,
   "part": 34,
-  "none": 5
+  "none": 4
  },
  "heroes": {
   "kayo": {
@@ -10282,18 +10282,16 @@
     "{d}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Target card defending an Assassin attack gets -2{d} this combat chain.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Target card defending an Assassin attack gets -2{d} this combat chain."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target card defending an Assassin attack gets -2{d} this combat chain.",

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.88
+**Current version:** v3.89
 
 ---
 
@@ -516,6 +516,68 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A PLAYED ATTACK REACTION IS ROUTED BY ITS WINDOW, NOT ITS PAYLOAD (v3.89)
+
+`execute` sent a played attack reaction to `attackRx` only when it carried
+an **unconditional pump** (`fx.self`). **Seven of the pool's twenty carry
+none**, so at the table they fell through to the plain resolution while
+the TRAINER routed every one of them — v3.01's shape, and v3.11's own bug
+still live for the cards it did not measure.
+
+**DRIVEN, SAME CARD, SAME STATE:** Ironsong Response (*"Reprise - … target
+weapon attack gets +3{p}"*) pumped the swing by **3** on the trainer and
+by **NOTHING** at the table, where `execute`'s generic condition loop has
+no case for `reprise` — it needs the hand-blocker count, which only that
+route is given — and printed *"condition not met"* before dropping the
+bonus. **AND judge handed `execute` no wall at all**, so reprise could
+never fire there even once the routing was fixed (`judge.declaredWall` is
+that answer now).
+
+Both are WEAKER than printed, so the one-sided sweep is blind, and both
+cards read `tier: full`, so coverage is blind. **Only driving the same
+card at both boards sees either.**
+
+**`_attackRx` IS THE ACTIVATED TWIN AND HAS BEEN ROUTED ON ITS WINDOW
+SINCE v3.63** — this is the same correction one route over. And its ops
+are held back from `execute`'s own run for v3.63's reason too: driven,
+Night's Embrace landed its standing grant TWICE the moment the routing
+stopped asking for a pump. The hold-back is a **PREDICATE**, not a result,
+because that line runs BEFORE the branch.
+
+**`RX_CONDS` IS ONE LIST WITH TWO READERS** — the skip in `execute` and
+the dispatcher in `attackRx` — for `LATE_CONDS`' reason (v3.71): two
+copies drift into a condition that is skipped and then never run.
+
+### A DEFENDER SHRUNK FOR THE REST OF THE CHAIN (v3.89)
+
+> *"Target card defending an **Assassin** attack gets -2{d} this combat
+> chain."* — SHRED, the pool's only defender debuff
+
+**THE AMOUNT IS READ, AND FOR ONCE THE POOL PROVES IT**: Shred prints
+**-4 / -3 / -2** across its three pitches. Eighth outing of that rule and
+the first that needed no synthetic.
+
+**`defendValue` IS ALREADY THE ONE READER** of what a defender is worth
+(v3.23) and `defSide` is already the card's CONTROLLER, so no caller can
+forget to say. **KEYED BY UID**, because the card is TARGETED — a second
+defender of the same name keeps its printed value. **FLOORED AT ZERO**: a
+defender blocking for a negative would ADD damage no text grants. It
+**ACCUMULATES**, and it expires through `closeChainGrants`, the shared
+body both boards already call.
+
+**WHICH CARDS DEFEND IS THE CALLER'S ANSWER** (v3.11, v3.24, v3.27), and
+the restriction reads on **either side of the word** through
+`attackQual` — seventh member of that family to invent no vocabulary.
+Without the tail capture the "unreadable restriction refuses" guard is
+DEAD CODE that reads like a rule (v3.67, v3.77), and the sabotage for it
+comes back silent because the fixture cannot express the bug (v3.62).
+
+**AND EVERY UNIT DRILL WAS GREEN WHILE THE CARD DID NOTHING.** `execute`
+threaded the hand-blocker count into `attackRx` and silently dropped the
+defender list, so Shred said *"nothing is defending"* in every real game
+— while sixteen drills that called `attackRx` DIRECTLY all passed.
+v3.20's condemn lesson: **drive the real entry point, or pin nothing.**
 
 ### A CROSS-SEAT ZONE MOVE, AND THE TIMING THAT BLOCKED IT (v3.88)
 

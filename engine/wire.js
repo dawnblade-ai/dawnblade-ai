@@ -95,8 +95,9 @@
    clients on different versions are refused at the handshake rather than
    discovering it on turn six.
    v3.87 — `atkBuff` JOINED it (Night's Embrace's standing attack grant),
-   which is the same kind of shape change in the other direction. */
-const WIRE_V = 3;
+   which is the same kind of shape change in the other direction.
+   v3.89 — and `defDebuff` (Shred's chain-scoped defender debuff). */
+const WIRE_V = 4;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -118,7 +119,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
    every SIDE_FIELD is accounted for one way or the other. */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
-  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
+  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defDebuff","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
   "runeHitNext","amp","ward","awd","arcShield",
   "lifeLock","namedBuff","dracNext","marked","fatigue","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",

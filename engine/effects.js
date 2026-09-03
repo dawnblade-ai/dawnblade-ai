@@ -71,6 +71,18 @@ const {resolveEntry} = C;
    that is skipped and then never run — a printed bonus that silently
    vanishes. */
 const LATE_CONDS = ["pumped", "defLt2", "defLt2any"];
+/* THE CONDITIONS ONLY `attackRx` CAN ANSWER (v3.89). Both need the WALL —
+   `reprise` asks how many cards from hand met the attack, `charged` rides
+   with it on the same route — and `execute`'s generic loop is given
+   neither, so it falls through to the default `false` and prints
+   "condition not met (reprise)" four lines before the reaction pumps the
+   link by 3. That is the sev-2 category the player TRUSTS: the state is
+   right and the feed contradicts itself (v3.60).
+
+   ONE LIST, TWO READERS — the skip in `execute` and the dispatcher in
+   `attackRx` — for `LATE_CONDS`' own reason: two copies drift into a
+   condition that is skipped and then never run. */
+const RX_CONDS = ["reprise", "charged"];
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
@@ -2075,6 +2087,13 @@ function makeEffects(ctx){
     }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
     n._arsWay  = 0;         // …and the cross-seat arsenal count (v3.88)
+    /* IS THIS CARD GOING TO RESOLVE ONTO THE LINK? (v3.89) Two routes
+       reach `attackRx` — an ACTIVATED ability (`_attackRx`, v3.63) and a
+       PLAYED attack reaction — and both need the answer BEFORE the
+       condition loop and the op run below, which is why it is a predicate
+       rather than a result. */
+    const _rxRoute = !!card._attackRx
+      || (isAR(card) && !isAttack(card) && !!n.pend && n.pend.by === actorOf(n));
     const preRan = new Set();
     if(fx.ops.some(o=>o[0]==="discardRandom")){
       const pre = fx.ops.filter(o=>o[0]==="draw"||o[0]==="discardRandom");
@@ -2119,6 +2138,13 @@ function makeEffects(ctx){
          skipped here and evaluated by the LATE pass below, after the
          card's own ops have actually run. */
       if(/^way:/.test(cond)) return;
+      /* AND A REACTION CONDITION BELONGS TO `attackRx` (v3.89). It is the
+         only route given the hand-blocker count, so this loop can only
+         ever answer `reprise` FALSE — and then print that, four lines
+         before the reaction pumps the link. The state is identical either
+         way; what differs is that the player is told the condition failed
+         and then handed the bonus, which is exactly v3.60's shape. */
+      if(_rxRoute && RX_CONDS.indexOf(cond) >= 0) return;
       /* AND NEITHER CAN A LATE CONDITION (v3.71), for the same reason one
          step further out: `pumped` and the two defender counts are settled
          at the WALL, and this loop runs at declaration. They were falling
@@ -2924,7 +2950,18 @@ function makeEffects(ctx){
          target check and Stalker's Steps' go again onto the card's own
          (nonexistent) attack. One place, and it is the one that knows
          what the link is. */
-      n = runOps(n, card._attackRx ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      /* A PLAYED ATTACK REACTION IS THE SAME CASE (v3.89), and it is a
+         PREDICATE rather than a result: this line runs BEFORE the branch
+         that calls `attackRx`, so "did it route" has to be answerable
+         here. Driven: Night's Embrace landed its standing grant TWICE the
+         moment the routing below stopped asking for a pump.
+
+         A REFUSAL INSIDE `attackRx` STILL DROPS THEM, which is what the
+         TRAINER does — `playRx` returns on `rx.why` with the card already
+         spent — and `judge.legal`'s `rxTargetWhy` refuses an illegal
+         target before the card ever leaves the hand, so the only way to
+         reach that refusal is a stale action off the wire. */
+      n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
       /* ---- THE LATE CONDITION PASS (v3.60) ---------------------------
          "…this way" asks what THIS card's own resolution just did, so it
          can only be answered here — after `fx.ops` have run. The main
@@ -2996,13 +3033,59 @@ function makeEffects(ctx){
         if(!(n.pend && n.pend.by === actorOf(n)))
           n = L(n, `${card.name}: no attack of yours to react to.`);
         else {
-          const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0});
+          const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0,
+            /* AND WHICH CARDS THEY ARE (v3.89) — Shred targets one of
+               them. Threaded from the caller, not re-derived: a body both
+               boards call cannot go looking for either seat's wall.
+
+               BOTH ROUTES CARRY IT, and one of them is LATENT: no pool
+               equipment or hero ability prints Shred's shape, so
+               sabotaging this on the ACTIVATED route comes back silent.
+               v3.63's rule about the powCard BUILDERS, said about the
+               places that FEED what they built — a drill pins the
+               symmetry rather than pretending the route is covered. */
+            defenders: (opts && opts.defenders) || []});
           if(rx.why) n = L(n, rx.why);
           else { n = rx.game; if(rx.pump) n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
         }
       }
-      else if(fx.self && !isAttack(card) && isAR(card) && n.pend && n.pend.by === actorOf(n)){
-        const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0});
+      /* A PLAYED ATTACK REACTION GOES TO `attackRx`, PUMP OR NO PUMP
+         (v3.89). This tested `fx.self` — "does it carry an unconditional
+         pump" — and SEVEN of the pool's twenty attack reactions carry
+         none, so at the table they fell through to the plain resolution
+         while the TRAINER routed every one of them here. v3.01's shape,
+         and v3.11's own bug still live for the cards it did not measure.
+
+         DRIVEN, both boards, same state: Ironsong Response ("Reprise - …
+         target weapon attack gets +3{p}") pumps the swing by 3 on the
+         trainer and by NOTHING at the table, where `execute`'s generic
+         condition loop has no case for `reprise` — it needs the
+         hand-blocker count, which only this route is given — and prints
+         "condition not met" before dropping the pump on the floor. The
+         player pays a card and a printed +3 vanishes.
+
+         WEAKER THAN PRINTED, so the one-sided fairness sweep is blind,
+         and every affected card reads `tier: full` because the clause IS
+         consumed. Only driving the same card at both boards sees it.
+
+         THE TEST IS NOW WHAT THE RULE IS: a played attack reaction, in
+         the reaction window of an attack this seat controls (CR 8.1.2a).
+         `_attackRx` above is the ACTIVATED twin and is already routed on
+         its window rather than on its payload (v3.63) — this is the same
+         correction one route over. */
+      else if(isAR(card) && !isAttack(card) && n.pend && n.pend.by === actorOf(n)){
+        const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0,
+            /* AND WHICH CARDS THEY ARE (v3.89) — Shred targets one of
+               them. Threaded from the caller, not re-derived: a body both
+               boards call cannot go looking for either seat's wall.
+
+               BOTH ROUTES CARRY IT, and one of them is LATENT: no pool
+               equipment or hero ability prints Shred's shape, so
+               sabotaging this on the ACTIVATED route comes back silent.
+               v3.63's rule about the powCard BUILDERS, said about the
+               places that FEED what they built — a drill pins the
+               symmetry rather than pretending the route is covered. */
+            defenders: (opts && opts.defenders) || []});
         if(rx.why) n = L(n, rx.why);
         else { n = rx.game; n = L(n, `${card.name} on the stack (+${rx.pump}).`); }
       }
@@ -3543,6 +3626,13 @@ function makeEffects(ctx){
       n = L(n, `${got.name} takes ${(st.n||1) > 1 ? st.n + " " + st.label + " counters" : "a " + st.label + " counter"} — now ${(cur[st.kind]||0) + (st.n||1)}.`);
       n = ctrLanded(n, got, st, p.src || "");
     }
+    /* SHRED'S DEBUFF, WHEN A SHEET WAS OPENED (v3.89). The other landing
+       site is `attackRx`'s single-defender path; one body serves both, so
+       the two cannot disagree about what the answer did. */
+    if(p.tag === "pick" && p.defStamp && (r.picked||[]).length){
+      const st = p.defStamp;
+      n = applyDefDebuff(n, st.seat, r.picked[0], st.amt, p.src || "");
+    }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
       const st = p.untapStamp || {};
@@ -3849,6 +3939,20 @@ function makeEffects(ctx){
     return g2;
   };
 
+  /* ONE BODY FOR THE DEBUFF (v3.89), because it lands from two places —
+     the direct path when there is a single defender, and `applyAnswer`
+     when a sheet was opened. Written twice they drift, which is the rule
+     `faceUpArsenal` and `ctrStamp` each carry a comment about. */
+  const applyDefDebuff = (s, seat, card, amt, src) => {
+    let n = {...s};
+    const sides = n.sides.slice();
+    const sd = sides[seat] || {};
+    sides[seat] = Object.assign({}, sd,
+      {defDebuff: [...(sd.defDebuff || []), {uid: card.uid, amt}]});
+    n = Object.assign({}, n, {sides});
+    return L(n, `${src}: ${card.name} defends for ${amt} less for the rest of this combat chain.`);
+  };
+
   const attackRx = (s, c, o) => {
     o = o || {};
     const fx = fxParse(c);
@@ -3892,6 +3996,10 @@ function makeEffects(ctx){
        bonus may REPLACE the printed one rather than stack with it. */
     const fired = [];
     (fx.conds || []).forEach(({cond, op}) => {
+      /* ONE LIST, TWO READERS (v3.89) — `execute` skips exactly these and
+         this is where they are answered. A condition in the list with no
+         branch here is a gate that is skipped and then never run. */
+      if(RX_CONDS.indexOf(cond) < 0) return;
       if(cond === "reprise"){
         const fromHand = o.handBlockers || 0;
         if(!fromHand){ n = L(n, `${c.name}: reprise needs a card from hand to have met the attack — none did.`); return; }
@@ -3932,6 +4040,54 @@ function makeEffects(ctx){
       }
     }
     n = runOps(n, (eff.ops || []).filter(op => op[0] !== "buffNext"), c.name);
+    /* ---- A DEFENDER SHRUNK FOR THE REST OF THE CHAIN (v3.89) --------
+       Shred: "Target card defending an ASSASSIN attack gets -2{d} this
+       combat chain."
+
+       WHICH CARDS DEFEND IS THE CALLER'S ANSWER (v3.11, v3.24, v3.27).
+       The two boards hold their declared defenders differently, and a
+       body that reads either representation is a body the other board
+       cannot call — which is exactly how phantasm came to be inert at the
+       table for three versions (v3.00). A caller that says nothing offers
+       no target and the card refuses: weaker than printed and visible.
+
+       (The field names are deliberately not written out here: the guard
+       in `reactions.test.js` scans this body's RAW SOURCE, comments
+       included, so prose naming them reads as a lookup. Reword the prose
+       rather than weakening the scan — the same discipline
+       `html-balance.test.js`'s pre-neutralize list follows.)
+
+       THE GATE IS ABOUT THE ATTACK, not the defender — `pend.card` must
+       be the kind of swing the line names, read through the one matcher.
+
+       THE DEBUFF IS HELD ON THE DEFENDING SIDE, because that is where
+       `defendValue` already looks for everything else about a card's
+       worth (v3.78) and it is keyed by uid because the card is TARGETED.
+
+       WITH ONE LEGAL TARGET IT JUST HAPPENS (v3.55): a sheet offering a
+       single forced choice is a tap that teaches nothing. With two or
+       more it opens a real `pick` — caller-supplied candidates, nothing
+       moves (`to` omitted), and `defStamp` is DATA the answer applies,
+       exactly as `untapStamp` is (v3.47) and for the same reason: this
+       module runs no effects, so returning it as ops would hand it to
+       `runOps`, which would apply it to the source. */
+    if(fx.defDebuff){
+      const wall = (o.defenders || []).filter(Boolean);
+      const dSeat = 1 - actorOf(n);
+      if(fx.defDebuff.q && !qualMatches(fx.defDebuff.q, pend.card, qo))
+        n = L(n, `${c.name} shrinks a card defending ${P.qualLabel(fx.defDebuff.q)} — ${pend.card.name} isn't one.`);
+      else if(!wall.length)
+        n = L(n, `${c.name}: nothing is defending — there is no card to shrink.`);
+      else if(wall.length === 1){
+        n = applyDefDebuff(n, dSeat, wall[0], fx.defDebuff.amt, c.name);
+      } else {
+        n.promptQ = [...(n.promptQ||[]), {tag: "pick", src: c.name, side: actorOf(n),
+          cards: wall, min: 1, max: 1,
+          defStamp: {amt: fx.defDebuff.amt, seat: dSeat},
+          title: `Shrink a defender by ${fx.defDebuff.amt}`,
+          hint: "It defends for that much less for the rest of this combat chain."}];
+      }
+    }
     n.stack = [...(n.stack || []), {k: "rx", label: `${c.name} — +${pump}`, pump}];
     return {game: n, pump, why: null};
   };
@@ -4856,7 +5012,26 @@ function defendValue(defSide, card, opts){
      Found by driving it, not by a drill. */
   if(self && !(card && card.destroyed) && defSelfMet(self, defSide, opts)) d += self.amt;
 
-  return d;
+  /* A CHAIN-SCOPED DEBUFF ON THIS PARTICULAR DEFENDER (v3.89) — Shred.
+     "Target card defending an Assassin attack gets -2{d} this combat
+     chain." It is keyed by UID because the card is TARGETED: a second
+     defender of the same name is a different object and keeps its
+     printed value.
+
+     `defSide` is already the CONTROLLER of the card being valued, which
+     is where the debuff is held, so no caller can forget to say — the
+     same reason Lyath's grant lives there (v3.78).
+
+     FLOORED AT ZERO. A defender that blocks for a negative number would
+     ADD damage to the swing, which no printed text says; the card's job
+     is to stop the block, not to reverse it.
+
+     IT ACCUMULATES rather than being assigned, or a second Shred on the
+     same defender is silently dropped. */
+  for(const e of (defSide && defSide.defDebuff) || [])
+    if(e && card && e.uid === card.uid) d -= e.amt;
+
+  return Math.max(0, d);
 }
 
 /* ONE DESCRIPTION OF THE OPTIONAL-COST OFFER (v3.20).
@@ -5443,9 +5618,14 @@ function closeChainGrants(game){
   for(let i = 0; i < 2; i++){
     const sd = (n.sides || [])[i] || {};
     const keep = (sd.atkBuff || []).filter(b => b.until !== "chain");
-    if(keep.length === (sd.atkBuff || []).length) continue;
+    /* SHRED'S DEBUFF IS "THIS COMBAT CHAIN" TOO (v3.89), so it expires
+       here rather than growing a schedule of its own — and it is held on
+       the DEFENDING side, which is the other seat from the one that
+       played the card. Both seats are swept for that reason. */
+    const dropDeb = ((sd.defDebuff || []).length > 0);
+    if(keep.length === (sd.atkBuff || []).length && !dropDeb) continue;
     const sides = n.sides.slice();
-    sides[i] = Object.assign({}, sd, {atkBuff: keep});
+    sides[i] = Object.assign({}, sd, {atkBuff: keep, defDebuff: []});
     n = Object.assign({}, n, {sides});
   }
   return n;

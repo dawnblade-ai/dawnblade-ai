@@ -1,6 +1,6 @@
-# Handoff — Dawnblade, at v3.88 · PHASE C · FIVE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.89 · PHASE C · FOUR CARDS READ NOTHING
 
-## ⚠ THE REMAINING FIVE, AND WHAT EACH IS WAITING ON
+## ⚠ THE REMAINING FOUR, AND WHAT EACH IS WAITING ON
 
 `npm run audit`: **365 full / 34 part / 6 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
@@ -8,24 +8,20 @@ list at v3.87. What is left, with the honest reason each still refuses:
 | card | printed | waiting on |
 |---|---|---|
 | **Jittery Bones** | *"you may discard a card **or** destroy the top card of your deck. If that card has watery grave…"* | a MODAL optional cost — `optCost` carries one cost shape |
-| **Shred** | *"target card defending an Assassin attack gets -2{d} this combat chain"* | a target pick among the declared defenders, and a chain-scoped defender debuff |
 | **Glisten** | *"distribute up to four +1{p} counters among any number of weapons"* | a DISTRIBUTION sheet. `ctrPut` and the sharpen wipe (v3.66) are both built |
 | **Danger Digits** | *"target dagger you control that isn't on the active chain link deals 1 damage… the dagger has hit"* | a "has hit" FICTION for a card that never attacked |
 | **Hope Merchant's Hood** | *"shuffle any number of cards from your hand into your deck, then draw that many"* | deck manipulation, and a rider whose count is the pick's own size |
 
-**THE PATTERN, FOR THE FOURTH VERSION RUNNING: none of the five is
+**THE PATTERN, FOR THE FIFTH VERSION RUNNING: none of the four is
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
 
-**SHRED IS THE CHEAPEST OF THE FIVE.** `defendValue` (v3.23) is already
-the ONE reader of what a defender is worth and already takes the defending
-side, so a `-2{d}` keyed by uid is a read there and nothing else. The
-chain-scoped expiry has a home too: `effects.closeChainGrants` (v3.87)
-is the shared body both boards already call at the close step. What is
-genuinely new is the TARGET — which cards defend is the CALLER's answer
-(v3.11, v3.24, v3.27), so `attackRx` needs the defender list beside the
-`handBlockers` count it already takes.
+**SHRED CLOSED AT v3.89, AND BUILDING IT FOUND TWO LIVE TWO-BOARD
+DEFECTS** — see the changelog. The lesson worth carrying: when a card
+refuses, check which ROUTE it takes on each board before building
+anything. Seven attack reactions were taking different routes on the two
+boards and nothing here could see it.
 
 **CONCOCT DISORDER CLOSED AT v3.88** and its lesson generalises: on an
 attack card, an op whose own condition asks about it must be PRE-RUN at

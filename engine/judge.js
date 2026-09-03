@@ -1563,6 +1563,29 @@ function resolveLink(g){
    zones; a card in NONE falls out of the census and is invisible to it.
    So the chain's cards are filed, turn-stamped, and the declarations
    cleared for both seats. */
+/* THE WALL AS IT STANDS RIGHT NOW — for a card being played into the
+   reaction window (v3.89).
+
+   `strike` builds this again when it resolves the link, and it has to:
+   there it is spending the wall, here it is only reporting it. What must
+   NOT happen is a shared body reaching for either representation — the
+   trainer holds declared defenders as `{k:"def"}` stack layers and this
+   file on `blockH`/`blockG`, so WHICH CARDS DEFEND is the caller's
+   answer (v3.11, v3.24, v3.27) and this is that answer.
+
+   IT NEEDED A CALLER BEFORE IT WAS WORTH ANYTHING. Until v3.89 `doPlay`
+   handed `execute` no wall at all, so `attackRx` saw `handBlockers: 0`
+   and REPRISE could never fire at the table — Ironsong Response and
+   Courageous Steelhand were inert here while working in the trainer. */
+function declaredWall(g, defSeat){
+  const sd = at(g, defSeat) || {};
+  const hand = (sd.blockH || [])
+    .map(u => (sd.hand || []).find(c => c.uid === u)).filter(Boolean);
+  const gear = (sd.blockG || [])
+    .map(u => (sd.gear || []).find(c => c.uid === u)).filter(Boolean);
+  return {handBlockers: hand.length, defenders: [...gear, ...hand]};
+}
+
 function closeChain(g){
   let n = g;
   const spent = n.chainCards || [];
@@ -2064,8 +2087,15 @@ function commitPlay(g, card, zone, seat, window, target){
      here and applied AFTER the fact in `declareAttack`; a trigger that
      asks "am I attacking a hero" has to be told before it fires, at
      declaration. `heroHit` answers the other question, later. */
+  /* THE WALL IS THE CALLER'S ANSWER (v3.89). A played attack reaction
+     resolves through `effects.attackRx`, which asks how many cards from
+     hand met the attack (reprise) and which cards are defending (Shred) —
+     and neither is knowable inside a body both boards call. Handing it
+     nothing is what left reprise dead at this board. */
+  const _wall = declaredWall(g, P.other(seat));
   let n = withEffects({...g, actor: seat},
-    (fx, s) => fx.execute(s, card, zone, idx, {window, target}));
+    (fx, s) => fx.execute(s, card, zone, idx,
+      {window, target, handBlockers: _wall.handBlockers, defenders: _wall.defenders}));
 
   if(n._declared){
     const d = n._declared; delete n._declared;
