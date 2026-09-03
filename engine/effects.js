@@ -2507,6 +2507,24 @@ function makeEffects(ctx){
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
       const arsPow = (card._arsPow && card._upTurn === n.turn) ? card._arsPow : 0;
+      /* AND WHAT A BANISH-RIDER STAMPED ON IT (v3.92) — Mounting Anger's
+         "it gets +1{p}", which belongs to the BANISHED card rather than
+         to the attack that banished it (v2.29's pin).
+
+         TWO GRANTS FROM ONE PRINTED SENTENCE EXPIRE BY ONE RECORD. The
+         arsenal stamp above carries its own `_upTurn` because an arsenal
+         card genuinely survives to later turns; this one does not need a
+         twin, because the SAME sentence prints "and you may play it this
+         turn" and `playableFromZone` refuses the card from banish on any
+         other turn. Measured over all 797 records: four read the banish
+         zone and not one returns a card from it to hand, so there is no
+         route by which the pump could outlive `_playTurn`.
+
+         A second turn record beside it would be v3.77's dead guard — and
+         it could not be applied consistently anyway, because the cost
+         half of the same rider is read by `effCost`, which is called from
+         twenty sites and is handed no turn. One record, both halves. */
+      const banPow = card._banPow || 0;
       /* "it gets -N{p} unless you pay {cost}" (Look Tuff). This is a
          declare-time decision, before the total below is struck — the same
          timing wall Charge and Fusion hit, so it gets the same honest
@@ -2561,7 +2579,7 @@ function makeEffects(ctx){
         smBuff = _sm; smRider = [["ga"]];
         n = L(n, `${card.name} strikes from stealth at a marked hero — +${_sm} power, and go again if it lands.`);
       }
-      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+payPenalty+frailPen+smBuff;
+      const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff;
       /* +1{p} COUNTERS ARE PART OF THE WEAPON'S POWER, not a bonus on the
          swing. They sit on the piece and travel between turns, so a
          counter-bearing blade is simply a bigger weapon — which is what
@@ -3755,6 +3773,27 @@ function makeEffects(ctx){
       const st = p.defStamp;
       n = applyDefMod(n, st.seat, r.picked[0], -st.amt, p.src || "");
     }
+    /* THE BANISHED CARD'S OWN STAMP (v3.92). "It gets +1{p} and you may
+       play it this turn" is about the card that MOVED, and the card is
+       already in the banish zone by the time this runs — so the stamp is
+       written onto the copy that is there. */
+    if(p.tag === "pick" && p.banStamp && (r.picked||[]).length){
+      const st = p.banStamp, got = r.picked[0];
+      /* `_playTurn` IS THE WHOLE WINDOW — see the note beside `banPow` in
+         `execute`. `_asInstant` is written FALSE on purpose: Blaze's
+         banish (v3.39) prints a speed grant and these two do not, so the
+         two lines must not be read onto each other. */
+      actMut(n).banish = (act(n).banish||[]).map(c => c.uid === got.uid
+        ? Object.assign({}, c,
+            st.pow ? {_banPow: st.pow} : {},
+            st.costOff ? {_banCostOff: st.costOff} : {},
+            st.playThisTurn ? {_playTurn: n.turn, _asInstant: false} : {})
+        : c);
+      n = L(n, `${p.src}: ${got.name} is banished`
+             + (st.pow ? ` with +${st.pow}{p}` : "")
+             + (st.costOff ? ` costing ${st.costOff} less` : "")
+             + (st.playThisTurn ? ", and may be played this turn." : "."));
+    }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
       const st = p.untapStamp || {};
@@ -4567,6 +4606,38 @@ function makeEffects(ctx){
       else if(total>0) n = L(n, `${pc.name} hit an ally — its "when this hits a hero" ability does not fire.`);
       else n = L(n, "Fully blocked — on-hit effects fizzle.");
     }
+    /* ---- THE `hits` OPTIONAL COST (v3.92) ---------------------------
+       Mounting Anger and Rising Resentment: "When this HITS, you may
+       banish an attack action card from your hand with cost less than the
+       number of Draconic chain links you control."
+
+       v3.53 measured this trigger as having ZERO pool cards and recorded
+       the site as unwired for that reason — which was true only because
+       the FILTER refused (v2.29) and `fx.optCost` was therefore never
+       set. Building `dracLinks` for Fai (v3.86) discharged the refusal,
+       and these two are the trigger's first customers. A trigger with no
+       card is not work; a trigger whose cards were refused elsewhere is.
+
+       IT FIRES ON A HIT OF ANY KIND, not a hero hit: the printed line
+       says "when this hits" with no subject, and 13 pool records print
+       that bare form (v3.45). `total > 0` is the hit.
+
+       THE DYNAMIC BOUND IS SUPPLIED HERE, never in the parse: `fxParse`
+       memoizes on `name|pitch`, so a number stored there freezes at
+       whatever the chain was the first time it was read (v3.20, v3.39).
+       `costLtDrac` says WHICH count; this says what it is right now. */
+    if(total > 0){
+      const _oc = fxParse(pc).optCost;
+      if(_oc && _oc.trigger === "hits"){
+        const spec = optCostSpec(_oc, pc, actorOf(n), false);
+        if(spec.filter && spec.filter.costLtDrac){
+          const lim = P.dracLinks(n.chain);
+          spec.filter = Object.assign({}, spec.filter, {costLe: lim - 1});
+          delete spec.filter.costLtDrac;
+        }
+        n.promptQ = [...(n.promptQ||[]), spec];
+      }
+    }
     /* BOTH BOARDS GET THIS, because it lives in the shared body rather
        than in either caller's damage step. `heroHit` is the caller's
        answer — see `briarEarth`. */
@@ -5277,6 +5348,11 @@ function optCostSpec(oc, card, side, leaving){
       : "Optional — choose none to decline. The rider only resolves if you pay."
   };
   if(oc.kind !== "reveal") spec.to = (oc.kind === "banish" ? "banish" : "grave");
+  /* "IT" IS THE CARD THAT MOVED (v3.92) — a STAMP the answer applies, not
+     ops, for `arsStamp`'s reason (v2.34): this module runs no effects, so
+     returning it as ops hands it to `runOps`, which applies it to the
+     SOURCE. Opt-in, so every other optional cost keeps its shape. */
+  if(oc.banStamp) spec.banStamp = oc.banStamp;
   return spec;
 }
 

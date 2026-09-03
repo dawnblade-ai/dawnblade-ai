@@ -206,6 +206,133 @@ module.exports = [
     "both of its paths ask the one reader": 2,
     "the trainer holds no private copy either": true
   }
+},
+
+{
+  name: "Mounting Anger's banish is priced by the chain, and the +1 lands on the CARD",
+  why: "v3.92 — v2.29 REFUSED both this and Rising Resentment because " +
+       "\"with cost less than the number of Draconic chain links you " +
+       "control\" is a dynamic bound no printed field expresses, and a " +
+       "loose read that dropped the limit made ANY attack in hand a legal " +
+       "banish (sev-3, illegal play allowed). The refusal stopped being " +
+       "right at v3.86, when `dracLinks` was built for Fai's OWN " +
+       "discount — the reader was already in the same deck box. And 'it' " +
+       "is the BANISHED card, not the attacker: read as ops the +1{p} " +
+       "pumps the attack that just hit (v2.33's Bull's Eye Bracers trap).",
+  run(c){
+    const hand = [
+      {uid: 901, name: "Cheap Swing", cost: 0, pitch: 1, power: 3,
+       tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: [], gkw: []},
+      {uid: 902, name: "Edge Swing", cost: 1, pitch: 1, power: 4,
+       tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: [], gkw: []},
+      {uid: 903, name: "Dear Swing", cost: 3, pitch: 1, power: 7,
+       tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: [], gkw: []},
+      {uid: 904, name: "Not An Attack", cost: 0, pitch: 1,
+       tt: "Generic Action", ty: ["Generic","Action"], tx: "", kw: [], gkw: []}
+    ];
+    const real = c.card("Mounting Anger", 1, 900);
+    /* A REAL SWING THAT CONNECTS, so `linkPayload` runs its own trigger.
+       Building the sheet by hand would measure the SHEET and say nothing
+       about whether anything opens one (v3.20). */
+    const drac = () => ({n: "x", kind: "atk", drac: true});
+    const swing = links => {
+      const g0 = c.state({hand: hand.slice(), banish: [], res: 9}, {hp: 20}, {turn: 3});
+      return c.J.withEffects(g0, (fx, n) => {
+        n = Object.assign({}, n, {chain: links.slice(),
+          pend: {card: real, total: 4, ops: [], onHit: [], onHitHero: [],
+                 ga: false, by: 0, lateConds: []}});
+        const r = fx.linkPayload(n, {total: 4, pumps: 0, heroHit: true});
+        return r.game || r;
+      });
+    };
+    const offered = g => {
+      const q = (g.promptQ || [])[0];
+      const built = q && c.PM.buildPrompt(g, q);
+      return built ? built.cards.map(x => x.name) : null;
+    };
+    /* THE ATTACK'S OWN LINK IS ON THE CHAIN by the time its trigger
+       resolves, so a seeded chain of N gives N+1 and the bound is
+       "cost < N+1". Written with two seeded links this scene asked for
+       the cost-3 card at a bound of 2, selected nothing, and threw two
+       lines later — check your own fixture, ninth time. */
+    const one = swing([]), four = swing([drac(), drac(), drac()]);
+    /* PAY IT, through the real selection route. */
+    const built = c.PM.buildPrompt(four, four.promptQ[0]);
+    const idx = built.cards.findIndex(x => x.name === "Dear Swing");
+    const paid = c.J.withEffects(
+      Object.assign({}, four, {promptQ: [], prompt: c.PM.promptToggleSel(built, idx)}),
+      (fx, n) => fx.applyAnswer(n, n.prompt));
+    const g2 = paid.game || paid;
+    const got = (g2.sides[0].banish || [])[0] || {};
+    /* AND SPEND IT — a stamp nothing spends is the no-op blind spot
+       wearing a number. Printed 7, so the swing must strike for 8. */
+    const played = c.exec(Object.assign({}, g2, {pend: null, chain: [], promptQ: [], prompt: null}),
+                          got, "banish", 0, {});
+    const g3 = played.game || played;
+    return {
+      "one Draconic link — only the cost-0 attack": offered(one),
+      "four links — the cost-1 and cost-3 come in":  offered(four),
+      "a non-attack is never offered":              (offered(four) || []).indexOf("Not An Attack"),
+      "the chosen card really left the hand":       g2.sides[0].hand.some(x => x.uid === 903),
+      "…and is in the banish zone":                 got.name,
+      "the +1{p} rides on the card that MOVED":     got._banPow,
+      "the ATTACKER was not pumped":                real._banPow == null,
+      "it may be played this turn":                 c.P.playableFromZone(got, "banish", {turn: g2.turn}),
+      "and the swing strikes for printed 7 plus 1": g3.pend && g3.pend.total
+    };
+  },
+  want: {
+    "one Draconic link — only the cost-0 attack": ["Cheap Swing"],
+    "four links — the cost-1 and cost-3 come in": ["Cheap Swing", "Edge Swing", "Dear Swing"],
+    "a non-attack is never offered": -1,
+    "the chosen card really left the hand": false,
+    "…and is in the banish zone": "Dear Swing",
+    "the +1{p} rides on the card that MOVED": 1,
+    "the ATTACKER was not pumped": true,
+    "it may be played this turn": true,
+    "and the swing strikes for printed 7 plus 1": 8
+  }
+},
+
+{
+  name: "Rising Resentment's rider is a DISCOUNT, and it reaches effCost",
+  why: "v3.92 — the two cards share every word but the rider, which is " +
+       "exactly the look-alike hazard v2.29 pinned them for. A discount " +
+       "read as a pump (or either read onto the other) is a card doing " +
+       "something its text never says. It rides on the CARD rather than " +
+       "on the side, because the printed line names one specific card; " +
+       "`costOff` is the side-level qualified grant and would land on " +
+       "whatever matched next.",
+  run(c){
+    const hand = [{uid: 911, name: "Dear Swing", cost: 3, pitch: 1, power: 7,
+      tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: [], gkw: []}];
+    const real = c.card("Rising Resentment", 1, 910);
+    const g0 = c.state({hand: hand.slice(), banish: [], res: 0}, {hp: 20}, {turn: 3});
+    const hit = c.J.withEffects(g0, (fx, n) => {
+      n = Object.assign({}, n, {chain: [{n:"x",kind:"atk",drac:true},{n:"y",kind:"atk",drac:true},{n:"z",kind:"atk",drac:true}],
+        pend: {card: real, total: 4, ops: [], onHit: [], onHitHero: [], ga: false, by: 0, lateConds: []}});
+      const r = fx.linkPayload(n, {total: 4, pumps: 0, heroHit: true});
+      return r.game || r;
+    });
+    const built = c.PM.buildPrompt(hit, hit.promptQ[0]);
+    const paid = c.J.withEffects(
+      Object.assign({}, hit, {promptQ: [], prompt: c.PM.promptToggleSel(built, 0)}),
+      (fx, n) => fx.applyAnswer(n, n.prompt));
+    const g2 = paid.game || paid;
+    const got = (g2.sides[0].banish || [])[0] || {};
+    return {
+      "the rider is a cost reduction, not a pump": got._banCostOff,
+      "nothing pumped the card's power":           got._banPow == null,
+      "a printed 3 now costs":                     c.P.effCost(got, g2.sides[0]),
+      "and it may be played this turn":            c.P.playableFromZone(got, "banish", {turn: g2.turn})
+    };
+  },
+  want: {
+    "the rider is a cost reduction, not a pump": 1,
+    "nothing pumped the card's power": true,
+    "a printed 3 now costs": 2,
+    "and it may be played this turn": true
+  }
 }
 
 ];

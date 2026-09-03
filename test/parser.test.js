@@ -952,20 +952,46 @@ test("optFilter — reads printed fields only, and refuses the rest", () => {
    restriction dropped, making it strictly better than printed.
    =================================================================== */
 
-test("look-alike — a DYNAMIC cost limit is refused, not flattened", () => {
-  /* Mounting Anger / Rising Resentment: "with cost less than the number of
-     Draconic chain links you control". A substring test saw "attack action
-     card" and returned {type:"attack"}, silently dropping the limit — so
-     any attack card in hand became a legal banish. */
+test("a DYNAMIC cost limit is CARRIED, never flattened", () => {
+  /* DELIBERATE CHANGE AT v3.92, and this drill carried the reason in its
+     own assertion text for a very long time — which is what a recorded
+     refusal is FOR (v3.38).
+
+     The refusal was right while nothing could express the limit: a
+     substring test saw "attack action card", returned `{type:"attack"}`
+     and silently dropped the bound, so any attack card in hand became a
+     legal banish — sev-3 "illegal play allowed". What changed is that
+     `parser.dracLinks` was built for Fai at v3.86, so the count exists.
+
+     THE BOUND IS NOT IN THE PARSE. `fxParse` memoizes on `name|pitch`, so
+     a number stored here freezes at whatever the chain was the first time
+     the card was read; `costLtDrac` says WHICH count and the QUEUE SITE
+     supplies it (v3.20's `notUid`, v3.39's X).
+
+     THE REFUSAL PROPERTY IS KEPT ALIVE BY THE PROBE BELOW: the
+     vocabulary is still closed, and a limit nothing can express still
+     leaves the card unclaimed. */
+  assert.deepEqual(
+    P.optFilter("an attack action card with cost less than the number of Draconic chain links you control"),
+    {costLtDrac:true, type:"attack"});
+  /* THE ZONE IS THE CALLER'S TO STRIP, and this reader still refuses a
+     phrase carrying one — "from your hand" is not a printed FIELD and an
+     unconsumed word is an unread subject (v2.29). The optCost pairing
+     removes it before asking, which is why the card reads. */
   assert.equal(
     P.optFilter("an attack action card from your hand with cost less than the number of Draconic chain links you control"),
-    null, "an inexpressible limit must leave the card unclaimed");
-  assert.equal(
-    P.optFilter("an attack action card with cost less than the number of Draconic chain links you control"),
-    null);
-  /* the readable sibling still works, so the refusal is specific */
+    null, "the whole subject phrase must still be consumed or refused");
+  /* NO NUMBER IS BAKED IN — the whole point. */
+  assert.equal(P.optFilter("an attack action card with cost less than the number of Draconic chain links you control").costLe,
+    undefined, "the bound belongs to the queue site, not to the parse");
+  /* the readable sibling still works, so the reading is specific */
   assert.deepEqual(P.optFilter("an attack action card with cost 2 or less"),
     {costLe:2, type:"attack"});
+  /* AND THE VOCABULARY IS STILL CLOSED: a limit nothing can express is
+     still refused, which is the property the old pin was protecting. */
+  assert.equal(
+    P.optFilter("an attack action card with cost less than the number of auras you control"),
+    null, "a dynamic limit with no reader still leaves the card unclaimed");
 });
 
 test("'ANOTHER aura' is an exclusion, and it is carried rather than dropped", () => {
@@ -1014,14 +1040,26 @@ test("a PRINTED KEYWORD is a printed field; an unknown one still refuses", () =>
   assert.equal(P.optFilter("a card"), null);
 });
 
-test("look-alike — Mounting Anger and Rising Resentment are BOTH unclaimed", () => {
+test("Mounting Anger and Rising Resentment are BOTH read, and differently", () => {
   const MA = P.fxParse({name:"Mounting Anger", pitch:1, tt:"Draconic Ninja Action - Attack",
     tx:"When Mounting Anger hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it gains +1{p} and you may play it this turn.\nGo again", kw:["Go again"]});
   const RR = P.fxParse({name:"Rising Resentment", pitch:1, tt:"Draconic Ninja Action - Attack",
     tx:"When Rising Resentment hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it costs {r} less to play and you may play it this turn.\nGo again", kw:["Go again"]});
-  assert.equal(MA.optCost, undefined,
-    "Mounting Anger's limit is dynamic — claiming it allowed an illegal banish");
-  assert.equal(RR.optCost, undefined, "and its look-alike must be refused for the same reason");
+  /* DELIBERATE CHANGE AT v3.92 — see the dynamic-limit drill above. What
+     matters now is that the two look-alikes do NOT share a reading: they
+     print the same cost and different riders, and "it" is the BANISHED
+     card in both, so the ops list is EMPTY and the rider is a STAMP the
+     answer applies (v2.34's `arsStamp` rule). */
+  assert.ok(MA.optCost, "Mounting Anger reads");
+  assert.ok(RR.optCost, "…and so does its look-alike");
+  assert.deepEqual(MA.optCost.filter, {costLtDrac:true, type:"attack"});
+  assert.deepEqual(MA.optCost.filter, RR.optCost.filter, "the same printed cost");
+  assert.deepEqual(MA.optCost.ops, [], "the rider is NOT ops — 'it' is not the attacker");
+  assert.deepEqual(RR.optCost.ops, []);
+  assert.deepEqual(MA.optCost.banStamp, {playThisTurn:true, pow:1});
+  assert.deepEqual(RR.optCost.banStamp, {playThisTurn:true, costOff:1});
+  assert.notDeepEqual(MA.optCost.banStamp, RR.optCost.banStamp,
+    "two different riders must not resolve to the same thing");
 });
 
 test("look-alike — the payload's SUBJECT differs between siblings", () => {

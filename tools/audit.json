@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-03T18:27:34.224Z",
+ "generated": "2026-09-03T22:27:09.465Z",
  "appVer": "3.91",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 371,
-  "part": 31,
+  "full": 373,
+  "part": 29,
   "none": 3
  },
  "heroes": {
@@ -8051,27 +8051,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, it gets +1{p} and you may play it this turn.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-    "If you do, it gets +1{p} and you may play it this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it gets +1{p} and you may play it this turn.\nGo again",
@@ -8170,27 +8167,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, it costs {r} less to play and you may play it this turn.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control",
-    "If you do, it costs {r} less to play and you may play it this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control. If you do, it costs {r} less to play and you may play it this turn.\nGo again",

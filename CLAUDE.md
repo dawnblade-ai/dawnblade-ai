@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.91
+**Current version:** v3.92
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **1773 drills**.
+This is `node --test "test/*.test.js"` — currently **2021 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,56 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A BOUND THE PARSE MUST NOT HOLD (v3.92)
+
+> *"…banish an attack action card from your hand **with cost less than the
+> number of Draconic chain links you control**."*
+> — MOUNTING ANGER · RISING RESENTMENT
+
+**v2.29 REFUSED BOTH BY NAME AND WROTE DOWN WHY**: no printed field
+expresses that bound, and a loose read that dropped the limit made **any
+attack in hand a legal banish** — sev-3 *illegal play allowed*. The
+refusal stopped being right at **v3.86**, when `parser.dracLinks` was
+built for **Fai's** discount — and Fai is the hero who decks both cards.
+Fourth recorded refusal discharged this fortnight, and the reader was
+already in the same deck box.
+
+**THE COUNT IS NOT IN THE PARSE.** `fxParse` memoizes on `name|pitch`, so
+a number stored there freezes at whatever the chain was the first time
+anything read it (v3.20's `notUid`, v3.39's X). `costLtDrac` says WHICH
+count; the **queue site** supplies it. And **every other reader refuses an
+unresolved one** — `staticFilter` at `pickSubject`, and `promptFilter`
+itself — because an unknown key that falls through **admits every card**,
+which is the sev-3 the refusal was protecting against.
+
+**THE ATTACK'S OWN LINK IS ON THE CHAIN** by the time its trigger
+resolves, so an opening Draconic swing controls one and *"less than one"*
+is cost 0. **A fixture holding only a cost-0 and a cost-3 attack cannot
+see that off-by-one** — at one link both readings admit the same single
+card, at four links both admit everything — and the sabotage came back
+SILENT until a **cost-1** attack was added. Ninth *check your own
+fixture*; the scene for the same card asked for a cost-3 banish at a bound
+of 2 and threw two lines later.
+
+**"IT" IS THE BANISHED CARD** (v2.29's own second reason, v2.33, v3.47 —
+third time), so both riders are **STAMPS** on the card that MOVED rather
+than ops, which `runOps` would apply to the SOURCE.
+
+**TWO GRANTS FROM ONE PRINTED SENTENCE EXPIRE BY ONE RECORD.** The pump
+carries no turn stamp: the same sentence prints *"and you may play it this
+turn"*, `playableFromZone` refuses the card afterwards, and **measured
+over 797 records, four read the banish zone and none returns a card from
+it to hand.** A second turn record is v3.77's dead guard — and could not
+be applied consistently anyway, since the cost half is read by `effCost`,
+called from twenty sites and handed no turn.
+
+**AND A CENSUS CAN REPORT A FAMILY EMPTY FOR A REASON ONE LAYER UP.**
+v3.53 measured the `hits` trigger as having ZERO pool cards and recorded
+the queue site as unwired *for that reason*. Both halves were true: the
+trigger had no cards **because the FILTER refused**, so `fx.optCost` was
+never set. **When a census reports a family empty, ask what would have to
+be true for it to be non-empty.**
 
 ### SWEEP THE REFUSALS THAT WERE WAITING — TWO MORE (v3.91)
 

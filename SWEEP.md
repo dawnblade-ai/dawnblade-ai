@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 34 cards | understood ≠ built |
-| **Fail states** | 63 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 32 cards | understood ≠ built |
+| **Fail states** | 61 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -57,10 +57,8 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Boom Grenade** (part, 2/4 unread)
 - **Halo of Illumination** (part, 2/3 unread)
 - **Ice Eternal** (part, 2/4 unread)
-- **Mounting Anger** (part, 2/3 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
 - **Refraction Bolters** (part, 2/3 unread)
-- **Rising Resentment** (part, 2/3 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Carrion Crown** (part, 1/3 unread)
@@ -99,15 +97,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| Ability inert — cost not modelled | 16 |
+| Ability inert — cost not modelled | 14 |
 | Earned value denied | 14 |
-| No schedule to fire on | 13 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Choice never offered | 11 |
+| No schedule to fire on | 11 |
+| Choice never offered | 9 |
 | Unread, effect unknown | 8 |
-| Displayed total is wrong | 7 |
+| Displayed total is wrong | 6 |
 
-### WRONG — 35 entries
+### WRONG — 33 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -193,15 +191,6 @@ can be overruled. Same discipline as the mention count.
     > Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. If they do, create a Gold token."
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. If they do, create a Gold token."
-- **Mounting Anger** (1) · tier `part` · fai
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > If you do, it gets +1{p} and you may play it this turn.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If you do, it gets +1{p} and you may play it this turn.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
 - **Oasis Respite** (1) · tier `part` · dorinthea, enigma, lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If they have less {h} than each other hero, they may gain 1{h}.
@@ -214,17 +203,22 @@ can be overruled. Same discipline as the mention count.
 - **Polar Cap** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
-- **Rising Resentment** (1) · tier `part` · fai
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > If you do, it costs {r} less to play and you may play it this turn.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
 - **Roaring Beam** (2) · tier `part` · boltyn
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If there are no cards in your soul, return this to its owner's hand, then charge your soul.
-- … and 10 more (see the station)
+- **Silent Stilettos** · tier `part` · enigma
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Whenever an attacking ally you control dies or an attack action card you control is destroyed by phantasm, you may pay {r}{r}{r}
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > Whenever an attacking ally you control dies or an attack action card you control is destroyed by phantasm, you may pay {r}{r}{r}
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > Whenever an attacking ally you control dies or an attack action card you control is destroyed by phantasm, you may pay {r}{r}{r}
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If you do, destroy this and gain 1 action point.
+- **Stains of the Redback** (1) · tier `part` · arakni
+  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+    > If the defending hero is marked, this costs {r} less to play.
+- … and 8 more (see the station)
 
 ### LOST VALUE — 27 entries
 

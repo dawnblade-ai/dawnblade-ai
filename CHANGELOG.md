@@ -9,6 +9,118 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.92 — a refusal that was waiting on a reader built for its own hero
+
+> *"When this hits, you may banish an attack action card from your hand
+> **with cost less than the number of Draconic chain links you control**.
+> If you do, it gets +1{p} and you may play it this turn."*
+> — MOUNTING ANGER
+>
+> *"…If you do, **it costs {r} less to play** and you may play it this
+> turn."* — RISING RESENTMENT
+
+**v2.29 REFUSED BOTH BY NAME, AND WROTE DOWN WHY.** No printed field
+expresses that bound, and a loose substring test that read *"attack action
+card"* and dropped the limit made **any attack in hand a legal banish** —
+sev-3 *illegal play allowed*, the direction that steals games. Its own
+words: *"a wrong guess would let a player pay the wrong thing, or pay
+nothing and collect."*
+
+**THE REFUSAL STOPPED BEING RIGHT AT v3.86**, when `parser.dracLinks` was
+built for **Fai's** hero discount — and Fai is the hero who decks both of
+these. The reader that discharged the debt was already sitting in the same
+deck box. A recorded refusal is a debt (v3.38) and what discharges it is
+usually somewhere else entirely (v3.47); this is the fourth this fortnight
+to come due, and the third settled by building the payload rather than by
+loosening a reader.
+
+### The trigger had been measured as EMPTY, and the measurement was right
+
+v3.53 asked the parser which records actually set `fx.optCost` and
+reported **`hits: (none)`** — then recorded the queue site as unwired *for
+that reason*. Both halves were true, and together they were misleading:
+the trigger had no cards **because the FILTER refused one layer up**, so
+`fx.optCost` was never set on the two cards whose trigger it is.
+
+**A trigger with no card is not work; a trigger whose cards were refused
+somewhere else is.** When a census reports a family empty, ask what would
+have to be true for it to be non-empty.
+
+### The bound is not in the parse
+
+`fxParse` memoizes on `name|pitch`, so one parse serves every copy in a
+match and a number stored there **freezes** at whatever the chain was the
+first time anything read it — the same rule `notUid` follows for `notSelf`
+(v3.20) and `arcAmount` for Blaze's X (v3.39). The filter carries
+**`costLtDrac`**, which says WHICH count; the **queue site** supplies what
+it is right now.
+
+**AND EVERY OTHER READER REFUSES AN UNRESOLVED ONE.** `pickSubject` serves
+every `pick` site and none of them has a chain to resolve against, so
+`staticFilter` leaves those subjects unclaimed exactly as they were before
+— and `promptFilter` refuses a spec still carrying the flag, because an
+unknown key that simply falls through **admits every card**, which is
+precisely the sev-3 the original refusal was protecting against. Refusing
+is weaker than printed and visible (v3.24); the other direction steals
+games.
+
+### The attack's own link counts itself
+
+`linkPayload` pushes the attack's chain entry **before** its own trigger
+resolves, so an opening Draconic swing already controls **one** link — and
+*"cost LESS THAN one"* is cost 0. That is the printed reading, and it is
+also what makes the card do anything at all on the first swing of a turn.
+
+**A FIXTURE HOLDING ONLY A COST-0 AND A COST-3 ATTACK CANNOT SEE THAT
+OFF-BY-ONE.** At one link, `costLe 0` and `costLe 1` admit the same single
+card; at four links both admit everything. The sabotage came back
+**SILENT** until a **cost-1** attack was added — the one cost the two
+readings disagree about. v3.62's rule read from the fixture's end, and
+the ninth *check your own fixture* in this project's history: the scene
+written for the same card asked for a cost-3 banish at a bound of 2,
+selected nothing, and threw two lines later.
+
+### "It" is the banished card, not the attacker
+
+v2.29 pinned this as the second reason it refused both: *"in both, 'it' is
+the banished card, not the attacker, so the existing `self` op is the
+wrong op for either."* Left to `classifyClause`, *"it gets +1{p}"* comes
+back as `[["self",1]]` — a pump on the card being RESOLVED, which is the
+attack that just hit. v2.33's Bull's Eye Bracers trap and v3.47's Scuttle
+Toes, a **third** time.
+
+So both riders are **STAMPS** the answer applies to the card that MOVED —
+`arsStamp`'s shape (v2.34) and for its reason: `prompts.js` runs no
+effects, so returning them as ops hands them to `runOps`, which applies to
+the SOURCE.
+
+**TWO GRANTS FROM ONE PRINTED SENTENCE EXPIRE BY ONE RECORD.** The pump
+carries no turn stamp of its own, because the same sentence prints *"and
+you may play it this turn"* and `playableFromZone` refuses the card from
+banish on any other turn. Measured over all 797 records: **four read the
+banish zone and not one returns a card from it to hand**, so there is no
+route by which the pump could outlive `_playTurn`. A second turn record
+would be v3.77's dead guard — and could not be applied consistently
+anyway, since the cost half is read by `effCost`, which is called from
+twenty sites and is handed no turn.
+
+**AND THE DISCOUNT RIDES ON THE CARD, NOT ON THE SIDE.** `costOff` is the
+side-level qualified grant (v3.32) and would land on whatever matched
+next; the printed line names **one specific card**.
+
+**FaB PRINTS gains / gets / has** and every anchor must accept all three
+(v2.12) — v3.10 records that a missing alternation does not drop the rule,
+it RELOCATES it into a loose matcher below. The pool prints *"gets"*; a
+drill's own synthetic printing *"gains"* is what found the gap.
+
+**Eighteen sabotages, eighteen bite, none silent.** Coverage **371 → 373
+full**, `part` **31 → 29**. Two of the pool's three remaining `none` cards
+and every `part` family are listed in `HANDOFF.md`. 210 self-play games ·
+0 stalls · 0 refusals · 0 invariant violations. Scenes 55 → **57**, drills
+2001 → **2021**.
+
+---
+
 ## v3.91 — two refusals that were waiting on machinery already built
 
 v3.47's rule: *when you build a mechanic, sweep the refusals that were

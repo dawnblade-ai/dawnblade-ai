@@ -1999,7 +1999,7 @@ function classifyClause(raw){
      used — an unreadable subject refuses the clause and leaves the card
      unclaimed rather than banishing something the text never named. */
   if(m=c.match(/^banish (.+?) from your hand with an effect that deals arcane damage equal to x$/)){
-    const filter = optFilter(m[1]);
+    const filter = staticFilter(optFilter(m[1]));
     if(!filter) return null;
     /* `arcGe:1` is the printed "WITH an effect that deals arcane damage":
        a card the engine cannot count arcane on is not a legal choice,
@@ -2334,6 +2334,15 @@ const CLS_SUBJECTS = /^(?:non-attack action cards?|attack action cards?|action c
    purpose — see `optFilter`. */
 const WPN_SUBTYPES = /^(?:swords?|daggers?)$/;
 
+/* A FILTER WHOSE BOUND ONLY ONE QUEUE SITE CAN RESOLVE (v3.92).
+   `costLtDrac` is supplied by the `hits` optional-cost site out of the
+   live chain; every OTHER consumer of `optFilter` has no such site, so a
+   subject carrying it must leave those cards unclaimed exactly as it did
+   before v3.92. Refusing there is weaker than printed and visible;
+   admitting it is the sev-3 "illegal play allowed" the original refusal
+   was protecting against. */
+const staticFilter = f => (f && f.costLtDrac) ? null : f;
+
 function optFilter(phrase){
   let rest = String(phrase||"").trim();
   if(!rest) return null;
@@ -2364,6 +2373,29 @@ function optFilter(phrase){
   if(notSelf) f.notSelf = true;
   /* Consume the qualifiers we can actually express, removing each from the
      phrase as we go. */
+  /* A DYNAMIC BOUND — "with cost less than the number of DRACONIC CHAIN
+     LINKS you control" (v3.92). v2.29 REFUSED this outright and wrote
+     down why: no printed field expresses it, and a loose substring test
+     that read "attack action card" and dropped the limit made any attack
+     in hand a legal banish — sev-3 "illegal play allowed", the direction
+     that steals games.
+
+     THE REFUSAL STOPPED BEING RIGHT AT v3.86, when `parser.dracLinks`
+     was built for Fai's discount. A recorded refusal is a debt (v3.38),
+     and what discharges it is usually somewhere else entirely (v3.47).
+
+     THE BOUND IS NOT IN THE PARSE. `fxParse` memoizes on `name|pitch`, so
+     one parse serves every copy in a match and a number stored here
+     freezes at whatever the chain was the first time it was read — the
+     same rule `notSelf` follows for its uid (v3.20) and `arcAmount` for
+     Blaze's X (v3.39). `costLtDrac` says WHICH count, and the QUEUE SITE
+     supplies it as `costLe`.
+
+     A FILTER THAT NEVER RECEIVES ONE ADMITS NOTHING, for `notSelf`'s
+     reason: offering a card the printed limit excludes is stronger than
+     printed; offering none is weaker and visible. */
+  const dm = rest.match(/\s*\bwith cost less than the number of draconic chain links you control\b/i);
+  if(dm){ f.costLtDrac = true; rest = (rest.slice(0, dm.index) + " " + rest.slice(dm.index + dm[0].length)).trim(); }
   const cm = rest.match(/\s*\bwith cost (\d+) or less\b/i);
   if(cm){ f.costLe = +cm[1]; rest = (rest.slice(0, cm.index) + " " + rest.slice(cm.index + cm[0].length)).trim(); }
   /* AN EXACT COST is a different printed qualifier from "or less", and
@@ -2505,7 +2537,12 @@ function optFilter(phrase){
 function pickSubject(phrase){
   const rest = String(phrase||"").trim().replace(/^(?:a|an|one)\s+/i, "");
   if(/^cards?$/i.test(rest)) return {};
-  return optFilter(phrase);
+  /* AND A DYNAMIC BOUND IS REFUSED HERE (v3.92). Every `pickPrompt` site
+     goes through this reader and none of them has a queue site that can
+     resolve `costLtDrac` against the live chain — so those cards stay
+     unclaimed exactly as they were before v3.92, which is the property
+     the original refusal was protecting. */
+  return staticFilter(optFilter(phrase));
 }
 
 /* THE ARSENAL FACE-UP PUT (v2.34). Two shapes that must be read together,
@@ -3222,6 +3259,50 @@ function fxParse(card){
     if(zm){ zone = zm[1].toLowerCase(); subject = (subject.slice(0, zm.index) + " " + subject.slice(zm.index + zm[0].length)).trim(); }
     const filter = optFilter(subject);
     if(!filter) continue;                       /* unreadable cost — do not claim the card */
+    /* "IT" IS THE BANISHED CARD, NOT THE ATTACKER (v3.92). v2.29 pinned
+       this and refused both cards for it: "in both, 'it' is the banished
+       card, not the attacker, so the existing `self` op is the wrong op
+       for either."
+
+       Left to `classifyClause`, "it gets +1{p}" comes back as
+       `[["self",1]]` — a pump on the CARD BEING RESOLVED, which is the
+       attack that just hit. That is v2.33's Bull's Eye Bracers trap and
+       v3.47's Scuttle Toes, a third time.
+
+       SO THE RIDER IS A STAMP ON THE CARD THAT MOVED, not ops: the same
+       shape `arsStamp` (v2.34) and `untapStamp` (v3.47) already take, and
+       for the same reason — this module runs no effects, so returning it
+       as ops hands it to `runOps`, which applies it to the SOURCE.
+
+       "AND YOU MAY PLAY IT THIS TURN" IS `playThisTurn`, built for
+       Blaze's banish (v3.39) and read by `playsAsInstant`. */
+    const _rid = rider.replace(/^if you do,?\s*/i, "").trim().replace(/\.$/, "");
+    /* FaB PRINTS gains / gets / has, AND EVERY ANCHOR MUST ACCEPT ALL
+       THREE (v2.12, and v3.10 records what a missing alternation costs:
+       it does not drop the rule, it RELOCATES it into a loose matcher
+       below). The pool prints "gets" here; a drill's synthetic printing
+       "gains" is what found the gap. */
+    const _bp = _rid.match(/^it (?:gains?|gets?|has) \+(\d+)\{p\} and you may play it this turn$/i);
+    const _bc = _rid.match(/^it costs ((?:\{r\})+|\d+) less to play and you may play it this turn$/i);
+    if(_bp || _bc){
+      const filter2 = filter;
+      fx.optCost = {
+        trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"")
+                              .replace(/^enters or leaves the arena$/,"entersLeaves")
+                              .replace(/^you play an aura$/,"playAura") : "play",
+        kind: cm[2].toLowerCase(),
+        zone: zone || (cm[2].toLowerCase() === "discard" ? "hand" : "grave"),
+        filter: filter2,
+        ops: [],
+        /* DATA THE ANSWER APPLIES TO THE CARD THAT MOVED. */
+        banStamp: Object.assign({playThisTurn: true},
+          _bp ? {pow: +_bp[1]}
+              : {costOff: /^\d+$/.test(_bc[1]) ? +_bc[1] : (_bc[1].match(/\{r\}/g)||[]).length})
+      };
+      if(fx.optCost.zone === "graveyard") fx.optCost.zone = "grave";
+      handled.add(i); handled.add(i+1);
+      continue;
+    }
     const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
     if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — same */
     fx.optCost = {
@@ -4732,7 +4813,13 @@ function costOffFor(c, sd){
    can see the chain hand it in. */
 function effCost(c,sd,o){
   o = o || {};
-  const dyn = (c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0;
+  /* AND WHAT A BANISH-RIDER STAMPED ON THE CARD ITSELF (v3.92) — Rising
+     Resentment's "it costs {r} less to play". It rides on the CARD rather
+     than on the side, because the printed line names one specific card;
+     `costOff` is the side-level qualified grant and would apply to
+     whatever matched next. */
+  const stamp = (c && c._banCostOff) || 0;
+  const dyn = ((c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0) + stamp;
   return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
        + frostCount(sd) + nextTurnTax(sd);
 }
@@ -5783,7 +5870,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,

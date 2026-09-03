@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.91 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.92 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
-`npm run audit`: **365 full / 34 part / 6 none**. Night's Embrace left that
+`npm run audit`: **373 full / 29 part / 3 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |
@@ -16,12 +16,27 @@ waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
 
+**v3.92 CLOSED MOUNTING ANGER AND RISING RESENTMENT — A RECORDED REFUSAL
+FROM v2.29, DISCHARGED BY A READER BUILT FOR THEIR OWN HERO.** *"…with
+cost less than the number of Draconic chain links you control"* was
+refused because no printed field expresses the bound; `parser.dracLinks`
+was built at v3.86 for **Fai's** discount, and Fai decks both cards. Fourth
+recorded refusal to come due this fortnight.
+
+**THE RULE WORTH CARRYING: A CENSUS CAN REPORT A FAMILY EMPTY FOR A REASON
+ONE LAYER UP.** v3.53 measured the `hits` optional-cost trigger as having
+**zero pool cards** and recorded its queue site as unwired *for that
+reason*. Both halves were true — and the trigger had no cards **because
+the FILTER refused**, so `fx.optCost` was never set on the two cards whose
+trigger it is. When a census reports a family empty, ask what would have
+to be true for it to be non-empty.
+
 **v3.91 CLOSED TWO MORE `part` CARDS AND NEITHER NEEDED ANYTHING NEW** —
 Agile Engagement's condition is Boltyn's one route over, and Turn to
 Mindfire's two records (`_dmgWay`, `heroTapped`) both already existed.
 **That is the shape to look for first**: `npm run gaps` lists the
 unfinished cards, and a good share of them are waiting on something the
-engine already has. Coverage is **371 full / 31 part / 3 none**.
+engine already has. Coverage is **373 full / 29 part / 3 none**.
 
 **JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
 found a third: FOUR pool records print *"when this defends"* on GEAR and

@@ -67,6 +67,15 @@ function promptFilter(spec){
        Refusing is weaker than printed and visible; the other direction
        steals games. */
     if(spec.notSelf && spec.notUid == null) return false;
+    /* AND A DYNAMIC COST BOUND THAT WAS NEVER RESOLVED (v3.92), for the
+       identical reason. `costLtDrac` says "cost less than the number of
+       Draconic chain links you control" and the QUEUE SITE turns it into
+       a `costLe` against the chain as it stands — because `fxParse`
+       memoizes and a number in the parse freezes. A filter that still
+       carries the flag was never given the count, and an unknown key that
+       simply falls through would admit EVERY card, which is exactly the
+       sev-3 the refusal it replaced was protecting against. */
+    if(spec.costLtDrac) return false;
     if(spec.notUid != null && c.uid === spec.notUid) return false;
     if(spec.type === "attack" && !isAttack(c)) return false;
     if(spec.type === "nonAttack" && isAttack(c)) return false;
@@ -218,6 +227,11 @@ function buildPrompt(game, spec){
       ctrSpend: spec.ctrSpend || null,
       ctrHeld: spec.ctrHeld != null ? spec.ctrHeld : null,
       playThisTurn: !!spec.playThisTurn,
+      /* THE BANISH RIDER'S STAMP (v3.92) — data the answer applies to the
+         card that MOVED. A spec only carries fields `buildPrompt` knows
+         about (v2.34, v3.33, v3.53), so a field threaded through and
+         forgotten here vanishes and the rider does nothing. */
+      banStamp: spec.banStamp || null,
       /* WHICH SEAT'S FREEZE THIS IS. Like `arsStamp` it is DATA, not ops:
          this module runs no effects, and the stamp belongs to the object
          that was chosen rather than to the source. `applyAnswer` reads it
