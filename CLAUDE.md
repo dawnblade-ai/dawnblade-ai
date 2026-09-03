@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.90
+**Current version:** v3.91
 
 ---
 
@@ -516,6 +516,38 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### SWEEP THE REFUSALS THAT WERE WAITING — TWO MORE (v3.91)
+
+v3.47's rule again, and neither card needed anything new.
+
+**AGILE ENGAGEMENT** — *"if it is defended by an attack action card"* asks
+the wall the identical question Boltyn's clause 1 asks (v3.74), which both
+boards already compute. What was missing is that `attackRx` was handed the
+wall as a **COUNT** and not as CARDS, which v3.89 fixed for Shred and
+nobody went back for. It joins **`RX_CONDS`**, because the generic
+condition loop is given no wall and could only ever answer FALSE and then
+say so (v3.60). **A drill asserts every name in `RX_CONDS` has a branch in
+the dispatcher** — one in the list with none is a gate that is skipped and
+then never run.
+
+**TURN TO MINDFIRE** — *"if this deals damage, you may {t} your hero"*
+needs `_dmgWay` (v3.62, recorded INSIDE `arcaneHit`'s `left > 0` branch,
+so CR 7.5.5's *prevented is not dealt* governs the offer without being
+restated) and `heroTapped` (v3.48). Both existed.
+
+**A HERO TAP IS NOT A PERMANENT'S TAP.** `weaponUsed[uid]` is a per-turn
+ALLOWANCE lifted at every turn boundary; `heroTapped` is a STATE only the
+controller's own untap step lifts (CR 4.4.3d). Writing the wrong one makes
+the cost payable again on the opponent's turn. **A hero already tapped is
+never offered the sheet** — v3.48's ruling is exactly that narrow.
+
+**AND A GUARD THAT TESTS TWO THINGS NEEDS A FIXTURE THAT REACHES BOTH.**
+*"An unreadable payload refuses"* was drilled with text `classifyClause`
+returns NULL for, so the `status !== "run"` half was never reached and
+deleting it was SILENT. The fixture that bites uses a payload it reads as
+a `noop` — a cost with no reward, which is v2.04 inverted. Second time in
+two versions.
 
 ### A MODAL OPTIONAL COST, AND "THAT CARD" (v3.90)
 

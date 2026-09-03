@@ -1644,7 +1644,11 @@ test("the second-person debt in the shared semantics does not grow", () => {
      YOU spend"; a prompt is addressed to ONE SIDE (`spec.side` has meant
      that since v2.17), and the seat being asked is the seat "you" names.
      The FEED half of both cards names the seat instead. */
-  assert.ok(lits.length <= 51,
+  /* 51 -> 52 AT v3.91, AND IT IS PROMPT TEXT AGAIN. Turn to Mindfire's
+     sheet says "YOUR hero stays tapped until YOUR untap step" — a prompt
+     is addressed to ONE SIDE (`spec.side` since v2.17), and the seat being
+     asked is the seat "you" names. Its FEED half names the seat. */
+  assert.ok(lits.length <= 52,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

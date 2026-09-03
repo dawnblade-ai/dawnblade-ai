@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.90 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.91 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -15,6 +15,13 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.91 CLOSED TWO MORE `part` CARDS AND NEITHER NEEDED ANYTHING NEW** —
+Agile Engagement's condition is Boltyn's one route over, and Turn to
+Mindfire's two records (`_dmgWay`, `heroTapped`) both already existed.
+**That is the shape to look for first**: `npm run gaps` lists the
+unfinished cards, and a good share of them are waiting on something the
+engine already has. Coverage is **371 full / 31 part / 3 none**.
 
 **JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
 found a third: FOUR pool records print *"when this defends"* on GEAR and

@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-03T18:17:31.209Z",
- "appVer": "3.90",
+ "generated": "2026-09-03T18:27:34.224Z",
+ "appVer": "3.91",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 369,
-  "part": 33,
+  "full": 371,
+  "part": 31,
   "none": 3
  },
  "heroes": {
@@ -6631,9 +6631,9 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Target Warrior attack gets +3{p}",
@@ -6641,12 +6641,10 @@
     },
     {
      "t": "If it's defended by an attack action card, create an Agility token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If it's defended by an attack action card, create an Agility token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Target Warrior attack gets +3{p}. If it's defended by an attack action card, create an Agility token.",
@@ -10476,7 +10474,7 @@
     "{t}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -10486,23 +10484,18 @@
     },
     {
      "t": "If this deals damage, you may {t} your hero",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, create a Ponder token.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If this deals damage, you may {t} your hero",
-    "If you do, create a Ponder token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Deal 5 arcane damage to any target.\nIf this deals damage, you may {t} your hero. If you do, create a Ponder token.",
-   "flags": [
-    "tap cost {t} — not enforced: its clause has no reader"
-   ]
+   "flags": []
   },
   "voltic bolt|1": {
    "name": "Voltic Bolt",

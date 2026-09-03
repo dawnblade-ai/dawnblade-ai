@@ -82,7 +82,7 @@ const LATE_CONDS = ["pumped", "defLt2", "defLt2any"];
    ONE LIST, TWO READERS — the skip in `execute` and the dispatcher in
    `attackRx` — for `LATE_CONDS`' own reason: two copies drift into a
    condition that is skipped and then never run. */
-const RX_CONDS = ["reprise", "charged"];
+const RX_CONDS = ["reprise", "charged", "defAtkAction"];
 /* IS THIS SEAT'S NAME THE SECOND PERSON? (v3.90) Seat 0 is called "You",
    so a feed line that NAMES the seat has to agree with the name it used —
    "You discards" and "You puts the top card of THEIR deck" are both wrong
@@ -3017,6 +3017,26 @@ function makeEffects(ctx){
          target before the card ever leaves the hand, so the only way to
          reach that refusal is a stale action off the wire. */
       n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      /* ---- "IF THIS DEALS DAMAGE, YOU MAY {t} YOUR HERO" (v3.91) -----
+         Turn to Mindfire, and the offer can only be made once the card's
+         own ops have run — `_dmgWay` is set inside `arcaneHit`'s
+         `left > 0` branch, so a hit turned entirely aside by a barrier or
+         a ward offers nothing at all (CR 7.5.5, without restating it).
+
+         A TAPPED HERO CANNOT PAY IT AGAIN (v3.48's ruling is exactly that
+         narrow), so an already-tapped hero is never offered the sheet —
+         a choice with no legal answer is a tap that teaches nothing.
+
+         `cost: 0` because the price is the TAP, not resources — the same
+         reason a counter cost and a soul banish both read cost 0. */
+      if(fx.tapCost && fx.tapCost.when === "dealt"
+         && (n._dmgWay || 0) > 0 && !act(n).heroTapped){
+        n.promptQ = [...(n.promptQ||[]), {
+          tag: "pay", side: actorOf(n), src: card.name, cost: 0,
+          tapHero: true, ops: fx.tapCost.ops,
+          title: "Tap " + act(n).name + " to power " + card.name + "?",
+          hint: "The cost is the tap itself — your hero stays tapped until your untap step."}];
+      }
       /* ---- THE LATE CONDITION PASS (v3.60) ---------------------------
          "…this way" asks what THIS card's own resolution just did, so it
          can only be answered here — after `fx.ops` have run. The main
@@ -3613,6 +3633,13 @@ function makeEffects(ctx){
       const ps = actMut(n);
       ps.weaponUsed = {...(ps.weaponUsed||{}), [r.tap]: true};
     }
+    /* AND A HERO TAP IS THE OTHER RECORD (v3.91). `heroTapped` is a STATE
+       only the controller's own untap step lifts (CR 4.4.3d); the line
+       above writes a per-turn ALLOWANCE that comes back at every turn
+       boundary. They coincide for a hero using its own ability and come
+       apart the moment an opponent taps you — v3.48 states this, and
+       using the wrong one makes the cost payable again on their turn. */
+    if(r.tapHero) actMut(n).heroTapped = true;
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
@@ -4130,6 +4157,21 @@ function makeEffects(ctx){
         fired.push(cond);
         if(op[0] !== "self") n = runOps(n, [op], c.name);
         n = L(n, `${c.name}: charged this turn — the bonus is live.`);
+      }
+      /* "IF IT IS DEFENDED BY AN ATTACK ACTION CARD" (v3.91) — Agile
+         Engagement. WHICH CARDS DEFEND is the caller's answer (v3.11,
+         v3.24, v3.27) and this route was given a COUNT until v3.89 gave
+         it the cards; the condition itself is Boltyn's, one route over
+         (v3.74), so nothing new was invented.
+
+         A CALLER THAT SAYS NOTHING ANSWERS NO — weaker than printed and
+         visible, which is the safe direction. */
+      if(cond === "defAtkAction"){
+        const hit = (o.defenders || []).some(x => isAtkActionCard(x));
+        if(!hit){ n = L(n, `${c.name}: no attack action card is defending — no bonus.`); return; }
+        fired.push(cond);
+        if(op[0] !== "self") n = runOps(n, [op], c.name);
+        n = L(n, `${c.name}: an attack action card defends — the bonus is live.`);
       }
     });
     const {pump, replaced} = rxPump(eff, fired);

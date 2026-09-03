@@ -9,6 +9,88 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.91 — two refusals that were waiting on machinery already built
+
+v3.47's rule: *when you build a mechanic, sweep the refusals that were
+waiting on it.* Neither of these needed anything new — what they needed
+was for somebody to ask.
+
+### Agile Engagement
+
+> *"Target Warrior attack gets +3{p}. **If it is defended by an attack
+> action card**, create an Agility token."*
+
+It asks the wall the **identical question Boltyn's clause 1 asks** (v3.74)
+and both boards already compute it for `linkPumps`. What was missing is
+that `attackRx` was handed the wall as a **COUNT** and not as CARDS —
+which v3.89 fixed for Shred and nobody went back for.
+
+**IT JOINS `RX_CONDS`**, beside `reprise` and `charged`: the generic
+condition loop is given no wall at all, so it could only ever answer FALSE
+— and then say so, before the route that CAN answer runs. That is v3.60's
+sev-2 category, where the state is right and the feed contradicts itself.
+
+A drill now asserts that **every name in `RX_CONDS` has a branch in the
+dispatcher**, because a condition in the list with none is a gate that is
+skipped and then never run.
+
+**THE PUMP IS READ, AND THE POOL PROVES IT**: +3 / +2 / +1 across the
+three printings.
+
+### Turn to Mindfire
+
+> *"Deal 5 arcane damage to any target. **If this deals damage, you may
+> {t} your hero. If you do**, create a Ponder token."*
+
+Two records, both already there:
+
+- **`_dmgWay`** (v3.62), recorded **INSIDE** `arcaneHit`'s `left > 0`
+  branch — so CR 7.5.5's *prevented is not dealt* governs the offer
+  without being restated. Driven: an arcane shield that stops all of it
+  offers nothing at all.
+- **`heroTapped`** (v3.48).
+
+**A HERO TAP IS NOT A PERMANENT'S TAP.** `weaponUsed[uid]` is a per-turn
+ALLOWANCE lifted at every turn boundary, for both seats; `heroTapped` is a
+STATE only the controller's own untap step lifts (CR 4.4.3d). They
+coincide for a hero using its own ability and come apart the moment an
+opponent taps you — **writing the wrong one makes this cost payable again
+on their turn.** A drill asserts nothing reaches the allowance.
+
+**AND A HERO ALREADY TAPPED IS NEVER OFFERED THE SHEET**, because v3.48's
+ruling is exactly that narrow and a sheet with no legal answer is a tap
+that teaches nothing.
+
+It is the pool's **only** hero-tap optional cost, measured — so it is a
+NAMED shape rather than a widening of `optCost`, which is the
+never-parse-ahead-of-wiring rule.
+
+### One sabotage came back silent, and it was the same fixture flaw as v3.90's
+
+*"An unreadable payload refuses"* was drilled with text `classifyClause`
+returns **NULL** for — so the `status !== "run"` half was never reached
+and removing it changed nothing. The fixture that bites uses a payload
+`classifyClause` READS as a `noop` (`intimidate`): a noop payload is a
+cost with no reward, which is v2.04's free-ability bug inverted.
+
+**Second time in two versions.** When a guard tests two things, the
+fixture has to reach both.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| pool coverage | 369 full / **33 part** | **371 full** / **31 part** / 3 none |
+| drills | 1987 | **1999** |
+| the audit's `{t}` flag | 2 cards | **1** |
+| `RX_CONDS` | 2 | **3** (a deliberate edit, and every name now drilled to have a branch) |
+| second-person ledger | 51 | **52** (prompt text again) |
+
+Self-play 210 games · 0 stalls · 0 refusals · 0 violations; `npm run
+fairness` clean.
+
+---
+
 ## v3.90 — a modal optional cost, and a trigger neither board reached
 
 > *"When this **attacks**, you may discard a card **or** destroy the top

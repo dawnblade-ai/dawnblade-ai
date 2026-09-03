@@ -284,9 +284,21 @@ test("RX_CONDS is ONE list with two readers", {skip}, () => {
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
   const m = src.match(/const RX_CONDS = (\[[^\]]*\]);/);
   assert.ok(m, "the list is named");
-  assert.deepEqual(eval(m[1]).slice().sort(), ["charged", "reprise"]);
+  /* `defAtkAction` JOINED AT v3.91 — Agile Engagement asks the identical
+     question of the wall that Boltyn's clause 1 does (v3.74), and this is
+     the route that is given the wall. Moving this list is a deliberate
+     edit: a condition IN it with no branch in the dispatcher is a gate
+     that is skipped and then never run. */
+  assert.deepEqual(eval(m[1]).slice().sort(), ["charged", "defAtkAction", "reprise"]);
   assert.equal((src.match(/RX_CONDS/g) || []).length, 3,
     "declared once and read exactly twice — the skip and the dispatcher");
+  /* AND EVERY NAME IN IT HAS A BRANCH. Without this the list can grow a
+     condition the dispatcher never answers, which is exactly the gate
+     that is skipped and then never run. */
+  const i = src.indexOf("const attackRx = (s, c, o) =>");
+  const body = src.slice(i, src.indexOf("PIECE ONE", i));
+  for(const k of eval(m[1]))
+    assert.ok(body.indexOf('cond === "' + k + '"') > 0, k + " has no branch in attackRx");
 });
 
 test("judge hands `execute` the wall — reprise was dead there without it", {skip}, () => {

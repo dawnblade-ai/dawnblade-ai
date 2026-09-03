@@ -794,6 +794,22 @@ function classifyClause(raw){
       return Object.assign(rest,{cond:"weaponSwung"});
     if(/^this is defended by fewer than 2 cards$/.test(cond))
       return Object.assign(rest,{cond:"defLt2any"});
+    /* "IF IT IS DEFENDED BY AN ATTACK ACTION CARD" (v3.91) — Agile
+       Engagement, an attack REACTION, so "it" is the attack it targets
+       rather than the reaction itself.
+
+       THE CONDITION ALREADY EXISTS ONE ROUTE OVER. Boltyn's clause 1 asks
+       the identical question of the wall (v3.74) and both boards already
+       compute it for `linkPumps`; what was missing here is that
+       `attackRx` was given the wall as a COUNT and not as CARDS — which
+       v3.89 fixed for Shred. This is v3.47's rule: when you build a
+       mechanic, sweep the refusals that were waiting on it.
+
+       IT IS ANSWERED IN `attackRx`, not by the generic loop, because that
+       loop is given no wall at all — the same reason `reprise` and
+       `charged` are `RX_CONDS` (v3.89). */
+    if(/^it is defended by an attack action card$/.test(cond))
+      return Object.assign(rest,{cond:"defAtkAction"});
     if(/^you'?(?:ve| have) dealt damage this turn$/.test(cond))
       return Object.assign(rest,{cond:"dealtDmg"});
     /* "{p} greater than its base" — the pump is known once the total is struck.
@@ -2656,7 +2672,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null, tapCost:null};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -3273,6 +3289,42 @@ function fxParse(card){
      a clause consumed by a dedicated reader (`handled`) took an early
      return that pushed `run` without ever asking, which is how Avast Ye!
      kept reporting `full` after the other three were fixed. */
+  /* ---- A HERO TAP AS AN OPTIONAL COST (v3.91) ----------------------
+     "Deal 5 arcane damage to any target. If this deals damage, you may
+      {t} your hero. If you do, create a Ponder token."
+                                                   — TURN TO MINDFIRE
+
+     THE POOL'S ONLY ONE, measured — so it is a NAMED shape rather than a
+     widening of `optCost`, which is the never-parse-ahead-of-wiring rule.
+
+     BOTH HALVES ALREADY EXISTED AND NEITHER WAS ASKED. `_dmgWay` has
+     recorded "did this resolution deal damage" since v3.62 (and it is
+     recorded INSIDE `arcaneHit`'s `left > 0` branch, so CR 7.5.5's
+     "prevented is not dealt" governs it without being restated), and
+     `heroTapped` has been the hero's own tap state since v3.48. v3.47's
+     rule: when you build a mechanic, sweep the refusals that were waiting
+     on it.
+
+     A HERO TAP IS NOT A PERMANENT'S TAP. `weaponUsed[uid]` is a per-turn
+     ALLOWANCE lifted at every turn boundary; `heroTapped` is a STATE only
+     the controller's own untap step lifts (CR 4.4.3d). They coincide for
+     a hero using its own ability and come apart the moment an opponent
+     taps you — v3.48 states this, and using the wrong one here would make
+     the cost payable again on the opponent's turn. */
+  for(let ci = 0; ci < clauses.length - 1; ci++){
+    if(handled.has(ci) || handled.has(ci+1)) continue;
+    if(!/^if this deals damage, you may \{t\} your hero$/i.test(clauses[ci].trim().replace(/\.$/, ""))) continue;
+    const tr = clauses[ci+1].match(/^if you do,?\s*(.+?)\.?$/i);
+    if(!tr) continue;
+    const rr3 = classifyClause(tr[1]);
+    /* AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE (v2.29) — a cost
+       with no reward is the free-ability bug v2.04 fixed, inverted. */
+    if(!rr3 || rr3.status !== "run" || !rr3.ops || !rr3.ops.length) continue;
+    fx.tapCost = {when: "dealt", ops: rr3.ops};
+    handled.add(ci); handled.add(ci+1);
+    break;
+  }
+
   /* ---- A MODAL OPTIONAL COST, AND "THAT CARD" (v3.90) --------------
      "When this attacks, you may discard a card OR destroy the top card of
       your deck. If THAT CARD has watery grave, this gets go again."

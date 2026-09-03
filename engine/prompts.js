@@ -302,6 +302,13 @@ function buildPrompt(game, spec){
          and the ability is repeatable every time an aura is played, which
          is strictly stronger than printed. */
       taps: !!spec.taps, tapUid: spec.tapUid,
+      /* A HERO TAP IS A DIFFERENT RECORD FROM A PERMANENT'S (v3.91).
+         `tapUid` goes into `weaponUsed`, a per-turn ALLOWANCE lifted at
+         every turn boundary; a hero's tap is a STATE only the
+         controller's own untap step lifts (CR 4.4.3d, v3.48). A spec only
+         carries fields `buildPrompt` knows about (v2.34), so this is
+         declared rather than threaded. */
+      tapHero: !!spec.tapHero,
       choice:null,
       title: spec.title || ("Pay " + cost + "?"),
       hint: spec.hint || "You may pay this. If you do, the rider resolves."};
@@ -554,6 +561,7 @@ function applyPrompt(game, prompt){
     /* The TAP leaves as data, like the payment: this module runs no
        effects and touches no state. The caller marks the permanent spent. */
     if(prompt.taps && prompt.tapUid != null) out.tap = prompt.tapUid;
+    if(prompt.tapHero) out.tapHero = true;
     out.msgs.push(who + " paid " + prompt.cost
       + (prompt.taps ? " and tapped " + prompt.src : "") + " — the rider resolves.");
     return out;
