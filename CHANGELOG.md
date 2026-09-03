@@ -9,6 +9,77 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.95 — a granted ability in two sentences, and the trace it needed
+
+> *"Your next Pirate ally attack this turn gets **"When this hits a hero,
+> destroy a card in their arsenal. If you do, create a Gold token."**"*
+> — LOOT THE ARSENAL
+>
+> *"…**"When this hits a hero, they discard a card. If they do, create a
+> Gold token."**"* — LOOT THE HOLD
+
+**A RECORDED REFUSAL, COMING DUE.** v3.45 built the rider-only grant
+reader and wrote down why these two still refused — handed both sentences
+at once, `classifyClause` reads **one** of them and drops the other,
+**inconsistently**:
+
+| card | what the whole-string read gave | what it lost |
+|---|---|---|
+| Loot the Hold | the discard | the Gold |
+| Loot the Arsenal | the **GOLD** | the destroy it is printed to pay for |
+
+The second is the reward without the cost. Claiming half is worse than
+claiming nothing (v2.29), so the grant refused whole — and the drill for
+it carried the reason in its own assertion text, which is what a recorded
+refusal is FOR (v3.38). **Fifth discharged this fortnight.**
+
+### The sentences are split, and the second is a gate
+
+Not more ops: an **empty hand discards nothing** and an **empty arsenal
+destroys nothing**, and the rider is the whole difference between the card
+working and the card being a free Gold.
+
+**CHECK FOR THE TRACE BEFORE YOU BUILD ONE** (v3.61). `_discWay` records
+what a resolution DISCARDED — the actor's own — and `_dmgWay` what it
+dealt. Neither can answer *"did we take a card from the OPPONENT"*, which
+is what both riders ask, so **`_tookWay` is a second record of a second
+fact** rather than a widening of either. It is set **where the fact
+becomes true** (v3.62), inside each op's success branch, so an empty zone
+records nothing without the guard being restated anywhere.
+
+**`thisWayMet` IS ITS ONE EVALUATOR** (v3.60), and the `condOnHit` loop
+routes *every* `way:` cond through it now — two copies of "what does this
+name mean" is a condition read in one place and answered in another.
+
+**AND IT IS RE-CHECKED AT THE HIT**, not at declaration: *"if you do"*
+asks about an op that has not run yet when the attack is declared, which
+is v3.60's whole lesson. `condOnHit` is the shape that already does this
+(v3.10), so the granted gate rides in it — `pend.condOnHit` joins the
+card's own and the granted ones.
+
+**"IF YOU DO" AND "IF THEY DO" NAME THE SAME EVENT** from its two ends —
+Loot the Arsenal destroys (yours), Loot the Hold makes them discard
+(theirs) — so both spellings read and neither is a different question. **A
+THIRD sentence refuses**: the pool prints none, and reading only the first
+two would be the same half-claim one sentence over.
+
+### Thirteen sabotages, and the silent one was a fixture
+
+The trace's **clear** came back silent, because the drill for it built a
+*second* state — where a stale trace could not survive to begin with. And
+driving two attacks in sequence cannot see it either: declaring the second
+one goes through `execute`, which is where the clear lives. So the honest
+fixture puts a stale trace **on the state** and asks whether `execute`
+wipes it — and the drill says plainly that the clear is not behaviourally
+reachable today, and why it exists anyway (v3.61's gap is exactly what it
+costs when one is missing).
+
+Coverage **375 → 377 full**, `part` **27 → 25**. Drills 2063 → **2076**.
+Scenes 61 → **62**. Fairness clean. 210 self-play games · 0 stalls · 0
+refusals · 0 invariant violations.
+
+---
+
 ## v3.94 — clash was a whole mechanic on one board
 
 > *"When this defends, **clash with the attacking hero**. The winner

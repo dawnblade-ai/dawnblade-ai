@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.94 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.95 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
-`npm run audit`: **375 full / 27 part / 3 none**. Night's Embrace left that
+`npm run audit`: **377 full / 25 part / 3 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |
@@ -15,6 +15,18 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.95 CLOSED THE TWO LOOT CARDS — THE FIFTH RECORDED REFUSAL TO COME
+DUE THIS FORTNIGHT.** Both grant a two-sentence quoted ability, and
+`classifyClause` over the whole string reads ONE sentence and drops the
+other inconsistently. The sentences are split now and the second rides as
+a `way:took` gate, off a trace neither `_discWay` nor `_dmgWay` could
+supply.
+
+**THE HABIT THAT KEEPS PAYING: read the drills' own assertion TEXT for
+recorded refusals.** Five have come due in a fortnight and every one was
+written down in the drill that pinned it. `grep -rn "refus\|deliberately
+not\|does not read" test/` is the sweep.
 
 **v3.94 FOUND A WHOLE MECHANIC ON ONE BOARD — AND COVERAGE COULD NOT SEE
 IT.** Seven pool cards print CLASH, every one reads `tier: full`, and at
@@ -67,7 +79,7 @@ Agile Engagement's condition is Boltyn's one route over, and Turn to
 Mindfire's two records (`_dmgWay`, `heroTapped`) both already existed.
 **That is the shape to look for first**: `npm run gaps` lists the
 unfinished cards, and a good share of them are waiting on something the
-engine already has. Coverage is **375 full / 27 part / 3 none**.
+engine already has. Coverage is **377 full / 25 part / 3 none**.
 
 **JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
 found a third: FOUR pool records print *"when this defends"* on GEAR and

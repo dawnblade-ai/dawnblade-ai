@@ -156,7 +156,40 @@ function quotedRider(txt){
      "If you do, …" is the family this project deliberately does not read
      (see Known approximations), so a quoted payload carrying one is not
      fully readable and must claim nothing rather than claim half. */
-  if(/\bif (?:you|they) do\b/i.test(q)) return null;
+  /* "…, IF YOU DO, …" — THE SECOND SENTENCE, READ (v3.95).
+
+     Until now this refused, and the refusal was honest: `classifyClause`
+     over the whole quoted string reads ONE of the two sentences and drops
+     the other, INCONSISTENTLY — Loot the Hold gave the discard and lost
+     the Gold; Loot the Arsenal gave the GOLD and lost the destroy it is
+     printed to pay for, which is the reward without the cost. Claiming
+     half is worse than claiming nothing (v2.29).
+
+     So the two sentences are SPLIT and read separately, and the second
+     rides as a GATE rather than as more ops: an empty hand discards
+     nothing and an empty arsenal destroys nothing, and the rider is the
+     whole difference. `way:took` is the condition and
+     `effects.thisWayMet` is its one evaluator (v3.60).
+
+     "IF YOU DO" AND "IF THEY DO" NAME THE SAME EVENT from its two ends —
+     Loot the Arsenal destroys (yours) and Loot the Hold makes them
+     discard (theirs) — so both spellings read, and neither is a different
+     question. A THIRD sentence refuses: the pool prints none, and reading
+     only the first two would be the same half-claim one sentence over. */
+  const parts = String(q).split(/\.\s+/).map(x => x.trim().replace(/\.$/, "")).filter(Boolean);
+  if(parts.length > 2) return null;
+  if(parts.length === 2){
+    if(!/^if (?:you|they) do,\s*/i.test(parts[1])) return null;
+    const head = classifyClause(parts[0]);
+    if(!(head && head.status === "run" && head.onHit && head.ops.length)) return null;
+    const tail = classifyClause(parts[1].replace(/^if (?:you|they) do,\s*/i, ""));
+    if(!(tail && tail.status === "run" && tail.ops && tail.ops.length)) return null;
+    /* THE GATE IS ON THE TAIL, NEVER ON THE HEAD. The head is what the
+       ability DOES; making it conditional would gate the card on a thing
+       that has not happened yet. */
+    return {ops: head.ops, heroOnly: !!head.heroOnly,
+            condOnHit: tail.ops.map(op => ({cond: "way:took", op, heroOnly: !!head.heroOnly}))};
+  }
   const sub = classifyClause(q);
   if(!(sub && sub.status === "run" && sub.onHit && sub.ops.length)) return null;
   return {ops: sub.ops, heroOnly: !!sub.heroOnly};
@@ -345,7 +378,13 @@ function classifyClause(raw){
     else full.atk = true;
     const ro = quotedRider(c);
     if(!ro) return null;
-    return R([["buffNext", 0, full, ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}]]);
+    /* THE GATED HALF RIDES ALONGSIDE (v3.95) — `condOnHit` is the shape
+       the engine already uses for a conditionally granted on-hit ability
+       (v3.10), and it is re-checked at the HIT rather than at declaration,
+       which is the only moment "if you do" can be answered. */
+    const _r = ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops};
+    if(ro.condOnHit && ro.condOnHit.length) _r.condOnHit = ro.condOnHit;
+    return R([["buffNext", 0, full, _r]]);
   }
 
   if(/^when this is discarded at random, put it on the bottom of (?:its owner'?s?|your) deck$/.test(c))

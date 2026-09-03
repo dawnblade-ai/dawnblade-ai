@@ -268,12 +268,15 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
        || (f.modes || []).some(m => m.riderOnHit)) carried++;
   }
   assert.equal(total, 28, "pool cards granting a quoted ability");
-  assert.equal(carried, 22, "carrying their rider — 7 before v3.10, 15 after it, " +
+  assert.equal(carried, 24, "carrying their rider — 7 before v3.10, 15 after it, " +
     "the targeted and modal shapes at v3.12, Avast Ye! at v3.42 (whose rider read " +
     "fine all along and was simply never asked for), Drop the Anchor at v3.48, " +
     "whose payload taps a hero and had no reader until the RULING settled what that " +
-    "means, and Bolt'n' Shot at v3.71 — whose rider had ALWAYS parsed, and whose " +
-    "gate was one printed wording of `pumped` the anchor did not know. The six that " +
-    "remain unread are honest refusals: an `attacks` trigger rather than a hit, or " +
-    "a payload with no reader.");
+    "means, Bolt'n' Shot at v3.71 — whose rider had ALWAYS parsed, and whose " +
+    "gate was one printed wording of `pumped` the anchor did not know — and the two " +
+    "LOOT cards at v3.95, whose quoted payload is TWO sentences: `classifyClause` " +
+    "read one of them and dropped the other, inconsistently, so the grant refused " +
+    "whole until the second sentence could ride as a gate. The four that remain " +
+    "unread are honest refusals: an `attacks` trigger rather than a hit, or a " +
+    "payload with no reader.");
 });

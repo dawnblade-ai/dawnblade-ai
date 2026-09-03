@@ -750,6 +750,11 @@ function makeEffects(ctx){
         const a = foe(n).arsenal;
         foeMut(n).arsenal = null;
         foeMut(n).grave = [...gy(n.turn, a), ...foe(n).grave];
+        /* THE SAME TRACE (v3.95) — Loot the Arsenal prints "destroy a card
+           in their arsenal. IF YOU DO, create a Gold token", and an empty
+           arsenal destroys nothing. "You do" and "they do" name the same
+           event from the two ends of it; the reader accepts both. */
+        n._tookWay = [...(n._tookWay||[]), a];
         n = L(n, `${srcName}: ${a.name} is destroyed in ${foe(n).name}'s arsenal.`);
       }
       else if(k==="foeArsBottom"){
@@ -851,6 +856,14 @@ function makeEffects(ctx){
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).grave = [...take, ...foe(n).grave];
+          /* WHAT THIS RESOLUTION TOOK FROM THE OPPONENT (v3.95), beside
+             `_discWay` ("what this resolution discarded", which is the
+             ACTOR's own) and `_dmgWay`. Loot the Hold prints "they discard
+             a card. IF THEY DO, create a Gold token" — an empty hand takes
+             nothing, and the rider is the whole difference. Recorded where
+             the fact becomes true (v3.62), so an empty zone records
+             nothing without the guard being restated. */
+          n._tookWay = [...(n._tookWay||[]), ...take];
           n = L(n, `${srcName}: ${foe(n).name} discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
@@ -2201,6 +2214,10 @@ function makeEffects(ctx){
        both the immediate and the deferred op lists so they cannot fire a
        second time on resolution. */
     n._discWay = [];
+    /* AND WHAT IT TOOK FROM THE OPPONENT (v3.95), for `_discWay`'s reason:
+       left to accumulate it is the NEXT card's condition reading a
+       discard it never caused. */
+    n._tookWay = [];
     n._kwGrant = [];        // cleared with _discWay, and for the same reason
     /* A KEYWORD THE ARSENAL STAMPED ON THIS CARD (v3.71). Azalea's hero
        ability grants dominate to an ARROW it turns face up, and the grant
@@ -2489,7 +2506,7 @@ function makeEffects(ctx){
     const runWayConds = (nn, grantGa) => {
       for(const {cond, op} of fx.conds){
         if(!/^way:/.test(cond)) continue;
-        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay})){
+        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay, took: nn._tookWay})){
           nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
           continue;
         }
@@ -2586,6 +2603,12 @@ function makeEffects(ctx){
          grants "When this hits a HERO, create a Gold token"; landing that
          on an ally hit is the same bug one grant further out. */
       const qRiderHero = _qr.reduce((a2,b)=>a2.concat(b.rider.onHitHero||[]), []);
+      /* AND A GRANTED RIDER MAY CARRY A GATE (v3.95). Loot the Arsenal and
+         Loot the Hold each grant a TWO-SENTENCE ability whose second half
+         is conditional on the first having taken something — so the grant
+         rides as `condOnHit` entries, the shape `fx.condOnHit` already
+         uses, and is re-checked at the hit rather than at declaration. */
+      const qRiderCond = _qr.reduce((a2,b)=>a2.concat(b.rider.condOnHit||[]), []);
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
@@ -2947,7 +2970,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -4864,7 +4887,19 @@ function makeEffects(ctx){
            unknown cond answers FALSE (v3.26) — correctly, and silently.
            The number is the STRUCK power, the same one `linkPumps`
            records, never the damage that got past the wall. */
-        const met = cond==="charged" ? (act(n).hist.charged||0)>0
+        /* A `way:` GATE IS `thisWayMet`'s (v3.95), never a fourth branch
+           here: it is the ONE evaluator for "what did this resolution
+           actually do", and two copies drift into a condition that is
+           read in one place and answered in the other. The trace is the
+           same object the pre-run loop passes, so the two cannot disagree
+           about what a `way:` name means.
+
+           IT IS READ AFTER `pend.onHit` HAS RUN — the granted ability's
+           own first op is what sets the trace, and this loop sits below
+           that call for exactly that reason (v3.60's sequencing). */
+        const met = /^way:/.test(cond)
+            ? thisWayMet(cond, {disc: n._discWay, dmg: n._dmgWay, ars: n._arsWay, took: n._tookWay})
+          : cond==="charged" ? (act(n).hist.charged||0)>0
           : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
           : cond==="marked" ? !!foe(n).marked
           : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > (pc.power||0)
@@ -4875,7 +4910,7 @@ function makeEffects(ctx){
            know — so an unknown gate reported itself as a charge problem on
            a card with no charge in it, which is the feed lying about a rule
            (v2.83's category, one board over). */
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
+        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":cond==="way:took"?"the card it was printed to take — that zone was empty":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
@@ -6053,6 +6088,11 @@ function thisWayMet(cond, trace){
      for any other (v3.17, v3.32, v3.55). */
   const am = String(cond||"").match(/^way:arsPut(\d+)$/);
   if(am) return (t.ars||0) >= +am[1];
+  /* "IF YOU DO" / "IF THEY DO" INSIDE A GRANTED ABILITY (v3.95) — did the
+     ability's own first op actually take something from the opponent? An
+     empty hand or an empty arsenal takes nothing, and the rider is the
+     whole difference between the two Loot cards and half of each. */
+  if(cond === "way:took") return (t.took||[]).length > 0;
   /* AN UNKNOWN `way:` ANSWERS FALSE — a condition added to the parser and
      forgotten here leaves the card weaker than printed and visible, which
      is the safe direction (v3.26's rule, and this function is NAMED so

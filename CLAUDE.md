@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.94
+**Current version:** v3.95
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2061 drills**.
+This is `node --test "test/*.test.js"` — currently **2076 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,46 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A GRANTED ABILITY IN TWO SENTENCES (v3.95)
+
+> *"Your next Pirate ally attack this turn gets **"When this hits a hero,
+> <take something>. If you do, create a Gold token."**"*
+
+**v3.45 BUILT THE READER AND RECORDED WHY THESE TWO STILL REFUSED.**
+Handed both sentences at once, `classifyClause` reads **one** and drops
+the other, INCONSISTENTLY: Loot the Hold gave the discard and lost the
+Gold; Loot the Arsenal gave the **GOLD** and lost the destroy it is
+printed to pay for — the reward without the cost. Claiming half is worse
+than claiming nothing (v2.29). Fifth recorded refusal discharged this
+fortnight.
+
+**THE SENTENCES ARE SPLIT AND THE SECOND IS A GATE**, not more ops: an
+empty hand discards nothing and an empty arsenal destroys nothing, and the
+rider is the whole difference between the card working and a free Gold.
+
+**CHECK FOR THE TRACE BEFORE YOU BUILD ONE** (v3.61). `_discWay` is the
+ACTOR's own discard and `_dmgWay` is damage; neither answers *"did we take
+a card from the OPPONENT"*, so **`_tookWay` is a second record of a second
+fact** — set where the fact becomes TRUE (v3.62), so an empty zone records
+nothing without the guard being restated.
+
+**`thisWayMet` IS ITS ONE EVALUATOR**, and the `condOnHit` loop routes
+every `way:` cond through it now. **And it is re-checked AT THE HIT**:
+*"if you do"* asks about an op that has not run when the attack is
+declared (v3.60), which is what `condOnHit` already exists for.
+
+**BOTH SPELLINGS READ.** *"If you do"* and *"if they do"* name the same
+event from its two ends — one card destroys, the other makes them
+discard. **A THIRD sentence refuses**, because reading only the first two
+is the same half-claim one sentence over.
+
+**AND THE SILENT SABOTAGE WAS THE TRACE'S CLEAR**, because the drill built
+a SECOND state where a stale trace could not survive — and driving two
+attacks cannot see it either, since declaring the second goes through
+`execute`, where the clear lives. The honest fixture puts a stale trace on
+the state and asks whether `execute` wipes it, and says plainly that the
+clear is not behaviourally reachable today.
 
 ### CLASH WAS A WHOLE MECHANIC ON ONE BOARD (v3.94)
 

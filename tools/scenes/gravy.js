@@ -216,6 +216,73 @@ module.exports = [
     "…and NOT on the attacker who shot it": 0,
     "the actor is handed back": 1
   }
+},
+
+{
+  name: "the two Loot cards grant a TWO-SENTENCE ability, and the second is a gate",
+  why: "v3.95 — v3.45 built the rider-only grant reader and recorded why " +
+       "these two still refused: handed both sentences at once, " +
+       "`classifyClause` reads ONE and drops the other INCONSISTENTLY — " +
+       "Loot the Hold gave the discard and lost the Gold, Loot the " +
+       "Arsenal gave the GOLD and lost the destroy it is printed to pay " +
+       "for, which is the reward without the cost. Claiming half is worse " +
+       "than claiming nothing (v2.29). The sentences are split now and " +
+       "the second rides as `way:took`, because an empty hand discards " +
+       "nothing and an empty arsenal destroys nothing — the rider is the " +
+       "whole difference.",
+  run(c){
+    const P = require("../../engine/parser.js");
+    const junk = (nm, uid) => ({name: nm, uid, pitch: 1, cost: 0, power: 3,
+      tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: [], gkw: []});
+    const play = (nm, foe) => {
+      P.fxReset();
+      const loot = Object.assign(c.card(nm, 3), {uid: "loot1"});
+      const ally = Object.assign(c.card("Swabbie", 2), {uid: "ally1"});
+      const g = Object.assign(c.state(
+        {name: "Alice", hand: [loot], res: 9, ap: 2,
+         board: [{uid: "ally1", kind: "ally", spent: false, card: ally}]},
+        Object.assign({name: "Bob", hp: 20}, foe), {turn: 3, turnPlayer: 0}),
+        {phase: "action", step: "layer"});
+      g.builds = [{}, {}];
+      const o1 = c.exec(g, loot, "hand", 0, {});
+      const n1 = o1.game || o1;
+      const entry = n1.sides[0].board.find(b => b.uid === "ally1");
+      const o2 = c.exec(Object.assign({}, n1, {promptQ: [], prompt: null}), entry.card, "ally", 0, {});
+      const n2 = o2.game || o2;
+      if(!n2.pend) return {gold: -1, played: n1};
+      const r = c.J.withEffects(n2, (fx, m) => {
+        const x = fx.linkPayload(m, {total: m.pend.total, pumps: 0, heroHit: true});
+        return x.game || x;
+      });
+      const out = r.game || r;
+      return {gold: (out.sides[0].board || []).filter(b => b.card.name === "Gold").length,
+              foeHand: (out.sides[1].hand || []).length,
+              foeArs: out.sides[1].arsenal ? 1 : 0,
+              played: n1};
+    };
+    const holdFull = play("Loot the Hold", {hand: [junk("Junk", "j1")]});
+    const holdNone = play("Loot the Hold", {hand: []});
+    const arsFull  = play("Loot the Arsenal", {arsenal: junk("Set", "s1")});
+    const arsNone  = play("Loot the Arsenal", {arsenal: null});
+    return {
+      "a hand to take from pays the Gold":       holdFull.gold,
+      "…and they really did discard":            holdFull.foeHand,
+      "an EMPTY hand pays nothing":              holdNone.gold,
+      "an arsenal to take pays the Gold":        arsFull.gold,
+      "…and it really was destroyed":            arsFull.foeArs,
+      "an EMPTY arsenal pays nothing":           arsNone.gold,
+      "and NOTHING fires when the card is played": (holdFull.played.sides[1].hand || []).length
+    };
+  },
+  want: {
+    "a hand to take from pays the Gold": 1,
+    "…and they really did discard": 0,
+    "an EMPTY hand pays nothing": 0,
+    "an arsenal to take pays the Gold": 1,
+    "…and it really was destroyed": 0,
+    "an EMPTY arsenal pays nothing": 0,
+    "and NOTHING fires when the card is played": 1
+  }
 }
 
 ];

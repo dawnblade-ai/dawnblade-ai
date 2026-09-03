@@ -238,19 +238,63 @@ test("a trailing period is not a sentence break", () => {
 
 /* ---- 4. THE RIDER-ONLY GRANT ----------------------------------------- */
 
-test("a rider-only grant claims nothing when its payload cannot be read", {skip}, () => {
+test("a rider-only grant reads BOTH its sentences, or claims nothing", {skip}, () => {
   H.db();
-  /* Loot the Hold and Loot the Arsenal print "Your next Pirate ally attack
-     this turn gets \"…\"" — no pump for `buffNext`, no go again for
-     `gaNext`. Both quoted payloads carry an "if you do" tail, the family
-     this project deliberately does not read, so the grant refuses rather
-     than claiming half of it: Loot the Arsenal's half was the GOLD TOKEN
-     with the destroy it pays for dropped — the reward without the cost. */
+  /* DELIBERATE CHANGE AT v3.95, and this drill carried the reason in its
+     own assertion text — which is what a recorded refusal is FOR (v3.38).
+
+     The refusal was right while `quotedRider` handed the whole quoted
+     string to `classifyClause`, which reads ONE of the two sentences and
+     drops the other INCONSISTENTLY: Loot the Hold gave the discard and
+     lost the Gold; Loot the Arsenal gave the GOLD and lost the destroy it
+     is printed to pay for — the reward without the cost. Claiming half is
+     worse than claiming nothing (v2.29).
+
+     What changed is that the two sentences are now SPLIT and read
+     separately, and the second rides as a GATE (`way:took`) rather than
+     as more ops — because an empty hand discards nothing and an empty
+     arsenal destroys nothing, and the rider is the whole difference.
+
+     THE REFUSAL PROPERTY IS KEPT ALIVE by the probes below. */
   for(const nm of ["Loot the Hold", "Loot the Arsenal"]){
     P.fxReset();
     const f = P.fxParse(H.card(nm, 3));
-    assert.deepEqual(f.ops, [], nm + " must claim nothing rather than half its rider");
+    assert.equal((f.ops || []).length, 1, nm + " claims its grant now");
+    const g = f.ops[0];
+    assert.equal(g[0], "buffNext");
+    assert.equal(g[1], 0, "a rider-only grant carries no power");
+    assert.deepEqual(g[2], {g: [["pirate", "ally"]], atk: true}, "the printed qualifier");
+    assert.equal((g[3].onHitHero || []).length, 1, "the first sentence is the ability");
+    assert.deepEqual((g[3].condOnHit || []).map(x => x.cond), ["way:took"],
+      "and the second rides as a gate, not as more ops");
   }
+});
+
+test("…and a payload it still cannot read claims NOTHING", {skip}, () => {
+  /* The property the old pin was protecting, kept alive with probes the
+     pool cannot supply. A grant that fires half its printed ability is
+     the shape this whole family exists to refuse. */
+  P.fxReset();
+  const real = H.card("Loot the Hold", 3);
+  const syn = (nm, tx) => P.fxParse(Object.assign({}, real, {name: nm, tx}));
+  /* THREE sentences — the pool prints none, and reading only the first
+     two would be the same half-claim one sentence over. */
+  assert.deepEqual(syn("SYN-loot-3s",
+    'Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. If they do, create a Gold token. Then draw a card."').ops,
+    [], "three sentences refuse");
+  /* an unreadable TAIL */
+  assert.deepEqual(syn("SYN-loot-tail",
+    'Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. If they do, ascend to a higher plane."').ops,
+    [], "an unreadable second sentence refuses the whole grant");
+  /* an unreadable HEAD */
+  assert.deepEqual(syn("SYN-loot-head",
+    'Your next Pirate ally attack this turn gets "When this hits a hero, ascend to a higher plane. If they do, create a Gold token."').ops,
+    [], "and so does an unreadable first one");
+  /* a second sentence that is NOT an "if you do" — it would be a second
+     unconditional ability, which this shape does not express */
+  assert.deepEqual(syn("SYN-loot-uncond",
+    'Your next Pirate ally attack this turn gets "When this hits a hero, they discard a card. Draw a card."').ops,
+    [], "a second sentence that is not a gate refuses");
 });
 
 test("driven: neither Loot card fires its payload ON PLAY", {skip}, () => {
