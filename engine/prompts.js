@@ -255,7 +255,19 @@ function buildPrompt(game, spec){
   if(spec.tag === "modal"){
     const options = (spec.options||[]).filter(Boolean);
     if(options.length < 2) return null;
+    /* A MODE CAN BE OPTIONAL (v3.90). "You may discard a card OR destroy
+       the top card of your deck" is a CHOICE the player may also refuse,
+       and a modal with no way out would make a "you may" mandatory —
+       stronger than printed, and the free-ability rule v2.04 fixed read
+       from the other end. `optional` is opt-in (v3.58), so every existing
+       modal keeps its exact shape. */
     return {...base, options, choice:null,
+      optional: !!spec.optional,
+      /* DATA THE ANSWER APPLIES, never ops (v2.34, v3.47). The rider is
+         conditional on the card the COST consumed, which prompts.js
+         cannot know and must not decide — it names the keyword and the
+         payload, and `applyAnswer` asks. */
+      costRider: spec.costRider || null,
       title: spec.title || "Choose one",
       hint: spec.hint || "Pick one mode — the other is not used."};
   }
@@ -419,6 +431,7 @@ function promptChoose(prompt, choice){
 function promptDecline(prompt){
   if(!prompt) return prompt;
   if(prompt.tag === "pay") return promptChoose(prompt, "decline");
+  if(prompt.tag === "modal" && prompt.optional) return promptChoose(prompt, "decline");
   if(prompt.tag === "pick" && prompt.optional) return {...prompt, sel: []};
   return prompt;
 }
@@ -515,6 +528,13 @@ function applyPrompt(game, prompt){
     return out;
   }
   if(prompt.tag === "modal"){
+    /* DECLINING IS A CHOICE, NOT A CANCEL (v3.90, and v2.77's rule for
+       `pay`). An optional modal that was declined runs NOTHING — neither
+       the cost nor the rider — which is what "you may" says. */
+    if(prompt.choice === "decline"){
+      out.msgs.push(who + " declined.");
+      return out;
+    }
     const opt = prompt.options[prompt.choice];
     out.msgs.push("Mode chosen: " + (opt && opt.label ? opt.label : String(opt)) + ".");
     out.ops = (opt && opt.ops) || [];

@@ -1638,7 +1638,13 @@ test("the second-person debt in the shared semantics does not grow", () => {
      construction — the string is only reachable when `who(i)` is "You".
      A feed line that says "you" about the OTHER seat is the debt; this
      says "your" about the seat it has just named. */
-  assert.ok(lits.length <= 49,
+  /* 49 -> 51 AT v3.90, AND BOTH ARE PROMPT TEXT — the case the four moves
+     above all record as correct. The modal optional cost's option label
+     is "Destroy the top card of YOUR deck" and its hint says "the card
+     YOU spend"; a prompt is addressed to ONE SIDE (`spec.side` has meant
+     that since v2.17), and the seat being asked is the seat "you" names.
+     The FEED half of both cards names the seat instead. */
+  assert.ok(lits.length <= 51,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 38 cards | understood ≠ built |
-| **Fail states** | 67 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 36 cards | understood ≠ built |
+| **Fail states** | 65 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -52,7 +52,6 @@ Cards whose ruling exists but which still do not resolve in full.
 
 - **Danger Digits** (none, 3/3 unread)
 - **Glisten** (none, 2/2 unread)
-- **Jittery Bones** (none, 2/2 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
@@ -64,7 +63,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Rising Resentment** (part, 2/3 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Turn to Mindfire** (part, 2/3 unread)
-- **Washed Up Wave** (part, 2/3 unread)
 - **Agile Engagement** (part, 1/2 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Carrion Crown** (part, 1/3 unread)
@@ -102,16 +100,16 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Ability inert — cost not modelled | 19 |
-| Earned value denied | 17 |
+| Ability inert — cost not modelled | 17 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| Choice never offered | 14 |
+| Earned value denied | 16 |
 | No schedule to fire on | 13 |
+| Choice never offered | 12 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Displayed total is wrong | 8 |
 | Unread, effect unknown | 8 |
+| Displayed total is wrong | 7 |
 
-### WRONG — 36 entries
+### WRONG — 35 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -228,9 +226,9 @@ can be overruled. Same discipline as the mention count.
 - **Roaring Beam** (2) · tier `part` · boltyn
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If there are no cards in your soul, return this to its owner's hand, then charge your soul.
-- … and 11 more (see the station)
+- … and 10 more (see the station)
 
-### LOST VALUE — 30 entries
+### LOST VALUE — 29 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -271,7 +269,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
     > Suspense
 - **Enigma Chimera** (1) · tier `full` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Halo of Illumination** · tier `part` · boltyn
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -281,13 +279,6 @@ can be overruled. Same discipline as the mention count.
 - **Hope Merchant's Hood** · tier `none`
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > Instant - Destroy this: Shuffle any number of cards from your hand into your deck, then draw that many cards.
-- **Jittery Bones** (3) · tier `none` · gravy
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > When this attacks, you may discard a card or destroy the top card of your deck
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this attacks, you may discard a card or destroy the top card of your deck
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If that card has watery grave, this gets go again.
 - **Limpit, Hop-a-long** (2) · tier `full`
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
@@ -298,7 +289,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
 - **Phantasmal Haze** (3) · tier `full` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Refraction Bolters** · tier `part` · dorinthea
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -311,10 +302,10 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
 - **Spears of Surreality** (3) · tier `full` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Spectral Rider** (3) · tier `part` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Swabbie** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
@@ -325,7 +316,10 @@ can be overruled. Same discipline as the mention count.
 - **The Suspense is Killing Me** (3) · tier `full` · bravo, lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
     > Suspense
-- … and 5 more (see the station)
+- **Thunder Quake** (3) · tier `full` · bravo
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Heave 3" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Heave 3 is active when thunder quake is in your hand at the end of turn - instead of putting it into your arsenal as normal, the player will get a popup and have the option to pay 3 resources - if they do - add 3 seismic
+    > Heave 3
+- … and 4 more (see the station)
 
 ### INERT — 1 entries
 

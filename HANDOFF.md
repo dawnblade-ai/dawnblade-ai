@@ -1,21 +1,27 @@
-# Handoff — Dawnblade, at v3.89 · PHASE C · FOUR CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.90 · PHASE C · THREE CARDS READ NOTHING
 
-## ⚠ THE REMAINING FOUR, AND WHAT EACH IS WAITING ON
+## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
 `npm run audit`: **365 full / 34 part / 6 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |
 |---|---|---|
-| **Jittery Bones** | *"you may discard a card **or** destroy the top card of your deck. If that card has watery grave…"* | a MODAL optional cost — `optCost` carries one cost shape |
 | **Glisten** | *"distribute up to four +1{p} counters among any number of weapons"* | a DISTRIBUTION sheet. `ctrPut` and the sharpen wipe (v3.66) are both built |
 | **Danger Digits** | *"target dagger you control that isn't on the active chain link deals 1 damage… the dagger has hit"* | a "has hit" FICTION for a card that never attacked |
 | **Hope Merchant's Hood** | *"shuffle any number of cards from your hand into your deck, then draw that many"* | deck manipulation, and a rider whose count is the pick's own size |
 
-**THE PATTERN, FOR THE FIFTH VERSION RUNNING: none of the four is
+**THE PATTERN, FOR THE SIXTH VERSION RUNNING: none of the three is
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
+found a third: FOUR pool records print *"when this defends"* on GEAR and
+**neither board reached any of them** — judge built its wall from the hand
+alone and the trainer filtered gear out, so Stonewall Impasse was inert on
+both. That is the third consecutive version where a card refused because
+of a ROUTE rather than a reading.
 
 **SHRED CLOSED AT v3.89, AND BUILDING IT FOUND TWO LIVE TWO-BOARD
 DEFECTS** — see the changelog. The lesson worth carrying: when a card

@@ -123,7 +123,7 @@ test("the defends trigger fires from afterDefenders — the shared body", () => 
      boards already call it. Comments stripped. */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const i = src.indexOf("const afterDefenders = (s, wall) =>");
+  const i = src.indexOf("const afterDefenders = (s, wall, gearWall) =>");
   assert.ok(i > 0, "afterDefenders moved — re-anchor this drill");
   const body = src.slice(i, src.indexOf("THE LINK RESOLVES, IN THREE PIECES", i))
     /* COMMENTS STRIPPED. The prose right above this trigger EXPLAINS that

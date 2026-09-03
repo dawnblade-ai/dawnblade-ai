@@ -23,6 +23,74 @@ function built(c, k){
 module.exports = [
 
 {
+  name: "the watery-grave cost is a real CHOICE, and it pays only when it lands",
+  why: "v3.90 — Jittery Bones read NOTHING and Washed Up Wave read `part`. " +
+       "Both print the SAME modal optional cost with different triggers and " +
+       "different payloads, so one reader closes both. `fx.optCost` " +
+       "describes ONE cost with a zone and a filter and cannot say \"either " +
+       "of these two different things\"; reading it as a plain discard " +
+       "deletes a printed line of play, because milling is the branch you " +
+       "take when your hand holds nothing with the keyword.",
+  run(c){
+    c.H.db(); c.P.fxReset();
+    const jb = c.card("Jittery Bones", 3, 1001);
+    const wg = c.card("Barnacle", 0, 1010);
+    const plain = c.card("Wounding Blow", 1, 1011);
+    const play = (mode, top, hand) => {
+      const g = c.state({hand: [jb, ...(hand || [])], res: 9, ap: 1,
+                         deck: [top, Object.assign({}, plain, {uid: 1099})]},
+                        {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+      const out = c.exec(g, jb, "hand", 0, {});
+      let n = c.open(out.game || out) || (out.game || out);
+      if(!n.prompt) return {err: "no sheet"};
+      n = mode === "decline"
+        ? c.reduce(n, {t: "promptDecline"}, n.prompt.side)
+        : c.reduce(n, {t: "promptChoose", choice: mode}, n.prompt.side);
+      n = c.reduce(n, {t: "promptConfirm"}, 0);
+      return {ga: !!(n.pend && n.pend.ga), deck: n.sides[0].deck.length,
+              grave: n.sides[0].grave.map(x => x.name).join(","),
+              gy: (n.sides[0].grave[0] || {})._gy};
+    };
+    const milled  = play(1, Object.assign({}, wg, {uid: 1020}));
+    const missed  = play(1, Object.assign({}, plain, {uid: 1021}));
+    const declined = play("decline", Object.assign({}, wg, {uid: 1022}));
+    const fromHand = play(0, Object.assign({}, plain, {uid: 1023}),
+                          [Object.assign({}, wg, {uid: 1024})]);
+    return {
+      "what the card asks for":        JSON.stringify(c.P.fxParse(jb).millCost),
+      "mill a watery-grave card":      milled.grave,
+      "…and it goes again":            milled.ga,
+      /* THE GRANT REACHES THE LINK, not just a local (v3.62) — this sheet
+         is answered AFTER the attack is already on the chain. */
+      "…turn-stamped in the graveyard": milled.gy,
+      "mill an ordinary card":         missed.ga,
+      /* DECLINING SPENDS NOTHING. A "you may" that cannot be refused is
+         stronger than printed — v2.04's free-ability rule, read from the
+         other end. */
+      "declining leaves the deck alone": declined.deck,
+      "…and grants nothing":            declined.ga,
+      /* THE DISCARD BRANCH IS A REAL SECOND MODE: the card in HAND was
+         spent and the deck is untouched. */
+      "discard from hand instead":      fromHand.grave,
+      "…deck untouched":                fromHand.deck,
+      "…and it goes again":             fromHand.ga
+    };
+  },
+  want: {
+    "what the card asks for": "{\"trigger\":\"attacks\",\"kw\":\"watery grave\",\"ops\":[[\"ga\"]]}",
+    "mill a watery-grave card": "Barnacle",
+    "…and it goes again": true,
+    "…turn-stamped in the graveyard": 3,
+    "mill an ordinary card": false,
+    "declining leaves the deck alone": 2,
+    "…and grants nothing": false,
+    "discard from hand instead": "Barnacle",
+    "…deck untouched": 2,
+    "…and it goes again": true
+  }
+},
+
+{
   name: "his ability costs a Gold — and the Gold really leaves the board",
   why: "v3.86 — `parseHeroPower` refuses any activation cost containing " +
        "\"destroy\" unless it destroys THIS, so `build.js` built him NO " +

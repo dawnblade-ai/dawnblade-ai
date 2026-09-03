@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T17:58:04.813Z",
- "appVer": "3.88",
+ "generated": "2026-09-03T18:17:31.209Z",
+ "appVer": "3.90",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 367,
-  "part": 34,
-  "none": 4
+  "full": 369,
+  "part": 33,
+  "none": 3
  },
  "heroes": {
   "kayo": {
@@ -12739,27 +12739,24 @@
     "blade break",
     "watery grave"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this defends, you may discard a card or destroy the top card of your deck",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If that card has watery grave, this gets +2{d}.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Blade Break",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "When this defends, you may discard a card or destroy the top card of your deck",
-    "If that card has watery grave, this gets +2{d}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this defends, you may discard a card or destroy the top card of your deck. If that card has watery grave, this gets +2{d}.\nBlade Break __",
@@ -13301,23 +13298,20 @@
     "go again",
     "watery grave"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When this attacks, you may discard a card or destroy the top card of your deck",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If that card has watery grave, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, you may discard a card or destroy the top card of your deck",
-    "If that card has watery grave, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, you may discard a card or destroy the top card of your deck. If that card has watery grave, this gets go again.",

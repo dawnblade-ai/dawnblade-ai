@@ -1328,8 +1328,13 @@ function afterDefenders(g){
   if(!link) return g;
   const def = P.defendingPlayer(g), sd = at(g, def);
   const wall = (sd.blockH || []).map(uid => (sd.hand || []).find(c => c.uid === uid)).filter(Boolean);
+  /* THE DECLARED EQUIPMENT, SEPARATELY (v3.90). `wall` is pinned as the
+     non-equipment cards because phantasm reads no other kind; four pool
+     records print "when this defends" on GEAR and neither board reached
+     any of them. */
+  const gearWall = (sd.blockG || []).map(uid => (sd.gear || []).find(c => c.uid === uid)).filter(Boolean);
   const out = withEffects({...g, actor: P.attackingPlayer(g)},
-    (fx, s) => fx.afterDefenders(s, wall));
+    (fx, s) => fx.afterDefenders(s, wall, gearWall));
   if(!out._fizzled) return out;
   const n = {...out}; delete n._fizzled;
   return closeChain(P.reset(n));

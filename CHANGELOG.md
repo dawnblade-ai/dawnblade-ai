@@ -9,6 +9,103 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.90 — a modal optional cost, and a trigger neither board reached
+
+> *"When this **attacks**, you may discard a card **or** destroy the top
+> card of your deck. If **that card** has watery grave, this gets go
+> again."* — JITTERY BONES
+> *"When this **defends**, … this gets +2{d}."* — WASHED UP WAVE
+
+Measured: exactly **two** pool records print this, with the SAME cost, two
+different triggers and two different payloads. One reader closes both, and
+Jittery Bones was among the cards reading nothing at all.
+
+### It is a MODE, not a filter
+
+`fx.optCost` describes ONE cost with a zone and a filter, and `optFilter`
+cannot say *"either of these two different things"*. Reading it as a plain
+discard deletes a printed line of play — **milling is the branch you take
+when your hand holds nothing with the keyword**.
+
+- **"THAT CARD" IS WHICHEVER BRANCH WAS TAKEN**, so the rider cannot be
+  answered until the cost is paid — which is why it rides on the SPEC
+  rather than becoming a `fx.conds` entry that `execute`'s loop would
+  answer FALSE before any op ran (v3.60).
+- **`_costWay` IS A SECOND RECORD OF A SECOND FACT.** A milled card was
+  never DISCARDED, so `_discWay` cannot answer *"that card"* — and a
+  discarded one feeds both, because other cards really do ask about
+  discards. That is not the duplication v3.61 warns about.
+- **THE KEYWORD IS READ off the printed line** — both pool cards name
+  `watery grave`, so a synthetic is what proves it (ninth outing).
+- **`printedKw`, NEVER `hasKw`** (v2.84's three questions). Every real
+  card that mentions watery grave also has it, so the two predicates agree
+  across the whole pool and only a synthetic near-miss tells them apart.
+
+### A modal can be declined now
+
+*"You may choose one of two things"* is a choice the player may also
+refuse. A modal with no way out makes a *"you may"* mandatory — stronger
+than printed, and **v2.04's free-ability rule read from the other end**.
+`optional` is opt-in (v3.58), so every existing modal keeps its shape.
+
+### Four pool records print "when this defends" on GEAR, and neither board reached any of them
+
+Judge built its wall from the **hand** alone and the trainer's site
+filtered gear out. So **Stonewall Impasse** and **Washed Up Wave** were
+inert on both boards, and the two Unity pieces were answered only by their
+own separate reader at the wall.
+
+**The declared equipment is a SECOND NAMED ARGUMENT, not a wider `wall`.**
+`wall` is pinned in its own comment as *"the declared NON-EQUIPMENT cards;
+phantasm reads no other kind"* — that is a CONTRACT, and widening it to
+serve a new reader would change what phantasm looks at, silently, for the
+sake of a card phantasm has nothing to do with. A drill asserts phantasm's
+reading is unchanged.
+
+### And a defBuff payload is the PIECE's, not the wall's
+
+Washed Up Wave is equipment that is DEFENDING, and *"this gets +2{d}"*
+belongs to that piece for the rest of the chain — which is `defMod`, keyed
+by uid, **the same field Shred moves the other way**. Run as a generic
+`defBuff` the number would go to a defence REACTION being played, which is
+a different card entirely.
+
+`defDebuff` was renamed to `defMod` with a SIGNED entry for that reason:
+two pool cards move one named defender's defence in opposite directions,
+and a field named for one direction that also carries the other is the
+same-name-different-meaning trap this project polices.
+
+### Seventeen sabotages, four silent first
+
+Each needed a fixture that could express its bug (v3.62):
+
+| sabotage | silent because | seen by |
+|---|---|---|
+| a `noop` payload claimed | the fixture's payload came back NULL, so the *status* test was never reached | a payload `classifyClause` READS as a noop (`intimidate`) |
+| decline still runs the cost | the fallback also yields no ops — the state is identical | the FEED (v3.60): *"Mode chosen: undefined"* instead of *"declined"* |
+| `hasKw` instead of `printedKw` | every real card that mentions watery grave also has it | a synthetic that only MENTIONS it |
+| the defBuff also run generically | `runOps`' `defBuff` only LOGS | the feed line about a number that went somewhere else |
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| pool coverage | 367 full / **4 none** | **369 full** / 33 part / **3 none** |
+| drills | 1970 | **1987** |
+| scenes | 54 | **55** |
+| second-person ledger | 49 | **51** (both prompt text — the case the four earlier moves record as correct) |
+
+Also fixed: *"You discards Barnacle"* — a feed line that NAMES the seat has
+to agree with the name it used, and seat 0's name is literally *"You"*
+(v3.88's rule; this line predated it). The test is a NAMED helper hoisted
+out of the template, because the second-person ledger scans template
+literals and a `/^you$/` inside the backticks reads as a feed line.
+
+Self-play 210 games · 0 stalls · 0 refusals · 0 violations; `npm run
+fairness` clean.
+
+---
+
 ## v3.89 — Shred, and two live two-board defects it uncovered
 
 > *"Target card defending an **Assassin** attack gets **-2{d}** this

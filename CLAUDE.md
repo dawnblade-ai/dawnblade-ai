@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.89
+**Current version:** v3.90
 
 ---
 
@@ -516,6 +516,47 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A MODAL OPTIONAL COST, AND "THAT CARD" (v3.90)
+
+> *"you may discard a card **OR** destroy the top card of your deck. If
+> **that card** has watery grave, …"* — JITTERY BONES · WASHED UP WAVE
+
+**IT IS A MODE, NOT A FILTER.** `fx.optCost` describes ONE cost with a
+zone and a filter and cannot say *"either of these two different things"*;
+reading it as a plain discard deletes a printed line of play, because
+milling is the branch you take when your hand holds nothing with the
+keyword.
+
+**"THAT CARD" IS WHICHEVER BRANCH WAS TAKEN**, so the rider rides on the
+SPEC and is asked AFTER the cost is paid — a `fx.conds` entry would be
+answered FALSE before any op ran (v3.60). **`_costWay` is a SECOND record
+of a SECOND fact**: a milled card was never DISCARDED, so `_discWay`
+cannot answer it, and a discarded one feeds both.
+
+**A MODAL CAN BE DECLINED** (opt-in, v3.58). A *"you may"* that cannot be
+refused is stronger than printed — v2.04's free-ability rule read from the
+other end.
+
+### "WHEN THIS DEFENDS" ON GEAR REACHED NEITHER BOARD (v3.90)
+
+Judge built its wall from the **hand** alone and the trainer's site
+filtered gear out, so **four pool records** print the trigger on equipment
+and **Stonewall Impasse and Washed Up Wave were inert on both boards**.
+
+**THE DECLARED EQUIPMENT IS A SECOND NAMED ARGUMENT, NOT A WIDER `wall`.**
+`wall`'s own comment pins it as *"the declared NON-EQUIPMENT cards;
+phantasm reads no other kind"* — a CONTRACT — and widening it to serve a
+new reader would change what phantasm looks at, silently, for the sake of
+a card phantasm has nothing to do with. A drill asserts phantasm's reading
+is unchanged.
+
+**AND A `defBuff` PAYLOAD ON THIS ROUTE IS THE PIECE'S**, not the wall's:
+`defMod` keyed by uid, the same field Shred moves the other way. That is
+why `defDebuff` was renamed and its entry SIGNED — two pool cards move one
+named defender's defence in opposite directions, and a field named for one
+direction that also carries the other is the same-name-different-meaning
+trap `KNOWN_COLLISIONS` polices.
 
 ### A PLAYED ATTACK REACTION IS ROUTED BY ITS WINDOW, NOT ITS PAYLOAD (v3.89)
 

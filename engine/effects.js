@@ -83,6 +83,13 @@ const LATE_CONDS = ["pumped", "defLt2", "defLt2any"];
    `attackRx` — for `LATE_CONDS`' own reason: two copies drift into a
    condition that is skipped and then never run. */
 const RX_CONDS = ["reprise", "charged"];
+/* IS THIS SEAT'S NAME THE SECOND PERSON? (v3.90) Seat 0 is called "You",
+   so a feed line that NAMES the seat has to agree with the name it used —
+   "You discards" and "You puts the top card of THEIR deck" are both wrong
+   in the same way. Named rather than inlined because the second-person
+   ledger in `judge.test.js` scans template literals: a `/^you$/` inside
+   the backticks reads as a second-person feed line to that scan. */
+const isSecondPerson = nm => /^you$/i.test(String(nm || ""));
 const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
@@ -579,7 +586,23 @@ function makeEffects(ctx){
              `discardRandom`" — `selfDiscard` was not wired, so a 6+ power
              card discarded by one could never satisfy `discard6way`. */
           n._discWay = [...(n._discWay||[]), ...take];
-          n = L(n, `${srcName}: ${act(n).name} discards ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
+          /* AND WHAT THE COST CONSUMED (v3.90) — the same cards, a
+             different question. "That card" names whichever branch of a
+             modal cost was taken, and only one of the two branches is a
+             discard. */
+          n._costWay = [...(n._costWay||[]), ...take];
+          /* THE VERB AGREES WITH THE NAME THE LINE JUST USED (v3.88's
+             rule, and this line predates it): seat 0's name is literally
+             "You", so an unconditional "discards" reads "You discards".
+
+             THE TEST IS HOISTED OUT OF THE TEMPLATE on purpose — the
+             second-person ledger in `judge.test.js` scans string and
+             template literals, so a `/^you$/` inside the backticks counts
+             as a second-person feed line. Reword rather than weaken the
+             scan; same discipline as `html-balance.test.js`'s
+             pre-neutralize list. */
+          const _dv = isSecondPerson(act(n).name) ? "discard" : "discards";
+          n = L(n, `${srcName}: ${act(n).name} ${_dv} ${take.map(c=>c.name).join(", ")} — ${act(n).hand.length} left in hand.`);
           /* AND THE SHARED DISCARD EVENT, which v3.61 left behind (v3.70).
              That version wired this op into `_discWay` and quoted the gap
              it was closing — "every discard path should call this" — while
@@ -1429,6 +1452,30 @@ function makeEffects(ctx){
         n = Object.assign({}, n, {sides});
         n._arsWay = (n._arsWay || 0) + put;
       }
+      /* DESTROY THE TOP CARD OF YOUR OWN DECK (v3.90) — the mill half of
+         the two watery-grave cards' modal cost.
+
+         IT REACHES THE GRAVEYARD, turn-stamped like every other path in
+         (v3.54) — a destroyed card is not banished, and `_gy` answers the
+         whole "…this turn" family, which for these two heroes is the
+         point: Gravy Bones plays watery-grave cards OUT of the graveyard.
+
+         `_costWay` RECORDS WHAT THE COST CONSUMED, which is what "if THAT
+         CARD has watery grave" asks. It is a different fact from
+         `_discWay` ("what this resolution discarded") — a milled card was
+         never discarded — so it is a second record of a second thing
+         rather than the duplication v3.61 warns about, and the discard
+         branch feeds BOTH. */
+      else if(k==="deckDestroy"){
+        const take = act(n).deck.slice(0, v);
+        if(!take.length){ n = L(n, `${act(n).name}: no deck left to destroy from.`); }
+        else {
+          actMut(n).deck = act(n).deck.slice(v);
+          actMut(n).grave = [...gy(n.turn, ...take), ...act(n).grave];
+          n._costWay = [...(n._costWay||[]), ...take];
+          n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of the deck.`);
+        }
+      }
       else if(k==="atkBuff"){
         actMut(n).atkBuff = [...(act(n).atkBuff||[]),
                              {amt: v, q: op[2] || null, until: op[3] || "turn"}];
@@ -2087,6 +2134,7 @@ function makeEffects(ctx){
     }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
     n._arsWay  = 0;         // …and the cross-seat arsenal count (v3.88)
+    n._costWay = [];        // …and what an optional cost consumed (v3.90)
     /* IS THIS CARD GOING TO RESOLVE ONTO THE LINK? (v3.89) Two routes
        reach `attackRx` — an ACTIVATED ability (`_attackRx`, v3.63) and a
        PLAYED attack reaction — and both need the answer BEFORE the
@@ -2883,6 +2931,13 @@ function makeEffects(ctx){
       if(fx.optCost && (fx.optCost.trigger === "attacks" || fx.optCost.trigger === "play")){
         n.promptQ = [...(n.promptQ||[]), optCostSpec(fx.optCost, card, actorOf(n), false)];
       }
+      /* THE MODAL OPTIONAL COST, ON THE ATTACK ROUTE (v3.90) — Jittery
+         Bones. Its sibling Washed Up Wave prints the identical cost on
+         the `defends` trigger and is queued in `afterDefenders`; one
+         reader, two sites, exactly as `optCost` keeps. */
+      if(fx.millCost && fx.millCost.trigger === "attacks"){
+        n.promptQ = [...(n.promptQ||[]), millCostSpec(fx.millCost, card, actorOf(n))];
+      }
       if(hasKw(card,"intimidate") && foe(n).hand.length){
         /* SEEDED: which card intimidate strips is hidden information in a
            real game, so it MUST come from the shared stream — two peers
@@ -3626,12 +3681,52 @@ function makeEffects(ctx){
       n = L(n, `${got.name} takes ${(st.n||1) > 1 ? st.n + " " + st.label + " counters" : "a " + st.label + " counter"} — now ${(cur[st.kind]||0) + (st.n||1)}.`);
       n = ctrLanded(n, got, st, p.src || "");
     }
+    /* "IF THAT CARD HAS <KEYWORD>, …" (v3.90). The rider is conditional
+       on the card the COST consumed, which is knowable only after the
+       chosen mode's ops have run — so it is asked HERE rather than
+       becoming a `fx.conds` entry that `execute`'s loop would answer
+       FALSE before any op ran (v3.60).
+
+       `printedKw`, NEVER `hasKw` (v2.84's three questions): a card that
+       merely MENTIONS watery grave does not have it.
+
+       A `defBuff` PAYLOAD IS THE PIECE'S OWN (v3.90). Washed Up Wave is
+       equipment that is DEFENDING, and "this gets +2{d}" belongs to that
+       piece for the rest of the chain — which is `defMod`, keyed by uid,
+       the same field Shred moves the other way. Running it as a generic
+       `defBuff` would hand the number to a defence REACTION being played,
+       which is a different card entirely. */
+    if(p.tag === "modal" && p.costRider && p.choice !== "decline"){
+      const cr = p.costRider;
+      const took = (n._costWay || []);
+      const hit = took.some(c => P.printedKw(c, cr.kw));
+      if(!took.length) n = L(n, `${p.src}: nothing was spent — the bonus does not apply.`);
+      else if(!hit) n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has no ${cr.kw} — no bonus.`);
+      else {
+        n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has ${cr.kw} — the bonus is live.`);
+        const dbuff = (cr.ops || []).filter(o => o[0] === "defBuff")
+          .reduce((a, o) => a + o[1], 0);
+        if(dbuff){
+          const src = (act(n).gear || []).find(x => x.uid === cr.uid)
+                   || ((act(n).board || []).map(b => b && b.card).find(c => c && c.uid === cr.uid));
+          if(src) n = applyDefMod(n, actorOf(n), src, dbuff, p.src || "");
+        }
+        const rest = (cr.ops || []).filter(o => o[0] !== "defBuff");
+        if(rest.length) n = runOps(n, rest, p.src || "");
+        /* GO AGAIN GOES TO THE LINK AS WELL AS THE LOCAL (v3.62). `pend`
+           was built at declaration and carries its own copy of `ga`; a
+           grant that set only `_gaGrant` here is invisible to the
+           resolution the chain link actually runs on — and this sheet is
+           answered AFTER the attack is on the chain. */
+        if(n._gaGrant && n.pend){ n.pend = {...n.pend, ga: true}; delete n._gaGrant; }
+      }
+    }
     /* SHRED'S DEBUFF, WHEN A SHEET WAS OPENED (v3.89). The other landing
        site is `attackRx`'s single-defender path; one body serves both, so
        the two cannot disagree about what the answer did. */
     if(p.tag === "pick" && p.defStamp && (r.picked||[]).length){
       const st = p.defStamp;
-      n = applyDefDebuff(n, st.seat, r.picked[0], st.amt, p.src || "");
+      n = applyDefMod(n, st.seat, r.picked[0], -st.amt, p.src || "");
     }
     if(p.tag === "pick" && p.untapStamp && (r.picked||[]).length){
       const chosen = r.picked[0];
@@ -3777,7 +3872,7 @@ function makeEffects(ctx){
      `_fizzled` when the attack did not survive to the reaction step. It
      never names a phase: what "the attack is gone" MEANS is the caller's,
      and that is the whole point of the split. */
-  const afterDefenders = (s, wall) => {
+  const afterDefenders = (s, wall, gearWall) => {
     let n = {...s};
     const d = n._declared;
     delete n._declared;
@@ -3835,8 +3930,29 @@ function makeEffects(ctx){
     {
       const defSeat = 1 - actorOf(n);
       let queued = 0;
-      for(const dc of (wall || [])){
-        const oc = fxParse(dc).optCost;
+      /* THE DECLARED EQUIPMENT IS A SECOND ARGUMENT, NOT A WIDER `wall`
+         (v3.90). The comment above pins `wall` as "the declared
+         NON-EQUIPMENT cards; phantasm reads no other kind", and that is a
+         CONTRACT — widening it to serve a new reader would change what
+         phantasm looks at, silently, for the sake of a card phantasm has
+         nothing to do with.
+
+         FOUR POOL RECORDS PRINT "when this defends" ON GEAR — the two
+         Unity pieces (answered at the wall by their own reader),
+         Stonewall Impasse and Washed Up Wave — and until now NEITHER
+         board reached any of them: judge's wall is built from the hand
+         alone and the trainer's site filters gear out. A trigger with no
+         caller looks exactly like a trigger that works (v3.50). */
+      for(const dc of [...(wall || []), ...(gearWall || [])]){
+        const dfx = fxParse(dc);
+        /* A MODAL OPTIONAL COST (v3.90) — Washed Up Wave. Its sibling
+           Jittery Bones prints the identical cost on the `attacks`
+           trigger; one reader, two sites, exactly as `optCost` keeps. */
+        if(dfx.millCost && dfx.millCost.trigger === "defends"){
+          n.promptQ = [...(n.promptQ||[]), millCostSpec(dfx.millCost, dc, defSeat)];
+          queued++;
+        }
+        const oc = dfx.optCost;
         if(!oc || oc.trigger !== "defends") continue;
         n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
         queued++;
@@ -3939,18 +4055,19 @@ function makeEffects(ctx){
     return g2;
   };
 
-  /* ONE BODY FOR THE DEBUFF (v3.89), because it lands from two places —
+  /* ONE BODY FOR THE SHIFT (v3.89), because it lands from two places —
      the direct path when there is a single defender, and `applyAnswer`
      when a sheet was opened. Written twice they drift, which is the rule
      `faceUpArsenal` and `ctrStamp` each carry a comment about. */
-  const applyDefDebuff = (s, seat, card, amt, src) => {
+  const applyDefMod = (s, seat, card, d, src) => {
     let n = {...s};
     const sides = n.sides.slice();
     const sd = sides[seat] || {};
     sides[seat] = Object.assign({}, sd,
-      {defDebuff: [...(sd.defDebuff || []), {uid: card.uid, amt}]});
+      {defMod: [...(sd.defMod || []), {uid: card.uid, d}]});
     n = Object.assign({}, n, {sides});
-    return L(n, `${src}: ${card.name} defends for ${amt} less for the rest of this combat chain.`);
+    return L(n, `${src}: ${card.name} defends for ${Math.abs(d)} ${d < 0 ? "less" : "more"}`
+              + ` for the rest of this combat chain.`);
   };
 
   const attackRx = (s, c, o) => {
@@ -4079,7 +4196,7 @@ function makeEffects(ctx){
       else if(!wall.length)
         n = L(n, `${c.name}: nothing is defending — there is no card to shrink.`);
       else if(wall.length === 1){
-        n = applyDefDebuff(n, dSeat, wall[0], fx.defDebuff.amt, c.name);
+        n = applyDefMod(n, dSeat, wall[0], -fx.defDebuff.amt, c.name);
       } else {
         n.promptQ = [...(n.promptQ||[]), {tag: "pick", src: c.name, side: actorOf(n),
           cards: wall, min: 1, max: 1,
@@ -5012,24 +5129,32 @@ function defendValue(defSide, card, opts){
      Found by driving it, not by a drill. */
   if(self && !(card && card.destroyed) && defSelfMet(self, defSide, opts)) d += self.amt;
 
-  /* A CHAIN-SCOPED DEBUFF ON THIS PARTICULAR DEFENDER (v3.89) — Shred.
-     "Target card defending an Assassin attack gets -2{d} this combat
-     chain." It is keyed by UID because the card is TARGETED: a second
-     defender of the same name is a different object and keeps its
-     printed value.
+  /* A CHAIN-SCOPED SHIFT ON THIS PARTICULAR DEFENDER (v3.89, signed at
+     v3.90). Two pool cards move one named defender's defence for the rest
+     of the combat chain and they move it in OPPOSITE directions:
+
+       Shred            "target card defending an Assassin attack gets
+                         -2{d} this combat chain"
+       Washed Up Wave   "if that card has watery grave, this gets +2{d}"
+
+     SO THE ENTRY IS SIGNED AND THE FIELD IS NOT CALLED A DEBUFF. It was
+     `defDebuff` for one version, and a field named for one direction that
+     also carries the other is the same-name-different-meaning trap this
+     project polices in `KNOWN_COLLISIONS`.
+
+     KEYED BY UID, because both cards TARGET: a second defender of the
+     same name is a different object and keeps its printed value.
 
      `defSide` is already the CONTROLLER of the card being valued, which
-     is where the debuff is held, so no caller can forget to say — the
-     same reason Lyath's grant lives there (v3.78).
+     is where the shift is held, so no caller can forget to say — the same
+     reason Lyath's grant lives there (v3.78).
 
-     FLOORED AT ZERO. A defender that blocks for a negative number would
-     ADD damage to the swing, which no printed text says; the card's job
-     is to stop the block, not to reverse it.
-
-     IT ACCUMULATES rather than being assigned, or a second Shred on the
-     same defender is silently dropped. */
-  for(const e of (defSide && defSide.defDebuff) || [])
-    if(e && card && e.uid === card.uid) d -= e.amt;
+     IT ACCUMULATES rather than being assigned, or a second source on the
+     same defender is silently dropped. The FLOOR below is what stops a
+     negative: a defender blocking for less than nothing would ADD damage
+     to the swing, which no printed text grants. */
+  for(const e of (defSide && defSide.defMod) || [])
+    if(e && card && e.uid === card.uid) d += e.d;
 
   return Math.max(0, d);
 }
@@ -5066,6 +5191,28 @@ function payCostSpec(px, card, side){
          ledger is a budget rather than a licence. */
       ? "Optional — it taps, so it will not untap until CR 4.4.3d."
       : "Optional — decline and the rider does not resolve."
+  };
+}
+
+/* THE MODAL OPTIONAL COST (v3.90) — one description of the offer, for
+   `optCostSpec`'s reason (v3.20): the spec written out at each queue site
+   is the no-mirror rule broken inside a single file, and there are two
+   sites here.
+
+   BOTH BRANCHES CONSUME EXACTLY ONE CARD and the rider asks about THAT
+   card, so the keyword and the payload ride on the spec as DATA and
+   `applyAnswer` asks — `prompts.js` runs no effects and decides no card
+   semantics (v2.34, v3.47). */
+function millCostSpec(mc, card, side){
+  return {
+    tag: "modal", side, src: card.name, optional: true,
+    options: [
+      {label: "Discard a card", ops: [["selfDiscard", 1]]},
+      {label: "Destroy the top card of your deck", ops: [["deckDestroy", 1]]}
+    ],
+    costRider: {kw: mc.kw, ops: mc.ops, uid: card.uid, trigger: mc.trigger},
+    title: card.name + " — pay to power it?",
+    hint: "Optional. If the card you spend has " + mc.kw + ", the bonus applies."
   };
 }
 
@@ -5622,10 +5769,10 @@ function closeChainGrants(game){
        here rather than growing a schedule of its own — and it is held on
        the DEFENDING side, which is the other seat from the one that
        played the card. Both seats are swept for that reason. */
-    const dropDeb = ((sd.defDebuff || []).length > 0);
+    const dropDeb = ((sd.defMod || []).length > 0);
     if(keep.length === (sd.atkBuff || []).length && !dropDeb) continue;
     const sides = n.sides.slice();
-    sides[i] = Object.assign({}, sd, {atkBuff: keep, defDebuff: []});
+    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: []});
     n = Object.assign({}, n, {sides});
   }
   return n;

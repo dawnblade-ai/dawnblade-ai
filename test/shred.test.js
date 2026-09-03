@@ -110,40 +110,40 @@ test("an unreadable restriction refuses the whole clause", {skip}, () => {
 
 /* ---- 2. THE SIDE FIELD ---------------------------------------------- */
 
-test("`defDebuff` is a real side field — all three ledgers carry it", {skip}, () => {
+test("`defMod` is a real side field — all three ledgers carry it", {skip}, () => {
   const fs = require("fs"), path = require("path");
   const rd = f => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
-  assert.deepEqual(S.makeSide({id: 0}).defDebuff, []);
-  assert.ok(S.SIDE_FIELDS.indexOf("defDebuff") >= 0);
-  assert.match(rd("engine/wire.js"), /"defDebuff"/);
-  assert.match(rd("engine/report.js"), /defDebuff: sd\.defDebuff/);
+  assert.deepEqual(S.makeSide({id: 0}).defMod, []);
+  assert.ok(S.SIDE_FIELDS.indexOf("defMod") >= 0);
+  assert.match(rd("engine/wire.js"), /"defMod"/);
+  assert.match(rd("engine/report.js"), /defMod: sd\.defMod/);
 });
 
-test("`defendValue` reads it, keyed by UID and floored at zero", {skip}, () => {
+test("`defendValue` reads it — signed, keyed by UID, floored at zero", {skip}, () => {
   H.db();
   const three = blk(981, 3), other = blk(982, 3);
   /* `makeSide` takes its zones from options and its counters from
      nothing, so the field is set after — the same thing `H.state`'s own
      side helper does. */
-  const sd = Object.assign(S.makeSide({id: 1}), {defDebuff: [{uid: 981, amt: 2}]});
+  const sd = Object.assign(S.makeSide({id: 1}), {defMod: [{uid: 981, d: -2}]});
   assert.equal(E.defendValue(sd, three, {}), 1, "the targeted card is shrunk");
   assert.equal(E.defendValue(sd, other, {}), 3,
     "a DIFFERENT card of the same shape keeps its printed value — it was targeted, not named");
   /* FLOORED. A defender blocking for a negative number would ADD damage
      to the swing, which no printed text says. */
-  const big = Object.assign(S.makeSide({id: 1}), {defDebuff: [{uid: 981, amt: 9}]});
+  const big = Object.assign(S.makeSide({id: 1}), {defMod: [{uid: 981, d: -9}]});
   assert.equal(E.defendValue(big, three, {}), 0);
   /* AND IT ACCUMULATES, or a second Shred on the same card is dropped. */
-  const twice = Object.assign(S.makeSide({id: 1}), {defDebuff: [{uid: 981, amt: 1}, {uid: 981, amt: 1}]});
+  const twice = Object.assign(S.makeSide({id: 1}), {defMod: [{uid: 981, d: -1}, {uid: 981, d: -1}]});
   assert.equal(E.defendValue(twice, three, {}), 1);
 });
 
 test("it expires when the CHAIN closes, on both seats", {skip}, () => {
-  const g = {sides: [{defDebuff: [{uid: 1, amt: 2}], atkBuff: []},
-                     {defDebuff: [{uid: 2, amt: 2}], atkBuff: []}]};
+  const g = {sides: [{defMod: [{uid: 1, d: -2}], atkBuff: []},
+                     {defMod: [{uid: 2, d: -2}], atkBuff: []}]};
   const n = E.closeChainGrants(g);
-  assert.deepEqual(n.sides[0].defDebuff, []);
-  assert.deepEqual(n.sides[1].defDebuff, [],
+  assert.deepEqual(n.sides[0].defMod, []);
+  assert.deepEqual(n.sides[1].defMod, [],
     "and the debuff is held on the DEFENDING side — the other seat from the one that played it");
 });
 
@@ -156,7 +156,7 @@ test("one defender: it just happens, with no sheet", {skip}, () => {
   const {g, shred} = board(defs);
   const n = react(g, shred, defs);
   assert.ok(!n.prompt, "no sheet");
-  assert.deepEqual(n.sides[1].defDebuff, [{uid: 981, amt: 2}]);
+  assert.deepEqual(n.sides[1].defMod, [{uid: 981, d: -2}]);
   assert.equal(E.defendValue(n.sides[1], defs[0], {}), 1, "3 printed, 1 now");
 });
 
@@ -169,7 +169,7 @@ test("two defenders: a real sheet, and the CHOSEN one shrinks", {skip}, () => {
     "the candidates are the caller's wall");
   let m = J.reduce(n, {t: "promptSel", i: 1}, n.prompt.side).state;
   m = J.reduce(m, {t: "promptConfirm"}, n.prompt.side).state;
-  assert.deepEqual(m.sides[1].defDebuff, [{uid: 982, amt: 2}], "the one that was chosen");
+  assert.deepEqual(m.sides[1].defMod, [{uid: 982, d: -2}], "the one that was chosen");
   assert.equal(E.defendValue(m.sides[1], defs[1], {}), 2, "4 printed, 2 now");
   assert.equal(E.defendValue(m.sides[1], defs[0], {}), 3, "and the other is untouched");
 });
@@ -181,14 +181,14 @@ test("the printed GATE holds — a non-Assassin attack refuses", {skip}, () => {
   const {g, shred} = board(defs, wrong);
   assert.ok(!/assassin/i.test(wrong.tt), "the control: it is not an Assassin card");
   const n = react(g, shred, defs);
-  assert.deepEqual(n.sides[1].defDebuff, [], "nothing is shrunk");
+  assert.deepEqual(n.sides[1].defMod, [], "nothing is shrunk");
   assert.match((n.feed || []).join(" | "), /isn't one/, "and the feed says why");
 });
 
 test("an EMPTY wall refuses rather than crashing", {skip}, () => {
   const {g, shred} = board([]);
   const n = react(g, shred, []);
-  assert.deepEqual(n.sides[1].defDebuff, []);
+  assert.deepEqual(n.sides[1].defMod, []);
   assert.match((n.feed || []).join(" | "), /nothing is defending/);
 });
 
@@ -200,7 +200,7 @@ test("a caller that says nothing offers no target", {skip}, () => {
   const {g, shred} = board(defs);
   const out = J.withEffects(g, (fx, s) => ({game: fx.attackRx(s, shred, {}).game}));
   const n = out.game || out;
-  assert.deepEqual(n.sides[1].defDebuff, []);
+  assert.deepEqual(n.sides[1].defMod, []);
 });
 
 /* ---- 4. THE TWO DEFECTS BUILDING IT UNCOVERED ----------------------- */
@@ -348,12 +348,12 @@ test("driven at the table: the shrunk wall lets damage through", {skip}, () => {
       const o = J.reduce(n, {t: "play", uid: shred.uid, from: "hand"}, 0);
       assert.ok(!o.error, "Shred is legal in the reaction step: " + o.error);
       n = o.state;
-      assert.deepEqual(n.sides[1].defDebuff, [{uid: blocker.uid, amt: 2}],
+      assert.deepEqual(n.sides[1].defMod, [{uid: blocker.uid, d: -2}],
         "and the debuff actually landed — `defenders` reached `attackRx`");
     }
     step();
     return {dealt: 20 - n.sides[1].hp, bad: INV.errors(n).length,
-            left: n.sides[1].defDebuff};
+            left: n.sides[1].defMod};
   };
   const bare = run(false), shredded = run(true);
   assert.equal(bare.dealt, 0, `a ${infect.power}-power swing into a ${blocker.def} wall is stopped`);

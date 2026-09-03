@@ -2656,7 +2656,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -3273,6 +3273,54 @@ function fxParse(card){
      a clause consumed by a dedicated reader (`handled`) took an early
      return that pushed `run` without ever asking, which is how Avast Ye!
      kept reporting `full` after the other three were fixed. */
+  /* ---- A MODAL OPTIONAL COST, AND "THAT CARD" (v3.90) --------------
+     "When this attacks, you may discard a card OR destroy the top card of
+      your deck. If THAT CARD has watery grave, this gets go again."
+                                                        — JITTERY BONES
+     "When this defends, … If that card has watery grave, this gets +2{d}."
+                                                     — WASHED UP WAVE
+
+     MEASURED: exactly TWO pool records print this, with the SAME cost,
+     two different triggers and two different payloads — so one reader
+     closes both, and one of them was among the four cards reading
+     nothing at all.
+
+     IT IS A MODE, NOT A FILTER. `fx.optCost` describes ONE cost with a
+     zone and a filter, and `optFilter` cannot express "either of these
+     two different things"; the printed shape is a CHOICE, which is what
+     `prompts.js`'s `modal` variant is for. Reading it as a plain discard
+     would silently delete a printed line of play — milling is the branch
+     you take when your hand holds nothing with the keyword.
+
+     "THAT CARD" IS THE ONE THE COST CONSUMED, on either branch, so the
+     condition cannot be answered until the cost has been paid — which is
+     why it rides on the spec rather than becoming a `fx.conds` entry that
+     `execute`'s loop would answer FALSE before the ops ran (v3.60).
+
+     THE KEYWORD IS READ off the printed line, never stored: a second card
+     naming a different one reads correctly, and the pool prints only
+     `watery grave` today.
+
+     BOTH TRIGGERS ARE ALREADY WIRED — `attacks` in `execute` and
+     `defends` in `afterDefenders` — so this needed no new queue site
+     (v3.52's rule: before building anything, check whether it exists). */
+  for(let ci = 0; ci < clauses.length - 1; ci++){
+    if(handled.has(ci) || handled.has(ci+1)) continue;
+    const mc = clauses[ci].match(
+      /^when(?:ever)? this (attacks|defends|hits), you may discard a card or destroy the top card of your deck$/i);
+    if(!mc) continue;
+    const mr = clauses[ci+1].match(/^if that card has ([a-z' ]+?), (.+?)\.?$/i);
+    if(!mr) continue;
+    const rr2 = classifyClause(mr[2]);
+    /* AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLAUSE (v2.29). Half a
+       cost is not a cheap approximation when the half that reads is the
+       REWARD. */
+    if(!rr2 || rr2.status !== "run" || !rr2.ops || !rr2.ops.length) continue;
+    fx.millCost = {trigger: mc[1].toLowerCase(), kw: mr[1].trim().toLowerCase(), ops: rr2.ops};
+    handled.add(ci); handled.add(ci+1);
+    break;
+  }
+
   /* ---- A DEFENDER SHRUNK FOR THE REST OF THE CHAIN (v3.89) ---------
      "Target card defending an Assassin attack gets -2{d} this combat
       chain."   — SHRED, and the pool's only defender debuff.
