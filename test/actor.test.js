@@ -66,7 +66,13 @@ const ANCHORS = [
   ["linkPumps",    "  const linkPumps = (s, info) => {",           "effects"],
   ["linkPayload",  "  const linkPayload = (s, info) => {",         "effects"],
   ["resolveStack", "  const resolveStack = (s) => {",              "effects"],
-  ["__endEffects", "  return {runOps, execute, afterDefenders, resolveStack,", "effects"],
+  /* THE TERMINAL ANCHOR IS THE EXPORT LINE, so it moves whenever a body
+     is added to it — `resolveClash` at v3.94. That is a deliberate edit,
+     the way a symmetry-ledger move is: the anchor exists to bound the
+     LAST slice, and a stale one throws rather than silently scanning
+     nothing (v2.53's lesson — a ledger that stops scanning a body keeps
+     reporting it green). */
+  ["__endEffects", "  return {runOps, execute, afterDefenders, resolveClash, resolveStack,", "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way
@@ -123,7 +129,7 @@ const ANCHORS = [
      grown here — but they still need their own anchors or their bodies
      would be silently swallowed into takeIt's slice (finishBlock, defined
      just before it) or newTurn's (confirmDefPay, defined just after). */
-  ["finishBlock",  "  const finishBlock = (s, clashDef, defBonus) => {"],
+  ["finishBlock",  "  const finishBlock = (s, defBonus) => {"],
   ["takeIt",       "  const takeIt = () => setG(s=>{"],
   ["confirmDefPay","  const confirmDefPay = pay => setG(s=>{"],
   ["newTurn",      "  function newTurn(s){"],

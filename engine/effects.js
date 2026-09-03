@@ -4031,6 +4031,97 @@ function makeEffects(ctx){
      `_fizzled` when the attack did not survive to the reaction step. It
      never names a phase: what "the attack is gone" MEANS is the caller's,
      and that is the whole point of the split. */
+  /* ---- CLASH, IN ONE BODY (v3.94) -----------------------------------
+     "When this defends, clash with the attacking hero. The winner creates
+      a Might token."
+
+     THE WHOLE MECHANIC LIVED IN `index.html`: 31 mentions there, and ONE
+     in `judge.js` which is a COMMENT — the comment recording that clash
+     had once fired on the wrong trigger for five versions. Seven pool
+     cards print it, every one reads `tier: full`, and at the table not
+     one of them did anything. v3.01's shape at the scale of a whole
+     mechanic, and the same family as phantasm (v3.00) and ephemeral
+     (v3.82): a keyword carried on one board, which no coverage tool and
+     no keyword ledger can express.
+
+     THE THREE PAYOFFS WERE INLINE REGEXES over `.tx` — the token name,
+     the defence bonus and the revealed card's damage — which is v3.58's
+     "an inline reader is a card special-cased", one mechanic over. They
+     are `fx.clash` / `fx.clashReveal` now.
+
+     WHICH CARDS DEFEND IS THE CALLER'S ANSWER (v3.11, v3.24, v3.27), as
+     it is for phantasm two lines below.
+
+     `fx.clash`, NEVER `hasKw(c, "clash")`. Measured over the pool: the
+     keyword predicate claims SEVEN cards and `printedKw` claims none,
+     because the database prints no keyword line for it — and the seventh
+     is **Unexpected Backhand**, an ordinary Brute attack whose text
+     merely MENTIONS a clash. Any non-block card may be declared as a
+     defender, so the trainer's keyword filter ran a clash off a card that
+     prints no such trigger. v2.84's three questions, answered by reading
+     the parsed field instead of any of them.
+
+     THE ACTOR IS THE ATTACKER on this route (`afterDefenders` is called
+     with the attacking seat), so the defender's seat is BORROWED and
+     handed back — `allyDeath`'s rule (v3.46): a body that leaves the
+     actor moved corrupts every rule after it in the same resolution. */
+  const resolveClash = (s, defSeat, defenders) => {
+    let n = s;
+    const cards = (defenders || []).filter(Boolean).filter(c => fxParse(c).clash);
+    if(!cards.length) return n;
+    const keepActor = actorOf(n);
+    n = {...n, actor: defSeat};
+    for(const cc of cards){
+      const cl = fxParse(cc).clash;
+      /* zonePow, NOT printed power: the top of a DECK is a zone other
+         than the combat chain, so Kayo's clause 2 reaches it — and each
+         card is read with ITS OWN owner's build, which is what `bFoe` is
+         for. Reading both with one build applies the revealer's passive
+         to the opponent's card. */
+      const myTop = act(n).deck[0], foeTop = foe(n).deck[0];
+      const mine = myTop ? zonePow(myTop, bAct(n)) : 0;
+      const theirs = foeTop ? zonePow(foeTop, bFoe(n)) : 0;
+      const win = mine > theirs, tie = mine === theirs;
+      n = L(n, `${cc.name} clashes — ${act(n).name} reveals `
+        + `${myTop ? myTop.name + " (" + mine + ")" : "nothing (0)"} vs `
+        + `${foe(n).name}'s ${foeTop ? foeTop.name + " (" + theirs + ")" : "empty deck (0)"} — `
+        /* A TIE IS NO WINNER — CONFIRMED (user, 2026-08-19), so it is
+           settled rather than assumed. */
+        + (tie ? "a tie, no winner." : win ? `${act(n).name} wins.` : `${foe(n).name} wins.`));
+      if(tie) continue;
+      /* THE TOKEN GOES TO THE WINNER, whichever side that is — the card
+         says "the winner", not "you". */
+      if(cl.token) n = runOps(n, [["token", cl.token, 1, win ? "self" : "foe"]], cc.name);
+      /* THE DEFENCE BONUS IS THE DEFENDER'S, and only on a win: "IF YOU
+         win, THIS gets +1{d}" names the clashing piece. It rides as a
+         `defMod` keyed by uid (v3.89), so both walls read it through
+         `defendValue` and neither caller has to be told — and it carries
+         the window the card prints. */
+      if(cl.defBuff && win)
+        n = applyDefMod(n, defSeat, cc, cl.defBuff.amt, cc.name + " braces from the clash",
+                        cl.defBuff.until);
+      /* AND THE REVEALED CARD MAY PAY OFF (Unexpected Backhand). It is
+         the WINNER's revealed card, on either side — the trainer only
+         ever looked at the defender's, so an attacker who won a clash
+         revealing it dealt nothing. "The OTHER hero" is the loser. */
+      const top = win ? myTop : foeTop;
+      const rv = top && fxParse(top).clashReveal;
+      if(rv){
+        /* THE WINNER'S SEAT IS BORROWED so the existing `dmg` op can say
+           it — one description of what dealing damage to the other hero
+           means, rather than a second inline write beside the one in
+           `runOps`. Handed straight back, like the defender's seat above. */
+        const wSeat = win ? defSeat : 1 - defSeat;
+        const keep2 = actorOf(n);
+        n = runOps({...n, actor: wSeat}, [["dmg", rv.dmg]], top.name);
+        n = {...n, actor: keep2};
+        n = L(n, `${top.name} was the card revealed — it lashes out at `
+                 + `${((n.sides || [])[1 - wSeat] || {}).name} for ${rv.dmg}.`);
+      }
+    }
+    return {...n, actor: keepActor};
+  };
+
   const afterDefenders = (s, wall, gearWall) => {
     let n = {...s};
     const d = n._declared;
@@ -4088,6 +4179,16 @@ function makeEffects(ctx){
        `payOr` already keep apart. */
     {
       const defSeat = 1 - actorOf(n);
+      /* CLASH IS A "WHEN THIS DEFENDS" TRIGGER TOO, and it fires here for
+         the same reason the others do: this is the moment the wall is
+         FINAL. Before the prompts, because a clash creates a token and
+         moves a defender's value, and a sheet opened first would resolve
+         against a board the clash has not yet changed.
+
+         BOTH KINDS OF DEFENDER, hand and gear — Stonewall Impasse is
+         EQUIPMENT, and it is one of the four records v3.90 found that
+         neither board could reach. */
+      n = resolveClash(n, defSeat, [...(wall || []), ...(gearWall || [])]);
       let queued = 0;
       /* THE DECLARED EQUIPMENT IS A SECOND ARGUMENT, NOT A WIDER `wall`
          (v3.90). The comment above pins `wall` as "the declared
@@ -4218,15 +4319,27 @@ function makeEffects(ctx){
      the direct path when there is a single defender, and `applyAnswer`
      when a sheet was opened. Written twice they drift, which is the rule
      `faceUpArsenal` and `ctrStamp` each carry a comment about. */
-  const applyDefMod = (s, seat, card, d, src) => {
+  /* `until` IS READ OFF THE PRINTED WORDS (v3.87, v3.94). Shred prints
+     "this combat chain" and Stonewall Impasse's clash payoff prints
+     "until end of turn" — a turn-scoped bonus filed as chain-scoped is
+     weaker than printed the moment a second chain opens the same turn,
+     and a chain-scoped one filed as turn-scoped is stronger. Defaulted to
+     the chain, which is what every caller before v3.94 meant. */
+  const applyDefMod = (s, seat, card, d, src, until) => {
     let n = {...s};
     const sides = n.sides.slice();
     const sd = sides[seat] || {};
     sides[seat] = Object.assign({}, sd,
-      {defMod: [...(sd.defMod || []), {uid: card.uid, d}]});
+      /* THE FIELD IS OPT-IN (v3.58's rule): `until` is written only for a
+         window that is NOT the default, so an entry keeps the exact shape
+         it had before v3.94 and the drills that `deepEqual` it stay
+         meaningful. Absent means "this combat chain", which is what every
+         caller before v3.94 meant. */
+      {defMod: [...(sd.defMod || []), until && until !== "chain"
+        ? {uid: card.uid, d, until} : {uid: card.uid, d}]});
     n = Object.assign({}, n, {sides});
     return L(n, `${src}: ${card.name} defends for ${Math.abs(d)} ${d < 0 ? "less" : "more"}`
-              + ` for the rest of this combat chain.`);
+              + (until === "turn" ? " until end of turn." : " for the rest of this combat chain."));
   };
 
   const attackRx = (s, c, o) => {
@@ -5057,7 +5170,7 @@ function makeEffects(ctx){
                   `${act(n).name}'s winter`);
   }
 
-  return {runOps, execute, afterDefenders, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
+  return {runOps, execute, afterDefenders, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, foeTurnIce, takeInstantNext};
 }
@@ -6013,10 +6126,15 @@ function closeChainGrants(game){
        here rather than growing a schedule of its own — and it is held on
        the DEFENDING side, which is the other seat from the one that
        played the card. Both seats are swept for that reason. */
-    const dropDeb = ((sd.defMod || []).length > 0);
+    /* AND ONLY THE CHAIN-SCOPED ONES (v3.94). `defMod` used to be swept
+       whole because Shred was its only writer and prints "this combat
+       chain"; Stonewall Impasse's clash payoff prints "until end of turn"
+       and is swept in `beginEndPhase` beside the other turn grants. */
+    const keepD = (sd.defMod || []).filter(x => x.until === "turn");
+    const dropDeb = keepD.length !== (sd.defMod || []).length;
     if(keep.length === (sd.atkBuff || []).length && !dropDeb) continue;
     const sides = n.sides.slice();
-    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: []});
+    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: keepD});
     n = Object.assign({}, n, {sides});
   }
   return n;
@@ -6225,12 +6343,18 @@ function beginEndPhase(game, seat, db){
                   the CLOSE STEP instead, because that is the window its
                   card prints; sweeping both here makes a chain grant last
                   a whole turn, which is stronger than printed. */
-               + (sd.atkBuff || []).filter(b => b.until !== "chain").length;
+               + (sd.atkBuff || []).filter(b => b.until !== "chain").length
+               /* AND A TURN-SCOPED DEFENCE MODIFIER (v3.94) — Stonewall
+                  Impasse's clash payoff prints "until end of turn", where
+                  Shred's prints "this combat chain" and is dropped at the
+                  close step. Same split, same reason. */
+               + (sd.defMod || []).filter(b => b.until === "turn").length;
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
       {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0,
-       atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain")});
+       atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain"),
+       defMod: (sd.defMod || []).filter(b => b.until !== "turn")});
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");

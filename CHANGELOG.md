@@ -9,6 +9,108 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.94 — clash was a whole mechanic on one board
+
+> *"When this defends, **clash with the attacking hero**. The winner
+> creates a Might token."* — six pool records
+>
+> *"…If you win, this gets +1{d} **until end of turn**."*
+> — STONEWALL IMPASSE
+>
+> *"When you win a clash **revealing this**, deal 1 damage to the other
+> hero."* — UNEXPECTED BACKHAND
+
+**Seven pool cards, every one reading `tier: full`, and at the table not
+one of them did anything.** `index.html` carried **31** mentions of clash.
+`judge.js` carried **one**, and it is a **comment** — the comment
+recording that clash had once fired on the wrong trigger for five
+versions.
+
+v3.01's shape at the scale of a whole mechanic, and the same family as
+phantasm (v3.00) and ephemeral (v3.82): **a keyword carried on one
+board**, which no coverage tool and no keyword ledger can express.
+
+**COVERAGE DID NOT MOVE A SINGLE CARD, AND THAT IS THE POINT.** 375 full
+before and after. Every clash clause was filed `noop` with a reason
+naming *"the clash block"* — a reader that exists in the trainer — so the
+audit counted the text accounted for. **The no-op blind spot at its
+purest**, and v3.16's rule (a noop must describe the clause in front of
+it, never a sibling) one board over.
+
+### Three payoffs were inline regexes
+
+The token name, the defence bonus and the revealed card's damage were all
+read by regexes over `.tx` inside `takeIt` — v3.58's *"an inline reader is
+a card special-cased"*, one mechanic over. They are `fx.clash` and
+`fx.clashReveal` now.
+
+**THE TOKEN NAME KEEPS ITS PRINTED CAPITALISATION.** `classifyClause`
+works on the lowercased clause and `resolveEntry` answers the ENTRY's name
+by design (v2.48), so a lowercased capture rides onto the board and deals
+the player a card called *"might"* — twelve names went wrong that way at
+v3.33. The shape is matched on the levelled clause and the name captured
+from the RAW one, which is the split v3.53 had to make for `optFilter`.
+
+### The keyword predicate was the wrong question
+
+Measured over the pool: **`hasKw(c, "clash")` claims SEVEN cards and
+`printedKw` claims NONE**, because the database prints no keyword line for
+it. The seventh is **Unexpected Backhand** — an ordinary Brute attack
+whose whole text is a REVEAL payoff. Any non-block card may be declared as
+a defender, so the trainer ran a clash off a card that prints no such
+trigger. v2.84's three questions, answered by reading the **parsed field**
+instead of any of them.
+
+### The defence bonus is no longer a local
+
+The trainer summed a `clashDef` number and threaded it into `finishBlock`;
+at the table there was nothing at all. It rides as a **`defMod` keyed by
+uid** (v3.89) now, so `defendValue` picks it up on **both** walls and
+neither caller has to be told.
+
+**AND IT CARRIES THE WINDOW THE CARD PRINTS.** Stonewall Impasse says
+*"until end of turn"* where Shred's debuff says *"this combat chain"* — a
+local number could not express the difference at all, and a turn-scoped
+bonus swept at the chain close is weaker than printed the moment a second
+chain opens the same turn (v3.87). Chain grants die in
+`closeChainGrants`; turn grants in `beginEndPhase`, beside the other
+turn-scoped ones.
+
+**THE FIELD IS OPT-IN** (v3.58's rule): `until` is written only for a
+window that is not the default, so every entry Shred writes keeps the
+exact shape five drills `deepEqual`.
+
+### The revealed card pays off for whoever won
+
+The trainer only ever looked at the **defender's** revealed card, so an
+attacker who won a clash revealing Unexpected Backhand dealt nothing.
+*"The OTHER hero"* is the loser, either way round. The winner's seat is
+borrowed so the existing `dmg` op can say it — one description of what
+dealing damage means — and handed straight back, like the defender's seat
+around the whole body (v3.46's `allyDeath`).
+
+### Eighteen sabotages, and two were silent
+
+Both because **no fixture reached the case**:
+
+| silent sabotage | the fixture that bites |
+|---|---|
+| the gear wall dropped from the clash scan | Stonewall Impasse declared as **EQUIPMENT** — it is the pool's only gear clasher, and one of the four gear *"when this defends"* records v3.90 found unreachable |
+| back to `hasKw` from the parsed field | **Unexpected Backhand declared as a defender** — asserting what the two predicates ANSWER cannot tell a reader that asks the right question from one that asks the wrong one |
+
+**AND FOUR SOURCE-SLICE DRILLS WERE REWRITTEN TO DRIVE WHAT THEY GREPPED.**
+A source slice rots where a rule moves (v3.22, v3.28) — and the driven
+versions say more: the clash-build one now plays three fixtures across a
+tie instead of matching two regexes, and it covers both boards, which a
+grep of `index.html` never could.
+
+Coverage **375 full / 27 part / 3 none** — unchanged, deliberately. Drills
+2039 → **2061**. Scenes 59 → **61**. Fairness clean. 210 self-play games ·
+0 stalls · 0 refusals · 0 invariant violations; **Gold tokens 26 → 43**,
+because Enigma's Test of Strength now fires at the table.
+
+---
+
 ## v3.93 — the third cost verb, and a card that was firing without the parser
 
 > *"Whenever you discard a random card with 6 or more {p}, **you may

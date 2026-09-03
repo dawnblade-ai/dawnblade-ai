@@ -125,6 +125,68 @@ module.exports = [
     "declining gains nothing": 1,
     "…and keeps the iron (v2.04)": false
   }
+},
+
+{
+  name: "clash resolves at the table, and it did not exist there at all",
+  why: "v3.94 — SEVEN pool cards print clash, every one reads `tier: full`, " +
+       "and the whole mechanic lived in index.html: 31 mentions there, ONE " +
+       "in judge.js and it is a COMMENT. v3.01's shape at the scale of a " +
+       "mechanic, and the same family as phantasm (v3.00) and ephemeral " +
+       "(v3.82). Every clash clause was filed `noop` with a reason naming " +
+       "\"the clash block\" — a reader in the trainer — which is the no-op " +
+       "blind spot at its purest. Four of these cards are Kayo's.",
+  run(c){
+    const top = (nm, power) => ({name: nm, uid: nm, pitch: 1, cost: 0, power,
+      tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: []});
+    const cm = Object.assign(c.card("Clash of Might", 1), {uid: "cm1"});
+    const ub = Object.assign(c.card("Unexpected Backhand", 3), {uid: "ub1"});
+    const run = (defenders, mine, theirs) => {
+      const g = c.state({name: "Alice", deck: [top("mine", mine)]},
+                        {name: "Bob", deck: [top("theirs", theirs)]},
+                        {turn: 3, actor: 0});
+      g.builds = [{}, {}];
+      const out = c.J.withEffects(g, (fx, n) => fx.resolveClash(n, 0, defenders));
+      const o = out.game || out;
+      return {me: (o.sides[0].board || []).map(b => b.card.name),
+              foe: (o.sides[1].board || []).map(b => b.card.name),
+              hp0: o.sides[0].hp, hp1: o.sides[1].hp, actor: o.actor};
+    };
+    const won = run([cm], 6, 3), lost = run([cm], 3, 6), tied = run([cm], 4, 4);
+    /* THE CARD THAT ONLY MENTIONS A CLASH. `hasKw` claims it — its whole
+       text is a REVEAL payoff — and any non-block card may be declared as
+       a defender, so the trainer ran a clash off it. */
+    const mention = run([ub], 9, 1);
+    /* …and as the REVEALED card on a win it really does pay off */
+    const revealed = run([cm], 9, 1);
+    const rv = (() => {
+      const g = c.state({name: "Alice", deck: [Object.assign({}, ub, {uid: "ubDeck"})]},
+                        {name: "Bob", deck: [top("t", 1)]}, {turn: 3, actor: 0});
+      g.builds = [{}, {}];
+      const o = c.J.withEffects(g, (fx, n) => fx.resolveClash(n, 0, [cm]));
+      return (o.game || o).sides[1].hp;
+    })();
+    return {
+      "winning the clash creates the token":      won.me,
+      "…and the opponent gets nothing":           won.foe,
+      "LOSING hands the token to the winner":     lost.foe,
+      "a tie creates nothing at all":             [tied.me.length, tied.foe.length],
+      "a card that only MENTIONS clash runs none": [mention.me.length, mention.foe.length],
+      "…and deals nobody anything":               [mention.hp0, mention.hp1],
+      "the revealed card lashes out on a win":    rv,
+      "the borrowed seat is handed back":         revealed.actor
+    };
+  },
+  want: {
+    "winning the clash creates the token": ["Might"],
+    "…and the opponent gets nothing": [],
+    "LOSING hands the token to the winner": ["Might"],
+    "a tie creates nothing at all": [0, 0],
+    "a card that only MENTIONS clash runs none": [0, 0],
+    "…and deals nobody anything": [20, 20],
+    "the revealed card lashes out on a win": 19,
+    "the borrowed seat is handed back": 0
+  }
 }
 
 ];

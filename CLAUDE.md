@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.93
+**Current version:** v3.94
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2037 drills**.
+This is `node --test "test/*.test.js"` — currently **2061 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,59 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### CLASH WAS A WHOLE MECHANIC ON ONE BOARD (v3.94)
+
+Seven pool cards print it, **every one reads `tier: full`**, and at the
+table not one of them did anything. `index.html` carried **31** mentions
+of clash; `judge.js` carried **one**, and it is a **comment** — the
+comment recording that clash had fired on the wrong trigger for five
+versions. v3.01's shape at the scale of a mechanic, the same family as
+phantasm (v3.00) and ephemeral (v3.82).
+
+**COVERAGE DID NOT MOVE A SINGLE CARD, AND THAT IS THE POINT.** Every
+clash clause was filed `noop` with a reason naming *"the clash block"* — a
+reader that exists in the trainer — so the audit counted the text
+accounted for. **The no-op blind spot at its purest**, and v3.16's rule
+(a noop must describe the clause in front of it, never a sibling) one
+board over.
+
+**THREE PAYOFFS WERE INLINE REGEXES** over `.tx` (v3.58 again) — the token
+name, the defence bonus, the revealed card's damage. **The token NAME
+keeps its printed capitalisation**, or a lowercased capture puts *"might"*
+on the board (v3.33, v3.53).
+
+**AND THE KEYWORD PREDICATE WAS THE WRONG QUESTION.** Measured:
+`hasKw(c,"clash")` claims **seven** cards, `printedKw` claims **none**
+(the database prints no keyword line for it), and the seventh is
+**Unexpected Backhand** — an ordinary Brute attack whose text merely
+MENTIONS a clash. Any non-block card may be declared as a defender, so the
+trainer ran a clash off a card that prints no such trigger. **The parsed
+field is the discriminator** (v2.84's three questions).
+
+**THE DEFENCE BONUS IS A `defMod`, NOT A LOCAL** (v3.89), so both walls
+read it through `defendValue` — and it carries the window the card prints:
+Stonewall Impasse says *"until end of turn"* where Shred says *"this
+combat chain"*, which a local number could not express at all (v3.87).
+The field is **opt-in**, so Shred's entries keep the shape five drills
+`deepEqual` (v3.58).
+
+**THE REVEALED CARD PAYS OFF FOR WHOEVER WON.** The trainer only looked at
+the DEFENDER's, so an attacker who won a clash revealing Unexpected
+Backhand dealt nothing. The winner's seat is borrowed so the existing
+`dmg` op says it, and handed back — like the defender's seat around the
+whole body (v3.46).
+
+**TWO SABOTAGES WERE SILENT BECAUSE NO FIXTURE REACHED THE CASE**: the
+gear wall dropped from the scan (fixed by declaring Stonewall Impasse as
+EQUIPMENT — the pool's only gear clasher) and `hasKw` restored (fixed by
+DECLARING Unexpected Backhand as a defender; asserting what the two
+predicates ANSWER cannot tell a right reader from a wrong one).
+
+**AND FOUR SOURCE-SLICE DRILLS WERE REWRITTEN TO DRIVE WHAT THEY
+GREPPED.** A source slice rots where a rule moves (v3.22, v3.28) — and a
+grep of `index.html` could never have said anything about the board where
+the mechanic did not exist.
 
 ### A CARD THAT FIRED WITHOUT THE PARSER (v3.93)
 

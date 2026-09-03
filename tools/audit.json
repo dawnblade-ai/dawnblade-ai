@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-03T22:52:03.871Z",
- "appVer": "3.92",
+ "generated": "2026-09-03T23:14:09.091Z",
+ "appVer": "3.93",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -895,15 +895,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates an Agility token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -929,15 +929,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates a Might token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -1121,15 +1121,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates a Might token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -1223,15 +1223,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates a Might token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -1549,11 +1549,11 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When you win a clash revealing this, deal 1 damage to the other hero.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -5118,15 +5118,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates a Vigor token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -8669,15 +8669,15 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "The winner creates a Gold token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -13788,11 +13788,11 @@
    "clauses": [
     {
      "t": "When this defends, clash with the attacking hero",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "If you win, this gets +1{d} until end of turn.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "Temper",

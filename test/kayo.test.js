@@ -495,15 +495,40 @@ test("the trigger only fires when a random 6+ is actually discarded", {skip}, ()
 /* CLASH compares the power of the top card of each deck, and the deck is a
    zone other than the combat chain — so clause 2 reaches it, and each card
    must be read with ITS OWN owner's build. Seven of Kayo's cards clash. */
-test("clash reads effective power, each side with its own build", {skip}, () => {
-  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  const i = html.indexOf("const myTop = act(clashState).deck[0]");
-  assert.ok(i > 0, "the clash loop moved — re-anchor this drill");
-  const body = html.slice(i, i + 500);
-  assert.match(body, /zonePow\(myTop, bAct\(/, "your revealed card uses YOUR build");
-  assert.match(body, /zonePow\(foeTop, bFoe\(/,
-    "and theirs uses THEIRS — one shared build would apply the revealer's buff to both cards");
-  assert.ok(!/\(myTop\.power\|\|0\)/.test(body), "printed power must not decide a clash any more");
+test("clash reads effective power, each side with its own build — DRIVEN", {skip}, () => {
+  /* IT USED TO GREP THE TRAINER'S CLASH LOOP, and that loop moved into
+     `effects.resolveClash` at v3.94 — a source slice rots where a rule
+     moves (v3.22, v3.28), and it could never have said anything about the
+     table, where the whole mechanic did not exist.
+
+     THE FIXTURE IS BUILT SO THE TWO BUILDS DECIDE THE OUTCOME. Kayo's
+     clause 2 gives +1{p} in any zone but the chain, and the top of a deck
+     is such a zone. Mine prints 5 (6 to Kayo); theirs prints 6 (6 to
+     them, who have no such passive). Read correctly that is a TIE and no
+     token is created; read with ONE build applied to both cards it is
+     6 vs 7 and the opponent wins one. */
+  const top = (nm, power) => ({name: nm, uid: nm, pitch: 1, cost: 0, power,
+    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []});
+  const clashCard = Object.assign(card("Clash of Might"), {uid: "cm1"});
+
+  const run = (mine, theirs) => {
+    const g = game([], {builds: [kayoBuild(), {}]});
+    const sides = g.sides.slice();
+    sides[0] = {...sides[0], deck: [top("mine", mine)], blockH: [clashCard.uid],
+                hand: [clashCard]};
+    sides[1] = {...sides[1], deck: [top("theirs", theirs)]};
+    const g2 = {...g, sides};
+    const out = H.fx(g2, (fx, n) => fx.resolveClash(n, 0, [clashCard]));
+    return {me: (out.sides[0].board || []).length, foe: (out.sides[1].board || []).length};
+  };
+
+  /* 5 (Kayo: 6) vs 6 (theirs: 6) — a TIE, and a tie is no winner
+     (CONFIRMED, user 2026-08-19). */
+  assert.deepEqual(run(5, 6), {me: 0, foe: 0},
+    "each card read with its OWN owner's build makes this a tie");
+  /* and the two directions, so the drill cannot pass by creating nothing */
+  assert.deepEqual(run(6, 6), {me: 1, foe: 0}, "6 (Kayo: 7) beats a printed 6");
+  assert.deepEqual(run(4, 6), {me: 0, foe: 1}, "4 (Kayo: 5) loses to a printed 6");
 });
 
 /* ---- A KEYWORD THE CARD ONLY GRANTS CONDITIONALLY --------------------- */
@@ -572,19 +597,19 @@ test("Agile Windup and Rally the Coast Guard both read their ability", {skip}, (
 
 /* FOUND BY PLAYING THE MIRROR (v2.64). Rally's +3{d} was written to
    `s.defBonus` and then thrown away one line before the wall was totalled:
-   `takeIt`'s no-pause path called `finishBlock(s, clashDef, {})`. A 2+3
+   `takeIt`'s no-pause path called `finishBlock(s, {})`. A 2+3
    defender locked the defence at 3, and the whole suite was green — the
    bonus map had only ever been produced and consumed inside a single
    defpay cycle, so nothing had reason to check the other path. */
 test("a defence bonus raised before the block reaches the wall", {skip}, () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.match(html, /return finishBlock\(s, clashDef, s\.defBonus \|\| \{\}\);/,
+  assert.match(html, /return finishBlock\(s, s\.defBonus \|\| \{\}\);/,
     "the no-pause path must pass the accrued bonus, not an empty object — an " +
     "activated ability can raise a defender before takeIt is ever reached");
   assert.match(html, /defBonus:\{\.\.\.\(s\.defBonus\|\|\{\}\)\}/,
     "and entering the defpay pause must carry it rather than wiping a cost already paid");
   /* and it must not outlive the wall it was raised on */
-  const fb = html.slice(html.indexOf("const finishBlock = (s, clashDef, defBonus) => {"),
+  const fb = html.slice(html.indexOf("const finishBlock = (s, defBonus) => {"),
                         html.indexOf("const takeIt = () => setG"));
   assert.match(fb, /n\.defBonus = \{\};/,
     "cleared where blockH/blockG clear, or a defender carries its +{d} into the next link");

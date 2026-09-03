@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.93"; /* v3.93 - THE THIRD COST VERB, AND A CARD THAT WAS FIRING WITHOUT THE PARSER. Two pool records print "you may DESTROY THIS. If you do, X" (measured over all 797) and both are Legs equipment WATCHING an event somewhere else. Beaten Trackers already FIRED - through an inline regex over raw text inside `afterDiscard` - which is v3.58's "an inline reader is a card special-cased by name", and it is why the card reported `part` while working: a tier is a claim about the PARSER, so a card read outside it is invisible to every coverage tool here. A TIER THAT SAYS `part` ON A CARD THAT WORKS IS A LEAD, second outing. That regex also matched \d+ and then tested `pow6`, a hardcoded 6 - so a piece printing 8 would have fired on a 6, and the pool has one card of the shape so no pool fixture can see it (v3.32, tenth outing); a card printing 6, effective 7 under Kayo, is the fixture that discriminates. Its sibling REFRACTION BOLTERS prints the identical cost and was completely DEAD on both boards. Its rider names "THE ATTACK" - a third subject, the live layer rather than the resolving card, because the watcher is the iron (v2.33, v3.47, v3.92: fourth time); measured, six records print the phrase and only this one moved. AND ITS GRANT CANNOT ARRIVE IN TIME TO BE KEPT: `linkPayload` spends the layer's action point on its last line and `openPrompt` drains at the tail of the CALLER, so CR 5.3.5 - go again is a GAIN of one action point - is what the settlement hands over, and the chain link is marked so the display agrees. THE QUEUE SITE SAYS THE LAYER HAS SETTLED; THE BOARD IS NEVER INFERRED - the first draft asked `!pend`, which is the trainer's marker (judge holds pend until closeChain), so it would have worked on one board and leaked a free action point on the other: v3.01's shape created deliberately rather than found. The three watcher scans are ONE body now (`offerPayCost`), gear AND arena. A `noop` rider refuses too - `classifyClause` answers ops.length 1 for a keyword it deliberately does nothing about, so the length test alone destroys the piece for nothing (v2.04 inverted). Sixteen sabotages bite, two silent first because the fixture used a newline where the card prints ". " - eleventh check-your-own-fixture. Coverage 373 -> 375 full, 29 -> 27 part. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.94"; /* v3.94 - CLASH WAS A WHOLE MECHANIC ON ONE BOARD. Seven pool cards print it, every one reads `tier: full`, and at the table not one of them did anything: index.html carried 31 mentions of clash and judge.js carried ONE, which is a COMMENT - the comment recording that clash had fired on the wrong trigger for five versions. v3.01's shape at the scale of a mechanic, and the same family as phantasm (v3.00) and ephemeral (v3.82). Every clash clause was filed `noop` with a reason naming "the clash block", a reader that exists in the trainer: THE NO-OP BLIND SPOT AT ITS PUREST, and v3.16's rule (a noop must describe the clause in front of it, never a sibling) one board over. Coverage did not move a single card, which is the point. THREE PAYOFFS WERE INLINE REGEXES over .tx - the token name, the defence bonus, the revealed card's damage - v3.58 one mechanic over; they are `fx.clash` / `fx.clashReveal` now, and the token NAME keeps its printed capitalisation because a lowercased capture puts "might" on the board (v3.33, v3.53). AND THE KEYWORD PREDICATE WAS THE WRONG QUESTION: measured over the pool, `hasKw("clash")` claims SEVEN cards and `printedKw` claims NONE, and the seventh is UNEXPECTED BACKHAND - an ordinary Brute attack whose text merely MENTIONS a clash, and any non-block card may be declared as a defender, so the trainer ran a clash off a card that prints no such trigger. The parsed field is the discriminator (v2.84). THE DEFENCE BONUS IS NO LONGER A LOCAL: it rides as a `defMod` keyed by uid (v3.89) so both walls read it through `defendValue`, and it carries the window Stonewall Impasse PRINTS - "until end of turn", where Shred prints "this combat chain" - which a local could not express at all. The field is opt-in, so the entries Shred writes keep the exact shape five drills deepEqual. THE REVEALED CARD PAYS OFF FOR WHOEVER WON: the trainer only ever looked at the defender's, so an attacker who won a clash revealing Unexpected Backhand dealt nothing. The defender's seat is BORROWED and handed back (v3.46). Eighteen sabotages bite; two were silent until a GEAR-declared fixture and a declared-Unexpected-Backhand fixture existed, and four source-slice drills were rewritten to DRIVE what they used to grep. Self-play Gold tokens 26 -> 43. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -4133,7 +4133,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      clash bonus and any paid defBuff bonuses (by uid) as parameters
      because both are already-settled facts by the time this runs — this
      function itself makes no further decisions. */
-  const finishBlock = (s, clashDef, defBonus) => {
+  const finishBlock = (s, defBonus) => {
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
     const bonus = defBonus || {};
     /* WHAT A DEFENDER IS WORTH IS `defendValue`'s, ON THIS WALL TOO (v3.34).
@@ -4161,7 +4161,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)}) + (bonus[piece.uid]||0);
     },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
-    let through = Math.max(0, s.incoming-dh-dg-drx-clashDef);
+    /* NO `clashDef` TERM ANY MORE (v3.94). The clash defence bonus is a
+       `defMod` on the piece, so `defendValue` above has already counted
+       it — a separate term here would count it twice. */
+    let through = Math.max(0, s.incoming-dh-dg-drx);
     const drNames = bcards.filter(c=>fxParse(c).dr).map(c=>c.name);
     let n = {...s};
     /* WARD IS `effects.preventDamage`'S NOW (v3.67). It was four inline
@@ -4200,46 +4203,30 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const takeIt = () => setG(s=>{
     if(s.mode!=="block") return s;
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
-    /* CLASH RESOLVES ON DEFENCE. Every clash card in the pool reads "When this
-       defends, clash with the attacking hero" — it fires when the card blocks,
-       not when it is played as an attack, which is where it used to live. Both
-       sides reveal for real (the dummy has a deck), greatest POWER wins, and a
-       tie is no winner — all three settled by ruling and printed reminder. */
-    let clashDef = 0, clashState = s;
-    for(const cc of [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])].filter(x=>x && hasKw(x,"clash"))){
-      /* `theirs`, NOT `foe` — a local named `foe` here is block-scoped, so it
-         puts the GLOBAL foe() helper into the temporal dead zone for this
-         whole block and the foe(clashState) call on the line ABOVE it binds
-         to the number instead of the function. Native ES throws "cannot
-         access 'foe' before initialization"; Babel rewrites the const to a
-         hoisted `var _foe`, which turned it into "_foe is not a function"
-         and crashed the trainer on EVERY clash resolved on defence. Same
-         shadowing trap as tapTwice's `act` parameter (v2.25) — and clash
-         fires on BLOCK, so it never showed up in any attack-side testing. */
-      const myTop = act(clashState).deck[0], foeTop = foe(clashState).deck[0];
-      /* zonePow, not printed power: the top of a DECK is a zone other than
-         the combat chain, so Kayo's clause 2 reaches it. Each card is read
-         with its OWN owner's build — that is what bFoe is for. */
-      const mine = myTop ? zonePow(myTop, bAct(clashState)) : 0,
-            theirs = foeTop ? zonePow(foeTop, bFoe(clashState)) : 0;
-      const win = mine > theirs, tie = mine === theirs;
-      clashState = L(clashState, `${cc.name} clashes — you reveal ${myTop?myTop.name+" ("+mine+")":"nothing (0)"}`
-        + ` vs the dummy's ${foeTop?foeTop.name+" ("+theirs+")":"empty deck (0)"} — `
-        + (tie ? "a tie, no winner." : win ? "you win!" : "the dummy wins."));
-      if(tie) continue;
-      const tl = clean(cc.tx||"").toLowerCase();
-      const tm = tl.match(/the winner creates? (?:a|an|\d+) ([a-z' -]+) tokens?/);
-      if(tm) clashState = runOps(clashState, [["token", tm[1].trim(), 1, win?"self":"foe"]], cc.name);
-      const wm = tl.match(/if you win, this gets \+(\d+)\s*\{d\}/);
-      if(win && wm){ clashDef += +wm[1]; clashState = L(clashState, `${cc.name} braces — +${wm[1]} defence from the clash.`); }
-      /* the REVEALED card may itself pay off on a win (Unexpected Backhand) */
-      if(win && myTop && /when you win a clash revealing this, deal (\d+) damage/i.test(myTop.tx||"")){
-        const dmg = +(myTop.tx.match(/deal (\d+) damage/i)[1]);
-        clashState = {...clashState};
-        foeMut(clashState).hp -= dmg;
-        clashState = L(clashState, `${myTop.name} was the card revealed — it lashes out for ${dmg}.`);
-      }
-    }
+    /* CLASH RESOLVES ON DEFENCE, AND IT IS `effects.resolveClash` NOW
+       (v3.94). Every clash card reads "When this defends, clash with the
+       attacking hero" — it fires when the card blocks, not when it is
+       played as an attack, which is where it used to live.
+
+       IT WAS 30 LINES HERE AND NOTHING AT THE TABLE. `judge.js` had one
+       mention of clash and it was a comment; seven pool cards print it and
+       all seven read `tier: full`. Three of the payoffs were inline
+       regexes over `.tx` — the token name, the defence bonus, the revealed
+       card's damage — which is v3.58's "a card special-cased" one mechanic
+       over. The parser reads them as `fx.clash` / `fx.clashReveal`.
+
+       THE DEFENCE BONUS IS NO LONGER A LOCAL. It rides as a `defMod`
+       keyed by uid (v3.89), so `defendValue` picks it up on both walls and
+       `finishBlock` needs to be told nothing — and it carries the window
+       Stonewall Impasse prints ("until end of turn"), which a local could
+       not express at all.
+
+       ON THIS PATH THE PLAYER IS THE DEFENDER AND THE ACTOR, so the seat
+       handed in is `actorOf(s)`; on the attacker's path `afterDefenders`
+       hands in `1 - actorOf`. Which cards defend is the caller's answer
+       either way. */
+    let clashState = _EFX.resolveClash(s, actorOf(s),
+      [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])]);
     s = clashState;
     /* PAY-COST DEFENDERS (Brothers in Arms) — "when this defends, you may
        pay {cost}. If you do, +N{d}" has to be decided BEFORE damage is
@@ -4254,7 +4241,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       .map(c=>({c, px:fxParse(c).payCost}))
       .filter(({px})=>px && px.trigger==="defends");
     if(payable.length){
-      return {...s, mode:"defpay", _clashDef:clashDef,
+      return {...s, mode:"defpay",
         defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops})),
         /* CARRY WHAT IS ALREADY ON THE WALL. `defBonus` used to exist only
            inside a defpay cycle, so starting it empty was harmless; an
@@ -4267,7 +4254,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        +3{d} was written to the state and then thrown away one line before
        the wall was totalled: "Defense locked at 3" for a 2 + 3 defender.
        Found by playing the mirror, not by a drill. */
-    return finishBlock(s, clashDef, s.defBonus || {});
+    return finishBlock(s, s.defBonus || {});
   });
   /* THE ANSWER RE-ENTERS `playRx`, which is what keeps ONE description of
      what playing a reaction does. A second body that paid and pushed
@@ -4298,7 +4285,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n.defPayQueue = rest;
     n.defBonus = bonus;
     if(rest.length) return {...n, mode:"defpay"};
-    return finishBlock({...n, mode:"block"}, n._clashDef||0, bonus);
+    return finishBlock({...n, mode:"block"}, bonus);
   });
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);

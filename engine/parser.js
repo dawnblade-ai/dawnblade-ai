@@ -3212,6 +3212,69 @@ function fxParse(card){
     break;
   }
 
+  /* ---- CLASH, AS A READING RATHER THAN A REGEX IN ONE BOARD (v3.94)
+
+     "When this defends, clash with the attacking hero. The winner creates
+      a Might token."                            — six pool records
+     "…If you win, this gets +1{d} until end of turn." — STONEWALL IMPASSE
+     "When you win a clash revealing this, deal 1 damage to the other
+      hero."                                     — UNEXPECTED BACKHAND
+
+     ALL SEVEN READ `tier: full` AND THE MECHANIC EXISTED ON ONE BOARD.
+     `index.html` had 31 mentions of clash, `judge.js` had ONE and it is a
+     COMMENT — the very comment recording that clash once fired on the
+     wrong trigger for five versions. Every clash clause was filed `noop`
+     with a reason naming "the clash block", which is a reader in the
+     trainer: the no-op blind spot at its purest, and v3.16's rule
+     (a noop must describe the clause in front of it, never a sibling)
+     one board over.
+
+     A WHOLE-CARD READER, because the trigger and the payoff arrive as
+     separate clauses — the splitter breaks on the period, which is the
+     same reason `optCost` and `atkTrigger` are paired here.
+
+     THE TOKEN NAME KEEPS ITS PRINTED CAPITALISATION (v3.53, v3.33): the
+     clause loop works on lowercased text and `resolveEntry` answers the
+     ENTRY's name, so a lowercased capture puts "might" on the board.
+     Matched on the LEVELLED clause and captured from the RAW one, which
+     is the split v3.53 had to make for `optFilter`'s named subject.
+
+     THE WINDOW IS READ OFF THE PRINTED WORDS (v3.87). Stonewall Impasse
+     says "until end of turn" and `defMod` is chain-scoped, so a bonus
+     filed without its window is weaker than printed the moment a second
+     chain opens the same turn. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    if(!/^when this defends, clash with the attacking hero$/i.test(levelIdiom(clauses[ci]).trim().replace(/\.$/, ""))) continue;
+    const cl = {token: null, defBuff: null};
+    /* the payoff, if there is one, is the NEXT clause */
+    const nx = clauses[ci + 1] == null ? "" : String(clauses[ci + 1]).trim().replace(/\.$/, "");
+    const tm = nx.match(/^the winner creates? (?:a|an|\d+) ([A-Za-z' -]+?) tokens?$/i);
+    const dm = nx.match(/^if you win, this gets \+(\d+)\s*\{d\}( until end of turn)?$/i);
+    if(tm) cl.token = tm[1].trim();
+    else if(dm) cl.defBuff = {amt: +dm[1], until: dm[2] ? "turn" : "chain"};
+    /* AN UNREADABLE PAYOFF REFUSES THE WHOLE THING (v2.29). A clash with
+       no reward is a reveal that decides nothing, filed `full`. */
+    if(!cl.token && !cl.defBuff) continue;
+    fx.clash = cl;
+    handled.add(ci); handled.add(ci + 1);
+    break;
+  }
+
+  /* THE REVEALED CARD'S OWN PAYOFF (v3.94). It fires when this card is the
+     one turned up on a winning clash — an event that happens to a card in
+     the DECK, so it can never be an op on resolution. Held off `fx.ops`
+     for `boostBanish`'s reason one schedule over. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const rm = String(clauses[ci]).trim().replace(/\.$/, "")
+      .match(/^when you win a clash revealing this, deal (\d+) damage to the other hero$/i);
+    if(!rm) continue;
+    fx.clashReveal = {dmg: +rm[1]};
+    handled.add(ci);
+    break;
+  }
+
   /* ---- AN AURA THAT IS A WEAPON (v3.84) — Cosmo's whole static -------
      A WHOLE-CARD READER, because the two sentences are one mechanic and
      the second names the first ("your AURA ATTACKS"): read a clause at a

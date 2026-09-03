@@ -99,6 +99,50 @@ module.exports = [
     "a Defense Reaction is not an action card": 0,
     "and it expires with the turn": 0
   }
+},
+
+{
+  name: "Stonewall Impasse clashes from the GEAR zone, and braces until end of turn",
+  why: "v3.94 — it is the pool's only clasher on EQUIPMENT, and one of " +
+       "the four gear \"when this defends\" records v3.90 found that " +
+       "NEITHER board could reach. Its payoff prints \"until end of turn\" " +
+       "where Shred's `defMod` prints \"this combat chain\", so a bonus " +
+       "filed without its window is weaker than printed the moment a " +
+       "second chain opens the same turn (v3.87). The sabotage that drops " +
+       "the gear wall from the clash scan is SILENT against every " +
+       "hand-declared fixture.",
+  run(c){
+    const E = require("../../engine/effects.js");
+    const top = (nm, power) => ({name: nm, uid: nm, pitch: 1, cost: 0, power,
+      tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: []});
+    const piece = Object.assign(c.card("Stonewall Impasse", 0), {uid: "gp1"});
+    const g = c.state({name: "Alice", deck: [top("mine", 1)]},
+                      {name: "Bob", gear: [Object.assign({}, piece)], deck: [top("theirs", 9)]},
+                      {turn: 3, actor: 0});
+    g.builds = [{}, {}];
+    /* THE ATTACKER IS THE ACTOR on this route, and `afterDefenders` is
+       handed both kinds of declared defender (v3.90). */
+    const out = c.J.withEffects(Object.assign({}, g, {_declared: {card: top("atk", 5)}}),
+      (fx, n) => fx.afterDefenders(n, [], [Object.assign({}, piece)]));
+    const won = out.game || out;
+    const printed = piece.def || 0;
+    return {
+      "a GEAR clasher fires at all":        (won.sides[1].defMod || []).length,
+      "…and it carries its printed window": (won.sides[1].defMod || []).map(x => x.until),
+      "the wall counts the bonus":          E.defendValue(won.sides[1], piece, {base: printed}) - printed,
+      "the chain closing does not clear it": (E.closeChainGrants(won).sides[1].defMod || []).length,
+      "…but the end phase does":            ((r => (r.game || r))(E.beginEndPhase(
+                                               Object.assign({}, E.closeChainGrants(won), {phase: "end"}),
+                                               1, c.H.db())).sides[1].defMod || []).length
+    };
+  },
+  want: {
+    "a GEAR clasher fires at all": 1,
+    "…and it carries its printed window": ["turn"],
+    "the wall counts the bonus": 1,
+    "the chain closing does not clear it": 1,
+    "…but the end phase does": 0
+  }
 }
 
 ];

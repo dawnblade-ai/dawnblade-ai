@@ -211,7 +211,7 @@ test("the trainer's DEFENDING wall goes through defendValue", () => {
      and 4 at the table on the same board state. */
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
-  const i = htm.indexOf("const finishBlock = (s, clashDef, defBonus) =>");
+  const i = htm.indexOf("const finishBlock = (s, defBonus) =>");
   assert.ok(i > 0, "finishBlock moved — re-anchor this drill");
   const body = htm.slice(i, i + 1400);
   assert.match(body, /defendValue\(act\(s\), c,/, "the hand wall must ask it");

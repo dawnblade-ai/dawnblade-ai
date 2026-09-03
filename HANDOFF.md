@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.93 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.94 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -15,6 +15,24 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.94 FOUND A WHOLE MECHANIC ON ONE BOARD — AND COVERAGE COULD NOT SEE
+IT.** Seven pool cards print CLASH, every one reads `tier: full`, and at
+the table not one of them did anything: `index.html` had 31 mentions,
+`judge.js` had one and it is a comment. Coverage did not move a single
+card this version, deliberately.
+
+**THE DIAGNOSTIC THAT FOUND IT IS CHEAP AND HAS NOW PAID TWICE:** `grep`
+the engine and `index.html` for regexes over `.tx`, and for each one ask
+**which board runs it**. v3.93 found a card firing without the parser that
+way; v3.94 found a mechanic. The remaining hits are listed by
+`grep -n "\.tx" engine/*.js index.html` — most are display (`tapwrap`),
+which is fine.
+
+**AND A `noop` WHOSE REASON NAMES A READER IS THE SHAPE TO DISTRUST.**
+Every clash clause said *"the clash block applies this"* — a reader that
+existed in one file. **When a noop names a reader, go and ask which board
+holds it.**
 
 **v3.93 CLOSED BEATEN TRACKERS AND REFRACTION BOLTERS, AND ONE OF THEM
 WAS ALREADY FIRING.** Beaten Trackers worked for versions through an
