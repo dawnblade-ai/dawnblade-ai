@@ -26,12 +26,27 @@ const skip = !H.hasDb() && "no cached card database";
 const fx = (nm, p) => { P.fxReset(); return P.fxParse(H.card(nm, p)); };
 
 test("an unreadable quoted ability is RECORDED, not silently dropped", {skip}, () => {
-  /* Goon Tactics: the +3{p} head parses and the quoted ability has no
-     reader at all. Before v3.40 this card reported `full`. */
+  /* GOON TACTICS LEFT THIS LIST AT v3.96, which is exactly how a record
+     leaves it: the flag asks "is there a reader" (v3.41), and its rider —
+     "destroy the top card of their deck" — got one. Its head (+3{p} behind
+     the same `auras3` gate) has always parsed, so the card reported `full`
+     before v3.40 with a printed ability doing nothing.
+
+     RELEASE THE TENSION IS THE CONTROL, and it is a genuine refusal: its
+     quoted ability is a RESTRICTION on the opponent ("defense reactions
+     can't be played from arsenal this chain link"), which this engine has
+     no schedule for. */
   const g = fx("Goon Tactics", 3);
-  assert.deepEqual(g.quotedUnread, ["when this hits a hero, destroy the top card of their deck."],
-    "the unread ability must be recorded by name so the audit can flag it");
-  assert.equal((g.onHit || []).length, 0, "and it genuinely does not fire — this is the gap, not a mislabel");
+  assert.deepEqual(g.quotedUnread || [], [], "its rider reads now");
+  assert.deepEqual((g.condOnHit || []).map(x => [x.cond, x.op]),
+    [["auras3", ["foeDeckDestroy", 1]]],
+    "and it rides behind the SAME gate its head does — a granted ability " +
+    "whose grant is conditional is `condOnHit`, never a plain on-hit (v3.10)");
+
+  const r = fx("Release the Tension", 1);
+  assert.equal((r.quotedUnread || []).length, 1,
+    "the control: a rider with genuinely no reader is still recorded by name");
+  assert.equal((r.onHit || []).length, 0, "and genuinely does not fire");
 });
 
 test("the TIER still tells the truth about the HEAD", {skip}, () => {
@@ -84,9 +99,19 @@ test("the audit FLAGS every recorded one, by name", {skip}, () => {
     "and it must flag it by name");
 
   const md = fs.readFileSync(path.join(__dirname, "..", "AUDIT.md"), "utf8");
-  for(const nm of ["Display Loyalty", "Goon Tactics", "Release the Tension"])
+  /* GOON TACTICS LEFT THIS LIST AT v3.96 — its rider got a reader, which
+     is exactly how a record leaves it. The two that remain are the honest
+     refusals: a trigger this engine has no schedule for (Display Loyalty
+     fires on ATTACKS), and a RESTRICTION on the opponent (Release the
+     Tension). */
+  for(const nm of ["Display Loyalty", "Release the Tension"])
     assert.ok(new RegExp("\\*\\*" + nm + "\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
       nm + " must be flagged in the generated AUDIT.md — run `npm run audit` if this is stale");
+  /* AND THE ONE THAT LEFT IS NOT FLAGGED ANY MORE. Without this the drill
+     passes on an engine where the flag stopped being produced at all —
+     a census that finds nothing (v3.21's rule, and this file's own). */
+  assert.ok(!new RegExp("\\*\\*Goon Tactics\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
+    "Goon Tactics' rider reads now, so the flag must be gone");
 });
 
 test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {skip}, () => {
@@ -113,8 +138,12 @@ test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {ski
      payload a reader. The flag asks "is there a reader" (v3.41), so
      building one is exactly how a record leaves this list. */
   assert.deepEqual(found.sort(), [
-    "Display Loyalty p1", "Goon Tactics p3",
+    "Display Loyalty p1",
     "Release the Tension p1", "Release the Tension p2", "Release the Tension p3"
-  ], "five records print a quoted ability with no reader. A SIXTH means upstream added one " +
-     "or a reader regressed; a FOURTH means one was built — either way, a deliberate edit here.");
+  ], "four records print a quoted ability with no reader. A FIFTH means upstream added one " +
+     "or a reader regressed; a THIRD means one was built — either way, a deliberate edit here. " +
+     "GOON TACTICS LEFT AT v3.96, when `foeDeckDestroy` was built — the foe twin of the " +
+     "`deckDestroy` v3.90 wrote for Jittery Bones' cost. Display Loyalty stays for a " +
+     "different reason and it is not a payload: its rider triggers on ATTACKS rather than " +
+     "on hits, which is a schedule this file cannot express.");
 });

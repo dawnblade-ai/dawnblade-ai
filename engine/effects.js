@@ -757,6 +757,41 @@ function makeEffects(ctx){
         n._tookWay = [...(n._tookWay||[]), a];
         n = L(n, `${srcName}: ${a.name} is destroyed in ${foe(n).name}'s arsenal.`);
       }
+      /* BANISHING FROM THE OPPONENT'S ARSENAL (v3.96) — the twin of
+         `foeArsDestroy` two lines up, and the distinction is REAL: a
+         DESTROYED card reaches the graveyard, where the two `retrieve`
+         cards and every "from your graveyard" reader can still find it;
+         a BANISHED one is out of the game. Filing a banish in the
+         graveyard hands back a card the text removed from play, which is
+         the same mistake `sweepGear` had to be told about (v3.79).
+
+         IT FEEDS `_tookWay` (v3.95), for its reason: an empty arsenal
+         takes nothing, and a rider gated on "if you do" must be able to
+         tell. No pool card pairs this op with such a rider today; the
+         trace is recorded where the fact becomes true regardless, because
+         a trace bolted on later is a trace the next reader re-derives. */
+      else if(k==="foeArsBanish"){
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        const a = foe(n).arsenal;
+        foeMut(n).arsenal = null;
+        foeMut(n).banish = [a, ...foe(n).banish];
+        n._tookWay = [...(n._tookWay||[]), a];
+        n = L(n, `${srcName}: ${a.name} is banished out of ${foe(n).name}'s arsenal — not the graveyard, so nothing fetches it back.`);
+      }
+      /* DESTROYING THE TOP OF THE OPPONENT'S DECK (v3.96) — the foe twin
+         of `deckDestroy` (v3.90), and a different op rather than a flag on
+         one: whose deck is milled is the whole of what Goon Tactics'
+         rider says, and an op that took a side as a parameter would let a
+         card's text choose. Same reason `revPitch` and `revColorPitch`
+         stay apart. */
+      else if(k==="foeDeckDestroy"){
+        const take = foe(n).deck.slice(0, Math.max(1, v));
+        if(!take.length){ n = L(n, `${srcName}: ${foe(n).name} has no deck left to destroy from.`); return; }
+        foeMut(n).deck = foe(n).deck.slice(take.length);
+        foeMut(n).grave = [...gy(n.turn, ...take), ...foe(n).grave];
+        n._tookWay = [...(n._tookWay||[]), ...take];
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of ${foe(n).name}'s deck.`);
+      }
       else if(k==="foeArsBottom"){
         if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
         const a = foe(n).arsenal;
@@ -1872,7 +1907,12 @@ function makeEffects(ctx){
        itself per Draconic chain link, and the chain is game state. Handed
        in here so the ONE cost reader answers, rather than a fourth site
        subtracting after the fact (v3.80). */
-    const _costO = {dracLinks: P.dracLinks(s.chain)};
+    /* ONE READER FOR THE GAME'S HALF OF A COST (v3.96) — see
+       `parser.costCtx`. It used to be built inline here and nowhere else,
+       so a SECOND game-level input (Stains of the Redback's discount
+       against a marked defending hero) would have had to be threaded by
+       hand at four sites, which is v3.80's bug waiting to happen again. */
+    const _costO = P.costCtx(s, actorOf(s));
     exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s), _costO));
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
@@ -2970,7 +3010,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -4903,6 +4943,26 @@ function makeEffects(ctx){
           : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
           : cond==="marked" ? !!foe(n).marked
           : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > (pc.power||0)
+          /* THREE CONDITIONS REACHED HERE AND ANSWERED FALSE (v3.96).
+             Measured by asking the PARSER which conds the pool actually
+             puts into `condOnHit`: SEVEN, and this evaluator knew four.
+             Goon Beatdown's boo, Goon Tactics' mill and Hot on Their
+             Heels' mark were granted, carried onto the link, and then
+             refused by a gate nobody had taught — all three reading
+             `tier: full`, because the HEAD parses.
+
+             `CONDONHIT_CONDS` is the census now, and a drill fails if the
+             pool ever emits one this list does not name. That is v3.35's
+             fix for `PENDING_KINDS` and v3.91's for the attack-reaction
+             condition list, applied to
+             the second, smaller copy of a condition vocabulary. */
+          : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
+          : /^drac\d+$/.test(cond) ? P.dracLinks(n.chain) >= +cond.slice(4)
+          /* FUSED IS A DECLARATION-TIME FACT — how the card was PLAYED,
+             which no board state can answer at the hit. It rides on `pend`
+             for `chargedPitch`'s reason, and a link built without it
+             answers FALSE: weaker than printed and visible (v3.24). */
+          : cond==="fused" ? !!n.pend.fused
           : false;
         if(met) n = runOps(n, [op], pc.name);
         /* AND THE REFUSAL NAMES THE RIGHT CONDITION. The `else` here read
@@ -4910,7 +4970,7 @@ function makeEffects(ctx){
            know — so an unknown gate reported itself as a charge problem on
            a card with no charge in it, which is the feed lying about a rule
            (v2.83's category, one board over). */
-        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":cond==="way:took"?"the card it was printed to take — that zone was empty":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
+        else n = L(n, `${pc.name}: the granted on-hit bonus needed ${cond==="charged"?"a charge this turn":cond==="marked"?"the target to be marked":cond==="pumped"?"its {p} above its base":cond==="way:took"?"the card it was printed to take — that zone was empty":/^auras(\d+)$/.test(cond)?`${cond.slice(5)} or more auras on your board`:/^drac(\d+)$/.test(cond)?`${cond.slice(4)} or more Draconic chain links`:cond==="fused"?"this to have been fused":/^chargedPitch\d$/.test(cond)?"a differently-coloured charge":"`"+cond+"`"} — condition not met.`);
       });
     }
     if(n.pend.runeOnHit && total>0){ const many = n.pend.runeOnHit; n = mkRune(n, many);
@@ -6077,6 +6137,28 @@ function settleIntellect(game, seat){
    parser and forgotten here leaves the card at its printed value —
    weaker than printed and visible. The other direction hands out a bonus
    nobody built. */
+/* EVERY CONDITION THE POOL CAN PUT INTO `condOnHit` (v3.96).
+
+   `fx.condOnHit` is a conditionally GRANTED on-hit ability (v3.10), and
+   it is re-checked at the hit rather than at declaration — so it has its
+   own evaluator, a SECOND and much smaller copy of the vocabulary
+   `execute`'s condition loop answers. The parser emits into both, and
+   nothing was comparing them: measured across the pool, SEVEN conditions
+   reach `condOnHit` and the evaluator knew FOUR. Three cards were granted
+   an ability that then refused itself, all reading `tier: full`.
+
+   A DRILL ASSERTS THE POOL EMITS NOTHING OUTSIDE THIS LIST, which is what
+   `PENDING_KINDS` (v3.35) and the attack-reaction condition list (v3.91)
+   exist for: a census
+   catches the next arrival, where a blacklist walks into the same
+   fallback. Entries are PATTERNS, because three of the seven carry a
+   printed threshold in their name. */
+const CONDONHIT_CONDS = [
+  /^way:/, /^charged$/, /^chargedPitch\d$/, /^marked$/, /^pumped$/,
+  /^auras\d+$/, /^drac\d+$/, /^fused$/
+];
+const condOnHitKnown = cond => CONDONHIT_CONDS.some(rx => rx.test(String(cond || "")));
+
 function thisWayMet(cond, trace){
   const t = trace || {};
   const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
@@ -6588,6 +6670,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

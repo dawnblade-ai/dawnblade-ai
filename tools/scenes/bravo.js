@@ -155,6 +155,65 @@ module.exports = [
     "he paid and tapped": [7, true],
     "a card that only MENTIONS crush gains nothing": undefined
   }
+},
+
+{
+  name: "a granted on-hit ability was refused by a gate nobody had taught",
+  why: "v3.96 — `condOnHit` is a conditionally GRANTED on-hit ability " +
+       "(v3.10) re-checked at the HIT, so it has its OWN evaluator, a much " +
+       "smaller copy of the vocabulary `execute`'s condition loop answers. " +
+       "Nothing compared them. Measured by asking the PARSER: SEVEN " +
+       "conditions reach `condOnHit` across the pool and the evaluator " +
+       "knew FOUR — so Goon Beatdown's boo, Goon Tactics' mill and Hot on " +
+       "Their Heels' mark were granted, carried onto the link, and then " +
+       "refused. All three read `tier: full`, because the HEAD parses.",
+  run(c){
+    const P = require("../../engine/parser.js");
+    const junk = (nm, uid) => ({name: nm, uid, pitch: 1, cost: 0, power: 3,
+      tt: "Generic Action - Attack", ty: ["Generic","Action","Attack"], tx: "", kw: []});
+    const aura = i => ({uid: "au" + i, kind: "aura", spent: false,
+      card: {name: "A" + i, uid: "au" + i, tt: "Generic Token - Aura",
+             ty: ["Generic","Token","Aura"], tx: "", kw: []}});
+    const hit = (nm, pitch, o) => {
+      P.fxReset();
+      const card = Object.assign(c.card(nm, pitch), {uid: "atk1"});
+      const board = []; for(let i = 0; i < (o.auras || 0); i++) board.push(aura(i));
+      const chain = []; for(let i = 0; i < (o.drac || 0); i++) chain.push({n: "d" + i, kind: "atk", drac: true});
+      const g = Object.assign(c.state(
+        {name: "Alice", hand: [card], res: 9, ap: 1, board},
+        {name: "Bob", hp: 20, deck: [junk("Top", "t1"), junk("Next", "t2")]},
+        {turn: 3, turnPlayer: 0}), {phase: "action", step: "layer", chain});
+      g.builds = [{}, {}];
+      const o1 = c.exec(g, card, "hand", 0, {});
+      const n1 = o1.game || o1;
+      if(!n1.pend) return {};
+      const r = c.J.withEffects(n1, (fx, m) => {
+        const x = fx.linkPayload(m, {total: m.pend.total, pumps: 0, heroHit: true});
+        return x.game || x;
+      });
+      const out = r.game || r;
+      return {boo: (out.sides[0].hist || {}).booed || 0,
+              marked: !!out.sides[1].marked,
+              deck: (out.sides[1].deck || []).length,
+              gy: (out.sides[1].grave || []).map(x => x.name)};
+    };
+    return {
+      "Goon Beatdown boos at three auras":   hit("Goon Beatdown", 3, {auras: 3}).boo,
+      "…and not at one":                     hit("Goon Beatdown", 3, {auras: 1}).boo,
+      "Goon Tactics mills THEIR deck":        hit("Goon Tactics", 3, {auras: 3}).gy,
+      "…and not below the threshold":         hit("Goon Tactics", 3, {auras: 1}).gy,
+      "Hot on Their Heels marks at 2 links":  hit("Hot on Their Heels", 1, {drac: 2}).marked,
+      "…and not at none":                     hit("Hot on Their Heels", 1, {drac: 0}).marked
+    };
+  },
+  want: {
+    "Goon Beatdown boos at three auras": 1,
+    "…and not at one": 0,
+    "Goon Tactics mills THEIR deck": ["Top"],
+    "…and not below the threshold": [],
+    "Hot on Their Heels marks at 2 links": true,
+    "…and not at none": false
+  }
 }
 
 ];

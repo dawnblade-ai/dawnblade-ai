@@ -9,6 +9,83 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.96 — a second, smaller copy of a condition vocabulary
+
+`fx.condOnHit` is a conditionally **granted** on-hit ability (v3.10),
+re-checked **at the hit** rather than at declaration — so it has its own
+evaluator inside `linkPayload`, a much smaller copy of the vocabulary
+`execute`'s condition loop answers. **The parser emits into both, and
+nothing was comparing them.**
+
+**MEASURED BY ASKING THE PARSER**, not by reading either list: **seven**
+conditions reach `condOnHit` across the pool, and the evaluator knew
+**four**.
+
+| card | gate | what never happened |
+|---|---|---|
+| Goon Beatdown | `auras3` | the crowd never booed |
+| Goon Tactics | `auras3` | the mill never happened |
+| Hot on Their Heels | `drac2` | the mark was never applied |
+
+**All three read `tier: full`**, because the HEAD parses — the +3{p}, the
+go again. The no-op blind spot, one layer inside a granted ability, and
+invisible to every tool here: coverage counts the clause consumed, and the
+one-sided fairness sweep only looks for cards that are too STRONG.
+
+**`CONDONHIT_CONDS` IS THE CENSUS NOW**, and a drill fails if the pool ever
+emits a condition it does not name — v3.35's fix for `PENDING_KINDS` and
+v3.91's for the attack-reaction condition list, applied one layer in. A
+census catches the next arrival; a blacklist walks into the same silent
+fallback.
+
+**`fused` RIDES ON `pend`.** *"Was this card fused"* is how the card was
+PLAYED, which no board state can answer at the hit — so it travels from
+the declaration like `chargedPitch`, and a link built without it answers
+FALSE: weaker than printed and visible (v3.24).
+
+### Three payloads, each the twin of an op already there
+
+| op | card | the distinction |
+|---|---|---|
+| `foeArsBanish` | Mark of the Funnel Web | **BANISH IS NOT DESTROY** — a destroyed card reaches the graveyard, where the two `retrieve` cards and every *"from your graveyard"* reader can still find it; a banished one is out of the game. Same mistake `sweepGear` had to be told about (v3.79) |
+| `foeDeckDestroy` | Goon Tactics' rider | the foe twin of v3.90's `deckDestroy`. **Two ops, not one with a side parameter**: whose deck is milled is what the card SAYS, not something its text should get to choose — `revPitch`/`revColorPitch`'s reason |
+| `markRed` | Stains of the Redback | *"If the defending hero is marked, this costs {r} less to play"* — a discount, so it is read inside `effCost` beside `runeRed` and `boardRed`, never as an op |
+
+**MARK OF THE BLACK WIDOW WAS THE PROOF THAT ONE PAYLOAD WAS THE WHOLE
+GAP.** Same hero, same stealth line, same *"when this hits a marked
+hero"* — and it has read `full` since that trigger was built.
+
+### The game's half of a cost now comes from one reader
+
+`parser.costCtx` replaces an opts literal that was built inline at **two**
+of judge's nine `effCost` sites and omitted at the other seven. That is
+**v3.80's bug waiting to happen again** — a cost read three ways at three
+sites, which put a seat on `NEGATIVE-RES` — and the mark discount is
+exactly the second game-level input that would have triggered it.
+
+**A DRILL ASSERTS EVERY `effCost` CALL IN JUDGE ASKS IT**, and that no site
+builds the opts by hand. The ally branch stays the one deliberate
+exception, and it does not call `effCost` at all (v3.44).
+
+**Twelve sabotages, twelve bite, none silent.**
+
+### Recorded, not half-built
+
+**Aether Icevein and Polar Cap** print *"If this was fused and deals damage
+to a hero, …"* and both parse into `condOnHit` — but `condOnHit` is read
+at exactly one site, inside `linkPayload`, and **a non-attack never opens
+a `pend` at all**. So the gate is not unknown; the **route** is missing,
+which is a different gap from the three this version closed. What would
+discharge it already exists in pieces: `_dmgWay` (v3.62) and
+`thisWayMet`'s `way:dealt`. Recorded in `test/condgate.test.js` so it
+comes due the way five other refusals have this fortnight (v3.38).
+
+Coverage **377 → 379 full**, `part` **25 → 23**. Drills 2077 → **2091**.
+Scenes 62 → **63**. Fairness clean. 210 self-play games · 0 stalls · 0
+refusals · 0 invariant violations.
+
+---
+
 ## v3.95 — a granted ability in two sentences, and the trace it needed
 
 > *"Your next Pirate ally attack this turn gets **"When this hits a hero,

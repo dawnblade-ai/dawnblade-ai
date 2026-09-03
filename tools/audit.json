@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-03T23:27:38.307Z",
- "appVer": "3.94",
+ "generated": "2026-09-03T23:47:23.273Z",
+ "appVer": "3.95",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 377,
-  "part": 25,
+  "full": 379,
+  "part": 23,
   "none": 3
  },
  "heroes": {
@@ -9792,7 +9792,7 @@
    "mentions": [
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -9802,12 +9802,10 @@
     },
     {
      "t": "When this hits a marked hero, banish a card in their arsenal.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits a marked hero, banish a card in their arsenal."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Stealth\nWhen this hits a marked hero, banish a card in their arsenal.",
@@ -10009,22 +10007,20 @@
     "go again",
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "If the defending hero is marked, this costs {r} less to play.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Target attack with stealth gets +3{p} and go again.",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If the defending hero is marked, this costs {r} less to play."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If the defending hero is marked, this costs {r} less to play.\nTarget attack with stealth gets +3{p} and go again.",
@@ -14421,9 +14417,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you control 3 or more auras, this gets +3{p} and \"When this hits a hero, destroy the top card of their deck.\"",
-   "flags": [
-    "granted ability in quotes has NO reader: \"when this hits a hero, destroy the top card of their deck.\" — the head parses, this does not"
-   ]
+   "flags": []
   },
   "mocking blow|3": {
    "name": "Mocking Blow",

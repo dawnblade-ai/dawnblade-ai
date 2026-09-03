@@ -227,17 +227,23 @@ test("driven: a stale pre-v3.42 grant is refused, not handed to any card", {skip
 test("a rider the reader cannot honestly read is dropped, and the head still lands", {skip}, () => {
   H.db();
   /* Display Loyalty's rider triggers on ATTACKS, not on hits — a different
-     schedule. Goon Tactics' payload ("destroy the top card of their deck")
-     has no reader. Both keep their printed head and claim nothing else,
-     which is what leaves the gap visible in the audit instead of hiding
-     it behind a guess. */
+     SCHEDULE, which is why it is the one that stays: a payload with no
+     reader can be given one, and a trigger this engine does not model
+     cannot. Its head still lands, which is what leaves the gap visible in
+     the audit instead of hiding it behind a guess. */
   const dl = fx("Display Loyalty", 1);
   assert.deepEqual(dl.conds.map(x => [x.cond, x.op]), [["drac2", ["ga"]]], "the go again still lands");
   assert.deepEqual(dl.condOnHit || [], [], "and the attacks-trigger rider is not mis-filed as on-hit");
 
+  /* GOON TACTICS LEFT THIS DRILL AT v3.96 and is the POSITIVE control
+     now: "destroy the top card of their deck" got a reader, so the rider
+     rides behind the SAME `auras3` gate the head does. A drill that only
+     ever asserts an empty list passes against a reader that was deleted. */
   const gt = fx("Goon Tactics", 3);
   assert.deepEqual(gt.conds.map(x => [x.cond, x.op]), [["auras3", ["self", 3]]], "the pump still lands");
-  assert.deepEqual(gt.condOnHit || [], [], "and an unreadable payload is not invented");
+  assert.deepEqual((gt.condOnHit || []).map(x => [x.cond, x.op]),
+    [["auras3", ["foeDeckDestroy", 1]]],
+    "…and its rider is read, behind the gate it is printed behind");
 });
 
 /* ---- THE CENSUS IS PINNED ------------------------------------------- */
@@ -268,7 +274,7 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
        || (f.modes || []).some(m => m.riderOnHit)) carried++;
   }
   assert.equal(total, 28, "pool cards granting a quoted ability");
-  assert.equal(carried, 24, "carrying their rider — 7 before v3.10, 15 after it, " +
+  assert.equal(carried, 25, "carrying their rider — 7 before v3.10, 15 after it, " +
     "the targeted and modal shapes at v3.12, Avast Ye! at v3.42 (whose rider read " +
     "fine all along and was simply never asked for), Drop the Anchor at v3.48, " +
     "whose payload taps a hero and had no reader until the RULING settled what that " +
@@ -278,5 +284,6 @@ test("the granted-rider census — pinned, so a regression is a number", {skip},
     "read one of them and dropped the other, inconsistently, so the grant refused " +
     "whole until the second sentence could ride as a gate. The four that remain " +
     "unread are honest refusals: an `attacks` trigger rather than a hit, or a " +
-    "payload with no reader.");
+    "payload with no reader. Goon Tactics joined at v3.96, when `foeDeckDestroy` " +
+    "was built.");
 });

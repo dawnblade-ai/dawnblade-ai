@@ -159,10 +159,30 @@ test("all three activation branches ask effCost, and the ALLY one does not", {sk
      link count, which is game state rather than a fact about the side, so
      `effCost` takes it from the caller. It is still the ONE cost reader:
      the dynamic half went inside it rather than becoming a fourth site
-     subtracting after the fact. */
-  assert.match(body, /const acost = effCost\(ab, sd, \{dracLinks:/, "the hero branch");
-  assert.match(body, /piece\.powCard, acost = effCost\(ab, sd\)/, "the equipment-ability branch");
-  assert.match(body, /const cost = effCost\(piece, sd\);/, "the weapon branch");
+     subtracting after the fact.
+
+     AND AT v3.96 THAT ARGUMENT CAME FROM ONE READER. It was built inline
+     at two sites and omitted at the other three, so a SECOND game-level
+     input — Stains of the Redback's discount against a marked defending
+     hero — would have had to be threaded by hand at every one of them,
+     which is v3.80's bug waiting to happen again. `parser.costCtx` is
+     that reader, and every branch here asks it. */
+  assert.match(body, /const acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/, "the hero branch");
+  assert.match(body, /piece\.powCard, acost = effCost\(ab, sd, PR\.costCtx\(g, seat\)\)/,
+    "the equipment-ability branch");
+  assert.match(body, /const cost = effCost\(piece, sd, PR\.costCtx\(g, seat\)\);/, "the weapon branch");
   assert.match(body, /aa\.cost/, "and the ally branch keeps the printed ability cost");
   assert.doesNotMatch(body, /effCost\(b\.card/, "…never effCost");
+  /* NO SITE MAY BUILD THE OPTS BY HAND. A second inline literal is the
+     no-mirror rule broken inside one file, and it is how these three
+     branches came to disagree in the first place. */
+  const whole = fs.readFileSync(__dirname + "/../engine/judge.js", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(whole, /effCost\([^)]*\{\s*dracLinks/,
+    "the game's half of a cost comes from `costCtx`, never from a literal");
+  /* and EVERY `effCost` in the file asks it — the ally branch is the one
+     deliberate exception and it does not call `effCost` at all */
+  const calls = whole.match(/effCost\([^;]*?\)/g) || [];
+  for(const call of calls)
+    assert.match(call, /PR\.costCtx\(g, seat\)/, "unthreaded cost read: " + call);
 });

@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.95 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.96 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
-`npm run audit`: **377 full / 25 part / 3 none**. Night's Embrace left that
+`npm run audit`: **379 full / 23 part / 3 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |
@@ -15,6 +15,23 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.96 FOUND A SECOND, SMALLER COPY OF A CONDITION VOCABULARY.**
+`condOnHit` is re-checked at the HIT, so it has its own evaluator — and
+measured by asking the PARSER, seven conditions reach it and the evaluator
+knew four. Three cards were granted an ability that then refused itself,
+all reading `tier: full`.
+
+**THE DIAGNOSTIC, AND IT IS THE CHEAPEST ONE LEFT: when a value has two
+evaluators, ask the PARSER what reaches each — never read the lists.** It
+took one script and moved five cards. The same question is worth asking of
+`fx.conds` vs `pend.lateConds`, and of the activation-window readers.
+
+**AND TWO CARDS ARE RECORDED, NOT BUILT.** Aether Icevein and Polar Cap
+parse into `condOnHit` and are NON-ATTACKS, which open no `pend` — so the
+gate is not unknown, the ROUTE is missing. `_dmgWay` (v3.62) and
+`thisWayMet`'s `way:dealt` are the pieces that would discharge it; the
+refusal is pinned in `test/condgate.test.js`.
 
 **v3.95 CLOSED THE TWO LOOT CARDS — THE FIFTH RECORDED REFUSAL TO COME
 DUE THIS FORTNIGHT.** Both grant a two-sentence quoted ability, and
@@ -79,7 +96,7 @@ Agile Engagement's condition is Boltyn's one route over, and Turn to
 Mindfire's two records (`_dmgWay`, `heroTapped`) both already existed.
 **That is the shape to look for first**: `npm run gaps` lists the
 unfinished cards, and a good share of them are waiting on something the
-engine already has. Coverage is **377 full / 25 part / 3 none**.
+engine already has. Coverage is **379 full / 23 part / 3 none**.
 
 **JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
 found a third: FOUR pool records print *"when this defends"* on GEAR and

@@ -863,7 +863,7 @@ function legal(g, a, seat){
          v2.80 names this exactly: `effCost` is read twice and the two
          reads are different questions. It was found there on the PLAY
          route and left wrong on all three activation routes. */
-      { const _ec = effCost(ab, sd, {dracLinks: PR.dracLinks(g.chain)});
+      { const _ec = effCost(ab, sd, PR.costCtx(g, seat));
         if(_ec > sd.res + payCeiling(sd, null))
           return ab.name + " costs " + _ec + " to activate and you cannot raise it"; }
       /* A COUNTER-SPENDING ABILITY WITH NOTHING IT CAN AFFORD IS A DEAD
@@ -1011,7 +1011,7 @@ function legal(g, a, seat){
          v2.80 names this exactly: `effCost` is read twice and the two
          reads are different questions. It was found there on the PLAY
          route and left wrong on all three activation routes. */
-      { const _ec = effCost(ab, sd);
+      { const _ec = effCost(ab, sd, PR.costCtx(g, seat));
         if(_ec > sd.res + payCeiling(sd, null))
           return piece.name + " costs " + _ec + " to activate and you cannot raise it"; }
       return null;
@@ -1047,7 +1047,7 @@ function legal(g, a, seat){
      v2.80 names this exactly: `effCost` is read twice and the two
      reads are different questions. It was found there on the PLAY
      route and left wrong on all three activation routes. */
-    { const _ec = effCost(piece, sd);
+    { const _ec = effCost(piece, sd, PR.costCtx(g, seat));
       if(_ec > sd.res + payCeiling(sd, null))
         return piece.name + " costs " + _ec + " to swing and you cannot raise it"; }
     return null;
@@ -1154,7 +1154,7 @@ function playableWhy(g, seat, c, win, zone){
      cancel back into the identical state — a live-lock for any driver
      that trusts `legal` (which is the contract), and a dead tap for a
      human, which is the failure mode this codebase cares most about. */
-  const cost = effCost(c, sd);
+  const cost = effCost(c, sd, PR.costCtx(g, seat));
   if(cost > sd.res + payCeiling(sd, c))
     return c.name + " costs " + cost + " and you cannot raise it";
 
@@ -1704,7 +1704,7 @@ function doPlay(g, a, seat){
   const target = targetOf(g, seat, a.target);
   const sd = at(g, seat);
   const card = zone === "arsenal" ? sd.arsenal : sd[zone][find(sd[zone], a.uid)];
-  const cost = effCost(card, sd);
+  const cost = effCost(card, sd, PR.costCtx(g, seat));
   /* WHICH WINDOW this card is being played in, decided now and carried
      through the payment. It matters for a dual-typed card: Den of the
      Spider costs an action point as an Action and none as a Defense
@@ -1848,7 +1848,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    const acost = effCost(ab, sd, {dracLinks: PR.dracLinks(g.chain)});
+    const acost = effCost(ab, sd, PR.costCtx(g, seat));
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
@@ -1889,7 +1889,7 @@ function doActivate(g, a, seat){
      the "hero" zone is not a list and nothing splices it. */
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(!PR.isWeapon(piece)){
-    const ab = piece.powCard, acost = effCost(ab, sd);   /* v3.80 — see doActivate's hero branch */
+    const ab = piece.powCard, acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
@@ -1900,7 +1900,7 @@ function doActivate(g, a, seat){
      cost onto the gear entry's `.cost`, which is the field `effCost`
      reads and `execute` charges — so asking `wc.cost` here is asking a
      number nothing else uses the moment a tax or a discount applies. */
-  const cost = effCost(piece, sd);
+  const cost = effCost(piece, sd, PR.costCtx(g, seat));
   const target = targetOf(g, seat, a.target);
   if(cost > sd.res){
     return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost, target}},
@@ -2020,13 +2020,16 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
    the printed cost and the addition. Otherwise it plays straight through
    unpaid, the same rule `buildPrompt` follows for an empty spec, and the
    rider simply does not fire. */
-const addPayable = (card, sd) => {
+const addPayable = (g, card, sd, seat) => {
   const ap = PR.fxParse(card).addPay;
-  return !!ap && !!sd && (sd.res || 0) >= effCost(card, sd) + ap.cost;
+  /* THE GAME'S HALF OF THE COST ARRIVES FROM ONE READER (v3.96) — this
+     used to price the card with `effCost(card, sd)` alone, which is a
+     THIRD reading of a cost the other two sites already agree on. */
+  return !!ap && !!sd && (sd.res || 0) >= effCost(card, sd, PR.costCtx(g, seat)) + ap.cost;
 };
 
 function maybeAddPay(g, card, zone, seat, window, target){
-  if(!addPayable(card, at(g, seat)))
+  if(!addPayable(g, card, at(g, seat), seat))
     return maybeBoost(g, card, zone, seat, window, target);
   const ap = PR.fxParse(card).addPay;
   return say({...g, pending: {kind: "addPay", seat, card, from: zone, window, target, cost: ap.cost}},

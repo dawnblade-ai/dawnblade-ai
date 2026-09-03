@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.95
+**Current version:** v3.96
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2076 drills**.
+This is `node --test "test/*.test.js"` — currently **2091 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,45 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A SECOND, SMALLER COPY OF A CONDITION VOCABULARY (v3.96)
+
+`fx.condOnHit` is a conditionally GRANTED on-hit ability (v3.10),
+re-checked **at the hit** — so it has its OWN evaluator inside
+`linkPayload`, a much smaller copy of the vocabulary `execute`'s condition
+loop answers. **The parser emits into both and nothing compared them.**
+
+**MEASURED BY ASKING THE PARSER**, not by reading either list: **seven**
+conditions reach `condOnHit` across the pool and the evaluator knew
+**four**. Goon Beatdown's boo (`auras3`), Goon Tactics' mill (`auras3`)
+and Hot on Their Heels' mark (`drac2`) were granted, carried onto the
+link, and then refused — **all three reading `tier: full`**, because the
+HEAD parses. Coverage counts the clause consumed and the one-sided
+fairness sweep only looks for too-STRONG, so nothing here could see it.
+
+**`CONDONHIT_CONDS` IS THE CENSUS**, and a drill fails if the pool emits a
+condition it does not name — v3.35's `PENDING_KINDS` fix and v3.91's for
+the attack-reaction list, one layer in. **`fused` RIDES ON `pend`**: it is
+how the card was PLAYED, which no board state answers at the hit.
+
+**AND WHEN YOU FIND A SECOND EVALUATOR, MEASURE WHAT REACHES IT.** The
+list is not the thing to read — the parser is.
+
+### THE GAME'S HALF OF A COST COMES FROM ONE READER (v3.96)
+
+`parser.costCtx` replaces an opts literal built inline at **two** of
+judge's nine `effCost` sites and omitted at the other seven. That is
+**v3.80's bug waiting to happen again** — a cost read three ways, which
+put a seat on `NEGATIVE-RES` — and Stains of the Redback's discount
+against a marked defending hero is exactly the second game-level input
+that triggers it. A drill asserts every `effCost` call in judge asks it,
+and that no site builds the opts by hand.
+
+**BANISH IS NOT DESTROY.** `foeArsBanish` is `foeArsDestroy`'s twin one
+verb over, and the verb decides the ZONE: a destroyed card is in the
+graveyard where `retrieve` finds it, a banished one is out (v3.79's
+`sweepGear` lesson). **`foeDeckDestroy` is two ops, not one with a side
+parameter** — whose deck is milled is what the card SAYS.
 
 ### A GRANTED ABILITY IN TWO SENTENCES (v3.95)
 

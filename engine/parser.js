@@ -452,6 +452,13 @@ function classifyClause(raw){
     return NOOP("cost reduction — applied by the cost reader when you play it");
   if(/^this costs \{r\} less to play for each runechant(?: token)? you control$/.test(c))
     return NOOP("cost reduction — applied by the cost reader when you play it");
+  /* THE MARK DISCOUNT (v3.96) — `parser.markRed` reads it inside `effCost`
+     for the same reason its two neighbours above do: a discount is applied
+     when the card is PAID for, never as an op on resolution. It is a
+     `noop` only now that `effCost` actually carries it; filed earlier it
+     would have been the no-op blind spot at its purest. */
+  if(/^if the defending hero is marked, this costs (?:\{r\})+ less to play$/.test(c))
+    return NOOP("cost reduction — applied by the cost reader, against a marked defending hero");
   /* The clash block reads "the winner creates a <X> token" off the card's own
      text at declaration and routes the token to whoever won. */
   if(/^the winner creates? (?:a|an|\d+) [a-z' -]+ tokens?$/.test(c))
@@ -1181,6 +1188,25 @@ function classifyClause(raw){
     return R([["foeGearDef", -(+m[1])]]);
   if(/^destroy a card in their arsenal$/.test(c))
     return R([["foeArsDestroy", 1]]);
+  /* BANISH IS NOT DESTROY (v3.96). Mark of the Funnel Web prints the same
+     sentence one verb over, and the verb is the whole difference: a
+     destroyed card reaches the GRAVEYARD, where `retrieve` and every
+     "from your graveyard" reader can still find it, and a banished one is
+     out of the game. Reading either onto the other hands a card back that
+     the text removed, or removes one it did not.
+
+     Its sibling Mark of the Black Widow has read `full` since the marked
+     trigger was built — same hero, same stealth line, same "when this
+     hits a marked hero" gate — so this ONE payload was the whole gap. */
+  if(/^banish a card in their arsenal$/.test(c))
+    return R([["foeArsBanish", 1]]);
+  /* AND THE FOE'S DECK (v3.96) — Goon Tactics' granted rider. `deckDestroy`
+     (v3.90) mills the ACTOR's own for a cost; this mills the opponent's as
+     a payload, and they are two ops rather than one with a side parameter
+     for `revPitch`/`revColorPitch`'s reason: whose deck is milled is what
+     the card SAYS, not something its text should get to choose. */
+  if(/^destroy the top card of their deck$/.test(c))
+    return R([["foeDeckDestroy", 1]]);
   if(/^put a card from their arsenal on the bottom of (?:its owner'?s|their) deck$/.test(c))
     return R([["foeArsBottom", 1]]);
   if(/^put all cards in all arsenals on the bottom of (?:their owner'?s|its owner'?s) decks?$/.test(c))
@@ -4980,6 +5006,29 @@ function costOffFor(c, sd){
    half lands INSIDE `effCost` rather than being subtracted at each call
    site — every existing caller keeps the same answer, and the ones that
    can see the chain hand it in. */
+/* "IF THE DEFENDING HERO IS MARKED, THIS COSTS {r} LESS TO PLAY" (v3.96).
+
+   Read off the card's own text, like `runeRed` and `boardRed` beside it —
+   this is a discount, not an effect that fires on resolution, so it is
+   never an op.
+
+   WHETHER THERE IS A DEFENDING HERO AND WHETHER THEY ARE MARKED IS THE
+   CALLER'S ANSWER. `sd` is the side PAYING; the defending hero belongs to
+   the combat, which is game state a side cannot see (v3.24, v3.86). A
+   caller that says nothing pays FULL PRICE — weaker than printed and
+   visible, where the other direction is a card cheaper than it prints.
+
+   THE AMOUNT IS READ. Stains of the Redback is the pool's only card of
+   the shape and prints one pip, so a hardcoded 1 is indistinguishable
+   from a read one against every pool fixture (v3.32 — eleventh outing);
+   a synthetic printing two is what sees it. */
+function markRed(c){
+  const m = clean((c && c.tx) || "").toLowerCase()
+    .match(/if the defending hero is marked, this costs ((?:\{r\})+|\d+) less to play/);
+  if(!m) return 0;
+  return /^\d+$/.test(m[1]) ? +m[1] : (m[1].match(/\{r\}/g) || []).length;
+}
+
 function effCost(c,sd,o){
   o = o || {};
   /* AND WHAT A BANISH-RIDER STAMPED ON THE CARD ITSELF (v3.92) — Rising
@@ -4988,9 +5037,35 @@ function effCost(c,sd,o){
      `costOff` is the side-level qualified grant and would apply to
      whatever matched next. */
   const stamp = (c && c._banCostOff) || 0;
-  const dyn = ((c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0) + stamp;
+  /* THE MARK IS THE CALLER'S ANSWER (v3.96) — see `markRed`. */
+  const mk = o.foeMarked ? markRed(c) : 0;
+  const dyn = ((c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0) + stamp + mk;
   return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
        + frostCount(sd) + nextTurnTax(sd);
+}
+
+/* WHAT THE GAME CONTRIBUTES TO A COST, IN ONE PLACE (v3.96).
+
+   `effCost` takes a SIDE, because runechants and the board that discount
+   a card belong to whoever is playing it (v2.18). Two of its inputs are
+   not facts about a side at all — the combat chain, and whether the
+   DEFENDING hero is marked — so they arrive from the caller.
+
+   THEY ARRIVE FROM ONE READER. v3.80 is the version that had to learn
+   this: an activation's cost was read at THREE sites, only one of them
+   used `effCost`, and a seat ended up owing resources — `NEGATIVE-RES`,
+   and the `legal`/`reduce` agreement `fuzz.test.js` exists to hold. A
+   second input threaded by hand at four sites is that bug waiting to
+   happen again, so the sites ask this instead.
+
+   IT IS A PURE STATEMENT ABOUT STATE, not a rules decision: `pend` is
+   what makes a defending hero exist at all, so a card priced outside
+   combat pays full price — weaker than printed and visible (v3.24). */
+function costCtx(g, seat){
+  g = g || {};
+  const i = seat == null ? (g.actor || 0) : seat;
+  return {dracLinks: dracLinks(g.chain),
+          foeMarked: !!(g.pend && (((g.sides || [])[1 - i]) || {}).marked)};
 }
 
 /* HOW MANY DRACONIC CHAIN LINKS ARE ON THE CHAIN. One reader — it was
@@ -6064,7 +6139,7 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
