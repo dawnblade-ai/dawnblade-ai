@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 41 cards | understood ≠ built |
-| **Fail states** | 70 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 40 cards | understood ≠ built |
+| **Fail states** | 69 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -55,7 +55,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
-- **Night's Embrace** (none, 1/1 unread)
 - **Shred** (none, 1/1 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
@@ -109,12 +108,12 @@ can be overruled. Same discipline as the mention count.
 | Earned value denied | 18 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
 | Choice never offered | 15 |
-| No schedule to fire on | 14 |
+| No schedule to fire on | 13 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Displayed total is wrong | 9 |
+| Displayed total is wrong | 8 |
 | Unread, effect unknown | 8 |
 
-### WRONG — 37 entries
+### WRONG — 36 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -209,11 +208,6 @@ can be overruled. Same discipline as the mention count.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-- **Night's Embrace** (3) · tier `none`
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Your attacks with stealth get +1{p} this turn.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Your attacks with stealth get +1{p} this turn.
 - **Oasis Respite** (1) · tier `part` · dorinthea, enigma, lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If they have less {h} than each other hero, they may gain 1{h}.
@@ -233,7 +227,10 @@ can be overruled. Same discipline as the mention count.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-- … and 12 more (see the station)
+- **Roaring Beam** (2) · tier `part` · boltyn
+  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+    > If there are no cards in your soul, return this to its owner's hand, then charge your soul.
+- … and 11 more (see the station)
 
 ### LOST VALUE — 32 entries
 

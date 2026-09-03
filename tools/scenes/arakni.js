@@ -1,7 +1,15 @@
 /* ARAKNI — the Assassin, and the three activated ABILITIES that were being
-   offered in the wrong window. His hero ability is still unread (FINISH.md
-   P1); what is drilled here is the equipment route his deck is built on. */
+   offered in the wrong window.
+
+   THE SENTENCE THAT USED TO SIT HERE SAID THE HERO ABILITY WAS "STILL
+   UNREAD", AND IT HAS BEEN FALSE SINCE v3.75. Both clauses are built —
+   the stealth-on-a-marked-hero buff and the Agents of Chaos
+   transformation — and `tools/audit.js`'s ledger has carried them since
+   v3.76. A doc claim is a test with no assertion (v3.41); what is drilled
+   below is the equipment route the deck is built on, plus the standing
+   attack grant that v3.87 gave it. */
 const B = require("../../engine/build.js");
+const P0 = require("../../engine/parser.js");
 
 /* Build a piece's ability the way `build.js` does, so a scene exercises the
    real powCard rather than a hand-written stand-in. */
@@ -18,6 +26,62 @@ function ability(P, piece, uid){
 }
 
 module.exports = [
+
+{
+  name: "Night's Embrace lifts EVERY stealth attack, and only those",
+  why: "v3.87 — it read `tier: none`, one of the pool's seven unread " +
+       "cards, and the gap was that nothing could say \"every attack of " +
+       "this shape, until the window closes\". IT IS NOT `buffQ`: that " +
+       "grants \"your NEXT attack\" and is SPENT: a standing grant " +
+       "consumed by the first swing is weaker than printed, and a " +
+       "single-shot grant left standing is stronger.",
+  run(c){
+    c.H.db(); c.P.fxReset();
+    const ne = c.card("Night’s Embrace", 3, 810);
+    const fx = c.P.fxParse(ne);
+    const stealthy = c.card("Infect", 1, 811);
+    const plain = c.card("Wounding Blow", 1, 812);
+    /* declare the attack, then settle its power the way both walls do */
+    const swing = (atk, held) => {
+      const card = Object.assign({}, atk, {uid: atk.uid});
+      const g = c.state({hand: [card], res: 9, ap: 1, atkBuff: held || []},
+                        {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+      const ex = c.exec(g, card, "hand", 0, {});
+      const n = ex.game || ex;
+      const lp = c.J.withEffects(n, (fx2, s) => {
+        const r = fx2.linkPumps(s, {defenders: 0, handBlockers: 0});
+        return {game: r.game, _t: r.total, _held: (r.game.sides[0].atkBuff || []).length};
+      });
+      return {declared: n.pend && n.pend.total, struck: lp._t, stillHeld: lp._held};
+    };
+    const held = [{amt: 1, q: {kw: "stealth"}, until: "turn"}];
+    const s1 = swing(stealthy, held), s0 = swing(stealthy, []);
+    const p1 = swing(plain, held), p0 = swing(plain, []);
+    return {
+      "what the card grants":              JSON.stringify(fx.ops),
+      "the printed +1 is read ONCE":       fx.self,
+      "a stealth attack, no grant":        s0.struck,
+      "…with the grant standing":          s1.struck,
+      "a plain attack, no grant":          p0.struck,
+      "…with the grant standing":          p1.struck,
+      /* IT IS NOT SPENT — the whole difference from `buffQ`. */
+      "the grant is still there afterwards": s1.stillHeld,
+      /* AND THE DECLARATION IS UNTOUCHED: read in both places the printed
+         +1 lands twice, which is VALUE-DOUBLED on the sweep's own terms. */
+      "the declared total is the bare printed power": s1.declared
+    };
+  },
+  want: {
+    "what the card grants": "[[\"atkBuff\",1,{\"kw\":\"stealth\"},\"turn\"]]",
+    "the printed +1 is read ONCE": 0,
+    "a stealth attack, no grant": 3,
+    "…with the grant standing": 4,
+    "a plain attack, no grant": 4,
+    "…with the grant standing": 4,
+    "the grant is still there afterwards": 1,
+    "the declared total is the bare printed power": 3
+  }
+},
 
 {
   name: "an attack reaction is refused in the action phase",

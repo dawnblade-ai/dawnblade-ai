@@ -103,10 +103,21 @@ for(const c of Object.values(audit.cards)){
      Raydn Duskbane and Courageous Steelhand all reported clean.
      A doubled value is a doubled value wherever the second copy sits. */
   const pumps = [...tl.matchAll(/\+\s*(\d+)\s*\{p\}/g)].map(m => +m[1]);
+  /* EVERY OP KIND THAT CARRIES A PRINTED "+N{p}" (v3.87). The list named
+     two, and the check is only as wide as it is: Night's Embrace's
+     standing grant (`atkBuff`) was read a SECOND time into `fx.self` and
+     this sweep reported CLEAN, which is v3.12's `MODAL-SUMMED` lesson
+     restated — the tool's model going stale looks exactly like the card
+     being right.
+
+     WHEN YOU ADD AN OP THAT CARRIES A PRINTED VALUE, ADD IT HERE. The
+     same sentence `pumpRead` in parser.js carries about its own list,
+     which has now been widened three times for the identical reason. */
+  const PUMP_OPS = ["buffNext", "self", "atkBuff"];
   const pumpOpsAnywhere = [...(fx.ops||[]), ...(fx.onHit||[]),
                            ...(fx.conds||[]).map(x => x.op),
                            ...(fx.condOnHit||[]).map(x => x.op)]
-    .filter(o => o && (o[0]==="buffNext" || o[0]==="self"));
+    .filter(o => o && PUMP_OPS.indexOf(o[0]) >= 0);
   if(fx.self > 0){
     const opSame = pumpOpsAnywhere.filter(o => o[1] === fx.self);
     const timesInText = pumps.filter(n => n === fx.self).length;

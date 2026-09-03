@@ -1580,6 +1580,11 @@ function closeChain(g){
   for(let i = 0; i < 2; i++){
     n = put(n, i, s => ({...s, blockH: [], blockG: [], blockRx: [], chainBlocked: []}));
   }
+  /* AND A GRANT THAT PRINTS "THIS COMBAT CHAIN" EXPIRES WITH IT (v3.87).
+     One shared body, because a schedule written on one board is the bug
+     this project keeps paying for (v3.01) — `beginEndPhase` sweeps the
+     "this turn" grants and deliberately leaves these. */
+  n = E.closeChainGrants(n);
   return {...n, pend: null, stack: [], chainCards: []};
 }
 

@@ -9,6 +9,105 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.87 — a standing attack grant, with a window
+
+> *"Your attacks with **stealth** get +1{p} this turn."* — NIGHT'S EMBRACE
+
+It read `tier: none` — one of the pool's seven unread cards — and the whole
+gap was that nothing in the engine could say *"every attack of this shape,
+until the window closes"*.
+
+### It is not `buffQ`, and getting that backwards is wrong both ways
+
+`buffQ` grants *"your NEXT attack"* and is **SPENT** by the card it lands
+on. This applies to **every** matching attack inside its window and is
+never spent.
+
+| | consumed by | wrong reading costs |
+|---|---|---|
+| a single-shot grant | the first matching card | left standing, it pumps every attack — **stronger** than printed |
+| a standing grant | **nothing** | spent by the first swing, it pumps one — **weaker** than printed |
+
+That is v3.30's debuff/restriction distinction, one grant over.
+
+### Three things read off the printed line
+
+- **THE WINDOW.** *"this turn"* expires in `beginEndPhase` beside the five
+  single-shot grants; *"this combat chain"* expires at the **close step**,
+  through `effects.closeChainGrants` — **one shared body both boards
+  call**, because a schedule written on one board is the bug this project
+  keeps paying for (v3.01). Sweeping both in the end phase makes a chain
+  grant last a whole turn.
+- **THE QUALIFIER** is `attackQual`'s, and it can sit on either side of
+  the word: *"your ARROW attacks"* is a leading class group, *"your
+  attacks WITH STEALTH"* a tail. One reader for both, so this invents no
+  vocabulary — the **fifth** time that has been true of the family
+  (v3.31, v3.32, v3.37, v3.64).
+- **AN UNREADABLE TAIL REFUSES THE WHOLE CLAUSE.** `false` means *"a
+  restriction I cannot read"* and is a different answer from `null`
+  (*"nothing restricts this"*) — and `qualMatches` answers TRUE for a
+  falsy qualifier, so a `false` reaching the side would grant to every
+  attack in the game. v3.31's bug, one grant over.
+
+### It is read in `linkPumps`, and NOWHERE ELSE
+
+**Night's Embrace is an ATTACK REACTION**, so the grant does not exist yet
+when the attack is declared. Read only at declaration, the card cannot
+pump the swing it was played on — which is the whole of what it does.
+Read in **both** places, the printed value lands twice.
+
+The play context (`from`, `boosted`, *"this is an attack"*) rides on
+`pend` from the declaration, because those are facts about the PLAY that
+no reader of the card can recover (v3.31) — v3.24's rule about an argument
+threaded through two call sites.
+
+### And the fallback was reading the same +1 a second time
+
+`fxParse`'s whole-text self-pump fallback had not been told about the new
+op, so the card granted its qualified +1 **and** queued a bare,
+**unqualified** +1 for the next attack of any kind. Driven at the table: a
+3-power stealth attack dealt **5**.
+
+v2.30's `VALUE-DOUBLED`, and the **third** time a new op has arrived
+without that fallback being widened — v3.00's `onLeave`, v3.72's arsenal
+grant, and this.
+
+### The sweep reported CLEAN on it, and that was the tool's model
+
+`VALUE-DOUBLED` compares a printed *"+N{p}"* against the ops that carry
+one, and its list named exactly **two** kinds. It is a named constant now
+(`PUMP_OPS`) and pinned as a SET the way `wire.test.js`'s `HEADLESS` list
+is: moving one is a deliberate edit.
+
+**That is v3.12's `MODAL-SUMMED` lesson restated** — the tool's model
+going stale looks exactly like the card being right, and the two are
+indistinguishable in a report. Verified by sabotage: with the double read
+reintroduced, the widened sweep reports the finding by name.
+
+> **AND THE FIRST SABOTAGE RUN SAID IT WAS STILL BLIND.** The edit was
+> written as a shell-quoted `python3 -c` whose anchor never matched, so
+> nothing was sabotaged at all. **Check that a sabotage APPLIED before
+> believing the tool is weak** (v3.50) — third time this fortnight.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| pool coverage | 364 full / 34 part / **7 none** | **365 full** / 34 part / **6 none** |
+| drills | 1920 | **1937** |
+| scenes | 52 | **53** |
+| symmetry ledger | 46 | **47** (`atkBuff`), `WIRE_V` → 3 |
+| sabotages | — | **13, all bite, 0 silent** |
+
+Self-play unchanged at 210 games · 0 stalls · 0 refusals · 0 violations;
+`npm run fairness` clean.
+
+Also corrected: `tools/scenes/arakni.js`'s header said the hero ability was
+*"still unread"*, which has been false since v3.75. A doc claim is a test
+with no assertion (v3.41).
+
+---
+
 ## v3.86 — the last three hero clauses, and none was the payload
 
 Three printed clauses were left unread across the whole pool's fifteen

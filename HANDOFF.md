@@ -1,4 +1,46 @@
-# Handoff — Dawnblade, at v3.86 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.87 · PHASE C · SIX CARDS READ NOTHING
+
+## ⚠ THE REMAINING SIX, AND WHAT EACH IS WAITING ON
+
+`npm run audit`: **365 full / 34 part / 6 none**. Night's Embrace left that
+list at v3.87. What is left, with the honest reason each still refuses:
+
+| card | printed | waiting on |
+|---|---|---|
+| **Concoct Disorder** | *"each hero puts the top card of their deck face-down into their arsenal. If 2 or more are put this way, this gets go again"* | a CROSS-SEAT deck→arsenal put. The `way:` trace (v3.60) and the attack-path way-cond runner (v3.62) both exist |
+| **Jittery Bones** | *"you may discard a card **or** destroy the top card of your deck. If that card has watery grave…"* | a MODAL optional cost — `optCost` carries one cost shape |
+| **Shred** | *"target card defending an Assassin attack gets -2{d} this combat chain"* | a target pick among the declared defenders, and a chain-scoped defender debuff |
+| **Glisten** | *"distribute up to four +1{p} counters among any number of weapons"* | a DISTRIBUTION sheet. `ctrPut` and the sharpen wipe (v3.66) are both built |
+| **Danger Digits** | *"target dagger you control that isn't on the active chain link deals 1 damage… the dagger has hit"* | a "has hit" FICTION for a card that never attacked |
+| **Hope Merchant's Hood** | *"shuffle any number of cards from your hand into your deck, then draw that many"* | deck manipulation, and a rider whose count is the pick's own size |
+
+**THE PATTERN, FOR THE THIRD VERSION RUNNING: none of the six is waiting
+on its payload.** Every effect reads. What refuses is a cost shape, a
+prompt shape, or a zone move — which is what Phase C looks like from here.
+
+## ⚠ ONE UNREAD HERO CLAUSE REMAINS IN THE WHOLE POOL
+
+`npm run sweep`'s hero block is **3 heroes · 3 clauses**, and **two of
+those three are the ability's printed NAME** — Briar's *"Essence of Earth
+and Lightning"* and Iyslander's *"Essence of Ice"*, which the database
+lists in its own `card_keywords` and the audit annotates as such (v3.86).
+They are not work.
+
+**The one genuine remaining clause is ENIGMA's `{c}{c}{c}`**, and it is a
+RULING rather than an engineering call — see below.
+
+### WHAT LANDED AT v3.86
+
+| hero | clause | what actually refused |
+|---|---|---|
+| **Gravy Bones** | *"{t}, destroy a Gold you control: Draw a card, then discard a card"* | the COST. `parseHeroPower` refuses a destroy that is not `destroy this`, and 38 of the pool's 39 destroy-costs are. His ability was entirely inert. |
+| **Fai** | *"start the game with a Phoenix Flame in your graveyard"* | nothing built the pregame graveyard — Dash's shape, one zone over |
+| **Fai** | *"costs {r} less per Draconic chain link"* | the rider was dropped, so it charged 3 on the turn it should cost 0 |
+
+**AND `makeSide` SILENTLY DROPPED A SEEDED GRAVEYARD** — it hardcoded
+`grave: []`. Found by driving Fai's opening, not by reading the field
+list. If you seed a new zone into `newMatch`, check `makeSide` takes it.
+
 
 ## ⚠ ONE UNREAD HERO CLAUSE REMAINS IN THE WHOLE POOL
 

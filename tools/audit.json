@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T13:05:02.010Z",
- "appVer": "3.85",
+ "generated": "2026-09-03T17:23:34.617Z",
+ "appVer": "3.86",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 364,
+  "full": 365,
   "part": 34,
-  "none": 7
+  "none": 6
  },
  "heroes": {
   "kayo": {
@@ -10224,18 +10224,16 @@
    "mentions": [
     "stealth"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Your attacks with stealth get +1{p} this turn.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Your attacks with stealth get +1{p} this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your attacks with stealth get +1{p} this turn.",

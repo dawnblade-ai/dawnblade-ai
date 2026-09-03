@@ -117,7 +117,7 @@ test("the reprise count is the CALLER's answer, never read from a board", {skip}
   assert.ok(!/blockH/.test(body), "nor for judge's");
 });
 
-test("14 pool attack reactions pump, and that is the blast radius", {skip}, () => {
+test("13 pool attack reactions pump, and that is the blast radius", {skip}, () => {
   H.db();
   const cards = require("../tools/audit.json").cards;
   let n = 0;
@@ -129,7 +129,22 @@ test("14 pool attack reactions pump, and that is the blast radius", {skip}, () =
     P.fxReset && P.fxReset();
     if((P.fxParse(full).self || 0) > 0) n++;
   }
-  assert.equal(n, 14, "every one of these was landing on the wrong attack at the table");
+  /* 14 -> 13 AT v3.87, AND THE DEPARTURE IS A FIX. Night's Embrace prints
+     "your attacks with stealth get +1{p} this turn" — a STANDING grant,
+     read into `atkBuff` — and `fxParse`'s whole-text self-pump fallback
+     was reading the same +1 a SECOND time into `fx.self`. So the card
+     granted its printed +1 to every stealth attack AND queued a bare,
+     UNQUALIFIED +1 for the next attack of any kind: driven at the table,
+     a 3-power stealth attack dealt 5.
+
+     v2.30's VALUE-DOUBLED, and the third time a new op has arrived
+     without the fallback being told (v3.00's `onLeave`, v3.72's arsenal
+     grant, this). It never belonged in this count: it does not pump the
+     attack it reacts to, it creates a grant.
+
+     A NUMBER MOVING HERE IS A DELIBERATE EDIT — same discipline as the
+     coverage baseline. Read the card before changing it. */
+  assert.equal(n, 13, "every one of these was landing on the wrong attack at the table");
 });
 
 /* ============================================================

@@ -1359,6 +1359,28 @@ function makeEffects(ctx){
         actMut(n).defActionBuff = (act(n).defActionBuff||0) + v;
         n = L(n, `${act(n).name}: defending action cards get +${v}{d} for the rest of this turn.`);
       }
+      /* A STANDING ATTACK GRANT, WITH A WINDOW (v3.87) — Night's Embrace.
+         "Your attacks with stealth get +1{p} this turn."
+
+         IT IS NOT `buffQ`. That grants "your NEXT attack" and is SPENT by
+         the card it lands on; this applies to EVERY matching attack until
+         its window closes and is never spent. A standing grant consumed
+         by the first swing is weaker than printed; a single-shot grant
+         left standing is stronger — v3.30's debuff/restriction split, one
+         grant over.
+
+         IT ACCUMULATES rather than being assigned, or a second source is
+         silently dropped (v3.78's rule for the defensive twin).
+
+         `until` IS THE PRINTED WINDOW, read off the card and carried, so
+         `beginEndPhase` and the close step each drop only their own. */
+      else if(k==="atkBuff"){
+        actMut(n).atkBuff = [...(act(n).atkBuff||[]),
+                             {amt: v, q: op[2] || null, until: op[3] || "turn"}];
+        const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
+        n = L(n, `${act(n).name}: every ${who} gets +${v}{p} `
+               + (op[3] === "chain" ? "for the rest of this combat chain." : "this turn."));
+      }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
       else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
@@ -2325,6 +2347,7 @@ function makeEffects(ctx){
          weapon's type line carries no "Attack" (v3.43). */
       const qCtx = {from, atk: true, boosted: isBoostPlay(n, card)};
       const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card, qCtx)).reduce((a2,b)=>a2+b.amt,0);
+
       const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card, qCtx));
       /* AND ANY ABILITY THOSE BUFFS GRANTED comes with them. Warrior's
          Valor's `and "When this hits, it gets go again."` belongs to the
@@ -2670,7 +2693,17 @@ function makeEffects(ctx){
          which was FALSE with `by` absent and is FALSE now for your own
          swing — and the dummy's swing is the `[3,4,5]` scalar on
          `n.incoming` with no pend at all. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      /* THE PLAY CONTEXT RIDES ON `pend` (v3.87). The STANDING attack
+         grants are read in `linkPumps`, not here — Night's Embrace is an
+         ATTACK REACTION, so the grant it creates does not exist yet when
+         the attack is declared, and reading it at declaration alone would
+         make the card unable to pump the very swing it was played on.
+         `qualMatches` needs the play-site facts a card cannot answer for
+         itself (v3.31: which zone it came from, whether it was boosted,
+         and that this play IS an attack), so the answer travels with the
+         link rather than being re-derived over there — v3.24's rule about
+         an argument threaded through two call sites. */
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:fx.condOnHit||[], chargedPitch, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -3957,7 +3990,32 @@ function makeEffects(ctx){
   const linkPumps = (s, info) => {
     let n = {...s};
     const pumps = (n.stack||[]).filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
-    let total = capNoPump(n, n.pend.card, n.pend.total + pumps);
+    /* ---- THE STANDING ATTACK GRANTS (v3.87) --------------------------
+       "Your attacks with stealth get +1{p} this turn." — a CONTINUOUS
+       effect on the attack's power, not a bonus handed over at
+       declaration, so it is read HERE and nowhere else.
+
+       IT HAS TO BE HERE, and Night's Embrace is why: it is an ATTACK
+       REACTION, so the grant does not exist yet when the attack is
+       declared. Read only at declaration, the card cannot pump the swing
+       it was played on — which is the whole of what it does.
+
+       AND ONLY HERE, or the grant is counted twice for an attack declared
+       while it was already standing: `VALUE-DOUBLED` on the fairness
+       sweep's own terms.
+
+       THE PLAY CONTEXT IS THE LINK'S (v3.31): `from`, `boosted` and "this
+       is an attack" are facts about the PLAY that no reader of the card
+       can recover, so they travel on `pend` from the declaration.
+
+       IT IS NEVER SPENT — every matching attack inside the window gets it
+       (v3.30's debuff/restriction split, one grant over), which is why
+       nothing is written back to the side. */
+    const _sq = Object.assign({atk: true}, n.pend._qCtx || {});
+    const _sb = (act(n).atkBuff||[]).filter(b => qualMatches(b.q, n.pend.card, _sq));
+    const stand = _sb.reduce((a, b) => a + b.amt, 0);
+    if(stand) n = L(n, `${n.pend.card.name} carries +${stand}{p} from a standing grant.`);
+    let total = capNoPump(n, n.pend.card, n.pend.total + pumps + stand);
     /* RULING (Fender Bender): +1 per separate equipment the opponent defended
        with — only knowable once defenders are declared, so it lands here. */
     for(const op of (n.pend.lateOps||[])){
@@ -5283,6 +5341,36 @@ function sweepGear(game, seat){
    `setDb` and the trainer holds the loaded one, and neither is reachable
    from here. A caller that says nothing finds no Agent to become: weaker
    than printed and visible, which is the safe direction (v3.24). */
+/* THE CHAIN CLOSES — DROP THE GRANTS THAT PRINT THAT WINDOW (v3.87).
+
+   "Your attacks THIS COMBAT CHAIN get +N{p}" expires when the chain does,
+   not with the turn. `beginEndPhase` sweeps the "this turn" entries and
+   deliberately leaves these, so this is where they go.
+
+   IT IS A SHARED BODY BECAUSE A SCHEDULE IS WRITTEN PER BOARD (v3.01).
+   The trainer closes a chain in `closeChain` and at the turn boundary;
+   judge closes it in `closeChain`. Written into one of them, a chain
+   grant lasts a whole turn on the other — stronger than printed, which
+   is the direction that steals games.
+
+   BOTH SEATS, for `beginEndPhase`'s reason: a grant is not the turn
+   player's private property, and a chain belongs to nobody.
+
+   Pure, and it returns the game — no message, because a window closing is
+   not an event the player did anything to cause. */
+function closeChainGrants(game){
+  let n = game;
+  for(let i = 0; i < 2; i++){
+    const sd = (n.sides || [])[i] || {};
+    const keep = (sd.atkBuff || []).filter(b => b.until !== "chain");
+    if(keep.length === (sd.atkBuff || []).length) continue;
+    const sides = n.sides.slice();
+    sides[i] = Object.assign({}, sd, {atkBuff: keep});
+    n = Object.assign({}, n, {sides});
+  }
+  return n;
+}
+
 function beginEndPhase(game, seat, db){
   let n = game;
   const msgs = [], ops = [], fired = [];
@@ -5480,11 +5568,18 @@ function beginEndPhase(game, seat, db){
                /* LYATH'S DEFENCE GRANT IS "THIS TURN" TOO (v3.78) — the
                   same window as its five neighbours, so it expires in
                   the same step rather than growing its own schedule. */
-               + (sd.defActionBuff ? 1 : 0);
+               + (sd.defActionBuff ? 1 : 0)
+               /* AND SO ARE THE TURN-SCOPED STANDING ATTACK GRANTS (v3.87)
+                  — but only those. An `until: "chain"` entry is dropped at
+                  the CLOSE STEP instead, because that is the window its
+                  card prints; sweeping both here makes a chain grant last
+                  a whole turn, which is stronger than printed. */
+               + (sd.atkBuff || []).filter(b => b.until !== "chain").length;
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
-      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0});
+      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0,
+       atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain")});
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");
@@ -5678,6 +5773,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, settleIntellect,
+return {makeEffects, CTX_KEYS, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

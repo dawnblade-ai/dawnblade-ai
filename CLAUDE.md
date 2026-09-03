@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.86
+**Current version:** v3.87
 
 ---
 
@@ -516,6 +516,61 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A STANDING ATTACK GRANT IS NOT A SINGLE-SHOT ONE (v3.87)
+
+> *"Your attacks with **stealth** get +1{p} this turn."* — NIGHT'S EMBRACE
+
+`buffQ` grants *"your NEXT attack"* and is **SPENT** by the card it lands
+on. This applies to **every** matching attack inside its window and is
+never spent. Getting it backwards is wrong in both directions — a standing
+grant consumed by the first swing is weaker than printed, a single-shot
+one left standing is stronger — which is v3.30's debuff/restriction split,
+one grant over.
+
+**THE WINDOW IS READ OFF THE PRINTED WORDS.** *"this turn"* expires in
+`beginEndPhase` beside the five single-shot grants; *"this combat chain"*
+at the CLOSE step, through `effects.closeChainGrants` — **one shared body
+both boards call** (v3.01). Sweeping both in the end phase makes a chain
+grant last a whole turn.
+
+**THE QUALIFIER IS `attackQual`'s, ON EITHER SIDE OF THE WORD** — *"your
+ARROW attacks"* is a leading class group, *"your attacks WITH STEALTH"* a
+tail, one reader for both. Fifth member of the family to invent no
+vocabulary. **An unreadable tail refuses the whole clause**: `false` means
+*"a restriction I cannot read"*, and `qualMatches` answers TRUE for a
+falsy qualifier, so a `false` reaching the side grants to everything.
+
+**IT IS READ IN `linkPumps`, AND NOWHERE ELSE.** The card is an ATTACK
+REACTION, so the grant does not exist when the attack is declared — read
+only at declaration it cannot pump the swing it was played on, which is
+the whole of what it does; read in both places the printed value lands
+twice. The play context rides on `pend` from the declaration, because
+`from`/`boosted`/*"this is an attack"* are facts no reader of the card can
+recover (v3.31, v3.24).
+
+**AND THE WHOLE-TEXT SELF-PUMP FALLBACK HAD NOT BEEN TOLD.** The card
+granted its qualified +1 AND a bare unqualified one — driven, a 3-power
+stealth attack dealt 5. v2.30's `VALUE-DOUBLED`, and the **third** time a
+new op has arrived without `pumpRead` being widened (v3.00's `onLeave`,
+v3.72's arsenal grant, this).
+
+### A CHECK IS ONLY AS WIDE AS ITS OP LIST (v3.87)
+
+`npm run fairness` reported **CLEAN** on that doubling, because
+`VALUE-DOUBLED` compares a printed *"+N{p}"* against a hardcoded list of
+two op kinds. It is a named constant (`PUMP_OPS`) and pinned as a SET now,
+the way `wire.test.js`'s `HEADLESS` list is.
+
+**WHEN YOU ADD AN OP THAT CARRIES A PRINTED VALUE, ADD IT TO BOTH LISTS**
+— `parser.pumpRead` and `fairness.PUMP_OPS`. v3.12's `MODAL-SUMMED`
+lesson restated: the tool's model going stale looks exactly like the card
+being right, and the two are indistinguishable in a report.
+
+**AND THE FIRST SABOTAGE SAID IT WAS STILL BLIND.** The edit was a
+shell-quoted `python3 -c` whose anchor never matched, so nothing was
+sabotaged. **Check that a sabotage APPLIED before believing the tool is
+weak** (v3.50) — third time this fortnight.
 
 ### A COST CAN DESTROY SOMETHING OTHER THAN ITSELF (v3.86)
 

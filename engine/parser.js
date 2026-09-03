@@ -2838,6 +2838,52 @@ function fxParse(card){
     break;
   }
 
+  /* ---- A STANDING ATTACK GRANT, WITH A WINDOW (v3.87) ----------------
+     "Your attacks with stealth get +1{p} this turn."        Night's Embrace
+     "Your attacks this combat chain get +1{p} for each …"   V of the Vanguard
+
+     IT IS NOT `buffQ`, AND GETTING THAT BACKWARDS IS WRONG IN BOTH
+     DIRECTIONS. `buffQ` grants "your NEXT attack" and is SPENT by the
+     card it lands on; this applies to EVERY matching attack inside its
+     window and is never spent. A standing grant consumed by the first
+     swing is weaker than printed; a single-shot grant left standing is
+     stronger. Same distinction v3.30 draws between a debuff and a
+     restriction, one grant over.
+
+     THE WINDOW IS READ OFF THE PRINTED WORDS, never defaulted. The pool
+     prints both — "this turn" expires at the controller's end phase,
+     "this combat chain" at the close step — and defaulting either way
+     changes how long a real card's bonus lasts.
+
+     THE QUALIFIER IS `attackQual`'s, so this invents no vocabulary: the
+     same tail reader the four single-shot grants use (v3.31, v3.37), and
+     an unreadable tail REFUSES the whole clause rather than granting to
+     everything. `qualMatches` is the one matcher.
+
+     MEASURED BEFORE IT WAS BUILT: exactly two pool cards print the shape,
+     and the audit read Night's Embrace `none` and V of the Vanguard
+     `part`. Neither could be seen by the fairness sweep — both are WEAKER
+     than printed, which is the direction it is built not to look in. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const ag = clauses[ci].match(
+      /^your (.*?)attacks?( .+?)? gets? \+(\d+)\{p\} (this turn|this combat chain)\.?$/i);
+    if(!ag) continue;
+    /* TWO ARGUMENTS, BECAUSE THE PRINTED RESTRICTION CAN SIT ON EITHER
+       SIDE OF THE WORD (v3.31): "your ARROW attacks" is a leading class
+       group and "your attacks WITH STEALTH" is a tail. `attackQual` is
+       the one reader of both, so nothing here re-derives either. */
+    const q = attackQual(ag[1] || "", ag[2] || "");
+    /* `false` means "a restriction I cannot read", which is a DIFFERENT
+       answer from `null` ("nothing restricts this") — collapsing the two
+       is how v3.31's bug shipped, and `qualMatches` answers TRUE for a
+       falsy qualifier, so a `false` reaching it grants to everything. */
+    if(q === false) continue;
+    fx.ops.push(["atkBuff", +ag[3], q || null,
+                 /this turn/i.test(ag[4]) ? "turn" : "chain"]);
+    handled.add(ci);
+    break;
+  }
+
   /* ---- A DEFENDER THAT BUFFS ITSELF AGAINST A KIND OF ATTACK (v3.24)
      "This gets +1{d} while defending a weapon attack." — the four Blade
      Beckoner pieces, and the condition is a property of the INCOMING
@@ -3925,7 +3971,19 @@ function fxParse(card){
        THE MAGNITUDE IS MATCHED, not the mere presence of a grant (v2.30),
        so a card printing two different pumps still gets its unread one. */
     || [...fx.ops].some(o => o && (o[0]==="arsTurn" || o[0]==="arsCycle")
-                          && o[1] && o[1].pow === v);
+                          && o[1] && o[1].pow === v)
+    /* A STANDING ATTACK GRANT HAS ALREADY READ ITS "+N{p}" (v3.87).
+       Night's Embrace prints "Your attacks with stealth get +1{p} this
+       turn" and the fallback read the same +1 a SECOND time into
+       `fx.self` — so the card granted its printed +1 to every stealth
+       attack AND queued a bare, unqualified +1 for the next attack of any
+       kind. Driven at the table: a 3-power stealth attack dealt 5.
+
+       v2.30's VALUE-DOUBLED, fourth outing, and the third to arrive the
+       same way — a new op reads a printed number and the whole-text
+       fallback has not been told. THE MAGNITUDE IS MATCHED, so a card
+       printing two different pumps still gets its unread one. */
+    || [...fx.ops].some(o => o && o[0]==="atkBuff" && o[1] === v);
   if(!fx.self && !isAttack(card)
      && ![...fx.ops, ...(fx.onLeave||[])].some(o=>o[0]==="buffNext")
      && !(fx.arsenalPut && fx.arsenalPut.stamp)){
