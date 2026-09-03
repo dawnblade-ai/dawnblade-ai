@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.84
+**Current version:** v3.85
 
 ---
 
@@ -476,6 +476,46 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### A CLAUSE THAT PRICED A PLAY THAT COULD NOT HAPPEN (v3.85)
+
+> *"Your first Spectral Shield attack each turn costs {r} less to
+> activate."*
+
+Enigma's clause 1, and it was unreachable until v3.84 built Cosmo — which
+is the whole reason her hero read **0 of 2** while her deck read 62%.
+**When a hero clause refuses, ask whether the play it names EXISTS.**
+
+**THE NAME AND THE AMOUNT ARE BOTH READ** (v3.21). A boolean would move
+*"Spectral Shield"* into the engine; a hardcoded 1 is right for her
+printing and wrong for any other. **It is spent by a swing from a card of
+that NAME** — `hist.auraAtkNames`, the twin of `atkNames` — and CR 4.4.4
+clears `hist` at the turn boundary, so *"each turn"* needs nothing else.
+
+**AND IT IS THE CALLER'S ANSWER**, because it lives on a build the parser
+cannot see. All three readers pass it, so no two disagree about the cost
+(v3.80's three-cost-readers lesson taken as an instruction).
+
+**FOUR SABOTAGES CAME BACK SILENT**, and each fixture that fixed one is a
+shape already named here: she prints ONE PIP (a synthetic hero printing
+two), every driven fixture mints Spectral SHIELDS (Waxing Specter is the
+other ward aura), a FULL POOL means the discount never decides legality
+(zero resources is where it is the whole question), and 1 minus 1 cannot
+express a negative cost.
+
+**A FIXTURE DRIVEN THROUGH A POLICY IS A FIXTURE THE POLICY CAN CONSUME.**
+The two-shield drill resolved its first attack with `sparring.act` — and
+since v3.84 the policy attacks with auras, so it spent the second Shield
+mid-resolution. It closes the chain with PASSES now. Second time in two
+versions; the first was a resource assertion taken after the policy had
+spent.
+
+**AND `assert.notEqual(x, undefined)` CANNOT SEE AN EXPLICIT `null`**,
+because `null == undefined` loosely — which is the exact distinction the
+"no hero answers undefined" drill exists to make. It asks `k in d` now.
+The passive census also accepts `object` (second widening; v3.21 added
+`string`), and `buildVanilla` answers `null` for one — the empty value of
+the type, never a boolean standing in for it.
 
 ### AN AURA THAT IS A WEAPON (v3.84)
 

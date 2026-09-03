@@ -99,7 +99,12 @@ const SIDE_FIELDS = [
    THE WHOLE ARRAY, not a set of flags: the question pairs a class with a
    type ("Wizard" AND "action" AND not "attack"), and a flat set of words
    loses that pairing the moment two different cards contribute halves. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],playTy:[],arcTaken:0});
+/* `auraAtkNames` (v3.84) — which auras have attacked this turn, by NAME.
+   Enigma's clause 1 prices "your first SPECTRAL SHIELD attack each turn",
+   which is a fact about one named card rather than about aura attacks in
+   general: a Waxing Specter swinging first must not spend the Shield's
+   discount. Same shape and reason as `atkNames`, one route over. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],arcTaken:0});
 
 function makeSide(o){
   o = o || {};

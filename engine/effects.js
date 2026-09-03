@@ -1644,7 +1644,8 @@ function makeEffects(ctx){
        and is equally already spent, so `effCost` is as wrong here as it
        is there. */
     const _auraAtk = from === "aura"
-      ? P.auraAttackOf(card, act(s), {yourTurn: actorOf(s) === s.turnPlayer}) : null;
+      ? P.auraAttackOf(card, act(s), {yourTurn: actorOf(s) === s.turnPlayer,
+                                      discount: bAct(s).auraDiscount}) : null;
     const _allyCost = from === "ally" ? ((allyAttack(card) || {}).cost || 0)
                     : _auraAtk ? (_auraAtk.cost || 0) : null;
     exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s)));
@@ -1816,6 +1817,13 @@ function makeEffects(ctx){
         b && b.uid === card.uid ? {...b, spent: true} : b);
       if(_auraAtk.oncePerTurn) actMut(n).weaponUsed =
         {...act(n).weaponUsed, ["aura" + card.uid]: true};
+      /* RECORDED AFTER THE COST IS CHARGED, or the swing spends its own
+         discount — the same ordering `hist.non` keeps for "another"
+         (v3.38). The charge site is 150 lines above, so this is safe
+         where it stands; it is stated because moving either would be a
+         silent one-resource change to Enigma's first attack every turn. */
+      actMut(n).hist = {...act(n).hist,
+        auraAtkNames: [...(act(n).hist.auraAtkNames || []), card.name]};
     }
     if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;

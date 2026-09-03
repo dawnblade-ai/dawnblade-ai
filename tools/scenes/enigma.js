@@ -42,7 +42,7 @@ module.exports = [
 },
 
 {
-  name: "her clause 1 waits on COSMO, which is what makes a Shield attack",
+  name: "her clause 1 is BUILT now — Cosmo is what made a Shield attack exist",
   why: "\"Your first Spectral Shield ATTACK each turn costs {r} less to " +
        "ACTIVATE\" — and the Spectral Shield token's entire printed text " +
        "is \"Ward 1\". It has no attack. Cosmo, Scroll of Ancestral " +
@@ -66,7 +66,20 @@ module.exports = [
       "the Shield's ward is its base {p}":
         P.auraAttackOf({name: shield.name, tt: shield.type_text, ty: shield.types,
                         kw: shield.card_keywords, tx: shield.functional_text},
-                       {gear: [cx]}, {yourTurn: true}).power
+                       {gear: [cx]}, {yourTurn: true}).power,
+      /* HER CLAUSE 1, reachable only now: until Cosmo was built there was
+         no such thing as a Spectral Shield attack, so this priced a play
+         that could not happen. */
+      "her first Shield attack each turn costs {r} less":
+        P.auraAttackOf({name: shield.name, tt: shield.type_text, ty: shield.types,
+                        kw: shield.card_keywords, tx: shield.functional_text},
+                       {gear: [cx], hist: {auraAtkNames: []}},
+                       {yourTurn: true, discount: {name: "spectral shield", amt: 1}}).cost,
+      "…and the second pays the printed {r}":
+        P.auraAttackOf({name: shield.name, tt: shield.type_text, ty: shield.types,
+                        kw: shield.card_keywords, tx: shield.functional_text},
+                       {gear: [cx], hist: {auraAtkNames: ["Spectral Shield"]}},
+                       {yourTurn: true, discount: {name: "spectral shield", amt: 1}}).cost
     };
   },
   want: {
@@ -75,7 +88,9 @@ module.exports = [
     "Cosmo grants one": true,
     "…and Cosmo READS now (v3.84)": "full",
     "a POWERLESS card is still not a swing itself (v3.44)": true,
-    "the Shield's ward is its base {p}": 1
+    "the Shield's ward is its base {p}": 1,
+    "her first Shield attack each turn costs {r} less": 0,
+    "…and the second pays the printed {r}": 1
   }
 }
 

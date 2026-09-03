@@ -469,8 +469,15 @@ test("the passive is declared in the build ledger, so no hero answers undefined"
   const d = B.buildVanilla([], [], {byName:{}}, RNG.make("led"), {n:0}).b;
   assert.strictEqual(d.weaponRefresh, false,
     "the punching bag has no weapon-refresh, and says so explicitly");
-  for(const k of B.PASSIVES)
-    assert.notEqual(d[k], undefined, k + " is unanswered by the vanilla build");
+  /* THE KEY MUST BE PRESENT, which is what "answered" means — and
+     `notEqual(x, undefined)` cannot say so, because `null == undefined`
+     under loose comparison. That is the exact distinction this drill
+     exists to make, and it could not make it until v3.84 added a passive
+     whose empty value IS null (Enigma's `auraDiscount`, an object). */
+  for(const k of B.PASSIVES){
+    assert.ok(k in d, k + " is unanswered by the vanilla build");
+    assert.notStrictEqual(d[k], undefined, k + " answers an explicit undefined");
+  }
 });
 
 /* ---- THE LEDGER AND THE BUILD MUST AGREE -----------------------------

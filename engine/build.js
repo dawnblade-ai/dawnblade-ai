@@ -351,6 +351,22 @@ function heroAbilities(heroRec, displayName, code){
      Agility, Thunder Quake, Pick Up the Point). */
   const halveBase =
     /the base \{p\} and \{d\} of cards you control are halved/.test(_htx);
+  /* ENIGMA'S CLAUSE 1 (v3.84) — "Your first Spectral Shield attack each
+     turn costs {r} less to activate."
+
+     REACHABLE ONLY NOW. Until Cosmo was built there was no such thing as
+     a Spectral Shield attack, so this priced a play that could not
+     happen — the whole reason her hero read 0 of 2.
+
+     THE CARD NAME IS CAPTURED AS A STRING (v3.21's rule), because the
+     printed line NAMES it: storing a boolean would move "Spectral Shield"
+     into `parser.js`, which is inventing card text one level up. The
+     AMOUNT is counted off the printed pips for the same reason. */
+  const _fad = _htx.match(
+    /your first (.+?) attack each turn costs ((?:\{r\})+) less to activate/);
+  const auraDiscount = _fad
+    ? {name: _fad[1].trim(), amt: (_fad[2].match(/\{r\}/g) || []).length}
+    : null;
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
   /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
      fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
@@ -383,7 +399,7 @@ function heroAbilities(heroRec, displayName, code){
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
-    becomeAgent, returnToBrood, daggerDrain, halveBase};
+    becomeAgent, returnToBrood, daggerDrain, halveBase, auraDiscount};
 }
 
 /* ---- the build --------------------------------------------------------
@@ -638,8 +654,16 @@ function buildVanilla(list, gearNames, db, rng, ctr, o){
     int: o.int != null ? o.int : 4,
     _dummy: true
   };
+  /* EVERY PASSIVE IS WRITTEN OUT IN ITS DECLARED TYPE (v2.41's rule), so
+     a passive added to `buildSide` and forgotten here reads `undefined`
+     at the call site instead of silently reading as false on a real
+     hero's turn. `object` joined the list at v3.84 and answers `null`,
+     for the same reason `string` answers "" — the empty value of the
+     type, never a boolean standing in for it. */
   for(const p of PASSIVES)
-    b[p] = PASSIVE_TYPE[p] === "number" ? 0 : PASSIVE_TYPE[p] === "string" ? "" : false;
+    b[p] = PASSIVE_TYPE[p] === "number" ? 0
+         : PASSIVE_TYPE[p] === "string" ? ""
+         : PASSIVE_TYPE[p] === "object" ? null : false;
   return {b, rng: sh.rng};
 }
 
@@ -687,7 +711,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
                   "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
-                  "daggerDrain","halveBase"];
+                  "daggerDrain","halveBase","auraDiscount"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -710,6 +734,10 @@ const PASSIVE_TYPE = {
      names no set at all, it just goes home. */
   becomeAgent: "string", returnToBrood: "boolean", daggerDrain: "number",
   halveBase: "boolean",
+  /* AN OBJECT, because the printed line names BOTH a card and an amount
+     — "your first SPECTRAL SHIELD attack costs {r} less". Two passives
+     would be two readings of one sentence. */
+  auraDiscount: "object",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into

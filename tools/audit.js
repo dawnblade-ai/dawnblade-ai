@@ -92,6 +92,10 @@ const HERO_STATICS = [
      threaded to thirty readers — see `build.halveCard`. */
   {key:"halveBase", re:/the base \{p\} and \{d\} of cards you control are halved, rounded up/,
    note:"Lyath — every card he controls is dealt at half its printed {p} and {d}, rounded up"},
+  /* ENIGMA's clause 1, built v3.84 — reachable only once Cosmo made a
+     Spectral Shield attack exist at all. */
+  {key:"auraDiscount", re:/your first .+ attack each turn costs (?:\{r\})+ less to activate/,
+   note:"Enigma — her first Spectral Shield attack each turn costs {r} less to activate"},
   /* BRIAR's two clauses, built in v3.21. Both mint a token, and the token's
      NAME is read off her printed line rather than stored as a flag — so
      these passives answer a string, not a boolean. */

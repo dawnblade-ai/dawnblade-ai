@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-03T02:37:32.528Z · app v3.84 · data sage-v13 · db 797 records
+Generated 2026-09-03T12:37:57.516Z · app v3.85 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -119,9 +119,9 @@ Generated 2026-09-03T02:37:32.528Z · app v3.84 · data sage-v13 · db 797 recor
 - 🚩 2 hero-text clause(s) not recognized by any ability reader
 
 ### Enigma (Mystic Illusionist)
-- ⚠ unrecognized: "Your first Spectral Shield attack each turn costs {r} less to activate."
+- static: Enigma — her first Spectral Shield attack each turn costs {r} less to activate
 - ⚠ unrecognized: "Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter."
-- 🚩 2 hero-text clause(s) not recognized by any ability reader
+- 🚩 1 hero-text clause(s) not recognized by any ability reader
 
 ### Arakni, Web of Deceit (Chaos Assassin)
 - static: Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again

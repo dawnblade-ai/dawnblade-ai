@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-03T02:37:32.528Z",
- "appVer": "3.84",
+ "generated": "2026-09-03T12:37:57.516Z",
+ "appVer": "3.85",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -205,12 +205,14 @@
    "int": 4,
    "tt": "Mystic Illusionist Hero - Young",
    "tx": "Your first Spectral Shield attack each turn costs {r} less to activate.\nOnce per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.",
-   "statics": [],
+   "statics": [
+    "Enigma — her first Spectral Shield attack each turn costs {r} less to activate"
+   ],
    "power": null,
    "clauses": [
     {
      "t": "Your first Spectral Shield attack each turn costs {r} less to activate.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.",
@@ -218,7 +220,7 @@
     }
    ],
    "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader"
    ]
   },
   "arakni": {

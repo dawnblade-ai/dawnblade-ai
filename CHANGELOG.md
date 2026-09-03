@@ -9,6 +9,71 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.85 — Enigma's clause 1, reachable only now
+
+> *"Your first Spectral Shield attack each turn costs {r} less to
+> activate."*
+
+**It priced a play that could not happen.** Until v3.84 built Cosmo there
+was no such thing as a Spectral Shield attack — which is the whole reason
+her hero read **0 of 2** clauses while her deck read 62%.
+
+- **The card NAME and the AMOUNT are both captured off the printed line**
+  (v3.21's rule). A boolean would move *"Spectral Shield"* into the
+  engine, which is inventing card text one level up; a hardcoded 1 would
+  be right for her printing and wrong for any other.
+- **It is spent by a swing from a card of that NAME**, not by any aura
+  attack — a Waxing Specter swinging first must not spend the Shield's
+  discount. `hist.auraAtkNames` is the record, and **CR 4.4.4 clears
+  `hist` at the turn boundary**, so *"each turn"* needs no bookkeeping of
+  its own. Same shape and reason as `hist.atkNames`, one route over.
+- **The discount is the caller's answer**, because it lives on a build the
+  parser cannot see — and all three readers (`legal`, `doActivate`,
+  `execute`) pass it, so no two can disagree about the cost (v3.80).
+- **It is floored at zero.** CR 4.4.3e — points are lost, never owed.
+
+### FOUR SABOTAGES CAME BACK SILENT
+
+Each needed a fixture that could actually express its bug:
+
+| sabotage | silent because | seen by |
+|---|---|---|
+| the amount hardcoded to 1 | **she prints one pip** | a synthetic hero record printing `{r}{r}` (sixth time) |
+| the NAME test dropped | every driven fixture mints Spectral Shields | **Waxing Specter** — the other ward aura, which also prints ward 3 |
+| judge not passing the discount to `legal` | a full pool means the discount never decides anything | **zero resources**, where it is the whole question |
+| the cost allowed to go negative | 1 minus 1 is 0 either way | an oversized discount |
+
+### And a drill driven THROUGH the policy
+
+The two-shield fixture resolved the first attack with `sparring.act` — and
+**since v3.84 the policy can attack with an aura**, so it spent the second
+Shield during the resolution and the drill was handed *"Spectral Shield
+has already attacked this turn"*. It closes the chain with **passes**
+now. Second time in two versions that driving a fixture through a policy
+let the policy consume it.
+
+### Two ledgers moved, deliberately
+
+- **`PASSIVE_TYPE` accepts `object`** — the second widening of that census
+  (v3.21 added `string` for Briar's token name). Enigma's line names both
+  a card and an amount, so splitting it into two passives would be two
+  readings of one printed sentence. `buildVanilla` answers `null` for one,
+  the empty value of the type, never a boolean standing in for it.
+- **`assert.notEqual(x, undefined)` could not tell an absent key from an
+  explicit `null`**, because `null == undefined` under loose comparison —
+  which is the exact distinction that drill exists to make, and it could
+  not make it until a passive whose empty value *is* null arrived.
+
+### Measured
+
+- **Enigma 3 wins → 25**, first in the table, from 3 two versions ago.
+- 210 self-play games: **0 stalls, 0 refusals, 0 violations, 0 malformed
+  feed**.
+- The sweep's hero list: **6 unread clauses**, Enigma 2/2 → **1/2**.
+- 9 sabotages, 9 bite, 0 silent.
+
+---
+
 ## v3.84 — an aura that is a weapon
 
 > **Cosmo, Scroll of Ancestral Tapestry** — *"During your turn, auras you

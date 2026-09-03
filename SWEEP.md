@@ -6,16 +6,12 @@ axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 5 heroes, 7 unread clauses | never charged by the stack |
+| Hero abilities | 5 heroes, 6 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
 | Ruled but not built | 41 cards | understood ≠ built |
 | **Fail states** | 72 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
-
-### Enigma — 2/2 unread
-- ❌ Your first Spectral Shield attack each turn costs {r} less to activate.
-- ❌ Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 
 ### Fai — 2/3 unread
 - ❌ You may start the game with a Phoenix Flame in your graveyard.
@@ -26,6 +22,10 @@ axes it never covered.
 - ❌ Essence of Earth and Lightning
 - ✅ The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.
 - ✅ The second time you play a non-attack action card each turn, create an Embodiment of Lightning token.
+
+### Enigma — 1/2 unread
+- ✅ Your first Spectral Shield attack each turn costs {r} less to activate.
+- ❌ Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 
 ### Gravy Bones — 1/2 unread
 - ❌ Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.84 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.85 · PHASE C · HERO BY HERO
 
 ## ⚠ COSMO IS BUILT (v3.84) — AND ENIGMA IS ALIVE
 
@@ -6,10 +6,10 @@
 → 24**, and 210 self-play games came back with **zero stalls** for the
 first time.
 
-**HER CLAUSE 1 IS NOW REACHABLE** — *"your first Spectral Shield attack
-each turn costs {r} less to activate"* — because there is finally such an
-attack to discount. It is a `costOff`-shaped grant scoped to the first
-aura attack of the turn.
+**HER CLAUSE 1 IS BUILT (v3.85)** — *"your first Spectral Shield attack
+each turn costs {r} less to activate"*. She reads 1 of 2 now, and the
+remaining half is the `{c}` ruling below. **Enigma 3 wins → 25, first in
+the table.**
 
 **HER CLAUSE 2 IS STILL BLOCKED ON `{c}`**, which is a RULING and not an
 engineering call: the symbol appears on exactly one record in 797 (hers),

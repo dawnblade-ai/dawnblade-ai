@@ -900,24 +900,29 @@ function legal(g, a, seat){
          card that is both would be an ally first. One reader, shared with
          `doActivate` and `execute`. */
       const aa = PR.allyAttack(b.card)
-        || PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
+        || PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
+                                        discount: bOf(g, seat).auraDiscount});
       if(!aa) return b.card.name + " prints no attack to activate";
+      /* THE ROUTE NAMES ITSELF IN EVERY REFUSAL BELOW (v3.84). It used to
+         say "an ally cannot attack here" for an aura — a refusal that
+         names the wrong thing teaches the wrong lesson, which is the same
+         reason `legal`'s hand-ability branch asks the printed rule first. */
+      const _route = PR.allyAttack(b.card) ? "an ally" : "an aura";
       /* A TAP AND AN ALLOWANCE EXPIRE DIFFERENTLY — the Sledge/Scorpio
          rule (v2.46). `spent` is the arena's tap and is lifted at CR
          4.4.3d; `Once per Turn` comes back at the turn boundary. */
       if(aa.taps && b.spent) return b.card.name + " is tapped until your end phase";
-      const _route = PR.allyAttack(b.card) ? "ally" : "aura";
-      if(aa.oncePerTurn && (sd.weaponUsed || {})[_route + a.uid])
+      if(aa.oncePerTurn && (sd.weaponUsed || {})[(_route === "an ally" ? "ally" : "aura") + a.uid])
         return b.card.name + " has already attacked this turn";
       /* AN AURA HAS NO LIFE, and `allyLife` answers null for one — so the
          living-object test is the ALLY's and is asked only of an ally.
          CR 1.4.5a makes an ally attackable because it has life; an aura
          is a permanent that has been granted an attack, which is a
          different fact about a different object. */
-      if(_route === "ally" && !(GM.allyLife(b) > 0))
+      if(_route === "an ally" && !(GM.allyLife(b) > 0))
         return b.card.name + " is not on the battlefield";
       const win = P.speedAllowed(g, seat);
-      if(win.indexOf("action") < 0) return "no action-speed window — an ally cannot attack here";
+      if(win.indexOf("action") < 0) return "no action-speed window — " + _route + " cannot attack here";
       if(!(sd.ap > 0)) return "no action point left";
       if((aa.cost || 0) > sd.res + payCeiling(sd, null))
         return b.card.name + " costs " + aa.cost + " to attack and you cannot raise it";
@@ -1180,7 +1185,8 @@ const boardAttackOf = (g, seat, uid) => {
   if(!b) return null;
   const ally = PR.allyAttack(b.card);
   if(ally) return {cost: ally.cost || 0, power: +b.card.power || 0, kind: "ally"};
-  const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
+  const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
+                                            discount: bOf(g, seat).auraDiscount});
   return aura ? {cost: aura.cost || 0, power: aura.power || 0, kind: "aura"} : null;
 };
 const targetOf = (g, seat, spec) => {
@@ -1821,7 +1827,8 @@ function doActivate(g, a, seat){
          a number — so no two of the three can disagree (v3.80). */
       const _ally = PR.allyAttack(b.card);
       const _aura = _ally ? null
-        : PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer});
+        : PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
+                                       discount: bOf(g, seat).auraDiscount});
       const aa = _ally || _aura || {cost: 0};
       const route = _ally ? "ally" : _aura ? "aura" : "ally";
       const target = targetOf(g, seat, a.target);

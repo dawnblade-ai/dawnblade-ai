@@ -184,8 +184,18 @@ test("PASSIVE_TYPE covers exactly PASSIVES", () => {
        list must stay a deliberate edit: it is what stops a passive being
        added with no declared type, where `typeof x !== undefined` quietly
        becomes the whole check. */
-    assert.ok(t === "boolean" || t === "number" || t === "string",
-      `${p}: a passive answers a boolean, a number or a string, not ${t}`);
+    /* AN OBJECT JOINED THE LIST AT v3.84, deliberately — the second time
+       this census has been widened, and for the same reason as the first
+       (v3.21 added "string" so Briar's token NAME could ride on the
+       passive rather than being hardcoded in `effects.js`).
+
+       Enigma's clause 1 names BOTH a card and an amount — "your first
+       SPECTRAL SHIELD attack each turn costs {r} less" — so splitting it
+       into two passives would be two readings of one printed sentence.
+       What this census actually protects is that a hero ANSWERS rather
+       than defaulting to `undefined`, and an object answers. */
+    assert.ok(t === "boolean" || t === "number" || t === "string" || t === "object",
+      `${p}: a passive answers a boolean, a number, a string or an object, not ${t}`);
 });
 
 test("every hero's build answers every passive, and its deck is 60 cards of hero", {skip}, () => {

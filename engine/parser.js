@@ -4603,7 +4603,25 @@ function auraAttackOf(card, sd, o){
     .map(x => (x && !x.destroyed) ? auraWeaponGrant(x) : null)
     .find(Boolean);
   if(!g) return null;
-  return {cost: g.cost, taps: g.taps, oncePerTurn: g.oncePerTurn,
+  /* THE HERO'S FIRST-ATTACK DISCOUNT (v3.84) — Enigma's clause 1, and it
+     is the CALLER'S ANSWER because it lives on a build, which this file
+     cannot see. A caller that says nothing pays full price: weaker than
+     printed and visible, the direction every optional answer here takes.
+
+     "YOUR FIRST <NAME> ATTACK EACH TURN" IS A FACT ABOUT ONE NAMED CARD,
+     so it is spent by a swing from a card of that name and by nothing
+     else — a Waxing Specter attacking first must not spend the Spectral
+     Shield's discount. `hist.auraAtkNames` is that record, and CR 4.4.4
+     clears it at the turn boundary so "each turn" needs no other
+     bookkeeping. */
+  let cost = g.cost;
+  const d = o.discount;
+  if(d && d.amt && d.name
+     && String(card.name || "").toLowerCase() === String(d.name).toLowerCase()
+     && !((sd.hist || {}).auraAtkNames || [])
+          .some(n => String(n).toLowerCase() === String(d.name).toLowerCase()))
+    cost = Math.max(0, cost - d.amt);
+  return {cost, taps: g.taps, oncePerTurn: g.oncePerTurn,
           power: w, gaWithCounters: !!g.gaWithCounters};
 }
 

@@ -51,15 +51,41 @@ function table(o){
   let g = J.newMatch({builds: [b0.b, b1.b], names: [h0.n, h1.n],
                       heroKeys: [h0.k, h1.k], rng, first: 0, tokSeq: ctr.n});
   g = J.withEffects(g, (fx, n) =>
-    ({game: fx.runOps(n, [["token", "Spectral Shield", 1, "self"]], "probe")})).game;
-  const sh = (g.sides[0].board || []).find(e => /Spectral Shield/.test(e.card.name));
+    ({game: fx.runOps(n, [["token", "Spectral Shield", o.shields || 1, "self"]], "probe")})).game;
+  const shields = (g.sides[0].board || []).filter(e => /Spectral Shield/.test(e.card.name));
+  const sh = shields[0];
   const sides = g.sides.slice();
   sides[0] = Object.assign({}, sides[0], {res: 9, hand: []},
     o.counters ? {counters: {[sh.uid]: {pow: o.counters}}} : {},
-    o.noCosmo ? {gear: (sides[0].gear || []).filter(x => !/^Cosmo/.test(x.name))} : {});
+    o.noCosmo ? {gear: (sides[0].gear || []).filter(x => !/^Cosmo/.test(x.name))} : {},
+    /* HER CLAUSE 1 IS A HERO PASSIVE, so a fixture that wants full price
+       strips it from the BUILD rather than from the card. */
+    o.noDiscount ? {} : {});
   sides[1] = Object.assign({}, sides[1], {hand: []});
-  return {g: Object.assign({}, g, {sides}), uid: sh.uid};
+  let out = Object.assign({}, g, {sides});
+  if(o.noDiscount){
+    const builds = (out.builds || []).slice();
+    builds[0] = Object.assign({}, builds[0], {auraDiscount: null});
+    out = Object.assign({}, out, {builds});
+  }
+  return {g: out, uid: sh.uid, uid2: shields[1] && shields[1].uid};
 }
+/* CLOSE THE CHAIN WITH PASSES ALONE. Nothing else acts, so the state
+   that comes back is the fixture's own — see the note in the two-shield
+   drill for what happens when a policy drives it instead. */
+function passOut(n){
+  for(let i = 0; i < 60 && n.pend; i++){
+    let moved = false;
+    for(const s of [0, 1]){
+      const o = J.reduce(n, {t: "pass"}, s);
+      if(o.error) continue;
+      n = o.state; moved = true; break;
+    }
+    if(!moved) break;
+  }
+  return n;
+}
+
 /* drive the declared attack all the way to resolution */
 function resolve(n){
   for(let i = 0; i < 40 && n.pend; i++){
@@ -141,8 +167,8 @@ test("DRIVEN: a Spectral Shield attacks for its ward, and costs the point", {ski
      pool dropped by 2 and the drill blamed the aura for a card the
      opponent played. A measurement taken through unrelated actions is
      not a measurement of the thing it names. */
-  assert.equal(declared.sides[0].res, t.g.sides[0].res - 1,
-    "the granted ability costs {r}, and it is charged at the ONE charge site");
+  assert.equal(declared.sides[0].res, t.g.sides[0].res,
+    "her FIRST Spectral Shield attack each turn costs {r} less — 1 minus 1 is free");
   const out = resolve(declared);
   assert.equal(t.g.sides[1].hp - out.sides[1].hp, 1, "one damage — its ward");
   assert.equal(out.sides[0].ap, t.g.sides[0].ap - 1,
@@ -153,14 +179,150 @@ test("DRIVEN: an aura it cannot fund is refused, not swung for free", {skip}, ()
   /* v2.04 — AN UNPAYABLE COST IS INERT, NEVER FREE. With no resources and
      nothing in hand to pitch, `legal` must refuse: offering it opens a
      payment whose only exit is cancel, which is the live-lock v2.45
-     names. */
-  const t = table();
+     names. Her discount is stripped, or the attack is free and there is
+     nothing to be unable to fund. */
+  const t = table({noDiscount: true});
   const sides = t.g.sides.slice();
   sides[0] = Object.assign({}, sides[0], {res: 0, hand: []});
   const g = Object.assign({}, t.g, {sides});
   const why = J.legal(g, {t: "activate", uid: t.uid}, 0);
   assert.ok(why != null, "it must be refused — got: " + why);
   assert.match(String(why), /cannot raise it/);
+});
+
+/* ---- ENIGMA'S CLAUSE 1 (v3.84) --------------------------------------
+   "Your first Spectral Shield attack each turn costs {r} less to
+    activate."
+
+   REACHABLE ONLY NOW. Until Cosmo was built there was no such thing as a
+   Spectral Shield attack, so this priced a play that could not happen —
+   which is the whole reason her hero read 0 of 2 clauses. */
+
+test("the discount is READ — the card name and the amount both", {skip}, () => {
+  /* THE NAME IS CAPTURED AS A STRING (v3.21) because the printed line
+     NAMES it: a boolean would move "Spectral Shield" into the engine,
+     which is inventing card text one level up. */
+  const W = loadData();
+  const b = B.buildSideDefault(W.HEROES.find(x => x.k === "enigma"),
+    G.parseDeck(W.DECKS.enigma), H.db(), RNG.make("d"), {n: 0}).b;
+  assert.deepEqual(b.auraDiscount, {name: "spectral shield", amt: 1});
+  const k = B.buildSideDefault(W.HEROES.find(x => x.k === "kayo"),
+    G.parseDeck(W.DECKS.kayo), H.db(), RNG.make("d"), {n: 0}).b;
+  assert.equal(k.auraDiscount, null, "and only she prints it");
+});
+
+test("the AMOUNT is read, not the one pip she happens to print", {skip}, () => {
+  /* SHE PRINTS {r}, so no fixture built on her alone can tell a read
+     number from a literal 1 (v3.32, v3.74, v3.77, v3.78, v3.84 — sixth
+     time). A synthetic hero record printing {r}{r} is what sees it. */
+  const two = {n: "Enigma, Synthetic", tt: "Illusionist Hero - Young",
+               ty: ["Illusionist", "Hero"], health: 20, intellect: 4,
+               tx: "Your first Spectral Shield attack each turn costs {r}{r} "
+                 + "less to activate."};
+  assert.deepEqual(B.heroAbilities(two, two.n).auraDiscount,
+    {name: "spectral shield", amt: 2});
+  const other = Object.assign({}, two, {tx: "Your first Waxing Specter attack "
+    + "each turn costs {r} less to activate."});
+  assert.deepEqual(B.heroAbilities(other, other.n).auraDiscount,
+    {name: "waxing specter", amt: 1}, "…and the NAME is read too");
+});
+
+test("the discount can never drive a cost below zero", {skip}, () => {
+  /* CR 4.4.3e — points are lost, never owed — and a negative cost would
+     hand the seat a resource. Her printed 1 against a printed 1 cannot
+     express it, so the discount is oversized here. */
+  const shield = mk("Spectral Shield");
+  const on = {gear: [mk("Cosmo, Scroll of Ancestral Tapestry")], hist: {auraAtkNames: []}};
+  const at = P.auraAttackOf(shield, on,
+    {yourTurn: true, discount: {name: "spectral shield", amt: 99}});
+  assert.equal(at.cost, 0, "floored at zero, never negative");
+});
+
+test("DRIVEN: a DIFFERENTLY NAMED aura is not discounted", {skip}, () => {
+  /* "YOUR FIRST *SPECTRAL SHIELD* ATTACK" NAMES ONE CARD. Every other
+     driven fixture here mints Spectral Shields, so dropping the name test
+     is invisible to them — Waxing Specter is the ward aura that tells the
+     two readings apart (and prints ward 3, so it also proves the power is
+     per card). */
+  const specter = mk("Waxing Specter");
+  const on = {gear: [mk("Cosmo, Scroll of Ancestral Tapestry")], hist: {auraAtkNames: []}};
+  const d = {name: "spectral shield", amt: 1};
+  assert.equal(P.auraAttackOf(specter, on, {yourTurn: true, discount: d}).cost, 1,
+    "a Waxing Specter pays the printed {r} — her line does not name it");
+  assert.equal(P.auraAttackOf(mk("Spectral Shield"), on, {yourTurn: true, discount: d}).cost, 0,
+    "…and the card she DOES name is free");
+});
+
+test("DRIVEN: the discount decides LEGALITY, not just the charge", {skip}, () => {
+  /* `legal` ASKS WHETHER THE SEAT COULD RAISE THE COST, and with a full
+     pool the discount never decides anything — which is why judge failing
+     to pass it was invisible to every other drill here. At zero
+     resources and an empty hand it is the whole question. */
+  const t = table();
+  const strip = (g, disc) => {
+    const sides = g.sides.slice();
+    sides[0] = Object.assign({}, sides[0], {res: 0, hand: []});
+    const builds = (g.builds || []).slice();
+    builds[0] = Object.assign({}, builds[0], disc ? {} : {auraDiscount: null});
+    return Object.assign({}, g, {sides, builds});
+  };
+  assert.equal(J.legal(strip(t.g, true), {t: "activate", uid: t.uid}, 0), null,
+    "with her discount the attack is free, so it is legal at zero resources");
+  assert.ok(J.legal(strip(t.g, false), {t: "activate", uid: t.uid}, 0) != null,
+    "…and without it, it is not");
+});
+
+test("DRIVEN: the FIRST is discounted and the SECOND pays full", {skip}, () => {
+  /* THE FIXTURE IS TWO SHIELDS, because the discount is spent by a swing
+     from a card of that NAME — "your first SPECTRAL SHIELD attack". One
+     shield cannot tell "discounted once" from "discounted always": the
+     once-per-turn limit stops the same aura swinging twice, so the second
+     attack has to come from a second copy. */
+  /* THE FIRST SHIELD CARRIES A COUNTER, so Cosmo's go again keeps the
+     action point and the second attack is legal at all. Without it the
+     first swing spends the turn's one point and the second is refused —
+     correct rules, and a fixture that cannot reach the thing it names.
+     It also means this drill exercises BOTH of Cosmo's sentences. */
+  const t = table({shields: 2, counters: 1});
+  assert.ok(t.uid2, "the fixture needs two");
+  const declared = J.reduce(t.g, {t: "activate", uid: t.uid}, 0).state;
+  assert.equal(declared.sides[0].res, t.g.sides[0].res,
+    "the first is free — 1 minus her 1");
+  /* THE FIRST CHAIN MUST CLOSE BEFORE THE SECOND CAN BE DECLARED. Written
+     as two `reduce`s back to back, the second was refused "no
+     action-speed window" and the resource simply did not move — which
+     looks exactly like a discount that never spends. */
+  /* RESOLVED BY PASSING, NOT BY THE POLICY. `resolve()` lets
+     `sparring.act` act — and since v3.84 the policy can propose an aura
+     attack, so it spent the SECOND shield during the resolution and this
+     drill was handed "Spectral Shield has already attacked this turn".
+     A fixture driven through a policy is a fixture the policy can
+     consume; second time in one version. */
+  const one = passOut(declared);
+  const two = J.reduce(one, {t: "activate", uid: t.uid2}, 0);
+  assert.ok(!two.error, "the second must be legal: " + two.error);
+  assert.equal(two.state.sides[0].res, one.sides[0].res - 1,
+    "…and the second pays the printed {r}");
+});
+
+test("DRIVEN: without the passive, the first pays full too", {skip}, () => {
+  /* THE NEGATIVE CONTROL. Every drill above passes on an engine where the
+     aura attack is simply free. */
+  const t = table({noDiscount: true});
+  const out = J.reduce(t.g, {t: "activate", uid: t.uid}, 0).state;
+  assert.equal(out.sides[0].res, t.g.sides[0].res - 1);
+});
+
+test("the discount is spent by name, and the record clears with the turn", {skip}, () => {
+  /* "EACH TURN" NEEDS NO BOOKKEEPING OF ITS OWN — CR 4.4.4 clears `hist`
+     at the turn boundary, which is the same thing `atkNames` leans on. */
+  const S = require("../engine/sides.js");
+  assert.deepEqual(S.freshHist().auraAtkNames, [],
+    "the record exists and starts empty every turn");
+  const t = table();
+  const after = J.reduce(t.g, {t: "activate", uid: t.uid}, 0).state;
+  assert.deepEqual(after.sides[0].hist.auraAtkNames, ["Spectral Shield"],
+    "the swing is recorded by NAME, not by uid — a second copy spends it too");
 });
 
 test("DRIVEN: a +1{p} counter makes it 2, and it goes again", {skip}, () => {
