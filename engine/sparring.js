@@ -138,6 +138,32 @@ function payAction(g, seat, p, o){
      THE WALL STANDS. This reads no card text — `judge` asked the
      question, and "no" is a complete answer to "you may". */
   if(p.kind === "boost") return {t: "boost", yes: false};
+  /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
+     `judge.PENDING_KINDS` is a census of four and this function branched
+     on ONE, falling through to `paySel` for the rest — which is v3.35's
+     blacklist defect in a third consumer. It could not be reached until
+     now for a precise reason: both kinds are opened by NON-ATTACK plays,
+     and until this version the policy could not play one. Measured, it
+     was 21 refusals in 210 games, every one of them Burn Up // Shock.
+
+     A REFUSAL IS ALWAYS A BUG IN THIS FILE (the module's own contract),
+     so the fix belongs here rather than in `legal`.
+
+     SPLIT — declare the LEFT half, never `both`. That is `judge`'s own
+     default and its stated reason: melding doubles the base cost and
+     hands a player a textbox they never asked for, so defaulting to it
+     is a judgement this file cannot make. `legal` refuses `both` outright
+     on a card with no meld, and refuses a half whose window is wrong —
+     so asking for half 0 is the one answer that is always available, the
+     same argument the ally-target comment above makes for naming the
+     hero.
+
+     ADDPAY — declined, exactly as boost is, and for the identical reason:
+     `autoAnswer`'s standing policy is to decline what is optional, "no"
+     is a complete answer to "you may", and declining can never make the
+     seat stronger than printed. */
+  if(p.kind === "split")  return {t: "split", half: 0};
+  if(p.kind === "addPay") return {t: "addPay", yes: false};
   if(p.need - sd.res - J.paySum(sd) <= 0) return {t: "payConfirm"};
   const c = pitchPick(sd, p.card, o);
   /* Unreachable after a play this policy proposed — `legal` guarantees
@@ -271,8 +297,55 @@ function offence(g, seat, o){
      ability in this pool draws, digs or buffs rather than dealing damage,
      so spending the action point on it ahead of a swing would be a
      judgement this file cannot make without reading the card. */
-  return legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat)
-    ? {t: "activate", from: "hero", uid: "hpow"} : null;
+  if(legal(g, {t: "activate", from: "hero", uid: "hpow"}, seat))
+    return {t: "activate", from: "hero", uid: "hpow"};
+
+  /* ---- A NON-ATTACK IS STILL A PLAY (v3.80) --------------------------
+     THE FILTER ABOVE IS `num(x.c, "power") > 0`, AND A NON-ATTACK PRINTS
+     NO POWER. So until now this policy could not play one — at all, from
+     any zone, in any state. Measured over the fifteen precons, the share
+     of each deck it could never touch:
+
+         Dorinthea 91%   Blaze 88%   Iyslander 85%   Enigma 62%
+         Gravy 55%   Viserai/Arakni/Lyath 52%   Briar 48%   Azalea 45%
+
+     That is not a tuning complaint. It is v3.50's finding one source
+     over — "a feature with no caller looks exactly like a feature that
+     works, until you count" — and it had three visible symptoms nobody
+     had connected: Iyslander and Enigma won ZERO of 210 games and Blaze
+     won 2; every one of the 7 stalls was between two of those three; and
+     a stalled game is literally both seats passing forever with four
+     legal plays in hand, because `legal` said yes and nothing proposed
+     them.
+
+     IT ALSO MEANS THE HARNESS WAS EXERCISING HALF THE ENGINE. Every
+     arcane, every aura, every token mint and every pump in the pool rides
+     on a non-attack, so none of them had ever been driven here.
+
+     LAST, AND THE ORDER IS A PRINTED-NUMBERS ARGUMENT rather than a
+     reading of what the card does. Everything above it either deals
+     damage or spends no card: an attack wins the game, a weapon swing is
+     free, and a hero ability leaves the hand alone. A non-attack spends a
+     card AND the turn's action point, and a card in hand can always
+     block — so it is what this seat does when there is nothing better,
+     which is the same judgement the hero-ability comment above already
+     makes.
+
+     STILL NO CARD TEXT. `cost` and `pitch` are printed numbers and
+     `legal` answers everything else, so the contract this file is drilled
+     against is untouched: the cheapest first, ties broken on pitch and
+     then on uid, because a ranking that leaves ties unbroken is a desync
+     waiting for two equal cards. */
+  const nonAtk = from
+    .map(x => ({c: x.c, uid: x.c && x.c.uid, from: x.from}))
+    .filter(x => x.c && num(x.c, "power") <= 0)
+    .filter(x => affordableWithin(sd, x.c, o))
+    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost")
+                 || num(a.c, "pitch") - num(b.c, "pitch") || byUid(a, b))
+    .find(x => legal(g, {t: "play", uid: x.uid, from: x.from}, seat));
+  if(nonAtk) return {t: "play", uid: nonAtk.uid, from: nonAtk.from};
+
+  return null;
 }
 
 /* WOULD THIS COST MORE OF THE HAND THAN IT IS WORTH?

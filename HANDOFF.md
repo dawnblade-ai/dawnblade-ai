@@ -1,4 +1,16 @@
-# Handoff — Dawnblade, at v3.79 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.80 · PHASE C · HERO BY HERO
+
+## ⚠ THE HARNESS ONLY STARTED PLAYING THE WHOLE GAME AT v3.80
+
+`sparring.act` could not play a NON-ATTACK until v3.80 — 85-91% of three
+heroes' decks, and every arcane, aura, token mint and pump in the pool.
+So every `npm run play` number recorded before v3.80 was measured on
+roughly half the engine, and the two bugs that fix immediately surfaced
+(a whole `PENDING_KINDS` branch, and an activation charging more than
+`legal` checked) had never been reachable.
+
+**Re-run any measurement you are about to rely on.** The win table, the
+route-coverage counts and the mirror balance all moved.
 
 ## ⚠ SEVEN HEROES FINISHED — WHAT IS LEFT
 

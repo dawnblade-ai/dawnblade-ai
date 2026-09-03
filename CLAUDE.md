@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.79
+**Current version:** v3.80
 
 ---
 
@@ -476,6 +476,77 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### THE POLICY COULD NOT PLAY A NON-ATTACK (v3.80)
+
+`sparring.offence` filtered its candidates on **`num(x.c, "power") > 0`**,
+and a non-attack prints no power — so the policy could not play one from
+any zone in any state, and never had. Measured over the fifteen precons,
+the share of each deck it could never touch: **Dorinthea 91%, Blaze 88%,
+Iyslander 85%**, Enigma 62%, Gravy 55%, Viserai/Arakni/Lyath 52%, Briar
+48%, Azalea 45%, Kayo 4%.
+
+**THREE SYMPTOMS NOBODY HAD CONNECTED.** Iyslander and Enigma won ZERO of
+210 games and Blaze won 2; every one of the 7 stalls was between two of
+those three; and a stalled game was literally **both seats passing forever
+with four LEGAL plays in hand**. v3.50's sentence one source over: *a
+feature with no caller looks exactly like a feature that works, until you
+count.*
+
+**AND THE HARNESS WAS EXERCISING HALF THE ENGINE.** Every arcane, aura,
+token mint and pump in the pool rides on a non-attack.
+
+**IT SITS LAST, AND THE ORDER IS A PRINTED-NUMBERS ARGUMENT.** Everything
+above it deals damage or spends no card; a non-attack spends a card AND
+the action point, and a card in hand can always block. `cost` and `pitch`
+are printed numbers and `legal` answers the rest, so the no-card-text
+contract is untouched. Stalls **7 → 1**, and every hero wins games.
+
+### AN ACTIVATION READS ITS COST THREE TIMES (v3.80)
+
+| reader | asks |
+|---|---|
+| `judge.legal` | could this seat **raise** it? (pool + what it can pitch) |
+| `judge.doActivate` | must a **payment** open? (pool alone) |
+| `effects.execute` | **charge** it |
+
+**Only the third used `effCost`.** Driven: Briar activating Scorpio, Comet
+Tail (printed `{t}`, so 0) **under a Frostbite**, which taxes +1. `legal`
+said yes against 0, `doActivate` saw `0 > 0` and opened no payment, and
+`execute` charged 1 into a seat holding 0 — **`res: -1`**, `NEGATIVE-RES`,
+CR 4.4.3e, and the `legal`/`reduce` agreement `fuzz.test.js` exists to
+hold.
+
+**v2.80 FOUND THIS ON THE PLAY ROUTE AND LEFT IT WRONG ON ALL THREE
+ACTIVATION ROUTES.** Its own words: *"`effCost` is READ TWICE and the reads
+are different questions."*
+
+**THE ALLY BRANCH STAYS PRINTED, DELIBERATELY** — `execute` charges
+`allyAttack(card).cost` there, not `effCost` (v3.44). **Each read asks
+what its own charge site asks**, and a sabotage switching the ally branch
+fails two drills.
+
+**IT NEEDED THE POLICY FIX TO BECOME REACHABLE**, because a Frostbite
+arrives on a NON-ATTACK. A guard rail is only as good as the states that
+reach it — which is the argument for `npm run play` stated from the third
+end now.
+
+### `PENDING_KINDS` IS A CENSUS, AND THE POLICY WAS A THIRD BLACKLIST (v3.80)
+
+v3.35 made `judge.PENDING_KINDS` a census because the TABLE's demux was a
+blacklist. `sparring.payAction` was the same shape: it branched on `boost`
+and fell through to a `paySel` that `legal` REFUSES. Unreachable until
+now, and for a precise reason — **`split` and `addPay` are both opened by
+non-attack plays**. Measured: 21 refusals in 210 games, every one Burn Up
+// Shock. **When a census exists, grep for every consumer of it.**
+
+### THE ONE REMAINING STALL IS A REAL DRAW (v3.80)
+
+`iyslander-boltyn-0` runs to turn 1566 with **both decks empty**, two
+cards in each hand, and `Raydn, Duskbane resolves for 0` forever. CR 4.5.3
+has no deck-out loss — three ways to lose and no more — so it is a genuine
+unwinnable board, not an engine defect. Recorded rather than "fixed" by
+inventing a rule.
 
 ### A CARD AT `none` WHOSE PAYLOAD PARSES IS A COST OR A TRIGGER (v3.79)
 

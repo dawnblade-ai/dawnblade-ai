@@ -330,3 +330,137 @@ test("a card never pitches for itself, and never twice", {skip}, () => {
   assert.equal(SP.pitchPick({res: 0, paySel: ["b", "c"], hand: sd.hand}, {uid: "self"}, SP.DEFAULTS), null,
     "the policy kept selecting once the hand was exhausted — a payment that never confirms");
 });
+
+/* ---- A NON-ATTACK IS STILL A PLAY (v3.80) ------------------------------
+   The `offence` filter was `num(x.c, "power") > 0`, and a non-attack
+   prints no power — so this policy could not play one from any zone in
+   any state. Measured over the fifteen precons, the share of each deck it
+   could never touch ran from 4% (Kayo) to 91% (Dorinthea), and three
+   heroes were effectively unpilotable: Iyslander and Enigma won ZERO of
+   210 self-play games and Blaze won 2. Every stall in that run was
+   between two of those three, and a stalled game was literally both seats
+   passing forever with four LEGAL plays in hand. */
+
+test("a hand of non-attacks is played, not passed", {skip}, () => {
+  /* THE SHAPE THAT STALLED. Iyslander opens on four Wizard Actions, every
+     one of them legal, and the policy used to answer `endTurn`. */
+  const g = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  const hand = g.sides[0].hand;
+  assert.ok(hand.length > 0);
+  assert.ok(hand.every(c => !(c.power > 0)),
+    "the fixture must be all non-attacks, or it proves nothing");
+  assert.ok(hand.every(c => J.legal(g, {t: "play", uid: c.uid, from: "hand"}, 0) == null),
+    "…and every one of them must already be LEGAL — the engine was never the blocker");
+  const a = SP.act(g, 0);
+  assert.equal(a && a.t, "play", "the policy must propose one of them");
+  assert.ok(hand.some(c => c.uid === a.uid));
+});
+
+test("an ATTACK still outranks a non-attack — the addition changed no order", {skip}, () => {
+  /* THE NEGATIVE CONTROL, AND IT NEEDS A MIXED HAND. Written against
+     Kayo's opening — which is ALL attacks — it passed with the non-attack
+     branch moved ABOVE the attack pick, because there was no non-attack
+     for the wrong order to choose. A fixture where the two cases cannot
+     both occur has tested neither (v3.50). */
+  const g0 = match({h0: heroBy(/kayo/i), h1: heroBy(/dorinthea/i), seed: "spar"});
+  const atk = g0.sides[0].hand.find(c => c.power > 0);
+  assert.ok(atk, "the fixture needs an attack");
+  /* a cheap, always-legal non-attack beside it, so the wrong order has
+     something to pick */
+  const non = {uid: 8801, name: "Cheap Non-Attack", pitch: 1, cost: 0, power: null,
+               def: 2, tt: "Generic Action", ty: ["Generic", "Action"], kw: [], tx: ""};
+  const sides = g0.sides.slice();
+  sides[0] = Object.assign({}, sides[0], {hand: [atk, non], res: 9});
+  const g = Object.assign({}, g0, {sides});
+  assert.equal(J.legal(g, {t: "play", uid: non.uid, from: "hand"}, 0), null,
+    "…and the non-attack must be legal, or the ordering is never tested");
+  const a = SP.act(g, 0);
+  assert.equal(a.t, "play");
+  assert.equal(a.uid, atk.uid,
+    "the attack is chosen — an attack wins the game and a non-attack spends "
+    + "a card that could have blocked");
+});
+
+test("the non-attack ranking is a TOTAL order — the uid breaks a real tie", {skip}, () => {
+  /* A RANKING THAT LEAVES TIES UNBROKEN IS A DESYNC waiting for two equal
+     cards. Asserting `act()` twice over one state proves NOTHING — any
+     deterministic function passes that — so the fixture holds two
+     non-attacks IDENTICAL in every printed number the ranking reads, and
+     the uid is the only thing left to decide. Driven in both hand orders,
+     because a stable sort hides an absent tie-break when the input order
+     already happens to agree. */
+  const g0 = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  const twin = uid => ({uid, name: "Twin " + uid, pitch: 1, cost: 0, power: null,
+                        def: 2, tt: "Generic Action", ty: ["Generic", "Action"], kw: [], tx: ""});
+  const a = twin(8810), b = twin(8811);
+  const pick = hand => {
+    const sides = g0.sides.slice();
+    sides[0] = Object.assign({}, sides[0], {hand, res: 9});
+    return SP.act(Object.assign({}, g0, {sides}), 0);
+  };
+  const one = pick([a, b]), two = pick([b, a]);
+  assert.equal(one.t, "play");
+  assert.equal(one.uid, two.uid,
+    "the same card whichever order the hand is in — otherwise two peers "
+    + "over one state pick differently, which is a desync");
+  assert.equal(one.uid, 8810, "and the LOWER uid, which is the printed tie-break");
+});
+
+test("it stalled before, and the same seed now finishes", {skip}, () => {
+  /* THE REGRESSION, STATED AS THE OBSERVABLE. This exact seed ran 1324
+     turns without ending — both seats passing, hands full, decks nearly
+     untouched. A stall is the cheapest livelock detector this project
+     has, and a fix for one belongs in `test/` (v3.49's own rule). */
+  let g = match({h0: heroBy(/iyslander/i), h1: heroBy(/blaze/i), seed: "iyslander-blaze-0"});
+  let steps = 0;
+  for(let i = 0; i < 3000 && !g.over; i++){
+    let moved = false;
+    for(const s of [0, 1]){
+      const a = SP.act(g, s); if(!a) continue;
+      const out = J.reduce(g, a, s); if(out.error) continue;
+      g = out.state; steps++; moved = true; break;
+    }
+    if(!moved) break;
+  }
+  assert.ok(g.over, "the game must actually end");
+  assert.ok(g.turn < 200, "and in a sane number of turns, not 1324 — got " + g.turn);
+});
+
+/* ---- EVERY PENDING KIND HAS A BRANCH (v3.80) --------------------------- */
+
+test("the policy answers every kind in judge.PENDING_KINDS", {skip}, () => {
+  /* v3.35 MADE `PENDING_KINDS` A CENSUS because the table's demux was a
+     BLACKLIST — every kind without a branch fell through to a payment
+     screen whose only exit was Cancel. This file is a third consumer with
+     the identical shape: `payAction` branched on `boost` alone and fell
+     through to `paySel` for the rest.
+
+     It could not be reached until this version, and for a precise reason:
+     `split` and `addPay` are both opened by NON-ATTACK plays, which the
+     policy could not make. 21 refusals in 210 games, every one of them
+     Burn Up // Shock. */
+  const src = fs.readFileSync(__dirname + "/../engine/sparring.js", "utf8");
+  for(const k of J.PENDING_KINDS){
+    if(k === "pay") continue;      /* the fall-through IS pay's branch */
+    assert.match(src, new RegExp('p\\.kind === "' + k + '"'),
+      "payAction has no branch for the `" + k + "` pending kind — a kind "
+      + "with no branch is answered with a paySel, which `legal` refuses");
+  }
+});
+
+test("a split card is declared, one half, never both", {skip}, () => {
+  /* MELDING DOUBLES THE BASE COST and hands a player a textbox they never
+     asked for, so defaulting to `both` is a judgement this file cannot
+     make — it is judge's own default and its stated reason. */
+  const src = fs.readFileSync(__dirname + "/../engine/sparring.js", "utf8");
+  assert.match(src, /return \{t: "split", half: 0\}/);
+  assert.doesNotMatch(src, /half: *"both"/);
+});
+
+test("an optional additional cost is DECLINED, like boost", {skip}, () => {
+  /* `autoAnswer`'s standing policy is to decline what is optional, and
+     declining can never make the seat stronger than printed — which is
+     the direction that steals games. */
+  const src = fs.readFileSync(__dirname + "/../engine/sparring.js", "utf8");
+  assert.match(src, /p\.kind === "addPay"\) return \{t: "addPay", yes: false\}/);
+});

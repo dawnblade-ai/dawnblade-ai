@@ -9,6 +9,127 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.80 — the policy could not play a non-attack, and that hid two engine bugs
+
+`sparring.offence` filtered its candidates on **`num(x.c, "power") > 0`**
+and a non-attack prints no power. So this policy could not play one — at
+all, from any zone, in any state — and had not been able to since it was
+written.
+
+Measured over the fifteen precons, the share of each deck it could never
+touch:
+
+| | |
+|---|---|
+| Dorinthea | **91%** |
+| Blaze | **88%** |
+| Iyslander | **85%** |
+| Enigma | 62% |
+| Gravy Bones | 55% |
+| Viserai · Arakni · Lyath | 52% |
+| Briar | 48% · Azalea 45% |
+| Kayo | 4% |
+
+**Three visible symptoms nobody had connected.** Iyslander and Enigma won
+**zero** of 210 self-play games and Blaze won 2. Every one of the 7 stalls
+was between two of those three. And a stalled game was literally **both
+seats passing forever with four legal plays in hand** — `legal` said yes
+and nothing proposed them.
+
+**It also means the harness was exercising half the engine.** Every
+arcane, every aura, every token mint and every pump in the pool rides on a
+non-attack, so none of them had ever been driven here.
+
+This is v3.50's finding one source over: *a feature with no caller looks
+exactly like a feature that works, until you count.*
+
+### The fix, and where it sits
+
+**LAST**, after the attacks, the weapon swing and the hero ability — and
+the order is a **printed-numbers argument** rather than a reading of what
+the card does. Everything above it either deals damage or spends no card:
+an attack wins the game, a weapon swing is free, a hero ability leaves the
+hand alone. A non-attack spends a card **and** the turn's action point,
+and a card in hand can always block.
+
+**Still no card text.** `cost` and `pitch` are printed numbers and `legal`
+answers everything else, so the contract this file is drilled against is
+untouched.
+
+| | before | after |
+|---|---|---|
+| stalls | 7 | **1** |
+| policy refusals | 0 | 0 |
+| invariant violations | 0 | 0 |
+| heroes with zero wins | 2 | **0** |
+
+### AND IT MADE TWO THINGS REACHABLE THAT NEVER HAD BEEN
+
+**1. `payAction` branched on ONE of judge's four `PENDING_KINDS`.**
+`judge.PENDING_KINDS` is a census of four and this function handled
+`boost`, falling through to `paySel` for the rest — which `legal` refuses.
+That is **v3.35's blacklist defect in a third consumer**, and it could not
+be reached until now for a precise reason: `split` and `addPay` are both
+opened by **non-attack** plays. Measured: **21 refusals in 210 games,
+every one of them Burn Up // Shock**.
+
+A refusal is always a bug in the policy (the module's own contract), so
+the fix belongs there. Split declares the **left** half, never `both` —
+melding doubles the base cost and hands a player a textbox they never
+asked for, which is judge's own default and its stated reason. `addPay` is
+**declined**, exactly as boost is.
+
+**2. AN ACTIVATION READS ITS COST THREE TIMES, AND ONLY ONE USED
+`effCost`.**
+
+| reader | asks |
+|---|---|
+| `judge.legal` | could this seat **raise** it? (pool + what it can pitch) |
+| `judge.doActivate` | must a **payment** open? (pool alone) |
+| `effects.execute` | **charge** it |
+
+Only the third used the effective number. **Driven: Briar activating
+Scorpio, Comet Tail** — printed `{t}`, so cost **0** — **under a
+Frostbite**, which taxes +1. `legal` said yes against 0; `doActivate` saw
+`0 > 0` and opened no payment; `execute` charged 1 into a seat holding 0.
+**`res: -1`** — `NEGATIVE-RES`, CR 4.4.3e, *points are lost, never owed* —
+and it is also the `legal`/`reduce` agreement `fuzz.test.js` exists to
+hold.
+
+**v2.80 found this exact defect on the PLAY route** and left it wrong on
+all three activation routes. Its own words: *"`effCost` is READ TWICE and
+the reads are different questions."*
+
+**THE ALLY BRANCH STAYS PRINTED, deliberately.** `execute` charges
+`allyAttack(card).cost` there rather than `effCost` (v3.44 — an ally's
+`.cost` is its PLAY cost, already spent deploying it), so switching it
+would disagree with the charge in the other direction. **Each read asks
+what its own charge site asks**, and a sabotage that switches the ally
+branch to `effCost` fails two drills.
+
+### The one stall left is a real draw, not a bug
+
+`iyslander-boltyn-0` runs to turn 1566 with **both decks empty**, two
+cards in each hand, and `Raydn, Duskbane resolves for 0` forever. CR 4.5.3
+has no deck-out loss — three ways to lose and no more — so this is a
+genuine unwinnable board rather than an engine defect. Recorded rather
+than "fixed" by inventing a rule.
+
+### Measured
+
+- **11 sabotages, 11 bite, 0 silent** — after re-targeting two that could
+  not express their bug (v3.62): changing the attack filter's `> 0` to
+  `>= 0` does not reorder anything, because power-0 sorts last anyway, and
+  `.sort(() => 0)` is a no-op against V8's stable sort.
+- **And two weak drills behind them.** "An attack still outranks a
+  non-attack" was written against Kayo's opening, which is *all* attacks —
+  so there was no non-attack for the wrong order to pick, and it passed
+  with the branch moved to the top. The tie-break drill asserted `act()`
+  twice over one state, which any deterministic function passes. Both now
+  use fixtures where the two cases can actually both occur (v3.50).
+
+---
+
 ## v3.79 — two refusals discharged by machinery built two versions ago
 
 **v3.47 states the rule**: *when you build a mechanic, sweep the refusals

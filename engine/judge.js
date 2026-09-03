@@ -826,8 +826,23 @@ function legal(g, a, seat){
          instant does not. Blaze's is an Instant, so it costs none. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
       { const why = rxTargetWhy(g, ab, want); if(why) return why; }
-      if((ab.cost || 0) > sd.res + payCeiling(sd, null))
-        return ab.name + " costs " + ab.cost + " to activate and you cannot raise it";
+      /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
+         This read the PRINTED cost while `execute` charges `effCost`, and
+         the two are different numbers the moment anything modifies one:
+         Frostbite taxes +1, a runechant discounts, `costOff` and
+         `boardRed` both move it. Driven — Briar activating Scorpio, Comet
+         Tail (printed {t}, so cost 0) under a Frostbite: `legal` said yes
+         against 0, `execute` charged 1, and the seat went to **-1
+         resources**. `NEGATIVE-RES`, CR 4.4.3e — points are lost, never
+         owed — and it is also the `legal`/`reduce` agreement
+         `fuzz.test.js` exists to hold.
+
+         v2.80 names this exactly: `effCost` is read twice and the two
+         reads are different questions. It was found there on the PLAY
+         route and left wrong on all three activation routes. */
+      { const _ec = effCost(ab, sd);
+        if(_ec > sd.res + payCeiling(sd, null))
+          return ab.name + " costs " + _ec + " to activate and you cannot raise it"; }
       /* A COUNTER-SPENDING ABILITY WITH NOTHING IT CAN AFFORD IS A DEAD
          TAP (v3.39). Blaze's spends the chosen card's own arcane, so with
          an empty pool the filter admits nothing, `buildPrompt` returns
@@ -920,8 +935,23 @@ function legal(g, a, seat){
          Spider costs a point as an Action and none as a Defense Reaction. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
       { const why = rxTargetWhy(g, ab, want); if(why) return why; }
-      if((ab.cost || 0) > sd.res + payCeiling(sd, null))
-        return piece.name + " costs " + ab.cost + " to activate and you cannot raise it";
+      /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
+         This read the PRINTED cost while `execute` charges `effCost`, and
+         the two are different numbers the moment anything modifies one:
+         Frostbite taxes +1, a runechant discounts, `costOff` and
+         `boardRed` both move it. Driven — Briar activating Scorpio, Comet
+         Tail (printed {t}, so cost 0) under a Frostbite: `legal` said yes
+         against 0, `execute` charged 1, and the seat went to **-1
+         resources**. `NEGATIVE-RES`, CR 4.4.3e — points are lost, never
+         owed — and it is also the `legal`/`reduce` agreement
+         `fuzz.test.js` exists to hold.
+
+         v2.80 names this exactly: `effCost` is read twice and the two
+         reads are different questions. It was found there on the PLAY
+         route and left wrong on all three activation routes. */
+      { const _ec = effCost(ab, sd);
+        if(_ec > sd.res + payCeiling(sd, null))
+          return piece.name + " costs " + _ec + " to activate and you cannot raise it"; }
       return null;
     }
     const wc = PR.weaponCost(piece.tx || "");
@@ -941,8 +971,23 @@ function legal(g, a, seat){
     if(!(sd.ap > 0)) return "no action point left";
     /* Same rule as a card: an activation the seat cannot fund is not
        legal, and offering it opens a payment with no way out but cancel. */
-    if((wc.cost || 0) > sd.res + payCeiling(sd, null))
-      return piece.name + " costs " + wc.cost + " to swing and you cannot raise it";
+    /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
+     This read the PRINTED cost while `execute` charges `effCost`, and
+     the two are different numbers the moment anything modifies one:
+     Frostbite taxes +1, a runechant discounts, `costOff` and
+     `boardRed` both move it. Driven — Briar activating Scorpio, Comet
+     Tail (printed {t}, so cost 0) under a Frostbite: `legal` said yes
+     against 0, `execute` charged 1, and the seat went to **-1
+     resources**. `NEGATIVE-RES`, CR 4.4.3e — points are lost, never
+     owed — and it is also the `legal`/`reduce` agreement
+     `fuzz.test.js` exists to hold.
+
+     v2.80 names this exactly: `effCost` is read twice and the two
+     reads are different questions. It was found there on the PLAY
+     route and left wrong on all three activation routes. */
+    { const _ec = effCost(piece, sd);
+      if(_ec > sd.res + payCeiling(sd, null))
+        return piece.name + " costs " + _ec + " to swing and you cannot raise it"; }
     return null;
   }
   return "unhandled action: " + a.t;
@@ -1670,8 +1715,22 @@ function doActivate(g, a, seat){
      ability, and the per-turn flag is stamped by `execute` off the
      powCard's uid ("hpow") exactly as it is for "gp"+uid. */
   if(a.from === "hero" || a.uid === "hpow"){
+    /* AND SO MUST THE PAYMENT DECISION (v3.80). `effCost` is read THREE
+       times on an activation — `legal` asks whether the seat could raise
+       it, this asks whether a payment must open, and `execute` charges it
+       — and only the third used the effective number. So under a
+       Frostbite (+1 on a {t} weapon) the printed cost was 0, no payment
+       opened, and `execute` charged 1 into a seat holding 0: NEGATIVE-RES,
+       CR 4.4.3e. v2.80 found this on the PLAY route and left it wrong on
+       every activation route.
+
+       THE ALLY BRANCH STAYS PRINTED, deliberately: `execute` charges
+       `allyAttack(card).cost` there and not `effCost` (v3.44 — an ally's
+       `.cost` is its PLAY cost, already spent deploying it), so asking
+       `effCost` here would disagree with the charge in the other
+       direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    const acost = ab.cost || 0;
+    const acost = effCost(ab, sd);
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
@@ -1700,14 +1759,18 @@ function doActivate(g, a, seat){
      powCard's uid ("gp"+uid) for a destroy-cost, so no index is needed —
      the "hero" zone is not a list and nothing splices it. */
   if(!TY.isWeaponType(piece)){
-    const ab = piece.powCard, acost = ab.cost || 0;
+    const ab = piece.powCard, acost = effCost(ab, sd);   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
   }
   const wc = PR.weaponCost(piece.tx || "");
-  const cost = wc.cost || 0;
+  /* THE SWING'S EFFECTIVE COST (v3.80). `build.js` folds the activation
+     cost onto the gear entry's `.cost`, which is the field `effCost`
+     reads and `execute` charges — so asking `wc.cost` here is asking a
+     number nothing else uses the moment a tax or a discount applies. */
+  const cost = effCost(piece, sd);
   const target = targetOf(g, seat, a.target);
   if(cost > sd.res){
     return say({...g, pending: {kind: "pay", seat, card: piece, from: "weapon", need: cost, target}},
