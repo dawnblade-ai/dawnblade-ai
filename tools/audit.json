@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-03T22:27:09.465Z",
- "appVer": "3.91",
+ "generated": "2026-09-03T22:52:03.871Z",
+ "appVer": "3.92",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 373,
-  "part": 29,
+  "full": 375,
+  "part": 27,
   "none": 3
  },
  "heroes": {
@@ -537,27 +537,24 @@
    "mentions": [
     "battleworn"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Whenever you discard a random card with 6 or more {p}, you may destroy this",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, gain 1 action point.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Battleworn",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Whenever you discard a random card with 6 or more {p}, you may destroy this",
-    "If you do, gain 1 action point."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Whenever you discard a random card with 6 or more {p}, you may destroy this. If you do, gain 1 action point.\nBattleworn",
@@ -6589,27 +6586,24 @@
     "battleworn",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When a weapon attack you control hits, you may destroy this",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If you do, the attack gets go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Battleworn",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "When a weapon attack you control hits, you may destroy this",
-    "If you do, the attack gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When a weapon attack you control hits, you may destroy this. If you do, the attack gets go again.\nBattleworn",

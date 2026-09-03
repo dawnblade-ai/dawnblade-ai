@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.92
+**Current version:** v3.93
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2021 drills**.
+This is `node --test "test/*.test.js"` — currently **2037 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,58 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A CARD THAT FIRED WITHOUT THE PARSER (v3.93)
+
+> *"…**you may destroy this**. If you do, X"* — BEATEN TRACKERS ·
+> REFRACTION BOLTERS
+
+The pool's **only two** records of the shape (measured over 797), both
+Legs equipment WATCHING an event somewhere else — and one of them
+**already fired**, through an inline regex over raw text in
+`afterDiscard`. v3.58's defect exactly, and it is why the card reported
+`part` while working: **a tier is a claim about the PARSER**, so a card
+read anywhere else is invisible to every coverage tool here. **A tier
+that says `part` on a card that works is a LEAD** — second outing.
+
+**AND THE INLINE READER HARDCODED ITS THRESHOLD** — the regex matched
+`\d+` and then tested `pow6`, a literal. The fixture that discriminates
+prints **6** and is **7** under Kayo: it clears a 6 and misses an 8.
+Buckwild prints **7**, is 8 under Kayo, and meets both — the first draft
+failed against a correct engine (tenth outing of the read-the-number
+rule, and the tenth *check your own fixture*).
+
+**A `noop` RIDER MUST REFUSE TOO.** `classifyClause` answers
+`ops:[["noop", …]]` for a keyword it deliberately does nothing about, so
+`ops.length` is **1** and a length test alone destroys the piece for
+nothing — v2.04's free-ability rule read from the other end. Measured: no
+pool record's `optCost`/`payCost` rider is nothing but noops, so only a
+synthetic reaches it; and a fixture whose rider `classifyClause` answers
+NULL for never reaches the status test, **third** time that has cost a
+drill.
+
+**A GRANT THAT ARRIVES AFTER ITS LAYER IS CR 5.3.5's ACTION POINT.**
+`linkPayload` settles the layer's point on its LAST line and `openPrompt`
+drains at the tail of the CALLER, so a damage-step trigger answered by a
+prompt is always too late to "keep" it. Go again is a **GAIN of one
+action point**, so the point IS the grant; the link is marked too, or the
+chain display disagrees with what happened.
+
+**AND THE QUEUE SITE SAYS THE LAYER HAS SETTLED — THE BOARD IS NEVER
+INFERRED.** The first draft guarded on `!s.pend`, which is the
+**trainer's** marker: `resolveStack` nulls `pend` before draining and
+`judge.js` holds it until `closeChain`. That rule would have worked on
+one board and leaked a free action point on the other — **v3.01's shape,
+created deliberately rather than found.** `spec.lateGa` is opt-in
+(v3.58), set inside `linkPayload` itself.
+
+**THREE WATCHER SCANS ARE ONE BODY NOW** (`offerPayCost`) — gear AND
+arena, because Magmatic Carapace is a Chest and both new cards are Legs.
+**And three drills that GREPPED those scans were rewritten to DRIVE
+them**: a source slice rots where a rule moves (v3.22, v3.28), and the
+driven versions say more — the zone drill carries a control that no
+watcher means no sheet, and the randomness drill discards the *same*
+6-power card by two routes so only the randomness can separate them.
 
 ### A BOUND THE PARSE MUST NOT HOLD (v3.92)
 

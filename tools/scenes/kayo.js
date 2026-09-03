@@ -64,6 +64,67 @@ module.exports = [
             "still one after the second":        mights(twice)};
   },
   want: {"one Might after the first discard": 1, "still one after the second": 1}
+},
+
+{
+  name: "Beaten Trackers reads its own threshold, and only a RANDOM discard",
+  why: "v3.93 — it FIRED for versions and still reported `part`, because " +
+       "an inline regex in effects.js read it rather than the parser " +
+       "(v3.58). **A tier that says `part` on a card that works is a " +
+       "lead.** The regex matched `\\d+` and then tested `pow6`, a " +
+       "hardcoded 6 — so a piece printing 8 would have fired on a 6, and " +
+       "no pool fixture can see that because Beaten Trackers is the only " +
+       "record of the shape (v3.32, tenth outing). Its sibling Refraction " +
+       "Bolters prints the identical cost and was completely dead.",
+  run(c){
+    /* PRINTED 6, EFFECTIVE 7 under Kayo's clause 2 — the one power that
+       clears a threshold of 6 and misses one of 8. Buckwild prints 7 and
+       would meet both. */
+    const six = () => ({uid: 11, name: "SYN-six", pitch: 1, power: 6, cost: 0,
+      tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: [], gkw: []});
+    const real = c.card("Beaten Trackers", 0);
+    const eight = Object.assign({}, real, {name: "SYN-Trackers-8", uid: "gx",
+      tx: (real.tx || "").replace("6 or more", "8 or more")});
+    const at = (piece, ops) => {
+      const g = Object.assign(c.state({hand: [six()], gear: [piece], res: 5, ap: 1},
+                                      {hp: 20}, {turn: 3, turnPlayer: 0}), {phase: "action"});
+      g.builds = [{atkPowOffChain: 1}, {}];
+      const out = c.ops(g, ops, "scene");
+      return out.game || out;
+    };
+    const rnd = at(Object.assign(c.card("Beaten Trackers", 0), {uid: "g1"}), [["discardRandom", 1]]);
+    const chosen = at(Object.assign(c.card("Beaten Trackers", 0), {uid: "g1"}), [["selfDiscard", 1]]);
+    const high = at(eight, [["discardRandom", 1]]);
+    const sheet = rnd.promptQ && rnd.promptQ[0] && c.PM.buildPrompt(rnd, rnd.promptQ[0]);
+    const paid = (o => o.game || o)(c.J.withEffects(
+      Object.assign({}, rnd, {promptQ: [], prompt: c.PM.promptChoose(sheet, "pay")}),
+      (fx, n) => fx.applyAnswer(n, n.prompt)));
+    const no = (o => o.game || o)(c.J.withEffects(
+      Object.assign({}, rnd, {promptQ: [], prompt: c.PM.promptChoose(sheet, "decline")}),
+      (fx, n) => fx.applyAnswer(n, n.prompt)));
+    return {
+      "a RANDOM discard of a 6+ offers the piece": (rnd.promptQ || []).length,
+      "a discard BY CHOICE is a different event":  (chosen.promptQ || []).length,
+      "7 effective misses a printed threshold of 8": (high.promptQ || []).length,
+      "the price is the piece, not resources":     sheet && sheet.cost,
+      "…and the sheet names which piece":          sheet && sheet.destroyUid,
+      "paying gains the printed action point":     paid.sides[0].ap,
+      "…and spends the iron":                      !!paid.sides[0].gear[0].destroyed,
+      "declining gains nothing":                   no.sides[0].ap,
+      "…and keeps the iron (v2.04)":               !!no.sides[0].gear[0].destroyed
+    };
+  },
+  want: {
+    "a RANDOM discard of a 6+ offers the piece": 1,
+    "a discard BY CHOICE is a different event": 0,
+    "7 effective misses a printed threshold of 8": 0,
+    "the price is the piece, not resources": 0,
+    "…and the sheet names which piece": "g1",
+    "paying gains the printed action point": 2,
+    "…and spends the iron": true,
+    "declining gains nothing": 1,
+    "…and keeps the iron (v2.04)": false
+  }
 }
 
 ];

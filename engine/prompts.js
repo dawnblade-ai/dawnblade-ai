@@ -323,6 +323,18 @@ function buildPrompt(game, spec){
          carries fields `buildPrompt` knows about (v2.34), so this is
          declared rather than threaded. */
       tapHero: !!spec.tapHero,
+      /* AND THE THIRD COST VERB (v3.93) — "you may DESTROY THIS". A spec
+         only carries fields `buildPrompt` knows about (v2.34, v3.33,
+         v3.91), so this is declared here rather than threaded: dropped,
+         the equipment is never spent and the rider is FREE, which is
+         precisely the bug v2.04 fixed. */
+      destroyUid: spec.destroyUid,
+      /* AND WHETHER THE LAYER THAT QUEUED THIS HAS ALREADY SETTLED ITS
+         ACTION POINT (v3.93). A spec only carries fields `buildPrompt`
+         knows about (v2.34), and the two boards clear `pend` at different
+         moments — so the queue site says it rather than the consumer
+         guessing from board state. */
+      lateGa: !!spec.lateGa,
       choice:null,
       title: spec.title || ("Pay " + cost + "?"),
       hint: spec.hint || "You may pay this. If you do, the rider resolves."};
@@ -576,8 +588,18 @@ function applyPrompt(game, prompt){
        effects and touches no state. The caller marks the permanent spent. */
     if(prompt.taps && prompt.tapUid != null) out.tap = prompt.tapUid;
     if(prompt.tapHero) out.tapHero = true;
-    out.msgs.push(who + " paid " + prompt.cost
-      + (prompt.taps ? " and tapped " + prompt.src : "") + " — the rider resolves.");
+    /* THE DESTRUCTION LEAVES AS DATA, like the payment and the tap: this
+       module runs no effects and touches no state, so it reports WHICH
+       permanent was spent and the caller destroys it (v3.93). */
+    if(prompt.destroyUid != null) out.destroy = prompt.destroyUid;
+    /* PAST TENSE, SO THE VERB NEED NOT AGREE WITH THE NAME. `who` is
+       "You" or "The opponent" and those take different verb forms — the
+       existing "paid" dodges it the same way, and v2.83 is the version
+       that had to learn a cross-seat line names one seat. */
+    out.msgs.push(who + (prompt.destroyUid != null
+      ? " destroyed " + prompt.src
+      : " paid " + prompt.cost + (prompt.taps ? " and tapped " + prompt.src : ""))
+      + " — the rider resolves.");
     return out;
   }
   /* SOAK. This module runs no effects and touches no resources, so the

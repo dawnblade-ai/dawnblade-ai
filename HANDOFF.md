@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v3.92 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.93 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
-`npm run audit`: **373 full / 29 part / 3 none**. Night's Embrace left that
+`npm run audit`: **375 full / 27 part / 3 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |
@@ -15,6 +15,19 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.93 CLOSED BEATEN TRACKERS AND REFRACTION BOLTERS, AND ONE OF THEM
+WAS ALREADY FIRING.** Beaten Trackers worked for versions through an
+INLINE REGEX in `effects.js` — v3.58's "a card handled outside the parser
+is a card special-cased" — and that is exactly why it reported `part`:
+**a tier is a claim about the PARSER.** Its sibling, printing the
+identical cost, was completely dead on both boards.
+
+**SO THE CHEAPEST LEAD LEFT IS THE OPPOSITE OF THE USUAL ONE.** `npm run
+gaps` lists cards whose TEXT is unread; this one was a card whose
+BEHAVIOUR was already there. **Grep `engine/effects.js` for regexes over
+`.tx` and ask which card each one is really about** — v3.58 found two that
+way, this found a third, and each time the tier was the tell.
 
 **v3.92 CLOSED MOUNTING ANGER AND RISING RESENTMENT — A RECORDED REFUSAL
 FROM v2.29, DISCHARGED BY A READER BUILT FOR THEIR OWN HERO.** *"…with
@@ -36,7 +49,7 @@ Agile Engagement's condition is Boltyn's one route over, and Turn to
 Mindfire's two records (`_dmgWay`, `heroTapped`) both already existed.
 **That is the shape to look for first**: `npm run gaps` lists the
 unfinished cards, and a good share of them are waiting on something the
-engine already has. Coverage is **373 full / 29 part / 3 none**.
+engine already has. Coverage is **375 full / 27 part / 3 none**.
 
 **JITTERY BONES AND WASHED UP WAVE CLOSED AT v3.90**, and building them
 found a third: FOUR pool records print *"when this defends"* on GEAR and

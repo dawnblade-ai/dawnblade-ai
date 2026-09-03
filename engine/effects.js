@@ -162,6 +162,79 @@ function makeEffects(ctx){
     return n;
   };
 
+  /* ---- THE WATCHERS, IN ONE BODY (v3.93) -----------------------------
+     A `payCost` piece is a WATCHER: it sits in the gear zone or the arena
+     and pays for something that happens somewhere else. Every other trigger
+     in `execute` asks the resolving card about itself; these ask what is
+     WATCHING (v3.33's Magmatic Carapace, v3.72's Crow's Nest).
+
+     BOTH ZONES, ALWAYS. Magmatic Carapace is a CHEST piece and both v3.93
+     cards are LEGS, so a board-only scan finds nothing for any of them —
+     and `sweepArena` had to re-derive its teardown flags over gear for the
+     identical reason (v3.07).
+
+     THREE SITES CALL IT and there is one description of the scan, because
+     three copies of "who is watching" is where the drift starts — the
+     no-mirror rule inside a single file (v3.20's `optCostSpec`).
+
+     `ok` IS THE TRIGGER'S OWN EXTRA QUESTION, asked per watcher, because
+     the threshold travels with the trigger rather than being known here
+     (v3.88). A trigger that asks nothing more passes nothing. */
+  function offerPayCost(s, trigger, ok, extra){
+    let n = s;
+    const watchers = [...(act(n).gear||[]), ...((act(n).board||[]).map(b => b && b.card))]
+      .filter(Boolean)
+      .map(w => ({w, px: fxParse(w).payCost}))
+      .filter(({w, px}) => px && px.trigger === trigger
+                        && !(px.taps && (act(n).weaponUsed||{})[w.uid])
+                        /* A DESTROYED PIECE CANNOT PAY AGAIN. It is marked
+                           rather than spliced until the end-phase sweep
+                           (v3.54), so it is still sitting in the zone. */
+                        && !w.destroyed
+                        && (!ok || ok(px, w)));
+    for(const {w, px} of watchers)
+      n.promptQ = [...(n.promptQ||[]), Object.assign(payCostSpec(px, w, actorOf(n)), extra||{})];
+    return n;
+  }
+
+  /* A GO-AGAIN GRANT THAT ARRIVES AFTER ITS LAYER HAS SETTLED (v3.93).
+
+     `runOps`'s `ga` case records `_gaGrant` and two consumers fold it onto
+     a live `pend` — `execute`'s own settle and `linkPayload`'s. Neither can
+     see a grant that arrives LATER, and a prompt always does: `openPrompt`
+     drains at the tail of the caller, after `linkPayload` has spent the
+     action point on its last line.
+
+     WITHOUT THIS THE FLAG SIMPLY SITS ON THE STATE and folds onto the NEXT
+     attack — a free action point on a later swing, which is stronger than
+     printed and is the direction that steals games.
+
+     THE QUEUE SITE SAYS SO; THE BOARD IS NEVER INFERRED. The first draft
+     asked `!s.pend`, which is the TRAINER's marker — `resolveStack` nulls
+     `pend` before draining, and `judge.js` holds it until `closeChain`,
+     two steps later. So the rule would have worked on one board and
+     leaked on the other, which is v3.01's shape created deliberately
+     rather than found. `spec.lateGa` is set by the one site that KNOWS it
+     fires after the settle, because it is inside `linkPayload` itself.
+
+     CR 5.3.5: "If the layer has go again, the controlling player GAINS 1
+     action point." So the point IS the grant, and handing it over is the
+     faithful settlement rather than an approximation of one — this file
+     says the same thing at v2.39 about an instant, where the arithmetic is
+     spelled out for exactly this reason.
+
+     AND THE LINK IS MARKED, because the chain display reads a link's `ga`
+     to draw its go-again glyph. A number that is right while the screen
+     disagrees is the sev-2 category the player TRUSTS. */
+  function settleLateGa(s){
+    if(!s._gaGrant) return s;
+    let n = {...s}; delete n._gaGrant;
+    actMut(n).ap = act(n).ap + 1;
+    if(n.chain && n.chain.length)
+      n.chain = n.chain.map((l, i) => i === n.chain.length - 1 ? {...l, ga: true} : l);
+    return L(n, "Go again, granted after the attack resolved — CR 5.3.5 hands the action point back.");
+  }
+
   const afterDiscard = (s, taken, opts) => {
     let n = s;
     const b = bAct(n);
@@ -177,17 +250,27 @@ function makeEffects(ctx){
        time a cost was paid by choice.
 
        "You may" — RULING (user, 2026-08-08): prompt every time it triggers.
-       It is a real decision, an action point against a block, and the piece
-       is matched on its PRINTED TEXT rather than by name. */
-    if(big && atRandom){
-      const bt = (act(n).gear||[]).find(x => x && !x.destroyed &&
-        /whenever you discard a random card with \d+ or more \{p\}, you may destroy this/i.test(clean(x.tx||"")));
-      if(bt) n.promptQ = [...(n.promptQ||[]), {tag:"modal", side:actorOf(n), src:bt.name,
-        title:`${bt.name} — destroy it for an action point?`,
-        hint:"It triggers on every random discard of a 6 or more.",
-        options:[{label:`Destroy ${bt.name} — gain 1 action point`, ops:[["destroyGear",bt.uid],["ap",1]]},
-                 {label:"Keep the iron", ops:[]}]}];
-    }
+       It is a real decision, an action point against a block.
+
+       IT WAS AN INLINE REGEX OVER RAW TEXT UNTIL v3.93, and that is v3.58's
+       defect exactly: a card handled outside the parser is a card
+       special-cased, the ledger cannot see it, and the tier reported
+       `part` on a card that had worked for versions. **A tier that says
+       `part` on a card that works is a lead** — second outing of that
+       sentence.
+
+       AND ITS THRESHOLD WAS A LITERAL. The regex matched `\d+` and then
+       tested `pow6`, a hardcoded 6 — so a card printing 8 would have
+       fired on a 6. Beaten Trackers is the pool's only record of the
+       shape, so no pool fixture could tell the two apart (v3.32, tenth
+       outing); it is `px.trigN` now, and the reader is the parser's.
+
+       THE POWER IS THE CARD'S IN THE ZONE IT WAS IN — `zonePow` carries
+       Kayo's "+1{p} while in any zone other than the combat chain", which
+       is worth half his deck (v2.55). */
+    if(atRandom)
+      n = offerPayCost(n, "discardRandom",
+        px => taken.some(c => zonePow(c, b) >= px.trigN));
 
     if(!b || !b.mightOnFirst6Discard) return n;
     /* "DURING EACH OF **YOUR** ACTION PHASES" — and `phase === "action"` on
@@ -3271,16 +3354,8 @@ function makeEffects(ctx){
          permanent does not untap until CR 4.4.3d — which is what makes
          this once per turn on a card that never prints "Once per Turn".
          A piece already spent this turn is not offered. */
-      if(fx.perm === "aura"){
-        const watchers = [...(act(n).gear||[]), ...((act(n).board||[]).map(b => b && b.card))]
-          .filter(Boolean)
-          .map(w => ({w, px: fxParse(w).payCost}))
-          .filter(({w, px}) => px && px.trigger === "playAura"
-                            && !(px.taps && (act(n).weaponUsed||{})[w.uid])
-                            && !w.destroyed);
-        for(const {w, px} of watchers)
-          n.promptQ = [...(n.promptQ||[]), payCostSpec(px, w, actorOf(n))];
-      }
+      if(fx.perm === "aura")
+        n = offerPayCost(n, "playAura");
     }
     /* IYSLANDER, CLAUSE 2 — "Whenever you play an ICE card during an
        opponent's turn, create a Frostbite token under their control."
@@ -3658,7 +3733,25 @@ function makeEffects(ctx){
        apart the moment an opponent taps you — v3.48 states this, and
        using the wrong one makes the cost payable again on their turn. */
     if(r.tapHero) actMut(n).heroTapped = true;
+    /* AND THE PIECE ITSELF, WHERE THAT IS THE PRICE (v3.93). It is MARKED
+       rather than spliced, for `sweepGear`'s reason (v3.54): a wall
+       declared as INDICES into `gear` renumbers underneath a removal, and
+       Refraction Bolters' trigger fires in the DAMAGE step, with the wall
+       still declared. The end-phase sweep files it to the graveyard. */
+    if(r.destroy != null){
+      const piece = (act(n).gear||[]).find(x => x && x.uid === r.destroy);
+      if(piece){
+        actMut(n).gear = act(n).gear.map(x => x.uid === r.destroy ? {...x, destroyed:true} : x);
+        n = L(n, `${piece.name} is destroyed — the cost is paid.`);
+      }
+    }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
+    /* A GO-AGAIN GRANT THAT ARRIVES AFTER ITS LAYER (v3.93) — see
+       `settleLateGa`. AFTER the ops, because `runOps` is what records the
+       grant: written above them it reads a flag nothing has set yet, and
+       the drill for it passes on a card that does nothing. Opt-in on the
+       SPEC (v3.58), so every other prompt keeps the existing consumers. */
+    if(p.lateGa) n = settleLateGa(n);
     /* ARSENAL, FACE UP (v2.33). A card put face UP into the arsenal is a
        different event from the end-of-turn arsenal step, which sets face
        DOWN — Azalea's arrows trigger on the face-up one only. The flag
@@ -4770,6 +4863,28 @@ function makeEffects(ctx){
       n = L(n, `${pc.name} bites — a dagger of ${act(n).name}'s, and ${act(n).name} is the Tarantula.`);
       n = runOps(n, [["dmg", _dd]], pc.name);
     }
+    /* ---- REFRACTION BOLTERS (v3.93) ---------------------------------
+       "When a weapon attack you control HITS, you may destroy this. If
+        you do, the attack gets go again."
+
+       THE WATCHER IS A LEGS PIECE, not the swinging weapon, so the scan
+       is over gear AND the arena — one body with Magmatic Carapace's and
+       Beaten Trackers' (`offerPayCost`).
+
+       "A WEAPON ATTACK YOU CONTROL" IS THE ROUTE, not the card: `from`
+       is what `execute` decided when it picked its branch, and the two
+       sites either side of this one already ask the same question the
+       same way.
+
+       AND THE OFFER CANNOT BE ANSWERED BEFORE THE LAYER SETTLES. A
+       prompt is drained by `openPrompt` at the tail of the caller, and
+       both callers null `pend` first — so the grant arrives after the
+       action point has been spent five lines below. See `settleLateGa`:
+       CR 5.3.5 makes go again a GAIN of one action point, so the point
+       IS the grant, and the link is marked so the chain display agrees
+       with what happened. */
+    if(total>0 && n.pend.from==="weapon")
+      n = offerPayCost(n, "weaponHit", null, {lateGa: true});
     if(total>0 && n.pend.from==="weapon" && bAct(n).weaponRefresh && !act(n).hist.wpnAgain){
       actMut(n).hist = {...act(n).hist, wpnAgain:1};
       const wu = {...(act(n).weaponUsed||{})}; delete wu[pc.uid];
@@ -5293,6 +5408,17 @@ function defendValue(defSide, card, opts){
    paying. `pay` is what `applyPrompt` returns for the caller to charge —
    this module runs no effects and takes no resources. */
 function payCostSpec(px, card, side){
+  /* THE THIRD COST VERB (v3.93) — the price is the piece itself. It is
+     still a `pay` sheet, because the shape of the question is identical
+     (pay or decline, and the rider resolves only if you pay); what
+     changes is what is spent, so the resource cost is 0 and `destroyUid`
+     names the permanent. */
+  if(px.destroySelf) return {
+    tag:"pay", side, src:card.name,
+    cost:0, ops:px.ops, taps:false, destroyUid:card.uid,
+    title:"Destroy " + card.name + "?",
+    hint:"Optional — decline and the rider does not resolve. Destroyed gear goes to the graveyard."
+  };
   return {
     tag:"pay", side, src:card.name,
     cost:px.cost, ops:px.ops,

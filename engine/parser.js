@@ -908,6 +908,21 @@ function classifyClause(raw){
      again" and "High Tide - If there are 2 or more blue cards in your pitch
      zone, this gets go again" both granted go again outright. */
   if(/^(?:this|it) (?:gains?|gets?|has) go again(?: this turn)?$/.test(c)) return R([["ga"]]);
+  /* "THE ATTACK" IS A THIRD SUBJECT, and it names the LIVE LAYER rather
+     than the resolving card (v3.93). Refraction Bolters is an equipment
+     WATCHER — "when a weapon attack you control hits, you may destroy
+     this. If you do, THE ATTACK gets go again" — so "this" would be the
+     iron and is exactly the wrong subject (v2.33, v3.47, v3.92: fourth
+     time).
+
+     `runOps`'s `ga` case sets `_gaGrant`, which folds onto the live
+     `pend` — so on every route that can reach this clause the two
+     readings coincide in their effect and differ in what they NAME.
+     Measured across all 797 records: six print the phrase, and the three
+     `atkTrigger` tokens (Blade Dance, Embodiment of Lightning, Quicken)
+     have their whole clause claimed by that whole-card reader before
+     this loop runs, so nothing there moves. */
+  if(/^the attack (?:gains?|gets?|has) go again(?: this turn)?$/.test(c)) return R([["ga"]]);
   /* Printed keyword lines. The database prints these on their own line.
      The engine honors them through card_keywords — equipment wear, the
      boost prompt, the crush threshold — or they are honestly inert
@@ -3346,6 +3361,58 @@ function fxParse(card){
        makes this once per turn without the card printing "Once per Turn".
        Reading only the {r} would make it repeatable and strictly stronger
        than printed — the same shape as Scorpio vs the Sledge (v2.42). */
+    /* ---- THE THIRD COST VERB: DESTROY THIS (v3.93) -----------------
+       "Whenever you discard a random card with 6 or more {p}, YOU MAY
+        DESTROY THIS. If you do, gain 1 action point."   — BEATEN TRACKERS
+       "When a weapon attack you control hits, YOU MAY DESTROY THIS. If
+        you do, the attack gets go again."          — REFRACTION BOLTERS
+
+       Exactly two pool records print it, and both are Legs equipment
+       watching an event that happens somewhere else — so the piece is a
+       WATCHER, never the resolving card (v3.33's Magmatic Carapace,
+       v3.72's Crow's Nest).
+
+       IT IS `payCost`'s SHAPE WITH A DIFFERENT PRICE, not new machinery
+       (v3.58): a trigger, an optional cost, and a rider that resolves
+       only if the cost was paid. What changes is the verb, so the cost is
+       0 resources and `destroySelf` says what is actually spent.
+
+       THE TRIGGER VOCABULARY IS CLOSED. An unknown one refuses the whole
+       clause and leaves the card unclaimed — the alternative is a piece
+       destroyed by an event nobody built, which is the never-parse-ahead-
+       of-wiring rule at its most literal, since the cost here DESTROYS
+       the player's equipment.
+
+       AND THE THRESHOLD IS THE CARD'S OWN NUMBER. Beaten Trackers prints
+       6 and is the pool's only card of the shape, so a hardcoded 6 is
+       indistinguishable from a read one against every pool fixture — the
+       inline reader this replaces did exactly that, matching `\d+` in its
+       regex and then testing `pow6`, a literal. A synthetic printing 8 is
+       what sees it (v3.32, tenth outing). */
+    const dm = clauses[i].match(/^when(?:ever)? (.+?), you may destroy this$/i);
+    if(dm){
+      const trig = destroyTrigger(dm[1]);
+      if(!trig) continue;                        /* unknown event — leave the card unclaimed */
+      const rr2 = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
+      /* AN UNREADABLE PAYLOAD REFUSES (v2.29) — AND SO DOES A `noop` ONE.
+         `classifyClause` answers `{status:"noop", ops:[["noop", …]]}` for
+         a keyword it reads and deliberately does nothing about, so
+         `ops.length` is 1 and the length test alone lets it through: the
+         piece is DESTROYED for a reward nothing delivers. That is v2.04's
+         free-ability rule read from the other end — a cost with no reward
+         — and it matters most on this verb, where the price is a
+         permanent rather than resources.
+
+         Measured over the pool: NO record's optCost or payCost rider is
+         nothing but noops, so this is a guard for a shape only a
+         synthetic can reach, and the drill for it uses one. A fixture
+         whose rider `classifyClause` answers NULL for never reaches the
+         status test at all — third time that flaw has cost a drill. */
+      if(!rr2 || rr2.status !== "run" || !rr2.ops || !rr2.ops.length) continue;
+      fx.payCost = Object.assign({cost: 0, taps: false, destroySelf: true, ops: rr2.ops}, trig);
+      handled.add(i); handled.add(i+1);
+      break;
+    }
     const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (\{t\} this and )?pay ((?:\{r\})+|\d+)$/i);
     if(!cm) continue;
     const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
@@ -5322,6 +5389,31 @@ const arcAmount = c => !c ? 0 : (fxParse(c).ops || [])
 
 const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
   + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
+/* THE EVENTS A `destroy this` COST MAY WATCH FOR (v3.93). A CLOSED
+   vocabulary, and closed harder than most: the cost DESTROYS the
+   player's own equipment, so a trigger nobody built would spend a piece
+   on an event that never happens — or worse, on one that happens for a
+   different reason. Two entries, one per pool record.
+
+   THE THRESHOLD TRAVELS WITH THE TRIGGER rather than being known by the
+   site that fires it (v3.88's `thisWayMet` rule): Beaten Trackers prints
+   6 and is the only card of its shape, so a literal at the fire site is
+   invisible to every pool fixture.
+
+   "A RANDOM CARD" IS THE DISTINCTION THAT MATTERS. Kayo's hero clause
+   fires on ANY discard; this one only on a random one, and reading the
+   two as the same event hands out a free action point every time a cost
+   is paid by choice. */
+function destroyTrigger(phrase){
+  const p = String(phrase||"").trim().toLowerCase();
+  let m;
+  if((m = p.match(/^you discard a random card with (\d+) or more \{p\}$/)))
+    return {trigger: "discardRandom", trigN: +m[1]};
+  if(/^an? weapon attack you control hits$/.test(p))
+    return {trigger: "weaponHit"};
+  return null;
+}
+
 const pow6 = (c, b) => zonePow(c, b) >= 6;
 
 /* ---- A KEYWORD THE CARD ONLY GRANTS CONDITIONALLY -------------------

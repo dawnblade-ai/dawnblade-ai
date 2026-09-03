@@ -415,22 +415,31 @@ test("clause 3 requires YOUR OWN turn, not merely the action phase", {skip}, () 
 
 /* ---- BEATEN TRACKERS --------------------------------------------------- */
 
-test("Beaten Trackers triggers only on a RANDOM discard", {skip}, () => {
+test("Beaten Trackers triggers only on a RANDOM discard — DRIVEN", {skip}, () => {
   const bt = card("Beaten Trackers");
   assert.match(P.clean(bt.tx || ""), /whenever you discard a random card with 6 or more \{p\}/i,
     "the card says RANDOM, and the hero ability does not");
-  const body = afterDiscardBody();
-  /* Pin the GATE, not merely the presence of the variable: deleting
-     `&& atRandom` from the condition leaves the declaration behind, and a
-     drill that only greps the name passes over exactly that edit. */
-  assert.match(body, /if\(big && atRandom\)/,
-    "clause 3 fires on ANY discard; Beaten Trackers only on a random one. Reading the two " +
-    "as the same event hands out a free action point every time a cost is paid by choice.");
-  assert.match(body, /whenever you discard a random card with/,
-    "matched on the piece's PRINTED TEXT, not by name");
-  assert.match(body, /tag:"modal"/,
-    'RULING: "you may destroy this" is a real decision — prompt every time it triggers');
-  assert.ok(!/"Beaten Trackers"/.test(body), "no card is special-cased by name");
+
+  /* IT USED TO GREP `afterDiscard`'s SOURCE for `if(big && atRandom)`,
+     and the reader moved into the parser at v3.93 — a source slice rots
+     where a rule moves (v3.22, v3.28). Driving both events says the same
+     thing about behaviour and cannot rot.
+
+     THE TWO EVENTS ARE GENUINELY DIFFERENT. Kayo's own clause fires on
+     ANY discard; this piece only on a random one, and reading them as one
+     event hands out a free action point every time a cost is paid by
+     choice. Both fixtures discard the SAME 6-power card, so only the
+     randomness can be what separates them. */
+  const gear = [card("Beaten Trackers")];
+  const board = hand => { const g = game(hand); g.sides[0].gear = gear; g.phase = "action"; return g; };
+  const big = () => card("Buckwild");
+
+  const rnd = runOps(board([big()]), [["discardRandom", 1]], "probe");
+  assert.equal((rnd.promptQ || []).length, 1, "a RANDOM discard of a 6+ offers the piece");
+
+  const chosen = runOps(board([big()]), [["selfDiscard", 1]], "probe");
+  assert.equal((chosen.promptQ || []).length, 0,
+    "a discard BY CHOICE is a different event and offers nothing");
 });
 
 test("the trigger only fires when a random 6+ is actually discarded", {skip}, () => {
@@ -447,8 +456,40 @@ test("the trigger only fires when a random 6+ is actually discarded", {skip}, ()
   /* a real 6+ discard offers the choice */
   const loud = runOps(withGear([card("Buckwild")]), [["discardRandom", 1]], "probe");
   assert.equal((loud.promptQ || []).length, 1, "a 6+ random discard offers the action point");
-  assert.equal(loud.promptQ[0].tag, "modal");
-  assert.equal(loud.promptQ[0].options.length, 2, "destroy, or keep the iron");
+  /* IT IS A `pay` SHEET AS OF v3.93 — the same question every optional
+     cost asks (pay or decline, and the rider resolves only if you pay),
+     with the piece itself as the price. */
+  assert.equal(loud.promptQ[0].tag, "pay");
+  assert.equal(loud.promptQ[0].cost, 0, "the price is the piece, not resources");
+  assert.equal(loud.promptQ[0].destroyUid, gear[0].uid, "and it names WHICH piece");
+  assert.deepEqual(loud.promptQ[0].ops, [["ap", 1]], "the rider is the printed reward");
+
+  /* THE THRESHOLD IS THE CARD'S OWN NUMBER, and until v3.93 it was a
+     hardcoded 6 (`pow6`) behind a regex that matched `\d+` — so a piece
+     printing 8 fired on a 6. Beaten Trackers is the pool's only record of
+     the shape, so no pool fixture can tell a read number from a literal
+     (v3.32, tenth outing); a synthetic printing 8 is what sees it. */
+  const real = card("Beaten Trackers");
+  const eight = {...real, name: "SYN-Trackers-8", uid: "gx",
+    /* THE REAL PRINTED TEXT with one number changed — a synthetic that
+       also rewrites the SENTENCE SHAPE tests the splitter rather than the
+       threshold, and the first draft of this fixture did exactly that. */
+    tx: (real.tx || "").replace("6 or more", "8 or more")};
+  assert.equal(P.fxParse(eight).payCost.trigN, 8, "the parser reads the printed 8");
+
+  /* ONE CARD, TWO THRESHOLDS — the only fixture that can be explained by
+     the number being READ. It prints 6 and Kayo's clause 2 makes it 7 in
+     every zone but the chain, so it clears a 6 and misses an 8.
+
+     THE FIRST DRAFT USED BUCKWILD, WHICH PRINTS **7** — 8 under Kayo, so
+     it met the sabotaged threshold honestly and the drill failed against
+     a correct engine. Check your own fixture, tenth time. */
+  const mid = {name: "SYN-six", uid: "s6", pitch: 1, power: 6, cost: 0,
+    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"], tx: "", kw: []};
+  const at = piece => { const g = game([{...mid}]); g.sides[0].gear = [piece]; g.phase = "action";
+                        return (runOps(g, [["discardRandom", 1]], "probe").promptQ || []).length; };
+  assert.equal(at(card("Beaten Trackers")), 1, "7 effective clears the printed 6");
+  assert.equal(at(eight), 0, "…and misses the printed 8");
 });
 
 /* CLASH compares the power of the top card of each deck, and the deck is a

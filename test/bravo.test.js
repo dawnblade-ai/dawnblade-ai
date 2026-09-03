@@ -239,18 +239,45 @@ test("declining costs nothing and taps nothing", {skip}, () => {
   assert.ok(!(no.sides[0].weaponUsed || {}).mc1, "and the piece is untapped — v2.04's rule");
 });
 
-test("the watcher is found in GEAR, not only on the board", {skip}, () => {
+test("the watcher is found in GEAR, and in the ARENA, and it is DRIVEN", {skip}, () => {
   H.db();
   /* Every other trigger in that block asks the resolving card about
      itself. This one asks what is WATCHING, and Magmatic Carapace is a
-     Chest piece — a scan of the board alone finds nothing at all. */
-  const fs = require("fs"), path = require("path");
-  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const i = src.indexOf('trigger === "playAura"');
-  assert.ok(i > 0, "the playAura site moved — re-anchor this drill");
-  const body = src.slice(Math.max(0, i - 700), i + 300);
-  assert.match(body, /act\(n\)\.gear/, "the gear must be scanned");
-  assert.match(body, /act\(n\)\.board/, "and the board");
+     CHEST piece — a scan of the board alone finds nothing at all.
+
+     THIS DRILL USED TO GREP THE SCAN'S SOURCE, and it broke the moment
+     the scan moved into `offerPayCost` at v3.93 — a source slice rots
+     where a rule moves (v3.22, v3.28, and the ledgers `execute` left
+     behind at v2.53). Driving it says the same thing and cannot rot.
+
+     BOTH ZONES ARE ASSERTED. Nothing in the pool prints a `payCost` on an
+     arena permanent, so the board half is measured-latent — and a scan
+     written for one zone is exactly how three cards came to be dead in
+     the other (v3.33, v3.55, v3.72). */
+  const fromGear = H.execute(carapaceTurn(), carapaceTurn().sides[0].hand[0], "hand", 0, {});
+  assert.ok(fromGear.prompt, "a CHEST piece in the gear zone is found");
+  assert.equal(fromGear.prompt.src, "Magmatic Carapace");
+
+  /* the same piece, moved to the arena — the other half of the scan */
+  P.fxReset();
+  const g2 = H.state({board: [{uid: "b1", kind: "item", spent: false,
+                               card: {...H.card("Magmatic Carapace", 0), uid: "b1"}}],
+                      gear: [], res: 9, ap: 1,
+                      hand: [{...H.card("Edge of Their Seats", 1), uid: "a1"}]},
+                     {}, {turn: 3, actor: 0});
+  g2.builds = [{}, {}];
+  const fromBoard = H.execute(g2, g2.sides[0].hand[0], "hand", 0, {});
+  assert.ok(fromBoard.prompt, "and so is one in the arena");
+  assert.equal(fromBoard.prompt.src, "Magmatic Carapace");
+
+  /* the control: with the watcher nowhere, playing an aura offers nothing */
+  P.fxReset();
+  const g3 = H.state({board: [], gear: [], res: 9, ap: 1,
+                      hand: [{...H.card("Edge of Their Seats", 1), uid: "a1"}]},
+                     {}, {turn: 3, actor: 0});
+  g3.builds = [{}, {}];
+  assert.ok(!H.execute(g3, g3.sides[0].hand[0], "hand", 0, {}).prompt,
+            "no watcher, no sheet — so the two above are not passing on something else");
 });
 
 /* ---- 5. THE TOKEN'S PRINTED NAME ------------------------------------ */

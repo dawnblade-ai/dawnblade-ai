@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 32 cards | understood ≠ built |
-| **Fail states** | 61 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 30 cards | understood ≠ built |
+| **Fail states** | 59 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -53,12 +53,10 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Danger Digits** (none, 3/3 unread)
 - **Glisten** (none, 2/2 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
-- **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
 - **Halo of Illumination** (part, 2/3 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
-- **Refraction Bolters** (part, 2/3 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Carrion Crown** (part, 1/3 unread)
@@ -97,15 +95,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| Ability inert — cost not modelled | 14 |
-| Earned value denied | 14 |
+| Ability inert — cost not modelled | 12 |
+| Earned value denied | 12 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| No schedule to fire on | 11 |
-| Choice never offered | 9 |
+| No schedule to fire on | 10 |
 | Unread, effect unknown | 8 |
+| Choice never offered | 7 |
 | Displayed total is wrong | 6 |
 
-### WRONG — 33 entries
+### WRONG — 32 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -122,15 +120,6 @@ can be overruled. Same discipline as the mention count.
 - **Arcanic Shockwave** (1) · tier `full` · briar
   - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
-- **Beaten Trackers** · tier `part` · kayo
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Whenever you discard a random card with 6 or more {p}, you may destroy this
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Whenever you discard a random card with 6 or more {p}, you may destroy this
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Whenever you discard a random card with 6 or more {p}, you may destroy this
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you do, gain 1 action point.
 - **Boom Grenade** (1) · tier `part` · dash
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > At the start of your turn, destroy this unless you remove a steam counter from it.
@@ -218,9 +207,14 @@ can be overruled. Same discipline as the mention count.
 - **Stains of the Redback** (1) · tier `part` · arakni
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If the defending hero is marked, this costs {r} less to play.
-- … and 8 more (see the station)
+- **Topsy Turvy** · tier `part` · arakni
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
+- … and 7 more (see the station)
 
-### LOST VALUE — 27 entries
+### LOST VALUE — 26 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -280,13 +274,6 @@ can be overruled. Same discipline as the mention count.
 - **Phantasmal Haze** (3) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- **Refraction Bolters** · tier `part` · dorinthea
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > When a weapon attack you control hits, you may destroy this
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When a weapon attack you control hits, you may destroy this
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > If you do, the attack gets go again.
 - **Riggermortis** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
@@ -311,7 +298,10 @@ can be overruled. Same discipline as the mention count.
 - **Weave Lightning** (1) · tier `part` · briar
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If it's fused, it gets go again.
-- … and 2 more (see the station)
+- **Wreck Havoc** (1) · tier `part` · dorinthea
+  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
+    > When this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal.
+- … and 1 more (see the station)
 
 ### INERT — 1 entries
 

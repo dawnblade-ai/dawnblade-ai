@@ -9,6 +9,133 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.93 — the third cost verb, and a card that was firing without the parser
+
+> *"Whenever you discard a random card with 6 or more {p}, **you may
+> destroy this**. If you do, gain 1 action point."* — BEATEN TRACKERS
+>
+> *"When a weapon attack you control hits, **you may destroy this**. If
+> you do, the attack gets go again."* — REFRACTION BOLTERS
+
+Exactly **two** pool records print it — measured over all 797 — and both
+are Legs equipment **WATCHING** an event that happens somewhere else.
+
+### One of them already fired, and that is why it read `part`
+
+Beaten Trackers worked. It had worked for versions, through an **inline
+regex over raw text** sitting inside `afterDiscard`:
+
+```js
+/whenever you discard a random card with \d+ or more \{p\}, you may destroy this/i
+```
+
+That is v3.58's defect exactly — *an inline reader is a card
+special-cased by name* — and it is the reason the card reported
+`tier: part` the whole time. **A tier is a claim about the PARSER**, so a
+card read anywhere else is invisible to every coverage tool here.
+
+**A TIER THAT SAYS `part` ON A CARD THAT WORKS IS A LEAD** — v3.58's own
+sentence, second outing, and it is what started this build.
+
+**AND THE INLINE READER HARDCODED ITS THRESHOLD.** The regex matched
+`\d+` and then tested `pow6`, a literal 6 — so a piece printing 8 would
+have fired on a 6. Beaten Trackers is the pool's only record of the
+shape, so no pool fixture can tell a read number from a literal (v3.32,
+**tenth** outing). The fixture that discriminates prints **6** and is
+**7** under Kayo's clause 2: it clears a threshold of 6 and misses one of
+8. Buckwild — the obvious choice — prints **7**, is 8 under Kayo, and
+meets both; the first draft of that drill failed against a correct
+engine.
+
+**Its sibling was completely dead.** Refraction Bolters prints the
+identical cost and neither board could reach it.
+
+### It is `payCost`'s shape with a different price
+
+Not new machinery (v3.58): a trigger, an optional cost, and a rider that
+resolves only if the cost was paid. What changes is the **verb**, so the
+resource cost is 0 and `destroySelf` says what is actually spent.
+
+**THE TRIGGER VOCABULARY IS CLOSED, and closed harder than most** —
+this cost destroys the player's own equipment, so a trigger nobody built
+would spend a piece on an event that never happens, or on one that
+happens for a different reason.
+
+**THE THRESHOLD TRAVELS WITH THE TRIGGER** (v3.88's rule), rather than
+being known by the site that fires it.
+
+**AND A `noop` RIDER REFUSES TOO.** `classifyClause` answers
+`{status:"noop", ops:[["noop", …]]}` for a keyword it reads and
+deliberately does nothing about — so `ops.length` is **1** and the length
+test alone lets it through, destroying the piece for a reward nothing
+delivers. That is v2.04's free-ability rule read from the other end: a
+cost with no reward. Measured over the pool: **no** record's `optCost` or
+`payCost` rider is nothing but noops, so it is a guard only a synthetic
+can reach — and a fixture whose rider `classifyClause` answers NULL for
+never reaches the status test at all, which is the **third** time that
+flaw has cost a drill.
+
+### "The attack" is a third subject
+
+Refraction Bolters is a WATCHER, so *"this"* would be the iron and is
+exactly the wrong subject — v2.33's Bull's Eye Bracers, v3.47's Scuttle
+Toes, v3.92's banished card, **fourth time**. Measured across all 797
+records: six print *"the attack gets/gains/has go again"*, and the three
+`atkTrigger` tokens have their clause claimed by that whole-card reader
+before the clause loop runs. **Exactly one record's parse moved.**
+
+### The grant cannot arrive in time to be "kept"
+
+`linkPayload` settles the layer's action point on its **last line**;
+`openPrompt` drains at the tail of the **caller**. So a trigger that fires
+in the damage step and is answered by a prompt is always answered after
+the point is gone.
+
+**CR 5.3.5: "If the layer has go again, the controlling player GAINS 1
+action point."** So the point IS the grant, and handing it over is the
+faithful settlement rather than an approximation of one — this project
+spells the same arithmetic out at v2.39 for an instant, for exactly this
+reason. **The link is marked too**, because the chain display reads a
+link's `ga` to draw its glyph, and a number that is right while the screen
+disagrees is the sev-2 category the player TRUSTS.
+
+**THE QUEUE SITE SAYS THE LAYER HAS SETTLED; THE BOARD IS NEVER
+INFERRED.** The first draft guarded on `!s.pend` — which is the
+**trainer's** marker: `resolveStack` nulls `pend` before draining, and
+`judge.js` holds it until `closeChain`, two steps later. So the rule would
+have worked on one board and leaked a free action point onto the next
+attack on the other. **v3.01's shape, created deliberately rather than
+found.** `spec.lateGa` is set by the one site that KNOWS, because it is
+inside `linkPayload` itself, and the settlement is opt-in (v3.58) so every
+other prompt keeps the consumers it had.
+
+### Three watcher scans became one
+
+Magmatic Carapace's `playAura` scan, Beaten Trackers' and Refraction
+Bolters' are `offerPayCost` now — **gear AND arena**, because Magmatic is
+a Chest and both new cards are Legs, so a board-only scan finds nothing
+for any of them (v3.07, v3.33, v3.55, v3.72).
+
+**AND THREE DRILLS THAT GREPPED THOSE SCANS WERE REWRITTEN TO DRIVE
+THEM.** A source slice rots where a rule moves (v3.22, v3.28) — and the
+driven versions are strictly better: the gear/arena one now proves both
+zones *and* carries a control that no watcher means no sheet, and the
+randomness one discards the **same 6-power card** by two routes so only
+the randomness can separate them.
+
+**Sixteen sabotages, sixteen bite.** Two came back silent first because
+the synthetic put a **newline** between the two clauses where the card
+prints `". "` — the splitter then leaves a trailing period, the matcher
+misses for *that* reason, and the sabotage cannot express its bug (v3.62;
+**eleventh** *check your own fixture*).
+
+Coverage **373 → 375 full**, `part` **29 → 27**. Drills 2021 → **2037**.
+Scenes 57 → **59**. Fairness clean. 210 self-play games · 0 stalls · 0
+refusals · 0 invariant violations · 0 malformed feed. Dorinthea 4 → 7
+wins.
+
+---
+
 ## v3.92 — a refusal that was waiting on a reader built for its own hero
 
 > *"When this hits, you may banish an attack action card from your hand
