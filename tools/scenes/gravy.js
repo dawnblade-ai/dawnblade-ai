@@ -1,5 +1,5 @@
-/* GRAVY BONES — watery grave, and the DRAWBACK that is the whole reason
-   the keyword's ruling exists.
+/* GRAVY BONES — the ability that was INERT, and the drawback that is the
+   whole reason watery grave's ruling exists.
 
    "If a blue card has been put into your graveyard this turn, you may
     play cards with watery grave from your graveyard."
@@ -21,6 +21,68 @@ function built(c, k){
 }
 
 module.exports = [
+
+{
+  name: "his ability costs a Gold — and the Gold really leaves the board",
+  why: "v3.86 — `parseHeroPower` refuses any activation cost containing " +
+       "\"destroy\" unless it destroys THIS, so `build.js` built him NO " +
+       "powCard at all and neither board could offer the ability. His deck " +
+       "read in full while his hero did nothing. Measured across all 797 " +
+       "records: 39 print a destroy in an activation cost and 38 of them " +
+       "destroy the source — his is the only one that names a card " +
+       "somewhere else, which is why the shape is NAMED rather than the " +
+       "guard widened.",
+  run(c){
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "gravy");
+    const hd = W.HEROES.find(x => x.k === "dorinthea");
+    const ctr = {n: 0};
+    let rng = RNG.make("scene-gravy-cost");
+    const b0 = B.buildSideDefault(h, G.parseDeck(W.DECKS.gravy), c.H.db(), rng, ctr);
+    rng = b0.rng;
+    const b1 = B.buildSideDefault(hd, G.parseDeck(W.DECKS.dorinthea), c.H.db(), rng, ctr);
+    const g0 = c.J.newMatch({builds: [b0.b, b1.b], names: [h.n, hd.n],
+      heroKeys: ["gravy", "dorinthea"], rng: b1.rng, first: 0, tokSeq: ctr.n});
+    const gold = Object.assign({}, c.card("Gold", 0), {uid: "tokGOLD"});
+    const withGold = Object.assign({}, g0, {turn: 4, sides: g0.sides.map((s, i) =>
+      i === 0 ? Object.assign({}, s, {board: [{uid: "tokGOLD", kind: "item",
+                                              spent: false, card: gold}]}) : s)});
+    /* WITH NO GOLD IT IS REFUSED, and refused BEFORE he taps — a cost is a
+       legality (v3.11), or the player pays for a play the rules never
+       allowed. */
+    const broke = c.J.legal(g0, {t: "activate", from: "hero", uid: "hpow"}, 0);
+    const hand0 = withGold.sides[0].hand.length;
+    const n = c.reduce(withGold, {t: "activate", from: "hero", uid: "hpow"}, 0);
+    const gv = n.sides[0].grave;
+    return {
+      "the cost names the card it destroys": c.P.abDestroyBoard(b0.b.HPOW),
+      "with no Gold it is refused":          /Gold/.test(String(broke || "")),
+      "…and asking does not tap him":        g0.sides[0].heroTapped,
+      "the Gold leaves the arena":           (n.sides[0].board || []).length,
+      "…for the GRAVEYARD, turn-stamped":    (gv.find(x => x.name === "Gold") || {})._gy,
+      "he drew one and discarded one":       n.sides[0].hand.length - hand0,
+      "the {t} is charged":                  n.sides[0].heroTapped,
+      /* AN INSTANT COSTS NO ACTION POINT (CR 8.1.6). */
+      "action points spent":                 withGold.sides[0].ap - n.sides[0].ap,
+      /* THE COST IS PAID FIRST. Every path in UNSHIFTS, so the card filed
+         first sits deepest — cost-first puts the Gold under the discard. */
+      "the Gold went in BEFORE the discard": gv.length - 1 - gv.findIndex(x => x.name === "Gold"),
+      "the board is clean":                  require("../../engine/invariants.js").errors(n).length
+    };
+  },
+  want: {
+    "the cost names the card it destroys": "Gold",
+    "with no Gold it is refused": true,
+    "…and asking does not tap him": false,
+    "the Gold leaves the arena": 0,
+    "…for the GRAVEYARD, turn-stamped": 4,
+    "he drew one and discarded one": 0,
+    "the {t} is charged": true,
+    "action points spent": 0,
+    "the Gold went in BEFORE the discard": 0,
+    "the board is clean": 0
+  }
+},
 
 {
   name: "an ally that dies is turned FACE DOWN — it cannot be replayed",

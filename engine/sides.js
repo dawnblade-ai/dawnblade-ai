@@ -118,7 +118,16 @@ function makeSide(o){
     hp, maxHp: o.maxHp!=null ? o.maxHp : hp,
     int, baseInt: o.baseInt!=null ? o.baseInt : int, intWas: null,
     deck: o.deck || [], hand: o.hand || [], arsenal: o.arsenal!=null ? o.arsenal : null,
-    pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
+    /* `grave` IS SEEDABLE (v3.86), the way `board` already is. Fai's
+       "you may start the game with a Phoenix Flame in your GRAVEYARD" is
+       Dash's pregame start one zone over, and this hardcoded `[]` was
+       silently dropping it — the build carried the card and both boards
+       asked for it, and the shape in between threw it away.
+
+       ONLY `grave`. `pitch`, `banish` and `soul` stay empty because
+       nothing seeds them, and widening a shape ahead of a caller is how a
+       field arrives with no reader (this file's own lesson at v3.82). */
+    pitch: [], grave: o.grave || [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
     amp: 0, ward: 0, awd: 0,

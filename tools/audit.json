@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-03T12:37:57.516Z",
+ "generated": "2026-09-03T13:05:02.010Z",
  "appVer": "3.85",
  "dataVer": "sage-v13",
  "dbCount": 797,
@@ -52,7 +52,8 @@
    "clauses": [
     {
      "t": "Essence of Ice",
-     "covered": false
+     "covered": false,
+     "heading": true
     },
     {
      "t": "If it's not your turn, you may play blue non-attack action cards from your arsenal as though they were instants.",
@@ -64,7 +65,7 @@
     }
    ],
    "flags": [
-    "1 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader (1 of them the ability's printed NAME, not a rule)"
    ]
   },
   "viserai": {
@@ -179,12 +180,15 @@
    "int": 4,
    "tt": "Draconic Ninja Hero - Young",
    "tx": "You may start the game with a Phoenix Flame in your graveyard.\nOnce per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand. This ability costs {r} less to activate for each Draconic chain link you control.",
-   "statics": [],
+   "statics": [
+    "Fai — pregame Phoenix Flame in the graveyard (spliced out of the deck, `_gy` 0)",
+    "Fai — the ability costs {r} less per Draconic chain link (no passive: `_dracDiscount` rides on the powCard and `effCost` reads it)"
+   ],
    "power": "once/turn: Return a Phoenix Flame from your graveyard to your hand [3r]",
    "clauses": [
     {
      "t": "You may start the game with a Phoenix Flame in your graveyard.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Once per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand",
@@ -192,12 +196,10 @@
     },
     {
      "t": "This ability costs {r} less to activate for each Draconic chain link you control.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "enigma": {
    "name": "Enigma",
@@ -309,7 +311,8 @@
    "clauses": [
     {
      "t": "Essence of Earth and Lightning",
-     "covered": false
+     "covered": false,
+     "heading": true
     },
     {
      "t": "The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.",
@@ -321,7 +324,7 @@
     }
    ],
    "flags": [
-    "1 hero-text clause(s) not recognized by any ability reader"
+    "1 hero-text clause(s) not recognized by any ability reader (1 of them the ability's printed NAME, not a rule)"
    ]
   },
   "gravy": {
@@ -333,20 +336,18 @@
    "statics": [
     "Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"
    ],
-   "power": null,
+   "power": "destroy a Gold: Draw a card, then discard a card",
    "clauses": [
     {
      "t": "Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.",
      "covered": true
     }
    ],
-   "flags": [
-    "1 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "lyath": {
    "name": "Lyath Goldmane",

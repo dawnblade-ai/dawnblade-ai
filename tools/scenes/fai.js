@@ -1,8 +1,14 @@
 /* FAI — "You may start the game with a Phoenix Flame in your graveyard."
 
-   His ability's SECOND clause is unread (`npm run sweep`: 2 of 3). What
-   these scenes pin is EPHEMERAL, which his deck is the only user of — and
-   which was being read three different ways across two files, two of them
+   BOTH of his clauses landed at v3.86 and neither was the ability's
+   payload: the graveyard PICK has read for versions. What refused was
+   everything around it — he opened with an empty graveyard, so the return
+   had nothing to fetch until he had drawn and spent a Phoenix Flame, and
+   the discount was simply dropped, so the ability cost 3 on the turn its
+   whole point is that it costs 0.
+
+   The rest pin EPHEMERAL, which his deck is the only user of — and which
+   was being read three different ways across two files, two of them
    against reminder text the database has never carried. */
 const B = require("../../engine/build.js");
 const G = require("../../engine/game.js");
@@ -12,6 +18,95 @@ const RNG = require("../../engine/rng.js");
 const {loadData} = require("../../test/helpers/extract.js");
 
 module.exports = [
+
+{
+  name: "he opens with a Phoenix Flame ALREADY in the graveyard",
+  why: "v3.86 — the pool prints exactly TWO \"you may start the game " +
+       "with\" lines and this is the second; Dash's puts an ITEM in the " +
+       "ARENA and nobody had built the graveyard twin. Without it his own " +
+       "ability has nothing to fetch on turn one, which is the whole of " +
+       "what the hero does.",
+  run(c){
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "fai");
+    const ctr = {n: 0};
+    let rng = RNG.make("scene-fai");
+    const b0 = B.buildSideDefault(h, G.parseDeck(W.DECKS.fai), c.H.db(), rng, ctr);
+    rng = b0.rng;
+    const hd = W.HEROES.find(x => x.k === "dorinthea");
+    const b1 = B.buildSideDefault(hd, G.parseDeck(W.DECKS.dorinthea), c.H.db(), rng, ctr);
+    const g = c.J.newMatch({builds: [b0.b, b1.b], names: [h.n, hd.n],
+      heroKeys: ["fai", "dorinthea"], rng: b1.rng, first: 0, tokSeq: ctr.n});
+    const seen = new Set(); let dup = 0;
+    ["deck", "hand", "pitch", "grave", "banish", "soul"].forEach(z =>
+      (g.sides[0][z] || []).forEach(x => { if(seen.has(x.uid)) dup++; seen.add(x.uid); }));
+    return {
+      "cards in his graveyard at the deal": (g.sides[0].grave || []).length,
+      "…and it is the card his line NAMES": (g.sides[0].grave[0] || {}).name,
+      "stamped as NOT put there this turn": (g.sides[0].grave[0] || {})._gy,
+      "the opponent gets nothing":          (g.sides[1].grave || []).length,
+      /* SPLICED OUT OF THE DECK. A card in the graveyard AND in the deck
+         is CARD-IN-TWO-ZONES, which the census works by uid to catch. */
+      "no card is in two zones":            dup,
+      "the board is clean":                 require("../../engine/invariants.js").errors(g).length
+    };
+  },
+  want: {
+    "cards in his graveyard at the deal": 1,
+    "…and it is the card his line NAMES": "Phoenix Flame",
+    "stamped as NOT put there this turn": 0,
+    "the opponent gets nothing": 0,
+    "no card is in two zones": 0,
+    "the board is clean": 0
+  }
+},
+
+{
+  name: "the ability costs 3, then 1, then nothing — per Draconic chain link",
+  why: "v3.86 — the rider was dropped entirely, so the ability charged its " +
+       "printed {r}{r}{r} on the turn its whole point is that a Draconic " +
+       "chain has made it free. And it is charged through `judge.reduce` " +
+       "rather than read: `effCost` is asked three DIFFERENT questions on " +
+       "one activation (v3.80 — could the seat raise it, must a payment " +
+       "open, charge it), and a discount threaded into one of the three " +
+       "is what put a seat on negative resources.",
+  run(c){
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "fai");
+    const hd = W.HEROES.find(x => x.k === "dorinthea");
+    const spend = links => {
+      const ctr = {n: 0};
+      let rng = RNG.make("scene-fai-cost");
+      const b0 = B.buildSideDefault(h, G.parseDeck(W.DECKS.fai), c.H.db(), rng, ctr);
+      rng = b0.rng;
+      const b1 = B.buildSideDefault(hd, G.parseDeck(W.DECKS.dorinthea), c.H.db(), rng, ctr);
+      const g0 = c.J.newMatch({builds: [b0.b, b1.b], names: [h.n, hd.n],
+        heroKeys: ["fai", "dorinthea"], rng: b1.rng, first: 0, tokSeq: ctr.n});
+      const chain = [];
+      for(let i = 0; i < links; i++) chain.push({n: "L" + i, dmg: 1, drac: true, kind: "atk"});
+      const g = Object.assign({}, g0, {chain,
+        sides: g0.sides.map((s, i) => i === 0 ? Object.assign({}, s, {res: 9}) : s)});
+      const n = c.reduce(g, {t: "activate", from: "hero", uid: "hpow"}, 0);
+      return {spent: 9 - n.sides[0].res, bad: require("../../engine/invariants.js").errors(n).length};
+    };
+    const a = spend(0), b = spend(1), d = spend(3);
+    return {
+      "printed pips on his ability":  B.buildSideDefault(h, G.parseDeck(W.DECKS.fai),
+                                        c.H.db(), RNG.make("x"), {n: 0}).b.HPOW.cost,
+      "resources spent with no chain": a.spent,
+      "…with one Draconic link":       b.spent,
+      "…with three":                   d.spent,
+      "and nobody ever owes any":      a.bad + b.bad + d.bad
+    };
+  },
+  want: {
+    "printed pips on his ability": 3,
+    "resources spent with no chain": 3,
+    "…with one Draconic link": 2,
+    "…with three": 0,
+    "and nobody ever owes any": 0
+  }
+},
 
 {
   name: "EPHEMERAL is read off the printed KEYWORD, not off reminder text",

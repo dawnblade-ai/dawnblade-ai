@@ -988,3 +988,73 @@ test("a non-weapon attack collects neither the buff nor its rider", {skip}, () =
   assert.strictEqual(r.resolved.sides[0].ap, r.apBefore - 1,
     "so this one does NOT go again");
 });
+
+/* ============================================================
+   AN ABILITY'S PRINTED NAME IS NOT AN UNREAD RULE (v3.86)
+
+   Briar prints "**Essence of Earth and Lightning**" and Iyslander
+   "**Essence of Ice**" on lines of their own. The audit splits hero text
+   on newlines, so a NAME arrives looking exactly like a sentence and has
+   reported unread since v3.21 — where it is recorded IN PROSE so nobody
+   chases it. A doc claim is a test with no assertion (v3.41), so the
+   report says it now instead.
+
+   ANNOTATED, NEVER SUPPRESSED. `card_keywords` also carries real keywords
+   — Crouching Tiger's entire text is "Ephemeral" — so a filter that
+   dropped these lines from the count would hide a genuine gap the first
+   time a hero printed one. Over-reporting is the safe direction.
+   ============================================================ */
+test("the pool's ability NAMES are exactly Briar's and Iyslander's", {skip}, () => {
+  /* THE MEASUREMENT THE ANNOTATION RESTS ON. `card_keywords` is the
+     database naming its own bold lines, and `tools/ledger.js`'s closed
+     vocabulary is what tells a real keyword from an ability name. If this
+     count moves, the annotation is claiming something new and the reader
+     should go and look rather than trust the flag. */
+  const AUDIT = require("../tools/audit.js");
+  const pool = require("../data/pool.json");
+  const arr = Array.isArray(pool) ? pool : Object.values(pool);
+  const odd = [];
+  arr.forEach(c => (c.card_keywords || []).forEach(k => {
+    if(!AUDIT.isLedgerKeyword(k)) odd.push(c.name + " :: " + k);
+  }));
+  assert.deepEqual(odd.sort(), [
+    "Ash :: Material",
+    "Blasmophet, Levia Consumed :: Transform",
+    "Briar :: Essence of Earth and Lightning",
+    "Iyslander :: Essence of Ice"
+  ], "four entries are not ledger keywords, and only two are on a HERO");
+});
+
+test("a REAL keyword on a line of its own is not an ability name", {skip}, () => {
+  /* THE NEAR-MISS CONTROL. Crouching Tiger's whole printed text is
+     "**Ephemeral**", in the same field — so a heading test that looked at
+     shape alone would call a keyword a heading. Without this drill,
+     dropping the ledger check is SILENT. */
+  const AUDIT = require("../tools/audit.js");
+  assert.equal(AUDIT.isLedgerKeyword("Ephemeral"), true);
+  assert.equal(AUDIT.isLedgerKeyword("Ward 1"), true);
+  assert.equal(AUDIT.isLedgerKeyword("Azalea Specialization"), true);
+  assert.equal(AUDIT.isLedgerKeyword("Essence of Ice"), false);
+  assert.deepEqual([...AUDIT.abilityNamesOf({kw: ["Ephemeral", "Go again"]})], []);
+  assert.deepEqual([...AUDIT.abilityNamesOf({kw: ["Essence of Ice"]})], ["Essence of Ice"]);
+  assert.deepEqual([...AUDIT.abilityNamesOf({})], []);
+});
+
+test("the name is FLAGGED and still COUNTED — annotate, never suppress", {skip}, () => {
+  const AUDIT = require("../tools/audit.js");
+  for(const k of ["briar", "iyslander"]){
+    const h = AUDIT.analyzeHero(buildOf(k).heroRec, k);
+    const named = h.clauses.filter(c => c.heading);
+    assert.equal(named.length, 1, k + " has exactly one printed ability name");
+    assert.equal(named[0].covered, false,
+      "it is STILL uncovered — the flag annotates, it does not remove the line");
+    assert.ok(h.clauses.filter(c => !c.covered).includes(named[0]),
+      "and it is still in the uncovered list, so the count is unchanged");
+    assert.match(h.flags.join(" "), /printed NAME, not a rule/,
+      "…and the report SAYS so, which is the whole point");
+  }
+  /* THE CONTROL: a hero with no such line gets no flag and no annotation. */
+  const kayo = AUDIT.analyzeHero(buildOf("kayo").heroRec, "kayo");
+  assert.equal(kayo.clauses.filter(c => c.heading).length, 0);
+  assert.deepEqual(kayo.flags, [], "and Kayo reports fully covered");
+});

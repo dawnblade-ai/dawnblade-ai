@@ -1648,7 +1648,12 @@ function makeEffects(ctx){
                                       discount: bAct(s).auraDiscount}) : null;
     const _allyCost = from === "ally" ? ((allyAttack(card) || {}).cost || 0)
                     : _auraAtk ? (_auraAtk.cost || 0) : null;
-    exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s)));
+    /* THE CHAIN IS THE CALLER'S ANSWER (v3.86) — Fai's ability discounts
+       itself per Draconic chain link, and the chain is game state. Handed
+       in here so the ONE cost reader answers, rather than a fourth site
+       subtracting after the fact (v3.80). */
+    const _costO = {dracLinks: P.dracLinks(s.chain)};
+    exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s), _costO));
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource
        cost, because that is what "as an additional cost to play this"
@@ -1774,6 +1779,39 @@ function makeEffects(ctx){
         ? Object.assign({}, x, {destroyed: true, _banished: true}) : x);
       n = L(n, `${card.name.replace(/ — ability$/, "")} is banished — the rest of the cost is paid.`);
     }
+    /* A NAMED BOARD PERMANENT IS A COST (v3.86) — GRAVY BONES.
+
+       "Instant - {t}, destroy a Gold you control: Draw a card, then
+       discard a card." Measured across all 797 records, 39 print a
+       destroy in an activation cost and **38 of them destroy THIS**; his
+       is the only one that names a card somewhere else, which is why
+       `parseHeroPower` refused the whole line and his hero ability was
+       inert while his deck read 100%.
+
+       PAID ON ACTIVATION, beside the tap and the soul — not after the
+       effect, the way an equipment's own `destroy this` is. It is a COST:
+       drawing and discarding first and then finding the Gold gone is a
+       different card.
+
+       BOTH BOARDS REFUSE IT FIRST (`parser.boardEntryNamed`, a legality —
+       v3.11), so reaching here empty means a stale or crafted action off
+       the wire. An unpayable cost is INERT, never free (v2.04).
+
+       THE GRAVEYARD IS THE DESTINATION (the 2026-08-29 ruling: a destroyed
+       permanent goes to the graveyard) and it goes through `gy` so it is
+       TURN-STAMPED like every other path in — a new path that forgets the
+       stamp makes the whole "…this turn" family quietly wrong (v3.54).
+       Gold prints no pitch, so it is not blue and cannot satisfy his own
+       second clause; that falls out of the card rather than being said. */
+    { const _dn = P.abDestroyBoard(card);
+      if(_dn){
+        const _de = P.boardEntryNamed(act(n), _dn);
+        if(!_de)
+          return L(n, `${card.name} — ${act(n).name} controls no ${_dn}. Nothing happens.`);
+        actMut(n).board = act(n).board.filter(x => x !== _de);
+        actMut(n).grave = [...gy(n.turn, _de.card), ...act(n).grave];
+        n = L(n, `${act(n).name}: ${_de.card.name} is destroyed — the cost is paid.`);
+      } }
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
        stays on the board, exactly as a weapon stays equipped —
@@ -2028,7 +2066,7 @@ function makeEffects(ctx){
       /* RULING: links come from attacks — "the first attack each turn is chain
          link 1" — so non-attack arcane (kind "arc") and the dummy's swing
          (kind "foe") must not be counted. */
-      const dracLinks = n.chain.filter(l=>l.drac && l.kind==="atk").length;
+      const dracLinks = P.dracLinks(n.chain);   /* one reader — v3.86 */
       const met = cond==="atk" ? act(n).hist.atk>0 : cond==="non" ? act(n).hist.non>0
         /* what THIS resolution discarded, not what the turn did */
         : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))

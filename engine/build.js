@@ -367,6 +367,9 @@ function heroAbilities(heroRec, displayName, code){
   const auraDiscount = _fad
     ? {name: _fad[1].trim(), amt: (_fad[2].match(/\{r\}/g) || []).length}
     : null;
+  const _dr = _htx.match(
+    /this ability costs ((?:\{r\})+) less to activate for each draconic chain link you control/);
+  const _dracRed = _dr ? (_dr[1].match(/\{r\}/g) || []).length : 0;
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
   /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
      fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
@@ -394,7 +397,20 @@ function heroAbilities(heroRec, displayName, code){
     tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
     _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
     heroPow.soul ? {_soulCost: heroPow.soul} : {},
-    heroPow.selfBanish ? {_selfBanish: true} : {}) : null;
+    heroPow.selfBanish ? {_selfBanish: true} : {},
+    /* GRAVY BONES — "{t}, destroy a Gold you control" (v3.86). The named
+       permanent rides on the powCard the way the soul cost does, because
+       `heroAbilityLine` strips the cost prefix: a cost not carried here is
+       a cost nothing can charge, which is the free-ability bug v2.04
+       fixed. OPT-IN (v3.58). */
+    heroPow.destroyBoard ? {_destroyBoard: heroPow.destroyBoard} : {},
+    /* FAI — "this ability costs {r} less to activate for each DRACONIC
+       CHAIN LINK you control" (v3.86). A DYNAMIC reduction: it depends on
+       the chain, which is game state rather than a fact about the side,
+       so `effCost` takes the count from the caller and this stamp says
+       how much each link is worth. Read off the printed pips, never
+       hardcoded (v3.21). */
+    _dracRed ? {_dracDiscount: _dracRed} : {}) : null;
   return {heroRec, heroPow, HPOW, HZOOM,
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
@@ -543,7 +559,14 @@ function buildSide(h, d, db, opts, rng, ctr){
     gr.powCard=Object.assign({name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
       tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid},
       pw.soul ? {_soulCost: pw.soul} : {},
-      pw.selfBanish ? {_selfBanish: true, _banishGear: gr.uid} : {}); } } });
+      pw.selfBanish ? {_selfBanish: true, _banishGear: gr.uid} : {},
+      /* v3.63's rule, THIRD outing: when you add a flag to one powCard
+         builder, grep for the others. No pool EQUIPMENT prints this cost
+         today — measured, all 38 non-hero destroy costs say "destroy
+         this" — so this is latent; `execute` reads the flag off the
+         powCard without caring which builder stamped it, so a card that
+         printed the shape would work rather than be silently free. */
+      pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {}); } } });
   const _atk = deck.filter(isAttack);
   const _ga = deck.filter(c=>fxParse(c).ga).length;
   const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
@@ -564,12 +587,37 @@ function buildSide(h, d, db, opts, rng, ctr){
       return (m && m[1]>=4) ? T[m[0]] : "Line: chain go again into your heaviest hit; block with threes.";
     })()+(heroPow?" Hero power online — "+heroPow.label+".":"");
   const hasBoost = deck.some(c=>hasKw(c,"boost"));
-  let startItem = null;
+  let startItem = null, startGrave = null;
   if(/start the game with a mechanologist item with cost 2 or less/.test(clean(heroRec.tx||"").toLowerCase())){
     const ii = deck.findIndex(c=>/\bitem\b/i.test(c.tt||"") && (c.cost||0)<=2);
     if(ii>=0){ startItem = {card:deck[ii], kind:"item", spent:false, uid:deck[ii].uid}; deck.splice(ii,1); }
   }
-  return {b:Object.assign({deck,gear,hasBoost,read,startItem,
+  /* FAI — "You may start the game with a Phoenix Flame in your graveyard."
+     (v3.86)
+
+     DASH'S SHAPE, ONE ZONE OVER, and the second pregame passive in the
+     pool. His is an ITEM into the ARENA; this is a NAMED card into the
+     GRAVEYARD, which is where his whole engine reads from — his ability
+     returns a Phoenix Flame from there to hand, so without this he has to
+     draw and spend one before the ability does anything at all.
+
+     THE NAME IS READ OFF THE PRINTED LINE (v3.21's rule), not hardcoded:
+     a second hero printing the same shape for a different card gets the
+     right card, and this file names none.
+
+     IT IS SPLICED OUT OF THE DECK. A card in the graveyard AND in the
+     deck is `CARD-IN-TWO-ZONES`, which the invariant judge exists for —
+     the same reason Dash's item is spliced. And it is TURN-STAMPED with
+     0: `_gy` answers the whole "…put into a graveyard this turn" family,
+     and a card that was there before turn 1 must not satisfy it. */
+  const _sg = clean(heroRec.tx||"").toLowerCase()
+    .match(/you may start the game with an? (.+?) in your graveyard/);
+  if(_sg){
+    const want = _sg[1].trim();
+    const gi = deck.findIndex(c => String(c.name||"").toLowerCase() === want);
+    if(gi >= 0){ startGrave = Object.assign({}, deck[gi], {_gy: 0}); deck.splice(gi, 1); }
+  }
+  return {b:Object.assign({deck,gear,hasBoost,read,startItem,startGrave,
     hp:heroRec.hp!=null?heroRec.hp:20, int:heroRec.int!=null?heroRec.int:4}, _ab), rng};
 }
 
@@ -649,7 +697,6 @@ function buildVanilla(list, gearNames, db, rng, ctr, o){
   const b = {
     deck: sh.arr, gear, hasBoost: false, read: "", heroPow: null, HPOW: null,
     HZOOM: null, heroRec: {},
-    startItem: null,
     hp: o.hp != null ? o.hp : 42,
     int: o.int != null ? o.int : 4,
     _dummy: true
@@ -711,7 +758,14 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
                   "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
-                  "daggerDrain","halveBase","auraDiscount"];
+                  "daggerDrain","halveBase","auraDiscount",
+                  /* THE TWO PREGAME PLACEMENTS (v3.86). `startItem` has
+                     been a build field since Dash and was never in this
+                     list, so the census SKIPPED it — a HERO_STATICS row
+                     naming a build fact nothing verified, which is v3.21's
+                     one-sided ledger in the other direction. Adding Fai's
+                     `startGrave` is what made that visible. */
+                  "startItem","startGrave"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -744,7 +798,11 @@ const PASSIVE_TYPE = {
      `effects.js`, which is inventing card text one level up — the same
      reason `atkPowOffChain` is a number rather than a flag. Widening the
      ledger's allowed types was a deliberate edit to `build.test.js`. */
-  earthOnFirstHeroDmg: "string", lightningOnSecondNonAtk: "string"
+  earthOnFirstHeroDmg: "string", lightningOnSecondNonAtk: "string",
+  /* AN OBJECT each: the pregame placements are a CARD (or a board entry),
+     which is the thing the printed line names. Dash's goes to the arena,
+     Fai's to the graveyard. */
+  startItem: "object", startGrave: "object"
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,

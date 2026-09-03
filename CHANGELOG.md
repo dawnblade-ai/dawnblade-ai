@@ -9,6 +9,150 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.86 — the last three hero clauses, and none was the payload
+
+Three printed clauses were left unread across the whole pool's fifteen
+heroes. **Not one of them was the ability's effect** — every payload had
+read for versions. What refused was the cost, the pregame placement, and
+a rider.
+
+### Gravy Bones — a cost that destroys something ELSE
+
+> *"**Instant** - {t}, destroy a Gold you control: Draw a card, then
+> discard a card."*
+
+His deck read in full and his hero read **nothing at all**:
+`parseHeroPower` refuses any activation cost containing *"destroy"*
+unless it destroys **this**, so `build.js` built him **no powCard** and
+neither board could offer the ability.
+
+**AND HIS IS THE POOL'S ONLY COST OF ITS SHAPE.** Measured across all 797
+records: 39 print a destroy in an activation cost and **38 of them say
+"destroy this"** — the `sd` flag that has existed since equipment
+abilities got a route. That measurement is what makes this a NAMED third
+shape (beside v3.39's counter cost and v3.74's soul banish) rather than a
+widening of the guard, which would be parsing ahead of wiring.
+
+- **THE `{t}` NEEDED NOTHING.** `tapsToActivate` (v3.48) reads the hero's
+  own printed line for the tap in the cost half and already answered TRUE
+  for his. Carrying it a second time on the powCard would be two records
+  of one fact.
+- **THE NAME KEEPS ITS PRINTED CAPITALISATION** (v3.53). `costStr` comes
+  off the raw cleaned text, because a proper noun is the only thing
+  separating a token's NAME from a common noun — matched lowercased this
+  claims *"destroy a card you control"*, a subject no reader can pin. He
+  is the pool's only card of this shape, so **sabotaging the anchor open
+  is SILENT against every pool fixture**; a synthetic near-miss is what
+  sees it (v3.73's Crash-and-Bash discriminator, one cost over).
+- **IT IS PAID ON ACTIVATION**, beside the tap and the soul banish —
+  never after the effect, the way an equipment's own `destroy this` is.
+  Drawing and discarding first and finding the Gold gone afterwards is a
+  different card, and the **graveyard ORDER** is the observable that says
+  which happened.
+- **BOTH BOARDS REFUSE IT FIRST** (v3.11 — a cost is a legality), through
+  ONE reader: `parser.abDestroyBoard` names the card and
+  `parser.boardEntryNamed` finds it. Three spellings of a name match is
+  how an ability comes to be legal on one board and free on another.
+- **THE DESTROYED GOLD REACHES THE GRAVEYARD, TURN-STAMPED** — the
+  2026-08-29 ruling, and `_gy` answers the whole *"…this turn"* family, so
+  a new path in that forgets the stamp makes those cards quietly wrong
+  (v3.54). Gold prints no pitch, so it is not blue and cannot satisfy his
+  own second clause; that falls out of the card rather than being said.
+
+Driven in self-play: the route fires **6 times in 30 games**, so it is
+reachable in real play rather than only in a fixture — the *"when you
+build a route, go and count how often it fires"* rule (v3.84), which
+came back zero three times in the previous cycle.
+
+### Fai — a pregame zone, and a cost the chain moves
+
+> *"You may start the game with a **Phoenix Flame** in your graveyard.
+>
+> **Once per Turn Instant** - {r}{r}{r}: Return a Phoenix Flame from your
+> graveyard to your hand. This ability costs {r} less to activate for each
+> **Draconic chain link** you control."*
+
+The graveyard PICK has read for versions. He simply opened with an **empty
+graveyard**, so the return had nothing to fetch until he had drawn and
+spent a Phoenix Flame — and the discount was dropped, so the ability cost
+3 on the turn its whole point is that it costs 0.
+
+- **THE PREGAME HALF IS DASH'S SHAPE, ONE ZONE OVER.** The pool prints
+  exactly **two** *"you may start the game with"* lines; his puts an ITEM
+  in the ARENA, and nobody had built the graveyard twin. The card's NAME
+  is read off the printed line (v3.21) — a synthetic hero naming a
+  different card proves it, because Fai prints only one.
+- **IT IS SPLICED OUT OF THE DECK** and stamped `_gy: 0`. A card in the
+  graveyard AND the deck is `CARD-IN-TWO-ZONES`; a card stamped with the
+  current turn satisfies every *"…put into a graveyard this turn"* clause
+  on turn one, his own second hero clause included.
+- **AND `makeSide` SILENTLY DROPPED THE SEED.** It hardcoded `grave: []`
+  while taking every other zone from its options — found by driving the
+  opening, not by reading the field list, because every zone `newMatch`
+  seeds happened to be one `makeSide` already took.
+- **THE DISCOUNT IS THE CALLER'S ANSWER.** The combat chain is game state,
+  not a fact about the side, so `effCost` takes an optional third argument
+  and a caller that says nothing pays full price — weaker than printed and
+  visible (v3.24). **It lands INSIDE `effCost` rather than at the call
+  sites**, because v3.80's whole lesson is that a cost read three ways at
+  three sites is how a seat ends up owing resources.
+- **`parser.dracLinks` IS THE ONE READER.** It was inline in `effects.js`'s
+  `dracN` gate, where the same number is already counted.
+
+### Twenty sabotages, three silent — and each needed a better fixture
+
+| sabotage | silent because | seen by |
+|---|---|---|
+| the discount magnitude hardcoded to 1 | **he prints one pip** | a synthetic hero printing `{r}{r}` (v3.32, v3.74, v3.77, v3.81 — fifth time) |
+| `legal` reading the printed price | a seat with 9 resources raises 3 either way | a seat holding **exactly** the discounted price with an empty hand — v3.80's shape from the other side |
+| the destroy charged after the effect | the first harness swapped an unshift for a push **at the same site**, so both orders left the Gold at the same index | a sabotage that MOVES the charge to the late site — v3.62's rule, second outing: check a sabotage can express the bug it is named for |
+
+### The census learned about the pregame placements
+
+`startItem` has been a build field since Dash and was **never in
+`PASSIVES`**, so the forward census skipped it — a `HERO_STATICS` row
+naming a build fact that nothing verified. That is v3.21's one-sided
+ledger in the other direction, and adding Fai's `startGrave` is what made
+it visible. Both are censused now.
+
+### A bold ability NAME is annotated, never suppressed
+
+Briar prints *"**Essence of Earth and Lightning**"* and Iyslander
+*"**Essence of Ice**"* on lines of their own. The audit splits hero text
+on newlines, so a name arrives looking exactly like a sentence and has
+reported unread since v3.21 — **recorded in prose so nobody chases it**,
+and a doc claim is a test with no assertion (v3.41).
+
+- **THE DATABASE NAMES THEM ITSELF.** Both appear in the record's own
+  `card_keywords`. The bold marker cannot be used: `mapDbCard` strips
+  `**` before anything here sees a record.
+- **THE DISCRIMINATOR IS `tools/ledger.js`'s CLOSED VOCABULARY**, because
+  `card_keywords` also carries real keywords — Crouching Tiger's entire
+  text is *"Ephemeral"*. One reader, so a keyword added to the ledger is
+  understood here the same day.
+- **MEASURED OVER THE WHOLE POOL:** 63 `card_keywords` entries, 59 of them
+  ledger keywords, and of the four that are not, only these two are on a
+  HERO (Ash's *"Material"* and Blasmophet's *"Transform"* are labels on
+  ordinary records).
+- **IT ANNOTATES; IT DOES NOT SUPPRESS.** The clause stays in the
+  uncovered count, or a hero printing a real keyword on its own line
+  vanishes from the report. Over-reporting is the safe direction.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| hero abilities with unread clauses | 5 heroes · 6 clauses | **3 heroes · 3 clauses**, 2 of them the printed NAME |
+| genuinely unread hero clauses in the pool | 6 | **1** — Enigma's `{c}{c}{c}`, a booked ruling |
+| drills | 1881 | **1920** |
+| scenes | 49 | **52**, all 15 heroes |
+| self-play (210 games) | 0 stalls | **0 stalls · 0 refusals · 0 violations**, every hero winning, spread 25–2 |
+
+`npm run fairness` clean; coverage unchanged at **364 full / 34 part /
+7 none** — this version moved heroes, not cards.
+
+---
+
 ## v3.85 — Enigma's clause 1, reachable only now
 
 > *"Your first Spectral Shield attack each turn costs {r} less to

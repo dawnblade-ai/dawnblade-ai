@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-03T12:37:57.516Z · app v3.85 · data sage-v13 · db 797 records
+Generated 2026-09-03T13:05:02.010Z · app v3.85 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -94,8 +94,8 @@ Generated 2026-09-03T12:37:57.516Z · app v3.85 · data sage-v13 · db 797 recor
 ### Iyslander (Elemental Wizard)
 - static: Iyslander — blue non-attacks from arsenal at instant speed
 - static: Iyslander — Ice on opponent's turn → Frostbite
-- ⚠ unrecognized: "Essence of Ice"
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
+- ⚠ unrecognized: "Essence of Ice"  _(the ability's printed NAME — a heading, not a rule)_
+- 🚩 1 hero-text clause(s) not recognized by any ability reader (1 of them the ability's printed NAME, not a rule)
 
 ### Viserai (Runeblade)
 - static: Viserai — Runeblade after a non-attack → Runechant
@@ -114,9 +114,8 @@ Generated 2026-09-03T12:37:57.516Z · app v3.85 · data sage-v13 · db 797 recor
 
 ### Fai (Draconic Ninja)
 - hero power: once/turn: Return a Phoenix Flame from your graveyard to your hand [3r]
-- ⚠ unrecognized: "You may start the game with a Phoenix Flame in your graveyard."
-- ⚠ unrecognized: "This ability costs {r} less to activate for each Draconic chain link you control."
-- 🚩 2 hero-text clause(s) not recognized by any ability reader
+- static: Fai — pregame Phoenix Flame in the graveyard (spliced out of the deck, `_gy` 0)
+- static: Fai — the ability costs {r} less per Draconic chain link (no passive: `_dracDiscount` rides on the powCard and `effCost` reads it)
 
 ### Enigma (Mystic Illusionist)
 - static: Enigma — her first Spectral Shield attack each turn costs {r} less to activate
@@ -139,13 +138,12 @@ Generated 2026-09-03T12:37:57.516Z · app v3.85 · data sage-v13 · db 797 recor
 ### Briar (Elemental Runeblade)
 - static: Briar — first attack action card to damage a hero each turn → Embodiment of Earth
 - static: Briar — the SECOND non-attack action card each turn → Embodiment of Lightning
-- ⚠ unrecognized: "Essence of Earth and Lightning"
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
+- ⚠ unrecognized: "Essence of Earth and Lightning"  _(the ability's printed NAME — a heading, not a rule)_
+- 🚩 1 hero-text clause(s) not recognized by any ability reader (1 of them the ability's printed NAME, not a rule)
 
 ### Gravy Bones (Pirate Necromancer)
+- hero power: destroy a Gold: Draw a card, then discard a card
 - static: Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)
-- ⚠ unrecognized: "Instant - {t}, destroy a Gold you control: Draw a card, then discard a card."
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
 
 ### Lyath Goldmane (Reviled Guardian)
 - hero power: The crowd boos you [2r]

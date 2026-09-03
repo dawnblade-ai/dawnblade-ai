@@ -4082,6 +4082,38 @@ function parseHeroPower(tx, allowDestroy){
                  + (selfB ? "this and " : "") + nSoul
                  + " from your soul: " + m[4].trim()};
   }
+  /* A NAMED BOARD PERMANENT IS THE THIRD COST THIS READER ACCEPTS (v3.86),
+     and it is named for the same reason the counter cost (v3.39) and the
+     soul banish (v3.74) are: a broad relaxation raises the tier of cards
+     nothing wires.
+
+     GRAVY BONES' ABILITY IS THE POOL'S ONLY ONE. Measured across all 797
+     records: 39 print an activation cost containing "destroy", and
+     **38 of them destroy THIS** — the source, which is the `sd` flag
+     below. His is the single record whose cost destroys a card SOMEWHERE
+     ELSE, and the guard underneath refused the whole line for it, so his
+     hero ability was inert while his deck read 100%.
+
+     THE NAME KEEPS ITS PRINTED CAPITALISATION (v3.53). `costStr` comes off
+     the raw cleaned text rather than the lowercased clause, because a
+     proper noun is the only thing separating a token's NAME from a common
+     noun — and matched lowercased, this claims "destroy a card you
+     control" as a name.
+
+     THE TAP NEEDS NOTHING HERE. `tapsToActivate` reads the hero's own
+     printed line for the `{t}` in the cost half (v3.48), and Gravy's line
+     is the shape it already answers for; carrying the tap a second time
+     would be two records of one fact. */
+  const destM = costStr.match(/^\{t\},? destroy (?:a|an|one) ([A-Z][A-Za-z'\u2019 -]*?) you control$/);
+  if(destM){
+    const eff2 = classifyClause(m[4]);
+    if(!eff2 || eff2.status !== "run" || eff2.cond || eff2.onHit) return null;
+    const after2 = t.slice(m.index + m[0].length);
+    return {cost: 0, ga: /^\.?\s*go again/i.test(after2), sd: false, kind,
+            destroyBoard: destM[1].trim(), eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + "destroy a " + destM[1].trim()
+                 + ": " + m[4].trim()};
+  }
   /* "THIS" IS THE SOURCE, AND ON A REACTION ROUTE THE SOURCE IS NOT THE
      ATTACK (v3.63). An activated attack reaction resolves onto the OPEN
      LINK, so a payload whose subject is the card itself has no reading
@@ -4443,7 +4475,33 @@ function costOffFor(c, sd){
   const e = ((sd && sd.costOff) || []).find(x => x && qualMatches(x.q, c));
   return e ? (e.amt || 0) : 0;
 }
-function effCost(c,sd){ return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)) + frostCount(sd) + nextTurnTax(sd); }
+/* THE ONE COST READER, and it takes an optional third argument for the
+   reductions that depend on GAME state rather than on the side (v3.86).
+
+   Fai's ability prints "this ability costs {r} less to activate for each
+   DRACONIC CHAIN LINK you control", and the combat chain is not on the
+   side — so it is the CALLER'S ANSWER, exactly as the wall and the
+   attack-target are. A caller that says nothing pays full price: weaker
+   than printed and visible, which is the safe direction.
+
+   IT IS NOT A FOURTH READER. v3.80's lesson was that three sites reading
+   a cost three ways is how a seat ends up owing resources, so the dynamic
+   half lands INSIDE `effCost` rather than being subtracted at each call
+   site — every existing caller keeps the same answer, and the ones that
+   can see the chain hand it in. */
+function effCost(c,sd,o){
+  o = o || {};
+  const dyn = (c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0;
+  return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
+       + frostCount(sd) + nextTurnTax(sd);
+}
+
+/* HOW MANY DRACONIC CHAIN LINKS ARE ON THE CHAIN. One reader — it was
+   inline in `effects.js`'s condition loop, where the `dracN` gate uses
+   the same number, and Fai's discount is its second consumer. */
+function dracLinks(chain){
+  return (chain || []).filter(l => l && l.drac && l.kind === "atk").length;
+}
 function weaponCost(tx){
   const t = clean(tx||"");
   const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
@@ -5340,6 +5398,28 @@ const abSoulCost = ab => (ab && ab._soulCost) || 0;
    One reader, for the same reason `abSoulCost` is one: a cost read in one
    place and re-derived in the other is two descriptions of one price. */
 const abSelfBanish = ab => !!(ab && ab._selfBanish);
+/* THE NAMED BOARD PERMANENT AN ABILITY'S COST DESTROYS (v3.86), or null.
+   One reader, for the reason `abSoulCost` and `abSelfBanish` are one: a
+   cost read in one place and charged in another is how an ability comes
+   to be free on one board (v2.04, v3.01). */
+const abDestroyBoard = ab => (ab && ab._destroyBoard) || null;
+/* THE PERMANENT THAT COST NAMES, on one side's board — or null (v3.86).
+   ONE reader, because "which card satisfies the cost" is asked in three
+   places (both boards' legality and `execute`'s charge) and three
+   spellings of a name match is how an ability comes to be legal on one
+   board and free on another (v3.01).
+
+   FIRST MATCH IN BOARD ORDER, deliberately. Two Gold tokens are
+   indistinguishable — nothing in the pool tells one from the other — so
+   there is no choice to offer, and a sheet with one forced option is a
+   tap that teaches nothing (v3.55). Board order is a TOTAL order, which
+   is what keeps two peers replaying one log on the same entry. */
+function boardEntryNamed(sd, name){
+  if(!sd || !name) return null;
+  const want = String(name).toLowerCase();
+  return ((sd.board || []).find(b => b && b.card
+      && String(b.card.name || "").toLowerCase() === want)) || null;
+}
 
 function defCap(card, held, opts){
   const caps = [];
@@ -5465,12 +5545,12 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, isEphemeral,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, boardEntryNamed, isEphemeral,
         CARD_OVERRIDES};
 });

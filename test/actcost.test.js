@@ -155,7 +155,12 @@ test("all three activation branches ask effCost, and the ALLY one does not", {sk
   const src = fs.readFileSync(__dirname + "/../engine/judge.js", "utf8");
   const doAct = src.slice(src.indexOf("function doActivate"));
   const body = doAct.slice(0, doAct.indexOf("\nfunction "));
-  assert.match(body, /const acost = effCost\(ab, sd\);/, "the hero branch");
+  /* THE HERO BRANCH GAINED A THIRD ARGUMENT AT v3.86 — the Draconic chain
+     link count, which is game state rather than a fact about the side, so
+     `effCost` takes it from the caller. It is still the ONE cost reader:
+     the dynamic half went inside it rather than becoming a fourth site
+     subtracting after the fact. */
+  assert.match(body, /const acost = effCost\(ab, sd, \{dracLinks:/, "the hero branch");
   assert.match(body, /piece\.powCard, acost = effCost\(ab, sd\)/, "the equipment-ability branch");
   assert.match(body, /const cost = effCost\(piece, sd\);/, "the weapon branch");
   assert.match(body, /aa\.cost/, "and the ally branch keeps the printed ability cost");

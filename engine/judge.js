@@ -464,7 +464,12 @@ function newMatch(o){
       deck: (b.deck || []).slice(int),
       hand: (b.deck || []).slice(0, int),
       gear: b.gear || [],
-      board: b.startItem ? [b.startItem] : []
+      board: b.startItem ? [b.startItem] : [],
+      /* FAI'S PREGAME GRAVEYARD START (v3.86), beside Dash's arena one.
+         `build.js` splices the card out of the deck and stamps `_gy: 0`,
+         so it is here rather than being re-derived: one place decides
+         which card, both boards place it. */
+      grave: b.startGrave ? [b.startGrave] : []
     });
   });
 
@@ -828,6 +833,12 @@ function legal(g, a, seat){
         if(_sc && (sd.soul || []).length < _sc)
           return ab.name + " costs " + _sc + " from the soul, and " + sd.name
                + " holds " + (sd.soul || []).length; }
+      /* A NAMED PERMANENT IS A COST TOO, SO IT IS A LEGALITY (v3.86) —
+         v3.11's rule, and the same reader the trainer asks. */
+      { const _dn = PR.abDestroyBoard(ab);
+        if(_dn && !PR.boardEntryNamed(sd, _dn))
+          return ab.name + " costs a " + _dn + ", and " + sd.name
+               + " controls none"; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -852,7 +863,7 @@ function legal(g, a, seat){
          v2.80 names this exactly: `effCost` is read twice and the two
          reads are different questions. It was found there on the PLAY
          route and left wrong on all three activation routes. */
-      { const _ec = effCost(ab, sd);
+      { const _ec = effCost(ab, sd, {dracLinks: PR.dracLinks(g.chain)});
         if(_ec > sd.res + payCeiling(sd, null))
           return ab.name + " costs " + _ec + " to activate and you cannot raise it"; }
       /* A COUNTER-SPENDING ABILITY WITH NOTHING IT CAN AFFORD IS A DEAD
@@ -1804,7 +1815,7 @@ function doActivate(g, a, seat){
        `effCost` here would disagree with the charge in the other
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
-    const acost = effCost(ab, sd);
+    const acost = effCost(ab, sd, {dracLinks: PR.dracLinks(g.chain)});
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");

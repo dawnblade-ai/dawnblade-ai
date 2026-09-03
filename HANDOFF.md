@@ -1,4 +1,33 @@
-# Handoff — Dawnblade, at v3.85 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.86 · PHASE C · HERO BY HERO
+
+## ⚠ ONE UNREAD HERO CLAUSE REMAINS IN THE WHOLE POOL
+
+`npm run sweep`'s hero block is **3 heroes · 3 clauses**, and **two of
+those three are the ability's printed NAME** — Briar's *"Essence of Earth
+and Lightning"* and Iyslander's *"Essence of Ice"*, which the database
+lists in its own `card_keywords` and the audit now annotates as such
+(v3.86). They are not work.
+
+**The one genuine remaining clause is ENIGMA's `{c}{c}{c}`**, and it is a
+RULING rather than an engineering call — see below. Every other printed
+hero clause in the pool is built.
+
+### WHAT LANDED AT v3.86
+
+| hero | clause | what actually refused |
+|---|---|---|
+| **Gravy Bones** | *"{t}, destroy a Gold you control: Draw a card, then discard a card"* | the COST. `parseHeroPower` refuses a destroy that is not `destroy this`, and 38 of the pool's 39 destroy-costs are. His ability was entirely inert. |
+| **Fai** | *"start the game with a Phoenix Flame in your graveyard"* | nothing built the pregame graveyard — Dash's shape, one zone over |
+| **Fai** | *"costs {r} less per Draconic chain link"* | the rider was dropped, so it charged 3 on the turn it should cost 0 |
+
+**None of the three was the payload.** Every effect had read for versions;
+what refused was a cost, a placement, and a rider. That is the shape to
+expect for the rest of Phase C.
+
+**AND `makeSide` SILENTLY DROPPED A SEEDED GRAVEYARD** — it hardcoded
+`grave: []`. Found by driving Fai's opening, not by reading the field
+list. If you seed a new zone into `newMatch`, check `makeSide` takes it.
+
 
 ## ⚠ COSMO IS BUILT (v3.84) — AND ENIGMA IS ALIVE
 

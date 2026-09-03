@@ -6,20 +6,15 @@ axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 5 heroes, 6 unread clauses | never charged by the stack |
+| Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
 | Ruled but not built | 41 cards | understood ≠ built |
-| **Fail states** | 72 entries, 0 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 70 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
-### Fai — 2/3 unread
-- ❌ You may start the game with a Phoenix Flame in your graveyard.
-- ✅ Once per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand
-- ❌ This ability costs {r} less to activate for each Draconic chain link you control.
-
 ### Briar — 1/3 unread
-- ❌ Essence of Earth and Lightning
+- ❌ Essence of Earth and Lightning  _(the ability's printed NAME — a heading, not a rule)_
 - ✅ The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.
 - ✅ The second time you play a non-attack action card each turn, create an Embodiment of Lightning token.
 
@@ -27,12 +22,8 @@ axes it never covered.
 - ✅ Your first Spectral Shield attack each turn costs {r} less to activate.
 - ❌ Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 
-### Gravy Bones — 1/2 unread
-- ❌ Instant - {t}, destroy a Gold you control: Draw a card, then discard a card.
-- ✅ If a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard.
-
 ### Iyslander — 1/3 unread
-- ❌ Essence of Ice
+- ❌ Essence of Ice  _(the ability's printed NAME — a heading, not a rule)_
 - ✅ If it's not your turn, you may play blue non-attack action cards from your arsenal as though they were instants.
 - ✅ Whenever you play an Ice card during an opponent's turn, create a Frostbite token under their control.
 
@@ -114,16 +105,16 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Ability inert — cost not modelled | 20 |
-| Earned value denied | 19 |
+| Ability inert — cost not modelled | 19 |
+| Earned value denied | 18 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| Choice never offered | 16 |
+| Choice never offered | 15 |
 | No schedule to fire on | 14 |
 | Keyword filed as no-op, but it has meaning | 11 |
-| Displayed total is wrong | 10 |
+| Displayed total is wrong | 9 |
 | Unread, effect unknown | 8 |
 
-### WRONG — 38 entries
+### WRONG — 37 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -242,9 +233,9 @@ can be overruled. Same discipline as the mention count.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > When this hits, you may banish an attack action card from your hand with cost less than the number of Draconic chain links you control
-- … and 13 more (see the station)
+- … and 12 more (see the station)
 
-### LOST VALUE — 33 entries
+### LOST VALUE — 32 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -339,7 +330,7 @@ can be overruled. Same discipline as the mention count.
 - **Swabbie** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
-- … and 8 more (see the station)
+- … and 7 more (see the station)
 
 ### INERT — 1 entries
 

@@ -104,8 +104,12 @@ function heroEntries(){
       sub: h.tt || "Hero",
       art: artFor(h.name, 0),
       tx: h.tx || "",
-      clauses: clauses.map(c => ({t: c.t, covered: !!c.covered})),
+      clauses: clauses.map(c => ({t: c.t, covered: !!c.covered, heading: !!c.heading})),
       unread: unread.length,
+      /* HOW MANY OF THE UNREAD LINES ARE THE ABILITY'S PRINTED NAME
+         (v3.86). Counted rather than removed — see `abilityNamesOf` in
+         tools/audit.js for why annotating beats suppressing. */
+      named: unread.filter(c => c.heading).length,
       total: clauses.length,
       hits: mentions(h.name),
       ask: "Which of these lines does the engine actually need to enforce, and what should each do?"
@@ -229,6 +233,7 @@ function report(s){
     + heroClauses + " unread clauses");
   for(const h of s.heroes.slice(0, 20))
     console.log("     " + h.title.padEnd(28) + h.unread + "/" + h.total + " unread"
+      + (h.named ? " (" + h.named + " the ability's NAME)" : "")
       + (answered(h.slug) ? "  ✓noted" : ""));
   const dead = s.tokens.filter(t => !t.named), ded = s.tokens.filter(t => t.named);
   console.log("\n" + B("  2. TOKENS") + "  " + s.tokens.length + " need a look");
@@ -284,7 +289,9 @@ function writeMd(s){
   L.push("");
   for(const h of s.heroes){
     L.push("### " + h.title + " — " + h.unread + "/" + h.total + " unread");
-    for(const c of h.clauses) L.push("- " + (c.covered ? "✅" : "❌") + " " + c.t);
+    for(const c of h.clauses)
+      L.push("- " + (c.covered ? "✅" : "❌") + " " + c.t
+        + (c.heading ? "  _(the ability's printed NAME — a heading, not a rule)_" : ""));
     L.push("");
   }
   L.push("## 2. Tokens");

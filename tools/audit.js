@@ -82,6 +82,19 @@ const HERO_STATICS = [
    note:"an Agent of Chaos — its own end phase sends it home, and Arakni's clause fires again"},
   {key:"startItem", re:/start the game with a mechanologist item with cost 2 or less/,
    note:"Dash — pregame item (auto-picked; pick UI pending)"},
+  /* FAI's clause 1, built v3.86 — Dash's shape one zone over, and the
+     pool's only other "you may start the game with" line. The card's NAME
+     is read off the printed text rather than stored, so the recognizer
+     matches the SHAPE and not the card. */
+  {key:"startGrave", re:/you may start the game with an? .+ in your graveyard/,
+   note:"Fai — pregame Phoenix Flame in the graveyard (spliced out of the deck, `_gy` 0)"},
+  /* FAI's clause 2's RIDER, built v3.86. `build:false` for Blaze's reason:
+     it is carried by the ABILITY itself rather than by a passive on the
+     build — `_dracDiscount` is stamped on the hero powCard and `effCost`
+     applies it against the chain count the caller hands in. */
+  {key:"dracDiscount", build:false,
+   re:/this ability costs (?:\{r\})+ less to activate for each draconic chain link you control/,
+   note:"Fai — the ability costs {r} less per Draconic chain link (no passive: `_dracDiscount` rides on the powCard and `effCost` reads it)"},
   {key:"wateryGrave", re:/if a blue card has been put into your graveyard this turn, you may play cards with watery grave from your graveyard/,
    note:"Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"},
   {key:"lyathBoo", re:/whenever the crowd boos you, create a might token/,
@@ -243,6 +256,40 @@ function analyzeCard(rc){
    of one sentence are levelled before they are compared. */
 const heroClauseKey = t => String(t).toLowerCase().replace(/\s+/g," ").replace(/\.+$/,"").trim();
 
+/* IS THIS HERO CLAUSE THE ABILITY'S PRINTED NAME RATHER THAN A RULE? (v3.86)
+
+   Briar prints "**Essence of Earth and Lightning**" on a line of its own
+   and Iyslander "**Essence of Ice**". The audit splits hero text on
+   newlines, so a name arrives looking exactly like a sentence and has
+   reported UNREAD since v3.21 — which records it in prose so nobody
+   chases it. Prose is not a mechanism.
+
+   THE DATABASE NAMES THEM ITSELF. Both appear in the record's own
+   `card_keywords`, which is the printed fact rather than a guess about
+   shape — and the bold marker cannot be used, because `mapDbCard` strips
+   `**` before anything here sees a record.
+
+   THE DISCRIMINATOR IS `tools/ledger.js`'s CLOSED VOCABULARY, because
+   `card_keywords` also carries REAL keywords (Crouching Tiger's whole
+   text is "Ephemeral"). One reader, so a keyword added to the ledger is
+   understood here the same day.
+
+   MEASURED OVER THE WHOLE POOL before it was written: 63 `card_keywords`
+   entries, 59 of them ledger keywords, and of the four that are not, only
+   these two are on a HERO — Ash's "Material" and Blasmophet's "Transform"
+   are labels on ordinary records this never looks at.
+
+   IT ANNOTATES; IT DOES NOT SUPPRESS. The clause stays in the uncovered
+   count, because a hero that printed a real keyword on a line of its own
+   would otherwise vanish from the report. Over-reporting is the safe
+   direction (v3.21); what the flag buys is that the number can be READ
+   rather than investigated. */
+const KW_WORDS = Object.keys(KEYWORDS);
+const isLedgerKeyword = s =>
+  KW_WORDS.some(k => new RegExp("\\b" + k.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", "i").test(s));
+const abilityNamesOf = rec =>
+  new Set(((rec && rec.kw) || []).filter(k => !isLedgerKeyword(k)).map(k => P.clean(k)));
+
 function analyzeHero(rec, heroName){
   if(!rec) return {name: heroName, flags:["UNRESOLVED — hero not found in database"], clauses:[], statics:[], power:null};
   const tl = P.clean(rec.tx||"").toLowerCase();
@@ -268,17 +315,36 @@ function analyzeHero(rec, heroName){
                             tt: "Hero Ability", kw: [], tx: abLine});
     for(const c of abFx.clauses) if(c.st !== "skip") abRead.add(heroClauseKey(c.t));
   }
+  /* A BOLD ABILITY NAME IS A HEADING, AND IT IS ANNOTATED RATHER THAN
+     SUPPRESSED (v3.86). Briar prints "**Essence of Earth and Lightning**"
+     and Iyslander "**Essence of Ice**" on lines of their own; the audit
+     splits hero text on newlines, so a heading arrives looking exactly
+     like a sentence and has reported unread since v3.21, which records it
+     in prose so nobody chases it. Prose is not a mechanism.
+
+     IT IS NOT DROPPED FROM THE COUNT, deliberately. A wholly-bold line CAN
+     be real rules text — Teklovossen prints "**Battleworn**", a keyword —
+     so a suppressor would hide a genuine gap the moment one appears, and
+     over-reporting is the safe direction (v3.21). What the flag buys is
+     that the report SAYS which lines are names, so the number can be read
+     rather than investigated.
+
+     The test is on the RAW line: bold in the source, no sentence
+     punctuation, and not a printed keyword the ledger knows. */
+  const abilityNames = abilityNamesOf(rec);
   const clauses = (rec.tx||"").split(/\n+/).map(s=>P.clean(s)).filter(Boolean)
     .reduce((a,s)=>a.concat(s.split(/\.\s+/)),[]).map(s=>s.trim()).filter(Boolean).map(cl=>{
     const cll = cl.toLowerCase();
     const covered = HERO_STATICS.some(s=>s.re.test(cll))
       || (/(action|instant)/i.test(cl) && !!P.parseHeroPower(cl))
       || abRead.has(heroClauseKey(cl));
-    return {t:cl, covered};
+    return abilityNames.has(cl) ? {t:cl, covered, heading:true} : {t:cl, covered};
   });
   const flags = [];
   const uncovered = clauses.filter(c=>!c.covered);
-  if(uncovered.length) flags.push(`${uncovered.length} hero-text clause(s) not recognized by any ability reader`);
+  const named = uncovered.filter(c=>c.heading).length;
+  if(uncovered.length) flags.push(`${uncovered.length} hero-text clause(s) not recognized by any ability reader`
+    + (named ? ` (${named} of them the ability's printed NAME, not a rule)` : ""));
   return {name: rec.n, hp: rec.hp, int: rec.int, tt: rec.tt, tx: rec.tx,
     statics, power: power ? power.label : null, clauses, flags};
 }
@@ -394,7 +460,9 @@ async function main(){
     L.push(`### ${h.n} (${h.cls})`);
     if(hr.power) L.push(`- hero power: ${hr.power}`);
     for(const s of hr.statics) L.push(`- static: ${s}`);
-    for(const cl of hr.clauses.filter(c=>!c.covered)) L.push(`- ⚠ unrecognized: "${cl.t}"`);
+    for(const cl of hr.clauses.filter(c=>!c.covered))
+      L.push(`- ⚠ unrecognized: "${cl.t}"`
+        + (cl.heading ? "  _(the ability's printed NAME — a heading, not a rule)_" : ""));
     for(const f of hr.flags) L.push(`- 🚩 ${f}`);
     L.push(``);
   }
@@ -447,4 +515,4 @@ async function main(){
    ask `fxParse` about the ability's riders. Exported instead, behind a
    `require.main` guard so requiring this file audits nothing. */
 if(require.main === module) main().catch(e=>{ console.error(e); process.exit(1); });
-module.exports = {analyzeHero, HERO_STATICS, heroClauseKey};
+module.exports = {analyzeHero, HERO_STATICS, heroClauseKey, abilityNamesOf, isLedgerKeyword};

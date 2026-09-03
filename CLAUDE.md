@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.85
+**Current version:** v3.86
 
 ---
 
@@ -516,6 +516,100 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A COST CAN DESTROY SOMETHING OTHER THAN ITSELF (v3.86)
+
+> *"**Instant** - {t}, destroy a **Gold** you control: Draw a card, then
+> discard a card."* — GRAVY BONES
+
+His deck read in full and his hero read **nothing at all**.
+`parseHeroPower` refuses any activation cost containing *"destroy"* unless
+it destroys **this**, so `build.js` built him **no powCard** and neither
+board could offer the ability.
+
+**AND HIS IS THE POOL'S ONLY COST OF ITS SHAPE.** Measured across all 797
+records: 39 print a destroy in an activation cost and **38 of them say
+"destroy this"**. That measurement is what makes this a NAMED third shape
+— beside v3.39's counter cost and v3.74's soul banish — rather than a
+widening of the guard, which is the never-parse-ahead-of-wiring rule.
+
+**THE `{t}` NEEDED NOTHING.** `tapsToActivate` (v3.48) reads the hero's own
+printed line for the tap in the cost half and already answered TRUE.
+Carrying it a second time on the powCard is two records of one fact.
+
+**THE NAME KEEPS ITS PRINTED CAPITALISATION** (v3.53) — a proper noun is
+the only thing separating a token's NAME from a common noun, so matched
+lowercased this claims *"destroy a card you control"*. He is the pool's
+only card of the shape, so **sabotaging the anchor open is SILENT against
+every pool fixture**; a synthetic near-miss sees it (v3.73).
+
+**IT IS PAID ON ACTIVATION**, beside the tap and the soul banish — never
+after the effect, the way an equipment's own `destroy this` is. Both
+boards refuse it first through ONE reader (`abDestroyBoard` +
+`boardEntryNamed`), and the destroyed Gold reaches the **graveyard**,
+turn-stamped (v3.54).
+
+**AND A GRAVE-ORDER SABOTAGE AT ONE SITE CANNOT SAY THAT A CHARGE MOVED.**
+Written as a swap of the unshift for a push it reported SILENT, because
+with an empty graveyard both orders leave the Gold at the same index.
+The sabotage that bites MOVES the charge to the late site — v3.62's rule,
+second outing.
+
+### A PREGAME ZONE, AND A COST THE CHAIN MOVES (v3.86)
+
+Fai's graveyard PICK has read for versions. He opened with an **empty
+graveyard**, so the return had nothing to fetch; and his discount was
+dropped, so the ability cost 3 on the turn its whole point is that it
+costs 0.
+
+**THE PREGAME HALF IS DASH'S SHAPE, ONE ZONE OVER.** The pool prints
+exactly **two** *"you may start the game with"* lines. The card's NAME is
+read off the printed line (v3.21) — a synthetic hero naming a different
+card proves it, because Fai prints only one. It is **spliced out of the
+deck** (or `CARD-IN-TWO-ZONES`) and stamped **`_gy: 0`**, because a card
+stamped with the current turn satisfies every *"…put into a graveyard this
+turn"* clause on turn one, his own second hero clause included.
+
+**AND `makeSide` SILENTLY DROPPED THE SEED** — it hardcoded `grave: []`
+while taking every other zone from its options. Found by DRIVING the
+opening, not by reading the field list, because every zone `newMatch`
+seeds happened to be one `makeSide` already took.
+
+**THE DISCOUNT IS THE CALLER'S ANSWER.** The combat chain is game state,
+not a fact about the side, so `effCost` takes an optional third argument
+and a caller that says nothing pays full price (v3.24). **It lands INSIDE
+`effCost` rather than at the call sites**, because v3.80's lesson is that
+a cost read three ways at three sites is how a seat ends up owing
+resources — and a rich seat raises the printed price either way, so the
+sabotage that finds a half-threaded discount is a seat holding **exactly**
+the discounted amount with an empty hand.
+
+### A BOLD ABILITY NAME IS ANNOTATED, NEVER SUPPRESSED (v3.86)
+
+Briar prints *"**Essence of Earth and Lightning**"* and Iyslander
+*"**Essence of Ice**"* on lines of their own. The audit splits hero text
+on newlines, so a NAME arrives looking exactly like a sentence and has
+reported unread since v3.21 — **recorded in prose so nobody chases it**,
+and a doc claim is a test with no assertion (v3.41).
+
+**THE DATABASE NAMES THEM ITSELF**: both appear in the record's own
+`card_keywords`. The bold marker cannot be used — `mapDbCard` strips `**`
+before anything here sees a record. **The discriminator is
+`tools/ledger.js`'s CLOSED VOCABULARY**, because that field also carries
+real keywords (Crouching Tiger's entire text is *"Ephemeral"*).
+
+**MEASURED OVER THE WHOLE POOL:** 63 `card_keywords` entries, 59 ledger
+keywords, and of the four that are not, only these two are on a HERO.
+
+**IT ANNOTATES; IT DOES NOT SUPPRESS.** The clause stays in the uncovered
+count, or a hero printing a real keyword on its own line vanishes from the
+report. Over-reporting is the safe direction.
+
+**AND THE PREGAME PLACEMENTS WERE NEVER CENSUSED.** `startItem` has been a
+build field since Dash and was never in `PASSIVES`, so the forward census
+skipped it — a `HERO_STATICS` row naming a build fact nothing verified.
+v3.21's one-sided ledger in the other direction, and adding Fai's
+`startGrave` is what made it visible.
 
 ### AN AURA THAT IS A WEAPON (v3.84)
 

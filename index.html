@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.85"; /* v3.85 - ENIGMA'S CLAUSE 1, REACHABLE ONLY NOW. "Your first Spectral Shield attack each turn costs {r} less to activate" priced a play that could not happen until v3.84 built Cosmo, which is the whole reason her hero read 0 of 2 clauses. The card NAME and the AMOUNT are both captured off the printed line (v3.21's rule - a boolean would move "Spectral Shield" into the engine), the discount is spent by a swing from a card of that name via a new `hist.auraAtkNames` record, and CR 4.4.4 clears it at the turn boundary so "each turn" needs no bookkeeping of its own. FOUR SABOTAGES CAME BACK SILENT and each needed a fixture that could express its bug: she prints one pip (a synthetic hero printing two sees a hardcoded amount), every driven fixture minted Spectral Shields (Waxing Specter is the ward aura that tells the name test apart), a full resource pool means the discount never decides legality (zero resources is where it is the whole question), and 1 minus 1 cannot express a negative cost. And a drill was driven THROUGH the policy, which since v3.84 can attack with an aura - so it spent the second Shield mid-resolution; it closes the chain with passes now. Measured: Enigma 3 wins to 25, first in the table, and 210 games with zero stalls. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.86"; /* v3.86 - THE LAST THREE HERO CLAUSES, and none of them was the payload. Gravy Bones read NOTHING: `parseHeroPower` refuses any activation cost containing "destroy" unless it destroys THIS, and measured across all 797 records 38 of the 39 destroy-costs do exactly that - his is the single one that names a card somewhere else, so the shape is NAMED rather than the guard widened, and the {t} needed nothing because `tapsToActivate` already answers for it. The cost is paid ON ACTIVATION beside the soul banish, refused first on BOTH boards through one reader, and the destroyed Gold reaches the graveyard turn-stamped. Fai needed a pregame graveyard (Dash's shape one zone over, and the pool prints exactly two such lines) and a discount that depends on the CHAIN rather than the side - so it lands inside `effCost` off a count the caller hands in, because v3.80's lesson is that a cost subtracted at three sites is subtracted three different ways. Twenty sabotages, three came back silent and each needed a fixture that could express its bug: he prints one pip, a rich seat raises the printed price either way, and a grave-order swap at one site cannot say that a charge MOVED. The audit now annotates the two bold ability NAMES the database lists in its own `card_keywords`, so the one genuinely unread hero clause in the pool is Enigma's {c}{c}{c}. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2558,7 +2558,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     sides:[makeSide({
       id:0, name:"You", hp:built.myHP, maxHp:built.myHP, int:built.myInt,
       deck:built.deck.slice(built.myInt), hand:built.deck.slice(0,built.myInt),
-      gear:built.gear, board:built.startItem?[built.startItem]:[]
+      gear:built.gear, board:built.startItem?[built.startItem]:[],
+      /* Fai's pregame graveyard start (v3.86) — see judge.newMatch */
+      grave:built.startGrave?[built.startGrave]:[]
     }), makeSide({
       /* SEAT 1 IS BUILT FROM ITS OWN BUILD, not from constants. `int` in
          particular: the opponent draws to ITS hero's intellect, which is
@@ -2570,7 +2572,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       deck:built.both[1].deck.slice(built.both[1].int),
       hand:built.both[1].deck.slice(0,built.both[1].int),
       gear:built.both[1].gear,
-      board:built.both[1].startItem?[built.both[1].startItem]:[]
+      board:built.both[1].startItem?[built.both[1].startItem]:[],
+      grave:built.both[1].startGrave?[built.both[1].startGrave]:[]
     })],
     prompt:null, promptQ:[], revealed:null, lastRoll:null,
     boostOn:true, chainOpen:false, featured:null, boostChain:0, stack:[], pend:null, chain:[], chainHist:[], hitSeq:0, lastDmg:0, flags:{}, over:null, inspect:false,
@@ -3504,6 +3507,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const _sc = DawnParser.abSoulCost(card);
       if(_sc && (act(s).soul||[]).length < _sc)
         return L(s, `${card.name} costs ${_sc} from your soul, and you hold ${(act(s).soul||[]).length}.`); }
+    /* A NAMED PERMANENT IS A COST TOO, SO IT IS A LEGALITY (v3.86). Gravy
+       Bones prints "Instant - {t}, destroy a Gold you control: …", and
+       refusing after the ability resolves would TAP HIM for a play the
+       rules never allowed (v3.11). `parser.boardEntryNamed` is the one
+       reader both boards ask. */
+    { const _dn = DawnParser.abDestroyBoard(card);
+      if(_dn && !DawnParser.boardEntryNamed(act(s), _dn))
+        return L(s, `${card.name} costs a ${_dn}, and you control none.`); }
     if(fx.addCost && fx.addCost.discard){
       const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);
