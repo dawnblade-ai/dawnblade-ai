@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.81
+**Current version:** v3.82
 
 ---
 
@@ -476,6 +476,64 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### EPHEMERAL WAS READ THREE WAYS ACROSS TWO FILES (v3.82)
+
+| reader | tested |
+|---|---|
+| the trainer's `gy()` | the **keyword list** |
+| judge's `toGrave` | a printed **reminder sentence** |
+| judge's `effectsFor` stamp | the same reminder sentence again |
+
+**Measured over all 797 records: ONE card is ephemeral by keyword and NOT
+ONE prints the reminder text.** The database carries no reminder text for
+any keyword — this file says so in four other places — so both of judge's
+readers matched **nothing, ever**, and Crouching Tiger reached the
+graveyard at the table while the trainer correctly dropped it. A card the
+rules REMOVE FROM THE GAME, handed back to the player, on the board that
+is supposed to be the CR-exact one.
+
+v3.01's shape, with the twist that the strict board is the one that had it
+wrong and its reader was written against text that has never existed.
+
+**`parser.isEphemeral` is the one reader, and it asks `printedKw`** —
+v2.84's three questions. A card that merely MENTIONS ephemeral does not
+have it, and removing it from the game would be the golden rule broken at
+the keyword level. No pool card tells the two predicates apart, so the
+drill uses a **synthetic near-miss** (v3.73's Crash-and-Bash
+discriminator, one keyword over).
+
+**WHEN A READER TESTS REMINDER TEXT, GO AND COUNT THE RECORDS THAT PRINT
+IT.** Twice now that count has been zero.
+
+### THE DEAD `rune` FIELD, AND TWO DOC CLAIMS THAT WERE BOTH FALSE (v3.82)
+
+This file said from v2.23: *"There is no `sd.rune` field any more — a
+drill would fail if one came back."* **Both halves were false.** The field
+was still declared in `makeSide`, still shipped down the wire, and **read
+by nothing at all for sixty versions** — while `sides.js`'s own comment
+two lines above cited `rune` as an example of a field *already retired*,
+reasoning from the thing it stood next to.
+
+Dead rules STATE is worse than dead code elsewhere: it reads as a rule
+somebody can reach. Retired from `SIDE_FIELDS`, `makeSide` and `wire.js`
+(`WIRE_V` → 2, because the payload shape changed), symmetry ledger **47 →
+46**, and the promised drill now exists — it holds every derived count
+(`rune`, `frost`, `rot`, `fra`) to having no stored twin.
+
+### A SCENE'S FIXTURE MUST NAME ITS CARD (v3.82)
+
+Three of the eight new scenes were wrong before the engine was:
+
+- the Viserai rite scene took *"the first Runeblade non-attack in his
+  SHUFFLED deck"* — a different card under a different seed, and it landed
+  on **Mauvrion Skies**, whose own text queues a Runechant. **A fixture
+  that depends on a shuffle has not named what it is testing.**
+- the Iyslander scene omitted **`notYourTurn`**, the clause's own first
+  gate and the entire point of the card, and read the grant as dead.
+- the Fai scenes asserted two things that had not been measured.
+
+**Check your own fixture — sixth, seventh and eighth time.**
 
 ### NAMING THE HERO IS A JUDGEMENT TOO (v3.81)
 
@@ -5099,9 +5157,15 @@ each needs a different COST shape — *"destroy **this**"*, *"pay
 {r}{r}{r}"*, or a modal *"discard a card **or** destroy the top card of
 your deck"*. See `WEEK.md`.
 
-**Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong and
-Mounting Anger went none/part → full; Golden Tipple (×3) and Fire that Burns
-Within → full.
+**Measured:** 258 → **264 full**, 35 → **33 none**. Runic Fellingsong went
+none/part → full; Golden Tipple (×3) and Fire that Burns Within → full.
+
+> **THIS SENTENCE NAMED MOUNTING ANGER TOO, AND IT IS `part` (v3.82).**
+> Its trigger is `hits`, and v3.53's own measurement records that **zero
+> pool cards** set `fx.optCost` on that trigger — so it never had one to
+> gain. A doc claim is a test with no assertion (v3.41), fifth time; the
+> way to keep a coverage sentence true is to re-run `npm run audit`, not
+> to trust it.
 
 ### The priority machine, in SHADOW (v2.27)
 

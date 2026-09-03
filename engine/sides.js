@@ -48,15 +48,23 @@ const SIDE_FIELDS = [
   "res","ap","wasted",
   /* counters and statuses that live on a hero */
   "counters","weaponUsed","heroTapped","buffNext","buffQ","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider","runeHitNext",
-  /* `frost` RETIRED in v2.74, `rot` and `fra` in v3.09 — each is an Aura
-     on `board` and each count is derived (`parser.frostCount`,
-     `frailtyCount`), exactly as `rune` above is derived by `runeCount`. A
-     bare integer beside the board is a second source of truth for the same
-     fact, and in all three cases almost nothing read it: `frost` was read
-     by neither `effCost` nor effects.js, and `fra` was never once SET in a
-     real game — its only source read `none` until v3.08. Do not
-     reintroduce any of them. */
-  "amp","ward","awd","rune",
+  /* `frost` RETIRED in v2.74, `rot` and `fra` in v3.09 — and `rune` in
+     v3.82, which is the one this comment was CITING AS ALREADY GONE. Each
+     is an Aura on `board` and each count is derived (`parser.runeCount`,
+     `frostCount`, `frailtyCount`). A bare integer beside the board is a
+     second source of truth for the same fact, and in all four cases
+     almost nothing read it: `frost` was read by neither `effCost` nor
+     effects.js, `fra` was never once SET in a real game, and `rune` was
+     read by NOTHING AT ALL for sixty versions.
+
+     CLAUDE.md has said since v2.23 that "there is no `sd.rune` field any
+     more — a drill would fail if one came back". Both halves were false:
+     the field was still declared here and still shipped down the wire,
+     and no such drill existed. There is one now (`test/sides.test.js`).
+     Dead rules STATE is worse than dead code elsewhere — it reads as a
+     rule somebody can reach, and this comment two lines up was reasoning
+     from it. Do not reintroduce any of them. */
+  "amp","ward","awd",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
@@ -108,7 +116,7 @@ function makeSide(o){
     pitch: [], grave: [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
-    amp: 0, ward: 0, awd: 0, rune: 0,
+    amp: 0, ward: 0, awd: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
     hist: freshHist(),

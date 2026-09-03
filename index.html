@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.81"; /* v3.81 - CR 1.4.5, AND TWO COUNTERS THAT SPELLED THE WRONG WORD. The policy named the HERO as its attack-target always, and the note that stood there said choosing was a judgement it does not make - but naming the hero is a judgement too, just an invisible one, and it left the whole ally-combat branch (built across v3.44, v3.45 and v3.46) with ZERO coverage. Driven: the old always-hero target produced 0 ally deaths in 20 games and the choice produces 57. The rule is TWO CR FACTS AND TWO PRINTED NUMBERS so the no-card-text contract holds - CR 7.3.2a makes an attack on an ally unblockable, so power >= life is a guaranteed kill, and CR 4.4.3a heals it at end of turn, so anything short of a kill is thrown away. AND THE ROUTE COUNTER WAS GREPPING WORDS THE FEED NEVER PRINTS: it looked for /dies|died/ where the engine says "goes down", and for "Gold token" where the mint says "Gold created on your board" - so death 0 / gold 0 was reported for three versions, one of them AFTER the route worked. A scan aimed at the wrong WORD reports zero exactly as a missing feature does; v3.00 records the same defect with the opposite sign. Now death 167, gold 24. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.82"; /* v3.82 - EIGHT HEROES HAD NO SCENE, AND WRITING THEM FOUND TWO DEAD READERS. `npm run scenes` is the only instrument here that asks whether a reading was OBEYED rather than made, and it covered seven of fifteen heroes; all fifteen now, 34 scenes to 49. EPHEMERAL WAS READ THREE WAYS ACROSS TWO FILES: the trainer tested the keyword list and BOTH of judge's graveyard paths tested a printed REMINDER SENTENCE - and measured over all 797 records, one card is ephemeral by keyword and NOT ONE prints that reminder text, because the database carries none for any keyword. So Crouching Tiger reached the graveyard at the table while the trainer correctly dropped it: a card the rules remove from the game, handed back to the player, on the board that is supposed to be the CR-exact one. `parser.isEphemeral` is the one reader now. AND THE DEAD `rune` SIDE FIELD IS GONE - CLAUDE.md has said since v2.23 that it was removed and that a drill would fail if it came back, and BOTH halves were false: it was still declared, still shipped down the wire, read by nothing for sixty versions, and sides.js's own comment cited it as an example of a field already retired. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1448,7 +1448,8 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     arsCap = DawnParser.arsCap, arsCount = DawnParser.arsCount,
     arsFree = DawnParser.arsFree, arsEmpty = DawnParser.arsEmpty,
     isAtkActionCard = DawnParser.isAtkActionCard, zonePow = DawnParser.zonePow,
-    pow6 = DawnParser.pow6, kwGated = DawnParser.kwGated, hasKwNow = DawnParser.hasKwNow;
+    pow6 = DawnParser.pow6, kwGated = DawnParser.kwGated, hasKwNow = DawnParser.hasKwNow,
+    isEphemeral = DawnParser.isEphemeral;
 /* The SEEDED source. `rngShuffle` is deliberately NOT named `shuffle`:
    DawnGame.shuffle is the unseeded Math.random one, and two functions
    with the same name and different determinism is exactly the
@@ -2696,7 +2697,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      be put into a graveyard from anywhere, instead it ceases to exist." Every
      path into the graveyard goes through here, so this is the place to drop it. */
   const gy = (turn, ...cards) => cards
-    .filter(c => !(c && (c.kw||[]).some(k=>/ephemeral/i.test(k))))
+    .filter(c => !isEphemeral(c))          /* one reader, both boards — v3.82 */
     .map(c=>({...c, _gy:turn}));
   /* A DISCARD IS A DIFFERENT EVENT FROM "REACHED THE GRAVEYARD", and only
      this path stamps it. Cards arrive in the graveyard by being played, by

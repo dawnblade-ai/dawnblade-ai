@@ -348,9 +348,9 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      untap step lifts (CR 4.4.3d). The two coincide for a hero's own
      ability and come apart the moment an OPPONENT taps you — which is the
      whole of what the ruling (user, 2026-08-25) says a tapped hero means. */
-  assert.equal(gap.fields, 47);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78 */
-  assert.equal(gap.player.length, 47);
-  assert.equal(gap.opponent.length, 47);
+  assert.equal(gap.fields, 46);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82 */
+  assert.equal(gap.player.length, 46);
+  assert.equal(gap.opponent.length, 46);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -360,8 +360,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 47);   /* … +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78 */
-  assert.equal(gap.nativeForOpponent.length, 47);
+  assert.equal(gap.nativeForPlayer.length, 46);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82 */
+  assert.equal(gap.nativeForOpponent.length, 46);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 
@@ -369,4 +369,32 @@ test("symmetry gap: between them the two seats account for every field", () => {
   const gap = S.symmetryGap();
   const union = new Set([...gap.player, ...gap.opponent]);
   assert.equal(union.size, gap.fields);
+});
+
+/* ---- THE DERIVED COUNTS HAVE NO STORED TWIN (v3.82) -------------------
+   CLAUDE.md has said since v2.23 that "there is no `sd.rune` field any
+   more — a drill would fail if one came back". BOTH HALVES WERE FALSE:
+   the field was still declared in `makeSide` and still shipped down the
+   wire, and no such drill existed. It was read by NOTHING for sixty
+   versions, and `sides.js`'s own comment cited it as an example of a
+   field already retired while the line two below still declared it.
+
+   Dead rules STATE is worse than dead code elsewhere — it reads as a rule
+   somebody can reach, and a comment was reasoning from this one. This is
+   the drill that claim promised. */
+test("a token whose count is DERIVED keeps no stored field", () => {
+  const S = require("../engine/sides.js");
+  const P = require("../engine/parser.js");
+  const side = S.makeSide();
+  for(const [field, reader] of [["rune", "runeCount"], ["frost", "frostCount"],
+                                ["rot", null], ["fra", "frailtyCount"]]){
+    assert.ok(S.SIDE_FIELDS.indexOf(field) < 0,
+      "`" + field + "` is derived off the board — a bare integer beside it is a "
+      + "second source of truth for the same fact");
+    assert.ok(!(field in side), "`" + field + "` must not be declared by makeSide either");
+    if(reader) assert.equal(typeof P[reader], "function",
+      "…and the reader that replaced it must exist: parser." + reader);
+  }
+  const wire = require("fs").readFileSync(__dirname + "/../engine/wire.js", "utf8");
+  assert.doesNotMatch(wire, /"rune"/, "and it must not ship down the wire");
 });

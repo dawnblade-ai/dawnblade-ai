@@ -1,4 +1,23 @@
-# Handoff — Dawnblade, at v3.81 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.82 · PHASE C · HERO BY HERO
+
+## ⚠ ALL FIFTEEN HEROES HAVE SCENES NOW (v3.82)
+
+`npm run scenes` covers every hero — 49 scenes. Writing the eight that
+were missing found two dead readers that no other tool could see, which
+is the argument for the instrument restated. **When you touch a hero,
+read its scene file first**: each scene carries the defect it exists for.
+
+### THE DIAGNOSTIC THAT KEEPS PAYING
+
+Three separate versions this stretch found the same shape from three
+directions. It is worth running deliberately rather than stumbling on:
+
+1. **A reader that tests REMINDER TEXT** — count the records that print
+   it. Twice now the answer has been zero (ephemeral, v3.82).
+2. **A card at tier `none` whose payload parses ALONE** — the blocker is
+   the cost prefix or the trigger, not the effect (v3.79).
+3. **A counter or a scan reporting ZERO** — check it spells what the
+   source spells before believing the feature is missing (v3.81).
 
 ## ⚠ THE HARNESS ONLY STARTED PLAYING THE WHOLE GAME AT v3.80
 

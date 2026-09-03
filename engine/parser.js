@@ -5177,6 +5177,22 @@ const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
    for on nearly every page. Both boards ask it before the ability resolves
    (v3.11): refusing afterwards costs the player an activation the rules
    never allowed. */
+/* DOES THIS CARD CEASE TO EXIST INSTEAD OF REACHING A GRAVEYARD? (v3.82)
+
+   ONE READER, because there were two and they disagreed. The trainer's
+   `gy()` tested the KEYWORD LIST and judge's `toGrave` tested the printed
+   REMINDER SENTENCE — and measured across all 797 records, **one card is
+   ephemeral by keyword and NOT ONE prints the reminder text**. So judge's
+   regex matched nothing, ever, and Crouching Tiger reached the graveyard
+   at the table: a card the rules remove from the game handed back to the
+   player, on the board that is supposed to be the CR-exact one.
+
+   The database carries no reminder text for ANY keyword — this file says
+   so in four other places — so that reader was doomed the day it was
+   written. `printedKw` is the right question (v2.84's three): does the
+   card CARRY it as printed rules text. Crouching Tiger's whole text is
+   "**Ephemeral**\n\n**Go again**", two keyword lines and nothing else. */
+const isEphemeral = c => printedKw(c, "ephemeral");
 const abSoulCost = ab => (ab && ab._soulCost) || 0;
 /* ITS SIBLING (v3.79) — does the ability ALSO banish its own source?
    One reader, for the same reason `abSoulCost` is one: a cost read in one
@@ -5313,6 +5329,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, isEphemeral,
         CARD_OVERRIDES};
 });

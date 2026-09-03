@@ -215,9 +215,16 @@ function mint(g, tag){
    this turn" family. A new path that forgets it makes those cards quietly
    wrong, so there is exactly one. Ephemeral cards cease to exist instead
    (Crouching Tiger's printed reminder text). */
-const EPHEMERAL = /if it would be put into a graveyard from anywhere, instead it ceases to exist/i;
+/* EPHEMERAL IS `parser.isEphemeral`, AND IT USED TO BE A REGEX HERE
+   (v3.82). This file tested the printed REMINDER SENTENCE — "if it would
+   be put into a graveyard from anywhere, instead it ceases to exist" —
+   and the database carries no reminder text for any keyword, so the test
+   matched NOTHING across all 797 records. Crouching Tiger reached the
+   graveyard at the table while the trainer correctly dropped it: a rule
+   that exists on one board (v3.01), and the board it was missing from is
+   the CR-exact one. One reader now, asked by both. */
 const toGrave = (g, i, cards) => put(g, i, s => ({...s,
-  grave: [...cards.filter(c => !EPHEMERAL.test(c.tx || "")).map(c => ({...c, _gy: g.turn})),
+  grave: [...cards.filter(c => !PR.isEphemeral(c)).map(c => ({...c, _gy: g.turn})),
           ...(s.grave || [])]}));
 
 /* ============================================================
@@ -380,8 +387,13 @@ function autoAnswer(g){
    an accessor, a stamp or an adapter. */
 function effectsFor(g){
   const cell = {n: g.tokSeq || 0};
+  /* THE SECOND DEAD READER (v3.82). This is the `gy` the card semantics
+     are handed, and it carried its own copy of the same reminder-text
+     regex — so BOTH of judge's graveyard paths dropped nothing. Three
+     descriptions of one rule across two files, two of them matching
+     nothing on any of the 797 records. */
   const stamp = (turn, cards, disc) => cards
-    .filter(c => c && !EPHEMERAL.test(c.tx || ""))
+    .filter(c => c && !PR.isEphemeral(c))
     .map(c => disc ? {...c, _gy: turn, _disc: true} : {...c, _gy: turn});
   const ctx = {
     L: say,

@@ -90,7 +90,11 @@
 /* Bump WIRE_V for any change to the payload SHAPE. Two clients on
    different wire versions must refuse to play rather than guess, which is
    what `decode` does — same discipline as DATA_VER keying the card cache. */
-const WIRE_V = 1;
+/* v3.82 — `rune` left SIDE_FIELDS (dead since v2.23 made the count
+   derived), so the payload shape changed and this bumps with it. Two
+   clients on different versions are refused at the handshake rather than
+   discovering it on turn six. */
+const WIRE_V = 2;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -113,7 +117,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
   "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
-  "runeHitNext","amp","ward","awd","rune","arcShield",
+  "runeHitNext","amp","ward","awd","arcShield",
   "lifeLock","namedBuff","dracNext","marked","fatigue","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",
   "nextTurn"
