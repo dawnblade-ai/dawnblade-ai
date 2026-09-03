@@ -9,6 +9,85 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.88 — the pool's only cross-seat zone move
+
+> *"When this attacks, **each hero** puts the top card of **their** deck
+> face-down into **their** arsenal. If 2 or more cards are put into
+> arsenals **this way**, this gets go again."* — CONCOCT DISORDER
+
+It read `tier: none`, and both of its sentences refused.
+
+### It could not be built until the timing was fixed
+
+**`execute` evaluates conditions BEFORE it runs ops** (v3.60), and on an
+ATTACK card `fx.ops` ride all the way to RESOLUTION (`pend.ops`) while
+`runWayConds` fires at DECLARATION. So *"if 2 or more cards are put into
+arsenals this way"* was answered against an **empty record**, on every
+copy, forever.
+
+v3.60 states both halves of its own answer — *"pre-run when the op can
+safely move; the late pass when it cannot"* — and left the ATTACK case
+refusing. **This op can move**: a zone move between two decks and two
+arsenals depends on nothing the attack does.
+
+**AND THAT IS THE CR-CORRECT MOMENT.** *"When this attacks"* fires on
+DECLARATION; riding to `pend.ops` puts it at resolution, which is the
+standing approximation for the **other 14** attack cards printing a bare
+when-this-attacks. Those are measured and deliberately left alone — this
+one moves because its own condition asks about it.
+
+### Four things the op gets right, and each is a way to be wrong
+
+- **ONE OP FOR BOTH SEATS, NOT TWO.** *"2 or more cards are put into
+  arsenals THIS WAY"* counts **across** them, and two ops could not answer
+  it without threading a total between them — state no op carries. Same
+  reason Azalea's cycle is a whole-card reader (v3.71).
+- **IT IS SEAT-ABSOLUTE, NOT ACTOR-RELATIVE.** *"Each hero"* names both
+  players, so the loop runs over `sides` rather than through `act`/`foe`.
+  It is the one op in `effects.js` deliberately not written from the
+  actor's point of view, **because the card is not**.
+- **FACE-DOWN, READ RATHER THAN DEFAULTED** (v3.69). Read as face UP this
+  fires every arrow's put-face-up trigger **for both seats**, off an
+  attack that never says so — Azalea's whole deck.
+- **A FULL ARSENAL OR AN EMPTY DECK PUTS NOTHING**, which is the whole of
+  what the condition asks: without either gate the count is always 2 and
+  the second sentence is decoration.
+
+### The threshold travels in the condition's NAME
+
+`thisWayMet` READS the number rather than knowing it, so a printing that
+said *"3 or more"* would work. **Hardcoding it was SILENT** against every
+driven drill in the file — the card prints 2 and is the pool's only one of
+the shape, so no pool fixture can tell a read number from a literal. A
+synthetic printing 3 is what sees it: **sixth** time that rule has been
+needed (v3.32, v3.55, v3.74, v3.77, v3.81, v3.86).
+
+### The feed names each seat, and agrees with the name it used
+
+A log line is read by BOTH seats (v2.83), so a cross-seat op must say
+whose arsenal moved — and seat 0's name is literally *"You"*, which makes
+*"You puts the top card of THEIR deck"* wrong in two places at once. The
+verb and the possessive come from the seat's own name.
+
+That grows `judge.test.js`'s second-person ledger **48 → 49**, and it is
+the ledger's own remedy rather than a new debt: the string is reachable
+only when the seat it has just named is *"You"*. Moving that number is
+always an edit with a reason attached — that is the whole device.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| pool coverage | 365 full / **6 none** | **366 full** / 34 part / **5 none** |
+| drills | 1937 | **1951** |
+| scenes | 53 | **54** |
+| sabotages | — | **12, all bite, 0 silent** (after the synthetic threshold fixture) |
+
+Self-play unchanged at 210 games · 0 stalls · 0 refusals · 0 violations;
+`npm run fairness` clean.
+
+---
+
 ## v3.87 — a standing attack grant, with a window
 
 > *"Your attacks with **stealth** get +1{p} this turn."* — NIGHT'S EMBRACE

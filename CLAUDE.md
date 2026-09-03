@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.87
+**Current version:** v3.88
 
 ---
 
@@ -516,6 +516,49 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A CROSS-SEAT ZONE MOVE, AND THE TIMING THAT BLOCKED IT (v3.88)
+
+> *"When this attacks, **each hero** puts the top card of **their** deck
+> face-down into **their** arsenal. If 2 or more cards are put into
+> arsenals **this way**, this gets go again."* — CONCOCT DISORDER
+
+**`execute` EVALUATES CONDITIONS BEFORE IT RUNS OPS** (v3.60), and on an
+ATTACK card `fx.ops` ride to RESOLUTION while `runWayConds` fires at
+DECLARATION — so the second sentence was answered against an empty record
+on every copy, forever. v3.60 names both halves of its own answer
+(*"pre-run when the op can safely move; the late pass when it cannot"*)
+and left the attack case refusing; **this op can move**, because a zone
+move between two decks and two arsenals depends on nothing the attack
+does.
+
+**AND IT IS THE CR-CORRECT MOMENT.** *"When this attacks"* fires on
+DECLARATION. Riding to `pend.ops` puts it at resolution — the standing
+approximation for the **other 14** attack cards printing a bare
+when-this-attacks, which are measured and deliberately left alone.
+
+**ONE OP FOR BOTH SEATS, NOT TWO.** The count is ACROSS them, and two ops
+cannot thread a total between them — state no op carries.
+
+**IT IS SEAT-ABSOLUTE, NOT ACTOR-RELATIVE** — the one op in `effects.js`
+that deliberately loops `sides` rather than going through `act`/`foe`,
+because *"each hero"* names both players and the card is not written from
+anyone's point of view.
+
+**FACE-DOWN, READ RATHER THAN DEFAULTED** (v3.69): read as face UP it
+fires every arrow's put-face-up trigger for BOTH seats. **A full arsenal
+or an empty deck puts nothing**, which is the whole of what the condition
+asks — without either gate the count is always 2 and the sentence is
+decoration.
+
+**THE THRESHOLD TRAVELS IN THE CONDITION'S NAME**, so `thisWayMet` reads
+it rather than knowing it. Hardcoding it was SILENT against every driven
+drill: the card prints 2 and is the pool's only one of the shape, so a
+synthetic printing 3 is what sees it — **sixth** outing of that rule.
+
+**AND A CROSS-SEAT FEED LINE NAMES EACH SEAT** (v2.83) — seat 0's name is
+literally *"You"*, so the verb and the possessive come from the name the
+line just used, or it reads *"You puts the top card of THEIR deck"*.
 
 ### A STANDING ATTACK GRANT IS NOT A SINGLE-SHOT ONE (v3.87)
 

@@ -1374,6 +1374,49 @@ function makeEffects(ctx){
 
          `until` IS THE PRINTED WINDOW, read off the card and carried, so
          `beginEndPhase` and the close step each drop only their own. */
+      /* EACH HERO PUTS THEIR TOP CARD IN THEIR ARSENAL (v3.88) — Concoct
+         Disorder, the pool's only cross-seat zone move.
+
+         IT IS ONE OP FOR BOTH SEATS, not two. "2 or more cards are put
+         into arsenals THIS WAY" counts across them, and two ops could not
+         answer that without threading a total between them — state no op
+         carries. `_arsWay` is the trace, beside `_discWay` and `_dmgWay`
+         and cleared with them (v3.61: check for the trace before you
+         build one; here there was none).
+
+         IT IS SEAT-ABSOLUTE, NOT ACTOR-RELATIVE. "Each hero" names both
+         players, so the loop runs over `sides` rather than through
+         `act`/`foe` — the one op in this file that is deliberately not
+         written from the actor's point of view, because the card is not.
+
+         AN ARSENAL WITH NO ROOM PUTS NOTHING, and so does an empty deck.
+         Both are the reason the count can be 0 or 1 rather than always 2,
+         which is the whole of what the condition asks.
+
+         FACE-DOWN, and read rather than defaulted (v3.69): reading this
+         as face UP fires every arrow's put-face-up trigger for both
+         seats, off an attack that never says so. */
+      else if(k==="eachArsPut"){
+        let put = 0;
+        const sides = n.sides.slice();
+        /* A LOG LINE IS READ BY BOTH SEATS, SO IT NAMES THE SEAT (v2.83)
+           — and seat 0's name is literally "You", so the verb agrees with
+           it the way every other second-person line in this file does. */
+        const who = i => ((n.sides||[])[i]||{}).name || "seat " + i;
+        const verb = (i, s2, p2) => /^you$/i.test(who(i)) ? s2 : p2;
+        const poss = i => /^you$/i.test(who(i)) ? "your" : "their";
+        for(let i = 0; i < 2; i++){
+          const sd = sides[i] || {};
+          if(P.arsFree(sd) <= 0){ n = L(n, `${who(i)}: the arsenal is full — nothing is put.`); continue; }
+          if(!(sd.deck || []).length){ n = L(n, `${who(i)}: no deck left to put from.`); continue; }
+          const top = sd.deck[0];
+          sides[i] = Object.assign({}, sd, {deck: sd.deck.slice(1), arsenal: top});
+          put++;
+          n = L(n, `${who(i)} ${verb(i, "put", "puts")} the top card of ${poss(i)} deck face-down into ${poss(i)} arsenal.`);
+        }
+        n = Object.assign({}, n, {sides});
+        n._arsWay = (n._arsWay || 0) + put;
+      }
       else if(k==="atkBuff"){
         actMut(n).atkBuff = [...(act(n).atkBuff||[]),
                              {amt: v, q: op[2] || null, until: op[3] || "turn"}];
@@ -2031,9 +2074,35 @@ function makeEffects(ctx){
       n = L(n, `${card.name} came out of the arsenal with ${card._arsKw.join(" and ")}.`);
     }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
+    n._arsWay  = 0;         // …and the cross-seat arsenal count (v3.88)
     const preRan = new Set();
     if(fx.ops.some(o=>o[0]==="discardRandom")){
       const pre = fx.ops.filter(o=>o[0]==="draw"||o[0]==="discardRandom");
+      n = runOps(n, pre, card.name);
+      pre.forEach(o=>preRan.add(o));
+    }
+    /* THE CROSS-SEAT ARSENAL PUT IS PRE-RUN TOO (v3.88), and for the
+       reason v3.60 states: `execute` evaluates the conditions BEFORE it
+       runs the ops, so a condition asking what my own ops just did is
+       answered against an empty record. Concoct Disorder's second
+       sentence — "if 2 or more cards are put into arsenals THIS WAY" —
+       is exactly that shape.
+
+       THE `way:` LATE PASS CANNOT SERVE IT, because on an ATTACK card
+       `fx.ops` ride to RESOLUTION (`pend.ops`) while `runWayConds` fires
+       at DECLARATION. v3.60 says so in as many words and left the attack
+       case refusing; the pre-run is the other half of its own answer —
+       "pre-run when the op can safely move; the late pass when it
+       cannot" — and this op can, because a zone move between two decks
+       and two arsenals depends on nothing the attack does.
+
+       IT ALSO MATCHES THE PRINTED TRIGGER. "WHEN THIS ATTACKS" fires on
+       declaration; riding to `pend.ops` would put it at resolution, which
+       is the existing approximation for the other 14 attack cards that
+       print a bare when-this-attacks. This one is moved because its own
+       condition asks about it — the rest are measured and left alone. */
+    if(fx.ops.some(o=>o[0]==="eachArsPut")){
+      const pre = fx.ops.filter(o=>o[0]==="eachArsPut");
       n = runOps(n, pre, card.name);
       pre.forEach(o=>preRan.add(o));
     }
@@ -2263,7 +2332,7 @@ function makeEffects(ctx){
     const runWayConds = (nn, grantGa) => {
       for(const {cond, op} of fx.conds){
         if(!/^way:/.test(cond)) continue;
-        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay})){
+        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay})){
           nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
           continue;
         }
@@ -5299,6 +5368,17 @@ function thisWayMet(cond, trace){
   const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
   if(pm) return (t.disc||[]).some(c => c && (c.pitch||0) === +pm[1]);
   if(cond === "way:dealt") return (t.dmg||0) > 0;
+  /* "IF 2 OR MORE CARDS ARE PUT INTO ARSENALS THIS WAY" (v3.88). The
+     THRESHOLD is the card's own printed number, carried in the condition
+     name — a literal 2 here is right for this printing and silently wrong
+     for any other (v3.17, v3.32, v3.55). */
+  const am = String(cond||"").match(/^way:arsPut(\d+)$/);
+  if(am) return (t.ars||0) >= +am[1];
+  /* AN UNKNOWN `way:` ANSWERS FALSE — a condition added to the parser and
+     forgotten here leaves the card weaker than printed and visible, which
+     is the safe direction (v3.26's rule, and this function is NAMED so
+     that default is reachable by a drill: the parser only emits
+     conditions the evaluator knows, so no card fixture can drive it). */
   return false;
 }
 

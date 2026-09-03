@@ -3273,6 +3273,47 @@ function fxParse(card){
      a clause consumed by a dedicated reader (`handled`) took an early
      return that pushed `run` without ever asking, which is how Avast Ye!
      kept reporting `full` after the other three were fixed. */
+  /* ---- EACH HERO PUTS THEIR TOP CARD IN THEIR ARSENAL (v3.88) ------
+     Concoct Disorder, and it is the pool's only card of the shape:
+
+       "When this attacks, EACH HERO puts the top card of THEIR deck
+        face-down into THEIR arsenal. If 2 OR MORE cards are put into
+        arsenals THIS WAY, this gets go again."
+
+     A WHOLE-CARD READER, because the two sentences reach across the
+     clause split: "this way" names the puts the FIRST sentence made, and
+     the splitter breaks on the period. Same place and reason `optCost`
+     pairs its halves and `arsCycle` reads Azalea's three.
+
+     THE THRESHOLD IS THE CARD'S OWN NUMBER, never a literal — a second
+     printing naming a different count reads correctly, and a hardcoded 2
+     is right for this face and silently wrong for any other (v3.17,
+     v3.32, v3.55).
+
+     THE PUT IS FACE-DOWN, and that is READ rather than defaulted: the
+     face of an arsenal put is the caller's answer (v3.69), and reading
+     this as face UP would fire every arrow's put-face-up trigger for both
+     seats — Azalea's whole deck, off an attack that never says so.
+
+     IT IS ONE OP FOR BOTH SEATS, not two, because "2 or more cards are
+     put THIS WAY" counts across them: two ops could not answer it without
+     threading a total between them, which is state no op carries. */
+  {
+    const ci = clauses.findIndex(c =>
+      /^when this attacks, each hero puts the top card of their deck face.?down into their arsenal$/i
+        .test(levelIdiom(c.trim().replace(/\.$/, ""))));
+    const wi = clauses.findIndex(c =>
+      /^if (\d+) or more cards are put into arsenals this way, this gets go again\.?$/i
+        .test(levelIdiom(c.trim())));
+    if(ci >= 0 && wi >= 0 && !handled.has(ci) && !handled.has(wi)){
+      const nm = levelIdiom(clauses[wi].trim())
+        .match(/^if (\d+) or more cards are put into arsenals this way/i);
+      fx.ops.push(["eachArsPut"]);
+      fx.conds.push({cond: "way:arsPut" + (+nm[1]), op: ["ga"], instead: false, atkHero: false});
+      handled.add(ci); handled.add(wi);
+    }
+  }
+
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);

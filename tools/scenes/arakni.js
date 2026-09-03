@@ -28,6 +28,71 @@ function ability(P, piece, uid){
 module.exports = [
 
 {
+  name: "Concoct Disorder moves BOTH arsenals, and pays only for two",
+  why: "v3.88 — it read `tier: none`, and it is the pool's only CROSS-SEAT " +
+       "zone move. The reason it refused is v3.60's: `execute` evaluates " +
+       "conditions BEFORE it runs ops, and on an ATTACK card the ops ride " +
+       "all the way to RESOLUTION while the `way:` pass fires at " +
+       "DECLARATION — so \"if 2 or more cards are put into arsenals this " +
+       "way\" was answered against an empty record on every copy, forever.",
+  run(c){
+    c.H.db(); c.P.fxReset();
+    const cd = c.card("Concoct Disorder", 1, 901);
+    const filler = (u, nm) => ({uid: u, name: nm, tt: "Generic Action - Attack",
+      ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0, power: 3, def: 2,
+      tx: "", kw: []});
+    const play = o => {
+      o = o || {};
+      const g = c.state(
+        {hand: [cd], res: 9, ap: 1, deck: [filler(910, "YouTop"), filler(911, "Y2")],
+         arsenal: o.youArs ? filler(920, "YouArs") : null},
+        {hp: 20, deck: o.foeDeckEmpty ? [] : [filler(930, "FoeTop"), filler(931, "F2")],
+         arsenal: null},
+        {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+      const out = c.exec(g, cd, "hand", 0, {});
+      const n = out.game || out;
+      return {put: n._arsWay, ga: !!(n.pend && n.pend.ga),
+              you: (n.sides[0].arsenal || {}).name || null,
+              foe: (n.sides[1].arsenal || {}).name || null,
+              up: !!((n.sides[0].arsenal || {})._faceUp),
+              queued: ((n.pend || {}).ops || []).filter(x => x[0] === "eachArsPut").length,
+              bad: require("../../engine/invariants.js").errors(n).length};
+    };
+    const both = play(), oneFull = play({youArs: true}), decked = play({foeDeckEmpty: true});
+    return {
+      "cards put when both arsenals are empty": both.put,
+      "…and it goes again":                     both.ga,
+      "yours came off YOUR deck":               both.you,
+      "…and theirs off THEIRS":                 both.foe,
+      /* FACE-DOWN, read rather than defaulted (v3.69). Read as face UP it
+         fires every arrow's put-face-up trigger for BOTH seats. */
+      "the put is face-DOWN":                   both.up,
+      /* THE OP RAN AT DECLARATION AND IS NOT QUEUED AGAIN. Without the
+         pre-run both seats put twice and the second displaces the first. */
+      "it is not queued for resolution too":    both.queued,
+      "a full arsenal puts nothing":            oneFull.put,
+      "…so the go again is denied":             oneFull.ga,
+      "an empty deck puts nothing either":      decked.put,
+      "…and that is denied too":                decked.ga,
+      "no broken board anywhere":               both.bad + oneFull.bad + decked.bad
+    };
+  },
+  want: {
+    "cards put when both arsenals are empty": 2,
+    "…and it goes again": true,
+    "yours came off YOUR deck": "YouTop",
+    "…and theirs off THEIRS": "FoeTop",
+    "the put is face-DOWN": false,
+    "it is not queued for resolution too": 0,
+    "a full arsenal puts nothing": 1,
+    "…so the go again is denied": false,
+    "an empty deck puts nothing either": 1,
+    "…and that is denied too": false,
+    "no broken board anywhere": 0
+  }
+},
+
+{
   name: "Night's Embrace lifts EVERY stealth attack, and only those",
   why: "v3.87 — it read `tier: none`, one of the pool's seven unread " +
        "cards, and the gap was that nothing could say \"every attack of " +

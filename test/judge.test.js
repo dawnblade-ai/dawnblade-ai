@@ -1625,7 +1625,20 @@ test("the second-person debt in the shared semantics does not grow", () => {
      a card from the asked seat's own hand, so "your hand" is that seat's
      hand and the second person is correct here for the same reason it is
      correct in a refusal. The feed half of the card names the seat. */
-  assert.ok(lits.length <= 48,
+  /* 48 -> 49 AT v3.88, AND THIS ONE IS THE LEDGER'S OWN REMEDY RATHER
+     THAN A NEW DEBT. Concoct Disorder's cross-seat put writes a line for
+     EACH seat, so it names the seat first — and seat 0's name is
+     literally "You", which makes "You puts the top card of THEIR deck"
+     the wrong sentence in two places at once. The op therefore chooses
+     its verb and its possessive from the seat's own name, and the
+     possessive is where the literal comes from.
+
+     THE TEST TO APPLY IS THE ONE THE MOVES ABOVE APPLY: is the second
+     person addressed to the seat the line is ABOUT? Here it is, by
+     construction — the string is only reachable when `who(i)` is "You".
+     A feed line that says "you" about the OTHER seat is the debt; this
+     says "your" about the seat it has just named. */
+  assert.ok(lits.length <= 49,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

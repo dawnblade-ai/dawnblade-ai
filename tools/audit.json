@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T17:23:34.617Z",
- "appVer": "3.86",
+ "generated": "2026-09-03T17:35:58.854Z",
+ "appVer": "3.87",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 365,
+  "full": 366,
   "part": 34,
-  "none": 6
+  "none": 5
  },
  "heroes": {
   "kayo": {
@@ -9545,29 +9545,24 @@
    "mentions": [
     "go again"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "When this attacks, each hero puts the top card of their deck face-down into their arsenal",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If 2 or more cards are put into arsenals this way, this gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this attacks, each hero puts the top card of their deck face-down into their arsenal",
-    "If 2 or more cards are put into arsenals this way, this gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, each hero puts the top card of their deck face-down into their arsenal. If 2 or more cards are put into arsenals this way, this gets go again.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "den of the spider|1": {
    "name": "Den of the Spider",
