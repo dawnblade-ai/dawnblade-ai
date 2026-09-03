@@ -1739,12 +1739,31 @@ function makeEffects(ctx){
            action off the wire — and running the effect anyway would hand
            it out for nothing. */
         if((act(n).soul||[]).length < _sc)
-          return L(n, `${card.name}: ${act(n).name} has ${(act(n).soul||[]).length} in the soul and it costs ${_sc} — nothing happens.`);
+          return L(n, `${card.name} — ${act(n).name}: ${(act(n).soul||[]).length} in the soul, and it costs ${_sc}. Nothing happens.`);
         else {
           actMut(n).soul = act(n).soul.slice(_sc);
           n = L(n, `${act(n).name}: ${_sc} banished from the soul — the cost is paid.`);
         }
       } }
+    /* "BANISH THIS AND …" — THE SOURCE IS PART OF THE COST (v3.79).
+       Radiant Touch prints "Instant - Banish this and a card from your
+       soul", and the piece leaving for good IS the price: a prevention
+       pool you can raise every turn for one soul card is a different
+       card. Charged AFTER the soul, so an unpayable soul cost returns
+       above and the piece is not spent for an ability that never ran.
+
+       IT IS MARKED, NOT SPLICED, and that is v3.54's whole safety
+       argument: the trainer's `blockG` holds INDICES into `gear`, so
+       removing an entry while a wall is declared renumbers the defenders
+       underneath it — and this is an INSTANT, playable during exactly
+       that block. `sweepGear` files it at a point where no wall can be
+       live, and BANISH is its second destination. */
+    if(P.abSelfBanish(card)){
+      const _bu = card._banishGear;
+      actMut(n).gear = act(n).gear.map(x => x.uid === _bu
+        ? Object.assign({}, x, {destroyed: true, _banished: true}) : x);
+      n = L(n, `${card.name.replace(/ — ability$/, "")} is banished — the rest of the cost is paid.`);
+    }
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
        stays on the board, exactly as a weapon stays equipped —
@@ -3147,6 +3166,27 @@ function makeEffects(ctx){
     actMut(n).arsenal = up;
     if(!(pfx.arsenalUp||[]).length && !(stamp||[]).length)
       n = L(n, `${put.name} set face up in arsenal.`);
+    /* FACE-UP FROM THE **DECK** (v3.79) — Back Alley Breakline's own
+       trigger, and the second reader of the `from` this body carries. It
+       fires only on the deck route, because the printed line says "from
+       your deck": on a put out of the HAND it would hand over a free
+       action point the card never grants.
+
+       AFTER THE CARD IS FACE UP AND AFTER THE LINE THAT SAYS SO. Run
+       above, the feed pays the action point before the player has been
+       told the card arrived — and in a training sim the sequence IS the
+       lesson (v3.60). Same ordering Tarantula's drain keeps one rule
+       over.
+
+       IT IS LATENT AND THAT IS MEASURED, NOT ASSUMED. Azalea's hero
+       ability is the only thing in the pool that puts a card face-up
+       from a deck, and Back Alley Breakline is in GRAVY BONES' list — so
+       no deck holds both halves today. A printed distinction is still
+       read correctly whether or not anything notices (v3.73, and v3.72's
+       "a trigger with no event" from the other end). */
+    if(from === "deck")
+      for(const op of (pfx.deckFaceUp||[]))
+        n = runOps(n, [op], put.name);
     /* ---- WHAT WAS WATCHING (v3.72) ---------------------------------
        Crow's Nest: "whenever an arrow is put face-up into your arsenal
        FROM YOUR DECK, you may pay {r}."
@@ -5113,12 +5153,24 @@ function sweepGear(game, seat){
      makes those cards quietly wrong (CLAUDE.md says so in as many words).
      Stamped inline because this function is pure — the same thing
      `sweepArena` does, rather than reaching for the trainer's `gy()`. */
-  me.grave = [...gone.map(g => Object.assign({}, g, {_gy: game.turn})), ...(sd.grave || [])];
+  /* TWO DESTINATIONS, READ OFF THE MARK (v3.79). A DESTROYED permanent
+     goes to the graveyard (the 2026-08-29 ruling); a BANISHED one goes to
+     the banish zone, and they are different zones with different readers
+     — the two `retrieve` cards fetch gear out of a GRAVEYARD, so filing a
+     banished piece there would hand it back a card the text removed from
+     the game. One sweep, because the index hazard v3.54 names is the same
+     for both, and one mark says which. */
+  const banished = gone.filter(g => g._banished);
+  const destroyed = gone.filter(g => !g._banished);
+  me.grave = [...destroyed.map(g => Object.assign({}, g, {_gy: game.turn})), ...(sd.grave || [])];
+  if(banished.length) me.banish = [...banished.map(g => Object.assign({}, g)), ...(sd.banish || [])];
   sides[seat] = me;
   const who = ((game.sides || [])[seat] || {}).name || ("seat " + seat);
   return {
     game: Object.assign({}, game, {sides}),
-    msgs: gone.map(g => `${g.name} is destroyed — it goes to ${who}'s graveyard.`),
+    msgs: gone.map(g => g._banished
+      ? `${g.name} is banished — it is out of ${who}'s game for good.`
+      : `${g.name} is destroyed — it goes to ${who}'s graveyard.`),
     moved: gone.map(g => g.uid)};
 }
 

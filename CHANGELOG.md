@@ -9,6 +9,101 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.79 — two refusals discharged by machinery built two versions ago
+
+**v3.47 states the rule**: *when you build a mechanic, sweep the refusals
+that were waiting on it.* Two pool cards read tier **`none`** — and both
+of their payloads already parsed perfectly in isolation. Only the cost
+prefix and the trigger stood in the way, and each was waiting on
+something this project had since built and never gone back for.
+
+**That is the diagnostic worth keeping**: a card at `none` whose payload
+parses on its own is a card whose *cost* or *trigger* is the blocker, and
+it is a two-minute check.
+
+### RADIANT TOUCH — the anchor demanded the soul be the whole cost
+
+> *"Instant - Banish **this and** a card from your soul: Prevent the next
+> 2 damage that would be dealt to you this turn."*
+
+| half | built |
+|---|---|
+| the `ward 2` payload | **v3.67** |
+| the soul-banish cost | **v3.74** (Boltyn) |
+
+`parseHeroPower`'s soul matcher anchored on `^banish N cards? from your
+soul$`, so *"banish **this and** a card from your soul"* fell straight
+through. One optional middle in the regex — and it is the same cost with
+a second object, not a second reader.
+
+**THE SELF-BANISH IS THE DRAWBACK AND IT MUST LAND.** A prevention pool
+you can raise every turn for one soul card is a different card; the piece
+leaving for good is the price. Dropping it is the free-ability bug v2.04
+fixed, one cost over.
+
+**AND THE EQUIPMENT POWCARD BUILDER HAD NEVER STAMPED A SOUL COST.**
+v3.74 taught the parser and stamped `_soulCost` on the **hero** powCard
+alone — so an *equipment* ability printing the identical cost was built
+with the cost silently dropped. v3.63 states this in as many words —
+**when you add a flag to one powCard builder, grep for the others** —
+and this is the second time that sentence has been needed.
+
+**IT IS MARKED, NOT SPLICED**, which is v3.54's whole safety argument:
+the trainer's `blockG` holds INDICES into `gear`, so removing an entry
+while a wall is declared renumbers the defenders underneath it — and this
+is an **Instant**, playable during exactly that block.
+
+**`sweepGear` GAINS A SECOND DESTINATION, READ OFF THE MARK.** A
+destroyed permanent goes to the graveyard (the 2026-08-29 ruling); a
+banished one is out of the game. They are different zones with different
+readers — the two `retrieve` cards fetch gear out of a **graveyard**, so
+filing a banished piece there hands back a card the text removed from the
+game. One sweep, because the index hazard is the same for both.
+
+### BACK ALLEY BREAKLINE — the event was built for a different hero
+
+> *"When an activated ability or action card effect puts this face-up
+> into a zone **from your deck**, gain 1 action point."*
+
+v3.71 built exactly that event for Azalea's cycle (`faceUpArsenal(…,
+"deck")`). The card still read nothing.
+
+**A DIFFERENT TRIGGER, NOT A VARIANT OF THE ARSENAL ONE.** `arsenalUp`
+fires on any face-up put; this fires only off the **deck**, so routing it
+there would pay an action point every time the card is set face up out of
+the hand — the most valuable thing in the game to hand out wrongly
+(v2.31's go again, one resource over).
+
+**IT FIRES AFTER THE CARD IS FACE UP AND AFTER THE LINE THAT SAYS SO.**
+Run above, the feed hands over an action point before the player has been
+told the card arrived, and in a training sim the sequence IS the lesson
+(v3.60). Same ordering Tarantula's drain keeps one rule over.
+
+**LATENT, AND MEASURED RATHER THAN ASSUMED.** Azalea's ability is the
+only thing in the pool that puts a card face-up from a deck, and Back
+Alley Breakline is in **Gravy Bones'** list — so no deck holds both
+halves today. A reader that ignores a printed distinction is reading the
+card wrong whether or not anything notices (v3.73), and the measurement
+is pinned so the day a deck holds both, the claim is known to have moved.
+
+**AND THE MEASUREMENT'S OWN FIXTURE WAS WRONG FIRST.** It spelled *"face
+up"* where the card prints *"face-up"*, so it found nothing and reported
+the event unreachable — which looks exactly like a correct latency
+result. **Check your own fixture, sixth time**, and prefer the field the
+engine sets over a regex over card text.
+
+### Measured
+
+- **Coverage 361 → 363 full, 10 → 8 `none`.** Baseline repinned after
+  reading the diff: five cards moved, all upward, three of them left over
+  from v3.71/v3.72 and never repinned.
+- **12 sabotages, 12 bite, 0 silent.**
+- One feed line fixed on the way past: *"You **has** 0 in the soul"* — an
+  inflected verb against `nameOf`, which is literally "You" on the
+  trainer. A colon, per v2.83.
+
+---
+
 ## v3.78 — Lyath Goldmane, and the last UNFAIR entry
 
 > **"The base {p} and {d} of cards you control are halved, rounded up.

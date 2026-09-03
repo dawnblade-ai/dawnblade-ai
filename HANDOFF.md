@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.78 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.79 · PHASE C · HERO BY HERO
 
 ## ⚠ SEVEN HEROES FINISHED — WHAT IS LEFT
 
@@ -11,6 +11,45 @@ Gravy Bones 1/2, Iyslander 1/3.
 `npm run sweep`'s UNFAIR block carried Lyath's halving static from v3.21
 to v3.78 and now carries nothing. **Re-derive it rather than trusting this
 sentence** — the last one like it was wrong for nineteen versions.
+
+### THE `none` LIST IS DOWN TO 8, AND THE DIAGNOSTIC THAT DID IT
+
+Run every `none` card's payload through `classifyClause` ALONE. If it
+parses, the blocker is the COST PREFIX or the TRIGGER, not the effect —
+and both are usually waiting on machinery that already exists (v3.47,
+v3.79). It moved Radiant Touch and Back Alley Breakline in one version.
+
+The eight still reading nothing:
+
+| card | the blocker |
+|---|---|
+| **Cosmo, Scroll of Ancestral Tapestry** | *"auras you control with ward are weapons with base {p} equal to their ward"* — **Enigma's whole engine**, and CLAUDE.md already records that judge routes Cosmo as a swing wrongly |
+| **Hope Merchant's Hood** | shuffle-and-redraw — deck manipulation, a recorded open ruling |
+| **Danger Digits** | built at v3.63; re-check why it still reads none |
+| **Concoct Disorder** | a cross-seat arsenal put + a "…this way" COUNT condition |
+| **Night's Embrace** | *"your attacks with stealth get +1{p} this turn"* — a turn-scoped QUALIFIED attack grant, i.e. the exact twin of v3.78's `defActionBuff`, with `attackQual` already built |
+| **Shred** | *"target card defending an Assassin attack gets -4{d} this combat chain"* — a targeted debuff on a defender; `defendValue` is the reader |
+| **Glisten** | distribute up to four +1{p} counters among any number of weapons, plus an end-phase wipe — `ctrPut` (v3.55) and `idleCounterWipes` (v3.66) both exist |
+| **Jittery Bones** | a MODAL cost ("discard a card OR destroy the top card of your deck") with a rider on the chosen card |
+
+**Night's Embrace is the cheapest of the eight** — it is v3.78's
+`defActionBuff` with a qualifier instead of a type test, and both halves
+are built.
+
+### ENIGMA IS BLOCKED ON A SYMBOL, AND IT IS A RULING
+
+Her clause 2 costs **{c}{c}{c}** — a symbol that appears on **exactly one
+record in the pool, her own**, and for which the database prints no
+reminder text. The SEN001 card face shows three blue-grey spirals,
+visually distinct from the red {r} pip on the line above, and names them
+nowhere. **Do not guess it** — that is the golden rule at the keyword
+level. Book it in `tools/followups.json` with the narrow question: *what
+resource is {c}, and how is it generated?*
+
+Her clause 1 (*"your first Spectral Shield attack each turn costs {r} less
+to activate"*) is blocked on something buildable instead: **Cosmo**, which
+is what turns her ward-bearing auras into weapons that can attack at all.
+Build Cosmo first and clause 1 becomes reachable.
 
 ### THE NEXT HEROES, EASIEST FIRST
 

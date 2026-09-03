@@ -520,6 +520,24 @@ function classifyClause(raw){
          gain a bonus their text never grants; defaulted false, Spire
          Sniping loses a printed line of play. */
       return Object.assign(rest,{arsUp:true, arsUpTurn:/\bturned\b/.test(cond)});
+    /* FACE-UP FROM THE **DECK** (v3.79) — Back Alley Breakline:
+       "When an activated ability or action card effect puts this face-up
+        into a zone FROM YOUR DECK, gain 1 action point."
+
+       A DIFFERENT TRIGGER FROM THE ONE ABOVE, not a variant of it. That
+       one fires on any face-up put; this one fires ONLY when the card
+       came off the deck, so reading it as `arsUp` would pay an action
+       point every time the card is set face up out of the HAND — an
+       action point is the most valuable thing in the game to hand out
+       wrongly (v2.31's go again, one resource over).
+
+       "INTO A ZONE" IS DELIBERATELY GENERIC AND THE ARSENAL IS THE ONLY
+       ONE REACHABLE. Measured: Azalea's hero ability is the sole thing in
+       the pool that puts a card face-up from a deck, so the honest
+       reading is the event that exists — and a wider zone has no site to
+       fire at. */
+    if(/\bputs? this face.?up\b/.test(cond) && /\bfrom your deck\b/.test(cond))
+      return Object.assign(rest, {deckUp: true});
     /* "this hits A MARKED HERO" is a COMPOUND gate — on-hit AND the target
        being marked — and it must be caught before the generic /hits?/
        catch-all just below, or the marked half is silently lost and the
@@ -3265,6 +3283,11 @@ function fxParse(card){
       if(r.arsUp){ fx.arsenalUp = [...(fx.arsenalUp||[]), op];
         if(r.arsUpTurn) fx.arsenalUpTurn = true;
         return; }
+      /* ITS DECK-ONLY SIBLING (v3.79), held off `fx.ops` for the same
+         reason: left there, the action point is paid when the card is
+         PLAYED, which is the opposite of a trigger that fires while it
+         is still in the deck. */
+      if(r.deckUp){ fx.deckFaceUp = [...(fx.deckFaceUp||[]), op]; return; }
       /* A SCHEDULE, NOT AN ON-PLAY EFFECT. Both of these fire long after
          the activation that reads them — one when the weapon HITS for the
          Nth time this turn, the other at the beginning of an end phase.
@@ -4001,15 +4024,29 @@ function parseHeroPower(tx, allowDestroy){
      a LEGALITY, refused before the ability resolves (v3.11), because
      refusing afterwards costs the player an activation the rules never
      allowed. */
-  const soulM = costStr.match(/^banish (a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul$/i);
+  /* "BANISH THIS AND …" IS THE SAME COST WITH THE SOURCE ADDED (v3.79).
+     Radiant Touch prints "Instant - Banish THIS AND a card from your
+     soul: Prevent the next 2 damage…" — one printed `banish` governing
+     two objects, so it is this matcher with an optional middle rather
+     than a second reader. Its payload (`ward 2`) has read since v3.67 and
+     the soul cost since v3.74: the ONLY thing between the card and the
+     table was that the anchor demanded the soul be the whole cost.
+
+     THE SELF-BANISH IS THE DRAWBACK AND IT MUST LAND. A prevention pool
+     you can raise every turn for one soul card is a different card; the
+     piece leaving for good is the price. Dropping it is the free-ability
+     bug v2.04 fixed, one cost over. */
+  const soulM = costStr.match(/^banish (this and )?(a|an|one|two|three|\d+) cards? from your (?:hero'?s? )?soul$/i);
   if(soulM){
     const eff1 = classifyClause(m[4]);
     if(!eff1 || eff1.status !== "run" || eff1.cond || eff1.onHit) return null;
     const after1 = t.slice(m.index + m[0].length);
-    const nSoul = {a:1, an:1, one:1, two:2, three:3}[soulM[1].toLowerCase()] || +soulM[1];
+    const nSoul = {a:1, an:1, one:1, two:2, three:3}[soulM[2].toLowerCase()] || +soulM[2];
+    const selfB = !!soulM[1];
     return {cost: 0, ga: /^\.?\s*go again/i.test(after1), sd: false, kind,
-            soul: nSoul, eff: m[4].trim(),
-            label: (m[1] ? "once/turn: " : "") + "banish " + nSoul
+            soul: nSoul, selfBanish: selfB, eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + "banish "
+                 + (selfB ? "this and " : "") + nSoul
                  + " from your soul: " + m[4].trim()};
   }
   /* "THIS" IS THE SOURCE, AND ON A REACTION ROUTE THE SOURCE IS NOT THE
@@ -5141,6 +5178,10 @@ const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
    (v3.11): refusing afterwards costs the player an activation the rules
    never allowed. */
 const abSoulCost = ab => (ab && ab._soulCost) || 0;
+/* ITS SIBLING (v3.79) — does the ability ALSO banish its own source?
+   One reader, for the same reason `abSoulCost` is one: a cost read in one
+   place and re-derived in the other is two descriptions of one price. */
+const abSelfBanish = ab => !!(ab && ab._selfBanish);
 
 function defCap(card, held, opts){
   const caps = [];
@@ -5272,6 +5313,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish,
         CARD_OVERRIDES};
 });

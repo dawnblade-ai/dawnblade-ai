@@ -272,5 +272,64 @@ module.exports = [
     "the tapped card goes second": [903, 902, 904, 900]
   }
 }
+,
+
+{
+  name: "her cycle fires another hero's card, from the deck",
+  why: "v3.79 — Back Alley Breakline reads \"when an activated ability or " +
+       "action card effect puts THIS face-up into a zone FROM YOUR DECK, " +
+       "gain 1 action point\", and her ability is the ONLY thing in the " +
+       "pool that causes that event. The card is in Gravy Bones' list, so " +
+       "no deck holds both halves — latent, measured, and read correctly " +
+       "anyway (v3.73). The hand route is the negative control: an action " +
+       "point is the most valuable thing in the game to hand out wrongly.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const J = require("../../engine/judge.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const pool = require("../../data/pool.json");
+    const W = loadData();
+    const db = c.H.db();
+    const b = B.buildSide(W.HEROES.find(x => x.k === "azalea"),
+                          G.parseDeck(W.DECKS.azalea), db, {},
+                          RNG.make("scene-bab"), {n: 0}).b;
+    const as = (nm, uid) => { const r = pool.find(x => x.name === nm);
+      return {name: r.name, uid, pitch: r.pitch, tt: r.type_text, ty: r.types,
+              kw: r.card_keywords, tx: r.functional_text, power: r.power,
+              def: r.defense}; };
+    /* the DECK route — her own ability */
+    const g = c.state({deck: [as("Back Alley Breakline", 900)],
+                       arsenal: as("Act of Glory", 901), hand: [], res: 9, ap: 1},
+                      {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+    const n = c.H.execute(g, b.HPOW, "hero", 0, {});
+    /* the HAND route — the same card, put face up out of a hand */
+    let h0 = c.state({hand: [as("Back Alley Breakline", 902)], arsenal: null,
+                      res: 9, ap: 1}, {}, {actor: 0, turn: 3});
+    h0 = Object.assign({}, h0, {promptQ: [{tag: "pick", side: 0, src: "probe",
+      zone: "hand", to: "arsenal", min: 0, max: 1, faceUp: true, title: "Up?"}]});
+    let hn = J.openPrompt(h0);
+    hn = J.reduce(J.reduce(hn, {t: "promptSel", i: 0}, 0).state,
+                  {t: "promptConfirm"}, 0).state;
+    const iUp = n.feed.findIndex(l => /Back Alley Breakline set face up/.test(l));
+    const iAp = n.feed.findIndex(l => /action point — the turn stretches/.test(l));
+    return {
+      "it arrives face up out of the deck": n.sides[0].arsenal.name
+                                             + "/" + !!n.sides[0].arsenal._faceUp,
+      "action points after her cycle":      n.sides[0].ap,
+      "the card is seen arriving BEFORE the trigger pays": iUp >= 0 && iAp > iUp,
+      "and out of the HAND it goes up too": hn.sides[0].arsenal.uid,
+      "…but pays nothing":                  hn.sides[0].ap
+    };
+  },
+  want: {
+    "it arrives face up out of the deck": "Back Alley Breakline/true",
+    "action points after her cycle": 2,
+    "the card is seen arriving BEFORE the trigger pays": true,
+    "and out of the HAND it goes up too": 902,
+    "…but pays nothing": 1
+  }
+}
 
 ];

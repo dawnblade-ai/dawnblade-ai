@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-03T01:23:00.378Z",
- "appVer": "3.78",
+ "generated": "2026-09-03T01:36:33.173Z",
+ "appVer": "3.79",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 361,
+  "full": 363,
   "part": 34,
-  "none": 10
+  "none": 8
  },
  "heroes": {
   "kayo": {
@@ -10984,20 +10984,18 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Instant - Banish this and a card from your soul: Prevent the next 2 damage that would be dealt to you this turn.",
-     "st": "skip"
+     "st": "noop"
     }
    ],
-   "skipped": [
-    "Instant - Banish this and a card from your soul: Prevent the next 2 damage that would be dealt to you this turn."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "banish this and 1 from your soul: Prevent the next 2 damage that would be dealt to you this turn",
    "tx": "Instant - Banish this and a card from your soul: Prevent the next 2 damage that would be dealt to you this turn.",
    "flags": []
   },
@@ -13243,18 +13241,16 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "When an activated ability or action card effect puts this face-up into a zone from your deck, gain 1 action point.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When an activated ability or action card effect puts this face-up into a zone from your deck, gain 1 action point."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When an activated ability or action card effect puts this face-up into a zone from your deck, gain 1 action point.",

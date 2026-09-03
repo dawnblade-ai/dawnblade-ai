@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.78
+**Current version:** v3.79
 
 ---
 
@@ -476,6 +476,54 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### A CARD AT `none` WHOSE PAYLOAD PARSES IS A COST OR A TRIGGER (v3.79)
+
+**The cheapest diagnostic in this project, and it moved two cards.** Both
+Radiant Touch and Back Alley Breakline read tier `none` while their
+payloads — `ward 2` and `ap 1` — parsed perfectly on their own. Only the
+COST PREFIX and the TRIGGER refused, and each was waiting on machinery
+built two versions earlier and never gone back for.
+
+v3.47's rule, restated from the other end: *when you build a mechanic,
+sweep the refusals that were waiting on it* — and the way to find them is
+to run every `none` card's payload through `classifyClause` by itself.
+
+**RADIANT TOUCH.** *"Instant - Banish **this and** a card from your soul:
+Prevent the next 2 damage…"* — the `ward` pool is v3.67's, the soul cost
+v3.74's, and the anchor demanded the soul be the WHOLE cost. One optional
+middle: it is the same cost with a second object, not a second reader.
+**The self-banish is the drawback and it lands** — a prevention pool you
+can raise every turn for one soul card is a different card.
+
+**AND THE EQUIPMENT POWCARD BUILDER HAD NEVER STAMPED A SOUL COST.** v3.74
+taught the parser and stamped the HERO builder alone, so an equipment
+ability printing the identical cost was built with the cost silently
+DROPPED — the free-ability bug v2.04 fixed. **v3.63's rule, second
+outing: when you add a flag to one powCard builder, grep for the others.**
+
+**`sweepGear` HAS TWO DESTINATIONS NOW, READ OFF THE MARK.** A destroyed
+permanent goes to the graveyard (the 2026-08-29 ruling); a **banished**
+one is out of the game, and the two `retrieve` cards fetch gear out of a
+GRAVEYARD — so filing a banished piece there hands back a card the text
+removed from play. One sweep, because v3.54's index hazard is the same for
+both, and it is **marked rather than spliced** for that reason: this is an
+Instant, playable during exactly the block whose `blockG` holds indices.
+
+**BACK ALLEY BREAKLINE.** *"…puts this face-up into a zone **from your
+deck**, gain 1 action point."* v3.71 built that event for Azalea's cycle.
+**A DIFFERENT TRIGGER, NOT A VARIANT OF `arsenalUp`** — that one fires on
+any face-up put, so routing it there pays an action point off a put from
+the HAND. It fires AFTER the card is face up and after the line that says
+so, because the sequence is the lesson (v3.60).
+
+**LATENT, MEASURED, AND READ CORRECTLY ANYWAY.** Azalea's ability is the
+pool's only source of the event and the card is in GRAVY BONES' list, so
+no deck holds both halves — v3.73's rule. **And the measurement's own
+fixture was wrong first**: it spelled *"face up"* where the card prints
+*"face-up"*, found nothing, and reported the event unreachable — which
+looks exactly like a correct latency result. **Check your own fixture,
+sixth time**, and prefer the field the engine sets to a regex over text.
 
 ### LYATH — THE LAST UNFAIR ENTRY, AND WHY IT IS SPENT AT THE DEAL (v3.78)
 

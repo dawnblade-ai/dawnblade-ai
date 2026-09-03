@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 5 heroes, 7 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
-| Ruled but not built | 44 cards | understood ≠ built |
-| **Fail states** | 75 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 42 cards | understood ≠ built |
+| **Fail states** | 73 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -64,10 +64,8 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Cosmo, Scroll of Ancestral Tapestry** (none, 2/2 unread)
 - **Glisten** (none, 2/2 unread)
 - **Jittery Bones** (none, 2/2 unread)
-- **Back Alley Breakline** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Night's Embrace** (none, 1/1 unread)
-- **Radiant Touch** (none, 1/1 unread)
 - **Shred** (none, 1/1 unread)
 - **Beaten Trackers** (part, 2/3 unread)
 - **Boom Grenade** (part, 2/4 unread)
@@ -117,16 +115,16 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Earned value denied | 21 |
 | Ability inert — cost not modelled | 20 |
+| Earned value denied | 20 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
-| No schedule to fire on | 16 |
 | Choice never offered | 16 |
+| No schedule to fire on | 15 |
 | Keyword filed as no-op, but it has meaning | 11 |
 | Displayed total is wrong | 11 |
 | Unread, effect unknown | 8 |
 
-### WRONG — 40 entries
+### WRONG — 39 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -245,9 +243,9 @@ can be overruled. Same discipline as the mention count.
 - **Polar Cap** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
-- … and 15 more (see the station)
+- … and 14 more (see the station)
 
-### LOST VALUE — 34 entries
+### LOST VALUE — 33 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -255,9 +253,6 @@ can be overruled. Same discipline as the mention count.
 - **Agile Engagement** (1) · tier `part` · dorinthea
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > If it's defended by an attack action card, create an Agility token.
-- **Back Alley Breakline** (3) · tier `none` · gravy
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When an activated ability or action card effect puts this face-up into a zone from your deck, gain 1 action point.
 - **Barnacle** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
@@ -342,7 +337,10 @@ can be overruled. Same discipline as the mention count.
 - **Spectral Rider** (3) · tier `part` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- … and 9 more (see the station)
+- **Swabbie** (2) · tier `full` · gravy
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
+    > Watery Grave
+- … and 8 more (see the station)
 
 ### INERT — 1 entries
 

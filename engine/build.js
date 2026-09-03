@@ -377,7 +377,8 @@ function heroAbilities(heroRec, displayName, code){
   const HPOW = heroPow ? Object.assign({name:_nm+" — hero power", pitch:0, cost:heroPow.cost, power:null, def:null,
     tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
     _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
-    heroPow.soul ? {_soulCost: heroPow.soul} : {}) : null;
+    heroPow.soul ? {_soulCost: heroPow.soul} : {},
+    heroPow.selfBanish ? {_selfBanish: true} : {}) : null;
   return {heroRec, heroPow, HPOW, HZOOM,
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
@@ -512,8 +513,21 @@ function buildSide(h, d, db, opts, rng, ctr){
        `tt` is "Equipment Ability" — so judge.js and the trainer ask it
        separately rather than reading it off a type line that does not
        carry it, exactly as they do for `_instant`. */
-    gr.powCard={name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
-      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; } } });
+    /* THE SOUL COST IS STAMPED HERE TOO (v3.79), and until now it was NOT.
+       v3.74 taught `parseHeroPower` the soul banish for BOLTYN's hero and
+       stamped `_soulCost` on the HERO powCard alone — so an EQUIPMENT
+       ability printing the same cost was built with the cost silently
+       dropped, which is the free-ability bug v2.04 fixed. Radiant Touch
+       is the card: "Instant - Banish this and a card from your soul".
+
+       v3.63 states the rule in as many words — when you add a flag to one
+       powCard builder, grep for the others. There are three (hero, here,
+       and `boardPow`), and this is the second time that sentence has been
+       needed. */
+    gr.powCard=Object.assign({name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
+      tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid},
+      pw.soul ? {_soulCost: pw.soul} : {},
+      pw.selfBanish ? {_selfBanish: true, _banishGear: gr.uid} : {}); } } });
   const _atk = deck.filter(isAttack);
   const _ga = deck.filter(c=>fxParse(c).ga).length;
   const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;

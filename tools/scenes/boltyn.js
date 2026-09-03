@@ -179,5 +179,62 @@ module.exports = [
     "and he gains NO action point": 0
   }
 }
+,
+
+{
+  name: "Radiant Touch banishes itself, and the prevention lands",
+  why: "v3.79 — it read tier `none` and BOTH halves already existed: the " +
+       "`ward 2` payload since v3.67, the soul cost since v3.74. All that " +
+       "refused was the cost prefix, because the anchor demanded the soul " +
+       "be the WHOLE cost and the card prints \"banish THIS AND a card " +
+       "from your soul\". The self-banish is the drawback and it has to " +
+       "land: a prevention pool you can raise every turn for one soul " +
+       "card is a different card.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const E = require("../../engine/effects.js");
+    const RNG = require("../../engine/rng.js");
+    const P = require("../../engine/parser.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const db = c.H.db();
+    const h = W.HEROES.find(x => x.k === "boltyn");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.boltyn), db, {},
+                          RNG.make("scene-rt"), {n: 0}).b;
+    const rt = b.gear.find(g => /Radiant Touch/.test(g.name));
+    const soul = {name: "Soul Card", uid: 700, pitch: 1, tt: "Generic Action",
+                  ty: ["Generic", "Action"], kw: [], tx: ""};
+    const fire = souls => {
+      const g = c.state({gear: [rt], res: 9, ap: 1, hand: [], soul: souls},
+                        {hp: 20, hand: []},
+                        {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]});
+      const n = c.H.execute(g, rt.powCard, "hero", 0, {});
+      return {n, end: E.beginEndPhase(n, 0, db).game};
+    };
+    const paid = fire([soul]);
+    const broke = fire([]);
+    return {
+      "the cost it reads":            P.abSoulCost(rt.powCard) + " soul, self-banish "
+                                       + P.abSelfBanish(rt.powCard),
+      "prevention raised":            paid.n.sides[0].ward,
+      "soul spent":                   paid.n.sides[0].soul.length,
+      "the piece leaves the gear zone": !paid.end.sides[0].gear.some(x => x.uid === rt.uid),
+      "…to BANISH, not the graveyard": (paid.end.sides[0].banish || [])
+                                         .some(x => x.uid === rt.uid),
+      "with an EMPTY soul it is inert": broke.n.sides[0].ward || 0,
+      "…and the piece is NOT spent":  broke.n.sides[0].gear.some(x => x.uid === rt.uid)
+    };
+  },
+  want: {
+    "the cost it reads": "1 soul, self-banish true",
+    "prevention raised": 2,
+    "soul spent": 0,
+    "the piece leaves the gear zone": true,
+    "…to BANISH, not the graveyard": true,
+    "with an EMPTY soul it is inert": 0,
+    "…and the piece is NOT spent": true
+  }
+}
 
 ];
