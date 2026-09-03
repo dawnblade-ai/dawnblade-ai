@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.77
+**Current version:** v3.78
 
 ---
 
@@ -476,6 +476,86 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### LYATH — THE LAST UNFAIR ENTRY, AND WHY IT IS SPENT AT THE DEAL (v3.78)
+
+> *"The base {p} and {d} of cards you control are halved, rounded up.
+> **(5 becomes 3.)**"*
+
+**THE ONLY UNBUILT DRAWBACK IN THE POOL.** `npm run sweep`'s UNFAIR block
+carried exactly one entry from v3.21 to v3.78 and this was it, so he
+played **strictly better than printed** for nineteen versions — the
+direction that steals games — while the tool reported it every run.
+
+**THE PRINTING SETTLED THE ROUNDING, FOURTH TIME.** `functional_text`
+stops at *"rounded up"*; the **SLY001 card face** carries *"(5 becomes
+3.)"*, which rules out floor and round-half-even on its own. Clash of
+Agility, Thunder Quake, Pick Up the Point, and now this —
+`card.printings[].image_url` is in the pool record. **The `ceil` matters
+most at the BOTTOM of the range**: a 1-power attack halves to 1, and
+floor reads it as a blank.
+
+**IT IS SPENT AT THE DEAL, AND THAT IS THE WHOLE SAFETY ARGUMENT.** The
+alternative was a `halve` flag threaded to every site that reads a base
+value — the attack declaration, `linkPumps`, `defendValue`, `gearDef`,
+the `pumped` condition, phantasm's 6-power popper, every prompt filter,
+and every total shown to the player. **Thirty call sites is thirty chances
+to leave one out**, and v3.23 already states that half-building a value
+change is *worse than the honest gap*. `build.halveCard` runs once, over
+the deck and the gear; one place cannot be half-built, and **the display
+is right for free**.
+
+- **Non-destructive**, printed value kept on `_printedPow`/`_printedDef`.
+- **The stamp is opt-in** (v3.58) — only where the value actually MOVES.
+- **Power and def only.** An ally prints power and **life**, and life is
+  not {d}: the card names two symbols and neither is health.
+- **The gear halves BEFORE any wear**, or `gearDef` halves a `curDef`
+  that has already been counted down.
+- **The counters are not the base.** `effects.js` folds a +1{p} counter
+  into what it calls the swing's base — right there — but this line says
+  BASE, so the printed number halves and the counter rides on top.
+
+**A DEAL-TIME PASSIVE CREATES A COUPLING, SO DRILL IT.** A hero who
+gained the halving MID-GAME would not re-halve an already-dealt deck.
+Arakni is the only hero who changes (v3.76); measured, none of her six
+Agents prints it, and a drill fails the day one does.
+
+### A TURN-SCOPED GRANT IS NOT A BOARD STATIC (v3.78)
+
+> *"Defending action cards you control get +1{d} this turn."*
+
+Briar's `defGrant` sits in the arena and `defendValue` finds it by walking
+the board. Lyath's is fired by an **activated ability**, applies to cards
+nowhere near the board when it fires, and expires with the turn — **a
+board walk cannot see it and a grant cannot be re-derived**. It lives on
+the side (`defActionBuff`), and `defSide` is already the card's
+CONTROLLER, so no caller can forget to say.
+
+**IT IS A WINDOW, NOT A CHARGE.** Every action card he declares this turn
+gets it; a grant consumed by the first block is weaker than printed. It
+**accumulates** rather than being assigned, or a second source is dropped.
+
+**AND THE SUBJECT IS THE UNION, NEVER THE COMPLEMENT.** `isActionCard` is
+*not* `!isNonAtkActionCard`: a Defense Reaction carries no Action at all,
+so the complement of one twin sweeps in a whole type the line never names
+— v2.44's *"Reaction" contains "action"* one predicate over.
+
+**THE TWO CLAUSES COMPOSE, AND THAT IS THE HERO.** Goon Beatdown prints
+3{d}, is dealt at 2, and the boo lifts it back to 3. A drill testing
+either half alone never sees that the numbers have to meet.
+
+### ADDING A DUPLICATE BESIDE A DUPLICATE IS THE MOMENT TO LOOK (v3.78)
+
+`isNonAtkActionCard` was written in `effects.js`, **MOVED** to
+`parser.js` at v3.31 when `qualMatches` needed it — and a byte-identical
+copy stayed behind. Two bodies of one rule is the no-mirror rule broken
+inside the engine, and it is the shape that makes a sabotage silent:
+change one copy and the other keeps the drill green (v3.41's
+`quotedText`). Found only because a THIRD sibling was being added.
+
+**Measured: 21 sabotages, 21 bite, 0 silent. Self-play Lyath 20 wins →
+11** — the UNFAIR claim made concrete, and he lands mid-pack rather than
+collapsing because the boo rider buys some back.
 
 ### TARANTULA — AND A TRANSFORMATION THAT WAS A DOWNGRADE (v3.77)
 
@@ -3259,17 +3339,17 @@ fixed rather than reclassified.
 > that the tool's inputs kept moving under it — `analyzeHero` learned to
 > read hero riders, and a hero clause is graded like any other text.
 >
-> The standing entry is **Lyath Goldmane's halving static** — *"the base
+> The standing entry was **Lyath Goldmane's halving static** — *"the base
 > {p} and {d} of cards you control are halved, rounded up"* — a real
-> unbuilt DRAWBACK, so he plays strictly better than printed. It is the
-> named next hero job and it is a whole version: a base-value change
-> reaches `linkPumps`, `defendValue`, `gearDef` and every total shown to
-> the player, and half-building it puts a number on screen that disagrees
-> with the number that fought (v3.23's rule).
+> unbuilt DRAWBACK, so he played strictly better than printed. **BUILT AT
+> v3.78, and UNFAIR is now genuinely 0**: the block is gone from the
+> report for the first time in the project's history.
 >
 > **A doc claim is a test with no assertion** (v3.41), third time. Sweep
 > the sentences that state a count the way you sweep the pool: take each
-> one, and go and re-derive it.
+> one, and go and re-derive it. *(This one is re-derived at v3.78 — and
+> the honest way to keep it true is to re-run `npm run sweep` rather than
+> to trust this sentence.)*
 
 #### A NOOP CAN CLAIM A WHOLE FAMILY (v3.16)
 

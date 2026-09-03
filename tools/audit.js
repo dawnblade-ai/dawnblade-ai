@@ -86,6 +86,12 @@ const HERO_STATICS = [
    note:"Gravy Bones — blue-to-graveyard this turn unlocks watery grave (built.wateryGrave, already wired — this recognizer was simply missing)"},
   {key:"lyathBoo", re:/whenever the crowd boos you, create a might token/,
    note:"Lyath — booed → Might token"},
+  /* LYATH's clause 1, built v3.78 — and it was the project's ONLY UNFAIR
+     entry from v3.21 until then: a real DRAWBACK left unbuilt, so he
+     played strictly better than printed. Spent at the deal rather than
+     threaded to thirty readers — see `build.halveCard`. */
+  {key:"halveBase", re:/the base \{p\} and \{d\} of cards you control are halved, rounded up/,
+   note:"Lyath — every card he controls is dealt at half its printed {p} and {d}, rounded up"},
   /* BRIAR's two clauses, built in v3.21. Both mint a token, and the token's
      NAME is read off her printed line rather than stored as a flag — so
      these passives answer a string, not a boolean. */

@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-01T23:28:32.363Z · app v3.77 · data sage-v13 · db 797 records
+Generated 2026-09-03T01:23:00.378Z · app v3.78 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -150,9 +150,7 @@ Generated 2026-09-01T23:28:32.363Z · app v3.77 · data sage-v13 · db 797 recor
 ### Lyath Goldmane (Reviled Guardian)
 - hero power: The crowd boos you [2r]
 - static: Lyath — booed → Might token
-- ⚠ unrecognized: "The base {p} and {d} of cards you control are halved, rounded up."
-- ⚠ unrecognized: "Defending action cards you control get +1{d} this turn."
-- 🚩 2 hero-text clause(s) not recognized by any ability reader
+- static: Lyath — every card he controls is dealt at half its printed {p} and {d}, rounded up
 
 ## Tokens
 

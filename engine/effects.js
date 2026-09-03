@@ -1350,6 +1350,15 @@ function makeEffects(ctx){
           ? `${foe(n).name} shows a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
           : `${foe(n).name}'s hand is empty — nothing to show.`);
       }
+      /* LYATH'S CLAUSE 2 RIDER (v3.78). A TURN WINDOW, not a charge — it
+         is not spent by the first defender, because "this turn" says
+         every action card he declares gets it. It ACCUMULATES rather
+         than being assigned: two sources in one turn stack, and an
+         assignment would silently drop the second. */
+      else if(k==="defActBuff"){
+        actMut(n).defActionBuff = (act(n).defActionBuff||0) + v;
+        n = L(n, `${act(n).name}: defending action cards get +${v}{d} for the rest of this turn.`);
+      }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
       else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
@@ -4483,11 +4492,18 @@ function tickSuspense(game, seat){
 
    Only the AURA's controller's board is consulted, because the printed
    phrase is "cards YOU control". */
-const isNonAtkActionCard = c => {
-  const ty = (c && c.ty) || [];
-  return ty.some(t => /^action$/i.test(String(t)))
-      && !ty.some(t => /^attack$/i.test(String(t)));
-};
+/* BOTH PREDICATES ARE THE PARSER'S, AND THERE IS ONE BODY (v3.78).
+   `isNonAtkActionCard` was written here, MOVED to parser.js at v3.31 when
+   `qualMatches` also needed it — and a byte-identical copy stayed behind.
+   Two bodies of one rule is the no-mirror rule broken inside the engine,
+   and it is the shape that makes a sabotage silent: change one copy and
+   the other keeps the drill green (v3.41's `quotedText`, exactly).
+
+   Found while adding a THIRD sibling — `isActionCard`, the union of the
+   two, for Lyath's "defending action cards". Adding a duplicate beside a
+   duplicate is the moment to collapse them. */
+const isNonAtkActionCard = P.isNonAtkActionCard;
+const isActionCard = P.isActionCard;
 
 /* IS THE SELF-BUFF'S PRINTED CONDITION MET RIGHT NOW?
 
@@ -4548,6 +4564,14 @@ function defendValue(defSide, card, opts){
     if(g.subject === "nonAttackAction" && !isNonAtkActionCard(card)) continue;
     d += g.amt;
   }
+
+  /* A TURN-SCOPED GRANT HELD ON THE SIDE (v3.78) — Lyath's clause 2.
+     The board walk above cannot see this one: it is fired by an ACTIVATED
+     ability and applies to cards nowhere near the arena, so it lives on
+     the defending side and is read here. `defSide` is already the
+     CONTROLLER of the card being valued — "cards YOU control" — so no
+     new argument is needed and no caller can forget to say. */
+  if(isActionCard(card)) d += (defSide && defSide.defActionBuff) || 0;
 
   /* AND THE CARD'S OWN, gated on a property of the INCOMING attack (v3.24).
      "This gets +1{d} while defending a weapon attack" is answerable only
@@ -5297,11 +5321,15 @@ function beginEndPhase(game, seat, db){
     const sd = (n.sides || [])[i] || {};
     const held = (sd.buffNext || 0) + (sd.buffQ || []).length
                + ((sd.gaNext ? 1 : 0)) + (sd.gaNextQ || []).length + (sd.costOff || []).length
-               + (sd.instantNextQ || []).length + (sd.defCapNext || []).length;
+               + (sd.instantNextQ || []).length + (sd.defCapNext || []).length
+               /* LYATH'S DEFENCE GRANT IS "THIS TURN" TOO (v3.78) — the
+                  same window as its five neighbours, so it expires in
+                  the same step rather than growing its own schedule. */
+               + (sd.defActionBuff ? 1 : 0);
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
-      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: []});
+      {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0});
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");

@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-01T23:28:32.363Z",
- "appVer": "3.77",
+ "generated": "2026-09-03T01:23:00.378Z",
+ "appVer": "3.78",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -353,13 +353,14 @@
    "tt": "Reviled Guardian Hero - Young",
    "tx": "The base {p} and {d} of cards you control are halved, rounded up.\nInstant - {r}{r}, {t}: The crowd boos you. Defending action cards you control get +1{d} this turn.\nWhenever the crowd boos you, create a Might token.",
    "statics": [
-    "Lyath — booed → Might token"
+    "Lyath — booed → Might token",
+    "Lyath — every card he controls is dealt at half its printed {p} and {d}, rounded up"
    ],
    "power": "The crowd boos you [2r]",
    "clauses": [
     {
      "t": "The base {p} and {d} of cards you control are halved, rounded up.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Instant - {r}{r}, {t}: The crowd boos you",
@@ -367,16 +368,14 @@
     },
     {
      "t": "Defending action cards you control get +1{d} this turn.",
-     "covered": false
+     "covered": true
     },
     {
      "t": "Whenever the crowd boos you, create a Might token.",
      "covered": true
     }
    ],
-   "flags": [
-    "2 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   }
  },
  "tokens": {

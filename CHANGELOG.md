@@ -9,6 +9,123 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.78 — Lyath Goldmane, and the last UNFAIR entry
+
+> **"The base {p} and {d} of cards you control are halved, rounded up.
+> *(5 becomes 3.)*"**
+
+**THE ONLY UNBUILT DRAWBACK IN THE POOL.** `npm run sweep`'s UNFAIR block
+— *"a rule is broken every time these are played"* — has carried exactly
+one entry since v3.21, and it was this. Unbuilt, Lyath played **strictly
+better than printed** for nineteen versions, in the direction that steals
+games, while the tool said so on every run and CLAUDE.md said the count
+was zero.
+
+**UNFAIR is 0 now, for the first time.** The block is gone from the report.
+
+### THE PRINTING SETTLED THE ROUNDING — fourth time
+
+The database's `functional_text` stops at *"halved, rounded up"*. The
+**SLY001 card face** carries reminder text it drops:
+
+> *"The base {p} and {d} of cards you control are halved, rounded up.
+> **(5 becomes 3.)**"*
+
+So it is `Math.ceil` — which the example rules floor and round-half-even
+out of on its own. Clash of Agility, Thunder Quake, Pick Up the Point, and
+now this: **`card.printings[].image_url` is in the pool record, and reading
+it takes a minute.**
+
+The `ceil` matters most at the bottom of the range, not the top: a
+1-power attack halves to **1**, and floor would read it as a blank.
+
+### IT IS SPENT AT THE DEAL, AND THAT IS THE WHOLE SAFETY ARGUMENT
+
+The alternative was a `halve` flag threaded to every site that reads a
+base value — the attack declaration, `linkPumps`, `defendValue`,
+`gearDef`, the `pumped` condition, phantasm's 6-power popper, every
+prompt filter, and every total the player is shown. **Thirty call sites
+is thirty chances to leave one out**, and CLAUDE.md has said since v3.23
+that half-building a defensive value change is *worse than the honest
+gap*, because the number on screen then disagrees with the number that
+fought.
+
+`build.halveCard` runs once, at `buildSide`, over the deck and the gear.
+One place cannot be half-built, and **the display is right for free** —
+a player looking at Lyath's hand sees the numbers his cards fight with.
+
+- **Non-destructive**, and the printed value is kept on
+  `_printedPow`/`_printedDef` for a later display pass.
+- **The stamp is opt-in** (v3.58) — written only where the value actually
+  moves, or every `deepEqual` on a card shape breaks for the fourteen
+  heroes this does nothing to.
+- **Power and def only.** An ally prints power and **life**, and life is
+  not {d} — the card names two symbols and neither is health.
+- **The gear is halved before the weapon loop and before any wear**, or
+  `gearDef` would halve a `curDef` that had already been counted down.
+- **The counters are not part of the base.** `effects.js` folds a +1{p}
+  counter into what it calls the swing's base, and that is right there;
+  this line says BASE, so the printed number halves and the counter is
+  added on top.
+
+**AND THE DEAL CREATES A COUPLING, so it is drilled.** A hero who gained
+the halving *mid-game* would not re-halve an already-dealt deck. Arakni is
+the only hero who changes (v3.76) — measured: none of her six Agents
+prints it, and a drill fails the day one does.
+
+### CLAUSE 2, AND THE TWO COMPOSE
+
+> *"Defending action cards you control get +1{d} this turn."*
+
+A **turn-scoped grant**, not Briar's board static: it is fired by an
+activated ability, applies to cards nowhere near the arena, and expires
+with the turn — a board walk cannot see it and a grant cannot be
+re-derived. `sd.defActionBuff`, read in `defendValue` (whose `defSide` is
+already the card's controller, so no caller can forget to say), expiring
+in `beginEndPhase` beside its five neighbours, for **both seats**.
+
+**IT IS A WINDOW, NOT A CHARGE.** Every action card he declares this turn
+gets it; a grant consumed by the first block is weaker than printed.
+
+**AND THE SUBJECT IS THE UNION, NOT THE COMPLEMENT.** `isActionCard` is
+new and is *not* `!isNonAtkActionCard`: a Defense Reaction carries no
+Action at all, so the complement of one twin sweeps in a whole type the
+line never names — *"Reaction" contains "action"* (v2.44) one predicate
+over.
+
+The payoff is that the two clauses meet. **Goon Beatdown prints 3{d}, is
+dealt at 2, and the boo lifts it back to 3** — the hero halves everything
+and the crowd buys some of it back. A drill testing either half alone
+would never see that the numbers have to compose.
+
+### A DUPLICATE PREDICATE, FOUND BY ADDING A THIRD SIBLING
+
+`isNonAtkActionCard` was written in `effects.js`, **moved** to
+`parser.js` at v3.31 when `qualMatches` also needed it — and a
+byte-identical copy stayed behind. Two bodies of one rule is the
+no-mirror rule broken inside the engine, and it is exactly the shape that
+makes a sabotage silent: change one and the other keeps the drill green
+(v3.41's `quotedText`). Collapsed to one body.
+
+**Adding a duplicate beside a duplicate is the moment to look.**
+
+### Measured
+
+- **21 sabotages, 21 bite, 0 silent** — floor-instead-of-ceil, def not
+  halved, gear not halved, the passive read for every hero, a mutating
+  `halveCard`, life halved too, the rider's magnitude hardcoded, the wall
+  not reading the grant, the subject as the complement, the grant
+  assigned rather than accumulated, spent by the first defender, never
+  expiring, expiring for one seat, the field missing from each of its
+  three homes, the ledger row removed, and the duplicate predicate
+  restored.
+- **Self-play: Lyath 20 wins → 11.** The UNFAIR claim made concrete — he
+  was winning games the printed card does not let him win. He lands
+  mid-pack rather than collapsing, because the boo rider buys some back.
+- The symmetry ledger moves **46 → 47**, deliberately (v3.29).
+
+---
+
 ## v3.77 — Tarantula's daggers, and a transformation that pays out
 
 **v3.76 gave Arakni six Agents to become, and every one of their abilities

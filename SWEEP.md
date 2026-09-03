@@ -1,15 +1,15 @@
 # The Sweep
 
-Generated 2026-09-01 from `tools/audit.json`.
+Generated 2026-09-03 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 6 heroes, 9 unread clauses | never charged by the stack |
+| Hero abilities | 5 heroes, 7 unread clauses | never charged by the stack |
 | Tokens | 4 | 3 barely named in the trainer |
 | Ruled but not built | 44 cards | understood ≠ built |
-| **Fail states** | 76 entries, 1 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 75 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -21,12 +21,6 @@ axes it never covered.
 - ❌ You may start the game with a Phoenix Flame in your graveyard.
 - ✅ Once per Turn Instant - {r}{r}{r}: Return a Phoenix Flame from your graveyard to your hand
 - ❌ This ability costs {r} less to activate for each Draconic chain link you control.
-
-### Lyath Goldmane — 2/4 unread
-- ❌ The base {p} and {d} of cards you control are halved, rounded up.
-- ✅ Instant - {r}{r}, {t}: The crowd boos you
-- ❌ Defending action cards you control get +1{d} this turn.
-- ✅ Whenever the crowd boos you, create a Might token.
 
 ### Briar — 1/3 unread
 - ❌ Essence of Earth and Lightning
@@ -125,26 +119,12 @@ can be overruled. Same discipline as the mention count.
 |---|---|
 | Earned value denied | 21 |
 | Ability inert — cost not modelled | 20 |
-| No schedule to fire on | 17 |
 | Keyword filed as no-op — but the trainer names it (verify) | 17 |
+| No schedule to fire on | 16 |
 | Choice never offered | 16 |
-| Displayed total is wrong | 12 |
 | Keyword filed as no-op, but it has meaning | 11 |
+| Displayed total is wrong | 11 |
 | Unread, effect unknown | 8 |
-| Drawback skipped | 1 |
-
-### UNFAIR — 1 entries
-
-**A rule is broken every time one of these is played.** This is the
-worst thing a trainer can do: it teaches wrong play.
-
-- **Lyath Goldmane** · tier `hero` · lyath-goldmane
-  - *Drawback skipped* — The card's own downside never lands, so it plays as strictly better than printed.
-    > The base {p} and {d} of cards you control are halved, rounded up.
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Defending action cards you control get +1{d} this turn.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Defending action cards you control get +1{d} this turn.
 
 ### WRONG — 40 entries
 

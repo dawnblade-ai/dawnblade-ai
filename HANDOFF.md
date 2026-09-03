@@ -1,30 +1,31 @@
-# Handoff — Dawnblade, at v3.77 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.78 · PHASE C · HERO BY HERO
 
-## ⚠ SIX HEROES FINISHED — WHAT IS LEFT
+## ⚠ SEVEN HEROES FINISHED — WHAT IS LEFT
 
-Kayo, Dorinthea, Azalea, Bravo, Boltyn and Arakni. The sweep's hero list is
-**6 heroes / 9 unread clauses**: Enigma 2/2, Fai 2/3, Lyath 2/4, Briar 1/3,
+Kayo, Dorinthea, Azalea, Bravo, Boltyn, Arakni and Lyath. The sweep's hero
+list is **5 heroes / 7 unread clauses**: Enigma 2/2, Fai 2/3, Briar 1/3,
 Gravy Bones 1/2, Iyslander 1/3.
 
-### THE NEXT HERO IS LYATH, AND THE SWEEP HAS BEEN SAYING SO FOR 19 VERSIONS
+### UNFAIR IS 0 — FOR THE FIRST TIME
 
-`npm run sweep`'s **UNFAIR** block has read **1** since v3.21, and CLAUDE.md
-said it was 0 the whole time (corrected at v3.77 — a doc claim is a test
-with no assertion). The one entry is:
+`npm run sweep`'s UNFAIR block carried Lyath's halving static from v3.21
+to v3.78 and now carries nothing. **Re-derive it rather than trusting this
+sentence** — the last one like it was wrong for nineteen versions.
 
-> **Lyath Goldmane** — *"The base {p} and {d} of cards you control are
-> **halved, rounded up**."*
+### THE NEXT HEROES, EASIEST FIRST
 
-A real unbuilt **DRAWBACK**, so he plays strictly better than printed —
-the direction that steals games, and the only UNFAIR entry in the project.
-
-**IT IS A WHOLE VERSION, NOT A RIDER.** A base-value change reaches
-`linkPumps`, `defendValue`, `gearDef` and every total shown to the player.
-Half-building it puts a number on screen that disagrees with the number
-that fought, which is v3.23's stated reason for leaving the defensive
-self-buffs alone until they could be done at the wall AND on the display.
-His second unread clause (*"defending action cards you control get +1{d}
-this turn"*) is `defendValue`'s shape and is small once the first is done.
+- **Gravy Bones 1/2** — one clause. The recorded gap is that **watery
+  grave's DRAWBACK is unbuilt**: he replays allies out of the graveyard
+  and *nothing turns a dead ally face-down*, which is the entire reason
+  the keyword's ruling exists. `tools/ledger.js` records it `live` when
+  only the upside is.
+- **Briar 1/3** — the unread clause is *"Essence of Earth and Lightning"*,
+  a bold ability NAME that the audit's newline split reads as a sentence.
+  **Recorded at v3.21 as not-work**; confirm before touching it.
+- **Iyslander 1/3** — Snapback's *"another WIZARD non-attack action card"*
+  is built (v3.38's `hist.playTy`); check what her remaining clause is.
+- **Fai 2/3 · Enigma 2/2** — genuinely unread, and Enigma is the only
+  hero with NOTHING read. Start there for the biggest single move.
 
 ### ARAKNI — WHAT IS STILL OPEN
 

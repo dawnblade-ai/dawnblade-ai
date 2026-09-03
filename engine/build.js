@@ -337,6 +337,20 @@ function heroAbilities(heroRec, displayName, code){
   const _tara = _htx.match(
     /whenever a dagger you own hits a hero, they lose (\d+)\s*\{h\}/);
   const daggerDrain = _tara ? +_tara[1] : 0;
+  /* LYATH GOLDMANE — THE BASE IS HALVED (v3.78) ---------------------
+     "The base {p} and {d} of cards you control are halved, rounded up."
+
+     THE ONLY UNFAIR ENTRY IN THE PROJECT since v3.21, and the only one
+     that is a DRAWBACK: unbuilt, he plays strictly better than printed,
+     which is the direction that steals games.
+
+     THE PRINTING SETTLES THE ROUNDING and the database drops it. SLY001
+     carries reminder text `functional_text` does not — *"(5 becomes 3.)"*
+     — so it is `Math.ceil`, not floor and not round-half-even. Fourth
+     time reading the card face has answered a question outright (Clash of
+     Agility, Thunder Quake, Pick Up the Point). */
+  const halveBase =
+    /the base \{p\} and \{d\} of cards you control are halved/.test(_htx);
   const heroPow = heroRec.tx ? parseHeroPower(heroRec.tx) : null;
   /* THE HERO POWCARD CARRIES THE WHOLE ABILITY LINE (v3.39), which is the
      fix v2.34 made for EQUIPMENT and never made here: `parseHeroPower`
@@ -368,7 +382,7 @@ function heroAbilities(heroRec, displayName, code){
     arsenalInstant, iceFrostbite, viseraiPassive, wateryGrave, lyathBoo, energyOnOpt,
     earthOnFirstHeroDmg, lightningOnSecondNonAtk,
     atkPowOffChain, mightOnFirst6Discard, weaponRefresh, chargedDefBuff, stealthMarkedBuff,
-    becomeAgent, returnToBrood, daggerDrain};
+    becomeAgent, returnToBrood, daggerDrain, halveBase};
 }
 
 /* ---- the build --------------------------------------------------------
@@ -393,6 +407,54 @@ function heroAbilityLine(heroRec, heroPow){
   return line.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : "");
 }
 
+/* HALVE A CARD'S PRINTED BASE — Lyath Goldmane (v3.78) -----------------
+
+   "The base {p} and {d} of cards you control are halved, rounded up.
+    (5 becomes 3.)"
+
+   IT IS SPENT AT THE DEAL, AND THAT IS THE WHOLE SAFETY ARGUMENT. The
+   alternative was a `halve` flag threaded to every site that reads a base
+   value — the attack declaration, `linkPumps`, `defendValue`, `gearDef`,
+   the `pumped` condition, phantasm's 6-power popper, every prompt filter,
+   and every total the player is shown. CLAUDE.md has said since v3.23
+   that half-building a defensive value change is WORSE than the honest
+   gap, because the number on screen then disagrees with the number that
+   fought. Thirty threaded call sites is thirty chances to leave one out;
+   the deal is one place and cannot be half-built.
+
+   SO THE DISPLAY IS RIGHT FOR FREE, which is the point: a player looking
+   at Lyath's hand sees the numbers his cards actually fight with.
+
+   NON-DESTRUCTIVE. A new object, and the printed value is kept on
+   `_printedPow`/`_printedDef` so a later display pass can show both. The
+   stamp is OPT-IN (v3.58) — written only where the value actually MOVES,
+   or every `deepEqual` on a card shape breaks for the fourteen heroes
+   this does nothing to.
+
+   `power` AND `def` ONLY. An ally prints power and LIFE, and life is not
+   {d} — the card names two symbols and neither is health. (Measured: his
+   list holds no allies, so this is latent, and a reader that halved life
+   would be reading a third value the card never mentions.)
+
+   THE COUNTERS ARE NOT PART OF THE BASE. `effects.js` folds a +1{p}
+   counter into what it calls the swing's "base", and that is right there
+   — a counter-bearing blade is a bigger weapon — but this line says
+   BASE, which is the printed number before any modifier. So the printed
+   value halves and the counter is added on top, unhalved. */
+function halveCard(c, on){
+  if(!on || !c) return c;
+  const out = {...c};
+  if(typeof c.power === "number" && c.power > 0){
+    const h = Math.ceil(c.power / 2);
+    if(h !== c.power){ out._printedPow = c.power; out.power = h; }
+  }
+  if(typeof c.def === "number" && c.def > 0){
+    const h = Math.ceil(c.def / 2);
+    if(h !== c.def){ out._printedDef = c.def; out.def = h; }
+  }
+  return out;
+}
+
 function buildSide(h, d, db, opts, rng, ctr){
   const o = opts || {};
   const heroRec = resolveHero(db, d.hero) || {};
@@ -409,12 +471,17 @@ function buildSide(h, d, db, opts, rng, ctr){
   const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
     const q = Math.max(0, e.q - (cuts[ei]||0));
     if(!q) return [];
-    const c = resolveEntry(db,e,saSet);
+    const c = halveCard(resolveEntry(db,e,saSet), _ab.halveBase);
     return Array.from({length:q},()=>({...c,uid:++ctr.n}));
   }));
   rng = _pd.rng;
   const deck = _pd.arr;
-  const gearAll = d.gear.map((e,gi)=>({...resolveEntry(db,e,saSet),gi,uid:++ctr.n,used:false}));
+  /* THE GEAR IS HALVED AT THE SAME MOMENT, and it must be BEFORE the
+     weapon-cost loop below and before any wear: `gearDef` reads `curDef`
+     when one is set, so halving after a piece had been worn would halve
+     the WORN value rather than the base. Halve first, wear from there. */
+  const gearAll = d.gear.map((e,gi)=>Object.assign(
+    halveCard(resolveEntry(db,e,saSet), _ab.halveBase), {gi,uid:++ctr.n,used:false}));
   const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
   gear.forEach(gr=>{
     if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
@@ -606,7 +673,7 @@ const PASSIVES = ["arsenalInstant","iceFrostbite","viseraiPassive","wateryGrave"
                   "atkPowOffChain","mightOnFirst6Discard","weaponRefresh",
                   "earthOnFirstHeroDmg","lightningOnSecondNonAtk","energyOnOpt",
                   "chargedDefBuff","stealthMarkedBuff","becomeAgent","returnToBrood",
-                  "daggerDrain"];
+                  "daggerDrain","halveBase"];
 
 /* NOT EVERY PASSIVE IS A YES/NO. Most are — a hero either has Watery Grave
    or does not — but Kayo's clause 2 names its own MAGNITUDE ("get +1{p}"),
@@ -628,6 +695,7 @@ const PASSIVE_TYPE = {
      names nothing. `returnToBrood` is a plain flag — the Agent's line
      names no set at all, it just goes home. */
   becomeAgent: "string", returnToBrood: "boolean", daggerDrain: "number",
+  halveBase: "boolean",
   /* A STRING, and deliberately (v3.21). Briar's two clauses each NAME the
      token they create, so the passive carries that name and the mint site
      names nothing. A boolean here would move "Embodiment of Earth" into
@@ -638,6 +706,7 @@ const PASSIVE_TYPE = {
 };
 
 return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
+  halveCard,
         buildSeed, buildMatch, buildVanilla, heroAbilityLine, heroAbilities,
         agentsOf, PASSIVES, PASSIVE_TYPE};
 });

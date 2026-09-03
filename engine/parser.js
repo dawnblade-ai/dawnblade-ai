@@ -2792,6 +2792,34 @@ function fxParse(card){
     break;
   }
 
+  /* ---- A TURN-SCOPED DEFENCE GRANT (v3.78) — Lyath's clause 2 rider ---
+     "Defending action cards you control get +1{d} this turn."
+
+     THE TWIN ABOVE IS A BOARD STATIC AND THIS IS A GRANT, and the
+     difference is the whole reason it is a separate op rather than a
+     second `defGrant` subject. Briar's Embodiment sits in the arena and
+     `defendValue` finds it by walking the board every time it is asked;
+     Lyath's is fired by an ACTIVATED ability, applies to cards that are
+     nowhere near the board when it fires, and expires with the turn. A
+     board walk cannot see it and a grant cannot be re-derived.
+
+     THE SUBJECT IS "ACTION CARDS" — both halves, which is `isActionCard`
+     and NOT the complement of the twin's subject: a Defense Reaction
+     carries no Action at all, so `!isNonAtkActionCard` would hand the
+     buff to a whole type the line never names.
+
+     IT IS NOT SPENT BY THE FIRST DEFENDER. "This turn" is a window, not
+     a charge — every action card he declares this turn gets it, and a
+     grant consumed by the first block is weaker than printed. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    const lg = clauses[ci].match(
+      /^defending action cards you control get \+(\d+)\{d\} this turn\.?$/i);
+    if(!lg) continue;
+    fx.ops.push(["defActBuff", +lg[1]]);
+    handled.add(ci);
+    break;
+  }
+
   /* ---- A DEFENDER THAT BUFFS ITSELF AGAINST A KIND OF ATTACK (v3.24)
      "This gets +1{d} while defending a weapon attack." — the four Blade
      Beckoner pieces, and the condition is a property of the INCOMING
@@ -4701,6 +4729,17 @@ const isNonAtkActionCard = c => {
   return ty.some(t => /^action$/i.test(String(t)))
       && !ty.some(t => /^attack$/i.test(String(t)));
 };
+/* THE UNION OF THE TWO ABOVE (v3.78) — Lyath's "defending ACTION cards
+   you control get +1{d} this turn", where the printed subject is neither
+   half but both. It is NOT `!isNonAtkActionCard`: a Defense Reaction
+   carries no Action at all, so the complement of one twin sweeps in a
+   whole type the card never names — the same trap "Reaction" contains
+   "action" sets for a `tt` scan (v2.44). Ask the array for Action. */
+const isActionCard = c => {
+  const ty = (c && c.ty) || [];
+  return ty.some(t => /^action$/i.test(String(t)));
+};
+
 /* ---- HOW MUCH ARCANE DAMAGE THIS CARD'S EFFECT DEALS (v3.39) --------
    Blaze's ability asks it twice — once as a FILTER ("with an effect that
    deals arcane damage equal to X") and once as the COST — so it lives in
@@ -5225,7 +5264,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, attackQual, qualMatches, abWindow, defCap, defCounts, isBlockCard,
-        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, costOffFor, heaveOf,
+        nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         weaponCost, allyAttack, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
