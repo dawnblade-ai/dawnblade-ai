@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.80
+**Current version:** v3.81
 
 ---
 
@@ -476,6 +476,46 @@ payload paths that were never asked to carry one). This is the same
 sentence about a SOURCE, and it is the more dangerous direction: a
 condition nobody can reach is an approximation with no cost, right up
 until the turn somebody builds the thing that reaches it.
+
+### NAMING THE HERO IS A JUDGEMENT TOO (v3.81)
+
+`sparring.offence` returned `target: "hero"` unconditionally, and the note
+above it said choosing was *"a judgement about playing well that this
+policy does not make"*. **Naming the hero is a judgement too, just an
+invisible one** — and it left the whole ally-combat branch, built across
+v3.44, v3.45 and v3.46, with ZERO coverage. Driven: the old target
+produces **0 ally deaths in 20 games**, the choice produces **57**.
+
+**THE RULE IS TWO CR FACTS AND TWO PRINTED NUMBERS**, which is what keeps
+it inside the no-card-text contract:
+
+| | |
+|---|---|
+| CR 7.3.2a | an attack on an ally **cannot be blocked** — it always connects, so `power >= life` is a guaranteed kill |
+| CR 4.4.3a | ally life **resets** at end of turn, so anything short of a kill is thrown away |
+
+Take an ally when this swing kills it outright AND it prints power of its
+own; otherwise the hero, still the answer that is always available. **The
+uid is the ENTRY's, not the card's** (v3.50's coincident-fixture trap).
+
+### A COUNTER THAT SPELLS THE WRONG WORD REPORTS ZERO (v3.81)
+
+`tools/selfplay.js` counted ally deaths with `/dies|died/` and the engine
+prints *"…takes 6 and **goes down**"*; it counted Gold with `/Gold token/`
+and the mint prints *"**Gold created** on your board"*. So `death 0, gold
+0` stood for three versions — **the last of them after the route already
+worked.**
+
+**A SCAN AIMED AT THE WRONG WORD REPORTS ZERO EXACTLY AS A MISSING
+FEATURE DOES.** v3.00 records the same defect with the opposite sign: a
+source scan aimed at the wrong FILE *passes* by finding nothing, and this
+one *failed* by finding nothing. v3.50's own lesson — *"`death 0, gold 0`
+is how the ally gap announced itself"* — was written about this counter,
+which makes it the second time the same instrument has been believed.
+
+A drill pins the counter's phrase and the engine's phrase **together**, so
+a rewording of either breaks a test rather than silently zeroing a count.
+**death 0 → 167 · gold 0 → 24.**
 
 ### THE POLICY COULD NOT PLAY A NON-ATTACK (v3.80)
 

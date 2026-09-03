@@ -238,6 +238,31 @@ function nextBlocker(g, seat, o){
    every rule that could stop the play — the window, the action point, the
    type, whether the cost can be raised at all — so what is left is a
    ranking over printed power. */
+/* WHICH ATTACK-TARGET (CR 1.4.5) — see the note inside `offence`.
+
+   THE UID IS THE ENTRY'S, not the card's. A board entry is
+   `{card, kind, uid, …}`, and reading the card's uid names a card that is
+   in a deck somewhere — v3.50 lost a whole drill to that coincidence.
+
+   TIES BREAK ON THE UID, like every other ranking here: two peers over
+   one state must choose the same ally or the seats diverge. */
+function targetFor(g, seat, atkCard){
+  const foe = g.sides[1 - seat] || {};
+  const pw = num(atkCard, "power");
+  const kill = (foe.board || [])
+    .filter(b => b && GM.isAlly(b))
+    .filter(b => {
+      const life = b.life != null ? b.life : num(b.card, "life");
+      /* CR 7.3.2a — unblockable, so printed power alone decides. CR
+         4.4.3a — it heals at end of turn, so anything short of a kill is
+         thrown away. */
+      return life > 0 && pw >= life && num(b.card, "power") > 0;
+    })
+    /* the biggest threat this swing can actually remove */
+    .sort((a, b) => num(b.card, "power") - num(a.card, "power") || byUid(a, b))[0];
+  return kill ? kill.uid : "hero";
+}
+
 function offence(g, seat, o){
   const sd = g.sides[seat];
   const from = [];
@@ -264,10 +289,26 @@ function offence(g, seat, o){
      reads the entry's kind rather than a printed type line, so this stays
      inside the no-card-text contract.
 
-     THE TARGET IS THE HERO, always. CR 1.4.5 makes the choice mandatory
-     and `judge.targets` offers the alternatives; choosing between them is
-     a judgement about playing well that this policy does not make, and
-     naming the hero is the one answer that is always available. */
+     THE TARGET IS CHOSEN (v3.81), and it used to be the hero always. The
+     note that stood here said choosing was "a judgement about playing
+     well that this policy does not make" — but naming the hero is a
+     judgement too, just an invisible one, and it left an entire built
+     route with ZERO coverage: `npm run play` reported `death 0, gold 0`
+     across 210 games for three versions, because nothing in the harness
+     could ever kill an ally. v3.50's own lesson is written about this
+     exact counter.
+
+     THE RULE IS TWO CR FACTS AND TWO PRINTED NUMBERS, so it stays inside
+     the no-card-text contract:
+
+       CR 7.3.2a  an attack on an ALLY cannot be blocked — it always
+                  connects, which makes `power >= life` a guaranteed kill
+       CR 4.4.3a  ally life RESETS at end of turn, so a partial hit is
+                  wasted and only a kill is worth the swing
+
+     So: take an ally when this attack would KILL it outright and the ally
+     prints power of its own (it threatens something). Otherwise the hero,
+     which is still the answer that is always available. */
   const allies = (sd.board || [])
     .filter(b => b && GM.isAlly(b))
     .map(b => ({c: b.card, uid: b.uid, ally: true}));
@@ -279,10 +320,12 @@ function offence(g, seat, o){
     .filter(x => x.ally || affordableWithin(sd, x.c, o))
     .sort((a, b) => num(b.c, "power") - num(a.c, "power")
                  || num(a.c, "cost") - num(b.c, "cost") || byUid(a, b))
-    .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: "hero"}
-                               : {t: "play", uid: x.uid, from: x.from}, seat));
-  if(pick) return pick.ally ? {t: "activate", uid: pick.uid, target: "hero"}
-                            : {t: "play", uid: pick.uid, from: pick.from};
+    .find(x => legal(g, x.ally ? {t: "activate", uid: x.uid, target: targetFor(g, seat, x.c)}
+                               : {t: "play", uid: x.uid, from: x.from,
+                                  target: targetFor(g, seat, x.c)}, seat));
+  if(pick) return pick.ally
+    ? {t: "activate", uid: pick.uid, target: targetFor(g, seat, pick.c)}
+    : {t: "play", uid: pick.uid, from: pick.from, target: targetFor(g, seat, pick.c)};
 
   /* A weapon swing is an attack that comes from the gear zone. `legal`
      owns both of its limits — the printed `Once per Turn` and the tap —

@@ -50,7 +50,7 @@ When this attacks a marked hero, the attack gets go again.
 ### Inertia — fx `none`, 4 mentions in the trainer — **likely a real gap**
 > At the beginning of your end phase, destroy this, then put all cards from your hand and arsenal on the bottom of your deck.
 
-### Frostbite — fx `part`, 6 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
+### Frostbite — fx `part`, 5 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
 > Cards and abilities cost you an additional {r} to play or activate.
 When you play a card or activate an ability, destroy this.
 At the beginning of your end phase, destroy this.

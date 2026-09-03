@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.80 · PHASE C · HERO BY HERO
+# Handoff — Dawnblade, at v3.81 · PHASE C · HERO BY HERO
 
 ## ⚠ THE HARNESS ONLY STARTED PLAYING THE WHOLE GAME AT v3.80
 
@@ -11,6 +11,15 @@ roughly half the engine, and the two bugs that fix immediately surfaced
 
 **Re-run any measurement you are about to rely on.** The win table, the
 route-coverage counts and the mirror balance all moved.
+
+AND v3.81 ADDED THE ATTACK-TARGET CHOICE, so the ally-combat branch
+(v3.44/v3.45/v3.46) is exercised for the first time: 0 ally deaths per 20
+games became 57. Two route counters were also grepping words the feed
+never prints — `death` and `gold` both read 0 while the routes worked.
+
+**The numbers CLAUDE.md quotes from before v3.80 are all suspect**, the
+loadout button's "the dummy wins 29 of 45" among them. Re-derive before
+citing.
 
 ## ⚠ SEVEN HEROES FINISHED — WHAT IS LEFT
 

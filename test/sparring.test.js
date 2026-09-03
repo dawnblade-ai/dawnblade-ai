@@ -464,3 +464,116 @@ test("an optional additional cost is DECLINED, like boost", {skip}, () => {
   const src = fs.readFileSync(__dirname + "/../engine/sparring.js", "utf8");
   assert.match(src, /p\.kind === "addPay"\) return \{t: "addPay", yes: false\}/);
 });
+
+/* ---- CR 1.4.5 — THE ATTACK-TARGET IS CHOSEN (v3.81) --------------------
+   The policy named the hero always, and the note that stood there said
+   choosing was "a judgement about playing well that this policy does not
+   make". Naming the hero is a judgement too, just an invisible one, and
+   it left an entire built route with ZERO coverage: `npm run play`
+   reported `death 0, gold 0` across 210 games for three versions because
+   nothing in the harness could kill an ally. Driven, the old always-hero
+   target produced 0 ally deaths in 20 games and the choice produces 57. */
+
+test("an ally that this swing would KILL is taken over the hero", {skip}, () => {
+  /* TWO CR FACTS AND TWO PRINTED NUMBERS, which is what keeps this inside
+     the no-card-text contract:
+       CR 7.3.2a  an attack on an ally cannot be blocked — it always
+                  connects, so `power >= life` is a guaranteed kill
+       CR 4.4.3a  ally life RESETS at end of turn, so anything short of a
+                  kill is thrown away */
+  const g0 = match({seed: "spar"});
+  const atk = g0.sides[0].hand.find(c => c.power > 0);
+  const ally = life => ({uid: 7700, kind: "ally", spent: false, life,
+    card: {uid: 7700, name: "Test Ally", power: 2, life: 4, tt: "Generic Action - Ally",
+           ty: ["Generic", "Action", "Ally"], kw: [], tx: "", pitch: 1, cost: 1}});
+  const withAlly = life => {
+    const sides = g0.sides.slice();
+    sides[0] = Object.assign({}, sides[0], {hand: [atk], res: 9});
+    sides[1] = Object.assign({}, sides[1], {board: [ally(life)]});
+    return Object.assign({}, g0, {sides});
+  };
+  const lethal = SP.act(withAlly(1), 0);
+  assert.equal(lethal.target, 7700, "one life and a swing that kills it — take it");
+  const tanky = SP.act(withAlly(99), 0);
+  assert.equal(tanky.target, "hero",
+    "a swing that cannot kill it is thrown away — CR 4.4.3a heals it back");
+});
+
+test("a HARMLESS ally is left alone, however killable", {skip}, () => {
+  /* THE SECOND HALF OF THE RULE. An ally with no printed power threatens
+     nothing, so spending a swing on it is worse than face damage — and
+     without this the drill above passes on a policy that simply attacks
+     whatever it can reach. */
+  const g0 = match({seed: "spar"});
+  const atk = g0.sides[0].hand.find(c => c.power > 0);
+  const sides = g0.sides.slice();
+  sides[0] = Object.assign({}, sides[0], {hand: [atk], res: 9});
+  sides[1] = Object.assign({}, sides[1], {board: [{uid: 7701, kind: "ally", spent: false, life: 1,
+    card: {uid: 7701, name: "Harmless", power: 0, life: 1, tt: "Generic Action - Ally",
+           ty: ["Generic", "Action", "Ally"], kw: [], tx: "", pitch: 1, cost: 1}}]});
+  assert.equal(SP.act(Object.assign({}, g0, {sides}), 0).target, "hero");
+});
+
+test("the target choice is a TOTAL order — the entry uid breaks the tie", {skip}, () => {
+  /* AND THE UID IS THE ENTRY'S, NOT THE CARD'S. v3.50 lost a whole drill
+     to a fixture where the two coincided, so they are deliberately
+     different here. */
+  const g0 = match({seed: "spar"});
+  const atk = g0.sides[0].hand.find(c => c.power > 0);
+  const twin = (entryUid, cardUid) => ({uid: entryUid, kind: "ally", spent: false, life: 1,
+    card: {uid: cardUid, name: "Twin " + entryUid, power: 2, life: 1,
+           tt: "Generic Action - Ally", ty: ["Generic", "Action", "Ally"],
+           kw: [], tx: "", pitch: 1, cost: 1}});
+  const run = board => {
+    const sides = g0.sides.slice();
+    sides[0] = Object.assign({}, sides[0], {hand: [atk], res: 9});
+    sides[1] = Object.assign({}, sides[1], {board});
+    return SP.act(Object.assign({}, g0, {sides}), 0).target;
+  };
+  const a = twin(7710, 9001), b = twin(7711, 9000);
+  assert.equal(run([a, b]), run([b, a]), "the same ally whichever order the board is in");
+  assert.equal(run([a, b]), 7710, "…and the lower ENTRY uid, not the lower card uid");
+});
+
+test("DRIVEN: allies actually die now, and they did not before", {skip}, () => {
+  /* THE REGRESSION, AS THE BOARD SEES IT. The route was built at v3.44
+     (allies attack) and v3.45 (allies are attacked) and v3.46 (they die
+     and pay out), and until this version nothing in the harness could
+     reach any of it. */
+  let g = match({h0: heroBy(/kayo/i), h1: heroBy(/gravy/i), seed: "kayo-gravy-t2"});
+  let deaths = 0;
+  for(let i = 0; i < 2500 && !g.over; i++){
+    let moved = false;
+    for(const s of [0, 1]){
+      const a = SP.act(g, s); if(!a) continue;
+      const before = [0, 1].map(k => (g.sides[k].board || []).filter(x => x && x.kind === "ally").length);
+      const out = J.reduce(g, a, s); if(out.error) continue;
+      g = out.state; moved = true;
+      const after = [0, 1].map(k => (g.sides[k].board || []).filter(x => x && x.kind === "ally").length);
+      if(after[0] < before[0] || after[1] < before[1]) deaths++;
+      break;
+    }
+    if(!moved) break;
+  }
+  assert.ok(deaths > 0, "at least one ally must die in a Gravy Bones game — got " + deaths);
+});
+
+test("the route counter spells what the FEED spells", {skip: false}, () => {
+  /* A SCAN AIMED AT THE WRONG WORD REPORTS ZERO EXACTLY AS A MISSING
+     FEATURE DOES. `tools/selfplay.js` counted deaths with /dies|died/ and
+     the engine prints "<name> takes N and GOES DOWN"; it counted Gold
+     with /Gold token/ and the engine prints "Gold created on your board".
+     So `death 0, gold 0` was reported for three versions — the second of
+     them AFTER the route had been built. v3.00 records the same defect
+     with the opposite sign (a scan aimed at the wrong FILE).
+
+     This pins the two phrases together so a rewording of either breaks a
+     drill rather than silently zeroing a counter. */
+  const sp = fs.readFileSync(__dirname + "/../tools/selfplay.js", "utf8");
+  const ef = fs.readFileSync(__dirname + "/../engine/effects.js", "utf8");
+  const gm = fs.readFileSync(__dirname + "/../engine/game.js", "utf8");
+  assert.match(sp, /goes down/, "the death counter must spell the engine's own phrase");
+  assert.match(gm + ef, /goes down/, "…and the engine must still print it");
+  assert.match(sp, /created\\b/, "the gold counter must spell the mint's own phrase");
+  assert.match(ef, /created on \$\{who\} board/, "…and the mint must still print it");
+});

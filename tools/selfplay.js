@@ -72,8 +72,17 @@ function play(g, limit){
       for(const line of nf){
         if(/tapped|taps/i.test(line))            events.push(["tap", line]);
         if(/ally|allies/i.test(line))            events.push(["ally", line]);
-        if(/dies|died/i.test(line))              events.push(["death", line]);
-        if(/Gold token/i.test(line))             events.push(["gold", line]);
+        /* THE COUNTER MUST SPELL WHAT THE FEED SPELLS (v3.81). This read
+           /dies|died/ and the engine prints "<name> takes N and GOES
+           DOWN" — so `death 0` was reported for three versions while the
+           route worked, and the ally gap it was built to detect had
+           already been closed. A scan aimed at the wrong WORD reports
+           zero exactly as a missing feature does; v3.00 records the same
+           defect with the opposite sign (a scan aimed at the wrong FILE).
+           Anchored on the engine's own phrasing, with the old spellings
+           kept so a future rewording of either is still counted. */
+        if(/goes down|dies|died/i.test(line))     events.push(["death", line]);
+        if(/\bGold\b.*\bcreated\b|Gold token/i.test(line)) events.push(["gold", line]);
         if(/\bcrush\b/i.test(line))              events.push(["crush", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         feedSeen.add(line.replace(/\d+/g, "#"));

@@ -9,6 +9,75 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.81 — CR 1.4.5, and two counters that spelled the wrong word
+
+### The policy named the hero always, and that hid a whole branch
+
+`sparring.offence` returned `target: "hero"` unconditionally. The note
+above it said choosing between targets was *"a judgement about playing
+well that this policy does not make"* — but **naming the hero is a
+judgement too, just an invisible one**, and it left the entire
+ally-combat branch with zero coverage:
+
+| built | |
+|---|---|
+| v3.44 | an ally is a permanent that attacks |
+| v3.45 | whose hit was it? — the attack-target decides |
+| v3.46 | an ally that dies does what it prints |
+
+**Driven: the old always-hero target produces 0 ally deaths in 20 games.
+The choice produces 57.** Across the full 210, `death` went 0 → **167**.
+
+### The rule is two CR facts and two printed numbers
+
+So it stays inside the no-card-text contract this module is drilled
+against:
+
+- **CR 7.3.2a** — an attack on an ally **cannot be blocked**. It always
+  connects, so `power >= life` is a guaranteed kill.
+- **CR 4.4.3a** — ally life **resets** at end of turn, so anything short
+  of a kill is thrown away.
+
+Take an ally when this attack would kill it outright **and** the ally
+prints power of its own (it threatens something). Otherwise the hero,
+which is still the answer that is always available.
+
+**THE UID IS THE ENTRY'S, NOT THE CARD'S** — v3.50 lost a whole drill to a
+fixture where those two coincided, so the drill here deliberately gives
+them different values. Ties break on it, like every other ranking in the
+file.
+
+### AND THE ROUTE COUNTER WAS GREPPING WORDS THE FEED NEVER PRINTS
+
+`tools/selfplay.js` counts how often each new route fires, and v3.50's own
+lesson is written about this counter: *`death 0, gold 0` across 210 games
+is how the ally gap announced itself.*
+
+| counter looked for | the engine actually prints |
+|---|---|
+| `/dies\|died/` | *"Riggermortis takes 6 and **goes down**…"* |
+| `/Gold token/` | *"**Gold created** on your board…"* |
+
+So `death 0` was reported for three versions — **the last of them after
+the route already worked**. A scan aimed at the wrong WORD reports zero
+exactly as a missing feature does. v3.00 records the same defect with the
+opposite sign (a scan aimed at the wrong FILE *passes* by finding
+nothing); this one *failed* by finding nothing.
+
+Both counters now spell the engine's own phrasing, and a drill pins the
+two phrases **together** so a rewording of either breaks a test rather
+than silently zeroing a counter.
+
+**death 0 → 167 · gold 0 → 24.**
+
+### Measured
+
+- 9 sabotages, 9 bite, 0 silent.
+- 210 self-play games: **1 stall, 0 refusals, 0 violations, 0 malformed
+  feed** — unchanged, and every route now fires.
+
+---
+
 ## v3.80 — the policy could not play a non-attack, and that hid two engine bugs
 
 `sparring.offence` filtered its candidates on **`num(x.c, "power") > 0`**
