@@ -1,8 +1,8 @@
-# Handoff — Dawnblade, at v4.00 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v4.01 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
-`npm run audit`: **379 full / 23 part / 3 none**. Night's Embrace left that
+`npm run audit`: **381 full / 21 part / 3 none**. Night's Embrace left that
 list at v3.87. What is left, with the honest reason each still refuses:
 
 | card | printed | waiting on |

@@ -211,6 +211,13 @@ function buildPrompt(game, spec){
          counter put opens the right sheet, names the right permanent and
          places nothing. */
       ctrStamp: spec.ctrStamp || null,
+      /* THE CLASS RIDER (v4.01) — same rule, FIFTH field to prove it.
+         Halo of Illumination puts a card into the soul and draws "if it's
+         Light"; dropped here, the sheet opens, the right card moves, and
+         the printed reward never arrives. It is DATA, not ops: this
+         module runs no effects, so `applyAnswer` asks the class and runs
+         them (v2.17's whole contract). */
+      classRider: spec.classRider || null,
       /* A SPEC ONLY CARRIES FIELDS THIS FUNCTION KNOWS ABOUT (v2.34's
          `arsStamp` rule, and this is the fourth field to prove it). Left
          off, every arsenal put arrives FACE DOWN — including the three

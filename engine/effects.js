@@ -2252,6 +2252,39 @@ function makeEffects(ctx){
            : card._attackRx ? (card.kw||[]).some(k=>/^go again$/i.test(String(k)))
            : fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
+    /* ---- THE FIRST GRAVEYARD PLAY OF A KEYWORD EACH TURN (v4.01) -----
+       COMPASS OF SUNKEN DEPTHS — "The first card with watery grave you
+       play from your graveyard each turn gets go again."
+
+       IT IS READ HERE, before the attack/non-attack split, because it is
+       a fact about the PLAY rather than about the swing: Gravy Bones
+       replays ALLIES out of his graveyard, and every one of them is a
+       non-attack. Read inside the attacking branch — where `gaNext` is
+       taken — it would fire for none of the cards it exists for.
+
+       THE STATIC IS THE SIDE'S, and `parser.gyFirstGaKw` is its one
+       reader, scanning gear AND arena: the watcher is not the card being
+       played (v3.33, v3.55, v3.93), and Compass is an Off-Hand.
+
+       "FIRST … EACH TURN" IS `hist`, which CR 4.4.4 clears at the turn
+       boundary — so the window needs no other bookkeeping (v3.85). It is
+       recorded WHEN THE GRANT IS TAKEN rather than at the play, or the
+       second such card gets it too and "first" is decoration.
+
+       `printedKw`, NEVER `hasKw` (v2.84's three questions). A card that
+       merely MENTIONS the keyword has not got it, and granting an action
+       point off a mention is the most valuable keyword in the game to get
+       wrong. */
+    if(from === "grave"){
+      const _gk = P.gyFirstGaKw(act(n));
+      if(_gk && P.printedKw(card, _gk)
+         && !(act(n).hist.gyFirstKw || []).some(k => k === _gk)){
+        ga = true;
+        actMut(n).hist = {...act(n).hist,
+          gyFirstKw: [...(act(n).hist.gyFirstKw || []), _gk]};
+        n = L(n, `${card.name} is the first ${_gk} card out of the graveyard this turn — go again.`);
+      }
+    }
     /* SPEND A WAITING NEXT-INSTANT GRANT (v3.37) — Stir the Aetherwinds.
        IT IS TAKEN HERE, AHEAD OF THE CARD'S OWN OPS, because the payload
        it carries is an AMP and `arcane` reads `sd.amp` as it resolves
@@ -3992,6 +4025,29 @@ function makeEffects(ctx){
     /* SHRED'S DEBUFF, WHEN A SHEET WAS OPENED (v3.89). The other landing
        site is `attackRx`'s single-defender path; one body serves both, so
        the two cannot disagree about what the answer did. */
+    /* ---- "IF IT'S <CLASS>, …" ON THE CARD THAT WAS PUT (v4.01) -------
+       HALO OF ILLUMINATION. "It" is the card the player CHOSE, so the
+       question is asked here, where that card is in hand — never as an
+       `fx.conds` entry, which `execute` answers about the resolving card
+       (v2.33, v3.47, v3.92).
+
+       THE CLASS TEST IS `promptFilter`'s, so a class means the same thing
+       in a rider as in a filter — and it reads the STRUCTURED ARRAY,
+       which is the authority (v2.39: `tt` calls five records something
+       their `ty` denies).
+
+       IT FIRES ONLY WHEN A CARD ACTUALLY MOVED. An empty hand puts
+       nothing, and a reward for a cost that was not paid is the
+       free-ability bug v2.04 fixed. */
+    if(p.tag === "pick" && p.classRider && (r.picked||[]).length){
+      const got = r.picked[0];
+      if(promptFilter({ty: p.classRider.cls})(got)){
+        n = L(n, `${got.name} is ${p.classRider.cls} — the rider fires.`);
+        n = runOps(n, p.classRider.ops, p.src || "");
+      } else {
+        n = L(n, `${got.name} is not ${p.classRider.cls} — no rider.`);
+      }
+    }
     if(p.tag === "pick" && p.defStamp && (r.picked||[]).length){
       const st = p.defStamp;
       n = applyDefMod(n, st.seat, r.picked[0], -st.amt, p.src || "");

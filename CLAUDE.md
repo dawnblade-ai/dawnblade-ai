@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.00
+**Current version:** v4.01
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2146 drills**.
+This is `node --test "test/*.test.js"` — currently **2171 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -546,6 +546,52 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### TWO CARDS THAT NEEDED NO NEW MACHINERY (v4.01)
+
+`npm run gaps` reported 26 unfinished, 19 one clause away. One of these
+needed a READER and one needed a ROUTE; neither needed a mechanism.
+
+**COMPASS OF SUNKEN DEPTHS** — *"the first card with watery grave you play
+from your graveyard each turn gets go again"* read `skip`. **Measured: three
+pool records print "the first … each turn"** and the other two are Briar's
+and Dorinthea's HERO passives, both built.
+
+**IT IS READ BEFORE THE ATTACK/NON-ATTACK SPLIT**, and that is the whole of
+why it works: every watery-grave record in the pool is one of Gravy Bones'
+**allies**, and every one is a **non-attack** — so a grant read where `gaNext`
+is taken, inside the attacking branch, fires for **none of the cards it
+exists for**. v3.53's wrong-branch lesson, about a grant instead of a queue
+site.
+
+**THE KEYWORD RIDES IN `fx.gyFirstGa`** off the printed line (v3.21) and the
+vocabulary is **CLOSED** (v3.55). Adding `watery grave` to that closed list
+is a predicate change, so it was measured: **exactly one record's parse
+moved** (v3.33). And the list had **two readers the day it grew one** —
+`KW_VOCAB_SRC` is the single spelling now.
+
+**AND A CLAUSE-LEVEL FIELD ONLY EXISTS IF SOMETHING FORWARDS IT.** With
+`fxParse` copying nothing across, the clause reported `run`, the card went
+`part -> full`, and **nothing was built** — v2.34's `arsStamp` rule about
+`fx` rather than a prompt spec.
+
+**HALO OF ILLUMINATION** had **no route at all**: `parseHeroPower` refuses a
+line whose payload has no reader, so `build.js` built the piece no powCard
+and neither board could offer it — while `moveCards` has routed a pick to the
+`soul` since prompts.js was written. **v3.47's shape, third outing: reading
+the PAYLOAD is what creates the route.**
+
+**"IT" IS THE CARD THAT WAS PUT** (v2.33, v3.47, v3.92 — fourth time), so the
+rider rides on the pick's spec and is asked in `applyAnswer`. `classRider` is
+the **fifth field** to prove v2.34's rule. And the CARD's own parse
+under-reported it — the put sits inside a `noop`ed activation line there — so
+the rider is credited **conditionally on `parseHeroPower` answering**
+(v3.63's guard).
+
+**AND A DRILL THAT NAMES A COUNT ROTS WHEN THE COUNT IS THE WORK.**
+`gaps.test.js` held the `pick` family to ≥ 5 and both cards LEFT it by being
+built. Lowered deliberately, with a second assertion that the family still
+names cards — v3.53's hardcoded-card-name rule, one measurement over.
 
 ### WHICH PARSER READERS DOES EACH BOARD ASK? (v4.00)
 

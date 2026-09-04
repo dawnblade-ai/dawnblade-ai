@@ -49,8 +49,20 @@ test("it finds something — a scan aimed at the wrong shape passes by finding n
   const out = run();
   assert.match(out, /pick from a zone/, "the largest family must still match");
   const n = +(out.match(/(\d+)\s+pick from a zone/) || [])[1];
-  assert.ok(n >= 5, "the `pick` family collapsing to a handful means a pattern rotted: " + n);
+  /* A DRILL THAT NAMES A COUNT ROTS WHEN THE COUNT IS THE WORK (v3.53,
+     where a dossier drill hardcoded a card name and failed the moment
+     that card was closed — for the best possible reason). The floor
+     dropped 5 -> 3 at v4.01, when Compass of Sunken Depths and Halo of
+     Illumination LEFT the family by being built. Lowering it is the
+     deliberate edit; what it must never become is zero, because a
+     pattern that stops matching also reports zero and the two look
+     identical in a report. */
+  assert.ok(n >= 3, "the `pick` family collapsing to a handful means a pattern rotted: " + n);
   assert.match(out, /ONE clause away/, "the one-clause count is the reason to read this at all");
+  /* AND THE FAMILY MUST STILL NAME CARDS. A count with no roll call
+     beneath it cannot be told from a heading printed unconditionally. */
+  assert.match(out, /pick from a zone[\s\S]{0,400}·/,
+    "the family must still list the cards it claims");
 });
 
 test("a stale read is VISIBLE, not silent", {skip}, () => {

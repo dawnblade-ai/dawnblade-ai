@@ -9,6 +9,95 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.01 — two cards that needed no new machinery
+
+`npm run gaps` reported **26 unfinished, 19 one clause away**. These two are
+the pick-from-a-zone family's, and neither needed a mechanism built — one
+needed a READER and one needed a ROUTE.
+
+### COMPASS OF SUNKEN DEPTHS — the first graveyard play of a keyword each turn
+
+> **Instant** - {t}: Look at the top card of your deck.
+> The first card with **watery grave** you play from your graveyard each turn
+> gets **go again**.
+
+It read `skip` and did nothing. **Measured: three pool records print "the
+first … each turn"** and the other two are Briar's and Dorinthea's HERO
+passives, both built. This one is on EQUIPMENT, so it had no reader at all.
+
+**IT IS READ BEFORE THE ATTACK/NON-ATTACK SPLIT, AND THAT IS THE WHOLE OF
+WHY IT WORKS.** Every watery-grave record in the pool is one of Gravy Bones'
+**allies**, and every one of them is a **non-attack** — so a grant read where
+`gaNext` is taken, inside the attacking branch, would fire for **none of the
+cards it exists for**. v3.53's wrong-branch lesson, stated about a grant
+rather than a queue site.
+
+**THE KEYWORD IS READ OFF THE PRINTED LINE** (v3.21) into `fx.gyFirstGa`, and
+**the vocabulary is CLOSED** (v3.55): a grant keyed on a keyword nothing
+carries is a card filed `full` that does nothing. `watery grave` joining that
+closed list is a predicate change, so it was **measured** — exactly ONE
+record's parse moved, this card's own (v3.33's rule).
+
+**AND THE LIST HAD TWO READERS THE DAY IT GREW ONE.** v3.33 wrote it inline
+in `optFilter`'s reveal branch; this asks the same question of a different
+clause. `KW_VOCAB_SRC` is the one spelling now.
+
+**"FIRST … EACH TURN" IS `hist`**, which CR 4.4.4 clears at the turn boundary
+— the whole of the window (v3.85). It is keyed **by keyword**, not a bare
+boolean, because the keyword is read rather than known: a second card naming
+a different one must not spend this one's grant.
+
+**AND A CLAUSE-LEVEL FIELD ONLY EXISTS IF SOMETHING FORWARDS IT.** The first
+draft had `classifyClause` returning `{gyFirstGa}` and `fxParse` copying
+nothing across — so the clause reported `run`, the card went `part -> full`,
+and **NOTHING was built**. That is v2.34's `arsStamp` rule about `fx` instead
+of a prompt spec, and it is the no-op blind spot arriving through the front
+door.
+
+### HALO OF ILLUMINATION — a route that did not exist
+
+> **Instant** - {r}, destroy this: Put a card from your hand into your soul.
+> If it's **Light**, draw a card.
+
+**IT HAD NO ROUTE AT ALL.** `parseHeroPower` refuses a line whose payload has
+no reader, so `build.js` built the piece **no powCard** and neither board
+could offer the ability — while `moveCards` has routed a pick to the `soul`
+since prompts.js was written (`soul` is a real side array and the fallback
+branch handles it). **v3.47's shape, third outing: reading the PAYLOAD is
+what creates the route**, and the plumbing was already there.
+
+**"IT" IS THE CARD THAT WAS PUT**, never the equipment — v2.33's Bull's Eye
+Bracers, v3.47's Scuttle Toes, v3.92's banish riders, **fourth time**. So the
+rider cannot be an `fx.conds` entry, which `execute` answers about the
+RESOLVING card; it rides on the pick's spec and is asked in `applyAnswer`,
+where the chosen card is in hand. The two sentences arrive as separate
+clauses, so they are paired in `fxParse` where the whole card is visible —
+the same place and reason `optCost` pairs its halves.
+
+**`classRider` IS THE FIFTH FIELD TO PROVE v2.34's RULE** that a spec only
+carries what `buildPrompt` knows about. Dropped there, the sheet opens, the
+right card moves, and the printed reward never arrives.
+
+**AND THE CARD'S OWN PARSE UNDER-REPORTED IT.** On the powCard the put is a
+clause of its own; on the CARD it lives inside the activation line, which is
+filed `noop` — so the rider read unread on a card whose ability is fully
+built. Credited, **conditionally on `parseHeroPower` answering** (v3.63's
+guard): crediting a clause whose ability nothing can offer is the no-op blind
+spot arriving through the credit.
+
+### AND A DRILL THAT NAMES A COUNT ROTS WHEN THE COUNT IS THE WORK
+
+`gaps.test.js` held the `pick` family to **≥ 5** as its liveness floor, and
+both cards LEFT that family by being built. Lowered to 3, deliberately, with
+a second assertion that the family still names cards — v3.53's rule about a
+drill hardcoding a card name, one measurement over.
+
+```
+drills 2171 pass / 0 fail / 4 skipped    scenes 72
+coverage 381 full / 21 part / 3 none     fairness clean
+play 210 games, 0 stalls, 0 refusals, 0 violations
+```
+
 ## v4.00 — which parser readers does each board ask?
 
 v3.99 hoisted `abCostWhy` after finding judge's GEAR branch asking **none**

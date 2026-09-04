@@ -236,5 +236,58 @@ module.exports = [
     "…and the piece is NOT spent": true
   }
 }
+,
+
+{
+  name: "the Halo puts a card in the soul, and draws only for Light",
+  why: "v4.01 — the ability had NO ROUTE: `parseHeroPower` refuses a line " +
+       "whose payload has no reader, so build.js built the piece no " +
+       "powCard and neither board could offer it. `moveCards` has routed " +
+       "a pick to the soul since prompts.js was written — v3.47's shape, " +
+       "third outing: reading the PAYLOAD is what creates the route. And " +
+       "\"it\" is the card that was PUT, never the equipment (v2.33, " +
+       "v3.47, v3.92 — fourth time), so the rider rides on the pick.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "boltyn");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.boltyn), c.H.db(), {},
+                          RNG.make("scene-halo"), {n: 0}).b;
+    const halo = b.gear.find(g => g.name === "Halo of Illumination");
+    const put = (cls) => {
+      const card = {name: cls + " Card", uid: "h1", pitch: 1, cost: 0,
+        tt: cls + " Action", ty: [cls, "Action"], tx: "", kw: [], gkw: []};
+      const top = {name: "Drawn", uid: "h2", pitch: 1, cost: 0, tt: "Generic Action",
+                   ty: ["Generic", "Action"], tx: "", kw: [], gkw: []};
+      let g = c.acting(Object.assign(
+        c.state({name: "Boltyn", res: 9, ap: 1, hand: [card], deck: [top], soul: []},
+                {name: "Bob", hp: 20}, {turn: 3}), {builds: [b, {}]}));
+      g = c.ops(g, [["pickPrompt", {zone: "hand", to: "soul", min: 1, max: 1,
+                                    classRider: {cls: "light", ops: [["draw", 1]]}}]],
+                "Halo of Illumination");
+      g = c.open(g.game || g);
+      g = c.answer(g, 0);
+      return {soul: g.sides[0].soul.length, hand: g.sides[0].hand.map(x => x.name).join(",")};
+    };
+    const light = put("Light"), plain = put("Generic");
+    return {
+      "the ability is built at all":        !!(halo && halo.powCard),
+      "a Light card reaches the soul":      light.soul,
+      "…and the rider draws":               light.hand,
+      "a non-Light card reaches it too":    plain.soul,
+      "…and draws nothing — only the DRAW is gated": plain.hand
+    };
+  },
+  want: {
+    "the ability is built at all": true,
+    "a Light card reaches the soul": 1,
+    "…and the rider draws": "Drawn",
+    "a non-Light card reaches it too": 1,
+    "…and draws nothing — only the DRAW is gated": ""
+  }
+}
 
 ];

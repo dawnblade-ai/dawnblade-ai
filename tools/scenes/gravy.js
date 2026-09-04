@@ -284,5 +284,56 @@ module.exports = [
     "and NOTHING fires when the card is played": 1
   }
 }
+,
+
+{
+  name: "the Compass hands back an action point, once a turn",
+  why: "v4.01 — \"The first card with watery grave you play from your " +
+       "graveyard each turn gets go again.\" It read `skip` and did " +
+       "NOTHING: three pool records print \"the first … each turn\" and the " +
+       "other two are Briar's and Dorinthea's HERO passives, both built. " +
+       "All six watery-grave records are HIS ALLIES, so this is an action " +
+       "point on the play he makes most — and they are NON-ATTACKS, which " +
+       "is why the grant is read before the attack/non-attack split.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const S = require("../../engine/sides.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "gravy");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.gravy), c.H.db(), {},
+                          RNG.make("scene-compass"), {n: 0}).b;
+    const compass = b.gear.find(g => g.name === "Compass of Sunken Depths");
+    const replay = (gear, hist) => {
+      const ally = Object.assign({}, c.card("Barnacle", 2), {uid: "al1"});
+      let g = c.acting(Object.assign(
+        c.state({name: "Gravy", res: 9, ap: 1, gear, grave: [ally],
+                 hist: Object.assign({}, S.freshHist(), hist || {})},
+                {name: "Bob", hp: 20}, {turn: 3}), {builds: [b, {}]}));
+      const out = c.exec(g, ally, "grave", 0);
+      const n = out.game || out;
+      return {ap: n.sides[0].ap, spent: (n.sides[0].hist.gyFirstKw || []).length};
+    };
+    const first  = replay([compass], {});
+    const second = replay([compass], {gyFirstKw: ["watery grave"]});
+    const bare   = replay([], {});
+    return {
+      "his loadout takes the Compass":             !!compass,
+      "the first ally out of the graveyard keeps the point": first.ap,
+      "…and the turn records the grant spent":     first.spent,
+      "the second pays for itself":                second.ap,
+      "and with no Compass equipped, neither does the first": bare.ap
+    };
+  },
+  want: {
+    "his loadout takes the Compass": true,
+    "the first ally out of the graveyard keeps the point": 1,
+    "…and the turn records the grant spent": 1,
+    "the second pays for itself": 0,
+    "and with no Compass equipped, neither does the first": 0
+  }
+}
 
 ];

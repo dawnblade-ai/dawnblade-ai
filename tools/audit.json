@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-04T12:48:48.306Z",
+ "generated": "2026-09-04T17:23:36.962Z",
  "appVer": "4.00",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 379,
-  "part": 23,
+  "full": 381,
+  "part": 21,
   "none": 3
  },
  "heroes": {
@@ -10907,29 +10907,26 @@
    "mentions": [
     "spellvoid"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Instant - {r}, destroy this: Put a card from your hand into your soul",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "If it's Light, draw a card.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Spellvoid 2",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Instant - {r}, destroy this: Put a card from your hand into your soul",
-    "If it's Light, draw a card."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Put a card from your hand into your soul [1r]",
    "tx": "Instant - {r}, destroy this: Put a card from your hand into your soul. If it's Light, draw a card.\nSpellvoid 2",
    "flags": []
   },
@@ -12546,7 +12543,7 @@
     "go again",
     "watery grave"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -12556,12 +12553,10 @@
     },
     {
      "t": "The first card with watery grave you play from your graveyard each turn gets go again.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "The first card with watery grave you play from your graveyard each turn gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": "Look at the top card of your deck",
    "tx": "Instant - {t}: Look at the top card of your deck.\nThe first card with watery grave you play from your graveyard each turn gets go again.",

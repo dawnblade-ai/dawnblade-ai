@@ -104,7 +104,18 @@ const SIDE_FIELDS = [
    which is a fact about one named card rather than about aura attacks in
    general: a Waxing Specter swinging first must not spend the Shield's
    discount. Same shape and reason as `atkNames`, one route over. */
-const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],arcTaken:0});
+/* `gyFirstKw` (v4.01) — which KEYWORDS have already spent their
+   first-graveyard-play grant this turn. Compass of Sunken Depths reads
+   "the FIRST card with watery grave you play from your graveyard EACH
+   TURN gets go again", so the record has to say a play has happened, and
+   CR 4.4.4 clears `hist` at the turn boundary — which is the whole of
+   "each turn" (v3.85, one card over).
+
+   IT IS KEYED BY KEYWORD, not a bare boolean, because the KEYWORD is read
+   off the printed line rather than known by the engine: a second card
+   naming a different one must not spend this one's grant. Same shape and
+   reason as `auraAtkNames`, one field over. */
+const freshHist = () => ({atk:0,non:0,arc:0,aura:0,made:0,booed:0,blue:0,red:0,trans:0,blueGY:0,atkNames:[],auraAtkNames:[],playTy:[],arcTaken:0,gyFirstKw:[]});
 
 function makeSide(o){
   o = o || {};

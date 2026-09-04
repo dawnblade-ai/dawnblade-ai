@@ -18,6 +18,18 @@ const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const isAttack = c => /attack/i.test(c.tt) && /action/i.test(c.tt) && c.power!=null;
 const isArrow  = c => /arrow/i.test(c.tt);
 const isWeapon = c => /weapon/i.test(c.tt) && c.power!=null;
+/* THE KEYWORDS A PRINTED QUALIFIER MAY NAME — a CLOSED vocabulary, and
+   one copy of it (v4.01). It answers "which words can a card mean when it
+   says `with <X>`", and `printedKw` is what actually resolves one — so
+   widening it to any word after "with" re-opens the hole v3.33's refusal
+   was protecting: a DYNAMIC limit would read as a keyword and be dropped.
+
+   IT HAD TWO READERS THE DAY IT GREW ONE. v3.33 wrote it inline in
+   `optFilter`'s reveal branch; v4.01's Compass of Sunken Depths asks the
+   same question of a different clause, and two spellings of one closed
+   list is the drift this file names on nearly every page. */
+const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward|watery grave";
+const KW_VOCAB = new RegExp("^(?:" + KW_VOCAB_SRC + ")$", "i");
 const hasGA = c => (c.kw||[]).some(k=>/go again/i.test(k)) || /\bgo again\b/i.test(c.tx||"");
 const arcaneDmg = c => { const m=(c.tx||"").match(/deals? (\d+) arcane damage/i); return m?+m[1]:null; };
 
@@ -1088,6 +1100,29 @@ function classifyClause(raw){
      table is the first place to look when a widening you verified in
      isolation does nothing. Both spellings are accepted so the rule
      survives the table moving either way. */
+  /* ---- "THE FIRST CARD WITH <KEYWORD> YOU PLAY FROM YOUR GRAVEYARD
+     EACH TURN GETS GO AGAIN" (v4.01) — COMPASS OF SUNKEN DEPTHS -------
+     v3.85's shape one card over, and the pool's only unbuilt member:
+     three records print "the first … each turn" and the other two are
+     Briar's and Dorinthea's HERO passives, both built.
+
+     IT IS A STATIC ON A PIECE, not an ability, so it is filed on the
+     card and read by whoever is PLAYING something — `execute` — rather
+     than run as an op. `fx.gyFirstGa` carries the KEYWORD off the
+     printed line (v3.21: read the name, never move it into the engine),
+     so a future card naming a different keyword is read rather than
+     assumed to say watery grave.
+
+     THE KEYWORD VOCABULARY IS CLOSED to what `printedKw` can actually
+     answer. An unknown word refuses the clause — a grant keyed on a
+     keyword nothing carries is a card filed `full` that does nothing,
+     which is the no-op blind spot at its purest (v3.55's rule about
+     counter kinds, one mechanic over). */
+  if(m=c.match(/^the first card with ([a-z' ]+?) you play from your graveyard each turn gets go again$/)){
+    const kwName = m[1].trim();
+    if(!KW_VOCAB.test(kwName)) return null;
+    return R([["noop", "static — read at the play by execute, off fx.gyFirstGa"]], {gyFirstGa: kwName});
+  }
   if(m=c.match(/^quickstrike\s*[-—]\s*if this (?:gets|has) go again,\s*(.+)$/i))
     return GATED(m[1], "hasGa");
   if(m=c.match(/^rupture\s*[-—]\s*if (?:this|[a-z' ]+) is played as chain link (\d+) or higher,\s*(.+)$/i))
@@ -2188,6 +2223,28 @@ function classifyClause(raw){
       min:0, max:1, ctrSpend:"energy", playThisTurn:true,
       title:"Banish a card — it costs its own arcane in energy"}]]);
   }
+  /* ---- "PUT A CARD FROM YOUR HAND INTO YOUR SOUL" (v4.01) ----------
+     HALO OF ILLUMINATION — "Instant - {r}, destroy this: Put a card from
+     your hand into your soul. If it's Light, draw a card."
+
+     A PLAIN PICK. `moveCards` already routes to `soul` through its
+     fallback (`soul` is a real side array), so nothing new is moved —
+     what was missing was a rule that emits the spec, which is why
+     `parseHeroPower` refused the whole line and the equipment had no
+     powCard at all. v3.47's shape: reading the PAYLOAD is what creates
+     the route, and the plumbing was already there.
+
+     `min:1` — the card does not say "you may", so the put is mandatory;
+     `buildPrompt` returns null on an empty hand and the sheet politely
+     skips itself, which is the difference between mandatory and
+     impossible.
+
+     THE RIDER IS PAIRED IN `fxParse`, not here: "IT" is the card that was
+     PUT (v2.33's Bull's Eye Bracers, v3.47's Scuttle Toes, v3.92 — fourth
+     time), and this reader sees one clause at a time. */
+  if(/^put (?:a|an|one) card from your hand into your (?:hero'?s? )?soul$/.test(c))
+    return R([["pickPrompt", {zone:"hand", to:"soul", min:1, max:1,
+      title:"Put a card into your soul"}]]);
   /* "Your first attack each turn gets +1{p}" — a standing buff while in play */
   if(/^your first attack each turn gets \+(\d+)\s*\{p\}$/.test(c))
     return R([["firstAtkBuff", +c.match(/\+(\d+)/)[1]]]);
@@ -2605,7 +2662,7 @@ function optFilter(phrase){
      the counter reader exists for, and Cosmo, whose clause is a different
      shape entirely. A keyword the engine already carries, on a phrase
      almost nothing prints. */
-  const km = rest.match(/\s*\bwith (crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward)\b/i);
+  const km = rest.match(new RegExp("\\s*\\bwith (" + KW_VOCAB_SRC + ")\\b", "i"));
   if(km){ f.kw = km[1].toLowerCase(); rest = (rest.slice(0, km.index) + " " + rest.slice(km.index + km[0].length)).trim(); }
 
   /* THE WHOLE PHRASE MUST BE CONSUMED. What is left has to match one of
@@ -3835,6 +3892,15 @@ function fxParse(card){
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     const r = classifyClause(raw);
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
+    /* A CLAUSE-LEVEL FIELD ONLY EXISTS IF SOMETHING FORWARDS IT (v4.01).
+       v2.34 states this rule about a prompt SPEC — `arsStamp` had to be
+       added to `buildPrompt` explicitly or it vanished — and it is the
+       same rule about `fx`: `classifyClause` returning `{gyFirstGa}` sets
+       nothing unless this loop copies it across. The first draft did not,
+       and the symptom is the worst one available: the clause reported
+       `run`, the card went `part -> full`, and NOTHING was built. That is
+       the no-op blind spot arriving through the front door. */
+    if(r.gyFirstGa) fx.gyFirstGa = r.gyFirstGa;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
@@ -4405,6 +4471,65 @@ function fxParse(card){
           ops: rc.ops.map(op => op[0] === "aim" ? ["aim", op[1], "arsenal"] : op)
         };
         [ti, ri].forEach(i => { if(i >= 0 && fx.clauses[i].st === "skip") fx.clauses[i].st = "run"; });
+      }
+    }
+  }
+  /* ---- "IF IT'S <CLASS>, …" ON A SOUL PUT (v4.01) ------------------
+     HALO OF ILLUMINATION — "Put a card from your hand into your soul. If
+     it's Light, draw a card."
+
+     "IT" IS THE CARD THAT WAS PUT, never the equipment (v2.33's Bull's
+     Eye Bracers, v3.47's Scuttle Toes, v3.92's banish riders — fourth
+     time). So it cannot be an `fx.conds` entry, which `execute` answers
+     about the RESOLVING card: it rides on the pick's spec and is asked
+     in `applyAnswer`, where the chosen card is in hand.
+
+     THE TWO SENTENCES ARRIVE AS SEPARATE CLAUSES — the splitter breaks on
+     the period — so they are paired HERE, where the whole card is
+     visible. Same place and reason `optCost` pairs its halves (v2.28).
+
+     THE CLASS IS READ OFF THE PRINTED WORD and tested through
+     `promptFilter`'s `ty`, which reads the STRUCTURED ARRAY (v2.39: `tt`
+     is a display string and the two disagree on five records). One
+     reader, so a class means the same thing in a filter and in a rider.
+
+     AN UNREADABLE PAYLOAD REFUSES THE RIDER AND KEEPS THE PUT (v2.29,
+     v3.10): the head still lands, the card is weaker than printed rather
+     than guessed at, and the clause stays `skip` so the audit says so. */
+  {
+    /* TWO SHAPES REACH THIS, AND THE SECOND IS THE CARD ITSELF (v4.01).
+       On the POWCARD the put is a clause of its own — `build.js` strips
+       the cost prefix — so it matches directly. On the CARD the put lives
+       INSIDE the activation line, which `classifyClause` files `noop`, so
+       the rider's clause would report unread on a card whose ability is
+       fully built. That is v3.21's one-sided ledger: under-reporting is
+       the safe direction only while somebody is looking, and the audit
+       is looking.
+
+       THE CREDIT IS CONDITIONAL ON THE ROUTE EXISTING — `parseHeroPower`
+       answering is what makes `build.js` build a powCard at all, and
+       crediting a clause whose ability nothing can offer is the no-op
+       blind spot (v3.63's guard, same shape one route over). */
+    const soulPut = t => /^put (?:a|an|one) card from your hand into your (?:hero'?s? )?soul\.?$/i.test(t)
+                      || (/:\s*put (?:a|an|one) card from your hand into your (?:hero'?s? )?soul\.?$/i.test(t)
+                          && !!parseHeroPower(card.tx || "", true));
+    const pi = fx.clauses.findIndex(c => soulPut(clean(c.t)));
+    if(pi >= 0){
+      const ri = fx.clauses.findIndex(c =>
+        /^if it(?:'|\u2019)?s? (?:is )?[a-z]+, /i.test(clean(c.t)));
+      const rm = ri >= 0 ? clean(fx.clauses[ri].t)
+        .match(/^if it(?:'|\u2019)?s? (?:is )?([a-z]+),\s*(.+?)\.?$/i) : null;
+      const rc = rm ? classifyClause(rm[2].toLowerCase()) : null;
+      if(rc && rc.status === "run" && rc.ops && rc.ops.length && !rc.cond && !rc.onHit){
+        const put = (fx.ops || []).find(o => o[0] === "pickPrompt" && o[1] && o[1].to === "soul");
+        /* THE OP EXISTS ONLY ON THE POWCARD'S PARSE. On the card's own,
+           the put is inside a `noop`ed activation line — so the rider is
+           CREDITED as read (the powCard carries it, and `execute`
+           re-reads that) without being attached twice. Attaching it here
+           as well would be `VALUE-DOUBLED` on the fairness sweep's own
+           terms if any op ever reached both. */
+        if(put) put[1].classRider = {cls: rm[1].toLowerCase(), ops: rc.ops};
+        if(fx.clauses[ri].st === "skip") fx.clauses[ri].st = "run";
       }
     }
   }
@@ -6165,6 +6290,23 @@ const abDestroyBoard = ab => (ab && ab._destroyBoard) || null;
    for the reason the three costs above each have one: a cost read in one
    place and charged in another is how an ability comes to be free on one
    board (v2.04, v3.01). */
+/* WHICH SIDE-WIDE STATIC GRANTS THE FIRST GRAVEYARD PLAY GO AGAIN (v4.01),
+   or null. ONE reader, for the reason `abSoulCost` and its siblings each
+   have one — and it scans BOTH the gear and the arena, because the
+   watcher is not the card being played: Compass of Sunken Depths is an
+   Off-Hand, and a future record printing the same static on a permanent
+   would otherwise be silently inert (v3.33's Magmatic Carapace, v3.55,
+   v3.93 — a board-only scan finds nothing for half the family). */
+function gyFirstGaKw(sd){
+  if(!sd) return null;
+  const carriers = [...(sd.gear || []).filter(g => g && !g.destroyed),
+                    ...(sd.board || []).map(b => b && b.card).filter(Boolean)];
+  for(const c of carriers){
+    const f = fxParse(c);
+    if(f && f.gyFirstGa) return f.gyFirstGa;
+  }
+  return null;
+}
 const abFlipUp = ab => !!(ab && ab._flipUp);
 /* CLOAKED — "Equip this face-down", off the card's PRINTED reminder line.
    `printedKw` is the question (v2.84's three), not `hasKw`: a card that
@@ -6319,6 +6461,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, gyFirstGaKw,
         CARD_OVERRIDES};
 });
