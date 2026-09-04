@@ -548,8 +548,17 @@ test("the foeturn window will not open on an ability whose gate is unmet", () =>
   const h = slice("  function foeTurnHasPlay(s){", "  /* ---- SEAT 1'S TURN");
   assert.ok(/activateIfOk\(s, afx\.activateIf\)/.test(h),
     "a piece whose printed gate is unmet must not open a window it cannot be used in");
-  assert.ok(/effCost\(gr\.powCard, you\(s\)\)\s*<=\s*bank/.test(h),
-    "nor one the player cannot pay for, even counting what they could pitch");
+  /* AND IT MUST ASK WHAT `execute` CHARGES (v3.80, on this board at
+     v3.99). The call took `(card, side)` and `effCost`'s third argument
+     is the GAME's half — the Draconic chain-link count and whether the
+     defending hero is marked — so Fai's hero ability was quoted at full
+     price here while the table had the discount since v3.86. A source
+     slice that pinned the two-argument form went red when the third was
+     threaded, which is a slice rotting where a call changes (v3.22,
+     v3.28) — so it pins the STRONGER claim now. */
+  assert.ok(/effCost\(gr\.powCard, you\(s\), costCtx\([^)]*\)\)\s*<=\s*bank/.test(h),
+    "nor one the player cannot pay for, even counting what they could pitch — " +
+    "and the affordability check must read the same cost `execute` charges");
 });
 
 test("going second still opens turn 1 with an action point (CR 4.3.2)", () => {

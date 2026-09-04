@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.99 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v4.00 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -33,20 +33,28 @@ dropped a printed action point in the other direction, and **cloaked was
 filed under stealth's noop reason**, which hid a flip cost that made
 Uphold Tradition's ability repeatable.
 
-### THE CENSUS PATTERN HAS PAID FOUR TIMES IN FOUR VERSIONS
+### THE CENSUS PATTERN HAS PAID FIVE TIMES IN FIVE VERSIONS
 
-Two targets remain, in order of how much a miss would cost:
+**v4.00 ran the last three targets and the list is now empty.** Both
+window censuses came back clean and are pinned in
+`test/keycensus.test.js`; the BOARD-READER census — the third target,
+which suggested itself when `abCostWhy` was hoisted by hand — found **two
+more one-board rules**: `costCtx` (Fai's Draconic discount quoted at full
+price on the trainer, display sites included) and `tapsToActivate` (judge
+refuses a tapped hero, the trainer never asked).
 
-| census | why |
-|---|---|
-| `playWindowFor` vs `playableWhy` | v3.36's negative-action-point bug lived exactly there — a window widened in one and not the other |
-| `optFilter`'s keys vs `promptFilter`'s tests | a filter key the prompt does not test ADMITS EVERY CARD, which is the sev-3 v2.29's refusals exist to prevent |
+**WHAT IS LEFT TO CENSUS.** Nothing obvious, and that is itself worth
+saying rather than inventing a target. The pattern's value came from
+places where **one description of a rule had two readers**; the ones that
+remain are all single-reader by construction. The next one will present
+itself the way this one did — by a bug being found by hand and the
+question *"what would have caught this?"* being asked immediately.
 
-**AND A THIRD TARGET SUGGESTS ITSELF FROM THIS VERSION**: the boards'
-LEGALITY questions against each other. `abCostWhy` was hoisted because
-judge's gear branch asked none of the three activation-cost legalities its
-hero branch asks — v3.01's shape, found by hand. A census that walked both
-branches would have named it.
+**A CANDIDATE, HELD RATHER THAN BUILT**: `effects.js`'s 44 second-person
+feed literals against the seat that reads them (v2.83's pinned ledger). It
+is a REPORTING census rather than a rules one, so a miss costs a confusing
+line and never a game — which is why it has not been done, and why saying
+so beats leaving it on a list.
 
 ### THE CLOAKED DISPLAY HALF IS OPEN, AND IT IS THE ONLY HALF LEFT
 

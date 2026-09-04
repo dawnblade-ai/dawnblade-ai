@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.99
+**Current version:** v4.00
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2134 drills**.
+This is `node --test "test/*.test.js"` — currently **2146 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -546,6 +546,71 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### WHICH PARSER READERS DOES EACH BOARD ASK? (v4.00)
+
+v3.99 hoisted `abCostWhy` after finding judge's GEAR branch asking **none**
+of the three activation-cost legalities its HERO branch asks. That was
+found by hand. **`test/keycensus.test.js` is the standing version**: every
+function `parser.js` exports, against both boards, with the sets PINNED so
+a reader crossing the line is a deliberate edit.
+
+**IT FOUND TWO MORE ONE-BOARD RULES.**
+
+| reader | judge | the trainer |
+|---|---|---|
+| `costCtx` | all nine `effCost` calls | **none** |
+| `tapsToActivate` | refuses a tapped hero (v3.48) | **never asked** |
+
+**FAI'S DISCOUNT WAS QUOTED AT FULL PRICE ON THE BOARD A PLAYER USES.**
+v3.86 built *"this ability costs {r} less to activate for each Draconic
+chain link you control"* and threaded the count into judge. `effCost`'s
+third argument is the GAME's half — the chain-link count and whether the
+defending hero is marked (Stains of the Redback) — and the trainer passed
+it nowhere. **The DISPLAY sites too**, which is the sev-2 category the
+player TRUSTS: a number on screen that differs from the number charged.
+
+**AND `effects.execute` TAPS THE HERO ON BOTH BOARDS**, so the tap was
+real and only one board refused a second use. Latent today — the trainer's
+opponent is 12 vanilla attacks and cannot tap you — and a printed rule on
+one board is v3.01's shape whether or not anything reaches it.
+
+**A DESTRUCTURED READER IS STILL ASKED.** judge writes `const
+perTurnCleared = PR.perTurnCleared;` and the trainer writes `weaponCost =
+DawnParser.weaponCost,`, so a scan for the qualified call alone reports
+BOTH boards as not asking. **That is a false POSITIVE**, and it is what
+the first draft of this census produced — v3.00 and v3.81 both record a
+wrong-shape scan passing by finding nothing; this is the same defect with
+the sign flipped, which is why the drill proves the scan alive before
+trusting its gaps.
+
+**IT IS A LEAD LIST, NOT A FINDING LIST** (v3.17). Most asymmetries are
+legitimate: the trainer renders a UI and judge is a reducer, so `norm`,
+`clean` and `instantAbilityReady` belong to one and `defCounts` and
+`splitCostsAP` to the other.
+
+### TWO CENSUSES CAME BACK CLEAN, AND ARE PINNED ANYWAY (v4.00)
+
+**A clean result is worth having PROVED rather than assumed** — v3.97's
+own argument for `condcensus.test.js`. What makes them worth a file is
+that the sets are pinned: *"the scan found nothing"* cannot pass for
+*"everything is accounted for"*.
+
+**EVERY FILTER KEY THE POOL EMITS IS OBEYED BY `promptFilter` — DRIVEN
+PER KEY**, with a card that must pass and a near-miss that must be
+REFUSED. The first version grepped the function and the sabotage came back
+SILENT, because `if(false && spec.pitch != null)` keeps the name intact: a
+textual scan cannot tell a test from a NEUTERED one. Driving it is what
+discriminates (v3.94), and all five neutering sabotages bite now.
+
+**`windowsNow` IS ONE BODY *AND* BOTH DECIDING CALLERS NAME THE HALF AND
+THE ZONE.** v3.36 made it one body after a widened window in `playableWhy`
+and not `playWindowFor` put Iyslander on `ap: -1`. **One body is necessary
+and NOT sufficient**: a dropped argument in one caller reintroduces the
+divergence with the shared body perfectly intact, which is v3.24's lesson
+verbatim. The drill separates the two DECIDING calls from the one verbatim
+FORWARD, because only a call with something of its own to drop can
+diverge.
 
 ### A KEYWORD PREFIX EATS ITS OWN GATE (v3.99)
 

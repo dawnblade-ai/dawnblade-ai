@@ -376,5 +376,48 @@ module.exports = [
     "as chain link 5 it still applies": 5
   }
 }
+,
+
+{
+  name: "his hero-ability discount is quoted the same on both boards",
+  why: "v3.99 — v3.86 built \"this ability costs {r} less to activate for " +
+       "each Draconic chain link you control\" and threaded the count into " +
+       "judge's nine `effCost` calls. The TRAINER threaded it into NONE, so " +
+       "the ability was quoted at FULL price on the board a player actually " +
+       "uses — on the turn whose whole point is that it costs 0. v3.01's " +
+       "shape, found by censusing which parser readers each board asks.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "fai");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.fai), c.H.db(), {},
+                          RNG.make("scene-faicost"), {n: 0}).b;
+    const ab = b.HPOW;
+    const side = c.H.side({name: "Fai", res: 9}, 0);
+    const at = links => {
+      const chain = [];
+      for(let i = 0; i < links; i++) chain.push({n: "d" + i, kind: "atk", drac: true});
+      const g = {chain, sides: [side, c.H.side({name: "Bob"}, 1)], actor: 0};
+      return c.P.effCost(ab, side, c.P.costCtx(g, 0));
+    };
+    return {
+      "the ability carries a per-link discount": !!ab._dracDiscount,
+      "with no Draconic links it costs":         at(0),
+      "with one link":                           at(1),
+      "with three links it is free":             at(3),
+      "and a caller that says nothing pays full price": c.P.effCost(ab, side)
+    };
+  },
+  want: {
+    "the ability carries a per-link discount": true,
+    "with no Draconic links it costs": 3,
+    "with one link": 2,
+    "with three links it is free": 0,
+    "and a caller that says nothing pays full price": 3
+  }
+}
 
 ];

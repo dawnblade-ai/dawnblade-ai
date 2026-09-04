@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.99"; /* v3.99 - A KEYWORD PREFIX EATS ITS OWN GATE. `classifyClause` guards the ACTIVATION prefixes so the loose matchers below cannot claim a line INCLUDING its cost (v3.59); the pool prints a SECOND family of prefixes with the identical hazard, and only three of its five members - reprise, surge, high tide - had ever been given the same treatment. So Rush of Power ("Quickstrike - If this HAS GO AGAIN, it gets +1{p}") and Lava Burst ("Rupture - If this is played as CHAIN LINK 4 OR HIGHER, it gets +3{p}") had their gates swallowed whole and pumped unconditionally - four records, every one `tier: full`, every one STRONGER than printed. No tool here could see it: coverage counts the clause consumed, and the fairness sweep's COND-BYPASSED needs an unconditional TWIN to compare a gate against, so a gate that simply DISAPPEARS leaves nothing to compare (v3.57, stated about a prefix instead of an op dispatcher). THE SAME PASS FOUND THE ADJACENT DROP: "this gets +1{p} AND GO AGAIN" was read as the pump alone, so Second Strike lost a printed ACTION POINT (CR 5.3.5) at all three pitches and Jack Be Quick's optional cost paid out half its rider - and `runOps` had no `self` case at all, so the other half fell through the dispatcher and the card charged its cost for NOTHING (v2.04 read from the other end). AND CLOAKED WAS FILED UNDER STEALTH'S REASON - v3.16 at the keyword level - so Uphold Tradition reported fully scripted while its flip cost was dropped and its ability fired EVERY TURN where the print allows it once; the printing (ENG005) settles it, "Cloaked (Equip this face-down.)", fifth time reading the card first has paid. Hoisting that refusal found judge's GEAR branch asking NONE of the three activation-cost legalities the HERO branch asks, so Radiant Touch's soul cost was unrefused at the table too - one `abCostWhy` body now, both branches. Coverage 379 full, flagged 41 -> 31 as six stale ledger entries were driven and moved. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "4.00"; /* v4.00 - WHICH PARSER READERS DOES EACH BOARD ASK? v3.99 hoisted `abCostWhy` after finding judge's GEAR branch asking NONE of the three activation-cost legalities its HERO branch asks - found by hand, which is the expensive way. This is the standing version: every reader `parser.js` exports, against both boards, with destructured aliases resolved (a scan for the qualified call alone reports BOTH boards as not asking, which is a false POSITIVE and is what the first draft produced). IT FOUND TWO MORE ONE-BOARD RULES. `costCtx` supplies the GAME's half of a cost - the Draconic chain-link count and whether the defending hero is marked - and judge threads it into all nine of its `effCost` calls while the TRAINER threaded it into NONE: so Fai's hero-ability discount, whose whole point is that the ability costs 0 with links on the chain, was quoted at FULL PRICE on the board a player actually uses, and the DISPLAY sites quoted it too, which is the sev-2 category the player trusts. And `tapsToActivate`: `judge.legal` has refused a tapped hero's {t} ability since v3.48 while `effects.execute` - SHARED - taps the hero on both boards, and this one never asked. Latent (the trainer's dummy is 12 vanilla attacks and cannot tap you) and a printed rule on one board, which is v3.01's shape. TWO MORE CENSUSES CAME BACK CLEAN AND ARE PINNED ANYWAY: every filter key the pool emits is OBEYED by `promptFilter` - DRIVEN per key, because a textual scan cannot tell a test from a NEUTERED one and the sabotage for that came back silent - and `windowsNow` is one body whose two deciding callers both name the half and the zone, which is v3.24's dropped-argument lesson applied to v3.36's fix. Coverage unchanged at 379 full. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1433,6 +1433,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     num = DawnParser.num, clean = DawnParser.clean, classifyClause = DawnParser.classifyClause,
     fxParse = DawnParser.fxParse, parseHeroPower = DawnParser.parseHeroPower,
     runeRed = DawnParser.runeRed, boardRed = DawnParser.boardRed, effCost = DawnParser.effCost,
+    costCtx = DawnParser.costCtx,
     weaponCost = DawnParser.weaponCost, perTurnCleared = DawnParser.perTurnCleared,
     instantAbilityReady = DawnParser.instantAbilityReady,
     hasKw = DawnParser.hasKw, isAR = DawnParser.isAR,
@@ -3315,7 +3316,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const afx = fxParse(card);
     if(afx.activateIf && !activateIfOk(s, afx.activateIf))
       return L(s, `${card.name} can't be activated — ${afx.activateIf.why}.`);
-    const cost = effCost(card, act(s));
+    const cost = effCost(card, act(s), costCtx(s, actorOf(s)));
     const paid = autoPitch(s, cost, null);
     if(!paid) return L(s, `${card.name} costs ${cost} — not enough in hand to pitch for it at instant speed.`);
     /* NO CAPTURE-AND-RESTORE ANY MORE (v2.73). v2.72 had to save
@@ -3512,6 +3513,32 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `rxAllowed` makes. */
     if(card._attackRx && !(s.mode==="stack" && s.pend && s.pend.by===actorOf(s)))
       return L(s, `${card.name} is an attack reaction — declare an attack first, then use it before the damage step.`);
+    /* ---- A TAPPED HERO CANNOT PAY {t} AGAIN (v3.48, on this board at
+       v3.99) --------------------------------------------------------
+       RULING (user, 2026-08-25): "when tapped it mainly means it cannot
+       be tapped again to pay a cost." The tap is applied in
+       `effects.execute`, which both boards share, and `judge.legal` has
+       refused a tapped one since v3.48 — this board never asked, so the
+       rule existed on one board. v3.01's shape, found by censusing which
+       parser readers each board consults.
+
+       IT IS A DIFFERENT RECORD FROM THE ALLOWANCE. `weaponUsed["hpow"]`
+       is a per-turn allowance lifted at every turn boundary; `heroTapped`
+       is a STATE only the controller's own untap step lifts (CR 4.4.3d).
+       They coincide for a hero using its own ability and COME APART the
+       moment an OPPONENT taps you — Entangling Shot and Drop the Anchor.
+
+       LATENT ON THIS BOARD TODAY, AND MEASURED: the trainer's opponent is
+       12 vanilla attacks with no rules text, so nothing here can tap your
+       hero. It is still a printed rule that one board enforces and the
+       other does not (v3.01), and the dummy is not a guarantee.
+
+       READ THE HERO'S OWN PRINTED LINE, not the powCard's: `build.js`
+       strips the cost prefix when it builds HPOW, so the {t} lives in the
+       half that was removed. */
+    if(from === "hero" && act(s).heroTapped
+       && DawnParser.tapsToActivate(((bAct(s).heroRec)||{}).tx || ""))
+      return L(s, `${act(s).name} is tapped — that ability costs {t}, and a tapped hero cannot pay it again.`);
     /* A SOUL BANISH IS A COST, SO IT IS A LEGALITY (v3.74). Boltyn's
        ability reads "Attack Reaction - Banish a card from your soul: …",
        and refusing AFTER it resolves would cost the player a soul card for
@@ -3559,7 +3586,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     /* THE ATTACK'S COST IS NOT THE CARD'S. An ally's `.cost` is what it
        cost to DEPLOY; its attack prints its own. */
     const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
-                               : effCost(card, act(s));
+                               : effCost(card, act(s), costCtx(s, actorOf(s)));
     if(act(s).res>=cost) return maybeBoost(s,card,from,idx);
     const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
@@ -3568,7 +3595,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const confirmPay = () => setG(s=>{
     if(!s.pending) return s;
     const gain = you(s).paySel.reduce((a,i)=>a+(you(s).hand[i].pitch||0),0);
-    const need = effCost(s.pending.card, you(s))-you(s).res;
+    const need = effCost(s.pending.card, you(s), costCtx(s, 0))-you(s).res;
     if(gain<need) return L(s,`Selected pitch ${gain}, need ${need}.`);
     const pitched = you(s).paySel.map(i=>you(s).hand[i]);
     const keepIdx = you(s).hand.map((_,i)=>i).filter(i=>!you(s).paySel.includes(i));
@@ -3983,7 +4010,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       if(!instantAbilityReady(gr, you(s))) return false;
       const afx = fxParse(gr.powCard);
       if(afx.activateIf && !activateIfOk(s, afx.activateIf)) return false;
-      return effCost(gr.powCard, you(s)) <= bank;
+      return effCost(gr.powCard, you(s), costCtx(s, 0)) <= bank;
     });
     if(gearPlay) return true;
     return you(s).hand.some(c => isInstantT(c.tt||"") && fxParse(c).ops.length>0
@@ -4416,7 +4443,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g))-you(g).res)+" MORE"}
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res)+" MORE"}
     : (g.mode==="defpay" && (g.defPayQueue||[]).length) ? {card:[...you(g).hand, ...you(g).gear].find(c=>c.uid===g.defPayQueue[0].uid), chip:"PAY "+g.defPayQueue[0].cost+"? — "+g.defPayQueue[0].name}
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
@@ -4710,7 +4737,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   </div>
                 </div>
               </div>
-              {g.mode==="pay" && (()=>{const sel=you(g).paySel.reduce((a,i)=>a+(you(g).hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card, you(g))-you(g).res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
+              {g.mode==="pay" && (()=>{const sel=you(g).paySel.reduce((a,i)=>a+(you(g).hand[i].pitch||0),0); const need=Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res-sel); return <div className="statusline">Paying <b>{g.pending.card.name}</b> — pitch below · {need>0?<span>need <b>{need}</b> more</span>:<span>covered ✓</span>}<button onClick={cancelPay}>✕ cancel</button></div>;})()}
               {g.mode==="block" && <div className="statusline">{g.bphase==="defend" ? <span>Tap hand &amp; equipment to defend — incoming <b>{g.incoming}</b></span> : <span>Reaction step — instants from floating <b>{you(g).res}</b></span>}</div>}
               {g.mode==="stack" && <div className="statusline">Priority — react from floating <b>{you(g).res}</b> or pass</div>}
               {g.mode==="arsenal" && (()=>{ const off = DawnEffects.heaveOffer(g, 0); return (

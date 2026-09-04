@@ -90,16 +90,16 @@ can be overruled. Same discipline as the mention count.
 
 | category | entries |
 |---|---|
-| Keyword filed as no-op — but the trainer names it (verify) | 20 |
+| Keyword filed as no-op — but the trainer names it (verify) | 19 |
 | Earned value denied | 10 |
+| Keyword filed as no-op, but it has meaning | 9 |
 | Ability inert — cost not modelled | 9 |
-| Keyword filed as no-op, but it has meaning | 8 |
 | No schedule to fire on | 8 |
 | Choice never offered | 7 |
 | Unread, effect unknown | 7 |
 | Displayed total is wrong | 6 |
 
-### WRONG — 26 entries
+### WRONG — 27 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -185,6 +185,9 @@ can be overruled. Same discipline as the mention count.
     > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
+- **Uphold Tradition** · tier `full` · enigma
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Cloaked" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 1 time(s). Your ruling describes real behaviour: CLOAKED - EQUIPPED FACE DOWN - SHOW CARD BACK ON THE PLAYERS BOARD INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER TO IT
+    > Cloaked
 - **V of the Vanguard** (2) · tier `part` · boltyn
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Your attacks this combat chain get +1{p} for each Light card charged this way.
@@ -201,12 +204,9 @@ can be overruled. Same discipline as the mention count.
     > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
-- **Iyslander** · tier `hero` · iyslander
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Essence of Ice
-- … and 1 more (see the station)
+- … and 2 more (see the station)
 
-### LOST VALUE — 28 entries
+### LOST VALUE — 27 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -290,10 +290,10 @@ can be overruled. Same discipline as the mention count.
 - **Thunder Quake** (3) · tier `full` · bravo
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Heave 3" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Heave 3 is active when thunder quake is in your hand at the end of turn - instead of putting it into your arsenal as normal, the player will get a popup and have the option to pay 3 resources - if they do - add 3 seismic
     > Heave 3
-- **Uphold Tradition** · tier `full` · enigma
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Cloaked" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: CLOAKED - EQUIPPED FACE DOWN - SHOW CARD BACK ON THE PLAYERS BOARD INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER TO IT
-    > Cloaked
-- … and 3 more (see the station)
+- **Weave Lightning** (1) · tier `part` · briar
+  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
+    > If it's fused, it gets go again.
+- … and 2 more (see the station)
 
 ### INERT — 1 entries
 
