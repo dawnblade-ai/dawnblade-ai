@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-04T17:23:36.962Z · app v4.00 · data sage-v13 · db 797 records
+Generated 2026-09-04T18:09:34.924Z · app v4.01 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -29,7 +29,7 @@ Generated 2026-09-04T17:23:36.962Z · app v4.00 · data sage-v13 · db 797 recor
 
 | keyword | ledger status | cards |
 |---|---|---|
-| arcane barrier | inert-dummy — prevents arcane damage — the dummy deals only physical | Achilles Accelerator, Aetherstorm Wellingtons, Arcane Lantern, Bull's Eye Bracers, Crown of Dichotomy, Double Cross Strap, Enclosed Firemind, Mask of the Swarming Claw, Nullrune Boots, Nullrune Gloves, Nullrune Hood, Nullrune Robe, Runebleed Robe, Scuttle Toes, Silent Stilettos, Spellfire Cloak, Stalker's Steps, Topsy Turvy |
+| arcane barrier | live — v4.02 — BUILT, and the record was stale by its own definition: `inert-dummy` means 'goes live in Phase 2', and Phase 2 landed at v2.71. arcaneSoaks offers it at the point arcane damage is dealt, on both boards; the trainer's vanilla dummy deals no arcane, which is a fact about that opponent | Achilles Accelerator, Aetherstorm Wellingtons, Arcane Lantern, Bull's Eye Bracers, Crown of Dichotomy, Double Cross Strap, Enclosed Firemind, Mask of the Swarming Claw, Nullrune Boots, Nullrune Gloves, Nullrune Hood, Nullrune Robe, Runebleed Robe, Scuttle Toes, Silent Stilettos, Spellfire Cloak, Stalker's Steps, Topsy Turvy |
 | battleworn | live — -1 counter per block, survives at 0 | Beaten Trackers, Blood Scent, Bolt'n Boots, Pouncing Paws, Prey Spotters, Refraction Bolters, Tearing Shuko |
 | blade break | live — equipment destroyed after blocking | Carrion Crown, Flat Trackers, Ironrot Gauntlet, Ironrot Helm, Ironrot Legs, Ironrot Plate, Line Crossers, Stand Strong, Washed Up Wave |
 | boost | live — per-attack prompt; banish top, Mechanologist grants go again | Big Bertha, Crankshaft, Fender Bender, Jump Start, Out Pace, Rev Up, Teklo Trebuchet 2000, Throttle, Under Loop, Zero to Sixty, Zipper Hit |
@@ -50,7 +50,7 @@ Generated 2026-09-04T17:23:36.962Z · app v4.00 · data sage-v13 · db 797 recor
 | lightning fusion | unreviewed — RULED 2026-07-25 (spec in tools/rulings.json) — Briar — fusion cost rider | Arcanic Shockwave, Entwine Lightning |
 | mark | live — RULED 2026-07-25: qualifier only; the marked state now rides on g.dMarked | Hot on Their Heels, Lair of the Spider, Mark of the Huntsman, Mark the Prey |
 | meld | live — v3.34 built the whole declaration — isSplit/splitFx/splitCostsAP, the half is chosen before the payment, and judge refuses half:"both" without the keyword. RULED 2026-07-25 (spec in tools/rulings.json) | Arcane Seeds // Life, Burn Up // Shock |
-| opt | partial — RULED 2026-07-25: top N, any order, top or bottom. Auto-sorted by advisor value; the choose-and-order popup is still pending | Aether Spindle, Cindering Foresight, Read the Glide Path, Ridge Rider Shot, Whisper of the Oracle |
+| opt | partial — v4.02 — the NOTE was stale, not the status. The sheet has existed since v2.17: an `opt` op queues a real {tag:"opt"} prompt and the player toggles each looked-at card to the bottom, so 'auto-sorted by advisor value, popup still pending' was false. It stays PARTIAL for the half the ruling names that is genuinely not offered — ordering the cards KEPT on top; `applyPrompt` preserves their printed order. With N=1 that is complete | Aether Spindle, Cindering Foresight, Read the Glide Path, Ridge Rider Shot, Whisper of the Oracle |
 | overpower | unreviewed — defense restriction; needs CR wording | Spectral Rider |
 | phantasm | live — RULED 2026-07-25: a drawback — one blocker with 6+ printed POWER pops the attack; destroyed, so no go again and no action-point refund | Enigma Chimera, Phantasmal Haze, Spears of Surreality, Spectral Rider |
 | piercing | unreviewed — seen in pool; needs CR wording | Drill Shot |
@@ -62,7 +62,7 @@ Generated 2026-09-04T17:23:36.962Z · app v4.00 · data sage-v13 · db 797 recor
 | sharpen | live — v3.66 — ctrPut{kind:pow,n:1}; the MPW103 PRINTING carries the reminder text the database omits: put a +1{p} counter on the target, remove ALL +1{p} counters from IT at end of turn | Edict of Steel |
 | solflare | unreviewed — Boltyn package | Banneret of Salvation |
 | specialization | info — hero-locked card (normalized from '<Hero> Specialization') | Crow's Nest, Ice Eternal, Knucklehead, V of the Vanguard |
-| spellvoid | inert-dummy — destroy this to prevent N arcane — the dummy deals only physical | Halo of Illumination, Mask of the Swarming Claw |
+| spellvoid | partial — v4.02 — the same stale `inert-dummy` as arcane barrier: plain Spellvoid N is offered by arcaneSoaks at the point arcane damage is dealt, on both boards (Halo of Illumination and Spellbane Aegis print it). PARTIAL for the parametrised printing — Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain links you control' is refused with the rest of the X family, so the piece keeps its printed Arcane Barrier 1 (tools/approx.js: spellvoid-x) | Halo of Illumination, Mask of the Swarming Claw |
 | steal | unreviewed — Arakni package | Jack Be Quick |
 | stealth | live — RULED 2026-07-25: does nothing alone — a qualifier other cards test for | Art of Desire: Body, Art of Desire: Mind, Infect, Mark of the Black Widow, Mark of the Funnel Web, Mark the Prey, Reaper's Call |
 | surge | partial — v3.70 - PARTIAL, and the record said unreviewed. classifyClause reads the Surge dash line into a surgeOverN condition and effects evaluates it; Aether Quickening and Open the Flood Gates both read full. It is partial rather than live because the condition is APPROXIMATED as amp>0 rather than the damage actually dealt - partial counts as built for an upside and never for a drawback (v3.00) | Aether Quickening, Open the Flood Gates |

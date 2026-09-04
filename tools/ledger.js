@@ -26,7 +26,16 @@
    ============================================================ */
 
 const KEYWORDS = {
-   "arcane barrier":      {status:"inert-dummy", note:"prevents arcane damage — the dummy deals only physical"},
+   /* WAS `inert-dummy` FROM v2.21 TO v4.02, on a reason that named a
+      training prop retired at v2.71. `parser.arcaneSoaks` reads the
+      keyword off the gear AND the board and `effects.js` offers the soak
+      at the one place a hero takes arcane damage, which is in the SHARED
+      body — so both boards pay it. Measured at v4.02: 19 pool cards print
+      Arcane Barrier, 19 emit an arcane op, and 4 of the 15 precons hold
+      one, so at the TABLE the opponent really can burn you. It stays
+      unreachable on the TRAINER, and that is a property of DUMMY_DECK —
+      12 vanilla attacks, 0 of them arcane — rather than of the keyword. */
+   "arcane barrier":      {status:"live",        note:"v4.02 — BUILT, and the record was stale by its own definition: `inert-dummy` means 'goes live in Phase 2', and Phase 2 landed at v2.71. arcaneSoaks offers it at the point arcane damage is dealt, on both boards; the trainer's vanilla dummy deals no arcane, which is a fact about that opponent"},
    "battleworn":          {status:"live",        note:"-1 counter per block, survives at 0"},
    "blade break":         {status:"live",        note:"equipment destroyed after blocking"},
    "boost":               {status:"live",        note:"per-attack prompt; banish top, Mechanologist grants go again"},
@@ -54,7 +63,7 @@ const KEYWORDS = {
    "lightning fusion":    {status:"unreviewed",  note:"RULED 2026-07-25 (spec in tools/rulings.json) — Briar — fusion cost rider"},
    "mark":                {status:"live",        note:"RULED 2026-07-25: qualifier only; the marked state now rides on g.dMarked"},
    "meld":                {status:"live",        note:"v3.34 built the whole declaration — isSplit/splitFx/splitCostsAP, the half is chosen before the payment, and judge refuses half:\"both\" without the keyword. RULED 2026-07-25 (spec in tools/rulings.json)"},
-   "opt":                 {status:"partial",     note:"RULED 2026-07-25: top N, any order, top or bottom. Auto-sorted by advisor value; the choose-and-order popup is still pending"},
+   "opt":                 {status:"partial",     note:"v4.02 — the NOTE was stale, not the status. The sheet has existed since v2.17: an `opt` op queues a real {tag:\"opt\"} prompt and the player toggles each looked-at card to the bottom, so 'auto-sorted by advisor value, popup still pending' was false. It stays PARTIAL for the half the ruling names that is genuinely not offered — ordering the cards KEPT on top; `applyPrompt` preserves their printed order. With N=1 that is complete"},
    "overpower":           {status:"unreviewed",  note:"defense restriction; needs CR wording"},
    "phantasm":            {status:"live",        note:"RULED 2026-07-25: a drawback — one blocker with 6+ printed POWER pops the attack; destroyed, so no go again and no action-point refund"},
    "piercing":            {status:"unreviewed",  note:"seen in pool; needs CR wording"},
@@ -66,7 +75,7 @@ const KEYWORDS = {
    "sharpen":             {status:"live",        note:"v3.66 — ctrPut{kind:pow,n:1}; the MPW103 PRINTING carries the reminder text the database omits: put a +1{p} counter on the target, remove ALL +1{p} counters from IT at end of turn"},
    "solflare":            {status:"unreviewed",  note:"Boltyn package"},
    "specialization":      {status:"info",        note:"hero-locked card (normalized from '<Hero> Specialization')"},
-   "spellvoid":           {status:"inert-dummy", note:"destroy this to prevent N arcane — the dummy deals only physical"},
+   "spellvoid":           {status:"partial",     note:"v4.02 — the same stale `inert-dummy` as arcane barrier: plain Spellvoid N is offered by arcaneSoaks at the point arcane damage is dealt, on both boards (Halo of Illumination and Spellbane Aegis print it). PARTIAL for the parametrised printing — Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain links you control' is refused with the rest of the X family, so the piece keeps its printed Arcane Barrier 1 (tools/approx.js: spellvoid-x)"},
    "steal":               {status:"unreviewed",  note:"Arakni package"},
    "stealth":             {status:"live",        note:"RULED 2026-07-25: does nothing alone — a qualifier other cards test for"},
    "surge":               {status:"partial",     note:"v3.70 - PARTIAL, and the record said unreviewed. classifyClause reads the Surge dash line into a surgeOverN condition and effects evaluates it; Aether Quickening and Open the Flood Gates both read full. It is partial rather than live because the condition is APPROXIMATED as amp>0 rather than the damage actually dealt - partial counts as built for an upside and never for a drawback (v3.00)"},

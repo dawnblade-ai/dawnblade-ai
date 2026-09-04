@@ -9,6 +9,128 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.02 — the approximation ledger, and nobody had ever swept it
+
+`tools/ledger.js` enumerates every KEYWORD this project claims to
+understand, and asking the engine about those records rather than reading
+them has now caught **twelve** stale entries. **Nothing did it for the
+RULES MACHINE the cards run inside** — which has been accumulating stated
+approximations since v2.45's CR review, in prose, in CLAUDE.md's "Known
+approximations" section and in comments scattered across three files.
+
+**A DOC CLAIM IS A TEST WITH NO ASSERTION** (v3.41), and this is that rule
+applied to the largest surviving pile of them.
+
+### `tools/approx.js` — 26 records, each with a board and a probe
+
+Every entry carries its `status`, the `cr` rule it deviates from (or
+`null` where the CR is silent), and the **board** it lives on — because
+v3.01's shape, a rule that exists on one board only, is the recurring
+defect in exactly this area.
+
+`test/approx.test.js` gives every record a probe that DRIVES the engine,
+pointed in one of two directions:
+
+| status | the probe asserts | goes red when |
+|---|---|---|
+| `stated` / `open` | **the deviation is still there** | somebody BUILDS it — which forces the record to be deleted rather than left to rot |
+| `closed` | **the thing is built** | it regresses |
+
+Getting the direction backwards is the failure mode to watch for: a probe
+pointed the wrong way passes both before and after the work. The census is
+asserted in BOTH directions (v2.47) — a record with no probe is a claim
+nothing checks, a probe with no record is a check nobody can find — and
+the three status counts are pinned, so moving a record is a deliberate
+edit.
+
+### SEVEN OF CLAUDE.md's OWN ENTRIES HAD STOPPED BEING TRUE
+
+Every one closed by later work with the record left standing:
+
+| record | closed by |
+|---|---|
+| "a runechant created by PLAYING an attack pops on that same swing" | **v2.23** — `execute` captures the firing set before the card acts |
+| "ally swings are simplified (no action point consumed)" | **v3.44** — `from:"ally"` charges the ability's cost and the point |
+| "*If you do, …* is deliberately unread" | **v3.88–v3.95** — `thisWayMet`, `_costWay`, `_tookWay`, both spellings |
+| "a leaves/enters-the-arena payload fires when the card is PLAYED" | **v3.07** (`sweepArena`) and **v3.20** (`entersLeaves`) |
+| "Inertia is still a `noop` … the obvious next one to make real" | built — `effects.resolveInertia`, called by both boards |
+| "`soul` is the one migrated zone never exercised in live play" | driven by drills across six files |
+| "the dummy still has no action phase" | **v2.71**, for the TABLE. Still true of the trainer — so the record was SPLIT rather than deleted |
+
+**AND THREE MORE IN THE KEYWORD LEDGER.** `arcane barrier` and
+`spellvoid` were still `inert-dummy` — a status whose own definition is
+*"goes live in Phase 2"*, and Phase 2 landed at v2.71 — on a reason ("the
+dummy deals only physical") naming a training prop that no longer exists.
+Measured: 19 pool cards print Arcane Barrier, 19 emit an arcane op, and 4
+of the 15 precons hold one, so at the table the opponent really can burn
+you; `arcaneSoaks` offers the soak from the SHARED body. It stays
+unreachable on the trainer, and that is a fact about `DUMMY_DECK` rather
+than about the keyword. `opt` claimed "the choose-and-order popup is still
+pending" — the sheet has existed since v2.17.
+
+### SABOTAGE FOUND TWO REAL DEFECTS, AND FOUR OF MY OWN FIXTURES
+
+**`runeAtPlay` HAD BEEN DEAD SINCE v3.22.** Declared in `execute` and read
+by nothing — v3.22 moved the runechant pop to the general `atkTrigAt` site
+and left the capture behind — while **two comments still cited it as the
+mechanism**, and so did CLAUDE.md's approximations section. Dead RULES
+code is worse than dead code elsewhere (v3.67, v3.77): it reads as a rule
+somebody can reach. Found by sabotaging it and watching nothing fail.
+
+**`tools/crindex.js` WAS READING ITS OWN OUTPUT.** It scans every `*.md`
+in the repo root and WRITES `CR-INDEX.md` into that same directory, so
+**123 of the 1123 citations it reported were the tool citing itself** —
+and a rule that appeared once could never leave the index, because the
+report had written it down. Found by sabotage too: a fake rule injected
+into `engine/` to prove the new drill bites was still in the index after
+the sabotage was reverted. The honest count is **1000**.
+
+The four fixtures were all shapes this project already names, which is the
+point of running the pass:
+
+| probe | silent because | fixed by |
+|---|---|---|
+| the runechant capture | it GREPPED for a name that survives in three comments — a scan cannot tell a test from a NEUTERED one | driving Viserai's rite, the one card that separates the two readings |
+| the layer step | it drove `effects.execute` and read `stack`, which is the TRAINER's chain display | driving `judge.reduce`, because the question is about the turn structure |
+| the start phase | it hand-wrote `{phase:"start", priority:null}` and then asserted priority was null — a fabricated state answering its own question (v2.80) | driving a real turn handoff |
+| the crush halving rider | `fx.crush` is `undefined` on that card, so the filter ran over `[]` and held whatever the engine did | ASK FOR THE REFUSAL (v3.98) — 12 cards print a Crush rider, 11 read, and the census names the one that does not, with a control |
+
+### `npm run crindex`, RE-DERIVED AFTER EIGHTY-FIVE VERSIONS
+
+**63 distinct rules, 50 guarded, 3 UNGUARDED — the verdicts had not moved
+at all.** A clean result is worth having PROVED rather than assumed
+(v3.97, v4.00), so `test/crindex.test.js` pins the counts AND the members:
+two rules swapping buckets keeps every number intact, which is v3.98's
+qualifier census one tool over.
+
+**`--check` COULD NEVER BE GREEN AND NOTHING RAN IT.** It demanded ZERO
+unguarded rules, and three of the citations are SECTION POINTERS naming a
+whole section rather than a rule — no drill can drive one. So the gate
+exited non-zero on every run since v3.17 and no drill and no CI step ever
+called it. It pins a SET now, the way `wire.test.js`'s HEADLESS list does.
+
+**THE `prose` BUCKET WENT 6 → 4, AND THE LEDGER MOVED IT.** A rule cited
+only in documentation is one this project has written ABOUT and never
+encoded. Two of them — the layer-step window among them — are now pinned
+by a drill that asserts the deviation and fails the day it is built.
+
+**AND WRITING THAT DRILL MOVED THE INDEX, WHICH IS THE HAZARD THE TOOL'S
+OWN HEADER NAMES.** Its first draft spelled two section pointers in a
+comment — prose, in a file the scan classifies as a DRILL — and both were
+upgraded from UNGUARDED to guarded on the strength of a sentence that
+drives nothing. Same trap `sync.test.js` documents, same answer: **reword
+the prose rather than weaken the scan.**
+
+### The numbers
+
+2171 → **2204 drills**, 0 failing, 4 skipped (the live-wire drift drills,
+as designed). Coverage unchanged at **381 full / 21 part / 3 none** —
+deliberately: this version moved no card. Fairness clean, 72 scenes
+passing, 210 self-play games with 0 stalls, 0 refusals and 0 invariant
+violations.
+
+---
+
 ## v4.01 — two cards that needed no new machinery
 
 `npm run gaps` reported **26 unfinished, 19 one clause away**. These two are

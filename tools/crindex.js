@@ -3,7 +3,19 @@
  *
  *   node tools/crindex.js            ranked report + CR-INDEX.md
  *   node tools/crindex.js --json     machine-readable
- *   node tools/crindex.js --check    exit non-zero if a rule regressed to UNGUARDED
+ *   node tools/crindex.js --check    exit non-zero if a NEW rule is UNGUARDED
+ *
+ * `--check` USED TO DEMAND ZERO, AND IT COULD NEVER BE GREEN.  Three of the
+ * project's citations are SECTION POINTERS — "CR 4.4" naming the end phase as a
+ * whole, "CR 7" naming combat — and a section is not a rule a drill can drive.
+ * So the gate failed on every run since v3.17 and nothing ever called it: a
+ * check that is always red is a check nobody reads, which is the same defect as
+ * a doc claim with no assertion (v3.41) wearing a green-CI coat.
+ *
+ * IT PINS A SET NOW, the way `wire.test.js`'s HEADLESS list does.  A rule
+ * crossing the line is a deliberate edit to `ALLOWED_UNGUARDED`, and a NEW one
+ * fails.  `test/crindex.test.js` runs it, so the verdict is drilled rather than
+ * being a report somebody remembers to read.
  *
  * WHY THIS EXISTS.  A rules revision (FaB 2.0 happened; 3.0 is teased) does not
  * arrive as a diff against our source.  It arrives as a renumbered, reworded CR,
@@ -97,7 +109,20 @@ const GROUPS = [
   { key: "engine", label: "engine",  files: fs.readdirSync(path.join(ROOT, "engine")).filter(f => f.endsWith(".js")).map(f => "engine/" + f) },
   { key: "trainer", label: "trainer", files: ["index.html"] },
   { key: "drill", label: "drills",   files: fs.readdirSync(path.join(ROOT, "test")).filter(f => f.endsWith(".test.js")).map(f => "test/" + f) },
-  { key: "docs",  label: "docs",     files: fs.readdirSync(ROOT).filter(f => f.endsWith(".md")) },
+  /* THE TOOL'S OWN OUTPUT IS NOT AN INPUT (v4.02). `CR-INDEX.md` is
+     written into the directory this line scans, so every rule the report
+     names was counted as a `docs` citation of itself — which means a rule
+     that appeared ONCE could never leave the index, and the tool's own
+     `prose` bucket and rule total carried its history rather than the
+     source's. Found by sabotage: a fake rule injected into engine/ to
+     prove the drill bites was still in the index after the sabotage was
+     reverted, because the report had already written it down.
+
+     A SCAN THAT READS ITS OWN OUTPUT IS THE NO-MIRROR RULE INSIDE ONE
+     TOOL — the same family as a source guard aimed at the wrong file
+     (v3.00) or a report that rots against the code it describes (v3.52). */
+  { key: "docs",  label: "docs",     files: fs.readdirSync(ROOT)
+      .filter(f => f.endsWith(".md") && f !== "CR-INDEX.md") },
 ];
 
 const rules = new Map();  // rule -> {rule, sites:{engine:[],trainer:[],drill:[],docs:[]}, gloss}
@@ -225,4 +250,18 @@ for (const r of all.filter(x => x.engine.length + x.trainer.length)) {
 fs.writeFileSync(path.join(ROOT, "CR-INDEX.md"), md.join("\n"));
 console.log("\nwrote CR-INDEX.md");
 
-if (process.argv.includes("--check") && by("UNGUARDED").length) process.exit(1);
+/* THE THREE SECTION POINTERS. Each names a whole CR section rather than a
+   rule — there is no behaviour "CR 7" alone asserts — so no drill can
+   guard one, and demanding zero made the gate permanently red. Pinned, so
+   a fourth is a deliberate edit and anything else fails. */
+const ALLOWED_UNGUARDED = ["4.4", "4.3.1", "7"];
+if (process.argv.includes("--check")) {
+  const bad = by("UNGUARDED").map(r => r.rule).filter(r => !ALLOWED_UNGUARDED.includes(r));
+  const gone = ALLOWED_UNGUARDED.filter(r => !by("UNGUARDED").some(x => x.rule === r));
+  if (bad.length)  console.error("UNGUARDED and not allowed: " + bad.join(", "));
+  if (gone.length) console.error("allowed-unguarded rules that are no longer unguarded " +
+                                 "(delete them from ALLOWED_UNGUARDED): " + gone.join(", "));
+  if (bad.length || gone.length) process.exit(1);
+  console.log("check: the UNGUARDED set is exactly the " + ALLOWED_UNGUARDED.length +
+              " allowed section pointers");
+}

@@ -1,4 +1,134 @@
-# Handoff — Dawnblade, at v4.01 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v4.02 · THE RULES MACHINE, SWEPT FOR THE FIRST TIME
+
+## ⚠ START HERE: `tools/approx.js` IS THE NEW LEDGER
+
+**26 records, each with a status, a CR rule and the BOARD it lives on.**
+`node tools/approx.js` prints them; `test/approx.test.js` drives every one.
+It is the rules-machine twin of `tools/ledger.js`, and it exists because
+nobody had ever swept the stated approximations — CLAUDE.md's "Known
+approximations" section had been prose since v2.45's CR review.
+
+| status | count | what it means |
+|---|---|---|
+| `stated` | 10 | a deliberate deviation, argued and still in place |
+| `open` | 9 | a gap nobody has justified — **this is the work list** |
+| `closed` | 7 | the record was stale; the prose is corrected |
+
+**THE PROBES POINT TWO WAYS AND THAT IS THE WHOLE DESIGN.** A
+`stated`/`open` record's probe asserts THE DEVIATION, so **the drill goes
+red the day somebody builds it** and the record must be deleted rather
+than left to rot. A `closed` one asserts the thing is built. Pointing one
+the wrong way is the failure mode to watch for — it passes both before and
+after the work.
+
+### THE NINE `open` RECORDS, WHICH ARE THE WORK LIST
+
+| id | CR | what is missing |
+|---|---|---|
+| `layer-step-window` | 7.1.2 | an attack goes straight onto the chain; in the CR it sits on the stack as a layer first. `priority.js` already has the hooks (`queueEmpty`, `passOutcome`'s `resolve-layer`) |
+| `simultaneous-trigger-order` | 4.1.8a | the order is fixed; the CR hands it to the turn-player. Needs a prompt in a phase where CR 4.4.1 gives nobody priority |
+| `trainer-fatigue-loss` | 4.5.3 | **v3.01's shape** — judge dropped the invented deck-out loss at v2.45 and `index.html` still has it |
+| `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
+| `crush-halving-rider` | — | Walk in My Shoes, the ONE of twelve crush riders that refuses |
+| `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
+| `aura-ward-prevention-pool` | — | a RULING, not an engineering call (v3.84) |
+| `cloaked-face-down-values` | — | a RULING (v3.99) |
+| `cloaked-display` | — | deferred with the UI pass, on the record |
+
+**THE FIRST TWO ARE THE CR-EXACTNESS WORK** and neither is blocked. The
+layer step is the larger one and it is genuinely structural: what is
+missing is the distinction between "on the stack" and "on the chain",
+which no card in this pool asks about — the ATTACK step immediately after
+opens an equivalent window for both seats, verified in a driven game.
+
+## ⚠ WHAT THE SWEEP FOUND — READ THIS BEFORE TRUSTING ANY NOTE
+
+**SEVEN of CLAUDE.md's own approximation entries had stopped being true**,
+and three more in the KEYWORD ledger. The full table is in CHANGELOG.md.
+The pattern is one sentence:
+
+> **A doc claim is a test with no assertion** (v3.41), and the way to keep
+> one true is to make something ASK the engine every run.
+
+**TWO REAL DEFECTS, BOTH FOUND BY SABOTAGE RATHER THAN BY READING:**
+
+- **`runeAtPlay` had been dead since v3.22** — declared in `execute`, read
+  by nothing, with two comments still citing it as the mechanism and
+  CLAUDE.md quoting it as well. v3.22 moved the runechant pop to the
+  general `atkTrigAt` site and left the capture behind. Dead RULES code is
+  worse than dead code elsewhere (v3.67, v3.77): it reads as a rule
+  somebody can reach.
+- **`tools/crindex.js` was reading its own output** — it scans every root
+  `*.md` and WRITES `CR-INDEX.md` into that directory, so 123 of the 1123
+  citations were the tool citing itself, and a rule that appeared once
+  could never leave the index.
+
+## ⚠ `npm run crindex`, RE-DERIVED AFTER EIGHTY-FIVE VERSIONS
+
+**63 rules · 50 guarded · 3 UNGUARDED · 4 prose.** The verdicts had not
+moved since v3.17. That is a clean result and it is PINNED now
+(`test/crindex.test.js`) rather than assumed — counts and members both,
+because two rules swapping buckets keeps every number intact.
+
+**`--check` COULD NEVER BE GREEN AND NOTHING RAN IT.** It demanded zero
+UNGUARDED and three citations are section pointers, which no drill can
+drive. It pins a SET now.
+
+**THE `prose` BUCKET IS THE THING TO WATCH.** A rule cited only in
+documentation has been written about and never encoded. It went 6 → 4
+because the ledger's drills reached two of them.
+
+## ⚠ THE REMAINING THREE CARDS, UNCHANGED
+
+`npm run audit`: **381 full / 21 part / 3 none** — this version moved no
+card, deliberately.
+
+| card | printed | waiting on |
+|---|---|---|
+| **Glisten** | *"distribute up to four +1{p} counters among any number of weapons"* | a DISTRIBUTION sheet. `ctrPut` and the sharpen wipe (v3.66) are both built |
+| **Danger Digits** | *"target dagger you control that isn't on the active chain link deals 1 damage… the dagger has hit"* | a "has hit" FICTION for a card that never attacked |
+| **Hope Merchant's Hood** | *"shuffle any number of cards from your hand into your deck, then draw that many"* | deck manipulation, and a rider whose count is the pick's own size |
+
+**NONE OF THE THREE IS WAITING ON ITS PAYLOAD** — seventh version running.
+What refuses is a cost shape, a prompt shape, or a zone move.
+
+## ⚠ A LEAD, MEASURED AND NOT YET FOLLOWED
+
+**EIGHT POOL TOKENS READ `tier: none`, AND ONE OF THEM WORKS.** Inertia is
+in that set and `effects.resolveInertia` implements it — through
+`effects.isInertia`, which matches the token **BY NAME**. That is v3.22's
+Runechant shape exactly: *"Runechant was built by NAME and the other three
+tokens printing the identical trigger read `tier: none` and did nothing."*
+
+The set is pinned by `tools/approx.js`'s `unbuilt-three` probe: **Ash,
+Fealty, Gate to i'Arathael, Goldkiss Rum, Inertia, Soul Shackle,
+Toughness, Zen State.** Each needs its own text read before anyone can say
+whether it is inert or merely unlisted — and **a tier that says `none` on
+a card that works is a LEAD** (v3.93, third outing).
+
+## THE METHOD THAT FOUND ALL OF IT
+
+Unchanged, and it paid again:
+
+- **Sabotage every probe, and check the sabotage APPLIED and CAN EXPRESS
+  the bug.** Six sabotages this version were silent because the sabotage
+  could not reach the case, not because the drill was weak — a rename that
+  survives in comments, a `CARD_ZONES` edit that moved a zone into the
+  copy-verbatim bucket, an unused const, a comment-only edit.
+- **Four of my own fixtures were wrong before the engine was.** Every one
+  is a shape this project already names: a grep instead of a drive; the
+  TRAINER's `stack` read for a question about the TABLE; a fabricated
+  state answering its own question (v2.80); a filter over a field the card
+  does not set, passing vacuously (v3.98 — **ask for the refusal**).
+- **Measure before widening.** 23 / 17 / 1 / 3 / 2 / **11** for the bare
+  when-this-attacks family; 12 crush riders of which 11 read; 19 Arcane
+  Barrier records against a dummy deck that deals zero arcane.
+
+
+---
+
+# (v4.01 handoff, kept below)
+
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 

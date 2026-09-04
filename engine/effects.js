@@ -1897,14 +1897,22 @@ function makeEffects(ctx){
        counter unwinding, an on-hit forge) was not there when the attack
        was played and therefore survives to the next swing. Reading the
        board again at resolution is what made it pop on its own attack. */
-    const runeAtPlay = runeCount(act(s));
+    /* THE RUNECHANT COUNT USED TO BE CAPTURED HERE and v3.22 moved the
+       pop to the general site below, leaving the capture behind — dead
+       for seventy versions, with the two comments that explain the rule
+       still naming it. DEAD RULES CODE IS WORSE THAN DEAD CODE ELSEWHERE
+       (v3.67, v3.77): it reads as a rule somebody can reach, and this one
+       was quoted in CLAUDE.md's own approximations section as the
+       mechanism. Found at v4.02 by SABOTAGING it and watching nothing
+       fail — the capture below is the live one. */
     /* THE SAME RULE, IN ITS GENERAL FORM (v3.22). Four pool tokens print
        "when you play an attack action card[ or activate a weapon attack],
        destroy this and X" and only Runechant was built — by NAME, through
        `isRunechantEntry`. Courage, Quicken and Briar's Embodiment of
        Lightning read `tier: none` and did nothing.
 
-       Captured HERE for the same reason `runeAtPlay` is: the auras that
+       THIS IS THE ONE CAPTURE (v4.02 — the runechant-specific one above
+       it was dead). The auras that
        trigger are the ones in the arena at this instant, so one the card
        itself conjures was not there when the attack was played and
        survives to the next swing. Captured by ENTRY, and popped later by
@@ -3147,10 +3155,12 @@ function makeEffects(ctx){
          defend step. That is why this is here and not in resolveStack,
          where the arcane damage used to land after the attack's own damage.
 
-         `runeAtPlay` is the count captured before this card did anything,
-         so a runechant this attack conjured is not among them. Each token
-         destroys itself and deals its own damage, and there is no "you may"
-         in the text — all of them, mandatorily. */
+         `atkTrigAt` is the firing set captured before this card did
+         anything, so a runechant this attack conjured is not among them —
+         it is popped BY UID, because the board is about to change
+         underneath this. Each token destroys itself and deals its own
+         damage, and there is no "you may" in the text — all of them,
+         mandatorily. */
       /* THE HARDCODED RUNECHANT POP THAT USED TO SIT HERE IS GONE
          (v3.22). It matched the token BY NAME and fired after `pend`,
          which is why the three other tokens printing the identical

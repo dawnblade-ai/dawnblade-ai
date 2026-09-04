@@ -1391,9 +1391,18 @@ function classifyClause(raw){
     return R([["payOrLose", +m[1], cost]]);
   }
   /* the clash block reads this off the card and applies it to the block */
-  /* spellvoid destroys itself to stop arcane; the dummy throws only fists */
+  /* THE PARAMETRISED PRINTING IS REFUSED WITH THE REST OF THE X FAMILY
+     (Ice Eternal), because the chain belongs to the ATTACKER rather than
+     to the hero being hit. The piece keeps its printed Arcane Barrier 1.
+
+     THE REASON HERE USED TO READ "the dummy throws only fists" — a
+     training prop retired at v2.71, and false twice over: PLAIN spellvoid
+     is live (`arcaneSoaks` offers it at the point arcane damage is dealt,
+     from the shared body, so both boards pay it), and at the table seat 1
+     plays a real hero deck. A noop must describe the clause in front of it
+     (v3.16) and its reason must describe a world that still exists. */
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
-    return NOOP("stops arcane damage — the dummy throws only fists");
+    return NOOP("X is refused, as Ice Eternal's is — the chain belongs to the attacker, not to the hero being hit");
   /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
      This was a NOOP reading "the end phase already destroys it at 3
      counters" — a reason that named a payload living in ONE board's end

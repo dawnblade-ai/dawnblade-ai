@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2171 drills**.
+This is `node --test "test/*.test.js"` — currently **2204 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -243,6 +243,12 @@ drill that passed.**
    v2.45's nine bugs lived under green drills that read the log: the end
    phase really did print (a) through (f) in order, and it really did
    say "draws to intellect". It was drawing for the wrong hero.
+6d. **The approximation ledger** (`test/approx.test.js`) — every record in
+   `tools/approx.js` has a probe that DRIVES the engine, and the status says
+   which way it points. A `stated`/`open` record's drill goes RED the day
+   the gap is closed, which is v3.41's rule as a test rather than as prose.
+   `test/crindex.test.js` pins the CR index's verdict SETS and runs
+   `--check`, which could never be green before v4.02.
 7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -2028,6 +2034,98 @@ silent skip is not a pass. It also runs `npm run scenes`, compiles both
 every engine module the page loads (count DERIVED from `index.html`, never
 stated) and checks the live `APP_VER` matches the repo. That closes the gap
 between "pushed" and "live" which a session cannot check for itself.
+
+### `tools/approx.js` — THE APPROXIMATION LEDGER (v4.02)
+
+```
+node tools/approx.js         the records, ranked by status
+```
+
+`tools/ledger.js` does this for KEYWORDS and it has caught **twelve** stale
+records — nine at v3.99, three more in this sweep — every one found by
+**asking the engine rather than reading the note**. Nothing did it for the
+RULES MACHINE the cards run inside, which has been accumulating stated
+approximations since v2.45's CR review.
+
+**CLAUDE.md's "Known approximations" section was that list, in prose, and
+SEVEN of its entries had stopped being true.** Six were closed by later
+work with the record left standing; one had a conclusion that held while
+its stated REASON had gone false. That is v3.41's rule (*when you close a
+recorded gap, delete the record*) and v3.69's twin (*when a record says a
+thing is unbuilt, go and ask the engine*) costing a seventh, eighth and
+ninth entry.
+
+**EVERY RECORD HAS A PROBE, AND THE STATUS SAYS WHICH WAY IT POINTS.**
+
+| status | the probe asserts | goes red when |
+|---|---|---|
+| `stated` / `open` | **the deviation is still there** | somebody BUILDS it — so closing a gap FORCES the record to be deleted |
+| `closed` | **the thing is built** | it regresses |
+
+Pointing a probe the wrong way is the failure mode to watch for: it passes
+both before and after the work. The census is asserted in BOTH directions
+(v2.47) and the three status counts are pinned, so moving a record is a
+deliberate edit.
+
+**EACH RECORD CARRIES THE BOARD IT LIVES ON**, because v3.01's shape — a
+rule that exists on one board only — is the recurring defect in exactly
+this area. `trainer-fatigue-loss` is the live example: judge.js dropped the
+invented deck-out loss at v2.45 (CR 4.5.3 has three ways to lose and no
+more) and `index.html` still carries it.
+
+**AND THE PROBES MUST DRIVE.** Four of the first draft's probes were
+silent under sabotage and every one was a shape this file already names —
+a grep for a name that survives in three comments, a fixture reading the
+TRAINER's `stack` for a question about the TABLE's turn structure, a
+hand-written state answering its own question (v2.80), and a filter over a
+field the card does not set, which passes vacuously (v3.98: **ask for the
+refusal**).
+
+### A SCAN THAT READS ITS OWN OUTPUT (v4.02)
+
+`tools/crindex.js` scans every `*.md` in the repo root and **writes
+`CR-INDEX.md` into that same directory**. So the report was an input to
+itself: **123 of the 1123 citations it reported were the tool citing
+itself**, and a rule that appeared once could never leave the index,
+because the report had written it down.
+
+**FOUND BY SABOTAGE, NOT BY READING IT.** A fake rule injected into
+`engine/` to prove the new drill bites was still in the index after the
+sabotage was reverted. The honest citation count is **1000**.
+
+That is the no-mirror rule inside a single tool — the same family as a
+source guard aimed at the wrong file (v3.00) and a report that rots against
+the code it describes (v3.52).
+
+### A GATE THAT COULD NEVER BE GREEN IS A GATE NOBODY RUNS (v4.02)
+
+`node tools/crindex.js --check` demanded **ZERO** unguarded rules. Three of
+this project's citations are **SECTION POINTERS** — a whole CR section
+named as a whole rather than a rule — and no drill can drive one, so the
+gate exited non-zero on every run since v3.17 and **no drill and no CI step
+ever called it**. v3.41's doc-claim-with-no-assertion in a green-CI coat.
+
+It pins a SET now, the way `wire.test.js`'s `HEADLESS` list does, and
+`test/crindex.test.js` runs it.
+
+**RE-DERIVED AFTER EIGHTY-FIVE VERSIONS THE VERDICTS HAD NOT MOVED** — 63
+distinct rules, 50 guarded, 3 UNGUARDED. A clean result is worth having
+PROVED rather than assumed (v3.97, v4.00), so the counts AND the members
+are pinned: two rules swapping buckets keeps every number intact, which is
+v3.98's qualifier census one tool over.
+
+**THE `prose` BUCKET IS WHERE THE UNBUILT RULES LIVE**, and it went 6 → 4
+because the approximation ledger's drills reached two of them. A rule cited
+only in documentation is one this project has written ABOUT and never
+encoded; the layer-step window (CR 7.1.2) is the worked example, and it is
+`drill-only` now — pinned by a probe that asserts the deviation and fails
+the day it is built.
+
+**AND WRITING THAT DRILL MOVED THE INDEX.** Its first draft spelled two
+section pointers in a header comment — prose, in a file the scan classifies
+as a DRILL — and both were upgraded from UNGUARDED to guarded on the
+strength of a sentence that drives nothing. Same trap `sync.test.js`
+documents; same answer: **reword the prose rather than weaken the scan.**
 
 ### `npm run gaps` — WHAT ONE READER CLOSES THE MOST CARDS? (v3.52)
 
@@ -7545,11 +7643,22 @@ it carded effects only once the engine can actually read them.
 
 ## Known approximations — state these honestly, never paper over them
 
-- The dummy still has **no action phase**: its swing is the scripted
-  `[3,4,5][(turn-1)%3]` escalation, not a card played from its hand. Effects that
-  target an opponent's *turn* (frostbite, inertia, Crush's next-turn debuffs) stay
-  inert until it takes a real turn. The escalation now lives alone in `foeSwing`,
-  which is the seam a real played card slots into (roadmap item 3).
+> **THIS SECTION IS NOW A LEDGER, NOT PROSE (v4.02).** `tools/approx.js`
+> enumerates all of it with a status, a CR rule and the BOARD each
+> deviation lives on, and `test/approx.test.js` gives every record a probe
+> that drives the engine — a `stated`/`open` record's probe asserts the
+> deviation, so it goes RED the day somebody builds it. **The sweep that
+> produced it found SEVEN of the entries below had stopped being true.**
+> Read the ledger; the notes here are kept for their shape.
+
+- **The dummy has no action phase — TRAINER ONLY, and the record was wrong
+  about the table (corrected v4.02).** Seat 1 has had a start phase, an
+  action point it spends, a priority window and the shared end phase since
+  **v2.71**, and `sparring.act` plays real cards there. On the TRAINER the
+  opponent is still the scripted `[3,4,5][(turn-1)%3]` escalation in
+  `foeSwing`, so effects that target an opponent's *turn* stay inert on
+  that board alone. `tools/approx.js`: `dummy-no-action-phase` (closed) and
+  `trainer-priority-machine` (stated).
 - **Crumbling auras used to come back (fixed v2.16).** `newTurn` filtered auras
   with `sd==="turn"` off the board, logged them, and moved them to the graveyard
   — and then the return statement rebuilt the board from `s.board`, the *pre-filter*
@@ -7558,12 +7667,13 @@ it carded effects only once the engine can actually read them.
   the fix is that the rebuild now reads `you(n).board`, the filtered one. Worth
   knowing because the shape of the bug — a later `{...n, field:s.field}` silently
   reverting earlier work on `n` — is easy to reintroduce anywhere in this file.
-- **`soul` is the one migrated zone never exercised in live play.** Every other
-  zone was driven in a real game and inspected in React state; the on-hit soul
-  trigger needs an attack to actually connect, and the dummy blocked everything
-  the scripted player threw ("resolves for 0"). Its write path is the same
-  `youMut` idiom as `banish`, which *was* verified — but it is untested, not
-  proven. Drive Gravy Bones by hand when convenient.
+- ~~**`soul` is the one migrated zone never exercised in live play.**~~
+  **CLOSED, and the record stood for eighty versions (v4.02).** The soul is
+  driven by drills across six files — Boltyn's soul-banish ability cost
+  (v3.74), Gravy Bones, Fai's charge, Halo of Illumination's pick to the
+  soul (v4.01), Radiant Touch's cost (v3.79) and Cloaked. It is charged by
+  `execute` and an EMPTY one is refused before the ability resolves, on
+  both boards (`abSoulCost` / `abCostWhy`).
 - **`engine/priority.js` is not wired into `Battle` yet.** The trainer still
   gates windows with `mode` / `bphase` and the player still holds priority by
   construction. The module is the target shape and is drilled on its own; the
@@ -7630,7 +7740,12 @@ it carded effects only once the engine can actually read them.
 - Clash is honest as of v2.07: both sides reveal a real top card and **power** decides
   it (confirmed from the printed reminder text, not guessed). **A tie counts as no
   winner — CONFIRMED (user, 2026-08-19)**, so this is settled rather than assumed.
-- Ally swings are simplified (no action point consumed).
+- ~~Ally swings are simplified (no action point consumed).~~ **CLOSED AT
+  v3.44 (record corrected v4.02).** `allySwing` — which took the ally's
+  printed power straight off the opposing hero's life, free and unblockable
+  — is gone. An ally attacks through `from: "ally"` in `execute`, which
+  charges the ABILITY's own cost, the action point at resolution, and opens
+  a real defend step.
 - Auto-pitch/auto-discard picks the lowest advisor-valued card rather than prompting.
 - **Equipment abilities keep their riders.** `parseHeroPower` stops at the first
   period, which used to orphan the second sentence of an ability — Knucklehead rolled
@@ -7644,16 +7759,26 @@ it carded effects only once the engine can actually read them.
   `openPrompt` drains the queue at the end of `execute`/`resolveStack` — never inline,
   because the action must finish resolving first. One component, many flows: the other
   six prompt-shaped rulings should reuse it rather than growing their own.
-- **"If you do, …" is deliberately unread.** It hangs off an optional cost the engine
-  can't model; running it would re-introduce the free-ability bug v2.04 fixed. Cards
-  like Magmatic Carapace therefore stop at the cost line.
+- ~~**"If you do, …" is deliberately unread.**~~ **CLOSED ACROSS
+  v3.88–v3.95 (record corrected v4.02).** `thisWayMet` answers a `way:`
+  condition after the ops have run (v3.60's late pass), `_costWay` records
+  which branch of a modal cost was taken (v3.90), and `_tookWay` records a
+  card taken from the opponent (v3.95). **BOTH SPELLINGS read** — *"if you
+  do"* and *"if they do"*. The v2.04 property is intact: the rider fires
+  only when the cost was actually paid.
 - **The "handed to the dummy, therefore idle" note is RETIRED (v2.74).** It was
   true of a prop that paid no costs and took no action phase; seat 1 has had both
   since v2.71, and the log line that said so was deleted along with it. Runechant
   and Frostbite are real board auras; Bloodrot and Frailty keep their dedicated
-  counters. **Inertia is still a `noop`** and its stated reason ("the dummy has no
-  action phase") is now false — it is the same shape as Frostbite was and is the
-  obvious next one to make real.
+  counters. ~~**Inertia is still a `noop`**~~ — **BUILT, and the record was stale
+  (corrected v4.02).** `effects.resolveInertia` is a hand wipe at the
+  beginning of its controller's end phase, exported and called from
+  `beginEndPhase`, so BOTH boards run it. The clause is still filed `noop`
+  and that is now CORRECT: the noop's reason names the reader (v3.16), and
+  the reader exists. **Inertia the TOKEN still reads `tier: none`, and that
+  is a LEAD rather than a finding** — `effects.isInertia` matches it by
+  NAME, which is v3.22's Runechant shape exactly (see `tools/approx.js`'s
+  `unbuilt-three` probe, which pins the token set for this reason).
 - **Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.** Its
   printed cost is `XX`; nothing here models an X cost, so `create X ... tokens` is
   REFUSED rather than read as one. Creating a single token for a card that charges
@@ -7662,13 +7787,30 @@ it carded effects only once the engine can actually read them.
 - **`Spellvoid X` (Mask of the Swarming Claw) is refused for the same reason** —
   "where X is the number of chain links you control", and the chain belongs to the
   attacker rather than to the hero being hit. The piece keeps its printed Arcane
-  Barrier 1.
-- A runechant created by *playing* an attack pops on that same swing; strictly it should
-  survive to the next.
+  Barrier 1. **PLAIN spellvoid and plain arcane barrier are LIVE and the
+  keyword ledger said otherwise until v4.02**: both were `inert-dummy` on a
+  reason naming a training prop retired at v2.71, while `parser.arcaneSoaks`
+  has offered them at the point arcane damage is dealt, from the SHARED
+  body, for versions. Measured — 19 pool cards print Arcane Barrier, 19 emit
+  an arcane op, 4 of the 15 precons hold one. The NOOP's own reason for
+  Mask ("the dummy throws only fists") was stale the same way and is
+  corrected.
+- ~~A runechant created by *playing* an attack pops on that same swing.~~
+  **CLOSED AT v2.23, and the record survived until v4.02.** The firing set
+  is captured before the card does anything, so a token the attack itself
+  conjured is not among them — the token's own trigger is *"when you PLAY
+  an attack action card"*, and one that did not exist at that instant never
+  triggered for it. **The variable that comment named — `runeAtPlay` — had
+  itself been DEAD since v3.22**, which moved the pop to the general
+  `atkTrigAt` site and left the capture behind; deleted at v4.02, found by
+  sabotaging it and watching nothing fail.
 - The steam-builder is once-per-turn in the model.
-- "When this leaves/enters the arena, …" fires its payload when the card is *played*.
-  The trainer has no arena-departure schedule, so a Suspense aura's +{p} lands early.
-  Flagged `approx` by the parser so the ledger keeps counting it honestly.
+- ~~"When this leaves/enters the arena, …" fires its payload when the card
+  is *played*.~~ **CLOSED AT v3.07 and v3.20 (record corrected v4.02).**
+  `effects.sweepArena` is the schedule and the payload rides AFTER the
+  destroy in printed order; `entersLeaves` is one printed clause naming two
+  events, answered by two sites. Suspense ticks in `tickSuspense`, which
+  both turn structures call.
 - Activated abilities whose cost the readers can't model (discard-, banish- or
   soul-cost lines such as `Instant - Discard this: Amp 1`) are deliberately **inert**
   rather than free. Before v2.04 their effects fired on play at no cost.
