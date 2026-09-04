@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "3.98"; /* v3.98 - THE SAME CENSUS, ONE READER OVER - AND IT FOUND A GUARD THAT WAS NEVER COPIED. v3.97 censused the CONDITIONS; this censuses the QUALIFIER ATOMS, which is the same question asked of `qualMatches` - the single matcher for five families of single-shot grant. An atom the parser emits and the matcher does not test is a printed RESTRICTION silently dropped, which is v2.30's arrow buff landing on a sword. IT FOUND `amp`, AND IT WAS A SHAPE PROBLEM RATHER THAN A MISSING TEST: `instantNextQ` entries were `{...qualifier, amp}`, mixing the grant's PAYLOAD into the object being matched. `amp` is not a question about the card, and every other family in the group has kept the two apart since it was built (buffQ is {amt,q,rider}, gaNextQ is {q,rider}). The entry is {q, amp} now, and WIRE_V goes 4 -> 5 because a v4 entry read by a v5 client has no qualifier at all. AND THE REAL FIND IS ONE LAYER DOWN: `takeDefCap` (v3.64) was missing the guard `takeGaNext` has had since v3.43, and its OWN HEADER cites takeGaNext as "same shape and same rule" - it copied the shape and not the guard, which is v3.43's lesson verbatim. `qualMatches` answers TRUE for an ABSENT qualifier BY DESIGN, so a stale defCap entry off a wire capped EVERY attack's wall rather than the one its card names. THE TWO GROUPS ARE PINNED NOW, and the difference is the printed card: buffQ / atkBuff / costOff MAY be bare, because "your next attack gets +3{p}" prints no restriction at all and a null qualifier is the faithful reading; gaNextQ / instantNextQ / defCapNext are qualified BY CONSTRUCTION, so no qualifier means a stale entry and never a grant. Eight sabotages bite; three were silent first - one hit a different taker entirely (three findIndex lines look alike), and two needed a fixture that asks for a REFUSAL rather than a match, because `qualMatches` passes every field test vacuously on an object with no qualifier keys. Coverage unchanged at 379 full: this version moved no card's reading. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "3.99"; /* v3.99 - A KEYWORD PREFIX EATS ITS OWN GATE. `classifyClause` guards the ACTIVATION prefixes so the loose matchers below cannot claim a line INCLUDING its cost (v3.59); the pool prints a SECOND family of prefixes with the identical hazard, and only three of its five members - reprise, surge, high tide - had ever been given the same treatment. So Rush of Power ("Quickstrike - If this HAS GO AGAIN, it gets +1{p}") and Lava Burst ("Rupture - If this is played as CHAIN LINK 4 OR HIGHER, it gets +3{p}") had their gates swallowed whole and pumped unconditionally - four records, every one `tier: full`, every one STRONGER than printed. No tool here could see it: coverage counts the clause consumed, and the fairness sweep's COND-BYPASSED needs an unconditional TWIN to compare a gate against, so a gate that simply DISAPPEARS leaves nothing to compare (v3.57, stated about a prefix instead of an op dispatcher). THE SAME PASS FOUND THE ADJACENT DROP: "this gets +1{p} AND GO AGAIN" was read as the pump alone, so Second Strike lost a printed ACTION POINT (CR 5.3.5) at all three pitches and Jack Be Quick's optional cost paid out half its rider - and `runOps` had no `self` case at all, so the other half fell through the dispatcher and the card charged its cost for NOTHING (v2.04 read from the other end). AND CLOAKED WAS FILED UNDER STEALTH'S REASON - v3.16 at the keyword level - so Uphold Tradition reported fully scripted while its flip cost was dropped and its ability fired EVERY TURN where the print allows it once; the printing (ENG005) settles it, "Cloaked (Equip this face-down.)", fifth time reading the card first has paid. Hoisting that refusal found judge's GEAR branch asking NONE of the three activation-cost legalities the HERO branch asks, so Radiant Touch's soul cost was unrefused at the table too - one `abCostWhy` body now, both branches. Coverage 379 full, flagged 41 -> 31 as six stale ledger entries were driven and moved. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3520,6 +3520,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const _sc = DawnParser.abSoulCost(card);
       if(_sc && (act(s).soul||[]).length < _sc)
         return L(s, `${card.name} costs ${_sc} from your soul, and you hold ${(act(s).soul||[]).length}.`); }
+    /* TURNING THE SOURCE FACE-UP IS A COST TOO (v3.99). Uphold Tradition
+       prints "Cloaked (Equip this face-down.) / Instant - {r}, turn this
+       face-up: …" — so the ability may be used ONCE, and refusing here is
+       what makes that true. Without it the piece flipped, stayed flipped,
+       and the ability fired again every turn for one resource.
+       `parser.abFlipUp` is the one reader; `judge.legal` asks the same. */
+    { if(DawnParser.abFlipUp(card)){
+        const _fg = (act(s).gear||[]).find(x => x.uid === card._flipGear);
+        if(!_fg || !_fg._faceDown)
+          return L(s, `${card.name.replace(/ — ability$/, "")} is already face-up — that was its cost.`); } }
     /* A NAMED PERMANENT IS A COST TOO, SO IT IS A LEGALITY (v3.86). Gravy
        Bones prints "Instant - {t}, destroy a Gold you control: …", and
        refusing after the ability resolves would TAP HIM for a play the
@@ -3597,6 +3607,11 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
          guard rather than a fix; `fxParse` credits the clause as read, and
          a credit with no route is the no-op blind spot. */
       _instant:pw.kind==="instant", _attackRx:pw.kind==="attackRx",
+      /* v3.63's rule again (v3.99): a cost flag left off one builder is a
+         cost charged on one route and free on another. No pool ARENA
+         permanent prints the flip cost — measured, the one record is an
+         Equipment — so this is a guard. */
+      ...(pw.flipUp ? {_flipUp:true} : {}),
       img:b.card.img, dbImg:b.card.dbImg,
       _gearArt:true, uid:"bp"+b.uid};
   };

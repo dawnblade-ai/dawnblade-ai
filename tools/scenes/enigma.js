@@ -93,5 +93,59 @@ module.exports = [
     "…and the second pays the printed {r}": 1
   }
 }
+,
+
+{
+  name: "Uphold Tradition is a ONE-SHOT, because the flip is the cost",
+  why: "v3.99 — its printed cost is \"{r}, turn this face-up\" and " +
+       "`parseHeroPower`'s catch-all refuses none of those words, so the " +
+       "line fell through, the cost was read off the {r} alone, and the " +
+       "ability minted a +1{p} counter EVERY TURN for one resource. " +
+       "STRONGER than printed, `tier: full`, and the keyword itself was " +
+       "filed under STEALTH's noop reason — v3.16's mis-filing at the " +
+       "keyword level. The printing (ENG005) settles it: \"Cloaked (Equip " +
+       "this face-down.)\"",
+  run(c){
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "enigma");
+    const b = B.buildSide(h, G.parseDeck(W.DECKS.enigma), c.H.db(), {},
+                          RNG.make("scene-cloak"), {n: 0}).b;
+    const ut = b.gear.find(g => g.name === "Uphold Tradition");
+    const shield = {uid: "sh1", kind: "aura", spent: false,
+      card: {name: "Spectral Shield", uid: "sh1", tt: "Illusionist Token - Aura",
+             ty: ["Illusionist", "Token", "Aura"], tx: "**Ward 1**", kw: ["Ward 1"]}};
+    const g = c.acting(Object.assign(
+      c.state({res: 5, ap: 1, gear: [ut], board: [shield]}, {hp: 20}, {turn: 3}),
+      {builds: [{}, {}]}));
+    const one = c.exec(g, ut.powCard, "gear", 0);
+    const n1 = one.game || one;
+    const two = c.exec(n1, ut.powCard, "gear", 0);
+    const n2 = two.game || two;
+    const ctr = s => ((s.sides[0].counters || {})["sh1"] || {}).pow || 0;
+    return {
+      "it is equipped face-down":             !!ut._faceDown,
+      "…and nothing else in her loadout is":  b.gear.filter(x => x._faceDown).length,
+      "the first use puts the printed counter": ctr(n1),
+      "…and turns the piece face-up":         !!(n1.sides[0].gear.find(x => x.uid === ut.uid) || {})._faceDown,
+      "a second use mints nothing — the cost cannot be paid twice": ctr(n2),
+      "and judge refuses it by name rather than dead-tapping":
+        String(c.J.legal(Object.assign({}, n1, {priority: 0}),
+                         {t: "activate", uid: ut.uid, from: "gear"}, 0) || "")
+          .indexOf("already face-up") >= 0
+    };
+  },
+  want: {
+    "it is equipped face-down": true,
+    "…and nothing else in her loadout is": 1,
+    "the first use puts the printed counter": 1,
+    "…and turns the piece face-up": false,
+    "a second use mints nothing — the cost cannot be paid twice": 1,
+    "and judge refuses it by name rather than dead-tapping": true
+  }
+}
 
 ];

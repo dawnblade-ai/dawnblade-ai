@@ -22,9 +22,26 @@
                            evaluated; corrected to `partial`, not `live`,
                            because the condition is approximated
 
+   AND SIX MORE WERE STALE AT v3.99, all found by asking the engine rather
+   than by reading the note:
+
+     high tide  `unreviewed`  a GATED pitchBlueN condition, evaluated in
+                              `execute`'s loop; all 6 records read `full`
+     meld       `unreviewed`  v3.34 built the whole declaration — isSplit,
+                              splitFx, splitCostsAP, and judge refuses
+                              half:"both" without the keyword
+     unity      `unreviewed`  v3.27 — both walls count their hand
+                              defenders before either loop starts
+     quickstrike, rupture     BUILT AT v3.99 (their gates were being eaten
+                              by the loose pump matcher)
+     cloaked    `unreviewed`  half built at v3.99 — the piece equips
+                              face-down and the flip cost spends it; what
+                              face-down means for defence and Ward is not
+                              stated on the card, so `partial`
+
    v3.41's rule is "when you close a recorded gap, delete the record". Its
-   twin, which cost three entries: WHEN A RECORD SAYS A THING IS UNBUILT,
-   GO AND ASK THE ENGINE.
+   twin, which has now cost NINE entries: WHEN A RECORD SAYS A THING IS
+   UNBUILT, GO AND ASK THE ENGINE.
 
    THIS IS A LEDGER, NOT A HEURISTIC. A mention count is a signal and never
    a verdict (v3.00 says so in as many words — "Seismic Surge" appears only
@@ -49,9 +66,8 @@ const engine = ["parser.js", "effects.js", "judge.js"]
 const names = k => (engine.match(new RegExp(k.replace(/[^a-z0-9]/gi, "."), "gi")) || []).length;
 
 /* The keywords whose status CLAIMS nothing is built. Pinned as a set. */
-const UNBUILT = ["cloaked", "crank", "high tide", "ice fusion", "lightning flow",
-  "lightning fusion", "meld", "overpower", "piercing", "quickstrike", "rupture",
-  "solflare", "steal", "unity"];
+const UNBUILT = ["crank", "ice fusion", "lightning flow", "lightning fusion",
+  "overpower", "piercing", "solflare", "steal"];
 
 test("the ledger's unbuilt set is a LEDGER — moving one is a deliberate edit", () => {
   const claim = entries.filter(([, v]) => /pending|unreviewed/.test(v.status)).map(([k]) => k).sort();

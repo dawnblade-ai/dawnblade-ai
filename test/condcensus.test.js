@@ -53,8 +53,18 @@ const ELSEWHERE = {
   defLt2:     /LATE_CONDS/,
   defLt2any:  /LATE_CONDS/,
   reprise:    /RX_CONDS/,                                /* the attack-reaction dispatcher */
-  defAtkAction: /RX_CONDS/
+  defAtkAction: /RX_CONDS/,
+  hasGa:      /LATE_CONDS/                               /* quickstrike, settled with `pumped` (v3.99) */
 };
+
+/* THE PARAMETERISED HALF OF `ELSEWHERE` (v3.99). `chainLinkGe4` carries
+   its printed threshold in its name, so it cannot be a literal key — and
+   skipping it as merely PATTERNED would be weaker than this census is
+   meant to be, because that list asserts nothing about who answers.
+   Each entry claims an evaluator BY NAME and the drill checks the claim. */
+const PATTERNED_ELSEWHERE = [
+  [/^chainLinkGe\d+$/, /isLateCond/]                     /* rupture, settled in linkPumps (v3.99) */
+];
 
 function poolConds(){
   const pool = require("../data/pool.json");
@@ -92,6 +102,11 @@ test("every `fx.conds` condition the pool emits is answered somewhere", {skip}, 
       assert.match(SRC, ELSEWHERE[c], c + " claims another evaluator that is not there");
       continue;
     }
+    const pe = PATTERNED_ELSEWHERE.find(([rx]) => rx.test(c));
+    if(pe){
+      assert.match(SRC, pe[1], c + " claims another evaluator that is not there");
+      continue;
+    }
     if(body.indexOf('cond==="' + c + '"') < 0 && body.indexOf('cond === "' + c + '"') < 0)
       unanswered.push(c);
   }
@@ -104,14 +119,15 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* A CENSUS THAT QUIETLY STOPPED FINDING ANYTHING would pass by finding
      nothing, which is the failure mode this whole file guards against. */
   const {conds} = poolConds();
-  assert.equal(conds.size, 49,
-    "49 distinct conditions across the pool. A 50th is fine — add it here AND " +
+  assert.equal(conds.size, 51,
+    "51 distinct conditions across the pool. A 50th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
-    "at v3.97, when `way:dealtFused` was built: this drill caught that change on " +
-    "the version after it was written, which is what a census is for.");
-  /* three spot checks, so the count cannot be met by a scan that
+    "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
+    "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
+    "caught BOTH on the version after they were written, which is what a census is for.");
+  /* spot checks, so the count cannot be met by a scan that
      collected the wrong thing */
-  for(const c of ["auras3", "way:dealtFused", "chargedPitch2"])
+  for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4"])
     assert.ok(conds.has(c), c + " must be in the census");
 });
 

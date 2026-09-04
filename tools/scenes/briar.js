@@ -97,5 +97,111 @@ module.exports = [
     "…and that swing does not": false
   }
 }
+,
+
+{
+  name: "Rush of Power's quickstrike gate decides the pump",
+  why: "v3.99 — \"Quickstrike - If this has go again, it gets +1{p}\" was " +
+       "claimed WHOLE by the loose pump matcher, gate and all, so all three " +
+       "printings pumped unconditionally. `tier: full`, and STRONGER than " +
+       "printed: the fairness sweep's COND-BYPASSED needs an unconditional " +
+       "TWIN to compare against, and a gate that simply disappears leaves " +
+       "nothing to compare (v3.57).",
+  run(c){
+    const swing = (gaNext) => {
+      const card = c.card("Rush of Power", 1, "rop");
+      const g = c.acting(Object.assign(c.state({hand: [card], res: 9, ap: 1, gaNext: !!gaNext},
+                                               {hp: 40}, {turn: 3}), {builds: [{}, {}]}));
+      const out = c.exec(g, card, "hand", 0);
+      const n = out.game || out;
+      let total = null;
+      c.J.withEffects(n, (fx, m) => { total = fx.linkPumps(m, {equipDefenders: 0, handBlockers: 0, defenders: []}).total; return m; });
+      return total;
+    };
+    const printed = c.card("Rush of Power", 1).power;
+    return {
+      "its printed power": printed,
+      "with no go again it swings for the printed number": swing(false),
+      "with go again the printed +1 applies": swing(true),
+      "and the two differ, which is the whole of the gate": swing(true) - swing(false)
+    };
+  },
+  want: {
+    "its printed power": 3,
+    "with no go again it swings for the printed number": 3,
+    "with go again the printed +1 applies": 4,
+    "and the two differ, which is the whole of the gate": 1
+  }
+},
+
+{
+  name: "Second Strike's printed go again is an action point",
+  why: "v3.99 — \"this gets +1{p} and go again\" was read as the pump ALONE, " +
+       "so three printings lost a printed ACTION POINT (CR 5.3.5, and this " +
+       "project's own \"most valuable keyword in the game to get wrong\"). " +
+       "WEAKER than printed, so the one-sided sweep is blind, and `tier: " +
+       "full`, so coverage is too.",
+  run(c){
+    const S = require("../../engine/sides.js");
+    const play = (dealt) => {
+      const card = c.card("Second Strike", 1, "ss");
+      const hist = Object.assign({}, S.freshHist(), dealt ? {atk: 1} : {});
+      const g = c.acting(Object.assign(c.state({hand: [card], res: 9, ap: 1, hist},
+                                               {hp: 40}, {turn: 3}), {builds: [{}, {}]}));
+      const out = c.exec(g, card, "hand", 0);
+      const n = out.game || out;
+      const done = c.J.withEffects(n, (fx, m) => {
+        const r = fx.linkPayload(m, {total: m.pend.total, pumps: 0, heroHit: true});
+        return r.game || r;
+      });
+      return {ga: !!(n.pend && n.pend.ga), ap: (done.game || done).sides[0].ap};
+    };
+    const cold = play(false), hot = play(true);
+    return {
+      "no damage dealt this turn — no go again": cold.ga,
+      "…and the action point stays spent":       cold.ap,
+      "damage dealt — the printed go again lands": hot.ga,
+      "…and CR 5.3.5 hands the action point back": hot.ap
+    };
+  },
+  want: {
+    "no damage dealt this turn — no go again": false,
+    "…and the action point stays spent": 0,
+    "damage dealt — the printed go again lands": true,
+    "…and CR 5.3.5 hands the action point back": 1
+  }
+},
+
+{
+  name: "Jack Be Quick's optional cost pays out both halves",
+  why: "v3.99 — its rider reads \"this gets +1{p} and go again\", and the " +
+       "rider's ops come back from `applyPrompt` and go straight to " +
+       "`runOps`, which had NO `self` case. So the Nimblism was banished " +
+       "and NOTHING was granted: v2.04's free-ability bug read from the " +
+       "other end — pay, receive nothing.",
+  run(c){
+    const fx = c.P.fxParse(c.card("Jack Be Quick", 1));
+    const card = c.card("Jack Be Quick", 1, "jbq");
+    const g = c.acting(Object.assign(c.state({hand: [card], res: 9, ap: 1},
+                                             {hp: 40}, {turn: 3}), {builds: [{}, {}]}));
+    const out = c.exec(g, card, "hand", 0);
+    const n = out.game || out;
+    const before = n.pend.total;
+    const paid = c.ops(n, [["self", 1]], "Jack Be Quick");
+    const after = (paid.game || paid);
+    return {
+      "the rider carries the pump":     fx.optCost.ops.some(o => o[0] === "self"),
+      "…and the go again beside it":    fx.optCost.ops.some(o => o[0] === "ga"),
+      "the pump reaches the open link": after.pend.total - before,
+      "and the cost is a graveyard banish, not a hand one": fx.optCost.zone
+    };
+  },
+  want: {
+    "the rider carries the pump": true,
+    "…and the go again beside it": true,
+    "the pump reaches the open link": 1,
+    "and the cost is a graveyard banish, not a hand one": "grave"
+  }
+}
 
 ];

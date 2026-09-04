@@ -70,7 +70,11 @@ const {resolveEntry} = C;
    is settled. Written out twice they drift, and the drift is a condition
    that is skipped and then never run — a printed bonus that silently
    vanishes. */
-const LATE_CONDS = ["pumped", "defLt2", "defLt2any"];
+const LATE_CONDS = ["pumped", "defLt2", "defLt2any", "hasGa"];
+/* `chainLinkGe4` CARRIES ITS THRESHOLD IN ITS NAME (v3.88), so it cannot be
+   a literal in the list — which is exactly why the list has ONE reader
+   rather than two `indexOf` tests that would drift (v3.71, v3.89). */
+const isLateCond = c => LATE_CONDS.indexOf(c) >= 0 || /^chainLinkGe\d+$/.test(c);
 /* THE CONDITIONS ONLY `attackRx` CAN ANSWER (v3.89). Both need the WALL —
    `reprise` asks how many cards from hand met the attack, `charged` rides
    with it on the same route — and `execute`'s generic loop is given
@@ -1122,6 +1126,37 @@ function makeEffects(ctx){
         else if((n.incoming||0) > 0){ n.incoming = Math.max(0, n.incoming - v); n = L(n, `Incoming shaved by ${v} → ${n.incoming}.`); }
         else n = L(n, `-${v} power — nothing hostile to shave.`);
       }
+      /* ---- A PUMP THAT ARRIVES THROUGH `runOps` (v3.99) --------------
+         `self` is normally read at DECLARATION — `execute` folds `fx.self`
+         into the total before `pend` exists, and the condition loop has
+         its own `_condSelf` case one layer up. Neither of those is
+         `runOps`, so a `self` op that reaches HERE was dropped on the
+         floor: silently, with the cost already paid.
+
+         JACK BE QUICK is the pool's only record of the shape. Its
+         optional cost banishes a Nimblism from the graveyard and the
+         rider reads "this gets +1{p} and go again" — and the rider's ops
+         come back from `applyPrompt` and go straight to `runOps`. So the
+         card charged its cost and granted NOTHING, which is v2.04's
+         free-ability bug read from the other end: pay, receive nothing.
+
+         IT LANDS ON THE OPEN LINK, and `linkPumps` reads `pend.total`
+         after the wall is declared, so the bonus is on the swing rather
+         than on a number nobody spends (v3.71 — the late conditions added
+         to the DEALT damage and never touched a hero).
+
+         IT MUST BE MY OWN ATTACK. `atkMinus` is the hostile twin one
+         field over and tests the same thing with the opposite sign; a
+         pump landing on the opponent's swing would help them. A caller
+         with no attack in flight gets a feed line and no bonus — weaker
+         than printed and visible (v3.24). */
+      else if(k==="self"){
+        if(n.pend && n.pend.by != null && n.pend.by === actorOf(n)){
+          n.pend = {...n.pend, total: (n.pend.total||0) + v};
+          n = L(n, `${srcName}: +${v} power to the attack → ${n.pend.total}.`);
+        }
+        else n = L(n, `${srcName}: +${v} power, but no attack of yours is in flight.`);
+      }
       else if(k==="soulSpend"){
         if((act(n).soul||[]).length >= v){ actMut(n).soul = act(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — you have ${(act(n).soul||[]).length}.`);
@@ -2039,6 +2074,37 @@ function makeEffects(ctx){
         ? Object.assign({}, x, {destroyed: true, _banished: true}) : x);
       n = L(n, `${card.name.replace(/ — ability$/, "")} is banished — the rest of the cost is paid.`);
     }
+    /* ---- TURNING THE SOURCE FACE-UP IS A COST (v3.99) ---------------
+       Uphold Tradition: "Cloaked (Equip this face-down.) / Instant - {r},
+       turn this face-up: Put a +1{p} counter on an aura you control with
+       ward."
+
+       THE FLIP IS WHAT MAKES IT A ONE-SHOT. Until now the cost guard in
+       `parseHeroPower` never saw the phrase — "turn this face-up" contains
+       none of the words it refuses — so the resource half was charged, the
+       flip was dropped, and the ability minted a +1{p} counter EVERY TURN
+       for one resource. Stronger than printed, `tier: full`, and invisible
+       to the one-sided fairness sweep.
+
+       BOTH BOARDS REFUSE IT FIRST (`parser.abFlipUp`, a legality — v3.11),
+       so reaching here already face-up means a stale or crafted action off
+       the wire. It is still guarded, because an unpayable cost is INERT
+       and never free (v2.04).
+
+       THE PIECE IS MARKED, NOT MOVED. Nothing leaves a zone, so v3.54's
+       index hazard does not arise — but the flag lives on the gear entry
+       beside `curDef` and `destroyed`, which is what makes it ship over
+       the wire for free: `wire.js` diffs a card structurally and reads no
+       card text, so a card that grows a field travels automatically. */
+    if(P.abFlipUp(card)){
+      const _fu = card._flipGear;
+      const _fg = act(n).gear.find(x => x.uid === _fu);
+      if(!_fg || !_fg._faceDown)
+        return L(n, `${card.name.replace(/ — ability$/, "")} is already face-up — nothing happens.`);
+      actMut(n).gear = act(n).gear.map(x => x.uid === _fu
+        ? Object.assign({}, x, {_faceDown: false}) : x);
+      n = L(n, `${_fg.name} is turned face-up — the rest of the cost is paid.`);
+    }
     /* A NAMED BOARD PERMANENT IS A COST (v3.86) — GRAVY BONES.
 
        "Instant - {t}, destroy a Gold you control: Draw a card, then
@@ -2344,7 +2410,7 @@ function makeEffects(ctx){
          Only on the attacking route: `pend.lateConds` is built from this
          same list on that branch alone, so a non-attack printing one has
          no late pass to reach and keeps its honest refusal here. */
-      if(attacking && LATE_CONDS.indexOf(cond) >= 0) return;
+      if(attacking && isLateCond(cond)) return;
       /* "WHEN THIS ATTACKS A HERO, IF …" is a trigger with a subject
          wrapped around a gate (v3.46). Mocking Blow booed the crowd off an
          attack on an ally, which is a hero's reaction to being hit by a
@@ -3011,7 +3077,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>LATE_CONDS.indexOf(x.cond)>=0), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -4822,6 +4888,36 @@ function makeEffects(ctx){
         if(total <= base){ n = L(n, `${n.pend.card.name}: not pumped above its base ${base} — no bonus.`); return; }
         pump("pumped above base"); return;
       }
+      /* ---- QUICKSTRIKE: "IF THIS HAS GO AGAIN" (v3.99) ---------------
+         A static gate on the ATTACK, which is what puts it beside
+         `pumped` rather than in `execute`'s main condition loop: there
+         the local `ga` is still being assembled — the waiting `gaNext`
+         grant is not taken until ~300 lines later — so the question would
+         be answered against a half-built answer. By the time `pend` is
+         built, `pend.ga` is final, and it is the field the chain link
+         actually resolves on. */
+      if(cond==="hasGa"){
+        if(!n.pend.ga){ n = L(n, `${n.pend.card.name}: no go again — no bonus.`); return; }
+        pump("it goes again"); return;
+      }
+      /* ---- RUPTURE: "PLAYED AS CHAIN LINK N OR HIGHER" (v3.99) --------
+         THE ATTACK'S OWN LINK IS NOT ON THE CHAIN YET. `linkPayload`
+         pushes it (one site, shared by both boards) and `linkPumps` runs
+         BEFORE that — so this attack is link `chain.length + 1`, and a
+         fixture that cannot tell `>= N` from `>= N-1` has tested neither
+         (v3.92). Lava Burst prints 4, so the discriminating states are
+         exactly 3 prior links (this is link 4 — the bonus applies) and
+         exactly 2 (this is link 3 — it does not).
+
+         THE THRESHOLD IS READ, never known here: it travels in the
+         condition's name, so a Rupture card printing a different number
+         is read correctly rather than assumed to be 4. */
+      { const cm = /^chainLinkGe(\d+)$/.exec(cond);
+        if(cm){
+          const need = +cm[1], link = (n.chain||[]).length + 1;
+          if(link < need){ n = L(n, `${n.pend.card.name}: chain link ${link}, needs ${need} — no bonus.`); return; }
+          pump(`chain link ${link}`); return;
+        } }
       if(cond==="defLt2"){ // a real count now that both seats block from hand
         if(handBlk >= 2){ n = L(n, `${n.pend.card.name}: two cards from hand met it — the bonus is denied.`); return; }
         pump("defended by fewer than 2 non-equipment cards");

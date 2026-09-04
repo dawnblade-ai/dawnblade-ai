@@ -1045,6 +1045,53 @@ function classifyClause(raw){
      now". Evaluated before the arcane op runs and consumes it. */
   if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i))
     return GATED(m[2], "surgeOver"+m[1]);
+  /* ---- QUICKSTRIKE AND RUPTURE (v3.99) ------------------------------
+     The last two keyword-gated lines in the pool whose GATE was being
+     eaten, and both fail STRONGER than printed — the direction that
+     steals games.
+
+     A KEYWORD PREFIX IS AN ACTIVATION PREFIX'S COUSIN (v3.59). Reprise,
+     surge and high tide are read here precisely so the loose matchers
+     below cannot claim the line INCLUDING its condition; quickstrike and
+     rupture were never given the same treatment, so:
+
+       Rush of Power  "Quickstrike - If this has go again, it gets +1{p}"
+       Lava Burst     "Rupture - If this is played as chain link 4 or
+                       higher, it gets +3{p}"
+
+     …were both read as a BARE `[["self",N]]`. Four records, every one
+     `tier: full`, every one granting its pump unconditionally.
+
+     NO TOOL HERE COULD SEE IT. Coverage counts the clause consumed. And
+     `npm run fairness`'s `COND-BYPASSED` needs an unconditional TWIN to
+     compare a gate against — when the gate simply DISAPPEARS there is
+     nothing to compare, which is v3.57's lesson stated about a keyword
+     prefix instead of an op dispatcher.
+
+     THE GATE IS SELF-CONTAINED, so neither keyword's semantics are being
+     invented. Both printings (OMN068, DRO010) were read and neither
+     carries reminder text: the keyword is a NAME for the ability whose
+     condition the card spells out in full, which is exactly how reprise
+     and surge are already treated here.
+
+     THE THRESHOLD RIDES IN THE COND NAME (v3.88), so a future Rupture
+     card printing a different link number is READ rather than assumed —
+     and the pool prints only 4, so no pool fixture can tell a read number
+     from a literal. Both amounts are the card's own for the same reason:
+     Rush of Power prints +1 at all three pitches.
+
+     AND THE ANCHOR IS WRITTEN AGAINST THE LEVELLED TEXT (v3.71). The
+     card prints "if this HAS go again" and `SYNONYMS` rewrites
+     `(?:gains|has) go again` to `gets go again` before `classifyClause`
+     sees a word of it — so a pattern spelling the PRINTED form matches
+     nothing and looks exactly like a pattern that is simply wrong. That
+     table is the first place to look when a widening you verified in
+     isolation does nothing. Both spellings are accepted so the rule
+     survives the table moving either way. */
+  if(m=c.match(/^quickstrike\s*[-—]\s*if this (?:gets|has) go again,\s*(.+)$/i))
+    return GATED(m[1], "hasGa");
+  if(m=c.match(/^rupture\s*[-—]\s*if (?:this|[a-z' ]+) is played as chain link (\d+) or higher,\s*(.+)$/i))
+    return GATED(m[2], "chainLinkGe"+m[1]);
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
   /* COLD SNAP's cost-offer half is UNREAD with the freeze it gates — see
      the long note above. Reading the offer alone would ask the opponent
@@ -1058,7 +1105,24 @@ function classifyClause(raw){
      own" — they are qualifiers other cards test for. So the bare keyword
      line is genuinely a no-op; what matters is the state it leaves behind,
      which the mark/aim effect clauses below actually set. */
-  if(/^(?:stealth|cloaked)$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  if(/^stealth$/.test(c)) return NOOP("qualifier only — other cards check an attack for it");
+  /* CLOAKED IS NOT A QUALIFIER, AND FILING IT WITH STEALTH SAID IT WAS
+     (v3.99). Its printed reminder text (ENG005) is "Equip this
+     face-down" — a real property of the piece, not something other cards
+     check an attack for. That is v3.16's shape at the keyword level: **a
+     noop must describe the clause in front of it, never a sibling**, and
+     this one borrowed its neighbour's reason and reported Uphold
+     Tradition fully scripted with the mechanic doing nothing.
+
+     IT IS A `noop` ONLY NOW THAT `build.js` EQUIPS THE PIECE FACE-DOWN
+     and the flip cost spends it — filed earlier it would have been the
+     no-op blind spot exactly, which is the argument v3.32 makes for
+     heave. The half that is still unmodelled is what face-down means for
+     the piece's DEFENCE and its Ward, which the card does not state and
+     the database prints no CR text for; the ledger carries that, so
+     `failstates.js` grades the keyword against the claim rather than
+     against a grep (v3.00). */
+  if(/^cloaked$/.test(c)) return NOOP("live — build.js equips the piece face-down and the ability's flip cost spends it");
   /* MELD (v3.34). The printed reminder text is the whole rule:
 
        Meld (You may play 1 or both halves of this card. Each costs 0.)
@@ -1696,7 +1760,42 @@ function classifyClause(raw){
     return R([["defCapNext", +m[3], Object.assign({}, q || {}),
                m[4] === "non-block" ? "nonBlock" : "hand"]]);
   }
-  if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)/)) return R([["self",+m[1]]]);
+  /* ---- "…AND GO AGAIN" IS A SECOND GRANT (v3.99) --------------------
+     "This gets +1{p} and go again" was read as the pump ALONE, so the
+     printed go again — an ACTION POINT, CR 5.3.5, and this file's own
+     "most valuable keyword in the game to get wrong" — was dropped on
+     the floor. SECOND STRIKE prints it at all three pitches and reads
+     `tier: full`; JACK BE QUICK prints it as an optional cost's rider.
+
+     WEAKER THAN PRINTED, so the one-sided fairness sweep cannot look in
+     that direction, and the clause IS consumed, so coverage counts it
+     accounted for. Only reading the printed words next to each other
+     finds it.
+
+     THE ANCHOR IS THE ADJACENCY, not the presence of the phrase.
+     Measured over the pool, five clauses match this pump matcher AND
+     contain "go again", and only two of them are grants of both:
+
+       Second Strike        "this gets +1{p} and go again"     BOTH
+       Jack Be Quick        "this gets +1{p} and go again"     BOTH
+       Rush of Power        "if this HAS go again, it gets +1{p}"  a CONDITION
+       Enflame the Firebrand  the go again belongs to a DIFFERENT threshold
+       Bait                 an attack-reaction ability that refuses (v3.63)
+
+     A test for the phrase anywhere in the clause hands three of those
+     five a keyword their text does not grant them there — stronger than
+     printed, which is the direction that steals games.
+
+     THE DISPATCHER DOES THE REST. `classifyClause` returning two ops
+     means a conditional clause emits TWO `fx.conds` entries sharing one
+     condition, which is the natural expression of "if X, A and B", and
+     `execute` already has cases for both (`ga` is a GAIN tracked in a
+     local, `self` folds into the attack). Nothing new is wired. */
+  if(m=c.match(/(?:^|this(?: attack)? |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{p\}|power)( and go again)?/)){
+    const ops = [["self",+m[1]]];
+    if(m[2]) ops.push(["ga"]);
+    return R(ops);
+  }
   if(m=c.match(/\bamp (\d+)/)) return R([["amp",+m[1]]]);
   if(m=c.match(/create (a|an|\d+|one|two|three) runechants?/)) return R([["rune",num(m[1])]]);
   /* RULING: opt X — look at the top X, then put them back on top or bottom
@@ -4658,6 +4757,41 @@ function parseHeroPower(tx, allowDestroy){
             label: (m[1] ? "once/turn: " : "") + "destroy a " + destM[1].trim()
                  + ": " + m[4].trim()};
   }
+  /* TURNING THE SOURCE FACE-UP IS THE FOURTH NAMED COST (v3.99), beside
+     the counter cost (v3.39), the soul banish (v3.74) and the named board
+     permanent (v3.86) — named rather than relaxed, for their reason: a
+     broad relaxation raises the tier of cards nothing wires.
+
+     UPHOLD TRADITION IS THE POOL'S ONLY RECORD, measured: exactly one
+     card prints "turn this face-up" and exactly one carries Cloaked. Its
+     printed reminder text settles what the keyword does, and reading the
+     printing is the FIRST thing to try here rather than the last (v3.32,
+     v3.54, v3.66, v3.78 — fifth time):
+
+         Cloaked (Equip this face-down.)
+         Instant - {r}, turn this face-up: Put a +1{p} counter on an
+         aura you control with ward.
+
+     SO THE FLIP IS A ONE-SHOT AND THE COST GUARD NEVER SAW IT. "turn
+     this face-up" contains none of the words the catch-all below refuses,
+     so the line fell through, `cost` was read off the {r} alone, and the
+     ability became a +1{p} counter for one resource EVERY TURN, FOREVER —
+     where the card grants it exactly once. Live, `tier: full`, and
+     STRONGER than printed, which is the direction that steals games and
+     the one the one-sided fairness sweep is built not to look in.
+
+     THE RESOURCE HALF IS STILL READ. The cost is {r} AND the flip, so
+     dropping either is a different price: charging the resource without
+     the flip is today's bug, and the flip without the resource is free. */
+  const flipM = costStr.match(/^((?:\{r\})*)\s*,?\s*turn this face-?up$/i);
+  if(flipM){
+    const eff3 = classifyClause(m[4]);
+    if(!eff3 || eff3.status !== "run" || eff3.cond || eff3.onHit) return null;
+    const after3 = t.slice(m.index + m[0].length);
+    return {cost: (flipM[1].match(/\{r\}/gi)||[]).length, ga: /^\.?\s*go again/i.test(after3),
+            sd: false, kind, flipUp: true, eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + "turn face-up: " + m[4].trim()};
+  }
   /* "THIS" IS THE SOURCE, AND ON A REACTION ROUTE THE SOURCE IS NOT THE
      ATTACK (v3.63). An activated attack reaction resolves onto the OPEN
      LINK, so a payload whose subject is the card itself has no reading
@@ -6027,6 +6161,16 @@ const abSelfBanish = ab => !!(ab && ab._selfBanish);
    cost read in one place and charged in another is how an ability comes
    to be free on one board (v2.04, v3.01). */
 const abDestroyBoard = ab => (ab && ab._destroyBoard) || null;
+/* DOES THIS ABILITY'S COST TURN ITS SOURCE FACE-UP? (v3.99) One reader,
+   for the reason the three costs above each have one: a cost read in one
+   place and charged in another is how an ability comes to be free on one
+   board (v2.04, v3.01). */
+const abFlipUp = ab => !!(ab && ab._flipUp);
+/* CLOAKED — "Equip this face-down", off the card's PRINTED reminder line.
+   `printedKw` is the question (v2.84's three), not `hasKw`: a card that
+   merely MENTIONED the keyword would otherwise be equipped face-down,
+   which is a rule invented at the keyword level. */
+const isCloaked = c => printedKw(c, "cloaked");
 /* THE PERMANENT THAT COST NAMES, on one side's board — or null (v3.86).
    ONE reader, because "which card satisfies the cost" is asked in three
    places (both boards' legality and `execute`'s charge) and three
@@ -6175,6 +6319,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, boardEntryNamed, isEphemeral,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral,
         CARD_OVERRIDES};
 });

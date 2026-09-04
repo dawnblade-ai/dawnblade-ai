@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.98
+**Current version:** v3.99
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2104 drills**.
+This is `node --test "test/*.test.js"` — currently **2134 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -546,6 +546,140 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### A KEYWORD PREFIX EATS ITS OWN GATE (v3.99)
+
+`classifyClause` guards the ACTIVATION prefixes — *"Action - <cost>:"*,
+*"Instant - …"*, *"Attack Reaction - …"* — precisely so the loose matchers
+below cannot claim a line **including its cost** (v3.59). The pool prints
+a SECOND family of prefixes with the identical hazard, and only three of
+its five members had ever been given the same treatment:
+
+| | |
+|---|---|
+| reprise · surge · high tide | read here, gate carried |
+| **quickstrike · rupture** | claimed by the loose pump matcher, gate and all |
+
+> **Quickstrike** - If this **has go again**, it gets +1{p}. — RUSH OF POWER
+> **Rupture** - If this is played as **chain link 4 or higher**, it gets +3{p}. — LAVA BURST
+
+Four records, every one `tier: full`, every one granting its pump
+**unconditionally** — STRONGER than printed, the direction that steals
+games.
+
+**NO TOOL HERE COULD SEE IT.** Coverage counts the clause consumed, and
+`COND-BYPASSED` needs an unconditional TWIN to compare a gate against —
+**when the gate DISAPPEARS there is nothing to compare**, which is v3.57's
+lesson stated about a prefix instead of an op dispatcher.
+
+**THE GATES ARE SELF-CONTAINED**, so neither keyword's semantics are
+invented: both printings were read and neither carries reminder text, so
+the keyword is a NAME for an ability the card spells out in full — exactly
+how reprise and surge are already treated. **The threshold rides in the
+condition's name** (v3.88), and **the anchor is written against the
+LEVELLED text** (v3.71) — the card prints *"has go again"* and `SYNONYMS`
+rewrites it to *"gets"* before `classifyClause` sees a word, so the
+printed spelling matches nothing and looks exactly like a pattern that is
+simply wrong.
+
+**BOTH ARE LATE CONDITIONS**, settled in `linkPumps` beside `pumped`.
+`hasGa` because `execute`'s main loop is still assembling the local `ga`
+— the waiting `gaNext` grant is not taken for another 300 lines — and
+`chainLinkGeN` because that is where the power is struck. **The attack's
+own link is NOT on the chain yet**: `linkPayload` pushes it, so the attack
+is link `chain.length + 1`, and a fixture at 0 links and one at 6 agree
+under both readings (v3.92). Only the pair either side of the printed
+threshold tests anything.
+
+### "…AND GO AGAIN" IS A SECOND GRANT, AND THE ANCHOR IS THE ADJACENCY (v3.99)
+
+*"This gets +1{p} **and go again**"* was read as the pump alone — so
+**Second Strike**, three printings, `tier: full`, lost a printed ACTION
+POINT (CR 5.3.5, this file's own *"most valuable keyword in the game to
+get wrong"*). WEAKER than printed, so the one-sided sweep is blind too.
+
+**MEASURED BEFORE WIDENING**: five pool clauses match the pump matcher AND
+contain the phrase, and only two grant both. Testing for it anywhere hands
+three of them a keyword their text does not grant them there — Rush of
+Power's is the clause's own CONDITION, Enflame the Firebrand's belongs to
+a different threshold, Bait's is a reaction ability that refuses (v3.63).
+**No pool card can express the near-miss, so the drills are synthetic**
+(v3.73).
+
+**THE DISPATCHER DOES THE REST.** Two ops from one clause means a
+conditional emits TWO `fx.conds` entries sharing one condition — the
+natural expression of *"if X, A and B"* — and `execute` already has cases
+for both. Nothing new was wired.
+
+### A PUMP THAT ARRIVES THROUGH `runOps` (v3.99)
+
+**Jack Be Quick** banishes a Nimblism from the graveyard and its rider
+reads *"this gets +1{p} and go again"*. The rider's ops come back from
+`applyPrompt` and go straight to `runOps` — **which had no `self` case at
+all.** The cost was charged and NOTHING was granted: v2.04's free-ability
+bug read from the other end.
+
+**IT LANDS ON THE OPEN LINK**, where `linkPumps` reads `pend.total` after
+the wall is declared — never on the DEALT damage, which is v3.71's twelve
+weaker-than-printed records. **And it must be MY attack**: `atkMinus` is
+the hostile twin one field over, same test, opposite sign.
+
+**FOUND BY A CENSUS**, not by reading a card: every op kind the parser
+emits over the pinned pool, against `runOps`' vocabulary. Four were
+unhandled; three are dispatched elsewhere by design (`pump` and `wpnAgain`
+at the atkTrigger pop site, `payOrLose` at its own). **When you have a
+dispatcher, census what reaches it** — v3.96's rule, one dispatcher over.
+
+### CLOAKED WAS FILED UNDER STEALTH'S REASON (v3.99)
+
+`/^(?:stealth|cloaked)$/ -> NOOP("qualifier only")`. **Cloaked is not a
+qualifier**; it is a property of the PIECE. v3.16's rule at the keyword
+level — *a noop must describe the clause in front of it, never a sibling*
+— and this one borrowed its neighbour's, so Uphold Tradition reported
+fully scripted with the mechanic doing nothing.
+
+**THE PRINTING SETTLES IT — FIFTH TIME READING THE CARD FIRST HAS PAID**
+(v3.32, v3.54, v3.66, v3.78). ENG005 prints *"**Cloaked** (Equip this
+face-down.)"* and *"**Instant** - {r}, **turn this face-up**: …"*.
+
+**SO THE FLIP IS HALF THE COST AND THE GUARD NEVER SAW IT.**
+`parseHeroPower` refuses a cost containing discard/banish/remove/destroy/
+sacrifice/put/reveal/soul/life, and *"turn this face-up"* contains none of
+them — so the line fell through, the cost was read off the `{r}` alone,
+and the ability minted a +1{p} counter **every turn, forever**, where the
+card grants it once. It is the **FOURTH named cost** this reader accepts,
+beside v3.39's counter, v3.74's soul banish and v3.86's named permanent —
+**named rather than relaxed**, for their reason.
+
+**WHAT FACE-DOWN MEANS IS DELIBERATELY NARROW, AND THAT IS THE RULING**
+(v3.48). It gates the one thing the card's own text spends it on. Whether
+a face-down piece keeps its printed defence and its Ward is not stated,
+and half-building a value change is worse than the honest gap (v3.23).
+
+**THE RULING AGREES WITH THE PRINTING** (user, 2026-07-25) — *"INSTANT
+ABILITY - ALWAYS ACTIVE"* is this user's shorthand for the instant WINDOW,
+which they spell out at length for Spellfire Cloak in the same batch, not
+a claim the ability repeats. **The display half ("SHOW CARD BACK ON THE
+PLAYERS BOARD") is deferred with the UI pass**, and the ledger says so.
+
+### AN ACTIVATION'S COSTS ARE ONE BODY (v3.99)
+
+Three of the four costs an activated ability can print are paid out of
+somewhere the powCard cannot see — the soul, the piece itself, a named
+permanent — so each is a LEGALITY, refused before the ability resolves
+(v3.11). **All three lived in judge's HERO branch alone.**
+
+The trainer routes a hero's ability and an equipment's through ONE
+`tryPlay`, so it asked for both; judge has two branches and only one
+asked. **Radiant Touch's soul cost was therefore unrefused at the table**
+— `execute`'s own guard makes it inert rather than free (v2.04), and the
+seat still spends its once-per-turn allowance on a play the rules forbid.
+v3.01's shape; `abCostWhy` is one body both branches call.
+
+**FOUND BY BUILDING A FOURTH COST AND LOOKING FOR WHERE THE OTHERS ARE
+REFUSED.** v3.63's rule — *when you add a flag to one powCard builder,
+grep for the others* — has a twin one layer out: **when you add a cost,
+grep for where the others are REFUSED.**
 
 ### `test/condcensus.test.js` — EVERY EMITTED CONDITION IS ANSWERED (v3.97)
 

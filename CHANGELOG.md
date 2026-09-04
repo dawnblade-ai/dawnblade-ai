@@ -9,6 +9,163 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.99 — a keyword prefix eats its own gate
+
+**`classifyClause` guards the ACTIVATION prefixes precisely so the loose
+matchers below cannot claim a line INCLUDING its cost.** That is v3.59.
+The pool prints a SECOND family of prefixes with the identical hazard,
+and only three of its five members had ever been given the same
+treatment:
+
+| | |
+|---|---|
+| reprise · surge · high tide | read here, gate carried |
+| **quickstrike · rupture** | claimed by the loose pump matcher, gate and all |
+
+> **Quickstrike** - If this **has go again**, it gets +1{p}. — RUSH OF POWER
+> **Rupture** - If this is played as **chain link 4 or higher**, it gets +3{p}. — LAVA BURST
+
+Four records, every one `tier: full`, every one granting its pump
+**unconditionally** — STRONGER than printed, the direction that steals
+games.
+
+**NO TOOL HERE COULD SEE IT, AND EACH FOR ITS OWN REASON.** Coverage
+counts the clause consumed. And `npm run fairness`'s `COND-BYPASSED`
+needs an unconditional TWIN to compare a gate against: when the gate
+simply DISAPPEARS there is nothing to compare — **v3.57's lesson stated
+about a keyword prefix rather than an op dispatcher.**
+
+**THE GATES ARE SELF-CONTAINED, so neither keyword's semantics are
+invented.** Both printings were read (OMN068, DRO010) and neither carries
+reminder text: the keyword is a NAME for an ability whose condition the
+card spells out in full, which is exactly how reprise and surge are
+already treated. **The threshold rides in the condition's name** (v3.88),
+so a Rupture card printing a different number is read rather than
+assumed.
+
+**AND THE ANCHOR IS WRITTEN AGAINST THE LEVELLED TEXT** (v3.71). The card
+prints *"if this HAS go again"* and `SYNONYMS` rewrites it to *"gets"*
+before `classifyClause` sees a word — so the pattern spelling the PRINTED
+form matched nothing and looked exactly like a pattern that was simply
+wrong. **That table is the first place to look when a widening you
+verified in isolation does nothing.**
+
+**BOTH ARE LATE CONDITIONS**, settled in `linkPumps` beside `pumped` —
+`hasGa` because `execute`'s main loop is still assembling the local `ga`
+(the waiting `gaNext` grant is not taken for another 300 lines), and
+`chainLinkGeN` because that is where the power is struck. **The attack's
+own link is not on the chain yet**: `linkPayload` pushes it, so the
+attack is link `chain.length + 1`, and a fixture at 0 links and one at 6
+agree under both readings (v3.92). The pair either side of the printed
+threshold is the only one that tests anything.
+
+### "…AND GO AGAIN" IS A SECOND GRANT
+
+> *"This gets +1{p} **and go again**."*
+
+Read as the pump ALONE. **Second Strike prints it at all three pitches
+and reads `tier: full`** — so a printed ACTION POINT (CR 5.3.5, and this
+project's own *"most valuable keyword in the game to get wrong"*) went on
+the floor. WEAKER than printed, so the one-sided sweep is blind too.
+
+**THE ANCHOR IS THE ADJACENCY, not the presence of the phrase.** Measured
+over the pool: five clauses match the pump matcher AND contain the words,
+and only two grant both. A test for the phrase anywhere hands three of
+them a keyword their text does not grant them there — Rush of Power's is
+the clause's own CONDITION, Enflame the Firebrand's belongs to a
+different threshold, Bait's is an attack-reaction ability that refuses
+(v3.63). **No pool card can express the near-miss, so the drills are
+synthetic** (v3.73), and both bite.
+
+### A PUMP THAT ARRIVES THROUGH `runOps`
+
+**Jack Be Quick's optional cost banishes a Nimblism from the graveyard
+and its rider reads *"this gets +1{p} and go again"*.** The rider's ops
+come back from `applyPrompt` and go straight to `runOps` — **which had no
+`self` case at all.** So the cost was charged and NOTHING was granted:
+v2.04's free-ability bug read from the other end, pay and receive
+nothing.
+
+**IT LANDS ON THE OPEN LINK**, where `linkPumps` reads `pend.total` after
+the wall is declared — never on the DEALT damage, which is v3.71's twelve
+weaker-than-printed records. **And it must be MY attack**: `atkMinus` is
+the hostile twin one field over and tests the same thing with the
+opposite sign. A caller with no attack in flight gets a feed line and no
+bonus (v3.24).
+
+**FOUND BY A CENSUS**, not by reading a card: every op kind the parser
+emits, against `runOps`' vocabulary. Four were unhandled and three are
+dispatched elsewhere by design (`pump` and `wpnAgain` at the atkTrigger
+pop site, `payOrLose` at its own). `self` was the one real hole.
+
+### CLOAKED WAS FILED UNDER STEALTH'S REASON
+
+`/^(?:stealth|cloaked)$/ -> NOOP("qualifier only — other cards check an
+attack for it")`. **Cloaked is not a qualifier**; it is a property of the
+PIECE. v3.16's rule at the keyword level — *a noop must describe the
+clause in front of it, never a sibling* — and this one borrowed its
+neighbour's and reported Uphold Tradition fully scripted with the
+mechanic doing nothing.
+
+**THE PRINTING SETTLES IT — FIFTH TIME READING THE CARD FIRST HAS PAID**
+(v3.32, v3.54, v3.66, v3.78). ENG005:
+
+> **Cloaked** *(Equip this face-down.)*
+> **Instant** - {r}, **turn this face-up**: Put a +1{p} counter on an aura you control with **ward**.
+
+**SO THE FLIP IS HALF THE COST AND THE GUARD NEVER SAW IT.**
+`parseHeroPower` refuses a cost containing discard/banish/remove/destroy/
+sacrifice/put/reveal/soul/life — and *"turn this face-up"* contains none
+of them. The line fell through, the cost was read off the `{r}` alone,
+and the ability minted a counter **every turn, forever**, where the card
+grants it once. It is the FOURTH named cost this reader accepts, beside
+v3.39's counter, v3.74's soul banish and v3.86's named permanent —
+**named rather than relaxed**, for their reason.
+
+**THE RULING AGREES WITH THE PRINTING** (user, 2026-07-25): *"EQUIPPED
+FACE DOWN ... INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP
+- SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER"*. Its
+*"ALWAYS ACTIVE"* is this user's shorthand for the instant WINDOW — the
+same thing they spell out at length for Spellfire Cloak in the same
+batch — not a claim the ability repeats. **The display half ("SHOW CARD
+BACK") is deferred with the rest of the UI pass**, and the ledger says
+so.
+
+### AND THE HOIST FOUND A LIVE ONE
+
+Three of the four activation costs are paid out of somewhere the powCard
+cannot see, so each is a LEGALITY (v3.11). **All three lived in judge's
+HERO branch alone.** The trainer routes a hero's ability and an
+equipment's through ONE `tryPlay`, so it asked them for both; this file
+has two branches and only one asked. So **Radiant Touch's soul cost was
+unrefused at the table** — `execute`'s own guard makes it inert rather
+than free (v2.04), and the seat still spends its once-per-turn allowance
+on a play the rules forbid. **v3.01's shape, and `abCostWhy` is one body
+both branches call.**
+
+### SIX STALE LEDGER ENTRIES, ALL FOUND BY ASKING THE ENGINE
+
+v3.69's twin of v3.41 — *when a record says a thing is unbuilt, go and
+ask the engine* — has now cost **nine** entries:
+
+| | was | is |
+|---|---|---|
+| `high tide` | `unreviewed` | **live** — a GATED `pitchBlueN` condition, evaluated; all 6 records `full` |
+| `meld` | `unreviewed` | **live** — v3.34 built the whole declaration |
+| `unity` | `unreviewed` | **live** — v3.27; both walls count their hand defenders |
+| `quickstrike` · `rupture` | `unreviewed` | **live** — built here |
+| `cloaked` | `unreviewed` | **partial** — face-down and the flip cost; the display half is not |
+
+**A mention count is a signal and never a verdict** (v3.00), which is why
+the SET is pinned and moving one is a deliberate edit. Flagged cards
+**41 → 31**.
+
+```
+drills 2134 pass / 0 fail / 4 skipped    scenes 69
+coverage 379 full / 23 part / 3 none     fairness clean
+play 210 games, 0 stalls, 0 refusals, 0 violations
+```
+
 ## v3.98 — the same census one reader over, and a guard that was never copied
 
 v3.97 censused the **conditions**. This censuses the **qualifier atoms**,

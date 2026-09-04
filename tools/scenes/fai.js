@@ -334,5 +334,47 @@ module.exports = [
     "and it may be played this turn": true
   }
 }
+,
+
+{
+  name: "Lava Burst's rupture threshold is a chain-link count",
+  why: "v3.99 — \"Rupture - If this is played as chain link 4 or higher, it " +
+       "gets +3{p}\" was claimed whole by the loose pump matcher, so it " +
+       "granted +3 on chain link ONE. STRONGER than printed and `tier: " +
+       "full`; the fairness sweep cannot see a gate that disappears rather " +
+       "than being duplicated (v3.57). The off-by-one is the whole test " +
+       "(v3.92): `linkPayload` pushes this attack's own link and " +
+       "`linkPumps` runs BEFORE it, so the attack is link chain.length + 1, " +
+       "and a fixture at 0 links and one at 6 agree under both readings.",
+  run(c){
+    const at = (prior) => {
+      const card = c.card("Lava Burst", 1, "lb");
+      const chain = [];
+      for(let i = 0; i < prior; i++) chain.push({n: "L" + i, kind: "atk"});
+      const g = Object.assign(c.acting(Object.assign(
+        c.state({hand: [card], res: 9, ap: 1}, {hp: 40}, {turn: 3}), {builds: [{}, {}]})),
+        {chain});
+      const out = c.exec(g, card, "hand", 0);
+      const n = out.game || out;
+      let total = null;
+      c.J.withEffects(n, (fx, m) => { total = fx.linkPumps(m, {equipDefenders: 0, handBlockers: 0, defenders: []}).total; return m; });
+      return total;
+    };
+    return {
+      "its printed power":                    c.card("Lava Burst", 1).power,
+      "as chain link 1 it is just that":      at(0),
+      "as chain link 3 — one short":          at(2),
+      "as chain link 4 the printed +3 lands": at(3),
+      "as chain link 5 it still applies":     at(4)
+    };
+  },
+  want: {
+    "its printed power": 2,
+    "as chain link 1 it is just that": 2,
+    "as chain link 3 — one short": 2,
+    "as chain link 4 the printed +3 lands": 5,
+    "as chain link 5 it still applies": 5
+  }
+}
 
 ];

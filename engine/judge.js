@@ -120,6 +120,46 @@ const abWindow = ab => PR.abWindow(ab);
    is the worst kind of dead tap. `effects.pendPumped` is the one reader of
    "already above its printed power", so this check and `attackRx`'s own
    cannot disagree and offer an ability that then refuses itself. */
+/* ---- AN ACTIVATION'S COSTS ARE ONE BODY (v3.99) ---------------------
+   Three of the four costs an activated ability can print are paid out of
+   somewhere the powCard cannot see — the soul, the piece itself, a named
+   permanent on the board — so each is a LEGALITY, refused before the
+   ability resolves rather than after (v3.11: refusing afterwards costs
+   the player the price for a play the rules never allowed).
+
+   ALL THREE LIVED IN THE HERO BRANCH ALONE. The trainer routes both a
+   hero's ability and an equipment's through ONE `tryPlay`, so it asked
+   them for both; this file has two branches and only one of them asked.
+   So at the table:
+
+     Radiant Touch    Equipment, "Instant - Banish this and a card from
+                      your soul" — `legal` said yes with an EMPTY soul
+     Uphold Tradition Equipment, the flip cost (v3.99)
+
+   `execute` guards each, so nothing was granted free (v2.04) — but an
+   ability that is offered, accepted and then does nothing is the sev-1
+   category wearing a legal move's clothes, and the seat spends its
+   once-per-turn allowance for it. v3.01's shape: a rule that exists on
+   one board.
+
+   ONE BODY, BOTH BRANCHES, and the same three readers the trainer asks —
+   a cost read in one place and re-derived in another is two descriptions
+   of one price (v3.79, v3.86). */
+function abCostWhy(sd, ab){
+  const _sc = PR.abSoulCost(ab);
+  if(_sc && (sd.soul || []).length < _sc)
+    return ab.name + " costs " + _sc + " from the soul, and " + sd.name
+         + " holds " + (sd.soul || []).length;
+  if(PR.abFlipUp(ab)){
+    const _fg = (sd.gear || []).find(x => x.uid === ab._flipGear);
+    if(!_fg || !_fg._faceDown)
+      return ab.name + " costs turning it face-up, and it is already face-up";
+  }
+  const _dn = PR.abDestroyBoard(ab);
+  if(_dn && !PR.boardEntryNamed(sd, _dn))
+    return ab.name + " costs a " + _dn + ", and " + sd.name + " controls none";
+  return null;
+}
 function rxTargetWhy(g, ab, want){
   if(want !== "attack-reaction") return null;
   const q = PR.fxParse(ab).selfQ || PR.fxParse(ab).gaQ;
@@ -826,19 +866,10 @@ function legal(g, a, seat){
          asks about lives in the half that was removed. */
       if(sd.heroTapped && PR.tapsToActivate((bOf(g, seat).heroRec || {}).tx || ""))
         return sd.name + " is tapped — that ability costs {t}, and a tapped hero cannot pay it again";
-      /* A SOUL BANISH IS A COST, SO IT IS A LEGALITY (v3.74). Refused
-         before the ability resolves, never after — v3.11's rule one route
-         over. `parser.abSoulCost` is the one reader both boards ask. */
-      { const _sc = PR.abSoulCost(ab);
-        if(_sc && (sd.soul || []).length < _sc)
-          return ab.name + " costs " + _sc + " from the soul, and " + sd.name
-               + " holds " + (sd.soul || []).length; }
-      /* A NAMED PERMANENT IS A COST TOO, SO IT IS A LEGALITY (v3.86) —
-         v3.11's rule, and the same reader the trainer asks. */
-      { const _dn = PR.abDestroyBoard(ab);
-        if(_dn && !PR.boardEntryNamed(sd, _dn))
-          return ab.name + " costs a " + _dn + ", and " + sd.name
-               + " controls none"; }
+      /* THE SOUL BANISH (v3.74), THE FLIP (v3.99) AND THE NAMED BOARD
+         PERMANENT (v3.86) — one body, because the GEAR branch below has
+         to ask exactly the same three and asked none of them. */
+      { const why = abCostWhy(sd, ab); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -984,6 +1015,9 @@ function legal(g, a, seat){
          the rest print `Once per Turn`. Widening it here would be a NEW
          rules claim on the board that is not the regression harness. */
       if((sd.weaponUsed || {})[ab.uid]) return piece.name + "'s ability is spent this turn";
+      /* THE COSTS PAID OUT OF SOMEWHERE THE POWCARD CANNOT SEE (v3.99).
+         This branch asked NONE of them until now — see `abCostWhy`. */
+      { const why = abCostWhy(sd, ab); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, piece))
         return piece.name + " can't be activated — " + gate.why;

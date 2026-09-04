@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.98 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.99 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -16,18 +16,52 @@ waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
 
-**v3.98 RAN THE SAME CENSUS ON THE QUALIFIER ATOMS AND FOUND A GUARD THAT
-WAS NEVER COPIED.** `takeDefCap` (v3.64) cites `takeGaNext` as "same shape
-and same rule" in its own header and does not have its guard — a stale
-entry capped every attack's wall. The census also found `instantNextQ`
-mixing its PAYLOAD into the matched object; the entry is `{q, amp}` now
-and `WIRE_V` went 4 → 5.
+**v3.99 RAN THE CENSUS ON `runOps`' OP VOCABULARY — the third of the three
+targets the last handoff named — and it found one real hole and a seam.**
+Every op kind the parser emits over the pinned pool, against every kind
+`runOps` dispatches: four unhandled, three of them dispatched elsewhere by
+design (`pump` and `wpnAgain` at the atkTrigger pop site, `payOrLose` at
+its own). `self` was the hole, and **Jack Be Quick's optional cost paid it
+and received nothing.**
 
-**THE CENSUS PATTERN HAS NOW PAID THREE TIMES IN THREE VERSIONS.** What is
-left to census, in order of how much a miss would cost:
-`playWindowFor` vs `playableWhy` (v3.36's negative-action-point bug lived
-exactly there), `optFilter`'s keys against `promptFilter`'s tests, and the
-op vocabulary in `runOps` against what the parser emits.
+**AND THE SAME PASS FOUND A WHOLE PREFIX FAMILY.** `classifyClause` guards
+the ACTIVATION prefixes so the loose matchers cannot eat a cost (v3.59);
+the KEYWORD prefixes have the same hazard and only three of five members
+were guarded. **Rush of Power and Lava Burst pumped unconditionally**,
+four records, all `tier: full`, all stronger than printed. Second Strike
+dropped a printed action point in the other direction, and **cloaked was
+filed under stealth's noop reason**, which hid a flip cost that made
+Uphold Tradition's ability repeatable.
+
+### THE CENSUS PATTERN HAS PAID FOUR TIMES IN FOUR VERSIONS
+
+Two targets remain, in order of how much a miss would cost:
+
+| census | why |
+|---|---|
+| `playWindowFor` vs `playableWhy` | v3.36's negative-action-point bug lived exactly there — a window widened in one and not the other |
+| `optFilter`'s keys vs `promptFilter`'s tests | a filter key the prompt does not test ADMITS EVERY CARD, which is the sev-3 v2.29's refusals exist to prevent |
+
+**AND A THIRD TARGET SUGGESTS ITSELF FROM THIS VERSION**: the boards'
+LEGALITY questions against each other. `abCostWhy` was hoisted because
+judge's gear branch asked none of the three activation-cost legalities its
+hero branch asks — v3.01's shape, found by hand. A census that walked both
+branches would have named it.
+
+### THE CLOAKED DISPLAY HALF IS OPEN, AND IT IS THE ONLY HALF LEFT
+
+RULING (user, 2026-07-25) says *"EQUIPPED FACE DOWN — **SHOW CARD BACK ON
+THE PLAYERS BOARD**"*. The rules half is built (the piece equips
+face-down, the flip is a cost, the ability is a one-shot); the **display**
+half is not, and it is deferred with the rest of the UI pass rather than
+forgotten. It is one shared component — `ArmorGrid`'s cell — so both
+boards get it in one edit.
+
+What is deliberately NOT decided: whether a face-down piece keeps its
+printed defence and its **Ward 1**. The card does not say, the database
+prints no CR text for it, and half-building a value change is worse than
+the honest gap (v3.23). The ledger carries the gap as `partial` so
+`failstates.js` grades it against the claim rather than a grep.
 
 **AND ASK FOR THE REFUSAL, NOT THE MATCH.** `qualMatches` passes every
 field test vacuously on an object with no qualifier keys, so a drill that

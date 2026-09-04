@@ -40,7 +40,7 @@
   else root.DawnBuild = factory(root.DawnParser, root.DawnCards, root.DawnGame, root.DawnRNG);
 })(typeof self!=="undefined" ? self : this, function(PR, CD, GM, RNG){
 
-const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, ARS_PUT} = PR;
+const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, isCloaked, ARS_PUT} = PR;
 const {resolveEntry, resolveHero, cdnImg} = CD;
 const {slotOf} = GM;
 
@@ -404,6 +404,7 @@ function heroAbilities(heroRec, displayName, code){
        a cost nothing can charge, which is the free-ability bug v2.04
        fixed. OPT-IN (v3.58). */
     heroPow.destroyBoard ? {_destroyBoard: heroPow.destroyBoard} : {},
+    heroPow.flipUp ? {_flipUp: true} : {},
     /* FAI — "this ability costs {r} less to activate for each DRACONIC
        CHAIN LINK you control" (v3.86). A DYNAMIC reduction: it depends on
        the chain, which is game state rather than a fact about the side,
@@ -517,6 +518,22 @@ function buildSide(h, d, db, opts, rng, ctr){
     halveCard(resolveEntry(db,e,saSet), _ab.halveBase), {gi,uid:++ctr.n,used:false}));
   const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
   gear.forEach(gr=>{
+    /* ---- CLOAKED: "EQUIP THIS FACE-DOWN" (v3.99) --------------------
+       Read off the card's own PRINTED reminder line (ENG005) rather than
+       guessed, and stamped at the DEAL, where a piece becomes equipped —
+       the one moment the property is about. `printedKw` is the question
+       (v2.84's three): a card that merely mentioned the keyword must not
+       be equipped face-down, which would be a rule invented at the
+       keyword level.
+
+       WHAT FACE-DOWN MEANS HERE IS DELIBERATELY NARROW, and that is the
+       ruling rather than a shortcut (v3.48). It gates the ONE thing the
+       card's own text spends it on — "turn this face-up" — and nothing
+       else. Whether a face-down piece keeps its printed defence and its
+       Ward 1 is not stated on the card, the database prints no CR text
+       for it, and half-building a value change is worse than the honest
+       gap (v3.23). Recorded in HANDOFF.md as the open half. */
+    if(isCloaked(gr)) gr._faceDown = true;
     if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
       if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
       if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
@@ -566,7 +583,13 @@ function buildSide(h, d, db, opts, rng, ctr){
          this" — so this is latent; `execute` reads the flag off the
          powCard without caring which builder stamped it, so a card that
          printed the shape would work rather than be silently free. */
-      pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {}); } } });
+      pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {},
+      /* v3.63's rule, FOURTH outing: when you add a flag to one powCard
+         builder, grep for the others. Uphold Tradition is the pool's only
+         record — an EQUIPMENT — so the hero builder and `boardPow` are
+         given it as a guard rather than a fix, exactly as `_attackRx` was
+         (v3.63) and `_destroyBoard` (v3.86). */
+      pw.flipUp ? {_flipUp: true, _flipGear: gr.uid} : {}); } } });
   const _atk = deck.filter(isAttack);
   const _ga = deck.filter(c=>fxParse(c).ga).length;
   const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
