@@ -46,14 +46,20 @@ test("both sentences fold into ONE grant, carrying the printed number", {skip}, 
       "beside the grant is the leak this version fixes — and it would ALSO double, since " +
       "the grant carries the same number");
     assert.equal(ops[0][0], "instantNext");
-    assert.deepEqual(ops[0][1], {g: [["wizard"]], nonAtk: true, amp},
+    /* THE ENTRY IS `{q, amp}` AS OF v3.98 — the qualifier is what MATCHES
+       and the amp is what the grant PAYS. It used to be `{...q, amp}`,
+       which made `amp` show up as a qualifier ATOM in a census of what
+       the pool emits and handed `qualMatches` a key that is not a
+       question about the card. The other four single-shot grants have
+       kept them apart since they were built. */
+    assert.deepEqual(ops[0][1], {q: {g: [["wizard"]], nonAtk: true}, amp},
       "the AMOUNT IS THE CARD'S OWN: red prints plus 3, yellow 2, blue 1");
   }
 });
 
 test('"non-attack" contains "attack" — the qualifier must not ask for both', {skip}, () => {
   P.fxReset();
-  const q = P.fxParse(stir()).ops[0][1];
+  const q = P.fxParse(stir()).ops[0][1].q;
   assert.equal(q.nonAtk, true);
   assert.equal(q.aac, undefined,
     '"action card" in the tail belongs to the SUBJECT phrase. Setting `aac` as well asks ' +
@@ -113,7 +119,7 @@ test("an UNREADABLE tail refuses the whole clause, never a bare grant", {skip}, 
   const read = t => P.classifyClause(t);
 
   assert.deepEqual(read("You may play your next Wizard non-attack action card this turn as though it were an instant").ops,
-    [["instantNext", {g: [["wizard"]], nonAtk: true}]], "control: a readable tail reads");
+    [["instantNext", {q: {g: [["wizard"]], nonAtk: true}}]], "control: a readable tail reads");
 
   assert.equal(read("You may play your next Wizard non-attack action card with a purple sparkle this turn as though it were an instant"),
     null,
@@ -123,13 +129,13 @@ test("an UNREADABLE tail refuses the whole clause, never a bare grant", {skip}, 
   /* The tail atoms that DO have readers still work, so the refusal above
      is narrow rather than a reader that gave up. */
   assert.deepEqual(read("You may play your next attack action card with stealth this turn as though it were an instant").ops,
-    [["instantNext", {aac: true, kw: "stealth"}]]);
+    [["instantNext", {q: {aac: true, kw: "stealth"}}]]);
 });
 
 /* ---- READ vs SPEND --------------------------------------------------- */
 
 test("the grant is READ without being spent, and SPENT when the card is played", {skip}, () => {
-  const q = {g: [["wizard"]], nonAtk: true, amp: 1};
+  const q = {q: {g: [["wizard"]], nonAtk: true}, amp: 1};
   const bolt = H.card("Ice Bolt", 1);
   let g = H.state({res: 19, ap: 3, hand: [bolt], instantNextQ: [q]}, {},
                   {actor: 0, turnPlayer: 0, turn: 3});
@@ -146,7 +152,7 @@ test("the grant is READ without being spent, and SPENT when the card is played",
 
 test("a grant that does not match WAITS rather than being spent", {skip}, () => {
   /* v2.30's rule, kept by all four members of the family. */
-  const q = {g: [["wizard"]], nonAtk: true, amp: 1};
+  const q = {q: {g: [["wizard"]], nonAtk: true}, amp: 1};
   const bull = H.card("Wounded Bull", 1);            /* an attack */
   let g = H.state({res: 19, ap: 3, hand: [bull], instantNextQ: [q]}, {},
                   {actor: 0, turnPlayer: 0, turn: 3});
@@ -164,13 +170,32 @@ test("the grant opens the instant window for the named card", {skip}, () => {
                       {actor: 1, turnPlayer: 1, turn: 3, builds: [{}, {}]});
     return {...g, phase: "action", step: "layer", priority: 0, passed: []};
   };
-  const q = {g: [["wizard"]], nonAtk: true, amp: 1};
+  const q = {q: {g: [["wizard"]], nonAtk: true}, amp: 1};
   const act = {t: "play", uid: bolt.uid, from: "hand"};
 
   assert.ok(J.legal(at([]), act, 0),
     "without the grant an action card is refused on the opponent's turn");
   assert.equal(J.legal(at([q]), act, 0), null,
     "holding the grant, the same card in the same window is legal");
+
+  /* AND THE QUALIFIER STILL REFUSES (v3.98). Without a fixture that asks
+     for a REFUSAL, `playsAsInstant` reading the whole entry instead of
+     its `.q` is silent: `qualMatches` passes every field test vacuously
+     on an object with no qualifier keys, so the window opens for
+     everything — a printed restriction dropped in the one place it
+     decides whether a card may be played at all. */
+  const bull = H.card("Wounded Bull", 1);          /* an ATTACK — not what the line names */
+  const atBull = held => {
+    const g = H.state({res: 19, ap: 0, hand: [bull], instantNextQ: held}, {},
+                      {actor: 1, turnPlayer: 1, turn: 3, builds: [{}, {}]});
+    return {...g, phase: "action", step: "layer", priority: 0, passed: []};
+  };
+  assert.ok(J.legal(atBull([q]), {t: "play", uid: bull.uid, from: "hand"}, 0),
+    "the grant names a NON-ATTACK, so an attack is still refused in that window");
+  /* the control: with a qualifier that DOES match an attack, it is legal */
+  const qAtk = {q: {aac: true}, amp: 0};
+  assert.equal(J.legal(atBull([qAtk]), {t: "play", uid: bull.uid, from: "hand"}, 0), null,
+    "…so the refusal above is the QUALIFIER, not the window");
 
   /* AND NO ACTION POINT IS CHARGED — the seat has none to charge. Same
      reductio as v3.36: a grant that still cost one could never be used. */
@@ -206,7 +231,7 @@ test("instantNextQ is a real side field — both seats, wire and report", {skip}
 });
 
 test('it expires with the turn — the card prints "this turn"', {skip}, () => {
-  const q = {g: [["wizard"]], nonAtk: true, amp: 1};
+  const q = {q: {g: [["wizard"]], nonAtk: true}, amp: 1};
   const g = H.state({instantNextQ: [q]}, {instantNextQ: [q]}, {});
   const out = E.beginEndPhase(g, 0);
   assert.equal((out.game.sides[0].instantNextQ || []).length, 0,

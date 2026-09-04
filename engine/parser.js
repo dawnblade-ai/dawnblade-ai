@@ -1668,7 +1668,7 @@ function classifyClause(raw){
     if(!q) return null;
     let full = Object.assign({}, q);
     if(m[2] === "non-attack"){ delete full.aac; full.nonAtk = true; }
-    return R([["instantNext", full]]);
+    return R([["instantNext", {q: full}]]);
   }
   /* "YOUR NEXT <x> THIS TURN CAN'T BE DEFENDED BY MORE THAN N <kind>
      CARDS" — Confidence, and the FIFTH qualified single-shot grant beside
@@ -3942,7 +3942,16 @@ function fxParse(card){
     if(gi >= 0){
       const ai = fx.ops.findIndex(o => o[0] === "amp");
       if(ai >= 0){
-        fx.ops[gi] = ["instantNext", Object.assign({}, fx.ops[gi][1], {amp: fx.ops[ai][1]})];
+        /* THE PAYLOAD IS SEPARATE FROM THE QUALIFIER (v3.98). It used to
+           be mixed INTO the qualifier object — `{...q, amp}` — which made
+           `amp` show up as a qualifier atom in a census of what the pool
+           emits, and left `qualMatches` handed a key that is not a
+           question about the card at all. The other four single-shot
+           grants have kept them apart since they were built (`buffQ` is
+           `{amt, q, rider}`, `gaNextQ` is `{q, rider}`); this was the odd
+           one out, and an extra key riding on a matched object is the
+           same-name-different-meaning trap v3.31 names one shape over. */
+        fx.ops[gi] = ["instantNext", {q: fx.ops[gi][1].q, amp: fx.ops[ai][1]}];
         fx.ops.splice(ai, 1);
       }
     }
@@ -5883,7 +5892,7 @@ const playsAsInstant = (c, o) => {
      the hand. `takeInstantNext` in effects.js spends it, once, when the
      card is actually played. Same read/spend split `effCost` keeps for
      `costOff` (v3.32), and for the same reason. */
-  if((o.grants || []).some(gq => qualMatches(gq, c, o))) return true;
+  if((o.grants || []).some(gq => qualMatches(gq && gq.q, c, o))) return true;
   return asInstantMet(fxParse(c).asInstant, o);
 };
 

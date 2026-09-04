@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.97
+**Current version:** v3.98
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2099 drills**.
+This is `node --test "test/*.test.js"` — currently **2104 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,36 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### A GUARD THAT WAS NEVER COPIED (v3.98)
+
+The same census one reader over: every QUALIFIER ATOM the pool emits,
+against `qualMatches` — the single matcher for five families of
+single-shot grant. An atom the parser emits and the matcher ignores is a
+printed RESTRICTION dropped (v2.30's arrow buff on a sword).
+
+**IT FOUND A SHAPE, NOT A MISSING TEST.** `instantNextQ` entries were
+`{...qualifier, amp}` — the grant's PAYLOAD mixed into the object being
+matched, where every other family keeps them apart. The entry is
+`{q, amp}` now and `WIRE_V` went **4 → 5**, because a v4 entry read by a
+v5 client has no qualifier at all.
+
+**AND THE REAL FIND IS ONE LAYER DOWN: `takeDefCap` (v3.64) was missing
+the guard `takeGaNext` has had since v3.43**, and its own header cites
+that function as *"same shape and same rule"* — it copied the shape and
+not the guard. A stale entry off a wire capped EVERY attack's wall.
+
+**TWO GROUPS, AND THE PRINTED CARD DECIDES WHICH.** `buffQ`/`atkBuff`/
+`costOff` **may** be bare — *"your next attack gets +3{p}"* prints no
+restriction and `q: null` is the faithful reading. `gaNextQ`/
+`instantNextQ`/`defCapNext` are qualified **by construction**, so no `q`
+is a stale entry and never a grant. Both halves are pinned.
+
+**`qualMatches` PASSES EVERY FIELD TEST VACUOUSLY ON AN OBJECT WITH NO
+QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
+of this. **Ask for the refusal** — two of three silent sabotages needed
+exactly that, and the third had hit a different taker entirely (three
+`findIndex` lines look alike), which is what turned up `takeDefCap`.
 
 ### `test/condcensus.test.js` — EVERY EMITTED CONDITION IS ANSWERED (v3.97)
 

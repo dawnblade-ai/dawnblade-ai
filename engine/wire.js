@@ -96,8 +96,15 @@
    discovering it on turn six.
    v3.87 — `atkBuff` JOINED it (Night's Embrace's standing attack grant),
    which is the same kind of shape change in the other direction.
-   v3.89 — and `defMod` (Shred's chain-scoped defender debuff). */
-const WIRE_V = 4;
+   v3.89 — and `defMod` (Shred's chain-scoped defender debuff).
+   v3.98 — `instantNextQ`'s ENTRY shape changed, which is the same kind of
+   change one layer in: the field is the same, and an entry written by a
+   v4 client (`{...qualifier, amp}`) is read by a v5 one as an entry with
+   no qualifier at all. `takeInstantNext` refuses such an entry rather
+   than matching everything (v3.43's rule), so the failure is a lost grant
+   rather than a stolen game — and refusing at the handshake is better
+   still. */
+const WIRE_V = 5;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

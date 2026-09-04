@@ -177,3 +177,146 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
     assert.ok(SRC.indexOf('when === "' + w + '"') > 0 || SRC.indexOf('when==="' + w + '"') > 0,
       w + " has no branch in defSelfMet");
 });
+
+/* ---- THE QUALIFIER ATOMS, CENSUSED THE SAME WAY (v3.98) -------------- */
+
+test("every qualifier atom the pool emits is tested by `qualMatches`", {skip}, () => {
+  /* THE SAME QUESTION, ONE READER OVER. `qualMatches` is the single
+     matcher for five families of single-shot grant (v3.31, v3.37, v3.64),
+     and the parser fills their qualifiers from `attackQual` and its
+     neighbours. An atom the parser emits and the matcher does not test is
+     a printed RESTRICTION silently dropped — v2.30's arrow buff landing
+     on a sword, which is the direction that steals games.
+
+     IT FOUND ONE, AND IT WAS A SHAPE PROBLEM RATHER THAN A MISSING TEST:
+     `instantNextQ` entries used to be `{...qualifier, amp}`, mixing the
+     grant's PAYLOAD into the object being matched. `amp` is not a
+     question about the card, and every other family in the group has kept
+     the two apart since it was built. The entry is `{q, amp}` now. */
+  const pool = require("../data/pool.json");
+  const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
+  const atoms = new Set();
+  const take = q => { if(q && typeof q === "object" && !Array.isArray(q))
+    for(const k of Object.keys(q)) atoms.add(k); };
+  for(const c of arr){
+    P.fxReset();
+    const fx = P.fxParse({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
+      ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
+      cost: c.cost, power: c.power, def: c.defense});
+    take(fx.selfQ);
+    for(const m of (fx.modes || [])) take(m.q);
+    for(const o of (fx.ops || [])){
+      if(o[0] === "buffNext")    take(o[2]);
+      if(o[0] === "gaNext")      take(o[1]);
+      if(o[0] === "costOff")     take(o[2]);
+      if(o[0] === "atkBuff")     take(o[2]);
+      if(o[0] === "defCapNext")  take(o[1]);
+      if(o[0] === "instantNext") take(o[1] && o[1].q);
+    }
+  }
+  assert.deepEqual([...atoms].sort(),
+    ["aac", "atk", "boosted", "costGe", "costLe", "from", "g", "kw", "nonAtk", "powLe"],
+    "ten qualifier atoms across the pool. An eleventh needs a test in " +
+    "`qualMatches` — an atom the matcher ignores is a printed restriction dropped.");
+
+  /* AND EVERY ONE IS TESTED. The matcher is read as source because the
+     tests are a straight-line chain of early returns; a missing one is a
+     key that simply falls through, which is the silent shape. */
+  const fs = require("fs"), path = require("path");
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "parser.js"), "utf8");
+  const i = src.indexOf("function qualMatches(qual, card, opts){");
+  assert.ok(i > 0, "qualMatches moved — re-anchor this drill");
+  const body = src.slice(i, src.indexOf("\nfunction ", i + 10));
+  for(const a of atoms)
+    assert.ok(body.indexOf("qual." + a) > 0, a + " is emitted and `qualMatches` never asks it");
+});
+
+test("a grant entry with no qualifier matches NOTHING", {skip}, () => {
+  /* v3.43's rule, and the reason the guard lives at the TAKER rather than
+     in the matcher: `qualMatches` answers TRUE for an ABSENT qualifier by
+     design — that is correct for a genuinely unqualified grant — so an
+     entry that must ALWAYS carry one needs its own guard, or a stale
+     entry off a wire silently matches everything.
+
+     THIS IS THE SHAPE CHANGE'S OWN HAZARD: a v4 client writes
+     `{...qualifier, amp}`, a v5 client reads `entry.q` as undefined, and
+     without the guard the grant would fire on the next card played. The
+     handshake refuses the mismatch first (WIRE_V went 4 → 5), and this is
+     the second line of defence. */
+  const bolt = H.card("Ice Bolt", 1);
+  const stale = {g: [["wizard"]], nonAtk: true, amp: 1};   /* the OLD shape */
+  const g = H.state({res: 19, ap: 3, hand: [bolt], instantNextQ: [stale]}, {},
+                    {actor: 0, turnPlayer: 0, turn: 3});
+  const out = H.execute(g, bolt, "hand", 0, {});
+  assert.equal((out.sides[0].instantNextQ || []).length, 1,
+    "a stale entry is not spent — and, more importantly, not honoured");
+  assert.equal(out.sides[0].amp || 0, 0, "and its payload never landed");
+  /* the control: the CURRENT shape is honoured */
+  const g2 = H.state({res: 19, ap: 3, hand: [H.card("Ice Bolt", 1)],
+                      instantNextQ: [{q: {g: [["wizard"]], nonAtk: true}, amp: 1}]}, {},
+                     {actor: 0, turnPlayer: 0, turn: 3});
+  const out2 = H.execute(g2, g2.sides[0].hand[0], "hand", 0, {});
+  assert.equal((out2.sides[0].instantNextQ || []).length, 0, "…so the refusal is the SHAPE");
+});
+
+test("the three ALWAYS-qualified grants guard their entries; the three that may be bare do not",
+     {skip}, () => {
+  /* v3.43's rule, and it had been unlearned FIVE TIMES OVER by the time
+     anyone counted. `qualMatches` answers TRUE for an ABSENT qualifier BY
+     DESIGN — that is correct for a genuinely unqualified grant, and wrong
+     for an entry that is qualified by construction, where an absent `q`
+     means a STALE entry off a wire or a replay and honouring it applies
+     the grant to everything.
+
+     THE TWO GROUPS, AND THE DIFFERENCE IS THE PRINTED CARD:
+
+       may be bare   `buffQ` `atkBuff` `costOff` — "your next attack gets
+                     +3{p}" is printed with no restriction at all, so
+                     `q: null` is the FAITHFUL reading
+       never bare    `gaNextQ` `instantNextQ` `defCapNext` — every card
+                     that writes one names a card type, so no `q` is a
+                     stale entry and never a grant
+
+     `takeDefCap` was missing its guard until v3.98, and its own header
+     cites `takeGaNext` as "same shape and same rule" — it copied the
+     shape and not the guard, which is exactly what v3.43 warns about. */
+  const fs = require("fs"), path = require("path");
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  const par = fs.readFileSync(path.join(__dirname, "..", "engine", "parser.js"), "utf8");
+  const takerBody = nm => {
+    const i = src.indexOf("const " + nm + " = (n, card, ctx) => {");
+    assert.ok(i > 0, nm + " moved — re-anchor this drill");
+    return src.slice(i, src.indexOf("\n  };", i));
+  };
+  for(const nm of ["takeDefCap", "takeGaNext", "takeInstantNext"])
+    assert.match(takerBody(nm), /x && x\.q && qualMatches\(x\.q,/,
+      nm + " takes an ALWAYS-qualified grant and must refuse an entry with no qualifier");
+  /* AND THE OTHER THREE MUST NOT GROW THE GUARD, or a genuinely
+     unqualified grant stops working — "your next attack gets +3{p}" is
+     printed with no restriction, and `q: null` is what says so. */
+  assert.match(src, /buffQ\|\|\[\]\)\.filter\(b=>qualMatches\(b\.q, card, qCtx\)\)/,
+    "buffQ reads `b.q` straight — a null qualifier is the printed reading");
+  assert.match(src, /atkBuff\|\|\[\]\)\.filter\(b => qualMatches\(b\.q, n\.pend\.card, _sq\)\)/);
+  assert.match(par, /costOff\) \|\| \[\]\)\.find\(x => x && qualMatches\(x\.q, c\)\)/);
+});
+
+test("driven: a stale defCap entry caps NOTHING", {skip}, () => {
+  /* The observable, not the source: without the guard a stale entry with
+     no qualifier caps EVERY attack's wall rather than the one its card
+     names — a printed restriction applied to cards that never printed it,
+     which is the sev-3 direction. */
+  const atk = () => Object.assign(H.card("Wounded Bull", 1), {uid: "a1"});
+  const play = entry => {
+    const g = H.state({res: 19, ap: 3, hand: [atk()], defCapNext: [entry]}, {},
+                      {actor: 0, turnPlayer: 0, turn: 3});
+    return H.execute(g, g.sides[0].hand[0], "hand", 0, {});
+  };
+  const stale = play({n: 2, kind: "nonBlock"});                 /* the pre-guard shape */
+  assert.equal((stale.sides[0].defCapNext || []).length, 1, "not spent");
+  assert.equal(stale.pend.defCap, null, "and, more importantly, not honoured");
+
+  const live = play({q: {aac: true}, n: 2, kind: "nonBlock"});   /* the current shape */
+  assert.equal((live.sides[0].defCapNext || []).length, 0, "spent");
+  assert.deepEqual(live.pend.defCap, {n: 2, count: "hand"},
+    "…so the refusal above is the SHAPE, not the reader giving up");
+});

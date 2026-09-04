@@ -9,6 +9,67 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.98 — the same census one reader over, and a guard that was never copied
+
+v3.97 censused the **conditions**. This censuses the **qualifier atoms**,
+which is the same question asked of `qualMatches` — the single matcher for
+five families of single-shot grant (v3.31, v3.37, v3.64). An atom the
+parser emits and the matcher does not test is a printed **restriction
+silently dropped**: v2.30's arrow buff landing on a sword, which is the
+direction that steals games.
+
+### What the census found was a shape, not a missing test
+
+**`amp`.** `instantNextQ` entries were `{...qualifier, amp}` — the grant's
+**payload** mixed into the object being matched. `amp` is not a question
+about the card, and every other family in the group has kept the two apart
+since it was built (`buffQ` is `{amt, q, rider}`, `gaNextQ` is
+`{q, rider}`). An extra key riding on a matched object is the
+same-name-different-meaning trap v3.31 names one shape over.
+
+The entry is **`{q, amp}`** now, and **`WIRE_V` goes 4 → 5**: an entry
+written by a v4 client is read by a v5 one as an entry with no qualifier
+at all, so two clients on different versions must be refused at the
+handshake rather than discovering it mid-game.
+
+### And the real find is one layer down
+
+**`takeDefCap` (v3.64) was missing the guard `takeGaNext` has had since
+v3.43** — and its own header cites `takeGaNext` as *"same shape and same
+rule"*. It copied the shape and not the guard, which is v3.43's lesson
+verbatim: **a guard belongs to the SHAPE, not to the version that wrote
+it.**
+
+`qualMatches` answers TRUE for an **absent** qualifier by design, so a
+stale `defCapNext` entry off a wire or a replay capped **every** attack's
+wall rather than the one its card names — a printed restriction applied to
+cards that never printed it.
+
+**THE TWO GROUPS ARE PINNED NOW**, and the difference is the printed card:
+
+| | grants | why |
+|---|---|---|
+| **may be bare** | `buffQ` · `atkBuff` · `costOff` | *"your next attack gets +3{p}"* prints no restriction at all, so `q: null` is the FAITHFUL reading |
+| **never bare** | `gaNextQ` · `instantNextQ` · `defCapNext` | every card that writes one names a card type, so no `q` is a stale entry and never a grant |
+
+### Eight sabotages, and three were silent first
+
+| silent | why | the fix |
+|---|---|---|
+| the stale-entry guard | the sabotage hit a **different taker** — three `findIndex` lines look alike | target the right one; **check the sabotage can express the bug** (v3.62, and it is what turned up `takeDefCap`) |
+| `playsAsInstant` reading the whole entry | no fixture asked for a **REFUSAL** | an ATTACK against a non-attack qualifier, with a matching qualifier as the control |
+| the payload mixed back in | the census drill was the only reader | it is the drill, and it bites |
+
+**`qualMatches` PASSES EVERY FIELD TEST VACUOUSLY on an object with no
+qualifier keys**, which is precisely why a drill that only asks for
+matches can never see any of this. Ask for the refusal.
+
+Coverage unchanged at **379 full / 23 part / 3 none** — this version moved
+no card's reading. Drills 2100 → **2104**. Scenes 64. Fairness clean. 210
+self-play games · 0 stalls · 0 refusals · 0 invariant violations.
+
+---
+
 ## v3.97 — the census caught its own next change
 
 v3.96 found three cards whose granted on-hit ability was refused by a gate

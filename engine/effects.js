@@ -1032,7 +1032,7 @@ function makeEffects(ctx){
         if(!iq) return;
         actMut(n).instantNextQ = [...(act(n).instantNextQ||[]), iq];
         /* THE FEED IS READ BY BOTH SEATS, so it names one (v2.83). */
-        n=L(n,`${act(n).name}: their next ${P.qualLabel(iq).replace(/^an? /,"")} may be played at instant speed`
+        n=L(n,`${act(n).name}: their next ${P.qualLabel(iq.q).replace(/^an? /,"")} may be played at instant speed`
              + (iq.amp ? ` and deals +${iq.amp} arcane.` : "."));
       }
       else if(k==="gaNext"){
@@ -4637,7 +4637,22 @@ function makeEffects(ctx){
      `pend` is what both boards ask for the cap. */
   const takeDefCap = (n, card, ctx) => {
     const q = act(n).defCapNext || [];
-    const i = q.findIndex(x => x && qualMatches(x.q, card, ctx));
+    /* AN ENTRY WITH NO `q` MATCHES NOTHING (v3.98) — and this taker was
+       missing that guard, which `takeGaNext` has had since v3.43 and
+       whose note this function's own header cites as "same shape and same
+       rule". It copied the shape and not the guard, which is v3.43's
+       lesson verbatim: **a guard belongs to the SHAPE, not to the version
+       that wrote it.**
+
+       `qualMatches` answers TRUE for an ABSENT qualifier BY DESIGN, and
+       that is right for the three grants that may legitimately be
+       unqualified (`buffQ`, `atkBuff`, `costOff` — an unqualified "your
+       next attack gets +3" really does hit everything). It is wrong for
+       the three that are qualified BY CONSTRUCTION: every card that
+       writes one names a card type, so an entry with no `q` is a stale
+       one off a wire or a replay, and honouring it caps EVERY attack's
+       wall rather than the one the line names. */
+    const i = q.findIndex(x => x && x.q && qualMatches(x.q, card, ctx));
     if(i < 0) return null;
     actMut(n).defCapNext = q.slice(0, i).concat(q.slice(i + 1));
     return q[i];
@@ -4666,7 +4681,14 @@ function makeEffects(ctx){
      A grant that does not match is NOT spent: it waits (v2.30). */
   const takeInstantNext = (n, card, ctx) => {
     const q = act(n).instantNextQ || [];
-    const i = q.findIndex(x => qualMatches(x, card, ctx));
+    /* THE ENTRY IS `{q, amp}` (v3.98) — the qualifier is what MATCHES and
+       the amp is what the grant PAYS, kept apart the way `buffQ`'s
+       `{amt, q, rider}` and `gaNextQ`'s `{q, rider}` always have been. A
+       stale entry with no `q` matches NOTHING rather than everything,
+       which is v3.43's rule: `qualMatches` answers TRUE for an ABSENT
+       qualifier by design, so an entry that must always carry one needs
+       its guard here, not in the matcher. */
+    const i = q.findIndex(x => x && x.q && qualMatches(x.q, card, ctx));
     if(i < 0) return null;
     actMut(n).instantNextQ = q.slice(0, i).concat(q.slice(i + 1));
     return q[i];

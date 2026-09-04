@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.97 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.98 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -15,6 +15,25 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.98 RAN THE SAME CENSUS ON THE QUALIFIER ATOMS AND FOUND A GUARD THAT
+WAS NEVER COPIED.** `takeDefCap` (v3.64) cites `takeGaNext` as "same shape
+and same rule" in its own header and does not have its guard — a stale
+entry capped every attack's wall. The census also found `instantNextQ`
+mixing its PAYLOAD into the matched object; the entry is `{q, amp}` now
+and `WIRE_V` went 4 → 5.
+
+**THE CENSUS PATTERN HAS NOW PAID THREE TIMES IN THREE VERSIONS.** What is
+left to census, in order of how much a miss would cost:
+`playWindowFor` vs `playableWhy` (v3.36's negative-action-point bug lived
+exactly there), `optFilter`'s keys against `promptFilter`'s tests, and the
+op vocabulary in `runOps` against what the parser emits.
+
+**AND ASK FOR THE REFUSAL, NOT THE MATCH.** `qualMatches` passes every
+field test vacuously on an object with no qualifier keys, so a drill that
+only asks whether a grant LANDS is blind to a matcher that has stopped
+restricting anything. Two of three silent sabotages this version needed
+exactly that fixture.
 
 **v3.97 MADE THE v3.96 DIAGNOSTIC A STANDING DRILL, AND IT CAUGHT THE NEXT
 CHANGE IMMEDIATELY.** `test/condcensus.test.js` walks the pool, collects
