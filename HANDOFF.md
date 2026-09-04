@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v3.96 · PHASE C · THREE CARDS READ NOTHING
+# Handoff — Dawnblade, at v3.97 · PHASE C · THREE CARDS READ NOTHING
 
 ## ⚠ THE REMAINING THREE, AND WHAT EACH IS WAITING ON
 
@@ -15,6 +15,20 @@ list at v3.87. What is left, with the honest reason each still refuses:
 waiting on its payload.** Every effect reads. What refuses is a cost
 shape, a prompt shape, or a zone move — which is what Phase C looks like
 from here.
+
+**v3.97 MADE THE v3.96 DIAGNOSTIC A STANDING DRILL, AND IT CAUGHT THE NEXT
+CHANGE IMMEDIATELY.** `test/condcensus.test.js` walks the pool, collects
+every condition the parser EMITS, and asserts each is answered somewhere.
+It found nothing outstanding — worth having proved — and then went red on
+the very next commit, which routed two cards' gates to a different
+evaluator. **That is what a census is for.**
+
+**THE SAME QUESTION IS WORTH ASKING OF THE OTHER PAIRED READERS.** Three
+small evaluators now have pinned vocabularies (`defSelfMet`, the
+as-instant gate, the activation gate). The ones NOT yet censused:
+`playWindowFor` vs `playableWhy` (v3.36's negative-action-point bug lived
+exactly there), and `qualMatches`' atom set against what `attackQual`
+emits.
 
 **v3.96 FOUND A SECOND, SMALLER COPY OF A CONDITION VOCABULARY.**
 `condOnHit` is re-checked at the HIT, so it has its own evaluator — and

@@ -9,6 +9,76 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v3.97 — the census caught its own next change
+
+v3.96 found three cards whose granted on-hit ability was refused by a gate
+nobody had taught. It found them **by hand, once**. This version is the
+standing form.
+
+`test/condcensus.test.js` walks the whole pinned pool, collects every
+condition the parser **actually emits**, and asserts each one is answered
+by an evaluator. A new parser rule fails here until somebody says where it
+is answered — the opposite of the v3.96 failure, which was a new condition
+walking into a silent fallback.
+
+**IT FOUND NOTHING OUTSTANDING**, which is the right result and is worth
+having *proved* rather than assumed. `discard6` has its own early branch;
+`pumped`, `defLt2`, `defLt2any` are routed to `linkPumps` through
+`LATE_CONDS`; `reprise` and `defAtkAction` to the attack-reaction
+dispatcher. Every other emitted condition has a branch in the main loop.
+
+**AND THE SETS ARE PINNED**, so "the scan found nothing" cannot pass for
+"everything is accounted for" — the failure mode this project names on
+nearly every page (v3.21, v3.47, v2.47). The other three small evaluators
+— `defSelfMet`, the as-instant gate, the activation gate — get their
+vocabularies pinned too.
+
+### And it caught the next change one version later
+
+> *"Deal 4 arcane damage to any target. **If this was fused and deals
+> damage to a hero**, create a Frostbite token under their control."*
+> — POLAR CAP · AETHER ICEVEIN
+
+Both parsed the gate perfectly into `condOnHit`, and both were consulted
+by **nothing**: `condOnHit` is read at exactly one site, inside
+`linkPayload`, and **a non-attack never opens a `pend`**. The gate was not
+unknown — the **route** was missing. Recorded at v3.96, discharged one
+version later, which is what a refusal written down in a drill is FOR
+(v3.38). **Sixth this fortnight.**
+
+**THE MACHINERY WAS ALREADY THERE.** `_dmgWay` records whether an arcane
+resolution dealt anything (v3.62, inside `arcaneHit`'s `left > 0` branch,
+so CR 7.5.5's *prevented is not dealt* governs it without being restated)
+and `runWayConds` is the late pass that reads it (v3.60). What was missing
+is the parser routing a non-attack's gated on-hit clause there.
+
+**ONE COMPOUND NAME, NOT TWO CONDS.** `fx.conds` entries pair ONE
+condition with ONE op — there is nowhere for an AND to live — and a card
+whose second half was dropped would fire off any arcane at all, which is
+stronger than printed.
+
+**"TO A HERO" IS SATISFIED BY CONSTRUCTION, AND THAT IS MEASURED**: both
+`arcane` call sites pass `1 - actorOf(n)`, the opposing SEAT, so arcane in
+this engine never reaches an ally. If a route to one is ever built, this
+gate needs the target back — which is written where the gate is.
+
+**AND THE `isAttack` GUARD IS NOT DECORATION.** On an ATTACK, `fx.conds`
+are evaluated at **declaration** — before the swing has hit anything
+(v3.60, v3.88) — so a gated on-hit clause routed there would be answered
+against a hit that has not happened. **No pool card is an attack with a
+fusion-gated on-hit clause**, so the sabotage that drops the guard comes
+back SILENT against every pool fixture; a synthetic is what bites, and
+Entwine Lightning (an attack whose fusion clause is a plain conditional op
+with no on-hit at all) is the control.
+
+**Seven sabotages, seven bite.** Coverage unchanged at **379 full /
+23 part / 3 none**, deliberately: this version moved no card's *reading*,
+it moved where two of them are ANSWERED. Drills 2091 → **2099**. Scenes
+63 → **64**. Fairness clean. 210 self-play games · 0 stalls · 0 refusals ·
+0 invariant violations.
+
+---
+
 ## v3.96 — a second, smaller copy of a condition vocabulary
 
 `fx.condOnHit` is a conditionally **granted** on-hit ability (v3.10),

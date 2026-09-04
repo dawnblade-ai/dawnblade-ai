@@ -92,6 +92,54 @@ module.exports = [
     "a 2-cost card costs them": 3,
     "…and costs ME nothing extra": 2
   }
+},
+
+{
+  name: "the two Ice Fusion riders fire, and only when both halves are true",
+  why: "v3.97 — both cards print \"If this was FUSED and deals damage to a " +
+       "hero, …\", both parsed the gate perfectly, and both were consulted " +
+       "by NOTHING: `condOnHit` is read at exactly one site, inside " +
+       "`linkPayload`, and a NON-ATTACK never opens a `pend`. The gate was " +
+       "not unknown — the ROUTE was missing, which v3.96 recorded and this " +
+       "version discharged. The machinery was already there: `_dmgWay` " +
+       "(v3.62, recorded inside arcaneHit's left>0 branch so CR 7.5.5 " +
+       "governs it) and the late `way:` pass (v3.60).",
+  run(c){
+    const P = require("../../engine/parser.js");
+    const ice = uid => ({name: "Ice Junk" + uid, uid, pitch: 3, cost: 0,
+      tt: "Elemental Ice Wizard Action", ty: ["Elemental","Ice","Wizard","Action"], tx: "", kw: []});
+    const plain = uid => ({name: "Plain" + uid, uid, pitch: 3, cost: 0,
+      tt: "Generic Action", ty: ["Generic","Action"], tx: "", kw: []});
+    const play = (nm, extra) => {
+      P.fxReset();
+      const card = Object.assign(c.card(nm, 1), {uid: "c1"});
+      const g = Object.assign(c.state(
+        {name: "Alice", hand: [card, extra], res: 9, ap: 1, board: []},
+        {name: "Bob", hp: 20, hand: [plain("j1")], board: []},
+        {turn: 3, turnPlayer: 0}), {phase: "action", step: "layer"});
+      g.builds = [{}, {}];
+      const o = c.exec(g, card, "hand", 0, {});
+      return o.game || o;
+    };
+    const pcOn = play("Polar Cap", ice("i1")), pcOff = play("Polar Cap", plain("p1"));
+    const aiOn = play("Aether Icevein", ice("i1")), aiOff = play("Aether Icevein", plain("p1"));
+    return {
+      "fused, Polar Cap creates the token":  (pcOn.sides[1].board || []).map(b => b.card.name),
+      "unfused, it creates nothing":         (pcOff.sides[1].board || []).map(b => b.card.name),
+      "…and the arcane lands either way":    [pcOn.sides[1].hp, pcOff.sides[1].hp],
+      "fused, Aether Icevein asks THEM to pay": !!aiOn.prompt,
+      "…and it is addressed to their seat":  aiOn.prompt && aiOn.prompt.side,
+      "unfused, nobody is asked":            !!aiOff.prompt
+    };
+  },
+  want: {
+    "fused, Polar Cap creates the token": ["Frostbite"],
+    "unfused, it creates nothing": [],
+    "…and the arcane lands either way": [16, 16],
+    "fused, Aether Icevein asks THEM to pay": true,
+    "…and it is addressed to their seat": 1,
+    "unfused, nobody is asked": false
+  }
 }
 
 ];

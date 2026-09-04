@@ -3862,8 +3862,26 @@ function fxParse(card){
          site (resolveStack) can re-check it before the op fires. */
       /* A GATED on-hit carries the subject too, so "if you charged AND
          this hits a HERO" is not silently widened to any hit (v3.45). */
-      if(r.onHit && r.cond){ fx.condOnHit = [...(fx.condOnHit||[]),
-        {cond:r.cond, op, heroOnly: !!r.heroOnly}]; return; }
+      if(r.onHit && r.cond){
+        /* A NON-ATTACK OPENS NO `pend`, SO `condOnHit` NEVER RUNS (v3.97).
+           `pend.condOnHit` is read at exactly one site, inside
+           `linkPayload`, which is the attack path — so Aether Icevein and
+           Polar Cap parsed their gate perfectly and it was consulted by
+           nothing. The gate was not unknown; the ROUTE was missing, which
+           is a different gap from an unteachable condition and was
+           recorded as such at v3.96.
+
+           A NON-ATTACK'S "IF THIS … AND DEALS DAMAGE" IS A `way:`
+           CONDITION, answered by the late pass after the ops have run
+           (v3.60) — the same machinery `_dmgWay` was built for at v3.62.
+           Both pool cards print `fused`, so that is the one compound
+           named; anything else still routes to `condOnHit` and is honest
+           about firing on an attack alone. */
+        if(!isAttack(card) && r.cond === "fused"){
+          fx.conds.push({cond:"way:dealtFused", op, instead:false, atkHero:false});
+          return;
+        }
+        fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op, heroOnly: !!r.heroOnly}]; return; }
       if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op];
         /* "enters OR leaves" — the entry half is an ordinary on-play op
            for a permanent, which is where every other "when this enters

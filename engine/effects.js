@@ -2546,7 +2546,8 @@ function makeEffects(ctx){
     const runWayConds = (nn, grantGa) => {
       for(const {cond, op} of fx.conds){
         if(!/^way:/.test(cond)) continue;
-        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay, took: nn._tookWay})){
+        if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay,
+                              took: nn._tookWay, fused})){
           nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
           continue;
         }
@@ -6175,6 +6176,20 @@ function thisWayMet(cond, trace){
      empty hand or an empty arsenal takes nothing, and the rider is the
      whole difference between the two Loot cards and half of each. */
   if(cond === "way:took") return (t.took||[]).length > 0;
+  /* "IF THIS WAS FUSED AND DEALS DAMAGE TO A HERO" (v3.97) — Aether
+     Icevein and Polar Cap. TWO facts, and only one of them is about what
+     the resolution DID: `fused` is how the card was PLAYED.
+
+     IT IS ONE COMPOUND NAME RATHER THAN TWO CONDS because `fx.conds`
+     entries pair ONE condition with ONE op — there is nowhere for an AND
+     to live — and a card whose second half was dropped would fire off any
+     arcane at all, which is stronger than printed.
+
+     "TO A HERO" IS SATISFIED BY CONSTRUCTION, and that is measured rather
+     than assumed: both `arcane` call sites pass `1 - actorOf(n)`, the
+     opposing SEAT, so arcane in this engine never reaches an ally. If a
+     route to one is ever built, this gate needs the target back. */
+  if(cond === "way:dealtFused") return (t.dmg||0) > 0 && !!t.fused;
   /* AN UNKNOWN `way:` ANSWERS FALSE — a condition added to the parser and
      forgotten here leaves the card weaker than printed and visible, which
      is the safe direction (v3.26's rule, and this function is NAMED so

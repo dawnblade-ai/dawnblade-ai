@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v3.96
+**Current version:** v3.97
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2091 drills**.
+This is `node --test "test/*.test.js"` — currently **2099 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -516,6 +516,41 @@ because `null == undefined` loosely — which is the exact distinction the
 The passive census also accepts `object` (second widening; v3.21 added
 `string`), and `buildVanilla` answers `null` for one — the empty value of
 the type, never a boolean standing in for it.
+
+### `test/condcensus.test.js` — EVERY EMITTED CONDITION IS ANSWERED (v3.97)
+
+v3.96 found three cards refused by a gate nobody had taught, **by hand,
+once**. This is the standing version: it walks the pinned pool, collects
+every condition the parser ACTUALLY EMITS, and asserts each is answered by
+an evaluator. **A new parser rule fails here until somebody says where it
+is answered** — the opposite of a new condition walking into a silent
+fallback.
+
+**IT FOUND NOTHING OUTSTANDING**, which is worth having proved rather than
+assumed. The sets are PINNED, so "the scan found nothing" cannot pass for
+"everything is accounted for" (v3.21, v3.47, v2.47), and the other three
+small evaluators — `defSelfMet`, the as-instant gate, the activation gate
+— get their vocabularies pinned too.
+
+**AND IT CAUGHT THE NEXT CHANGE ONE VERSION LATER.** Aether Icevein and
+Polar Cap print *"If this was fused and deals damage to a hero"*, both
+parsed the gate perfectly, and both were consulted by NOTHING: a
+NON-ATTACK opens no `pend`, and `condOnHit` is read only from
+`linkPayload`. **The gate was not unknown — the ROUTE was.** Discharged
+with `way:dealtFused` through the late pass (v3.60) and `_dmgWay`
+(v3.62); sixth recorded refusal this fortnight.
+
+**ONE COMPOUND NAME, NOT TWO CONDS** — `fx.conds` pairs ONE condition with
+ONE op and there is nowhere for an AND to live. **"To a hero" is satisfied
+by construction, MEASURED**: both `arcane` call sites pass `1 -
+actorOf(n)`, so arcane never reaches an ally here.
+
+**AND THE `isAttack` GUARD IS NOT DECORATION.** On an ATTACK, `fx.conds`
+are evaluated at DECLARATION, before the swing has hit anything — a gated
+on-hit clause routed there is answered against a hit that has not
+happened. No pool card is an attack with a fusion-gated on-hit clause, so
+the sabotage is SILENT; the synthetic bites and Entwine Lightning is the
+control.
 
 ### A SECOND, SMALLER COPY OF A CONDITION VOCABULARY (v3.96)
 

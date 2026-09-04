@@ -84,10 +84,18 @@ test("every condition the POOL puts into condOnHit is in the census", {skip}, ()
       cost: c.cost, power: c.power, def: c.defense});
     for(const e of (fx.condOnHit || [])) seen.add(e.cond);
   }
+  /* SIX AS OF v3.97, not seven: `fused` left when both cards that emitted
+     it were routed to the late `way:` pass instead, because a NON-ATTACK
+     opens no `pend` for `condOnHit` to be read from. A condition LEAVING
+     is as deliberate an edit as one arriving. */
   assert.deepEqual([...seen].sort(),
-    ["auras3", "charged", "chargedPitch2", "drac2", "fused", "marked", "pumped"],
-    "seven conditions reach condOnHit — an EIGHTH is a deliberate edit here " +
+    ["auras3", "charged", "chargedPitch2", "drac2", "marked", "pumped"],
+    "six conditions reach condOnHit — a SEVENTH is a deliberate edit here " +
     "and a branch in the evaluator");
+  /* AND `fused` KEEPS ITS BRANCH, because the pattern list is what makes a
+     condition answerable if it ever routes here again — a census that
+     shrinks its own vocabulary to match today's pool re-opens the hole. */
+  assert.ok(E.condOnHitKnown("fused"), "the evaluator still knows it");
   for(const cond of seen)
     assert.ok(E.condOnHitKnown(cond), cond + " has no pattern in CONDONHIT_CONDS");
 });
@@ -242,31 +250,101 @@ test("costCtx reads the seat it is asked about", {skip}, () => {
 
 /* ---- 5. RECORDED: the two arcane fusion cards ------------------------- */
 
-test("RECORDED REFUSAL — a NON-ATTACK's condOnHit is never consulted", {skip}, () => {
-  /* Aether Icevein and Polar Cap print "If this was FUSED and deals damage
-     to a hero, …" and both parse into `condOnHit` — but `condOnHit` is
-     read at exactly one site, inside `linkPayload`, and a non-attack never
-     opens a `pend` at all. So the gate is not unknown; the ROUTE is
-     missing, which is a different gap from the three this version closed.
+test("a NON-ATTACK's gated on-hit clause is routed to the LATE pass", {skip}, () => {
+  /* RECORDED AT v3.96, DISCHARGED AT v3.97 — one version, which is what a
+     refusal written down in a drill is FOR (v3.38).
 
-     WHAT WOULD DISCHARGE IT already exists in pieces: `_dmgWay` records
-     whether an arcane resolution dealt anything (v3.62, inside
-     `arcaneHit`'s `left > 0` branch, so CR 7.5.5 governs it without being
-     restated) and `thisWayMet` already answers `way:dealt`. What is
-     missing is the parser routing a non-attack's gated on-hit clause
-     there instead of into `condOnHit`.
+     Aether Icevein and Polar Cap print "If this was FUSED and deals damage
+     to a hero, …" and both parsed into `condOnHit` — which is read at
+     exactly one site, inside `linkPayload`, and a non-attack never opens a
+     `pend` at all. The gate was not unknown; the ROUTE was missing.
 
-     RECORDED RATHER THAN HALF-BUILT, and recorded HERE so it comes due
-     the way five other refusals have this fortnight (v3.38). */
+     THE MACHINERY WAS ALREADY THERE: `_dmgWay` records whether an arcane
+     resolution dealt anything (v3.62, inside `arcaneHit`'s `left > 0`
+     branch, so CR 7.5.5's "prevented is not dealt" governs it without
+     being restated) and `runWayConds` is the late pass that reads it
+     (v3.60). What was missing was the parser routing the clause there. */
   for(const nm of ["Aether Icevein", "Polar Cap"]){
     P.fxReset();
     const fx = P.fxParse(H.card(nm, 1));
-    assert.equal((fx.condOnHit || []).length, 1, nm + " parses its gated rider");
-    assert.equal(fx.condOnHit[0].cond, "fused");
-    assert.equal(P.isAttack(H.card(nm, 1)), false,
-      nm + " is a NON-ATTACK, so nothing opens a pend for the gate to be read from");
+    assert.equal(P.isAttack(H.card(nm, 1)), false, nm + " is a NON-ATTACK");
+    assert.equal((fx.condOnHit || []).length, 0, "…so it does not go where nothing reads it");
+    assert.deepEqual((fx.conds || []).map(x => x.cond), ["way:dealtFused"],
+      "it rides in the late pass instead");
   }
-  /* and the reader that would discharge it is already there */
-  assert.equal(E.thisWayMet("way:dealt", {dmg: 3}), true);
-  assert.equal(E.thisWayMet("way:dealt", {dmg: 0}), false);
+  /* ONE COMPOUND NAME, NOT TWO CONDS. `fx.conds` entries pair ONE
+     condition with ONE op — there is nowhere for an AND to live — and a
+     card whose second half was dropped would fire off any arcane at all. */
+  assert.equal(E.thisWayMet("way:dealtFused", {dmg: 3, fused: true}), true);
+  assert.equal(E.thisWayMet("way:dealtFused", {dmg: 3, fused: false}), false, "unfused, nothing");
+  assert.equal(E.thisWayMet("way:dealtFused", {dmg: 0, fused: true}), false,
+    "and CR 7.5.5 — damage fully prevented is not dealt");
+});
+
+test("an ATTACK with the same gate keeps the `condOnHit` route", {skip}, () => {
+  /* THE `isAttack` GUARD, AND WHY IT IS NOT DECORATION. On an ATTACK,
+     `fx.conds` are evaluated at DECLARATION — before the attack has hit
+     anything at all (v3.60's whole lesson, and v3.88's) — so routing a
+     gated ON-HIT clause there would answer it against a swing that has
+     not happened. `condOnHit` is re-checked at the hit, which is the only
+     moment the question means anything.
+
+     NO POOL CARD IS AN ATTACK WITH A FUSION-GATED ON-HIT CLAUSE, so the
+     guard is measured-latent and the sabotage that drops it comes back
+     SILENT against every pool fixture (v3.62). Measured across all 797
+     records: five print "if this was fused", and the one that IS an
+     attack — Entwine Lightning — prints a plain conditional op with no
+     on-hit at all, so it takes the main loop and is untouched. */
+  P.fxReset();
+  const real = H.card("Polar Cap", 1);
+  const atk = Object.assign({}, real, {name: "SYN-fused-attack",
+    tt: "Elemental Wizard Action - Attack", ty: ["Elemental", "Wizard", "Action", "Attack"],
+    power: 4,
+    tx: "Ice Fusion\nWhen this hits a hero, if this was fused, create a Frostbite token under their control."});
+  const fx = P.fxParse(atk);
+  assert.equal(P.isAttack(atk), true, "the fixture really is an attack");
+  assert.deepEqual((fx.conds || []).map(x => x.cond), [],
+    "an attack's gated ON-HIT clause must NOT go to the late pass — its conds " +
+    "are answered at declaration, before the swing has hit anything");
+  assert.deepEqual((fx.condOnHit || []).map(x => x.cond), ["fused"],
+    "it keeps the route that is re-checked at the hit");
+
+  /* and the real attack-typed fusion card is untouched, because its
+     clause is not an on-hit at all */
+  P.fxReset();
+  const el = P.fxParse(H.card("Entwine Lightning", 1));
+  assert.deepEqual(el.conds.map(x => [x.cond, x.op]), [["fused", ["ga"]]],
+    "Entwine Lightning takes the main loop, as it always has");
+  assert.deepEqual(el.condOnHit || [], []);
+});
+
+test("driven: the fusion riders fire only when both halves are true", {skip}, () => {
+  const ice = uid => ({name: "Ice Junk" + uid, uid, pitch: 3, cost: 0,
+    tt: "Elemental Ice Wizard Action", ty: ["Elemental", "Ice", "Wizard", "Action"], tx: "", kw: []});
+  const plain = uid => ({name: "Plain" + uid, uid, pitch: 3, cost: 0,
+    tt: "Generic Action", ty: ["Generic", "Action"], tx: "", kw: []});
+  const play = (nm, extra) => {
+    P.fxReset();
+    const c = Object.assign(H.card(nm, 1), {uid: "c1"});
+    const g = Object.assign(H.state({name: "Alice", hand: [c, extra], res: 9, ap: 1, board: []},
+                                    {name: "Bob", hp: 20, hand: [plain("j1")], board: []},
+                                    {turn: 3, turnPlayer: 0}),
+                            {phase: "action", step: "layer"});
+    g.builds = [{}, {}];
+    return unwrap(H.execute(g, c, "hand", 0, {}));
+  };
+  /* POLAR CAP — the token half */
+  const pcOn = play("Polar Cap", ice("i1"));
+  assert.deepEqual((pcOn.sides[1].board || []).map(b => b.card.name), ["Frostbite"]);
+  assert.equal(pcOn.sides[1].hp, 20 - 4, "and the arcane landed either way");
+  const pcOff = play("Polar Cap", plain("p1"));
+  assert.deepEqual((pcOff.sides[1].board || []).map(b => b.card.name), []);
+  assert.equal(pcOff.sides[1].hp, 20 - 4);
+
+  /* AETHER ICEVEIN — the pay-or-discard half, which opens a real sheet */
+  const aiOn = play("Aether Icevein", ice("i1"));
+  assert.ok(aiOn.prompt, "fused, the opponent is asked to pay");
+  assert.equal(aiOn.prompt.side, 1, "and it is THEIR call (v2.75's `payOr`)");
+  const aiOff = play("Aether Icevein", plain("p1"));
+  assert.ok(!aiOff.prompt, "unfused, nobody is asked");
 });
