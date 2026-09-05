@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.12
+**Current version:** v4.13
 
 ---
 
@@ -767,6 +767,47 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### THE GRANT'S CARD IS THE RIDER'S "IT" TOO (v4.13)
+
+> *"The next Lightning or Elemental attack action card you play this turn
+> gets +3{p}. **If it's FUSED, it gets go again.**"* — WEAVE LIGHTNING
+
+v4.12's family one atom over, and **the atom cannot live in the qualifier
+at all**: `fused` is not a printed field and never can be — it is HOW THE
+CARD WAS PLAYED (v3.96), settled at the top of `execute`. `qualMatches`
+reads the CARD, so it is answered where the play happens instead.
+
+**LIVE, NOT LATENT.** Briar decks Weave Lightning AND both of the pool's
+fusable Lightning attack action cards, so the printed ACTION POINT
+(CR 5.3.5) was lost in real games.
+
+**AND IT IS NOT A SECOND GRANT.** The head already waits for the card the
+line names, so the rider goes in `buffQ`'s existing RIDER slot — v3.42
+built it because a rider *"belongs to the attack that eventually collects
+the pump"*. A separate `gaNextQ` entry would be spent by a card the head
+never matched, and v4.12's `once` cannot say *"the card that took the
+OTHER grant"*.
+
+**A GUARD THAT IS NARROWER THAN THE PRINTED RULE IS WORSE THAN NO GUARD.**
+Demanding the head carry a printed restriction was unexpressible against
+the pool **and** refused a card the line permits. The other dead guard was
+an "already read" test that could never fire, because `classifyClause`
+answers NULL for the rider alone — which is the whole reason the fold
+exists. **The premise is pinned as a drill**, so a reader arriving for
+that phrase fails a test rather than making the fold a second claimant.
+
+**THE REAL CARD CANNOT ALWAYS SEE A WIDENED ANCHOR.** Entwine Lightning
+prints *"if THIS WAS fused"* — a different subject, read in full — but it
+carries no next-attack grant, so the fold's loop never runs and widening
+the anchor to reach it is SILENT. The fixture that bites carries **both
+halves**: a head grant and that wording, where a second claim grants one
+printed action point to two different cards.
+
+**AND CHECK YOUR OWN FIXTURE — TENTH TIME.** The first drill INVENTED the
+Fusion wording as a sentence; the pool prints a **keyword line**
+(`**Lightning Fusion**`), so `fx.fusionCost` was never set and `fused` was
+false in both halves.
 
 ### TWO "IT"S, ONE ANCHOR (v4.12)
 

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.12 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.13 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -29,7 +29,9 @@ as a PRODUCTION defect. **v4.11** built the riders v4.10 had honestly
 left `skip`, and its sabotage pass found **a guard that could not express
 a bug** (below). **v4.12** followed the same family one card further and
 found **Flying High reporting `tier: full` while doing nothing at all** —
-two different "it"s reaching one anchor.
+two different "it"s reaching one anchor. **v4.13** finished the family:
+Weave Lightning's fused rider, LIVE in Briar's own deck and losing a
+printed action point every game.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -176,6 +178,21 @@ are worth two minutes. v4.04 found Inertia the same way (seven tokens at
 decked; red and yellow are not in the pool. So the card anybody actually
 plays is exactly the one that claimed to be read — the audit had nothing
 to say either before or after.
+
+## ⚠ WEAVE LIGHTNING — BUILT AT v4.13
+
+**The record below was written one version ago and is DISCHARGED.** Kept
+for its shape, because the estimate was wrong in an instructive way: it
+guessed a fifth play-context atom on `qualMatches` and a `gaNextQ` entry.
+Both are wrong. `qualMatches` reads the CARD, and a separate `gaNextQ`
+entry would be spent by a card the head never matched — the rider belongs
+on the grant that is already waiting for the right card, which is what
+`buffQ`'s rider slot has been for since v3.42. **Before adding a
+mechanism, check whether the mechanism is the shape you already have**
+(v3.58, v3.73, again).
+
+And the latency question below was worth asking: the answer was **no**.
+Briar decks Weave Lightning and both fusable Lightning attacks.
 
 ## ⚠ WHAT IS STILL OPEN IN THAT FAMILY — WEAVE LIGHTNING
 

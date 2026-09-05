@@ -2830,6 +2830,22 @@ function makeEffects(ctx){
          uses, and is re-checked at the hit rather than at declaration. */
       const qRiderCond = _qr.reduce((a2,b)=>a2.concat(b.rider.condOnHit||[]), []);
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
+      /* AND A RIDER CAN GRANT GO AGAIN ON A FACT ABOUT THE PLAY (v4.13).
+         Weave Lightning's "if it's FUSED, it gets go again" is about the
+         card that collects the pump, so it rides on the entry that waits
+         for it — and `fused` is not a printed field, it is HOW THE CARD
+         WAS PLAYED (v3.96), settled at the top of this function. It is
+         read here rather than in `qualMatches` for that reason: the
+         matcher reads the CARD, and no reader of the card can answer it.
+
+         GO AGAIN IS A GAIN, NOT A REFUND (CR 5.3.5) — so it sets the same
+         `ga` the printed keyword and every other grant set, and the feed
+         says which grant paid for it. */
+      for(const b of _qr){
+        if(b.rider.gaIf !== "fused") continue;
+        if(fused){ ga = true; n = L(n, `${card.name} was fused — that grant carries go again.`); }
+        else n = L(n, `${card.name}: that grant's go again needed this to be fused.`);
+      }
       /* what a face-up arsenal trigger stamped on this card, and only for
          the turn it was stamped — "this turn" is printed on the arrow. */
       const arsPow = (card._arsPow && card._upTurn === n.turn) ? card._arsPow : 0;

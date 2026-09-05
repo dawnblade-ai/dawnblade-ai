@@ -4314,6 +4314,72 @@ function fxParse(card){
     });
   });
 
+  /* ---- THE GRANT'S CARD IS THE RIDER'S "IT" TOO (v4.13) ------------
+     Weave Lightning prints ONE card across two sentences:
+
+       "The next Lightning or Elemental attack action card you play this
+        turn gets +3{p}. If it's FUSED, it gets go again."
+
+     `fused` is not a printed field and never can be — it is HOW THE CARD
+     WAS PLAYED (v3.96), settled at the top of `execute` and carried on
+     `pend`. So it cannot ride in the qualifier the way v4.12's colour
+     does; it is answered where the play happens.
+
+     AND IT IS NOT A SECOND GRANT. The head already waits for the card the
+     line names (a genuine RESTRICTION: "the next LIGHTNING OR ELEMENTAL
+     attack action card"), and the rider is about that same card — so it
+     rides in `buffQ`'s existing RIDER slot, which v3.42 built precisely
+     because a rider "belongs to the attack that eventually collects the
+     pump, not to the card that handed it over". A separate `gaNextQ`
+     entry would be spent by a card the head never matched, and a `once`
+     flag cannot express "the card that took the OTHER grant".
+
+     LIVE, NOT LATENT (v3.73's question, asked and answered the other
+     way): Briar decks Weave Lightning AND both of the pool's fusable
+     Lightning attack action cards — Arcanic Shockwave and Entwine
+     Lightning — so the printed action point has been lost in real games.
+     Go again is a GAIN (CR 5.3.5), this file's own "most valuable keyword
+     in the game to get wrong".
+
+     ONLY THE RIDER IS CLAIMED, as in v4.12: the head already reads. */
+  {
+    /* IT RUNS AFTER THE CLAUSE LOOP, not in the pre-pass beside v4.12's:
+       that one PUSHES an op and this one MUTATES the one the head already
+       produced, so it needs `fx.ops` to exist. The first draft sat in the
+       pre-pass, found an empty `fx.ops`, and refused — silently, and
+       looking exactly like a pattern that does not match. */
+    /* THE HEAD IS "the buffNext op this card produced", full stop. An
+       earlier draft also demanded `o[2]` — a printed RESTRICTION — and
+       that guard was both unexpressible (no pool card prints the
+       near-miss, and its sabotage came back SILENT) and NARROWER than the
+       printed rule: "your next attack gets +3. If it's fused, it gets go
+       again" would be a perfectly good card and the guard would refuse
+       it. Dropped rather than kept as rules code that reads like a rule
+       (v3.67, v3.77, v4.05, v4.11). */
+    const op = (fx.ops || []).find(o => o[0] === "buffNext");
+    /* NO "already read" GUARD, AND THAT IS MEASURED. `classifyClause`
+       answers NULL for this rider on its own — which is the whole reason
+       the fold exists — so a matching clause is always `skip` and a
+       `st === "run"` test beside this could never fire (v3.67, v3.77,
+       v4.05, v4.11; third dead guard this fortnight, and its sabotage
+       came back SILENT for exactly that reason). The premise is pinned in
+       flyinghigh.test.js: if that phrase ever gains a reader of its own,
+       this claim becomes a SECOND one and the guard comes back.
+
+       ENTWINE LIGHTNING IS THE POOL'S CONTROL, and it is a genuinely
+       different sentence: it prints "if THIS WAS fused, it gets go
+       again", where "this" is the card itself — an attack — and
+       `classifyClause` reads it in full as `{ga, cond: "fused"}`. Two
+       wordings, two subjects; the anchor must not reach the other one. */
+    if(op) for(let ri = 0; ri < (fx.clauses || []).length; ri++){
+      if(!/^if it is fused, it (?:gets|gains) go again\.?$/i
+           .test(levelIdiom(String(fx.clauses[ri].t || "").toLowerCase().trim()))) continue;
+      op[3] = Object.assign({}, op[3] || {}, {gaIf: "fused"});
+      fx.clauses[ri].st = "run";
+      break;
+    }
+  }
+
   /* ---- A GRANT'S RIDER CAN NARROW ITS OWN TARGET (v4.11) -----------
      Three of Arakni's six Agents print an attack-reaction ability in two
      sentences:

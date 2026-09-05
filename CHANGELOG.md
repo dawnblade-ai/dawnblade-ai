@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.13 — the grant's card is the rider's "it" too
+
+> *"The next Lightning or Elemental attack action card you play this turn
+> gets +3{p}. **If it's FUSED, it gets go again.**"* — WEAVE LIGHTNING
+
+Same family as v4.12, one atom over — and **the atom cannot live in the
+qualifier at all**. `fused` is not a printed field and never can be: it is
+HOW THE CARD WAS PLAYED (v3.96), settled at the top of `execute` and
+carried on `pend`. So it is answered where the play happens, not by a
+reader of the card.
+
+**LIVE, NOT LATENT** (v3.73's question, asked and answered the other way).
+Briar decks Weave Lightning **and both** of the pool's fusable Lightning
+attack action cards — Arcanic Shockwave and Entwine Lightning — so the
+printed ACTION POINT (CR 5.3.5, this file's *"most valuable keyword in the
+game to get wrong"*) has been lost in real games.
+
+**AND IT IS NOT A SECOND GRANT.** The head already waits for the card the
+line names — a genuine RESTRICTION, *"the next LIGHTNING OR ELEMENTAL
+attack action card"* — so the rider goes in `buffQ`'s existing RIDER slot,
+which v3.42 built precisely because a rider *"belongs to the attack that
+eventually collects the pump, not to the card that handed it over"*. A
+separate `gaNextQ` entry would be spent by a card the head never matched,
+and v4.12's `once` flag cannot say *"the card that took the OTHER grant"*.
+
+**THREE MORE DEAD GUARDS FELL OUT**, every one found by a sabotage coming
+back SILENT and every one the shape v4.11 named:
+
+| guard | why it could not express a bug |
+|---|---|
+| the head must be QUALIFIED (`o[2]`) | no pool card prints the near-miss — **and it is NARROWER than the printed rule**: *"your next attack gets +3. If it's fused, it gets go again"* is a perfectly good card and the guard refuses it |
+| the clause must not already be `run` | `classifyClause` answers **NULL** for the rider on its own, which is the whole reason the fold exists, so a matching clause is always `skip` |
+
+The second one's premise is **pinned as a drill**: if that phrase ever
+gains a reader, the fold becomes a SECOND claimant and the test fails
+rather than the bug shipping.
+
+**ENTWINE LIGHTNING IS THE CONTROL, AND IT IS A DIFFERENT SENTENCE.** It
+prints *"if **THIS WAS** fused, it gets go again"* — "this" is the card
+itself, an attack — and `classifyClause` reads it in full as
+`{ga, cond:"fused"}`. **The real card cannot see a widened anchor**,
+because it prints no next-attack grant at all, so the fold's loop never
+runs: the fixture that bites carries **both**, where claiming the clause a
+second time grants one printed action point to two different cards.
+
+**TWELVE SABOTAGES, TWELVE BITE — AND THE FIRST FIXTURE WAS WRONG.** It
+INVENTED the Fusion wording as a sentence (*"as an additional cost… reveal
+a Lightning card"*) where the pool prints a **keyword line**
+(`**Lightning Fusion**`), so `fx.fusionCost` was never set, `fused` was
+false in every half, and the drill failed against a correct engine. Check
+your own fixture — tenth time, and the answer is always to go and read
+what the pool actually prints.
+
+**382 full / 20 part / 3 none.**
+
 ## v4.12 — two "it"s, one anchor
 
 The pool prints the same rider about two different subjects:

@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-05T08:07:29.640Z",
- "appVer": "4.11",
+ "generated": "2026-09-05T08:20:57.861Z",
+ "appVer": "4.12",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 381,
-  "part": 21,
+  "full": 382,
+  "part": 20,
   "none": 3
  },
  "heroes": {
@@ -12423,7 +12423,7 @@
    "mentions": [
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -12433,16 +12433,14 @@
     },
     {
      "t": "If it's fused, it gets go again.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Go again",
      "st": "run"
     }
    ],
-   "skipped": [
-    "If it's fused, it gets go again."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "The next Lightning or Elemental attack action card you play this turn gets +3{p}. If it's fused, it gets go again.\nGo again",
