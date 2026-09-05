@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.06 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.07 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -19,12 +19,23 @@ found **Hyper Inflation inert on both boards with a feed line saying
 otherwise**, **Brand with Cinderclaw's Draconic grant never spent and, at
 the table, never cleared**, and a cost read two ways seven lines apart.
 
-## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, TWICE OVER
+## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
 v3.69: *when a record says a thing is unbuilt, go and ask the engine.*
 v4.06 is its twin — **when a record says an op is movable, go and ask
-what READS it.** Both times the answer was two minutes of grep-then-drive
-and both times it moved a real card:
+what READS it.** **v4.07 is the generalisation: census every field an op
+WRITES against the sweep meant to take it back**, which found three more
+"this turn" grants that never expired (`amp`, `runeHitNext`, and the
+whole prevention pool) plus a v3.84 record claiming a question was
+undecided that the engine had already answered by accident.
+
+**THE INSTRUMENT IS A GREP FOR A FIELD'S SITES, THEN A DRIVE.** That is
+all it has been each time. What makes it pay is that the two useful
+questions about any field are *what reads this* and *what clears this*,
+and neither is answered by the code that writes it.
+
+Both v4.06 answers were two minutes of grep-then-drive and both moved a
+real card:
 
 | field | written by | read by | cleared by |
 |---|---|---|---|
@@ -121,9 +132,9 @@ found by sabotage. The honest count is 1000.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 
-`npm run audit`: **381 full / 21 part / 3 none**. v4.02, v4.03, v4.05 and
-v4.06 moved no card, deliberately — every one is WIRING, which is exactly
-why no coverage tool could see any of them.
+`npm run audit`: **381 full / 21 part / 3 none**. v4.02 through v4.07
+moved no card, deliberately — every one is WIRING, which is exactly why
+no coverage tool could see any of them.
 
 | card | waiting on |
 |---|---|

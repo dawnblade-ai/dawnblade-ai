@@ -9,6 +9,86 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.07 — three more "this turn" grants that never expired
+
+v4.06 fixed `dracNext`, a grant nothing spent and, at the table, nothing
+cleared. The obvious next question is whether it was the only one, and
+the way to ask it is a census: **every field an op WRITES, against the
+sweep that is supposed to take it back.** Three more, all printed "this
+turn" and none of them in `beginEndPhase`'s step (8):
+
+| field | printed | cards |
+|---|---|---|
+| `amp` | *"The next card you play **this turn** with an arcane damage effect…"* | Absorb in Aether, Cindering Foresight |
+| `runeHitNext` | *"The next Runeblade attack action card you play **this turn**…"* | Mauvrion Skies |
+| `ward` / `awd` | *"…prevent N of that damage **this turn**"* | Cloud Cover, Oasis Respite, Toe the Line, Throw Caution, and three equipment abilities |
+
+All three are single-shot grants **spent by the card they name**, so the
+bug only shows when the grant is *not* spent — which is the ordinary case
+for a prevention nobody attacks into. It then follows its controller into
+every later turn of the game. **Stronger than printed**, and the
+one-sided fairness sweep is built not to look in that direction.
+
+### `ward` HAS TWO SOURCES WITH DIFFERENT WINDOWS
+
+That is the whole of the care this needed. The pool is fed by the
+*"prevent … this turn"* family **and** by an aura's printed `Ward N`
+keyword — Spectral Shield, Waxing Specter, Uphold Tradition. Measured
+across the pool: **every printed prevention says "this turn"; not one
+aura keyword does.**
+
+Sweeping the pool whole would take the aura's ward with it — and whether
+a board aura's ward feeds the prevention pool at all is an **open
+ruling** (v3.84). So **the window is read off the printed clause**
+(v3.87), `wardTurn` / `awdTurn` record only the windowed portion, and the
+end phase takes back exactly that. The aura half is untouched, and the
+ruling stays open rather than being decided by accident.
+
+**AND THE RECORD WAS WRONG IN THE OTHER DIRECTION TOO.** It claimed the
+question was *"not decided"*, which reads as *nothing happens*. Measured:
+all three ward auras parse to `[["ward", N]]` and `execute` adds it — so
+it was **answered by accident, in the affirmative, as a one-shot that
+outlives the aura**. v3.69's rule, one record over: when a record says a
+thing is undecided, go and ask the engine.
+
+### THE RIDER MERGE DROPPED THE WINDOW
+
+`fxParse` pairs Toe the Line's two sentences by rewriting the ward op —
+and written as a fresh literal it **overwrote `op[2]`**, so the one card
+in the pool printing **both** a rider and a window was the one that lost
+one. v2.34's rule read at the consumer end (v3.53), and the fixture that
+finds it is that same card.
+
+### THREE OF MY OWN FIXTURES WERE WRONG FIRST
+
+- **A text scan aimed at one wording.** `prevent the next \d+` found six
+  records — Cloud Cover and Toe the Line print *"The next time you would
+  be dealt damage this turn, **prevent N of that damage**"*, which that
+  spelling never reaches. A scan aimed at the wrong shape under-reports
+  exactly as a missing feature does (v3.81). The census drives
+  `classifyClause` now.
+- **The same census asked the CARD, not the CLAUSE.** Waning Vengeance
+  prints `Ward 3` on its own line and, three lines away, *"if you've
+  pitched a blue card **this turn**"* — so a keyword ward looked windowed
+  by a condition that has nothing to do with it. The window belongs to
+  the clause.
+- **A "window always on" sabotage came back SILENT**, because no pool
+  prevention omits the phrase — so the near-miss is synthetic (v3.73),
+  and it is the only thing separating *the window is read* from *the
+  window is assumed*.
+
+Ten sabotages, ten bites. Symmetry ledger **48 → 50**, deliberately —
+`wardTurn`/`awdTurn` are not a second pool (nothing spends them;
+`preventDamage` reads the total), they exist so the sweep can tell the
+two sources apart.
+
+Measured: `npm test` 2241 drills, 0 fail; coverage unmoved (381 full / 21
+part / 3 none); play 210 games, 0 stalls, 0 refusals, 0 violations — and
+**Iyslander 19 → 14, Blaze 20 → 15**, which is the fix landing on the two
+heroes that had been banking preventions and amps across turns.
+
+---
+
 ## v4.06 — two grants nothing spent, and one nothing read
 
 v4.02's approximation ledger names `costTax` and `dracNext` among the

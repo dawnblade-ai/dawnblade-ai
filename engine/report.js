@@ -82,7 +82,7 @@ function seat(sd){
     nextTurn: list(sd.nextTurn).map(e => e && (e.kind + (e.amt != null ? " " + e.amt : "")
                                      + (e.ready ? " (live)" : " (armed)"))),
     intimidated: list(sd.intimidated).map(c => c.name),
-    status: {amp: sd.amp, ward: sd.ward, awd: sd.awd,
+    status: {amp: sd.amp, ward: sd.ward, awd: sd.awd, wardTurn: sd.wardTurn, awdTurn: sd.awdTurn,
       rune: PR.runeCount ? PR.runeCount(sd) : undefined,
       auras: PR.auraCount ? PR.auraCount(sd) : undefined,
       frailty: PR.frailtyCount ? PR.frailtyCount(sd) : undefined, arcShield: sd.arcShield,

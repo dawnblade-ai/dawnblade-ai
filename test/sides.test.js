@@ -348,9 +348,22 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      untap step lifts (CR 4.4.3d). The two coincide for a hero's own
      ability and come apart the moment an OPPONENT taps you — which is the
      whole of what the ruling (user, 2026-08-25) says a tapped hero means. */
-  assert.equal(gap.fields, 48);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89 */
-  assert.equal(gap.player.length, 48);
-  assert.equal(gap.opponent.length, 48);
+  /* 48 -> 50 AT v4.07, and the pair arrives together for one reason.
+     Every printed prevention in this pool says "THIS TURN" and the
+     prevention pools NEVER EXPIRED, so an unspent ward followed its
+     controller into every later turn of the game — stronger than printed,
+     and invisible to the one-sided fairness sweep. `wardTurn`/`awdTurn`
+     record how much of each pool was granted for the turn, so the end
+     phase can take back exactly that and no more.
+
+     THEY ARE NOT A SECOND POOL. Nothing spends them; `preventDamage`
+     reads the total. They exist because `ward` has TWO sources with
+     different windows — a one-shot prevention, and an aura's printed
+     `Ward N`, whose window is the open aura-ward ruling. Sweeping the
+     pool whole would decide that ruling by accident. */
+  assert.equal(gap.fields, 50);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07 */
+  assert.equal(gap.player.length, 50);
+  assert.equal(gap.opponent.length, 50);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -360,8 +373,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 48);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89 */
-  assert.equal(gap.nativeForOpponent.length, 48);
+  assert.equal(gap.nativeForPlayer.length, 50);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07 */
+  assert.equal(gap.nativeForOpponent.length, 50);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

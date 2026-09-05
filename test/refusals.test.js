@@ -60,9 +60,12 @@ test("its payload has read since v3.67 — only the cost refused", {skip}, () =>
   /* THE DIAGNOSTIC THAT FOUND IT. A card at tier `none` whose payload
      parses in isolation is a card whose COST is the blocker, and that is
      a two-minute check worth making on every `none` card. */
+  /* THE WINDOW IS CARRIED AT v4.07 — the clause prints "this turn" and
+     the prevention pool now gives it back at the end phase. Changed
+     deliberately; the payload is the same reading, one field wider. */
   assert.deepEqual(P.classifyClause(
     "prevent the next 2 damage that would be dealt to you this turn"),
-    {status: "run", ops: [["ward", 2]]});
+    {status: "run", ops: [["ward", 2, {until: "turn"}]]});
 });
 
 test("\"banish this AND a card from your soul\" is one cost with two objects", {skip}, () => {

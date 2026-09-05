@@ -565,9 +565,24 @@ test("classifyClause — 'the next ... attack' buffs, not just 'your next'", () 
     {status:"run", ops:[["gaNext"]]});
 });
 
-test("classifyClause — 'prevent N of that damage' reads as ward", () => {
+test("classifyClause — 'prevent N of that damage' reads as ward, WITH its window", () => {
+  /* CHANGED DELIBERATELY AT v4.07. The clause prints "this turn" and the
+     op now carries it, because the prevention pool never expired — an
+     unspent ward followed its controller into every later turn of the
+     game, which is stronger than printed. */
   assert.deepEqual(cc("The next time you would be dealt damage this turn, prevent 2 of that damage"),
+    {status:"run", ops:[["ward",2,{until:"turn"}]]});
+
+  /* AND A PREVENTION THAT PRINTS NO WINDOW CARRIES NONE. The flag is
+     opt-in (v3.58) — an always-present key changes the shape of every op
+     in the pool, which is what broke five drills the last time. */
+  assert.deepEqual(cc("Prevent the next 2 damage that would be dealt to you"),
     {status:"run", ops:[["ward",2]]});
+
+  /* THE AURA KEYWORD IS THE ONE SOURCE THAT MUST NOT BE SWEPT — `Ward N`
+     is a value the permanent CARRIES, and its window is the open
+     aura-ward ruling rather than this one. */
+  assert.deepEqual(cc("Ward 1"), {status:"run", ops:[["ward",1]]});
 });
 
 test("classifyClause — activated abilities defer to the weapon/equipment readers", () => {

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.06
+**Current version:** v4.07
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2232 drills**.
+This is `node --test "test/*.test.js"` — currently **2241 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,73 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### CENSUS WHAT AN OP WRITES AGAINST WHAT TAKES IT BACK (v4.07)
+
+v4.06 fixed one grant nothing cleared. The generalisation is a census —
+**every field an op WRITES, against the sweep meant to expire it** — and
+it found three more, all printed *"this turn"* and none of them in
+`beginEndPhase`'s step (8): `amp` (Absorb in Aether, Cindering
+Foresight), `runeHitNext` (Mauvrion Skies), and the whole **prevention
+pool** (Cloud Cover, Oasis Respite, Toe the Line, Throw Caution, three
+equipment abilities).
+
+**THE BUG ONLY SHOWS WHEN THE GRANT IS NOT SPENT.** All three are
+single-shot grants consumed by the card they name, so they look correct
+in every drill that spends them — and the ordinary case for a prevention
+is that nobody attacks into it. It then follows its controller into every
+later turn of the game. **Stronger than printed**, which the one-sided
+fairness sweep is built not to see.
+
+**A SWEEP MUST BE COUNTED BY ITS OWN GATE.** Step (8) skips a seat
+holding nothing, so a field swept inside that branch but absent from
+`held` expires only on a turn when something *else* expires — right by
+coincidence, and indistinguishable in a green suite from right.
+
+### ONE POOL, TWO SOURCES, TWO WINDOWS (v4.07)
+
+`ward` is fed by the *"prevent … this turn"* family **and** by an aura's
+printed `Ward N`. Measured: **every printed prevention in the pool says
+"this turn"; not one aura keyword does.**
+
+**SWEEPING THE POOL WHOLE WOULD DECIDE AN OPEN RULING BY ACCIDENT** —
+whether a board aura's ward feeds the prevention pool is v3.84's
+undecided question. So the window is read off the printed clause (v3.87),
+`wardTurn`/`awdTurn` carry only the windowed portion, and the sweep takes
+exactly that. **They are not a second pool**: nothing spends them and
+`preventDamage` reads the total; they exist so the sweep can tell the two
+sources apart. Symmetry ledger 48 → 50.
+
+**AND THAT RECORD WAS WRONG IN THE OTHER DIRECTION.** It said *"not
+decided"*, which reads as *nothing happens* — measured, all three ward
+auras parse to `[["ward", N]]` and `execute` adds it, so the question was
+**answered by accident, in the affirmative, as a one-shot that outlives
+the aura**. v3.69: when a record says a thing is undecided, ask the
+engine.
+
+**THE RIDER MERGE DROPPED THE WINDOW.** `fxParse` rewrites the ward op to
+pair Toe the Line's two sentences, and a fresh literal **overwrote
+`op[2]`** — so the one card printing both a rider and a window lost one.
+v2.34's rule at the consumer end (v3.53), and that card is its own
+fixture.
+
+### A SCAN AIMED AT ONE WORDING UNDER-REPORTS (v4.07)
+
+Three of this version's own fixtures were wrong before the engine was,
+and each is a shape this file names:
+
+- `prevent the next \d+` found **six** records — Cloud Cover and Toe the
+  Line print *"The next time you would be dealt damage this turn,
+  **prevent N of that damage**"*, which that spelling never reaches.
+  **A scan aimed at the wrong shape under-reports exactly as a missing
+  feature does** (v3.81). Drive `classifyClause` instead.
+- the same census asked the **CARD** rather than the **CLAUSE**, so
+  Waning Vengeance's `Ward 3` looked windowed by a pitch condition three
+  lines away. A window belongs to the clause that prints it.
+- a *"window always on"* sabotage came back **SILENT**, because no pool
+  prevention omits the phrase. The near-miss is synthetic (v3.73) and is
+  the only thing separating *the window is READ* from *the window is
+  assumed*.
 
 ### BEFORE YOU MOVE AN OP, ASK WHAT READS IT (v4.06)
 

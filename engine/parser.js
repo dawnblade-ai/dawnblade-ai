@@ -1481,7 +1481,22 @@ function classifyClause(raw){
     return R([["buffNext", 0, null, {onHit: [["arcane", +m[1]]]}]]);
 
   if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
-  if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)) return m[2] ? R([["awd",+m[1]]]) : R([["ward",+m[1]]]);
+  /* THE WINDOW IS READ OFF THE PRINTED WORDS (v3.87, v4.07). Every
+     prevention in this pool prints "this turn" — Cloud Cover, Oasis
+     Respite, Toe the Line, Throw Caution, Radiant Touch, Seeker's Mitts,
+     Runebleed Robe — and the pool NEVER EXPIRED, so an unspent prevention
+     followed its controller into every later turn of the game.
+
+     The one ward source that is NOT windowed is the `Ward N` KEYWORD one
+     rule up: that is a number an AURA carries, not a one-shot the card
+     grants for a turn, so it must not be swept with these. Which matcher
+     fired is the discriminator — reading the clause rather than assuming
+     the pool's shape, because "every prevention in the pool says this
+     turn" is a statement about today. */
+  if(m=c.match(/prevent (?:the next )?(\d+) (?:points? of |of )?(arcane )?(?:that )?damage/)){
+    const win = /\bthis turn\b/.test(c) ? {until:"turn"} : null;
+    return R([[m[2] ? "awd" : "ward", +m[1], ...(win ? [win] : [])]]);
+  }
   /* RULING (Crucible of Aetherweave, Absorb in Aether): "the next card you
      play this turn with an effect that deals arcane damage, instead deals
      that much arcane damage plus N" is the bonus-arcane pool — which the
@@ -4198,7 +4213,12 @@ function fxParse(card){
         if(!pm) continue;
         const sub = classifyClause(pm[1]);
         if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length || sub.cond) continue;
-        fx.ops[wi] = ["ward", fx.ops[wi][1], {ops: sub.ops}];
+        /* MERGE, NEVER REPLACE (v4.07). Written as a fresh literal this
+           DROPPED the printed window the matcher had just attached — and
+           Toe the Line is the one card that prints both a rider AND
+           "this turn", so the one card with two things to carry was the
+           one that lost one. v2.34's rule at the CONSUMER end (v3.53). */
+        fx.ops[wi] = ["ward", fx.ops[wi][1], Object.assign({}, fx.ops[wi][2], {ops: sub.ops})];
         const RIDER = /^if you prevent damage this way,/i;
         fx.clauses.forEach(cl => { if(cl.st === "skip" && RIDER.test(clean(cl.t))) cl.st = "run"; });
         handled.add(k);

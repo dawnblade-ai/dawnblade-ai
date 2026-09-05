@@ -64,7 +64,13 @@ const SIDE_FIELDS = [
      Dead rules STATE is worse than dead code elsewhere — it reads as a
      rule somebody can reach, and this comment two lines up was reasoning
      from it. Do not reintroduce any of them. */
-  "amp","ward","awd",
+  /* `wardTurn`/`awdTurn` are the WINDOWED PORTION of the two prevention
+     pools (v4.07) — how much of `ward`/`awd` was granted "this turn" and
+     is taken back in the end phase. They are not a second pool: nothing
+     spends them, `preventDamage` reads the total, and they exist only so
+     the sweep can tell a one-shot prevention from an aura's printed
+     `Ward N`, whose window is the open aura-ward ruling. */
+  "amp","ward","awd","wardTurn","awdTurn",
   "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
@@ -141,7 +147,7 @@ function makeSide(o){
     pitch: [], grave: o.grave || [], banish: [], soul: [], board: o.board || [], gear: o.gear || [],
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], atkBuff: [], defMod: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
-    amp: 0, ward: 0, awd: 0,
+    amp: 0, ward: 0, awd: 0, wardTurn: 0, awdTurn: 0,
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
     marked: false, fatigue: false,
     hist: freshHist(),

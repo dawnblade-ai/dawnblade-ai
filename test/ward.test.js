@@ -116,7 +116,12 @@ test("Toe the Line's two halves are PAIRED, and the rider rides on the op", {ski
   const fx = P.fxParse({name: "toe|pair|" + r.pitch, tx: r.functional_text || "",
                         tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                         pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
-  assert.deepEqual(fx.ops, [["ward", 2, {ops: [["token", "flurry", 1, "self"]]}]]);
+  /* THE WINDOW RIDES BESIDE THE RIDER (v4.07), and this card is the one
+     that proves the merge. Written as a fresh literal, `fxParse`'s rider
+     merge DROPPED the "this turn" the matcher had just attached — so the
+     single card printing BOTH a rider and a window was the one that lost
+     one. v2.34's rule read at the consumer end (v3.53). */
+  assert.deepEqual(fx.ops, [["ward", 2, {until: "turn", ops: [["token", "flurry", 1, "self"]]}]]);
   assert.equal(fx.tier, "full");
   P.fxReset();
 });
@@ -131,7 +136,11 @@ test("…and a ward with NO rider keeps its plain shape", {skip}, () => {
   const fx = P.fxParse({name: "cloud|pair|" + r.pitch, tx: r.functional_text || "",
                         tt: r.type_text || "", ty: r.types || [], kw: r.card_keywords || [],
                         pitch: r.pitch, cost: r.cost, power: r.power, def: r.defense});
-  assert.deepEqual(fx.ops, [["ward", 3]]);
+  /* CHANGED DELIBERATELY AT v4.07 — Cloud Cover prints "this turn" too,
+     so its op carries the window and no rider. What v3.58's rule protects
+     is that the flag is OPT-IN: an aura's bare `Ward N` still parses to a
+     two-element op, which `test/parser.test.js` pins. */
+  assert.deepEqual(fx.ops, [["ward", 3, {until: "turn"}]]);
   P.fxReset();
 });
 

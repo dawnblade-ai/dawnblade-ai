@@ -1080,6 +1080,15 @@ function makeEffects(ctx){
       else if(k==="amp"){ actMut(n).amp+=v; n=L(n,`Amp ${v} — next arcane +${v}.`); }
       else if(k==="ward"){
         actMut(n).ward+=v;
+        /* THE EXPIRING PORTION IS TRACKED SEPARATELY (v4.07). The pool is
+           one number because prevention is spent as one number, but the
+           two SOURCES have different windows: a printed "prevent the next
+           N damage THIS TURN" is a one-shot the turn takes back, and an
+           aura's `Ward N` keyword is a value the permanent carries.
+           Sweeping the whole pool would decide the open aura-ward ruling
+           by accident; sweeping only what was granted for the turn decides
+           nothing. */
+        if(op[2] && op[2].until === "turn") actMut(n).wardTurn += v;
         n=L(n,`Ward ${v}.`);
         /* THE RIDER WAITS WITH THE POOL (v3.67). Toe the Line prints
            "The next time you would be dealt damage this turn, prevent 2
@@ -1094,7 +1103,9 @@ function makeEffects(ctx){
           n = L(n, `${srcName}: and something waits on that prevention.`);
         }
       }
-      else if(k==="awd"){ actMut(n).awd+=v; n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
+      else if(k==="awd"){ actMut(n).awd+=v;
+        if(op[2] && op[2].until === "turn") actMut(n).awdTurn += v;   /* same window, same reason */
+        n=L(n,`Arcane ward ${v} — soaks spells, not fists.`); }
       else if(k==="soulSelf"){ n._soulSelf = true; }
       else if(k==="ga"){ n._gaGrant = true; n = L(n, "Go again granted."); }
       else if(k==="defBuff"){ n = L(n, `+${v} defense to the wall.`); }
@@ -6741,11 +6752,33 @@ function beginEndPhase(game, seat, db){
                   Impasse's clash payoff prints "until end of turn", where
                   Shred's prints "this combat chain" and is dropped at the
                   close step. Same split, same reason. */
-               + (sd.defMod || []).filter(b => b.until === "turn").length;
+               + (sd.defMod || []).filter(b => b.until === "turn").length
+               /* AND THE THREE v4.07 ADDITIONS. `held` gates the whole
+                  step, so a grant swept above but not COUNTED here is a
+                  grant that expires only when something else happens to
+                  expire on the same turn — which is a sweep that works by
+                  coincidence. */
+               + (sd.amp ? 1 : 0) + (sd.runeHitNext ? 1 : 0)
+               + (sd.wardTurn ? 1 : 0) + (sd.awdTurn ? 1 : 0);
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
       {buffNext: 0, buffQ: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0,
+       /* THREE MORE "THIS TURN" GRANTS THAT NEVER EXPIRED (v4.07).
+          `amp` is Absorb in Aether's and Cindering Foresight's "the next
+          card you play THIS TURN with an arcane damage effect";
+          `runeHitNext` is Mauvrion Skies' "the next Runeblade attack
+          action card you play THIS TURN". Both print the window, both are
+          spent by the card they name, and neither was ever swept — so an
+          unspent one followed its controller into every later turn.
+          A grant that outlives its printed window is STRONGER than
+          printed, which the one-sided fairness sweep cannot see. */
+       amp: 0, runeHitNext: 0,
+       /* AND ONLY THE WINDOWED PART OF THE PREVENTION POOLS. Sweeping
+          `ward` whole would take an aura's printed `Ward N` with it and
+          decide the open aura-ward ruling by accident. */
+       ward: Math.max(0, (sd.ward || 0) - (sd.wardTurn || 0)), wardTurn: 0,
+       awd:  Math.max(0, (sd.awd  || 0) - (sd.awdTurn  || 0)), awdTurn: 0,
        atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain"),
        defMod: (sd.defMod || []).filter(b => b.until !== "turn")});
     n = Object.assign({}, n, {sides});

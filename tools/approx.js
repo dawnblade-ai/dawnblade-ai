@@ -321,13 +321,25 @@ const APPROX = {
 
 "aura-ward-prevention-pool": {
   status:"open", cr:null, board:"both", since:"v3.84", swept:"v4.02",
-  claim:"Whether a board aura's printed `Ward N` also feeds its controller's "+
-        "damage-prevention pool is not decided.",
+  claim:"A board aura's printed `Ward N` DOES feed its controller's prevention "+
+        "pool today — once, at resolution, through the generic `ward` op — and "+
+        "whether that is right is not decided.",
   why:"Cosmo's own text settles what the number MEANS for an aura weapon — 'base "+
       "{p} equal to their ward' — and says nothing about prevention. The database "+
       "prints no reminder text for ward, so deciding it is a RULING rather than an "+
       "engineering call, and half-building a value change is worse than the honest "+
-      "gap (v3.23)."},
+      "gap (v3.23). "+
+      "THE CLAIM WAS CORRECTED AT v4.07: it read 'not decided', which implied "+
+      "nothing happened. Measured — Spectral Shield, Waxing Specter and Uphold "+
+      "Tradition all parse to `[[\"ward\", N]]` and `execute` adds it — so the "+
+      "question was answered by accident, in the affirmative, as a ONE-SHOT that "+
+      "outlives the aura. v3.69's rule: when a record says a thing is undecided, "+
+      "go and ask the engine. "+
+      "AND v4.07's ward sweep DELIBERATELY DOES NOT TOUCH IT. Every printed "+
+      "prevention says 'this turn' and expires; the aura keyword prints no window, "+
+      "so `wardTurn` records only the windowed portion and the sweep takes exactly "+
+      "that. Sweeping the pool whole would have decided this ruling by accident a "+
+      "second time."},
 
 "cloaked-face-down-values": {
   status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",

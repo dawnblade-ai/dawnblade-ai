@@ -127,7 +127,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
   "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
-  "runeHitNext","amp","ward","awd","arcShield",
+  "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
   "lifeLock","namedBuff","dracNext","marked","fatigue","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",
   "nextTurn"
