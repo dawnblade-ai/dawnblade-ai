@@ -489,6 +489,20 @@ function classifyClause(raw){
      single unit, same rule that keeps other if/when patterns off the
      generic splitter — checks the SAME n.revealed the reveal op just set,
      in the same declOps pass. */
+  /* "EQUIP A <NAME> TOKEN" (v4.15). Measured across every pool record,
+     FOUR print it — Orb-Weaver Spinneret x3 and Arakni's Orb-Weaver
+     Agent — and all four name the same token, which is the pool's ONLY
+     record typed both Token and Weapon. So the destination is not the
+     board: `equipTok` files into the GEAR zone, and a token that is not
+     equipment refuses there rather than landing somewhere nothing reads
+     (v3.55's closed vocabulary, v3.07's token with no clock).
+
+     THE NAME IS LOOKED UP, NOT PRINTED FROM HERE. `classifyClause` works
+     on the lowercased clause and `resolveEntry` is case-insensitive, so
+     the capture finds the record and `dbName` supplies the printed form
+     at the mint — the same split the `token` op has kept since v3.33. */
+  if(m=c.match(/^equip an? ([a-z][a-z' -]*?) token$/))
+    return R([["equipTok", m[1].trim()]]);
   if(m=c.match(/^if it is (red|yellow|blue), pitch it$/))
     return R([["revColorPitch", COLOR_PITCH[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))

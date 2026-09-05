@@ -99,6 +99,20 @@ function play(g, limit){
         if(/on the stack \(/i.test(line))          events.push(["reaction", line]);
         if(/layer resolves/i.test(line))           events.push(["layer", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
+        /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
+           that NAMES the seat and then uses a third-person verb reads
+           "You discards Barnacle". `effects.isSecondPerson` has existed
+           since v3.90 to answer exactly that, and the lines written since
+           were never swept — v4.15 found two by DRIVING the engine and
+           reading the feed, which no parse assertion can do.
+
+           IT IS ITS OWN FAULT, NOT `MALFORMED` (v3.81): that one catches
+           structural corruption (`undefined`, `NaN`), and folding a
+           grammar fault into it would hide which of the two a number
+           means. The phrase is spelled here and in the engine, so a
+           rewording of either breaks a drill rather than zeroing a
+           count. */
+        if(/\bYou [a-z]+s\b/.test(line)) events.push(["SECOND-PERSON", line]);
         feedSeen.add(line.replace(/\d+/g, "#"));
       }
       break;

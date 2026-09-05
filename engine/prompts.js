@@ -27,9 +27,9 @@
    Same for costs: it reports `pay`, it does not reach into resources.
    ============================================================ */
 (function(root, factory){
-  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"));
-  else root.DawnPrompts = factory(root.DawnParser);
-})(typeof self!=="undefined" ? self : this, function(P){
+  if(typeof module==="object" && module.exports) module.exports = factory(require("./parser.js"), require("./game.js"));
+  else root.DawnPrompts = factory(root.DawnParser, root.DawnGame);
+})(typeof self!=="undefined" ? self : this, function(P, GM){
 
 const {isAttack, printedKw, arcAmount} = P;
 
@@ -635,11 +635,16 @@ function applyPrompt(game, prompt){
     out.pay = cost;
     out.ops = [...chosen.filter(o => o.kind === "spellvoid").map(o => ["destroyGear", o.uid]),
                ["arcTaken", through, prompt.src || "", prompt.by]];
+    /* THE VERB AGREES WITH THE SEAT (v4.15). `who` is "You" for seat 0,
+       so a bare "soaks" reads "You soaks 1 of 2 arcane" — and this is the
+       ONE second-person line the self-play harness reaches, 86 times in
+       210 games. `game.svName` is the one body; this module holds a NAME
+       rather than a side, which is what that entry point is for. */
     out.msgs.push(chosen.length
-      ? who + " soaks " + Math.min(prevented, prompt.amount || 0) + " of " + prompt.amount +
+      ? GM.svName(who, "soak") + " " + Math.min(prevented, prompt.amount || 0) + " of " + prompt.amount +
         " arcane with " + chosen.map(o => o.name + (o.kind === "spellvoid" ? " (destroyed)" : "")).join(", ") +
         (cost ? " for " + cost + "{r}" : "") + "."
-      : who + " takes all " + prompt.amount + " arcane rather than spend.");
+      : GM.svName(who, "take") + " all " + prompt.amount + " arcane rather than spend.");
     return out;
   }
   /* CR 1.4.5 — the declared attack-target. This module moves nothing and

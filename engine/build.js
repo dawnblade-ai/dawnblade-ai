@@ -42,7 +42,7 @@
 
 const {clean, isWeapon, weaponCost, isAttack, fxParse, hasKw, parseHeroPower, isCloaked, ARS_PUT} = PR;
 const {resolveEntry, resolveHero, cdnImg} = CD;
-const {slotOf} = GM;
+const {slotOf, HANDS, handsUsed} = GM;
 
 /* ---- the equipment slots (official zones) -----------------------------
    Four armour slots and two hands. A quiver is free but needs a bow in
@@ -87,7 +87,9 @@ function applyPick(list, sel, i){
   if(s.z==="off") out = out.filter(x=>item(x).s.z!=="off");
   let hands = out.filter(x=>["1h","off"].includes(item(x).s.z));
   hands.sort((a,b)=>(item(a).s.z==="off"?0:1)-(item(b).s.z==="off"?0:1));
-  while(hands.reduce((a,x)=>a+item(x).s.h,0) + s.h > 2){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
+  /* ONE SPELLING OF WHAT A HAND COSTS (v4.15) — `game.handsUsed` is the
+     one body, so this rule and the runtime equip cannot drift about it. */
+  while(handsUsed(hands.map(x=>item(x).c)) + s.h > HANDS){ out = out.filter(x=>x!==hands[0]); hands = hands.slice(1); }
   return [...out,i];
 }
 
@@ -535,35 +537,19 @@ function halveCard(c, on){
   return out;
 }
 
-function buildSide(h, d, db, opts, rng, ctr){
-  const o = opts || {};
-  const heroRec = resolveHero(db, d.hero) || {};
-  /* ONE BODY FOR THE ABILITY HALF (v3.76) — see `heroAbilities`. It is
-     read here at deal time and again whenever the hero CHANGES. */
-  const _ab = heroAbilities(heroRec, d.hero.name, d.hero.code);
-  const heroPow = _ab.heroPow, HPOW = _ab.HPOW;
-  const cuts = o.cuts||{};
-  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
-     SAZ). Passed to every resolveEntry so a card wears the face it has in
-     this deck's own precon rather than whatever printing the database
-     happened to list first. See cards.js `pickPrinting`. */
-  const saSet = (h.code||"").slice(0,3) || null;
-  const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
-    const q = Math.max(0, e.q - (cuts[ei]||0));
-    if(!q) return [];
-    const c = halveCard(resolveEntry(db,e,saSet), _ab.halveBase);
-    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
-  }));
-  rng = _pd.rng;
-  const deck = _pd.arr;
-  /* THE GEAR IS HALVED AT THE SAME MOMENT, and it must be BEFORE the
-     weapon-cost loop below and before any wear: `gearDef` reads `curDef`
-     when one is set, so halving after a piece had been worn would halve
-     the WORN value rather than the base. Halve first, wear from there. */
-  const gearAll = d.gear.map((e,gi)=>Object.assign(
-    halveCard(resolveEntry(db,e,saSet), _ab.halveBase), {gi,uid:++ctr.n,used:false}));
-  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
-  gear.forEach(gr=>{
+/* ---- WHAT MAKES A RESOLVED RECORD AN EQUIPPED PIECE (v4.15) --------
+   Extracted from `buildSide`'s gear loop, unchanged, because there is now
+   a SECOND caller: Orb-Weaver Spinneret prints "Equip a Graphene
+   Chelicera token", and a token weapon that skipped this body would be a
+   different card from the same record dealt at the start — no folded
+   activation cost, no `_faceDown`, no steam button, no arsenal-put
+   ability. That is the no-mirror rule in the one place a token and a real
+   piece are hardest to tell apart.
+
+   It closes over nothing from `buildSide` — checked before moving it, and
+   the reason the extraction is mechanical rather than a rewrite (v2.53's
+   rule about a port: the bodies are MOVED, not rewritten). */
+function equipPiece(gr){
     /* ---- CLOAKED: "EQUIP THIS FACE-DOWN" (v3.99) --------------------
        Read off the card's own PRINTED reminder line (ENG005) rather than
        guessed, and stamped at the DEAL, where a piece becomes equipped —
@@ -637,7 +623,42 @@ function buildSide(h, d, db, opts, rng, ctr){
          record — an EQUIPMENT — so the hero builder and `boardPow` are
          given it as a guard rather than a fix, exactly as `_attackRx` was
          (v3.63) and `_destroyBoard` (v3.86). */
-      pw.flipUp ? {_flipUp: true, _flipGear: gr.uid} : {}); } } });
+      pw.flipUp ? {_flipUp: true, _flipGear: gr.uid} : {}); } }
+  /* IT MUTATES AND RETURNS. The loadout loop discards the value and the
+     runtime equip needs it, which is the whole reason this body left the
+     `forEach` — a second copy that only returned would drift. */
+  return gr;
+}
+
+function buildSide(h, d, db, opts, rng, ctr){
+  const o = opts || {};
+  const heroRec = resolveHero(db, d.hero) || {};
+  /* ONE BODY FOR THE ABILITY HALF (v3.76) — see `heroAbilities`. It is
+     read here at deal time and again whenever the hero CHANGES. */
+  const _ab = heroAbilities(heroRec, d.hero.name, d.hero.code);
+  const heroPow = _ab.heroPow, HPOW = _ab.HPOW;
+  const cuts = o.cuts||{};
+  /* THIS HERO'S SILVER AGE SET, read off its own printed code (SAZ001 ->
+     SAZ). Passed to every resolveEntry so a card wears the face it has in
+     this deck's own precon rather than whatever printing the database
+     happened to list first. See cards.js `pickPrinting`. */
+  const saSet = (h.code||"").slice(0,3) || null;
+  const _pd = RNG.shuffle(rng, d.deck.flatMap((e,ei)=>{
+    const q = Math.max(0, e.q - (cuts[ei]||0));
+    if(!q) return [];
+    const c = halveCard(resolveEntry(db,e,saSet), _ab.halveBase);
+    return Array.from({length:q},()=>({...c,uid:++ctr.n}));
+  }));
+  rng = _pd.rng;
+  const deck = _pd.arr;
+  /* THE GEAR IS HALVED AT THE SAME MOMENT, and it must be BEFORE the
+     weapon-cost loop below and before any wear: `gearDef` reads `curDef`
+     when one is set, so halving after a piece had been worn would halve
+     the WORN value rather than the base. Halve first, wear from there. */
+  const gearAll = d.gear.map((e,gi)=>Object.assign(
+    halveCard(resolveEntry(db,e,saSet), _ab.halveBase), {gi,uid:++ctr.n,used:false}));
+  const gear = o.gearIdx ? gearAll.filter(x=>o.gearIdx.includes(x.gi)) : gearAll;
+  gear.forEach(equipPiece);
   const _atk = deck.filter(isAttack);
   const _ga = deck.filter(c=>fxParse(c).ga).length;
   const _arc = deck.filter(c=>fxParse(c).ops.concat(fxParse(c).onHit).some(o2=>o2[0]==="arcane")).length;
@@ -876,7 +897,7 @@ const PASSIVE_TYPE = {
   startItem: "object", startGrave: "object"
 };
 
-return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, buildSide, buildSideDefault,
+return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, buildSide, buildSideDefault,
   halveCard,
         buildSeed, buildMatch, buildVanilla, heroAbilityLine, heroAbilities,
         agentsOf, PASSIVES, PASSIVE_TYPE};

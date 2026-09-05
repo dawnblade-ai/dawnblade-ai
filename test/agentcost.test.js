@@ -117,14 +117,21 @@ test("an unreadable subject still refuses the whole line", {skip}, () => {
    B. THE POWCARD, ON BOTH BUILDERS
    ============================================================ */
 
-test("four Agents build a powCard that carries the cost", {skip}, () => {
+test("five Agents build a powCard that carries the cost", {skip}, () => {
   H.db();
   const built = [];
   for(const a of B.agentsOf(H.db(), "chaos")){
     const pw = B.heroAbilities(a, a.n).HPOW;
     if(pw && P.abDiscardCost(pw)) built.push(a.n);
   }
-  assert.equal(built.length, 4,
+  /* 4 -> 5 AT v4.15, DELIBERATELY. Orb-Weaver's line carries the same
+     discard cost and always did; what refused was her PAYLOAD — "Equip a
+     Graphene Chelicera token" — and `parseHeroPower` declines a line
+     whose payload has no reader (v2.29). Building `equipTok` was the
+     whole of it: reading the PAYLOAD is what creates the route (v3.47,
+     fifth outing). Trap-Door's deck search is the one that still
+     refuses. */
+  assert.equal(built.length, 5,
     "the number of Agents whose ability carries its discard cost moved — a cost not " +
     "stamped on the powCard is a cost the ability is never charged (v3.79)");
   const pw = agentPow("Tarantula");

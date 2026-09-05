@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-05T13:31:52.134Z",
- "appVer": "4.13",
+ "generated": "2026-09-05T13:54:47.959Z",
+ "appVer": "4.14",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 383,
-  "part": 19,
+  "full": 384,
+  "part": 18,
   "none": 3
  },
  "heroes": {
@@ -9857,13 +9857,13 @@
     "go again",
     "stealth"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Equip a Graphene Chelicera token.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Your next attack with stealth this turn gets +3{p}.",
@@ -9874,9 +9874,7 @@
      "st": "run"
     }
    ],
-   "skipped": [
-    "Equip a Graphene Chelicera token."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Equip a Graphene Chelicera token.\nYour next attack with stealth this turn gets +3{p}.\nGo again",

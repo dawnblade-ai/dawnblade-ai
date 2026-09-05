@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.14
+**Current version:** v4.15
 
 ---
 
@@ -767,6 +767,64 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### EQUIP A TOKEN — A MINT WITH A DIFFERENT ZONE (v4.15)
+
+> *"Equip a Graphene Chelicera token."* — ORB-WEAVER SPINNERET ×3, and
+> Arakni's Orb-Weaver Agent
+
+**MEASURED**: four pool records print it, all naming the same token, and
+that token is the pool's **only** record typed both Token and Weapon. So
+`equipTok` is `token`'s twin one **ZONE** over — the GEAR zone, where
+`isWeapon` and `weaponCost` already route a swing, not the board where
+every *"auras you control"* count would pick up a dagger. **The
+destination is read off the token, never defaulted** (v3.55).
+
+**IT MOVED FIVE RECORDS AND A HERO** — three Spinnerets `part` → `full`,
+Arakni's FIFTH Agent (her cost was built at v4.09; the PAYLOAD refused),
+and the token became reachable at all. *Reading the payload is what
+creates the route* — v3.47, fifth outing.
+
+**AND IT GOES THROUGH `build.equipPiece`, THE ONE BODY.** The gear loop's
+per-piece work is EXTRACTED unchanged (it closed over nothing), because a
+token minted past it is a different card from the same record dealt at
+the start — charged the printed `null` instead of the folded activation
+cost.
+
+**A HAND MUST BE FREE, AND A DESTROYED PIECE HOLDS NOTHING.**
+`game.handsUsed` is the one reader and the loadout rule asks it too.
+v3.54 files a destroyed piece at the end phase, and Mark of the Huntsman
+destroys *itself* to mark a hero — the very loop this token's printed
+*"when this attacks a MARKED hero"* is built around, so counting a dead
+dagger would refuse the equip the cards are designed to enable.
+
+### SIXTEEN FEED LINES NAMED A SEAT AND DISAGREED WITH IT (v4.15)
+
+Driving the new route printed **"You swings"**, and the census behind it
+found **"You controls no ally"**, **"You discards Barnacle"**, **"You
+takes Snatch from Kayo's graveyard"**. Seat 0 is literally named "You"
+(v2.83); **`isSecondPerson` has existed since v3.90 and sixteen lines
+never asked it.**
+
+**`prompts.js` HAD THE SAME FAULT IN ITS OWN VOCABULARY**, and that is
+the ONE the self-play harness reaches — *"You soaks"*, **86 lines in 210
+games**. A module with its own copy of a naming rule is where the drift
+shows up in prose.
+
+**ONE BODY, IN `game.js`**, for `typeAbbr`'s stated reason: presentation
+that more than one engine module reaches for. `sv` takes the **SIDE,
+never the name** — a caller handed the two separately reads one seat's
+name and agrees with the other's, which is v3.48's `tapFoeHero`
+inversion. And the **BASE form is the argument**, because third person is
+derivable from it and the reverse is not ("takes" → "take" has to know
+not to strip the "es"); `have` is named rather than stemmed.
+
+**TWO INSTRUMENTS, BECAUSE NEITHER SEES THE OTHER'S HALF.** A source scan
+cannot see a line built by concatenation — exactly how `prompts.js`'s
+line hid — so `tools/selfplay.js` carries a driven **SECOND-PERSON**
+counter. It is its OWN fault rather than folded into `MALFORMED` (v3.81:
+a counter that spells the wrong word reports zero, and folding a grammar
+fault into a corruption counter hides which a number means).
 
 ### AN ACTIVATION COST WITH TWO OBJECTS (v4.14)
 

@@ -55,6 +55,55 @@ function slotOf(c){
   return {z:"misc",h:0,lab:"gear"};
 }
 
+/* HOW MANY HANDS A GEAR ZONE IS USING, and the cap (v4.15). `slotOf` is
+   right above and says what one PIECE costs; this is the only place that
+   adds them up, so the loadout rule in `build.js` and the runtime equip
+   in `effects.js` cannot disagree about whether a hand is free.
+
+   A DESTROYED PIECE HOLDS NOTHING. `sweepGear` files it into the
+   graveyard at the beginning of its controller's end phase (v3.54), so
+   between the destroy and the sweep it is still in the array — and Mark
+   of the Huntsman destroys ITSELF to mark a hero, which is exactly the
+   card that frees Arakni's hand for a Graphene Chelicera. Counting a
+   destroyed dagger would refuse the equip the loop is designed around. */
+const HANDS = 2;
+const handsUsed = cards => (cards || [])
+  .filter(c => c && !c.destroyed)
+  .reduce((a, c) => a + slotOf(c).h, 0);
+const handsFree = cards => HANDS - handsUsed(cards);
+
+/* A SEAT AND ITS VERB, AGREEING (v4.15). Seat 0 is literally named
+   "You" (v2.83), so a feed line that NAMES the seat and then uses a
+   third-person verb reads "You controls no ally". `isSecondPerson` was
+   written in effects.js at v3.90 and the sixteen lines that name a seat
+   never asked it; `prompts.js` had the same fault in its own vocabulary
+   ("You soaks"), which is the ONE the self-play harness reaches — 86
+   lines in 210 games.
+
+   IT LIVES HERE FOR `typeAbbr`'s STATED REASON, one comment down:
+   presentation that more than one engine module reaches for. Two copies
+   of a conjugation rule is the no-mirror rule broken over prose, and
+   prose is what the player reads.
+
+   THE BASE FORM IS THE ARGUMENT AND THE THIRD PERSON IS DERIVED. That
+   direction is regular in English ("banish" -> "banishes", "take" ->
+   "takes") and the other is not — "takes" -> "take" has to know not to
+   strip the "es". `have` is the one irregular the feed uses, and it is
+   NAMED rather than stemmed.
+
+   `sv` TAKES THE SIDE, NEVER THE NAME. A caller handed the two
+   separately can read one seat's name and agree with the other's, which
+   is v3.48's `tapFoeHero` inversion and exactly the shape a feed line
+   invites. `svName` is for the one caller that genuinely holds a name
+   and no side — `prompts.js`, which builds "You" / "The opponent" from
+   the seat index and has no side object to hand over. */
+const isSecondPerson = nm => /^you$/i.test(String(nm || ""));
+const thirdPerson = base => base === "have" ? "has"
+  : /(?:s|sh|ch|x|z)$/.test(base) ? base + "es" : base + "s";
+const svName = (nm, base) =>
+  String(nm || "") + " " + (isSecondPerson(nm) ? base : thirdPerson(base));
+const sv = (sd, base) => svName((sd && sd.name) || "", base);
+
 /* THE ONE-WORD NAME FOR WHAT A CARD IS, for a chip on a card frame.
    Presentation, not a rule — no rules site asks this, and `types.js` is
    the authority on what a card IS. It lives here rather than in the
@@ -305,7 +354,8 @@ function popRunechants(game, side, limit, dmgEach){
           cards: popped};
 }
 
-return {parseDeck, gearDef, gearBlockApply, slotOf, typeAbbr,
+return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
+  isSecondPerson, thirdPerson, svName, sv, typeAbbr,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,

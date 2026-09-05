@@ -9,6 +9,68 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.15 — equip a token, and a feed family the drive found
+
+> *"Equip a Graphene Chelicera token."* — ORB-WEAVER SPINNERET ×3
+> *"…: Equip a Graphene Chelicera token. …"* — ARAKNI, ORB-WEAVER
+
+**MEASURED**: four pool records print it, all four name the same token,
+and that token is the pool's **only** record typed both Token and Weapon.
+So `equipTok` is `token`'s twin one **ZONE** over — the GEAR zone, where
+`isWeapon` and `weaponCost` already route a swing, and not the board,
+where every *"auras you control"* count would pick up a dagger.
+
+**IT MOVED FIVE RECORDS AND A HERO.** The three Spinnerets went `part` →
+`full`; **Arakni's FIFTH Agent stopped refusing** — her cost was built at
+v4.09 and it was the PAYLOAD that refused, so *reading the payload is
+what creates the route* (v3.47, fifth outing); and the Graphene
+Chelicera token became reachable at all, having been one of the sweep's
+*"unread and barely named"* entries.
+
+**THE DESTINATION IS READ OFF THE TOKEN, NEVER DEFAULTED** (v3.55). A
+token that is not equipment refuses rather than landing where nothing
+reads it.
+
+**AND IT GOES THROUGH `build.equipPiece`, THE ONE BODY.** The gear
+loop's per-piece work is EXTRACTED — unchanged, because it closed over
+nothing — since a token minted past it would be a different card from
+the same record dealt at the start: charged the printed `null` instead
+of the activation cost `weaponCost` folds on.
+
+**A HAND MUST BE FREE, AND `game.handsUsed` IS THE ONE READER** the
+loadout rule now asks too. **A DESTROYED PIECE HOLDS NOTHING** — v3.54
+files it at the end phase, and Mark of the Huntsman destroys *itself* to
+mark a hero, which is the very loop this token's own *"when this attacks
+a MARKED hero"* is built around. So refusing a third one-handed weapon is
+the faithful reading rather than a wall.
+
+### AND DRIVING IT FOUND WHAT NO PARSE COULD
+
+The feed read **"You swings"**, **"You controls no ally"**, **"You
+discards Barnacle"**. Seat 0 is literally named "You" (v2.83),
+`isSecondPerson` has existed since **v3.90** — and **sixteen** lines that
+name a seat never asked it. `prompts.js` had the same fault in its own
+vocabulary (*"You soaks"*), and that is the one the self-play harness
+reaches: **86 lines in 210 games**.
+
+**`game.sv` IS THE ONE BODY**, in `game.js` for `typeAbbr`'s stated
+reason (presentation more than one engine module reaches for) — two
+copies of a conjugation rule is the no-mirror rule broken over the prose
+the player reads. It takes the **SIDE, never the name**, because a caller
+handed the two separately reads one seat's name and agrees with the
+other's (v3.48's `tapFoeHero` inversion). And the **base form is the
+argument**: third person is derivable from it and not the reverse
+("takes" → "take" has to know not to strip the "es"). `have` is named,
+not stemmed.
+
+**TWO INSTRUMENTS, BECAUSE NEITHER SEES THE OTHER'S HALF.** A source scan
+cannot see a line built by concatenation — which is exactly how
+`prompts.js`'s "You soaks" hid — so `tools/selfplay.js` gains a driven
+**SECOND-PERSON** counter, its own fault rather than folded into
+`MALFORMED` (v3.81), with its phrase pinned against the engine's.
+
+**Twelve sabotages, twelve bite. 384 full / 18 part / 3 none.**
+
 ## v4.14 — an activation cost with two objects
 
 > *"Action - Discard an ally, **destroy this**: Draw a card. Go again"*

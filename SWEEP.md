@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 3 | 2 barely named in the trainer |
-| Ruled but not built | 22 cards | understood ≠ built |
-| **Fail states** | 51 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 21 cards | understood ≠ built |
+| **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -61,7 +61,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Jack Be Quick** (part, 1/3 unread)
 - **Line Crossers** (part, 1/2 unread)
 - **Oasis Respite** (part, 1/2 unread)
-- **Orb-Weaver Spinneret** (part, 1/3 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Spectral Rider** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
@@ -88,11 +87,11 @@ can be overruled. Same discipline as the mention count.
 | No schedule to fire on | 8 |
 | Ability inert — cost not modelled | 7 |
 | Choice never offered | 7 |
-| Unread, effect unknown | 7 |
 | Displayed total is wrong | 6 |
+| Unread, effect unknown | 6 |
 | Earned value denied | 6 |
 
-### WRONG — 27 entries
+### WRONG — 26 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -104,7 +103,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
 - **Arcanic Shockwave** (1) · tier `full` · briar
-  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 11 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Boom Grenade** (1) · tier `part` · dash
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -125,7 +124,7 @@ can be overruled. Same discipline as the mention count.
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If this has an aim counter, it gets piercing 1.
 - **Entwine Lightning** (1) · tier `full` · briar
-  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 11 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -152,9 +151,6 @@ can be overruled. Same discipline as the mention count.
 - **Oasis Respite** (1) · tier `part` · dorinthea, enigma, lyath
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If they have less {h} than each other hero, they may gain 1{h}.
-- **Orb-Weaver Spinneret** (1) · tier `part`
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Equip a Graphene Chelicera token.
 - **Plasma Barrel Shot** · tier `part` · dash
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
@@ -197,7 +193,10 @@ can be overruled. Same discipline as the mention count.
     > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
-- … and 2 more (see the station)
+- **Iyslander** · tier `hero` · iyslander
+  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+    > Essence of Ice
+- … and 1 more (see the station)
 
 ### LOST VALUE — 23 entries
 

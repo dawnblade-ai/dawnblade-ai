@@ -87,14 +87,10 @@ const isLateCond = c => LATE_CONDS.indexOf(c) >= 0 || /^chainLinkGe\d+$/.test(c)
    `attackRx` — for `LATE_CONDS`' own reason: two copies drift into a
    condition that is skipped and then never run. */
 const RX_CONDS = ["reprise", "charged", "defAtkAction"];
-/* IS THIS SEAT'S NAME THE SECOND PERSON? (v3.90) Seat 0 is called "You",
-   so a feed line that NAMES the seat has to agree with the name it used —
-   "You discards" and "You puts the top card of THEIR deck" are both wrong
-   in the same way. Named rather than inlined because the second-person
-   ledger in `judge.test.js` scans template literals: a `/^you$/` inside
-   the backticks reads as a second-person feed line to that scan. */
-const isSecondPerson = nm => /^you$/i.test(String(nm || ""));
-const {popRunechants, gearDef, gearBlockApply, hasExposedZone} = G;
+/* THE SEAT-AND-VERB HELPERS LIVE IN game.js (v4.15) — `prompts.js`
+   needs them too, and two copies of a conjugation rule is the no-mirror
+   rule broken over the prose the player reads. */
+const {popRunechants, gearDef, gearBlockApply, hasExposedZone, isSecondPerson, sv} = G;
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
    allowed it — prompts.js is script tag 1341, effects.js 1353. `arcaneHit`
@@ -726,7 +722,7 @@ function makeEffects(ctx){
          their turn would fire immediately, which is a turn early. */
       else if(k==="foeNextTurn"){
         foeMut(n).nextTurn = [...(foe(n).nextTurn||[]), {kind:v, amt:op[2]||0, ready:false}];
-        n = L(n, `${srcName}: ${foe(n).name} feels it next turn.`);
+        n = L(n, `${srcName}: ${sv(foe(n), "feel")} it next turn.`);
       }
       else if(k==="foeHandToDeck"){
         /* WHICH card is an approximation and always was: the printed text
@@ -884,7 +880,7 @@ function makeEffects(ctx){
       else if(k==="destroyFoeToken"){
         const want = norm(String(v||""));
         const hit = (foe(n).board||[]).find(b => b && b.card && norm(b.card.name) === want);
-        if(!hit){ n = L(n, `${srcName}: ${foe(n).name} controls no ${v}.`); return; }
+        if(!hit){ n = L(n, `${srcName}: ${sv(foe(n), "control")} no ${v}.`); return; }
         foeMut(n).board = foe(n).board.filter(b => b !== hit);
         foeMut(n).grave = [...gy(n.turn, hit.card), ...foe(n).grave];
         n = L(n, `${srcName}: ${hit.card.name} is destroyed.`);
@@ -903,7 +899,7 @@ function makeEffects(ctx){
              the fact becomes true (v3.62), so an empty zone records
              nothing without the guard being restated. */
           n._tookWay = [...(n._tookWay||[]), ...take];
-          n = L(n, `${srcName}: ${foe(n).name} discards ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
+          n = L(n, `${srcName}: ${sv(foe(n), "discard")} ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
       /* THE DEFENDER'S ESCAPE HATCH (Strongest Survive). "…unless they
@@ -925,7 +921,7 @@ function makeEffects(ctx){
         const dmg = n.lastDmg || 0;
         const esc = foe(n).hand.find(c => zonePow(c, bFoe(n)) > dmg);
         if(esc){
-          n = L(n, `${srcName}: ${foe(n).name} reveals ${esc.name} (${zonePow(esc, bFoe(n))}{p}, more than the ${dmg} dealt) — no discard.`);
+          n = L(n, `${srcName}: ${sv(foe(n), "reveal")} ${esc.name} (${zonePow(esc, bFoe(n))}{p}, more than the ${dmg} dealt) — no discard.`);
           return;
         }
         const take = foe(n).hand.slice(-Math.max(1,v));
@@ -940,7 +936,7 @@ function makeEffects(ctx){
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).banish = [...take, ...foe(n).banish];
-          n = L(n, `${srcName}: ${foe(n).name} banishes ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
+          n = L(n, `${srcName}: ${sv(foe(n), "banish")} ${take.map(c=>c.name).join(", ")} — ${foe(n).hand.length} left in hand.`);
         }
       }
       else if(k==="res"){ actMut(n).res+=v; n=L(n,`+${v} resource.`); }
@@ -1182,6 +1178,49 @@ function makeEffects(ctx){
       /* RULING: a token is a card. Resolve it through the same reader as
          everything else and stand it up on the correct player's board —
          never describe it, never hardcode what it does. */
+      /* ---- EQUIP A TOKEN (v4.15) --------------------------------------
+         `token`'s twin one ZONE over. Orb-Weaver Spinneret prints "Equip
+         a Graphene Chelicera token", and that token is the pool's only
+         record typed both Token and Weapon — so it belongs in the GEAR
+         zone, where `isWeapon` and `weaponCost` already route a swing,
+         and not on the board where every "auras you control" count would
+         pick it up.
+
+         THE DESTINATION IS READ OFF THE TOKEN, NOT DEFAULTED. A token
+         that is not equipment refuses rather than landing in a zone
+         nothing reads it from — v3.55's closed vocabulary, and v3.07's
+         token that carried no clock.
+
+         IT GOES THROUGH `build.equipPiece`, THE ONE BODY (v4.15). A token
+         weapon minted past it would be a different card from the same
+         record dealt at the start: no folded activation cost, so
+         `effCost` would charge the printed `cost` of null.
+
+         AND A HAND MUST BE FREE. `game.handsFree` is the one reader and
+         the loadout rule asks the same body, so the two cannot disagree.
+         Arakni's default loadout fills both hands with Mark of the
+         Huntsman — and that card destroys ITSELF to mark a hero, which
+         is what frees the hand AND sets up this token's own printed
+         "when this attacks a MARKED hero". The loop is designed (v3.54's
+         observation, one card over), so refusing when both hands are
+         full is the faithful reading rather than a wall. */
+      else if(k==="equipTok"){
+        let rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
+        if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database — nothing equipped.`); return; }
+        if(rec.dbName) rec = {...rec, name: rec.dbName};
+        if(!/\b(weapon|equipment)\b/i.test(rec.tt || "")){
+          n = L(n, `${srcName}: ${rec.name} is not equipment — there is nowhere to equip it.`);
+          return;
+        }
+        const _need = G.slotOf(rec).h;
+        if(_need > G.handsFree(act(n).gear || [])){
+          n = L(n, `${act(n).name}: no free hand for ${rec.name} — it stays unequipped.`);
+          return;
+        }
+        const piece = BD.equipPiece({...rec, uid:"tok"+tokSeq(), used:false});
+        actMut(n).gear = [...(act(n).gear || []), piece];
+        n = L(n, `${rec.name} is equipped${piece.cost != null ? ` — ${piece.cost} to activate` : ""}.`);
+      }
       else if(k==="token"){
         let rec = resolveEntry(db, {name:v, p:0, code:null, q:1});
         if(!rec.resolved){ n = L(n, `${srcName}: no card named "${v}" in the database — token not created.`); return; }
@@ -1265,7 +1304,7 @@ function makeEffects(ctx){
           const cur = act(n).counters.hero || {};
           actMut(n).counters = {...act(n).counters,
             hero: {...cur, energy: (cur.energy || 0) + looked}};
-          n = L(n, `${act(n).name} burns bright — ${looked} energy counter${looked>1?"s":""} (now ${(cur.energy||0)+looked}).`);
+          n = L(n, `${sv(act(n), "burn")} bright — ${looked} energy counter${looked>1?"s":""} (now ${(cur.energy||0)+looked}).`);
         }
       }
       /* LOOK AND REORDER — Spire Sniping (v3.71). The same sheet, and
@@ -1523,7 +1562,7 @@ function makeEffects(ctx){
          sheet after spending the cost. */
       else if(k==="untapAlly"){
         const mine = (act(n).board||[]).filter(b => b && b.card && G.isAlly(b));
-        if(!mine.length){ n = L(n, `${act(n).name} controls no ally — nothing to untap.`); }
+        if(!mine.length){ n = L(n, `${sv(act(n), "control")} no ally — nothing to untap.`); }
         else {
           /* CALLER-SUPPLIED CANDIDATES, NOT A ZONE + FILTER. `prompts.js`
              says a zone it was not really read from "is a feed line that
@@ -1552,7 +1591,7 @@ function makeEffects(ctx){
         const fs = 1 - actorOf(n);
         const auras = (n.sides[fs].board||[]).filter(b => b && b.card && /aura/i.test(b.card.tt||""));
         if(!auras.length){
-          n = L(n, `${foe(n).name} controls no aura — nothing to destroy.`);
+          n = L(n, `${sv(foe(n), "control")} no aura — nothing to destroy.`);
         } else {
           n.promptQ = [...(n.promptQ||[]), {
             tag:"pick", side:fs, src:srcName,
@@ -1565,7 +1604,7 @@ function makeEffects(ctx){
       /* the dummy holds a hand now, so showing it is real information */
       else if(k==="foeReveal"){
         n = L(n, foe(n).hand.length
-          ? `${foe(n).name} shows a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
+          ? `${sv(foe(n), "show")} a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
           : `${foe(n).name}'s hand is empty — nothing to show.`);
       }
       /* LYATH'S CLAUSE 2 RIDER (v3.78). A TURN WINDOW, not a charge — it
@@ -1786,7 +1825,7 @@ function makeEffects(ctx){
         ].filter(Boolean).filter(filt);
         const many = amt > 1;
         if(!cands.length){
-          n = L(n, `${srcName}: ${act(n).name} controls nothing that can take ${many ? amt + " " + label + " counters" : "a " + label + " counter"}.`);
+          n = L(n, `${srcName}: ${sv(act(n), "control")} nothing that can take ${many ? amt + " " + label + " counters" : "a " + label + " counter"}.`);
           return;
         }
         if(cands.length === 1){
@@ -2124,7 +2163,7 @@ function makeEffects(ctx){
         const _hand = act(n).hand || [];
         const _i = _hand.findIndex(PR.promptFilter(_dc));
         if(_i < 0)
-          return L(n, `${card.name} — ${act(n).name} holds no ${card._discardSubject||"card"} to discard. Nothing happens.`);
+          return L(n, `${card.name} — ${sv(act(n), "hold")} no ${card._discardSubject||"card"} to discard. Nothing happens.`);
         const _paid = _hand[_i];
         const _sd = actMut(n);
         _sd.hand = _hand.slice(0, _i).concat(_hand.slice(_i + 1));
@@ -2214,7 +2253,7 @@ function makeEffects(ctx){
       if(_dn){
         const _de = P.boardEntryNamed(act(n), _dn);
         if(!_de)
-          return L(n, `${card.name} — ${act(n).name} controls no ${_dn}. Nothing happens.`);
+          return L(n, `${card.name} — ${sv(act(n), "control")} no ${_dn}. Nothing happens.`);
         actMut(n).board = act(n).board.filter(x => x !== _de);
         actMut(n).grave = [...gy(n.turn, _de.card), ...act(n).grave];
         n = L(n, `${act(n).name}: ${_de.card.name} is destroyed — the cost is paid.`);
@@ -4257,7 +4296,7 @@ function makeEffects(ctx){
                     : to === "deckBottom" ? `on the bottom of ${foe(n).name}'s deck`
                     : to === "banish"     ? `out of the game`
                     : `into ${foe(n).name}'s ${to}`;
-        n = L(n, `${act(n).name} takes ${got.name} from ${foe(n).name}'s ${from === "grave" ? "graveyard" : from} — ${where}.`);
+        n = L(n, `${sv(act(n), "take")} ${got.name} from ${foe(n).name}'s ${from === "grave" ? "graveyard" : from} — ${where}.`);
       }
     }
     /* THE RE-EQUIP FIXUP (v3.53). A piece retrieved out of the graveyard is
@@ -4396,12 +4435,12 @@ function makeEffects(ctx){
       const mine = myTop ? zonePow(myTop, bAct(n)) : 0;
       const theirs = foeTop ? zonePow(foeTop, bFoe(n)) : 0;
       const win = mine > theirs, tie = mine === theirs;
-      n = L(n, `${cc.name} clashes — ${act(n).name} reveals `
+      n = L(n, `${cc.name} clashes — ${sv(act(n), "reveal")} `
         + `${myTop ? myTop.name + " (" + mine + ")" : "nothing (0)"} vs `
         + `${foe(n).name}'s ${foeTop ? foeTop.name + " (" + theirs + ")" : "empty deck (0)"} — `
         /* A TIE IS NO WINNER — CONFIRMED (user, 2026-08-19), so it is
            settled rather than assumed. */
-        + (tie ? "a tie, no winner." : win ? `${act(n).name} wins.` : `${foe(n).name} wins.`));
+        + (tie ? "a tie, no winner." : win ? `${sv(act(n), "win")}.` : `${sv(foe(n), "win")}.`));
       if(tie) continue;
       /* THE TOKEN GOES TO THE WINNER, whichever side that is — the card
          says "the winner", not "you". */

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.14 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.15 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -33,7 +33,10 @@ two different "it"s reaching one anchor. **v4.13** finished the family:
 Weave Lightning's fused rider, LIVE in Briar's own deck and losing a
 printed action point every game. **v4.14** built the pool's only compound
 activation cost — Carrion Crown, INERT in Gravy Bones' gear — and driving
-it turned up two feed defects the parser could not see.
+it turned up two feed defects the parser could not see. **v4.15** built
+`equipTok` (five records and Arakni's fifth Agent), and the same habit —
+drive it, then READ THE FEED — turned those two defects into a family of
+eighteen.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -145,6 +148,52 @@ UNGUARDED and three citations are section pointers, which no drill can
 drive. It pins a SET now. **And the tool was reading its own output** —
 123 of the 1123 citations it reported were `CR-INDEX.md` citing itself,
 found by sabotage. The honest count is 1000.
+
+## ⚠ v4.15 — DRIVE IT, THEN READ THE FEED
+
+Three versions of finds have come from the same two-step habit, and the
+second step is the one that keeps paying:
+
+1. `npm run gaps -- <name>` prints the ONE clause that refuses; hand its
+   payload to `classifyClause` alone (v3.79) and the blocker is usually
+   the COST or the TRIGGER, not the payload.
+2. **Then drive the built route and read what the engine SAYS.**
+
+Step 2 found, in one session: `You swings`, `You controls no ally`,
+`You discards Barnacle`, `You takes Snatch from Kayo's graveyard`. Seat 0
+is literally named "You" and `isSecondPerson` has existed since v3.90 —
+**sixteen lines never asked it**, and `prompts.js` had its own copy of
+the fault. No parse assertion in this project can see any of that.
+
+**AND THE TWO INSTRUMENTS SEE DIFFERENT HALVES.** A source scan over
+template literals found the sixteen; it could NOT see `prompts.js`'s
+line, which is built by string concatenation — and that is the one the
+self-play harness reaches, 86 times in 210 games. So the harness has a
+driven `SECOND-PERSON` counter now, and a drill pins its phrase against
+the engine's (v3.81: a counter that spells the wrong word reports zero
+exactly as a clean engine does).
+
+**THE FIXTURE COST FOUR ATTEMPTS AND EACH MISS TAUGHT SOMETHING TRUE:**
+`H.state` sets no `phase`/`step`/`priority`; judge's gear branch reads
+`piece.pow` BEFORE `piece.powCard`; `J.reduce` returns `{state, error}`;
+and `tools/selfplay.js` exports `match(k0,k1,seed)` and `play(game,limit)`
+as two calls rather than one. **When a refusal names something you did
+not expect, it is usually telling you the truth about the engine.**
+
+## ⚠ WHAT `equipTok` DID NOT BUILD, AND WHY THAT IS THE HONEST REPORT
+
+Graphene Chelicera stays `tier: part`. Its own third clause — *"When this
+attacks a **marked** hero, the attack gets go again"* — refuses, because
+`classifyClause` reads a bare *"when this attacks a hero"* subject
+(v3.46's `atkHero`) and not a MARKED one. The payload reads perfectly on
+its own, so it is v3.79's shape again: **the gate is the blocker.**
+
+Building it is one condition, and the pieces exist — `heroTarget` is
+derived at the top of `execute` (v3.46) and `marked` is already a
+condition the engine answers. It was left because it is a second reading
+rather than the family, and a token that swings for its printed power
+with stealth is doing plenty; saying so is the honest report rather than
+a claim the card is finished.
 
 ## ⚠ v4.14 — THE `npm run gaps` DOSSIER IS THE CHEAPEST READ THERE IS
 

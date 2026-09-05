@@ -567,23 +567,35 @@ test("becoming an Agent is no longer a pure downgrade", {skip}, () => {
      Assassin card: …`, a cost `parseHeroPower` declined by design, and
      that ONE refusal was the whole of what kept them dark. A discard from
      hand is the fifth NAMED cost now (v3.39, v3.74, v3.86, v3.99 are the
-     other four), so four of the six pay out. */
+     other four), so four of the six pay out.
+
+     4 -> 5 AT v4.15, AND THIS LINE SAID IN ADVANCE IT WOULD BE A
+     DELIBERATE EDIT — twice now. Orb-Weaver's cost was never the reason
+     she refused; her PAYLOAD was, and `parseHeroPower` declines a line
+     whose payload nothing reads (v2.29). `equipTok` closed it, which is
+     v3.47's rule for the fifth time: reading the payload creates the
+     route. Trap-Door's deck search is the last one. */
   H.db();
   const built = B.agentsOf(H.db(), "chaos")
     .map(a => B.heroAbilities(a, a.n))
     .filter(ab => ab.daggerDrain > 0 || ab.HPOW);
-  assert.equal(built.length, 4,
+  assert.equal(built.length, 5,
     "the number of Agents the engine can run moved — when another arrives, "
     + "this number is a deliberate edit");
 });
 
-test("…and the two that still refuse do so on their PAYLOAD, not their cost", {skip}, () => {
+test("…and the one that still refuses does so on its PAYLOAD, not its cost", {skip}, () => {
   /* A REFUSAL IS ONLY HONEST IF ITS REASON IS TRUE (v3.41). The cost was
      the reason for five of them and is no longer the reason for any: what
-     stops the last two is that nothing reads what they DO —
+     stops the last ONE is that nothing reads what it DOES —
 
-       Orb-Weaver  "Equip a Graphene Chelicera token"  — a token equip
        Trap-Door   "search your deck for a card"       — a deck search
+
+     ORB-WEAVER WAS THE OTHER, AND SHE LEFT THIS LIST AT v4.15 by being
+     built: "Equip a Graphene Chelicera token" is `equipTok` now, so her
+     ability parses in full. A drill that names a count rots when the
+     count is the work (v3.53, v4.01) — this one names the CARDS, so it
+     rots loudly and in the right direction.
 
      …which is v2.29's rule working, not a gap in this build: an
      unreadable payload refuses the whole line rather than being filed
@@ -603,12 +615,19 @@ test("…and the two that still refuse do so on their PAYLOAD, not their cost", 
     "Web of Deceit is in the Agent set — it is Arakni's BASE form, the one that " +
     "prints 'you become a random Agent of Chaos', and counting it as an Agent " +
     "would make the transformation a cycle with no exit");
-  for(const [n, why] of [["Arakni, Orb-Weaver", /equip/i], ["Arakni, Trap-Door", /search/i]]){
+  for(const [n, why] of [["Arakni, Trap-Door", /search/i]]){
     const rec = byName[n];
     assert.ok(rec, "fixture: " + n + " left the Agent set");
     assert.equal(P2.parseHeroPower(rec.tx), null, n + " now parses — check WHY before moving this");
     assert.match(String(rec.tx), why, "fixture: " + n + " no longer prints the payload that refuses");
   }
+  /* AND THE CONTROL: Orb-Weaver, who LEFT this list, must actually
+     answer — a drill that only ever asserts refusals passes just as well
+     against a reader deleted outright (v3.74's positive control). */
+  const ow = byName["Arakni, Orb-Weaver"];
+  assert.ok(ow, "fixture: Orb-Weaver left the Agent set");
+  assert.ok(P2.parseHeroPower(ow.tx),
+    "Orb-Weaver refuses again — `equipTok` regressed and the fifth Agent is dark");
   /* AND THE COST IS NOT THE REASON ANY MORE — the same line with a
      readable payload answers, so the refusal really does belong to the
      payload rather than to the discard. */

@@ -126,7 +126,11 @@ test("a dead tap is refused by name, not opened as an empty sheet", {skip}, () =
   g.builds = [{}, {}];
   const out = H.runOps(g, [["untapAlly", 1, {sd: "end"}]], "Scuttle Toes");
   assert.ok(!out.prompt && !(out.promptQ || []).length, "no sheet with nothing to pick");
-  assert.ok((out.feed || []).some(m => /controls no ally/i.test(m)), "and it says why");
+  /* THE VERB AGREES WITH THE SEAT (v4.15). Seat 0 is literally named
+     "You", so this line reads "You CONTROL no ally" — matching only the
+     third person here would pin the bug rather than the message. */
+  assert.ok((out.feed || []).some(m => /\bYou control no ally\b/.test(m)),
+    "and it says why, agreeing with the seat it names");
 });
 
 /* ---- 4. THE CHAIN CLOSES ON THE DEATH TRIGGER ------------------------ */
