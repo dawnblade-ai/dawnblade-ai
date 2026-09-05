@@ -397,6 +397,14 @@ function heroAbilities(heroRec, displayName, code){
     tt:"Hero Ability", kw:heroPow.ga?["Go again"]:[], tx:_hEffFull, _instant:heroPow.kind==="instant",
     _attackRx:heroPow.kind==="attackRx", img:null, dbImg:null, uid:"hpow"},
     heroPow.soul ? {_soulCost: heroPow.soul} : {},
+    /* ARAKNI'S AGENTS — "Discard an Assassin card" (v4.09). Carried the
+       way the soul cost is, and for the same reason: `heroAbilityLine`
+       strips the cost prefix, so a cost not stamped here is a cost the
+       ability is never charged (v3.79's equipment builder, one cost
+       over). v3.63's rule — when you add a flag to one powCard builder,
+       grep for the others — and the equipment builder gets it too. */
+    heroPow.discardCost ? {_discardCost: heroPow.discardCost.filter,
+                           _discardSubject: heroPow.discardCost.subject} : {},
     heroPow.selfBanish ? {_selfBanish: true} : {},
     /* GRAVY BONES — "{t}, destroy a Gold you control" (v3.86). The named
        permanent rides on the powCard the way the soul cost does, because
@@ -576,6 +584,8 @@ function buildSide(h, d, db, opts, rng, ctr){
     gr.powCard=Object.assign({name:gr.name+" — ability",pitch:0,cost:pw.cost,power:null,def:null,
       tt:"Equipment Ability",kw:pw.ga?["Go again"]:[],tx:_effFull,sd:pw.sd,_instant:pw.kind==="instant",_attackRx:pw.kind==="attackRx",img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid},
       pw.soul ? {_soulCost: pw.soul} : {},
+      pw.discardCost ? {_discardCost: pw.discardCost.filter,
+                        _discardSubject: pw.discardCost.subject} : {},   /* v4.09, v3.63's rule */
       pw.selfBanish ? {_selfBanish: true, _banishGear: gr.uid} : {},
       /* v3.63's rule, THIRD outing: when you add a flag to one powCard
          builder, grep for the others. No pool EQUIPMENT prints this cost

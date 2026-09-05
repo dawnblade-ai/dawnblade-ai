@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.08 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.09 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -132,9 +132,12 @@ found by sabotage. The honest count is 1000.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 
-`npm run audit`: **381 full / 21 part / 3 none**. v4.02 through v4.08
-moved no card, deliberately — every one is WIRING, which is exactly why
-no coverage tool could see any of them.
+`npm run audit`: **381 full / 21 part / 3 none**. v4.02 through v4.09
+moved no DECK card, deliberately — every one is WIRING, which is exactly
+why no coverage tool could see any of them. **v4.09 moved four HEROES**:
+the approximation ledger's set of hero records reading NOTHING went
+**9 → 5**, and all four were Agents of Chaos held back by a single
+unbuilt cost.
 
 | card | waiting on |
 |---|---|

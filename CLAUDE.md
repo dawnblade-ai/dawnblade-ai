@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.08
+**Current version:** v4.09
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2249 drills**.
+This is `node --test "test/*.test.js"` — currently **2259 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,60 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### A DISCARD IS THE FIFTH NAMED ACTIVATION COST (v4.09)
+
+v3.76 gave Arakni six Agents to become; v3.77 recorded that **every one
+of their abilities refused**, five of them on one cost. So the mechanic
+fired, announced itself in the feed, swapped her whole ability half, and
+left her with an ability nothing reads — the no-op blind spot wearing a
+hero's face, **worse than an unbuilt card because the game TELLS the
+player something happened**.
+
+**THE COST WAS THE WHOLE BLOCKER, and the diagnostic is one line**: hand
+the same printed line a payable cost and `parseHeroPower` answers in full
+— `kind: "attackRx"`, the window reads, the powCard builds, and
+`effects.attackRx` has resolved a targeted pump onto the open link since
+v3.63. Named rather than relaxed, beside v3.39's counter, v3.74's soul
+banish, v3.86's named permanent and v3.99's turn-this-face-up.
+
+**THE SUBJECT MUST BE ONE `optFilter` CAN PIN** (v3.53), so the
+class-qualified `"card"` is a CLOSED vocabulary, measured: the words the
+pool prints in that position are `assassin`, `shadow`, `random` and
+`yellow`, and only the first two are CLASSES. **`random` is the one that
+matters** — it is a different mechanic (`discardRandom`), and admitting
+it builds a filter matching NOTHING, which is an unpayable cost dressed
+as a payable one. Measured pool-wide before and after: exactly FOUR
+records' parse moved, all Agents.
+
+**A COST IS NOT THE EFFECT.** The discard is deliberately NOT credited to
+`_discWay`: that trace answers a *"discarded THIS WAY"* clause, and "this
+way" names the way the EFFECT describes rather than the way its price was
+paid. v2.04 draws the same boundary from the other side.
+
+### A GREEN SUITE SAYS NOTHING ABOUT A PATH NO DRILL REACHES (v4.09)
+
+Two of this build's three call sites, in their first draft, named
+functions that **do not exist** — `creditDiscard`, taken from a COMMENT
+rather than from the file, and `P.promptFilter`, which lives in
+`prompts.js` and is CURRIED. Both would have thrown from inside a reducer
+whose contract is that it never throws, and **2246 drills stayed green**.
+A third write was silently WIPED by `execute`'s own per-resolution clear
+three hundred lines below it.
+
+**CHECK THE FUNCTION EXISTS BEFORE CALLING IT, AND CHECK WHERE THE STATE
+YOU WRITE IS CLEARED.** A name that appears in prose is not a name that
+appears in the file — this project's own comments are the most convincing
+source of a function that was never written. And the only thing that
+finds any of it is driving the path: a parse assertion would have passed
+against all three.
+
+**AND CORRECTING A PIN CAUGHT A CARD NAMED FROM MEMORY.** Moving the
+ledger's `none` hero set 9 → 5, I wrote that the two Agents left were
+Orb-Weaver and Trap-Door. Measured: Orb-Weaver is `part`, and the other
+record is **Web of Deceit** — not an Agent at all, but Arakni's own base
+form, the one that prints *"you become a random Agent of Chaos"*. Check
+your own fixture, and check it by asking rather than by remembering.
 
 ### A BARE "WHEN THIS ATTACKS" FIRES ON DECLARATION (CR 7.2, v4.08)
 

@@ -542,10 +542,19 @@ probe("unbuilt-three", () => {
   assert.deepEqual(none.deck.sort(), want.slice().sort(),
     "the set of DECK cards reading NOTHING moved — a card built here must leave " +
     "the ledger, and a card arriving here is a regression");
-  assert.equal(none.hero.length, 9,
-    "the set of HEROES reading nothing moved. Six are Arakni's Agents, whose " +
-    "abilities refuse by design (v3.76); the rest are heroes whose whole printed " +
-    "line is read elsewhere, by `parseHeroPower` off the build");
+  /* 9 -> 5 AT v4.09, AND EVERY ONE OF THE FOUR IS AN AGENT OF CHAOS.
+     Five printed `Attack Reaction - Discard an Assassin card: …`, a cost
+     `parseHeroPower` declined by design — so the transformation swapped
+     Arakni's whole ability half for one nothing could read (v3.77's
+     no-op blind spot wearing a hero's face). A discard from hand is the
+     fifth NAMED cost now, and four of them read. The fifth, Orb-Weaver,
+     still refuses on its PAYLOAD (a token equip), which is v2.29 working
+     rather than a gap in that build. */
+  assert.equal(none.hero.length, 5,
+    "the set of HEROES reading nothing moved. Exactly ONE is now an Agent of " +
+    "Chaos — Trap-Door, refusing on its PAYLOAD (a deck search) rather than on " +
+    "the cost; the rest are Arakni's own base form and heroes whose whole " +
+    "printed line is read elsewhere, by `parseHeroPower` off the build");
   assert.equal(none.token.length, 7,
     "the set of TOKENS reading nothing moved. It was EIGHT at v4.02 and the " +
     "eighth was INERTIA — a token that WORKED while reading nothing, because " +

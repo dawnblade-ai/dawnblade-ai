@@ -158,6 +158,16 @@ function abCostWhy(sd, ab){
   const _dn = PR.abDestroyBoard(ab);
   if(_dn && !PR.boardEntryNamed(sd, _dn))
     return ab.name + " costs a " + _dn + ", and " + sd.name + " controls none";
+  /* AND A DISCARD FROM HAND (v4.09) — Arakni's Agents print "Attack
+     Reaction - Discard an Assassin card: …". Refusing AFTER the ability
+     resolves would spend the seat's once-per-turn allowance on a play the
+     rules never allowed (v3.11), which is the shape every cost above is
+     here for. `promptFilter` is the same matcher the CHARGE will use, so
+     the two cannot disagree about what pays. */
+  const _dc = PR.abDiscardCost(ab);
+  if(_dc && !(sd.hand || []).some(PM.promptFilter(_dc)))
+    return ab.name + " costs a " + (ab._discardSubject || "card") + " discarded, and "
+         + sd.name + " holds none";
   return null;
 }
 function rxTargetWhy(g, ab, want){

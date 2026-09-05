@@ -557,19 +557,64 @@ test("DRIVEN: the route is not the restriction — a dagger CARD drains too", {s
     "a Daggerfall Sword is not a Dagger");
 });
 
-test("becoming Tarantula is no longer a pure downgrade", {skip}, () => {
+test("becoming an Agent is no longer a pure downgrade", {skip}, () => {
   /* THE POINT OF BUILDING IT. Before v3.77 every Agent's ability refused,
      so the transformation cost Arakni her own readable passive and gave
      nothing back — faithful to what was built, and not what the cards do.
-     One of the six pays out now; the other five refuse on their COST
-     (`Discard an Assassin card`), which is recorded in HANDOFF.md. */
+
+     1 -> 4 AT v4.09, AND THIS LINE SAID IN ADVANCE THAT IT WOULD BE A
+     DELIBERATE EDIT. Five Agents print `Attack Reaction - Discard an
+     Assassin card: …`, a cost `parseHeroPower` declined by design, and
+     that ONE refusal was the whole of what kept them dark. A discard from
+     hand is the fifth NAMED cost now (v3.39, v3.74, v3.86, v3.99 are the
+     other four), so four of the six pay out. */
   H.db();
   const built = B.agentsOf(H.db(), "chaos")
     .map(a => B.heroAbilities(a, a.n))
     .filter(ab => ab.daggerDrain > 0 || ab.HPOW);
-  assert.equal(built.length, 1,
-    "exactly one Agent has something the engine can run — when a second "
-    + "arrives, this number is a deliberate edit");
+  assert.equal(built.length, 4,
+    "the number of Agents the engine can run moved — when another arrives, "
+    + "this number is a deliberate edit");
+});
+
+test("…and the two that still refuse do so on their PAYLOAD, not their cost", {skip}, () => {
+  /* A REFUSAL IS ONLY HONEST IF ITS REASON IS TRUE (v3.41). The cost was
+     the reason for five of them and is no longer the reason for any: what
+     stops the last two is that nothing reads what they DO —
+
+       Orb-Weaver  "Equip a Graphene Chelicera token"  — a token equip
+       Trap-Door   "search your deck for a card"       — a deck search
+
+     …which is v2.29's rule working, not a gap in this build: an
+     unreadable payload refuses the whole line rather than being filed
+     `full` with its meaning missing.
+
+     AND THE FIRST DRAFT OF THIS DRILL NAMED THE WRONG CARD in its
+     sibling: it said the two Agents left reading NOTHING were Orb-Weaver
+     and Trap-Door. Measured, Orb-Weaver is `part` — its passive reads —
+     and the other `none` Arakni record is WEB OF DECEIT, which is not an
+     Agent at all but her own base form. Check your own fixture, and
+     check it by asking rather than by remembering. */
+  H.db();
+  const P2 = require("../engine/parser.js");
+  const byName = {};
+  for(const a of B.agentsOf(H.db(), "chaos")) byName[a.n] = a;
+  assert.ok(!byName["Arakni, Web of Deceit"],
+    "Web of Deceit is in the Agent set — it is Arakni's BASE form, the one that " +
+    "prints 'you become a random Agent of Chaos', and counting it as an Agent " +
+    "would make the transformation a cycle with no exit");
+  for(const [n, why] of [["Arakni, Orb-Weaver", /equip/i], ["Arakni, Trap-Door", /search/i]]){
+    const rec = byName[n];
+    assert.ok(rec, "fixture: " + n + " left the Agent set");
+    assert.equal(P2.parseHeroPower(rec.tx), null, n + " now parses — check WHY before moving this");
+    assert.match(String(rec.tx), why, "fixture: " + n + " no longer prints the payload that refuses");
+  }
+  /* AND THE COST IS NOT THE REASON ANY MORE — the same line with a
+     readable payload answers, so the refusal really does belong to the
+     payload rather than to the discard. */
+  assert.ok(P2.parseHeroPower(
+    "Once per Turn Attack Reaction - Discard an Assassin card: Target Assassin attack gets +3{p}."),
+    "the discard cost refuses again — the five Agents are dark once more");
 });
 
 test("the pinned pool carries the Agents at all", {skip}, () => {

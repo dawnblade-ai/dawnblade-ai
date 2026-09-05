@@ -2080,6 +2080,51 @@ function makeEffects(ctx){
           n = L(n, `${act(n).name}: ${_sc} banished from the soul — the cost is paid.`);
         }
       } }
+    /* A DISCARD IS PAID ON ACTIVATION TOO (v4.09), beside the soul banish
+       and for its reasons. Arakni's Agents print "Attack Reaction -
+       Discard an Assassin card: …", and the hand is a real zone with real
+       cards in it.
+
+       BOTH BOARDS REFUSE IT FIRST (`parser.abDiscardCost`, a legality —
+       v3.11), so reaching here with nothing that matches is a stale or
+       crafted action off the wire. AN UNPAYABLE COST IS INERT, NEVER FREE
+       (v2.04), which is why it is still guarded.
+
+       THE DISCARD IS TURN-STAMPED into the graveyard like every other
+       (v2.23's `_gy`), or every "…put into a graveyard this turn" clause
+       goes quietly wrong.
+
+       AND IT IS DELIBERATELY NOT IN `_discWay`. That trace answers "what
+       did this resolution DISCARD" for a `…this way` clause — and "this
+       way" names the way the EFFECT describes, not the way its cost was
+       paid. A cost is not the effect (v2.04 states the same boundary from
+       the other side), so crediting it would let a 6-power card spent as
+       a PRICE satisfy a clause about what the card DID. No Agent prints
+       such a clause, so nothing turns on it today; the reading is what
+       matters.
+
+       (The first draft wrote the trace here and it was silently WIPED —
+       `execute` clears `_discWay` per resolution some 300 lines below, so
+       a credit taken at the charge never survived. Two facts, one bug:
+       the ordering was wrong AND the credit should not have been there.)
+
+       AND THE DRAFT BEFORE THAT CALLED A FUNCTION THAT DOES NOT EXIST —
+       `creditDiscard`, a name taken from a COMMENT rather than from the
+       file, which would have thrown from inside a reducer whose contract
+       is that it never throws. Check the function exists before calling
+       it, and check where the state you write is cleared. */
+    { const _dc = P.abDiscardCost(card);
+      if(_dc){
+        const _hand = act(n).hand || [];
+        const _i = _hand.findIndex(PR.promptFilter(_dc));
+        if(_i < 0)
+          return L(n, `${card.name} — ${act(n).name} holds no ${card._discardSubject||"card"} to discard. Nothing happens.`);
+        const _paid = _hand[_i];
+        const _sd = actMut(n);
+        _sd.hand = _hand.slice(0, _i).concat(_hand.slice(_i + 1));
+        _sd.grave = [Object.assign({}, _paid, {_gy: n.turn})].concat(_sd.grave || []);
+        n = L(n, `${act(n).name} discards ${_paid.name} — the cost is paid.`);
+      } }
     /* "BANISH THIS AND …" — THE SOURCE IS PART OF THE COST (v3.79).
        Radiant Touch prints "Instant - Banish this and a card from your
        soul", and the piece leaving for good IS the price: a prevention

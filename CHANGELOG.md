@@ -9,6 +9,94 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.09 — a discard is the fifth named activation cost, and it unlocks four of Arakni's Agents
+
+v3.76 gave Arakni six Agents of Chaos to become. v3.77 recorded that
+**every one of their abilities refused** — five of them on exactly one
+cost — so the mechanic fired, announced itself in the feed, swapped her
+whole ability half, and left her with an ability nothing reads. In
+v3.77's own words: *the no-op blind spot wearing a hero's face*, and
+worse than an unbuilt card, because the game **tells the player
+something happened**.
+
+> *"Once per Turn Attack Reaction - **Discard an Assassin card**: Target
+> Assassin attack gets +3{p}."*
+
+### THE COST WAS THE WHOLE BLOCKER
+
+The diagnostic is one line: hand the same printed line a payable cost and
+`parseHeroPower` answers in full — `kind: "attackRx"`, the window reads,
+the powCard builds, and `effects.attackRx` has resolved a targeted pump
+onto the open link since v3.63. **Nothing else was missing.**
+
+A discard from hand is the **fifth named cost**, beside v3.39's counter,
+v3.74's soul banish, v3.86's named permanent and v3.99's
+turn-this-face-up. **Named rather than relaxed**, for their reason: a
+blanket relaxation raises the tier of cards nothing wires.
+
+### THE SUBJECT MUST BE ONE `optFilter` CAN PIN
+
+A cost whose subject the reader cannot name is a cost a player could pay
+wrongly (v3.53), so the class-qualified `"card"` is a **closed
+vocabulary**, measured over the pool. The words printed in that position
+are `assassin`, `shadow`, `random` and `yellow`, and only the first two
+are classes:
+
+| | |
+|---|---|
+| `random` | a different mechanic entirely (`discardRandom`) — admitting it builds a filter matching **nothing**, which is an unpayable cost dressed as a payable one |
+| `yellow` | a PITCH value, and it already reads as `{pitch: 2}` |
+
+Measured pool-wide before and after: **exactly four records' parse
+moved**, all of them Agents.
+
+### ONE READER, THREE SITES
+
+`parser.abDiscardCost` — refused on **both boards** before the ability
+resolves (v3.11), and charged on activation into the turn-stamped
+graveyard beside the soul banish. It is **deliberately not** in
+`_discWay`: that trace answers a *"discarded **this way**"* clause, and
+"this way" names the way the **effect** describes rather than the way its
+cost was paid. A cost is not the effect.
+
+### AND A GREEN SUITE SAID NOTHING ABOUT ANY OF IT
+
+Two of the three call sites in the first draft named functions that **do
+not exist**:
+
+- `creditDiscard`, a name taken from a **comment** rather than from the
+  file;
+- `P.promptFilter`, which lives in `prompts.js` and is **curried**.
+
+Both would have thrown from inside a reducer whose contract is that it
+never throws — and **2246 drills stayed green, because no drill reached
+the path.** A third write was silently **wiped** by `execute`'s own
+per-resolution clear three hundred lines below it. Check the function
+exists before calling it, and check where the state you write is
+cleared. That is the whole argument for driving the charge rather than
+asserting the parse.
+
+### TWO PINS MOVED, AND BOTH SAID IN ADVANCE THAT THEY WOULD
+
+The Agent count **1 → 4** ("when a second arrives, this number is a
+deliberate edit") and the approximation ledger's `none` hero set **9 →
+5**. Correcting the second caught me naming a card without measuring: the
+other Agent reading nothing is **Trap-Door** (a deck search), Orb-Weaver
+is `part`, and the fifth `none` record is **Web of Deceit** — which is
+not an Agent at all but Arakni's own base form, the one that prints *"you
+become a random Agent of Chaos"*.
+
+The two that stay dark refuse on their **payload**, not their cost — a
+token equip and a deck search, neither of which has a reader. That is
+v2.29 working rather than a gap in this build.
+
+Seven sabotages, seven bites. Measured: `npm test` 2259 drills, 0 fail;
+pool coverage unmoved (381 full / 21 part / 3 none — the Agents are hero
+records, not deck cards); fairness clean; play 210 games, 0 stalls, 0
+refusals, 0 violations.
+
+---
+
 ## v4.08 — a bare "when this attacks" fires on declaration (CR 7.2)
 
 The last buildable item on this cycle's named CR list, and the parser was

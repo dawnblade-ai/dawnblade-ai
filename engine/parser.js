@@ -2645,6 +2645,30 @@ const CLS_SUBJECTS = /^(?:non-attack action cards?|attack action cards?|action c
    purpose — see `optFilter`. */
 const WPN_SUBTYPES = /^(?:swords?|daggers?)$/;
 
+/* THE CLASS WORDS THAT MAY QUALIFY A BARE "CARD" (v4.09).
+
+   `optFilter` refuses a bare "card" on purpose (v3.53): a cost whose
+   subject the reader cannot pin is a cost a player could pay wrongly,
+   and that refusal covers 19 subjects across 11 pool cards. A CLASS
+   pins it — "an Assassin card" names a printed field — so the class
+   prefix is what makes this subject readable at all, and the list is
+   CLOSED for `WPN_SUBTYPES`' reason: an open "any word before card"
+   re-opens the hole the refusal is protecting.
+
+   MEASURED over the pinned pool, the words printed in this position are
+   `assassin` (the five Agents of Chaos), `shadow` (Blasmophet),
+   `random` and `yellow`. Only the first two are CLASSES:
+
+     random   is not a class at all — "discard a RANDOM card" is a
+              different mechanic, read by `discardRandom`, and admitting
+              it here builds a filter matching nothing, which is an
+              unpayable cost dressed as a payable one
+     yellow   is a PITCH VALUE and already reads as `{pitch: 2}`
+
+   So a third word appearing in this position must be a deliberate edit
+   here rather than something the reader quietly claims. */
+const CARD_CLASSES = /^(?:assassin|shadow)$/;
+
 /* A FILTER WHOSE BOUND ONLY ONE QUEUE SITE CAN RESOLVE (v3.92).
    `costLtDrac` is supplied by the `hits` optional-cost site out of the
    live chain; every OTHER consumer of `optFilter` has no such site, so a
@@ -2770,6 +2794,12 @@ function optFilter(phrase){
   if(!CLS_SUBJECTS.test(low)){
     const cm2 = low.match(/^([a-z]+) (.+)$/);
     if(cm2 && CLS_SUBJECTS.test(cm2[2])){ cls = cm2[1]; low = cm2[2]; }
+    /* AND A CLASS MAY QUALIFY A BARE "CARD" (v4.09) — "an ASSASSIN
+       card". The bare subject still refuses on its own; what makes this
+       one readable is the class, so the vocabulary is closed and the
+       remainder must be exactly "card". */
+    else if(cm2 && /^cards?$/.test(cm2[2]) && CARD_CLASSES.test(cm2[1]))
+      return staticFilter(Object.assign(f, {ty: [cm2[1]]}));
   }
   const withCls = (o) => { if(cls) o.ty = [cls].concat(o.ty ? [].concat(o.ty) : []); return o; };
   if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
@@ -5054,6 +5084,35 @@ function parseHeroPower(tx, allowDestroy){
      CREATE — so this costs no card today and stops `fxParse` crediting a
      line whose meaning nobody has ruled on. */
   if(kind === "attackRx" && /^(?:this|it)\b/i.test((m[4]||"").trim())) return null;
+  /* A DISCARD FROM HAND IS THE FIFTH NAMED COST (v4.09), beside v3.39's
+     counter, v3.74's soul banish, v3.86's named permanent and v3.99's
+     turn-this-face-up. NAMED rather than relaxed, for their reason.
+
+     IT IS THE WHOLE OF WHY ARAKNI'S TRANSFORMATION MADE HER WORSE. v3.76
+     gave her six Agents to become and v3.77 recorded that every one of
+     their abilities REFUSED — five on exactly this cost — so the mechanic
+     fired, announced itself in the feed, swapped her whole ability half,
+     and left her with an ability nothing reads. That is the no-op blind
+     spot wearing a hero's face, and worse than an unbuilt card because
+     the game TELLS the player something happened.
+
+     THE SUBJECT MUST BE ONE `optFilter` CAN PIN, which is what keeps this
+     a reading rather than a guess: a cost whose subject the reader cannot
+     name is a cost a player could pay wrongly (v3.53). An unreadable one
+     falls through to the refusal below exactly as before. */
+  if(!sd){
+    const dcm = costStr.match(/^discard (an?|another) ([a-z][a-z -]*?)$/i);
+    if(dcm){
+      const filt = dcm[2] && optFilter(dcm[1] + " " + dcm[2]);
+      if(!filt) return null;
+      const eff2 = classifyClause(m[4]);
+      if(!eff2 || eff2.status !== "run") return null;
+      return {cost: 0, ga: /^\.?\s*go again/i.test(t.slice(m.index + m[0].length)),
+              sd: false, kind, discardCost: {filter: filt, subject: dcm[2].trim()},
+              eff: m[4].trim(),
+              label: (m[1] ? "once/turn: " : "") + "discard " + dcm[2].trim() + ": " + m[4].trim()};
+    }
+  }
   if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
@@ -6430,6 +6489,12 @@ const abSelfBanish = ab => !!(ab && ab._selfBanish);
    cost read in one place and charged in another is how an ability comes
    to be free on one board (v2.04, v3.01). */
 const abDestroyBoard = ab => (ab && ab._destroyBoard) || null;
+
+/* THE DISCARD AN ACTIVATION COSTS (v4.09), as a prompts.js FILTER or
+   null. One reader, for the reason `abSoulCost` and its siblings each
+   have one: a cost read in one place and re-derived in another is two
+   descriptions of one price (v3.79, v3.86). */
+const abDiscardCost = ab => (ab && ab._discardCost) || null;
 /* DOES THIS ABILITY'S COST TURN ITS SOURCE FACE-UP? (v3.99) One reader,
    for the reason the three costs above each have one: a cost read in one
    place and charged in another is how an ability comes to be free on one
@@ -6605,6 +6670,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });
