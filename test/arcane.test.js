@@ -244,7 +244,14 @@ test("three Runechants are three separate threats, not one pooled hit", {skip}, 
      calls `execute` straight cannot see it. */
   const tokRune = i => ({card: {...H.card("Runechant", 0), uid: "r" + i},
                          kind: "aura", spent: false, uid: "r" + i});
-  const atk = {...H.card("Vexing Malice", 3), uid: "a1"};
+  /* THE ATTACK MUST DO NOTHING OF ITS OWN (v4.08). This drill used
+     Vexing Malice, and once its bare "when this attacks" started firing
+     at DECLARATION — where the printed trigger says it fires — the card
+     opened a FOURTH soak sheet of its own and the count moved. A fixture
+     whose card does two things has tested neither (v3.26); a vanilla
+     attack leaves only the runechants to measure. */
+  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};
+  assert.deepEqual(P.fxParse(atk).onAtk || [], [], "fixture: the probe attack has a trigger of its own");
   let g = H.state({res: 9, hand: [atk], board: [tokRune(1), tokRune(2), tokRune(3)]},
                   {gear: [gear("Nullrune Hood", "g1")], res: 9},
                   {actor: 0, turnPlayer: 0, seed: "arc"});
@@ -271,7 +278,7 @@ test("the queued arcane is not left hanging — it reaches the hero", {skip}, ()
      proves they were paid for or taken. */
   const tokRune = i => ({card: {...H.card("Runechant", 0), uid: "r" + i},
                          kind: "aura", spent: false, uid: "r" + i});
-  const atk = {...H.card("Vexing Malice", 3), uid: "a1"};
+  const atk = {...H.card("Brutal Assault", 3), uid: "a1"};   /* vanilla — see above (v4.08) */
   let g = H.state({res: 9, hand: [atk], board: [tokRune(1), tokRune(2), tokRune(3)]},
                   {gear: [], res: 0}, {actor: 0, turnPlayer: 0, seed: "arc"});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: []};

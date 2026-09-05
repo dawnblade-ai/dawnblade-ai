@@ -150,7 +150,16 @@ const APPROX = {
       "nothing cleared. Both are built now, which also SHARPENS what is left "+
       "here: moving `dracNext` to declaration needs Brand to be excluded from "+
       "its own grant, because its link is pushed before its ops run today and "+
-      "would not be if the op fired earlier."},
+      "would not be if the op fired earlier. "+
+      "AND THE OTHER TWO ARE BUILT AT v4.08. `arcane` and `rune` route to "+
+      "`fx.onAtk` and fire at DECLARATION, which is where CR 7.2 puts the "+
+      "trigger — so Vexing Malice's arcane no longer lands after the swing's "+
+      "own damage and Spellblade Assault's Runechants reach the board before "+
+      "the wall is declared. `parser.DECL_OPS` is the pinned ALLOW-list and "+
+      "its header names why each remaining kind stays behind. Measured after: "+
+      "15 cards carry a payload, 7 still hold it at resolution, and FIVE are "+
+      "observably late — Brand with Cinderclaw, Fire Tenet, Hyper Inflation, "+
+      "Pick Up the Point and Teklo Trebuchet 2000."},
 
 "trainer-priority-machine": {
   status:"stated", cr:"CR 4.2-4.4, 7.x", board:"trainer", since:"v2.27", swept:"v4.02",

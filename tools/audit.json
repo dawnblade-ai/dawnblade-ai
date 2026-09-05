@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-05T06:52:18.517Z",
- "appVer": "4.06",
+ "generated": "2026-09-05T07:04:22.301Z",
+ "appVer": "4.07",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -3170,7 +3170,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, create 2 Runechant tokens.",
@@ -3462,7 +3462,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, create 2 Runechant tokens.",
@@ -3526,7 +3526,7 @@
    "mentions": [],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "When this attacks, deal 2 arcane damage to target hero.",

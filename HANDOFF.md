@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.07 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.08 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -132,7 +132,7 @@ found by sabotage. The honest count is 1000.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 
-`npm run audit`: **381 full / 21 part / 3 none**. v4.02 through v4.07
+`npm run audit`: **381 full / 21 part / 3 none**. v4.02 through v4.08
 moved no card, deliberately — every one is WIRING, which is exactly why
 no coverage tool could see any of them.
 

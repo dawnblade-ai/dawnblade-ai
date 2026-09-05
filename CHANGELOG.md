@@ -9,6 +9,85 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.08 — a bare "when this attacks" fires on declaration (CR 7.2)
+
+The last buildable item on this cycle's named CR list, and the parser was
+where it was stuck: the trigger was **flattened into `fx.ops`**. The
+parse recorded that the card had a payload and not that the payload had a
+**schedule**, so it rode to RESOLUTION with `pend.ops`.
+
+| card | printed | landed |
+|---|---|---|
+| **Vexing Malice** | *"When this attacks, deal 2 arcane damage to target hero."* | after the swing's own damage |
+| **Spellblade Assault** | *"When this attacks, create 2 Runechant tokens."* | after the wall had been declared |
+
+Both orderings are real, and both are **weaker than printed** in the way
+that matters: the defender never had to answer them. A hero who would
+have died to the arcane got to block first; a wall was declared against a
+board that did not yet have the tokens. **CR 7.2 puts a
+when-this-attacks trigger on the stack ABOVE the attack** — which is the
+same reasoning that has put the Runechant *pop* at declaration since
+v2.23, a few lines up in the same function.
+
+### `fx.onAtk` IS A SEPARATE LIST, NOT A WIDENING OF `onAtkHero`
+
+v3.46 built the hero-gated list because **a bare trigger fires on any
+attack-target and a gated one does not**. Collapsing them would fire
+these two off a swing at an **ally** — the direction that list exists to
+stop — so a drill drives exactly that case and asserts the arcane still
+lands.
+
+### THE ALLOW-LIST IS THE SAFETY PROPERTY
+
+`parser.DECL_OPS` names the kinds that can honour the printed moment.
+**A kind nobody has reasoned about stays where it is** — unchanged and
+visible — rather than being moved into a moment nothing has checked it
+in. A blacklist is the bug (v3.35, v3.80): the next kind added walks into
+the new site. Its header names why each of the others stays behind:
+
+| | |
+|---|---|
+| `draw` · `discardRandom` · `eachArsPut` · the reveal family · `payOrLose` | already fire at declaration, through the pre-run and `declOps` |
+| `buffNext` | fired here it is taken by **this** attack — a self-pump the card does not print |
+| `pickPrompt` | opens a sheet the caller has not finished draining |
+| `costTax` · `dracNext` | built as bugs at v4.06; moving them is its own call, and `dracNext` needs its source excluded from its own grant first |
+
+### AND THE MEASUREMENT CORRECTED ITSELF
+
+A hand-split scan reported **three** cards. Asked of `fxParse` instead,
+Arcanic Shockwave's arcane is **conditional** — *"When this attacks, **if
+it was fused**, …"* — so it lives in `fx.conds`, where the condition loop
+has run it at declaration all along. **Ask the function that holds the
+reader** (v3.56). The honest blast radius is two cards, six records.
+
+### A FIXTURE WHOSE CARD DOES TWO THINGS HAS TESTED NEITHER
+
+Two runechant drills used **Vexing Malice** as their probe attack. Once
+its trigger started firing at declaration it opened a **fourth** soak
+sheet of its own and the count moved — v3.26's rule, and the fix is a
+vanilla attack, which is a better fixture either way.
+
+### THE RECORD FORCED ITS OWN EDIT
+
+`tools/approx.js`'s `attack-ops-at-resolution` probe went **red** the
+moment part of the gap closed. That is exactly what a `stated` record is
+for (v4.02): closing a gap makes the drill fail so the record has to be
+updated rather than left to rot. Re-derived rather than guessed — **15
+cards carry a payload, 7 still hold it to resolution, five are observably
+late**: Brand with Cinderclaw, Fire Tenet, Hyper Inflation, Pick Up the
+Point, Teklo Trebuchet 2000.
+
+Seven sabotages bite. An eighth came back silent and could not express
+its bug — dropping the `return` in an `else if` chain still skips the
+fallthrough, so the double-fire sabotage had to push to both lists
+explicitly.
+
+Measured: `npm test` 2249 drills, 0 fail; coverage unmoved (381 full / 21
+part / 3 none); fairness clean; play 210 games, 0 stalls, 0 refusals, 0
+violations.
+
+---
+
 ## v4.07 — three more "this turn" grants that never expired
 
 v4.06 fixed `dracNext`, a grant nothing spent and, at the table, nothing

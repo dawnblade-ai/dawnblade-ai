@@ -3154,6 +3154,24 @@ function makeEffects(ctx){
           if(n.over) return n;
         } else n = L(n, `${card.name} is attacking an ally — its "attacks a hero" ability does not fire.`);
       }
+      /* ---- AND A BARE "WHEN THIS ATTACKS" (CR 7.2, v4.08) -------------
+         Same site, same reason, and NO target gate: a bare trigger fires
+         on any attack-target, which is the distinction v2.12 named and
+         v3.46 built the gated list for. The payload used to ride to
+         RESOLUTION in `pend.ops`, so Vexing Malice's 2 arcane landed
+         AFTER the swing's own damage and Spellblade Assault's Runechants
+         reached the board after the wall had been declared against an
+         empty one — both real, both invisible to every tool here, and
+         both WEAKER than printed in the way that matters, since the
+         defender never had to answer them.
+
+         `parser.DECL_OPS` decides which kinds get here, and its header
+         names the reason each of the others stays behind. */
+      if((fx.onAtk||[]).length){
+        n = runOps(n, fx.onAtk, card.name);
+        n = winCheck(n);
+        if(n.over) return n;
+      }
       /* THE ATTACK BRANCH'S LATE PASS (v3.62). Path of Same Ends prints
          "when this attacks a hero, deal 1 arcane damage to them. If damage
          is dealt this way, this gets go again" — so the question can only

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.07
+**Current version:** v4.08
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2241 drills**.
+This is `node --test "test/*.test.js"` — currently **2249 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,58 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### A BARE "WHEN THIS ATTACKS" FIRES ON DECLARATION (CR 7.2, v4.08)
+
+The trigger was **flattened into `fx.ops`** — the parse recorded that the
+card had a payload and not that the payload had a **schedule** — so it
+rode to RESOLUTION with `pend.ops`. Vexing Malice's 2 arcane landed
+*after* the swing's own damage; Spellblade Assault's Runechants reached
+the board *after* the wall had been declared against a board that did not
+have them.
+
+**BOTH ARE WEAKER THAN PRINTED, because the defender never had to answer
+them** — a hero who would have died to the arcane got to block first.
+CR 7.2 puts a when-this-attacks trigger on the stack ABOVE the attack,
+which is the same reasoning that has put the Runechant POP at declaration
+since v2.23, a few lines up in the same function.
+
+**`fx.onAtk` IS A SEPARATE LIST, NOT A WIDENING OF `onAtkHero`** (v3.46).
+A bare trigger fires on ANY attack-target and a gated one does not, so
+collapsing them fires these off a swing at an ALLY — the direction that
+list exists to stop. A drill drives exactly that case.
+
+**AND `parser.DECL_OPS` IS A PINNED ALLOW-LIST.** A kind nobody has
+reasoned about stays where it is — unchanged and visible — rather than
+being moved into a moment nothing has checked it in; a blacklist is the
+bug (v3.35, v3.80). Its header names why each of the others stays behind,
+which is v4.04's rule that *a blanket approximation hides which parts of
+it are actually hard*.
+
+### ASK THE FUNCTION THAT HOLDS THE READER — AGAIN (v4.08)
+
+A hand-split scan reported **three** cards. Asked of `fxParse` instead,
+Arcanic Shockwave's arcane is **conditional** — *"When this attacks, IF
+IT WAS FUSED, …"* — so it lives in `fx.conds`, where the condition loop
+has run it at declaration all along. v3.56's rule; the honest blast
+radius is two cards, six records.
+
+**AND A FIXTURE WHOSE CARD DOES TWO THINGS HAS TESTED NEITHER** (v3.26).
+Two runechant drills used Vexing Malice as their probe attack; once its
+trigger fired at declaration it opened a FOURTH soak sheet of its own and
+the count moved. A vanilla attack is the better fixture either way.
+
+**THE `stated` RECORD FORCED ITS OWN EDIT.** `attack-ops-at-resolution`'s
+probe went RED the moment part of the gap closed — which is exactly what
+a `stated` record is for (v4.02) — and the numbers were re-derived rather
+than guessed: 15 cards carry a payload, 7 hold it to resolution, FIVE are
+observably late.
+
+**AND A SABOTAGE THAT CANNOT EXPRESS ITS BUG PROVES NOTHING** (v3.62,
+again). Dropping the `return` from `else if(…){ fx.onAtk.push(op);
+return; }` came back SILENT — an `else if` chain skips the fallthrough
+whether or not the branch returns, so the op was never in both lists. The
+double-fire sabotage has to push to both explicitly.
 
 ### CENSUS WHAT AN OP WRITES AGAINST WHAT TAKES IT BACK (v4.07)
 

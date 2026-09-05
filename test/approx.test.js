@@ -335,14 +335,20 @@ probe("attack-ops-at-resolution", () => {
   const lateRows = rows.filter(r => r.late.length);
   const observable = lateRows.filter(r => !r.late.every(k => k === "noop"));
 
-  assert.equal(rows.length, 17,
+  /* 17 -> 15 AND 9 -> 7 AT v4.08, AND THE PROBE IS WHAT FORCED THE EDIT.
+     Vexing Malice and Spellblade Assault left this census by being BUILT:
+     their bare trigger routes to `fx.onAtk` and fires at declaration, so
+     they no longer carry a payload in `fx.ops` at all. That is exactly
+     what a `stated` record's probe is for — closing part of a gap turns
+     it RED and the record has to be updated rather than left to rot
+     (v4.02). */
+  assert.equal(rows.length, 15,
     "the number of bare when-this-attacks ATTACK cards with a payload moved");
-  assert.equal(lateRows.length, 9,
+  assert.equal(lateRows.length, 7,
     "the number whose payload rides to RESOLUTION moved");
   assert.deepEqual(observable.map(r => r.name).sort(),
     ["Brand with Cinderclaw", "Fire Tenet: Strike First", "Hyper Inflation",
-     "Pick Up the Point", "Spellblade Assault", "Teklo Trebuchet 2000",
-     "Vexing Malice"],
+     "Pick Up the Point", "Teklo Trebuchet 2000"],
     "the set of cards whose payload is OBSERVABLY late moved. Down means one " +
     "was moved to declaration and the ledger must say so; up is a regression. " +
     "(Two more are late and carry only a `noop`, which is not observable.)");

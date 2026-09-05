@@ -45,6 +45,45 @@ const clean = t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/
    module scope rather than rebuilt inside classifyClause, which recurses. */
 const ORDINAL = {first:1, second:2, third:3, fourth:4, fifth:5};
 
+/* WHICH OPS CAN FIRE AT THE MOMENT THE ATTACK IS DECLARED (CR 7.2, v4.08).
+   "When this attacks" fires on DECLARATION; the payload used to ride to
+   RESOLUTION with `pend.ops`, so an arcane landed after the swing's own
+   damage and a token reached the board after the wall had been declared
+   against an empty one.
+
+   THIS IS AN ALLOW-LIST AND THAT IS THE SAFETY PROPERTY. A kind nobody
+   has reasoned about stays where it is — unchanged and visible — rather
+   than being moved into a moment nothing has checked it in. Measured
+   over the pinned pool: NINE records, THREE cards — Vexing Malice,
+   Spellblade Assault, Arcanic Shockwave.
+
+   WHAT IS DELIBERATELY NOT HERE, each for its own reason (v4.04's rule
+   that a blanket approximation hides which parts of it are actually
+   hard):
+
+     draw · discardRandom · eachArsPut · reveal · revPitch ·
+     revColorPitch · payOrLose      already fire at declaration, through
+                                    `execute`'s pre-run and `declOps`
+     buffNext                       a next-attack grant fired here is
+                                    taken by THIS attack — a self-pump
+                                    the card does not print
+     pickPrompt                     opens a sheet the caller has not
+                                    finished draining (`openPrompt` runs
+                                    at the tail of `execute`)
+     costTax · dracNext             BUILT at v4.06 as bugs; moving them
+                                    is its own call, and `dracNext` needs
+                                    the source excluded from its own
+                                    grant first
+     noop                           nothing to fire
+
+   Both members touch nothing the attack does and nothing touches them:
+   an arcane resolves against the defending hero and a token mint lands on
+   the board, neither of which the swing's own total or wall can change.
+   `atkTrigAt` is captured at the top of `execute`, so a Runechant minted
+   here is NOT in the firing set and cannot pop for the attack that made
+   it (v2.23). */
+const DECL_OPS = new Set(["arcane", "rune"]);
+
 /* ---- ONE IDIOM, TWO SPELLINGS (v3.00) --------------------------------
 
    The card database is somebody else's `develop` branch, and between
@@ -563,6 +602,18 @@ function classifyClause(raw){
        are untouched: a bare trigger fires on any attack, which is the
        distinction v2.12 named (a trigger is not a gate). */
     if(/\battacks?\s+a\s+hero\b/.test(cond)) rest.atkHero = true;
+    /* AND A BARE "WHEN THIS ATTACKS" FIRES ON DECLARATION (CR 7.2, v4.08).
+       The trigger was flattened into `fx.ops` and rode to RESOLUTION with
+       the attack, so Vexing Malice's 2 arcane landed AFTER the swing's own
+       damage and Spellblade Assault's Runechants reached the board after
+       the defend step had already been declared against an empty one.
+
+       IT IS A SEPARATE FLAG FROM `atkHero`, not a widening of it: a bare
+       trigger fires on ANY attack-target and a hero-gated one does not
+       (v3.46), so collapsing them would fire these three off a swing at
+       an ally — which is the direction v3.46 exists to stop. Only the
+       WHEN form: `if`/`while` reach this same branch and are gates. */
+    if(/^when/.test(m[0]) && /^this attacks$/.test(cond.trim())) rest.onAtk = true;
     /* ARSENAL FACE-UP. Azalea's arrows fire when put FACE UP into the
        arsenal, which is NOT the end-of-turn arsenal step (that sets face
        DOWN). Three printed phrasings, one trigger:
@@ -2969,7 +3020,7 @@ function fxParse(card){
     /* `dr` is isDR's answer, not a second copy of the regex: the type
        question is asked in one place so a DFC's front face is read the
        same way here as everywhere else. */
-    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null, tapCost:null};
+    self:0, ops:[], onHit:[], onHitHero:[], onAtkHero:[], onAtk:[], onDeath:[], conds:[], clauses:[], perm:null, dr:isDR(card), approx:false, defDebuff:null, millCost:null, tapCost:null};
   if(fusionTypes) fx.fusionCost = {types:fusionTypes};
   if(/\bally\b/.test(tt)) fx.perm="ally";
   else if(/\bitem\b/.test(tt)) fx.perm="item";
@@ -4133,6 +4184,13 @@ function fxParse(card){
          (v3.46), for the reason `onHitHero` does: an op is a bare array
          and a flag on it sits where a reader expects a parameter. */
       else if(r.atkHero){ fx.onAtkHero.push(op); return; }
+      /* A BARE ATTACKS-TRIGGER, FOR THE OPS THAT CAN HONOUR IT (v4.08).
+         `DECL_OPS` is an ALLOW-list, pinned, because the safe direction
+         is that a kind nobody has reasoned about stays exactly where it
+         is — unchanged and visible — rather than being moved into a
+         moment nothing has checked it in. A blacklist is the bug (v3.35,
+         v3.80): the next kind added walks into the new site. */
+      else if(r.onAtk && DECL_OPS.has(op[0])){ fx.onAtk.push(op); return; }
       else if(r.onDeath){ fx.onDeath.push(op); return; }
       else fx.ops.push(op);
     });
@@ -6541,7 +6599,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
