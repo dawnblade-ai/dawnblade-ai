@@ -298,6 +298,18 @@ probe("trainer-fatigue-loss", () => {
    trigger fires on DECLARATION. MEASURED over the pinned pool rather
    than asserted, because the doc's number is the whole claim. */
 probe("attack-ops-at-resolution", () => {
+  /* THE FIRST VERSION OF THIS PROBE CLASSIFIED BY OP KIND AND WAS WRONG
+     (v4.03). It read `fx.ops`, excluded the pre-run and the reveal family
+     by NAME, and pinned ELEVEN — a number derived from a list of op kinds
+     rather than from the engine. Driven, the answer is different: the
+     pre-run in `execute` already runs `draw`/`discardRandom` at
+     declaration, so three of the eleven were never late at all.
+
+     DRIVE IT. Declare each card as a real attack and ask what has ALREADY
+     happened by the time `pend` exists — an op still sitting in
+     `pend.ops` is one that rides to RESOLUTION, which is the deviation
+     this record is about. */
+  H.db();
   const seen = new Set(); const rows = [];
   for(const c of pool()){
     if(!/when this attacks/i.test(c.tx || "")) continue;
@@ -305,32 +317,45 @@ probe("attack-ops-at-resolution", () => {
     if(/when this attacks[^.]*,\s*if\b/i.test(c.tx)) continue;   /* a nested gate is a different shape */
     if(seen.has(c.name)) continue; seen.add(c.name);
     const fx = PR.fxParse(c);
+    if(!(fx.ops || []).length || fx.optCost) continue;
+    const card = {...c, uid: 5000 + rows.length, cost: 0};
+    const g = H.state({hand:[card], res:9, ap:1,
+      deck:[{uid:8001, name:"Approx Filler A", tt:"Generic Action", ty:["Generic","Action"], tx:"", kw:[], pitch:1},
+            {uid:8002, name:"Approx Filler B", tt:"Generic Action", ty:["Generic","Action"], tx:"", kw:[], pitch:1}],
+      hist:{atk:0, non:0, arc:0, aura:0, made:0, booed:0, blue:0, red:0, trans:0, blueGY:0, atkNames:[]}},
+      {hp:20}, {turn:3});
+    let n;
+    try { n = H.execute(g, card, "hand", 0, {attacking:true, isAttack:true, target:"hero"}); }
+    catch(e){ assert.fail("declaring " + c.name + " threw: " + e.message); }
+    const pendOps = ((n.pend && n.pend.ops) || []).map(o => o[0]);
     const kinds = (fx.ops || []).map(o => o[0]);
-    rows.push({name:c.name, kinds, optCost: !!fx.optCost});
+    const late = kinds.filter(k => pendOps.includes(k));
+    rows.push({name:c.name, kinds, late});
   }
-  const withOps  = rows.filter(r => r.kinds.length && !r.optCost);
-  const preRun   = withOps.filter(r => r.kinds.includes("eachArsPut"));
-  const declTime = withOps.filter(r => !r.kinds.includes("eachArsPut") &&
-                                       r.kinds.some(k => /^rev/.test(k) || k === "reveal"));
-  const noopOnly = withOps.filter(r => r.kinds.every(k => k === "noop"));
-  const late     = withOps.filter(r => !preRun.includes(r) && !declTime.includes(r) && !noopOnly.includes(r));
+  const lateRows = rows.filter(r => r.late.length);
+  const observable = lateRows.filter(r => !r.late.every(k => k === "noop"));
 
-  assert.equal(rows.length,    23, "distinct bare when-this-attacks ATTACK cards moved");
-  assert.equal(withOps.length, 17, "cards putting a payload in fx.ops moved");
-  assert.equal(preRun.length,   1, "pre-run cards moved (v3.88's Concoct Disorder)");
-  assert.equal(declTime.length, 3, "declaration-time reveal cards moved");
-  assert.equal(noopOnly.length, 2, "noop-only cards moved");
-  assert.equal(late.length,    11,
-    "the number of bare when-this-attacks payloads that are observably LATE moved. " +
-    "Up is a regression; DOWN means one was built and the ledger must say so. " +
-    "(The prose said FOURTEEN, which is 17 minus the three declaration-time " +
-    "reveals and counts the two noops. Eleven is the same set measured to the " +
-    "thing a player could actually see.)");
+  assert.equal(rows.length, 17,
+    "the number of bare when-this-attacks ATTACK cards with a payload moved");
+  assert.equal(lateRows.length, 9,
+    "the number whose payload rides to RESOLUTION moved");
+  assert.deepEqual(observable.map(r => r.name).sort(),
+    ["Brand with Cinderclaw", "Fire Tenet: Strike First", "Hyper Inflation",
+     "Pick Up the Point", "Spellblade Assault", "Teklo Trebuchet 2000",
+     "Vexing Malice"],
+    "the set of cards whose payload is OBSERVABLY late moved. Down means one " +
+    "was moved to declaration and the ledger must say so; up is a regression. " +
+    "(Two more are late and carry only a `noop`, which is not observable.)");
+
+  /* AND THE CONTROL: the pre-run really does fire at declaration, so this
+     probe can tell a late op from an early one rather than reporting
+     everything late. */
+  const early = rows.filter(r => !r.late.length).map(r => r.name);
+  assert.ok(early.includes("Bare Fangs") && early.includes("Concoct Disorder"),
+    "the declaration-time cards are no longer landing at declaration — this " +
+    "probe can no longer tell the two moments apart");
 });
 
-/* The trainer gates its windows on `mode`/`bphase`; priority.js runs
-   there in SHADOW, deriving state through `fromTrainer` and driving
-   nothing. A claim about a babel block, pinned as source and said so. */
 probe("trainer-priority-machine", () => {
   assert.ok(/\bbphase\b/.test(HTML), "index.html no longer speaks bphase — the " +
     "trainer has been migrated onto priority.js and this record is closed");
@@ -515,10 +540,15 @@ probe("unbuilt-three", () => {
     "the set of HEROES reading nothing moved. Six are Arakni's Agents, whose " +
     "abilities refuse by design (v3.76); the rest are heroes whose whole printed " +
     "line is read elsewhere, by `parseHeroPower` off the build");
-  assert.equal(none.token.length, 8,
-    "the set of TOKENS reading nothing moved. This is a LEAD rather than a " +
-    "finding: Inertia is in it and Inertia WORKS — `effects.isInertia` matches " +
-    "the token by NAME, which is v3.22's Runechant shape exactly");
+  assert.equal(none.token.length, 7,
+    "the set of TOKENS reading nothing moved. It was EIGHT at v4.02 and the " +
+    "eighth was INERTIA — a token that WORKED while reading nothing, because " +
+    "`effects.isInertia` matched it by NAME (v3.22's Runechant shape exactly, " +
+    "and the golden rule broken). v4.03 taught the parser its printed wipe and " +
+    "the by-name match is gone. The remaining seven are the honest kind: their " +
+    "text has no reader and they do nothing. A tier that says `none` on a card " +
+    "that WORKS is a LEAD (v3.93) — check the next one that leaves this set is " +
+    "leaving because it was built, not because something started matching a name");
 });
 
 /* ============================================================

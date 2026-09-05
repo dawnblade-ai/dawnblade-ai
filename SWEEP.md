@@ -7,7 +7,7 @@ axes it never covered.
 | area | entries | note |
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
-| Tokens | 4 | 2 barely named in the trainer |
+| Tokens | 3 | 2 barely named in the trainer |
 | Ruled but not built | 24 cards | understood ≠ built |
 | **Fail states** | 53 entries, 0 break a rule | how cards go *wrong* at the table |
 
@@ -42,9 +42,6 @@ When this attacks a marked hero, the attack gets go again.
 > Cards and abilities cost you an additional {r} to play or activate.
 When you play a card or activate an ability, destroy this.
 At the beginning of your end phase, destroy this.
-
-### Inertia — fx `none`, 5 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
-> At the beginning of your end phase, destroy this, then put all cards from your hand and arsenal on the bottom of your deck.
 
 ## 3. Ruled but not built
 

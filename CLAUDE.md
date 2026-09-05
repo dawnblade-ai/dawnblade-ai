@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2210 drills**.
+This is `node --test "test/*.test.js"` — currently **2213 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -2034,6 +2034,63 @@ silent skip is not a pass. It also runs `npm run scenes`, compiles both
 every engine module the page loads (count DERIVED from `index.html`, never
 stated) and checks the live `APP_VER` matches the repo. That closes the gap
 between "pushed" and "live" which a session cannot check for itself.
+
+### A TOKEN THAT WORKED AND READ NOTHING (v4.04)
+
+`effects.isInertia` was `norm(b.card.name) === "inertia"` — **a card
+special-cased by NAME**, which is this file's own golden rule broken, and
+exactly **v3.22's Runechant defect one token over**: built by name, while
+the parser filed its clause `skip` and the card reported `tier: none`.
+
+**A TIER THAT SAYS `none` ON A CARD THAT WORKS IS A LEAD** (v3.93, third
+outing) — and what surfaced it is that `tools/approx.js`'s `unbuilt-three`
+probe pins the `none` set **per kind**. Seven tokens in that set genuinely
+do nothing; one of them worked. Pinning the sets separately is what made
+"one of these is not like the others" visible at all.
+
+**MEASURED BEFORE BUILDING**: Inertia is the pool's ONLY record printing
+that payload, and the SCHEDULE half has read since v3.07 across eight
+`destroy this, then` records. The payload had no reader, so the clause
+refused — v2.29 working as designed.
+
+**HELD OFF `fx.ops`** (v3.56, one schedule over). Left in `ops` the wipe
+fires when the token is PLAYED rather than at the end phase (v3.07's
+suspense bug), and emitting the `selfDestruct` hands the token to
+`sweepArena` as well — destroyed twice, and the wipe moves in the
+end-phase order v3.17 made load-bearing.
+
+**THE NAME AND THE TEXT MUST BE ABLE TO DISAGREE**, and no pool card does,
+so both fixtures are synthetic (v3.73): a token printing the wipe under an
+odd name must fire it, and **a token NAMED Inertia printing `Ward 1` must
+not** — that second half is the one that bites, because restoring the name
+match passes the first perfectly.
+
+**AND IT NEEDED `fxReset`.** `fxParse` memoizes on `name|pitch`, so
+parsing a fake "Inertia" poisons that key for every later reader in the
+process — the next drill got the impostor's parse back and reported a leak
+that was not there. The documented drill gotcha, inside a drill about a
+memo hazard's own family.
+
+**THE LEDGER CAUGHT ITS OWN CHANGE.** The pinned token set went 8 → 7 the
+moment the card was built and the drill went red. That is what a
+`stated`/`open` record is FOR: closing a gap forces the record to be
+updated rather than leaving a stale sentence behind.
+
+### A PROBE THAT CLASSIFIES INSTEAD OF DRIVING (v4.04)
+
+v4.02's `attack-ops-at-resolution` record read `fx.ops`, excluded the
+pre-run and the reveal family BY NAME, and pinned **eleven** cards. Driven,
+that is wrong: `execute`'s pre-run already runs `draw`/`discardRandom` at
+declaration, so three were never late. **17 cards / 9 late / SEVEN
+observably late.**
+
+**AND THE RECORD NOW NAMES A REASON PER OP** rather than one blanket
+approximation — `buffNext` cannot move because the pre-run happens BEFORE
+`pend` is built, so a next-attack grant fired there is taken by THIS
+attack; `pickPrompt` opens a sheet the caller has not finished draining;
+and `arcane`, `rune`, `costTax` and `dracNext` COULD move, each as its own
+version. **A blanket approximation hides which parts of it are actually
+hard.**
 
 ### A RESOLVED LAYER'S EFFECT HAD NOWHERE TO LAND (v4.03)
 
@@ -7840,10 +7897,10 @@ it carded effects only once the engine can actually read them.
   beginning of its controller's end phase, exported and called from
   `beginEndPhase`, so BOTH boards run it. The clause is still filed `noop`
   and that is now CORRECT: the noop's reason names the reader (v3.16), and
-  the reader exists. **Inertia the TOKEN still reads `tier: none`, and that
-  is a LEAD rather than a finding** — `effects.isInertia` matches it by
-  NAME, which is v3.22's Runechant shape exactly (see `tools/approx.js`'s
-  `unbuilt-three` probe, which pins the token set for this reason).
+  the reader exists. ~~**Inertia the TOKEN still reads `tier: none`**~~ — **the lead was
+  followed at v4.04 and it was real.** `effects.isInertia` matched the
+  token by NAME; `parser.isHandWipe` reads its printed clause now, the
+  token reports `full`, and the pinned token set went 8 -> 7.
 - **Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.** Its
   printed cost is `XX`; nothing here models an X cost, so `create X ... tokens` is
   REFUSED rather than read as one. Creating a single token for a card that charges

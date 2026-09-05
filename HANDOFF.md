@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.03 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
+# Handoff — Dawnblade, at v4.04 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -67,18 +67,18 @@ comment**. Building the branch moved Dorinthea 7 wins → 24 and Arakni 1 →
 and count how often it fires** — fourth time in this project's history
 that the answer was zero.
 
-**NOT YET FOLLOWED — EIGHT POOL TOKENS READ `tier: none`, AND ONE OF THEM
-WORKS.** Inertia is in that set and `effects.resolveInertia` implements it
-— through `effects.isInertia`, which matches the token **BY NAME**. That
-is v3.22's Runechant shape exactly: *"Runechant was built by NAME and the
-other three tokens printing the identical trigger read `tier: none` and
-did nothing."*
+**FOLLOWED AT v4.04, AND IT WAS REAL.** Eight pool tokens read
+`tier: none` and one of them WORKED: `effects.isInertia` matched the token
+**BY NAME**, which is v3.22's Runechant shape exactly and the golden rule
+broken. `parser.isHandWipe` reads its printed clause now, the token
+reports `full`, and the pinned set went **8 → 7**.
 
-The set is pinned by `tools/approx.js`'s `unbuilt-three` probe: **Ash,
-Fealty, Gate to i'Arathael, Goldkiss Rum, Inertia, Soul Shackle,
-Toughness, Zen State.** Each needs its own text read before anyone can say
-whether it is inert or merely unlisted — and **a tier that says `none` on
-a card that works is a LEAD** (v3.93, third outing).
+**THE REMAINING SEVEN ARE THE HONEST KIND** — text with no reader, doing
+nothing: **Ash, Fealty, Gate to i'Arathael, Goldkiss Rum, Soul Shackle,
+Toughness, Zen State.** Each is a small build (Toughness is the closest —
+`destroy this, then <defence grant>`, and the schedule half already
+reads). **When one leaves this set, check it left because it was BUILT
+and not because something started matching a name.**
 
 ## ⚠ `npm run crindex`, RE-DERIVED AFTER EIGHTY-FIVE VERSIONS
 

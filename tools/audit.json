@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-05T00:01:35.052Z",
- "appVer": "4.02",
+ "generated": "2026-09-05T00:12:51.059Z",
+ "appVer": "4.03",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -468,7 +468,7 @@
    "tx": "At the beginning of your end phase, destroy this, then put all cards from your hand and arsenal on the bottom of your deck.",
    "pw": null,
    "def": null,
-   "fx": "none"
+   "fx": "full"
   },
   "Might": {
    "found": true,

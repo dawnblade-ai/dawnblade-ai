@@ -3442,6 +3442,42 @@ function fxParse(card){
     break;
   }
 
+  /* ---- THE HAND WIPE, READ RATHER THAN MATCHED BY NAME (v4.03) -------
+
+     > "At the beginning of your end phase, destroy this, then put all
+     >  cards from your hand and arsenal on the bottom of your deck."
+     >                                                        — INERTIA
+
+     `effects.resolveInertia` implemented this by NAME —
+     `norm(b.card.name) === "inertia"` — which is the golden rule broken
+     at the top of this file: *never special-case a card by name; teach
+     the parser to read its text.* v3.22 is the same defect one token
+     over, where Runechant was built by name and the three siblings
+     printing the identical trigger read `tier: none` and did nothing.
+
+     MEASURED: Inertia is the pool's ONLY record printing this payload,
+     and it is the reason the token read `none` — the SCHEDULE half has
+     read since v3.07 ("destroy this, then X" over eight records), and it
+     was the payload that had no reader, so the whole clause refused
+     (v2.29: never parse ahead of wiring).
+
+     IT IS HELD OFF `fx.ops` (v3.56's rule, one schedule over). Left in
+     `ops` the wipe would fire when the token is PLAYED rather than at the
+     end phase — v3.07's suspense bug, a printed delay collected as a
+     bonus — and emitting the `selfDestruct` would hand the token to
+     `sweepArena` as well, so it would be destroyed twice and the wipe's
+     position in the end-phase order would move. The whole clause is
+     marked handled and `resolveInertia` keeps both the destroy and the
+     order it already has. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    if(!/^at the beginning of your end phase, destroy this, then put all cards from your hand and arsenal on the bottom of your deck$/i
+         .test(clauses[ci].replace(/\.$/, "").trim())) continue;
+    fx.handWipe = {when: "end"};
+    handled.add(ci);
+    break;
+  }
+
   /* ---- CLASH, AS A READING RATHER THAN A REGEX IN ONE BOARD (v3.94)
 
      "When this defends, clash with the attacking hero. The winner creates
@@ -6284,6 +6320,15 @@ const abWindow = ab => ab && ab._attackRx ? "attack-reaction"
    written. `printedKw` is the right question (v2.84's three): does the
    card CARRY it as printed rules text. Crouching Tiger's whole text is
    "**Ephemeral**\n\n**Go again**", two keyword lines and nothing else. */
+/* DOES THIS CARD PRINT THE END-PHASE HAND WIPE? (v4.03)
+
+   The one reader of Inertia's clause, and it asks the card's own PARSED
+   TEXT rather than its name — `effects.resolveInertia` matched
+   `norm(name) === "inertia"`, which is the golden rule broken at the
+   keyword level (v3.22's Runechant, one token over). A token that merely
+   MENTIONS the wipe does not have it; the reader is the parse. */
+const isHandWipe = c => !!(c && fxParse(c).handWipe);
+
 const isEphemeral = c => printedKw(c, "ephemeral");
 const abSoulCost = ab => (ab && ab._soulCost) || 0;
 /* ITS SIBLING (v3.79) — does the ability ALSO banish its own source?
@@ -6470,6 +6515,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, gyFirstGaKw,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

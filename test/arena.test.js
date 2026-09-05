@@ -264,3 +264,84 @@ test("the shared body still runs every schedule the table never had", {skip}, ()
     .replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(/E\.beginEndPhase\(n, seat, getDb\(\)\)/.test(judge), "and judge must call the body");
 });
+
+/* ============================================================
+   THE HAND WIPE IS READ, NOT MATCHED BY NAME (v4.03)
+
+   `effects.isInertia` was `norm(b.card.name) === "inertia"` — a card
+   special-cased by NAME, which is the golden rule broken at the top of
+   CLAUDE.md and exactly v3.22's Runechant defect one token over: built by
+   name, while the parser filed its clause `skip` and the token reported
+   `tier: none` beside seven siblings that genuinely do nothing.
+
+   **A TIER THAT SAYS `none` ON A CARD THAT WORKS IS A LEAD** (v3.93), and
+   this is the third time it has paid.
+
+   THE NAME AND THE TEXT MUST BE ABLE TO DISAGREE, or the drill cannot
+   tell the two readers apart — no pool card does, so both fixtures are
+   synthetic (v3.73's Crash-and-Bash discriminator, one token over).
+   ============================================================ */
+const HJ = require("./helpers/judged.js");
+
+const wipeText = "At the beginning of your end phase, destroy this, then put all " +
+                 "cards from your hand and arsenal on the bottom of your deck.";
+const tokenCard = (name, tx) => ({
+  uid: "hw-" + name, name, tt: "Generic Token - Disease Aura",
+  ty: ["Generic", "Token", "Aura"], tx, kw: [], gkw: [], pitch: 0
+});
+const boardWith = card => HJ.state({
+  board: [{uid: 77, kind: "aura", card}],
+  hand: [{uid: 1, name: "HW Hand A", tt: "Generic Action", ty: ["Generic","Action"], tx: "", kw: []},
+         {uid: 2, name: "HW Hand B", tt: "Generic Action", ty: ["Generic","Action"], tx: "", kw: []}],
+  arsenal: null, deck: []
+}, {});
+
+test("a token printing the wipe fires it — whatever it is called", () => {
+  const odd = tokenCard("Not Called Inertia At All", wipeText);
+  assert.equal(P.isHandWipe(odd), true, "the parser does not read the printed wipe");
+  const out = E.resolveInertia(boardWith(odd), 0);
+  assert.equal(out.game.sides[0].hand.length, 0,
+    "a token printing the wipe did not fire it — the reader is matching the NAME " +
+    "again, which is the golden rule broken");
+  assert.equal(out.game.sides[0].deck.length, 2, "the hand did not reach the deck");
+  assert.equal((out.game.sides[0].board || []).length, 0, "the token was not destroyed");
+});
+
+test("a token NAMED Inertia that prints no wipe does nothing", () => {
+  /* THE OTHER HALF, and the one that actually bites: reverting to the
+     name match passes the test above perfectly, because the real token IS
+     called Inertia. Only a card whose name and text disagree can tell the
+     two readers apart. */
+  /* THE IMPOSTOR MUST CARRY THE REAL NAME, or it cannot tell a
+     name-matcher from a text-reader — and `fxParse` MEMOIZES ON
+     `name|pitch`, so parsing a fake "Inertia" poisons that key for every
+     later reader in the process. `fxReset` at the end of this test is not
+     tidiness: without it the drill below got this card's parse back and
+     reported the wipe leaking into `fx.ops`. The documented drill gotcha,
+     in a drill about a memo hazard's own family. */
+  const impostor = tokenCard("Inertia", "Ward 1");
+  assert.equal(P.isHandWipe(impostor), false, "the parser reads a wipe off a card that prints none");
+  const out = E.resolveInertia(boardWith(impostor), 0);
+  assert.equal(out.game.sides[0].hand.length, 2,
+    "a token that merely CARRIES THE NAME wiped the hand — the reader is the " +
+    "name rather than the printed text");
+  assert.equal((out.game.sides[0].board || []).length, 1, "and it destroyed a card it does not read");
+  P.fxReset();
+});
+
+test("the wipe is held off `fx.ops`, so playing the token does not fire it", () => {
+  /* v3.56's rule one schedule over. Left in `ops` the wipe would fire
+     when the token is PLAYED rather than at the end phase — v3.07's
+     suspense bug, a printed delay collected as a bonus — and emitting the
+     `selfDestruct` would hand the token to `sweepArena` as well, so it
+     would be destroyed twice and the wipe would move in the end-phase
+     order. */
+  const real = tokenCard("HW Ops Probe", wipeText);
+  const fx = P.fxParse(real);
+  assert.deepEqual(fx.ops || [], [],
+    "the wipe leaked into fx.ops — it will fire when the token is played, and " +
+    "`sweepArena` will destroy it a second time");
+  assert.ok(fx.handWipe, "the whole-card reader did not claim the clause");
+  assert.equal(fx.tier, "full",
+    "the token no longer reports fully scripted — the clause is unclaimed again");
+});

@@ -9,6 +9,103 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.04 — a token that worked and read nothing
+
+v4.02's approximation ledger pins the set of pool records reading
+`tier: none` **per kind**, and its TOKEN set held **eight**. Seven of them
+genuinely do nothing. The eighth was **Inertia**, which works.
+
+`effects.isInertia` was `norm(b.card.name) === "inertia"` — **a card
+special-cased by NAME**, which is the golden rule broken at the top of
+CLAUDE.md, and exactly **v3.22's Runechant defect one token over**: built
+by name, while the parser filed its clause `skip` and the card reported
+reading nothing.
+
+**A TIER THAT SAYS `none` ON A CARD THAT WORKS IS A LEAD** (v3.93), third
+outing — and the ledger is what surfaced it, because pinning the token set
+separately is what made "one of these is not like the others" visible.
+
+### MEASURED BEFORE BUILDING
+
+Inertia is the pool's **only** record printing *"put all cards from your
+hand and arsenal on the bottom of your deck"*, and the **schedule** half
+has read since v3.07 across eight `destroy this, then` records. It was the
+**payload** that had no reader, so the whole clause refused — v2.29's
+never-parse-ahead-of-wiring rule working exactly as designed.
+
+`parser.isHandWipe` reads the printed clause now and `isInertia` asks it,
+so the token reports `full` and a second card printing the same wipe would
+work for free.
+
+**IT IS A WHOLE-CARD READER HELD OFF `fx.ops`** (v3.56's rule one schedule
+over), for two reasons that are each a bug this project has already had:
+
+- left in `ops`, the wipe fires when the token is **PLAYED** rather than
+  at the end phase — v3.07's suspense bug, a printed delay collected as a
+  bonus;
+- emitting the `selfDestruct` would hand the token to `sweepArena` **as
+  well**, so it would be destroyed twice and the wipe would move in the
+  end-phase order that v3.17 made load-bearing.
+
+### THE NAME AND THE TEXT MUST BE ABLE TO DISAGREE
+
+No pool card can tell a name-matcher from a text-reader, so both fixtures
+are synthetic (v3.73's Crash-and-Bash discriminator):
+
+| fixture | must |
+|---|---|
+| a token printing the wipe under an **odd name** | fire it |
+| a token **NAMED Inertia** printing only `Ward 1` | do nothing |
+
+**The second is the half that bites** — reverting to the name match
+passes the first perfectly, because the real token really is called
+Inertia. Sabotaged: restoring `norm(name) === "inertia"` was **SILENT**
+before these drills and fails two now.
+
+**AND IT NEEDED `fxReset`.** `fxParse` memoizes on `name|pitch`, so
+parsing a fake "Inertia" poisons that key for every later reader in the
+process — the drill below it got the impostor's parse back and reported
+the wipe leaking into `fx.ops`. The documented drill gotcha, inside a
+drill about a memo hazard's own family.
+
+### THE LEDGER CAUGHT ITS OWN CHANGE
+
+The pinned token set went **8 → 7** the moment the card was built, and the
+drill went red. That is precisely what a `stated`/`open` record is for:
+closing a gap FORCES the record to be updated rather than leaving a stale
+sentence behind (v3.41, as a test).
+
+### AND v4.02's OWN PROBE WAS WRONG
+
+`attack-ops-at-resolution` classified by **op KIND** — it read `fx.ops`,
+excluded the pre-run and the reveal family by name, and pinned **eleven**.
+That is the thing this project says not to do, and driving it says
+otherwise: `execute`'s pre-run already runs `draw`/`discardRandom` at
+declaration, so three of the eleven were never late at all.
+
+**Driven, the honest numbers are 17 cards / 9 late / SEVEN observably
+late** (two of the nine carry only a `noop`). The record now names each
+one and why it cannot simply move:
+
+| op | card | why it stays |
+|---|---|---|
+| `buffNext` | Fire Tenet: Strike First, Teklo Trebuchet 2000 | the pre-run happens BEFORE `pend` is built, so a next-attack grant fired there is taken by **this** attack — a self-pump the card does not print |
+| `pickPrompt` | Pick Up the Point | opens a sheet mid-declaration, and `openPrompt` drains at the tail of the caller |
+| `arcane`, `rune`, `costTax`, `dracNext` | Vexing Malice, Spellblade Assault, Hyper Inflation, Brand with Cinderclaw | touch nothing this attack resolves — **these four could move**, and each is a behavioural change to a real card that wants its own version rather than a blanket sweep |
+
+The probe carries a **control** now: the declaration-time cards must still
+land at declaration, or it can no longer tell the two moments apart.
+
+### The numbers
+
+2210 → **2213 drills**, 0 failing, 4 skipped. Coverage **381 full / 21
+part / 3 none** — unchanged, because Inertia is a TOKEN and the headline
+counts deck cards; the token set is where it moved. Fairness clean, 72
+scenes passing, 210 self-play games with 0 stalls, 0 refusals and 0
+invariant violations.
+
+---
+
 ## v4.03 — a resolved layer's effect had nowhere to land
 
 **Every attack-reaction pump was dropped at the table, every time.** 13

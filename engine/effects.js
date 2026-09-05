@@ -5504,7 +5504,17 @@ function makeEffects(ctx){
 
    The cards go to the BOTTOM of the deck, not the graveyard — so nothing
    is stamped `_gy` and "discarded this turn" riders must not see them. */
-const isInertia = b => !!(b && b.card && P.norm(b.card.name) === "inertia");
+/* THE TOKEN IS FOUND BY ITS PRINTED TEXT, NOT BY ITS NAME (v4.03).
+
+   This read `P.norm(b.card.name) === "inertia"` — a card special-cased by
+   name, which is the golden rule broken at the top of CLAUDE.md, and
+   exactly v3.22's Runechant defect one token over: built by name, while
+   the parser filed its clause `skip` and the token reported `tier: none`.
+
+   `parser.isHandWipe` reads the clause instead, so the token reports
+   `full` and a second card printing the same wipe would work for free.
+   Measured: Inertia is the pool's only such record today. */
+const isInertia = b => !!(b && b.card && P.isHandWipe(b.card));
 function resolveInertia(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);

@@ -126,12 +126,23 @@ const APPROX = {
   status:"stated", cr:"CR 7.2", board:"both", since:"v3.88", swept:"v4.02",
   claim:"On an ATTACK card a bare \"when this attacks\" payload rides to "+
         "RESOLUTION with `pend.ops`. The printed trigger fires on DECLARATION.",
-  why:"Measured rather than assumed: 23 distinct pool attack cards print a bare "+
-      "when-this-attacks; 16 put a payload in `fx.ops`; three of those are the "+
-      "declaration-time reveal family and two are noops, leaving ELEVEN whose "+
-      "payload is observably late. Concoct Disorder was moved at v3.88 because its "+
-      "own condition asks about it and the op can safely move; the rest are left "+
-      "alone rather than moved blind."},
+  why:"MEASURED BY DRIVING (v4.03 — the first version of this record counted op "+
+      "KINDS and pinned eleven, which is the thing this project says not to do; "+
+      "`execute`'s pre-run already runs draw/discardRandom at declaration, so "+
+      "three were never late). Declared as real attacks: 17 cards carry a "+
+      "payload, 9 still hold it in `pend.ops` at resolution, and 2 of those "+
+      "carry only a noop — leaving SEVEN observably late. "+
+      "AND EACH IS LEFT FOR ITS OWN REASON rather than as one blanket "+
+      "approximation: `buffNext` (Fire Tenet, Teklo Trebuchet) CANNOT move — the "+
+      "pre-run happens before `pend` is built, so a next-attack grant fired there "+
+      "would be taken by THIS attack, a self-pump the card does not print. "+
+      "`pickPrompt` (Pick Up the Point) opens a sheet mid-declaration, and "+
+      "`openPrompt` drains at the tail of the caller. `arcane` (Vexing Malice), "+
+      "`rune` (Spellblade Assault), `costTax` (Hyper Inflation) and `dracNext` "+
+      "(Brand with Cinderclaw) touch nothing this attack resolves and are the "+
+      "four that COULD move — each is a behavioural change to a real card and "+
+      "wants its own version, not a blanket sweep. Concoct Disorder was moved at "+
+      "v3.88 for exactly that kind of per-card reason."},
 
 "trainer-priority-machine": {
   status:"stated", cr:"CR 4.2-4.4, 7.x", board:"trainer", since:"v2.27", swept:"v4.02",
@@ -205,13 +216,17 @@ const APPROX = {
 
 "unbuilt-three": {
   status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.02",
-  claim:"Three pool cards read tier `none`: Glisten (distribute up to four +1{p} "+
+  claim:"Three pool DECK cards read tier `none`: Glisten (distribute up to four +1{p} "+
         "counters among any number of weapons), Danger Digits (a 'has hit' fiction "+
         "for a dagger that never attacked), Hope Merchant's Hood (shuffle any "+
         "number of cards from hand into the deck, then draw that many).",
   why:"NONE of the three is waiting on its payload — every effect reads. What "+
       "refuses is a PROMPT shape (a distribution sheet), a FICTION (a hit by a "+
-      "card that did not attack), and a ZONE MOVE (deck manipulation)."},
+      "card that did not attack), and a ZONE MOVE (deck manipulation). "+
+      "THE PROBE PINS THE HERO AND TOKEN SETS SEPARATELY, and that is what "+
+      "found INERTIA at v4.03: a token reading `none` that WORKED, because "+
+      "`effects.isInertia` matched it by NAME. Its wipe is read now and the "+
+      "token set went 8 -> 7. The remaining seven are the honest kind."},
 
 /* ---- C. RECORDS THIS SWEEP FOUND STALE ----------------------------- */
 
