@@ -122,7 +122,45 @@ function play(g, limit){
   return {game: n, steps, errs, viols, events, feedSeen};
 }
 
-module.exports = {match, play, W, DB, J, SP};
+/* THE FAULT LIST IS A CENSUS, AND IT LIVES BESIDE THE COUNTERS (v4.17).
+   `tourney.js` derives its ROUTE list from whatever `events` carries and
+   excluded exactly ONE name — so `SECOND-PERSON`, added at v4.15, was
+   reported under "ROUTE COVERAGE (times a feed line matched)", where a
+   number means a FEATURE FIRED. Driven against a sabotaged `svName`:
+   **78 faults, and the summary line read three zeroes.**
+
+   That is v3.81 with the sign flipped — there a fault counter spelled
+   the wrong word and reported nothing; here it reports a real number in
+   the column that means the opposite. And it is the v4.03 lesson on the
+   other half of the same split: the route list was made DERIVED because
+   a hardcoded one in the report cannot see a counter added here. The
+   exclusion was still typed, so it under-named by one the day this
+   file grew a second fault.
+
+   One spelling, here, where the counters are. A fault added below and
+   not named here is caught by `test/selfplay.test.js`, which drives a
+   line of each kind rather than reading this list. */
+const FAULTS = ["MALFORMED", "SECOND-PERSON"];
+
+/* AND THE TWO DECISIONS THE REPORT MAKES ABOUT THAT CENSUS LIVE HERE TOO,
+   beside the thing they read. Both were a hardcoded list in `tourney.js`
+   that under-named by one, and neither was drillable while it printed
+   inline — a source slice rots where a rule moves (v3.22, v3.28, v3.94),
+   so `test/tourney.test.js` DRIVES these with synthetic counts, and asks
+   for BOTH halves: a check that only ever sees a fault at ZERO passes
+   vacuously (v3.98).
+
+   EVERY FAULT IS ON THE SUMMARY LINE, because those numbers are what
+   CLAUDE.md tells a reader to read; one visible only in a detail block
+   further down is a fault nobody is told about. And a fault is never a
+   ROUTE — a number under "times a feed line matched" means a FEATURE
+   FIRED, which is the opposite of what a fault count means. */
+const summaryLine = (refusals, viols, faults) =>
+  `POLICY REFUSALS ${refusals.length} · INVARIANT VIOLATIONS ${viols.length} · `
+  + FAULTS.map(k => `${k} ${(faults[k] || []).length}`).join(" · ");
+const routeNames = evts => Object.keys(evts).filter(k => !FAULTS.includes(k)).sort();
+
+module.exports = {match, play, W, DB, J, SP, FAULTS, summaryLine, routeNames};
 
 if(require.main === module){
   const keys = W.HEROES.map(h => h.k);

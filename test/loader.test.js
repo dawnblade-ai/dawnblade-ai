@@ -180,6 +180,49 @@ function recordFor(card){
       || cands.slice().sort((a, b) => (a.p == null ? 9 : a.p) - (b.p == null ? 9 : b.p))[0];
 }
 
+/* ---- THE PINNED POOL IS THE WHOLE REASON THE SUITE NEEDS NO NETWORK ---
+   CLAUDE.md states what `data/pool.json` is in one sentence — "the pinned
+   pool, N records, every card the pool can reach" — and that sentence was
+   the ONLY place the number lived. It read **764** while the file held
+   **797**: a doc claim is a test with no assertion (v3.41), and this one
+   describes the fixture every other drill in the suite stands on.
+
+   SO THE CLAIM IS PINNED, NOT THE NUMBER ALONE. A count on its own says
+   nothing about reach — a pool of 797 records missing one deck entry is
+   the same number and a broken fixture. What is asserted is that every
+   card a match can DEAL resolves out of the pinned file with no live
+   database in the process at all.
+
+   UNGATED, DELIBERATELY. Every other drill in this file skips without a
+   cached database; this one must not, because "the suite needs no
+   network" is exactly the property it states. */
+test("the pinned pool carries every card a match can deal", () => {
+  const raw = JSON.parse(fs.readFileSync(
+    path.join(__dirname, "..", "data", "pool.json"), "utf8"));
+  assert.equal(raw.length, 797,
+    "the pinned pool moved — re-derive CLAUDE.md's sentence with it");
+
+  const db = C.buildMaps(raw.map(C.mapDbCard));
+  const missing = [], seen = new Set();
+  let entries = 0;
+  for(const h of W.HEROES){
+    assert.ok(C.resolveHero(db, {name: h.n, code: h.code}), "no pooled record for " + h.n);
+    const d = GM.parseDeck(W.DECKS[h.k]);
+    for(const e of [...d.deck, ...d.gear]){
+      entries++;
+      seen.add(e.name + "|" + (e.p == null ? "" : e.p));
+      if(!C.resolveEntry(db, e).resolved) missing.push(h.k + ": " + e.name);
+    }
+  }
+  /* PROVED ALIVE BEFORE ANYTHING IS CONCLUDED FROM ITS SILENCE (v4.00) —
+     a loop over zero entries satisfies "every one resolves" perfectly. */
+  assert.ok(entries >= 480, `only ${entries} entries walked — the deck source moved`);
+  assert.ok(seen.size >= 300, `only ${seen.size} distinct cards — the walk is not reaching`);
+  assert.deepEqual(missing, [],
+    "card(s) a deck lists that the pinned pool does not carry — the phone can deal "
+    + "them and no drill here can see them:\n  " + missing.join("\n  "));
+});
+
 test("every printed value survives the trip from the database to the table", {skip}, () => {
   /* One row per field so a failure names WHICH value was lost, not just
      that a card differs. `life` and `ty` are in here because each was

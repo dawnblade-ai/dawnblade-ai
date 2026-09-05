@@ -1,4 +1,5 @@
-const {match, play, W} = require("./selfplay.js");
+const {match, play, W, FAULTS, summaryLine, routeNames} = require("./selfplay.js");
+
 const keys = W.HEROES.map(h => h.k);
 /* An empty argument means "all of them" — "".split(",") is [""], which
    would silently run zero games and report a clean sweep by finding
@@ -9,14 +10,20 @@ const B = list(process.argv[3]);
 const SEEDS = +(process.argv[4] || 1);
 
 const wins = {}, games = [];
-let refusals = [], viols = [], evts = {}, malformed = [], stalls = 0, turnsum = 0, n = 0;
+let refusals = [], viols = [], evts = {}, stalls = 0, turnsum = 0, n = 0;
+/* KEYED BY FAULT KIND, from `selfplay.js`'s own census — never a bucket
+   per fault declared here, which is the shape that let SECOND-PERSON be
+   reported as a route (v4.17). */
+const faults = Object.fromEntries(FAULTS.map(k => [k, []]));
 for(const a of A) for(const b of B){
   if(a === b) continue;
   for(let s = 0; s < SEEDS; s++){
     const seed = `${a}-${b}-${s}`;
     let r;
     try { r = play(match(a, b, seed, s % 2)); }
-    catch(e){ malformed.push({seed, throw: e.message}); continue; }
+    /* A THROWN GAME IS A MALFORMED ONE. It is filed by the same name so
+       the summary counts it beside the feed lines. */
+    catch(e){ faults.MALFORMED.push({seed, throw: e.message}); continue; }
     n++;
     const over = r.game.over;
     if(!over){ stalls++; games.push({seed, a, b, result: "STALL", turn: r.game.turn, steps: r.steps}); }
@@ -29,17 +36,18 @@ for(const a of A) for(const b of B){
     }
     for(const e of r.errs)  refusals.push({seed, ...e});
     for(const v of r.viols) viols.push({seed, ...v});
-    for(const [k, line] of r.events){ (evts[k] = evts[k] || []).push(line); if(k==="MALFORMED") malformed.push({seed, line}); }
+    for(const [k, line] of r.events){ (evts[k] = evts[k] || []).push(line); if(faults[k]) faults[k].push({seed, line}); }
   }
 }
 console.log(`GAMES ${n} · stalls ${stalls} · avg turns ${(turnsum/Math.max(1,n)).toFixed(1)}`);
-console.log(`POLICY REFUSALS ${refusals.length} · INVARIANT VIOLATIONS ${viols.length} · MALFORMED FEED ${malformed.length}`);
+console.log(summaryLine(refusals, viols, faults));
 console.log("\nWINS:", Object.entries(wins).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`${k} ${v}`).join(" · "));
 const bad = games.filter(g => g.result === "STALL");
 if(bad.length) console.log("\nSTALLS:", JSON.stringify(bad.slice(0,6)));
 if(refusals.length) console.log("\nREFUSALS (first 8):", JSON.stringify(refusals.slice(0,8), null, 1));
 if(viols.length)    console.log("\nVIOLATIONS (first 8):", JSON.stringify(viols.slice(0,8), null, 1));
-if(malformed.length)console.log("\nMALFORMED (first 8):", JSON.stringify(malformed.slice(0,8), null, 1));
+for(const k of FAULTS)
+  if(faults[k].length) console.log(`\n${k} (first 8):`, JSON.stringify(faults[k].slice(0,8), null, 1));
 /* THE ROUTE LIST IS DERIVED, NEVER TYPED (v4.03). It was
    ["tap","ally","death","gold","crush"] — a hardcoded list in the REPORT
    while the counters live in `selfplay.js`, so a route counted there and
@@ -48,9 +56,11 @@ if(malformed.length)console.log("\nMALFORMED (first 8):", JSON.stringify(malform
    consumer, and it bit immediately: v4.03's `reaction` and `layer`
    counters were added, fired thousands of times, and printed nowhere.
 
-   MALFORMED is excluded because it is a FAULT rather than a route, and
-   it has its own block above. */
-const ROUTES = Object.keys(evts).filter(k => k !== "MALFORMED").sort();
+   THE FAULTS ARE EXCLUDED BECAUSE THEY ARE FAULTS, and each has its own
+   block above. That exclusion was itself a hardcoded list of ONE until
+   v4.17 — the same defect this comment describes, on the other half of
+   the same split — so it reads `selfplay.js`'s census instead. */
+const ROUTES = routeNames(evts);
 console.log("\nROUTE COVERAGE (times a feed line matched):");
 for(const k of ROUTES)
   console.log(`  ${k.padEnd(9)} ${(evts[k]||[]).length}`);

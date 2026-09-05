@@ -9,6 +9,79 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.17 — a fault is not a route, and two doc claims re-derived
+
+> `POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED FEED 0`
+> `ROUTE COVERAGE (times a feed line matched):`
+> `  SECOND-PERSON 78`
+
+`npm run play` prints two things a reader is told to act on: a **summary
+line** of faults, and a **ROUTE COVERAGE** block counting how often each
+new route fired. They mean opposite things — a number under *"times a feed
+line matched"* says a FEATURE FIRED; a fault count says something is
+WRONG — and the split between them was a hardcoded list of one name.
+
+**v4.03 FIXED THE OTHER HALF OF EXACTLY THIS.** The ROUTE list was made
+DERIVED after `reaction` and `layer` were counted in `selfplay.js`, named
+nowhere in the report, and printed nothing. The exclusion beside it stayed
+typed, so when v4.15 added a second fault it landed in the route block.
+
+**DRIVEN AGAINST A SABOTAGED `svName`** — every seat-0 feed line reading
+*"You soaks"*, *"You controls"* — the report showed **78 faults with three
+zeroes on the summary line**, and the fault sorted to the TOP of the
+features-working list. That is **v3.81 with the sign flipped**: there a
+fault counter spelled the wrong word and reported zero; here it reports a
+real number in the column that means the opposite.
+
+**THE CENSUS IS ONE SPELLING, BESIDE THE COUNTERS.** `selfplay.FAULTS`,
+in the file the counters live in — and the two decisions the report makes
+about it (`summaryLine`, `routeNames`) moved there too, because both were
+hardcoded lists in the report and neither was drillable while it printed
+inline. A source slice rots where a rule moves (v3.22, v3.28, v3.94), so
+`test/tourney.test.js` DRIVES them with synthetic counts.
+
+**AND BOTH HALVES ARE ASKED.** A check that only ever sees a fault at ZERO
+passes vacuously (v3.98) — every fault is driven PRESENT and non-empty,
+and the route half is the positive control, since an exclusion that
+refuses everything satisfies the fault half perfectly. The split is pinned
+as a **partition**, both sides: pinning the faults alone cannot see a name
+LEAVING the list, because every drill builds its fixture from `FAULTS`.
+
+### Two doc claims re-derived rather than trusted
+
+**A doc claim is a test with no assertion** (v3.41), and the way to keep a
+sentence that states a count true is to go and re-derive it:
+
+| said | is |
+|---|---|
+| `npm test` — *"currently **2264 drills**"* | **2305** — forty had grown underneath it |
+| `data/pool.json` — *"**764 records**"* | **797**, for seventeen versions |
+
+The second is the one that mattered: that sentence was the **only place
+the number lived**, and it describes the fixture every other drill in the
+suite stands on. So `test/loader.test.js` pins it — together with the
+CLAIM it makes, because **a count alone says nothing about reach**: a pool
+of 797 records missing one deck entry is the same number and a broken
+fixture. What is asserted is that every card a match can DEAL resolves out
+of the pinned file with **no live database in the process**, and the drill
+is deliberately UNGATED, because *the suite needs no network* is exactly
+the property it states.
+
+**AND THE LESSON LANDED ON ITSELF.** The corrected drill count was
+written **2304** — measured before the last two drills of this very
+version were added — and was stale by one before it was committed. It is
+**2305**, re-derived after the final `npm test` rather than after the
+first. A live count is only true at the moment it is taken, which is why
+the sentence now carries the command that reproduces it.
+
+**AND ONE SABOTAGE DID NOT APPLY, TWICE.** The summary-line edit missed on
+a shell-quoting escape, and the pool-drop sabotage named a card that is
+not in the pool. **Check that a sabotage APPLIED before believing a drill
+is weak** (v3.50, v3.87) — re-targeted, both bite. Nine sabotages, nine
+bite.
+
+---
+
 ## v4.16 — the same mark, the other printed wording
 
 > *"if this **IS ATTACKING** a marked hero"* — read since the mark was built

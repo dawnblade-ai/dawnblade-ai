@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.16
+**Current version:** v4.17
 
 ---
 
@@ -64,10 +64,17 @@ tool here reported success**: coverage printed a lower number without
 comparing it to anything, the fairness sweep is one-sided toward cards that
 are too STRONG, and `npm test` skipped.
 
-- **`data/pool.json` is the pinned pool** — 764 records, every card the pool
-  can reach, written by `tools/pin-pool.js`. **Fetched data, never authored.**
-  The whole drill suite reads it, which is why the suite now needs no network
-  and skips nothing.
+- **`data/pool.json` is the pinned pool** — **797 records**, every card the
+  pool can reach, written by `tools/pin-pool.js`. **Fetched data, never
+  authored.** The whole drill suite reads it, which is why the suite now
+  needs no network and skips nothing. **That sentence read 764 for
+  seventeen versions** while the file held 797, and it was the only place
+  the number lived — so `test/loader.test.js` pins it now, together with
+  the CLAIM it makes: every card a match can DEAL resolves out of the
+  pinned file with no live database in the process. A count alone says
+  nothing about reach (a pool missing one deck entry is the same number
+  and a broken fixture), and that drill is deliberately UNGATED, because
+  *the suite needs no network* is exactly the property it states.
 - **The GAME still streams the live database.** Pinning the fixture must not
   pin the player, or errata stop reaching anybody.
 - **`test/drift.test.js` is the ONE drill allowed to read the live wire.** It
@@ -178,10 +185,19 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2264 drills**.
+This is `node --test "test/*.test.js"` — **2305 drills** at v4.17.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
+
+**AND THAT NUMBER IS RE-DERIVED, NEVER TRUSTED** — it read **2264** for
+long enough that the suite had grown by forty drills underneath it, which
+is a doc claim rotting exactly as the engine-module count did (v3.41).
+The suite prints it:
+
+```sh
+npm test 2>&1 | grep -E '^# (tests|pass|fail|skipped)'
+```
 
 **READ THE SKIP COUNT, NOT ONLY THE FAIL COUNT (v3.00).** Until v3.00 a
 fresh clone ran this as **749 passes and 304 SILENT SKIPS**: every drill
@@ -767,6 +783,85 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A FAULT IS NOT A ROUTE, AND THE REPORT SAID IT WAS (v4.17)
+
+`npm run play` prints two things a reader is told to act on, and they mean
+**opposite** things:
+
+| block | a number there means |
+|---|---|
+| the SUMMARY LINE | something is **WRONG** |
+| ROUTE COVERAGE *(times a feed line matched)* | a **FEATURE FIRED** |
+
+The split between them was a hardcoded list of ONE name, so v4.15's
+`SECOND-PERSON` counter landed in the route block. **Driven against a
+sabotaged `svName`** — every seat-0 line reading *"You soaks"* — the
+report showed **78 faults, three zeroes on the summary line, and the fault
+sorted to the TOP of the features-working list.**
+
+**v3.81 WITH THE SIGN FLIPPED.** There a fault counter spelled the wrong
+word and reported zero; here it reports a real number in the column that
+means the opposite. And **v4.03 fixed the OTHER HALF of exactly this** —
+the ROUTE list was made DERIVED after two counters printed nowhere — and
+left the exclusion beside it typed.
+
+**THE CENSUS IS ONE SPELLING, BESIDE THE COUNTERS** (`selfplay.FAULTS`),
+and the two decisions the report makes about it moved there with it:
+`summaryLine` names **every** fault, because those numbers are what this
+file tells a reader to read, and `routeNames` excludes every one. Both
+were inline in the report and neither was drillable there — **a source
+slice rots where a rule moves** (v3.22, v3.28, v3.94) — so
+`test/tourney.test.js` DRIVES them with synthetic counts.
+
+**AND THE SPLIT IS PINNED AS A PARTITION, BOTH SIDES.** Pinning the faults
+alone cannot see a name **LEAVING** the list, because every drill builds
+its fixture FROM `FAULTS` — a shrunken census is one the drills stop
+asking about. Pinning the ROUTES too is what makes a removal fail, since
+the name has to land somewhere. **Which side a kind belongs on is a
+JUDGEMENT and no scan can make it**, so it is a pin rather than a
+derivation: moving a name is a deliberate edit, which is the moment
+somebody states what the counter means.
+
+**BOTH HALVES ARE ASKED** (v3.98). Every fault is driven PRESENT and
+non-empty — a check that only ever sees a fault at ZERO passes vacuously —
+and the route half is the positive control, because `routeNames` returning
+`[]` satisfies the fault half perfectly and deletes the coverage v4.03
+built.
+
+### SWEEP THE SENTENCES THAT STATE A COUNT (v4.17)
+
+**A doc claim is a test with no assertion** (v3.41), and this file carries
+two kinds of count: a **historical** one pinned to its version (*"258 →
+264 full"*) which is correct as written forever, and a **live** one in the
+present tense, which rots. Two of the live ones had:
+
+| said | is |
+|---|---|
+| `npm test` — *"currently 2264 drills"* | **2305** |
+| `data/pool.json` — *"764 records"* | **797**, for seventeen versions |
+
+**THE SECOND IS THE ONE THAT MATTERED**, because that sentence was the
+**only place the number lived** and it describes the fixture every other
+drill in the suite stands on. So `test/loader.test.js` pins it — with the
+**CLAIM**, not the number alone: a pool of 797 records missing one deck
+entry is the same number and a broken fixture. It asserts that every card
+a match can DEAL resolves out of the pinned file with **no live database
+in the process**, and it is deliberately **UNGATED** while every other
+drill in that file skips without a cache — because *the suite needs no
+network* is exactly the property it states.
+
+**AND THE LESSON LANDED ON ITSELF.** The corrected drill count was first
+written **2304** — measured before the last two drills of this very
+version existed — and was stale by one before it was committed. **A live
+count is only true at the moment it is taken**, which is why the sentence
+above now carries the command that reproduces it rather than only the
+number.
+
+**AND A SABOTAGE THAT DOES NOT APPLY REPORTS SILENT.** Two of this
+version's nine did: one missed on a shell-quoting escape, and the pool-drop
+named a card that is not in the pool. **Check that a sabotage APPLIED
+before believing a drill is weak** (v3.50, v3.87) — third and fourth time.
 
 ### THE SAME MARK, THE OTHER PRINTED WORDING (v4.16)
 

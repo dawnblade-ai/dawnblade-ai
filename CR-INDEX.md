@@ -192,7 +192,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/judge.test.js:555, test/judge.test.js:596, test/judge.test.js:1189, test/priority.test.js:117, test/priority.test.js:148, test/priority.test.js:161, test/priority.test.js:216, test/priority.test.js:251
 
 **CR 1.4.5a** — engine/cards.js:104, engine/game.js:168, engine/judge.js:978, engine/judge.js:1218, engine/prompts.js:419  
-*drills:* test/judge.test.js:478, test/judge.test.js:750, test/loader.test.js:34, test/loader.test.js:244, test/targets.test.js:7, test/targets.test.js:36, test/types.test.js:332, test/types.test.js:378
+*drills:* test/judge.test.js:478, test/judge.test.js:750, test/loader.test.js:34, test/loader.test.js:287, test/targets.test.js:7, test/targets.test.js:36, test/types.test.js:332, test/types.test.js:378
 
 **CR 4.5.3** — engine/judge.js:2643, engine/judge.js:2662, index.html:3979  
 *drills:* test/approx.test.js:277, test/approx.test.js:289, test/judge.test.js:362, test/judge.test.js:1368, test/judge.test.js:1374, test/judge.test.js:1379, test/judge.test.js:1392, test/judge.test.js:1396, test/table.test.js:203

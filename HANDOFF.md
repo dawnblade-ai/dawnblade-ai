@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.16 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.17 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -37,7 +37,114 @@ it turned up two feed defects the parser could not see. **v4.15** built
 `equipTok` (five records and Arakni's fifth Agent), and the same habit —
 drive it, then READ THE FEED — turned those two defects into a family of
 eighteen. **v4.16** finished the token: its last clause was the OTHER
-printed spelling of a mark the engine already answers.
+printed spelling of a mark the engine already answers. **v4.17** turned
+the same habit on the INSTRUMENTS — `npm run play` was reporting a FAULT
+as a route, and two of this file's own sentences stated counts that had
+stopped being true.
+
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.17, NOT QUOTED
+
+Every number below was produced by running the command beside it in this
+session. **Do not trust this block on your next read — re-run them.** Two
+of the sentences it replaces had been wrong for seventeen versions.
+
+| | | command |
+|---|---|---|
+| coverage | **384 full · 18 part · 3 none** of 405 | `npm run audit` |
+| drills | **2305 pass · 0 fail · 4 skipped** | `npm test` |
+| the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
+| self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
+| fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
+| scenes | **72 passing · 0 failing** | `npm run scenes` |
+| CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
+| sweep | **UNFAIR 0** · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
+
+**TWO OF THOSE THREE HERO CLAUSES ARE ABILITY NAMES**, not rules — Briar's
+*"Essence of Earth and Lightning"* and Iyslander's *"Essence of Ice"*,
+annotated by `tools/ledger.js`'s closed vocabulary and deliberately left
+in the uncovered count (v3.86: over-reporting is the safe direction). The
+third is Enigma's `{c}{c}{c}` activation.
+
+### The three cards at `none`, and what each is waiting on
+
+Re-derived from `tools/audit.json`, never from memory:
+
+| card | waiting on |
+|---|---|
+| **Glisten** | a DISTRIBUTION sheet — N counters across any number of targets. `prompts.js` has no variant that splits one pool among several picks |
+| **Danger Digits** | a *"has hit"* fiction — the chosen dagger deals damage without an attack, so nothing gives it a `pend` to hang an on-hit clause on |
+| **Hope Merchant's Hood** | deck manipulation (shuffle-and-redraw) AND a rider whose count is the PICK's own size |
+
+### What needs a RULING from the user, not code
+
+Neither is a gap in the engine; both are questions the printed cards do
+not answer and the database prints no reminder text for. **Building either
+by guess is the golden rule broken at the keyword level.**
+
+1. **Does a board aura's `Ward N` feed the prevention pool?** (v3.84,
+   sharpened at v4.07.) Measured: all three ward auras parse to
+   `[["ward", N]]` and `execute` adds it — so the question is currently
+   **answered by accident, in the affirmative, as a one-shot that outlives
+   the aura**. `wardTurn`/`awdTurn` carry only the windowed portion so the
+   end-phase sweep can tell the two sources apart without deciding this.
+2. **What does a face-down (Cloaked) piece keep?** (v3.99.) The flip is
+   built and is half the printed cost; whether the piece keeps its printed
+   defence and its Ward is not stated anywhere. Half-building a value
+   change is worse than the honest gap (v3.23).
+
+**AND ONE THING IS DEFERRED BY THE USER, NOT OPEN**: the phone/UI pass,
+which includes Cloaked's *"show card back on the player's board"* half.
+Desktop only until that project starts.
+
+### The two instruments that see different halves
+
+Keep both. Neither can see the other's defect:
+
+| | sees | cannot see |
+|---|---|---|
+| a SOURCE census | a rule stated in one place and not another | a line built by **concatenation** |
+| `npm run play`'s driven counters | what actually reaches the feed | anything no fixture drives |
+
+That is why v4.15's second-person family needed both, and why v4.17's
+whole find was that one of the driven counters was being **printed in the
+wrong column**.
+
+## ⚠ v4.17 — TURN THE METHOD ON THE INSTRUMENTS
+
+Every version from v4.09 to v4.16 drove a card and read what happened. The
+next place to point that is **the tools that do the reading**, and the
+first look found two things.
+
+**`npm run play` REPORTED A FAULT AS A ROUTE.** The report prints a
+summary line of faults and a ROUTE COVERAGE block, and they mean opposite
+things — a number under *"times a feed line matched"* says a FEATURE
+FIRED. The exclusion between them was a hardcoded list of ONE, so
+v4.15's `SECOND-PERSON` counter landed in the route block. Sabotage
+`svName` to always use the third person and the report reads **78 faults
+with three zeroes on the summary line**. **v4.03 fixed the OTHER half of
+this exact split** and left the second list typed.
+
+**AND TWO SENTENCES IN CLAUDE.md STATED COUNTS THAT HAD ROTTED** — 2264
+drills where the suite runs 2305, and 764 pool records where the file
+holds 797. The second was the only place that number lived, and it
+describes the fixture every drill stands on.
+
+**THE TECHNIQUE, AND WHERE TO POINT IT NEXT:**
+
+1. **For each tool, ask what its output would look like if the tool were
+   wrong.** A fault at zero and a fault reported in the wrong column look
+   identical in a green report. `tools/audit.js`, `tools/fairness.js`,
+   `tools/failstates.js` and `tools/gaps.js` have not had this pass.
+2. **Sabotage the tool, not only the engine.** The 78-fault run is the
+   whole finding; nothing else could have shown it.
+3. **Take every present-tense sentence that states a count and re-derive
+   it.** Historical ones (*"258 → 264 full"*) are correct forever;
+   live ones rot. `npm run gaps` already compares its own `appVer`
+   against `index.html` for this reason — nothing else does.
+4. **When a claim has one home, give it a drill.** The pool sentence is
+   pinned now, with the CLAIM rather than the number: a pool of 797
+   records missing one deck entry is the same number and a broken
+   fixture.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
