@@ -71,7 +71,7 @@ const SIDE_FIELDS = [
      the sweep can tell a one-shot prevention from an aura's printed
      `Ward N`, whose window is the open aura-ward ruling. */
   "amp","ward","awd","wardTurn","awdTurn",
-  "arcShield","lifeLock","namedBuff","dracNext","marked","fatigue",
+  "arcShield","lifeLock","namedBuff","dracNext","dracChain","marked","fatigue",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
   "hist",
@@ -148,7 +148,12 @@ function makeSide(o){
     res: 0, ap: 1, wasted: 0,
     counters: {}, weaponUsed: {}, heroTapped: false, buffNext: 0, buffQ: [], atkBuff: [], defMod: [], gaNext: false, gaNextQ: [], costOff: [], instantNextQ: [], defCapNext: [], defActionBuff: 0, wardRider: [], runeHitNext: 0,
     amp: 0, ward: 0, awd: 0, wardTurn: 0, awdTurn: 0,
-    arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false,
+    /* `dracChain` IS THE STANDING TWIN OF `dracNext` (v4.19). "Your NEXT
+       attack this combat chain is Draconic" is spent by the attack that
+       takes it (v4.06); "your ATTACKS are Draconic this combat chain" is
+       never spent and applies to every one inside the window. Two records
+       because they are two printed rules — v3.87's split, one grant over. */
+    arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false, dracChain: false,
     marked: false, fatigue: false,
     hist: freshHist(),
     nextTurn: [],

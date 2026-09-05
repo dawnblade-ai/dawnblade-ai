@@ -119,8 +119,8 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* A CENSUS THAT QUIETLY STOPPED FINDING ANYTHING would pass by finding
      nothing, which is the failure mode this whole file guards against. */
   const {conds} = poolConds();
-  assert.equal(conds.size, 50,
-    "50 distinct conditions across the pool. A 51st is fine — add it here AND " +
+  assert.equal(conds.size, 52,
+    "52 distinct conditions across the pool. A 53rd is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
@@ -129,10 +129,16 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
     "`revBlue` lost its only claimant. Flying High was its ONE emitter and \"it\" " +
     "there is the next attack rather than a revealed card, so the condition had never " +
     "once been asked about the thing it names — retired rather than left as a rule " +
-    "nobody can reach (v3.77, v3.82).");
+    "nobody can reach (v3.77, v3.82). AND 50 -> 52 AT v4.19, both from ONE " +
+    "card: Enflame the Firebrand prints an escalating ladder (2 or more / 3 or " +
+    "more / 4 or more Draconic chain links) that used to collapse into one " +
+    "`drac2` entry carrying the FOURTH rung's payload. `drac3` and `drac4` need " +
+    "no evaluator of their own — the answer reads its threshold off the " +
+    "condition's NAME (v3.88), which is why the ladder invents no vocabulary.");
   /* spot checks, so the count cannot be met by a scan that
      collected the wrong thing */
-  for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4"])
+  for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4",
+                  "drac2", "drac3", "drac4"])
     assert.ok(conds.has(c), c + " must be in the census");
 });
 

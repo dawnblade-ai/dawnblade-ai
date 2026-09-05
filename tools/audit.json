@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-05T21:41:20.561Z",
- "appVer": "4.18",
+ "generated": "2026-09-05T21:55:16.619Z",
+ "appVer": "4.19",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -7842,9 +7842,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this attacks, if you control 2 or more Draconic chain links, this gets go again, 3 or more, your attacks are Draconic this combat chain, 4 or more, this gets +2{p}.",
-   "flags": [
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "fire tenet strike first|1": {
    "name": "Fire Tenet: Strike First",

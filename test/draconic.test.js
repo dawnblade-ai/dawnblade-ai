@@ -54,6 +54,7 @@ const assert = require("node:assert/strict");
 const P = require("../engine/parser.js");
 const PR = require("../engine/prompts.js");
 const H = require("./helpers/judged.js");
+const J = require("../engine/judge.js");
 
 const skip = !H.hasDb() && "no cached card database";
 
@@ -417,4 +418,182 @@ test("the printed Go again is untouched by any of this", {skip}, () => {
      wrong. */
   for(const nm of ["Mounting Anger", "Rising Resentment"])
     assert.equal(P.printedKw(H.card(nm, 1), "go again"), true, nm);
+});
+
+/* ============================================================
+   AN ESCALATING LADDER IS N GATES, NOT ONE (v4.19)
+
+     "When this attacks, if you control 2 OR MORE Draconic chain links,
+      this gets GO AGAIN, 3 OR MORE, your attacks are Draconic this
+      combat chain, 4 OR MORE, this gets +2{p}."
+                                         — ENFLAME THE FIREBRAND, Fai's deck
+
+   `classifyClause` splits an if/when clause on the FIRST comma and
+   recurses into the gate, so the head gate was read and the loose pump
+   matcher below then claimed the rest of the sentence — finding the LAST
+   payload and attaching it to the FIRST gate. Measured, the whole parse
+   was ONE entry: `{cond: "drac2", op: ["self", 2]}`.
+
+   WRONG IN BOTH DIRECTIONS AT ONCE:
+
+     at 2 links   +2{p} arrived where the card grants it at FOUR   STRONGER
+     at 2 links   the printed go again was never granted           WEAKER
+     at 3 links   the middle rung was dropped entirely             WEAKER
+
+   AND NO TOOL HERE COULD SEE IT. The clause is consumed, so coverage read
+   the card `tier: full`; and `COND-BYPASSED` needs an unconditional TWIN
+   to compare a gate against, so a payload SUBSTITUTED onto the wrong gate
+   leaves nothing to compare — v3.57's lesson, about a threshold rather
+   than a dispatcher. `npm run fairness` reported clean on it.
+
+   THE DRILLS DRIVE `execute`, because that is where an attack's `fx.conds`
+   are evaluated (at DECLARATION), and they assert on `pend` and the side
+   — never on the feed (v2.45, v3.58).
+   ============================================================ */
+
+const ENFLAME_TX = "When this attacks, if you control 2 or more Draconic chain " +
+  "links, this gets go again, 3 or more, your attacks are Draconic this combat " +
+  "chain, 4 or more, this gets +2{p}.";
+
+test("the ladder reads as THREE gates, each with its own payload", {skip}, () => {
+  P.fxReset();
+  const fx = P.fxParse(H.card("Enflame the Firebrand", 1));
+  assert.deepEqual(fx.conds.map(e => [e.cond, e.op]), [
+    ["drac2", ["ga"]],
+    ["drac3", ["dracChain", 1]],
+    ["drac4", ["self", 2]],
+  ], "three rungs, in printed order, each gate carrying its OWN payload");
+  assert.deepEqual(fx.clauses.map(c => c.st), ["run"], "and the clause reads");
+});
+
+/* THE RUNGS ARE READ BY THE READERS THAT ALREADY ANSWER THE HEAD. The
+   continuation carries only a NUMBER, so each rung is rebuilt as the
+   head's printed condition with that number substituted and handed back
+   to `classifyClause`. `drac3`/`drac4` therefore need no evaluator of
+   their own — the answer reads its threshold off the condition's NAME
+   (v3.88). Pinned so a future "simplification" into a bespoke gate
+   vocabulary fails here. */
+test("the ladder invents no gate vocabulary — each rung round-trips", {skip}, () => {
+  for(const [n, pay, want] of [
+    [2, "this gets go again", ["ga"]],
+    [3, "your attacks are draconic this combat chain", ["dracChain", 1]],
+    [4, "this gets +2{p}", ["self", 2]],
+  ]){
+    const r = P.classifyClause(
+      "if you control " + n + " or more draconic chain links, " + pay);
+    assert.equal(r && r.cond, "drac" + n, "rung " + n + " reads its own gate");
+    assert.deepEqual(r && r.ops, [want], "rung " + n + " reads its own payload");
+  }
+});
+
+/* ---- DRIVEN, RUNG BY RUNG ------------------------------------------- */
+
+const dracChain = k => Array.from({length: k}, () => ({n: "x", kind: "atk", drac: true}));
+
+function declare(links){
+  H.db();
+  const g = H.state({res: 9, ap: 1}, {}, {turn: 3, actor: 0, turnPlayer: 0});
+  const atk = {...H.card("Enflame the Firebrand", 1), uid: 70};
+  const out = J.withEffects({...g, stack: [], chain: dracChain(links)},
+    (fx, s) => fx.execute(s, atk, "hand", 0));
+  return {out, base: atk.power};
+}
+
+test("DRIVEN: each rung pays out at its OWN threshold and no sooner", {skip}, () => {
+  /* FOUR ROWS, NOT TWO. A drill at 0 and 4 links agrees under BOTH the
+     broken reading and the correct one at the extremes — it is the pair
+     either side of each printed threshold that tests anything (v3.92,
+     v3.99). The 2-link row is the one that bites: the old engine gave
+     +2{p} there and no go again, which is this defect in both
+     directions at once. */
+  const rows = [
+    [0, false, false, 0],
+    [2, true,  false, 0],
+    [3, true,  true,  0],
+    [4, true,  true,  2],
+  ];
+  for(const [links, wantGa, wantStand, wantPump] of rows){
+    const {out, base} = declare(links);
+    assert.equal(out.pend.ga, wantGa,
+      links + " links: go again is the TWO-link rung");
+    assert.equal(!!out.sides[0].dracChain, wantStand,
+      links + " links: the standing Draconic grant is the THREE-link rung");
+    assert.equal(out.pend.total, base + wantPump,
+      links + " links: +2{p} is the FOUR-link rung, and nowhere else");
+  }
+});
+
+/* ---- THE STANDING GRANT IS NOT THE SINGLE-SHOT ONE ------------------ */
+
+test("DRIVEN: the standing grant is never SPENT, and dracNext still is", {skip}, () => {
+  /* v3.87's split, and v4.06 had to build the spend for `dracNext` after a
+     standing read made every later attack Draconic — STRONGER than
+     printed. Reading this line as `dracNext` is the same mistake with the
+     sign flipped: the first swing would take it and every later attack on
+     the chain would be plain, which is WEAKER than printed.
+
+     ONE SWING CANNOT TELL THEM APART (v3.26) — both readings mark the
+     first link. Two swings is the fixture. */
+  H.db();
+  const plain = syn("", {name: "SYN-DRAC-STANDING", tt: "Ninja Action - Attack",
+                         ty: ["Ninja", "Action", "Attack"], power: 3});
+  const run = field => {
+    let g = H.state({res: 9, [field]: true}, {hp: 40}, {turn: 3, actor: 0});
+    g = {...g, chain: []};
+    for(let i = 0; i < 2; i++){
+      g = H.fx(g, (f, n) => {
+        n = {...n, pend: {card: plain, total: 3, ops: [], onHit: [], onHitHero: [],
+                          ga: false, by: 0, lateConds: []}};
+        const r = f.linkPayload(n, {total: 3, pumps: 0, heroHit: true});
+        return r.game || r;
+      });
+    }
+    return g.chain.map(l => !!l.drac);
+  };
+  assert.deepEqual(run("dracChain"), [true, true],
+    "STANDING: every attack inside the window counts");
+  assert.deepEqual(run("dracNext"), [true, false],
+    "SINGLE-SHOT: the first attack takes it and the second is plain");
+});
+
+test("the standing grant expires when the CHAIN closes, for BOTH seats", {skip}, () => {
+  /* IT IS NEVER SPENT, SO THIS IS ITS ONLY EXIT. A standing Draconic
+     grant that outlives the chain it names compounds through
+     `dracLinks` — Fai's discount, every `dracN` gate and Mounting
+     Anger's bound — for the rest of the game. */
+  const E = require("../engine/effects.js");
+  let g = H.state({dracChain: true}, {dracChain: true}, {turn: 3});
+  g = E.closeChainGrants(g);
+  assert.equal(g.sides[0].dracChain, false, "seat 0's grant is taken back");
+  assert.equal(g.sides[1].dracChain, false, "and seat 1's — both seats are swept");
+});
+
+/* ---- THE REFUSALS --------------------------------------------------- */
+
+test("an unreadable rung refuses the WHOLE ladder", {skip}, () => {
+  /* v2.29's rule. Claiming the rungs that read and dropping one is the
+     half-claim this file names on nearly every page — and it is exactly
+     what the old behaviour did, so a partial build here would be the
+     defect wearing a tidier shape. No pool card can express this, so the
+     fixture is synthetic (v3.73). */
+  P.fxReset();
+  const bad = P.fxParse(syn(
+    "When this attacks, if you control 2 or more Draconic chain links, this gets " +
+    "go again, 3 or more, every hero yodels, 4 or more, this gets +2{p}.",
+    {name: "SYN-LADDER-UNREADABLE"}));
+  assert.deepEqual(bad.conds || [], [], "not one rung is claimed");
+  assert.deepEqual(bad.clauses.map(c => c.st), ["skip"],
+    "and the clause reports UNREAD rather than partly built");
+});
+
+test("an ordinary conditional is left entirely alone", {skip}, () => {
+  /* THE LADDER MARKER IS A BARE THRESHOLD IN THE TAIL (", N or more,").
+     Without it this is an everyday `if X, Y` clause and the pre-pass must
+     not touch it — measured, that is the whole pool but one card. */
+  P.fxReset();
+  const one = P.fxParse(syn(
+    "When this attacks, if you control 2 or more Draconic chain links, this gets go again.",
+    {name: "SYN-LADDER-PLAIN"}));
+  assert.deepEqual(one.conds.map(e => [e.cond, e.op]), [["drac2", ["ga"]]],
+    "one gate, one payload, read by the path that always read it");
 });

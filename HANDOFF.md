@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.18 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.19 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -44,7 +44,10 @@ stopped being true. **v4.18** turned it on the AUDIT's flag list: of the
 15 cards flagged *"mentions go again, nothing parses it"*, fourteen were
 correct and one — Stains of the Redback, three printings in Arakni's deck
 — had lost a printed ACTION POINT to a reader v3.99 built one matcher
-over.
+over. **v4.19** built the last defect that census turned up: **Enflame
+the Firebrand**, in Fai's deck, whose three printed thresholds collapsed
+into ONE gate carrying the LAST rung's payload — stronger than printed in
+the power, weaker in the action point, and the middle rung gone.
 
 ## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.17, NOT QUOTED
 
@@ -55,11 +58,11 @@ of the sentences it replaces had been wrong for seventeen versions.
 | | | command |
 |---|---|---|
 | coverage | **384 full · 18 part · 3 none** of 405 | `npm run audit` |
-| drills | **2305 pass · 0 fail · 4 skipped** | `npm test` |
+| drills | **2316 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
-| scenes | **72 passing · 0 failing** | `npm run scenes` |
+| scenes | **73 passing · 0 failing** | `npm run scenes` |
 | CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
 | sweep | **UNFAIR 0** · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
 
@@ -112,6 +115,32 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.19 — THE ONE SHAPE THE FAIRNESS SWEEP CANNOT SEE
+
+`COND-BYPASSED` — the sweep's check for a gate that is decoration — needs
+an **unconditional TWIN** to compare a condition against. So it sees a
+payload that is DUPLICATED past its gate, and it is blind to a payload
+that is **SUBSTITUTED onto the wrong gate**. v3.57 states this about an op
+dispatcher; Enflame the Firebrand is the same sentence about a THRESHOLD,
+and the card sat in Fai's deck reading `tier: full` while granting +2{p}
+at two links and never once granting the go again it prints there.
+
+**THE GENERALISATION IS WORTH THE NEXT SESSION'S TIME.** Ask of every
+multi-clause printed sentence: *does each printed gate still carry its
+OWN payload?* The instrument is small — parse the card, print
+`fx.conds`, and read it against the printed line:
+
+```sh
+node -e 'const P=require("./engine/parser"); P.fxReset();
+  console.log(JSON.stringify(P.fxParse(/* card */).conds, null, 1))'
+```
+
+**AND A REFUSAL MUST NOT FALL BACK.** The sharpest thing this build
+taught: declining to read the ladder handed the clause straight back to
+the reader that reads it WRONG. A pre-pass that refuses has to mark the
+clause unreadable, or "refusing" means "silently doing the broken thing"
+— which is the failure mode the refusal existed to prevent.
 
 ## ⚠ v4.18 — A FLAG LIST IS A LEAD LIST, AND THE WALK IS THE INSTRUMENT
 

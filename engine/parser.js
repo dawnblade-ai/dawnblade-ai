@@ -2430,6 +2430,25 @@ function classifyClause(raw){
      attacks," and hands the payload here either way. */
   if(/^your next attack this combat chain is draconic(?: in addition to its other card types)?$/.test(c))
     return R([["dracNext",1]]);
+  /* ---- THE STANDING TWIN (v4.19) -----------------------------------
+     "Your ATTACKS are Draconic this combat chain" — Enflame the
+     Firebrand's middle rung, and the pool's only printing of it.
+
+     A STANDING GRANT IS NOT A SINGLE-SHOT ONE (v3.87), and getting it
+     backwards is wrong in both directions: read as `dracNext` the first
+     attack spends it and every later one on the chain is plain, which is
+     WEAKER than printed; and v4.06 had to build the spend for `dracNext`
+     precisely because a standing read of a single-shot line was STRONGER
+     than printed. The printed words are the discriminator — "your NEXT
+     attack" against "your ATTACKS" — so they are two ops, not one with
+     a flag.
+
+     IT COMPOUNDS, which is why the split matters here more than usual:
+     `parser.dracLinks` counts Draconic chain links, and that number is
+     Fai's discount, every `dracN` gate and Mounting Anger's banish
+     bound. Enflame is in FAI's deck. */
+  if(/^your attacks are draconic this combat chain(?: in addition to their other card types)?$/.test(c))
+    return R([["dracChain",1]]);
   /* "When it has none, destroy it" — the tail of a counter-tick sentence; the
      tick op that precedes it owns the destruction. */
   if(/^destroy it at the beginning of the end phase$/.test(c))
@@ -4131,6 +4150,85 @@ function fxParse(card){
     }
   }
 
+  const ladderBad = new Set();
+  /* ---- AN ESCALATING LADDER IS N GATES, NOT ONE (v4.19) ------------
+     ENFLAME THE FIREBRAND prints three thresholds in one sentence:
+
+       "When this attacks, if you control 2 OR MORE Draconic chain links,
+        this gets GO AGAIN, 3 OR MORE, your attacks are Draconic this
+        combat chain, 4 OR MORE, this gets +2{p}."
+
+     `classifyClause` splits an if/when clause on the FIRST comma and
+     recurses into the gate, so the head gate was read and then the loose
+     pump matcher below claimed the rest of the sentence — finding the
+     LAST payload and attaching it to the FIRST gate. Measured, the parse
+     was one entry: `{cond: "drac2", op: ["self", 2]}`.
+
+     WRONG IN BOTH DIRECTIONS AT ONCE, on a card in FAI's own deck:
+     +2{p} arrived at TWO links where the card grants it at four
+     (STRONGER than printed, the direction that steals games), the go
+     again it prints at two was never granted at all (CR 5.3.5, WEAKER),
+     and the middle rung was dropped entirely.
+
+     AND NO TOOL HERE COULD SEE IT. The clause is consumed, so coverage
+     read the card `tier: full`; and `COND-BYPASSED` needs an
+     unconditional TWIN to compare a gate against, so a payload
+     SUBSTITUTED onto the wrong gate leaves nothing to compare — v3.57's
+     lesson, about a threshold instead of a dispatcher.
+
+     EVERY RUNG GOES BACK THROUGH `classifyClause`, so this invents no
+     gate vocabulary and no payload vocabulary: the continuation carries
+     only a NUMBER, so each rung is rebuilt as the head's own printed
+     condition with that number substituted, and read by the reader that
+     already answers the head. `drac2`/`drac3`/`drac4` all fall out of the
+     one emitter, and the evaluator reads its threshold from the
+     condition's NAME (v3.88), so nothing downstream needed telling.
+
+     AN UNREADABLE RUNG REFUSES THE WHOLE CLAUSE (v2.29). Claiming the
+     rungs that read and dropping one is the half-claim this file names
+     on nearly every page — and it is exactly what the old behaviour did.
+
+     MEASURED BEFORE BUILDING: across all 797 records, ONE prints an
+     escalating ladder and ONE prints the standing Draconic grant its
+     middle rung needs. Both are this card. */
+  {
+    for(let ci = 0; ci < clauses.length; ci++){
+      if(handled.has(ci)) continue;
+      const lc = levelIdiom(clauses[ci].toLowerCase().trim()).replace(/\.$/, "");
+      const hm = lc.match(/^(?:when this attacks, )?if ([^,]+), (.+)$/);
+      if(!hm) continue;
+      const head = hm[1], tail = hm[2];
+      /* THE LADDER MARKER IS A BARE THRESHOLD IN THE TAIL. A clause with
+         no ", N or more," continuation is an ordinary conditional and is
+         left entirely alone — the whole pool but this one card. */
+      if(!/,\s*\d+ or more,/.test(tail)) continue;
+      if(!/\b\d+\b/.test(head)) continue;
+      const parts = tail.split(/,\s*(\d+) or more,\s*/);
+      const rungs = [[head, parts[0]]];
+      for(let k = 1; k < parts.length; k += 2)
+        rungs.push([head.replace(/\b\d+\b/, parts[k]), parts[k + 1]]);
+      const got = [];
+      let ok = rungs.length > 1;
+      for(const [cnd, pay] of rungs){
+        const r = pay == null ? null : classifyClause("if " + cnd + ", " + pay);
+        if(!r || r.status !== "run" || !r.cond || !(r.ops || []).length){ ok = false; break; }
+        for(const op of r.ops) got.push({cond: r.cond, op, instead: !!r.instead, atkHero: !!r.atkHero});
+      }
+      /* A REFUSED LADDER MUST NOT FALL BACK — that fallback IS the bug.
+         `classifyClause` reads the head gate and lets the loose pump
+         matcher below claim the rest of the sentence, so a ladder this
+         pre-pass declines is read as ONE gate carrying the LAST rung's
+         payload. Driven against a synthetic whose middle rung has no
+         reader, that is exactly what came back: `{drac2, ["self",2]}`,
+         reported `run`. So the clause is marked UNREADABLE instead —
+         weaker than printed and VISIBLE in the audit, which is the
+         direction v2.29 chose for every unreadable payload. */
+      if(!ok){ ladderBad.add(ci); continue; }
+      fx.conds = [...(fx.conds || []), ...got];
+      handled.add(ci);
+    }
+  }
+
   /* ---- TWO "IT"S, ONE ANCHOR (v4.12) -------------------------------
      Flying High prints TWO sentences about ONE card:
 
@@ -4193,6 +4291,9 @@ function fxParse(card){
 
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
+    /* v4.19: a ladder whose rungs do not all read is refused whole rather
+       than handed to the fallback that reads it wrong. */
+    if(ladderBad.has(ci)){ fx.clauses.push({t:raw, st:"skip"}); return; }
     const r = classifyClause(raw);
     if(!r){ fx.clauses.push({t:raw,st:"skip"}); return; }
     /* A CLAUSE-LEVEL FIELD ONLY EXISTS IF SOMETHING FORWARDS IT (v4.01).

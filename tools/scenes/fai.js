@@ -418,6 +418,58 @@ module.exports = [
     "with three links it is free": 0,
     "and a caller that says nothing pays full price": 3
   }
-}
+},
+
+{
+  name: "Enflame the Firebrand pays out RUNG BY RUNG, at its own thresholds",
+  why: "v4.19 — the pool's only escalating ladder. `classifyClause` splits " +
+       "an if/when clause on the FIRST comma, so the head gate was read and " +
+       "the loose pump matcher below then claimed the rest of the sentence, " +
+       "finding the LAST payload and attaching it to the FIRST gate: the " +
+       "whole parse was one entry, {drac2, [\"self\",2]}. Wrong in both " +
+       "directions at once on a card in Fai's own deck — +2{p} arrived at " +
+       "TWO links where the card grants it at four, the go again it prints " +
+       "at two was never granted, and the middle rung was dropped. The " +
+       "clause was consumed, so coverage read it `tier: full`, and " +
+       "COND-BYPASSED needs an unconditional TWIN to compare a gate " +
+       "against, so a payload SUBSTITUTED onto the wrong gate leaves the " +
+       "fairness sweep nothing to see. Only DRIVING each threshold does.",
+  run(c){
+    const link = () => ({n: "x", kind: "atk", drac: true});
+    const at = k => {
+      const g = c.H.state({res: 9, ap: 1}, {}, {turn: 3, actor: 0, turnPlayer: 0});
+      const atk = {...c.H.card("Enflame the Firebrand", 1), uid: 70};
+      const out = c.J.withEffects(
+        {...g, stack: [], chain: Array.from({length: k}, link)},
+        (fx, st) => fx.execute(st, atk, "hand", 0));
+      return {ga: out.pend.ga, stand: !!out.sides[0].dracChain,
+              pump: out.pend.total - atk.power};
+    };
+    const a = at(0), b = at(2), d = at(3), e = at(4);
+    return {
+      "0 links — go again":            a.ga,
+      "0 links — power over base":     a.pump,
+      "2 links — go again":            b.ga,
+      "2 links — power over base":     b.pump,
+      "2 links — attacks Draconic":    b.stand,
+      "3 links — attacks Draconic":    d.stand,
+      "3 links — power over base":     d.pump,
+      "4 links — power over base":     e.pump,
+      "4 links — go again":            e.ga
+    };
+  },
+  want: {
+    "0 links — go again": false,
+    "0 links — power over base": 0,
+    "2 links — go again": true,
+    /* THE ROW THAT BITES. The old engine gave +2 HERE and no go again. */
+    "2 links — power over base": 0,
+    "2 links — attacks Draconic": false,
+    "3 links — attacks Draconic": true,
+    "3 links — power over base": 0,
+    "4 links — power over base": 2,
+    "4 links — go again": true
+  }
+},
 
 ];

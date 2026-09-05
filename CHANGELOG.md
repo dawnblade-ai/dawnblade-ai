@@ -9,6 +9,72 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.19 — an escalating ladder is N gates, not one
+
+> *"When this attacks, if you control **2 or more** Draconic chain links,
+> this gets **go again**, **3 or more**, your attacks are Draconic this
+> combat chain, **4 or more**, this gets +2{p}."*
+> — ENFLAME THE FIREBRAND, in **Fai's** deck
+
+`classifyClause` splits an if/when clause on the FIRST comma and recurses
+into the gate, so the head gate was read and the loose pump matcher below
+then claimed the rest of the sentence — finding the **LAST** payload and
+attaching it to the **FIRST** gate. Measured, the whole parse was one
+entry: `{cond: "drac2", op: ["self", 2]}`.
+
+**WRONG IN BOTH DIRECTIONS AT ONCE:**
+
+| at | printed | engine did |
+|---|---|---|
+| 2 links | go again | **+2{p}** — a payload the card grants at FOUR |
+| 3 links | your attacks are Draconic | nothing |
+| 4 links | +2{p} | nothing more |
+
+Stronger than printed in the power, weaker in the action point, and the
+middle rung dropped entirely. **And it compounds** — `parser.dracLinks`
+counts Draconic chain links, and that number is Fai's own discount, every
+`dracN` gate and Mounting Anger's banish bound.
+
+**NO TOOL HERE COULD SEE IT.** The clause is consumed, so coverage read
+the card `tier: full`; and `COND-BYPASSED` needs an unconditional TWIN to
+compare a gate against, so a payload **SUBSTITUTED** onto the wrong gate
+leaves nothing to compare — v3.57's lesson about a threshold rather than a
+dispatcher. `npm run fairness` reported clean on it every run.
+
+**EVERY RUNG GOES BACK THROUGH `classifyClause`**, so the ladder invents
+no gate vocabulary and no payload vocabulary. The continuation carries
+only a NUMBER, so each rung is rebuilt as the head's own printed condition
+with that number substituted, and handed to the reader that already
+answers the head. `drac3` and `drac4` needed **no evaluator** — the answer
+reads its threshold off the condition's NAME (v3.88).
+
+**AN UNREADABLE RUNG REFUSES THE WHOLE CLAUSE (v2.29), AND IT MUST REFUSE
+RATHER THAN FALL BACK** — because the fallback *is* the bug. Driven
+against a synthetic whose middle rung has no reader, declining the ladder
+handed the clause straight back to the path that reads it wrong:
+`{drac2, ["self",2]}`, reported `run`. The clause is marked UNREADABLE
+instead — weaker than printed and **visible in the audit**.
+
+**`dracChain` IS THE STANDING TWIN OF `dracNext` (v3.87).** *"Your NEXT
+attack this combat chain is Draconic"* is SPENT by the attack that takes
+it — v4.06 had to build that spend after a standing read made every later
+attack Draconic — and *"your ATTACKS are Draconic this combat chain"* is
+never spent. Two printed rules, two records; `closeChainGrants` expires
+both, for both seats, because both print the same window. Symmetry ledger
+50 → 51.
+
+**MEASURED over all 797 records**: ONE prints an escalating ladder, ONE
+prints the standing grant, and exactly ONE parse moves. Conditions 50 →
+52. Flagged cards 30 → 29.
+
+**FOUR ROWS, NOT TWO.** A drill at 0 and 4 links agrees under both the
+broken reading and the correct one — it is the pair either side of each
+printed threshold that tests anything (v3.92, v3.99), and the **2-link
+row is the one that bites**. Seven sabotages, seven bite, and a Fai
+**scene** was added that goes red the moment the ladder collapses again.
+
+---
+
 ## v4.18 — "…and go again" on the **targeted** pump
 
 > *"Target attack with **stealth** gets +3{p} **and go again**."*

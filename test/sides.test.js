@@ -361,9 +361,22 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      different windows — a one-shot prevention, and an aura's printed
      `Ward N`, whose window is the open aura-ward ruling. Sweeping the
      pool whole would decide that ruling by accident. */
-  assert.equal(gap.fields, 50);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07 */
-  assert.equal(gap.player.length, 50);
-  assert.equal(gap.opponent.length, 50);
+  /* 50 -> 51 AT v4.19, DELIBERATELY. `dracChain` is the STANDING twin of
+     `dracNext`, and the two are separate records because they are two
+     separate printed rules: "your NEXT attack this combat chain is
+     Draconic" (Brand with Cinderclaw) is SPENT by the attack that takes
+     it, and "your ATTACKS are Draconic this combat chain" (Enflame the
+     Firebrand) is never spent and covers every attack in the window.
+
+     v3.87's standing-vs-single-shot split, and getting it backwards is
+     wrong in both directions — v4.06 had to BUILD the spend for
+     `dracNext` after a standing read made every later attack Draconic.
+     Folding them into one field would re-open that in the other
+     direction, and it compounds: `dracLinks` feeds Fai's discount, every
+     `dracN` gate and Mounting Anger's banish bound. */
+  assert.equal(gap.fields, 51);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19 */
+  assert.equal(gap.player.length, 51);
+  assert.equal(gap.opponent.length, 51);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -373,8 +386,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 50);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07 */
-  assert.equal(gap.nativeForOpponent.length, 50);
+  assert.equal(gap.nativeForPlayer.length, 51);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19 */
+  assert.equal(gap.nativeForOpponent.length, 51);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

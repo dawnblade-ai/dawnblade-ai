@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.18
+**Current version:** v4.19
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2308 drills** at v4.18.
+This is `node --test "test/*.test.js"` — **2316 drills** at v4.19.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -783,6 +783,58 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### AN ESCALATING LADDER IS N GATES, NOT ONE (v4.19)
+
+> *"When this attacks, if you control **2 or more** Draconic chain links,
+> this gets **go again**, **3 or more**, your attacks are Draconic this
+> combat chain, **4 or more**, this gets +2{p}."* — ENFLAME THE FIREBRAND
+
+`classifyClause` splits an if/when clause on the FIRST comma and recurses
+into the gate, so the head gate read and the loose pump matcher below then
+claimed the rest of the sentence — the **LAST** payload on the **FIRST**
+gate. The whole parse was `{cond: "drac2", op: ["self", 2]}`.
+
+| at | printed | engine did |
+|---|---|---|
+| 2 links | go again | **+2{p}** — the FOUR-link payload |
+| 3 links | your attacks are Draconic | nothing |
+| 4 links | +2{p} | nothing more |
+
+Stronger than printed in the power, weaker in the action point, the middle
+rung gone — **and it compounds**, because `dracLinks` feeds Fai's own
+discount, every `dracN` gate and Mounting Anger's bound. Fai decks it.
+
+**A SUBSTITUTED PAYLOAD IS THE ONE SHAPE THE SWEEP CANNOT SEE.**
+`COND-BYPASSED` needs an unconditional TWIN to compare a gate against; when
+the payload is moved onto the wrong gate rather than duplicated there is
+nothing to compare. v3.57's lesson, about a threshold instead of an op
+dispatcher — and coverage read the card `full` throughout.
+
+**EVERY RUNG GOES BACK THROUGH `classifyClause`.** The continuation carries
+only a NUMBER, so each rung is rebuilt as the head's own printed condition
+with that number substituted. **`drac3` and `drac4` needed no evaluator** —
+the answer reads its threshold off the condition's NAME (v3.88) — so the
+ladder invents no gate vocabulary and no payload vocabulary at all.
+
+**AN UNREADABLE RUNG REFUSES THE WHOLE CLAUSE, AND IT MUST REFUSE RATHER
+THAN FALL BACK.** Driven against a synthetic whose middle rung has no
+reader, simply declining the ladder handed the clause back to the path
+that reads it wrong — **the fallback IS the bug**. The clause is marked
+UNREADABLE instead: weaker than printed and visible in the audit, which is
+the direction v2.29 chose for every unreadable payload.
+
+**`dracChain` IS THE STANDING TWIN OF `dracNext`** (v3.87, one grant over).
+*"Your NEXT attack this combat chain is Draconic"* is SPENT by the attack
+that takes it — v4.06 built that spend after a standing read made every
+later attack Draconic — and *"your ATTACKS are…"* is never spent. Two
+printed rules, two records, and `closeChainGrants` expires both for both
+seats. Never spent means **that sweep is its only exit**.
+
+**FOUR ROWS, NOT TWO.** A drill at 0 and 4 links agrees under both the
+broken reading and the correct one at the extremes; the pair either side
+of each printed threshold is what tests anything (v3.92, v3.99), and the
+**2-link row is the one that bites**.
 
 ### A FIX FOR ONE MATCHER IS NOT A FIX FOR THE SHAPE (v4.18)
 

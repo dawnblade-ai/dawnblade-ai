@@ -1707,6 +1707,16 @@ function makeEffects(ctx){
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
+      /* THE STANDING GRANT (v4.19) — never spent, so it is NOT the field
+         above with a different name. `linkPayload` spends `dracNext` and
+         deliberately leaves this one alone; `closeChainGrants` expires
+         both, because both print "this combat chain". */
+      else if(k==="dracChain"){ actMut(n).dracChain = true;
+        /* A LOG LINE IS READ BY BOTH SEATS, SO IT NAMES ONE (v2.83, v4.15).
+           The `dracNext` line above says "Your" and is part of the pinned
+           second-person debt; a new line must not grow it. `sv` takes the
+           SIDE, so seat 0 reads "You have" and seat 1 reads "Fai has". */
+        n = L(n, `${sv(act(n), "have")} Draconic attacks for the rest of this chain.`); }
       else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
       else if(k==="enterCounters"){ n._enterCounters = v; }
       else if(k==="boo"){
@@ -2654,7 +2664,7 @@ function makeEffects(ctx){
         : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
         : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
         : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
-        : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext)
+        : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext || !!act(n).dracChain)
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
         : cond==="lifeTie" ? act(n).hp === foe(n).hp
         /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
@@ -3704,7 +3714,7 @@ function makeEffects(ctx){
         playTy: [...(act(n).hist.playTy || []), _ty]};
     }
     const delta = preHP - foe(n).hp;
-    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext,kind:(isAttack(card)||from==="weapon"||from==="ally")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
+    if(delta>0){ n.chain=[...n.chain,{n:card.name,img:card.img,dbImg:card.dbImg,dmg:delta,ga,drac:/draconic/i.test(card.tt||"")||!!act(n).dracNext||!!act(n).dracChain,kind:(isAttack(card)||from==="weapon"||from==="ally")?"atk":"arc"}]; n.hitSeq=n.hitSeq+1; n.lastDmg=delta; }
     /* THE ACTION POINT IS AN *ACTION'S* COST (CR 8.1.1 / 8.1.6 / 5.3.5).
        This used to read `ga ? keep : -1`, which charges every non-attack
        that resolves here — and an instant has no such cost, so playing one
@@ -5231,7 +5241,14 @@ function makeEffects(ctx){
        the card its qualifier names. Brand pushes its own link BEFORE its
        ops run, so it never takes its own grant. */
     const _dracGrant = !!act(n).dracNext;
-    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant, kind:"atk"}];
+    /* READ BOTH, SPEND ONLY THE SINGLE-SHOT (v4.19). Enflame the
+       Firebrand's middle rung prints "your ATTACKS are Draconic this
+       combat chain" — a standing grant, so every attack inside the window
+       counts and none of them consumes it. Spending it here would be
+       v3.87's split read backwards: a standing grant consumed by the
+       first swing is WEAKER than printed. */
+    const _dracStand = !!act(n).dracChain;
+    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant||_dracStand, kind:"atk"}];
     if(_dracGrant){
       actMut(n).dracNext = false;
       n = L(n, `${pc.name} takes the Draconic grant \u2014 it is spent.`);
@@ -6688,10 +6705,14 @@ function closeChainGrants(game){
        ONLY. Wrong board, wrong seat and wrong boundary at once: a grant
        that survives the chain it names is stronger than printed, and one
        that survives the GAME compounds through `dracLinks`. */
-    const dropDrac = !!sd.dracNext;
+    /* AND THE STANDING ONE EXPIRES HERE TOO (v4.19), because it prints
+       the same window. It is never spent, so this is its ONLY exit — a
+       standing Draconic grant that outlives its chain compounds through
+       `dracLinks` for the rest of the game. */
+    const dropDrac = !!sd.dracNext || !!sd.dracChain;
     if(keep.length === (sd.atkBuff || []).length && !dropDeb && !dropDrac) continue;
     const sides = n.sides.slice();
-    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: keepD, dracNext: false});
+    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: keepD, dracNext: false, dracChain: false});
     n = Object.assign({}, n, {sides});
   }
   return n;
