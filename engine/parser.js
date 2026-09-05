@@ -2831,6 +2831,15 @@ function optFilter(phrase){
   }
   const withCls = (o) => { if(cls) o.ty = [cls].concat(o.ty ? [].concat(o.ty) : []); return o; };
   if(/^auras?$/.test(low))                { f.tt = "aura";     return f; }
+  /* AN ALLY IS A PRINTED TYPE, read the same way (v4.14). Measured over
+     the pinned pool: `tt` says "ally" on exactly the eleven records whose
+     structured `types` array says Ally and on nothing else, so no word
+     boundary is needed and none is invented — this is the aura line one
+     type over, not a widening of the subtype list. v3.66's own
+     measurement names `ally` as one of the three printed subjects of the
+     board-target shape; that one is `pickSubject`'s and answers a
+     different question. This is a card in a HAND. */
+  if(/^allies$|^ally$/.test(low))         { f.tt = "ally";     return f; }
   /* A PRINTED WEAPON SUBTYPE (v3.66) — "target SWORD you control". It is
      read off `tt`, where the database keeps the subtype ("Warrior Weapon
      - Sword (2H)"), and the vocabulary is CLOSED for the same reason
@@ -5323,17 +5332,37 @@ function parseHeroPower(tx, allowDestroy){
      a reading rather than a guess: a cost whose subject the reader cannot
      name is a cost a player could pay wrongly (v3.53). An unreadable one
      falls through to the refusal below exactly as before. */
-  if(!sd){
-    const dcm = costStr.match(/^discard (an?|another) ([a-z][a-z -]*?)$/i);
-    if(dcm){
+  /* AND IT MAY CARRY A SECOND OBJECT (v4.14). Carrion Crown prints
+     "Action - Discard an ally, DESTROY THIS: Draw a card" — the pool's
+     ONLY compound activation cost, measured across every record: four
+     distinct discard-bearing costs, and this is the one with a second
+     half. v3.79's Radiant Touch is the same shape read from the other
+     end ("Banish THIS AND a card from your soul") and its note is the
+     ruling here too: *one optional middle — it is the same cost with a
+     second object, not a second reader.*
+
+     THE SECOND OBJECT IS `destroy this` AND NOTHING ELSE. Anything wider
+     re-opens the guard below, which refuses a destroy cost that does not
+     name the source (v3.86's measurement: 38 of the pool's 39 say
+     "destroy this", and the one that does not is Gravy Bones' named
+     permanent, read by its own reader).
+
+     AND `allowDestroy` STILL GATES IT. The HERO builder passes false, so
+     a hero printing this shape is refused exactly as before — the flag
+     decides whether a self-destroy is payable at all, and this reader
+     must not be the door around it. */
+  {
+    const dcm = costStr.match(/^discard (an?|another) ([a-z][a-z -]*?)(, destroy this)?$/i);
+    if(dcm && (!dcm[3] || allowDestroy)){
       const filt = dcm[2] && optFilter(dcm[1] + " " + dcm[2]);
       if(!filt) return null;
       const eff2 = classifyClause(m[4]);
       if(!eff2 || eff2.status !== "run") return null;
       return {cost: 0, ga: /^\.?\s*go again/i.test(t.slice(m.index + m[0].length)),
-              sd: false, kind, discardCost: {filter: filt, subject: dcm[2].trim()},
+              sd: !!dcm[3], kind, discardCost: {filter: filt, subject: dcm[2].trim()},
               eff: m[4].trim(),
-              label: (m[1] ? "once/turn: " : "") + "discard " + dcm[2].trim() + ": " + m[4].trim()};
+              label: (m[1] ? "once/turn: " : "") + "discard " + dcm[2].trim()
+                     + (dcm[3] ? ", destroy this" : "") + ": " + m[4].trim()};
     }
   }
   if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;

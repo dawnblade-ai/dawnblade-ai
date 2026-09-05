@@ -9,6 +9,62 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.14 — an activation cost with two objects
+
+> *"Action - Discard an ally, **destroy this**: Draw a card. Go again"*
+> — CARRION CROWN
+
+**THE POOL'S ONLY COMPOUND ACTIVATION COST**, measured across every
+record — four distinct discard-bearing costs are printed:
+
+| cost | records |
+|---|---|
+| `Discard this` | 12 — a card in HAND destroying itself |
+| `Discard an Assassin card` | 5 — the Agents, built at v4.09 |
+| `Discard a card` | 3 — Rally the Coast Guard, a hand ability |
+| **`Discard an ally, destroy this`** | **1** |
+
+`parseHeroPower` refused the line, so `build.js` built **no powCard** and
+neither board could offer the ability. **Reading the COST is what creates
+the route** — v3.47's shape, fourth outing.
+
+**LIVE, NOT LATENT.** Gravy Bones decks Carrion Crown as GEAR and his
+deck is built out of allies, so the cost is payable in a real game and
+the equipment sat there doing nothing.
+
+**ONE OPTIONAL MIDDLE, NOT A SECOND READER.** v3.79's Radiant Touch is
+the same shape from the other end — *"Banish **this and** a card from
+your soul"* — and its ruling governs here.
+
+**THE SECOND OBJECT IS `destroy this` AND NOTHING ELSE**, because
+anything wider re-opens the guard below it, which refuses a destroy cost
+that does not name the source. v3.86 measured **38 of the pool's 39** as
+*"destroy this"*, and the one that is not is Gravy Bones' named
+permanent, with a reader of its own. **And `allowDestroy` still gates
+it**: the HERO builder passes false, and a hero destroying "this"
+destroys the hero — this reader must not be the door around that flag.
+
+**AN ALLY IS A PRINTED TYPE**, read off `tt` beside the aura line.
+Measured: the type line says *"ally"* on exactly the eleven records whose
+structured array says Ally and on **nothing else**, so no word boundary
+is invented and none is needed — and exactly **one record's parse moved**.
+v3.66's own measurement names `ally` as a printed subject of the
+board-target shape; that one is `pickSubject`'s and asks a different
+question. This is a card in a HAND.
+
+**NOTHING DOWNSTREAM CHANGED.** Both powCard builders have carried `sd`
+and `_discardCost` since v4.09 (v3.63's rule, already applied), so the
+whole build was the parser.
+
+**AND DRIVING IT FOUND TWO FEED DEFECTS THE PARSER COULD NOT.** The v4.09
+discard line read *"**You discards** Barnacle"* — seat 0 is literally
+called "You", and `isSecondPerson` has existed since v3.90 **unasked** —
+and the refusal read *"costs **a ally**"*. In a training sim the sequence
+IS the lesson, so both are drilled (v3.60's stated exception, not a
+licence).
+
+**Nine sabotages, nine bite. 383 full / 19 part / 3 none.**
+
 ## v4.13 — the grant's card is the rider's "it" too
 
 > *"The next Lightning or Elemental attack action card you play this turn

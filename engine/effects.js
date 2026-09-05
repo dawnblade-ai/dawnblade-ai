@@ -2129,7 +2129,12 @@ function makeEffects(ctx){
         const _sd = actMut(n);
         _sd.hand = _hand.slice(0, _i).concat(_hand.slice(_i + 1));
         _sd.grave = [Object.assign({}, _paid, {_gy: n.turn})].concat(_sd.grave || []);
-        n = L(n, `${act(n).name} discards ${_paid.name} — the cost is paid.`);
+        /* THE VERB COMES FROM THE NAME THE LINE JUST USED (v2.83, v3.88,
+           v3.90) — seat 0 is called "You", so a bare `discards` reads
+           "You discards Barnacle". `isSecondPerson` has existed since
+           v3.90 and this line, written at v4.09, never asked it. */
+        n = L(n, `${act(n).name} ${isSecondPerson(act(n).name) ? "discard" : "discards"} `
+               + `${_paid.name} — the cost is paid.`);
       } }
     /* "BANISH THIS AND …" — THE SOURCE IS PART OF THE COST (v3.79).
        Radiant Touch prints "Instant - Banish this and a card from your

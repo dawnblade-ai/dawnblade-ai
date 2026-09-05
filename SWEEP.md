@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 3 | 2 barely named in the trainer |
-| Ruled but not built | 23 cards | understood ≠ built |
-| **Fail states** | 52 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 22 cards | understood ≠ built |
+| **Fail states** | 51 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -55,7 +55,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Plasma Barrel Shot** (part, 2/4 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
-- **Carrion Crown** (part, 1/3 unread)
 - **Crown of Dichotomy** (part, 1/2 unread)
 - **Drill Shot** (part, 1/2 unread)
 - **Flamecall Awakening** (part, 1/2 unread)
@@ -87,11 +86,11 @@ can be overruled. Same discipline as the mention count.
 | Keyword filed as no-op — but the trainer names it (verify) | 19 |
 | Keyword filed as no-op, but it has meaning | 9 |
 | No schedule to fire on | 8 |
-| Ability inert — cost not modelled | 8 |
+| Ability inert — cost not modelled | 7 |
 | Choice never offered | 7 |
 | Unread, effect unknown | 7 |
-| Earned value denied | 7 |
 | Displayed total is wrong | 6 |
+| Earned value denied | 6 |
 
 ### WRONG — 27 entries
 
@@ -105,7 +104,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
 - **Arcanic Shockwave** (1) · tier `full` · briar
-  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 11 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Boom Grenade** (1) · tier `part` · dash
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -126,7 +125,7 @@ can be overruled. Same discipline as the mention count.
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If this has an aim counter, it gets piercing 1.
 - **Entwine Lightning** (1) · tier `full` · briar
-  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 11 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -200,7 +199,7 @@ can be overruled. Same discipline as the mention count.
     > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 - … and 2 more (see the station)
 
-### LOST VALUE — 24 entries
+### LOST VALUE — 23 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 4 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -221,11 +220,6 @@ can be overruled. Same discipline as the mention count.
 - **Burn Up // Shock** (1) · tier `full`
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Meld" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 12 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: These are tricky - these are 2 cards with the same cost and same pitch but different effects. the 'meld' popup will allow the player to choose 1 or both sides of the card to player - the cost must be paid for each side c
     > Meld
-- **Carrion Crown** · tier `part` · gravy
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Action - Discard an ally, destroy this: Draw a card
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Action - Discard an ally, destroy this: Draw a card
 - **Crown of Dichotomy** · tier `part` · viserai, briar
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
     > Action - {r}, destroy this: Put target Runeblade attack action card and target Runeblade non-attack action card from your graveyard on top of your deck in any order.

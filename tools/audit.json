@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-05T08:20:57.861Z",
- "appVer": "4.12",
+ "generated": "2026-09-05T13:31:52.134Z",
+ "appVer": "4.13",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 382,
-  "part": 20,
+  "full": 383,
+  "part": 19,
   "none": 3
  },
  "heroes": {
@@ -12498,13 +12498,13 @@
     "blade break",
     "go again"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Action - Discard an ally, destroy this: Draw a card",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Go again",
@@ -12515,11 +12515,9 @@
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Action - Discard an ally, destroy this: Draw a card"
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "discard ally, destroy this: Draw a card",
    "tx": "Action - Discard an ally, destroy this: Draw a card. Go again\nBlade Break",
    "flags": []
   },

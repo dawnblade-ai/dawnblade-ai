@@ -166,8 +166,15 @@ function abCostWhy(sd, ab){
      the two cannot disagree about what pays. */
   const _dc = PR.abDiscardCost(ab);
   if(_dc && !(sd.hand || []).some(PM.promptFilter(_dc)))
-    return ab.name + " costs a " + (ab._discardSubject || "card") + " discarded, and "
-         + sd.name + " holds none";
+  {
+    /* THE ARTICLE AGREES WITH THE SUBJECT, and the subject is a printed
+       word the parser captured — "an ally", not "a ally" (v4.14). Third
+       copy of this test in the engine, and the cheapest place to get it
+       right is where the word is known. */
+    const _sub = ab._discardSubject || "card";
+    return ab.name + " costs " + (/^[aeiou]/i.test(_sub) ? "an " : "a ") + _sub
+         + " discarded, and " + sd.name + " holds none";
+  }
   return null;
 }
 function rxTargetWhy(g, ab, want){

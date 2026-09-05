@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.13 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.14 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -31,7 +31,9 @@ a bug** (below). **v4.12** followed the same family one card further and
 found **Flying High reporting `tier: full` while doing nothing at all** —
 two different "it"s reaching one anchor. **v4.13** finished the family:
 Weave Lightning's fused rider, LIVE in Briar's own deck and losing a
-printed action point every game.
+printed action point every game. **v4.14** built the pool's only compound
+activation cost — Carrion Crown, INERT in Gravy Bones' gear — and driving
+it turned up two feed defects the parser could not see.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -143,6 +145,50 @@ UNGUARDED and three citations are section pointers, which no drill can
 drive. It pins a SET now. **And the tool was reading its own output** —
 123 of the 1123 citations it reported were `CR-INDEX.md` citing itself,
 found by sabotage. The honest count is 1000.
+
+## ⚠ v4.14 — THE `npm run gaps` DOSSIER IS THE CHEAPEST READ THERE IS
+
+Three versions running, the lead has come from the same two commands:
+
+```
+npm run gaps                    # the families
+node tools/gaps.js "<name>"     # the ONE unread clause, verbatim
+```
+
+The dossier prints the clause that refuses. For Carrion Crown it was
+`Action - Discard an ally, destroy this: Draw a card` — and the diagnosis
+took one line: **hand the payload to `classifyClause` on its own** (v3.79's
+cheapest diagnostic) and `draw a card` reads perfectly. So the COST is the
+whole blocker, which is the third time in six versions.
+
+**AND THE HONEST QUESTION AFTER "does the parser read it" IS "does anyone
+DECK it".** Carrion Crown is Necromancer gear and the pool has no
+Necromancer hero — but Gravy Bones decks it, and his deck is allies, so
+the cost is payable in a real game. `npm run gaps` cannot tell you that;
+one loop over `W.DECKS` can.
+
+## ⚠ AND THE PARSER IS NEVER THE WHOLE ANSWER — DRIVE IT
+
+Both of v4.14's other findings came from driving `J.legal` and `J.reduce`
+and READING THE FEED, not from any parse assertion:
+
+| | |
+|---|---|
+| `You discards Barnacle` | seat 0 is literally named "You", and `isSecondPerson` has existed since v3.90 **unasked** by the line v4.09 wrote |
+| `costs a ally` | the article does not agree with the printed subject the parser captured |
+
+Neither is a state defect, so every zone assertion passes. **In a training
+sim the sequence is the lesson** and a feed that reads wrong is the sev-2
+category the player TRUSTS — so both are drilled, which is v3.60's stated
+exception rather than a licence to assert on prose.
+
+**THE FIXTURE COST THREE ATTEMPTS, AND EACH MISS IS A REAL FACT ABOUT
+JUDGE:** `H.state` sets no `phase`/`step`/`priority`, so `legal` refuses
+*"you do not hold priority"*; judge's gear branch reads **`piece.pow`**
+before `piece.powCard`, so a hand-built powCard alone is refused *"prints
+no activated ability"*; and `J.reduce` returns `{state, error}`, not the
+game. **Check your own fixture** — and when a refusal names something you
+did not expect, it is usually telling you the truth about the engine.
 
 ## ⚠ v4.12 — THE CHEAPEST LEAD IN THE PROJECT, AND WHERE TO POINT IT NEXT
 

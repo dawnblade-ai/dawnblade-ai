@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.13
+**Current version:** v4.14
 
 ---
 
@@ -767,6 +767,41 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### AN ACTIVATION COST WITH TWO OBJECTS (v4.14)
+
+> *"Action - Discard an ally, **destroy this**: Draw a card. Go again"*
+> — CARRION CROWN
+
+**THE POOL'S ONLY COMPOUND ACTIVATION COST**, measured: four distinct
+discard-bearing costs across every record — `Discard this` ×12,
+`Discard an Assassin card` ×5 (the Agents, v4.09), `Discard a card` ×3
+(a hand ability), and this one. `parseHeroPower` refused the line, so
+`build.js` built no powCard — **reading the COST is what creates the
+route** (v3.47, fourth outing).
+
+**LIVE, NOT LATENT**: Gravy Bones decks it as GEAR and his deck is built
+out of allies.
+
+**ONE OPTIONAL MIDDLE, NOT A SECOND READER** — v3.79's Radiant Touch
+from the other end. **The second object is `destroy this` and nothing
+else**, because anything wider re-opens the guard below it (v3.86: 38 of
+39 say "destroy this"); **and `allowDestroy` still gates it**, because
+the HERO builder passes false and a hero destroying "this" destroys the
+hero.
+
+**AN ALLY IS A PRINTED TYPE**, read off `tt` beside the aura line and
+MEASURED: the type line says "ally" on exactly the eleven records whose
+structured array says Ally and on nothing else, so no word boundary is
+invented. Exactly one record's parse moved. Both powCard builders already
+carried `sd` and `_discardCost`, so the whole build was the parser.
+
+**AND DRIVING IT FOUND TWO FEED DEFECTS THE PARSER COULD NOT.** The v4.09
+discard line read *"You discards Barnacle"* — seat 0 is literally called
+"You" and `isSecondPerson` has existed since v3.90, **unasked** — and the
+refusal read *"costs a ally"*. **When you add a line that names a seat,
+ask the helper that already exists**; and when a refusal quotes a printed
+word, the article agrees with the word.
 
 ### THE GRANT'S CARD IS THE RIDER'S "IT" TOO (v4.13)
 
