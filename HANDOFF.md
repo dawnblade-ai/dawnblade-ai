@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.09 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.10 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 

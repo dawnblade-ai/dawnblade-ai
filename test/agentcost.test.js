@@ -232,3 +232,115 @@ test("and the two that stay dark refuse on their PAYLOAD, not their cost", {skip
       n + " refuses for a reason that is neither its payload nor recorded — check WHY");
   }
 });
+
+/* ============================================================
+   D. THE WHOLE PRINTED LINE (v4.10)
+   ============================================================ */
+
+test("`heroAbilityLine` knows every activation prefix, not two of three", {skip}, () => {
+  H.db();
+  /* v3.39 BUILT THIS READER so a hero's powCard carries the ability's
+     WHOLE printed line — `parseHeroPower` answers about the first
+     sentence only, and everything after it is re-read by `fxParse` off
+     the powCard (v3.71). It matched `action` and `instant` and not
+     `attack reaction`, so for the four Agents it found NO line at all
+     and fell back to `heroPow.eff` — which is truncated at the first
+     period, which is the exact defect it exists to fix.
+
+     v3.63's rule one reader over: when a route learns a third window,
+     grep for the readers that ENUMERATE windows. `classifyClause`
+     (v3.59) and `parseHeroPower` (v3.63) each had to be told; this is
+     the third. */
+  const widow = B.agentsOf(H.db(), "chaos").find(a => /Black Widow/.test(a.n));
+  assert.ok(widow, "fixture: Black Widow left the Agent set");
+  const line = B.heroAbilityLine(widow, P.parseHeroPower(widow.tx));
+  assert.match(line, /gets \+3\{p\}/, "the head is gone — the reader now finds no line at all");
+  assert.match(line, /if it has stealth/i,
+    "the RIDER is truncated away again — the audit cannot see a clause that never " +
+    "reaches the powCard, so the gap is invisible rather than visible (v3.41)");
+
+  /* THE COST PREFIX IS STILL STRIPPED, which is what the line is FOR. */
+  assert.ok(!/discard an assassin/i.test(line),
+    "the cost prefix is on the powCard — `execute` would re-read it as payload");
+});
+
+test("the rider reaches the powCard and is honestly reported unread", {skip}, () => {
+  H.db();
+  /* A REFUSAL NOBODY IS TOLD ABOUT IS A LIE (v3.41). These three riders
+     are not built — each grants a conditional ability to the TARGETED
+     attack, which is its own reading — and the point of carrying them is
+     that the clause is now REPORTED as unread rather than removed before
+     anything could look at it. Over-reporting is the safe direction
+     (v3.86). */
+  for(const f of ["Black Widow", "Funnel Web", "Redback"]){
+    const a = B.agentsOf(H.db(), "chaos").find(x => new RegExp(f).test(x.n));
+    const fx = P.fxParse(B.heroAbilities(a, a.n).HPOW);
+    assert.equal(fx.clauses.length, 2, f + ": the rider is not a clause on the powCard");
+    assert.equal(fx.clauses[0].st, "run", f + ": the head stopped reading");
+    assert.equal(fx.clauses[1].st, "skip",
+      f + ": the rider now claims to read — check WHAT it built before moving this");
+  }
+});
+
+test("a hero whose line was already found keeps its reading", {skip}, () => {
+  H.db();
+  /* THE CONTROL. Widening a prefix list is a change to every hero the
+     reader already answered for, so the one whose printed line ALSO ends
+     in a period is the one to check: Boltyn's is an attack reaction too,
+     and his qualifier must be untouched. */
+  const C2 = require("../engine/cards.js");
+  const bo = C2.resolveEntry(H.db(), {name: "Boltyn", p: 0, code: null, q: 1});
+  const fx = P.fxParse(B.heroAbilities(bo, "Boltyn").HPOW);
+  assert.deepEqual(fx.gaQ, {pumped: true},
+    "Boltyn's target restriction moved — the widening changed a hero it should not have");
+  assert.equal(fx.clauses.length, 1, "his line grew a clause it does not print");
+});
+
+test("four Agents do not share one parse — the powCard name IS the memo key", {skip}, () => {
+  H.db();
+  /* `fxParse` MEMOIZES ON `name|pitch`. CLAUDE.md has documented that as
+     a DRILL gotcha since v2.20; here it was a production defect. Four
+     Agents built an ability under the name "Arakni — hero power", so
+     whichever parsed first decided the TARGET QUALIFIER for all four —
+     become Tarantula (target DAGGER), then become Black Widow, and her
+     ability still targets daggers.
+
+     LATENT UNTIL v4.09 BUILT THE COST: with every Agent ability refusing
+     there was no powCard to collide (v3.72 — building a SOURCE can make
+     a defect reachable that was wrong the whole time it could not be).
+
+     DRIVEN IN ORDER, because that is the whole bug: parsing Tarantula
+     FIRST is what poisons the key, so a drill that parses Widow alone
+     passes against the broken engine. */
+  P.fxReset();
+  const pow = f => {
+    const a = B.agentsOf(H.db(), "chaos").find(x => new RegExp(f, "i").test(x.n));
+    assert.ok(a, "fixture: no Agent matching " + f);
+    return B.heroAbilities(a, a.n).HPOW;
+  };
+  const t = pow("Tarantula"), w = pow("Black Widow");
+  assert.notEqual(t.name, w.name,
+    "two Agents build a powCard under ONE name — `fxParse` memoizes on it, so they " +
+    "share a parse and the second Agent inherits the first's target restriction");
+
+  assert.deepEqual(P.fxParse(t).selfQ, {g: [["dagger"]]}, "Tarantula targets a dagger");
+  assert.deepEqual(P.fxParse(w).selfQ, {g: [["assassin"]]},
+    "Black Widow inherited Tarantula's DAGGER restriction — the memo key collided");
+  P.fxReset();
+});
+
+test("…and the fifteen playable heroes keep their short powCard name", {skip}, () => {
+  H.db();
+  /* THE CONTROL, and the reason the fix is not simply "use the full
+     name": the comma-split is RIGHT where the part before the comma is
+     the identity. The shortest name used is the shortest one that is
+     UNIQUE among the heroes a match can hold. */
+  const C2 = require("../engine/cards.js");
+  for(const n of ["Blaze, Firemind", "Gravy Bones"]){
+    const c = C2.resolveEntry(H.db(), {name: n, p: 0, code: null, q: 1});
+    const pw = B.heroAbilities(c, n).HPOW;
+    assert.ok(pw, "fixture: " + n + " builds no powCard");
+    assert.equal(pw.name, n.split(",")[0] + " — hero power",
+      n + "'s powCard name moved — the widening reached a hero it should not have");
+  }
+});

@@ -9,6 +9,70 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.10 — four Agents shared one parse, and a reader that knew two windows of three
+
+v4.09 built the Agents' cost; this is the sweep v3.47 calls for — *when
+you build a mechanic, sweep the refusals that were waiting on it.* Two
+defects, both made **reachable** by that build and both wrong the whole
+time they could not be reached (v3.72).
+
+### THE ABILITY LINE KNEW TWO OF THE THREE ACTIVATION PREFIXES
+
+`build.heroAbilityLine` matched `action` and `instant` and not `attack
+reaction`. So for the four Agents it found **no printed line at all** and
+fell back to `heroPow.eff` — which is truncated at the first period,
+**which is the exact v3.39 defect the reader exists to fix.**
+
+What it dropped is the whole second half of each Agent:
+
+> *"…gets +3{p}. **If it has stealth, it gets "When this hits a hero,
+> they banish a card from their hand."**"*
+
+**A clause that never reaches the powCard is a gap the audit cannot
+see.** A refusal nobody is told about is a lie (v3.41), and these were
+not even refusing — they were removed before anything could look. They
+read `skip` now: honestly reported unread, which is over-reporting in the
+safe direction (v3.86). Building them is its own call — each grants a
+conditional ability to the **targeted** attack.
+
+v3.63's rule one reader over: **when a route learns a third window, grep
+for the readers that ENUMERATE windows.** `classifyClause` (v3.59) and
+`parseHeroPower` (v3.63) each had to be told; this is the third.
+
+Measured: **five hero lines move** — three gain their rider, two gain a
+trailing period — and Boltyn's qualifier is pinned unchanged as the
+control, because widening a prefix list is a change to every hero the
+reader already answered for.
+
+### AND FOUR AGENTS SHARED ONE PARSE
+
+`fxParse` **memoizes on `name|pitch`**, and four Agents built their
+ability under the one name `"Arakni — hero power"`. So whichever parsed
+first decided the **target qualifier for all four**. Driven: become
+Tarantula (target **dagger**), then become Black Widow, and her ability
+still targets daggers.
+
+That is the drill gotcha CLAUDE.md has documented since v2.20, **as a
+production defect rather than a test one** — and it was invisible while
+every Agent ability refused, because there was no powCard to collide.
+
+**THE POWCARD NAME IS ITS MEMO KEY**, so the shortest name used is the
+shortest one that is **unique among the heroes a match can hold**. The
+comma-split is right where the part *before* the comma is the identity
+("Kayo, Armed and Dangerous") and exactly wrong where the part after it
+is. A Demi-Hero keeps its whole name; the fifteen playable heroes are
+pinned unchanged.
+
+**DRIVEN IN ORDER**, because that is the whole bug: parsing Tarantula
+first is what poisons the key, so a drill that parses Widow alone passes
+against the broken engine.
+
+Measured: `npm test` 2264 drills, 0 fail; pool coverage unmoved (381 full
+/ 21 part / 3 none); fairness clean; scenes 72/72; play 210 games, 0
+stalls, 0 refusals, 0 violations.
+
+---
+
 ## v4.09 — a discard is the fifth named activation cost, and it unlocks four of Arakni's Agents
 
 v3.76 gave Arakni six Agents of Chaos to become. v3.77 recorded that

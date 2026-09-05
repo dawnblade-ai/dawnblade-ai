@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.09
+**Current version:** v4.10
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2259 drills**.
+This is `node --test "test/*.test.js"` — currently **2264 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,48 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### WHEN A ROUTE LEARNS A THIRD WINDOW, GREP THE READERS THAT ENUMERATE WINDOWS (v4.10)
+
+`build.heroAbilityLine` matched `action` and `instant` and not `attack
+reaction` — so for Arakni's four built Agents it found **no printed line
+at all** and fell back to `heroPow.eff`, which is truncated at the first
+period. **That is the exact v3.39 defect the reader exists to fix**, and
+what it dropped is the whole second half of each Agent.
+
+**A CLAUSE THAT NEVER REACHES THE POWCARD IS A GAP NO TOOL CAN SEE.** It
+was not refusing; it was removed before anything could look at it, which
+is v3.41's *a refusal nobody is told about is a lie* one step earlier.
+They read `skip` now — over-reporting in the safe direction (v3.86).
+
+`classifyClause` (v3.59) and `parseHeroPower` (v3.63) each had to be told
+about the attack-reaction prefix; this is the **third** reader. And
+widening a prefix list changes every hero the reader already answered
+for, so the measurement is both-directions: five lines move, and Boltyn's
+qualifier is pinned unchanged as the control.
+
+### THE POWCARD'S NAME IS ITS MEMO KEY (v4.10)
+
+`fxParse` memoizes on `name|pitch`. CLAUDE.md has documented that as a
+**drill** gotcha since v2.20; here it was a **production defect**. Four
+Agents built their ability under the one name `"Arakni — hero power"`, so
+whichever parsed first decided the TARGET QUALIFIER for all four —
+driven, become Tarantula (target **dagger**), then become Black Widow,
+and her ability still targets daggers.
+
+**LATENT UNTIL v4.09 BUILT THE COST**: with every Agent ability refusing
+there was no powCard to collide. v3.72's rule — building a SOURCE can
+make a defect reachable that was wrong the whole time it could not be.
+
+**THE SHORTEST NAME USED IS THE SHORTEST ONE THAT IS UNIQUE AMONG THE
+HEROES A MATCH CAN HOLD.** The comma-split is right where the part before
+the comma is the identity ("Kayo, Armed and Dangerous") and exactly wrong
+where the part after it is. A Demi-Hero keeps its whole name; the fifteen
+playable heroes are pinned unchanged.
+
+**AND THE DRILL DRIVES THEM IN ORDER**, because parsing Tarantula first
+is what poisons the key: a drill that parses Widow alone passes against
+the broken engine.
 
 ### A DISCARD IS THE FIFTH NAMED ACTIVATION COST (v4.09)
 

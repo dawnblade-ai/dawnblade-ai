@@ -380,7 +380,29 @@ function heroAbilities(heroRec, displayName, code){
      ability — `heroAbilityLine` strips the cost prefix, so a cost not
      carried here is a cost nothing can charge. OPT-IN (v3.58). */
   const _hEffFull = heroAbilityLine(heroRec, heroPow);
-  const _nm = String(displayName || heroRec.n || "Hero").split(",")[0];
+  /* THE POWCARD'S NAME IS ITS MEMO KEY (v4.10). `fxParse` memoizes on
+     `name|pitch`, so two powCards sharing a name share a PARSE — the
+     drill gotcha CLAUDE.md has documented since v2.20, as a production
+     defect rather than a test one.
+
+     The comma-split is right for the fifteen playable heroes, where the
+     part BEFORE the comma is the identity ("Kayo, Armed and Dangerous").
+     It is exactly wrong for Arakni's Agents, where the part AFTER it is:
+     four of them build an ability under the name "Arakni — hero power",
+     so whichever parsed first decided the TARGET QUALIFIER for all four.
+     Driven: become Tarantula (target DAGGER), then become Black Widow,
+     and her ability still targets daggers.
+
+     LATENT UNTIL v4.09 BUILT THE COST. With every Agent ability refusing
+     there was no powCard to collide — which is v3.72's rule, that
+     building a SOURCE can make a defect reachable that was wrong the
+     whole time it could not be reached.
+
+     A DEMI-HERO KEEPS ITS WHOLE NAME, so the shortest name used is the
+     shortest one that is UNIQUE among the heroes a match can hold. */
+  const _isAgent = /demi-hero/i.test(String((heroRec && heroRec.tt) || ""));
+  const _nm = _isAgent ? String(displayName || heroRec.n || "Hero")
+                       : String(displayName || heroRec.n || "Hero").split(",")[0];
   /* THE CARD THE HERO ROW SHOWS. It is part of the ability half because a
      hero who has BECOME an Agent must show the Agent — its name, its type
      line and its printed text — or the mechanic is invisible and the
@@ -443,9 +465,25 @@ function heroAbilities(heroRec, displayName, code){
    no-mirror rule broken between a tool and the engine — and one that did
    not ask at all reports a built ability as unread, which is v3.21's
    one-sided ledger exactly. */
+/* THE HERO'S WHOLE PRINTED ABILITY LINE (v3.39, v3.71) — everything
+   after the cost prefix, because `parseHeroPower` answers about the FIRST
+   sentence only and `fxParse` re-reads the rest off the powCard.
+
+   IT KNEW TWO OF THE THREE ACTIVATION PREFIXES (v4.09). `attack reaction`
+   was missing, so for the four Agents of Chaos this found NO line at all
+   and fell back to `heroPow.eff` — which is truncated at the first
+   period, exactly the v3.39 defect it exists to fix. The rider that was
+   dropped is the whole second half of each Agent:
+
+     "…gets +3{p}. If it has stealth, it gets \"When this hits a hero,
+      they banish a card from their hand.\""
+
+   v3.63's rule one reader over: when a route learns a third window, grep
+   for the readers that ENUMERATE windows. `classifyClause` (v3.59) and
+   `parseHeroPower` (v3.63) each had to be told; this is the third. */
 function heroAbilityLine(heroRec, heroPow){
   const line = ((heroRec && heroRec.tx) || "").split(/\n+/).map(l => clean(l))
-    .find(l => /^(?:once per turn )?(?:action|instant)\s*[-—]/i.test(l)) || "";
+    .find(l => /^(?:once per turn )?(?:action|instant|attack reaction|defense reaction)\s*[-—]/i.test(l)) || "";
   return line.replace(/^[^:]*:\s*/, "") || (heroPow ? heroPow.eff : "");
 }
 
