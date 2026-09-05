@@ -65,6 +65,79 @@ test("the pump reaches the attack on the chain, not the next one", {skip}, () =>
     "NOT queued for the next attack — that was the bug, and the feed announced it");
 });
 
+/* ---- "…AND GO AGAIN" ON THE TARGETED PUMP (v4.18) --------------------
+   The drill above asserts the +3 and says nothing about the ACTION POINT
+   printed beside it. Stains of the Redback reads:
+
+     "Target attack with stealth gets +3{p} AND GO AGAIN."
+
+   v3.99 built that reader for the SELF-pump matcher and measured its five
+   claimants there; this shape sits one MATCHER over and nothing looked —
+   v3.53's rule inside the family v3.99 had just been working in. Three
+   printings, all in ARAKNI's deck, all `tier: full`, and CR 5.3.5's point
+   was dropped on every one.
+
+   GO AGAIN IS AN ACTION POINT, AND THAT IS WHAT TO ASSERT ON (v3.58). At
+   this seam the observable is `pend.ga` — the field `linkPayload` settles
+   the layer's point from — so the drill drives the real play and reads
+   the pend, never the feed. */
+test("the targeted pump's printed go again reaches the ATTACK", {skip}, () => {
+  H.db();
+  const rx = H.card("Stains of the Redback", 1);
+  const {g} = reacting([rx], "Mark the Prey");             /* a stealth attack */
+  /* AN EXPLICIT `false`, NOT `undefined` — the swing is a vanilla stealth
+     attack, so the field exists and is off. Asserting `undefined` here
+     failed against a correct engine: check your own fixture. */
+  assert.equal(g.pend.ga, false, "the swing carries no go again of its own");
+
+  const out = J.reduce(g, {t: "play", uid: "h0", from: "hand"}, 0);
+  assert.ok(!out.error, out.error || "the play must be legal");
+  assert.equal(out.state.pend.ga, true,
+    "the reaction grants the TARGET go again — an action point, CR 5.3.5");
+  /* and the pump is still there, so the fix added a grant rather than
+     trading one printed half for the other */
+  const pre = J.withEffects(out.state, (fx, s) => fx.linkPumps(s, {equipDefenders: 0}));
+  assert.equal(pre.total, H.card("Mark the Prey", 1).power + 3, "both halves land");
+});
+
+test("the go again carries the head's own qualifier, and the amount is READ", {skip}, () => {
+  /* ONE PRINTED SENTENCE NAMES ONE TARGET and gives it both, so the grant
+     rides on `q1` rather than on a fresh or absent qualifier — an absent
+     one matches everything (v3.43), which would hand the point to a swing
+     the card never named.
+
+     AND THE POOL PROVES THE NUMBER FOR ONCE. Stains prints 3 / 2 / 1
+     across its three pitches, so a hardcoded amount is right for one
+     printing and wrong for two — no synthetic needed (v3.89). */
+  const want = {1: 3, 2: 2, 3: 1};
+  for(const pitch of [1, 2, 3]){
+    P.fxReset();
+    const fx = P.fxParse(H.card("Stains of the Redback", pitch));
+    assert.equal(fx.self, want[pitch], "pitch " + pitch + " prints +" + want[pitch]);
+    assert.equal(fx.ga, true, "pitch " + pitch + " grants go again");
+    assert.deepEqual(fx.gaQ, fx.selfQ,
+      "the go again is restricted exactly as the pump is — pitch " + pitch);
+    assert.deepEqual(fx.gaQ, {kw: "stealth"}, "and that restriction is the printed one");
+  }
+});
+
+test('the "and" grammar alone does NOT grant a go again', {skip}, () => {
+  /* THE NEAR-MISSES ARE REAL POOL CARDS, not synthetics (v3.73 is the
+     exception, not the preference). Three records print the identical
+     "gets +N{p} and <something>" shape and none of them prints the
+     keyword, so an anchor testing for "and <anything>" claims all three
+     — stronger than printed, the direction that steals games.
+
+     Puncture is the sharpest: "and PIERCING 1" is a keyword in exactly
+     the position the go again occupies. */
+  for(const nm of ["Puncture", "Scar Tissue", "Spike with Bloodrot"]){
+    P.fxReset();
+    const fx = P.fxParse(H.card(nm, 1));
+    assert.ok(fx.self > 0, nm + " still reads its pump");
+    assert.equal(fx.ga, false, nm + " prints no go again and must not be granted one");
+  }
+});
+
 test("a printed target restriction refuses the PLAY, before the card is spent", {skip}, () => {
   H.db();
   const rx = H.card("Puncture", 1);                        /* target sword or dagger */

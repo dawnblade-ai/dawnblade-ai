@@ -1435,7 +1435,34 @@ function classifyClause(raw){
      "attack" and no more. `attackQual` is the same reader buffNext uses,
      so "sword or dagger" is an OR of two groups and "Pirate ally" is one
      group of two words. */
-  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)/)){
+  /* ---- "…AND GO AGAIN" ON THE **TARGETED** PUMP (v4.18) -------------
+     v3.99 built this reader for the SELF-pump matcher and measured its
+     five claimants there. The identical printed shape sits one MATCHER
+     over, on the targeted pump, and nothing looked:
+
+       "Target attack with stealth gets +3{p} AND GO AGAIN."
+                                              — STAINS OF THE REDBACK
+
+     v3.53's rule, in the family v3.99 had just been working in: a fix
+     for one mechanic is not a fix for the SHAPE. Three printings, all
+     in ARAKNI's deck, all reading `tier: full`, and the printed ACTION
+     POINT (CR 5.3.5) was dropped on every one.
+
+     WEAKER THAN PRINTED, so the one-sided fairness sweep cannot look in
+     that direction, and the clause IS consumed, so coverage counts it
+     accounted for — the same pair of blind spots v3.99 names.
+
+     AND IT REACHES THE TABLE THROUGH `fx.ga`, WHICH IS WHY IT WORKS
+     WITH NO NEW WIRING. `effects.attackRx` grants the TARGET's go again
+     off `fx.ga` + `fx.gaQ` (v3.74), and `fxParse` sets both from a bare
+     `["ga", n, q]` op. The grant carries `q1`, the head's own qualifier,
+     because one printed sentence names ONE target and gives it both.
+
+     MEASURED BEFORE WIDENING, the way v3.99 measured its own: exactly
+     ONE pool record matches this matcher and contains "go again", and it
+     prints the ADJACENT form. So the anchor is the adjacency here too,
+     and it claims nothing else in the pool. */
+  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)( and go again)?/)){
     /* AND ITS GRANTED ABILITY RIDES ALONG (v3.12) — the same `quotedOnHit`
        the next-attack pump and the self-grant already share. Scar Tissue
        and Spike with Bloodrot print "…and \"When this hits a hero, mark
@@ -1448,8 +1475,13 @@ function classifyClause(raw){
     const q1 = attackQual(m[1], m[2]);
     if(q1 === false) return null;
     const rider = quotedOnHit(c);
-    return rider ? R([["self", +m[3], q1]], {riderOnHit: rider})
-                 : R([["self", +m[3], q1]]);
+    /* THE GO AGAIN IS A SECOND OP, NOT A FLAG ON THE PUMP. `fxParse`
+       reads `fx.ga`/`fx.gaQ` off a bare `ga` op (v3.31's one shape, one
+       matcher), and a conditional clause emits one `fx.conds` entry per
+       op — so both halves survive a gate without anything new. */
+    const ops = [["self", +m[3], q1]];
+    if(m[4]) ops.push(["ga", 1, q1]);
+    return rider ? R(ops, {riderOnHit: rider}) : R(ops);
   }
   /* the go-again twin of the target-attack pump, restriction and all */
   if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?) go again$/)){

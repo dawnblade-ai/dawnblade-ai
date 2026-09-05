@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.17 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.18 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -40,7 +40,11 @@ eighteen. **v4.16** finished the token: its last clause was the OTHER
 printed spelling of a mark the engine already answers. **v4.17** turned
 the same habit on the INSTRUMENTS — `npm run play` was reporting a FAULT
 as a route, and two of this file's own sentences stated counts that had
-stopped being true.
+stopped being true. **v4.18** turned it on the AUDIT's flag list: of the
+15 cards flagged *"mentions go again, nothing parses it"*, fourteen were
+correct and one — Stains of the Redback, three printings in Arakni's deck
+— had lost a printed ACTION POINT to a reader v3.99 built one matcher
+over.
 
 ## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.17, NOT QUOTED
 
@@ -108,6 +112,34 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.18 — A FLAG LIST IS A LEAD LIST, AND THE WALK IS THE INSTRUMENT
+
+The audit flags **15** cards *"text mentions go again but no clause parses
+it"*. Reading that list tells you nothing; **fourteen of them are
+correct**, with the grant carried by `arsenalUp`, `payCost`, `optCost`,
+`millCost`, `auraWeapon`, `gyFirstGa`, a powCard route, or read as a
+CONDITION rather than a grant (`defGA`, `hasGa`).
+
+**THE INSTRUMENT IS A FIFTEEN-LINE WALK**, and it is worth keeping:
+
+```js
+/* does the parse grant a go again ANYWHERE? — walk the whole fx object,
+   never a hand-picked list of field names */
+const grantsGa = o => { /* recurse; hit on a ["ga",…] op or a truthy
+   ga / gaWithCounters / lateGa / gaIf / arsGA / gaNext */ };
+```
+
+**A HAND-PICKED LIST IS THE FAILURE MODE.** The first draft named a dozen
+fields and omitted `arsenalUp` and `auraWeapon` — so Swift Shot and Cosmo,
+both correctly built, came back as gaps. Enumerate every SET field.
+
+**AND THE SAME QUESTION IS WORTH ASKING OF EVERY OTHER FLAG FAMILY.** The
+remaining flags are 6 unreviewed-keyword families (`ice fusion`,
+`piercing`, `lightning fusion`, `overpower`, `solflare`, `lightning flow`,
+`steal`), 2 quoted abilities with no reader, and one `{u}`. Nobody has
+driven those the way this pass drove the go-again family — **that is the
+next cheapest lead in the project.**
 
 ## ⚠ v4.17 — TURN THE METHOD ON THE INSTRUMENTS
 

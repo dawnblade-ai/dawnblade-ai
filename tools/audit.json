@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-05T15:40:43.213Z",
- "appVer": "4.17",
+ "generated": "2026-09-05T21:41:20.561Z",
+ "appVer": "4.18",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -10014,10 +10014,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If the defending hero is marked, this costs {r} less to play.\nTarget attack with stealth gets +3{p} and go again.",
-   "flags": [
-    "granted go-again with no parsed grant path",
-    "text mentions go again but no clause parses it"
-   ]
+   "flags": []
   },
   "two sides to the blade|1": {
    "name": "Two Sides to the Blade",

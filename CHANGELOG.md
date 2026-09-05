@@ -9,6 +9,62 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.18 — "…and go again" on the **targeted** pump
+
+> *"Target attack with **stealth** gets +3{p} **and go again**."*
+> — STAINS OF THE REDBACK ×3, all in Arakni's deck
+
+**v3.99 BUILT THIS READER ONE MATCHER OVER.** It widened the SELF-pump
+matcher (*"this gets +1{p} and go again"*) and measured its five claimants
+carefully — Second Strike and Jack Be Quick grant both; Rush of Power's go
+again is the clause's own CONDITION, Enflame the Firebrand's belongs to a
+different threshold, Bait's refuses. That census was correct **about that
+matcher**. The identical printed shape sits on the TARGETED pump, and
+nothing looked.
+
+**v3.53's rule, inside the family v3.99 had just been working in**: a fix
+for one mechanic is not a fix for the SHAPE.
+
+Three printings, all `tier: full`, and CR 5.3.5's **action point** — this
+file's own *"most valuable keyword in the game to get wrong"* — was
+dropped on every one. WEAKER than printed, so the one-sided fairness
+sweep cannot look in that direction; the clause IS consumed, so coverage
+counts it accounted for. **The coverage number cannot move, and that is
+the point.**
+
+**IT REACHES THE TABLE WITH NO NEW WIRING.** `effects.attackRx` grants the
+TARGET's go again off `fx.ga` + `fx.gaQ` (v3.74), and `fxParse` sets both
+from a bare `["ga", n, q]` op (v3.31's one shape, one matcher). The whole
+build is one optional group and one pushed op.
+
+**THE GRANT CARRIES THE HEAD'S OWN QUALIFIER.** One printed sentence names
+ONE target and gives it both, and an absent qualifier matches everything
+(v3.43) — which would hand the point to a swing the card never named.
+
+**MEASURED BOTH WAYS over all 797 records: exactly three parses move**,
+all Stains. And the pool proves the amount for once — 3 / 2 / 1 across the
+three pitches, so a hardcoded number is right for one printing and wrong
+for two (v3.89, no synthetic needed).
+
+**AND THE NEAR-MISSES ARE REAL CARDS.** Three pool records print the
+identical *"gets +N{p} and \<something\>"* grammar and none prints the
+keyword: **Puncture** — *"and **piercing 1**"*, a keyword in exactly the
+position the go again occupies — plus Scar Tissue and Spike with
+Bloodrot, whose *"and"* is followed by a quoted ability. An anchor testing
+for *"and anything"* claims all three, which is stronger than printed.
+
+**FOUND BY A CENSUS, NOT BY READING A CARD.** The audit's *"text mentions
+go again but no clause parses it"* flag names 15 cards; driven, fourteen
+were correct (the grant carried by `arsenalUp`, `payCost`, `auraWeapon`,
+`gyFirstGa`, a powCard route, or read as a CONDITION — `defGA`, `hasGa`).
+**Asking whether the PARSE grants a go again anywhere**, rather than
+reading the flag, is what separated the one real gap from thirteen noise.
+Flagged cards 31 → 30.
+
+Five sabotages, five bite.
+
+---
+
 ## v4.17 — a fault is not a route, and two doc claims re-derived
 
 > `POLICY REFUSALS 0 · INVARIANT VIOLATIONS 0 · MALFORMED FEED 0`

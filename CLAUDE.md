@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.17
+**Current version:** v4.18
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2305 drills** at v4.17.
+This is `node --test "test/*.test.js"` — **2308 drills** at v4.18.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -783,6 +783,68 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A FIX FOR ONE MATCHER IS NOT A FIX FOR THE SHAPE (v4.18)
+
+> *"Target attack with **stealth** gets +3{p} **and go again**."*
+> — STAINS OF THE REDBACK ×3, Arakni's deck, every one `tier: full`
+
+**v3.99 BUILT EXACTLY THIS READER ONE MATCHER OVER** — on the SELF-pump
+(*"this gets +1{p} and go again"*) — and measured its five claimants
+carefully enough to exclude three of them by name. That census was right
+**about that matcher**. The same printed shape on the TARGETED pump was
+never asked about, so CR 5.3.5's action point was dropped on all three
+printings.
+
+**v3.53's rule inside the family v3.99 had just been working in.** When you
+widen a matcher for a printed shape, **grep for the other matchers that
+read the same shape** — the sibling is usually twenty lines away.
+
+**NOTHING NEW WAS WIRED.** `effects.attackRx` grants the TARGET's go again
+off `fx.ga` + `fx.gaQ` (v3.74) and `fxParse` sets both from a bare
+`["ga", n, q]` op — one optional group, one pushed op. **The grant carries
+the head's own qualifier**, because one printed sentence names ONE target
+and gives it both, and an absent qualifier matches everything (v3.43).
+
+**THE NEAR-MISSES ARE REAL POOL CARDS, WHICH IS RARER THAN THE SYNTHETIC.**
+Three records print *"gets +N{p} and \<something\>"* and none prints the
+keyword — **Puncture**'s *"and **piercing 1**"* puts a keyword in exactly
+the go again's position, and Scar Tissue and Spike with Bloodrot follow
+the *"and"* with a quoted ability. Testing for *"and anything"* claims all
+three.
+
+**AND THE COVERAGE NUMBER CANNOT MOVE, WHICH IS THE POINT** (v4.12's
+lesson, one grant over). The card was already `full`; the sweep is blind
+because this is WEAKER than printed. Only reading the printed words next
+to each other finds it.
+
+### ASK WHAT THE PARSE GRANTS, NOT WHAT THE FLAG SAYS (v4.18)
+
+The audit's *"text mentions go again but no clause parses it"* flag names
+**15 cards**. Driven — walking each whole parse for a `ga` op or a truthy
+`ga` field — **fourteen were correct**, the grant carried somewhere
+`fx.ga` is not:
+
+| carrier | cards |
+|---|---|
+| a powCard route (`attackRx`, `instant`) | Bolt'n Boots · Stalker's Steps · Compass of Sunken Depths |
+| `arsenalUp` · `payCost` · `optCost` · `millCost` | Swift Shot · Refraction Bolters · Jack Be Quick · Jittery Bones |
+| `auraWeapon.gaWithCounters` | Cosmo |
+| read as a **CONDITION**, not a grant | Frailty Trap · Lair of the Spider (`defGA`) · Rush of Power (`hasGa`) |
+
+**A FLAG LIST IS A LEAD LIST** (v3.17, v4.00), and this one over-reports in
+the safe direction. What separates the real gap from the noise is asking
+**whether the parse grants a go again ANYWHERE**, which is a fifteen-line
+walk over the whole `fx` object — never reading the flag, and never a
+hand-picked list of fields.
+
+**A HAND-PICKED FIELD LIST REPORTED TWO BUILT CARDS AS UNBUILT.** The
+first version of that walk checked a dozen field names by hand and omitted
+`arsenalUp` and `auraWeapon`, so Swift Shot and Cosmo came back empty and
+looked like gaps. **Enumerate every set field; do not name the ones you
+expect.** Check your own fixture — and the same pass had `assert.equal(pend.ga,
+undefined)` fail against a correct engine, because the field is an explicit
+`false`.
 
 ### A FAULT IS NOT A ROUTE, AND THE REPORT SAID IT WAS (v4.17)
 
