@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.04"; /* v4.04 - A TOKEN THAT WORKED AND READ NOTHING. v4.02's approximation ledger pins the set of pool records reading `tier: none` per KIND, and its TOKEN set held EIGHT - seven of which genuinely do nothing, and INERTIA, which works. `effects.isInertia` matched the token by NAME (`norm(b.card.name) === "inertia"`), which is the golden rule broken at the top of CLAUDE.md and exactly v3.22's Runechant defect one token over: built by name, while the parser filed its clause `skip` and the card reported reading nothing. A TIER THAT SAYS `none` ON A CARD THAT WORKS IS A LEAD (v3.93), third outing. Measured before building: Inertia is the pool's ONLY record printing "put all cards from your hand and arsenal on the bottom of your deck", and the SCHEDULE half has read since v3.07 across eight "destroy this, then" records - it was the payload that had no reader, so the whole clause refused (v2.29, never parse ahead of wiring). `parser.isHandWipe` reads the printed clause now and `isInertia` asks it, so the token reports `full` and a second card printing the same wipe would work for free; the reader is a WHOLE-CARD one held off `fx.ops` (v3.56) because left in `ops` the wipe fires when the token is PLAYED rather than at the end phase (v3.07's suspense bug) and emitting the `selfDestruct` would hand it to `sweepArena` as well, destroying it twice and moving the wipe in the end-phase order. THE NAME AND THE TEXT MUST BE ABLE TO DISAGREE or no drill can tell the two readers apart, and no pool card does - so both fixtures are synthetic (v3.73): a token printing the wipe under an odd name must fire it, and a token NAMED Inertia printing Ward 1 must not, which is the half that bites, and it needed `fxReset` because `fxParse` memoizes on `name|pitch` and a fake Inertia poisons that key for every later reader. AND THE LEDGER CAUGHT ITS OWN CHANGE: the pinned token set went 8 -> 7 the moment the card was built, which is what a `stated`/`open` record is for. Also corrected v4.02's own bare-when-this-attacks probe, which classified by OP KIND and pinned eleven - driven, `execute`'s pre-run already runs draw/discardRandom at declaration, so the honest numbers are 17 cards / 9 late / SEVEN observably late, and each is now left for its own named reason rather than one blanket approximation. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
+window.APP_VER = "4.05"; /* v4.05 - HEAVE'S FACE-UP PUT FIRED NO TRIGGER. v3.71 measured `heave` as the THIRD site that sets `_faceUp` and fires nothing, called it latent because Thunder Quake is Guardian and no arrow deck holds it, and recorded it rather than half-moving it - the honest call at the time, and the reason it stayed open is structural rather than a judgement: `heave` is module-level in effects.js and `faceUpArsenal` lives INSIDE `makeEffects`, so the zone move could not reach the one reader. THE FIX IS NOT TO MOVE THE READER, IT IS TO EXPOSE IT: `faceUpArsenal` joins `makeEffects`' returned object beside `runOps` and the two ARSENAL STEPS call it after the heave resolves, so `heave` stays a zone move and there is still exactly ONE face-up walk (v3.71's whole point). THE GUARD HAD TO LEARN AN OPT-IN: `faceUpArsenal` returns early on a card that is ALREADY face up, which is right for every existing caller and wrong for this one - heave sets `_faceUp` itself, because the card prints it and the pre-existing drill rightly pins that. `already` is a fifth opt-in parameter (v3.58), so no other call site moves. AND THE ZONE IS THE CALLER'S ANSWER, "hand" (v3.72): defaulted to "deck" a heave pays an action point off Back Alley Breakline for a card that came out of the hand. BOTH BOARDS, because a schedule is written per board (v3.01) and this one is written twice. THE ONE-BODY DRILL WAS DEAD CODE READING LIKE A RULE (v3.67, v3.77): counting `function faceUpArsenal(` can only ever answer 1, since two of that name in one scope is a JS redeclaration - the sabotage came back SILENT because it could not express the bug. It pins that every `arsenalUp` READ falls inside the one body now, and its first bound (`\n  function `) was hundreds of lines too wide, so a second reader planted in `applyAnswer` was silent too. A BOUND THAT IS TOO WIDE READS EXACTLY LIKE A DRILL THAT PASSES; six sabotages bite now. The fixture is synthetic because no pool card prints both halves (v3.73), and its first draft spelled "face up" where the pool prints "face-up" - v3.79's slip, second outing. Full history in CHANGELOG.md; this comment stays one sentence. (No end-phase step letter is named here: priority.test.js slices this file between those markers, and an earlier mention moves the slice.) */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2983,6 +2983,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                                         gy, gyDisc, had6ThisTurn, mkRune, openPrompt, tokSeq, typeAbbr, winCheck});
   const runOps = _EFX.runOps;
 
+  /* HEAVE'S FACE-UP PUT (v4.05). `heave` is module-level and cannot reach
+     the closure that holds this, so both boards call it from their own
+     arsenal step — one body, two more callers, rather than a second copy
+     of the trigger reading. */
+  const faceUpArsenal = _EFX.faceUpArsenal;
+
   const execute = _EFX.execute;
 
   /* AN OPTIONAL ADDITIONAL COST ON A PLAYED REACTION (v3.34) — Staunch
@@ -3821,6 +3827,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const h = DawnEffects.heave(s, 0, off.uid);
     let n = h.game;
     for(const m of h.msgs) n = L(n, m);
+    /* THE THIRD FACE-UP SITE FIRES ITS TRIGGER NOW (v4.05). `heave` is
+       module-level and cannot reach `faceUpArsenal`, so v3.71 recorded
+       this as the one put that fired nothing. The zone is "hand" — heave
+       takes the card from there, and a default of "deck" would fire the
+       from-the-deck trigger off it (v3.72). */
+    n = faceUpArsenal({...n, actor:0}, [], "Heave", "hand", true);
     if(h.ops.length) n = runOps({...n, actor:0}, h.ops, "Heave");
     return afterArsenal(n);
   });

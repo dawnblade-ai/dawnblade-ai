@@ -9,6 +9,81 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.05 — heave's face-up put fired no trigger
+
+v3.71 built `faceUpArsenal` as the **one** face-up walk and measured a
+third site that sets `_faceUp` and fires nothing: **`heave`**. It recorded
+that rather than half-moving it, and it was right to — Thunder Quake is
+Guardian, no arrow deck holds it, so the gap is **latent**. What the note
+did not say is *why* it stayed open, and the reason is structural rather
+than a judgement: **`heave` is module-level in `effects.js` and
+`faceUpArsenal` lives inside `makeEffects`**, so the zone move could not
+reach the one reader even to ask.
+
+**THE FIX IS NOT TO MOVE THE READER — IT IS TO EXPOSE IT.**
+`faceUpArsenal` joins `makeEffects`' returned object beside `runOps`, and
+the two **arsenal steps** call it after the heave resolves. `heave` stays
+a zone move, and there is still exactly one face-up walk, which is
+v3.71's whole point. Moving the walk out to module level instead would
+have needed the actor helpers, the parser and `say` — a second copy in
+all but name.
+
+**THE GUARD HAD TO LEARN AN OPT-IN.** `faceUpArsenal` returns early on a
+card that is **already face up**, which is correct for every existing
+caller — an arsenal set puts a card face DOWN and the enabler is what
+turns it up — and wrong for this one, because heave sets `_faceUp`
+itself. It does that because **the card prints it** — the reminder text
+v3.32 read off the printing says *"put Thunder Quake FACE UP into your
+arsenal"* — and a pre-existing drill rightly pins it. The first attempt made heave a plain
+zone move and broke that drill; `already` is a **fifth opt-in
+parameter** (v3.58) instead, so no other call site moves.
+
+**AND THE ZONE IS THE CALLER'S ANSWER** (v3.72). Heave takes the card
+from **hand**; defaulted to `"deck"` it fires Back Alley Breakline's
+*"puts this face-up into a zone from your deck"* and pays an action point
+for a card that came out of the hand — v3.79's card, one route over.
+
+**BOTH BOARDS**, because a schedule is written per board (v3.01) and this
+one is written twice — `judge.doArsenal` and the trainer's `doHeave`.
+
+### THE ONE-BODY DRILL WAS DEAD CODE READING LIKE A RULE
+
+Written as `assert.equal(count of "function faceUpArsenal(", 1)`, it
+**can only ever answer 1**: two functions of that name in one scope is a
+JS redeclaration. The sabotage came back SILENT, and the silence was the
+harness, not the drill — v3.62's rule, and v3.67/v3.77's dead-guard shape
+in a test file rather than in the engine.
+
+It pins that **every `arsenalUp` read in the file falls inside the one
+body** now. And its first bound was `\n  function `, whose next match is
+**hundreds of lines away** — so the body swallowed `applyAnswer` and a
+second reader planted there was silent too. **A BOUND THAT IS TOO WIDE
+READS EXACTLY LIKE A DRILL THAT PASSES.** Bounded at the next same-indent
+declaration of any kind, six sabotages bite: the `already` opt-in
+removed, each board's call deleted, the zone changed to `"deck"`, and a
+second reader in `heave` or in `applyAnswer`.
+
+**THE FIXTURE IS SYNTHETIC** because no pool card prints both halves
+(v3.73) — and its first draft spelled *"face up"* where the pool prints
+*"face-up"*, so the trigger did not parse and the drill failed as though
+the call site were missing. **v3.79's slip, second outing; check your own
+fixture.**
+
+**AND THE LEDGER CARRIES IT.** `tools/approx.js` gains a `closed`
+record — v3.71's note was an approximation record living in prose, and a
+prose record is a test with no assertion (v3.41). Its probe asserts the
+reader is **reachable from outside `makeEffects`** and that the trigger
+fires, so a regression is red; the census moved **26 → 27 records, 7 → 8
+closed**, which is a deliberate edit to the pin and is what the pin is
+for. Both halves of the census caught the record arriving before the
+probe did.
+
+Measured: `npm test` 2221 drills, 0 fail. Coverage unmoved (381 full / 21
+part / 3 none) — this is a wiring change, not a parser change, which is
+exactly why no tool here could see it.
+
+---
+
 ## v4.04 — a token that worked and read nothing
 
 v4.02's approximation ledger pins the set of pool records reading

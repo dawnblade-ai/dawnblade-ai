@@ -145,10 +145,10 @@ test("every record carries a status the probes know how to point at", () => {
    `wire.test.js`'s HEADLESS list and the symmetry ledger. */
 test("the ledger's shape is pinned — moving a record is a deliberate edit", () => {
   const n = s => Object.values(APPROX).filter(v => v.status === s).length;
-  assert.equal(Object.keys(APPROX).length, 26, "record count moved");
+  assert.equal(Object.keys(APPROX).length, 27, "record count moved");
   assert.equal(n("stated"), 10, "stated count moved");
   assert.equal(n("open"),    9, "open count moved");
-  assert.equal(n("closed"),  7, "closed count moved");
+  assert.equal(n("closed"),  8, "closed count moved");
 });
 
 /* ============================================================
@@ -558,6 +558,37 @@ probe("unbuilt-three", () => {
 /* A runechant created BY playing an attack must NOT pop for that swing:
    the token's own trigger is "when you PLAY an attack action card", and
    one that did not exist at that instant never triggered. */
+/* CLOSED AT v4.05. The probe asserts the thing IS BUILT — a card put
+   face-up into the arsenal BY HEAVE fires its face-up trigger — so a
+   regression is red. STILL LATENT in the pool (Thunder Quake is Guardian,
+   no arrow deck holds it), which is exactly why nothing else would ever
+   notice the wiring coming back out. */
+probe("heave-faceup-trigger", () => {
+  H.db();
+  const both = {
+    uid:"apx-hv", name:"Approx Heave Arrow", pitch:1, cost:0, power:3,
+    tt:"Ranger Attack Action - Arrow", ty:["Ranger","Attack","Action"],
+    kw:[], gkw:[],
+    tx:"Heave 3\nWhen this is put face-up into your arsenal, it gets +2{p} this turn."
+  };
+  const g = H.state({hand:[both], res:3, ap:0}, {}, {turn:3, actor:0});
+  const offer = E.heaveOffer(g, 0);
+  assert.ok(offer, "fixture: the synthetic card is not heaveable");
+  const h = E.heave(g, 0, offer.uid);
+
+  /* THE READER MUST BE REACHABLE FROM OUTSIDE `makeEffects` — that is
+     the whole of what v4.05 changed, and it is what a regression would
+     undo first. */
+  const fxq = J.withEffects({...h.game, actor:0}, fx => fx);
+  assert.equal(typeof (fxq && fxq.faceUpArsenal), "function",
+    "`faceUpArsenal` is no longer exposed, so no arsenal step can fire the trigger");
+
+  const after = J.withEffects({...h.game, actor:0},
+    (fx, s) => fx.faceUpArsenal(s, [], "Heave", "hand", true));
+  assert.equal(after.sides[0].arsenal._arsPow, 2,
+    "heave's face-up put fires no trigger again — v3.71's third site, reopened");
+});
+
 probe("runechant-same-swing", () => {
   /* SABOTAGE FOUND THIS PROBE, NOT THE ENGINE. The first draft grepped
      effects.js for `runeAtPlay` — and renaming the DECLARATION left the

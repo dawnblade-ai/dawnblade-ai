@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.01
+**Current version:** v4.05
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2213 drills**.
+This is `node --test "test/*.test.js"` — currently **2221 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,54 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### HEAVE'S FACE-UP PUT FIRED NO TRIGGER (v4.05)
+
+v3.71 made the face-up walk one body and measured a **third** site that
+sets `_faceUp` and fires nothing — `heave` — then recorded it rather than
+half-moving it. That was right: Thunder Quake is Guardian, no arrow deck
+holds it, so the gap is **latent**. What the note omitted is *why* it
+stayed open, and it is structural: **`heave` is module-level in
+`effects.js` and `faceUpArsenal` lives inside `makeEffects`**, so the zone
+move could not reach the one reader even to ask it.
+
+**THE FIX IS NOT TO MOVE THE READER, IT IS TO EXPOSE IT.**
+`faceUpArsenal` joins `makeEffects`' returned object beside `runOps` and
+the two **arsenal steps** call it. `heave` stays a zone move and there is
+still exactly one walk. Moving the walk out to module level instead would
+have needed the actor helpers, the parser and `say` — a second copy in
+all but name.
+
+**THE GUARD HAD TO LEARN AN OPT-IN.** `faceUpArsenal` returns early on a
+card that is ALREADY face up — correct for every existing caller, because
+an arsenal set puts a card face DOWN and the enabler turns it up — and
+wrong for this one, since **heave sets `_faceUp` itself because the card
+prints it** (v3.32's reading of the printing). `already` is a **fifth
+opt-in parameter** (v3.58), so no other call site moves.
+
+**AND THE ZONE IS THE CALLER'S ANSWER** (v3.72): `"hand"`. Defaulted to
+`"deck"` a heave fires Back Alley Breakline and pays an action point off
+a card that came out of the hand — v3.79's card, one route over.
+
+### A BOUND THAT IS TOO WIDE READS EXACTLY LIKE A DRILL THAT PASSES (v4.05)
+
+The one-body drill was written `assert.equal(count of "function
+faceUpArsenal(", 1)`. **It can only ever answer 1** — two functions of
+that name in one scope is a JS redeclaration — so it was **dead code
+reading like a rule** (v3.67, v3.77) in a test file, and its sabotage came
+back SILENT because it could not express the bug (v3.62).
+
+Rewritten to pin that **every `arsenalUp` READ falls inside the one
+body**, it was silent a second time: the body was bounded at the next
+`\n  function `, whose next match is hundreds of lines away, so it
+swallowed `applyAnswer` and a reader planted there passed. Bounded at the
+next same-indent declaration **of any kind**, six sabotages bite — the
+opt-in removed, each board's call deleted, the zone changed, and a second
+reader in either of two places.
+
+**WHEN A ONE-BODY CLAIM IS A COUNT, ASK WHAT THE OTHER COUNT WOULD LOOK
+LIKE.** If the language forbids the second copy, the count is not the
+property — the READERS are.
 
 ### TWO CARDS THAT NEEDED NO NEW MACHINERY (v4.01)
 
@@ -1893,9 +1941,10 @@ the opposite: **check your own fixture**, fourth time.)
 **THE FACE-UP WALK IS ONE BODY NOW** (`faceUpArsenal`). It was inline in
 `applyAnswer` because a `pick` from hand was the only route that existed;
 a second copy is how one board fires Swift Shot's go again and the other
-does not. `heave` is a THIRD site that sets `_faceUp` and fires no
+does not. `heave` was a THIRD site that sets `_faceUp` and fired no
 trigger — measured (Thunder Quake is Guardian, no arrow deck holds it),
-latent, and recorded rather than half-moved.
+latent, and recorded rather than half-moved. **BUILT AT v4.05**, and the
+record is discharged; see the section of that name below.
 
 **`parseHeroPower` ACCEPTS A SECOND NAMED SHAPE**, never a relaxation.
 The powCard carries the whole printed line and `execute` re-reads it, so

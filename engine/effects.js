@@ -3766,10 +3766,17 @@ function makeEffects(ctx){
      above it in this closure and a `const` arrow would be in the temporal
      dead zone for any reader of the file (v3.12's `quotedOnHit`, same
      reasoning one module over). */
-  function faceUpArsenal(n0, stamp, srcName, from){
+  /* `already` IS AN OPT-IN FOR A CARD THE CALLER HAS JUST TURNED UP
+     ITSELF (v4.05). The early return below is an IDEMPOTENCE guard for
+     the pick route — call it twice and the trigger must not fire twice —
+     and `heave` is the one caller that legitimately arrives with the card
+     already up, because it does what the card prints on its own. Opt-in
+     (v3.58), so every existing caller is untouched and a missing flag
+     fires nothing rather than firing twice. */
+  function faceUpArsenal(n0, stamp, srcName, from, already){
     let n = n0;
     const put = act(n).arsenal;
-    if(!put || put._faceUp) return n;
+    if(!put || (put._faceUp && !already)) return n;
     const pfx = fxParse(put);
     const up = {...put, _faceUp:true, _upTurn:n.turn};
     /* TURNING IS NOT PUTTING (v3.72). Spire Sniping alone prints "put OR
@@ -5455,7 +5462,18 @@ function makeEffects(ctx){
 
   return {runOps, execute, afterDefenders, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
-          activateHandAbility, foeTurnIce, takeInstantNext};
+          activateHandAbility, foeTurnIce, takeInstantNext,
+          /* EXPOSED FOR HEAVE (v4.05). `heave` is module-level — it returns
+             `{game,msgs,ops}` rather than threading `n` — so it could not
+             reach this closure, and v3.71 recorded it as "a THIRD site that
+             sets `_faceUp` and fires no trigger", latent and left alone
+             rather than half-moved.
+
+             Exposing the ONE body is what closes it without growing a
+             second copy of the trigger reading: both heave call sites hold
+             an effects context, so they call this after the put exactly as
+             `applyAnswer` does. */
+          faceUpArsenal};
 }
 
 /* ---- FROSTBITE'S END-PHASE THAW (v2.74) ------------------------------
@@ -5953,7 +5971,16 @@ function heave(game, seat, uid){
   me.res = (me.res || 0) - offer.n;
   me.hand = (me.hand || []).filter(c => c.uid !== offer.uid);
   /* THE SAME STAMPS THE FACE-UP ARSENAL MACHINERY ALREADY READS (v2.33).
-     `_upTurn` is what makes "this turn" mean this turn. */
+     `_upTurn` is what makes "this turn" mean this turn.
+
+     HEAVE DOES WHAT THE CARD PRINTS, ON ITS OWN (v4.05). A first attempt
+     at firing the trigger split this in two — heave putting the card face
+     DOWN and the call site turning it up — and that is the wrong contract
+     for a module-level function two boards call: a two-call pairing is
+     exactly the kind a caller forgets, and this project's whole ledger is
+     made of rules that existed on one board. The card goes up here, and
+     the TRIGGER is fired by the call site through the one reader, which
+     takes `already` for precisely this case. */
   me.arsenal = Object.assign({}, offer.card, {_faceUp: true, _upTurn: game.turn});
   sides[seat] = me;
   const n = Object.assign({}, game, {sides});

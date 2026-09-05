@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.04 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
+# Handoff — Dawnblade, at v4.05 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -8,7 +8,12 @@ own approximation records had stopped being true, plus three more in the
 keyword ledger and two real defects (`runeAtPlay` dead since v3.22, and
 `crindex.js` reading its own output). **v4.03** then found and fixed the
 biggest two-player bug this project has had in some time: **every
-attack-reaction pump was dropped at the table, every time.**
+attack-reaction pump was dropped at the table, every time.** **v4.04**
+deleted a card special-cased by NAME (Inertia). **v4.05** closed the last
+buildable item on the named CR-gap list — **heave's face-up put fired no
+trigger**, recorded latent at v3.71 and blocked only by `faceUpArsenal`
+living inside `makeEffects` where the module-level `heave` could not
+reach it.
 
 ## ⚠ START HERE: THE TWO LEDGERS
 
@@ -94,8 +99,9 @@ found by sabotage. The honest count is 1000.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 
-`npm run audit`: **381 full / 21 part / 3 none**. Neither v4.02 nor v4.03
-moved a card, deliberately.
+`npm run audit`: **381 full / 21 part / 3 none**. v4.02, v4.03 and v4.05
+moved no card, deliberately — all three are WIRING, which is exactly why
+no coverage tool could see any of them.
 
 | card | waiting on |
 |---|---|
@@ -123,6 +129,13 @@ moved a card, deliberately.
   when-this-attacks family; 12 crush riders of which 11 read; 13 attack
   reactions across 33 printings; 19 Arcane Barrier records against a dummy
   deck that deals zero arcane.
+- **A ONE-BODY CLAIM THAT IS A COUNT MAY BE UNFALSIFIABLE (v4.05).**
+  `assert.equal(count of "function faceUpArsenal(", 1)` can only ever
+  answer 1 — the language forbids the second copy — so it was dead code
+  reading like a rule, in a TEST file. And its replacement was silent too
+  until the body's bound was narrowed: **a bound that is too wide reads
+  exactly like a drill that passes.** When the count cannot move, pin the
+  READERS instead.
 
 
 ---

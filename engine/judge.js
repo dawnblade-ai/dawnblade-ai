@@ -2360,6 +2360,24 @@ function doArsenal(g, a, seat){
     const h = E.heave(n, seat, a.uid);
     n = h.game;
     for(const m of h.msgs) n = say(n, m);
+    /* HEAVE IS THE THIRD SITE THAT PUTS A CARD FACE UP (v4.05), and until
+       now it was the only one that fired no trigger — v3.71 measured that
+       and recorded it rather than half-moving the reader. `heave` is
+       module-level so it cannot reach `faceUpArsenal` itself; the call
+       site holds an effects context and makes it, exactly as
+       `applyAnswer` does for a pick.
+
+       THE ZONE IS `"hand"`, because that is where heave takes the card
+       from — its printed reminder text says so, and a default of `"deck"`
+       would fire Back Alley Breakline's from-the-deck trigger off it
+       (v3.72's rule: the source zone is the caller's answer).
+
+       LATENT, AND MEASURED: Thunder Quake is the pool's only heave card
+       and it is a Guardian/Brute action, so no deck holds it beside an
+       arrow. A printed distinction is read whether or not anything
+       reaches it today (v3.73). */
+    n = withEffects({...n, actor: seat},
+      (fx, s2) => fx.faceUpArsenal(s2, [], "Heave", "hand", true));
     if(h.ops.length)
       n = withEffects({...n, actor: seat}, (fx, s2) => fx.runOps(s2, h.ops, "Heave"));
     return endPhaseAfterArsenal({...n, arsenalFor: null}, seat);

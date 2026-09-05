@@ -319,3 +319,128 @@ test("both boards ask the ONE body, and neither restates the rule", () => {
     }
   }
 });
+
+/* ============================================================
+   HEAVE IS THE THIRD FACE-UP SITE, AND IT FIRED NOTHING (v4.05)
+
+   v3.71 made `faceUpArsenal` one body after finding two copies of the
+   walk, and measured a THIRD site that sets `_faceUp` and fires no
+   trigger: `heave`. It was recorded rather than half-moved, because
+   `heave` is module-level — it returns `{game,msgs,ops}` instead of
+   threading `n` — so it cannot reach the closure that holds the reader.
+
+   THE FIX IS THE ONE BODY WITH TWO MORE CALLERS. `makeEffects` exposes
+   `faceUpArsenal`, and both boards call it from their own arsenal step
+   exactly as `applyAnswer` does for a pick. A second copy of the trigger
+   reading is the thing v3.71 refused to create.
+
+   IT IS LATENT AND THAT IS MEASURED: Thunder Quake is the pool's only
+   heave card and it is a Guardian/Brute action, so no deck holds it
+   beside an arrow. **A printed distinction is read whether or not
+   anything reaches it today** (v3.73), and the drills below are
+   synthetic for exactly that reason.
+   ============================================================ */
+
+test("a card heaved face up FIRES its face-up trigger", {skip}, () => {
+  H.db();
+  /* A synthetic card that prints heave AND an arsenal-up trigger. No pool
+     card does both — that is the latency — so the fixture has to. */
+  const both = {
+    uid: "hv1", name: "Heave Probe Arrow", pitch: 1, cost: 0, power: 3,
+    tt: "Ranger Attack Action - Arrow", ty: ["Ranger", "Attack", "Action"],
+    kw: [], gkw: [],
+    /* THE PRINTED WORDING IS "face-up", HYPHENATED, and every arrow in
+       the pool spells it that way. The first draft wrote "face up" and
+       the trigger simply did not parse — which reads exactly like the
+       call site not firing. v3.79 records the identical slip in a
+       MEASUREMENT; check your own fixture. */
+    tx: "Heave 3\nWhen this is put face-up into your arsenal, it gets +2{p} this turn."
+  };
+  const g = H.state({hand: [both], res: 3, ap: 0}, {}, {turn: 3, actor: 0});
+  const offer = E.heaveOffer(g, 0);
+  assert.ok(offer, "fixture: the synthetic card is not heaveable");
+
+  const h = E.heave(g, 0, offer.uid);
+  const up = h.game.sides[0].arsenal;
+  assert.ok(up && up._faceUp, "heave did not set the card face up at all");
+
+  /* The put alone stamps nothing — the TRIGGER is what does, and it is
+     the call site that fires it. */
+  const after = J.withEffects({...h.game, actor: 0},
+    (fx, s) => fx.faceUpArsenal(s, [], "Heave", "hand", true));
+  assert.equal(after.sides[0].arsenal._arsPow, 2,
+    "the face-up trigger did not fire for a card put there by HEAVE — the third " +
+    "site is silent again, which is what v3.71 recorded and v4.05 closed");
+});
+
+test("both boards call it — neither heave site is the silent one", {skip}, () => {
+  /* A CLAIM ABOUT TWO CALL SITES, and one of them lives in a babel block
+     no drill can execute. judge's half is DRIVEN below; the trainer's is
+     pinned as source, precisely enough that deleting the call breaks this
+     line. v3.01's shape is the recurring defect here, so asserting only
+     the board a drill can reach is exactly how it comes back. */
+  const fs = require("fs"), path = require("path");
+  const ROOT = path.join(__dirname, "..");
+  const jd = fs.readFileSync(path.join(ROOT, "engine", "judge.js"), "utf8");
+  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+
+  const jHeave = jd.slice(jd.indexOf("E.heave(n, seat, a.uid)"));
+  assert.match(jHeave.slice(0, 1400), /fx\.faceUpArsenal\(s2, \[\], "Heave", "hand", true\)/,
+    "judge's arsenal step no longer fires the face-up trigger after a heave");
+
+  const tHeave = html.slice(html.indexOf("DawnEffects.heave(s, 0, off.uid)"));
+  assert.match(tHeave.slice(0, 1200), /faceUpArsenal\(\{\.\.\.n, actor:0\}, \[\], "Heave", "hand", true\)/,
+    "the trainer's arsenal step no longer fires it");
+
+  /* AND THE ZONE IS "hand", NEVER "deck". Heave takes the card from hand;
+     a default of "deck" would fire Back Alley Breakline's from-the-deck
+     trigger off every heave (v3.72's rule, v3.79's card). */
+  assert.ok(!/faceUpArsenal\([^)]*"Heave",\s*"deck"\)/.test(jd + html),
+    "a heave now claims to put from the DECK — that pays an action point off " +
+    "Back Alley Breakline for a card that came out of the hand");
+});
+
+test("the reader is ONE body — every arsenal-up read is inside it", {skip}, () => {
+  const fs = require("fs"), path = require("path");
+  const ef = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+
+  /* THE FIRST DRAFT COUNTED `function faceUpArsenal(` AND WAS DEAD CODE
+     READING LIKE A RULE (v3.67, v3.77). Two functions of that exact name
+     in one scope is a JS redeclaration, so the count can only ever be 1 —
+     the sabotage came back SILENT because it could not express the bug.
+     What a second copy actually looks like is a second reader of the
+     trigger, under any name, so that is what is pinned: every
+     `arsenalUp` read in the file must fall inside this one body. */
+  const start = ef.indexOf("function faceUpArsenal(");
+  assert.ok(start > 0, "faceUpArsenal is gone — the one reader has been renamed or removed");
+  /* BOUND IT AT THE NEXT SAME-INDENT DECLARATION OF ANY KIND. The first
+     draft looked only for `\n  function `, and the next one of those is
+     hundreds of lines away — so the body swallowed `applyAnswer` and a
+     second reader planted THERE came back silent. A bound that is too
+     wide reads exactly like a drill that passes. */
+  const endM = /\n  (?:function|const|let|var) /.exec(ef.slice(start + 10));
+  assert.ok(endM, "could not bound the body; the anchor moved");
+  const end = start + 10 + endM.index;
+
+  const reads = [];
+  const rx = /\barsenalUp\b/g;
+  let m; while((m = rx.exec(ef))) reads.push(m.index);
+  assert.ok(reads.length >= 2, "the scan found no arsenal-up read at all — it is aimed wrong");
+
+  const outside = reads.filter(i => (i < start || i > end) && !inComment(ef, i));
+  assert.deepEqual(outside, [],
+    "an arsenal-up read exists outside `faceUpArsenal` — that is the two-copy " +
+    "defect v3.71 fixed, and the reason heave was left alone rather than half-moved");
+});
+
+/* Comments name the field constantly in this file, and a scan that cannot
+   tell prose from code reports them as readers — the false positive
+   `sync.test.js` documents. Strip them by position rather than by
+   rewriting the source. */
+function inComment(src, at){
+  const before = src.slice(0, at);
+  const line = before.slice(before.lastIndexOf("\n") + 1);
+  if(/(^|[^:])\/\//.test(line)) return true;
+  const ob = before.lastIndexOf("/*"), cb = before.lastIndexOf("*/");
+  return ob > cb;
+}

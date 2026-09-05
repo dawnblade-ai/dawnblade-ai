@@ -230,6 +230,19 @@ const APPROX = {
 
 /* ---- C. RECORDS THIS SWEEP FOUND STALE ----------------------------- */
 
+"heave-faceup-trigger": {
+  status:"closed", cr:null, board:"both", since:"v3.71", swept:"v4.05",
+  claim:"WAS: 'heave is a THIRD site that sets `_faceUp` and fires no trigger — "+
+        "measured, latent, and recorded rather than half-moved.'",
+  why:"CLOSED AT v4.05. It was blocked by SHAPE rather than by judgement: `heave` "+
+      "is module-level in effects.js and `faceUpArsenal` lives inside "+
+      "`makeEffects`, so the zone move could not reach the one reader. The reader "+
+      "is EXPOSED on makeEffects' returned object now and both arsenal steps call "+
+      "it — heave stays a zone move, and there is still exactly one face-up walk. "+
+      "STILL LATENT: Thunder Quake is Guardian and no arrow deck holds it, so no "+
+      "pool fixture drives this and only a synthetic can (v3.73)."},
+
+
 "runechant-same-swing": {
   status:"closed", cr:null, board:"both", since:"v2.23", swept:"v4.02",
   claim:"WAS: 'a runechant created by PLAYING an attack pops on that same swing; "+
