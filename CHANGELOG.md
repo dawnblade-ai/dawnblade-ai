@@ -9,6 +9,74 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.12 — two "it"s, one anchor
+
+The pool prints the same rider about two different subjects:
+
+> *"Your next attack this turn gets go again. **If it's RED, it gets
+> +1{p}.**"* — FLYING HIGH (red / yellow / blue)
+>
+> *"When this attacks, reveal the top card of your deck. **If it's BLUE,
+> pitch it.**"* — SALTWATER SWELL
+
+`classifyClause` sees one clause at a time, so it cannot know which "it"
+it is holding. It had ONE answer — `/^it is blue$/ -> revBlue`, written
+for the reveal — and that anchor claimed Flying High's rider too.
+**Measured: `revBlue` had exactly one claimant in the whole pool and it
+was the wrong card.**
+
+**SO THE BLUE PRINTING READ `tier: full` AND DID NOTHING, TWICE OVER.**
+The condition asked `n.revealed.pitch === 3` on a card that reveals
+nothing, and the payload `["self", 1]` pumped **Flying High itself** — a
+Generic NON-ATTACK with no printed power. Red and yellow were honestly
+`skip`. v2.33's Bull's Eye Bracers trap (sixth outing: *"it" is the card
+the head sentence named, never the source*) wearing v3.58's disguise (a
+tier that says a card is read while nothing happens).
+
+**AND NO TOOL HERE COULD SEE IT — INCLUDING BY THE NUMBERS.** Coverage
+counts the clause consumed, and its count **cannot move at all**, because
+only the blue printing is decked (twice) and it was already reported
+`full`. The fairness sweep is one-sided toward too-STRONG and all three
+printings are WEAKER than printed.
+
+**THE DISCRIMINATOR IS THE HEAD CLAUSE**, so the fix is a whole-card
+pre-pass beside `eachArsPut` — and it marks **only the rider** handled.
+The head already reads as a bare `gaNext`; re-emitting it would be a
+second reader of one clause, which is the defect being fixed.
+
+**IT IS A CONDITION, NOT A RESTRICTION** (v3.30, one grant over). A
+qualified `buffQ` **waits** for a card it matches (v2.30) — right for
+*"your next ARROW attack"*, and stronger than printed here: the line
+names YOUR NEXT ATTACK, and a red one takes the go again and ends the
+sentence. The entry is marked **`once`** and spent either way. Opt-in, so
+every existing entry keeps its shape (v3.58), and **`WIRE_V` goes 5 → 6**
+— a v5 client reading a v6 entry keeps a grant the card ended.
+
+**`revBlue` IS RETIRED**, not kept "in case". Its one emitter was a
+misread, and the neighbouring `revColorPitch` op exists *because* the
+conds loop runs before a declaration-time reveal — so a cond asking about
+`n.revealed` reads the last card's stale reveal or none, and could never
+have been right. A rule with no emitter and a written reason it cannot
+work is dead rules code (v3.77, v3.82, v4.11).
+
+**A PRINTED COLOUR IS A PRINTED FIELD**, so `pitch` joins `qualMatches`
+as its eleventh atom — and the one no tail reader can set, because a
+colour here names a condition on the card the head already picked out.
+`COLOR_PITCH` is **one map with two readers** now (`revColorPitch` and
+this), because two copies of a three-entry table is still the no-mirror
+rule broken inside one file.
+
+**BOTH CENSUSES CAUGHT IT** — conditions **51 → 50**, qualifier atoms
+**10 → 11**. A census that only ever goes UP is half a census.
+
+**ELEVEN SABOTAGES, ELEVEN BITE — AND TWO FOUND MY OWN FIXTURES FIRST.**
+All three printings print **1**, so a hardcoded amount is silent without
+a synthetic (v3.32, v3.74, v3.86) — the drill's own comment said so and
+its first draft asserted `=== 1` against those three anyway. And a BLUE
+follow-up matches the qualifier, so it is spent either way: dropping
+`once` end-to-end needed the **RED** half of the route. *Both halves*
+has to mean both halves of the ROUTE, not only of the matcher.
+
 ## v4.11 — a grant's rider can narrow its own target, and a guard that could not express a bug
 
 v4.10 carried the three Agents' riders onto the powCard and left them

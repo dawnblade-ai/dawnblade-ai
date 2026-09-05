@@ -103,8 +103,14 @@
    no qualifier at all. `takeInstantNext` refuses such an entry rather
    than matching everything (v3.43's rule), so the failure is a lost grant
    rather than a stolen game — and refusing at the handshake is better
-   still. */
-const WIRE_V = 5;
+   still.
+   v4.12 — `buffQ`'s ENTRY gained an optional `once` (Flying High), which
+   is the same one-layer-in change: the flag says the grant is spent by
+   the attack the printed line NAMED whether or not the qualifier matched,
+   so a v5 client reading a v6 entry keeps a grant the card ended — it
+   would wait for a blue attack the sentence never mentioned, which is
+   STRONGER than printed. Refused at the handshake instead. */
+const WIRE_V = 6;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

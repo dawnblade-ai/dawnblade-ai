@@ -29,6 +29,12 @@ const isWeapon = c => /weapon/i.test(c.tt) && c.power!=null;
    same question of a different clause, and two spellings of one closed
    list is the drift this file names on nearly every page. */
 const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward|watery grave";
+/* A PRINTED COLOUR IS A PRINTED PITCH VALUE, and it is one map with two
+   readers (v4.12): `revColorPitch`'s reveal-and-pitch op, and the
+   next-attack pump Flying High gates on its own colour. Two copies of a
+   three-entry table is still the no-mirror rule broken inside one file
+   — the shape that makes a sabotage silent (v3.41's `quotedText`). */
+const COLOR_PITCH = {red: 1, yellow: 2, blue: 3};
 const KW_VOCAB = new RegExp("^(?:" + KW_VOCAB_SRC + ")$", "i");
 const hasGA = c => (c.kw||[]).some(k=>/go again/i.test(k)) || /\bgo again\b/i.test(c.tx||"");
 const arcaneDmg = c => { const m=(c.tx||"").match(/deals? (\d+) arcane damage/i); return m?+m[1]:null; };
@@ -484,7 +490,7 @@ function classifyClause(raw){
      generic splitter — checks the SAME n.revealed the reveal op just set,
      in the same declOps pass. */
   if(m=c.match(/^if it is (red|yellow|blue), pitch it$/))
-    return R([["revColorPitch", {red:1,yellow:2,blue:3}[m[1]]]]);
+    return R([["revColorPitch", COLOR_PITCH[m[1]]]]);
   if(/^if you win, this gets \+\d+\s*\{d\}(?: until end of turn)?$/.test(c))
     return NOOP("clash payoff — the defence step applies this when you win");
   /* RULING (Reaping Blade): a static lock — the hero ahead on life can't gain
@@ -942,7 +948,19 @@ function classifyClause(raw){
        the other end, where the lowercasing silently ate a printed NAME. */
     if(/^this(?: has|'s) \{p\} (?:is )?greater than its base$/.test(cond))
       return Object.assign(rest,{cond:"pumped"});
-    if(/^it is blue$/.test(cond)) return Object.assign(rest,{cond:"revBlue"});
+    /* `/^it is blue$/ -> revBlue` WAS HERE AND IS RETIRED (v4.12). Its
+       only claimant in the whole pool was FLYING HIGH, where "it" is the
+       next attack the head sentence granted rather than a revealed card —
+       so the condition had never once been evaluated about the thing it
+       names. And it could not be: the neighbouring `revColorPitch` op
+       exists BECAUSE the generic conds loop runs before a declaration-time
+       reveal, so a cond asking about `n.revealed` reads the last card's
+       stale reveal or none. A rule with no emitter and a written reason it
+       can never be right is dead rules code, which reads as a rule
+       somebody can reach (v3.77, v3.82, v4.11). Saltwater Swell — the one
+       pool card that genuinely prints the phrase — keeps `revColorPitch`,
+       and a future card printing a different payload after the same reveal
+       refuses honestly and shows up in the audit. */
     /* "if it is Draconic" — a question about the card's own printed talent,
        which may also be granted for the chain by dracNext. */
     if(/^it is draconic$/.test(cond)) return Object.assign(rest,{cond:"isDraconic"});
@@ -2573,6 +2591,8 @@ function qualLabel(qual){
   const pre = qual.g ? qual.g.map(g => g.join(" ")).join(" or ") + " " : "";
   const post = [];
   if(qual.kw) post.push("with " + qual.kw);
+  if(qual.pitch != null) post.push("if it is " +
+    (Object.keys(COLOR_PITCH).find(k => COLOR_PITCH[k] === qual.pitch) || ("pitch " + qual.pitch)));
   if(qual.costLe != null) post.push("with cost " + qual.costLe + " or less");
   if(qual.costGe != null) post.push("with cost " + qual.costGe + " or more");
   if(qual.powLe  != null) post.push("with " + qual.powLe + " or less base {p}");
@@ -2607,6 +2627,14 @@ function qualMatches(qual, card, opts){
   if(qual.aac && !isAtkActionCard(c)) return false;
   if(qual.nonAtk && !isNonAtkActionCard(c)) return false;
   if(qual.kw && !printedKw(c, qual.kw)) return false;
+  /* A PRINTED COLOUR IS A PRINTED FIELD (v4.12) — the safest kind, and the
+     one atom in this matcher that the tail reader cannot set: only the
+     whole-card fold for Flying High builds it, because the colour names a
+     CONDITION on the card the head sentence already picked out rather
+     than a restriction on which card the grant is looking for. A card
+     that prints no pitch (Equipment, Weapons, Blocks) satisfies no colour
+     comparison, for `costLe`'s reason one field up. */
+  if(qual.pitch != null && !(c.pitch != null && +c.pitch === qual.pitch)) return false;
   /* A CARD THAT PRINTS NO COST CANNOT SATISFY A PRINTED COST COMPARISON.
      Equipment, Weapons and Blocks carry `cost: null`, and reading that as
      0 would hand every "cost 1 or less" buff to a weapon swing. */
@@ -4026,6 +4054,66 @@ function fxParse(card){
       fx.ops.push(["eachArsPut"]);
       fx.conds.push({cond: "way:arsPut" + (+nm[1]), op: ["ga"], instead: false, atkHero: false});
       handled.add(ci); handled.add(wi);
+    }
+  }
+
+  /* ---- TWO "IT"S, ONE ANCHOR (v4.12) -------------------------------
+     Flying High prints TWO sentences about ONE card:
+
+       "Your next attack this turn gets go again. If it's RED, it gets
+        +1{p}."                                   — and yellow, and blue
+
+     `classifyClause` sees one clause at a time, so it cannot know what
+     "it" is — and the pool prints the identical rider about a DIFFERENT
+     "it": Saltwater Swell's "reveal the top card of your deck. If it's
+     blue, pitch it", where "it" is the REVEALED card. That is the whole
+     reason a colour condition existed at all, and it claimed Flying
+     High's rider too: measured, `revBlue` had exactly ONE claimant in the
+     pool and it was the wrong card, so it is RETIRED — see the note
+     beside its old home in `classifyClause`.
+
+     THE BLUE PRINTING THEREFORE READ `tier: full` AND DID NOTHING TWICE
+     OVER — the condition asks `n.revealed.pitch === 3` on a card that
+     reveals nothing, and the payload `["self", 1]` pumps Flying High
+     itself, a Generic NON-ATTACK with no printed power. Red and yellow
+     were honestly `skip`. v2.33's Bull's Eye Bracers trap (sixth outing:
+     "it" is the card the head sentence named, never the source) wearing
+     v3.58's disguise (a tier that claims a card is read while nothing
+     happens).
+
+     THE DISCRIMINATOR IS THE HEAD CLAUSE, so this is a whole-card
+     pre-pass: a head that grants the next attack go again says "it" is
+     that attack; a head that REVEALS says it is the revealed card, and
+     Saltwater Swell is pinned unmoved.
+
+     IT IS A CONDITION, NOT A RESTRICTION (v3.30, one grant over). A
+     qualified `buffQ` WAITS for a card its qualifier matches (v2.30) —
+     correct for "your next ARROW attack", and stronger than printed
+     here: the printed line names YOUR NEXT ATTACK, and a red one takes
+     the go again and ends the sentence. `once` says the grant is spent by
+     that attack whether or not the colour matched. It is OPT-IN (v3.58),
+     so every existing `buffQ` entry keeps its shape.
+
+     ONLY THE RIDER IS MARKED HANDLED. The head already reads correctly
+     as a bare `gaNext`, and claiming it here would mean re-emitting an op
+     this file already knows how to build — a second reader of one clause,
+     which is the defect being fixed. */
+  {
+    const hi = clauses.findIndex(c =>
+      /^your next attack this turn gets go again\.?$/i.test(levelIdiom(c.trim())));
+    if(hi >= 0 && !handled.has(hi)){
+      for(let ri = 0; ri < clauses.length; ri++){
+        if(ri === hi || handled.has(ri)) continue;
+        const rm = levelIdiom(clauses[ri].toLowerCase().trim())
+          .match(/^if it is (red|yellow|blue), it (?:gets|gains) \+(\d+)\{p\}\.?$/);
+        if(!rm) continue;
+        /* THE AMOUNT IS THE CARD'S OWN NUMBER (v3.17, v3.32, v3.55) — all
+           three printings say 1 today, so no pool fixture can tell a read
+           number from a hardcoded one and the drill is synthetic (v3.73). */
+        fx.ops.push(["buffNext", +rm[2], {pitch: COLOR_PITCH[rm[1]]}, null, true]);
+        handled.add(ri);
+        break;
+      }
     }
   }
 

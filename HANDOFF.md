@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.11 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.12 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -27,7 +27,9 @@ made reachable and found `heroAbilityLine` knew two windows of three and
 four Agents sharing one `fxParse` memo key — the documented drill gotcha
 as a PRODUCTION defect. **v4.11** built the riders v4.10 had honestly
 left `skip`, and its sabotage pass found **a guard that could not express
-a bug** (below).
+a bug** (below). **v4.12** followed the same family one card further and
+found **Flying High reporting `tier: full` while doing nothing at all** —
+two different "it"s reaching one anchor.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -139,6 +141,67 @@ UNGUARDED and three citations are section pointers, which no drill can
 drive. It pins a SET now. **And the tool was reading its own output** —
 123 of the 1123 citations it reported were `CR-INDEX.md` citing itself,
 found by sabotage. The honest count is 1000.
+
+## ⚠ v4.12 — THE CHEAPEST LEAD IN THE PROJECT, AND WHERE TO POINT IT NEXT
+
+**HOW IT WAS FOUND, IN ONE COMMAND.** After v4.11 I scanned the pool for
+every clause of the shape *"if it \<verb\> X, it gets Y"* — the family
+v4.11 had just built one member of — and printed the clause STATUS beside
+each:
+
+```
+1 | if it has stealth, it gets go again.            Arakni, Redback   [skip]
+1 | if it is an arrow, it gets dominate…            Azalea            [skip]
+1 | if it is red, it gets +1{p}.                    Flying High p1    [skip]
+1 | if it is yellow, it gets +1{p}.                 Flying High p2    [skip]
+1 | if it is blue, it gets +1{p}.                   Flying High p3    [run]   <--
+3 | if it is fused, it gets go again.               Weave Lightning   [skip]
+```
+
+**ONE OF THESE IS NOT LIKE THE OTHERS.** Three printings of one sentence
+and only the blue one read — which meant an anchor was matching a COLOUR
+rather than the shape. It was: `/^it is blue$/ -> revBlue`, written for
+Saltwater Swell's *reveal* and claiming Flying High's rider, where "it"
+is the next attack. The clause reported `run`, the card reported `full`,
+and the +1{p} landed on a condition it could never satisfy and a subject
+with no power.
+
+**THE INSTRUMENT IS: GROUP A FAMILY BY ITS SHAPE, PRINT THE STATUS, AND
+LOOK FOR THE ODD ONE OUT.** A family whose members disagree is either a
+real printed distinction or an anchor matching the wrong thing, and both
+are worth two minutes. v4.04 found Inertia the same way (seven tokens at
+`none` and one that worked).
+
+**AND THE COVERAGE NUMBER COULD NOT MOVE.** Only the blue printing is
+decked; red and yellow are not in the pool. So the card anybody actually
+plays is exactly the one that claimed to be read — the audit had nothing
+to say either before or after.
+
+## ⚠ WHAT IS STILL OPEN IN THAT FAMILY — WEAVE LIGHTNING
+
+> *"The next Lightning or Elemental attack action card you play this turn
+> gets +3{p}. **If it's fused, it gets go again.**"*
+
+Three printings, all `skip`, and it is **the same fold one atom over**:
+the head is a qualified `buffQ`, the rider adds a `gaNextQ` whose
+qualifier is the head's plus `fused`. Everything needed exists —
+`fused` is computed in `execute` at the top of the play and already rides
+on `pend` (v3.96), and `qCtx` (the opts object `qualMatches` reads) is
+built ~400 lines later in the same scope. It is a **fifth play-context
+atom** beside `from`, `boosted`, `pumped` and `atk`.
+
+**WHAT TO CHECK FIRST**: whether any deck holds Weave Lightning AND a
+Lightning/Elemental attack action card that can be fused, or the build is
+LATENT and should say so (v3.73).
+
+**AND SPECTRAL RIDER IS THE ONE TO REFUSE.** *"When this is played, if
+you control a Spectral Shield, this gets overpower"* — the condition is
+buildable (`boardEntryNamed`, v3.86) and the payload is not: `gainKw`
+puts the keyword on `_kwGrant`, whose only reader is `defCap`'s
+**dominate**. Building the gate would file the card `full` with the
+keyword doing nothing, which is the no-op blind spot at its purest.
+`tools/ledger.js` still has overpower as `unreviewed — needs CR wording`,
+and that is the honest state.
 
 ## ⚠ v4.11 — A SABOTAGE THAT FINDS A DEAD GUARD IS NOT A WEAK DRILL
 

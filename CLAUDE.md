@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.11
+**Current version:** v4.12
 
 ---
 
@@ -767,6 +767,58 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### TWO "IT"S, ONE ANCHOR (v4.12)
+
+> *"Your next attack this turn gets go again. **If it's RED, it gets
+> +1{p}.**"* — FLYING HIGH
+>
+> *"When this attacks, reveal the top card of your deck. **If it's BLUE,
+> pitch it.**"* — SALTWATER SWELL
+
+`classifyClause` sees one clause at a time, so it cannot know which "it"
+it is holding. It had ONE answer — `/^it is blue$/ -> revBlue`, written
+for the reveal — and that anchor claimed Flying High's rider too.
+**Measured: `revBlue` had exactly one claimant in the pool and it was the
+wrong card.**
+
+**THE BLUE PRINTING READ `tier: full` AND DID NOTHING TWICE OVER**: the
+condition asked `n.revealed.pitch === 3` on a card that reveals nothing,
+and `["self", 1]` pumped **Flying High itself**, a Generic NON-ATTACK
+with no printed power. v2.33's Bull's Eye Bracers trap, sixth outing.
+
+**AND THE COVERAGE NUMBER CANNOT MOVE, WHICH IS THE POINT.** Only the
+blue printing is decked — twice — and it was already reported `full`.
+Red and yellow are not in the pool at all. So the one printing anybody
+plays is the one that claimed to be read; the sweep is blind too, because
+all three are WEAKER than printed.
+
+**THE DISCRIMINATOR IS THE HEAD CLAUSE**, so the fold is a whole-card
+pre-pass — and it marks **only the rider** handled. The head already
+reads as a bare `gaNext`, and re-emitting it would be a second reader of
+one clause, which is the defect.
+
+**IT IS A CONDITION, NOT A RESTRICTION** (v3.30, one grant over). A
+qualified `buffQ` **waits** for a card it matches (v2.30) — right for
+*"your next ARROW attack"* and stronger than printed here, because the
+line names YOUR NEXT ATTACK and a red one ends the sentence. The entry is
+marked **`once`** and spent either way: opt-in (v3.58), `WIRE_V` 5 → 6.
+
+**A RULE WITH NO EMITTER AND A WRITTEN REASON IT CANNOT WORK IS DEAD.**
+`revBlue` is retired: `revColorPitch` exists *because* the conds loop
+runs before a declaration-time reveal, so a cond reading `n.revealed`
+sees the last card's stale reveal or none (v3.77, v3.82, v4.11).
+
+**A CENSUS THAT ONLY EVER GOES UP IS HALF A CENSUS.** Conditions went
+**51 → 50** and qualifier atoms **10 → 11**, and both drills failed —
+which is what pinning a SET rather than a direction buys.
+
+**AND TWO SABOTAGES FOUND MY OWN FIXTURES FIRST.** All three printings
+print **1**, so a hardcoded amount is silent without a synthetic (v3.32)
+— the drill's own comment said so and its first draft asserted `=== 1`
+against those three anyway. And a BLUE follow-up matches the qualifier,
+so dropping `once` end-to-end needed the **RED** half: *both halves*
+means both halves of the ROUTE, not only of the matcher.
 
 ### A GRANT'S RIDER CAN NARROW ITS OWN TARGET (v4.11)
 

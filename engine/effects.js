@@ -988,8 +988,14 @@ function makeEffects(ctx){
            travel on the buffQ entry, because it belongs to the attack
            that eventually collects the pump, not to the card that
            handed it over. */
+        /* op[4] is `once` (v4.12): the grant is spent by your NEXT attack
+           whether or not the qualifier matched, because the printed line
+           names that one card and the qualifier is a CONDITION on it
+           rather than a restriction on which card the grant waits for.
+           OPT-IN, so every existing entry keeps its shape (v3.58). */
         if(op[2] || op[3]){
-          actMut(n).buffQ = [...(act(n).buffQ||[]), {amt:v, q:op[2]||null, rider:op[3]||null}];
+          actMut(n).buffQ = [...(act(n).buffQ||[]),
+            Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {})];
           const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
           n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
@@ -2604,7 +2610,6 @@ function makeEffects(ctx){
         : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
         : cond==="weaponSwung" ? Object.keys(act(n).weaponUsed||{}).length>0
         : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
-        : cond==="revBlue" ? (n.revealed ? n.revealed.pitch===3 : false)
         : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext)
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
         : cond==="lifeTie" ? act(n).hp === foe(n).hp
@@ -2667,7 +2672,7 @@ function makeEffects(ctx){
         allyDied:"no ally has hit your graveyard this turn",
         weaponSwung:"you haven't attacked with a weapon this turn",
         dealtDmg:"you haven't dealt damage this turn",
-        revBlue:"the revealed card isn't blue", isDraconic:"this isn't Draconic",
+        isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
         lifeTie:"life totals aren't level",
         charged:"you didn't charge your hero's soul this turn",
@@ -2801,7 +2806,12 @@ function makeEffects(ctx){
       const qCtx = {from, atk: true, boosted: isBoostPlay(n, card)};
       const qBuff = (act(n).buffQ||[]).filter(b=>qualMatches(b.q, card, qCtx)).reduce((a2,b)=>a2+b.amt,0);
 
-      const qKept = (act(n).buffQ||[]).filter(b=>!qualMatches(b.q, card, qCtx));
+      /* A GRANT THAT DOES NOT MATCH IS NOT SPENT, IT WAITS (v2.30) —
+         unless the printed line named YOUR NEXT ATTACK and the qualifier
+         is a condition on it (`once`, v4.12). Flying High's red printing
+         hands the go again to a red attack and the +1 to nobody; kept,
+         it would wait for a blue attack the sentence never named. */
+      const qKept = (act(n).buffQ||[]).filter(b=>!b.once && !qualMatches(b.q, card, qCtx));
       /* AND ANY ABILITY THOSE BUFFS GRANTED comes with them. Warrior's
          Valor's `and "When this hits, it gets go again."` belongs to the
          attack that collects the pump, so it is gathered here, from the
