@@ -4711,9 +4711,29 @@ function makeEffects(ctx){
        once damage is dealt. Scar Tissue and Spike with Bloodrot print it
        plainly; Pummel and Two Sides print it inside a mode. */
     const rider = mode ? mode.riderOnHit : (fx.onHit && fx.onHit.length ? fx.onHit : null);
-    if(rider && rider.length && n.pend){
+    /* AND THE RIDER MAY CARRY ITS OWN, NARROWER RESTRICTION (v4.11).
+       Arakni's Agents print "Target Assassin attack gets +3{p}. If IT has
+       stealth, it gets <ability>" — the head restricts the target and the
+       second sentence restricts it further, so `fx.onHitQ` is `gaQ`'s
+       twin one grant over and `qualMatches` is the same matcher.
+
+       WITHOUT THE GATE THE ABILITY IS GRANTED TO EVERY LEGAL TARGET,
+       which is a printed RESTRICTION dropped (v2.30's arrow buff on a
+       sword) and the direction the fairness sweep exists to catch. */
+    const riderOK = !fx.onHitQ || (n.pend && qualMatches(fx.onHitQ, n.pend.card, qo));
+    if(rider && rider.length && n.pend && riderOK){
       n.pend = {...n.pend, onHit: [...(n.pend.onHit || []), ...rider]};
       n = L(n, `${c.name}: ${n.pend.card.name} carries its rider — it pays out if it connects.`);
+    } else if(rider && rider.length && n.pend && !riderOK){
+      n = L(n, `${c.name}: ${n.pend.card.name} is not ${P.qualLabel(fx.onHitQ)} — the rider does not attach.`);
+    }
+    /* THE HERO-GATED HALF TOO. `onHitHero` is a separate list because an
+       ally is an attack-target and "hits a HERO" is not "hits" (v3.45),
+       and the same restriction governs it. */
+    const riderH = fx.onHitHero && fx.onHitHero.length ? fx.onHitHero : null;
+    if(riderH && n.pend && riderOK){
+      n.pend = {...n.pend, onHitHero: [...(n.pend.onHitHero || []), ...riderH]};
+      n = L(n, `${c.name}: ${n.pend.card.name} carries its rider — it pays out if it hits a hero.`);
     }
     /* `fx.ga` on an attack reaction can only mean the TARGET's go again —
        no attack reaction in the pool prints the keyword for itself. */

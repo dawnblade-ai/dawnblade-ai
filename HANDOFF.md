@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.10 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.11 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -18,6 +18,16 @@ asked the cheapest question about each — **what reads this?** — which
 found **Hyper Inflation inert on both boards with a feed line saying
 otherwise**, **Brand with Cinderclaw's Draconic grant never spent and, at
 the table, never cleared**, and a cost read two ways seven lines apart.
+**v4.07** censused every field an op WRITES against the sweep meant to
+take it back — three "this turn" grants never expired. **v4.08** gave a
+bare *"when this attacks"* its declaration timing (CR 7.2). **v4.09**
+built the **fifth named activation cost** (a discard from hand), which
+unlocked four Agents of Chaos; **v4.10** swept the refusals that build
+made reachable and found `heroAbilityLine` knew two windows of three and
+four Agents sharing one `fxParse` memo key — the documented drill gotcha
+as a PRODUCTION defect. **v4.11** built the riders v4.10 had honestly
+left `skip`, and its sabotage pass found **a guard that could not express
+a bug** (below).
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -129,6 +139,53 @@ UNGUARDED and three citations are section pointers, which no drill can
 drive. It pins a SET now. **And the tool was reading its own output** —
 123 of the 1123 citations it reported were `CR-INDEX.md` citing itself,
 found by sabotage. The honest count is 1000.
+
+## ⚠ v4.11 — A SABOTAGE THAT FINDS A DEAD GUARD IS NOT A WEAK DRILL
+
+The build itself is small and is v3.31's family paying out for the sixth
+time: *"Target Assassin attack gets +3{p}. **If it has stealth, it gets
+go again**"* is not a new condition family — it is the head's qualifier
+PLUS a printed keyword, which `qualMatches` has answered since v3.31 made
+*"with stealth"* one of its five tail atoms. **No new evaluator.**
+
+What is worth carrying forward is what the sabotage pass said. One of six
+came back SILENT:
+
+```
+if(!pay || pay.status !== "run" || !(pay.ops || []).length) continue;
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+The instinct is *"the drill is weak — find a better fixture"*, and I
+spent a while looking for one. **The guard is dead.** `classifyClause`
+answers exactly three things: `null`, `{status:"run", ops:[…at least
+one]}`, or `NOOP(why)` — which is `[["noop", why]]`. So a non-`run`
+answer carries no `ga` and no on-hit op, the take loop below refuses it
+already, and no `run` answer has zero ops. The guard **cannot express a
+bug**, which is v4.05's one-body drill (*a bound that is too wide reads
+exactly like a drill that passes*) in RULES code rather than in a test,
+and v3.67 / v3.77's dead `off > 0` and `total > 0` for the third time.
+
+**THE QUESTION THAT SETTLES IT IS ONE LAYER OUT: what would the OTHER
+answer look like?** If no reachable input can make the guard change the
+outcome, the guard is not the property — the `took` gate is.
+
+**AND A DELETION RESTS ON A PREMISE, SO DRIVE THE PREMISE.** The
+deletion is only safe while `classifyClause` answers those two shapes, so
+that is now a drill over the pinned pool — 686 distinct clauses, 389
+`run`, 120 `noop`, 177 refused — asserting each `run` carries ops and
+each `noop` carries exactly one `noop` op. A doc claim is a test with no
+assertion (v3.41); a third answer shape fails on the day it is added.
+
+**AND THE FIXTURE THAT WAS MISSING IS THE `noop` HALF** (v3.91, second
+time in this family): a payload `classifyClause` REFUSES never reaches
+the take loop, so the existing probe could say nothing about a clause
+that IS read and stamps nothing. `it gets inertia` is that fixture — and
+its CLAUSE STATUS is deliberately not the observable, because the if/when
+handler passes a noop inner through (v2.12) and the clause reads `noop`
+either way. **What must not happen is a GRANT.**
+
+Nine sabotages, nine bite.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 

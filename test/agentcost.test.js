@@ -264,22 +264,129 @@ test("`heroAbilityLine` knows every activation prefix, not two of three", {skip}
     "the cost prefix is on the powCard — `execute` would re-read it as payload");
 });
 
-test("the rider reaches the powCard and is honestly reported unread", {skip}, () => {
+test("the rider is READ, and it narrows the head's restriction", {skip}, () => {
   H.db();
-  /* A REFUSAL NOBODY IS TOLD ABOUT IS A LIE (v3.41). These three riders
-     are not built — each grants a conditional ability to the TARGETED
-     attack, which is its own reading — and the point of carrying them is
-     that the clause is now REPORTED as unread rather than removed before
-     anything could look at it. Over-reporting is the safe direction
-     (v3.86). */
-  for(const f of ["Black Widow", "Funnel Web", "Redback"]){
+  P.fxReset();
+  /* v4.10 CARRIED THESE RIDERS TO THE POWCARD AND LEFT THEM `skip`, with
+     a drill saying "check WHAT it built before moving this". v4.11 built
+     them, and the reading is that "it" is the attack the FIRST sentence
+     targeted — so the rider's qualifier is the head's PLUS the printed
+     keyword, which `qualMatches` has answered since v3.31 made "with
+     stealth" one of its five tail atoms. No new evaluator. */
+  const want = {
+    "Redback":     {field: "gaQ",     get: fx => fx.ga && fx.gaQ},
+    "Black Widow": {field: "onHitQ",  get: fx => (fx.onHitHero || []).length && fx.onHitQ},
+    "Funnel Web":  {field: "onHitQ",  get: fx => (fx.onHitHero || []).length && fx.onHitQ}
+  };
+  for(const f of Object.keys(want)){
     const a = B.agentsOf(H.db(), "chaos").find(x => new RegExp(f).test(x.n));
     const fx = P.fxParse(B.heroAbilities(a, a.n).HPOW);
     assert.equal(fx.clauses.length, 2, f + ": the rider is not a clause on the powCard");
-    assert.equal(fx.clauses[0].st, "run", f + ": the head stopped reading");
-    assert.equal(fx.clauses[1].st, "skip",
-      f + ": the rider now claims to read — check WHAT it built before moving this");
+    assert.equal(fx.clauses[1].st, "run", f + ": the rider is not read");
+    const q = want[f].get(fx);
+    assert.ok(q, f + ": nothing carries the rider's payload");
+    assert.equal(q.kw, "stealth",
+      f + ": the printed keyword restriction is DROPPED — the ability is granted to " +
+      "every legal target, which is v2.30's arrow buff on a sword");
+    assert.deepEqual(q.g, [["assassin"]],
+      f + ": the HEAD's restriction is lost — the rider must narrow it, not replace it");
   }
+  P.fxReset();
+});
+
+test("the keyword vocabulary is CLOSED, and Bravo does not move", {skip}, () => {
+  H.db();
+  P.fxReset();
+  /* AN OPEN "any word after has" reads a card NAME or a type as a
+     keyword and silently grants off it (v3.55, v3.66). Measured: the
+     pool prints four records of this shape — three Agents (`stealth`)
+     and Bravo (`crush`), whose own is an ARSENAL grant read elsewhere
+     since v3.73 and MUST NOT move. */
+  const probe = {name: "Rider Vocab Probe", pitch: 0, cost: 0, power: null, def: null,
+                 tt: "Hero Ability", ty: [], kw: [], gkw: [],
+                 tx: 'Target Assassin attack gets +3{p}. If it has nimblism, it gets go again.'};
+  const fx = P.fxParse(probe);
+  assert.equal(fx.clauses[1].st, "skip",
+    "an unknown word was read as a keyword — a card NAME now grants an ability");
+  assert.ok(!fx.ga, "…and the grant landed anyway");
+
+  /* AND AN UNREADABLE PAYLOAD REFUSES THE WHOLE RIDER (v2.29). */
+  const probe2 = Object.assign({}, probe, {name: "Rider Payload Probe",
+    tx: 'Target Assassin attack gets +3{p}. If it has stealth, it gets nothing in particular.'});
+  assert.equal(P.fxParse(probe2).clauses[1].st, "skip",
+    "an unreadable payload was claimed — half a grant is not a cheap approximation");
+
+  /* AND A `noop` PAYLOAD REFUSES TOO, WHICH IS THE HALF A `null` CANNOT
+     REACH (v3.91, second time in this file's own family). A payload
+     `classifyClause` answers NULL for never reaches the take loop at all,
+     so the fixture above cannot say anything about a clause that IS read
+     and has nothing to stamp — and `ops.length` is 1 on a noop, so a
+     length test is silent (v3.93). `inertia` is a keyword this engine
+     deliberately reads somewhere else, so as a rider payload there is
+     nothing to put on the attack: claiming it files the clause `run`
+     with NOTHING BUILT, which is the no-op blind spot at its purest. */
+  const probe3 = Object.assign({}, probe, {name: "Rider Noop Probe",
+    tx: 'Target Assassin attack gets +3{p}. If it has stealth, it gets inertia.'});
+  const nf = P.fxParse(probe3);
+  assert.equal(P.classifyClause("it gets inertia").status, "noop",
+    "the fixture no longer reaches the noop half — pick a payload that READS " +
+    "and stamps nothing, or this drill cannot express the bug (v3.62)");
+  /* THE CLAUSE STATUS IS NOT THE OBSERVABLE HERE, and saying so is the
+     point: the if/when handler recurses into the inner half and PASSES A
+     NOOP INNER THROUGH (v2.12), so the whole clause reads `noop` whatever
+     the rider does. What must not happen is a GRANT. */
+  assert.notEqual(nf.clauses[1].st, "run", "a noop payload was filed as read");
+  assert.ok(!nf.ga && !nf.gaQ && !nf.onHitQ && !(nf.onHitHero || []).length &&
+            !(nf.onHit || []).length,
+    "a noop payload was granted — the attack carries an op that does nothing");
+  P.fxReset();
+});
+
+test("classifyClause answers exactly two shapes, and the rider leans on it", {skip}, () => {
+  H.db();
+  P.fxReset();
+  /* THE PREMISE THE RIDER'S REFUSAL RESTS ON. v4.11 deleted a
+     `pay.status !== "run" || !pay.ops.length` guard beside the take loop
+     because it could not express a bug: a NOOP answer is
+     `[["noop", why]]`, so it carries no `ga` and no on-hit op and the
+     loop refuses it already, and no `run` answer has zero ops. That is a
+     property of `classifyClause`, not of the rider — so it is DRIVEN
+     over the pinned pool here rather than asserted in prose, and a third
+     answer shape fails this drill on the day it is added. */
+  const raw = require("../data/pool.json");
+  const pool = (Array.isArray(raw) ? raw : (raw.cards || Object.values(raw))).map(c => ({
+    name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "", ty: c.types || [],
+    tx: c.functional_text || "", kw: c.card_keywords || [],
+    cost: c.cost, power: c.power, def: c.defense}));
+  let run = 0, noop = 0;
+  const seen = new Set();
+  for(const r of pool){
+    P.fxReset();
+    for(const cl of (P.fxParse(r).clauses || [])){
+      const t = String(cl.t || "");
+      if(!t || seen.has(t)) continue;
+      seen.add(t);
+      let a = null;
+      try { a = P.classifyClause(t.toLowerCase().trim()); } catch(e) { continue; }
+      if(a == null) continue;
+      if(a.status === "run"){
+        run++;
+        assert.ok((a.ops || []).length > 0,
+          "a `run` answer with no ops: " + t);
+      } else {
+        noop++;
+        assert.equal(a.status, "noop", "a THIRD answer shape: " + a.status + " — " + t);
+        assert.deepEqual((a.ops || []).map(o => o[0]), ["noop"],
+          "a `noop` answer carrying a real op — the rider's take loop would claim it: " + t);
+      }
+    }
+  }
+  /* PROVE THE SCAN ALIVE BEFORE TRUSTING WHAT IT DID NOT FIND (v4.00): a
+     scan aimed at the wrong shape passes by finding nothing. Measured at
+     v4.11: 686 distinct clauses, 389 `run`, 120 `noop`, 177 refused. */
+  assert.ok(run > 300, "the scan stopped finding run clauses (" + run + ") — it is aimed wrong");
+  assert.ok(noop > 90, "the scan stopped finding noop clauses (" + noop + ") — it is aimed wrong");
+  P.fxReset();
 });
 
 test("a hero whose line was already found keeps its reading", {skip}, () => {
@@ -343,4 +450,53 @@ test("…and the fifteen playable heroes keep their short powCard name", {skip},
     assert.equal(pw.name, n.split(",")[0] + " — hero power",
       n + "'s powCard name moved — the widening reached a hero it should not have");
   }
+});
+
+test("DRIVEN: the rider attaches to a stealth target and REFUSES a plain one", {skip}, () => {
+  H.db();
+  P.fxReset();
+  /* BOTH HALVES OR THE DRILL PROVES NOTHING (v3.45). A gate that
+     refuses everything passes the plain half perfectly, so the same
+     ability is driven at two targets that differ in exactly one printed
+     keyword. */
+  const E = require("../engine/effects.js");
+  const a = B.agentsOf(H.db(), "chaos").find(x => /Black Widow/.test(x.n));
+  const pw = B.heroAbilities(a, a.n).HPOW;
+
+  const base = {uid: 7301, name: "Rider Target Plain", tt: "Assassin Action - Attack",
+                ty: ["Assassin", "Action", "Attack"], power: 4, pitch: 1, cost: 1,
+                def: 2, kw: [], gkw: [], tx: ""};
+  const sneaky = Object.assign({}, base, {uid: 7302, name: "Rider Target Stealth",
+                 kw: ["Stealth"], tx: "Stealth"});
+
+  const run = tgt => {
+    const g = H.state({hand: [ASSASSIN], res: 9, ap: 1}, {hp: 20}, {actor: 0, turn: 3});
+    const withPend = Object.assign({}, g, {pend: {card: tgt, by: 0, total: tgt.power,
+                                                 ops: [], onHit: [], onHitHero: []}});
+    let out = J.withEffects(withPend, (fx, st) => fx.attackRx(st, pw, {hand: 0}));
+    return (out.game || out);
+  };
+
+  const hit = run(sneaky);
+  assert.equal(((hit.pend || {}).onHitHero || []).length, 1,
+    "a STEALTH target did not receive the rider — the grant is dead");
+
+  const miss = run(base);
+  assert.equal(((miss.pend || {}).onHitHero || []).length, 0,
+    "a target with NO stealth received the rider — the printed restriction is dropped, " +
+    "which is v2.30's arrow buff on a sword");
+
+  /* THE HEAD LANDS EITHER WAY, which is what makes the two halves
+     comparable: the +3 is printed for any Assassin attack and only the
+     RIDER is gated.
+
+     AND THE PUMP IS A LAYER, NOT `pend.total` (v4.03) — `attackRx` pushes
+     an `{k:"rx"}` layer and `rxPumpTotal` is the one reader of both the
+     waiting and the resolved record. The first draft asserted on
+     `pend.total` and failed against a correct engine: check what the
+     function you are driving actually writes. */
+  assert.equal(E.rxPumpTotal(hit), 3, "the head's pump did not land on the stealth target");
+  assert.equal(E.rxPumpTotal(miss), 3,
+    "the head's pump was gated too — the rider's restriction has leaked onto the printed +3");
+  P.fxReset();
 });

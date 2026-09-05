@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.10
+**Current version:** v4.11
 
 ---
 
@@ -767,6 +767,55 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A GRANT'S RIDER CAN NARROW ITS OWN TARGET (v4.11)
+
+> *"Target Assassin attack gets +3{p}. **If it has stealth, it gets go
+> again.**"* — REDBACK
+
+v4.10 carried the three Agents' riders onto the powCard and left them
+`skip`. **"IT" IS THE ATTACK THE FIRST SENTENCE TARGETED** (v2.33, v3.47,
+v3.92, v4.01 — fifth time), so the two are paired in `fxParse` where the
+whole card is visible.
+
+**IT IS A NARROWER QUALIFIER, NOT A NEW CONDITION FAMILY.** The head
+restricts the target (`selfQ`); the rider restricts it further by a
+printed keyword — which is what `qualMatches` answers, since v3.31 made
+*"with stealth"* one of its five tail atoms. The payload rides on the
+head's qualifier PLUS the keyword: **no new evaluator**, and a target
+failing the head could never reach the rider. Sixth member of that family
+to invent no vocabulary. **The vocabulary is CLOSED** (v3.55, v3.66) —
+measured, four pool records print the shape, three Agents and **Bravo**,
+whose `crush` is an ARSENAL grant read elsewhere since v3.73 and is
+pinned unmoved.
+
+**THE `gets` IS PART OF THE PAYLOAD'S ANCHOR.** A granted ability arrives
+in QUOTES and `quotedText` anchors on a quote IMMEDIATELY after
+gets/gains (v3.45), so stripping the verb makes the two Agents whose
+rider *is* an ability read nothing. Redback's plain go again works either
+way — v3.26's fixture rule, one layer out.
+
+**AND THE SABOTAGE FOUND A DEAD GUARD, NOT A WEAK DRILL.** A
+`pay.status !== "run" || !pay.ops.length` test beside the take loop came
+back SILENT because **it cannot express a bug**: `classifyClause` answers
+only `null`, `run` with at least one op, or `NOOP(why)` — which is
+`[["noop", why]]`, so it carries no `ga` and no on-hit op and the loop
+refuses it already; `ops.length` is **1** on a noop, so a length test is
+silent too (v3.93). Deleted rather than kept as rules code that reads
+like a rule (v3.67, v3.77, v4.05).
+
+**THE PREMISE A DELETION RESTS ON IS DRIVEN, NOT STATED.** 686 distinct
+pool clauses through `classifyClause` — 389 `run`, 120 `noop`, 177
+refused — asserting every answer is one of the two shapes. A doc claim is
+a test with no assertion (v3.41); a third answer shape fails a drill the
+day it is added.
+
+**AND A NOOP PAYLOAD IS THE HALF A `null` CANNOT REACH** (v3.91, second
+time in this family). A refused payload never reaches the take loop, so
+the existing fixture said nothing about a clause that IS read and stamps
+nothing. **The clause STATUS is deliberately not the observable** — the
+if/when handler passes a noop inner through (v2.12), so the clause reads
+`noop` whatever the rider does. What must not happen is a GRANT.
 
 ### BEFORE YOU MOVE AN OP, ASK WHAT READS IT (v4.06)
 

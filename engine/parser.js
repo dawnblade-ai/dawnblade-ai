@@ -4226,6 +4226,75 @@ function fxParse(card){
     });
   });
 
+  /* ---- A GRANT'S RIDER CAN NARROW ITS OWN TARGET (v4.11) -----------
+     Three of Arakni's six Agents print an attack-reaction ability in two
+     sentences:
+
+       "Target Assassin attack gets +3{p}. If it has STEALTH, it gets
+        go again."                                    — REDBACK
+
+     "It" is the attack the FIRST sentence targeted, so the two are paired
+     HERE where the whole card is visible — v3.37's Stir the Aetherwinds
+     shape, and the same reason `optCost` pairs its halves.
+
+     THE RIDER IS A NARROWER QUALIFIER, NOT A NEW CONDITION FAMILY. The
+     head already restricts the target (`selfQ`), and the second sentence
+     restricts it further by a printed keyword — which is exactly what
+     `qualMatches` answers, since v3.31 made "with stealth" one of the
+     five tail atoms. So the payload rides on a qualifier that is the
+     head's PLUS the keyword: no new evaluator, and a target that fails
+     the head could never reach the rider anyway.
+
+     THE KEYWORD VOCABULARY IS CLOSED (v3.55, v3.66). An open "any word
+     after has" reads a card NAME or a type as a keyword and silently
+     grants off it. Measured: the pool prints exactly four records of this
+     shape — three Agents (`stealth`) and Bravo (`crush`), whose own is an
+     ARSENAL grant read elsewhere since v3.73 and must not move.
+
+     AND AN UNREADABLE PAYLOAD REFUSES THE WHOLE RIDER (v2.29). Half a
+     grant is not a cheap approximation when the half that reads is the
+     reward. THE REFUSAL IS THE `took` GATE, and a `pay.status !== "run"`
+     test beside it was DEAD (v3.67, v3.77, v4.05): `classifyClause`
+     answers `null`, `{status:"run", ops:[...at least one]}`, or
+     `NOOP(why)` — which is `[["noop", why]]` and therefore carries no
+     `ga` and no on-hit op, so the take loop below refuses it already.
+     `ops.length` is 1 on a noop, so a length test is silent too (v3.93).
+     The premise is DRIVEN over the pinned pool in agentcost.test.js
+     rather than restated here. */
+  if(fx.selfQ && (fx.clauses || []).length > 1){
+    for(let ci = 1; ci < fx.clauses.length; ci++){
+      const raw2 = String((fx.clauses[ci] || {}).t || "");
+      const km = levelIdiom(raw2.toLowerCase().trim())
+        .match(/^if it has ([a-z ]+?), it (?:gets|gains) (.+?)\.?$/);
+      if(!km) continue;
+      const kw = km[1].trim();
+      if(!new RegExp("^(?:" + KW_VOCAB_SRC + ")$").test(kw)) continue;
+      /* THE `gets` IS PART OF THE PAYLOAD'S ANCHOR, so the whole phrase
+         goes back to `classifyClause` rather than the tail alone. A
+         granted ability arrives in QUOTES and `quotedText`'s anchor is a
+         quote IMMEDIATELY after gets/gains (v3.45) — strip the verb and
+         the two Agents whose rider is a granted ability fall through to
+         the loose matchers and read NOTHING. Driven: Redback's plain
+         `go again` worked either way and the other two did not, which is
+         v3.26's rule about a fixture that cannot tell two shapes apart,
+         one layer up. */
+      const pay = classifyClause("it gets " + km[2]);
+      if(!pay) continue;
+      const q = Object.assign({}, fx.selfQ, {kw});
+      let took = false;
+      for(const op of pay.ops){
+        if(op[0] === "ga"){ fx.ga = true; fx.gaQ = q; took = true; }
+        else if(pay.onHit){
+          const list = pay.heroOnly ? "onHitHero" : "onHit";
+          fx[list] = [...(fx[list] || []), op];
+          fx.onHitQ = q;
+          took = true;
+        }
+      }
+      if(took) fx.clauses[ci].st = "run";
+    }
+  }
+
   /* ---- "IT" IS THE CARD THE GRANT NAMES (v3.37) --------------------
      Stir the Aetherwinds prints TWO sentences about ONE card:
 

@@ -9,6 +9,70 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.11 — a grant's rider can narrow its own target, and a guard that could not express a bug
+
+v4.10 carried the three Agents' riders onto the powCard and left them
+`skip`, with a drill saying *"check WHAT it built before moving this"*.
+This builds them.
+
+> *"Target Assassin attack gets +3{p}. **If it has stealth, it gets go
+> again.**"* — REDBACK
+
+**"IT" IS THE ATTACK THE FIRST SENTENCE TARGETED** (v2.33, v3.47, v3.92,
+v4.01 — fifth outing), so the two sentences are paired in `fxParse` where
+the whole card is visible, which is v3.37's Stir the Aetherwinds shape and
+the same reason `optCost` pairs its halves.
+
+**THE RIDER IS A NARROWER QUALIFIER, NOT A NEW CONDITION FAMILY.** The
+head already restricts the target (`selfQ`) and the second sentence
+restricts it further by a printed keyword — which is exactly what
+`qualMatches` answers, since v3.31 made *"with stealth"* one of its five
+tail atoms. The payload rides on the head's qualifier PLUS the keyword:
+**no new evaluator**, and a target that fails the head could never reach
+the rider anyway. Sixth member of that family to invent no vocabulary.
+
+**THE KEYWORD VOCABULARY IS CLOSED** (v3.55, v3.66). An open *"any word
+after has"* reads a card NAME or a type as a keyword and grants off it
+silently. Measured: the pool prints exactly four records of this shape —
+three Agents (`stealth`) and **Bravo** (`crush`), whose own is an ARSENAL
+grant read elsewhere since v3.73 and is pinned unmoved.
+
+**THE `gets` IS PART OF THE PAYLOAD'S ANCHOR.** A granted ability arrives
+in QUOTES and `quotedText` anchors on a quote IMMEDIATELY after
+gets/gains (v3.45) — strip the verb and the two Agents whose rider *is* a
+granted ability fall through to the loose matchers and read **nothing**.
+Driven: Redback's plain `go again` works either way and the other two do
+not, which is v3.26's rule about a fixture that cannot tell two shapes
+apart, one layer out.
+
+**AND THE SABOTAGE FOUND A DEAD GUARD, NOT A WEAK DRILL.** A
+`pay.status !== "run" || !pay.ops.length` test beside the take loop came
+back SILENT, and the reason is that **it cannot express a bug**:
+`classifyClause` answers only `null`, `{status:"run", ops:[…at least
+one]}`, or `NOOP(why)` — which is `[["noop", why]]`, so it carries no
+`ga` and no on-hit op and the loop refuses it already. `ops.length` is
+**1** on a noop, so a length test is silent too (v3.93). Deleted rather
+than left as rules code that reads like a rule (v3.67, v3.77, v4.05),
+and **the premise is DRIVEN over the pinned pool** — 686 distinct
+clauses, 389 `run`, 120 `noop` — so a third answer shape fails a drill
+the day it is added, rather than the deletion resting on a sentence.
+
+**A NOOP PAYLOAD IS THE HALF A `null` CANNOT REACH** (v3.91, second time
+in this family). A payload `classifyClause` refuses never reaches the
+take loop at all, so the existing fixture could say nothing about a
+clause that IS read and has nothing to stamp. `it gets inertia` is that
+fixture — and the CLAUSE STATUS is deliberately not the observable, because
+the if/when handler passes a noop inner through (v2.12) and the clause
+reads `noop` whatever the rider does. What must not happen is a GRANT.
+
+**AND THE RIDER IS GATED AT THE TABLE TOO.** `effects.attackRx` asks
+`qualMatches(fx.onHitQ, pend.card)` before stamping, so an Assassin attack
+without stealth gets the head's +3 and none of the rider — the restriction
+enforced where the grant lands, not only where it parses.
+
+All three Agents read `tier: full` with `{"g":[["assassin"]],"kw":"stealth"}`.
+**Nine sabotages, nine bite.**
+
 ## v4.10 — four Agents shared one parse, and a reader that knew two windows of three
 
 v4.09 built the Agents' cost; this is the sweep v3.47 calls for — *when
