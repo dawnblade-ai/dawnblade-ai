@@ -89,8 +89,17 @@ test("every condition the POOL puts into condOnHit is in the census", {skip}, ()
      opens no `pend` for `condOnHit` to be read from. A condition LEAVING
      is as deliberate an edit as one arriving. */
   assert.deepEqual([...seen].sort(),
-    ["auras3", "charged", "chargedPitch2", "drac2", "marked", "pumped"],
-    "six conditions reach condOnHit — a SEVENTH is a deliberate edit here " +
+    /* +playedCls:lightning AT v4.21, DELIBERATELY. Static Shock prints
+       "LIGHTNING FLOW - When this hits a hero, if you've played a
+       Lightning card this turn, deal 1 arcane damage to them" — and the
+       keyword prefix ate the trigger AND the gate, so the arcane fired
+       unconditionally on PLAY. The gate reaches `condOnHit` now, and the
+       evaluator inside `linkPayload` answers it off `hist.playTy` with
+       the same expression the main condition loop uses (v3.96: this is
+       the second, SMALLER copy of that vocabulary). */
+    ["auras3", "charged", "chargedPitch2", "drac2", "marked",
+     "playedCls:lightning", "pumped"],
+    "seven conditions reach condOnHit — an EIGHTH is a deliberate edit here " +
     "and a branch in the evaluator");
   /* AND `fused` KEEPS ITS BRANCH, because the pattern list is what makes a
      condition answerable if it ever routes here again — a census that

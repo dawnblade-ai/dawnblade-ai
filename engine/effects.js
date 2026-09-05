@@ -5416,6 +5416,16 @@ function makeEffects(ctx){
              for `chargedPitch`'s reason, and a link built without it
              answers FALSE: weaker than printed and visible (v3.24). */
           : cond==="fused" ? !!n.pend.fused
+          /* v4.21 — Static Shock's "Lightning Flow - When this hits a
+             hero, IF YOU'VE PLAYED A LIGHTNING CARD THIS TURN, deal 1
+             arcane damage to them." The keyword prefix used to eat the
+             whole gate AND the trigger, so the arcane fired on PLAY,
+             unconditionally. `hist.playTy` is the class-aware turn
+             history v3.38 built, and the main condition loop has answered
+             `playedCls:` from it since — this is the second, smaller copy
+             of that vocabulary being told (v3.96). */
+          : /^playedCls:/.test(cond) ? ((act(n).hist.playTy||[])
+              .some(ty => (ty||[]).indexOf(cond.replace(/^playedCls:/, "")) >= 0))
           : false;
         if(met) n = runOps(n, [op], pc.name);
         /* AND THE REFUSAL NAMES THE RIGHT CONDITION. The `else` here read
@@ -6638,7 +6648,10 @@ function settleIntellect(game, seat){
    printed threshold in their name. */
 const CONDONHIT_CONDS = [
   /^way:/, /^charged$/, /^chargedPitch\d$/, /^marked$/, /^pumped$/,
-  /^auras\d+$/, /^drac\d+$/, /^fused$/
+  /^auras\d+$/, /^drac\d+$/, /^fused$/,
+  /* +playedCls AT v4.21 — Static Shock's gate, which the "Lightning
+     Flow -" prefix used to eat along with its trigger. */
+  /^playedCls:/
 ];
 const condOnHitKnown = cond => CONDONHIT_CONDS.some(rx => rx.test(String(cond || "")));
 

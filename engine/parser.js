@@ -29,6 +29,23 @@ const isWeapon = c => /weapon/i.test(c.tt) && c.power!=null;
    same question of a different clause, and two spellings of one closed
    list is the drift this file names on nearly every page. */
 const KW_VOCAB_SRC = "crush|stealth|dominate|go again|piercing|intimidate|blade break|battleworn|temper|guardwell|phantasm|reprise|boost|ward|watery grave";
+/* EVERY KEYWORD PREFIX THE POOL PRINTS (v4.21), measured over all 797
+   records: a line beginning "<Keyword> - " that is not an ACTIVATION
+   prefix (those are v3.59's, guarded above). Five have bespoke readers
+   further up and never reach the catch-all; `unity` and `material`
+   answer for themselves.
+
+   IT HOLDS ONLY THE TWO WITH NO OTHER READER, and that is a MEASURED
+   boundary rather than a cautious one. The first draft listed all ten,
+   and `crush`'s reader lives BELOW this point — so stripping the prefix
+   here took the clause away from `fx.crush` and moved 28 parses across
+   twelve cards. Measuring the blast radius BOTH WAYS is what caught it
+   (v3.33): the count alone would have looked like a big win.
+
+   `test/prefix.test.js` holds the census from the other end — it fails
+   the day the pool prints a prefix that reaches the loose matchers
+   ungated, which is how these two should have been found. */
+const KW_PREFIX = new Set(["lightning flow", "solflare"]);
 /* A PRINTED COLOUR IS A PRINTED PITCH VALUE, and it is one map with two
    readers (v4.12): `revColorPitch`'s reveal-and-pitch op, and the
    next-attack pump Flying High gates on its own colour. Two copies of a
@@ -1229,6 +1246,52 @@ function classifyClause(raw){
     return GATED(m[1], "hasGa");
   if(m=c.match(/^rupture\s*[-—]\s*if (?:this|[a-z' ]+) is played as chain link (\d+) or higher,\s*(.+)$/i))
     return GATED(m[2], "chainLinkGe"+m[1]);
+  /* ---- THE REST OF v3.99's FAMILY (v4.21) ---------------------------
+     v3.99 gave `quickstrike` and `rupture` the guard `reprise`, `surge`
+     and `high tide` already had, and stopped there. Censused, the pool
+     prints TEN keyword prefixes and TWO more were still being eaten:
+
+       Static Shock          "LIGHTNING FLOW - When this hits a hero, if
+                              you've played a Lightning card this turn,
+                              deal 1 arcane damage to them."
+       Banneret of Salvation "SOLFLARE - When this is charged to your
+                              hero's soul, the next time you hit this
+                              turn, gain 1{h}."
+
+     Both read `tier: full` and both parsed to a BARE unconditional op —
+     `[["arcane",1]]` and `[["life",1]]` — fired on PLAY, with the
+     trigger AND the gate gone. Stronger than printed twice over on one
+     card, which is the direction that steals games, and invisible to
+     every tool here for v3.99's own reason: coverage counts the clause
+     consumed, and `COND-BYPASSED` needs an unconditional TWIN to compare
+     a gate against, so a gate that DISAPPEARS leaves nothing to compare.
+
+     THE FIX IS TO STRIP AND RECURSE, NOT TO WRITE A READER PER KEYWORD.
+     Neither printing carries reminder text (AST016, DTD055 — both read),
+     so the keyword is a NAME for an ability the card spells out in full,
+     exactly as v3.99 established. Handed the rest of its own line,
+     `classifyClause` already reads Static Shock in full: a `playedCls`
+     gate on an on-hit-hero arcane.
+
+     AND AN UNREADABLE REMAINDER REFUSES (v2.29) rather than falling
+     through to the loose matchers — which is the whole defect. Solflare
+     refuses today: "when this is charged to your hero's soul" has no
+     trigger and "the next time you hit this turn" has no schedule, and
+     claiming the tail alone is what granted 1{h} on play. A RECORDED
+     REFUSAL IS A DEBT (v3.38); the tail already reads on its own, so
+     what this is waiting on is the trigger and the delay.
+
+     THE LIST IS CLOSED AND MEASURED, and `test/prefix.test.js` fails the
+     day the pool prints an eleventh — the census property, so a new
+     keyword cannot walk into this bug the way these two did. The five
+     with bespoke readers above never reach here; `crush` is lifted into
+     `fx.crush` and `unity`/`material` answer for themselves. */
+  if(m=c.match(/^([a-z][a-z' ]{2,20}?)\s*[-—]\s+(.+)$/)){
+    if(KW_PREFIX.has(m[1].trim())){
+      const inner = classifyClause(m[2]);
+      return inner || null;
+    }
+  }
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
   /* COLD SNAP's cost-offer half is UNREAD with the freeze it gates — see
      the long note above. Reading the offer alone would ask the opponent

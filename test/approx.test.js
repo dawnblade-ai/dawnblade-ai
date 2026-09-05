@@ -517,9 +517,16 @@ probe("auto-pitch-discard", () => {
     "a forced discard now queues a prompt — the record is closed and must move");
 });
 
-/* Three pool cards read tier `none`. */
+/* Four pool DECK cards read tier `none`. */
 probe("unbuilt-three", () => {
-  const want = ["Glisten", "Danger Digits", "Hope Merchant's Hood"];
+  /* +Banneret of Salvation AT v4.21, AND IT ARRIVED AS A CORRECTION.
+     Its "Solflare -" keyword prefix was eaten by the loose matchers, so
+     the card read `tier: full` while granting 1{h} UNCONDITIONALLY ON
+     PLAY — the charge trigger and the "next time you hit this turn"
+     delay both dropped. Refusing the clause is weaker than printed and
+     VISIBLE; the tier going down is the number improving (v3.16). */
+  const want = ["Glisten", "Danger Digits", "Hope Merchant's Hood",
+                "Banneret of Salvation"];
   /* A HERO IS NOT A DECK CARD AND NEITHER IS A TOKEN, and the pool holds
      all three (v3.21 keeps tokens by TYPE, v3.76 put Arakni's six Agents in
      the same way). The audit's headline "3 none" is over DECK cards; a flat

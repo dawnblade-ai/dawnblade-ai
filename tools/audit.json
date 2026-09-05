@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-05T22:11:01.951Z",
+ "generated": "2026-09-05T22:25:37.357Z",
  "appVer": "4.20",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 385,
+  "full": 384,
   "part": 17,
-  "none": 3
+  "none": 4
  },
  "heroes": {
   "kayo": {
@@ -1796,9 +1796,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 5 arcane damage to any target. If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "fyendal s fighting spirit|1": {
    "name": "Fyendal's Fighting Spirit",
@@ -1945,9 +1943,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If this was fused and deals damage to a hero, create a Frostbite token under their control.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "wounded bull|1": {
    "name": "Wounded Bull",
@@ -2016,9 +2012,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 4 arcane damage to any target. If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "aether hail|3": {
    "name": "Aether Hail",
@@ -2084,9 +2078,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nDeal 3 arcane damage to any target. If this was fused and deals damage to a hero, they discard a card unless they pay {r}{r}.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "arcane twining|3": {
    "name": "Arcane Twining",
@@ -2154,9 +2146,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Ice Fusion\nTarget opponent reveals their hand. If this was fused, put an action card with cost 0 from their hand on top of their deck.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "brothers in arms|3": {
    "name": "Brothers in Arms",
@@ -2391,9 +2381,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Iyslander Specialization\nIce Fusion\nCreate X Frostbite tokens under target hero's control. Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.",
-   "flags": [
-    "unreviewed keyword: \"ice fusion\""
-   ]
+   "flags": []
   },
   "photon splicing|3": {
    "name": "Photon Splicing",
@@ -11368,22 +11356,22 @@
    "mentions": [
     "solflare"
    ],
-   "tier": "full",
+   "tier": "none",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.",
-     "st": "run"
+     "st": "skip"
     }
    ],
-   "skipped": [],
+   "skipped": [
+    "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}."
+   ],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.",
-   "flags": [
-    "unreviewed keyword: \"solflare\""
-   ]
+   "flags": []
   },
   "beaming bravado|2": {
    "name": "Beaming Bravado",
@@ -11913,9 +11901,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nWhen this attacks, if it was fused, deal 1 arcane damage to target hero.",
-   "flags": [
-    "unreviewed keyword: \"lightning fusion\""
-   ]
+   "flags": []
   },
   "burn up shock|1": {
    "name": "Burn Up // Shock",
@@ -12025,9 +12011,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Fusion\nIf this was fused, it gets go again.",
-   "flags": [
-    "unreviewed keyword: \"lightning fusion\""
-   ]
+   "flags": []
   },
   "fry|1": {
    "name": "Fry",
@@ -12374,7 +12358,7 @@
    ],
    "tier": "full",
    "approx": false,
-   "playable": true,
+   "playable": false,
    "clauses": [
     {
      "t": "Lightning Flow - When this hits a hero, if you've played a Lightning card this turn, deal 1 arcane damage to them.",
@@ -12385,9 +12369,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Lightning Flow - When this hits a hero, if you've played a Lightning card this turn, deal 1 arcane damage to them.",
-   "flags": [
-    "unreviewed keyword: \"lightning flow\""
-   ]
+   "flags": []
   },
   "weave lightning|1": {
    "name": "Weave Lightning",

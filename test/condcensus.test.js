@@ -152,8 +152,14 @@ test("every `condOnHit` condition is in that evaluator's own census", {skip}, ()
      read for them, and the clause is routed to the late `way:` pass
      instead. A condition leaving is as deliberate an edit as one
      arriving. */
+  /* +playedCls:lightning AT v4.21. Static Shock's "Lightning Flow -"
+     prefix ate its trigger AND its gate, so the arcane fired
+     unconditionally on PLAY; stripping the prefix routes the whole
+     printed line through the readers that already answer it, and the
+     gate lands here. */
   assert.deepEqual([...onHit].sort(),
-    ["auras3", "charged", "chargedPitch2", "drac2", "marked", "pumped"]);
+    ["auras3", "charged", "chargedPitch2", "drac2", "marked",
+     "playedCls:lightning", "pumped"]);
   for(const c of onHit)
     assert.ok(E.condOnHitKnown(c), c + " has no pattern in CONDONHIT_CONDS");
 });

@@ -9,6 +9,75 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.21 — the rest of v3.99's family: a keyword prefix eating its own gate
+
+v3.59 guarded the **activation** prefixes so the loose matchers could not
+claim a line INCLUDING its cost. v3.99 found the same hazard in the
+**keyword** prefixes, gave `quickstrike` and `rupture` the guard
+`reprise`/`surge`/`high tide` already had — **and stopped there.**
+
+Censused, the pool prints **ten** keyword prefixes and **two more were
+still being eaten**:
+
+> **Static Shock** — *"**Lightning Flow** - When this hits a hero, if
+> you've played a Lightning card this turn, deal 1 arcane damage to
+> them."*
+>
+> **Banneret of Salvation** — *"**Solflare** - When this is charged to
+> your hero's soul, the next time you hit this turn, gain 1{h}."*
+
+Both read `tier: full`. Both parsed to a **bare unconditional op** —
+`[["arcane",1]]` and `[["life",1]]` — fired **on PLAY**, with the trigger
+AND the gate gone. Stronger than printed twice over on one card.
+
+**NO TOOL HERE COULD SEE IT**, for v3.99's own reason: coverage counts the
+clause consumed, and `COND-BYPASSED` needs an unconditional TWIN to
+compare a gate against — when the gate DISAPPEARS there is nothing to
+compare. `npm run fairness` reported clean on both, every run.
+
+**THE FIX IS TO STRIP AND RECURSE, NOT A READER PER KEYWORD.** Both
+printings were fetched and read (AST016, DTD055) and **neither carries
+reminder text**, so the keyword is a NAME for an ability the card spells
+out in full — exactly what v3.99 established. Handed the rest of its own
+line, `classifyClause` already reads Static Shock perfectly: a
+`playedCls:lightning` gate on an on-hit-hero arcane. Nothing was invented.
+
+**AN UNREADABLE REMAINDER REFUSES (v2.29)** rather than falling through —
+which is the whole defect. Banneret drops to `none` and stops granting
+1{h} on play; **a downgrade that corrects over-reporting is the number
+improving** (v3.16). Its tail reads on its own, so the recorded refusal
+(v3.38) names what it waits on: a *"when this is charged to your soul"*
+trigger and a next-hit schedule.
+
+**THE LIST IS CLOSED AND THE BOUNDARY WAS MEASURED.** The first draft
+listed all ten prefixes and **moved 28 parses across twelve cards** —
+`crush`'s reader lives BELOW the catch-all, so stripping the prefix took
+the clause away from `fx.crush`. Measuring the blast radius **both ways**
+is what caught it (v3.33); the count alone would have looked like a win.
+
+**AND THE CENSUS ASKS `fxParse`, NOT `classifyClause`** (v3.56). Its own
+first draft ran each line through the clause reader in isolation and
+reported the two **Unity** cards — whose clause a RAW scan inside
+`fxParse` claims first, into `fx.defSelf` (v3.27). Asking the clause
+reader about a whole-card reader's card is asserting a different
+function's answer.
+
+### Three stale ledger records, corrected
+
+v3.69's rule — *when a record says a thing is unbuilt, go and ask the
+engine* — and two of these had nothing to do with this version's build:
+
+| keyword | said | is |
+|---|---|---|
+| `ice fusion` | unreviewed | **partial** — `fx.fusionCost` parses it and `execute` settles `fused`; what is approximated is the printed *"you MAY reveal"*, auto-taken |
+| `lightning fusion` | unreviewed | **partial** — the same mechanic one talent over |
+| `lightning flow` | unreviewed | **live** |
+| `solflare` | unreviewed | **pending** — a recorded refusal with its reason, rather than an unexamined one |
+
+Flagged cards **26 → 16**. Five sabotages, five bite.
+
+---
+
 ## v4.20 — piercing N: a keyword in the vocabulary that nothing consumed
 
 `piercing` sat in `parser.js`'s `KW_VOCAB_SRC` — so `printedKw` could

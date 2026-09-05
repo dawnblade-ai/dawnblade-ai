@@ -73,8 +73,16 @@ const names = k => (engine.match(new RegExp(k.replace(/[^a-z0-9]/gi, "."), "gi")
    of Drill Shot prints the parenthetical it omits: "(If this is defended
    by an EQUIPMENT, this gets +N{p}.)" — sixth time reading the printed
    card has settled one. */
-const UNBUILT = ["crank", "ice fusion", "lightning flow", "lightning fusion",
-  "overpower", "solflare", "steal"];
+/* v4.21 MOVED THREE MORE, and two of them were STALE RATHER THAN BUILT
+   BY THIS VERSION (v3.69: when a record says a thing is unbuilt, ask the
+   engine). `ice fusion` and `lightning fusion` are PARTIAL — `fx.fusionCost`
+   has parsed them and `execute` has settled `fused` for versions; what is
+   approximated is the printed "you MAY reveal", which is auto-taken.
+   `lightning flow` is LIVE: its prefix was being eaten, and stripping it
+   lets the whole printed line read. `solflare` stays here as PENDING — a
+   recorded refusal (v3.38) rather than an unreviewed one, because its
+   payload reads and what it waits on is a trigger and a schedule. */
+const UNBUILT = ["crank", "overpower", "solflare", "steal"];
 
 test("the ledger's unbuilt set is a LEDGER — moving one is a deliberate edit", () => {
   const claim = entries.filter(([, v]) => /pending|unreviewed/.test(v.status)).map(([k]) => k).sort();

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.20
+**Current version:** v4.21
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2323 drills** at v4.20.
+This is `node --test "test/*.test.js"` — **2330 drills** at v4.21.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -783,6 +783,41 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### FIX THE FAMILY, NOT THE TWO MEMBERS YOU FOUND (v4.21)
+
+v3.99 gave `quickstrike` and `rupture` the keyword-prefix guard
+`reprise`/`surge`/`high tide` already had, and stopped at the two it had
+found. **Censused, the pool prints ten prefixes and two more were still
+being eaten** — Static Shock's `Lightning Flow` and Banneret of
+Salvation's `Solflare`, both `tier: full`, both parsing to a **bare
+unconditional op fired on PLAY** with the trigger and the gate gone.
+
+**WHEN YOU FIX TWO MEMBERS OF A FAMILY, CENSUS THE FAMILY.**
+`test/prefix.test.js` is that census: it pins the ten prefixes the pool
+prints, and asserts no prefixed line carrying a gate reaches the CARD as
+plain `fx.ops`. A new keyword now fails a drill instead of walking into
+the same bug.
+
+**STRIP AND RECURSE, NEVER A READER PER KEYWORD.** Both printings were
+fetched and read and neither carries reminder text, so the keyword is a
+NAME for an ability the card spells out in full — handed the rest of its
+own line, `classifyClause` reads Static Shock in full and nothing is
+invented. **An unreadable remainder REFUSES** (v2.29) rather than falling
+through, which is the whole defect: Banneret drops to `none` and stops
+granting 1{h} on play.
+
+**THE BOUNDARY IS MEASURED, NOT CAUTIOUS.** The first draft listed all ten
+prefixes and moved **28 parses across twelve cards**, because `crush`'s
+reader lives BELOW the catch-all — stripping the prefix took the clause
+away from `fx.crush`. **Measuring the blast radius both ways** is what
+caught it (v3.33); the count alone read as a big win.
+
+**AND A CENSUS MUST ASK THE FUNCTION THAT HOLDS THE READER** (v3.56).
+Its own first draft ran each line through `classifyClause` in isolation
+and reported the two Unity cards — whose clause a RAW scan inside
+`fxParse` claims first, into `fx.defSelf` (v3.27). **Ask what the CARD
+ends up with.**
 
 ### A KEYWORD IN THE VOCABULARY THAT NOTHING CONSUMED (v4.20)
 

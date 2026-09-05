@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.20 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.21 · FIX THE FAMILY, NOT THE MEMBERS
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -50,9 +50,14 @@ into ONE gate carrying the LAST rung's payload — stronger than printed in
 the power, weaker in the action point, and the middle rung gone. **v4.20**
 took the same census to the KEYWORD flags and found `piercing` — in the
 parser's vocabulary, answered by `printedKw`, and consumed by nothing —
-settled by fetching one card image.
+settled by fetching one card image. **v4.21** asked the question v3.99
+did not: it had found TWO keyword prefixes eating their own gate and
+fixed those two. Censused, the pool prints **ten**, and two more were
+still being eaten — Static Shock and Banneret of Salvation, both
+`tier: full`, both firing a BARE unconditional op on PLAY with the
+trigger *and* the gate gone.
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.17, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.21, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.** Two
@@ -60,14 +65,15 @@ of the sentences it replaces had been wrong for seventeen versions.
 
 | | | command |
 |---|---|---|
-| coverage | **385 full · 17 part · 3 none** of 405 | `npm run audit` |
-| drills | **2323 pass · 0 fail · 4 skipped** | `npm test` |
+| coverage | **384 full · 17 part · 4 none** of 405 | `npm run audit` |
+| drills | **2330 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
 | scenes | **73 passing · 0 failing** | `npm run scenes` |
 | CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
 | sweep | **UNFAIR 0** · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
+| audit flags | **16**, down from 26 | `npm run audit` |
 
 **TWO OF THOSE THREE HERO CLAUSES ARE ABILITY NAMES**, not rules — Briar's
 *"Essence of Earth and Lightning"* and Iyslander's *"Essence of Ice"*,
@@ -75,15 +81,17 @@ annotated by `tools/ledger.js`'s closed vocabulary and deliberately left
 in the uncovered count (v3.86: over-reporting is the safe direction). The
 third is Enigma's `{c}{c}{c}` activation.
 
-### The three cards at `none`, and what each is waiting on
+### The four cards at `none`, and what each is waiting on
 
-Re-derived from `tools/audit.json`, never from memory:
+Re-derived from `tools/audit.json`, never from memory. **It was three at
+v4.20 and the fourth is a CORRECTION, not a regression** — see below.
 
 | card | waiting on |
 |---|---|
 | **Glisten** | a DISTRIBUTION sheet — N counters across any number of targets. `prompts.js` has no variant that splits one pool among several picks |
 | **Danger Digits** | a *"has hit"* fiction — the chosen dagger deals damage without an attack, so nothing gives it a `pend` to hang an on-hit clause on |
 | **Hope Merchant's Hood** | deck manipulation (shuffle-and-redraw) AND a rider whose count is the PICK's own size |
+| **Banneret of Salvation** | *"Solflare - When this is charged to your hero's soul, …"* — a CHARGE-to-soul trigger. `fx.chargeCost` and `hist.charged` exist; what does not is a schedule that fires when a card is charged |
 
 ### What needs a RULING from the user, not code
 
@@ -119,6 +127,51 @@ That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
 
+## ⚠ v4.21 — WHEN YOU FIX TWO MEMBERS OF A FAMILY, CENSUS THE FAMILY
+
+v3.99 found `quickstrike` and `rupture` being claimed WHOLE — gate and
+all — by the loose pump matcher below them, and gave them the guard
+`reprise`, `surge` and `high tide` already had. **It fixed the two it
+found.** The pool prints **ten** keyword prefixes, and the question
+*"which of the other five are also being eaten"* was never asked.
+
+| prefix | at v4.20 |
+|---|---|
+| reprise · surge · high tide · quickstrike · rupture | guarded |
+| crush · fusion ×2 · **lightning flow** · **solflare** | claimed by a loose matcher |
+
+Crush is fine — its reader sits BELOW the catch-all and keeps its own
+threshold. The last two were not: **Static Shock** parsed to a bare
+`arcane 1` and **Banneret of Salvation** to a bare `life 1`, both fired
+on PLAY, with the printed trigger and the printed gate both gone.
+Stronger than printed twice over on one card.
+
+**AND NO TOOL HERE COULD SEE IT, for v3.99's own reason**: coverage
+counts the clause consumed, and `COND-BYPASSED` needs an unconditional
+TWIN to compare a gate against — **when the gate DISAPPEARS there is
+nothing to compare.** Both cards read `tier: full`.
+
+**THE FIX IS TO STRIP AND RECURSE, not a reader per keyword.** Neither
+printing carries reminder text (AST016 and DTD055, both fetched and
+read), so the keyword is a NAME for an ability the card spells out in
+full — exactly how reprise and surge are already treated. Handed the
+rest of its own line, `classifyClause` reads Static Shock perfectly.
+
+**AN UNREADABLE REMAINDER REFUSES** (v2.29), so Banneret drops to `none`
+and stops granting 1{h} on play. **A downgrade that corrects
+over-reporting is the number improving** (v3.16).
+
+**THE LIST IS CLOSED AND MEASURED, BOTH DIRECTIONS.** The first draft
+listed all ten and moved **28 parses across twelve cards** — because
+crush's reader lives below the catch-all, so stripping its prefix took
+its threshold with it. Measuring the blast radius of a widening in BOTH
+directions is what caught that before it shipped.
+
+**AND THE CENSUS DRILL ASKED THE WRONG FUNCTION FIRST.** Written against
+`classifyClause` it reported the two Unity cards, whose clause a RAW
+whole-card scan claims into `fx.defSelf` before the clause reader is
+ever asked (v3.56). It asks `fxParse` now.
+
 ## ⚠ v4.20 — FETCH THE CARD IMAGE. IT IS ONE `curl`.
 
 `tools/ledger.js` had `piercing` as **unreviewed — "seen in pool; needs CR
@@ -132,11 +185,13 @@ node -e 'const p=require("./data/pool.json").find(c=>c.name==="CARD");
 curl -sSO "<that url>"        # then convert the .webp and read it
 ```
 
-**SIXTH TIME THIS HAS PAID** — Clash of Agility, Thunder Quake, Pick Up
-the Point, Lyath's halving, Cloaked, and now piercing. **The remaining
-`unreviewed` keywords have never had it tried**: `ice fusion`, `lightning
-fusion`, `lightning flow`, `overpower`, `solflare`, `steal`, and the one
-`pending` (`crank`). Every one of them has a printing.
+**SEVENTH AND EIGHTH TIMES THIS HAS PAID** — Clash of Agility, Thunder
+Quake, Pick Up the Point, Lyath's halving, Cloaked, piercing, and at
+v4.21 both of the keyword prefixes above (AST016, DTD055), whose faces
+carry **no reminder text at all** — which is itself the answer, and is
+what makes strip-and-recurse the faithful reading rather than a guess.
+**The remaining ones have never had it tried**: `overpower`, `steal`,
+and the one `pending` (`crank`). Every one of them has a printing.
 
 **AND THE FLAG THAT LED HERE WAS A KEYWORD FLAG, NOT A CARD.** v4.18's
 walk asked *"does the parse grant a go again anywhere"*; the same question
