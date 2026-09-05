@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.05 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
+# Handoff — Dawnblade, at v4.06 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -13,7 +13,29 @@ deleted a card special-cased by NAME (Inertia). **v4.05** closed the last
 buildable item on the named CR-gap list — **heave's face-up put fired no
 trigger**, recorded latent at v3.71 and blocked only by `faceUpArsenal`
 living inside `makeEffects` where the module-level `heave` could not
-reach it.
+reach it. **v4.06** went back to the ledger's own list of movable ops and
+asked the cheapest question about each — **what reads this?** — which
+found **Hyper Inflation inert on both boards with a feed line saying
+otherwise**, **Brand with Cinderclaw's Draconic grant never spent and, at
+the table, never cleared**, and a cost read two ways seven lines apart.
+
+## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, TWICE OVER
+
+v3.69: *when a record says a thing is unbuilt, go and ask the engine.*
+v4.06 is its twin — **when a record says an op is movable, go and ask
+what READS it.** Both times the answer was two minutes of grep-then-drive
+and both times it moved a real card:
+
+| field | written by | read by | cleared by |
+|---|---|---|---|
+| `costTax` | one line in `runOps` | **nothing, on either board** | **nothing** |
+| `dracNext` | one line in `runOps` | 3 sites | **the trainer, seat 0, at a TURN boundary — for a grant printed "this combat CHAIN"** |
+
+**A GREP FOR EVERY SITE OF A FIELD IS THE WHOLE TECHNIQUE.** Both were
+found by `grep -rn <field> engine/ index.html` and confirmed by driving.
+Neither is visible to any tool here: coverage counts the clause consumed,
+the fairness sweep is one-sided toward too-STRONG (and Hyper Inflation is
+as weak as a card gets), and 2221 drills were green.
 
 ## ⚠ START HERE: THE TWO LEDGERS
 
@@ -99,9 +121,9 @@ found by sabotage. The honest count is 1000.
 
 ## ⚠ THE REMAINING THREE CARDS, UNCHANGED
 
-`npm run audit`: **381 full / 21 part / 3 none**. v4.02, v4.03 and v4.05
-moved no card, deliberately — all three are WIRING, which is exactly why
-no coverage tool could see any of them.
+`npm run audit`: **381 full / 21 part / 3 none**. v4.02, v4.03, v4.05 and
+v4.06 moved no card, deliberately — every one is WIRING, which is exactly
+why no coverage tool could see any of them.
 
 | card | waiting on |
 |---|---|

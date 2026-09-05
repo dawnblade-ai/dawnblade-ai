@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.05
+**Current version:** v4.06
 
 ---
 
@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2221 drills**.
+This is `node --test "test/*.test.js"` — currently **2232 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -552,6 +552,75 @@ QUALIFIER KEYS**, so a drill that only asks for MATCHES can never see any
 of this. **Ask for the refusal** — two of three silent sabotages needed
 exactly that, and the third had hit a different taker entirely (three
 `findIndex` lines look alike), which is what turned up `takeDefCap`.
+
+### BEFORE YOU MOVE AN OP, ASK WHAT READS IT (v4.06)
+
+v4.02's approximation ledger named four op kinds that COULD move from
+resolution to declaration. **Two of them were not waiting on a timing
+decision at all**, and asking the cheapest question first is what found
+that — v3.69's rule (*when a record says a thing is unbuilt, go and ask
+the engine*) pointed at a record that says a thing is BUILT.
+
+**HYPER INFLATION** — *"cards cost {r} more to play this turn"*, three
+printings, `tier: full` — wrote `game.costTax` from ONE line, printed
+*"Cards cost 1 more for the rest of this turn"*, and **was read by
+nothing on either board.** Nothing cleared it either, so had anything
+read it the tax would have been permanent. **A counter with no reader is
+a no-op wearing a number** (v3.55), and this one shipped with a feed line
+asserting the opposite — the sev-2 category the player TRUSTS.
+
+**IT NAMES NO SEAT, SO IT IS GAME STATE.** *"Cards"*, unqualified, bills
+both players — which is why it rides in `parser.costCtx` (the game's half
+of a cost, v3.96) rather than on a side beside Frostbite's, and why both
+boards got it for free: every `effCost` caller already asks (v4.00).
+
+**AND IT IS ADDED AFTER THE FLOOR.** A discount cannot take a cost below
+zero; a tax on a free card is still a tax. Folded inside the `Math.max`
+the two cancel silently on exactly the cards a tax matters most against
+— **and a cost-0 fixture cannot see that**, because `max(0,0)+1` and
+`max(0,0+1)` are both 1. The drill discounts BELOW the printed cost,
+where the floor has work to do.
+
+### A SINGLE-SHOT GRANT NOTHING SPENT, AND NOTHING CLEARED (v4.06)
+
+> *"When this attacks, your next attack this combat chain is Draconic."*
+> — BRAND WITH CINDERCLAW
+
+`dracNext` was a boolean nothing ever **spent**, so one Brand made every
+later attack Draconic. v3.87's standing-vs-single-shot split read from
+the other end — and it **compounds**, because `parser.dracLinks` counts
+Draconic chain links and that number is Fai's discount, the `dracN` gates
+and Mounting Anger's banish bound.
+
+**AT THE TABLE NOTHING CLEARED IT EVER**, and the trainer's only clear
+was seat 0 in `newTurn` — **wrong board, wrong seat and wrong boundary at
+once** for a grant printed *"this combat CHAIN"*. Spent where it is READ
+so the two cannot disagree; spent even by an attack already Draconic by
+type, because the printed line names that attack either way (`buffQ`'s
+rule); expired in `closeChainGrants`, the shared body, for BOTH seats.
+The trainer's line is **deleted** rather than left beside the shared one
+— a second clear standing is dead rules code (v3.82).
+
+**AND A CARD CANNOT BE ITS OWN VICTIM.** Brand's ops RE-GRANT at
+resolution, so a drill that swings Brand into a pre-set grant reads the
+field back as true and fails against a correct engine. A synthetic
+Draconic attack that prints nothing separates the two facts (v3.73), and
+**one swing cannot tell a single-shot grant from a standing one** at all
+(v3.26) — both readings mark the first link.
+
+### A COST READ TWO WAYS, SEVEN LINES APART (v4.06)
+
+`effects.js` computed `_costO = P.costCtx(...)`, charged with it, and
+seven lines below asked `effCost(card, act(s))` **without** it for
+Staunch Response's additional-cost check. **v3.80 verbatim**, and the
+exact shape `costCtx` exists to stop: under a Frostbite or the new tax
+the affordability test passed on a price the charge did not use. A drill
+asserts every `effCost` call in `effects.js` passes the game's half —
+**and its own first draft was aimed wrong**, matching `/effCost\([^)]*\)/`,
+which stops at the paren inside `act(s)` so every call came back
+truncated and the third argument was invisible. A scan aimed at the wrong
+SHAPE passes by finding nothing (v2.80, v3.00); the match count and the
+nesting are both asserted now.
 
 ### HEAVE'S FACE-UP PUT FIRED NO TRIGGER (v4.05)
 

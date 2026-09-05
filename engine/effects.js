@@ -1963,7 +1963,13 @@ function makeEffects(ctx){
        means (v3.34). The ANSWER rides on the state as `_addPaid`, the
        same seam boost uses for `_doBoost` — a cost cannot be a queued
        prompt, which drains after the card has already resolved. */
-    if(n._addPaid && fx.addPay && act(s).res >= effCost(card, act(s)) + fx.addPay.cost){
+    /* AND THE SAME READER, SEVEN LINES DOWN (v4.06). This asked `effCost`
+       without the game's half while the line above already had `_costO` in
+       hand — a cost read twice with different inputs, which is v3.80's bug
+       verbatim and the exact shape `costCtx` was built to stop. Under a
+       Frostbite or Hyper Inflation's tax the two disagreed, so the
+       affordability test passed on a price the charge above did not use. */
+    if(n._addPaid && fx.addPay && act(s).res >= effCost(card, act(s), _costO) + fx.addPay.cost){
       exSide.res = exSide.res - fx.addPay.cost;
       n = L(n, `${card.name}: the additional ${fx.addPay.cost} is paid.`);
     } else if(n._addPaid){
@@ -5046,7 +5052,26 @@ function makeEffects(ctx){
        bonus lifts back over the wall has now hit, and the old ordering
        had already decided it had not. */
     const pc = n.pend.card;
-    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||!!act(n).dracNext, kind:"atk"}];
+    /* ---- "YOUR NEXT ATTACK" IS ONE ATTACK (v4.06) --------------------
+       Brand with Cinderclaw prints "your NEXT attack this combat chain is
+       Draconic" and `dracNext` was a boolean nothing ever spent — so every
+       attack after it counted as Draconic, which is v3.87's standing-vs-
+       single-shot split read from the other end, and STRONGER than
+       printed. It compounds: `parser.dracLinks` counts Draconic links, and
+       that number is Fai's discount, the `dracN` gates and Mounting
+       Anger's banish bound.
+
+       SPENT WHERE IT IS READ, so the two cannot disagree — and spent even
+       when the attack was already Draconic by type, because the printed
+       line names that attack either way, exactly as `buffQ` is spent by
+       the card its qualifier names. Brand pushes its own link BEFORE its
+       ops run, so it never takes its own grant. */
+    const _dracGrant = !!act(n).dracNext;
+    n.chain = [...n.chain, {n:pc.name, img:pc.img, dbImg:pc.dbImg, dmg:total, ga:n.pend.ga, drac:/draconic/i.test(pc.tt||"")||_dracGrant, kind:"atk"}];
+    if(_dracGrant){
+      actMut(n).dracNext = false;
+      n = L(n, `${pc.name} takes the Draconic grant \u2014 it is spent.`);
+    }
     if(total+rd>0){ n.hitSeq = n.hitSeq+1; n.lastDmg = total+rd; }
     n = L(n, `${pc.name} resolves for ${total}${pumps?` (+${pumps} reactions)`:""}.${blkNote}${runeMsg}`);
     n = runOps(n, n.pend.ops, pc.name);
@@ -6493,9 +6518,16 @@ function closeChainGrants(game){
        and is swept in `beginEndPhase` beside the other turn grants. */
     const keepD = (sd.defMod || []).filter(x => x.until === "turn");
     const dropDeb = keepD.length !== (sd.defMod || []).length;
-    if(keep.length === (sd.atkBuff || []).length && !dropDeb) continue;
+    /* AND THE DRACONIC GRANT (v4.06). Brand with Cinderclaw prints "this
+       COMBAT CHAIN", so this is its window — and it had no expiry at the
+       table at all, while the trainer cleared it in `newTurn` for SEAT 0
+       ONLY. Wrong board, wrong seat and wrong boundary at once: a grant
+       that survives the chain it names is stronger than printed, and one
+       that survives the GAME compounds through `dracLinks`. */
+    const dropDrac = !!sd.dracNext;
+    if(keep.length === (sd.atkBuff || []).length && !dropDeb && !dropDrac) continue;
     const sides = n.sides.slice();
-    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: keepD});
+    sides[i] = Object.assign({}, sd, {atkBuff: keep, defMod: keepD, dracNext: false});
     n = Object.assign({}, n, {sides});
   }
   return n;
@@ -6719,6 +6751,18 @@ function beginEndPhase(game, seat, db){
     n = Object.assign({}, n, {sides});
     msgs.push(nameOf(i) + ": " + held + " unspent \u201cthis turn\u201d grant"
       + (held > 1 ? "s expire" : " expires") + " with the turn.");
+  }
+
+  /* (8b) AND THE GAME'S OWN "THIS TURN" TAX (v4.06). Hyper Inflation's
+     "cards cost {r} more to play this turn" names no seat, so it is not a
+     side grant and step (8) above cannot reach it — it lives on the game,
+     taxes both players, and had no expiry at all because it had no
+     READER at all. Cleared in the TURN PLAYER's end phase, which is the
+     turn it was played in: the card is an attack action, so it can only
+     ever be set on its controller's own turn. */
+  if(n.costTax){
+    msgs.push("The inflation subsides \u2014 cards cost their printed price again.");
+    n = Object.assign({}, n, {costTax: 0});
   }
 
   /* (9) THE BROOD — ARAKNI'S AGENTS OF CHAOS (v3.76) ------------------

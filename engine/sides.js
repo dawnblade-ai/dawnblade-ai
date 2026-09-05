@@ -189,6 +189,12 @@ const GAME_KEYS = [
   "prompt","promptQ","revealed","lastRoll","boostOn",
   "chain","chainHist","chainOpen","boostChain","stack","pend","featured",
   "hitSeq","lastDmg",
+  /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this turn"
+     names no seat, so it taxes BOTH players and belongs to the game rather
+     than to either side. It is read through `parser.costCtx` and cleared in
+     `effects.beginEndPhase`; before v4.06 it was written by one line and
+     read by nothing at all. */
+  "costTax",
   /* the side whose effect is RESOLVING (ROADMAP-MULTIPLAYER.md Phase A step 1).
      Distinct from turnPlayer: a defence reaction resolves for the defender
      during the attacker's turn. Shared, not per-side — it names one of the two

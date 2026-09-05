@@ -5371,8 +5371,13 @@ function effCost(c,sd,o){
   /* THE MARK IS THE CALLER'S ANSWER (v3.96) — see `markRed`. */
   const mk = o.foeMarked ? markRed(c) : 0;
   const dyn = ((c && c._dracDiscount) ? c._dracDiscount * (o.dracLinks || 0) : 0) + stamp + mk;
+  /* A TAX IS ADDED AFTER THE FLOOR, never folded into the discount — a
+     discount cannot take a cost below zero, and a tax on a free card is
+     still a tax. `costTax` is the GAME's (v4.06), beside the two side
+     taxes, and it reaches every caller because all of them ask `costCtx`
+     (v3.96, v4.00). */
   return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
-       + frostCount(sd) + nextTurnTax(sd);
+       + frostCount(sd) + nextTurnTax(sd) + (o.costTax || 0);
 }
 
 /* WHAT THE GAME CONTRIBUTES TO A COST, IN ONE PLACE (v3.96).
@@ -5396,6 +5401,13 @@ function costCtx(g, seat){
   g = g || {};
   const i = seat == null ? (g.actor || 0) : seat;
   return {dracLinks: dracLinks(g.chain),
+          /* HYPER INFLATION'S TAX (v4.06). "Cards cost {r} more to play this
+             turn" names no seat, so it is GAME state and taxes both players'
+             cards — which is why it rides here rather than on a side. It was
+             written to `game.costTax` by one line and READ BY NOTHING for as
+             long as the op has existed: a no-op wearing a number (v3.55),
+             with a feed line telling the player it had worked. */
+          costTax: +(g.costTax || 0),
           foeMarked: !!(g.pend && (((g.sides || [])[1 - i]) || {}).marked)};
 }
 

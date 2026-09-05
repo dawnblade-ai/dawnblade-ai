@@ -9,6 +9,101 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.06 — two grants nothing spent, and one nothing read
+
+v4.02's approximation ledger names `costTax` and `dracNext` among the
+four op kinds that COULD move from resolution to declaration. **Before
+moving an op, go and ask what READS it** — v3.69's rule — and neither of
+these two was waiting on a timing decision at all.
+
+### HYPER INFLATION DID NOTHING, AND SAID IT HAD
+
+> *"When this attacks, cards cost {r} more to play this turn."*
+
+Three printings, `tier: full`. `runOps` wrote `game.costTax` from **one
+line** and printed *"Cards cost 1 more for the rest of this turn."*
+**Nothing anywhere read that field**, on either board — and nothing
+cleared it either, so had it ever been read it would have been permanent.
+**A counter with no reader is a no-op wearing a number** (v3.55), and
+this one came with a feed line asserting the opposite: the sev-2 category
+the player TRUSTS.
+
+**IT NAMES NO SEAT**, so the tax is GAME state and bills both players.
+That is the printed reading — *"cards"*, unqualified — and it is why the
+tax rides in `parser.costCtx`, the game's half of a cost (v3.96), rather
+than on a side beside Frostbite's. Every `effCost` caller on both boards
+already asks `costCtx` (v4.00), so both boards got it for free.
+
+**IT IS ADDED AFTER THE FLOOR.** A discount cannot take a cost below
+zero; a tax on a free card is still a tax. Folded inside the `Math.max`
+the two cancel, silently, on exactly the cards a tax matters most
+against. **And a cost-0 fixture cannot see that** — `max(0,0)+1` and
+`max(0,0+1)` are both 1, so the first drill came back SILENT under that
+sabotage. The one that bites discounts BELOW the printed cost, where the
+floor has real work to do.
+
+It expires in `beginEndPhase`, the shared body both boards call (v3.17),
+in the **turn player's** end phase — the card is an attack action, so it
+can only ever be set on its controller's own turn.
+
+### "YOUR NEXT ATTACK" IS ONE ATTACK
+
+> *"When this attacks, your next attack this combat chain is Draconic."*
+> — BRAND WITH CINDERCLAW
+
+`dracNext` was a boolean that nothing ever **spent**, so one Brand made
+every later attack Draconic. That is v3.87's standing-vs-single-shot
+split read from the other end, and it **compounds**: `parser.dracLinks`
+counts Draconic chain links, and that number is Fai's discount, the
+`dracN` gates and Mounting Anger's banish bound.
+
+**AT THE TABLE NOTHING CLEARED IT EVER.** The trainer's only clear was
+`youMut(n).dracNext = false` in `newTurn` — **wrong board, wrong seat and
+wrong boundary at once**, for a grant printed *"this combat CHAIN"*.
+
+- **Spent where it is READ**, so the two cannot disagree — and spent even
+  by an attack already Draconic by type, because the printed line names
+  that attack either way, exactly as `buffQ` is spent by the card its
+  qualifier names. Brand pushes its own link BEFORE its ops run, so it
+  never takes its own grant.
+- **Expired in `closeChainGrants`** for BOTH seats — the shared body, the
+  printed window.
+- The trainer's line is **deleted**, not left beside the shared one: a
+  second clear standing is dead rules code, which reads as a rule
+  somebody can reach (v3.67, v3.77, v3.82).
+
+### A COST READ TWO WAYS, SEVEN LINES APART
+
+`effects.js` computed `_costO = P.costCtx(...)`, charged the cost with
+it, and then **seven lines below** asked `effCost(card, act(s))` without
+it for Staunch Response's additional-cost affordability test. **v3.80
+verbatim** — a cost read at two sites with different inputs, the exact
+shape `costCtx` was built to stop — and under a Frostbite or this new tax
+the two disagreed, so the check passed on a price the charge did not use.
+A drill now asserts every `effCost` call in `effects.js` passes the
+game's half.
+
+### THE FIXTURES, THREE OF WHICH WERE WRONG FIRST
+
+- **One swing cannot tell a single-shot grant from a standing one**
+  (v3.26) — both readings mark the first link. The drills swing twice.
+- **Brand cannot be its own victim**: its ops RE-GRANT at resolution, so
+  the field came back true and the drill failed against a correct engine.
+  A synthetic Draconic attack that prints nothing separates the facts
+  (v3.73).
+- **My own source scan stopped at the paren inside `act(s)`**, so every
+  `effCost` call came back truncated and the third argument was
+  invisible. A scan aimed at the wrong shape passes by finding nothing
+  (v2.80, v3.00) — the match count is asserted now, and so is the nesting.
+
+Twelve sabotages, twelve bites. **And 2221 drills were green throughout**
+— coverage counts the clause consumed, and the fairness sweep is
+one-sided toward too-STRONG while Hyper Inflation is as weak as a card
+gets. Measured: `npm test` 2232 drills, 0 fail; coverage unmoved (381
+full / 21 part / 3 none); play 210 games, 0 stalls, 0 violations.
+
+---
+
 ## v4.05 — heave's face-up put fired no trigger
 
 v3.71 built `faceUpArsenal` as the **one** face-up walk and measured a

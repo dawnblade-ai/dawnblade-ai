@@ -142,7 +142,15 @@ const APPROX = {
       "(Brand with Cinderclaw) touch nothing this attack resolves and are the "+
       "four that COULD move — each is a behavioural change to a real card and "+
       "wants its own version, not a blanket sweep. Concoct Disorder was moved at "+
-      "v3.88 for exactly that kind of per-card reason."},
+      "v3.88 for exactly that kind of per-card reason. "+
+      "AND ASKING WHAT READS THEM CAME FIRST (v4.06). Two of the four were not "+
+      "waiting on a timing decision at all: `costTax` had NO READER — Hyper "+
+      "Inflation was inert on both boards while its feed line said otherwise — "+
+      "and `dracNext` was a single-shot grant nothing spent and, at the table, "+
+      "nothing cleared. Both are built now, which also SHARPENS what is left "+
+      "here: moving `dracNext` to declaration needs Brand to be excluded from "+
+      "its own grant, because its link is pushed before its ops run today and "+
+      "would not be if the op fired earlier."},
 
 "trainer-priority-machine": {
   status:"stated", cr:"CR 4.2-4.4, 7.x", board:"trainer", since:"v2.27", swept:"v4.02",
