@@ -178,7 +178,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — currently **2204 drills**.
+This is `node --test "test/*.test.js"` — currently **2210 drills**.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -2034,6 +2034,71 @@ silent skip is not a pass. It also runs `npm run scenes`, compiles both
 every engine module the page loads (count DERIVED from `index.html`, never
 stated) and checks the live `APP_VER` matches the repo. That closes the gap
 between "pushed" and "live" which a session cannot check for itself.
+
+### A RESOLVED LAYER'S EFFECT HAD NOWHERE TO LAND (v4.03)
+
+`effects.attackRx` records an attack reaction's pump **on the layer it
+pushes**, and `linkPumps` sums the reaction layers at the damage step.
+That works on the TRAINER, which has no layer-resolution step at all.
+
+**THE TABLE POPS THEM, AND IT IS RIGHT TO.** CR 4.2.2 resolves the top
+layer when both seats pass, and `windowClosed` requires an EMPTY stack
+before the reaction step can end — so at the table every reaction layer is
+gone before `strike` runs, and summing the survivors summed **nothing**.
+Driven, same card and same state: Courageous Steelhand prints +3, the feed
+said *"on the stack (+3)"*, and the attack dealt its base **3** at the
+table against **3+3** in the trainer. 13 distinct pool attack reactions
+carry a pump across 33 printings.
+
+**v3.01's SHAPE WITH THE CR-CORRECT BOARD LOSING.** Popping the layer is
+what resolving one MEANS; the defect was that the pump lived only in the
+thing being destroyed. It rides onto the open link in `resolveLayer` — the
+CR-correct moment — and **`effects.rxPumpTotal` is the ONE reader** of
+both records. The second reader had the identical defect: `pendPumped`
+answered FALSE after a layer resolved, so an ability targeting *"an attack
+with {p} greater than its base"* was offered against a link it had already
+pumped.
+
+**SEVENTEEN DRILLS CALL `attackRx` DIRECTLY AND ALL PASS** — v3.89's
+lesson one layer out. There the sixteen missed a dropped argument; here
+the function is entirely correct and the TURN STRUCTURE deletes its record
+two priority passes later. **Drive the real entry point, or pin nothing.**
+
+### THE REACTION STEP HAD NO CALLER — FOURTH TIME (v4.03)
+
+`sparring.js` contained the word "reaction" **exactly once, in a
+comment**. So 20 attack reactions, 15 defence reactions, the layer
+machinery, `pendPumped` and every printed target restriction were driven
+**never**, and `npm run play` reported byte-identical results either side
+of the fix above.
+
+v3.50's allies, v3.80's non-attacks, v3.84's aura attacks, and now this:
+**a feature with no caller looks exactly like a feature that works, until
+you count.** The branch is printed numbers and CR facts only — the
+cheapest legal reaction, **one per chain link** (structural: nothing of
+ours already on the stack, and the link not already carrying a resolved
+one), with `legal` deciding the rest. Measured: **reaction 273 / layer
+273**, Dorinthea 7 wins → 24, Arakni 1 → 21.
+
+**AND IT MADE TWO BLACKLISTS REACHABLE.** `sparring.payAction` hardcoded
+`half: 0` under a comment calling it *"the one answer that is always
+available"* — true only while no reaction window was reachable, and Burn
+Up // Shock declared there is refused because its **Instant** half is the
+legal one. `tools/tourney.js` named its route counters in a hardcoded list
+while the counters live in `selfplay.js`, so the two new ones fired
+thousands of times and printed nowhere (v3.35's `PENDING_KINDS` in a third
+consumer). **A fallback that is "always available" is a claim about the
+states that can reach it.**
+
+### NAMING A THING IN THE FEED CAN ZERO A COUNTER (v4.03)
+
+`resolveLayer` printed a bare *"A layer resolves."* because a reaction
+layer carries a `label` rather than a `name`. Naming it is worth doing —
+in a training sim the sequence is the lesson — and doing so **silently
+zeroed `selfplay.js`'s `layer` counter on the next run**, beside a healthy
+`reaction 273`. v3.81's rule: the counter spells the engine's own phrase,
+so the line keeps the word *layer* and a drill pins the two spellings
+against each other.
 
 ### `tools/approx.js` — THE APPROXIMATION LEDGER (v4.02)
 

@@ -149,20 +149,37 @@ function payAction(g, seat, p, o){
      A REFUSAL IS ALWAYS A BUG IN THIS FILE (the module's own contract),
      so the fix belongs here rather than in `legal`.
 
-     SPLIT — declare the LEFT half, never `both`. That is `judge`'s own
-     default and its stated reason: melding doubles the base cost and
-     hands a player a textbox they never asked for, so defaulting to it
-     is a judgement this file cannot make. `legal` refuses `both` outright
-     on a card with no meld, and refuses a half whose window is wrong —
-     so asking for half 0 is the one answer that is always available, the
-     same argument the ally-target comment above makes for naming the
-     hero.
+     SPLIT — declare a half, never `both`. Melding doubles the base cost
+     and hands a player a textbox they never asked for, so defaulting to
+     it is a judgement this file cannot make.
 
-     ADDPAY — declined, exactly as boost is, and for the identical reason:
+     THE HALF IS ASKED, NOT ASSUMED (v4.03). This read `half: 0`, and the
+     comment here claimed that was "the one answer that is always
+     available". IT WAS NOT — it was true only while the policy could
+     never reach this pending in a reaction window. The moment v4.03 gave
+     the policy a reaction branch, Burn Up // Shock was declared there and
+     refused with "Arcane Seeds is an action — not legal in this window":
+     the INSTANT half is the legal one, and the left half is not.
+
+     That is this file's own contract broken (a refusal is always a bug
+     here), and it is v3.80's lesson one branch over: a fallback that is
+     "always available" is a claim about the states that can reach it, and
+     it stops being true the day a new caller reaches more of them.
+
+     `legal` decides, so the two halves are OFFERED to it in printed order
+     and the first it approves is taken — no card text, and the left half
+     still wins wherever both are legal. */
+  if(p.kind === "split"){
+    for(const half of [0, 1])
+      if(legal(g, {t: "split", half}, seat)) return {t: "split", half};
+    /* Neither half legal: fall through to the payment branches below
+       rather than proposing a refusal. */
+  }
+
+  /* ADDPAY — declined, exactly as boost is, and for the identical reason:
      `autoAnswer`'s standing policy is to decline what is optional, "no"
      is a complete answer to "you may", and declining can never make the
      seat stronger than printed. */
-  if(p.kind === "split")  return {t: "split", half: 0};
   if(p.kind === "addPay") return {t: "addPay", yes: false};
   if(p.need - sd.res - J.paySum(sd) <= 0) return {t: "payConfirm"};
   const c = pitchPick(sd, p.card, o);
@@ -261,6 +278,23 @@ function targetFor(g, seat, atkCard){
     /* the biggest threat this swing can actually remove */
     .sort((a, b) => num(b.card, "power") - num(a.card, "power") || byUid(a, b))[0];
   return kill ? kill.uid : "hero";
+}
+
+/* THE CHEAPEST LEGAL REACTION IN HAND, or nothing.
+
+   NO CARD TEXT: `cost` and `pitch` are printed numbers, `legal` answers
+   everything else, and the arsenal is included because a reaction set
+   there is playable from it exactly as one in hand is. */
+function reaction(g, seat){
+  const sd = g.sides[seat];
+  const from = [];
+  (sd.hand || []).forEach(c => from.push({c, from: "hand"}));
+  if(sd.arsenal) from.push({c: sd.arsenal, from: "arsenal"});
+  const legalRx = from
+    .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
+    .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
+  const pick = legalRx[0];
+  return pick ? {t: "play", uid: pick.c.uid, from: pick.from} : null;
 }
 
 function offence(g, seat, o){
@@ -479,9 +513,46 @@ function act(g, seat, o){
 
   if(!P.hasPriority(g, seat)) return null;
 
-  if(P.speedAllowed(g, seat).indexOf("action") >= 0){
+  const speeds = P.speedAllowed(g, seat);
+
+  if(speeds.indexOf("action") >= 0){
     const a = offence(g, seat, o);
     if(a) return a;
+  }
+
+  /* ---- THE REACTION WINDOW (v4.03) ----------------------------------
+     THIS FILE CONTAINED THE WORD "reaction" EXACTLY ONCE, IN A COMMENT.
+     So the whole reaction step had no caller: 20 attack reactions and 15
+     defence reactions in the pool, `effects.attackRx`, the layer
+     machinery, `pendPumped` and every printed target restriction, driven
+     ZERO times in 210 self-play games.
+
+     That is v3.50's lesson for the FOURTH time — allies (v3.50),
+     non-attacks (v3.80), aura attacks (v3.84), and now this: **a feature
+     with no caller looks exactly like a feature that works, until you
+     count.** It is also why `npm run play` reported byte-identical
+     results either side of the v4.03 fix for a bug that dropped EVERY
+     attack-reaction pump at the table.
+
+     THE HEURISTIC IS PRINTED NUMBERS AND CR FACTS ONLY, as everything
+     here is. `legal` decides whether a card may be played in this window
+     at all — `rxAllowed`, the printed target restriction, the cost — so
+     this proposes and the judge disposes.
+
+     ONE PER CHAIN LINK. Without a cap the seat empties its hand into a
+     single swing, which is not a heuristic, it is a leak. The cap is
+     STRUCTURAL rather than remembered: nothing of ours may already be
+     waiting on the stack, and the link must not already carry a resolved
+     reaction. A stateless policy cannot hold a counter, and a marker on
+     the state is judge's to own.
+
+     CHEAPEST FIRST, ties on uid. A reaction spends a card and resources
+     mid-combat; the cheapest legal one is the least the seat can commit
+     while still exercising the route, and `cost` is a printed number. */
+  const rxWindow = speeds.some(w => w === "attack-reaction" || w === "defense-reaction");
+  if(rxWindow && g.pend && !(g.stack || []).length && !g.pend.rxPump){
+    const r = reaction(g, seat);
+    if(r) return r;
   }
 
   /* Nothing worth doing. Ending the turn is a PASS carrying intent

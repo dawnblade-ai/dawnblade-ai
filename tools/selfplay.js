@@ -84,6 +84,20 @@ function play(g, limit){
         if(/goes down|dies|died/i.test(line))     events.push(["death", line]);
         if(/\bGold\b.*\bcreated\b|Gold token/i.test(line)) events.push(["gold", line]);
         if(/\bcrush\b/i.test(line))              events.push(["crush", line]);
+        /* THE REACTION WINDOW (v4.03). `sparring.js` contained the word
+           "reaction" exactly once, in a comment, so the whole reaction
+           step had ZERO coverage — 20 attack reactions and 15 defence
+           reactions in the pool, driven never. That is why this harness
+           reported byte-identical results either side of a fix that
+           restored EVERY attack-reaction pump at the table.
+
+           TWO PHRASES, because they are two different events: the layer
+           going ON (the reaction was played) and the layer RESOLVING
+           (both seats passed over it, CR 4.2.2). A counter that watched
+           only the first would report a number while the resolution was
+           broken, which is the bug v4.03 fixed. */
+        if(/on the stack \(/i.test(line))          events.push(["reaction", line]);
+        if(/layer resolves/i.test(line))           events.push(["layer", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         feedSeen.add(line.replace(/\d+/g, "#"));
       }

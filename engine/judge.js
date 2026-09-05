@@ -1339,7 +1339,50 @@ function settle(g){
 function resolveLayer(g){
   const top = g.stack[g.stack.length - 1];
   let n = P.reset({...g, stack: g.stack.slice(0, -1)});
-  return say(n, (top && top.name ? top.name : "A layer") + " resolves.");
+
+  /* A RESOLVED LAYER'S EFFECT HAS TO LAND SOMEWHERE (v4.03), and until now
+     it did not. `effects.attackRx` records an attack reaction's pump ON
+     THE LAYER, and `linkPumps` sums the reaction layers at the damage
+     step — which works on the TRAINER, where nothing ever pops one, and
+     was silently zero here: CR 4.2.2 resolves the top layer when both
+     seats pass, and the reaction step cannot end until the stack is
+     EMPTY, so every reaction layer is gone before `strike` runs.
+
+     (THE LAYER SHAPE IS DELIBERATELY NOT SPELLED OUT IN THIS COMMENT.
+     `dorinthea.test.js` guards that this file never GROWS a reaction
+     layer of its own, by scanning for the literal — and prose that reads
+     like the call trips it. Reword the prose rather than weaken the scan,
+     which is the same discipline `sync.test.js` documents.)
+
+     Driven, same card and same state: Courageous Steelhand prints +3, the
+     feed said "on the stack (+3)", and the attack dealt its base 3 at the
+     table against 3+3 in the trainer. 13 distinct pool attack reactions
+     carry a pump across 33 printings, and the three activated
+     attack-reaction abilities take the same route.
+
+     v3.01's shape with the CR-CORRECT BOARD LOSING: popping the layer is
+     exactly what resolving one MEANS, and the defect was that the pump
+     lived only in the thing being destroyed. It rides onto the open link
+     here, at the moment the layer resolves — which is also the CR-correct
+     moment for the effect to happen — and `effects.rxPumpTotal` is the
+     ONE reader of both records, so `linkPumps` and `pendPumped` cannot
+     disagree about how much a link has been pumped. */
+  if(top && top.k === "rx" && top.pump && n.pend)
+    n = {...n, pend: {...n.pend, rxPump: (n.pend.rxPump || 0) + top.pump}};
+
+  /* THE LINE NAMES THE LAYER AND STILL SAYS "layer" (v4.03). It read
+     `top.name || "A layer"`, and a reaction layer carries a `label`
+     rather than a name, so every one of them printed the bare "A layer
+     resolves." — true, and in a training sim the SEQUENCE is the lesson,
+     so which layer just resolved is worth saying.
+
+     BOTH HALVES MATTER: naming it alone (the first draft here) silently
+     broke `tools/selfplay.js`'s route counter, which spells the engine's
+     own phrase — v3.81's rule, and it reported `layer 0` beside
+     `reaction 273` on the very next run. The word survives, so the
+     counter and the feed cannot drift apart. */
+  const who = (top && (top.name || top.label)) ? (top.name || top.label) + " — the layer" : "A layer";
+  return say(n, who + " resolves.");
 }
 
 /* ---- the damage step (CR 7.5) -----------------------------------------

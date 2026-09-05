@@ -40,12 +40,23 @@ if(bad.length) console.log("\nSTALLS:", JSON.stringify(bad.slice(0,6)));
 if(refusals.length) console.log("\nREFUSALS (first 8):", JSON.stringify(refusals.slice(0,8), null, 1));
 if(viols.length)    console.log("\nVIOLATIONS (first 8):", JSON.stringify(viols.slice(0,8), null, 1));
 if(malformed.length)console.log("\nMALFORMED (first 8):", JSON.stringify(malformed.slice(0,8), null, 1));
+/* THE ROUTE LIST IS DERIVED, NEVER TYPED (v4.03). It was
+   ["tap","ally","death","gold","crush"] — a hardcoded list in the REPORT
+   while the counters live in `selfplay.js`, so a route counted there and
+   not named here reports NOTHING and reads exactly like a route that
+   never fires. That is v3.35's `PENDING_KINDS` blacklist in a third
+   consumer, and it bit immediately: v4.03's `reaction` and `layer`
+   counters were added, fired thousands of times, and printed nowhere.
+
+   MALFORMED is excluded because it is a FAULT rather than a route, and
+   it has its own block above. */
+const ROUTES = Object.keys(evts).filter(k => k !== "MALFORMED").sort();
 console.log("\nROUTE COVERAGE (times a feed line matched):");
-for(const k of ["tap","ally","death","gold","crush"])
-  console.log(`  ${k.padEnd(7)} ${(evts[k]||[]).length}`);
-for(const k of ["tap","ally","death","gold"]){
-  const u = [...new Set(evts[k]||[])].slice(0,4);
-  if(u.length) console.log(`  e.g. ${k}: ` + u.join(" | ").slice(0,220));
+for(const k of ROUTES)
+  console.log(`  ${k.padEnd(9)} ${(evts[k]||[]).length}`);
+for(const k of ROUTES){
+  const u = [...new Set(evts[k]||[])].slice(0,3);
+  if(u.length) console.log(`  e.g. ${k}: ` + u.join(" | ").slice(0,200));
 }
 const longest = games.filter(g=>g.turn).sort((a,b)=>b.turn-a.turn)[0];
 const shortest= games.filter(g=>g.turn).sort((a,b)=>a.turn-b.turn)[0];

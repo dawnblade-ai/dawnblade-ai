@@ -23,6 +23,11 @@ const C = require("../engine/cards");
 const G = require("../engine/game");
 const P = require("../engine/priority");
 const RNG = require("../engine/rng");
+/* THE DRILL may read the parser; the MODULE may not. The no-card-text
+   contract is about `engine/sparring.js`, and the guard below scans that
+   file — this line is a fixture asking the engine which card is a split
+   rather than re-deriving it from a slash in the type line. */
+const PR = require("../engine/parser");
 const INV = require("../engine/invariants");
 const { loadData } = require("./helpers/extract");
 
@@ -461,13 +466,66 @@ test("the policy answers every kind in judge.PENDING_KINDS", {skip}, () => {
   }
 });
 
-test("a split card is declared, one half, never both", {skip}, () => {
+test("a split card is declared, one half, never both — and the half is ASKED", {skip}, () => {
   /* MELDING DOUBLES THE BASE COST and hands a player a textbox they never
      asked for, so defaulting to `both` is a judgement this file cannot
-     make — it is judge's own default and its stated reason. */
-  const src = fs.readFileSync(__dirname + "/../engine/sparring.js", "utf8");
-  assert.match(src, /return \{t: "split", half: 0\}/);
-  assert.doesNotMatch(src, /half: *"both"/);
+     make — it is judge's own default and its stated reason.
+
+     THIS DRILL USED TO GREP FOR `half: 0` AND ROTTED THE DAY THE RULE
+     MOVED (v4.03). A source slice rots where a rule moves (v3.22, v3.28,
+     v3.94), and this one was worse than useless: it pinned the very
+     literal that was the bug. `half: 0` was described in the source as
+     "the one answer that is always available" — true only while the
+     policy could never reach a split pending in a REACTION window, which
+     v4.03's reaction branch made reachable. Burn Up // Shock declared
+     there was refused: its INSTANT half is the legal one.
+
+     DRIVEN NOW, in both windows, which is the only thing that could have
+     told the difference. */
+  const g0 = match({seed: "splitprobe"});
+  const half = (g, seat) => {
+    const p = J.pendingOf(g);
+    assert.ok(p && p.kind === "split", "fixture: no split pending to answer");
+    const a = SP.act(g, seat);
+    assert.ok(a && a.t === "split", "the policy did not answer the split pending");
+    assert.notEqual(a.half, "both", "the policy melded — a textbox nobody asked for");
+    /* `judge.legal` RETURNS THE REASON, and null when the action is
+       legal — so a bare truthiness test is inverted, which is what the
+       first draft of this drill did and why it failed against a correct
+       engine. `sparring.js`'s own wrapper is `J.legal(...) == null`. */
+    assert.equal(J.legal(g, a, seat), null,
+      "the policy proposed a half `legal` refuses — that is this module's own " +
+      "contract broken, and `half: 0` is not always the legal one");
+    return a.half;
+  };
+
+  /* THE CARD IS FOUND BY THE ENGINE'S OWN READER, not by a `//` in the
+     type line — CLAUDE.md says in as many words that the slash is a
+     RENDERING and `played_horizontally` is the fact, and the first draft
+     of this drill picked its fixture by the slash and got a card judge
+     would not declare. Check your own fixture.
+
+     The card is spliced into hand rather than waited for: the question is
+     what the POLICY answers, not how the card arrived. */
+  const db = DB();
+  const split = C.resolveEntry(db, {name: "Burn Up // Shock", p: 1, code: null, q: 1});
+  assert.ok(split && PR.isSplit(split),
+    "Burn Up // Shock is no longer a split card — re-anchor this drill");
+
+  let g = g0;
+  while(g.arsenalFor != null) g = J.reduce(g, {t: "arsenal", uid: null}, g.arsenalFor).state;
+  const seat = g.turnPlayer;
+  const card = Object.assign({}, split, {uid: 9001});
+  let sides = g.sides.slice();
+  sides[seat] = Object.assign({}, sides[seat], {res: 9, hand: [card, ...sides[seat].hand]});
+  g = Object.assign({}, g, {sides});
+
+  const act0 = J.reduce(g, {t: "play", uid: card.uid, from: "hand"}, seat);
+  assert.notEqual(act0.state, g, "the split card was refused in the action window: " + act0.error);
+  const leftHalf = half(act0.state, seat);
+  assert.equal(leftHalf, 0,
+    "in the ACTION window the left half is legal and is still the one taken — " +
+    "asking `legal` must not change the answer where both are available");
 });
 
 test("an optional additional cost is DECLINED, like boost", {skip}, () => {
@@ -589,4 +647,18 @@ test("the route counter spells what the FEED spells", {skip: false}, () => {
   assert.match(gm + ef, /goes down/, "…and the engine must still print it");
   assert.match(sp, /created\\b/, "the gold counter must spell the mint's own phrase");
   assert.match(ef, /created on \$\{who\} board/, "…and the mint must still print it");
+  /* v4.03 — the reaction window, whose coverage was ZERO until the policy
+     was given a branch. Two phrases: the layer going ON and the layer
+     RESOLVING. Pinning only the first would report a number while the
+     resolution was broken, which is precisely the defect v4.03 fixed. */
+  const jd = fs.readFileSync(__dirname + "/../engine/judge.js", "utf8");
+  assert.match(sp, /on the stack/,
+    "the reaction counter must spell the phrase `attackRx` prints");
+  assert.match(ef, /on the stack/,
+    "…and effects.js must still print it when a reaction becomes a layer");
+  assert.match(sp, /layer resolves/,
+    "the layer counter must spell the phrase judge prints");
+  assert.match(jd, /the layer" : "A layer"/,
+    "…and judge.js must still print the word `layer` when one resolves " +
+    "(CR 4.2.2). Naming the card alone is what zeroed this counter once.");
 });

@@ -4836,7 +4836,10 @@ function makeEffects(ctx){
 
   const linkPumps = (s, info) => {
     let n = {...s};
-    const pumps = (n.stack||[]).filter(l=>l.k==="rx").reduce((a,l)=>a+l.pump,0);
+    /* ONE READER (v4.03) — the layers still waiting AND the ones judge has
+       already resolved onto the link. Summing only the survivors dropped
+       every attack-reaction pump at the table. */
+    const pumps = rxPumpTotal(n);
     /* ---- THE STANDING ATTACK GRANTS (v3.87) --------------------------
        "Your attacks with stealth get +1{p} this turn." — a CONTINUOUS
        effect on the attack's power, not a bonus handed over at
@@ -6813,11 +6816,43 @@ function thawFrost(game, seat){
    it from `legal`, which holds no effects context, so a copy built inside
    `makeEffects` would be reachable from exactly one of the two callers
    that must agree. */
+/* WHAT HAVE REACTIONS CONTRIBUTED TO THE OPEN LINK? (v4.03)
+
+   TWO RECORDS, BECAUSE THE TWO BOARDS RESOLVE A LAYER DIFFERENTLY, and
+   reading only one of them was a live two-player bug for as long as the
+   table has had a priority machine:
+
+     waiting    `{k:"rx"}` layers still on the stack. The TRAINER never
+                pops one — it has no layer-resolution step at all — so
+                every reaction it has ever played is still here at the
+                damage step, which is why the pump landed there.
+     resolved   `pend.rxPump`. judge.js DOES pop them: CR 4.2.2 resolves
+                the top layer when both seats pass, and `windowClosed`
+                requires an EMPTY stack before the reaction step can end
+                — so at the table EVERY rx layer is gone before the damage
+                step, and summing the survivors summed nothing.
+
+   MEASURED: 13 distinct pool attack reactions carry a pump across 33
+   printings, and all three activated attack-reaction abilities route
+   through the same `attackRx`. Driven, same card and same state:
+   Courageous Steelhand prints +3, said "on the stack (+3)" in the feed,
+   and the attack dealt its base 3 at the table and 3+3 in the trainer.
+
+   THIS IS v3.01's SHAPE WITH THE CR-CORRECT BOARD LOSING. judge is right
+   to pop the layer — that is what resolving one MEANS — and the defect is
+   that the pump was stored in the layer rather than carried onto the link
+   when it resolved. One body, so the two readers cannot disagree again. */
+function rxPumpTotal(s){
+  const waiting = (s && s.stack || []).filter(x => x.k === "rx")
+                    .reduce((a, x) => a + (x.pump || 0), 0);
+  const resolved = (s && s.pend && s.pend.rxPump) || 0;
+  return waiting + resolved;
+}
+
 function pendPumped(s){
   const p = s && s.pend;
   if(!p || !p.card) return false;
-  const rx = (s.stack || []).filter(x => x.k === "rx").reduce((a, x) => a + (x.pump || 0), 0);
-  return ((p.total || 0) + rx) > (p.card.power || 0);
+  return ((p.total || 0) + rxPumpTotal(s)) > (p.card.power || 0);
 }
 
 function soakPolicy(live, sd){
@@ -6869,6 +6904,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, defendValue, defSelfMet, armNextTurn, pendPumped, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -9,6 +9,113 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.03 — a resolved layer's effect had nowhere to land
+
+**Every attack-reaction pump was dropped at the table, every time.** 13
+distinct pool attack reactions carry a pump across 33 printings, and all
+three activated attack-reaction abilities take the same route.
+
+`effects.attackRx` records the pump **on the layer it pushes**, and
+`linkPumps` sums the reaction layers at the damage step. That works on the
+TRAINER, which has no layer-resolution step at all — every reaction it has
+ever played is still sitting on the stack when the total is struck.
+
+**THE TABLE POPS THEM, AND IT IS RIGHT TO.** CR 4.2.2 resolves the top
+layer when both seats pass in succession, and `windowClosed` requires an
+EMPTY stack before the reaction step can end — so at the table every
+reaction layer is gone before `strike` runs, and summing the survivors
+summed nothing.
+
+**DRIVEN, SAME CARD AND SAME STATE.** Courageous Steelhand prints +3, the
+feed said *"charged this turn — the bonus is live"* and *"on the stack
+(+3)"*, and the attack dealt its base **3** at the table against **3+3**
+in the trainer.
+
+### v3.01's SHAPE WITH THE CR-CORRECT BOARD LOSING
+
+Popping the layer is exactly what resolving one MEANS. The defect was that
+the pump lived only in the thing being destroyed — so it now rides onto
+the open link inside `resolveLayer`, which is also the CR-correct moment
+for a layer's effect to happen.
+
+**`effects.rxPumpTotal` IS THE ONE READER** of both records — the layers
+still waiting and the ones already resolved. **The second reader had the
+identical defect**: `pendPumped` summed the survivors too, so after a
+layer resolved at the table it answered FALSE, and an ability targeting
+*"an attack with {p} greater than its base"* was offered against a link it
+had already pumped.
+
+### NOTHING HERE COULD SEE IT
+
+| tool | why |
+|---|---|
+| coverage | the cards read `tier: full` |
+| the fairness sweep | one-sided toward too-STRONG; this is weaker than printed |
+| the drills | **seventeen** call `attackRx` DIRECTLY and all pass — v3.89's lesson one layer out |
+| `npm run play` | byte-identical either side of the fix |
+
+**AND THAT LAST ONE IS THE REAL FINDING.** `sparring.js` contained the
+word "reaction" **exactly once, in a comment**. The whole reaction step
+had ZERO self-play coverage — 20 attack reactions and 15 defence
+reactions in the pool, `effects.attackRx`, the layer machinery,
+`pendPumped` and every printed target restriction, driven **never**.
+
+That is v3.50's lesson for the **FOURTH** time — allies (v3.50),
+non-attacks (v3.80), aura attacks (v3.84), and now this: **a feature with
+no caller looks exactly like a feature that works, until you count.**
+
+### THE POLICY HAS A REACTION BRANCH, AND IT FOUND TWO MORE BLACKLISTS
+
+The heuristic is printed numbers and CR facts only: the cheapest legal
+reaction, **one per chain link** (structural — nothing of ours already on
+the stack, and the link not already carrying a resolved reaction), with
+`legal` deciding everything else.
+
+**`payAction` HARDCODED `half: 0`**, under a comment calling it *"the one
+answer that is always available"*. It was true only while the policy could
+never reach a split pending in a reaction window. The moment one was
+reachable, Burn Up // Shock was declared there and refused — *"Arcane
+Seeds is an action — not legal in this window"* — because its **Instant**
+half is the legal one. The halves are offered to `legal` in printed order
+now, and the left half still wins wherever both are legal.
+
+**`tourney.js` NAMED ITS ROUTE COUNTERS IN A HARDCODED LIST**, while the
+counters themselves live in `selfplay.js`. So v4.03's two new counters
+fired thousands of times and printed **nowhere** — v3.35's `PENDING_KINDS`
+blacklist in a third consumer. The list is derived from the events now.
+
+**AND THE COUNTER'S PHRASE AND THE ENGINE'S ARE PINNED TOGETHER** (v3.81).
+Naming the resolved layer in the feed — worth doing, because in a training
+sim the sequence is the lesson — silently zeroed the `layer` counter on
+the very next run. The line says both the card and the word *layer*, and a
+drill pins the two spellings against each other.
+
+### FOUR FIXTURES WERE WRONG BEFORE THE ENGINE WAS
+
+Every one a shape this project already names:
+
+| fixture | wrong because |
+|---|---|
+| the split card | picked by `//` in the type line — CLAUDE.md says in as many words that the slash is a RENDERING and `played_horizontally` is the fact |
+| the legality assertion | `judge.legal` returns the REASON and `null` when legal, so a bare truthiness test is **inverted** — the module's own wrapper is `== null` |
+| the reaction fixture | Courageous Steelhand's *"if you've charged this turn"* gate was unmet under the first seed, so the drill measured a conditional pump that never fires. The gate is asserted now |
+| the drill that broke | pinned `half: 0` as a source slice — it rotted where the rule moved (v3.22, v3.28, v3.94) and was worse than useless: it pinned the literal that WAS the bug. Driven now, in both windows |
+
+### The numbers
+
+2204 → **2210 drills**, 0 failing, 4 skipped. Coverage unchanged at
+**381 full / 21 part / 3 none** — this version moved no card. Fairness
+clean, 72 scenes passing.
+
+**Self-play: `reaction 273 · layer 273`** across 210 games — every
+reaction played becomes a layer and every layer resolves. 0 stalls, 0
+refusals, 0 invariant violations. The win distribution moved a long way,
+which is the fix and the branch landing together: **Dorinthea 7 → 24**
+(eight attack reactions in her deck), **Arakni 1 → 21**, average game 21.8
+→ 19.7 turns.
+
+---
+
 ## v4.02 — the approximation ledger, and nobody had ever swept it
 
 `tools/ledger.js` enumerates every KEYWORD this project claims to

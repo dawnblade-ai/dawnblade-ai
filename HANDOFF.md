@@ -1,4 +1,134 @@
-# Handoff — Dawnblade, at v4.02 · THE RULES MACHINE, SWEPT FOR THE FIRST TIME
+# Handoff — Dawnblade, at v4.03 · THE REACTION STEP, AND THE LEDGER THAT FOUND IT
+
+## ⚠ WHAT LANDED, IN ONE PARAGRAPH
+
+**v4.02** built `tools/approx.js` — the approximation ledger, the
+rules-machine twin of `tools/ledger.js` — and found SEVEN of CLAUDE.md's
+own approximation records had stopped being true, plus three more in the
+keyword ledger and two real defects (`runeAtPlay` dead since v3.22, and
+`crindex.js` reading its own output). **v4.03** then found and fixed the
+biggest two-player bug this project has had in some time: **every
+attack-reaction pump was dropped at the table, every time.**
+
+## ⚠ START HERE: THE TWO LEDGERS
+
+| | enumerates | drill |
+|---|---|---|
+| `tools/ledger.js` | every KEYWORD this project claims to understand | `test/ledger.test.js` |
+| `tools/approx.js` | every place the engine knowingly differs from the CR | `test/approx.test.js` |
+
+**26 approximation records: 10 `stated`, 9 `open`, 7 `closed`.** Each
+carries its status, the CR rule it deviates from, and the **BOARD** it
+lives on — v3.01's shape is the recurring defect in exactly this area.
+
+**THE PROBES POINT TWO WAYS AND THAT IS THE WHOLE DESIGN.** A
+`stated`/`open` record's probe asserts THE DEVIATION, so **the drill goes
+red the day somebody builds it** and the record must be deleted rather
+than left to rot. A `closed` one asserts the thing IS built. Pointing one
+the wrong way is the failure mode to watch for — it passes both before and
+after the work.
+
+### THE NINE `open` RECORDS ARE THE WORK LIST
+
+| id | CR | what is missing |
+|---|---|---|
+| `layer-step-window` | 7.1.2 | an ATTACK goes straight onto the chain. **A played REACTION does become a layer** (v4.03 drove it), so what is missing is only the attack's own layer |
+| `simultaneous-trigger-order` | 4.1.8a | the order is fixed; the CR hands it to the turn-player |
+| `trainer-fatigue-loss` | 4.5.3 | judge dropped the invented deck-out loss at v2.45; `index.html` still has it |
+| `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
+| `crush-halving-rider` | — | Walk in My Shoes — the ONE of twelve crush riders that refuses |
+| `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
+| `aura-ward-prevention-pool` | — | a RULING, not an engineering call (v3.84) |
+| `cloaked-face-down-values` | — | a RULING (v3.99) |
+| `cloaked-display` | — | deferred with the UI pass, on the record |
+
+## ⚠ THE v4.03 BUG, AND WHY NOTHING SAW IT
+
+`effects.attackRx` records a reaction's pump ON THE LAYER; `linkPumps`
+sums the layers at the damage step. The TRAINER never pops one. **judge
+does, and is right to** — CR 4.2.2 resolves the top layer when both seats
+pass, and the reaction step cannot end until the stack is EMPTY.
+
+Driven, same card and same state: Courageous Steelhand prints +3 and the
+attack dealt **3** at the table against **3+3** in the trainer. 13
+distinct pool attack reactions carry a pump across 33 printings.
+
+**Coverage reads them `full`; the one-sided sweep looks for too-STRONG and
+this is weaker; SEVENTEEN drills call `attackRx` directly and all pass.**
+`effects.rxPumpTotal` is the one reader now, and `pendPumped` — which had
+the identical defect — asks it too.
+
+## ⚠ THE LEAD THAT PAID, AND THE ONE THAT HAS NOT YET
+
+**PAID:** `npm run play` was byte-identical either side of that fix,
+because `sparring.js` contained the word "reaction" **once, in a
+comment**. Building the branch moved Dorinthea 7 wins → 24 and Arakni 1 →
+21, and turned up two more hardcoded lists. **When you build a route, go
+and count how often it fires** — fourth time in this project's history
+that the answer was zero.
+
+**NOT YET FOLLOWED — EIGHT POOL TOKENS READ `tier: none`, AND ONE OF THEM
+WORKS.** Inertia is in that set and `effects.resolveInertia` implements it
+— through `effects.isInertia`, which matches the token **BY NAME**. That
+is v3.22's Runechant shape exactly: *"Runechant was built by NAME and the
+other three tokens printing the identical trigger read `tier: none` and
+did nothing."*
+
+The set is pinned by `tools/approx.js`'s `unbuilt-three` probe: **Ash,
+Fealty, Gate to i'Arathael, Goldkiss Rum, Inertia, Soul Shackle,
+Toughness, Zen State.** Each needs its own text read before anyone can say
+whether it is inert or merely unlisted — and **a tier that says `none` on
+a card that works is a LEAD** (v3.93, third outing).
+
+## ⚠ `npm run crindex`, RE-DERIVED AFTER EIGHTY-FIVE VERSIONS
+
+**63 rules · 50 guarded · 3 UNGUARDED · 4 prose.** The verdicts had not
+moved since v3.17, and are PINNED now (`test/crindex.test.js`) — counts
+AND members, because two rules swapping buckets keeps every number intact.
+
+**`--check` COULD NEVER BE GREEN AND NOTHING RAN IT.** It demanded zero
+UNGUARDED and three citations are section pointers, which no drill can
+drive. It pins a SET now. **And the tool was reading its own output** —
+123 of the 1123 citations it reported were `CR-INDEX.md` citing itself,
+found by sabotage. The honest count is 1000.
+
+## ⚠ THE REMAINING THREE CARDS, UNCHANGED
+
+`npm run audit`: **381 full / 21 part / 3 none**. Neither v4.02 nor v4.03
+moved a card, deliberately.
+
+| card | waiting on |
+|---|---|
+| **Glisten** | a DISTRIBUTION sheet. `ctrPut` and the sharpen wipe are built |
+| **Danger Digits** | a "has hit" FICTION for a card that never attacked |
+| **Hope Merchant's Hood** | deck manipulation, and a rider whose count is the pick's own size |
+
+**NONE IS WAITING ON ITS PAYLOAD** — seventh version running.
+
+## THE METHOD, WHICH FOUND EVERY ONE OF THESE
+
+- **Sabotage every probe, and check the sabotage APPLIED and CAN EXPRESS
+  the bug.** Several were silent because the sabotage could not reach the
+  case — a rename surviving in comments, a zone edit that moved a field
+  into the copy-verbatim bucket, an unused const, a comment-only edit.
+- **Eight of my own fixtures were wrong before the engine was**, across
+  the two versions. Every one is a shape this file already names: a grep
+  instead of a drive; the TRAINER's `stack` read for a question about the
+  TABLE; a fabricated state answering its own question (v2.80); a filter
+  over a field the card does not set, passing vacuously (v3.98 — **ask for
+  the refusal**); a split card picked by the `//` the docs call a
+  RENDERING; and a legality predicate **inverted**, because `judge.legal`
+  returns the REASON and `null` when legal.
+- **Measure before widening.** 23/17/1/3/2/**11** for the bare
+  when-this-attacks family; 12 crush riders of which 11 read; 13 attack
+  reactions across 33 printings; 19 Arcane Barrier records against a dummy
+  deck that deals zero arcane.
+
+
+---
+
+# (v4.02 handoff, kept below)
+
 
 ## ⚠ START HERE: `tools/approx.js` IS THE NEW LEDGER
 
