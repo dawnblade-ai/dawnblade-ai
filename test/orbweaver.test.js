@@ -255,3 +255,113 @@ test("the self-play harness counts the fault, and spells the engine's phrase", {
   assert.match(sp, /\\bYou \[a-z\]\+s\\b/,
     "the counter's phrase moved — it now reports zero exactly as a clean engine does");
 });
+
+/* ============================================================
+   THE SAME MARK, THE OTHER PRINTED WORDING (v4.16)
+
+     "if this IS ATTACKING a marked hero"  — read since the mark was built
+     "when this ATTACKS a marked hero"     — GRAPHENE CHELICERA, refused
+
+   v3.36's and v3.65's rule: the database prints both spellings, and an
+   anchor that knows one is a card waiting to be found. This is the card
+   — the token `equipTok` made reachable one version earlier, and its own
+   third clause was the only thing still holding it at `part`.
+
+   AND MARK OF THE HUNTSMAN IS BOTH HALVES OF THE LOOP: it destroys
+   ITSELF to mark a hero, which frees the hand this token needs AND sets
+   the state its trigger reads.
+   ============================================================ */
+
+test("the second wording reads, and carries the hero gate", {skip}, () => {
+  P.fxReset();
+  assert.deepEqual(
+    P.classifyClause("when this attacks a marked hero, the attack gets go again"),
+    {status: "run", ops: [["ga"]], cond: "marked", atkHero: true},
+    "the trigger is unread, or it lost the hero gate");
+  /* AND THE QUALIFIER IS `marked`, NOT "any word in that slot". No pool
+     card prints a second one, so the near-miss is synthetic (v3.73) —
+     and without it the anchor could be widened to `[a-z]+` and every
+     drill here would still pass, which is exactly what the sabotage
+     said. An unknown printed qualifier read AS the mark grants off a
+     state the card never names: the golden rule at the gate. */
+  assert.equal(
+    P.classifyClause("when this attacks a frozen hero, the attack gets go again"), null,
+    "an unread qualifier was read as the MARK — the anchor matches any word there");
+
+  /* THE FIRST WORDING IS UNMOVED — one reader per printed form, and
+     widening either into the other is how two spellings become one wrong
+     answer. */
+  assert.deepEqual(
+    P.classifyClause("if this is attacking a marked hero, this gets +1{p}"),
+    {status: "run", ops: [["self", 1]], cond: "marked"},
+    "the existing wording moved");
+  P.fxReset();
+});
+
+test("the token reads in full, and Mark of the Huntsman does not move", {skip}, () => {
+  P.fxReset();
+  const raw = require("../data/pool.json");
+  const arr = Array.isArray(raw) ? raw : (raw.cards || Object.values(raw));
+  const mk = c => ({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
+    ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
+    cost: c.cost, power: c.power, def: c.defense});
+
+  P.fxReset();
+  const tok = P.fxParse(mk(arr.find(c => c.name === "Graphene Chelicera")));
+  assert.equal(tok.tier, "full", "the token is still short");
+  assert.deepEqual(tok.conds, [{cond: "marked", op: ["ga"], instead: false, atkHero: true}]);
+
+  /* MEASURED, AND PINNED IN BOTH DIRECTIONS (v2.47). One pool clause
+     prints this wording; the other `marked` emitter must keep its own
+     shape, and `atkHero` is the field that tells them apart. */
+  P.fxReset();
+  const mark = P.fxParse(mk(arr.find(c => c.name === "Mark of the Huntsman")));
+  const mc = (mark.conds || []).filter(x => x.cond === "marked");
+  assert.equal(mc.length, 1, "Mark of the Huntsman's own condition moved");
+  assert.equal(mc[0].atkHero, false,
+    "the hero gate leaked onto a clause that never printed one");
+  P.fxReset();
+});
+
+test("DRIVEN: marked grants it, unmarked does not, and an ALLY never does", {skip}, () => {
+  H.db();
+  /* THREE HALVES, NOT TWO. The `marked` evaluator asks `foe(n).marked` —
+     a state on the opposing HERO, not on the attack-target — so without
+     `atkHero` this fires off a swing at an ALLY whenever the hero
+     happens to be marked. That is the direction v3.46 built the flag to
+     stop, and a two-case drill cannot see it.
+
+     GO AGAIN IS A GAIN (CR 5.3.5), so `pend.ga` is the observable and
+     never the feed (v3.58). */
+  const spin = C.resolveEntry(H.db(), {name: "Orb-Weaver Spinneret", p: 1, code: null, q: 1});
+  const helm = C.resolveEntry(H.db(), {name: "Prey Spotters", p: 0, code: null, q: 1});
+  const ally = C.resolveEntry(H.db(), {name: "Barnacle", p: 2, code: null, q: 1});
+
+  const swing = (marked, target) => {
+    const g0 = Object.assign(H.state(
+      {hand: [Object.assign({}, spin, {uid: 701})],
+       gear: [Object.assign({}, helm, {uid: 801})], res: 9, ap: 1},
+      {hp: 20, marked,
+       board: target === "hero" ? []
+            : [{card: Object.assign({}, ally, {uid: 900}), kind: "ally", uid: 900, life: 3}]},
+      {actor: 0, turnPlayer: 0, turn: 3}),
+      {phase: "action", step: "layer", priority: 0, passed: []});
+    const o = H.execute(g0, g0.sides[0].hand[0], "hand", 0, {});
+    const s1 = o.game || o;
+    const tok = (s1.sides[0].gear || []).find(x => /Graphene/.test(x.name));
+    assert.ok(tok, "the token was not equipped — re-anchor this drill");
+    const g1 = Object.assign({}, s1, {phase: "action", step: "layer", priority: 0, passed: [],
+      sides: [Object.assign({}, s1.sides[0], {ap: 1, res: 9, hand: []}), s1.sides[1]]});
+    const act = {t: "activate", uid: tok.uid, from: "gear", target};
+    assert.equal(J.legal(g1, act, 0), null, "the swing was refused");
+    return J.reduce(g1, act, 0).state;
+  };
+
+  assert.equal(!!swing(true, "hero").pend.ga, true,
+    "a MARKED hero did not grant the go again — the trigger is dead");
+  assert.equal(!!swing(false, "hero").pend.ga, false,
+    "an UNMARKED hero granted it — the printed condition is decoration");
+  assert.equal(!!swing(true, 900).pend.ga, false,
+    "swinging at an ALLY granted it because the opposing HERO is marked — " +
+    "`atkHero` is the gate and it is not being asked (v3.46)");
+});

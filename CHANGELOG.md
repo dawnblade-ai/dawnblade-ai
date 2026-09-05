@@ -9,6 +9,43 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.16 — the same mark, the other printed wording
+
+> *"if this **IS ATTACKING** a marked hero"* — read since the mark was built
+> *"when this **ATTACKS** a marked hero"* — GRAPHENE CHELICERA, refused
+
+v3.36's and v3.65's rule: **the database prints both spellings**, and an
+anchor that knows one is a card waiting to be found. This is that card —
+the token `equipTok` made reachable one version earlier, and its own third
+clause was the last thing holding it at `part`. The sweep's *"unread and
+barely named"* token block goes **3 → 2**.
+
+**`atkHero` IS LOAD-BEARING HERE, NOT DECORATION.** The evaluator asks
+`foe(n).marked` — a state on the opposing **HERO**, not on the
+attack-target — so without the flag the go again fires off a swing at an
+**ALLY** whenever the hero happens to be marked. That is exactly the
+direction v3.46 built the flag to stop. The flag line three hundred lines
+up matches a bare *"a hero"* and cannot see a qualifier, so it is set
+where the qualifier is read.
+
+**THREE HALVES, NOT TWO** (v3.45, one case further): marked hero grants
+it, unmarked does not, **and an ally never does**. A two-case drill
+cannot see the third, and the third is the one that matters.
+
+**THE QUALIFIER IS `marked`, NOT "ANY WORD IN THAT SLOT".** No pool card
+prints a second one, so the sabotage that widens the anchor to `[a-z]+`
+came back **SILENT** against every driven fixture — the near-miss is
+synthetic (v3.73), and an unread qualifier read AS the mark grants off a
+state the card never names.
+
+**AND MARK OF THE HUNTSMAN IS BOTH HALVES OF THE LOOP.** It destroys
+*itself* to mark a hero, which frees the hand the token needs AND sets
+the state its trigger reads — v3.54's observation ("a keyword whose
+enabler is another card in the same deck is a good sign the model
+underneath it is missing something"), two cards on.
+
+**Four sabotages, four bite.**
+
 ## v4.15 — equip a token, and a feed family the drive found
 
 > *"Equip a Graphene Chelicera token."* — ORB-WEAVER SPINNERET ×3

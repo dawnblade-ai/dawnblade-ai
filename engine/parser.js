@@ -901,6 +901,25 @@ function classifyClause(raw){
     if(m=cond.match(/you control (\d+) or more draconic chain links/)) return Object.assign(rest,{cond:"drac"+m[1]});
     if(/^this is attacking a marked hero/.test(cond) || /the defending hero is marked/.test(cond))
       return Object.assign(rest,{cond:"marked"});
+    /* THE SAME MARK, THE OTHER PRINTED WORDING (v4.16). The pool prints
+       both — "if this IS ATTACKING a marked hero" above, and Graphene
+       Chelicera's "when this ATTACKS a marked hero" — which is v3.36's
+       and v3.65's rule: an anchor that knows one spelling is a card
+       waiting to be found.
+
+       `atkHero` IS LOAD-BEARING HERE, NOT DECORATION. The evaluator asks
+       `foe(n).marked` — a state on the opposing HERO, not on the
+       attack-target — so without the flag this grants its go again off a
+       swing at an ALLY whenever the hero happens to be marked, which is
+       exactly the direction v3.46 built `atkHero` to stop. The flag line
+       three hundred lines up matches a BARE "a hero" and cannot see the
+       qualifier, so it is set here, where the qualifier is read.
+
+       ONE POOL CLAUSE, MEASURED, and it is the token `equipTok` made
+       reachable at v4.15 — Mark of the Huntsman is what marks the hero
+       AND what frees the hand to equip it. The loop is designed. */
+    if(/^this attacks a marked hero$/.test(cond))
+      return Object.assign(rest,{cond:"marked", atkHero:true});
     /* ---- conditions the engine can already answer -----------------------
        Each of these reads state the trainer has held all along: the aim
        counter on the chain link, the aura count on the board, the arsenal,

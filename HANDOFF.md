@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.15 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.16 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -36,7 +36,8 @@ activation cost — Carrion Crown, INERT in Gravy Bones' gear — and driving
 it turned up two feed defects the parser could not see. **v4.15** built
 `equipTok` (five records and Arakni's fifth Agent), and the same habit —
 drive it, then READ THE FEED — turned those two defects into a family of
-eighteen.
+eighteen. **v4.16** finished the token: its last clause was the OTHER
+printed spelling of a mark the engine already answers.
 
 ## ⚠ THE CHEAPEST QUESTION IN THE PROJECT, THREE TIMES OVER
 
@@ -180,20 +181,28 @@ and `tools/selfplay.js` exports `match(k0,k1,seed)` and `play(game,limit)`
 as two calls rather than one. **When a refusal names something you did
 not expect, it is usually telling you the truth about the engine.**
 
-## ⚠ WHAT `equipTok` DID NOT BUILD, AND WHY THAT IS THE HONEST REPORT
+## ⚠ THE RECORD ABOVE WAS DISCHARGED AT v4.16, ONE VERSION LATER
 
-Graphene Chelicera stays `tier: part`. Its own third clause — *"When this
-attacks a **marked** hero, the attack gets go again"* — refuses, because
-`classifyClause` reads a bare *"when this attacks a hero"* subject
-(v3.46's `atkHero`) and not a MARKED one. The payload reads perfectly on
-its own, so it is v3.79's shape again: **the gate is the blocker.**
+It read: *Graphene Chelicera stays `tier: part` — its own third clause
+refuses because `classifyClause` reads a bare "when this attacks a hero"
+and not a MARKED one. The payload reads perfectly on its own, so it is
+v3.79's shape again: the gate is the blocker.*
 
-Building it is one condition, and the pieces exist — `heroTarget` is
-derived at the top of `execute` (v3.46) and `marked` is already a
-condition the engine answers. It was left because it is a second reading
-rather than the family, and a token that swings for its printed power
-with stealth is doing plenty; saying so is the honest report rather than
-a claim the card is finished.
+That was right, and the build was **two lines**: the pool prints two
+spellings of the same mark and only one had a reader. What the record
+missed is worth keeping — it called the fix "one condition" when the
+condition already existed; what was missing was the **second wording**.
+
+**AND THE FLAG WAS THE WHOLE RISK.** `marked` asks `foe(n).marked`, a
+state on the opposing HERO, so the obvious one-line fix — reuse the
+existing `is attacking a marked hero` pattern — would have granted the go
+again off a swing at an ALLY. `atkHero` is set where the qualifier is
+read, and the drill drives all THREE cases because the two obvious ones
+cannot see it.
+
+**A RECORD THAT NAMES THE BLOCKER IS WORTH WRITING EVEN WHEN YOU ARE
+ABOUT TO FIX IT.** This one was written to be honest about an unfinished
+card and it read as a work order the next morning.
 
 ## ⚠ v4.14 — THE `npm run gaps` DOSSIER IS THE CHEAPEST READ THERE IS
 

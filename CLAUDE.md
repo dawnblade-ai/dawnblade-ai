@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.15
+**Current version:** v4.16
 
 ---
 
@@ -767,6 +767,32 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### THE SAME MARK, THE OTHER PRINTED WORDING (v4.16)
+
+> *"if this **IS ATTACKING** a marked hero"* — read for versions
+> *"when this **ATTACKS** a marked hero"* — GRAPHENE CHELICERA, refused
+
+v3.36's and v3.65's rule: the database prints **both** spellings, and an
+anchor that knows one is a card waiting to be found. Here it was the
+token v4.15's `equipTok` had just made reachable — the sweep's *"unread
+and barely named"* token block goes **3 → 2**.
+
+**`atkHero` IS LOAD-BEARING, NOT DECORATION.** The `marked` evaluator
+asks `foe(n).marked` — a state on the opposing **HERO**, not on the
+attack-target — so without the flag this grants its go again off a swing
+at an **ALLY** whenever the hero happens to be marked, which is what
+v3.46 built the flag to stop. And the flag line three hundred lines up
+matches a BARE *"a hero"*, so it is set where the qualifier is read.
+
+**THREE HALVES, NOT TWO.** Marked grants it, unmarked does not, and an
+ALLY never does — a two-case drill cannot see the third, and the third is
+the one the gate exists for.
+
+**AND THE QUALIFIER IS `marked`, NOT "any word in that slot."** No pool
+card prints a second one, so widening the anchor is SILENT against every
+driven fixture; the near-miss is synthetic (v3.73), because an unread
+qualifier read AS the mark grants off a state the card never names.
 
 ### EQUIP A TOKEN — A MINT WITH A DIFFERENT ZONE (v4.15)
 

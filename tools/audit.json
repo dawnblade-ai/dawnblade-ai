@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-05T13:54:47.959Z",
- "appVer": "4.14",
+ "generated": "2026-09-05T14:02:57.720Z",
+ "appVer": "4.15",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -460,7 +460,7 @@
    "tx": "Stealth\nOnce per Turn Action - {r}: Attack\nWhen this attacks a marked hero, the attack gets go again.",
    "pw": 1,
    "def": null,
-   "fx": "part"
+   "fx": "full"
   },
   "Inertia": {
    "found": true,

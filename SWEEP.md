@@ -7,7 +7,7 @@ axes it never covered.
 | area | entries | note |
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
-| Tokens | 3 | 2 barely named in the trainer |
+| Tokens | 2 | 1 barely named in the trainer |
 | Ruled but not built | 21 cards | understood ≠ built |
 | **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
 
@@ -32,11 +32,6 @@ axes it never covered.
 ### Fealty — fx `none`, 0 mentions in the trainer — **likely a real gap**
 > Instant - Destroy this: The next card you play this turn is Draconic.
 At the beginning of your end phase, if you haven't created a Fealty token or played a Draconic card this turn, destroy this.
-
-### Graphene Chelicera — fx `part`, 0 mentions in the trainer — **likely a real gap**
-> Stealth
-Once per Turn Action - {r}: Attack
-When this attacks a marked hero, the attack gets go again.
 
 ### Frostbite — fx `part`, 5 mentions in the trainer (named in the trainer — verify it is carried, not just a refusal string)
 > Cards and abilities cost you an additional {r} to play or activate.
