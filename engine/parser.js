@@ -1462,7 +1462,7 @@ function classifyClause(raw){
      ONE pool record matches this matcher and contains "go again", and it
      prints the ADJACENT form. So the anchor is the adjacency here too,
      and it claims nothing else in the pool. */
-  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)( and go again)?/)){
+  if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?|has) \+(\d+)\s*(?:\{p\}|power)(?: and (go again|piercing \d+))?/)){
     /* AND ITS GRANTED ABILITY RIDES ALONG (v3.12) — the same `quotedOnHit`
        the next-attack pump and the self-grant already share. Scar Tissue
        and Spike with Bloodrot print "…and \"When this hits a hero, mark
@@ -1480,9 +1480,40 @@ function classifyClause(raw){
        matcher), and a conditional clause emits one `fx.conds` entry per
        op — so both halves survive a gate without anything new. */
     const ops = [["self", +m[3], q1]];
-    if(m[4]) ops.push(["ga", 1, q1]);
+    /* THE TAIL IS A CLOSED SET OF TWO (v4.18, v4.20), never "and
+       anything". Three pool records print "gets +N{p} and <something>"
+       whose something is neither — Scar Tissue and Spike with Bloodrot
+       follow the "and" with a QUOTED ABILITY, which has its own reader
+       and must not be read as a keyword grant. */
+    if(m[4] === "go again") ops.push(["ga", 1, q1]);
+    else if(m[4]) ops.push(["piercing", +m[4].match(/\d+/)[0], q1]);
     return rider ? R(ops, {riderOnHit: rider}) : R(ops);
   }
+  /* ---- PIERCING N (v4.20) -------------------------------------------
+     The database carries no reminder text for any keyword, and this one
+     was `unreviewed` in `tools/ledger.js` — so it sat in `KW_VOCAB_SRC`,
+     where `printedKw` could answer for it, and NOTHING consumed it.
+
+     TRY THE PRINTING BEFORE BOOKING A QUESTION (v3.32, v3.54, v3.66,
+     v3.78, v3.99 — sixth time it has paid). The AAZ010 face of Drill Shot
+     prints the parenthetical the database omits:
+
+       "If this has an aim counter, it gets **piercing 1**.
+        (If this is defended by an EQUIPMENT, this gets +1{p}.)"
+
+     So piercing N is a conditional pump settled at the WALL, and it is
+     `perEquipDef`'s flat twin one card over — that one is +N per separate
+     equipment, this one is +N if there is at least one. The reader for
+     both is the same site in `linkPumps`, and `equipDefenders` has been
+     the caller's answer from BOTH boards since it was written.
+
+     TWO POOL CARDS GRANT IT AND BOTH ARE DECKED — Drill Shot (Azalea,
+     gated on an aim counter) and Puncture (Dorinthea, granted to the
+     TARGET of an attack reaction). Neither did anything: Drill Shot read
+     `tier: part` with the whole clause unread, and Puncture read `full`
+     with the +3 landing and the piercing silently dropped. */
+  if(m=c.match(/^(?:this|it) (?:gets?|gains?|has) piercing (\d+)$/))
+    return R([["piercing", +m[1]]]);
   /* the go-again twin of the target-attack pump, restriction and all */
   if(m=c.match(/^target ([^.]*?)\battack\b([^.]*?) (?:gets?|gains?) go again$/)){
     const q2 = attackQual(m[1], m[2]);

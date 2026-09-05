@@ -66,8 +66,15 @@ const engine = ["parser.js", "effects.js", "judge.js"]
 const names = k => (engine.match(new RegExp(k.replace(/[^a-z0-9]/gi, "."), "gi")) || []).length;
 
 /* The keywords whose status CLAIMS nothing is built. Pinned as a set. */
+/* -piercing AT v4.20, DELIBERATELY. It sat in `KW_VOCAB_SRC` — so
+   `printedKw` could answer for it — with NOTHING in the engine consuming
+   it, and the ledger note said "seen in pool; needs CR wording". The
+   database carries no reminder text for any keyword, but the AAZ010 face
+   of Drill Shot prints the parenthetical it omits: "(If this is defended
+   by an EQUIPMENT, this gets +N{p}.)" — sixth time reading the printed
+   card has settled one. */
 const UNBUILT = ["crank", "ice fusion", "lightning flow", "lightning fusion",
-  "overpower", "piercing", "solflare", "steal"];
+  "overpower", "solflare", "steal"];
 
 test("the ledger's unbuilt set is a LEDGER — moving one is a deliberate edit", () => {
   const claim = entries.filter(([, v]) => /pending|unreviewed/.test(v.status)).map(([k]) => k).sort();

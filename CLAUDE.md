@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.19
+**Current version:** v4.20
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2316 drills** at v4.19.
+This is `node --test "test/*.test.js"` — **2323 drills** at v4.20.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -783,6 +783,44 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A KEYWORD IN THE VOCABULARY THAT NOTHING CONSUMED (v4.20)
+
+`piercing` was in `parser.js`'s `KW_VOCAB_SRC` — so `printedKw` answered
+for it and a card could be qualified *"with piercing"* — and **nothing in
+the engine read it**. That is the `noop` blind spot one layer up: the
+keyword was CARRIED, so every predicate about it worked, and the mechanic
+did nothing.
+
+**TRY THE PRINTING — SIXTH TIME IT HAS PAID** (v3.32, v3.54, v3.66, v3.78,
+v3.99). The AAZ010 face of Drill Shot prints what the database omits:
+*"(If this is defended by an **equipment**, this gets +N{p}.)"* Fetching
+one card image and reading it settled a keyword the ledger had marked
+*"needs CR wording"*.
+
+**IT IS `perEquipDef`'s FLAT TWIN.** Fender Bender's is +N for EACH
+equipment; this is +N if there is at least one. **A drill at 0 and 1
+equipment agrees under both readings** — the 2-equipment row is the only
+one that tells the ops apart, which is v3.92/v3.99's pair-either-side rule
+about a threshold, here about a multiplier.
+
+**THE READER ALREADY EXISTED** — `equipDefenders` has reached `linkPumps`
+from BOTH boards since it was written, and `pend.lateOps` is where
+`perEquipDef` already waits for the same fact. Before building machinery
+for a shape, check whether the machinery is the shape you already have
+(v3.58, v3.73).
+
+**THE CONDITION LOOP RUNS BEFORE `pend` IS BUILT** (v4.04), so a
+conditional grant collects in `_condPierce` beside `_condSelf` — **and the
+first draft read that collector at the `pend` site, where its sibling is
+DELETED forty lines earlier.** Every parse assertion passed while the card
+went on doing nothing. v4.09's rule, second outing: **check where the
+state you write is cleared.**
+
+**AND THE PRINTED RESTRICTION RIDES ON BOTH OPS.** Puncture's *"target
+sword or dagger attack gets +3{p} and piercing 1"* is one sentence naming
+one target; a grant with no qualifier matches everything (v3.43), so a
+piercing without it pierces with a bow.
 
 ### AN ESCALATING LADDER IS N GATES, NOT ONE (v4.19)
 

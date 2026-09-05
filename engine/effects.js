@@ -1170,6 +1170,29 @@ function makeEffects(ctx){
         }
         else n = L(n, `${srcName}: +${v} power, but no attack of yours is in flight.`);
       }
+      /* ---- PIERCING N (v4.20) ------------------------------------
+         The AAZ010 printing of Drill Shot carries the reminder text the
+         database omits: "(If this is defended by an EQUIPMENT, this gets
+         +N{p}.)" — so it is a conditional pump settled at the WALL, and
+         it cannot be applied here: at declaration nobody has blocked yet.
+
+         IT RIDES ON `pend.lateOps`, which is exactly where `perEquipDef`
+         already waits for the same fact. `linkPumps` reads both once the
+         defenders are declared, from the `equipDefenders` count BOTH
+         boards already supply.
+
+         IT MUST BE MY OWN ATTACK, for `self`'s reason one op over —
+         `atkMinus` is the hostile twin and a bonus landing on the
+         opponent's swing would help them. A caller with no attack in
+         flight gets a feed line and no grant: weaker than printed and
+         visible (v3.24). */
+      else if(k==="piercing"){
+        if(n.pend && n.pend.by != null && n.pend.by === actorOf(n)){
+          n.pend = {...n.pend, lateOps: [...(n.pend.lateOps||[]), ["piercing", v]]};
+          n = L(n, `${srcName}: ${n.pend.card.name} has piercing ${v} — +${v} power if an equipment blocks.`);
+        }
+        else n = L(n, `${srcName}: piercing ${v}, but no attack of yours is in flight.`);
+      }
       else if(k==="soulSpend"){
         if((act(n).soul||[]).length >= v){ actMut(n).soul = act(n).soul.slice(v); n = L(n,`${v} soul spent.`); n = runOps(n, op[2]||[], srcName); }
         else n = L(n,`Needs ${v} soul — you have ${(act(n).soul||[]).length}.`);
@@ -2588,6 +2611,14 @@ function makeEffects(ctx){
         if(!had6ThisTurn(n)){ n = L(n, `${card.name}: nothing with 6+ power has hit your graveyard this turn.`); return; }
         if(op[0]==="ga") ga = true;
         else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
+        /* PIERCING COLLECTS THE SAME WAY (v4.20). The condition loop runs
+           BEFORE `pend` is built (v4.04), so a `piercing` op handed to
+           `runOps` here finds no attack in flight and is dropped with a
+           feed line — which is how Drill Shot's clause did nothing even
+           once the parser read it. `self` has had this collector for
+           exactly that reason; this is its twin, and the `pend` builder
+           folds it into `lateOps`. */
+        else if(op[0]==="piercing" && attacking) n._condPierce = (n._condPierce||0)+op[1];
         else n = runOps(n,[op],card.name);
         n = L(n, `${card.name}: a 6+ power card is already in the graveyard — the bonus is live.`);
         return;
@@ -2752,6 +2783,7 @@ function makeEffects(ctx){
         n = L(n, `${card.name}: the condition holds — ${op[0]} ${op[1]} REPLACES the printed value.`); }
       if(op[0]==="ga") ga = true;
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
+      else if(op[0]==="piercing" && attacking) n._condPierce = (n._condPierce||0)+op[1];
       else n = runOps(n,[op],card.name);
     });
     /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
@@ -2976,6 +3008,14 @@ function makeEffects(ctx){
         n = L(n, `${card.name} strikes from stealth at a marked hero — +${_sm} power, and go again if it lands.`);
       }
       const bonus = (fx.self||0)+(n._condSelf||0)+act(n).buffNext+qBuff+arsPow+banPow+payPenalty+frailPen+smBuff;
+      /* CAPTURED HERE BECAUSE ITS SIBLING IS DELETED BELOW (v4.20).
+         `_condPierce` is the condition loop's collector for a piercing
+         grant, and `_condSelf` is cleared a few lines down — long before
+         `pend` is built. Read at the pend site instead it is always
+         undefined, which is exactly how the first draft of this build
+         made Drill Shot go on doing nothing while every parse assertion
+         passed. */
+      const _pierce = n._condPierce || 0;
       /* +1{p} COUNTERS ARE PART OF THE WEAPON'S POWER, not a bonus on the
          swing. They sit on the piece and travel between turns, so a
          counter-bearing blade is simply a bigger weapon — which is what
@@ -3001,7 +3041,7 @@ function makeEffects(ctx){
       if(powCtr) n = L(n, `${card.name} carries +${powCtr}{p} in counters — it swings at ${base}.`);
       /* a qualified buff that did NOT match is not spent — it waits for an
          attack it actually applies to */
-      actMut(n).buffNext = 0; actMut(n).buffQ = qKept; delete n._condSelf;
+      actMut(n).buffNext = 0; actMut(n).buffQ = qKept; delete n._condSelf; delete n._condPierce;
       /* CLEARED TO `false`, NOT DELETED, AND WRITTEN THROUGH `actMut`.
          Both of these broke two standing rules on one line each:
 
@@ -3260,7 +3300,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:fx.ops.filter(o=>o[0]==="perEquipDef"), runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -5056,10 +5096,22 @@ function makeEffects(ctx){
     /* RULING (Fender Bender): +1 per separate equipment the opponent defended
        with — only knowable once defenders are declared, so it lands here. */
     for(const op of (n.pend.lateOps||[])){
-      if(op[0]!=="perEquipDef") continue;
       const eq = (info && info.equipDefenders) || 0;
-      total += op[1]*eq;
-      n = L(n, `${n.pend.card.name}: ${eq} equipment defending — +${op[1]*eq} power.`);
+      if(op[0]==="perEquipDef"){
+        total += op[1]*eq;
+        n = L(n, `${n.pend.card.name}: ${eq} equipment defending — +${op[1]*eq} power.`);
+      }
+      /* PIERCING IS THE FLAT TWIN (v4.20): +N if an equipment is
+         defending AT ALL, where Fender Bender's is +N for EACH. The
+         printed parenthetical says "if this is defended by an
+         equipment", so the count is a yes/no here and multiplying by it
+         would be a different card. */
+      else if(op[0]==="piercing" && eq > 0){
+        total += op[1];
+        n = L(n, `${n.pend.card.name} pierces the iron — +${op[1]} power.`);
+      }
+      else if(op[0]==="piercing")
+        n = L(n, `${n.pend.card.name} has piercing, but no equipment is defending.`);
     }
     /* ---- THE STRUCK POWER IS RECORDED HERE (v3.71) --------------------
        "If this has {p} greater than its base" is a question about the

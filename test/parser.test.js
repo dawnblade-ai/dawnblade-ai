@@ -550,8 +550,17 @@ test("classifyClause — target-attack pump folds into self (the reaction pump)"
      than tolerated: a bare ["self",N] here means the restriction is gone. */
   assert.deepEqual(cc("Target weapon attack gains +4{p}"),
     {status:"run", ops:[["self",4,{g:[["weapon"]]}]]});
+  /* CHANGED DELIBERATELY AT v4.20, and the fixture was read before the
+     assertion was reshaped (v3.31's own rule, stated just above). This
+     line is PUNCTURE's, and the claim here is about `op[2]` — the printed
+     target restriction. The dropped "and piercing 1" was incidental to
+     that claim and is now a second op: the AAZ010 printing of Drill Shot
+     carries the reminder text the database omits, so piercing N is a +N
+     if an equipment defends. The restriction still rides on BOTH ops,
+     which is the thing this drill exists to assert. */
   assert.deepEqual(cc("Target sword or dagger attack gains +3{p} and piercing 1."),
-    {status:"run", ops:[["self",3,{g:[["sword"],["dagger"]]}]]});
+    {status:"run", ops:[["self",3,{g:[["sword"],["dagger"]]}],
+                        ["piercing",1,{g:[["sword"],["dagger"]]}]]});
   assert.deepEqual(cc("Target attack gains +2{p}"),
     {status:"run", ops:[["self",2,null]]}, "an unqualified target really is unqualified");
 });

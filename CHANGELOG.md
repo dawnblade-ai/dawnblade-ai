@@ -9,6 +9,61 @@ Newest first. `APP_VER` bumps by 0.01 per release (see CLAUDE.md).
 
 ---
 
+## v4.20 — piercing N: a keyword in the vocabulary that nothing consumed
+
+`piercing` sat in `parser.js`'s `KW_VOCAB_SRC` — so `printedKw` could
+answer for it, and a card could be qualified *"with piercing"* — while
+**nothing in the engine read it.** `tools/ledger.js` said `unreviewed`,
+with the note *"seen in pool; needs CR wording"*.
+
+**TRY THE PRINTING BEFORE BOOKING A QUESTION** (v3.32, v3.54, v3.66,
+v3.78, v3.99 — sixth time it has paid). The database carries no reminder
+text for any keyword, and `card.printings[].image_url` is in the pool
+record. The **AAZ010** face of Drill Shot prints the parenthetical:
+
+> *"If this has an aim counter, it gets **piercing 1**.
+> (If this is defended by an **equipment**, this gets +1{p}.)"*
+
+So piercing N is a **conditional pump settled at the WALL**, and it is
+`perEquipDef`'s **FLAT** twin — Fender Bender's is +N for EACH equipment,
+this is +N if there is at least one. A drill at 0 and 1 equipment agrees
+under both readings; **only the 2-equipment row tells the two ops apart.**
+
+**TWO POOL CARDS GRANT IT, BOTH DECKED, AND NEITHER DID ANYTHING:**
+
+| card | hero | route | read |
+|---|---|---|---|
+| Drill Shot | Azalea | gated on an aim counter | `tier: part` — the clause unread |
+| Puncture | Dorinthea | granted to the TARGET of a reaction | **`tier: full`** — the +3 landed, the piercing was dropped |
+
+Puncture is the more dangerous of the two: coverage called it fully
+scripted. WEAKER than printed, which the one-sided fairness sweep is built
+not to look for.
+
+**THE READER ALREADY EXISTED.** `equipDefenders` has been the caller's
+answer to `linkPumps` from BOTH boards since it was written, and
+`perEquipDef` waits for the same fact on `pend.lateOps`. The printed
+restriction rides on **both** ops, because a grant with no qualifier
+matches everything (v3.43) — dropping it would pierce with a bow.
+
+**AND THE CONDITION LOOP RUNS BEFORE `pend` IS BUILT** (v4.04), so the
+grant collects in `_condPierce` beside `_condSelf`. **The first draft read
+that collector at the `pend` site, where its sibling has already been
+DELETED forty lines earlier** — so every parse assertion passed while
+Drill Shot went on doing nothing. v4.09's rule: check where the state you
+write is cleared.
+
+**THE TAIL IS A CLOSED SET OF TWO** (v4.18's `and go again`, and this),
+never *"and anything"*: Scar Tissue and Spike with Bloodrot print the same
+grammar with a QUOTED ABILITY after the *"and"*, which has its own reader.
+
+Both cards print **1**, so the amount needs a synthetic (v3.32). Six
+records' parses move, coverage **384 → 385 full**, flagged cards 29 → 26,
+fail states 50 → 49, and the keyword ledger's unbuilt set goes 8 → 7.
+Seven sabotages, seven bite.
+
+---
+
 ## v4.19 — an escalating ladder is N gates, not one
 
 > *"When this attacks, if you control **2 or more** Draconic chain links,

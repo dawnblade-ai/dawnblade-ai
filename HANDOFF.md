@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.19 · THE LEDGER KEEPS PAYING
+# Handoff — Dawnblade, at v4.20 · THE LEDGER KEEPS PAYING
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -47,7 +47,10 @@ correct and one — Stains of the Redback, three printings in Arakni's deck
 over. **v4.19** built the last defect that census turned up: **Enflame
 the Firebrand**, in Fai's deck, whose three printed thresholds collapsed
 into ONE gate carrying the LAST rung's payload — stronger than printed in
-the power, weaker in the action point, and the middle rung gone.
+the power, weaker in the action point, and the middle rung gone. **v4.20**
+took the same census to the KEYWORD flags and found `piercing` — in the
+parser's vocabulary, answered by `printedKw`, and consumed by nothing —
+settled by fetching one card image.
 
 ## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.17, NOT QUOTED
 
@@ -57,8 +60,8 @@ of the sentences it replaces had been wrong for seventeen versions.
 
 | | | command |
 |---|---|---|
-| coverage | **384 full · 18 part · 3 none** of 405 | `npm run audit` |
-| drills | **2316 pass · 0 fail · 4 skipped** | `npm test` |
+| coverage | **385 full · 17 part · 3 none** of 405 | `npm run audit` |
+| drills | **2323 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
@@ -115,6 +118,32 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.20 — FETCH THE CARD IMAGE. IT IS ONE `curl`.
+
+`tools/ledger.js` had `piercing` as **unreviewed — "seen in pool; needs CR
+wording"**. There was no question to ask: `card.printings[].image_url` is
+in every pool record, the CDN answers, and the printed face carries the
+reminder text the database omits.
+
+```sh
+node -e 'const p=require("./data/pool.json").find(c=>c.name==="CARD");
+  console.log(p.printings[0].image_url)'
+curl -sSO "<that url>"        # then convert the .webp and read it
+```
+
+**SIXTH TIME THIS HAS PAID** — Clash of Agility, Thunder Quake, Pick Up
+the Point, Lyath's halving, Cloaked, and now piercing. **The remaining
+`unreviewed` keywords have never had it tried**: `ice fusion`, `lightning
+fusion`, `lightning flow`, `overpower`, `solflare`, `steal`, and the one
+`pending` (`crank`). Every one of them has a printing.
+
+**AND THE FLAG THAT LED HERE WAS A KEYWORD FLAG, NOT A CARD.** v4.18's
+walk asked *"does the parse grant a go again anywhere"*; the same question
+about any keyword in `KW_VOCAB_SRC` is *"does anything CONSUME it"* — and
+`piercing` was in the vocabulary, answered by `printedKw`, and read by
+nothing. **A keyword a predicate can answer for is not a keyword the
+engine plays.**
 
 ## ⚠ v4.19 — THE ONE SHAPE THE FAIRNESS SWEEP CANNOT SEE
 

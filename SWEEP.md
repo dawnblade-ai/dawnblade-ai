@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 21 cards | understood ≠ built |
-| **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 20 cards | understood ≠ built |
+| **Fail states** | 49 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -51,7 +51,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Crown of Dichotomy** (part, 1/2 unread)
-- **Drill Shot** (part, 1/2 unread)
 - **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
 - **Line Crossers** (part, 1/2 unread)
@@ -83,10 +82,10 @@ can be overruled. Same discipline as the mention count.
 | Ability inert — cost not modelled | 7 |
 | Choice never offered | 7 |
 | Displayed total is wrong | 6 |
-| Unread, effect unknown | 6 |
 | Earned value denied | 6 |
+| Unread, effect unknown | 5 |
 
-### WRONG — 26 entries
+### WRONG — 25 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -115,9 +114,6 @@ can be overruled. Same discipline as the mention count.
     > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
   - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
     > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
-- **Drill Shot** (1) · tier `part` · azalea
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > If this has an aim counter, it gets piercing 1.
 - **Entwine Lightning** (1) · tier `full` · briar
   - *Keyword filed as no-op, but it has meaning* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 5 time(s). Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
@@ -191,7 +187,11 @@ can be overruled. Same discipline as the mention count.
 - **Iyslander** · tier `hero` · iyslander
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Ice
-- … and 1 more (see the station)
+- **Walk in My Shoes** (2) · tier `part` · lyath
+  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
+    > Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
+  - *Earned value denied* — This penalty lands on the OPPONENT, so skipping it denies the player a payoff and spares the opponent a cost.
+    > Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
 
 ### LOST VALUE — 23 entries
 
