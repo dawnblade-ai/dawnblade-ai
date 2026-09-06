@@ -147,8 +147,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   const n = s => Object.values(APPROX).filter(v => v.status === s).length;
   assert.equal(Object.keys(APPROX).length, 27, "record count moved");
   assert.equal(n("stated"), 10, "stated count moved");
-  assert.equal(n("open"),    9, "open count moved");
-  assert.equal(n("closed"),  8, "closed count moved");
+  /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
+     built. That is the reversal a `stated`/`open` record exists to force
+     (v4.02) — its probe went RED the moment the gap closed, and closing
+     it is a deliberate edit to this line rather than a stale sentence. */
+  assert.equal(n("open"),    8, "open count moved");
+  assert.equal(n("closed"),  9, "closed count moved");
 });
 
 /* ============================================================
@@ -275,12 +279,17 @@ probe("start-phase-passthrough", () => {
 });
 
 /* CR 4.5.3 has three ways to lose and no more. judge.js removed the
-   invented fatigue loss at v2.45; index.html kept it, so this is v3.01's
-   one-board shape with the invented rule on the SOLO board.
+   invented fatigue loss at v2.45 and the trainer kept it for four dozen
+   versions — v3.01's shape with the invented rule on the board a PLAYER
+   USES. CLOSED AT v4.26, and this probe is REVERSED: it asserted the
+   deviation while the record was `open`, went red the day it was built,
+   and now asserts the fix. That reversal is what a `stated`/`open`
+   record is FOR (v4.02).
 
    THE JUDGE HALF IS DRIVEN. The trainer half is a claim about a babel
-   block no drill can execute, so it is pinned as source — precisely
-   enough that neutering it breaks this line. */
+   block no drill can execute, so it is pinned as source — in BOTH
+   directions (v3.98), because "the invented line is gone" is satisfied
+   perfectly by a block that draws nothing and says nothing. */
 probe("trainer-fatigue-loss", () => {
   /* judge: an empty deck is not a loss. */
   const g = H.state({deck:[], hand:[], hp:12}, {hp:12});
@@ -288,10 +297,19 @@ probe("trainer-fatigue-loss", () => {
   const drawn = H.runOps(g, [["draw", 1]], "probe");
   assert.ok(!drawn.over, "judge.js now ends the game on an empty deck — CR 4.5.3 " +
                          "has three ways to lose and this would be a fourth");
-  /* the trainer: the invented loss is still there. */
-  assert.ok(/fatigued/.test(HTML) && /wins by attrition/.test(HTML),
-    "index.html no longer carries the invented fatigue loss — the record is closed " +
-    "and must move to `closed`");
+  /* the trainer: the invented loss is GONE… */
+  assert.ok(!/fatigued/.test(HTML) && !/wins by attrition/.test(HTML),
+    "the invented fatigue loss is back in index.html");
+  assert.ok(!/n\.over\s*=\s*\{win:\s*false\}\s*;\s*return\s*\{\.\.\.L\(n,\s*`Deck empty/.test(HTML),
+    "…and so is the assignment that ended the game");
+  /* …AND THE CR-CORRECT LINE IS THERE. Both halves, or a block that
+     silently stopped drawing satisfies the first perfectly. */
+  assert.ok(/CR 4\.5\.3: that is not a loss/.test(HTML),
+    "the trainer no longer tells the player what an empty deck means — in a " +
+    "training sim the sequence is the lesson");
+  const J2 = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
+  assert.ok(/CR 4\.5\.3: that is not a loss/.test(J2),
+    "…and the two boards no longer say it the same way");
 });
 
 /* On an ATTACK card, `fx.ops` ride to RESOLUTION while the printed

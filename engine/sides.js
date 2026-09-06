@@ -71,7 +71,14 @@ const SIDE_FIELDS = [
      the sweep can tell a one-shot prevention from an aura's printed
      `Ward N`, whose window is the open aura-ward ruling. */
   "amp","ward","awd","wardTurn","awdTurn",
-  "arcShield","lifeLock","namedBuff","dracNext","dracChain","marked","fatigue",
+  /* `fatigue` RETIRED in v4.26 — declared here, shipped down the wire,
+     and READ AND WRITTEN BY NOTHING, ever. It is `rune`'s shape one
+     invented rule over: the trainer's deck-out loss set `game.over` and
+     never touched this field, and CR 4.5.3 has no such loss anyway, so
+     the field named a rule that does not exist AND was not the thing
+     implementing it. Dead rules STATE is worse than dead code elsewhere
+     — it reads as a rule somebody can reach. Do not reintroduce it. */
+  "arcShield","lifeLock","namedBuff","dracNext","dracChain","marked",
   /* per-turn history — reset every turn, read by "second attack this turn"
      style conditions */
   "hist",
@@ -154,7 +161,7 @@ function makeSide(o){
        never spent and applies to every one inside the window. Two records
        because they are two printed rules — v3.87's split, one grant over. */
     arcShield: 0, lifeLock: false, namedBuff: null, dracNext: false, dracChain: false,
-    marked: false, fatigue: false,
+    marked: false,
     hist: freshHist(),
     nextTurn: [],
     blockH: [], blockG: [], blockRx: [], blockedHand: 0, chainBlocked: [],

@@ -374,9 +374,18 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      Folding them into one field would re-open that in the other
      direction, and it compounds: `dracLinks` feeds Fai's discount, every
      `dracN` gate and Mounting Anger's banish bound. */
-  assert.equal(gap.fields, 51);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19 */
-  assert.equal(gap.player.length, 51);
-  assert.equal(gap.opponent.length, 51);
+  /* 51 -> 50 AT v4.26, DELIBERATELY. `fatigue` is retired: declared in
+     SIDE_FIELDS, shipped down the wire, and READ AND WRITTEN BY NOTHING,
+     ever. It is `rune`'s shape (v3.82) one invented rule over — the
+     trainer's deck-out loss set `game.over` and never touched this
+     field, so the name announced a rule CR 4.5.3 does not have AND was
+     not the thing implementing it. Dead rules STATE is worse than dead
+     code elsewhere: it reads as a rule somebody can reach.
+
+     A FIELD LEAVING IS AS DELIBERATE AN EDIT AS ONE ARRIVING (v3.29). */
+  assert.equal(gap.fields, 50);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26 */
+  assert.equal(gap.player.length, 50);
+  assert.equal(gap.opponent.length, 50);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -386,8 +395,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 51);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19 */
-  assert.equal(gap.nativeForOpponent.length, 51);
+  assert.equal(gap.nativeForPlayer.length, 50);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26 */
+  assert.equal(gap.nativeForOpponent.length, 50);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 
@@ -423,4 +432,32 @@ test("a token whose count is DERIVED keeps no stored field", () => {
   }
   const wire = require("fs").readFileSync(__dirname + "/../engine/wire.js", "utf8");
   assert.doesNotMatch(wire, /"rune"/, "and it must not ship down the wire");
+});
+
+/* ---- A FIELD THAT NAMES A RULE THAT DOES NOT EXIST (v4.26) ------------
+   `fatigue` is the same shape one step further out. The four above are
+   second sources of truth for a fact the board already knows; this one
+   was a second source of truth for a LOSS CONDITION CR 4.5.3 does not
+   have — and it was not even that, because the trainer's invented loss
+   set `game.over` and never touched the field. Declared in SIDE_FIELDS,
+   shipped down the wire, and READ AND WRITTEN BY NOTHING, ever.
+
+   BOTH HALVES, or the drill is satisfied by a field that is merely
+   undeclared while the invented rule is still being enforced. */
+test("a retired field stays retired, and the rule it named stays gone", () => {
+  const S = require("../engine/sides.js");
+  const side = S.makeSide();
+  assert.ok(S.SIDE_FIELDS.indexOf("fatigue") < 0,
+    "`fatigue` is back in SIDE_FIELDS — it names a loss condition CR 4.5.3 " +
+    "does not have, and nothing has ever read it");
+  assert.ok(!("fatigue" in side), "…and makeSide must not declare it either");
+  const wire = require("fs").readFileSync(__dirname + "/../engine/wire.js", "utf8");
+  assert.doesNotMatch(wire, /"fatigue"/, "…and it must not ship down the wire");
+  /* THE SECOND HALF: the rule. `test/approx.test.js` drives judge's side
+     of CR 4.5.3 and pins the trainer's as source; this asserts the field
+     and the rule were retired TOGETHER, which is what stops one coming
+     back wearing the other's clothes. */
+  const html = require("fs").readFileSync(__dirname + "/../index.html", "utf8");
+  assert.doesNotMatch(html, /wins by attrition/,
+    "the invented deck-out loss is back on the board a player uses");
 });

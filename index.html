@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.25"; /* v4.25 - A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT. v4.24 made BOOM GRENADE's "when a Mechanologist attack action card YOU CONTROL hits a hero, destroy this and deal 4 damage to them" REFUSE, because `fx.onHit` means "when THIS hits" and is read only from `pend`, which an Item never opens; a recorded refusal is a debt and this discharges it. The subject goes through `attackQual` so no qualifier vocabulary is invented, and the printed DESTROY is split off and carried rather than read as payload - `classifyClause("destroy this and deal 4 damage to them")` answers `[["dmg",4]]`, so reading the tail whole would file an unbounded repeatable 4 damage. Exactly 3 records move, all Boom Grenade, part -> full; the route fires 15 times in 210 self-play games. AND THE SABOTAGE PASS FOUND TWO MORE: `attackQual`'s FALSE ("a restriction I cannot read") and NULL ("nothing restricts this") were collapsed by one `!q`, which is the bug v3.31 and v3.87 both name; and `tools/sweep.js` kept its OWN copy of the source-mention scan still reading `index.html` alone - the file the semantics left at v2.53 - and passed it back INTO `FS.failStates`, so one grading function scored the same card two ways and the UNFAIR block read 1 for four versions after crank was built and drilled. One scan, one body, and UNFAIR is 0. Nineteen sabotages, nineteen bite. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.26"; /* v4.26 - THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD. CR 4.5.3 lists every way a player loses and there are exactly three - life to zero or no hero at all, an effect that says so, and concede. `judge.js` deleted the invented fatigue loss at v2.45 and wrote down why; the TRAINER kept it for four dozen versions, so the invented rule lived on the board a PLAYER USES while the CR-exact board had it right - v3.01's one-board shape with the sign that matters, because a trainer TEACHES. The approximation ledger justified leaving it on the grounds that "seat 1 reshuffles, so this is a decision about solo play": that is a fact about the DUMMY and the rule being broken is the PLAYER's loss condition, so the reason never reached the thing it excused (v3.69). A hero who runs their deck out now keeps playing, keeps blocking with what is in hand, and loses only when their life reaches 0 - and the feed says so, because in a training sim the sequence is the lesson. AND THE FIELD THAT NAMED IT WAS DEAD: `sd.fatigue` was declared in SIDE_FIELDS, shipped down the wire, and READ AND WRITTEN BY NOTHING, ever - `sd.rune`'s shape (v3.82) one invented rule over, and not even the thing implementing the loss, which set `game.over`. Retired; symmetry ledger 51 -> 50 and WIRE_V 7 -> 8, because a peer carrying one extra field FINGERPRINTS differently and two honest peers would desync on the opening state. The bump itself was unguarded - three versions have moved WIRE_V by hand and a fourth that forgot would have been silent - so the version and a digest of the payload SHAPE are pinned together now. Nine sabotages, nine bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3976,13 +3976,38 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       }
     }
 
-    /* THE INVENTED FATIGUE LOSS IS SEAT 0'S, deliberately (CR 4.5.3 lists
-       three ways to lose and this is not one of them). Left alone rather
-       than generalised: seat 1 reshuffles above, so changing it is a
-       decision about solo play, not a rules fix. */
-    if(si===0 && drawn.length<need && act(n).hand.length===0){
-      n.over={win:false}; return {...L(n,`Deck empty — fatigued. ${foe(n).name} wins by attrition.`), actor:_prevActor};
-    }
+    /* THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD — RETIRED AT v4.26.
+       CR 4.5.3 lists every way a player loses and there are exactly
+       three: 4.5.3a, their hero's life reaches zero or they control no
+       hero at all; 4.5.3b, an effect says they lose; 4.5.3c, they
+       concede. An empty deck is not on that list, and a draw that
+       cannot be filled simply draws what it can.
+
+       (The rule numbers lead here on purpose: `test/sync.test.js` scans
+       RAW source, comments included, so an English sentence that puts a
+       parenthesised citation straight after a bare noun reports that
+       noun as an unbridged call. Reword the prose rather than weakening
+       the scan — CLAUDE.md's own instruction, and the third sentence in
+       this project to trip it.)
+
+       `judge.js` deleted this at v2.45 and wrote down why; the trainer
+       kept it for four dozen versions, so the invented rule lived on the
+       board a PLAYER USES while the CR-exact board had it right —
+       v3.01's shape with the sign that matters, because a trainer
+       teaches. The record in `tools/approx.js` justified leaving it on
+       the grounds that "seat 1 reshuffles, so this is a decision about
+       solo play": that is a fact about the DUMMY and the rule being
+       broken is the PLAYER's loss condition. A reason that does not
+       reach the thing it excuses is not a reason (v3.69).
+
+       WHAT HAPPENS INSTEAD IS THE RULE. A hero who runs their deck out
+       keeps playing, keeps blocking with what is in hand, and loses only
+       when their life reaches 0 like anyone. The dummy still swings
+       every turn, so a decked-out solo game still ENDS — it just ends
+       the way the CR says. The line names the rule, because in a
+       training sim the sequence is the lesson. */
+    if(drawn.length < need)
+      n = L(n, `${_me()} draw${_you()?"":"s"} ${drawn.length} of ${need} — the deck is empty. (CR 4.5.3: that is not a loss.)`);
     /* THE BLOODROT TICK IS GONE (v3.09). It was a per-turn, unavoidable,
        never-expiring drain standing in for a token that prints a ONE-SHOT
        the controller can buy out of: "at the beginning of your end phase,

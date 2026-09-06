@@ -280,6 +280,48 @@ test("every SIDE_FIELD is classified — a new zone cannot escape the format", (
   assert.deepEqual(bogus, [], "wire.js lists a field sides.js does not have");
 });
 
+/* ---- THE VERSION AND THE SHAPE ARE PINNED TOGETHER (v4.26) ------------
+   `WIRE_V`'s own header says "bump for any change to the payload SHAPE",
+   and NOTHING held it to that. Three versions have bumped it by hand —
+   v3.82 (`sd.rune` retired), v4.23 (`verse` off the board entry), v4.26
+   (`sd.fatigue` retired) — and a fourth that forgot would be SILENT:
+   measured, dropping v4.26's bump back to 7 failed no drill in the
+   project.
+
+   WHAT GOES WRONG IS NOT THE DECODE. The lists are read by NAME, so a
+   stale key rides through the diff harmlessly. It is the FINGERPRINT: a
+   peer whose side carries one extra field hashes differently from one
+   whose side does not, so two honest peers desync on the opening state
+   and `diffPaths` reports a field neither of them can do anything about.
+   The handshake is supposed to refuse that pair, and it can only do so
+   if the number moved.
+
+   PIN THE TWO SPELLINGS TOGETHER (v3.81) — the version, and a digest of
+   the shape it describes. A shape change with no bump fails here, and so
+   does a bump with no shape change, which is the half that keeps the
+   number meaningful. Both are a DELIBERATE edit to this line. */
+test("WIRE_V moves when the payload shape moves, and only then", () => {
+  const shape = JSON.stringify({
+    card:  [...W.CARD_ZONES].sort(),
+    slot:  [...W.SLOT_ZONES].sort(),
+    entry: [...W.ENTRY_ZONES].sort(),
+    non:   [...W.NON_CARD_SIDE_FIELDS].sort(),
+  });
+  /* A DIGEST, not the list: pinning the list here would make this drill a
+     second copy of wire.js's own ledger — the classification drill above
+     already holds that, against sides.js. What is pinned here is only
+     that the shape and the number moved together. */
+  let h = 5381;
+  for(let i = 0; i < shape.length; i++) h = ((h * 33) ^ shape.charCodeAt(i)) >>> 0;
+  assert.equal(W.WIRE_V, 8,
+    "WIRE_V moved — if the payload shape moved with it, update the digest below " +
+    "in the same edit and say what changed in the header");
+  assert.equal(h, 109932619,
+    "the payload SHAPE moved and WIRE_V did not. A stale key decodes fine (the " +
+    "lists are read by name) — what breaks is the FINGERPRINT, so two honest " +
+    "peers desync on the opening state instead of being refused at the handshake.");
+});
+
 test("the encoder actually visits every declared zone", () => {
   /* Guards against a zone being listed but mapped into the wrong bucket —
      a SLOT_ZONE listed under CARD_ZONES would silently ship verbatim. */

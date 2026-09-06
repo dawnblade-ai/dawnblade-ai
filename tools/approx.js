@@ -113,14 +113,20 @@ const APPROX = {
       "shortcut, and it becomes a real pause the day a card needs one."},
 
 "trainer-fatigue-loss": {
-  status:"open", cr:"CR 4.5.3", board:"trainer", since:"v2.45", swept:"v4.02",
-  claim:"index.html ends the game when seat 0's deck is empty — 'fatigued'. CR "+
-        "4.5.3 has THREE ways to lose and no more: life to zero or no hero, an "+
-        "effect that says so, and concede.",
-  why:"judge.js removed it at v2.45 and the trainer kept it, so this is v3.01's "+
-      "one-board shape with the invented rule on the solo board. Left alone "+
-      "deliberately because seat 1 reshuffles rather than decking out, which makes "+
-      "changing it a decision about SOLO PLAY rather than a rules fix."},
+  status:"closed", cr:"CR 4.5.3", board:"trainer", since:"v2.45", swept:"v4.26",
+  claim:"index.html used to end the game when seat 0's deck ran out — 'fatigued'. "+
+        "CR 4.5.3 has THREE ways to lose and no more: life to zero or no hero, an "+
+        "effect that says so, and concede. BUILT AT v4.26 — both boards now draw "+
+        "what the deck holds and say so.",
+  why:"judge.js removed it at v2.45 and the trainer kept it for four dozen "+
+      "versions, so the invented rule lived on the board a PLAYER USES while the "+
+      "CR-exact board had it right — v3.01's shape with the sign that matters, "+
+      "because a trainer TEACHES. This record justified leaving it on the grounds "+
+      "that seat 1 reshuffles rather than decking out, 'which makes it a decision "+
+      "about solo play': that is a fact about the DUMMY, and the rule being broken "+
+      "is the PLAYER's loss condition. A reason that does not reach the thing it "+
+      "excuses is not a reason (v3.69). The dummy still swings every turn, so a "+
+      "decked-out solo game still ends — the CR's way."},
 
 "attack-ops-at-resolution": {
   status:"stated", cr:"CR 7.2", board:"both", since:"v3.88", swept:"v4.02",

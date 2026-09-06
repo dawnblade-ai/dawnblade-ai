@@ -118,8 +118,16 @@
    entry and writes nothing into the bag, so a v7 client reading it sees a
    clock with no counters — the aura would sit there forever, which is the
    direction that steals games. Same retirement, same reason, as v3.82's
-   `sd.rune`: refused at the handshake instead. */
-const WIRE_V = 7;
+   `sd.rune`: refused at the handshake instead.
+
+   7 -> 8 AT v4.26 for the same reason a third time: `sd.fatigue` is
+   retired. It was declared in SIDE_FIELDS, shipped here, and read and
+   written by NOTHING — dead rules state naming a loss condition CR 4.5.3
+   does not have. The field is inert, but the FINGERPRINT is not: a v7
+   peer's side carries `fatigue:false` and a v8 peer's does not, so two
+   honest peers would hash differently on the opening state and every
+   action would read as a desync. Refused at the handshake instead. */
+const WIRE_V = 8;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -143,7 +151,7 @@ const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
   "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
   "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
-  "lifeLock","namedBuff","dracNext","dracChain","marked","fatigue","hist",
+  "lifeLock","namedBuff","dracNext","dracChain","marked","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",
   "nextTurn"
 ];

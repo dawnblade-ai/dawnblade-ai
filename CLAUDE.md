@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.25
+**Current version:** v4.26
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2399 drills** at v4.25.
+This is `node --test "test/*.test.js"` — **2401 drills** at v4.26.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -790,6 +790,60 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD (v4.26)
+
+**CR 4.5.3** lists every way a player loses and there are exactly three:
+life to zero or no hero at all, an effect that says so, and concede. An
+empty deck is not on that list.
+
+`judge.js` deleted the invented fatigue loss at **v2.45** and wrote down
+why; **the trainer kept it for four dozen versions** — so the invented
+rule lived on the board a PLAYER USES while the CR-exact board had it
+right. v3.01's one-board shape with the sign that matters, **because a
+trainer TEACHES**.
+
+**THE RECORD'S REASON NEVER REACHED THE THING IT EXCUSED.**
+`tools/approx.js` justified leaving it on the grounds that *"seat 1
+reshuffles, so this is a decision about SOLO PLAY rather than a rules
+fix"* — a fact about the DUMMY, when the rule being broken is **the
+PLAYER's** loss condition. **A reason that does not reach the thing it
+excuses is not a reason** (v3.69, one record over). When a record
+justifies a gap, check the justification is about the same thing as the
+gap.
+
+A decked-out solo game still ENDS, because the dummy still swings every
+turn — it ends the CR's way. **And the feed says so**, in the same words
+judge has used since v2.45. The `open` record's probe went RED the day
+the gap closed, which is what a `stated`/`open` record is FOR (v4.02);
+the ledger moved open **9 → 8**, closed **8 → 9**.
+
+**AND THE FIELD THAT NAMED IT WAS DEAD.** `sd.fatigue` was in
+`SIDE_FIELDS`, in `makeSide` and on the wire, and **read and written by
+NOTHING, ever** — `sd.rune`'s shape (v3.82) one invented rule over, and
+worse in one way: it was not even the mechanism, which set `game.over`.
+Retired; symmetry ledger **51 → 50**, `WIRE_V` **7 → 8**.
+
+### THE WIRE VERSION AND THE PAYLOAD SHAPE ARE PINNED TOGETHER (v4.26)
+
+`WIRE_V`'s own header says *"bump for any change to the payload SHAPE"*
+and **nothing held it to that**. Three versions have moved it by hand
+(v3.82, v4.23, v4.26) and **a fourth that forgot would be SILENT** —
+measured, dropping this version's bump back to 7 failed no drill in the
+project.
+
+**WHAT BREAKS IS NOT THE DECODE.** The lists are read by NAME, so a stale
+key rides through the diff harmlessly. It is the **FINGERPRINT**: a peer
+whose side carries one extra field hashes differently from one whose side
+does not, so two honest peers desync on the opening state and
+`diffPaths` reports a field neither can do anything about. The handshake
+exists to refuse that pair and can only do so if the number moved.
+
+**PIN THE TWO SPELLINGS TOGETHER** (v3.81) — the version, and a DIGEST of
+the shape. A shape change with no bump fails, **and so does a bump with
+no shape change**, which is the half that keeps the number meaningful. A
+reorder of a zone list is correctly SILENT and that is drilled too: a
+guard that fires on a non-change is a guard people learn to edit past.
 
 ### A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25)
 
@@ -3381,9 +3435,12 @@ deliberate edit.
 
 **EACH RECORD CARRIES THE BOARD IT LIVES ON**, because v3.01's shape — a
 rule that exists on one board only — is the recurring defect in exactly
-this area. `trainer-fatigue-loss` is the live example: judge.js dropped the
-invented deck-out loss at v2.45 (CR 4.5.3 has three ways to lose and no
-more) and `index.html` still carries it.
+this area. `trainer-fatigue-loss` was the worked example and it is
+**CLOSED at v4.26**: judge.js dropped the invented deck-out loss at v2.45
+(CR 4.5.3 has three ways to lose and no more) and `index.html` carried it
+for four dozen versions after. Its probe asserted the deviation and went
+RED the day the gap closed, which is the whole point of the two probe
+directions.
 
 **AND THE PROBES MUST DRIVE.** Four of the first draft's probes were
 silent under sabotage and every one was a shape this file already names —
@@ -6849,9 +6906,14 @@ Still deliberately not modelled, and each is honest rather than hidden:
   absent from the trainer**: its opponent is 12 vanilla attacks with no
   allies and a fabricated swing, so there is never a target to choose —
   see "MEASURE BEFORE BUILDING A PLANNED JOB".
-- **`index.html` still carries the invented fatigue loss.** Left alone on
-  purpose: the dummy reshuffles its graveyard rather than decking out, so
-  changing it is a decision about solo play, not a rules fix.
+- ~~**`index.html` still carries the invented fatigue loss.**~~ **CLOSED
+  AT v4.26 (record corrected).** The reason this sentence gave — *"the
+  dummy reshuffles rather than decking out, so changing it is a decision
+  about solo play"* — is a fact about the DUMMY, and the rule being
+  broken (CR 4.5.3) is the PLAYER's loss condition. **A reason that does
+  not reach the thing it excuses is not a reason** (v3.69). Both boards
+  now draw what the deck holds and say so; `sd.fatigue`, which named the
+  rule and implemented none of it, is retired with it.
 
 ### `engine/sparring.js` (v2.46) — A SEAT IS A POLICY
 

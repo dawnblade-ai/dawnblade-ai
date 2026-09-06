@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.25 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.26 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -84,9 +84,18 @@ had **built and drilled**: `tools/sweep.js` kept its own copy of the
 source-mention scan v3.00 fixed, still pointed at `index.html`, and
 passed it back into `FS.failStates`. One grading function, two scans, two
 verdicts on the same card. **UNFAIR is 0 now, for the first time the tool
-has been able to say so.**
+has been able to say so.** **v4.26** went to the approximation ledger's
+`open` list and took the one with the CR rule beside it: **the trainer
+still carried an invented deck-out loss** that `judge.js` deleted at
+v2.45, so the rule CR 4.5.3 does not have lived on the board a PLAYER
+USES. The record's own justification turned out to be about the DUMMY
+while the rule broken was the PLAYER's; and the side field that named it,
+`sd.fatigue`, was declared, shipped down the wire and **read and written
+by nothing, ever**. `WIRE_V`'s bump is pinned against a digest of the
+payload shape now, because three versions had moved it by hand and a
+fourth that forgot would have been silent.
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.25, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.26, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.**
@@ -97,7 +106,7 @@ from a run, which is the failure this table exists to stop.
 | | | command |
 |---|---|---|
 | coverage | **386 full · 15 part · 4 none** of 405 | `npm run audit` |
-| drills | **2395 pass · 0 fail · 4 skipped** | `npm test` |
+| drills | **2397 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
@@ -106,6 +115,7 @@ from a run, which is the failure this table exists to stop.
 | sweep | **UNFAIR 0** — genuinely, for the first time · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
 | audit flags | **15**, down from 26 | `npm run audit` |
 | gaps | **19 unfinished · 14 one clause away** | `npm run gaps` |
+| approximations | **10 stated · 8 open · 9 closed** of 27 | `node tools/approx.js` |
 
 **TWO OF THOSE THREE HERO CLAUSES ARE ABILITY NAMES**, not rules — Briar's
 *"Essence of Earth and Lightning"* and Iyslander's *"Essence of Ice"*,

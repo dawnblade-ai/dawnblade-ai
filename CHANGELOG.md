@@ -1,3 +1,76 @@
+## v4.26 — THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD
+
+> **CR 4.5.3** lists every way a player loses and there are exactly
+> three: **4.5.3a** their hero's life reaches zero or they control no
+> hero at all; **4.5.3b** an effect says they lose; **4.5.3c** they
+> concede.
+
+An empty deck is not on that list. `judge.js` deleted the invented
+fatigue loss at **v2.45** and wrote down why; **the trainer kept it for
+four dozen versions** — so the invented rule lived on the board a PLAYER
+USES while the CR-exact board had it right. v3.01's one-board shape with
+the sign that matters, **because a trainer TEACHES**: a loss screen
+reading *"Deck empty — fatigued"* is a rule the game does not have,
+stated to somebody learning the game.
+
+**THE RECORD'S REASON NEVER REACHED THE THING IT EXCUSED.**
+`tools/approx.js` justified leaving it on the grounds that *"seat 1
+reshuffles rather than decking out, which makes changing it a decision
+about SOLO PLAY rather than a rules fix."* That is a fact about the
+DUMMY, and the rule being broken is **the PLAYER's** loss condition —
+whether the opponent can deck out has nothing to do with whether seat 0
+loses for it. **A reason that does not reach the thing it excuses is not
+a reason** (v3.69, one record over).
+
+**WHAT HAPPENS INSTEAD IS THE RULE.** A hero who runs their deck out
+keeps playing, keeps blocking with what is in hand, and loses only when
+their life reaches 0 like anyone. The dummy still swings every turn, so a
+decked-out solo game still ENDS — it just ends the CR's way. **And the
+feed says so**, in the same words judge has used since v2.45, because in
+a training sim the sequence is the lesson.
+
+**THE PROBE WENT RED THE DAY IT WAS BUILT, WHICH IS WHAT IT IS FOR**
+(v4.02). `trainer-fatigue-loss` was an `open` record whose drill asserted
+the deviation; closing the gap forced the record to move rather than
+leaving a stale sentence behind. Ledger: open **9 → 8**, closed **8 → 9**.
+
+### AND THE FIELD THAT NAMED IT WAS DEAD
+
+`sd.fatigue` was declared in `SIDE_FIELDS`, declared by `makeSide`,
+shipped down the wire — and **read and written by NOTHING, ever**.
+
+It is `sd.rune`'s shape (v3.82) **one invented rule over**, and worse in
+one way: it was not even the thing implementing the loss. The trainer's
+deck-out branch set `game.over` and never touched this field, so the name
+announced a rule the CR does not have *and* was not the mechanism for it.
+**Dead rules STATE is worse than dead code elsewhere** — it reads as a
+rule somebody can reach.
+
+Retired from all three places. Symmetry ledger **51 → 50**; a field
+leaving is as deliberate an edit as one arriving (v3.29). `WIRE_V` goes
+**7 → 8** for v3.82's reason: the lists are read by NAME so a stale key
+decodes fine, but a peer whose side carries one extra field
+**fingerprints differently**, so two honest peers would desync on the
+opening state instead of being refused at the handshake.
+
+### THE BUMP ITSELF WAS UNGUARDED
+
+`WIRE_V`'s own header says *"bump for any change to the payload SHAPE"*,
+and **nothing held it to that**. Three versions have moved it by hand —
+v3.82, v4.23, v4.26 — and **a fourth that forgot would have been
+silent**: measured, dropping this version's bump back to 7 failed no
+drill in the project.
+
+**PIN THE TWO SPELLINGS TOGETHER** (v3.81): the version, and a digest of
+the shape it describes. A shape change with no bump fails, **and so does
+a bump with no shape change** — which is the half that keeps the number
+meaningful. A reorder of a zone list is correctly SILENT (the digest
+sorts), and that is drilled too, because a guard that fires on a
+non-change is a guard people learn to edit past.
+
+**Nine sabotages, nine bite** — including the two that must not: the
+reorder, and a bump-with-no-change which must fail rather than pass.
+
 ## v4.25 — A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT
 
 > *"When a Mechanologist attack action card you control hits a hero,
