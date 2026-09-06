@@ -175,6 +175,15 @@ and it validates the entire rules core before any networking risk is added.
 
 9. **Backend** (Firebase or Supabase; both are CDN-loadable, free-tier, and need
    no build step): accounts, matchmaking, persisted results.
+
+   > **INVESTIGATED at v4.28 — see `SUPABASE.md`.** Supabase clears the
+   > no-build-step rule, measured: `dist/umd/supabase.js` is a 55KB-gzipped
+   > IIFE defining `window.supabase`, the same shape `room.js` already
+   > lazy-loads PeerJS in. The three jobs each land on a seam that already
+   > exists — `store` for accounts, **the seed and the action log** for
+   > saved games (a whole game is **under 1KB gzipped**, measured over
+   > three real matches), and `report.js` for reporting. What it does NOT
+   > solve is fact 4 above: hiding a hand needs step 10, not a database.
 10. **Authoritative state.** Move `reduce` server-side; clients send intents and
     receive their own view. This is where hidden information becomes real.
 11. **ELO** over the 15 Silver Age decks, plus the deck-legality checks the
