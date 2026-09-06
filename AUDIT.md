@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-06T03:19:14.557Z · app v4.22 · data sage-v13 · db 797 records
+Generated 2026-09-06T03:44:32.738Z · app v4.24 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -36,7 +36,7 @@ Generated 2026-09-06T03:19:14.557Z · app v4.22 · data sage-v13 · db 797 recor
 | charge | live — v3.70 — BUILT, and the record was stale. fx.chargeCost is parsed, `execute` charges the chosen card into the soul and records hist.charged, and the chargedPitchN conditions resolve; Beaming Bravado, Bolt of Courage, Courageous Steelhand and Engulfing Light all read full. Boltyn's own HERO clause is still unread, which is a separate gap (FINISH.md P1) | Beaming Bravado, Bolt of Courage, Engulfing Light, Light the Way, Roaring Beam, Take Flight, V of the Vanguard |
 | clash | live — RULED 2026-07-25: both sides reveal for real, greatest POWER wins, a tie is no winner. Fires when the card DEFENDS, which is how every clash card is printed | Clash of Agility, Clash of Might, Clash of Vigor, Stonewall Impasse, Test of Might, Test of Strength |
 | cloaked | partial — v3.99 — build.js equips the piece face-down off the printed reminder line (ENG005: 'Equip this face-down') and the ability's flip cost spends it, so Uphold Tradition's +1{p} counter is the ONE-SHOT it prints. RULED 2026-07-25 and the ruling agrees with the printing: 'EQUIPPED FACE DOWN ... INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER'. ('ALWAYS ACTIVE' is this user's shorthand for the instant WINDOW — they spell it out at length for Spellfire Cloak in the same batch — not a claim the ability repeats; the printed cost includes turning it face-up, which can be paid once.) UNBUILT: 'SHOW CARD BACK ON THE PLAYERS BOARD', a display half deferred with the rest of the UI pass | Uphold Tradition |
-| crank | pending — RULED 2026-07-25: the item enters with a steam counter; crank prompts to spend it for an action point. Needs the prompt sheet | Boom Grenade |
+| crank | live — v4.24 — the parameters are the keyword's own, off the SDA023 printing: as this ENTERS the arena you may remove a steam counter from it for an action point. Offered after `ctrSelf` has put the counter on, refused when the bag cannot pay, and the cost leaves as data on the `pay` spec (spendCtr) beside the tap, the hero tap and the destroy. It is what makes v4.23's counter clock a decision: bank the point now and the item dies at the next upkeep, or keep the counter and buy a turn | Boom Grenade |
 | crush | partial — threshold and payload read off each card's own printed rider (v3.16); the two next-turn DEBUFFS built v3.29 and the two RESTRICTIONS v3.30. Partial for one card: Walk in My Shoes halves base {p} and {d} for a turn and has no reader | Boulder Drop, Buckling Blow, Cartilage Crush, Chokeslam, Crush the Weak, Debilitate, Disable, Fault Line, Flatten the Field, Short Shrift, Walk in My Shoes, Wee Wrecking Ball |
 | dominate | live — v2.05: the dummy holds cards, so this really does hold it to one blocker from hand | Macho Grande, Pulping |
 | go again | live — printed via card_keywords; conditional grants parsed from text (never merged — the Kayo rule) | Aether Quickening, Arcane Seeds // Life, Avast Ye!, Blaze Headlong, Bolt'n' Shot, Booze!, Brand with Cinderclaw, Buckwild, Burn Up // Shock, Call in the Big Guns, Cinderskin Devotion, Cold Snap, Concoct Disorder, Condemn to Slaughter, Display Loyalty, Drop the Anchor, Duty Bound Blitz, Edict of Steel, Enflame the Firebrand, Entwine Lightning, Fire Tenet: Strike First, Fire that Burns Within, Flamecall Awakening, Fluid Motion, Flying High, Fry, Goblet of Bloodrun Wine, Golden Tipple, Hit and Run, Hot on Their Heels, Hyper Inflation, Jack Be Quick, Jittery Bones, Lace with Bloodrot, Lace with Frailty, Lace with Inertia, Lead with Speed, Light the Way, Lightning Surge, Loot the Arsenal, Loot the Hold, Malefic Incantation, Mauvrion Skies, Mounting Anger, Murderous Rabble, Nimblism, Orb-Weaver Spinneret, Path of Same Ends, Phoenix Flame, Pick Up the Point, Portside Exchange, Prime the Crowd, Pulping, Ravenous Rabble, Re-Charge!, Read the Glide Path, Release the Tension, Rise from the Ashes, Rising Resentment, Ronin Renegade, Rune Flash, Runerager Swarm, Sadistic Scowl, Saltwater Swell, Scar for a Scar, Scout the Periphery, Second Strike, Second Tenet of Chi: Wind, Sharpen Steel, Sigil of Silphidae, Sizzle, Spears of Surreality, Spectral Manifestations, Sprout Strength, Star Fall, Swift Shot, Take Aim, Trot Along, Up Sticks and Run, Villainous Pose, Warrior's Valor, Weave Lightning, Whisper of the Oracle, Wild Ride, Winter's Bite, Yo Ho Ho!, Zealous Belting |
@@ -191,10 +191,10 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ### Boom Grenade (pitch 1) — part · [dash]
 - type: Mechanologist Action - Item · printed: Crank
-- — Crank
+- ○ Crank
 - ▶ This enters the arena with a steam counter
 - ▶ At the start of your turn, destroy this unless you remove a steam counter from it.
-- ▶ When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
+- — When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
 
 ### Crown of Dichotomy (pitch 0) — part · [viserai, briar]
 - type: Runeblade Equipment - Head · printed: Arcane Barrier 1

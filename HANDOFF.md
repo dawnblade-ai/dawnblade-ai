@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.23 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.24 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -69,9 +69,16 @@ kept its counters on the board ENTRY, a second storage. Hyper Driver read
 `tier: full`, paid its {r} **once, on PLAY**, and was immortal; both
 grenades were immortal too, on a printed drawback the parser refused
 whole. `enterCounters` turned out to be an op that wrote a field
-**nothing had ever read**.
+**nothing had ever read**. **v4.24** finished the keyword by fetching the
+SDA023 printing — and DRIVING it found three more: a `noop`'s reason is
+printed **verbatim into the feed**, so three of them were reading like
+code comments to the player; the on-hit trigger's SUBJECT was never
+tested, so Boom Grenade's *"when a Mechanologist attack action card you
+control hits a hero"* was filed as the item's own on-hit and did nothing;
+and `payPolicy` priced a **destroy** at zero, so both of v3.93's Legs
+pieces were spent every time they were offered.
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.23, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.24, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.** Two
@@ -80,7 +87,7 @@ of the sentences it replaces had been wrong for seventeen versions.
 | | | command |
 |---|---|---|
 | coverage | **385 full · 16 part · 4 none** of 405 | `npm run audit` |
-| drills | **2360 pass · 0 fail · 4 skipped** | `npm test` |
+| drills | **2378 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
@@ -140,6 +147,26 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.24 — THE KEYWORD, AND WHAT DRIVING IT FOUND
+
+**THE FEED IS AN INSTRUMENT AND IT WAS NEVER READ FOR VOICE.** A `noop`'s
+reason goes straight into the player's log. Three read like code
+comments; `test/noopvoice.test.js` is the standing census now.
+
+**THE ON-HIT SUBJECT CENSUS IS WORTH KNOWING** — seven distinct subjects
+in the pool, four of them third person, three of those built on their own
+routes. The fourth (Boom Grenade) is the one gap left on that card.
+
+**WHAT IS STILL OPEN ON BOOM GRENADE:** the payoff — *"When a
+Mechanologist attack action card you control hits a hero, destroy this
+and deal N damage to them"*. Two halves are missing and both are small:
+a MANDATORY watcher on the played-attack route (which is
+`offerPayCost`'s scan one trigger over — the scan already covers gear AND
+the arena, and `attackQual("mechanologist ", " action card")` already
+answers `{aac:true, g:[["mechanologist"]]}`), and a payload reader that
+keeps the printed *"destroy this"* rather than dropping it, which
+`classifyClause("destroy this and deal 4 damage to them")` does today.
 
 ## ⚠ v4.23 — THE CLOCK NOBODY WOUND
 

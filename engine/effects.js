@@ -260,6 +260,65 @@ function makeEffects(ctx){
     return n;
   }
 
+  /* ---- A PERMANENT ENTERS THE ARENA WITH ITS COUNTERS (v4.24) --------
+
+     ONE BODY, TWO ENTRY POINTS: a permanent PLAYED from hand and a TOKEN
+     minted by `runOps`. v3.07 had to give the mint its own `sd` stamp for
+     exactly this reason — "a token carries its own clock" — and the
+     counter it enters with is the sibling field that was never given the
+     same treatment.
+
+     THE STASH IS THE PLAY SITE'S ANSWER AND THE PARSE IS THE MINT'S. A
+     played permanent's `ctrSelf` may be GATED (Waxing Specter prints it
+     behind "if you've pitched a blue card this turn"), so only the op
+     that actually RAN may write the bag — which is what the stash
+     records. A token's own text carries no such gate and there is no op
+     to run, so the mint reads the parse, exactly as it reads `sd`.
+
+     AND CRANK IS OFFERED HERE, AFTER THE COUNTER LANDS. The card prints
+     "enters the arena WITH a steam counter" on the line below the
+     keyword, so a crank asked first is a crank nobody can ever pay. The
+     bag is checked for the reason any cost is: an offer the seat cannot
+     take is a tap that teaches nothing (v3.39, v3.55).
+
+     IT IS A CHOICE, AND IT IS THE CARD. Bank the action point now and the
+     item dies at the next upkeep; keep the counter and buy a turn of
+     uptime for the payoff. That is the reverse of v4.23's reprieve, where
+     the counter has no other consumer and declining is strictly
+     dominated — so that one is taken without asking and this one is not.
+
+     THE COST LEAVES AS DATA on the `pay` spec (`spendCtr`), the fourth
+     verb in that family beside the tap, the hero tap and the destroy:
+     `prompts.js` runs no effects and touches no state.
+
+     THE TOKEN HALF IS LATENT AND MEASURED. Exactly two pool tokens print
+     an enters-with-counters clause — Golden Cog and Zen State — and
+     NEITHER has a creator anywhere in the pool, so this fires for no card
+     today (v3.84: when you build a route, go and count). It is here
+     because leaving it out reported Golden Cog `full` with a crank nobody
+     could ever pay, which is the no-op blind spot. */
+  function enterWithCounters(s0, card, uid, seat, cs){
+    let n = s0;
+    const spec = cs || ((P.fxParse(card).ops || []).find(o => o[0] === "ctrSelf") || [])[1] || null;
+    const sdOf = () => (n.sides || [])[seat] || {};
+    if(spec){
+      const cur = (sdOf().counters || {})[uid] || {};
+      const sides = (n.sides || []).slice();
+      sides[seat] = Object.assign({}, sides[seat], {counters: Object.assign({}, sdOf().counters,
+        {[uid]: Object.assign({}, cur, {[spec.kind]: (cur[spec.kind] || 0) + (spec.n || 1)})})});
+      n = Object.assign({}, n, {sides});
+      n = L(n, `${card.name} enters with ${(spec.n||1) > 1 ? spec.n + " " + spec.label + " counters" : "a " + spec.label + " counter"}.`);
+    }
+    const cr = P.crankCost(card);
+    if(cr && ((sdOf().counters || {})[uid] || {})[cr.kind] >= cr.n)
+      n.promptQ = [...(n.promptQ || []), {
+        tag: "pay", side: seat, src: card.name, cost: 0, avail: 0,
+        ops: cr.ops, spendCtr: {uid, kind: cr.kind, n: cr.n},
+        title: `Crank ${card.name}?`,
+        hint: `Remove a ${cr.kind} counter for an action point — or keep it, and the ${card.name} survives another turn.`}];
+    return n;
+  }
+
   /* The teardown is `sweepArena`'s, deliberately: it files the card to the
      graveyard turn-stamped, runs whatever the departing card pays out, and
      re-derives `arcShield`/`lifeLock` from what is left. A second teardown
@@ -1351,10 +1410,18 @@ function makeEffects(ctx){
            authority for what a card is called, exactly as it is for
            everything else on it. */
         if(rec.dbName) rec = {...rec, name: rec.dbName};
+        /* THE COUNTER IT ENTERS WITH, AND CRANK (v4.24) — `_tsd` above is
+           the same lesson one field over: a permanent played from hand
+           gets both from `execute`, and a token skipped that path
+           entirely. `enterWithCounters` is the one body, and the seat is
+           the RECIPIENT's rather than the actor's, because a token can be
+           minted under the opponent's control. */
+        const _tseat = side === "foe" ? 1 - actorOf(n) : actorOf(n), _minted = [];
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
           if(side==="foe") foeMut(n).board = [...(foe(n).board||[]), {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
           else actMut(n).board = [...act(n).board, {card:tok, kind:"token", spent:false, uid:tok.uid, sd:_tsd}];
+          _minted.push(tok);
         }
         actMut(n).hist = {...act(n).hist, made:(act(n).hist.made||0)+1};
         if(/aura/i.test(rec.tt||"")) actMut(n).hist = {...act(n).hist, aura:(act(n).hist.aura||0)+1};
@@ -1368,6 +1435,10 @@ function makeEffects(ctx){
         const who = side==="foe" ? foe(n).name+"'s"
                   : (/^you$/i.test(_self) ? "your" : _self+"'s");
         n = L(n, `${rec.name}${(op[2]||1)>1?` ×${op[2]}`:""} created on ${who} board — ${clean(rec.tx||"no text").split(". ")[0]}.`);
+        /* AFTER THE LINE THAT SAYS IT ARRIVED. In a training sim the
+           sequence IS the lesson (v3.60), and a counter announced before
+           the token it sits on reads as a counter on something else. */
+        for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, null);
         /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
            "pays no costs and takes no action phase, so anything that taxes
            those sits idle" — true of the training prop it was written for,
@@ -3797,12 +3868,7 @@ function makeEffects(ctx){
            "if you've pitched a blue card this turn" is honoured by the op
            never being queued rather than by a second check here. */
         const _cs = n._ctrSelf || null; delete n._ctrSelf;
-        if(_cs){
-          const cur = act(n).counters[card.uid] || {};
-          actMut(n).counters = Object.assign({}, act(n).counters,
-            {[card.uid]: Object.assign({}, cur, {[_cs.kind]: (cur[_cs.kind]||0) + (_cs.n||1)})});
-          n = L(n, `${card.name} enters with ${(_cs.n||1) > 1 ? _cs.n + " " + _cs.label + " counters" : "a " + _cs.label + " counter"}.`);
-        }
+        n = enterWithCounters(n, card, card.uid, actorOf(n), _cs);
         /* SUSPENSE ALWAYS ENTERS WITH 2 COUNTERS. RULING 2026-07-25:
            "suspense always comes in with 2 counters - that number is in
            the rules text and is the same for every suspense card". The
@@ -4257,6 +4323,22 @@ function makeEffects(ctx){
         actMut(n).gear = act(n).gear.map(x => x.uid === r.destroy ? {...x, destroyed:true} : x);
         n = L(n, `${piece.name} is destroyed — the cost is paid.`);
       }
+    }
+    /* AND THE FOURTH COST VERB (v4.24) — a counter off the permanent that
+       is paying. Charged BEFORE the rider runs, for the tap's reason two
+       paragraphs up, and clamped at zero because `reduce` is fed by JSON
+       off a wire: a stale answer must cost a bonus, never a negative bag.
+
+       IT DOES NOT ASK `emptyDies` AFTERWARDS. Crank is paid as the
+       permanent ENTERS, and no pool record prints both the keyword and
+       "when this has none, destroy it" — the grenades die on their own
+       printed upkeep instead. A destroy fired here would be inventing a
+       clause the card does not have. */
+    if(r.spendCtr && r.spendCtr.uid != null){
+      const bag = (act(n).counters || {})[r.spendCtr.uid] || {};
+      actMut(n).counters = Object.assign({}, act(n).counters,
+        {[r.spendCtr.uid]: Object.assign({}, bag,
+          {[r.spendCtr.kind]: Math.max(0, (bag[r.spendCtr.kind] || 0) - r.spendCtr.n)})});
     }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* A GO-AGAIN GRANT THAT ARRIVES AFTER ITS LAYER (v3.93) — see
@@ -7429,7 +7511,28 @@ function soakPolicy(live, sd){
 function payPolicy(live, sd){
   if(!live) return false;
   const cost = live.cost || 0;
-  if(cost <= 0) return true;
+  /* ---- A PRICE THIS FUNCTION CANNOT WEIGH IS NOT NO PRICE (v4.24) ----
+
+     `cost` is RESOURCES, and the whole of what is weighed below. The
+     `pay` sheet carries three other cost verbs that leave as DATA — the
+     tap, the destroy and (v4.24) the counter — and `payCostSpec` sets
+     `cost: 0` when the price is the PERMANENT ITSELF. So `cost <= 0 →
+     true` was reading "destroy this Legs piece" as free and taking it
+     every time it was offered, on both of v3.93's cards.
+
+     THE STANDING POLICY IS TO DECLINE WHAT IS OPTIONAL AND CANNOT BE
+     WEIGHED. `sparring.js` states it twice for boost, in as many words,
+     and gives the reason: declining can never make the seat stronger than
+     printed. A function with no model of board value must not price a
+     permanent at zero and call the trade free.
+
+     IT IS THE SHAPE, NOT THE VERB. Any spec carrying a non-resource price
+     falls here, so the next cost verb inherits the answer rather than
+     rediscovering it (v3.43: a guard belongs to the shape). */
+  const otherPrice = live.destroyUid != null || !!live.tapHero
+                  || !!live.spendCtr || (!!live.taps && live.tapUid != null);
+  if(cost <= 0) return !otherPrice;
+  if(otherPrice) return false;
   if(cost > (live.avail || 0)) return false;          /* cannot reach it */
   const res = (sd && sd.res) || 0;
   const hand = ((sd && sd.hand) || []).length;

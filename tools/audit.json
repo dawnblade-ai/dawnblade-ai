@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-06T03:19:14.557Z",
- "appVer": "4.22",
+ "generated": "2026-09-06T03:44:32.738Z",
+ "appVer": "4.24",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -3698,7 +3698,7 @@
    "clauses": [
     {
      "t": "Crank",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "This enters the arena with a steam counter",
@@ -3710,11 +3710,11 @@
     },
     {
      "t": "When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.",
-     "st": "run"
+     "st": "skip"
     }
    ],
    "skipped": [
-    "Crank"
+    "When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them."
    ],
    "weaponCost": null,
    "eqAbility": null,

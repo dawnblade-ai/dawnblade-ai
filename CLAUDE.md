@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.23
+**Current version:** v4.24
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2360 drills** at v4.23.
+This is `node --test "test/*.test.js"` — **2378 drills** at v4.24.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -247,6 +247,10 @@ drill that passed.**
 6a2. **The counter clock** (`test/ctrclock.test.js`) — the three printed
    halves of a permanent on a counter clock, the reprieve, and the pool
    census pinned as SETS. See "A PERMANENT ON A COUNTER CLOCK" below.
+   **`test/crank.test.js`** is its keyword half and the on-hit SUBJECT
+   census; **`test/noopvoice.test.js`** holds every `noop` reason that
+   can reach a pool card to reading as game text, because `runOps` prints
+   it verbatim into the feed.
 6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`,
    `test/types.test.js`, `test/sparring.test.js`, `test/journey.test.js`, `test/loader.test.js`,
    `test/fuzz.test.js`).
@@ -786,6 +790,91 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A `noop`'s REASON IS THE PLAYER'S LINE (v4.24)
+
+`runOps` does `L(n, \`${srcName}: ${v}.\`)` for every `noop` op, so the
+reason string has **two readers** — the audit, which wants to know the
+clause is accounted for, and the PLAYER, who is being taught the game.
+Nothing was holding it to the second.
+
+**FOUND BY DRIVING A NEW ONE.** v4.24's first draft of the crank noop
+read *"live — v4.24; the offer is made as the permanent enters the arena
+(parser.crankCost)"*, and the first driven game printed it into the feed
+under the card's name. Censused, TWO more were already there — a version
+number plus the name of a training prop retired at v2.71 (dominate ·
+intimidate), and a module path (Uphold Tradition).
+
+**IN A TRAINING SIM THE FEED IS THE LESSON**, so a line that reads like a
+code comment is the sev-2 category the player TRUSTS. `test/noopvoice.
+test.js` is the standing census — v4.21's rule, fix the family rather
+than the three you found — and it is a DERIVATION rather than a pin,
+because the reasons are prose and pinning the SET makes every reword a
+test edit. What is pinned is the fault count at ZERO, with the scan
+proved alive against a control string.
+
+**A REWRITE MUST NOT EMPTY THE CLAIM.** A `noop` asserts that something
+reads the clause (v3.59), so each rewritten reason still names the moment
+or the mechanism — just without naming a file.
+
+### CRANK — AN OPTIONAL SELF-COST PAID IN COUNTERS (v4.24)
+
+> **Crank** *(As this enters the arena, you may remove a steam counter
+> from it. If you do, gain an action point.)* — SDA023, fetched and read
+
+**TENTH TIME READING THE PRINTED CARD FIRST HAS PAID.** The printing
+names the MOMENT (as it *enters*, not when it is played), the kind, the
+amount and the payload; the 2026-07-25 ruling had the shape without the
+moment and its *"needs the prompt sheet"* had been false since v2.17.
+
+**IT IS WHAT MAKES v4.23's CLOCK A DECISION** rather than a countdown —
+and it is the reverse of the reprieve, where the counter has no other
+consumer and declining is strictly dominated. That one is taken without
+asking; this one is a real prompt.
+
+**THE COST LEAVES AS DATA — THE FOURTH VERB.** `spendCtr` on the `pay`
+spec, beside the tap, the hero tap and the destroy. A spec only carries
+fields `buildPrompt` knows about (v2.34, v3.33, v3.91, v3.93).
+
+**AND IT IS OFFERED AFTER `ctrSelf` PUTS THE COUNTER ON**, because the
+card prints *"enters the arena WITH a steam counter"* on the line below
+the keyword. Both entry points — played from hand, and minted by `runOps`
+— go through one body, which is v3.07's *"a token carries its own clock"*
+one field over. The token half is LATENT and measured: exactly two pool
+tokens print an enters-with-counters clause and neither has a creator.
+
+### AN ON-HIT TRIGGER HAS A SUBJECT (v4.24)
+
+`fx.onHit` means *"when THIS hits"*, and the test for it was a bare
+`/\bhits?\b/` over the condition — so any `when …hits…` clause became the
+RESOLVING card's own trigger whatever the sentence named. v3.63's *"a
+damage clause can name a subject"* one clause up, and v2.33's Bull's Eye
+Bracers trap in a trigger instead of a payload.
+
+**MEASURED — the pool prints SEVEN distinct on-hit subjects and FOUR are
+third person:** Arakni's dagger drain (v3.77) and Refraction Bolters
+(v3.93) are built on their own routes and never reach the matcher,
+Nasreth's payload has no reader, and **Boom Grenade's was filed into
+`fx.onHitHero`** — a list read only from `pend`, which an ITEM never
+opens. The clause read `run`, counted as covered, and did nothing.
+
+**IT REFUSES, AND THE REFUSAL IS THE HONEST REPORT.** The payload reader
+also silently drops the printed *"destroy this"*, so claiming the clause
+would file a `full` whose payoff is an unbounded repeatable 4 damage.
+Exactly 3 records move.
+
+### A PRICE THE POLICY CANNOT WEIGH IS NOT NO PRICE (v4.24)
+
+`payCostSpec` sets `cost: 0` when the price is the PERMANENT ITSELF
+(v3.93), and `payPolicy` opened with `cost <= 0 → true` — *"free from the
+floating pool, nothing is given up"*. **That claim is false for three of
+the four cost verbs the `pay` sheet carries**, so both of v3.93's Legs
+pieces were destroyed every time the offer was made.
+
+**THE STANDING POLICY IS TO DECLINE WHAT CANNOT BE WEIGHED** —
+`sparring.js` states it twice for boost, with the reason: declining can
+never make the seat stronger than printed. It is guarded by SHAPE rather
+than by verb, so the next cost verb inherits the answer (v3.43).
 
 ### A PERMANENT ON A COUNTER CLOCK (v4.23)
 

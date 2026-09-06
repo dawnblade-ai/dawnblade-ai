@@ -1,3 +1,93 @@
+## v4.24 — CRANK, AND A `noop`'s REASON IS THE PLAYER'S LINE
+
+> **Crank** *(As this enters the arena, you may remove a steam counter
+> from it. If you do, gain an action point.)* — SDA023, fetched and read
+
+**TENTH TIME READING THE PRINTED CARD FIRST HAS PAID** (v3.32, v3.54,
+v3.66, v3.78, v3.99, v4.20, v4.22). The database carries no reminder text
+for any keyword and `card.printings[].image_url` is in every pool record.
+The printing names the MOMENT (as it *enters*, not when it is played),
+the counter kind, the amount and the payload — and the 2026-07-25 ruling
+had the shape without the moment, while its *"needs the prompt sheet"*
+had been false since v2.17.
+
+**IT IS WHAT MAKES v4.23's CLOCK A DECISION.** Bank the action point now
+and the grenade dies at the next upkeep; keep the counter and buy a turn
+of uptime. That is the reverse of the reprieve, where the counter has no
+other consumer and declining is strictly dominated — so that one is taken
+without asking and this one is a real prompt.
+
+**THE COST LEAVES AS DATA — THE FOURTH VERB.** `spendCtr` on the `pay`
+spec, beside the tap, the hero tap and the destroy. A spec only carries
+fields `buildPrompt` knows about (v2.34, v3.33, v3.91, v3.93): dropped,
+the action point is granted and the counter stays, which is v2.04's
+free-ability bug and also leaves the item alive past its printed clock.
+
+**AND THE OFFER IS MADE AFTER `ctrSelf` PUTS THE COUNTER ON.** The card
+prints *"enters the arena WITH a steam counter"* on the line below the
+keyword, so a crank asked first is a crank nobody can ever pay. Both
+entry points — a permanent played from hand and a token minted by
+`runOps` — go through one body now, which is v3.07's *"a token carries
+its own clock"* one field over.
+
+### DRIVING IT FOUND THREE MORE THINGS
+
+**A `noop`'s REASON IS PRINTED VERBATIM INTO THE FEED.** `runOps` does
+`L(n, \`${srcName}: ${v}.\`)`, so the string has TWO readers — the audit,
+and the PLAYER being taught the game. The first draft of the crank noop
+read *"live — v4.24; the offer is made as the permanent enters the arena
+(parser.crankCost)"*, and the very first driven game printed it under the
+card's name. Censused, two more were already there: a version number and
+the name of a training prop retired at v2.71 (dominate · intimidate), and
+a module path (Uphold Tradition). **In a training sim the feed is the
+lesson**, and a line that reads like a code comment is the sev-2 category
+the player trusts. `test/noopvoice.test.js` is the standing census —
+v4.21's rule, fix the family rather than the three you found — and it is
+a DERIVATION with the scan proved alive against a control string, because
+a scan aimed at the wrong shape passes by finding nothing.
+
+**AN ON-HIT TRIGGER'S SUBJECT WAS NEVER READ.** `onHit` means *"when THIS
+hits"*, and the test for it was a bare `/\bhits?\b/` over the condition —
+so Boom Grenade's *"when a **Mechanologist attack action card you
+control** hits a hero"* was filed as the item's own on-hit, a list read
+only from `pend`, which an ITEM never opens. The clause read `run`,
+counted as covered, and did nothing. **Measured: the pool prints SEVEN
+distinct on-hit subjects and FOUR are third person** — Arakni's dagger
+drain (v3.77) and Refraction Bolters (v3.93) are built on their own
+routes and never reach it, Nasreth's payload has no reader, and Boom
+Grenade's was the mis-file. It refuses now, and the refusal is the honest
+report: the payload reader also silently drops the printed *"destroy
+this"*, so claiming it would file a `full` whose payoff is an unbounded
+repeatable 4 damage. **Exactly 3 records move.**
+
+**AND `payPolicy` PRICED A DESTROY AT ZERO.** `payCostSpec` sets
+`cost: 0` when the price is the PERMANENT ITSELF (v3.93), and the policy
+opened with `cost <= 0 → true` — *"free from the floating pool, nothing is
+given up"*. That claim is false for three of the four cost verbs, so both
+of v3.93's Legs pieces were destroyed every time the offer was made, and
+crank would have been taken the same way. **The standing policy is to
+decline what is optional and cannot be weighed** — `sparring.js` says so
+twice for boost, with the reason: declining can never make the seat
+stronger than printed. It is guarded by SHAPE rather than by verb, so the
+next cost inherits the answer (v3.43).
+
+**SIXTEEN SABOTAGES, SIXTEEN BITE — and one came back SILENT first.** The
+mint reading the ACTOR's seat rather than the RECIPIENT's is invisible
+until something mints a counter-bearing token across the table, which no
+pool card does; the near-miss is driven (v3.73).
+
+**MEASURED:** `npm test` 2378 pass / 0 fail / 4 skipped · audit 385 full
+/ 16 part / 4 none, flagged 15 · fairness clean · 73 scenes · 210
+self-play games, 0 stalls / 0 refusals / 0 violations (the `payPolicy`
+fix moved the ladder by one or two wins per hero and collapsed nobody) ·
+both babel blocks compile.
+
+**STILL UNREAD ON BOOM GRENADE, AND IT IS THE NEXT VERSION'S:** the
+payoff — *"When a Mechanologist attack action card you control hits a
+hero, destroy this and deal N damage to them"*. It needs a MANDATORY
+watcher on the played-attack route, which is `offerPayCost`'s scan one
+trigger over, and a payload reader that keeps the printed destroy.
+
 ## v4.23 — A PERMANENT ON A COUNTER CLOCK
 
 > *"This enters the arena with 3 steam counters. **When this has none,

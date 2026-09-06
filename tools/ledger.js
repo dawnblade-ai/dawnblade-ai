@@ -43,7 +43,14 @@ const KEYWORDS = {
    "clash":               {status:"live",        note:"RULED 2026-07-25: both sides reveal for real, greatest POWER wins, a tie is no winner. Fires when the card DEFENDS, which is how every clash card is printed"},
    "ephemeral":           {status:"live",        note:"from Crouching Tiger's printed reminder text: if it would be put into a graveyard from anywhere, instead it ceases to exist. Enforced in the gy() helper, the single path into the graveyard"},
    "cloaked":             {status:"partial",     note:"v3.99 — build.js equips the piece face-down off the printed reminder line (ENG005: 'Equip this face-down') and the ability's flip cost spends it, so Uphold Tradition's +1{p} counter is the ONE-SHOT it prints. RULED 2026-07-25 and the ruling agrees with the printing: 'EQUIPPED FACE DOWN ... INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER'. ('ALWAYS ACTIVE' is this user's shorthand for the instant WINDOW — they spell it out at length for Spellfire Cloak in the same batch — not a claim the ability repeats; the printed cost includes turning it face-up, which can be paid once.) UNBUILT: 'SHOW CARD BACK ON THE PLAYERS BOARD', a display half deferred with the rest of the UI pass"},
-   "crank":               {status:"pending",  note:"RULED 2026-07-25: the item enters with a steam counter; crank prompts to spend it for an action point. Needs the prompt sheet"},
+   /* BUILT v4.24, and the PRINTING settled it rather than the ruling. The
+      SDA023 face of Boom Grenade carries the reminder text the database
+      omits: "(As this enters the arena, you may remove a steam counter
+      from it. If you do, gain an action point.)" — which names the moment
+      (as it ENTERS, not when it is played), the counter kind, the amount
+      and the payload. The 2026-07-25 ruling had the shape and not the
+      moment, and "needs the prompt sheet" had been false since v2.17. */
+   "crank":               {status:"live",     note:"v4.24 — the parameters are the keyword's own, off the SDA023 printing: as this ENTERS the arena you may remove a steam counter from it for an action point. Offered after `ctrSelf` has put the counter on, refused when the bag cannot pay, and the cost leaves as data on the `pay` spec (spendCtr) beside the tap, the hero tap and the destroy. It is what makes v4.23's counter clock a decision: bank the point now and the item dies at the next upkeep, or keep the counter and buy a turn"},
    "crush":               {status:"partial",     note:"threshold and payload read off each card's own printed rider (v3.16); the two next-turn DEBUFFS built v3.29 and the two RESTRICTIONS v3.30. Partial for one card: Walk in My Shoes halves base {p} and {d} for a turn and has no reader"},
    "dominate":            {status:"live",        note:"v2.05: the dummy holds cards, so this really does hold it to one blocker from hand"},
    /* BUILT v3.03. Both halves were `noop` until v3.02 with reasons about a

@@ -336,6 +336,15 @@ function buildPrompt(game, spec){
          the equipment is never spent and the rider is FREE, which is
          precisely the bug v2.04 fixed. */
       destroyUid: spec.destroyUid,
+      /* AND THE FOURTH COST VERB (v4.24) — "remove a <kind> counter from
+         it", which is what CRANK spends. A spec only carries fields
+         `buildPrompt` knows about (v2.34, v3.33, v3.91, v3.93), so this
+         is declared here rather than threaded: dropped, the action point
+         is granted and the counter stays, which is the v2.04 free-ability
+         bug and also leaves the item alive a turn longer than printed.
+         It leaves as DATA like the tap and the destruction — this module
+         runs no effects and touches no state. */
+      spendCtr: spec.spendCtr || null,
       /* AND WHETHER THE LAYER THAT QUEUED THIS HAS ALREADY SETTLED ITS
          ACTION POINT (v3.93). A spec only carries fields `buildPrompt`
          knows about (v2.34), and the two boards clear `pend` at different
@@ -582,7 +591,13 @@ function applyPrompt(game, prompt){
   }
   if(prompt.tag === "pay"){
     if(prompt.choice !== "pay"){
-      out.msgs.push(who + " declined to pay " + prompt.cost + ".");
+      /* A COST THAT IS NOT RESOURCES MUST NOT SAY "declined to pay 0"
+         (v4.24). The feed is the observable in a training sim, and a
+         number that is not the price is the sev-2 category the player
+         trusts. */
+      out.msgs.push(who + (prompt.spendCtr
+        ? " kept the " + prompt.spendCtr.kind + " counter on " + prompt.src + "."
+        : " declined to pay " + prompt.cost + "."));
       /* "…unless they pay" — declining is what makes the consequence
          happen. These are actor-relative to the ASKED side, because that
          is the actor a prompt resolves at. */
@@ -599,12 +614,15 @@ function applyPrompt(game, prompt){
        module runs no effects and touches no state, so it reports WHICH
        permanent was spent and the caller destroys it (v3.93). */
     if(prompt.destroyUid != null) out.destroy = prompt.destroyUid;
+    if(prompt.spendCtr) out.spendCtr = prompt.spendCtr;
     /* PAST TENSE, SO THE VERB NEED NOT AGREE WITH THE NAME. `who` is
        "You" or "The opponent" and those take different verb forms — the
        existing "paid" dodges it the same way, and v2.83 is the version
        that had to learn a cross-seat line names one seat. */
     out.msgs.push(who + (prompt.destroyUid != null
       ? " destroyed " + prompt.src
+      : prompt.spendCtr
+      ? " took a " + prompt.spendCtr.kind + " counter off " + prompt.src
       : " paid " + prompt.cost + (prompt.taps ? " and tapped " + prompt.src : ""))
       + " — the rider resolves.");
     return out;

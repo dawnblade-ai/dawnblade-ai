@@ -809,8 +809,37 @@ function classifyClause(raw){
        hit on Barnacle, an ALLY. Stronger than printed, live at the table,
        and invisible to every tool here — coverage counts the clause
        consumed and the fairness sweep does not model attack-targets. */
-    if(/\bhits?\b/.test(cond))
+    /* ---- AND WHOSE HIT IS IT? THE SUBJECT (v4.24) --------------------
+       `onHit` means "when THIS hits". The test above was unanchored, so
+       any `when …hits…` condition was filed as the RESOLVING card's own
+       trigger whatever the sentence actually named — v3.63's "a damage
+       clause can name a subject", one clause up, and v2.33's Bull's Eye
+       Bracers trap in a trigger instead of a payload.
+
+       MEASURED — the pool prints SEVEN distinct on-hit subjects and FOUR
+       of them are third person:
+
+         a dagger you own hits a hero            Arakni, Tarantula (v3.77)
+         a weapon attack you control hits        Refraction Bolters (v3.93)
+         a mechanologist attack … hits a hero    BOOM GRENADE — mis-filed
+         nasreth hits a hero                     Nasreth, the Soul Harrower
+
+       The first two are BUILT, each on its own route, and neither reaches
+       here. Boom Grenade's was filed into `fx.onHitHero` — a list read
+       only from `pend`, which an ITEM never opens — so the clause read
+       `run`, counted as covered, and did nothing. The card is LIVE in
+       Dash's deck.
+
+       IT REFUSES rather than being routed, and the refusal is the honest
+       report: the payload prints "destroy this AND deal N damage", the
+       destroy is dropped by the payload reader below, and a watcher route
+       for a played attack action card does not exist yet. Claiming it
+       would file the card `full` with an unbounded repeatable 4 damage —
+       stronger than printed, which is the direction that steals games. */
+    if(/\bhits?\b/.test(cond)){
+      if(!/^(?:this|it)\b/.test(cond)) return null;
       return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)});
+    }
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
@@ -1410,7 +1439,14 @@ function classifyClause(raw){
      the database prints no CR text for; the ledger carries that, so
      `failstates.js` grades the keyword against the claim rather than
      against a grep (v3.00). */
-  if(/^cloaked$/.test(c)) return NOOP("live — build.js equips the piece face-down and the ability's flip cost spends it");
+  if(/^cloaked$/.test(c)) return NOOP("this is equipped face-down, and its own ability pays to turn it up");
+  /* CRANK (v4.24). Its parameters are the keyword's own and live in
+     `crankCost`, off the printed reminder text the database omits — so
+     the clause is a `noop` whose reason names a reader that EXISTS,
+     which is the whole of v3.16's rule. Filed before the offer was built
+     it would have been the no-op blind spot exactly (v3.32's argument for
+     heave), which is why it stayed `skip` through v4.23. */
+  if(/^crank$/.test(c)) return NOOP("you are offered it as this enters the arena — a counter for an action point");
   /* MELD (v3.34). The printed reminder text is the whole rule:
 
        Meld (You may play 1 or both halves of this card. Each costs 0.)
@@ -1744,7 +1780,14 @@ function classifyClause(raw){
   if(/^target opponent reveals their hand$/.test(c)) return R([["foeReveal",1]]);
   /* a self-imposed cost tax for the rest of the turn */
   if(m=c.match(/^cards cost \{r\} more to play this turn$/)) return R([["costTax",1]]);
-  if(/^(dominate|intimidate)$/.test(c)) return NOOP("live since v2.05 — the dummy holds a hand to restrict and to lose cards from");
+  /* A NOOP'S REASON IS PLAYER-FACING TEXT (v4.24). `runOps` prints it
+     verbatim into the feed, so it has TWO readers — the audit, which
+     wants to know that the clause is accounted for, and the player, who
+     is being taught the game. A version number and the name of a training
+     prop retired at v2.71 served neither. Say what happens at the table.
+     `test/noopvoice.test.js` is the standing census. */
+  if(/^dominate$/.test(c)) return NOOP("a defence restriction — the wall reads it when this attacks");
+  if(/^intimidate$/.test(c)) return NOOP("it fires when this attacks — a card is banished from their hand for the turn");
   /* "…UNLESS THEY REVEAL A CARD FROM THEIR HAND WITH {p} GREATER THAN THE
      DAMAGE DEALT" — the defender's escape hatch, and it did not exist.
      `classifyClause` returned BYTE-IDENTICAL output with and without this
@@ -6926,6 +6969,39 @@ const printedKw = (c, k) => {
   return false;
 };
 
+/* ---- CRANK — THE KEYWORD'S OWN PARAMETERS (v4.24) --------------------
+
+   The database carries no reminder text for any keyword, and the SDA023
+   face of Boom Grenade prints it — fetched and read:
+
+     **Crank** (As this enters the arena, you may remove a steam counter
+     from it. If you do, gain an action point.)
+
+   TENTH TIME READING THE PRINTED CARD FIRST HAS PAID (v3.32, v3.54,
+   v3.66, v3.78, v3.99, v4.20, v4.22). `card.printings[].image_url` is in
+   every pool record.
+
+   SO IT IS AN OPTIONAL SELF-COST, PAID IN COUNTERS, AT THE MOMENT THE
+   PERMANENT LANDS — and it is what makes the counter clock a decision
+   rather than a countdown: bank the action point now and the item dies at
+   the next upkeep, or hold the counter and buy a turn of uptime with it.
+   v4.23 built the clock and left this half honestly `skip`.
+
+   THE PARAMETERS ARE THE KEYWORD'S, NOT THE CARD'S. No printing carries a
+   number, so the kind, the amount and the payload are the keyword's own
+   definition and live here, once, with the printing cited — the same
+   treatment `suspense`'s two counters get (RULING 2026-07-25) and for the
+   same reason. Four pool records print it and all four print it bare.
+
+   `printedKw`, NEVER `hasKw` (v2.84's three questions). An ADDITIONAL
+   COST cannot be conditionally granted, and neither can a triggered
+   ability a keyword names: the card CARRIES crank as printed rules text
+   or it does not. Measured over the pool: `hasKw` and `printedKw` agree
+   on all four records here, so the discriminator is drilled with a
+   synthetic near-miss (v3.73). */
+const crankCost = c => printedKw(c, "crank")
+  ? {kind: "steam", n: 1, ops: [["ap", 1]]} : null;
+
 /* ---- WHICH ZONE A CARD MAY BE PLAYED FROM (v3.00) -------------------
 
    A card is played from the HAND. The graveyard and the banished zone are
@@ -7441,6 +7517,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
+        crankCost,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,

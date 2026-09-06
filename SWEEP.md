@@ -9,7 +9,7 @@ axes it never covered.
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
 | Ruled but not built | 20 cards | understood ≠ built |
-| **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 50 entries, 1 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -78,14 +78,28 @@ can be overruled. Same discipline as the mention count.
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 21 |
 | No schedule to fire on | 8 |
+| Displayed total is wrong | 7 |
+| Ability inert — cost not modelled | 7 |
 | Keyword filed as no-op, but it has meaning | 7 |
 | Choice never offered | 7 |
-| Unread, effect unknown | 6 |
-| Displayed total is wrong | 6 |
-| Ability inert — cost not modelled | 6 |
 | Earned value denied | 6 |
+| Unread, effect unknown | 5 |
+| Keyword filed as no-op, but it is a DRAWBACK | 1 |
 
-### WRONG — 24 entries
+### UNFAIR — 1 entries
+
+**A rule is broken every time one of these is played.** This is the
+worst thing a trainer can do: it teaches wrong play.
+
+- **Boom Grenade** (1) · tier `part` · dash
+  - *Keyword filed as no-op, but it is a DRAWBACK* — The parser records "Crank" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 2 time(s). Your ruling describes real behaviour: crank - this takes place after it enters with a steam counter - the player should get a pop up if they want to 'crank' - if they do - remove the steam counter and give the player an action point. it is destroyed at start
+    > Crank
+  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
+    > When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
+  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
+    > When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.
+
+### WRONG — 23 entries
 
 - **Aether Icevein** (1) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
@@ -96,9 +110,6 @@ can be overruled. Same discipline as the mention count.
 - **Aether Icevein** (3) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
-- **Boom Grenade** (1) · tier `part` · dash
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Crank
 - **Brain Freeze** (3) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
