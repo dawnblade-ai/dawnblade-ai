@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.27
+**Current version:** v4.28
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2415 drills** at v4.27.
+This is `node --test "test/*.test.js"` — **2417 drills** at v4.28.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -4058,6 +4058,48 @@ npm install --no-save --prefix "$SCRATCH" @babel/standalone
 # then transform each <script type="text/babel"> body with
 # {presets:["react"], sourceType:"script"}
 ```
+
+### AND THE PAGE CAN BE DRIVEN AT PHONE DIMENSIONS (v4.28)
+
+This file has said since v2.36 to **test at phone dimensions, not a tall
+desktop window — this class of bug only exists there**, and there has never
+been an instrument for it. v4.28 is the bill: the loadout's two fight
+options laid out as four columns, the disclosure 51px wide, and every drill
+green because **a text pin cannot see a layout**.
+
+The compile check's own trick reaches the whole page. The three CDN script
+tags and `DBSRC` are the only things a sandbox cannot fetch, and each is a
+one-line substitution into a **scratch copy** — `index.html` itself is never
+touched, so what runs is the real page with the real engine:
+
+```sh
+npm install --no-save --prefix "$SCRATCH" react@18.2.0 react-dom@18.2.0 \
+                                          @babel/standalone playwright
+curl -o "$SCRATCH/serve/card.json" "$DBSRC"          # the live database, ~23MB
+cp -r engine "$SCRATCH/serve/"                        # UMD modules, as authored
+sed -e 's|https://cdnjs[^"]*react.production.min.js|vendor/react.js|' … index.html \
+    > "$SCRATCH/serve/index.html"
+python3 -m http.server -d "$SCRATCH/serve"
+# chromium at /opt/pw-browsers/chromium, viewport 393x852
+```
+
+**ASSERT ON BOXES, NEVER ON A SCREENSHOT.** A picture says a layout is
+wrong and cannot say why; `getBoundingClientRect` says the note is 51px
+wide and the bar overlaps the pane by 29px, which is the difference between
+noticing and fixing. The three numbers worth taking are the **overlap**
+between a fixed bar and the box above it, the **narrowest child** of a flex
+container, and the computed `flex-direction` — v4.28's whole defect is
+visible in those three.
+
+**AND MEASURE MORE THAN ONE VIEWPORT.** `--lochrome` comes out 284px at
+393x852, 301px at 360x740 and 267px at 820x1180 — a single reading would
+have been indistinguishable from the hardcoded number it replaced.
+
+It stays a **pre-ship step**, not a drill, for the compile check's reason:
+`npm test` must stay green on a fresh clone with no `npm install` (v3.00),
+and this one also wants a 23MB download and a browser. What goes in `test/`
+is what a source scan can honestly carry — see `test/phasebar.test.js`,
+where the layout rules sit beside the words they make readable.
 
 ### A TRACE BELONGS WHERE THE FACT BECOMES TRUE (v3.62)
 

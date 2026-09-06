@@ -1,3 +1,106 @@
+## v4.28 — a disclosure that is not readable is not a disclosure
+
+Reported from a phone, with a screenshot: the loadout screen's two fight
+options collide. The striped **Fight** plate is clipped to a red sliver at
+the left edge, the note beside it is a ribbon about six characters wide,
+the dark *Fight the new engine — harder* button sits on top of it, and the
+seating line — *"You are ON THE PLAY — first turn, and a card of tempo for
+it."* — is painted through from underneath.
+
+### `.actbar` is shared, and `display:flex` with no direction is a ROW
+
+That is right for the board, where `.actbar .a{flex:1}` lays four buttons
+out side by side, and it has been wrong on the loadout since **v3.51** put
+a STACK in it: a button, its note, a second button, its note.
+
+Driven in Chromium at 393x852, which is the phone this is played on:
+
+| child | rendered |
+|---|---|
+| `Fight` | **66px** wide, 163px tall |
+| its note | **51px** — about six characters |
+| `Fight the new engine — harder` | 98px |
+| its note | 138px |
+
+**v3.51's own lesson was *"a doc the player cannot read is not a disclosure
+— put it on the button"*.** It was put on the button and then rendered
+unreadable, which is the same sentence one layer down — and the drill that
+v3.51 wrote pins the WORDS. **A text pin cannot see a layout**, so
+`test/phasebar.test.js` was green throughout.
+
+### And the reserve was a stated number
+
+`.lo .tablewrap,.lo .vscreen{height:calc(100vh - 236px)}` — the chrome
+described as a literal, written when the bar was one button tall. The bar
+stood **163px**, so the fixed bar painted over the bottom **29px** of the
+pane. That is the same shape as `--peekbot` before **v2.52** measured it,
+and this file records the lesson in as many words: *a hardcoded offset was
+wrong the moment the layout changed, which is exactly how this shipped.*
+
+`--lochrome` is measured off the live chrome, in `Loadout`, at **BOTH
+ENDS** — everything above the pane is its own distance from the top of the
+viewport, everything below it is the distance from the bar's top edge to
+the bottom. Neither is derived from the header or the nav, so nothing has
+to know what the chrome is made of. Driven:
+
+| viewport | `--lochrome` | overlap |
+|---|---|---|
+| 393x852 | **284px** | 0 |
+| 360x740 | **301px** | 0 |
+| 430x932 | **284px** | 0 |
+| 820x1180 | **267px** | 0 |
+
+Three different right answers and none of them is the literal — which is
+the whole argument for measuring rather than stating.
+
+**A ResizeObserver rather than `--peekbot`'s per-frame walk**, and the
+difference is the thing being watched: that rail SCROLLS, with no event
+that reliably says so, while this bar is fixed and only ever changes when
+its own box does — a viewport resize, a web font landing, or the `netFoe`
+branch swapping two options for one. The bar's height does not depend on
+the pane's, so there is no loop.
+
+### The fix is SCOPED, and that half is pinned too
+
+Written on `.actbar` itself it would turn the board's action bar — four
+buttons with `flex:1` — into a four-storey tower on every turn of every
+game. Driven after the fix: the board's bar is still `flex-direction: row`,
+one full-width END TURN, and `--lochrome` is **cleared** the moment the
+loadout unmounts. Pinning only the column half cannot see either.
+
+**AND ONE RULE WAS DEAD BEFORE IT SHIPPED.** The first draft added
+`.lo .actbar .note{margin-top:6px}` beside the direction fix — and both
+notes carry an inline `marginTop`, which beats a stylesheet rule. It could
+never fire. Deleted rather than kept as CSS that reads like a rule
+(v3.67, v4.11, v4.24 — fourth outing).
+
+### What the disclosure now costs, and it is worth it
+
+The primary was wearing the home screen's 30px `BATTLE` type on a screen
+where it is one of two options with a paragraph under each — it alone stood
+56px of a 188px bar and pushed the scout pane's last line off the bottom.
+The plate stays, because the primary tap should look like one; only the
+type comes down, and only on this screen. Bar **188 → 174px**, and the
+scout pane reads to its last word at 393x852.
+
+**Every word of v3.51's disclosure is unchanged.**
+
+### The instrument
+
+`npm test` runs on a fresh clone with no dependencies (v3.00), so a browser
+cannot go in it. The measurement above is a **pre-ship step beside the
+compile check** — `npm install --no-save --prefix "$SCRATCH" react react-dom
+@babel/standalone playwright`, point the three CDN script tags and `DBSRC`
+at local copies, and drive the real page at 393x852. CLAUDE.md carries the
+recipe. Two source drills carry what a drill can carry: the bar is a column
+where it holds a stack (and the board's is not), and the reserve is a
+variable with exactly one writer that is cleared on unmount.
+
+**2417 drills green.** Seven sabotages, seven bite. Audit 386 full / 15
+part / 4 none, fairness clean, scenes 73/0, `crindex --check` green — every
+card number identical to v4.27, which is what a UI change should do to
+them.
+
 ## v4.27 — FUSION IS A COST, AND IT WAS BEING TAKEN WITHOUT BEING PAID
 
 > **"[TALENT] Fusion"** — as an additional cost to play this, **YOU MAY**

@@ -169,3 +169,86 @@ test("a failed table build is never silent", () => {
   assert.ok(HTML.slice(Math.max(0, i - 2200), i).includes("cfg.table"),
     "this must be the catch on the table build");
 });
+
+/* ============================================================
+   A DISCLOSURE THAT IS NOT READABLE IS NOT A DISCLOSURE (v4.28)
+
+   v3.51's lesson was **"a doc the player cannot read is not a disclosure
+   — put it on the button"**, and the drill above pins the words. It was
+   the right pin and it is only half the claim: the words were put on the
+   button and then rendered in a ribbon about six characters across, and
+   **a text pin cannot see a layout.**
+
+   `.actbar` is SHARED. `display:flex` with no direction is a ROW — right
+   for the board, where `.actbar .a{flex:1}` lays four buttons out side by
+   side, and wrong the moment v3.51 put a STACK in it. Measured in Chromium
+   at 393x852: the four children became four COLUMNS, the striped Fight
+   button 66px wide, its note 51px, and the bar 163px tall against a pane
+   that had reserved 236px of chrome for a bar one button high — so it
+   painted over the bottom 29px of the scout pane and struck through the
+   seating line.
+
+   TWO RULES, AND THE SECOND IS THE ONE THAT ROTS. The direction is the
+   bug; the hardcoded reserve is why it could not be seen coming, and it
+   is the same shape as `--peekbot` before v2.52 measured it. Both are
+   source rules, because `npm test` runs on a fresh clone with no
+   dependencies (v3.00) and neither can be driven without a browser — the
+   browser measurement is a pre-ship step, beside the compile check, and
+   CLAUDE.md carries the recipe.
+   ============================================================ */
+const CSS = HTML.slice(HTML.indexOf("<style>"), HTML.indexOf("</style>"));
+
+test("the loadout's action bar is a COLUMN, because it holds a stack", () => {
+  /* The bar's own children, counted rather than assumed: a rule about a
+     stack is only owed where there IS a stack, and if the screen ever goes
+     back to one button this drill should say so out loud rather than
+     quietly keep demanding a column. */
+  const i = HTML.indexOf('<div className="actbar" ref={bar}>');
+  assert.ok(i > 0, "the loadout's action bar moved — re-anchor this drill");
+  const bar = HTML.slice(i, HTML.indexOf("<CardModal", i));
+  const kids = (bar.match(/\n\s{14}<(?:button|p)\b/g) || []).length;
+  assert.ok(kids >= 4, "v3.51 puts two options and their disclosure in this " +
+    "bar; found " + kids + " stacked children");
+
+  assert.match(CSS, /\.lo \.actbar\{[^}]*flex-direction:column/,
+    "`.actbar` is shared and its default direction is ROW, which lays this " +
+    "stack out as " + kids + " columns — measured at 393x852 the disclosure " +
+    "came out 51px wide, about six characters");
+  /* AND THE BOARD'S MUST STAY A ROW. The two boards share the class, so a
+     fix written on `.actbar` itself would turn the action bar — four
+     buttons with `flex:1` — into a four-storey tower on every turn of
+     every game. That is the half a scoped fix is FOR, and pinning only
+     the column half cannot see it. */
+  assert.ok(!/\n\.actbar\{[^}]*flex-direction:column/.test(CSS),
+    "the board's own action bar is a row of `.a` buttons and must stay one");
+});
+
+test("the pane's reserve is MEASURED, not stated", () => {
+  const rule = (CSS.match(/\.lo \.tablewrap,\.lo \.vscreen\{[^}]*\}/) || [""])[0];
+  assert.ok(rule, "the loadout pane's height rule moved — re-anchor this drill");
+  assert.match(rule, /var\(--lochrome/,
+    "this read `calc(100vh - 236px)`, a number written when the bar was one " +
+    "button tall; a hardcoded offset is wrong the moment the layout moves, " +
+    "which is exactly how `--peekbot` shipped (v2.52)");
+
+  /* A VARIABLE WITH NO WRITER IS THE FALLBACK WEARING A VARIABLE'S CLOTHES
+     — the counter-with-no-reader shape (v3.55, v4.06) with the arrows
+     reversed. Measured in Chromium it resolves to 284px at 393x852, 301px
+     at 360x740 and 267px at 820x1180: three different right answers, none
+     of them the literal. */
+  const lo = HTML.slice(HTML.indexOf("function Loadout("),
+                        HTML.indexOf("/* ---------- APP ---------- */"));
+  assert.ok(lo.length > 2000, "Loadout's slice must contain its body");
+  const writes = (lo.match(/setProperty\("--lochrome"/g) || []).length;
+  assert.equal(writes, 1, "exactly one writer, in the component that owns the " +
+    "chrome — two would be the no-mirror rule broken inside one screen");
+  assert.match(lo, /removeProperty\("--lochrome"\)/,
+    "and it is cleared on unmount, or a measurement taken on this screen " +
+    "outlives it on every other one");
+  /* BOTH ENDS OF THE PANE. Reserving only the bar's height leaves the
+     header and the screen nav out and the pane runs off the top; reserving
+     only what is above it puts the bar back over the bottom, which is the
+     defect this replaced. */
+  assert.match(lo, /wb\.top/, "everything ABOVE the pane is measured");
+  assert.match(lo, /innerHeight - bb\.top/, "and everything BELOW it");
+});

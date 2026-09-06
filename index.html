@@ -443,7 +443,36 @@ img{display:block;max-width:100%}
 .wslot .cfw{max-width:118px;margin:0 auto}
 
 /* v1.08 sideboarding table */
-.lo .tablewrap,.lo .vscreen{height:calc(100vh - 236px);min-height:calc(100vh - 236px)}
+/* THE LOADOUT'S ACTION BAR IS A COLUMN, AND THE BOARD'S IS A ROW (v4.28).
+   `.actbar` is shared, and `display:flex` with no direction is a ROW —
+   right for the board, where `.actbar .a{flex:1}` lays four buttons out
+   side by side, and wrong here from the moment v3.51 put a STACK in it:
+   a button, its note, a second button, its note. Measured at 393x852 the
+   four became four columns — the striped Fight button 66px wide, its
+   disclosure squeezed into a 51px ribbon about six characters across.
+   v3.51's own lesson was "a doc the player cannot read is not a
+   disclosure — put it on the button"; it was put on the button and then
+   rendered unreadable, which is the same sentence one layer down.
+   The inline margins on those four already spell a stack, so `gap:0`
+   lets them govern rather than adding a second spacing rule. */
+.lo .actbar{flex-direction:column;gap:0;align-items:stretch}
+/* AND THE PRIMARY IS WEARING THE HOME SCREEN'S TYPE. `.battlebtn` is the
+   30px striped BATTLE plate, which is right where it is the only thing on
+   the screen and oversized here, where it is one of two options with a
+   paragraph under each — it alone stood 56px of a 188px bar and pushed the
+   scout pane's last line off the bottom. The plate stays (it is the
+   signature, and the primary tap should look like one); only the type
+   comes down, and only on this screen. */
+.lo .actbar .battlebtn{font-size:22px;letter-spacing:.18em;padding:8px 8px}
+/* AND THE RESERVE IS MEASURED, NOT STATED. This read `calc(100vh - 236px)`
+   — a number written when the bar was one button tall. With two options
+   and their disclosure the bar stands 163px at 393x852, so the fixed bar
+   painted over the bottom 29px of the pane and struck through the seating
+   line. A hardcoded offset is wrong the moment the layout moves, which is
+   exactly how `--peekbot` shipped (v2.52); `--lochrome` is measured off
+   the live chrome in `Loadout`, and the literal here is only the value
+   before the first frame. */
+.lo .tablewrap,.lo .vscreen{height:calc(100vh - var(--lochrome, 236px));min-height:calc(100vh - var(--lochrome, 236px))}
 .cutgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .cutgrid .pick{display:block}
 .pick.cut{opacity:.45}
@@ -777,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.27"; /* v4.27 - FUSION IS A COST, AND IT WAS BEING TAKEN WITHOUT BEING PAID. "[TALENT] Fusion" reads "as an additional cost to play this, YOU MAY reveal a [TALENT] card from your hand", and `execute` settled `fused` by SCANNING THE HAND - so the bonus landed on every play that could take it, no card was ever named, and the opponent learned nothing. The block's own comment said why: "nothing moves zones, so there is no real downside to taking it" - true about the ZONES and false about the COST, because what a reveal charges is INFORMATION, and taking the bonus while naming no card is the reward without the cost (v2.04 from the other end). A "you may" that cannot be refused is stronger than printed (v3.90), and a printed CHOICE never offered is a fail state on this project's own scale. 16 pool records across six cards, LIVE in Iyslander's and Briar's lists, and every one of them read `tier: full` throughout - the clause WAS consumed, so no coverage tool could see it. `parser.fusionOffer` is the ONE reader of which cards could pay, both boards ASK before the card resolves (boost's shape, one cost over: a COST cannot be a queued prompt), the answer rides as `_fuseUid`, `execute` RE-DERIVES it because `reduce` is fed by JSON off a wire, and the revealed card is NAMED in the shared feed - which is what the printed cost actually does. AND THE LEDGER NOW OUTRANKS THE GREP IN BOTH DIRECTIONS: v3.00 made it one-way, so a mechanic built as a FAMILY off the printed talent - which is the golden rule working - was reported as "almost certainly absent" because the engine says `fusionCost` and never "ice fusion". Eighteen sabotages, eighteen bite. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.28"; /* v4.28 - A DISCLOSURE THAT IS NOT READABLE IS NOT A DISCLOSURE. v3.51 put the two fight options on the loadout screen with a note under each, on the stated lesson that "a doc the player cannot read is not a disclosure - put it on the button", and a drill pinned the WORDS - but `.actbar` is shared with the board, where `display:flex` with no direction is the ROW that lays four `.a` buttons out side by side, so the loadout's stack became four COLUMNS: measured in Chromium at 393x852 the striped Fight button came out 66px wide and its disclosure 51px, about six characters, and the bar stood 163px against a pane that had reserved a hardcoded 236px of chrome for a bar one button high - so it painted over the bottom 29px of the scout pane and struck through the seating line. A TEXT PIN CANNOT SEE A LAYOUT, which is v3.51's own sentence one layer down. The direction is scoped to `.lo` because the board still needs its row, and the reserve is MEASURED off the live chrome at BOTH ends into `--lochrome` - a hardcoded offset is wrong the moment the layout moves, which is exactly how `--peekbot` shipped (v2.52) - driven, it resolves to 284px at 393x852, 301px at 360x740 and 267px at 820x1180: three right answers, none of them the literal. Overlap is 0 at every viewport measured, on all three panes, and the board's own bar is still a row. Seven sabotages, seven bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -5305,6 +5334,48 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
       </button>);
   };
   const sc1=uR(null), sc2=uR(null), sc3=uR(null);
+  const bar=uR(null), wrap=uR(null);
+  /* --lochrome: EVERYTHING THE THREE FLICK SCREENS DO NOT GET, MEASURED.
+     It was the literal 236 in the rule above, written when the action bar
+     held one button; v3.51 put two options and their disclosure in it and
+     the bar stands 163px at 393x852, so the fixed bar painted over the
+     bottom of the pane. A hardcoded offset is wrong the moment the layout
+     moves — `--peekbot` is in this file for that reason (v2.52) — so the
+     reserve is taken off the live chrome.
+
+     BOTH ENDS, because the pane is boxed by both: everything ABOVE it is
+     its own distance from the top of the viewport, and everything BELOW is
+     the distance from the bar's top edge to the bottom. Neither is derived
+     from the header or the nav, so nothing here has to know what the
+     chrome is made of.
+
+     A ResizeObserver rather than `--peekbot`'s per-frame walk, and the
+     difference is the thing being watched: that rail SCROLLS, with no
+     event that reliably says so, while this bar is fixed and only ever
+     changes when its own box does — a viewport resize, a web font landing,
+     or the `netFoe` branch swapping two options for one. Observing the box
+     catches all three and costs nothing between them.
+
+     The bar's height does not depend on the pane's, so there is no loop. */
+  uE(()=>{
+    const root = document.documentElement;
+    let last = null;
+    const place = () => {
+      const b = bar.current, w = wrap.current;
+      if(!b || !w) return;
+      const bb = b.getBoundingClientRect(), wb = w.getBoundingClientRect();
+      const above = Math.round(wb.top) + Math.round(root.scrollTop || 0);
+      const below = Math.round(window.innerHeight - bb.top) + 8;
+      const px = Math.max(120, above + below);
+      if(px !== last){ last = px; root.style.setProperty("--lochrome", px + "px"); }
+    };
+    place();
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(place) : null;
+    if(ro){ ro.observe(bar.current); ro.observe(document.body); }
+    window.addEventListener("resize", place);
+    return () => { if(ro) ro.disconnect(); window.removeEventListener("resize", place);
+                   root.style.removeProperty("--lochrome"); };
+  },[netFoe]);
   const jumpL = r => r.current && r.current.scrollIntoView({behavior:"smooth",block:"start"});
   const selItems = sel.map(i=>gearR.find(x=>x.i===i)).filter(Boolean);
   const selHand = selItems.filter(x=>HAND_Z.includes(x.s.z));
@@ -5331,7 +5402,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
         <button onClick={()=>jumpL(sc2)}>Loadout</button>
         <button onClick={()=>jumpL(sc3)}>Deck ▼</button>
       </div>
-      <div className="tablewrap">
+      <div className="tablewrap" ref={wrap}>
         {/* ---- SCOUT: hero card only ---- */}
         <div className="vscreen" ref={sc1}>
           <div className="hpane vfill" style={{flex:1}}>
@@ -5436,7 +5507,7 @@ function Loadout({h,db,onBack,onStart,netFoe,netOnPlay,onPlay}){
           </div>
         </div>
       </div>
-      <div className="actbar">
+      <div className="actbar" ref={bar}>
         {/* AT A TABLE THERE IS NOTHING TO START. This screen is the
             lobby's sideboard STEP when `netFoe` is set — `onStart` locks
             the board and waits for the other seat — so a "Fight" button
