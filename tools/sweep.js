@@ -37,7 +37,9 @@ const ROOT = path.join(HERE, "..");
 const A = JSON.parse(fs.readFileSync(path.join(HERE, "audit.json"), "utf8"));
 const RULINGS = readJson(path.join(HERE, "rulings.json")) || {};
 const NOTES = readJson(path.join(HERE, "sweep-notes.json")) || {};
-const TRAINER = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+/* HOISTED so `mentions` below is not reaching into a temporal dead zone
+   for it — the counter lives in failstates.js now (v4.25). */
+const FS = require("./failstates.js");
 
 function readJson(p){ try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch(e){ return null; } }
 const slug = s => String(s||"").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -66,29 +68,28 @@ const artFor = (name, pitch) => {
   return imgs[slug(name)+"|"+(pitch||0)] || imgs[slug(name)+"|0"] || null;
 };
 
-/* ---- does the trainer mention this by name? -------------------------
+/* ---- does the SOURCE name this? -------------------------------------
    A blunt signal, and deliberately reported as a COUNT rather than a
    verdict. A high count is consistent with dedicated handling (runechant
    and frostbite really do have counters) but it is not proof: "Seismic
    Surge" appears only inside a refusal message. Zero mentions plus unread
    text is the one combination that reliably means "absent". Everything
-   else is for a human to judge, which is what the station is for. */
-function mentions(name){
-  const bare = String(name||"").replace(/[^A-Za-z ]/g, "").trim();
-  if(!bare) return 0;
-  const tries = [bare];
-  /* the trainer calls the Bloodrot Pox token plain "Bloodrot", so a
-     full-name-only search reports a live counter as absent. Fall back to
-     the first substantial word before believing something is missing. */
-  const first = bare.split(/\s+/)[0];
-  if(first && first.length >= 5 && first !== bare) tries.push(first);
-  let best = 0;
-  for(const t of tries){
-    const n = (TRAINER.match(new RegExp("\\b" + t.replace(/\s+/g, "\\s*") + "\\b", "gi")) || []).length;
-    if(n > best) best = n;
-  }
-  return best;
-}
+   else is for a human to judge, which is what the station is for.
+
+   ONE BODY, IN `failstates.js` (v4.25). This file kept its own copy
+   reading `index.html` ALONE — the file the card semantics left at v2.53
+   — and then passed that copy into `FS.failStates`, so one grading
+   function scored the same card two ways: `npm run sweep` filed Boom
+   Grenade's crank sev-3 "it is a DRAWBACK" (2 mentions in the trainer)
+   while `node tools/failstates.js` filed it sev-1 "the trainer names it"
+   (16 across the engine). v3.00 fixed that scan in one consumer and left
+   the other; v3.35's rule is to grep for every consumer of a census.
+
+   `loose` IS THE TOKEN HALF and stays opt-in (v3.58): the trainer calls
+   the Bloodrot Pox token plain "Bloodrot", so a name lookup needs the
+   first-word fallback and a KEYWORD lookup must not have it — "Lightning
+   Fusion" would fall back to "lightning" and count a class. */
+const mentions = name => FS.sourceMentions(name, {loose: true});
 
 /* ---- 1. hero abilities ---------------------------------------------- */
 function heroEntries(){
@@ -192,14 +193,15 @@ function buildGap(){
    table? Ranked by damage to a game judged at pro-tour standards, which
    is a different order from "most unread text". See tools/failstates.js
    for the categories and the honesty rule. */
-const FS = require("./failstates.js");
-
 function failEntries(){
-  /* `mentions` is the trainer cross-check: a keyword the parser files as a
-     noop may still be enforced by name (phantasm is), so failstates.js must
-     not call it ignored on parser status alone. */
-  const cards = FS.failStates(A, RULINGS, mentions);
-  const heroes = FS.heroFailStates(A, RULINGS, mentions);
+  /* THE SOURCE CROSS-CHECK, STRICT. A keyword the parser files as a noop
+     may still be enforced by name (phantasm is), so failstates.js must not
+     call it ignored on parser status alone — but the count must be of the
+     KEYWORD and nothing else, so no `loose` here (see `mentions` above).
+     Handing this the same function the CLI uses is what makes `npm run
+     sweep` and `node tools/failstates.js` agree about a card. */
+  const cards = FS.failStates(A, RULINGS, FS.sourceMentions);
+  const heroes = FS.heroFailStates(A, RULINGS, FS.sourceMentions);
   return [...cards, ...heroes].map(e => Object.assign({}, e, {
     art: e.isHero ? artFor(e.title, 0) : artFor(e.title, e.pitch),
     ask: e.sev >= 3

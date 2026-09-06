@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-06T03:44:32.738Z",
- "appVer": "4.24",
+ "generated": "2026-09-06T11:32:44.184Z",
+ "appVer": "4.25",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 385,
-  "part": 16,
+  "full": 386,
+  "part": 15,
   "none": 4
  },
  "heroes": {
@@ -3692,7 +3692,7 @@
    "mentions": [
     "crank"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -3710,12 +3710,10 @@
     },
     {
      "t": "When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Crank\nThis enters the arena with a steam counter. At the start of your turn, destroy this unless you remove a steam counter from it.\nWhen a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.",

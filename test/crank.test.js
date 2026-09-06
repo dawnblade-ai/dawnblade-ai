@@ -211,20 +211,24 @@ test("the pool's on-hit subjects are pinned as a SET, both halves", {skip}, () =
     "nasreth hits a hero"]);                     /* its own payload has no reader */
 });
 
-test("DRIVEN: Boom Grenade's watcher is visibly UNREAD rather than silently wrong", {skip}, () => {
+test("DRIVEN: Boom Grenade's watcher is not the ITEM's own on-hit", {skip}, () => {
   H.db();
   P.fxReset();
   const fx = P.fxParse(H.card("Boom Grenade", 1));
   assert.deepEqual(fx.onHitHero, [],
     "it used to be filed here — a list read only from `pend`, which an ITEM " +
     "never opens, so the clause read `run` and did nothing");
-  assert.equal(fx.clauses[3].st, "skip");
-  assert.equal(fx.tier, "part",
-    "and the card reports PART. Claiming it would file a `full` whose payoff " +
-    "is an unbounded repeatable 4 damage: the payload reader drops the " +
-    "printed \"destroy this\" too, so the grenade would never leave the board");
-  /* THE DROPPED DESTROY IS THE SECOND HALF OF WHY IT REFUSES, and it is
-     asserted rather than described. */
+  /* v4.24 MADE IT REFUSE and v4.25 BUILT THE ROUTE, which is what a
+     recorded refusal is for (v3.38): the drill that pinned the refusal
+     goes red the day the gap closes, and the edit has to be deliberate.
+     What survives is the property — the clause is somebody ELSE's hit. */
+  assert.ok(fx.hitWatch, "it is a watcher now");
+  assert.equal(fx.hitWatch.selfDestroy, true);
+  assert.equal(fx.tier, "full");
+  /* THE PAYLOAD READER STILL DROPS THE PRINTED DESTROY, which is why the
+     watcher splits it off rather than reading the tail whole — asserted
+     rather than described, so the day that reader learns the verb this
+     drill says so. */
   assert.deepEqual(P.classifyClause("destroy this and deal 4 damage to them").ops,
     [["dmg", 4]], "the payload reader keeps the damage and loses the destroy");
   P.fxReset();

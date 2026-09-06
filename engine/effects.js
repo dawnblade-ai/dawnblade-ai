@@ -5769,6 +5769,62 @@ function makeEffects(ctx){
        CR 5.3.5 makes go again a GAIN of one action point, so the point
        IS the grant, and the link is marked so the chain display agrees
        with what happened. */
+    /* ---- A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25) --------
+       "When a Mechanologist attack action card you control hits a hero,
+        destroy this and deal 4 damage to them."      — BOOM GRENADE ×3
+
+       `offerPayCost`'s scan one trigger over, and mandatory rather than
+       an offer — so it runs rather than queueing a sheet. Both zones for
+       that function's reason (v3.33): the pool's only printing is an
+       ITEM on the board, and a Chest or Legs piece printing the same
+       shape would be missed by a board-only scan.
+
+       "YOU CONTROL" IS SATISFIED BY CONSTRUCTION. The scan is over
+       `act(n)`, and inside a combat link the actor is the ATTACKER — so
+       the opponent's own Boom Grenade is correctly not looking at your
+       swing, which is what the printed words say.
+
+       THE ROUTE IS THE QUALIFIER'S JOB, not a second test. `aac` asks
+       `isAtkActionCard`, and a weapon carries no Action on its type line
+       while an ally carries neither — so a weapon swing and an ally's
+       activated attack are excluded by the printed restriction itself
+       rather than by a `from` check this clause never asks for (v3.77).
+
+       THE DESTROY IS FIRST, IN PRINTED ORDER, and it is what stops the
+       item dealing its damage on every hit for the rest of the game. */
+    if(total>0){
+      const watchers = [...(act(n).gear || []), ...((act(n).board || []).map(b => b && b.card))]
+        .filter(Boolean)
+        .map(w => ({w, hw: fxParse(w).hitWatch}))
+        .filter(({w, hw}) => hw && !w.destroyed
+                          && (!hw.heroOnly || heroHit)
+                          && P.qualMatches(hw.q, pc, {}));
+      for(const {w, hw} of watchers){
+        if(hw.selfDestroy){
+          const ent = (act(n).board || []).find(b => b && b.uid === w.uid);
+          if(ent){
+            actMut(n).board = act(n).board.filter(x => x !== ent);
+            actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
+          } else {
+            /* A GEAR PIECE IS MARKED, NOT SPLICED (v3.54): a wall
+               declared as INDICES into `gear` renumbers underneath a
+               removal, and this fires in the DAMAGE step with the wall
+               still declared. `sweepGear` files it at the end phase. */
+            actMut(n).gear = (act(n).gear || []).map(x =>
+              x && x.uid === w.uid ? {...x, destroyed: true} : x);
+          }
+        }
+        /* THE LINE NAMES THE EVENT, NOT ONLY THE DESTROY (v3.81, v4.03).
+           `tools/selfplay.js` counts how often a route fires by matching
+           the feed, and a watcher that prints nothing unless it also
+           destroys itself reports ZERO for the half that does not — a
+           counter aimed at the wrong words is indistinguishable from a
+           route nothing reaches. The destroy is a RIDER on the sentence. */
+        n = L(n, `${w.name} goes off — ${pc.name} connected` +
+                 (hw.selfDestroy ? ", so it is destroyed." : "."));
+        n = runOps(n, hw.ops, w.name);
+      }
+    }
     if(total>0 && n.pend.from==="weapon")
       n = offerPayCost(n, "weaponHit", null, {lateGa: true});
     if(total>0 && n.pend.from==="weapon" && bAct(n).weaponRefresh && !act(n).hist.wpnAgain){

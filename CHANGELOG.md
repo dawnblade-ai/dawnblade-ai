@@ -1,3 +1,131 @@
+## v4.25 — A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT
+
+> *"When a Mechanologist attack action card you control hits a hero,
+> destroy this and deal 4 damage to them."* — BOOM GRENADE ×3
+
+**v4.24 MADE THIS CLAUSE REFUSE, AND SAID WHY.** `fx.onHit` means *"when
+THIS hits"* and is read only from `pend` — something an ITEM never opens
+— so the bare `/\bhits?\b/` subject test had been filing the clause as
+the item's own trigger, where it read `run`, counted as covered, and did
+nothing. Refusing was the honest report; **a recorded refusal is a
+DEBT** (v3.38, v3.47), and this discharges it. Third one this cycle.
+
+**THE SUBJECT GOES THROUGH `attackQual`**, so the reader invents no
+qualifier vocabulary: *"MECHANOLOGIST attack ACTION CARD"* is a leading
+class group plus the `aac` tail, and the same object answers at the fire
+site through `qualMatches`. Seventh member of that family to add nothing.
+**The route is the qualifier's job, not a second test** — a weapon
+carries no Action on its type line and an ally carries neither, so a
+weapon swing and an ally's activated attack are excluded by the printed
+restriction itself rather than by a `from` check the card never asks for.
+
+**AND THE PRINTED DESTROY IS SPLIT OFF, NOT READ AS PAYLOAD.**
+`classifyClause("destroy this and deal 4 damage to them")` answers
+`[["dmg",4]]` — the drawback silently dropped — so reading the tail whole
+would file a `full` whose payoff is an **unbounded repeatable 4 damage**
+every time a Mechanologist attack connects. It rides as `selfDestroy`,
+the same way v4.23's `ctrTick` splits its counter removal from its
+payload, and a drill asserts the payload reader still drops the verb so
+that a future widening says so rather than destroying the item twice.
+
+**THE WATCHER IS NOT THE CARD BEING PLAYED** (v3.33, v3.55, v4.23): the
+scan covers the **gear AND the arena**, because Boom Grenade is an Item
+on the board and the identical printed shape on an equipment piece would
+be missed by a board-only scan. *"You control"* is satisfied by
+construction — the scan is over `act(n)`, and inside a combat link the
+actor is the attacker.
+
+Exactly **3 records move**, all Boom Grenade, `part → full`; measured
+over 797 before and after. **The route fires 15 times in 210 self-play
+games**, across three different Mechanologist attacks — v3.84's rule
+(when you build a route, go and count how often it fires) answered rather
+than assumed, and it has its own counter in `tools/selfplay.js` now.
+
+### `false` AND `null` ARE TWO ANSWERS AND ONE `!q` COLLAPSED THEM
+
+`attackQual` returns **`false`** for a restriction it cannot read and
+**`null`** when the printed line restricts nothing — and `qualMatches`
+answers TRUE for a falsy qualifier *by design*, so a `false` reaching the
+fire site would have fired the watcher off **every attack in the game**.
+The first draft's `if(!q) continue;` refused both, which is weaker than
+printed on the bare form and is the exact bug v3.31 named when it retired
+the array qualifier and v3.87 named again for `attackQual`'s tail.
+
+**BOTH HALVES ARE DRILLED, AND THE BARE ONE IS SYNTHETIC** (v3.73): no
+pool record prints *"when an attack you control hits"*, so only a
+synthetic can tell *the qualifier is read* from *the qualifier is
+assumed*. Blast radius measured after the split: **zero records move**.
+
+### A GUARD COPIED FROM A SIBLING INHERITS ITS DEAD HALVES
+
+`|| pay.ops.some(o => o[0] === "noop")` sat beside the status test here
+**and** in v4.23's `ctrTick`, copied from one to the other. It cannot
+express a bug: `classifyClause` answers `null`, `run` with at least one
+op, or `NOOP(why)`, and **that premise is a DRILL** — `test/agentcost.
+test.js` drives every distinct pool clause and asserts the three shapes.
+Deleted from both rather than kept as rules code that reads like a rule
+(v3.67, v3.77, v4.05, v4.11). Zero records move. **The live half is
+`status !== "run"`**, and it now has a fixture that reaches it: a payload
+of *"dominate"*, which answers `noop` and would otherwise have printed
+its reason into the feed on every hit.
+
+### ONE SCAN, TWO CONSUMERS — AND UNFAIR IS GENUINELY 0
+
+**Found by running `npm run sweep` at the end of the ship chain**, where
+`UNFAIR` still read **1** and named Boom Grenade's *crank* — a keyword
+**built and drilled at v4.24**, with 15 drills of its own.
+
+`failstates.js` grades a no-op keyword partly on how often the SOURCE
+names it, and **v3.00 fixed that scan after finding it aimed at
+`index.html`** — the file the card semantics left at v2.53. It fixed the
+one consumer it was looking at. **`tools/sweep.js` kept its own copy,
+still reading the trainer alone, and passed that copy back INTO
+`FS.failStates`** — so one grading function scored the same card two
+ways:
+
+| | crank mentions | verdict |
+|---|---|---|
+| `npm run sweep` | 2 (index.html) | **sev 3 · "it is a DRAWBACK"** |
+| `node tools/failstates.js` | 16 (engine) | sev 1 · "the trainer names it (verify)" |
+
+v3.35's rule — **when a census exists, grep for every consumer of it** —
+and the no-mirror rule, inside a pair of tools. The scan is one exported
+body now (`FS.sourceMentions`) and both callers use it. `UNFAIR` is
+**0**, for the first time the tool has been able to say so.
+
+**AND THE UNION WAS THE WRONG SHAPE, WHICH THE MEASUREMENT DECIDED.**
+sweep.js's counter carries a first-word fallback — the trainer calls the
+Bloodrot Pox token plain *"Bloodrot"* — and folding it into the KEYWORD
+count moved a card on a lie: *"Lightning Fusion"* falls back to
+*"lightning"*, which the engine says **35 times** about a class, a talent
+and a token, so Arcanic Shockwave was upgraded to *"the trainer names
+it"* on a word its keyword only borrows. **Measured both ways before
+choosing** (v3.33): exactly one card moves, and it moves wrong. The
+fallback is opt-in (v3.58) and the CLI's report is byte-identical across
+the extraction.
+
+Three cards move in the report and every one is the honest direction:
+Boom Grenade **UNFAIR → verify**, Uphold Tradition's *Cloaked* **WRONG →
+verify** (built at v3.99, 16 engine mentions), and the two Briar
+*Lightning Fusion* cards **verify → WRONG**, which is right — the keyword
+is genuinely unbuilt and the strict count says 0.
+
+### NINETEEN SABOTAGES, NINETEEN BITE
+
+Six came back silent and each was a shape this file already names — four
+weak drills, one piece of dead rules code, and one **harness** fault
+(v3.50, v3.87, v4.17: *check that a sabotage APPLIED before believing a
+drill is weak* — the cross-seat edit never landed and the drill was fine).
+
+| silent | the fixture that bites |
+|---|---|
+| the hero gate dropped | an attack on an ALLY — no drill had targeted one |
+| the gear half of the scan dropped | a synthetic gear-mounted watcher; Boom Grenade is an Item, so the real card cannot see it |
+| `total > 0` dropped | a synthetic printing the BARE *"hits"* — the real card's `heroOnly` already refuses a blocked swing, so the guard is invisible behind it |
+| `!w.destroyed` dropped | a piece already marked, which `sweepGear` does not file until the end phase |
+| the noop-payload conjunct | **it cannot express a bug** — deleted |
+| the scan reads both boards | the sabotage never applied |
+
 ## v4.24 — CRANK, AND A `noop`'s REASON IS THE PLAYER'S LINE
 
 > **Crank** *(As this enters the arena, you may remove a steam counter

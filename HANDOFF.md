@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.24 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.25 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -76,31 +76,67 @@ code comments to the player; the on-hit trigger's SUBJECT was never
 tested, so Boom Grenade's *"when a Mechanologist attack action card you
 control hits a hero"* was filed as the item's own on-hit and did nothing;
 and `payPolicy` priced a **destroy** at zero, so both of v3.93's Legs
-pieces were spent every time they were offered.
+pieces were spent every time they were offered. **v4.25** discharged the
+refusal v4.24 had just recorded — Boom Grenade's watcher on somebody
+else's hit — and then, running `npm run sweep` at the END of the ship
+chain, found `UNFAIR` still reporting **1** and naming the keyword v4.24
+had **built and drilled**: `tools/sweep.js` kept its own copy of the
+source-mention scan v3.00 fixed, still pointed at `index.html`, and
+passed it back into `FS.failStates`. One grading function, two scans, two
+verdicts on the same card. **UNFAIR is 0 now, for the first time the tool
+has been able to say so.**
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.24, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.25, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
-session. **Do not trust this block on your next read — re-run them.** Two
-of the sentences it replaces had been wrong for seventeen versions.
+session. **Do not trust this block on your next read — re-run them.**
+The previous version of this table said *"sweep: UNFAIR 0"* and the tool
+was reporting **1** — a doc claim copied from an expectation rather than
+from a run, which is the failure this table exists to stop.
 
 | | | command |
 |---|---|---|
-| coverage | **385 full · 16 part · 4 none** of 405 | `npm run audit` |
-| drills | **2378 pass · 0 fail · 4 skipped** | `npm test` |
+| coverage | **386 full · 15 part · 4 none** of 405 | `npm run audit` |
+| drills | **2395 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
 | scenes | **73 passing · 0 failing** | `npm run scenes` |
 | CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
-| sweep | **UNFAIR 0** · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
+| sweep | **UNFAIR 0** — genuinely, for the first time · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
 | audit flags | **15**, down from 26 | `npm run audit` |
+| gaps | **19 unfinished · 14 one clause away** | `npm run gaps` |
 
 **TWO OF THOSE THREE HERO CLAUSES ARE ABILITY NAMES**, not rules — Briar's
 *"Essence of Earth and Lightning"* and Iyslander's *"Essence of Ice"*,
 annotated by `tools/ledger.js`'s closed vocabulary and deliberately left
 in the uncovered count (v3.86: over-reporting is the safe direction). The
 third is Enigma's `{c}{c}{c}` activation.
+
+### ⚠ v4.25 — RUN EVERY TOOL IN THE CHAIN, AND ASK WHICH SCAN PRODUCED IT
+
+The card work this version was one clause. **The finding was the
+instrument**, and it came from doing the boring thing: running
+`npm run sweep` at the END of the ship chain rather than trusting the
+previous session's note that it was clean.
+
+`UNFAIR` read **1** and named a keyword that had been **built and drilled
+one version earlier**. The cause was two copies of one scan —
+`failstates.js` grades a no-op keyword on how often the SOURCE names it,
+v3.00 repointed that scan off `index.html` (the file the semantics left
+at v2.53), and `tools/sweep.js` kept its own copy and passed it back into
+the same grading function.
+
+**THE HABIT TO CARRY FORWARD:** when a report says something surprising,
+ask **which scan produced it** before believing either the report or the
+code. Two of the last four versions found a defect in an instrument
+rather than in the engine (v4.17's fault-vs-route split, this), and both
+were invisible to `npm test`.
+
+**AND POINT IT AT THE REMAINING PAIRS.** `test/ledger.test.js` has its
+own third counter (`names(k)`, a zero-test over `engine/` with a loose
+regex) — deliberately a different question, and worth a look if a third
+verdict ever disagrees with these two.
 
 ### The four cards at `none`, and what each is waiting on
 

@@ -3918,8 +3918,15 @@ function fxParse(card){
     }
     if(!tail) continue;
     const pay = classifyClause(tail);
-    if(!pay || pay.status !== "run" || !pay.ops.length
-       || pay.ops.some(o => o[0] === "noop")) continue;
+    /* A `run` NEVER CARRIES A NOOP OP, so a `some(noop)` test beside this
+       one is dead rules code that reads like a rule (v3.67, v3.77, v4.05,
+       v4.11). The premise is a DRILL rather than a claim — `test/agentcost
+       .test.js` drives every distinct pool clause and asserts the three
+       answer shapes — so a reader that starts mixing them fails there
+       first. `status !== "run"` is the live half: `classifyClause("dominate")`
+       answers `noop`, and a watcher built on it would print the noop's
+       reason into the feed on every hit. */
+    if(!pay || pay.status !== "run" || !pay.ops.length) continue;
     fx.ctrTick = {on: m[2].toLowerCase() === "boost a card" ? "boost" : "atkPlay",
                   kind, n: cn, once: !!m[1], ops: pay.ops};
     handled.add(ci);
@@ -4340,6 +4347,74 @@ function fxParse(card){
     };
     handled.add(i); handled.add(i+1);
     break;                                       /* one pay-cost rider per card in the pool */
+  }
+
+  /* ---- A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25) -----------
+
+     > "When a Mechanologist attack action card you control hits a hero,
+     >  destroy this and deal 4 damage to them."   — BOOM GRENADE ×3
+
+     THE POOL PRINTS FOUR THIRD-PERSON ON-HIT SUBJECTS (v4.24's census)
+     and this is the one with no route. Arakni's dagger drain is a hero
+     passive, Refraction Bolters' is an OPTIONAL cost read by `payCost`
+     above — so it is claimed before this loop ever sees it, and the
+     `you may` wording refuses here anyway — and Nasreth's payload has no
+     reader. This is the mandatory one.
+
+     v4.24 MADE THE CLAUSE REFUSE rather than be filed as the item's own
+     `onHitHero`, which is a list read only from `pend` — something an
+     ITEM never opens. That refusal was the honest report and this is the
+     route that discharges it (v3.47: a recorded refusal is a debt).
+
+     THE SUBJECT GOES THROUGH `attackQual` LIKE ANY OTHER (v3.31), so
+     this rule invents no qualifier vocabulary: "MECHANOLOGIST attack
+     ACTION CARD" is a leading class group plus the `aac` tail, and the
+     same object answers at the fire site through `qualMatches`. An
+     unreadable restriction REFUSES — `false` means "a limit I cannot
+     read", and a watcher with no qualifier fires off every attack in the
+     game (v3.87, v3.43).
+
+     AND THE PRINTED DESTROY IS KEPT. `classifyClause("destroy this and
+     deal 4 damage to them")` answers `[["dmg",4]]` — the payload with
+     the drawback silently dropped — so reading the tail whole would file
+     an unbounded repeatable 4 damage. It is split off here and carried
+     as `selfDestroy`, the same way `ctrTick` splits its counter removal
+     from its payload.
+
+     "TO THEM" IS THE HERO THAT WAS HIT, which is what `dmg` already
+     means at the fire site: `linkPayload`'s actor is the attacker, so it
+     lands on the defender. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const m = clauses[ci].match(/^when (?:a|an) ([^.,]*?)\battack\b([^.,]*?) you control hits( a hero)?, (.+?)\.?$/i);
+    if(!m) continue;
+    /* `false` MEANS "A RESTRICTION I CANNOT READ" AND `null` MEANS
+       "NOTHING RESTRICTS THIS" — collapsing the two is the bug v3.31 and
+       v3.87 both name. A `false` reaching `qualMatches` would answer TRUE
+       for every card (it tests a falsy qualifier as unqualified), so an
+       unreadable subject must refuse the whole clause; a genuinely bare
+       "when an attack you control hits" is the faithful unqualified
+       reading and fires on any attack, which is what the words say.
+       Measured: no pool record prints the bare form, so the second half
+       is LATENT and drilled with a synthetic (v3.73). */
+    const q = attackQual(m[1], m[2]);
+    if(q === false) continue;
+    let tail = m[4].trim(), selfDestroy = false;
+    const dm = tail.match(/^destroy (?:this|it),? and (.+)$/i);
+    if(dm){ selfDestroy = true; tail = dm[1].trim(); }
+    const pay = classifyClause(tail);
+    /* A `run` NEVER CARRIES A NOOP OP, so a `some(noop)` test beside this
+       one is dead rules code that reads like a rule (v3.67, v3.77, v4.05,
+       v4.11). The premise is a DRILL rather than a claim — `test/agentcost
+       .test.js` drives every distinct pool clause and asserts the three
+       answer shapes — so a reader that starts mixing them fails there
+       first. `status !== "run"` is the live half: `classifyClause("dominate")`
+       answers `noop`, and a watcher built on it would print the noop's
+       reason into the feed on every hit. */
+    if(!pay || pay.status !== "run" || !pay.ops.length) continue;
+    fx.hitWatch = {q, heroOnly: !!m[3], selfDestroy, ops: pay.ops};
+    handled.add(ci);
+    break;                                 /* one such watcher per card in the pool */
   }
 
   /* Does this card print a MODAL choice? Asked once, off the whole text,

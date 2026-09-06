@@ -98,6 +98,14 @@ function play(g, limit){
            broken, which is the bug v4.03 fixed. */
         if(/on the stack \(/i.test(line))          events.push(["reaction", line]);
         if(/layer resolves/i.test(line))           events.push(["layer", line]);
+        /* A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25). Boom Grenade
+           is the pool's only one and it is in DASH's list, so this counter
+           is how "the route works" is told apart from "no deck can reach
+           it" — v3.84's rule: when you build a route, go and count how
+           often it fires. The engine prints "goes off —" for BOTH halves
+           of the shape, destroy or no destroy, so the count cannot be
+           silently halved by the printed drawback (v3.81). */
+        if(/goes off —/.test(line))                events.push(["hitwatch", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

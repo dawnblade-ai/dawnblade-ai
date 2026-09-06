@@ -413,38 +413,78 @@ function heroFailStates(A, RULINGS, mentionsFn){
 
 const SEV_NAME = {3: "UNFAIR", 2: "WRONG", 1: "LOST VALUE", 0: "INERT"};
 
-module.exports = {failStates, heroFailStates, classify, CATS, SEV_NAME, isUnread};
+/* ---- THE SOURCE SCAN, ONE BODY (v4.25) --------------------------------
+   THE SEMANTICS ARE NOT IN index.html ANY MORE, AND HAVE NOT BEEN SINCE
+   v2.53. This read the trainer alone, so every keyword carried by
+   `engine/effects.js` counted ZERO mentions and was graded sev-3
+   "filed as no-op" — which is how 16 of the 17 UNFAIR entries came to
+   be one tool looking at the file the code left. Measured with this
+   tool's own regex: phantasm 2 mentions in index.html and 11 across the
+   engine, watery grave 2 and 13, suspense 2 and 11.
+
+   A source scan aimed at the wrong file passes by finding nothing; this
+   one FAILED by finding nothing, which is the same defect wearing the
+   opposite sign. It reads the whole engine now, and the count stays
+   what it always was — a SIGNAL, not a verdict. Phantasm is the worked
+   example in both directions: it was mentioned 11 times and still did
+   nothing at the table until v3.00 wired judge.js to call it.
+
+   AND v3.00 FIXED IT IN ONE CONSUMER ONLY (v4.25). `tools/sweep.js` kept
+   its own copy of this counter, still reading `index.html` alone, and
+   passed THAT into `failStates` — so one function graded the same card
+   two ways and the UNFAIR block CLAUDE.md tells a reader to act on was
+   produced by the wrong one. Driven: crank is named 2 times in
+   index.html and 16 across the engine, so `npm run sweep` filed Boom
+   Grenade sev-3 "it is a DRAWBACK" while `node tools/failstates.js`
+   filed the identical card sev-1 "the trainer names it (verify)".
+   v3.35's rule (when a census exists, grep for every consumer of it) and
+   the no-mirror rule, in a tool.
+
+   AND THE FIRST-WORD FALLBACK IS OPT-IN, WHICH THE MEASUREMENT DECIDED
+   (v3.58). sweep.js added it for a TOKEN NAME — the trainer calls the
+   Bloodrot Pox token plain "Bloodrot", so a full-name-only search
+   reports a live counter as absent — and folding it into the KEYWORD
+   count as a union moved a card on a lie: "Lightning Fusion" falls back
+   to "lightning", which the engine says 35 times about a CLASS, a token
+   and a talent, so Arcanic Shockwave was upgraded to "the trainer names
+   it (verify)" on a count of a word its keyword only borrows. Measured
+   both ways before choosing: exactly one card moves, and it moves wrong.
+   A name's first word is its distinguishing one; a keyword's is usually
+   not. */
+function sourceText(){
+  if(sourceText._t != null) return sourceText._t;
+  const srcOf = f => { try { return fs.readFileSync(f, "utf8"); } catch(e){ return ""; } };
+  const ENG = path.join(HERE, "..", "engine");
+  let TR = srcOf(path.join(HERE, "..", "index.html"));
+  try {
+    for(const f of fs.readdirSync(ENG).filter(x => x.endsWith(".js")).sort())
+      TR += "\n" + srcOf(path.join(ENG, f));
+  } catch(e){}
+  return (sourceText._t = TR);
+}
+function sourceMentions(name, opts){
+  const TR = sourceText();
+  const bare = String(name||"").replace(/[^A-Za-z ]/g, "").trim();
+  if(!bare || !TR) return 0;
+  const tries = [bare];
+  const first = bare.split(/\s+/)[0];
+  if(opts && opts.loose && first && first.length >= 5 && first !== bare) tries.push(first);
+  let best = 0;
+  for(const t of tries){
+    const n = (TR.match(new RegExp("\\b" + t.replace(/\s+/g, "\\s*") + "\\b", "gi")) || []).length;
+    if(n > best) best = n;
+  }
+  return best;
+}
+
+module.exports = {failStates, heroFailStates, classify, CATS, SEV_NAME, isUnread,
+                  sourceMentions, sourceText};
 
 /* ---- standalone report ----------------------------------------------- */
 if(require.main === module){
   const A = JSON.parse(fs.readFileSync(path.join(HERE, "audit.json"), "utf8"));
   let R = {}; try { R = JSON.parse(fs.readFileSync(path.join(HERE, "rulings.json"), "utf8")); } catch(e){}
-  /* THE SEMANTICS ARE NOT IN index.html ANY MORE, AND HAVE NOT BEEN SINCE
-     v2.53. This read the trainer alone, so every keyword carried by
-     `engine/effects.js` counted ZERO mentions and was graded sev-3
-     "filed as no-op" — which is how 16 of the 17 UNFAIR entries came to
-     be one tool looking at the file the code left. Measured with this
-     tool's own regex: phantasm 2 mentions in index.html and 11 across the
-     engine, watery grave 2 and 13, suspense 2 and 11.
-
-     A source scan aimed at the wrong file passes by finding nothing; this
-     one FAILED by finding nothing, which is the same defect wearing the
-     opposite sign. It reads the whole engine now, and the count stays
-     what it always was — a SIGNAL, not a verdict. Phantasm is the worked
-     example in both directions: it was mentioned 11 times and still did
-     nothing at the table until v3.00 wired judge.js to call it. */
-  const srcOf = f => { try { return fs.readFileSync(f, "utf8"); } catch(e){ return ""; } };
-  const ENG = path.join(HERE, "..", "engine");
-  let TR = srcOf(path.join(HERE, "..", "index.html"));
-  try {
-    for(const f of fs.readdirSync(ENG).filter(x => x.endsWith(".js")))
-      TR += "\n" + srcOf(path.join(ENG, f));
-  } catch(e){}
-  const mentionsFn = kw => {
-    const bare = String(kw||"").replace(/[^A-Za-z ]/g, "").trim();
-    if(!bare || !TR) return 0;
-    return (TR.match(new RegExp("\\b" + bare.replace(/\s+/g, "\\s*") + "\\b", "gi")) || []).length;
-  };
+  const mentionsFn = sourceMentions;
   const cards = failStates(A, R, mentionsFn), heroes = heroFailStates(A, R, mentionsFn);
   const B = t => "\x1b[1m" + t + "\x1b[0m";
   console.log("\n" + B("FAIL STATES") + " — how each card goes wrong at the table\n");

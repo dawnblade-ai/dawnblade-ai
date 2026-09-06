@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.24
+**Current version:** v4.25
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2378 drills** at v4.24.
+This is `node --test "test/*.test.js"` — **2399 drills** at v4.25.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -790,6 +790,90 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25)
+
+> *"When a Mechanologist attack action card you control hits a hero,
+> destroy this and deal 4 damage to them."* — BOOM GRENADE ×3
+
+v4.24 made this REFUSE, because `fx.onHit` means *"when THIS hits"* and
+is read only from `pend`, which an ITEM never opens — so the clause read
+`run`, counted as covered, and did nothing. **A recorded refusal is a
+DEBT** and this discharges it; third one this cycle.
+
+**THE SUBJECT GOES THROUGH `attackQual`**, so no qualifier vocabulary is
+invented, and **THE ROUTE IS THE QUALIFIER'S JOB**: a weapon carries no
+Action on its type line and an ally carries neither, so both are excluded
+by the printed restriction rather than by a `from` check the card never
+asks for (v3.77, one card over).
+
+**THE PRINTED DESTROY IS SPLIT OFF, NOT READ AS PAYLOAD.**
+`classifyClause("destroy this and deal 4 damage to them")` answers
+`[["dmg",4]]` — the drawback dropped — so reading the tail whole files a
+`full` whose payoff is an **unbounded repeatable 4 damage**. It rides as
+`selfDestroy`, exactly as v4.23's `ctrTick` carries its counter removal.
+
+**THE WATCHER IS NOT THE CARD BEING PLAYED** (v3.33, v3.55), so the scan
+covers **gear AND arena** — and the gear half is LATENT, measured (the
+pool's one record is an Item), so it is drilled with a synthetic or the
+sabotage that drops it is silent.
+
+**`false` AND `null` ARE TWO ANSWERS AND ONE `!q` COLLAPSED THEM.**
+`attackQual` says `false` for *"a restriction I cannot read"* and `null`
+for *"nothing restricts this"* — and `qualMatches` answers TRUE for a
+falsy qualifier by design, so a `false` reaching the fire site fires the
+watcher off **every attack in the game**. v3.31's and v3.87's rule, a
+third time; blast radius after the split, zero records.
+
+**AND A GUARD COPIED FROM A SIBLING INHERITS ITS DEAD HALVES.** `||
+pay.ops.some(o => o[0] === "noop")` sat beside the status test here and
+in v4.23's `ctrTick`. It cannot express a bug — `classifyClause` answers
+`null`, `run` with ops, or `NOOP(why)` — and **that premise is a DRILL**
+(`test/agentcost.test.js` drives every distinct pool clause), so it was
+deleted from both rather than kept as rules code that reads like a rule
+(v4.11, second outing). The LIVE half is `status !== "run"`, and a
+`"dominate"` payload is the fixture that reaches it.
+
+Exactly **3 records move**, all Boom Grenade, `part → full`. The route
+fires **15 times in 210 games** and has its own `selfplay.js` counter
+(v3.84), whose phrase is pinned against the engine's (v3.81).
+
+### ONE SCAN, TWO CONSUMERS — AND UNFAIR IS GENUINELY 0 (v4.25)
+
+**Found by running `npm run sweep` at the END of the ship chain**, where
+`UNFAIR` still read 1 and named Boom Grenade's **crank** — a keyword
+built and drilled at v4.24, with 15 drills of its own.
+
+`failstates.js` grades a no-op keyword partly on how often the SOURCE
+names it. **v3.00 fixed that scan after finding it aimed at `index.html`
+— the file the card semantics left at v2.53 — and fixed the ONE consumer
+it was looking at.** `tools/sweep.js` kept its own copy, still reading
+the trainer alone, and passed that copy back INTO `FS.failStates`:
+
+| | crank mentions | verdict on the same card |
+|---|---|---|
+| `npm run sweep` | 2 (index.html) | **sev 3 · "it is a DRAWBACK"** |
+| `node tools/failstates.js` | 16 (engine) | sev 1 · "the trainer names it (verify)" |
+
+**One grading function, two scans, two verdicts — and the block this file
+tells a reader to act on was produced by the wrong one.** v3.35's rule
+(when a census exists, grep for every consumer of it) and the no-mirror
+rule, in a pair of tools. `FS.sourceMentions` is the one body now.
+
+**AND THE UNION WAS THE WRONG SHAPE, WHICH THE MEASUREMENT DECIDED.**
+sweep's counter carries a first-word fallback for a TOKEN NAME (the
+trainer calls the Bloodrot Pox token plain *"Bloodrot"*); folded into the
+KEYWORD count it moved a card on a lie — *"Lightning Fusion"* falls back
+to *"lightning"*, which the engine says 35 times about a class, a talent
+and a token. **Measured both ways before choosing** (v3.33): exactly one
+card moves and it moves wrong. The fallback is opt-in (v3.58) and the
+CLI's report is byte-identical across the extraction.
+
+Three cards move and every one is honest: Boom Grenade **UNFAIR →
+verify**, Uphold Tradition's *Cloaked* **WRONG → verify** (built at
+v3.99), and the two Briar *Lightning Fusion* cards **verify → WRONG**,
+which is right — that keyword is genuinely unbuilt and the strict count
+says 0.
 
 ### A `noop`'s REASON IS THE PLAYER'S LINE (v4.24)
 
@@ -5838,7 +5922,9 @@ then have cleared the whole block, including two keywords nobody built. So:
 UNFAIR went 16 → 11 when the tool stopped reading the wrong file, and
 11 → 0 when the two keywords that actually remained were built (see Phase
 B in `FINISH.md`). The four phantasm cards left first, because they were
-fixed rather than reclassified.
+fixed rather than reclassified. **`npm run sweep` kept reporting 1 until
+v4.25**, because it was still passing its OWN copy of that scan into this
+grading function — the same defect, in the other consumer.
 
 > **THIS PARAGRAPH SAID "UNFAIR IS 0 AS OF v3.01" FOR NINETEEN VERSIONS
 > AND IT WAS NOT (v3.77).** Measured across every commit that touched
@@ -5850,14 +5936,23 @@ fixed rather than reclassified.
 > The standing entry was **Lyath Goldmane's halving static** — *"the base
 > {p} and {d} of cards you control are halved, rounded up"* — a real
 > unbuilt DRAWBACK, so he played strictly better than printed. **BUILT AT
-> v3.78, and UNFAIR is now genuinely 0**: the block is gone from the
-> report for the first time in the project's history.
+> v3.78.**
 >
-> **A doc claim is a test with no assertion** (v3.41), third time. Sweep
-> the sentences that state a count the way you sweep the pool: take each
-> one, and go and re-derive it. *(This one is re-derived at v3.78 — and
-> the honest way to keep it true is to re-run `npm run sweep` rather than
-> to trust this sentence.)*
+> **AND IT STILL READ 1, FOR FOUR MORE VERSIONS, AND THAT ONE WAS THE
+> TOOL (v4.25).** The standing entry became Boom Grenade's **crank** —
+> built and drilled at v4.24 with 15 drills of its own — because
+> `tools/sweep.js` kept its own copy of the source-mention scan, still
+> reading `index.html` alone, and passed it into `FS.failStates`. Two
+> scans, one grading function, two verdicts on the same card. **UNFAIR is
+> 0 now, for the first time the tool has been able to say so**; see "ONE
+> SCAN, TWO CONSUMERS" above.
+>
+> **A doc claim is a test with no assertion** (v3.41), third time — and
+> a REPORT is a test with no assertion too, until somebody checks which
+> scan produced it. Sweep the sentences that state a count the way you
+> sweep the pool: take each one, and go and re-derive it. *(Re-derived at
+> v4.25; the honest way to keep it true is to re-run `npm run sweep`
+> rather than to trust this sentence.)*
 
 #### A NOOP CAN CLAIM A WHOLE FAMILY (v3.16)
 

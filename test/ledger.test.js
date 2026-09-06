@@ -132,3 +132,69 @@ test("the ledger still describes every status the tools grade on", () => {
       s => seen.includes(s)).sort(),
     "an unknown status string means failstates.js is grading against a value it does not know");
 });
+
+/* ============================================================
+   ONE SCAN, TWO CONSUMERS (v4.25)
+
+   `failstates.js` grades a no-op keyword partly on how often the SOURCE
+   names it, and v3.00 fixed that scan after finding it pointed at
+   `index.html` — the file the card semantics left at v2.53. It fixed the
+   ONE consumer it was looking at. `tools/sweep.js` kept its own copy,
+   still reading the trainer alone, and passed that copy back INTO
+   `FS.failStates` — so one grading function scored the same card two ways
+   and the block CLAUDE.md tells a reader to act on was produced by the
+   wrong one:
+
+     npm run sweep          Boom Grenade · sev 3 · "it is a DRAWBACK"   (crank: 2 mentions)
+     node tools/failstates  Boom Grenade · sev 1 · "the trainer names it" (crank: 16)
+
+   UNFAIR therefore read 1 for four versions after crank was BUILT and
+   drilled. v3.35's rule — when a census exists, grep for every consumer
+   of it — and the no-mirror rule, inside a pair of tools.
+   ============================================================ */
+
+test("the source scan reads the ENGINE, not the file the semantics left", () => {
+  const FS = require("../tools/failstates.js");
+  const idx = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const inIndex = kw => (idx.match(new RegExp("\\b" + kw.replace(/\s+/g, "\\s*") + "\\b", "gi")) || []).length;
+  /* DRIVEN, AND WITH A CONTROL. `crank` is the worked example — 2 in the
+     trainer, well over the tool's threshold of 3 across the engine — and
+     `boost` proves the scan alive rather than merely large. */
+  assert.ok(FS.sourceMentions("crank") > inIndex("crank"),
+    "the scan is back to index.html alone: crank " + FS.sourceMentions("crank") +
+    " vs " + inIndex("crank"));
+  assert.ok(FS.sourceMentions("crank") >= 3,
+    "a keyword this project has BUILT must clear the tool's own threshold");
+  assert.ok(FS.sourceMentions("phantasm") >= 3 && FS.sourceMentions("watery grave") >= 3,
+    "v3.00's own two examples still clear it");
+});
+
+test("the first-word fallback is OPT-IN, because a keyword's first word is not its name", () => {
+  const FS = require("../tools/failstates.js");
+  /* sweep.js added it for a TOKEN NAME — the trainer calls the Bloodrot
+     Pox token plain "Bloodrot" — and folding it into the KEYWORD count
+     moved a card on a lie: "Lightning Fusion" falls back to "lightning",
+     which the engine says about a class, a talent and a token. Measured
+     both ways before choosing (v3.33). */
+  assert.equal(FS.sourceMentions("Lightning Fusion"), 0,
+    "the keyword itself is genuinely unbuilt and the strict count says so");
+  assert.ok(FS.sourceMentions("Lightning Fusion", {loose: true}) > 10,
+    "and the loose one counts a CLASS — which is why it is not the default");
+  assert.ok(FS.sourceMentions("Bloodrot Pox", {loose: true}) >
+            FS.sourceMentions("Bloodrot Pox"),
+    "while the token half is exactly what `loose` exists for");
+});
+
+test("`tools/sweep.js` grades on that one body and keeps no copy", () => {
+  /* A SOURCE PIN, deliberately narrow: what must not come back is a
+     SECOND scan in this file feeding the SAME grading function. The
+     behaviour is driven above; this is the shape that let it drift. */
+  const sw = fs.readFileSync(path.join(__dirname, "..", "tools", "sweep.js"), "utf8");
+  assert.ok(/FS\.failStates\(A, RULINGS, FS\.sourceMentions\)/.test(sw),
+    "sweep.js is passing its own counter into failStates again");
+  assert.ok(/FS\.heroFailStates\(A, RULINGS, FS\.sourceMentions\)/.test(sw),
+    "…and the hero half too — v3.98: pin BOTH halves or a drill sees one");
+  assert.equal((sw.match(/readFileSync\([^)]*index\.html/g) || []).length, 0,
+    "sweep.js reads index.html directly again — that is the copy that drifted");
+});
+
