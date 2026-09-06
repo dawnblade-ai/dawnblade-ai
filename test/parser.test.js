@@ -1630,16 +1630,32 @@ test("marked — Mark of the Black Widow resolves to full, and its banish lands 
   assert.equal(fx.tier, "full");
 });
 
-/* ---- Malefic Incantation — verse counters, credited not re-read, v2.39 */
-test("verse counters — the unwind clauses are noop-credited (handled by execute()'s board scan, not this reader)", () => {
-  assert.equal(P.classifyClause("Once per turn, when you play an attack action card, remove a verse counter from this").status, "noop");
-  assert.equal(P.classifyClause("If you do, create a Runechant token").status, "noop");
+/* ---- Malefic Incantation — the counter clock, READ rather than credited
+   (v2.39 credited it, v4.23 reads it).
+
+   Three `noop`s stood here, and each was a CLAIM that something read the
+   clause. Two of them were true of this card only — an inline regex over
+   its raw text inside `execute` — and the third ("when it has none,
+   destroy it") was inherited verbatim by four Hyper Driver records that
+   nothing destroyed. v3.16: a noop must describe the clause in front of
+   it, never a sibling.
+
+   THE CLOCK IS A WHOLE-CARD READING, so `classifyClause` alone answers
+   NULL for the tick clause and for its "if you do" tail — the payload is
+   in the next clause and one clause at a time cannot see it (v3.56: ask
+   the function that holds the reader). What the CARD ends up with is the
+   assertion that matters. */
+test("verse counters — the tick clause is a WHOLE-CARD reading, so the clause reader alone refuses", () => {
+  assert.equal(P.classifyClause("Once per turn, when you play an attack action card, remove a verse counter from this"), null);
+  assert.equal(P.classifyClause("If you do, create a Runechant token"), null);
 });
 
-test("verse counters — Malefic Incantation resolves to tier full", () => {
+test("verse counters — Malefic Incantation resolves to tier full, and the clock is what reads it", () => {
   const fx = P.fxParse({name:"Malefic Incantation", pitch:1, tt:"Runeblade Action - Aura", power:null, kw:[],
     tx:"Go again\nThis enters the arena with 3 verse counters. When it has none, destroy it.\nOnce per turn, when you play an attack action card, remove a verse counter from this. If you do, create a Runechant token."});
   assert.equal(fx.tier, "full");
+  assert.deepEqual(fx.ctrTick, {on:"atkPlay", kind:"verse", n:1, once:true, ops:[["rune",1]]});
+  assert.equal(fx.emptyDies, "verse");
 });
 
 /* ---- RELOAD — CR-verified: no type filter, empty-arsenal only, v2.39 -- */

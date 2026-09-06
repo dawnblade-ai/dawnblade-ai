@@ -46,11 +46,11 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Glisten** (none, 2/2 unread)
 - **Banneret of Salvation** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
-- **Boom Grenade** (part, 2/4 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
+- **Boom Grenade** (part, 1/4 unread)
 - **Crown of Dichotomy** (part, 1/2 unread)
 - **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
@@ -77,13 +77,13 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 21 |
-| No schedule to fire on | 9 |
+| No schedule to fire on | 8 |
 | Keyword filed as no-op, but it has meaning | 7 |
-| Ability inert — cost not modelled | 7 |
 | Choice never offered | 7 |
+| Unread, effect unknown | 6 |
 | Displayed total is wrong | 6 |
+| Ability inert — cost not modelled | 6 |
 | Earned value denied | 6 |
-| Unread, effect unknown | 5 |
 
 ### WRONG — 24 entries
 
@@ -97,10 +97,8 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion
 - **Boom Grenade** (1) · tier `part` · dash
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > At the start of your turn, destroy this unless you remove a steam counter from it.
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > At the start of your turn, destroy this unless you remove a steam counter from it.
+  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+    > Crank
 - **Brain Freeze** (3) · tier `full` · iyslander
   - *Keyword filed as no-op, but it has meaning* — The parser records "Ice Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer never names it, so it is almost certainly absent. Your ruling describes real behaviour: to gain an extra effect on these cards you must reveal an ice card from your hand - if your opponent uses this effect you will get a popup with their card in it and you'll have to hit 'ok'
     > Ice Fusion

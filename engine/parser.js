@@ -309,16 +309,28 @@ const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
    that does nothing, filed `full`, which is the no-op blind spot at its
    purest; an unrecognised kind REFUSES and leaves the card unclaimed.
 
-   Each of these four is genuinely consumed somewhere:
-     steam  a weapon's `needSteam` activation, and Plasma Barrel Shot
+   Each of these five is genuinely consumed somewhere:
+     steam  a weapon's `needSteam` activation, Plasma Barrel Shot, and
+            `ctrTick` — the counter clock (v4.23)
      rust   `rustedThrough` — the piece shatters at its printed threshold
      aim    the `aim` condition, and Drill Shot's piercing
      pow    `powCtr` on a weapon swing, and the idle-counter wipe
+     verse  `ctrTick`
 
    `+1{p}` IS THE PRINTED SPELLING OF `pow`. Mapping a printed form onto
-   an existing field is reading; adding a fifth key here without a reader
-   would be parsing ahead of wiring. */
-const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow"};
+   an existing field is reading; adding a key here without a reader
+   would be parsing ahead of wiring.
+
+   `verse` JOINED AT v4.23, AND ITS READER IS WHY IT MAY. Malefic
+   Incantation's counters used to live on the BOARD ENTRY as `b.verse`,
+   ticked by an inline regex over raw text inside `execute` — a SECOND
+   storage for one card's counters, and v3.58's inline-reader defect.
+   `ctrTick` reads the printed line for both cards that print the clock,
+   so the counter goes in the one bag everything else already reads and
+   the entry field is retired. Measured before adding it: exactly three
+   records' parse moves, all Malefic Incantation, and no pool record
+   prints "put a verse counter on …" for `ctrPut` to newly claim. */
+const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow", "verse":"verse"};
 const CTR_WORDS = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6};
 const RX_CTR_PUT = /^put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (.+)$/;
 
@@ -479,17 +491,16 @@ function classifyClause(raw){
     return NOOP("discard redirect — honoured by the discard path, not on resolution");
   if(/^when you win a clash revealing this, deal \d+ damage to the other hero$/.test(c))
     return NOOP("reveal payoff — fires if this is the card revealed on a winning clash");
-  if(/^when (?:it|this) has none, destroy it$/.test(c))
-    return NOOP("counter tick — destruction handled with the tick that empties it");
-  /* VERSE COUNTERS (Malefic Incantation): this exact rider is the OTHER
-     half of the verse-counter unwind read directly off the board in
-     execute() — see the matching NOOP for its "remove a verse counter"
-     clause further down. Read as a whole-clause match, before the generic
-     if/when splitter, because "if you do" alone is shared by every
-     optional-cost rider in the pool; matching just the cond string would
-     silently claim clauses this exact wording was never written for. */
-  if(/^if you do, create a runechant token$/.test(c))
-    return NOOP("live — same verse-counter unwind; the runechant is minted when the counter empties");
+  /* THREE `noop`s STOOD HERE AND ALL THREE ARE GONE (v4.23) — the two
+     halves of Malefic Incantation's verse unwind and the shared
+     "when it has none, destroy it". They pointed at an inline regex in
+     `execute` that read one card's raw text, so the CLAIM was true for
+     that card and false for the four Hyper Driver records printing the
+     identical sentence: v3.16's rule, that a noop must describe the
+     clause in front of it and never a sibling. `fx.ctrTick` and
+     `fx.emptyDies` read the printed line for both cards, so these
+     clauses are read rather than credited, and a card whose payload has
+     no reader now leaves them visibly unread. */
   /* COLD SNAP — BUILT, and this comment used to say it was not (v3.40).
 
      It was a `noop` until v3.02 for reasons that had already stopped being
@@ -1206,8 +1217,6 @@ function classifyClause(raw){
      up in the whole-clause patterns — it has to be, since a bare "if you
      do" cond string is shared by every optional-cost rider in the pool and
      would over-match if read as a generic condition here. */
-  if(/^once per turn, when you play an attack action card, remove a verse counter from this$/.test(c))
-    return NOOP("live — the verse-counter unwind is read directly off the board at declaration (execute()'s verse scan)");
   /* Ephemeral, per its own printed reminder text: if it would be put into a
      graveyard from anywhere, instead it ceases to exist. Enforced in gy(). */
   if(/^ephemeral$/.test(c)) return NOOP("live — it ceases to exist instead of reaching a graveyard");
@@ -1351,6 +1360,26 @@ function classifyClause(raw){
       return inner || null;
     }
   }
+  /* THE COUNTER CLOCK'S TICK IS A WHOLE-CARD READING, AND THIS IS ITS
+     GUARD (v4.23) — the same discipline v3.59 gives an activation prefix
+     and v3.99/v4.21 give a keyword one: a triggered line must not be
+     claimed by a loose matcher BELOW, gate and cost and all.
+
+     Measured: `Once per turn, when you boost a card, remove a steam
+     counter from this and gain {r}` was claimed by the unanchored
+     "gains {r}" rule, which returned a bare `[["res",1]]` — the payload
+     with the trigger, the once-per-turn limit and the counter removal all
+     gone. That is how Hyper Driver came to pay its {r} once, on PLAY,
+     while reading `tier: full`. Malefic Incantation's own tick escaped
+     only because nothing below happened to match its wording.
+
+     IT REFUSES rather than reading half: when `fx.ctrTick` claims the
+     clause it is marked handled and never reaches here, so anything that
+     DOES reach here is a clock whose payload or counter kind has no
+     reader — and that card must report the clause unread (v2.29) rather
+     than fire a payload with no schedule. */
+  if(/^(?:once per turn, )?when you [a-z ]+, remove (?:a|an|one|two|three|four|five|six|\d+) [a-z+{}0-9-]+ counters? from (?:this|it)\b/.test(c))
+    return null;
   if(/^legendary$/.test(c)) return NOOP("deckbuilding marker — one copy per deck");
   /* COLD SNAP's cost-offer half is UNREAD with the freeze it gates — see
      the long note above. Reading the offer alone would ask the opponent
@@ -1810,6 +1839,34 @@ function classifyClause(raw){
     return R([["costOff", amt, q]]);
   }
 
+  /* "…DESTROY THIS **UNLESS** YOU REMOVE A COUNTER FROM IT" (v4.23).
+
+     The reprieve, and it is the other half of the counter clock read as a
+     whole card above. Four pool records print it — three Boom Grenade and
+     the Golden Cog token — and the clause refused whole, so the item was
+     IMMORTAL on both boards: a printed DRAWBACK skipped, which is
+     `failstates.js`'s sev-3 and the direction that steals games.
+
+     IT RIDES ON THE SCHEDULE, not beside it. `["selfDestruct", when]` is
+     already what the board entry is stamped with and what `sweepArena`
+     acts on, so the reprieve is a third element on that op — the same
+     relationship the payout half has with "…destroy this, THEN X" one
+     rule down, one printed word over.
+
+     THE KIND VOCABULARY IS THE SHARED ONE. A counter kind nothing reads
+     is a reprieve that can never be paid, which would report the clause
+     consumed and leave the item immortal anyway — so an unknown kind
+     falls through and the card stays honestly unread. That is what keeps
+     Zen State's "unless you remove a BALANCE counter" out: `balance` is
+     not in `CTR_KINDS`, its own enter-clause refuses for the same reason,
+     and building one half of a card whose other two clauses have no
+     reader is worse than the honest gap (v3.23). */
+  if(m=c.match(/^at the (?:beginning|start) of your (action phase|turn|end phase), destroy (?:this|it) unless you remove (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? from (?:it|this)$/)){
+    const kind = CTR_KINDS[m[3]];
+    const cn = CTR_WORDS[m[2]] != null ? CTR_WORDS[m[2]] : parseInt(m[2], 10);
+    if(kind && cn > 0)
+      return R([["selfDestruct", m[1] === "end phase" ? "end" : "turn", {kind, n: cn}]]);
+  }
   /* RULING: auras that scrub themselves at the top of your next turn */
   if(/^at the (?:beginning|start) of your (?:action phase|turn), destroy this$/.test(c))
     return R([["selfDestruct","turn"]]);
@@ -2610,9 +2667,13 @@ function classifyClause(raw){
     return R([["unpreventable",1]]);
   if(/^defense reaction(?: card)?s can'?t be played (?:to )?this(?:'s)? chain link$/.test(c))
     return NOOP("the dummy plays no defence reactions — nothing to deny yet");
-  if(/^this enters the arena with (\d+) (?:verse|steam) counters?$/.test(c))
-    return R([["enterCounters", +c.match(/(\d+)/)[1]]]);
-  if(/^this enters the arena with a steam counter$/.test(c)) return R([["enterCounters",1]]);
+  /* TWO `enterCounters` RULES STOOD HERE AND THE OP WAS DEAD (v4.23).
+     `runOps` stashed it as `_enterCounters` and NOTHING read that field,
+     ever — while the verse count the clause describes was recovered by a
+     separate regex over raw text at the board-placement site and the
+     steam count came from `ctrSelf` above, which claims the same clause
+     first. So one of the two rules was unreachable and the other wrote a
+     number into the void. `ctrSelf` is the one reader now. */
   /* FROSTBITE HAS NO NOOP ANY MORE (v2.74). It used to be intercepted here
      with "frostbite — dummy pays no costs", which was a fact about the old
      training prop and not about the rules — and a `noop` counts as
@@ -3746,6 +3807,117 @@ function fxParse(card){
        one that did anything. */
     handled.add(ci);
     break;                                /* one such trigger per card in the pool */
+  }
+
+  /* ---- A PERMANENT ON A COUNTER CLOCK (v4.23) -----------------------
+
+     Eleven pool records print the same three-part machine, and not one of
+     them ran it:
+
+       ENTER   "this enters the arena with N <kind> counters"   `ctrSelf`
+       TICK    "(Once per turn, )when you <EVENT>, remove a <kind>
+                counter from this[ and <PAYLOAD>]"              here
+       EMPTY   "when (it|this) has (none | no <kind> counters),
+                destroy it"                                     here
+
+     HYPER DRIVER READ `tier: full` AND DID NEITHER HALF. Its tick clause
+     parsed to a bare `["res",1]` — the payload with the trigger and the
+     removal gone — so the {r} landed once, on PLAY, and the counters
+     never moved; and its EMPTY clause was a `noop` whose reason names a
+     reader that only exists for the OTHER card in this family. So a
+     printed three-use engine was an immortal one that paid out once at
+     the wrong moment. It is LIVE in Dash's deck (`1|Hyper Driver|1`), and
+     both halves are the direction that steals games.
+
+     THE NOOP DESCRIBED A SIBLING — v3.16, exactly. Malefic Incantation
+     prints the identical EMPTY clause and really is destroyed when its
+     counters run out, by an inline regex over raw text inside `execute`
+     (v3.58's shape, and a SECOND counter storage on the board entry).
+     Four Hyper Driver records inherited the claim and none of it.
+
+     ONE READER, BOTH CARDS, and the family is what makes it safe: the two
+     print two EVENTS, two KINDS and two PAYLOADS, so nothing here can be
+     a card special-cased by name. `on` is a ROUTE read off the printed
+     subject, the way `atkTrigger` above reads its own (v3.65).
+
+     THE PAYLOAD ARRIVES TWO WAYS AND BOTH ARE PRINTED. Hyper Driver joins
+     it with "and" inside one sentence; Malefic Incantation puts it in a
+     following "If you do, …", which the clause splitter delivers as its
+     own clause — so the fold happens here, where the whole card is
+     visible, exactly as `optCost` pairs its two halves (v2.28).
+
+     AN UNREADABLE PAYLOAD REFUSES THE WHOLE CLOCK (v2.29). A tick with a
+     payload nobody built would spend the counter, kill the permanent on
+     schedule and pay nothing — weaker than printed AND reported as read.
+
+     "IF YOU DO" IS LOAD-BEARING, not decoration: an empty bag removes no
+     counter, so the Runechant is not minted. `ctrTick.ops` therefore run
+     only when the removal actually happened, which is where `effects.js`
+     puts them. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const m = clauses[ci].match(
+      /^(once per turn, )?when you (play an attack action card|boost a card), remove (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? from (?:this|it)(?:[,.]? and (.+?))?\.?$/i);
+    if(!m) continue;
+    const kind = CTR_KINDS[m[4].toLowerCase()];
+    if(!kind) continue;                    /* an unknown kind is a counter nothing reads */
+    const cn = CTR_WORDS[m[3].toLowerCase()] != null ? CTR_WORDS[m[3].toLowerCase()]
+             : parseInt(m[3], 10);
+    if(!(cn > 0)) continue;
+    /* THE PAYLOAD, FROM WHICHEVER HALF PRINTS IT. `used` is the second
+       clause index when the fold consumed one, so a card that prints
+       neither form leaves the "if you do" clause reporting unread. */
+    let tail = m[5] ? m[5].trim() : null, used = -1;
+    if(!tail){
+      const nx = clauses[ci + 1] || "";
+      const im = nx.match(/^if you do,\s*(.+?)\.?$/i);
+      if(im){ tail = im[1].trim(); used = ci + 1; }
+    }
+    if(!tail) continue;
+    const pay = classifyClause(tail);
+    if(!pay || pay.status !== "run" || !pay.ops.length
+       || pay.ops.some(o => o[0] === "noop")) continue;
+    fx.ctrTick = {on: m[2].toLowerCase() === "boost a card" ? "boost" : "atkPlay",
+                  kind, n: cn, once: !!m[1], ops: pay.ops};
+    handled.add(ci);
+    if(used >= 0) handled.add(used);
+    break;                                /* one clock per card in the pool */
+  }
+
+  /* THE EMPTY HALF, AND THE KIND IS THE CARD'S OWN ANSWER.
+
+     The database prints BOTH wordings (v3.36, v3.65): the Hyper Driver
+     TOKEN says "when this has no STEAM counters" and names the kind,
+     while all three Action printings say "when this has NONE" and leave
+     it to the sentence beside them. So a bare "none" is resolved from the
+     clock this card already declared — its tick or the counter it enters
+     with — and a card that declares neither REFUSES rather than guessing
+     a kind, which would arm a destroy against a bag that is empty because
+     nothing ever filled it.
+
+     IT IS READ AFTER THE TICK ON PURPOSE: the tick is the stronger
+     source, because a token enters with nothing and gets its counters
+     from elsewhere. */
+  for(let ci = 0; ci < clauses.length; ci++){
+    if(handled.has(ci)) continue;
+    const m = clauses[ci].match(/^when (?:it|this) has (?:none|no ([a-z+{}0-9-]+) counters?), destroy (?:it|this)\.?$/i);
+    if(!m) continue;
+    let kind = m[1] ? CTR_KINDS[m[1].toLowerCase()] : null;
+    if(!kind && !m[1]){
+      /* READ OFF THE SIBLING CLAUSE, NOT OFF `fx.ops`. These whole-card
+         scans run BEFORE the per-clause loop — that is what `handled`
+         exists for — so `fx.ops` is still empty here and a lookup there
+         answers for no card at all. The first draft did exactly that and
+         its own drill is what caught it. */
+      const en = clauses.map(x => x.match(/enters the arena with (?:a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters?/i))
+                        .find(Boolean);
+      kind = (fx.ctrTick && fx.ctrTick.kind)
+           || (en && CTR_KINDS[en[1].toLowerCase()]) || null;
+    }
+    if(!kind) continue;
+    fx.emptyDies = kind;
+    handled.add(ci);
+    break;
   }
 
   /* ---- "WHEN THIS IS DESTROYED, …" (v3.58) --------------------------

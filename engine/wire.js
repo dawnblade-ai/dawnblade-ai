@@ -109,8 +109,17 @@
    the attack the printed line NAMED whether or not the qualifier matched,
    so a v5 client reading a v6 entry keeps a grant the card ended — it
    would wait for a blue attack the sentence never mentioned, which is
-   STRONGER than printed. Refused at the handshake instead. */
-const WIRE_V = 6;
+   STRONGER than printed. Refused at the handshake instead.
+   v4.23 — the board ENTRY lost `verse`. Malefic Incantation's counters
+   were a SECOND storage for one card, filled by a regex at the placement
+   site and read by an inline scan; the counter clock reads the printed
+   line for every card that prints one and puts the counter in the
+   `counters` bag like every other kind. A v6 peer ships `verse` on the
+   entry and writes nothing into the bag, so a v7 client reading it sees a
+   clock with no counters — the aura would sit there forever, which is the
+   direction that steals games. Same retirement, same reason, as v3.82's
+   `sd.rune`: refused at the handshake instead. */
+const WIRE_V = 7;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

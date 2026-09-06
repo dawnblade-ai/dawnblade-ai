@@ -1,3 +1,113 @@
+## v4.23 — A PERMANENT ON A COUNTER CLOCK
+
+> *"This enters the arena with 3 steam counters. **When this has none,
+> destroy it.** Once per turn, when you **boost** a card, remove a steam
+> counter from this and gain {r}."* — HYPER DRIVER, `tier: full`
+
+Eleven pool records across four cards print the same three-part machine,
+and only one of them ran it:
+
+| | ENTER | TICK | EMPTY |
+|---|---|---|---|
+| Hyper Driver ×4 | 3 / 2 / 1 steam | on **boost**, one off, gain {r} | destroy |
+| Malefic Incantation ×3 | 3 / 2 / 1 verse | on **playing an attack action card**, one off, create a Runechant | destroy |
+| Boom Grenade ×3 · Golden Cog | 1 steam | — | *"destroy this **unless** you remove a steam counter from it"* |
+
+**HYPER DRIVER READ `tier: full` AND DID NEITHER HALF.** Its tick clause
+parsed to a bare `[["res",1]]` — the payload with the trigger, the
+once-per-turn limit and the counter removal all eaten by the unanchored
+*"gains {r}"* matcher — so the {r} landed **once, on PLAY**, the counters
+never moved, and a printed three-use engine never expired. It is LIVE in
+Dash's deck (`1|Hyper Driver|1|SDA024`). Both halves are the direction
+that steals games.
+
+**THE `noop` DESCRIBED A SIBLING — v3.16, EXACTLY.** *"When this has
+none, destroy it"* was filed `noop` with the reason *"destruction handled
+with the tick that empties it"*. That reader existed, for **Malefic
+Incantation only**, as an inline regex over its raw text inside `execute`
+(v3.58's defect) — and four Hyper Driver records printing the identical
+sentence inherited the claim and none of the behaviour.
+
+**AND A SECOND COUNTER STORAGE WENT WITH IT.** That inline walk ticked
+`b.verse`, a field on the BOARD ENTRY, while every other counter in the
+game lives in the `counters` bag keyed by uid. `CTR_KINDS` gains `verse`
+— which it may **because** `ctrTick` now consumes it (v3.55's closed
+vocabulary, working) — the entry field is retired, and `WIRE_V` goes
+**6 → 7**: a v6 peer ships `verse` on the entry and writes nothing into
+the bag, so a v7 client would read a clock with no counters and the aura
+would sit there forever. Same retirement and same reason as v3.82's
+`sd.rune`.
+
+**THE REPRIEVE WAS A PRINTED DRAWBACK SKIPPED.** Four records print
+*"destroy this UNLESS you remove a \<kind\> counter from it"* and the
+clause refused whole, so both grenades were IMMORTAL — `failstates.js`'s
+sev-3. It rides as a third element on the `selfDestruct` op, the same
+relationship the payout half has with *"…destroy this, THEN X"* one
+printed word over, and it is read off the card in `sweepArena` rather
+than carried on the entry.
+
+**IT IS TAKEN WITHOUT ASKING, AND THAT IS A MEASUREMENT.** CR 4.2.1 gives
+nobody priority in the start phase, so there is no window a prompt could
+be answered in (v3.09 settled the same question for Bloodrot Pox at the
+other end of the turn) — and measured over the pool, **every card that
+reads a steam counter names its OWN permanent**, so nothing can spend the
+counter this reprieve is holding. Declining is strictly dominated.
+
+**AND `enterCounters` WAS DEAD.** `runOps` stashed it as
+`_enterCounters` and **nothing read that field, ever**; the verse count
+the clause describes was recovered by a separate regex at the
+board-placement site and the steam count came from `ctrSelf`, which
+claims the same clause first. One op, one write, no reader — deleted.
+
+**THE ORDER OF TWO TRIGGERS ON ONE BOOST IS A DECISION, AND IT IS SAID
+OUT LOUD.** Crankshaft and Big Bertha PUT a steam counter on a Hyper
+Driver; the Driver's own clock REMOVES one. Both fire on one event and
+CR 4.1.8a gives the order to the controller, which this project does not
+model — so the clock ticks FIRST, because a clock running after them
+would spend the counter they just placed and destroy the permanent they
+were refilling. The total {r} is identical either way; the only thing the
+order decides is whether the card the deck is built around survives.
+
+**AND A SPENT PERMANENT REACHES THE GRAVEYARD.** The inline walk simply
+did not push a spent aura back onto the board, so the card was in **no
+zone at all** — which `invariants.js` cannot see, because a card in TWO
+zones is an error and a card in none falls out of the census silently.
+`sweepArena` files it, turn-stamped, and runs the same payout every other
+departure runs; `emptyDies` is answered there rather than in a second
+teardown.
+
+**"WHEN THIS HAS NONE" IS A TRIGGER, NOT A STANDING STATE TEST**, so it
+is asked at the removal that could have emptied the bag. That is what the
+printed *"when"* says, and it is also what keeps a permanent created with
+no counters at all from evaporating on sight.
+
+**THE TICK NEEDED ITS OWN PREFIX GUARD** (v3.59, v3.99, v4.21 — the same
+discipline a third time): a triggered line must not be claimed by a loose
+matcher below, gate and cost and all. `classifyClause` refuses the tick
+shape outright now, so a clock whose payload or counter kind has no
+reader reports the clause UNREAD rather than firing a payload with no
+schedule.
+
+**MEASURED BOTH WAYS: exactly 11 records move and nothing else does.**
+`npm test` 2360 pass / 0 fail / 4 skipped · audit 385 full / 16 part /
+4 none, flagged 16 → 15 · fairness clean · 73 scenes · 210 self-play
+games with 0 stalls, 0 refusals, 0 violations.
+
+**EIGHTEEN SABOTAGES, EIGHTEEN BITE — AND TWO OF THEM FOUND MY DRILLS
+FIRST.** Every pool clock removes exactly ONE counter, so hardcoding the
+amount is SILENT against every real fixture (v3.32, eleventh outing);
+a synthetic printing two is what sees it, in the parse AND in the sweep.
+And the first draft of the bare-*"none"* fold read the kind off `fx.ops`
+— but these whole-card scans run BEFORE the per-clause loop (that is what
+`handled` is for), so `fx.ops` is empty there and the lookup answered for
+no card at all. Its own drill is what caught it.
+
+**STILL UNREAD, AND IT IS THE NEXT VERSION'S:** the `Crank` keyword line.
+Its printed reminder text (SDA023) is *"(As this enters the arena, you
+may remove a steam counter from it. If you do, gain an action point.)"* —
+an optional cost at the moment the item lands, and the whole reason to
+have a counter to spend at the upkeep.
+
 ## v4.22 — OVERPOWER: THE THIRD CAP, AND A THIRD COUNTED SET
 
 > *"When you play Spectral Rider, if you control a Spectral Shield, this

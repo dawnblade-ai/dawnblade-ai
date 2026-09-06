@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.22 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.23 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -61,8 +61,17 @@ keyword ledger still called *"needs CR wording"* and found `overpower` is
 its gate ran into the second-person debt ledger, which is what surfaced
 **thirty hand-rolled seat possessives reading "You's board"**, a gap
 `effects.js` had recorded in its own source and nobody had swept.
+**v4.23** followed the `crank` keyword into the card it sits on and found
+a whole family behind it: **eleven records print a counter CLOCK — enters
+with N, ticks one off on a printed event, dies when empty — and only ONE
+CARD ran it**, through an inline regex over its own raw text that also
+kept its counters on the board ENTRY, a second storage. Hyper Driver read
+`tier: full`, paid its {r} **once, on PLAY**, and was immortal; both
+grenades were immortal too, on a printed drawback the parser refused
+whole. `enterCounters` turned out to be an op that wrote a field
+**nothing had ever read**.
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.22, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.23, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.** Two
@@ -71,14 +80,14 @@ of the sentences it replaces had been wrong for seventeen versions.
 | | | command |
 |---|---|---|
 | coverage | **385 full · 16 part · 4 none** of 405 | `npm run audit` |
-| drills | **2343 pass · 0 fail · 4 skipped** | `npm test` |
+| drills | **2360 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
 | scenes | **73 passing · 0 failing** | `npm run scenes` |
 | CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
 | sweep | **UNFAIR 0** · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
-| audit flags | **16**, down from 26 | `npm run audit` |
+| audit flags | **15**, down from 26 | `npm run audit` |
 
 **TWO OF THOSE THREE HERO CLAUSES ARE ABILITY NAMES**, not rules — Briar's
 *"Essence of Earth and Lightning"* and Iyslander's *"Essence of Ice"*,
@@ -131,6 +140,34 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.23 — THE CLOCK NOBODY WOUND
+
+**THE CHEAPEST DIAGNOSTIC IN THIS PROJECT PAID AGAIN.** `crank` was one
+of three keywords the ledger still called unbuilt. Reading the CARD it
+prints on — rather than the keyword — turned up three separate defects on
+one card and a fourth on a card nobody was looking at:
+
+| | printed | engine |
+|---|---|---|
+| Hyper Driver ×4 | 3 uses, then destroyed | **immortal**, {r} paid once on PLAY, `tier: full` |
+| Boom Grenade ×3 · Golden Cog | destroyed unless you pay a counter | **immortal** — the clause refused whole |
+| Malefic Incantation ×3 | a verse clock | worked, via an inline regex and a second counter storage; the p3 printing entered with ZERO and was inert |
+| `enterCounters` | — | an op writing a field **nothing read** |
+
+**A TIER THAT SAYS `full` ON A CARD THAT DOES NOTHING IS A LEAD** — and
+so is a `noop` whose reason names a reader. This one named a reader that
+existed for a DIFFERENT CARD (v3.16).
+
+**WHAT IS STILL OPEN ON THIS FAMILY:** the `Crank` keyword line itself,
+`skip` on all four records. Its printed reminder text (SDA023) is *"(As
+this enters the arena, you may remove a steam counter from it. If you do,
+gain an action point.)"* — an optional cost at the moment the item lands,
+and the whole reason to have a counter to spend at the upkeep. It needs a
+one-option optional modal, which `buildPrompt` currently refuses
+(`options.length < 2`); measured, no existing modal is `optional` with a
+single option, so loosening that guard for an `optional` modal moves
+nothing today.
 
 ## ⚠ v4.22 — THE PRINTING SETTLED IT, AND THE LEDGER FORCED THE REST
 

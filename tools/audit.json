@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-06T02:28:12.363Z",
- "appVer": "4.21",
+ "generated": "2026-09-06T03:19:14.557Z",
+ "appVer": "4.22",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -2878,15 +2878,15 @@
     },
     {
      "t": "When it has none, destroy it.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -3200,15 +3200,15 @@
     },
     {
      "t": "When it has none, destroy it.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "Once per turn, when you play an attack action card, remove a verse counter from this",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "If you do, create a Runechant token.",
-     "st": "noop"
+     "st": "run"
     }
    ],
    "skipped": [],
@@ -3706,7 +3706,7 @@
     },
     {
      "t": "At the start of your turn, destroy this unless you remove a steam counter from it.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "When a Mechanologist attack action card you control hits a hero, destroy this and deal 4 damage to them.",
@@ -3714,8 +3714,7 @@
     }
    ],
    "skipped": [
-    "Crank",
-    "At the start of your turn, destroy this unless you remove a steam counter from it."
+    "Crank"
    ],
    "weaponCost": null,
    "eqAbility": null,
@@ -3817,7 +3816,7 @@
     },
     {
      "t": "When this has none, destroy it.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "Once per turn, when you boost a card, remove a steam counter from this and gain {r}.",
@@ -9210,9 +9209,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is played, if you control a Spectral Shield, this gets overpower.\nPhantasm",
-   "flags": [
-    "unreviewed keyword: \"overpower\""
-   ]
+   "flags": []
   },
   "unmovable|3": {
    "name": "Unmovable",

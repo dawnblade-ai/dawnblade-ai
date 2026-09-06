@@ -197,6 +197,81 @@ function makeEffects(ctx){
     return n;
   }
 
+  /* ---- THE COUNTER CLOCK, ONE BODY (v4.23) ---------------------------
+
+     "Once per turn, when you <EVENT>, remove a <kind> counter from this
+      [and|. If you do,] <PAYLOAD>."
+
+     Two pool cards print it — Malefic Incantation (verse, on playing an
+     attack action card) and Hyper Driver (steam, on boosting) — and only
+     one of them ran, through an INLINE REGEX over raw card text a few
+     hundred lines down: v3.58's defect, with the extra cost that the
+     counters lived on the BOARD ENTRY as `b.verse`, a second storage for
+     one card's counters beside the `counters` bag everything else reads.
+     `parser.ctrTick` reads the printed line for both, so this is one
+     scan, one storage, and no card is named.
+
+     THE WATCHER IS NOT THE CARD BEING PLAYED — `offerPayCost`'s rule one
+     trigger over, so the scan is over GEAR AND THE ARENA for its reason
+     (v3.33's Magmatic Carapace is a Chest piece).
+
+     AN EMPTY BAG REMOVES NOTHING, AND THEN THE PAYLOAD DOES NOT FIRE.
+     Malefic Incantation prints "remove a verse counter from this. IF YOU
+     DO, create a Runechant token" — so the Runechant is the reward for a
+     removal that actually happened, and running the ops regardless is a
+     free token every turn once the clock has run out.
+
+     THE ONCE-PER-TURN LATCH IS THE ALLOWANCE RECORD THIS FILE ALREADY
+     HAS, namespaced the way an ability's flag is ("gp"/"bp", v2.71). A
+     board permanent is not in the gear list, so `perTurnCleared` treats
+     it as an allowance and lifts it at every turn boundary — which is
+     what "once per turn" says, and is a DIFFERENT record from a tap
+     (v3.91), which only the controller's untap step lifts.
+
+     AND "ct" IS DELIBERATELY NOT IN `perTurnCleared`'s PREFIX STRIP. That
+     strip exists so an ABILITY's flag can find its gear piece and be held
+     back when the piece is tapped; a clock is an allowance whatever it
+     sits on, so falling through the piece lookup is the answer that is
+     right for both zones rather than an accident of the spelling. */
+  function ctrClock(s, event){
+    let n = s;
+    const watchers = [...(act(n).gear || []), ...((act(n).board || []).map(b => b && b.card))]
+      .filter(Boolean)
+      .map(w => ({w, t: fxParse(w).ctrTick}))
+      .filter(({w, t}) => t && t.on === event && !w.destroyed
+                       && !(t.once && (act(n).weaponUsed || {})["ct" + w.uid]));
+    for(const {w, t} of watchers){
+      const bag = (act(n).counters || {})[w.uid] || {};
+      const have = bag[t.kind] || 0;
+      if(have < t.n) continue;           /* nothing to remove — "if you do" says no */
+      const left = have - t.n;
+      actMut(n).counters = Object.assign({}, act(n).counters,
+        {[w.uid]: Object.assign({}, bag, {[t.kind]: left})});
+      if(t.once) actMut(n).weaponUsed = Object.assign({}, act(n).weaponUsed || {}, {["ct" + w.uid]: true});
+      n = L(n, `${w.name}: a ${t.kind} counter comes off — ${left} left.`);
+      n = runOps(n, t.ops, w.name);
+      /* "WHEN THIS HAS NONE, DESTROY IT" IS A TRIGGER, NOT A STANDING
+         STATE TEST, so it is asked HERE — at the removal that could have
+         emptied the bag — rather than on every board scan. That is what
+         the printed "when" says, and it is also what keeps a permanent
+         created with no counters at all from evaporating on sight. */
+      n = sweepEmpty(n, actorOf(n));
+    }
+    return n;
+  }
+
+  /* The teardown is `sweepArena`'s, deliberately: it files the card to the
+     graveyard turn-stamped, runs whatever the departing card pays out, and
+     re-derives `arcShield`/`lifeLock` from what is left. A second teardown
+     written here would be a second description of leaving the arena. */
+  function sweepEmpty(s, seat){
+    const sw = sweepArena(s, seat, "empty");
+    let n = sw.game;
+    for(const m of sw.msgs) n = L(n, m);
+    if(sw.ops && sw.ops.length) n = runOps(n, sw.ops, sw.fired.join(", "));
+    return n;
+  }
+
   /* A GO-AGAIN GRANT THAT ARRIVES AFTER ITS LAYER HAS SETTLED (v3.93).
 
      `runOps`'s `ga` case records `_gaGrant` and two consumers fold it onto
@@ -1741,7 +1816,6 @@ function makeEffects(ctx){
            SIDE, so seat 0 reads "You have" and seat 1 reads "Fai has". */
         n = L(n, `${sv(act(n), "have")} Draconic attacks for the rest of this chain.`); }
       else if(k==="unpreventable"){ n._unpreventable = true; n = L(n, `${srcName}: this damage can't be prevented.`); }
-      else if(k==="enterCounters"){ n._enterCounters = v; }
       else if(k==="boo"){
         actMut(n).hist = {...act(n).hist, booed:(act(n).hist.booed||0)+1};
         n = L(n, "The crowd boos you — Reviled, and your Bravo cards know it.");
@@ -3117,15 +3191,25 @@ function makeEffects(ctx){
       if(_held) n = L(n, `${card.name} is what that restriction was waiting for — no more than ${_held.n} ${_held.count==="nonBlock"?"non-block":"hand"} card${_held.n===1?"":"s"} may defend it.`);
       const _cap = defCap(card, _held, {kwGrant: n._kwGrant});
       const runeOnHit = act(n).runeHitNext || 0; if(runeOnHit) actMut(n).runeHitNext = 0;
-      /* Verse counters unwind into runechants. The new runechants are minted
-         AFTER the board is rebuilt, not during — mkRune appends to the board
-         and doing it inside the walk would be clobbered by the rebuild. */
-      { const nb=[]; let verseRunes=0; act(n).board.forEach(b=>{ const vtx=(b.card.tx||"").toLowerCase();
-          if((b.verse||0)>0 && b.verseTurn!==n.turn && /remove a verse counter[^.]{0,40}create a runechant/.test(vtx)){
-            verseRunes++; const e={...b, verse:b.verse-1, verseTurn:n.turn};
-            n=L(n,`${b.card.name}: a verse counter unwinds into a Runechant (${e.verse} verse left).`);
-            if(e.verse>0) nb.push(e); else n=L(n,`${b.card.name} spends its last verse and fades.`);
-          } else nb.push(b); }); actMut(n).board=nb; if(verseRunes) n = mkRune(n, verseRunes); }
+      /* THE COUNTER CLOCK, ON THE PLAY ROUTE (v4.23). This was an inline
+         regex over one card's raw text, ticking a `b.verse` field that no
+         other counter in the game uses — so Malefic Incantation worked
+         and the four Hyper Driver records printing the identical clock
+         did nothing at all. `ctrClock` reads the printed line for both.
+
+         "PLAY AN ATTACK ACTION CARD" IS THE PRINTED SUBJECT, so a weapon
+         swing, an ally's activated attack and an aura's granted one are
+         all excluded — `isAtkActionCard` answers the card half and `from`
+         the route half, the same split `atkTrigAt` makes a few lines
+         down (v3.65).
+
+         AND THE DEPARTING CARD REACHES THE GRAVEYARD NOW. The inline walk
+         simply did not push a spent aura back onto the board, so the card
+         was in NO zone — which `invariants.js` cannot see, because its
+         census catches a card in TWO zones and one in none falls out of
+         it silently. `sweepArena` files it, turn-stamped. */
+      if(isAtkActionCard(card) && from !== "weapon" && from !== "ally" && from !== "aura")
+        n = ctrClock(n, "atkPlay");
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
         const _pc = payAddCost(n, card, fx); n = _pc.game;
         const bigDiscard = _pc.discarded.some(c2=>pow6(c2, bAct(n)));
@@ -3144,6 +3228,33 @@ function makeEffects(ctx){
         const mech = /mechanologist/i.test(top.tt||"");
         if(mech) ga = true;
         declNote += ` Boost: ${top.name} banished${mech?" — Mechanologist, go again!":"."}`;
+        /* THE COUNTER CLOCK, ON THE BOOST ROUTE (v4.23). Hyper Driver
+           prints "Once per turn, when you BOOST a card, remove a steam
+           counter from this and gain {r}" — a WATCHER, so it is asked of
+           the actor's own permanents rather than of the card being
+           played. It read `tier: full` and its {r} landed once, on PLAY,
+           with the trigger and the removal both eaten by a loose matcher;
+           the counters therefore never moved and a printed three-use
+           engine never expired. It is LIVE in Dash's deck.
+
+           AFTER THE BANISH AND THE CHAIN INCREMENT, because the clause is
+           printed about a boost that has HAPPENED — and BEFORE the
+           banished card's own trigger, which is a decision rather than an
+           accident. Both fire on one event, and CR 4.1.8a gives the
+           ORDER to the controller (this project models no trigger
+           ordering, so one has to be picked and said out loud). Ticking
+           first is the order a controller would choose every time:
+           Crankshaft and Big Bertha exist to PUT a steam counter on a
+           Hyper Driver, and a clock that ran after them would spend the
+           counter they just placed and destroy the permanent they were
+           refilling. The total {r} is identical either way — one per
+           counter — so the only thing the order decides is whether the
+           card the deck is built around survives.
+
+           AND AN EMPTY BAG DOES NOT SPEND THE ALLOWANCE (`ctrClock`
+           continues before the latch), so a tick that found nothing can
+           still fire on a later boost the same turn. */
+        n = ctrClock(n, "boost");
         /* "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) — a trigger that
            fires from the DECK, on a card its controller never played.
            Three pool records print it and their payload has read since
@@ -3675,7 +3786,7 @@ function makeEffects(ctx){
       /* RULING: a transcended card returns to hand as Inner Chi instead of
          going to the graveyard — undo the grave push made above. */
       if(n._transcended){ delete n._transcended; actMut(n).grave = act(n).grave.filter(x=>x.uid!==card.uid); }
-      if(fx.perm){ const _vm=(card.tx||"").toLowerCase().match(/with (\d+) verse counter/);
+      if(fx.perm){
         /* RULING: several auras scrub themselves at the top of your next turn
            (Booze!, Goon Beatdown, Pyroglyphic Protection). Carry the schedule
            on the board entry so newTurn can sweep them. */
@@ -3700,7 +3811,13 @@ function makeEffects(ctx){
            because two pool cards only ASK whether you control an aura of
            suspense (Full of Bravado, Stand Strong). */
         const _susp = printedKw(card, "suspense") ? 2 : 0;
-        actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,verse:_vm?+_vm[1]:0,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_vm?` with ${_vm[1]} verse counters`:""}${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
+        /* `verse` LEFT THE BOARD ENTRY AT v4.23. It was a SECOND counter
+           storage for one card, filled by a regex over raw text right
+           here while every other counter in the game lives in the
+           `counters` bag keyed by uid. `ctrSelf` above now fills that bag
+           for verse exactly as it does for steam, so there is one storage
+           and one reader — the same deletion v3.82 made of `sd.rune`. */
+        actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
       else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
@@ -6280,15 +6397,65 @@ function heave(game, seat, uid){
   };
 }
 
+/* ---- THREE REASONS A PERMANENT LEAVES THE ARENA (v4.23) -------------
+
+   `when` is "turn" / "end" — the two printed SCHEDULES — or "empty", the
+   state trigger "when this has none, destroy it". All three file the card
+   the same way, run the same payout and re-derive the same side flags,
+   which is the whole reason `emptyDies` is answered here rather than in a
+   second teardown next to the tick that empties the bag.
+
+   AND A SCHEDULE CAN BE BOUGHT OFF. Four pool records print "at the start
+   of your turn, destroy this UNLESS you remove a <kind> counter from it",
+   and the clause refused whole until v4.23 — so the item never died at
+   all, which is a printed drawback skipped. The reprieve rides on the
+   `selfDestruct` op (`parser.js`), and it is read off the card here for
+   the reason `stillGrants` below is: there is one reader of a printed
+   line and this asks it, rather than carrying a second copy on the entry.
+
+   IT IS TAKEN WITHOUT ASKING, and that is a MEASUREMENT rather than a
+   convenience. CR 4.2.1 gives nobody priority in the start phase, so
+   there is no window a prompt could be answered in (v3.09 settled the
+   same question for Bloodrot Pox at the other end of the turn) — and
+   measured over the pool, every card that reads a steam counter names its
+   OWN permanent ("remove a steam counter from THIS"), so nothing can
+   spend the counter this reprieve is holding. Declining is strictly
+   dominated: the counter has no other consumer and the permanent dies.
+   The feed says which counter was spent either way. */
 function sweepArena(game, seat, when){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
   const board = sd.board || [];
-  const dying = board.filter(b => b.sd === when);
-  if(!dying.length) return {game, fired: [], msgs: [], ops: []};
-
+  const emptyNow = b => {
+    const kind = P.fxParse(b.card).emptyDies;
+    return !!kind && !((((sd.counters || {})[b.uid]) || {})[kind] > 0);
+  };
+  const due = b => when === "empty" ? emptyNow(b) : b.sd === when;
+  /* THE REPRIEVE IS PAID BEFORE THE LIST IS DRAWN UP, so a spared card is
+     never in `dying` and none of the payout machinery below can see it. */
+  const counters = Object.assign({}, sd.counters || {});
+  const spared = [];
+  const dying = board.filter(b => {
+    if(!due(b)) return false;
+    const op = (P.fxParse(b.card).ops || []).find(o => o[0] === "selfDestruct" && o[2]);
+    const sp = op && op[2];
+    if(!sp) return true;
+    const bag = counters[b.uid] || {};
+    if((bag[sp.kind] || 0) < sp.n) return true;
+    counters[b.uid] = Object.assign({}, bag, {[sp.kind]: (bag[sp.kind] || 0) - sp.n});
+    spared.push({b, sp, left: (bag[sp.kind] || 0) - sp.n});
+    return false;
+  });
+  if(!dying.length && !spared.length) return {game, fired: [], msgs: [], ops: []};
+  sd.counters = counters;
   const msgs = [], fired = [], ops = [];
-  const kept = board.filter(b => b.sd !== when);
+  for(const {b, sp, left} of spared)
+    msgs.push(b.card.name + " pays a " + sp.kind + " counter and survives — " + left + " left.");
+  if(!dying.length){
+    sides[seat] = sd;
+    return {game: Object.assign({}, game, {sides}), fired, msgs, ops};
+  }
+  const kept = board.filter(b => dying.indexOf(b) < 0);
   for(const b of dying){
     fired.push(b.card.name);
     /* WHAT A DEPARTING CARD PAYS OUT, from two places, and the two are
@@ -6348,6 +6515,8 @@ function sweepArena(game, seat, when){
     ops.push(...pay);
     msgs.push(b.card.name + (when === "turn"
       ? " crumbles at the top of the turn."
+      : when === "empty"
+      ? " has no counters left — it is destroyed."
       : " is destroyed at the beginning of the end phase.")
       + (pay.length ? " It pays out as it goes." : ""));
   }

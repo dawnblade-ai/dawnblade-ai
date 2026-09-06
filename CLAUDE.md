@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.22
+**Current version:** v4.23
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2343 drills** at v4.22.
+This is `node --test "test/*.test.js"` — **2360 drills** at v4.23.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -244,6 +244,9 @@ drill that passed.**
    `test/actions.test.js`) — serialization round-trips, the rules
    fingerprint, and two sessions driven at each other over a loopback
    with packet loss, desync and reconnect. See "The sync layer" below.
+6a2. **The counter clock** (`test/ctrclock.test.js`) — the three printed
+   halves of a permanent on a counter clock, the reprieve, and the pool
+   census pinned as SETS. See "A PERMANENT ON A COUNTER CLOCK" below.
 6b. **The Phase 1 rebuild** (`test/build.test.js`, `test/judge.test.js`,
    `test/types.test.js`, `test/sparring.test.js`, `test/journey.test.js`, `test/loader.test.js`,
    `test/fuzz.test.js`).
@@ -783,6 +786,81 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### A PERMANENT ON A COUNTER CLOCK (v4.23)
+
+> *"This enters the arena with 3 steam counters. **When this has none,
+> destroy it.** Once per turn, when you **boost** a card, remove a steam
+> counter from this and gain {r}."* — HYPER DRIVER, `tier: full`
+
+Eleven pool records across four cards print the same three-part machine —
+ENTER, TICK, EMPTY — and only one card ran it.
+
+**HYPER DRIVER READ `full` AND DID NEITHER HALF.** Its tick parsed to a
+bare `[["res",1]]` — the payload with the trigger, the once-per-turn
+limit and the counter removal all eaten by the unanchored *"gains {r}"*
+matcher — so the {r} landed **once, on PLAY**, the counters never moved
+and a printed three-use engine never expired. **LIVE in Dash's deck.**
+
+**THE `noop` DESCRIBED A SIBLING — v3.16, EXACTLY.** *"When this has
+none, destroy it"* was credited to a reader that exists for **Malefic
+Incantation only**, as an inline regex over raw text inside `execute`
+(v3.58) — and four Hyper Driver records printing the identical sentence
+inherited the claim and none of the behaviour.
+
+**AND THAT INLINE READER KEPT A SECOND COUNTER STORAGE.** `b.verse` on
+the board ENTRY, beside the `counters` bag every other counter uses.
+`CTR_KINDS` gains `verse` — which it may **because** `ctrTick` consumes
+it (v3.55's closed vocabulary working, not being widened) — the entry
+field is retired, and `WIRE_V` goes **6 → 7** for v3.82's `sd.rune`
+reason: a v6 peer ships `verse` and writes nothing into the bag, so a v7
+client reads a clock with no counters and the aura sits there forever.
+
+**THE REPRIEVE IS A PRINTED DRAWBACK THAT WAS SKIPPED.** Four records
+print *"destroy this UNLESS you remove a \<kind\> counter from it"* and
+the clause refused whole, so both grenades were IMMORTAL (sev-3). It
+rides as a third element on the `selfDestruct` op — the same relationship
+the payout half has with *"…destroy this, THEN X"* one printed word over
+— and is read off the card in `sweepArena`, never carried on the entry.
+
+**IT IS TAKEN WITHOUT ASKING, AND THAT IS A MEASUREMENT.** CR 4.2.1 gives
+nobody priority in the start phase (v3.09 settled the same question for
+Bloodrot Pox at the other end of the turn), and **every card in the pool
+that reads a steam counter names its OWN permanent** — so nothing can
+spend the counter the reprieve is holding and declining is strictly
+dominated.
+
+**`enterCounters` WAS DEAD.** `runOps` stashed it as `_enterCounters` and
+**nothing read that field, ever**. One op, one write, no reader; deleted.
+
+**THE ORDER OF TWO TRIGGERS ON ONE BOOST IS A DECISION, SAID OUT LOUD.**
+Crankshaft and Big Bertha PUT a steam counter on a Hyper Driver and the
+Driver's clock REMOVES one; both fire on one event and CR 4.1.8a gives
+the order to the controller, which this project does not model. The clock
+ticks FIRST, because one running after them would spend the counter they
+just placed and destroy the permanent they were refilling.
+
+**"WHEN THIS HAS NONE" IS A TRIGGER, NOT A STANDING STATE TEST**, so it
+is asked at the removal that could have emptied the bag — which is what
+the printed *"when"* says, and what keeps a permanent created with no
+counters from evaporating on sight. The teardown is `sweepArena`'s third
+`when`, so the graveyard filing, the payout and the `arcShield`
+re-derivation are shared rather than written twice. **The inline walk
+never filed the spent aura at all** — a card in NO zone, which
+`invariants.js` cannot see, because a card in TWO zones is an error and
+one in none falls out of the census silently.
+
+**AND THE TICK NEEDED ITS OWN PREFIX GUARD** (v3.59, v3.99, v4.21 — third
+time): a triggered line must not be claimed by a loose matcher below,
+gate and cost and all.
+
+**TWO SABOTAGES FOUND MY OWN DRILLS FIRST.** Every pool clock removes
+exactly ONE counter, so hardcoding the amount is silent against every
+real fixture (v3.32, eleventh outing) — a synthetic printing two is what
+sees it, in the parse AND in the sweep. And the bare-*"none"* fold's
+first draft read the kind off `fx.ops`, which these whole-card scans run
+BEFORE the per-clause loop fills (that is what `handled` is for), so the
+lookup answered for no card at all.
 
 ### OVERPOWER — A THIRD CAP, AND A THIRD COUNTED SET (v4.22)
 

@@ -66,31 +66,46 @@ test("AN UNKNOWN COUNTER KIND REFUSES — the no-op blind spot, closed", () => {
 test("…BUT IT MUST NOT STEAL THE CLAUSE FROM A READER THAT KNOWS IT", {skip}, () => {
   /* Written as match-then-refuse, the enters-with reader swallowed
      Malefic Incantation's "this enters the arena with 3 VERSE counters" —
-     a kind it does not know — and returned null, killing a clause an
-     existing verse reader further down was already handling. The card
-     went `full` -> `part`, and `coverage.test.js`'s pinned baseline is
-     what caught it, which is exactly what that baseline is for.
+     a kind it does not know — and returned null, killing a clause a
+     second reader further down was handling. The card went `full` ->
+     `part`, and `coverage.test.js`'s pinned baseline is what caught it.
 
-     The kind is tested in the GUARD now, so an unknown kind falls
-     through. Both properties survive: nothing else claims "glitter", so
-     that still refuses, and "verse" reaches the reader that wants it. */
+     THE SECOND READER IS GONE AS OF v4.23, AND IT WAS DEAD ALL ALONG.
+     `enterCounters` stashed its number as `_enterCounters` and NOTHING
+     read that field; the verse count the clause describes was recovered
+     by a separate regex over raw text at the board-placement site. So the
+     rule this drill was written to protect was writing into the void.
+     `verse` is in `CTR_KINDS` now and `ctrSelf` is the one reader.
+
+     THE GUARD-VS-BODY PROPERTY IS UNCHANGED and is what is asserted here:
+     an unknown kind falls THROUGH rather than returning null from inside
+     the match, so the clause stays available to anything below and, when
+     nothing claims it, is reported UNREAD rather than consumed. */
   P.fxReset();
   const fx = P.fxParse(H.card("Malefic Incantation", 1));
   assert.equal(fx.tier, "full",
-    "the verse-counter reader must still get its clause");
-  assert.ok(!fx.ops.some(o => o[0] === "ctrSelf"),
-    "and the counter reader must not have claimed it");
+    "the verse clock must still read in full");
+  assert.deepEqual(fx.ops.filter(o => o[0] === "ctrSelf"),
+    [["ctrSelf", {kind: "verse", n: 3, label: "verse"}]],
+    "and the counter it enters with goes in the ONE bag, like every other kind");
   P.fxReset();
-  /* THE VERSE READER OWNS THIS PHRASE, and it is the one that must get it:
-     `enterCounters` is the verse mechanic's own op, wired to the board
-     entry's `verse` field. The fall-through hands it over intact. */
   assert.deepEqual(cc("This enters the arena with 3 verse counters"),
-    {status: "run", ops: [["enterCounters", 3]]},
-    "the verse reader still claims its own clause");
+    {status: "run", ops: [["ctrSelf", {kind: "verse", n: 3, label: "verse"}]]},
+    "verse reaches the shared reader now");
   /* AND A KIND NOBODY OWNS STILL REFUSES — the fall-through is not a
      licence, it just stops this reader answering for shapes it cannot
-     read. */
+     read. Asked of the CARD as well as the clause, because "returns null"
+     and "the card reports the clause unread" are two claims and only the
+     second one is what the tier depends on. */
   assert.equal(cc("This enters the arena with 3 glitter counters"), null);
+  P.fxReset();
+  const gl = P.fxParse(synth("Glitterbomb Probe",
+    "This enters the arena with 3 glitter counters."));
+  assert.ok(!gl.ops.some(o => o[0] === "ctrSelf"),
+    "an unknown kind is never stored");
+  assert.equal((gl.clauses[0] || {}).st, "skip",
+    "and the clause is reported UNREAD rather than consumed");
+  P.fxReset();
 });
 
 test("the amount is per PRINTING, not hardcoded", {skip}, () => {
@@ -173,19 +188,56 @@ test("driven: boosting with Crankshaft on top fires ITS trigger", {skip}, () => 
   let g = H.state({name: "Dash", res: 9, ap: 3, hand: [boostCard],
                    deck: [crank, {uid: "d2", name: "Filler"}],
                    board: [{card: drv, kind: "item", spent: false, uid: "hd1"}],
-                   counters: {}},
+                   counters: {hd1: {steam: 2}}},
                   {name: "Them", deck: [{uid: "d3", name: "T"}]},
                   {actor: 0, turnPlayer: 0, seed: "bb", turn: 4});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: [], _doBoost: true};
   let n = J.reduce(g, {t: "play", uid: "src1", from: "hand"}, 0).state;
   assert.equal(n.pending && n.pending.kind, "boost", "boost is a choice, and it is asked");
+  const resBefore = n.sides[0].res;
   n = J.reduce(n, {t: "boost", yes: true}, 0).state;
 
   assert.ok((n.sides[0].banish || []).some(c => c.uid === "cr1"),
     "Crankshaft is banished off the top of the deck to pay for the boost");
-  assert.equal((n.sides[0].counters.hd1 || {}).steam, 1,
+  /* TWO TRIGGERS FIRE ON ONE BOOST as of v4.23, and the fixture has to
+     tell them apart (v3.26). The Driver's own clock REMOVES a counter and
+     pays {r}; Crankshaft PUTS one on. The clock goes FIRST (see
+     `ctrClock`'s call site), so from 2 the Driver reads 2 -> 1 -> 2.
+     Dropping Crankshaft's trigger reads 1; dropping the clock reads 3. */
+  assert.equal((n.sides[0].counters.hd1 || {}).steam, 2,
     "and the trigger it prints fires — from the DECK, on a card its " +
     "controller never played");
+  /* AND THE {r} IS ASSERTED AGAINST A CONTROL, not against arithmetic:
+     Jump Start prints cost 2 and its own first line discounts it to 1
+     while a Hyper Driver is on the board, so "resBefore + 1" is wrong for
+     a correct engine — the first draft of this line said so and failed.
+     The row below runs the identical boost with the Driver's bag EMPTY,
+     where the clock can remove nothing and pays nothing, and the two rows
+     differ by exactly the {r} and the counter. */
+  assert.equal(n.sides[0].res, resBefore - 1 + 1,
+    "the Hyper Driver's own clock spends a counter on the same boost and pays {r}");
+
+  const drv2 = Object.assign({}, H.card("Hyper Driver", 0), {uid: "hd1"});
+  let g2 = H.state({name: "Dash", res: 9, ap: 3,
+                    hand: [Object.assign({}, H.card("Jump Start", 1), {uid: "src1"})],
+                    deck: [Object.assign({}, H.card("Crankshaft", 1), {uid: "cr1"}),
+                           {uid: "d2", name: "Filler"}],
+                    board: [{card: drv2, kind: "item", spent: false, uid: "hd1"}],
+                    counters: {}},
+                   {name: "Them", deck: [{uid: "d3", name: "T"}]},
+                   {actor: 0, turnPlayer: 0, seed: "bb", turn: 4});
+  g2 = {...g2, phase: "action", step: "layer", priority: 0, passed: [], _doBoost: true};
+  let m = J.reduce(g2, {t: "play", uid: "src1", from: "hand"}, 0).state;
+  const resBefore2 = m.sides[0].res;
+  m = J.reduce(m, {t: "boost", yes: true}, 0).state;
+  assert.equal((m.sides[0].counters.hd1 || {}).steam, 1,
+    "an empty bag removes nothing, so Crankshaft's counter lands and STAYS — " +
+    "the order is what keeps the permanent the boost is refilling alive");
+  assert.equal(m.sides[0].res, resBefore2 - 1,
+    "and \"if you do\" is load-bearing — no removal, no {r}");
+  assert.ok(m.sides[0].board.some(b => b.uid === "hd1"),
+    "and it is still on the board: ticking after the put would have emptied " +
+    "the bag and destroyed it on the very boost that refilled it");
 });
 
 test("THE TRIGGER BELONGS TO THE BANISHED CARD, not the played one", {skip}, () => {
