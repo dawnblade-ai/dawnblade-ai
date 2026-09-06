@@ -82,7 +82,12 @@ const names = k => (engine.match(new RegExp(k.replace(/[^a-z0-9]/gi, "."), "gi")
    lets the whole printed line read. `solflare` stays here as PENDING — a
    recorded refusal (v3.38) rather than an unreviewed one, because its
    payload reads and what it waits on is a trigger and a schedule. */
-const UNBUILT = ["crank", "overpower", "solflare", "steal"];
+/* v4.22 MOVED `overpower` TO LIVE — the ninth time reading the printed
+   card has settled a keyword the ledger called unreviewed. DYN229 carries
+   the parenthetical the database omits: "(This can't be defended by more
+   than 1 ACTION card.)" — so it is `parser.defCap`'s third source, and
+   its counted set is neither sibling's. */
+const UNBUILT = ["crank", "solflare", "steal"];
 
 test("the ledger's unbuilt set is a LEDGER — moving one is a deliberate edit", () => {
   const claim = entries.filter(([, v]) => /pending|unreviewed/.test(v.status)).map(([k]) => k).sort();

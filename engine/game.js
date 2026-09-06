@@ -104,6 +104,36 @@ const svName = (nm, base) =>
   String(nm || "") + " " + (isSecondPerson(nm) ? base : thirdPerson(base));
 const sv = (sd, base) => svName((sd && sd.name) || "", base);
 
+/* THE SAME AGREEMENT, ONE PART OF SPEECH OVER (v4.22). `sv` inflects the
+   VERB after a seat's name; this inflects the seat's name into a
+   POSSESSIVE, and thirty sites in `effects.js` were building one by hand
+   as `${act(n).name}'s` — which reads **"You's board"** on the board a
+   player actually uses, because seat 0 is literally named "You" (v2.83).
+
+   `effects.js` ALREADY RECORDED THE GAP, in as many words, above the one
+   site that had been fixed: *"`act(n).name` is literally 'You' on the
+   trainer, so `${act(n).name}'s deck` reads 'You's deck' there and a hero
+   name at the table — one string that is wrong on exactly one of the two
+   boards. Three older sites in this file still say it."* A recorded gap
+   is a debt (v3.61), and it came due the moment a new feed line needed a
+   possessive and the second-person ledger refused to grow.
+
+   IT NAMES THE SEAT, IT DOES NOT REPLACE IT WITH "YOUR". v3.46 moved
+   deliberately the other way — a token line reading *"created on YOUR
+   board"* is a lie the moment a borrowed seat mints one — so the answer
+   is not to say "your" but to inflect the NAME, and seat 0's name simply
+   happens to possess as "your". Both rules are satisfied at once.
+
+   AND ONLY THE SEAT-0 CASE MOVES. A hero name keeps the apostrophe-s the
+   feed has always printed, "Gravy Bones's" included: choosing the bare
+   apostrophe for a name ending in s is a style judgement about English,
+   not a defect, and making it here would change 25 lines for no rule.
+
+   `spName` is the twin `svName` is — for a caller that holds a name and
+   no side. */
+const spName = nm => isSecondPerson(nm) ? "your" : String(nm || "") + "'s";
+const sp = sd => spName((sd && sd.name) || "");
+
 /* THE ONE-WORD NAME FOR WHAT A CARD IS, for a chip on a card frame.
    Presentation, not a rule — no rules site asks this, and `types.js` is
    the authority on what a card IS. It lives here rather than in the
@@ -355,7 +385,7 @@ function popRunechants(game, side, limit, dmgEach){
 }
 
 return {parseDeck, gearDef, gearBlockApply, slotOf, HANDS, handsUsed, handsFree,
-  isSecondPerson, thirdPerson, svName, sv, typeAbbr,
+  isSecondPerson, thirdPerson, svName, sv, spName, sp, typeAbbr,
         ARMOR_SLOTS, exposedZones, hasExposedZone,
         isAlly, allyBaseLife, allyLife, isAttackable,
         attackTargets, targetCanBeDefended, damageAlly, resetAllyLife,

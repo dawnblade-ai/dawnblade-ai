@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-05T22:25:37.357Z",
- "appVer": "4.20",
+ "generated": "2026-09-06T02:28:12.363Z",
+ "appVer": "4.21",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 384,
-  "part": 17,
+  "full": 385,
+  "part": 16,
   "none": 4
  },
  "heroes": {
@@ -9193,22 +9193,20 @@
     "overpower",
     "phantasm"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "When this is played, if you control a Spectral Shield, this gets overpower.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Phantasm",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "When this is played, if you control a Spectral Shield, this gets overpower."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "When this is played, if you control a Spectral Shield, this gets overpower.\nPhantasm",

@@ -63,7 +63,15 @@ const ELSEWHERE = {
    meant to be, because that list asserts nothing about who answers.
    Each entry claims an evaluator BY NAME and the drill checks the claim. */
 const PATTERNED_ELSEWHERE = [
-  [/^chainLinkGe\d+$/, /isLateCond/]                     /* rupture, settled in linkPumps (v3.99) */
+  [/^chainLinkGe\d+$/, /isLateCond/],                    /* rupture, settled in linkPumps (v3.99) */
+  /* THE NAMED PERMANENT (v4.22). The card's NAME travels in the condition
+     (v3.21 — a boolean would move "Spectral Shield" into the engine), so
+     a literal-branch scan cannot see it. Filed HERE rather than in the
+     bare `PATTERNED` list for that list's own stated weakness: it asserts
+     nothing about who answers, and this entry claims `boardEntryNamed` —
+     the ONE reader of "the permanent a printed line names" (v3.86) — by
+     name. */
+  [/^board:/, /cond\.slice\(0,\s*6\)\s*===\s*"board:"[\s\S]{0,120}boardEntryNamed/]
 ];
 
 function poolConds(){
@@ -119,8 +127,8 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* A CENSUS THAT QUIETLY STOPPED FINDING ANYTHING would pass by finding
      nothing, which is the failure mode this whole file guards against. */
   const {conds} = poolConds();
-  assert.equal(conds.size, 52,
-    "52 distinct conditions across the pool. A 53rd is fine — add it here AND " +
+  assert.equal(conds.size, 53,
+    "53 distinct conditions across the pool. A 54th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
@@ -134,7 +142,12 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
     "more / 4 or more Draconic chain links) that used to collapse into one " +
     "`drac2` entry carrying the FOURTH rung's payload. `drac3` and `drac4` need " +
     "no evaluator of their own — the answer reads its threshold off the " +
-    "condition's NAME (v3.88), which is why the ladder invents no vocabulary.");
+    "condition's NAME (v3.88), which is why the ladder invents no vocabulary. AND 52 -> 53 AT v4.22, from a " +
+    "GATE rather than a payload: `board:<name>` reads \"if you control a " +
+    "Spectral Shield\", the pool's only refusing clause of that shape and " +
+    "the gate on Spectral Rider's overpower. The card's NAME travels in the " +
+    "condition (v3.21) rather than a second card being written into the " +
+    "engine, which is what `seismic` one line above it does");
   /* spot checks, so the count cannot be met by a scan that
      collected the wrong thing */
   for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4",

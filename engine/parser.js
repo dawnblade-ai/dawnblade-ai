@@ -63,6 +63,20 @@ const num = w => NWORD[w] || parseInt(w,10) || 1;
    emphasis run — `**Blade Break** __` — which left the clause reading
    "blade break __" and stopped the keyword line being recognised at all. */
 const clean = t => (t||"").replace(/\*\*?/g,"").replace(/__?/g,"").replace(/\s+/g," ").trim();
+/* A PRINTED PROPER NOUN — every word capitalised, e.g. "Nimblism",
+   "Phoenix Flame", "Spectral Shield". ONE spelling, because this pattern
+   is the discriminator in TWO places now (`optFilter`'s named-card branch
+   and the named-permanent condition below) and two spellings of one
+   pattern is the drift v3.41's `quotedText` documents: sabotage one copy
+   and the other keeps the drill green.
+
+   IT IS THE ONLY THING THAT TELLS A NAME FROM A COMMON NOUN, which is
+   why `classifyClause` has to recover the RAW capitalisation to use it
+   (v3.53). Measured over the pool's four singular "you control a X"
+   subjects: only "Spectral Shield" answers TRUE — "Lightning attack"
+   capitalises a CLASS and not the second word, "aura of suspense" and
+   "card with 6 or more {p}" are common nouns. */
+const PROPER_NOUN = /^[A-Z][A-Za-z'\-]*(?: [A-Z][A-Za-z'\-]*)*$/;
 /* FaB counts occurrences in words ("the SECOND time this hits each turn"),
    so a clause that names WHICH occurrence it fires on needs these. Kept at
    module scope rather than rebuilt inside classifyClause, which recurses. */
@@ -615,7 +629,24 @@ function classifyClause(raw){
   if(/^at the beginning of your end phase, if this hasn'?t hit this turn, remove all \+\d+\s*\{p\} counters from it$/.test(c))
     return R([["wipePowIfIdle"]]);
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
-    const cond=m[1], rest=classifyClause(m[2]);
+    /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
+       `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
+       call text whose printed capitalisation is already gone, and every
+       reader below that needs a proper noun to tell a NAME from a common
+       noun answers `null`. It looks exactly like a pattern that simply
+       did not match.
+
+       v3.53's lesson one recursion deeper: there the lowercasing ate a
+       printed name at the top level, here it ate one INSIDE a gate. The
+       tail is recovered from the raw clause with the same shape, and
+       `cased` falls back to the lowercased capture when the two diverge —
+       correct for every payload whose subject is not a name. Re-levelled
+       on entry, because `classifyClause` levels its own input (line ~327),
+       so nothing depends on the caller having done it.
+
+       MEASURED over all 797 records: exactly ONE record's parse moves,
+       and it is the card this was found on. */
+    const cond=m[1], rest=classifyClause(cased(/^(?:if|when|while) [^,:]+[,:] ?(.+)$/, 1, m[2]));
     if(!rest) return null;
     /* A noop inner is already accounted for elsewhere (a keyword the engine
        carries, a cost the reader applies). It does nothing either way, so pass
@@ -949,6 +980,34 @@ function classifyClause(raw){
        tags (see the NOOP above); reads the board the same way "seismic"
        reads it for its own named token. */
     if(/^you control an aura of suspense$/.test(cond)) return Object.assign(rest,{cond:"suspenseAura"});
+    /* A NAMED PERMANENT YOU CONTROL (v4.22) — "if you control a Spectral
+       Shield". `seismic` above is the same question with ONE card's name
+       written into the parser, which is this project's golden rule broken
+       at the condition level (v3.22's Runechant, v4.04's Inertia). This
+       reads the NAME off the printed line and carries it in the condition,
+       so `boardEntryNamed` — already the one reader of "the permanent that
+       a printed line names, on one side's board" (v3.86) — answers it.
+
+       THE DISCRIMINATOR IS THE PRINTED CAPITALISATION, and it has to be
+       (v3.53): `classifyClause` works on the LOWERCASED clause, so the
+       name is recovered from the raw one with `cased`. Measured over the
+       pool's four singular subjects of this shape, only "Spectral Shield"
+       is a proper noun — "a Lightning attack" capitalises a CLASS and not
+       its second word, and "an aura of suspense" and "a card with 6 or
+       more {p}" are common nouns, all three of which have their own
+       readers above or are noop'd on an activation line. An OPEN "any
+       word after `you control a`" claims every one of them, silently.
+
+       IT SITS BELOW EVERY EXISTING READER, so nothing already answered
+       moves: measured before and after over all 797 records, exactly TWO
+       clauses change and both are Enigma's — Spectral Rider's overpower
+       grant and Astral Etchings' as-instant gate, the pool's only two
+       refusals of this shape. */
+    if(/^you control (?:a|an) [a-z][a-z' -]*$/.test(cond)){
+      const nm = cased(/you control (?:a|an) ([^,.]+?)(?:,|\.|$)/, 1, null);
+      if(nm && PROPER_NOUN.test(nm))
+        return Object.assign(rest,{cond:"board:"+nm.toLowerCase()});
+    }
     /* `or greater` is levelled to `or more` by SYNONYMS — one canonical
        comparative, so an anchor spells it once. */
     if(m=cond.match(/^there is a card with cost (\d+) or more in your pitch zone$/))
@@ -3059,7 +3118,7 @@ function optFilter(phrase){
   if(/^cards?$/.test(low) && f.kw) return f;
   /* A NAMED card — "a Nimblism", "a Phoenix Flame". Only when what remains
      is a bare proper noun, so "a card" never becomes a name filter. */
-  if(/^[A-Z][A-Za-z'\-]*(?: [A-Z][A-Za-z'\-]*)*$/.test(rest) && !/^cards?$/i.test(rest)){
+  if(PROPER_NOUN.test(rest) && !/^cards?$/i.test(rest)){
     f.name = "^" + rest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
     return f;
   }
@@ -7062,6 +7121,30 @@ function defCap(card, held, opts){
      than printed and visible. */
   const granted = ((opts && opts.kwGrant) || []).indexOf("dominate") >= 0;
   if(granted || (card && hasKwNow(card, "dominate"))) caps.push({n: 1, count: "hand"});
+  /* OVERPOWER IS THE THIRD SOURCE, AND ITS COUNTED SET IS ITS OWN (v4.22).
+     The database prints no reminder text for any keyword; the DYN229 face
+     of Spectral Rider prints it — "(This can't be defended by more than 1
+     ACTION card.)" — so the number and the counted set are both read off
+     a printing rather than guessed.
+
+     THREE SOURCES, THREE COUNTED SETS, AND NONE IS THE OTHERS' DEFAULT:
+     dominate counts cards FROM HAND (this project's recorded reading),
+     Confidence counts NON-BLOCK cards (so a declared piece of equipment
+     counts), and this counts ACTION cards — which is neither, because an
+     equipment is not an action card and a Block card from hand is not
+     one either. Defaulting to a sibling's set changes what may block.
+
+     `isActionCard` reads the STRUCTURED ARRAY, which is the authority
+     (v2.39): "Reaction" contains the substring "action", so a Defense
+     Reaction declared as a defender must not count against a limit its
+     own printing never names.
+
+     IT IS THE CALLER'S ANSWER WHEN IT IS GRANTED. Spectral Rider prints
+     it only "if you control a Spectral Shield", so `hasKwNow` correctly
+     drops it — `_kwGrant` is how the clause hands it over when the gate
+     fires, exactly as it does for a granted dominate (v3.64, v3.71). */
+  const over = ((opts && opts.kwGrant) || []).indexOf("overpower") >= 0;
+  if(over || (card && hasKwNow(card, "overpower"))) caps.push({n: 1, count: "action"});
   if(held && held.n != null) caps.push({n: held.n, count: held.count || "hand"});
   if(!caps.length) return null;
   /* THE TIGHTEST CAP WINS — two restrictions do not cancel, and taking
@@ -7079,6 +7162,13 @@ const isBlockCard = c => /\bblock\b/i.test((c && c.tt) || "");
 function defCounts(cap, card, fromGear){
   if(!cap) return false;
   if(cap.count === "hand") return !fromGear;
+  /* `action` is overpower's printed word (v4.22), and it is read off the
+     STRUCTURED ARRAY rather than the type line: "Reaction" contains
+     "action" (v2.44), so a Defense Reaction declared as a defender would
+     otherwise count against a cap its printing never names — and a
+     declared piece of EQUIPMENT is not an action card at all, so the
+     `fromGear` half needs no restating here. */
+  if(cap.count === "action") return isActionCard(card);
   return !isBlockCard(card);          /* nonBlock — equipment counts too */
 }
 

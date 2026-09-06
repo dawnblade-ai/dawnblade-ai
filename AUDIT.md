@@ -1,14 +1,14 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-05T22:25:37.357Z · app v4.20 · data sage-v13 · db 797 records
+Generated 2026-09-06T02:28:12.363Z · app v4.21 · data sage-v13 · db 797 records
 
 ## Summary
 
 | | count |
 |---|---|
 | Unique cards in pool (name\|pitch) | 405 |
-| Fully scripted | 384 |
-| Partially scripted | 17 |
+| Fully scripted | 385 |
+| Partially scripted | 16 |
 | Text-only (nothing parsed) | 4 |
 | Cards with audit flags | 16 |
 
@@ -265,12 +265,6 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - — If you do, destroy this and gain 1 action point.
 - ○ Arcane Barrier 1
 
-### Spectral Rider (pitch 3) — part · [enigma]
-- type: Illusionist Action - Attack · printed: Overpower, Phantasm
-- — When this is played, if you control a Spectral Shield, this gets overpower.
-- ○ Phantasm
-- 🚩 unreviewed keyword: "overpower"
-
 ### Topsy Turvy (pitch 0) — part · [arakni]
 - type: Chaos Equipment - Head · printed: Arcane Barrier 1
 - — Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.
@@ -311,6 +305,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - **Refraction Bolters** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
 - **Release the Tension** (pitch 1): granted ability in quotes has NO reader: "defense reactions can't be played from arsenal this chain link." — the head parses, this does not
 - **Rush of Power** (pitch 1): text mentions go again but no clause parses it
+- **Spectral Rider** (pitch 3): unreviewed keyword: "overpower"
 - **Stalker's Steps** (pitch 0): granted go-again with no parsed grant path · text mentions go again but no clause parses it
 - **Swift Shot** (pitch 1): text mentions go again but no clause parses it
 

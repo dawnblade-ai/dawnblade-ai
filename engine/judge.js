@@ -733,8 +733,13 @@ function legal(g, a, seat){
                        + (sd.blockG || []).map(u => sd.gear.find(x => x.uid === u))
                            .filter(x => x && PR.defCounts(cap, x, true)).length;
         if(declared >= cap.n)
+          /* THE MESSAGE NAMES THE COUNTED SET, because the three sets
+             genuinely differ (v3.64, v4.22) and a refusal that says only
+             "more than 1 card" is wrong for two of them. overpower's own
+             printed reminder text is "no more than 1 ACTION card". */
           return ((g.pend.card || {}).name || "that attack") + " can't be defended by more than "
-               + cap.n + (cap.count === "nonBlock" ? " non-block" : "") + " card"
+               + cap.n + (cap.count === "nonBlock" ? " non-block"
+                        : cap.count === "action" ? " action" : "") + " card"
                + (cap.n === 1 ? "" : "s")
                + (cap.count === "hand" ? " from hand" : "");
       }

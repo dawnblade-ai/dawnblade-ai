@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-05 from `tools/audit.json`.
+Generated 2026-09-06 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,7 +8,7 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 21 cards | understood ≠ built |
+| Ruled but not built | 20 cards | understood ≠ built |
 | **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
@@ -57,7 +57,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Line Crossers** (part, 1/2 unread)
 - **Oasis Respite** (part, 1/2 unread)
 - **Roaring Beam** (part, 1/2 unread)
-- **Spectral Rider** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
 - **V of the Vanguard** (part, 1/3 unread)
 - **Walk in My Shoes** (part, 1/2 unread)
@@ -200,7 +199,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Meld" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 12 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: These are tricky - these are 2 cards with the same cost and same pitch but different effects. the 'meld' popup will allow the player to choose 1 or both sides of the card to player - the cost must be paid for each side c
     > Meld
 - **Arcanic Shockwave** (1) · tier `full` · briar
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Barnacle** (2) · tier `full` · gravy
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 3 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
@@ -233,7 +232,7 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Entwine Lightning** (1) · tier `full` · briar
-  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 7 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
+  - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Lightning Fusion" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: similar to ice fusion - fusion pop up will show the cards in hand that have the 'lightning' talent in the players hand - they choose one and the opponent will get a pop up to see it - if they are able to do so the card h
     > Lightning Fusion
 - **Hope Merchant's Hood** · tier `none`
   - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
@@ -253,7 +252,7 @@ can be overruled. Same discipline as the mention count.
 - **Spears of Surreality** (3) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
-- **Spectral Rider** (3) · tier `part` · enigma
+- **Spectral Rider** (3) · tier `full` · enigma
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Phantasm" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 5 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: phantasm is a drawback for these above rate illusionist cards - if the opponent is able to block with a card that has 6+ power - the attack is destroyed and no further blocks are needed. update - check the attack power -
     > Phantasm
 - **Swabbie** (2) · tier `full` · gravy

@@ -90,7 +90,7 @@ const RX_CONDS = ["reprise", "charged", "defAtkAction"];
 /* THE SEAT-AND-VERB HELPERS LIVE IN game.js (v4.15) — `prompts.js`
    needs them too, and two copies of a conjugation rule is the no-mirror
    rule broken over the prose the player reads. */
-const {popRunechants, gearDef, gearBlockApply, hasExposedZone, isSecondPerson, sv} = G;
+const {popRunechants, gearDef, gearBlockApply, hasExposedZone, isSecondPerson, sv, sp} = G;
 const {advValue} = A;
 /* prompts.js is a NEW factory argument in v2.74 and the load order already
    allowed it — prompts.js is script tag 1341, effects.js 1353. `arcaneHit`
@@ -652,7 +652,7 @@ function makeEffects(ctx){
          the hand, so a discard is not silently the player's best card. */
       else if(k==="selfDiscard"){
         const take = act(n).hand.slice(-Math.max(1,v));
-        if(!take.length) n = L(n, `${srcName}: ${act(n).name}'s hand is already empty.`);
+        if(!take.length) n = L(n, `${srcName}: ${sp(act(n))} hand is already empty.`);
         else {
           actMut(n).hand = act(n).hand.slice(0, act(n).hand.length-take.length);
           actMut(n).grave = [...gyDisc(n.turn, ...take), ...act(n).grave];
@@ -728,11 +728,11 @@ function makeEffects(ctx){
         /* WHICH card is an approximation and always was: the printed text
            lets THEM choose, and this takes the last in hand. Carried over
            verbatim from the hardcoded trigger rather than quietly changed. */
-        if(!foe(n).hand.length){ n = L(n, `${srcName}: ${foe(n).name}'s hand is empty.`); return; }
+        if(!foe(n).hand.length){ n = L(n, `${srcName}: ${sp(foe(n))} hand is empty.`); return; }
         const top = foe(n).hand[foe(n).hand.length-1];
         foeMut(n).hand = foe(n).hand.slice(0,-1);
         foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `${srcName}: ${top.name} is forced from ${foe(n).name}'s hand back on top of their deck.`);
+        n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
       }
       else if(k==="foeGearDef"){
         /* A -1{d} COUNTER SITS ON THE PIECE, so it travels between turns
@@ -746,7 +746,7 @@ function makeEffects(ctx){
         n = L(n, `${srcName}: ${worst.name} takes a ${v}{d} counter.`);
       }
       else if(k==="foeArsDestroy"){
-        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${sp(foe(n))} arsenal is empty.`); return; }
         const a = foe(n).arsenal;
         foeMut(n).arsenal = null;
         foeMut(n).grave = [...gy(n.turn, a), ...foe(n).grave];
@@ -755,7 +755,7 @@ function makeEffects(ctx){
            arsenal destroys nothing. "You do" and "they do" name the same
            event from the two ends of it; the reader accepts both. */
         n._tookWay = [...(n._tookWay||[]), a];
-        n = L(n, `${srcName}: ${a.name} is destroyed in ${foe(n).name}'s arsenal.`);
+        n = L(n, `${srcName}: ${a.name} is destroyed in ${sp(foe(n))} arsenal.`);
       }
       /* BANISHING FROM THE OPPONENT'S ARSENAL (v3.96) — the twin of
          `foeArsDestroy` two lines up, and the distinction is REAL: a
@@ -771,12 +771,12 @@ function makeEffects(ctx){
          trace is recorded where the fact becomes true regardless, because
          a trace bolted on later is a trace the next reader re-derives. */
       else if(k==="foeArsBanish"){
-        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${sp(foe(n))} arsenal is empty.`); return; }
         const a = foe(n).arsenal;
         foeMut(n).arsenal = null;
         foeMut(n).banish = [a, ...foe(n).banish];
         n._tookWay = [...(n._tookWay||[]), a];
-        n = L(n, `${srcName}: ${a.name} is banished out of ${foe(n).name}'s arsenal — not the graveyard, so nothing fetches it back.`);
+        n = L(n, `${srcName}: ${a.name} is banished out of ${sp(foe(n))} arsenal — not the graveyard, so nothing fetches it back.`);
       }
       /* DESTROYING THE TOP OF THE OPPONENT'S DECK (v3.96) — the foe twin
          of `deckDestroy` (v3.90), and a different op rather than a flag on
@@ -790,14 +790,14 @@ function makeEffects(ctx){
         foeMut(n).deck = foe(n).deck.slice(take.length);
         foeMut(n).grave = [...gy(n.turn, ...take), ...foe(n).grave];
         n._tookWay = [...(n._tookWay||[]), ...take];
-        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of ${foe(n).name}'s deck.`);
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} destroyed off the top of ${sp(foe(n))} deck.`);
       }
       else if(k==="foeArsBottom"){
-        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${foe(n).name}'s arsenal is empty.`); return; }
+        if(!foe(n).arsenal){ n = L(n, `${srcName}: ${sp(foe(n))} arsenal is empty.`); return; }
         const a = foe(n).arsenal;
         foeMut(n).arsenal = null;
         foeMut(n).deck = [...foe(n).deck, a];
-        n = L(n, `${srcName}: ${a.name} goes to the bottom of ${foe(n).name}'s deck.`);
+        n = L(n, `${srcName}: ${a.name} goes to the bottom of ${sp(foe(n))} deck.`);
       }
       /* ---- AZALEA'S ARSENAL CYCLE (v3.71) ---------------------------
          "Put a card from your arsenal on the bottom of your deck. If you
@@ -887,7 +887,7 @@ function makeEffects(ctx){
       }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
-        if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
+        if(!take.length) n = L(n, `${srcName}: ${sp(foe(n))} hand is already empty.`);
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).grave = [...take, ...foe(n).grave];
@@ -925,14 +925,14 @@ function makeEffects(ctx){
           return;
         }
         const take = foe(n).hand.slice(-Math.max(1,v));
-        if(!take.length){ n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`); return; }
+        if(!take.length){ n = L(n, `${srcName}: ${sp(foe(n))} hand is already empty.`); return; }
         foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
         foeMut(n).grave = [...gyDisc(n.turn, ...take), ...foe(n).grave];
-        n = L(n, `${srcName}: nothing in ${foe(n).name}'s hand beats the ${dmg} dealt — discards ${take.map(c=>c.name).join(", ")}.`);
+        n = L(n, `${srcName}: nothing in ${sp(foe(n))} hand beats the ${dmg} dealt — discards ${take.map(c=>c.name).join(", ")}.`);
       }
       else if(k==="foeBanish"){
         const take = foe(n).hand.slice(-Math.max(1,v));
-        if(!take.length) n = L(n, `${srcName}: ${foe(n).name}'s hand is already empty.`);
+        if(!take.length) n = L(n, `${srcName}: ${sp(foe(n))} hand is already empty.`);
         else {
           foeMut(n).hand = foe(n).hand.slice(0, foe(n).hand.length-take.length);
           foeMut(n).banish = [...take, ...foe(n).banish];
@@ -1375,11 +1375,11 @@ function makeEffects(ctx){
         const zone = spec.zone || "hand";
         const filt = promptFilter(spec.filter);
         const cands = ((foe(n)[zone]) || []).filter(filt);
-        if(!cands.length){ n = L(n, `${srcName}: nothing in ${foe(n).name}'s ${zone === "grave" ? "graveyard" : zone} matches.`); return; }
+        if(!cands.length){ n = L(n, `${srcName}: nothing in ${sp(foe(n))} ${zone === "grave" ? "graveyard" : zone} matches.`); return; }
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:srcName, cards:cands, min:1, max:1,
           moveFoe:{from:zone, to:spec.to || "deckTop"},
-          title: spec.title || `Choose one of ${foe(n).name}'s cards`,
+          title: spec.title || `Choose one of ${sp(foe(n))} cards`,
           hint: spec.hint || ""}];
       }
       else if(k==="pickPrompt"){
@@ -1486,15 +1486,15 @@ function makeEffects(ctx){
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:chooser, src:srcName, cards:cands, min:1, max:1,
           freezeSide: fs,
-          title:`Freeze one of ${sd.name}'s objects`,
+          title:`Freeze one of ${sp(sd)} objects`,
           hint:`It cannot be played or activated until the start of your next turn.`}];
       }
       /* the dummy has a real deck, so banishing off its top is a real cost */
       else if(k==="foeBanishTop"){
         const take = foe(n).deck.slice(0,v);
-        if(!take.length){ n = L(n, `${srcName}: ${foe(n).name}'s deck is empty.`); return; }
+        if(!take.length){ n = L(n, `${srcName}: ${sp(foe(n))} deck is empty.`); return; }
         foeMut(n).deck = foe(n).deck.slice(take.length);
-        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of ${foe(n).name}'s deck (${foe(n).deck.length} left).`);
+        n = L(n, `${srcName}: ${take.map(c=>c.name).join(", ")} banished off the top of ${sp(foe(n))} deck (${foe(n).deck.length} left).`);
       }
       else if(k==="firstAtkBuff"){
         /* a standing buff on the turn's FIRST attack only */
@@ -1628,7 +1628,7 @@ function makeEffects(ctx){
       else if(k==="foeReveal"){
         n = L(n, foe(n).hand.length
           ? `${sv(foe(n), "show")} a hand: ${foe(n).hand.map(c=>c.name).join(", ")}.`
-          : `${foe(n).name}'s hand is empty — nothing to show.`);
+          : `${sp(foe(n))} hand is empty — nothing to show.`);
       }
       /* LYATH'S CLAUSE 2 RIDER (v3.78). A TURN WINDOW, not a charge — it
          is not spent by the first defender, because "this turn" says
@@ -2690,6 +2690,18 @@ function makeEffects(ctx){
         : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
         : cond==="hasArsenal" ? !!act(n).arsenal
         : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
+        /* A NAMED PERMANENT YOU CONTROL (v4.22). The name travels IN the
+           condition, read off the printed line (v3.21), so this evaluator
+           knows no card — `seismic` one line up is the same question with
+           one card's name written into the engine, which is the golden
+           rule broken at the condition level.
+
+           `P.boardEntryNamed` is the ONE reader of "the permanent a printed
+           line names, on one side's board" (v3.86). Asking it here rather
+           than re-deriving the match is what keeps the ability's gate and
+           an activation cost's gate from disagreeing about the same
+           board. */
+        : cond.slice(0,6)==="board:" ? !!P.boardEntryNamed(act(n), cond.slice(6))
         : cond==="suspenseAura" ? (act(n).board||[]).some(b=>b.kind==="aura" && hasKw(b.card,"suspense"))
         : /^pitchCost\d+$/.test(cond) ? act(n).pitch.some(c=>(c.cost||0) >= +cond.slice(9))
         : cond==="allyDied" ? (act(n).grave||[]).some(c=>c._gy===n.turn && /\bally\b/i.test(c.tt||""))
@@ -2745,7 +2757,7 @@ function makeEffects(ctx){
       const why = {atk:"no other attack yet", non:"no other non-attack yet",
         pitch6:"no 6+ power card in your pitch zone", arsenal:"not played from arsenal",
         lifeLt:"you aren't behind on life", lifeGt:"you aren't ahead on life",
-        marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${foe(n).name}'s`,
+        marked:`${foe(n).name} isn't marked`, foeTurn:`it's your turn, not ${sp(foe(n))}`,
         arcDealt:"no arcane damage dealt yet this turn",
         auraTurn:"no aura played or created this turn",
         madeCard:"nothing created this turn", booed:"the crowd hasn't booed you this turn",
@@ -2775,6 +2787,10 @@ function makeEffects(ctx){
            feed is the lesson in a training sim, and "condition not met
            (playedCls:lightning)" teaches nobody anything. */
         || (/^playedCls:/.test(cond) ? `no ${cond.replace(/^playedCls:/, "")} card played this turn` : null)
+        /* Same rule for the named permanent — the player is told which
+           CARD is missing, in the printed capitalisation the clause used,
+           not "condition not met (board:spectral shield)". */
+        || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
         || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
         || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
         || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
@@ -3421,7 +3437,7 @@ function makeEffects(ctx){
         const lost = foe(n).hand[pick];
         foeMut(n).hand = foe(n).hand.filter((_,i)=>i!==pick);
         foeMut(n).intimidated = [...(foe(n).intimidated||[]), lost];
-        declNote += ` Intimidate — a card is pulled at random from ${foe(n).name}'s hand`
+        declNote += ` Intimidate — a card is pulled at random from ${sp(foe(n))} hand`
           + ` and banished face-down (${foe(n).hand.length} left); it comes back at the end phase.`;
       }
       /* NAME THE ATTACK YOU JUST DECLARED (v2.63). Reported from play: the
@@ -4313,7 +4329,7 @@ function makeEffects(ctx){
         foeMut(n).arsenal = {...foe(n).arsenal, _frozenBy: by};
       else foeMut(n).board = (foe(n).board||[]).map(b =>
         b && b.uid === fz.uid ? {...b, _frozenBy: by, card: {...b.card, _frozenBy: by}} : b);
-      n = L(n, `${chosen.name} is frozen — it cannot be played or activated until the start of ${act(n).name}'s next turn.`);
+      n = L(n, `${chosen.name} is frozen — it cannot be played or activated until the start of ${sp(act(n))} next turn.`);
     }
     /* THE CROSS-SEAT MOVE. `prompts.js` moves cards within ONE side, so a
        pick whose candidates came from the other seat reports the choice
@@ -4342,11 +4358,11 @@ function makeEffects(ctx){
         else                         fs[to]  = [got, ...(fs[to]||[])];
         /* NAME THE SEAT (v2.83). This line goes to the shared feed, which
            both seats read, so "their deck" is only right from one chair. */
-        const where = to === "deckTop"    ? `on top of ${foe(n).name}'s deck`
-                    : to === "deckBottom" ? `on the bottom of ${foe(n).name}'s deck`
+        const where = to === "deckTop"    ? `on top of ${sp(foe(n))} deck`
+                    : to === "deckBottom" ? `on the bottom of ${sp(foe(n))} deck`
                     : to === "banish"     ? `out of the game`
-                    : `into ${foe(n).name}'s ${to}`;
-        n = L(n, `${sv(act(n), "take")} ${got.name} from ${foe(n).name}'s ${from === "grave" ? "graveyard" : from} — ${where}.`);
+                    : `into ${sp(foe(n))} ${to}`;
+        n = L(n, `${sv(act(n), "take")} ${got.name} from ${sp(foe(n))} ${from === "grave" ? "graveyard" : from} — ${where}.`);
       }
     }
     /* THE RE-EQUIP FIXUP (v3.53). A piece retrieved out of the graveyard is
@@ -4487,7 +4503,7 @@ function makeEffects(ctx){
       const win = mine > theirs, tie = mine === theirs;
       n = L(n, `${cc.name} clashes — ${sv(act(n), "reveal")} `
         + `${myTop ? myTop.name + " (" + mine + ")" : "nothing (0)"} vs `
-        + `${foe(n).name}'s ${foeTop ? foeTop.name + " (" + theirs + ")" : "empty deck (0)"} — `
+        + `${sp(foe(n))} ${foeTop ? foeTop.name + " (" + theirs + ")" : "empty deck (0)"} — `
         /* A TIE IS NO WINNER — CONFIRMED (user, 2026-08-19), so it is
            settled rather than assumed. */
         + (tie ? "a tie, no winner." : win ? `${sv(act(n), "win")}.` : `${sv(foe(n), "win")}.`));
@@ -5531,7 +5547,7 @@ function makeEffects(ctx){
       /* THE REASON FIRST, THEN THE OP'S OWN LINE. `dmg` reports "1 damage"
          and says nothing about why; announcing after it reads as a second,
          separate hit. In a training sim the sequence IS the lesson. */
-      n = L(n, `${pc.name} bites — a dagger of ${act(n).name}'s, and ${act(n).name} is the Tarantula.`);
+      n = L(n, `${pc.name} bites — a dagger of ${sp(act(n))}, and ${act(n).name} is the Tarantula.`);
       n = runOps(n, [["dmg", _dd]], pc.name);
     }
     /* ---- REFRACTION BOLTERS (v3.93) ---------------------------------
@@ -5725,7 +5741,7 @@ function makeEffects(ctx){
     const ty = card.ty || [];
     if(!ty.some(t => /^ice$/i.test(String(t)))) return n;
     return runOps(n, [["token", "Frostbite", 1, "foe", null]],
-                  `${act(n).name}'s winter`);
+                  `${sp(act(n))} winter`);
   }
 
   return {runOps, execute, afterDefenders, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,

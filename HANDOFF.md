@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.21 · FIX THE FAMILY, NOT THE MEMBERS
+# Handoff — Dawnblade, at v4.22 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -55,9 +55,14 @@ did not: it had found TWO keyword prefixes eating their own gate and
 fixed those two. Censused, the pool prints **ten**, and two more were
 still being eaten — Static Shock and Banneret of Salvation, both
 `tier: full`, both firing a BARE unconditional op on PLAY with the
-trigger *and* the gate gone.
+trigger *and* the gate gone. **v4.22** fetched the ONE printing the
+keyword ledger still called *"needs CR wording"* and found `overpower` is
+`defCap`'s **third** source with a **third** counted set — and building
+its gate ran into the second-person debt ledger, which is what surfaced
+**thirty hand-rolled seat possessives reading "You's board"**, a gap
+`effects.js` had recorded in its own source and nobody had swept.
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.21, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.22, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.** Two
@@ -65,8 +70,8 @@ of the sentences it replaces had been wrong for seventeen versions.
 
 | | | command |
 |---|---|---|
-| coverage | **384 full · 17 part · 4 none** of 405 | `npm run audit` |
-| drills | **2330 pass · 0 fail · 4 skipped** | `npm test` |
+| coverage | **385 full · 16 part · 4 none** of 405 | `npm run audit` |
+| drills | **2343 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
@@ -126,6 +131,30 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.22 — THE PRINTING SETTLED IT, AND THE LEDGER FORCED THE REST
+
+**`overpower` was the ledger's last `unreviewed` keyword with a printing
+nobody had fetched.** DYN229 carries what the database omits — *"(This
+can't be defended by more than 1 **action** card.)"* — which settles the
+number AND the counted set, and that set is **neither** of the two
+`parser.defCap` already knew. Read the table in CLAUDE.md; the short form
+is that defaulting to a sibling changes what may block.
+
+**THE GATE, NOT THE KEYWORD, WAS THE BLOCKER** — and the reader for it
+turned out to be `boardEntryNamed`, already the one reader of *"the
+permanent a printed line names"*. `seismic` one line above it is the same
+question with a card special-cased by NAME.
+
+**AND THE FEED LINE COULD NOT BE WRITTEN.** The second-person debt ledger
+caps `effects.js` at 52 literals, and a possessive needed one. **That
+refusal was right**, and chasing it found thirty sites building a seat
+possessive by hand — *"You's board"* on the board a player uses. The
+source had **recorded the gap itself** three sites earlier; a recorded
+gap is a debt, and this one came due sideways.
+
+**WHAT TO TAKE FROM IT:** when a ledger refuses to grow, the thing it is
+refusing is usually the lead.
 
 ## ⚠ v4.21 — WHEN YOU FIX TWO MEMBERS OF A FAMILY, CENSUS THE FAMILY
 
@@ -190,8 +219,9 @@ Quake, Pick Up the Point, Lyath's halving, Cloaked, piercing, and at
 v4.21 both of the keyword prefixes above (AST016, DTD055), whose faces
 carry **no reminder text at all** — which is itself the answer, and is
 what makes strip-and-recurse the faithful reading rather than a guess.
-**The remaining ones have never had it tried**: `overpower`, `steal`,
-and the one `pending` (`crank`). Every one of them has a printing.
+**NINTH TIME AT v4.22** — `overpower`, above. **The remaining ones have
+never had it tried**: `steal`, and the one `pending` (`crank`). Every one
+of them has a printing, and the command to fetch it is four lines up.
 
 **AND THE FLAG THAT LED HERE WAS A KEYWORD FLAG, NOT A CARD.** v4.18's
 walk asked *"does the parse grant a go again anywhere"*; the same question

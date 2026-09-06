@@ -1,3 +1,106 @@
+## v4.22 — OVERPOWER: THE THIRD CAP, AND A THIRD COUNTED SET
+
+> *"When you play Spectral Rider, if you control a Spectral Shield, this
+> gains **overpower**. (This can't be defended by more than 1 action
+> card.)"* — DYN229, fetched and read
+
+**TRY THE PRINTING — NINTH TIME IT HAS PAID.** `tools/ledger.js` had
+`overpower` as *unreviewed — "defense restriction; needs CR wording"*.
+There was no question to ask: `card.printings[].image_url` is in every
+pool record, and the printed face carries the reminder text the database
+omits. It settles the NUMBER and the COUNTED SET at once.
+
+**AND THAT SET IS NEITHER OF THE TWO `parser.defCap` ALREADY KNEW:**
+
+| | caps | counts |
+|---|---|---|
+| dominate | 1 | cards **from hand** |
+| Confidence | 2 | **non-block** cards — a declared equipment counts |
+| **overpower** | 1 | **action** cards — an equipment is not one, nor is a Block, nor a Defense Reaction |
+
+Defaulting to a sibling's set is wrong in both directions, which is why
+v3.64 wrote that **the counted set is READ OFF THE PRINTED WORD**.
+`isActionCard` reads the STRUCTURED ARRAY, which is the authority
+(v2.39): *"Reaction" contains the substring "action"* (v2.44), so a
+Defense Reaction declared as a defender must not count against a limit
+its own printing never names.
+
+**THE GATE WAS THE WHOLE BLOCKER.** `gainKw` has accepted `overpower`
+since it was written; what refused was *"if you control a Spectral
+Shield"* — measured, the pool's **only** refusing clause of that shape.
+So the NAME is read off the printed line (v3.21) and carried in the
+condition, answered by `boardEntryNamed`, already the one reader of *"the
+permanent a printed line names, on one side's board"* (v3.86). `seismic`
+one line above it is the identical question with **one card's name
+written into the parser** — the golden rule broken at the condition
+level.
+
+**THE DISCRIMINATOR IS THE PRINTED CAPITALISATION** (v3.53). Measured
+over the pool's four singular subjects of this shape, only *"Spectral
+Shield"* is a proper noun — *"a Lightning attack"* capitalises a CLASS
+and not its second word, and *"an aura of suspense"* and *"a card with 6
+or more {p}"* are common nouns. An open *"any word after `you control
+a`"* claims every one of them, silently. `PROPER_NOUN` is hoisted to ONE
+spelling, because it is now the discriminator in two places.
+
+**AND IT HAD TO BE RECOVERED THROUGH THE RECURSION.** `classifyClause`'s
+if/when handler matched against the LOWERCASED clause and recursed on
+that capture, so the inner call got text whose capitalisation was already
+gone — **v3.53's lesson one recursion deeper**, and it looks exactly like
+a pattern that simply did not match. The tail is recovered from the raw
+clause with `cased`, whose fallback is what makes it safe for every
+payload whose subject is not a name. **Measured over all 797 records:
+exactly THREE moved, all Spectral Rider.**
+
+**AND ASTRAL ETCHINGS WAS ALREADY BUILT.** A first probe reported it
+refusing too — its clause is claimed by a RAW whole-card scan inside
+`fxParse` (`fx.asInstant`), never by `classifyClause`. **v3.56's rule,
+and the same trap v4.21's own drill hit one version ago**: ask the
+function that holds the reader.
+
+### THE SECOND-PERSON LEDGER REFUSED TO GROW, AND THAT FORCED THE REST
+
+The new gate's feed line needs a POSSESSIVE, and `test/judge.test.js`'s
+debt ledger caps the second-person literals in `effects.js` at 52. That
+refusal was right, and the fix was not to spend the allowance:
+
+**MEASURED: THIRTY SITES BUILT A SEAT POSSESSIVE BY HAND.** Seat 0 is
+literally named *"You"* (v2.83), so `${act(n).name}'s` reads **"You's
+board"** on the board a player actually uses, and `${foe(n).name}'s`
+reads it whenever seat 1 is the actor — which it has been since v2.71.
+
+**THE GAP WAS ALREADY RECORDED IN THE SOURCE**, above the one site that
+had been fixed: *"`act(n).name` is literally 'You' on the trainer … Three
+older sites in this file still say it."* **A recorded gap is a debt**
+(v3.61), and it came due sideways, through a card change that was not
+looking for it.
+
+**`game.sp` IS `sv`'s MISSING TWIN** — one body, in `game.js`, for
+`typeAbbr`'s stated reason. **It inflects the NAME rather than replacing
+it with "your"**: v3.46 moved deliberately the other way (a token line
+reading *"created on YOUR board"* is a lie under a borrowed seat), so
+naming the seat and agreeing with the name are satisfied at once, because
+seat 0's name simply possesses as *"your"*.
+
+**ONLY THE SEAT-0 CASE MOVES.** A hero name keeps the apostrophe-s the
+feed has always printed, *"Gravy Bones's"* included — the bare apostrophe
+is a style judgement about English, not a defect, and making it here
+changes 25 lines for no rule. **A CARD's possessive is untouched**:
+`${top.name}'s` and `${pc.name}'s` name cards, whose names are never
+"You", and sweeping them would widen a fix past the shape it was measured
+for.
+
+**AND NEITHER INSTRUMENT COULD SEE IT.** `npm run play`'s SECOND-PERSON
+counter spells `/\bYou [a-z]+s\b/` — the VERB case — and a possessive is
+the same family one part of speech over (v3.81: a scan aimed at the wrong
+word reports zero exactly as a missing feature does). It could not have
+reached it anyway: the harness names **both** seats after heroes, so
+`act(n).name` is never "You" there. The source census is the instrument
+that sees this one.
+
+**Ten sabotages, ten bite, none silent.** Coverage **384 → 385 full**,
+17 → 16 part; the second-person debt holds at 52; conditions 52 → 53.
+
 # Dawnblade — changelog
 
 Extracted from the `APP_VER` comment in `index.html` at v2.32, where 19

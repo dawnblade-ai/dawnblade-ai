@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.21
+**Current version:** v4.22
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2330 drills** at v4.21.
+This is `node --test "test/*.test.js"` — **2343 drills** at v4.22.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -783,6 +783,69 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### OVERPOWER — A THIRD CAP, AND A THIRD COUNTED SET (v4.22)
+
+> *"…this gains **overpower**. (This can't be defended by more than 1
+> **action** card.)"* — DYN229, fetched and read
+
+**TRY THE PRINTING — NINTH TIME.** The ledger had it *unreviewed, "needs
+CR wording"*, and there was no question to ask.
+
+**THREE SOURCES, THREE COUNTED SETS, AND NONE IS THE OTHERS' DEFAULT.**
+dominate counts cards **from hand**, Confidence counts **non-block**
+cards (a declared equipment counts), and this counts **action** cards —
+which an equipment, a Block card and a Defense Reaction all are not.
+v3.64's rule holds: **the counted set is read off the printed word.**
+`isActionCard` asks the STRUCTURED ARRAY, because *"Reaction"* contains
+*"action"* (v2.44).
+
+**THE GATE WAS THE WHOLE BLOCKER** — `gainKw` has accepted the keyword
+since it was written. *"If you control a Spectral Shield"* is the pool's
+**only** refusing clause of that shape, so the NAME is read off the line
+(v3.21) and answered by `boardEntryNamed` (v3.86). **`seismic` one line
+above it is the same question with one card's name written into the
+parser** — the golden rule broken at the condition level.
+
+**AND THE RECURSION HANDED ITS INNER CALL THE LOWERCASED TAIL.** v3.53's
+lesson one recursion deeper: `classifyClause` matches on the lowercased
+clause, so recursing on that capture strips the capitalisation that is
+the only thing telling a NAME from a common noun. Measured: exactly three
+records move, all Spectral Rider. **And a first probe reported Astral
+Etchings refusing too** — its clause is claimed by a RAW whole-card scan
+in `fxParse`, never by `classifyClause` (v3.56, the same trap v4.21's own
+drill hit one version earlier).
+
+### A SEAT'S POSSESSIVE IS `sv`'s MISSING TWIN (v4.22)
+
+The new gate's feed line needs a possessive, and the second-person debt
+ledger caps `effects.js` at 52 literals. **That refusal was right, and
+the answer was not to spend the allowance.**
+
+**MEASURED: THIRTY SITES BUILT ONE BY HAND.** Seat 0 is literally named
+*"You"* (v2.83), so `${act(n).name}'s` reads **"You's board"** on the
+board a player uses — and `${foe(n).name}'s` reads it whenever seat 1 is
+the actor, which it has been since v2.71.
+
+**THE GAP WAS ALREADY RECORDED IN THE SOURCE**, above the one site fixed
+earlier: *"Three older sites in this file still say it."* **A recorded
+gap is a debt** (v3.61), and it came due sideways — through a card change
+that was not looking for it.
+
+**`game.sp` INFLECTS THE NAME; IT DOES NOT REPLACE IT WITH "YOUR."**
+v3.46 moved deliberately the other way, so both rules hold at once: the
+seat is named, and the grammar agrees with the name, because seat 0's
+name possesses as *"your"*. **Only the seat-0 case moves** — a hero name
+keeps the apostrophe-s the feed has always printed. **A CARD's possessive
+is untouched**, because a card's name is never "You" and sweeping it
+would widen a fix past the shape it was measured for.
+
+**AND NEITHER INSTRUMENT COULD SEE IT.** `npm run play`'s SECOND-PERSON
+counter spells the VERB case (`/\bYou [a-z]+s\b/`) and a possessive is
+the same family one part of speech over — v3.81, again. It could not have
+reached it regardless: **the harness names both seats after heroes**, so
+`act(n).name` is never "You" there. The source census is what sees this
+one.
 
 ### FIX THE FAMILY, NOT THE TWO MEMBERS YOU FOUND (v4.21)
 
