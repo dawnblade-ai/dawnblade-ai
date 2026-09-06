@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.26
+**Current version:** v4.27
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2401 drills** at v4.26.
+This is `node --test "test/*.test.js"` — **2415 drills** at v4.27.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -790,6 +790,102 @@ and each is a shape this file names:
   prevention omits the phrase. The near-miss is synthetic (v3.73) and is
   the only thing separating *the window is READ* from *the window is
   assumed*.
+
+### FUSION IS A COST, AND IT WAS TAKEN WITHOUT BEING PAID (v4.27)
+
+> **"[TALENT] Fusion"** — as an additional cost to play this, **YOU MAY**
+> reveal a [TALENT] card from your hand. — SIY014's reminder text
+
+`fx.fusionCost` parsed the keyword line and `execute` settled `fused` by
+**SCANNING THE HAND**: the bonus landed on every play that could take it,
+**no card was ever named**, and the opponent learned nothing. The block's
+own comment said why — *"nothing moves zones, so there is no real
+downside"* — which is **true about the ZONES and false about the COST**.
+What a reveal charges is **INFORMATION**, and taking the bonus while
+naming no card is the reward without the cost (v2.04 from the other end).
+A *"you may"* that cannot be refused is stronger than printed (v3.90).
+
+**16 records, six cards, live in two precons — and every one read `tier:
+full` throughout.** The clause WAS consumed, so coverage is blind; and
+the one-sided sweep does not model a cost that was skipped.
+
+**`parser.fusionOffer` IS THE ONE READER** of which cards could pay, so
+the offer, the legality of the answer and `execute`'s own re-derivation
+cannot disagree. The talent comes off the **structured array** (v2.39):
+measured over 797 records for both talents, the two readers agree on every
+one, so it moves nothing today and is right the day they diverge.
+
+**BOTH BOARDS ASK, BEFORE THE CARD RESOLVES** — boost's shape one cost
+over. A COST cannot be a queued prompt (v3.34), so it is a `pending` and
+the answer rides as `_fuseUid`. `PENDING_KINDS` four → five.
+
+**THE ANSWER IS NOT YES/NO.** One button per eligible card, because WHICH
+card is the decision. And `execute` **re-derives** it, because `reduce` is
+fed by JSON off a wire (v2.48).
+
+**THE FEED IS THE REVEAL** (v2.83): the card is NAMED, through `sv`. 44
+firings in 210 games, with its own route counter and the two spellings
+pinned against each other (v3.81, v3.84).
+
+**AND THE THIRD ROW WAS UNEXPRESSIBLE.** The old engine could not tell
+*"no Ice card in hand"* from *"did not reveal one"*, and only one of those
+is a decision the card offers.
+
+**ALL SIX POOL RECORDS THAT PRINT FUSION ARE TYPED `Elemental` AND NOT ONE
+CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
+and its sabotage is silent against every real fixture. A synthetic Ice
+card that prints Ice Fusion is what sees it (v3.73).
+
+### THE LEDGER OUTRANKS THE GREP IN BOTH DIRECTIONS (v4.27)
+
+v3.00 made that relation ONE-WAY — a status short of `live` is never
+"likely handled" however loud the source is, which is what stopped
+suspense being downgraded from a drawback nobody had built. **The reverse
+was left to a mention count**, and that is wrong for exactly the keywords
+this project builds best.
+
+*"[TALENT] Fusion"* is a **FAMILY**: the parser reads the talent off the
+printed line, so the engine says `fusionCost` and **never "ice fusion"** —
+naming it would be the golden rule broken at the keyword level. `npm run
+sweep` therefore answered ZERO mentions and reported a mechanic firing 44
+times per 210 games as *"almost certainly absent."*
+
+**`live` IS AN ASSERTION, NOT A CLAIM.** `test/ledger.test.js` holds every
+live entry to being named by the engine — and a generically-built one to
+naming the **identifier the engine does carry**, so the exemption is
+EARNED rather than a way to silence the check. Measured first: exactly two
+keywords move, both that case, and eight cards with them.
+
+**AND THE CONTROL FOR THE OTHER HALF WAS VACUOUS.** Its first draft
+guarded on `if(/pending|unreviewed/)` over a keyword that had since gone
+`live`, so the assertion never ran and dropping the demote half came back
+SILENT. It picks its keyword BY STATUS now and fails if none can express
+the bug — v3.98's *ask for the refusal*, in a drill.
+
+### A REPORT THAT READS THE DOCUMENTATION (v4.27)
+
+`failstates.js`'s source scan counted **comments** as well as code, and
+the bill came due within the hour: writing v4.27's own `APP_VER` comment
+— which names the keyword it is about — took *"ice fusion"* from **0
+mentions to 1** and turned a drill that pins the premise red.
+
+A keyword named in a comment is not a keyword the engine CARRIES, which
+is the entire question the count exists to answer. **MEASURED BOTH WAYS**
+(v3.33): nine keywords cross the threshold of 3 when comments go, seven
+are `live` (graded by the ledger regardless), one is `pending` (never
+promoted either way), and **exactly one verdict moves** — `cloaked` 9 →
+2, which is the honest grade for a `partial` whose display half is
+deliberately unbuilt.
+
+**THE TWO v4.27 CHANGES COMPOSE**: the ledger promotes what this project
+has CLAIMED, and the grep counts only what the engine SAYS.
+
+**AND THE ANCHOR IS A STATED CHOICE, NOT A DRILLED GUARD.** `//` is
+stripped at line start only — `https://` is not a comment and a split
+card is literally named *"Burn Up // Shock"* — and measured, no keyword's
+count changes either way. Recorded as such rather than pretending a drill
+covers it (v3.67, v4.11: a guard that cannot express a bug is dead code
+that reads like a rule).
 
 ### THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD (v4.26)
 

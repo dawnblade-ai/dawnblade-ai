@@ -7074,6 +7074,50 @@ const printedKw = (c, k) => {
    or it does not. Measured over the pool: `hasKw` and `printedKw` agree
    on all four records here, so the discriminator is drilled with a
    synthetic near-miss (v3.73). */
+/* FUSION IS A COST, AND IT WAS BEING TAKEN WITHOUT BEING PAID (v4.27).
+
+   > "[TALENT] Fusion" — as an additional cost to play this, YOU MAY
+   > reveal a [TALENT] card from your hand.
+
+   `fx.fusionCost` has parsed the keyword line since it was written and
+   `execute` settled `fused` by SCANNING THE HAND — so the bonus was
+   taken on every play that could take it, no card was ever named, and
+   the opponent learned nothing. That is v2.04's free-ability shape read
+   from the other end: **the reward without the cost.** The price a
+   reveal charges is INFORMATION, and in a two-player game with hidden
+   hands that is the whole of what the card asks for.
+
+   A "YOU MAY" THAT CANNOT BE REFUSED IS STRONGER THAN PRINTED (v3.90),
+   and a printed choice never offered is sev-1 on `failstates.js`'s own
+   scale — the player can see the card did something they were not asked
+   about. The ruling recorded 2026-07-25 says it in as many words: the
+   pop-up shows the qualifying cards, THEY CHOOSE ONE, and the opponent
+   is shown it.
+
+   THIS IS THE READER, ONCE, FOR BOTH BOARDS (v3.01). It answers WHICH
+   cards in a given hand could pay, so the offer, the legality of an
+   answer and the feed line cannot disagree about it — and the card
+   asking is excluded by uid, because a card being played is not in the
+   hand to reveal.
+
+   THE TALENT COMES OFF THE STRUCTURED ARRAY (v2.39's ruling: where `tt`
+   and `ty` conflict the array wins). Measured over all 797 records for
+   both printed talents: the two readers agree on every one, so this
+   moves nothing today and is right the day they diverge. A DFC's array
+   carries BOTH faces, which is correct here rather than a hazard — the
+   reveal shows the physical card, and a card printing Lightning on
+   either face IS a Lightning card. */
+function fusionOffer(card, sd, uid){
+  const fx = fxParse(card);
+  if(!fx.fusionCost || !sd) return null;
+  const types = fx.fusionCost.types;
+  const uids = (sd.hand || [])
+    .filter(c => c && c.uid !== (uid != null ? uid : (card && card.uid)))
+    .filter(c => types.some(t => (c.ty || []).some(x => String(x).toLowerCase() === t)))
+    .map(c => c.uid);
+  return uids.length ? {types, uids} : null;
+}
+
 const crankCost = c => printedKw(c, "crank")
   ? {kind: "steam", n: 1, ops: [["ap", 1]]} : null;
 
@@ -7592,7 +7636,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
-        crankCost,
+        crankCost, fusionOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,

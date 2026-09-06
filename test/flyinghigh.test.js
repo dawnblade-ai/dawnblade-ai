@@ -279,10 +279,15 @@ test("DRIVEN: the fused half and the unfused half of the same grant", {skip}, ()
      never the feed. */
   const q = {amt: 3, q: {aac: true, g: [["lightning"], ["elemental"]]},
              rider: {gaIf: "fused"}};
-  const run = (tx, hand2) => {
+  /* THE REVEAL IS NAMED (v4.27) — Fusion's "you MAY" is a real cost now,
+     settled before the card resolves and riding on the state as
+     `_fuseUid`, so a fixture holding a Lightning card is no longer the
+     same thing as a fixture that PAID with it. */
+  const run = (tx, hand2, reveal) => {
     const c = lightAtk(9101, "Fusable Bolt", tx);
-    const g = H.state({hand: [c, ...(hand2 || [])], res: 9, ap: 1, buffQ: [q]},
-                      {hp: 30}, {actor: 0, turnPlayer: 0, turn: 3});
+    let g = H.state({hand: [c, ...(hand2 || [])], res: 9, ap: 1, buffQ: [q]},
+                    {hp: 30}, {actor: 0, turnPlayer: 0, turn: 3});
+    if(reveal != null) g = {...g, _fuseUid: reveal};
     const out = H.execute(g, c, "hand", 0, {});
     const st = out.game || out;
     return {ga: !!(st.pend || {}).ga, total: (st.pend || {}).total};
@@ -293,7 +298,7 @@ test("DRIVEN: the fused half and the unfused half of the same grant", {skip}, ()
                ty: ["Lightning", "Action"], power: null, pitch: 1, cost: 0, def: 2,
                kw: [], gkw: [], tx: ""};
 
-  const fused = run(FUSE, [pay]);
+  const fused = run(FUSE, [pay], 9102);
   assert.equal(fused.total, 6, "the head's +3 did not land on the fused card");
   assert.equal(fused.ga, true,
     "a FUSED card did not get the printed go again — CR 5.3.5's action point, lost");

@@ -1,3 +1,126 @@
+## v4.27 — FUSION IS A COST, AND IT WAS BEING TAKEN WITHOUT BEING PAID
+
+> **"[TALENT] Fusion"** — as an additional cost to play this, **YOU MAY**
+> reveal a [TALENT] card from your hand.
+> *(SIY014's reminder text, already read and recorded in `tools/ledger.js`.)*
+
+`fx.fusionCost` has parsed the keyword line since it was written, and
+`execute` settled `fused` by **SCANNING THE HAND** — so the bonus landed
+on every play that could take it, **no card was ever named**, and the
+opponent learned nothing. The block's own comment said why: *"nothing
+moves zones, so there is no real downside to taking it."*
+
+**TRUE ABOUT THE ZONES AND FALSE ABOUT THE COST.** What a reveal charges
+is **INFORMATION**, and in a two-player game with hidden hands that is
+the whole of what the card asks for. Taking the bonus while naming no
+card is **the reward without the cost** — v2.04 read from the other end —
+and a *"you may"* that cannot be refused is stronger than printed
+(v3.90). The ruling recorded 2026-07-25 names the choice in as many
+words: show the qualifying cards, **THEY CHOOSE ONE**, the opponent is
+shown it.
+
+**16 POOL RECORDS ACROSS SIX CARDS**, live in Iyslander's and Briar's
+lists — **and every one of them read `tier: full` throughout**, because
+the clause WAS consumed. Coverage cannot see a printed choice that is
+never offered, and the one-sided fairness sweep does not model a cost
+that was skipped rather than a value that was doubled.
+
+### WHAT WAS BUILT
+
+- **`parser.fusionOffer` is the ONE reader** of which cards in a hand
+  could pay, so the offer, the legality of the answer and `execute`'s own
+  check cannot disagree (v3.01). The card being played is excluded **by
+  uid** — a card that has been through a spread is a different object
+  with the same identity (v3.00).
+- **THE TALENT COMES OFF THE STRUCTURED ARRAY** (v2.39's ruling). Measured
+  over all 797 records for both printed talents: the two readers agree on
+  every one, so it moves nothing today and is right the day they diverge.
+  A DFC's array carries both faces, which is **correct** here — the reveal
+  shows the physical card.
+- **BOTH BOARDS ASK, BEFORE THE CARD RESOLVES.** Boost's exact shape one
+  cost over: a COST is settled at play time and `openPrompt` drains after
+  the card has resolved (v3.34), so it is a `pending` and the answer rides
+  on the state as `_fuseUid`. `PENDING_KINDS` goes four → five, which is
+  what that census exists to make a deliberate edit.
+- **THE ANSWER IS NOT YES/NO.** One button per eligible card, because
+  WHICH card is the decision — revealing a spent blue is not the same play
+  as revealing the attack you are holding.
+- **`execute` RE-DERIVES IT.** `reduce` is fed by JSON off a wire (v2.48),
+  so a uid naming a card that is not in the hand, or does not carry the
+  talent, fuses nothing — the guard `_addPaid` grew at v3.34 for the same
+  reason.
+- **THE FEED IS THE REVEAL.** A log line is read by BOTH seats (v2.83), so
+  the card is NAMED, through `sv` — seat 0 is literally called "You".
+  Driven: **44 firings in 210 self-play games**, with its own route
+  counter and the two spellings pinned against each other (v3.81, v3.84).
+- **THE POLICY TAKES IT**, and the reasoning differs from boost's. v4.24's
+  standing rule is to decline a price it cannot weigh; here the price is
+  information and both peers hold full state by construction, so it is
+  **provably zero for this policy** rather than unweighable. Declining
+  would leave every fusion rider driven NEVER (v3.50, v3.84).
+
+### THE THIRD ROW NOTHING COULD EXPRESS
+
+The old engine could not tell **"no Ice card in hand"** from **"did not
+reveal one"**, and only one of those is a decision the printed line
+offers. Four drills and the Iyslander scene now carry that row, and the
+two fusion `partial` records in `tools/ledger.js` move to **`live`**.
+
+### THE LEDGER OUTRANKS THE GREP IN BOTH DIRECTIONS
+
+v3.00 made that relation ONE-WAY: a status short of `live` can never be
+"likely handled" however loud the source is. That half is right and is
+why suspense was not downgraded from a drawback nobody had built.
+
+**The reverse was left to a mention count, and that is wrong for exactly
+the keywords this project builds best.** *"[TALENT] Fusion"* is a FAMILY:
+the parser reads the talent off the printed line, so the engine says
+`fusionCost` and **never "ice fusion"** — naming it would be the golden
+rule broken at the keyword level. `npm run sweep` answered ZERO mentions
+and reported a mechanic that fires 44 times per 210 games as *"the
+trainer never names it, so it is almost certainly absent."*
+
+**`live` IS AN ASSERTION, NOT A CLAIM.** `test/ledger.test.js` holds every
+live entry to being named by the engine — and now holds a
+generically-built one to naming the identifier the engine DOES carry, so
+the exemption is EARNED rather than a way to silence the check. Measured
+before changing it: **exactly two keywords move**, both that generic case,
+and eight cards with them. `WRONG` 21 → **18** (14 from the ledger change, +4 back when the scan stopped counting comments).
+
+### AND THE REPORT WAS READING THE DOCUMENTATION
+
+**The bill came due within the hour.** `failstates.js`'s source scan
+counted COMMENTS as well as code, so writing v4.27's own `APP_VER`
+comment — which names the keyword it is about — took *"ice fusion"* from
+**0 mentions to 1** and turned a drill that pins the premise red.
+
+A keyword named in a comment is not a keyword the engine CARRIES, which
+is the entire question the count exists to answer, and this codebase
+comments more than most. **MEASURED BOTH WAYS** (v3.33): nine keywords'
+counts cross the threshold of 3 when comments go; seven are `live` and
+are graded as built by the ledger regardless, one is `pending` and was
+never promoted either way, and **exactly one verdict moves** — `cloaked`
+9 → 2, from *"the trainer names it (verify)"* to *"it has meaning"*,
+which is the honest grade for a `partial` whose display half is
+deliberately unbuilt.
+
+**THE TWO CHANGES COMPOSE**: the ledger promotes what this project has
+CLAIMED, and the grep now counts only what the engine SAYS. `//` is
+stripped at line start only — `https://` is not a comment and a split
+card is literally named *"Burn Up // Shock"* — and that anchor is
+recorded as a stated choice rather than drilled, because measured, no
+keyword's count changes either way.
+
+### EIGHTEEN SABOTAGES, EIGHTEEN BITE
+
+Three came back silent and each named a shape this file already carries:
+
+| silent | why, and the fixture that bites |
+|---|---|
+| the card being played is not excluded | **all six pool records that print Fusion are typed `Elemental` and NOT ONE carries the talent it asks for** — no real card can pay for itself, so the guard is latent; a synthetic Ice card that prints Ice Fusion sees it (v3.73) |
+| the talent test reads `tt` instead of `ty` | the two agree on all 797 records, which is what makes the swap invisible; the near-miss is a synthetic pair whose printed line and array disagree |
+| the ledger's DEMOTE half is dropped | the control guarded on a status that had since gone `live`, so **the assertion never ran** — v3.98's *ask for the refusal*, in a drill. The control picks its keyword BY STATUS now and fails if none can express the bug |
+
 ## v4.26 — THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD
 
 > **CR 4.5.3** lists every way a player loses and there are exactly

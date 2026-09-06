@@ -449,7 +449,11 @@ test("every pending kind judge can open has a branch at the table", () => {
      A BLACKLIST IS THE BUG. The next kind added walks into the same
      fallback, so the census is the guard rather than the memory. */
   const kinds = J.PENDING_KINDS;
-  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "pay", "split"]);
+  /* +fuse AT v4.27: Fusion's printed "you MAY reveal" was being taken
+     without being paid, so the offer is now a real pending — boost's
+     shape one cost over, and a NEW KIND, which is exactly what this
+     census exists to make a deliberate edit. */
+  assert.deepEqual([...kinds].sort(), ["addPay", "boost", "fuse", "pay", "split"]);
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const htm = strip(fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8"));
   const i = htm.indexOf("const kindIs = k =>");

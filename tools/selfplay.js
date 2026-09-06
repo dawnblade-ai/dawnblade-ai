@@ -106,6 +106,12 @@ function play(g, limit){
            of the shape, destroy or no destroy, so the count cannot be
            silently halved by the printed drawback (v3.81). */
         if(/goes off —/.test(line))                events.push(["hitwatch", line]);
+        /* FUSION'S REVEAL (v4.27). The printed "you MAY reveal" is a real
+           additional cost now rather than something the engine took for
+           itself, so this counts the times a seat actually paid it — 16
+           pool records across six cards, live in Iyslander's and Briar's
+           lists. v3.84: when you build a route, go and count. */
+        if(/is fused \(Fusion\)/.test(line))        events.push(["fusion", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

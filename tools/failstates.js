@@ -234,7 +234,28 @@ function noopBlindSpots(card, RULINGS, mentionsFn){
        for a drawback. */
     const claimedBuilt = !led || led.status === "live"
       || (!isDrawback && (led.status === "partial" || led.status === "approx"));
-    const likelyHandled = claimedBuilt && hits != null && hits >= 3;
+    /* THE LEDGER OUTRANKS THE GREP IN BOTH DIRECTIONS (v4.27). v3.00 made
+       the relation one-way — a status short of `live` can never be
+       "likely handled" however loud the source is — and left the reverse
+       to a mention count, which is wrong for exactly the keywords this
+       project builds BEST.
+
+       "[TALENT] Fusion" is a FAMILY, not a keyword: the parser reads the
+       talent off the printed line into `fx.fusionCost.types` and matches
+       it against the structured array, so the engine says `fusionCost`
+       and never "ice fusion". Naming it would be the golden rule broken
+       at the keyword level — and the tool answered ZERO mentions and
+       reported a mechanic that fires 44 times in 210 self-play games as
+       "the trainer never names it, so it is almost certainly absent".
+
+       `live` IS AN ASSERTION, NOT A CLAIM. `test/ledger.test.js` holds
+       every `live` entry to being named by the engine — and, since
+       v4.27, holds a generically-built one to naming the identifier the
+       engine DOES carry. So the status is backed by a drill and the
+       mention count is not. Measured before changing it: exactly TWO
+       keywords move, and both are that generic case. */
+    const likelyHandled = claimedBuilt
+      && ((led && led.status === "live") || (hits != null && hits >= 3));
     out.push({
       cat: "noop-with-meaning",
       /* a keyword the trainer clearly names is a VERIFY, not a defect */
@@ -451,6 +472,32 @@ const SEV_NAME = {3: "UNFAIR", 2: "WRONG", 1: "LOST VALUE", 0: "INERT"};
    both ways before choosing: exactly one card moves, and it moves wrong.
    A name's first word is its distinguishing one; a keyword's is usually
    not. */
+/* AND IT READS CODE, NOT PROSE (v4.27). This counted COMMENTS too, and
+   the bill came due within the hour: v4.27's own `APP_VER` comment names
+   the keyword it is about, so writing the release note took "ice fusion"
+   from 0 mentions to 1 and a drill that pins the premise went red. **The
+   report was reading the documentation.** A keyword named in a comment
+   is not a keyword the engine CARRIES — which is the entire question this
+   count exists to answer — and this codebase comments more than most, so
+   the prose was doing real work in the verdict.
+
+   MEASURED BOTH WAYS BEFORE CHANGING IT (v3.33). Nine keywords' counts
+   cross the tool's threshold of 3 when comments go; seven are `live` and
+   are graded as built by the LEDGER now regardless, one is `pending` and
+   was never promoted either way, and exactly ONE verdict moves:
+   `cloaked` 9 -> 2, from "the trainer names it (verify)" to "it has
+   meaning" — which is the honest grade for a `partial` whose display
+   half is deliberately unbuilt. The two v4.27 changes compose: the
+   ledger promotes what this project has CLAIMED, and the grep now counts
+   only what the engine SAYS.
+
+   `//` IS STRIPPED ONLY AT LINE START, because `https://` is not a
+   comment, a split card is literally named "Burn Up // Shock", and 34
+   surviving `//` in the scanned source are neither. MEASURED: no
+   keyword's count changes either way today, so the anchor is a stated
+   choice about the SHAPE rather than a guard with a fixture — recorded
+   as such instead of pretending a drill covers it (v3.67, v4.11: a guard
+   that cannot express a bug is dead code that reads like a rule). */
 function sourceText(){
   if(sourceText._t != null) return sourceText._t;
   const srcOf = f => { try { return fs.readFileSync(f, "utf8"); } catch(e){ return ""; } };
@@ -460,6 +507,7 @@ function sourceText(){
     for(const f of fs.readdirSync(ENG).filter(x => x.endsWith(".js")).sort())
       TR += "\n" + srcOf(path.join(ENG, f));
   } catch(e){}
+  TR = TR.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
   return (sourceText._t = TR);
 }
 function sourceMentions(name, opts){

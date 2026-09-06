@@ -332,7 +332,12 @@ test("driven: the fusion riders fire only when both halves are true", {skip}, ()
     tt: "Elemental Ice Wizard Action", ty: ["Elemental", "Ice", "Wizard", "Action"], tx: "", kw: []});
   const plain = uid => ({name: "Plain" + uid, uid, pitch: 3, cost: 0,
     tt: "Generic Action", ty: ["Generic", "Action"], tx: "", kw: []});
-  const play = (nm, extra) => {
+  /* THE REVEAL RIDES ON THE STATE (v4.27). Fusion's printed "you MAY
+     reveal" is a COST now, settled before the card resolves, and
+     `_fuseUid` is the seam `_doBoost` and `_addPaid` already use. Passing
+     no uid is a DECLINE — which is the third row this drill can now ask
+     for and could not before. */
+  const play = (nm, extra, reveal) => {
     P.fxReset();
     const c = Object.assign(H.card(nm, 1), {uid: "c1"});
     const g = Object.assign(H.state({name: "Alice", hand: [c, extra], res: 9, ap: 1, board: []},
@@ -340,18 +345,33 @@ test("driven: the fusion riders fire only when both halves are true", {skip}, ()
                                     {turn: 3, turnPlayer: 0}),
                             {phase: "action", step: "layer"});
     g.builds = [{}, {}];
+    if(reveal != null) g._fuseUid = reveal;
     return unwrap(H.execute(g, c, "hand", 0, {}));
   };
   /* POLAR CAP — the token half */
-  const pcOn = play("Polar Cap", ice("i1"));
+  const pcOn = play("Polar Cap", ice("i1"), "i1");
   assert.deepEqual((pcOn.sides[1].board || []).map(b => b.card.name), ["Frostbite"]);
   assert.equal(pcOn.sides[1].hp, 20 - 4, "and the arcane landed either way");
   const pcOff = play("Polar Cap", plain("p1"));
   assert.deepEqual((pcOff.sides[1].board || []).map(b => b.card.name), []);
   assert.equal(pcOff.sides[1].hp, 20 - 4);
+  /* THE THIRD ROW: the card IS in hand and the reveal is DECLINED. It was
+     unreachable while `execute` scanned the hand — the engine could not
+     tell "no ice card" from "did not reveal one", and only one of those
+     is a decision the printed line offers. */
+  const pcNo = play("Polar Cap", ice("i1"));
+  assert.deepEqual((pcNo.sides[1].board || []).map(b => b.card.name), [],
+    "declined, so the fused rider does not fire even though the card was there");
+  assert.equal(pcNo.sides[1].hp, 20 - 4, "and the unconditional half is untouched");
+  /* AND A UID THAT CANNOT PAY IS NOT A PAYMENT. `execute` re-derives the
+     answer through `parser.fusionOffer` rather than trusting the field —
+     `reduce` is fed by JSON off a wire (v2.48). */
+  const pcBad = play("Polar Cap", plain("p1"), "p1");
+  assert.deepEqual((pcBad.sides[1].board || []).map(b => b.card.name), [],
+    "a Generic card carries no Ice talent, so naming it fuses nothing");
 
   /* AETHER ICEVEIN — the pay-or-discard half, which opens a real sheet */
-  const aiOn = play("Aether Icevein", ice("i1"));
+  const aiOn = play("Aether Icevein", ice("i1"), "i1");
   assert.ok(aiOn.prompt, "fused, the opponent is asked to pay");
   assert.equal(aiOn.prompt.side, 1, "and it is THEIR call (v2.75's `payOr`)");
   const aiOff = play("Aether Icevein", plain("p1"));

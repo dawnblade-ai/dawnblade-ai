@@ -53,7 +53,7 @@ const EMITTED = [...new Set(
 )].sort();
 
 test("the emitted-kind scan is alive", () => {
-  assert.ok(EMITTED.length >= 8, `scan found ${EMITTED.length} kinds — aimed wrong`);
+  assert.ok(EMITTED.length >= 9, `scan found ${EMITTED.length} kinds — aimed wrong`);
 });
 
 /* PINNED AS A SET (wire.test.js's HEADLESS, condcensus.test.js). A new
@@ -63,7 +63,7 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "crush", "death", "gold", "hitwatch", "layer", "reaction", "tap",
+    "ally", "crush", "death", "fusion", "gold", "hitwatch", "layer", "reaction", "tap",
   ]);
 });
 
@@ -86,7 +86,7 @@ test("every name in FAULTS is a kind selfplay actually emits", () => {
    this is a pin rather than a derivation: moving a name is a deliberate
    edit here, which is the moment somebody states what the counter means. */
 const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
-const ROUTES_PINNED = ["ally", "crush", "death", "gold", "hitwatch", "layer", "reaction", "tap"];
+const ROUTES_PINNED = ["ally", "crush", "death", "fusion", "gold", "hitwatch", "layer", "reaction", "tap"];
 
 test("faults and routes partition the emitted kinds", () => {
   assert.deepEqual([...SP.FAULTS].sort(), FAULTS_PINNED);

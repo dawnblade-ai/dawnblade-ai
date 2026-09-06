@@ -36,13 +36,24 @@ const FOE_HAND = () => [
    tt: "Assassin / Warrior Action Defense Reaction - Trap",
    ty: ["Assassin", "Warrior", "Defense Reaction", "Trap"]}];
 
-function play(hand){
+/* FUSION IS ASKED NOW (v4.27), so the play opens a `fuse` pending and the
+   drill has to ANSWER it. That is the point of the change — the printed
+   "you MAY reveal" was being taken without being paid — and it is why
+   these fixtures name the card they reveal rather than letting a scan of
+   the hand decide. `reveal` is the uid to hand over, or null to decline. */
+function play(hand, reveal){
   H.db();
   let g = H.state({name: "Iyslander", res: 9, ap: 3, hand, deck: [{uid: "d1", name: "F"}]},
                   {name: "Them", hand: FOE_HAND(), deck: [{uid: "d2", name: "Bottom"}]},
                   {actor: 0, turnPlayer: 0, seed: "bf"});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: [], turn: 4};
-  return J.reduce(g, {t: "play", uid: "bf1", from: "hand"}, 0).state;
+  let n = J.reduce(g, {t: "play", uid: "bf1", from: "hand"}, 0).state;
+  if(n.pending && n.pending.kind === "fuse"){
+    const r = J.reduce(n, {t: "fuse", uid: reveal === undefined ? null : reveal}, 0);
+    assert.ok(!r.error, String(r.error));
+    n = r.state;
+  } else assert.equal(reveal, undefined, "the fixture named a card to reveal and nothing asked");
+  return n;
 }
 const answer = n => {
   n = J.reduce(n, {t: "promptSel", i: 0}, n.prompt.side).state;
@@ -101,7 +112,7 @@ test("'an action card' reads the STRUCTURED array — a defence reaction is not 
 test("fused: the chosen card leaves their hand and becomes their next draw", {skip}, () => {
   const bf = {...H.card("Brain Freeze", 3), uid: "bf1"};
   const ice = {...H.card("Ice Bolt", 1), uid: "ice"};      /* an Ice card to reveal */
-  let n = play([bf, ice]);
+  let n = play([bf, ice], "ice");
   assert.equal(n.prompt && n.prompt.tag, "pick", "fused, so the rider asks");
   assert.deepEqual(n.prompt.cards.map(c => c.name), ["Zero Action"],
     "only the legal choice is offered — the filter is the rule, not a hint");

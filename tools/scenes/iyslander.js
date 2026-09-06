@@ -110,7 +110,12 @@ module.exports = [
       tt: "Elemental Ice Wizard Action", ty: ["Elemental","Ice","Wizard","Action"], tx: "", kw: []});
     const plain = uid => ({name: "Plain" + uid, uid, pitch: 3, cost: 0,
       tt: "Generic Action", ty: ["Generic","Action"], tx: "", kw: []});
-    const play = (nm, extra) => {
+    /* v4.27 — THE REVEAL IS NAMED. Fusion's printed "you MAY reveal" is a
+       real additional cost now, settled before the card resolves and
+       riding on the state as `_fuseUid`; holding an Ice card is no longer
+       the same thing as having PAID with it, which is the third row
+       below. */
+    const play = (nm, extra, reveal) => {
       P.fxReset();
       const card = Object.assign(c.card(nm, 1), {uid: "c1"});
       const g = Object.assign(c.state(
@@ -118,14 +123,17 @@ module.exports = [
         {name: "Bob", hp: 20, hand: [plain("j1")], board: []},
         {turn: 3, turnPlayer: 0}), {phase: "action", step: "layer"});
       g.builds = [{}, {}];
+      if(reveal != null) g._fuseUid = reveal;
       const o = c.exec(g, card, "hand", 0, {});
       return o.game || o;
     };
-    const pcOn = play("Polar Cap", ice("i1")), pcOff = play("Polar Cap", plain("p1"));
-    const aiOn = play("Aether Icevein", ice("i1")), aiOff = play("Aether Icevein", plain("p1"));
+    const pcOn = play("Polar Cap", ice("i1"), "i1"), pcOff = play("Polar Cap", plain("p1"));
+    const pcNo = play("Polar Cap", ice("i1"));
+    const aiOn = play("Aether Icevein", ice("i1"), "i1"), aiOff = play("Aether Icevein", plain("p1"));
     return {
       "fused, Polar Cap creates the token":  (pcOn.sides[1].board || []).map(b => b.card.name),
       "unfused, it creates nothing":         (pcOff.sides[1].board || []).map(b => b.card.name),
+      "declined with the card in hand, nothing either": (pcNo.sides[1].board || []).map(b => b.card.name),
       "…and the arcane lands either way":    [pcOn.sides[1].hp, pcOff.sides[1].hp],
       "fused, Aether Icevein asks THEM to pay": !!aiOn.prompt,
       "…and it is addressed to their seat":  aiOn.prompt && aiOn.prompt.side,
@@ -135,6 +143,7 @@ module.exports = [
   want: {
     "fused, Polar Cap creates the token": ["Frostbite"],
     "unfused, it creates nothing": [],
+    "declined with the card in hand, nothing either": [],
     "…and the arcane lands either way": [16, 16],
     "fused, Aether Icevein asks THEM to pay": true,
     "…and it is addressed to their seat": 1,

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.26 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.27 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -93,9 +93,19 @@ while the rule broken was the PLAYER's; and the side field that named it,
 `sd.fatigue`, was declared, shipped down the wire and **read and written
 by nothing, ever**. `WIRE_V`'s bump is pinned against a digest of the
 payload shape now, because three versions had moved it by hand and a
-fourth that forgot would have been silent.
+fourth that forgot would have been silent. **v4.27** took the sweep's
+biggest remaining block and found the same shape one layer down:
+**Fusion's printed "you MAY reveal" was being taken without being paid**
+— `execute` scanned the hand, no card was ever named, and the opponent
+learned nothing, on the stated grounds that "revealing spends nothing",
+which is true about the ZONES and false about the COST. 16 records across
+six cards, live in two precons, every one reading `tier: full`. And
+building it exposed that **the ledger outranked the grep in one direction
+only**, so a mechanic built as a FAMILY off the printed talent — the
+golden rule working — was reported as "almost certainly absent" because
+the engine says `fusionCost` and never "ice fusion".
 
-## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.26, NOT QUOTED
+## ⚠ WHERE THINGS STAND — RE-DERIVED AT v4.27, NOT QUOTED
 
 Every number below was produced by running the command beside it in this
 session. **Do not trust this block on your next read — re-run them.**
@@ -106,13 +116,13 @@ from a run, which is the failure this table exists to stop.
 | | | command |
 |---|---|---|
 | coverage | **386 full · 15 part · 4 none** of 405 | `npm run audit` |
-| drills | **2397 pass · 0 fail · 4 skipped** | `npm test` |
+| drills | **2411 pass · 0 fail · 4 skipped** | `npm test` |
 | the 4 skips | `drift.test.js`, the ONE drill allowed the live wire | — |
 | self-play | 210 games · **0 stalls · 0 refusals · 0 violations · 0 MALFORMED · 0 SECOND-PERSON** | `npm run play` |
 | fairness | **nothing found** — no card grants more than it prints | `npm run fairness` |
 | scenes | **73 passing · 0 failing** | `npm run scenes` |
 | CR index | UNGUARDED is exactly the 3 allowed section pointers | `node tools/crindex.js --check` |
-| sweep | **UNFAIR 0** — genuinely, for the first time · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
+| sweep | **UNFAIR 0** · WRONG 21 → **18** at v4.27 · 3 heroes / 3 unread clauses · 2 tokens | `npm run sweep` |
 | audit flags | **15**, down from 26 | `npm run audit` |
 | gaps | **19 unfinished · 14 one clause away** | `npm run gaps` |
 | approximations | **10 stated · 8 open · 9 closed** of 27 | `node tools/approx.js` |

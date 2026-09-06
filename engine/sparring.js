@@ -138,6 +138,32 @@ function payAction(g, seat, p, o){
      THE WALL STANDS. This reads no card text — `judge` asked the
      question, and "no" is a complete answer to "you may". */
   if(p.kind === "boost") return {t: "boost", yes: false};
+  /* FUSION'S REVEAL (v4.27) — TAKEN, and the reasoning is why it is not
+     boost's answer one line up.
+
+     v4.24's standing rule is to DECLINE a price this policy cannot
+     weigh, and boost is the worked example: the card it banishes is the
+     top of this seat's own deck, which the policy cannot see. Fusion's
+     price is different in kind — nothing moves zones and the whole cost
+     is the INFORMATION the opponent gains. Both peers hold full state by
+     construction (`wire.js`'s stated Phase B position, and this policy
+     is handed the whole game), so a revealed card tells the opposing
+     seat nothing it did not already have: the price is provably zero
+     FOR THIS POLICY, which is a different statement from "cannot be
+     weighed".
+
+     IT IS ALSO WHAT KEEPS THE ROUTE DRIVEN. Declining would leave every
+     fusion rider in the pool — 16 records across six cards, live in two
+     precons — fired NEVER in 210 self-play games, which is v3.50's and
+     v3.84's shape: a feature with no caller looks exactly like a feature
+     that works, until you count.
+
+     THE CARD IS PICKED DETERMINISTICALLY, on uid, like every other
+     ranking here — a policy that left this tie unbroken is a desync
+     waiting for two equal reveals. And it reads NO card text: `judge`
+     supplied the eligible uids with the question. */
+  if(p.kind === "fuse")
+    return {t: "fuse", uid: [...(p.uids || [])].sort((a, b) => byUid({uid:a}, {uid:b}))[0] || null};
   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
      `judge.PENDING_KINDS` is a census of four and this function branched
      on ONE, falling through to `paySel` for the rest — which is v3.35's

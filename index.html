@@ -777,7 +777,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.26"; /* v4.26 - THERE IS NO DECK-OUT LOSS IN FLESH AND BLOOD. CR 4.5.3 lists every way a player loses and there are exactly three - life to zero or no hero at all, an effect that says so, and concede. `judge.js` deleted the invented fatigue loss at v2.45 and wrote down why; the TRAINER kept it for four dozen versions, so the invented rule lived on the board a PLAYER USES while the CR-exact board had it right - v3.01's one-board shape with the sign that matters, because a trainer TEACHES. The approximation ledger justified leaving it on the grounds that "seat 1 reshuffles, so this is a decision about solo play": that is a fact about the DUMMY and the rule being broken is the PLAYER's loss condition, so the reason never reached the thing it excused (v3.69). A hero who runs their deck out now keeps playing, keeps blocking with what is in hand, and loses only when their life reaches 0 - and the feed says so, because in a training sim the sequence is the lesson. AND THE FIELD THAT NAMED IT WAS DEAD: `sd.fatigue` was declared in SIDE_FIELDS, shipped down the wire, and READ AND WRITTEN BY NOTHING, ever - `sd.rune`'s shape (v3.82) one invented rule over, and not even the thing implementing the loss, which set `game.over`. Retired; symmetry ledger 51 -> 50 and WIRE_V 7 -> 8, because a peer carrying one extra field FINGERPRINTS differently and two honest peers would desync on the opening state. The bump itself was unguarded - three versions have moved WIRE_V by hand and a fourth that forgot would have been silent - so the version and a digest of the payload SHAPE are pinned together now. Nine sabotages, nine bite. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.27"; /* v4.27 - FUSION IS A COST, AND IT WAS BEING TAKEN WITHOUT BEING PAID. "[TALENT] Fusion" reads "as an additional cost to play this, YOU MAY reveal a [TALENT] card from your hand", and `execute` settled `fused` by SCANNING THE HAND - so the bonus landed on every play that could take it, no card was ever named, and the opponent learned nothing. The block's own comment said why: "nothing moves zones, so there is no real downside to taking it" - true about the ZONES and false about the COST, because what a reveal charges is INFORMATION, and taking the bonus while naming no card is the reward without the cost (v2.04 from the other end). A "you may" that cannot be refused is stronger than printed (v3.90), and a printed CHOICE never offered is a fail state on this project's own scale. 16 pool records across six cards, LIVE in Iyslander's and Briar's lists, and every one of them read `tier: full` throughout - the clause WAS consumed, so no coverage tool could see it. `parser.fusionOffer` is the ONE reader of which cards could pay, both boards ASK before the card resolves (boost's shape, one cost over: a COST cannot be a queued prompt), the answer rides as `_fuseUid`, `execute` RE-DERIVES it because `reduce` is fed by JSON off a wire, and the revealed card is NAMED in the shared feed - which is what the printed cost actually does. AND THE LEDGER NOW OUTRANKS THE GREP IN BOTH DIRECTIONS: v3.00 made it one-way, so a mechanic built as a FAMILY off the printed talent - which is the golden rule working - was reported as "almost certainly absent" because the engine says `fusionCost` and never "ice fusion". Eighteen sabotages, eighteen bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2291,6 +2291,7 @@ function phaseLabel(mode, bphase, over){
   if(mode === "pay") return "paying a cost";
   if(mode === "arsenal") return "end phase — arsenal";
   if(mode === "boostpick") return "boost?";
+  if(mode === "fusepick")  return "fusion?";
   if(mode === "targetpick") return "choosing a target";
   if(mode === "act") return "your action phase";
   return mode || "—";
@@ -3380,6 +3381,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `_doBoost` and `_addPaid`; leaving it there would play the next
        split card as whatever the last one chose, without asking. */
     if(n._half !== undefined){ n = {...n}; delete n._half; }
+    /* AND THE FUSION ANSWER IS SPENT TOO (v4.27), for `_half`'s reason:
+       left on the state the next fusion card is played as whatever the
+       last one revealed, without asking. */
+    if(n._fuseUid !== undefined){ n = {...n}; delete n._fuseUid; }
     if(!n._declared) return n;          /* it resolved; the action phase continues */
     /* WHERE THE DECLARED ATTACK GOES IS THIS BOARD'S ANSWER (v2.77).
        `execute` used to file it to the graveyard itself, at declaration —
@@ -3414,6 +3419,32 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     ? {...s, mode:"boostpick", pending:{card,from,idx}}
     : resolvePlay({...s,_doBoost:false},card,from,idx);
   const confirmBoost = (doBoost) => setG(s=>{ if(s.mode!=="boostpick"||!s.pending) return s; const {card,from,idx}=s.pending; return resolvePlay({...s,_doBoost:doBoost},card,from,idx); });
+  /* FUSION IS A COST AND IT WAS TAKEN WITHOUT BEING PAID (v4.27).
+     "[TALENT] Fusion" reads "as an additional cost to play this, YOU MAY
+     reveal a [TALENT] card from your hand", and `execute` used to settle
+     it by SCANNING the hand — so the bonus landed on every play that
+     could take it, no card was ever named, and the opponent learned
+     nothing. The reward without the cost (v2.04 from the other end), and
+     a "you may" that cannot be refused is stronger than printed (v3.90).
+
+     BOOST'S EXACT SHAPE, one cost over, and it goes AHEAD of it so both
+     boards ask the two in the same order (judge.js says the same). What
+     differs is that the answer is not yes/no: the printed line says
+     reveal A card, and WHICH one is the decision, because the price is
+     the information the opponent gets. `parser.fusionOffer` is the ONE
+     reader of what could pay it, shared with the table. */
+  const maybeFuse = (s,card,from,idx) => {
+    const off = DawnParser.fusionOffer(card, act(s), card && card.uid);
+    return off ? {...s, mode:"fusepick", pending:{card,from,idx,types:off.types,uids:off.uids}}
+               : maybeBoost(s,card,from,idx);
+  };
+  const confirmFuse = (uid) => setG(s=>{
+    if(s.mode!=="fusepick"||!s.pending) return s;
+    const {card,from,idx,uids} = s.pending;
+    const pick = (uid != null && (uids||[]).indexOf(uid) >= 0) ? uid : null;
+    const n = pick == null ? {...s} : {...s, _fuseUid: pick};
+    return maybeBoost(n, card, from, idx);
+  });
   /* THE ANSWER RE-ENTERS `tryPlay`, so there is ONE description of what
      playing a card does. A second body that resolved the half itself
      would skip every gate above it — the reaction-window refusal, the
@@ -3424,7 +3455,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(pick) tryPlay(pick.card, pick.from, pick.idx, half);
   };
   const tryPlay = (card,from,idx,half) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="defpay"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="defpay"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3601,7 +3632,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        cost to DEPLOY; its attack prints its own. */
     const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
                                : effCost(card, act(s), costCtx(s, actorOf(s)));
-    if(act(s).res>=cost) return maybeBoost(s,card,from,idx);
+    if(act(s).res>=cost) return maybeFuse(s,card,from,idx);
     const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
     return pn;
@@ -3620,7 +3651,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     paySide.hand = keepIdx.map(i=>you(s).hand[i]);
     paySide.pitch = [...you(s).pitch,...pitched];
     n = L(n, `Pitched ${pitched.map(c=>c.name).join(", ")} for ${gain}.`);
-    return maybeBoost(n, s.pending.card, s.pending.from, pendIdx);
+    return maybeFuse(n, s.pending.card, s.pending.from, pendIdx);
   });
   const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; return n; });
 
@@ -3683,7 +3714,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      adds only the trainer's own busy-modes, which are not a rule about
      the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    if(["pay","arsenal","boostpick","defpay"].indexOf(s.mode) >= 0) return false;
+    if(["pay","arsenal","boostpick","fusepick","defpay"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
   /* THE PAYMENT AND THE OPS ARE SHARED; the DEFENCE BUFF is this board's.
@@ -3692,7 +3723,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      way to raise one — so `activateHandAbility` hands the number back and
      this routes it. Same split as `linkPumps`/`linkPayload`. */
   const activateHand = c => setG(s=>{
-    if(["pay","arsenal","boostpick","defpay"].indexOf(s.mode) >= 0) return s;
+    if(["pay","arsenal","boostpick","fusepick","defpay"].indexOf(s.mode) >= 0) return s;
     const r = _EFX.activateHandAbility(s, c);
     if(r.why) return L(s, r.why + ".");
     let n = r.game;
@@ -4494,7 +4525,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
-  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res)+" MORE"}
+  const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="fusepick" && g.pending) ? {card:g.pending.card, chip:"FUSION? — reveal a "+g.pending.types.join("/")+" card"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res)+" MORE"}
     : (g.mode==="defpay" && (g.defPayQueue||[]).length) ? {card:[...you(g).hand, ...you(g).gear].find(c=>c.uid===g.defPayQueue[0].uid), chip:"PAY "+g.defPayQueue[0].cost+"? — "+g.defPayQueue[0].name}
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
@@ -4796,6 +4827,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                   {off && <button onClick={doHeave}>heave {off.card.name} ({off.n})</button>}
                   <button onClick={skipArsenal}>skip</button></div>); })()}
               {g.mode==="boostpick" && <div className="statusline">Boost <b>{g.pending.card.name}</b>? Banish the top card of your deck — a Mechanologist card grants go again.</div>}
+              {g.mode==="fusepick" && g.pending && <div className="statusline">Fuse <b>{g.pending.card.name}</b>? Reveal a {g.pending.types.join("/")} card from your hand — <b>your opponent sees it</b>.</div>}
               {g.mode==="splitpick" && g.splitPick && <div className="statusline">
                 <b>{g.splitPick.name}</b> is a split card — one card, two halves.
                 {(g.splitPick.halves||[]).map((h,i)=><span key={i}> <b>{h.name}</b> ({h.tt}).</span>)}
@@ -4965,6 +4997,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
         )) : g.mode==="boostpick" ? (<>
           <button className="a go" onClick={()=>confirmBoost(true)}>⚡ Boost</button>
           <button className="a" onClick={()=>confirmBoost(false)}>No boost</button>
+        </>) : g.mode==="fusepick" ? (<>
+          {/* ONE BUTTON PER ELIGIBLE CARD, because WHICH card is the
+              decision — the price fusion charges is the information the
+              opponent gains, so revealing a spent blue is not the same
+              play as revealing the attack you are holding. The uids come
+              from `parser.fusionOffer` with the question, so the buttons
+              and the legality of the answer cannot disagree. */}
+          {(g.pending?.uids||[]).map(u => {
+            const c = you(g).hand.find(x=>x.uid===u);
+            return <button key={u} className="a go" onClick={()=>confirmFuse(u)}>
+              Reveal {c ? c.name : "card"}</button>;
+          })}
+          <button className="a" onClick={()=>confirmFuse(null)}>No reveal</button>
         </>) : g.mode==="defpay" ? (<>
           <button className="a go" disabled={you(g).res < ((g.defPayQueue||[])[0]?.cost||0)} onClick={()=>confirmDefPay(true)}>
             Pay {(g.defPayQueue||[])[0]?.cost||0}
@@ -6175,6 +6220,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const boost  = kindIs("boost");
   const addPay = kindIs("addPay");
   const split  = kindIs("split");
+  const fuse   = kindIs("fuse");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -6447,6 +6493,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   THIS seat, in the trainer's voice. */}
               {over ? <div className="statusline">{over.winner===mySeat?"You win":"You lose"} — {g.sides[over.winner].name} takes it on {over.how}.</div>
                 : boost ? <div className="statusline">Boost <b>{boost.card.name}</b>? Banish the top card of your deck as an additional cost — a <b>Mechanologist</b> card grants go again.</div>
+                : fuse ? <div className="statusline">Fuse <b>{fuse.card.name}</b>? Reveal a {(fuse.types||[]).join("/")} card from your hand as an additional cost — <b>{them.name} sees it</b>.</div>
                 : pay ? <div className="statusline">Paying <b>{pay.card.name}</b> — tap cards below to pitch · {(()=>{const short=Math.max(0,pay.need-me.res-DawnJudge.paySum(me)); return short>0?<span>need <b>{short}</b> more</span>:<span>covered ✓</span>;})()}
                     <button onClick={()=>fire({t:"payCancel"})}>✕ cancel</button></div>
                 : theirPay ? <div className="statusline">{them.name} is paying for something…</div>
@@ -6591,6 +6638,21 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
           : addPay ? <>
               <button className="a go" onClick={()=>fire({t:"addPay",yes:true})}>Pay {addPay.cost} more</button>
               <button className="a" onClick={()=>fire({t:"addPay",yes:false})}>Decline</button>
+            </>
+          /* FUSION'S REVEAL (v4.27). ONE BUTTON PER ELIGIBLE CARD, because
+             WHICH card is the decision: the price this cost charges is the
+             INFORMATION the opponent gains, so revealing a spent blue is
+             not the same play as revealing the attack you are holding. The
+             uids arrive with the question from `parser.fusionOffer`, the
+             one reader both boards ask, so the buttons and the legality of
+             the answer cannot disagree. No Cancel, for boost's reason. */
+          : fuse ? <>
+              {(fuse.uids||[]).map(u => {
+                const c = (me.hand||[]).find(x=>x.uid===u);
+                return <button key={u} className="a go" onClick={()=>fire({t:"fuse",uid:u})}>
+                  Reveal {c ? c.name : "card"}</button>;
+              })}
+              <button className="a" onClick={()=>fire({t:"fuse",uid:null})}>No reveal</button>
             </>
           : pay ? <>
               <button className="a" onClick={()=>fire({t:"payCancel"})}>Cancel</button>

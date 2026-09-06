@@ -2619,18 +2619,46 @@ function makeEffects(ctx){
       actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
       n = L(n, `${card.name}: charged ${picked.name} into your hero's soul (Charge).`);
     }
-    /* FUSION — CR: "As an additional cost to play this, you may reveal a
-       [type] card from your hand." Nothing moves zones (a reveal, not a
-       cost paid away), so unlike Charge there is no real downside to
-       taking it — always fused when hand has a qualifying card. Type is
-       read off the printed type line (`tt`), same field attackQual reads
-       elsewhere; never guessed. */
+    /* FUSION — "[TALENT] Fusion" means "as an additional cost to play
+       this, YOU MAY reveal a [TALENT] card from your hand."
+
+       IT WAS TAKEN WITHOUT BEING PAID UNTIL v4.27. This block scanned the
+       hand and set `fused` whenever a qualifying card existed, on the
+       stated grounds that "nothing moves zones, so there is no real
+       downside" — which is true about the ZONES and false about the
+       COST. What a reveal charges is INFORMATION: the opponent is shown
+       a card out of a hidden hand. Taking the bonus and naming no card
+       is the reward without the cost (v2.04, read from the other end),
+       and a "you may" that cannot be refused is stronger than printed
+       (v3.90). 16 pool records across six cards, live in Iyslander's and
+       Briar's lists.
+
+       THE ANSWER RIDES ON THE STATE as `_fuseUid`, the seam `_doBoost`
+       and `_addPaid` already use — a COST is settled before the card
+       resolves, and `openPrompt` drains after it has (v3.34). `null`
+       means the offer was declined or never made.
+
+       AND IT IS RE-DERIVED HERE RATHER THAN TRUSTED. `reduce` is fed by
+       JSON off a wire, so a uid naming a card that is not in the hand,
+       or does not carry the talent, must not fuse — the same guard
+       `_addPaid` grew at v3.34 for the same reason, three lines down.
+       `parser.fusionOffer` is the ONE reader of what could pay, so the
+       offer, the legality of the answer and this check cannot disagree. */
     let fused = false;
     if(fx.fusionCost){
-      fused = act(n).hand.some(c2 => fx.fusionCost.types.some(ty => new RegExp("\\b"+ty+"\\b","i").test(c2.tt||"")));
+      const offer = P.fusionOffer(card, act(n), card.uid);
+      const pick  = (offer && n._fuseUid != null && offer.uids.indexOf(n._fuseUid) >= 0)
+        ? act(n).hand.find(c2 => c2 && c2.uid === n._fuseUid) : null;
+      fused = !!pick;
+      /* THE FEED IS THE REVEAL. A log line is read by BOTH seats (v2.83),
+         so naming the card here is what the printed cost actually does —
+         and the seat is NAMED rather than second-personed, because the
+         line is addressed to the opponent as much as to the player. */
       n = L(n, fused
-        ? `${card.name}: revealed a ${fx.fusionCost.types.join("/")} card from hand — fused (Fusion).`
-        : `${card.name}: no ${fx.fusionCost.types.join("/")} card in hand to reveal — not fused.`);
+        ? `${sv(act(n), "reveal")} ${pick.name} from hand — ${card.name} is fused (Fusion).`
+        : offer
+          ? `${card.name}: the ${fx.fusionCost.types.join("/")} reveal was declined — not fused.`
+          : `${sv(act(n), "hold")} no ${fx.fusionCost.types.join("/")} card to reveal — ${card.name} is not fused.`);
     }
     // conditional clauses evaluated against this turn's history (before this card)
     /* "INSTEAD" REPLACES. When a conditional payload says "instead" and its
