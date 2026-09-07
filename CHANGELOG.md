@@ -1,3 +1,112 @@
+## v4.29 — a printed trigger that fired on two exits of seven
+
+> *"When this leaves the arena, your next attack this turn gets +6{p}."*
+> — ACT OF GLORY ×3, and three more decked cards
+
+It fires **however the card leaves**. It was read in exactly two of the
+arena's exits — the suspense counter running out, and the card's own
+printed clock — and both of those are exits a card **schedules for
+itself**. Every exit somebody else forced paid nothing.
+
+Driven, seat 0 holding Act of Glory:
+
+| exit | `onLeave` |
+|---|---|
+| suspense runs out | ✅ `fired`, `ops [["buffNext",6]]` |
+| **destroyed by Condemn to Slaughter** | ❌ board 0, grave 1, **`ops []`, `buffNext 0`** |
+
+### It is LIVE, and it is CROSS-SEAT
+
+Condemn to Slaughter is **Viserai's**; the four decked cards that print
+the trigger are **Lyath's** (Act of Glory, Tension in the Air, Booze!) and
+**Bravo's** (Edge of Their Seats). Within one deck it is latent — and
+Condemn's rider (`foeDestroyAura`, v3.20) makes the **opponent** destroy
+one, so the reachable case is a table, which is what the table is for.
+
+**AND NO TOOL HERE COULD SEE IT.** All four read `tier: full`, because the
+clause *is* consumed — into `fx.onLeave`, faithfully. The fairness sweep is
+one-sided toward too-STRONG and every one of these is a payout the
+controller was **owed**. v3.17's rule at the scale of an exit: **the event
+is one body, or it is not an event.**
+
+### `leavePayout` is that body, and seven routes ask it
+
+| exit | |
+|---|---|
+| `tickSuspense` | the counter runs out (v3.07) |
+| `sweepArena` | the card's own printed clock, incl. v4.23's counter clock |
+| **`applyAnswer`** | a board→grave PICK — Condemn's own cost, and its cross-seat rider |
+| **`destroyFoeToken`** | a named token on the opposing board |
+| **`abDestroyBoard`** | v3.86's named-permanent activation cost |
+| **`card.sd` route** | an arena permanent's own *"destroy this"* cost (v2.35) |
+| **`hitWatch`** | v4.25's watcher destroying itself on somebody else's hit |
+
+**THE PAYOUT IS ONLY `onLeave`, NEVER THE SCHEDULE'S OWN OPS.**
+`sweepArena` also pays the ops printed *after* a `selfDestruct` — Might's
+*"destroy this, THEN buff"* — and is right to, because that card left on
+its own clock and the clock ran. A card somebody else destroyed never ran
+its schedule, so paying those would hand out a payout whose printed
+trigger did not fire. That is why the shared body is thin.
+
+**IT IS THE CONTROLLER'S PAYOUT, NOT THE DESTROYER'S.** `destroyFoeToken`
+destroys the other seat's, so `payLeave` takes the seat explicitly, borrows
+it and hands it straight back — v3.46's `allyDeath` inversion, one trigger
+over. Driven both ways: the aura's controller is paid, the destroyer is
+not, and the actor comes back.
+
+### Three routes are EXCLUDED by measurement, not by oversight
+
+The attack-trigger token **pop** (v3.22) destroys a token whose own
+trigger *is* the payload, so paying `onLeave` as well would be
+`VALUE-DOUBLED` on the sweep's own terms; `resolveInertia` and `thawFrost`
+remove tokens that print no such clause. **Measured over 797 records:
+exactly one token emits a leave clause (Sigil of Fate) and nothing in the
+pool creates it** — so no token an engine can make carries one, and the
+day something creates it a drill fails and the exclusion is re-argued.
+
+**THE PARTITION IS PINNED, BOTH SIDES** (v4.17). Pinning the payers alone
+cannot see a name *leaving* the list; pinning the exclusions too is what
+makes a removal fail, because a route has to land somewhere.
+
+### And v3.57's recorded reason was stale in its first half
+
+It refused a gated leave-payload and wrote down why: *"`fx.onLeave` has
+exactly ONE caller, `tickSuspense`, and nothing in this engine can make it
+leave the arena."* The first half stopped being true at **v3.20**, when
+`sweepArena` began paying it too. **A recorded reason is only as good as
+the day it was measured** (v3.69) — and the second half was never about
+these four cards at all.
+
+### The drills, and the three sabotages that proved nothing
+
+Fifteen drills; fifteen sabotages, fifteen bite. Three of the first seven
+came back **SILENT because the fixture could not express the bug** (v3.62):
+inside `applyAnswer` the actor has *already* been borrowed to `p.side`
+twenty lines above the payout, so a sabotage reading the ambient actor
+there is a no-op. `destroyFoeToken` is the one route where the destroyer
+and the controller genuinely differ, and that is where the seat drills
+live now. Two more exits were wired and **undrilled** — one of them
+`sweepArena`, which already worked and which the collapse could have
+broken silently — and both are driven now, with synthetics where the pool
+is latent (v3.73).
+
+### And the route was counted (v3.84)
+
+`tools/selfplay.js` gains a `leave` counter, its phrase pinned against the
+engine's (v3.81): **126 payouts in 210 games.** It counts every exit
+deliberately, because the FORCED half reads **zero** — measured, Condemn
+to Slaughter is named 88 times in 24 games and **every one is a pitch or a
+block**. `sparring.act` ranks non-attacks last (v3.80's printed-numbers
+argument) and never reaches it as a play, so the new routes are exercised
+by drills rather than by the harness. A counter narrowed to that half
+would print a 0 that is about the POLICY, and a number in that block means
+a feature fired (v4.17).
+
+**2432 drills green.** Audit 386 full / 15 part / 4 none — **unchanged,
+which is the point**: all four cards were already `full`. Fairness clean,
+scenes 73/0, `crindex --check` green, 210 self-play games with 0 stalls /
+0 refusals / 0 violations.
+
 ## v4.28 — a disclosure that is not readable is not a disclosure
 
 Reported from a phone, with a screenshot: the loadout screen's two fight

@@ -112,6 +112,24 @@ function play(g, limit){
            pool records across six cards, live in Iyslander's and Briar's
            lists. v3.84: when you build a route, go and count. */
         if(/is fused \(Fusion\)/.test(line))        events.push(["fusion", line]);
+        /* LEAVING THE ARENA (v4.29). "When this leaves the arena, X"
+           fired on two of the arena's seven exits, and both were exits a
+           card SCHEDULES FOR ITSELF. This counts the times a card actually
+           PAID for leaving, by any route. The phrase is the engine's own
+           (v3.81: a counter that spells the wrong word reports zero
+           exactly as a missing feature does) and test/leavearena.test.js
+           pins the two spellings against each other.
+
+           IT COUNTS EVERY EXIT DELIBERATELY, and the FORCED half reads
+           ZERO here — measured over 224 games, where Condemn to Slaughter
+           is named 88 times in 24 of them and every one is a PITCH or a
+           BLOCK. `sparring.act` ranks non-attacks last (v3.80's printed-
+           numbers argument) and never reaches it as a play, so the routes
+           v4.29 built are exercised by drills rather than here. Narrowing
+           the counter to that half would print a 0 that is about the
+           POLICY, and a number in this block means a FEATURE FIRED
+           (v4.17). v3.84: when you build a route, go and count. */
+        if(/leaves the arena — and it pays out/.test(line)) events.push(["leave", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

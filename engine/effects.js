@@ -724,6 +724,36 @@ function makeEffects(ctx){
     return n;
   };
 
+  /* ---- ONE EXIT, ONE PAYOUT (v4.29) ---------------------------------
+
+     Every route that takes a card off the board and files it to a
+     graveyard pays what the card printed about LEAVING. It takes the SEAT
+     explicitly and borrows it, because "your next attack this turn gets
+     +6{p}" belongs to the aura's CONTROLLER and `destroyFoeToken`
+     destroys the other seat's — read from the ambient actor, the payout
+     lands on whoever did the destroying, which is v3.46's `allyDeath`
+     inversion one trigger over. Handed straight back, or every rule after
+     it in the same resolution runs for the wrong hero.
+
+     TWO ROUTES DELIBERATELY DO NOT CALL IT, and both are measured rather
+     than assumed. The attack-trigger token POP (v3.22) destroys a token
+     whose own trigger IS the payload, so paying `onLeave` as well would
+     be `VALUE-DOUBLED` on the sweep's own terms; and `resolveInertia` /
+     `thawFrost` remove tokens that print no such clause. Measured over
+     797 records: exactly one token emits `onLeave` (Sigil of Fate) and
+     NOTHING in the pool creates it, so no token an engine can make
+     carries one. `test/leavearena.test.js` pins that partition, both
+     sides, so a new removal route has to say which one it is. */
+  const payLeave = (s, card, seat) => {
+    const pay = leavePayout(card);
+    if(!pay.length) return s;
+    const was = actorOf(s);
+    let n = {...s, actor: seat};
+    n = L(n, card.name + " leaves the arena — and it pays out.");
+    n = runOps(n, pay, card.name);
+    return {...n, actor: was};
+  };
+
   const runOps = (s, ops, srcName) => {
     let n = {...s};
     ops.forEach(op=>{
@@ -1018,6 +1048,7 @@ function makeEffects(ctx){
         foeMut(n).board = foe(n).board.filter(b => b !== hit);
         foeMut(n).grave = [...gy(n.turn, hit.card), ...foe(n).grave];
         n = L(n, `${srcName}: ${hit.card.name} is destroyed.`);
+        n = payLeave(n, hit.card, 1 - actorOf(n));
       }
       else if(k==="foeDiscard"){
         const take = foe(n).hand.slice(-Math.max(1,v));
@@ -2435,6 +2466,7 @@ function makeEffects(ctx){
         actMut(n).board = act(n).board.filter(x => x !== _de);
         actMut(n).grave = [...gy(n.turn, _de.card), ...act(n).grave];
         n = L(n, `${act(n).name}: ${_de.card.name} is destroyed — the cost is paid.`);
+        n = payLeave(n, _de.card, actorOf(n));
       } }
     /* ---- AN ALLY ATTACKS FROM THE ARENA (v3.44) ---------------------
        Nothing is spliced out of a zone: the ally is a permanent and it
@@ -3879,6 +3911,7 @@ function makeEffects(ctx){
           actMut(n).board = act(n).board.filter(x=>x!==ent);
           actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
           n = L(n, `${ent.card.name} is destroyed — cost paid.`);
+          n = payLeave(n, ent.card, actorOf(n));
         }
       }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
@@ -4369,6 +4402,31 @@ function makeEffects(ctx){
           {[r.spendCtr.kind]: Math.max(0, (bag[r.spendCtr.kind] || 0) - r.spendCtr.n)})});
     }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
+    /* AND A CARD THAT LEFT THE ARENA PAYS FOR LEAVING IT (v4.29).
+       `prompts.js` runs no effects and touches no resources — that is the
+       contract that makes it drillable without a deck, and it is right —
+       so a board->grave pick splices the entry with a plain filter and
+       reports WHICH card moved in `r.picked`. Nothing then asked the
+       card what it printed about leaving.
+
+       Driven: Condemn to Slaughter destroying an Act of Glory left the
+       board empty, the graveyard holding it, `ops: []` and `buffNext: 0`
+       — a printed +6 the controller was promised and did not get.
+
+       IT IS THE CONTROLLER'S PAYOUT, NOT THE DESTROYER'S. "Your next
+       attack this turn gets +6{p}" is the AURA's controller's, and
+       `foeDestroyAura` addresses its pick to the opposing seat — so the
+       seat that owns the payout is `p.side`, which the borrow twenty
+       lines up has already made the actor. Read from `act(n)` and the
+       Gold lands on whoever condemned it, which is v3.46's borrowed-seat
+       inversion one trigger over.
+
+       ONLY WHEN IT LEFT THE BOARD. `p.zone` is where the pick came FROM,
+       so a graveyard pick or a hand pick pays nothing, and a card put ON
+       to the board is not leaving one. */
+    if(p.tag === "pick" && p.zone === "board" && (r.picked||[]).length){
+      for(const gone of r.picked) n = payLeave(n, gone, pSide);
+    }
     /* A GO-AGAIN GRANT THAT ARRIVES AFTER ITS LAYER (v3.93) — see
        `settleLateGa`. AFTER the ops, because `runOps` is what records the
        grant: written above them it reads a flag nothing has set yet, and
@@ -5833,6 +5891,7 @@ function makeEffects(ctx){
           if(ent){
             actMut(n).board = act(n).board.filter(x => x !== ent);
             actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
+            n = payLeave(n, ent.card, actorOf(n));
           } else {
             /* A GEAR PIECE IS MARKED, NOT SPLICED (v3.54): a wall
                declared as INDICES into `gear` renumbers underneath a
@@ -6159,6 +6218,41 @@ function armNextTurn(game, seat){
                  + " lingering effect(s)."]};
 }
 
+/* ---- WHAT A CARD PAYS FOR LEAVING THE ARENA (v4.29) ----------------
+
+   "When this leaves the arena, X" is a TRIGGER, and it fires however the
+   card leaves. It was read in exactly TWO of the arena's exits — the
+   suspense counter running out and the card's own printed clock — and
+   both of those are exits the card SCHEDULES FOR ITSELF. Every exit
+   somebody else forces paid nothing.
+
+   DRIVEN, seat 0 holding Act of Glory (`onLeave: [["buffNext", 6]]`):
+
+     suspense runs out          fired, ops [["buffNext",6]]
+     destroyed by Condemn       board 0, grave 1, ops [], buffNext 0
+
+   That is LIVE and CROSS-SEAT. Condemn to Slaughter is Viserai's, the
+   four decked cards that print the trigger are Lyath's and Bravo's, and
+   its rider (`foeDestroyAura`, v3.20) makes the OPPONENT destroy one —
+   so the reachable case is a table, which is what the table is for.
+
+   AND NO TOOL HERE COULD SEE IT. Coverage reads all four `tier: full`,
+   because the clause IS consumed — into `fx.onLeave`, faithfully. The
+   fairness sweep is one-sided toward too-STRONG and every one of these is
+   a payout the controller was PROMISED and did not get. v3.17's rule at
+   the scale of an exit: **the event is one body, or it is not an event.**
+
+   THE PAYOUT IS ONLY `onLeave`, NEVER THE SCHEDULE'S OWN OPS.
+   `sweepArena` also pays the ops printed AFTER a `selfDestruct` —
+   Might's "destroy this, THEN buff" — and it is right to, because that
+   card left on its own clock and the clock ran. A card somebody else
+   destroyed never ran its schedule, so paying those would hand out a
+   payout whose printed trigger did not fire. That is why this is one
+   THIN body rather than a shared `sweepArena`. */
+function leavePayout(card){
+  return (card && P.fxParse(card).onLeave) || [];
+}
+
 function tickSuspense(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -6179,7 +6273,7 @@ function tickSuspense(game, seat){
        arena" clause has been waiting for. */
     fired.push(b.card.name);
     grave.push(b.card);
-    const pay = (P.fxParse(b.card).onLeave || []);
+    const pay = leavePayout(b.card);
     ops.push(...pay);
     msgs.push(b.card.name + " runs out of suspense and leaves the arena" +
       (pay.length ? " — and it pays out." : "."));
@@ -6644,7 +6738,7 @@ function sweepArena(game, seat, when){
        happened to be built first. */
     const f = P.fxParse(b.card);
     const di = (f.ops || []).findIndex(o => o[0] === "selfDestruct");
-    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...(f.onLeave || [])];
+    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...leavePayout(b.card)];
     /* THE LEAVES HALF of "when this enters or leaves the arena" (v3.20).
        It queues rather than resolves, because the cost is a CHOICE — and
        it goes out as a `pickPrompt` op rather than onto `promptQ`
@@ -7629,6 +7723,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

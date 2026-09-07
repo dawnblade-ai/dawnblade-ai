@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.28
+**Current version:** v4.29
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2417 drills** at v4.28.
+This is `node --test "test/*.test.js"` — **2432 drills** at v4.29.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -835,6 +835,68 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PRINTED TRIGGER THAT FIRED ON TWO EXITS OF SEVEN (v4.29)
+
+> *"When this leaves the arena, your next attack this turn gets +6{p}."*
+> — ACT OF GLORY ×3, and three more decked cards
+
+It fires **however the card leaves**, and it was read in exactly two of
+the arena's exits — the suspense counter running out and the card's own
+printed clock — **both of which are exits a card SCHEDULES FOR ITSELF.**
+Every exit somebody else forced paid nothing. Driven, seat 0 holding Act
+of Glory: suspense running out fired it; Condemn to Slaughter destroying
+it left the board empty, the graveyard holding it, `ops: []` and
+`buffNext: 0`.
+
+**LIVE AND CROSS-SEAT.** Condemn is Viserai's, the four decked cards are
+Lyath's and Bravo's, and Condemn's rider (`foeDestroyAura`, v3.20) makes
+the OPPONENT destroy one — so the reachable case is a table.
+
+**AND NO TOOL HERE COULD SEE IT.** All four read `tier: full`, because the
+clause IS consumed — into `fx.onLeave`, faithfully — and every one is a
+payout the controller was OWED, which is the direction the one-sided sweep
+is built not to look in. v3.17's rule at the scale of an exit: **the event
+is one body, or it is not an event.**
+
+**`leavePayout` IS THAT BODY AND SEVEN ROUTES ASK IT** — the two schedules
+plus a board→grave PICK, `destroyFoeToken`, v3.86's named-permanent cost,
+an arena permanent's own destroy-this, and v4.25's self-destroying watcher.
+**The payout is only `onLeave`, never the schedule's own ops**: `sweepArena`
+also pays what is printed AFTER a `selfDestruct`, and is right to, because
+that card's clock RAN — a card somebody else destroyed never ran its
+schedule, so paying those hands out a payout whose trigger did not fire.
+
+**IT IS THE CONTROLLER'S, NOT THE DESTROYER'S** (v3.46's `allyDeath`
+inversion). `payLeave` takes the seat explicitly, borrows it and hands it
+straight back.
+
+**THREE ROUTES ARE EXCLUDED BY MEASUREMENT.** The attack-trigger token POP
+destroys a token whose own trigger IS the payload (VALUE-DOUBLED
+otherwise); `resolveInertia` and `thawFrost` remove tokens printing no such
+clause. Measured over 797 records: exactly one token emits a leave clause
+(Sigil of Fate) and **nothing in the pool creates it**. The partition is
+pinned BOTH SIDES (v4.17) — pinning the payers alone cannot see a name
+leaving the list.
+
+**AND v3.57's RECORDED REASON WAS STALE IN ITS FIRST HALF.** It said
+`fx.onLeave` has exactly one caller; `sweepArena` became a second at v3.20.
+**A recorded reason is only as good as the day it was measured** (v3.69).
+
+**THREE SABOTAGES PROVED NOTHING BECAUSE THE FIXTURE COULD NOT EXPRESS THE
+BUG** (v3.62). Inside `applyAnswer` the actor is ALREADY borrowed to
+`p.side` twenty lines above the payout, so a sabotage reading the ambient
+actor there is a no-op; `destroyFoeToken` is the one route where destroyer
+and controller genuinely differ, and that is where the seat drills live.
+Two more exits were wired and **undrilled** — one of them `sweepArena`,
+which already worked and which the collapse could have broken silently.
+
+**AND THE ROUTE WAS COUNTED** (v3.84): `leave` reads **126 in 210 games**.
+It counts EVERY exit deliberately, because the forced half reads ZERO —
+measured, Condemn is named 88 times in 24 games and every one is a PITCH
+or a BLOCK, since `sparring.act` ranks non-attacks last (v3.80). A counter
+narrowed to that half would print a 0 that is about the POLICY, and a
+number in that block means a feature FIRED (v4.17).
 
 ### THE LEDGER OUTRANKS THE GREP IN BOTH DIRECTIONS (v4.27)
 
