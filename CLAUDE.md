@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.29
+**Current version:** v4.30
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2432 drills** at v4.29.
+This is `node --test "test/*.test.js"` — **2435 drills** at v4.30.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -835,6 +835,50 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE REFUSAL v4.29 CAME DUE ON (v4.30)
+
+> *"When this leaves the arena, **if you've pitched a blue card this
+> turn**, create a Spectral Shield token."* — WANING VENGEANCE ×3
+
+v3.57 refused it and wrote down TWO reasons. One was a real gap; the
+other stopped being true underneath it.
+
+**REASON ONE WAS REAL AND IS BUILT.** The dispatcher had no branch for a
+gate riding with a leave payload, so the gate would be DROPPED and the
+token minted unconditionally — `COND-BYPASSED`, and the one shape the
+fairness sweep cannot see, because its model needs an unconditional TWIN
+and a vanished gate leaves none. The entry rides in **`fx.condOnLeave`**
+(`condOnHit`'s shape one trigger over, a separate list for v3.45's
+reason) and `effects.leavePayout` evaluates it at the exit against a
+**CLOSED vocabulary** — an unknown gate answers FALSE, and a drill walks
+the pinned pool and fails the day one is emitted that is not named
+(v3.96's rule, one trigger over).
+
+**REASON TWO STOPPED BEING TRUE, AND IT WAS THE ONE DOING THE WORK.** It
+read *"`fx.onLeave` has exactly ONE caller … so nothing in this engine can
+make it leave the arena at all."* `sweepArena` became a second at v3.20
+and **v4.29** wired the five exits somebody else can FORCE. **A recorded
+reason is only as good as the day it was measured** (v3.69) — and this is
+v3.47 one version later: *when you build a mechanic, sweep the refusals
+that were waiting on it.*
+
+**THE SIDE IS THE CALLER'S ANSWER.** `pitchBlue1` reads the PITCH ZONE,
+not a turn history — the same reading `execute`'s condition loop gives it,
+because CR 4.4.3c sends that zone to the deck bottom at end of turn, so
+*"this turn"* and *"in the pitch zone"* coincide inside one and two
+readers of one gate cannot disagree. A caller that says nothing grants
+nothing.
+
+**THE DRILL THAT ASSERTED THE REFUSAL WENT RED THE DAY THE GAP CLOSED**,
+which is what a recorded refusal is FOR (v3.38). It is the POSITIVE now,
+and it keeps the half v3.57 was protecting: the gate is CARRIED, never
+folded into `fx.onLeave`. Driven both ways — the aura leaves either way
+and the Shield is minted only when the gate is met, because **the gate is
+on the PAYLOAD, not on the exit.**
+
+Measured: 3 records, one card, the pool's only gated leave-trigger.
+**386 → 387 full, 15 → 14 part**, floor re-pinned after reading the diff.
 
 ### A PRINTED TRIGGER THAT FIRED ON TWO EXITS OF SEVEN (v4.29)
 

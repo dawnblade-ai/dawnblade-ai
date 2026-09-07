@@ -365,3 +365,84 @@ test(gate("an arena permanent's own destroy-this cost is an exit too"), () => {
     assert.equal(after.sides[0].buffNext, 6, "and paid its leave clause on the way out");
   } finally { P.fxReset(); }
 });
+
+/* ---- the gate rides with the payload (v4.30) ------------------------ */
+
+const WV = () => {
+  const c = H.card("Waning Vengeance", 1);
+  return {card: c, kind: "aura", spent: false, uid: c.uid, sd: null};
+};
+const BLUE = () => H.card("Ice Bolt", 3);
+
+test(gate("the GATE decides, and both halves are driven"), () => {
+  /* BOTH HALVES OR THE DRILL PROVES NOTHING. A gate that refuses
+     everything passes the unmet half perfectly, and one that grants
+     everything passes the met half — the pair is what tests anything. */
+  P.fxReset();
+  try {
+    const wv = H.card("Waning Vengeance", 1);
+    assert.deepEqual(P.fxParse(wv).condOnLeave,
+      [{cond: "pitchBlue1", op: ["token", "spectral shield", 1, "self"]}]);
+
+    const unmet = H.state({board: [WV()], pitch: []}, {});
+    assert.deepEqual(E.leavePayout(wv, unmet.sides[0]), [],
+      "no blue pitched — the gate refuses and nothing is minted");
+
+    const met = H.state({board: [WV()], pitch: [BLUE()]}, {});
+    assert.deepEqual(E.leavePayout(wv, met.sides[0]),
+      [["token", "spectral shield", 1, "self"]],
+      "a blue in the pitch zone — the gate opens");
+
+    /* AND A CALLER THAT SAYS NOTHING GETS NOTHING (v3.24, v3.36, v3.87).
+       Weaker than printed and visible, never a payload granted off a
+       condition nobody answered. */
+    assert.deepEqual(E.leavePayout(wv, null), [],
+      "a caller that names no side grants nothing");
+  } finally { P.fxReset(); }
+});
+
+test(gate("driven: destroying it mints the Shield only when the gate is met"), () => {
+  P.fxReset();
+  try {
+    for (const [label, pitch, want] of [["gate unmet", [], 0], ["gate met", [BLUE()], 1]]) {
+      const g = H.state({board: [WV()], pitch}, {});
+      const spec = {tag: "pick", side: 0, src: "Condemn to Slaughter", zone: "board",
+                    to: "grave", filter: {tt: "aura"}, min: 1, max: 1};
+      const built = PR.buildPrompt(g, spec);
+      assert.ok(built, "the sheet opens");
+      const after = H.fx(g, (f, n) => f.applyAnswer(n, Object.assign({}, built, {sel: [0]})));
+      const shields = (after.sides[0].board || [])
+        .filter(b => b && b.card && /spectral shield/i.test(b.card.name || "")).length;
+      assert.equal(shields, want, label + ": expected " + want + " Spectral Shield");
+      assert.equal((after.sides[0].board || []).filter(b => b && b.uid === WV().uid).length, 0,
+        label + ": the aura left either way — the gate is on the PAYLOAD, not the exit");
+    }
+  } finally { P.fxReset(); }
+});
+
+test("the gated-leave condition vocabulary is CLOSED, and the pool is inside it", () => {
+  /* v3.96's rule for `condOnHit`, one trigger over: the parser emits into
+     this list and an evaluator answers it, and nothing compared them. A
+     condition the evaluator does not know answers FALSE — weaker than
+     printed and visible — and this fails the day the pool emits one that
+     is not named, rather than the payload quietly never firing. */
+  const pool = require("../data/pool.json").filter(c => c && c.name).map(C.mapDbCard);
+  const seen = new Set(), emitted = new Set(), cards = new Set();
+  for(const r of pool){
+    const k = r.n + "|" + r.p; if(seen.has(k)) continue; seen.add(k);
+    const fx = P.fxParse({name: "gl-probe|" + k, pitch: r.p, tt: r.tt, ty: r.ty, kw: r.kw, tx: r.tx});
+    for(const e of (fx.condOnLeave || [])){ emitted.add(e.cond); cards.add(r.n); }
+  }
+  assert.deepEqual([...emitted].sort(), ["pitchBlue1"],
+    "a gate the evaluator has not been taught: " +
+    [...emitted].filter(c => E.CONDONLEAVE_CONDS.indexOf(c) < 0).join(", "));
+  for(const c of emitted)
+    assert.ok(E.CONDONLEAVE_CONDS.indexOf(c) >= 0, "unnamed in the census: " + c);
+  assert.deepEqual([...cards], ["Waning Vengeance"],
+    "the pool's only gated leave-trigger — re-derive the blast radius if this moves");
+  /* THE POSITIVE CONTROL. A census over an empty set satisfies "every
+     emitted gate is named" perfectly (v3.98: ask for the refusal). */
+  assert.ok(emitted.size > 0, "the scan must actually find the card it exists for");
+  assert.equal(E.condOnLeaveMet("noSuchGate", {pitch: [BLUE()]}), false,
+    "and an unknown gate answers FALSE rather than falling through");
+});

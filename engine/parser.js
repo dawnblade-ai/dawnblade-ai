@@ -754,35 +754,39 @@ function classifyClause(raw){
        on, not one value read by two rules (which is v2.30's bug and the
        opposite mistake). */
     if(/\bleaves the arena\b/.test(cond)){
-      /* A GATED LEAVE-TRIGGER REFUSES (v3.57), and it is worth saying why
-         at length because the clause LOOKS readable and both halves parse.
+      /* A GATED LEAVE-TRIGGER READS (v4.30), AND v3.57 REFUSED IT FOR TWO
+         REASONS — one of which the engine has since falsified.
 
-         The op dispatcher in `fxParse` files an `onLeave` payload into
-         `fx.onLeave` and has NO branch for a condition riding with it —
-         so the gate is silently DROPPED and the payload fires
-         unconditionally. That is the COND-BYPASSED shape `npm run
-         fairness` exists to catch, and **the sweep does not catch it**:
-         its model looks for a condition gating an effect the engine ALSO
-         grants unconditionally, and here the condition simply vanishes,
-         leaving no unconditional twin to compare against.
+         REASON ONE WAS A REAL GAP AND IS BUILT. The dispatcher had no
+         branch for a condition riding with a leave payload, so the gate
+         would have been silently DROPPED and the payload fired
+         unconditionally — the COND-BYPASSED shape, and one `npm run
+         fairness` cannot catch, because its model needs an unconditional
+         TWIN to compare against and a vanished gate leaves none. The
+         entry now rides in `fx.condOnLeave`, which `effects.leavePayout`
+         evaluates at the exit against a CLOSED vocabulary (v3.96's rule
+         for `condOnHit`, one trigger over): a condition the evaluator
+         does not know answers FALSE, which is weaker than printed and
+         visible, and `test/leavearena.test.js` fails the day the pool
+         emits one that is not named.
 
-         Found by building the `pitchBlue1` condition, which made Waning
-         Vengeance's gate readable for the first time. Measured: it is the
-         ONLY pool card printing a gated leave-trigger, so nothing was
-         shipped wrong — this is a latent hole being closed before a card
-         could fall into it.
+         REASON TWO STOPPED BEING TRUE, AND IT WAS THE ONE DOING THE WORK.
+         It read: "`fx.onLeave` HAS EXACTLY ONE CALLER, `tickSuspense` …
+         so nothing in this engine can make it leave the arena at all."
+         `sweepArena` became a second caller at **v3.20**, and **v4.29**
+         wired the five exits somebody else can force — including the
+         board->grave destroy Condemn to Slaughter reaches across a table.
+         Waning Vengeance can leave the arena now, so the clause has an
+         occasion to fire. A recorded reason is only as good as the day it
+         was measured (v3.69), and this is the second half of one going
+         stale underneath a conclusion that was right when it was written.
 
-         AND `fx.onLeave` HAS EXACTLY ONE CALLER: `tickSuspense`, for an
-         aura whose SUSPENSE counters run out. Waning Vengeance prints no
-         suspense and its Ward is a side-level pool rather than counters
-         on the aura, so nothing in this engine can make it leave the
-         arena at all. Reading the clause would file the card `full` with
-         a dropped gate on a trigger that cannot fire — two ways wrong at
-         once. Refusing leaves it `part`, which is the truth.
+         MEASURED, BOTH TIMES: Waning Vengeance is the pool's ONLY gated
+         leave-trigger — 3 records, all three printings — so nothing was
+         ever shipped wrong and nothing else moves.
 
          The UNGATED wording is untouched: Booze!, Lyath's boo and the
          enters-or-leaves pair all still read. */
-      if(rest.cond) return null;
       return Object.assign(rest, /\benters?\b/.test(cond) ? {onLeave:true, onEnter:true} : {onLeave:true});
     }
     /* ---- AN ALLY DYING IS AN EVENT (v3.46) ----------------------------
@@ -4894,6 +4898,23 @@ function fxParse(card){
           return;
         }
         fx.condOnHit = [...(fx.condOnHit||[]), {cond:r.cond, op, heroOnly: !!r.heroOnly}]; return; }
+      /* A GATE RIDING WITH A LEAVE PAYLOAD IS ITS OWN LIST (v4.30) —
+         `condOnHit`'s shape one trigger over, and a separate list for the
+         same reason (v3.45): an op is a bare array, so a flag on it sits
+         where another reader expects a parameter. Folded into
+         `fx.onLeave` the gate is DROPPED and the payload fires
+         unconditionally, which is COND-BYPASSED and the one shape the
+         sweep cannot see — its model needs an unconditional twin, and a
+         vanished gate leaves none.
+
+         THE ENTRY HALF IS NOT GATED HERE. "Enters or leaves" pairs two
+         occasions with one payload, and a card printing a gate on both is
+         not in the pool; the gated wording that IS printed names leaving
+         alone, so the enter half is left to the ungated branch below
+         rather than given a reading nothing has measured. */
+      if(r.onLeave && r.cond && !r.onEnter){
+        fx.condOnLeave = [...(fx.condOnLeave||[]), {cond: r.cond, op}];
+        return; }
       if(r.onLeave){ fx.onLeave = [...(fx.onLeave||[]), op];
         /* "enters OR leaves" — the entry half is an ordinary on-play op
            for a permanent, which is where every other "when this enters

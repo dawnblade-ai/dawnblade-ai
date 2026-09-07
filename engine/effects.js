@@ -745,7 +745,7 @@ function makeEffects(ctx){
      carries one. `test/leavearena.test.js` pins that partition, both
      sides, so a new removal route has to say which one it is. */
   const payLeave = (s, card, seat) => {
-    const pay = leavePayout(card);
+    const pay = leavePayout(card, (s.sides || [])[seat]);
     if(!pay.length) return s;
     const was = actorOf(s);
     let n = {...s, actor: seat};
@@ -6249,8 +6249,34 @@ function armNextTurn(game, seat){
    destroyed never ran its schedule, so paying those would hand out a
    payout whose printed trigger did not fire. That is why this is one
    THIN body rather than a shared `sweepArena`. */
-function leavePayout(card){
-  return (card && P.fxParse(card).onLeave) || [];
+/* THE CONDITIONS A LEAVE PAYLOAD MAY CARRY — a CLOSED vocabulary, and
+   the census is the drill (v3.96's rule for `condOnHit`, one trigger
+   over). A gate the evaluator does not know answers FALSE: weaker than
+   printed and visible in the audit, rather than a payload firing off a
+   condition nobody wrote an answer for. `test/leavearena.test.js` walks
+   the pinned pool and fails the day a card emits one that is not here. */
+const CONDONLEAVE_CONDS = ["pitchBlue1"];
+
+function condOnLeaveMet(cond, sd){
+  /* THE SIDE IS THE CALLER'S ANSWER, and a caller that says nothing gets
+     FALSE (v3.24, v3.36, v3.87). `pitchBlue1` reads the PITCH ZONE rather
+     than a turn history, which is the same reading `execute`'s condition
+     loop gives it — CR 4.4.3c sends that zone to the deck bottom at the
+     end of the turn, so "this turn" and "in the pitch zone" coincide
+     inside one, and two readers of one gate cannot disagree. */
+  if(!sd) return false;
+  if(/^pitchBlue(\d+)$/.test(cond))
+    return (sd.pitch || []).filter(c => c && c.pitch === 3).length >= +cond.match(/\d+/)[0];
+  return false;
+}
+
+function leavePayout(card, sd){
+  if(!card) return [];
+  const fx = P.fxParse(card);
+  const gated = (fx.condOnLeave || [])
+    .filter(e => e && condOnLeaveMet(e.cond, sd))
+    .map(e => e.op);
+  return [...(fx.onLeave || []), ...gated];
 }
 
 function tickSuspense(game, seat){
@@ -6273,7 +6299,7 @@ function tickSuspense(game, seat){
        arena" clause has been waiting for. */
     fired.push(b.card.name);
     grave.push(b.card);
-    const pay = leavePayout(b.card);
+    const pay = leavePayout(b.card, sd);
     ops.push(...pay);
     msgs.push(b.card.name + " runs out of suspense and leaves the arena" +
       (pay.length ? " — and it pays out." : "."));
@@ -6738,7 +6764,7 @@ function sweepArena(game, seat, when){
        happened to be built first. */
     const f = P.fxParse(b.card);
     const di = (f.ops || []).findIndex(o => o[0] === "selfDestruct");
-    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...leavePayout(b.card)];
+    const pay = [...(di >= 0 ? f.ops.slice(di + 1) : []), ...leavePayout(b.card, sd)];
     /* THE LEAVES HALF of "when this enters or leaves the arena" (v3.20).
        It queues rather than resolves, because the cost is a CHOICE — and
        it goes out as a `pickPrompt` op rather than onto `promptQ`
@@ -7723,6 +7749,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

@@ -1,3 +1,72 @@
+## v4.30 — the refusal v4.29 came due on
+
+> *"When this leaves the arena, **if you've pitched a blue card this
+> turn**, create a Spectral Shield token."* — WANING VENGEANCE ×3
+
+v3.57 refused this clause and wrote down **two** reasons. One was a real
+gap. The other stopped being true underneath it.
+
+### Reason one was real, and is built
+
+`fxParse`'s dispatcher had no branch for a **gate riding with a leave
+payload**, so reading the clause would have DROPPED the gate and minted
+the token unconditionally. That is `COND-BYPASSED` — and the one shape
+`npm run fairness` cannot see, because its model needs an unconditional
+**twin** to compare a gate against, and a vanished gate leaves none.
+
+The entry rides in **`fx.condOnLeave`** now — `condOnHit`'s shape one
+trigger over, and a separate list for v3.45's reason: an op is a bare
+array, so a flag on it sits where another reader expects a parameter.
+`effects.leavePayout` evaluates it at the exit against a **closed
+vocabulary**; a gate the evaluator has not been taught answers **FALSE**,
+which is weaker than printed and visible, and a drill walks the pinned
+pool and fails the day a card emits one that is not named (v3.96's rule
+for `condOnHit`, one trigger over).
+
+### Reason two stopped being true, and it was the one doing the work
+
+> *"`fx.onLeave` HAS EXACTLY ONE CALLER: `tickSuspense` … so nothing in
+> this engine can make it leave the arena at all. Reading the clause would
+> file the card `full` with a dropped gate on a trigger that cannot fire."*
+
+`sweepArena` became a second caller at **v3.20**. **v4.29** wired the five
+exits somebody else can force — including the board→grave destroy Condemn
+to Slaughter reaches across a table. Waning Vengeance can leave the arena
+now, so the clause has an occasion to fire.
+
+**A recorded reason is only as good as the day it was measured** (v3.69),
+and this is v3.47's rule one version later: *when you build a mechanic,
+sweep the refusals that were waiting on it.* Fourth recorded refusal
+discharged this way, and the thing that discharged it was somewhere else
+entirely — which is the usual shape.
+
+### The side is the caller's answer, and all three readers name it
+
+`pitchBlue1` reads the **pitch zone** rather than a turn history — the
+same reading `execute`'s own condition loop gives it, because CR 4.4.3c
+sends that zone to the deck bottom at the end of the turn, so *"this
+turn"* and *"in the pitch zone"* coincide inside one and two readers of
+one gate cannot disagree. `leavePayout(card, sd)` therefore takes the
+side, and **a caller that says nothing grants nothing**.
+
+### The drill that asserted the refusal went red the day the gap closed
+
+Which is exactly what a recorded refusal is **for** (v3.38). It is the
+positive now, and it keeps the half v3.57 was actually protecting: the
+gate is **carried**, never folded into `fx.onLeave` as an unconditional
+payload. Driven both ways — the aura leaves either way, and the Shield is
+minted only when a blue sits in the pitch zone, because the gate is on the
+PAYLOAD and not on the exit.
+
+**Measured: 3 records, one card — the pool's only gated leave-trigger.**
+Coverage **386 → 387 full**, **15 → 14 part**, and the floor was re-pinned
+after reading the diff card by card (exactly one moved, and it is the one
+that was built).
+
+**2435 drills green.** Six sabotages, six bite. Fairness clean, scenes
+73/0, `crindex --check` green, 210 self-play games with 0 stalls / 0
+refusals / 0 violations.
+
 ## v4.29 — a printed trigger that fired on two exits of seven
 
 > *"When this leaves the arena, your next attack this turn gets +6{p}."*

@@ -391,27 +391,40 @@ test("driven: a RED card in the pitch zone does not — the gate is real", {skip
   assert.ok(!n.sides[0].counters.ws1, "and it brings no counter");
 });
 
-/* ---- 5. A GATED LEAVE-TRIGGER REFUSES ---------------------------- */
+/* ---- 5. A GATED LEAVE-TRIGGER READS, AND CARRIES ITS GATE (v4.30) --- */
 
-test("a gated 'when this leaves the arena' clause is REFUSED", {skip}, () => {
-  /* Found by building `pitchBlue1`, which made Waning Vengeance's gate
-     readable for the first time. `fxParse`'s op dispatcher files an
-     onLeave payload into `fx.onLeave` and has NO branch for a condition
-     riding with it, so the gate was silently DROPPED and the token minted
-     unconditionally — COND-BYPASSED, and **the fairness sweep does not
-     catch it**: its model wants a condition gating an effect the engine
-     ALSO grants unconditionally, and here the condition simply vanishes,
-     leaving no unconditional twin to compare against.
+test("a gated 'when this leaves the arena' clause keeps its gate", {skip}, () => {
+  /* THIS DRILL ASSERTED THE REFUSAL AND WENT RED THE DAY THE GAP CLOSED,
+     which is what a recorded refusal is FOR (v3.38). v3.57 refused the
+     clause for TWO reasons and one of them has since gone false:
 
-     `fx.onLeave` also has exactly one caller (`tickSuspense`), and this
-     card prints no suspense, so reading the clause would file it `full`
-     with a dropped gate on a trigger that cannot fire. */
-  assert.equal(cc("When this leaves the arena, if you've pitched a blue card this turn, create a Spectral Shield token"),
-    null);
+       1. the dispatcher had no branch for a gate riding with a leave
+          payload, so the gate would be DROPPED — COND-BYPASSED, and the
+          one shape the fairness sweep cannot see, because its model needs
+          an unconditional TWIN and a vanished gate leaves none. BUILT:
+          the entry rides in `fx.condOnLeave` and is evaluated at the exit.
+
+       2. "`fx.onLeave` has exactly ONE caller (`tickSuspense`) … so
+          nothing in this engine can make it leave the arena at all."
+          `sweepArena` became a second at v3.20 and v4.29 wired the five
+          exits somebody else can FORCE, so the clause has an occasion to
+          fire. A recorded reason is only as good as the day it was
+          measured (v3.69).
+
+     WHAT MUST NOT HAPPEN IS AN UNGATED PAYLOAD. The gate is carried, not
+     dropped — that half is the whole of v3.57's first reason. */
+  const r = cc("When this leaves the arena, if you've pitched a blue card this turn, create a Spectral Shield token");
+  assert.ok(r, "the clause is read");
+  assert.equal(r.onLeave, true, "as a leave trigger");
+  assert.equal(r.cond, "pitchBlue1", "carrying its printed gate");
   P.fxReset();
   const fx = P.fxParse(H.card("Waning Vengeance", 1));
-  assert.ok(!(fx.onLeave || []).length, "no ungated payload may be manufactured from a gated clause");
-  assert.equal(fx.tier, "part", "the card stays honestly unfinished");
+  assert.deepEqual(fx.condOnLeave,
+    [{cond: "pitchBlue1", op: ["token", "spectral shield", 1, "self"]}],
+    "and the CARD files it gated");
+  assert.ok(!(fx.onLeave || []).length,
+    "never as an unconditional payload — that is the bug v3.57 refused to ship");
+  assert.equal(fx.tier, "full", "the card is finished now");
   P.fxReset();
 });
 
