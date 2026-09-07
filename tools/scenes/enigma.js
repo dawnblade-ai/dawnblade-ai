@@ -147,5 +147,63 @@ module.exports = [
     "and judge refuses it by name rather than dead-tapping": true
   }
 }
+,
+
+{
+  name: "her own phantasm attacks do not pop each other",
+  why: "The pop site asked `(c.power||0) >= 6` over the wall — the SIX " +
+       "with both printed restrictions beside it dropped. SAT001's set " +
+       "carries phantasm's reminder in full, and upstream's own " +
+       "`keyword.csv` agrees independently: \"defended by a NON-ILLUSIONIST " +
+       "ATTACK ACTION CARD with 6 or more {p}\". Enigma is the hero this " +
+       "bites: the pool's nine 6+-power Illusionist attack action cards " +
+       "are HER OWN phantasm attacks at every pitch, so blocking with one " +
+       "destroyed the opponent's, which the keyword forbids by name. " +
+       "WEAKER than printed, so the one-sided fairness sweep is blind, " +
+       "and all four cards read `tier: full` because the keyword line IS " +
+       "consumed. Driving it is the only thing that sees it (v4.31).",
+  run(c){
+    const pool = require("../../data/pool.json");
+    const six = pool.filter(x => (+x.power || 0) >= 6
+      && (x.types || []).some(t => /^illusionist$/i.test(String(t))));
+    /* Her three, at every pitch, resolved the way the game resolves them. */
+    const chim   = c.card("Enigma Chimera", 3, "w1");        /* 6 power, Illusionist */
+    const grunt  = {uid: "w2", name: "Six Power", def: 3, power: 6, pitch: 1,
+                    tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"]};
+    const swing = blk => {
+      const atk = c.card("Spears of Surreality", 1, "ph");
+      let g = c.acting(c.state({res: 9, ap: 3, hand: [atk]}, {hp: 20, hand: [blk]},
+                               {turn: 3}));
+      let n = c.reduce(g, {t: "play", uid: "ph", from: "hand"}, 0);
+      if(n.pending && n.pending.kind === "boost") n = c.reduce(n, {t: "boost", yes: false}, 0);
+      n = c.passTo(n, "defend");
+      n = c.reduce(n, {t: "defend", uid: blk.uid}, 1);
+      for(let i = 0; i < 16 && n.phase === "action" && n.step !== "layer"; i++){
+        let moved = false;
+        for(const seat of [0, 1]){
+          const out = c.J.reduce(n, {t: "pass"}, seat);
+          if(!out.error){ n = out.state; moved = true; break; }
+        }
+        if(!moved) break;
+      }
+      return n;
+    };
+    const vsHers = swing(chim), vsTheirs = swing(grunt);
+    return {
+      "her 6+-power Illusionist attacks in the pool": six.length,
+      "…and they are":  [...new Set(six.map(x => x.name))].sort().join(", "),
+      "blocked by one of her own, the attack RESOLVES": vsHers.sides[1].hp < 20,
+      "blocked by a Generic six, it is popped":         vsTheirs.sides[1].hp === 20,
+      "…and destroyed, once":                           vsTheirs.sides[0].grave.length
+    };
+  },
+  want: {
+    "her 6+-power Illusionist attacks in the pool": 9,
+    "…and they are": "Enigma Chimera, Phantasmal Haze, Spectral Rider",
+    "blocked by one of her own, the attack RESOLVES": true,
+    "blocked by a Generic six, it is popped": true,
+    "…and destroyed, once": 1
+  }
+}
 
 ];

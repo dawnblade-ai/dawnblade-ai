@@ -1490,7 +1490,11 @@ function classifyClause(raw){
      blocker with 6+ printed POWER destroys the attack outright ("popping"
      it), and because it is destroyed its go again never resolves. Enforced
      at the declare step, so the keyword line itself is a no-op. */
-  if(/^phantasm$/.test(c)) return NOOP("drawback — a single 6+ power blocker pops this attack (checked when defenders are declared)");
+  /* THE REASON DESCRIBED THE ENGINE, NOT THE CARD (v4.31). It read "a
+     single 6+ power blocker", which is what the pop site asked for and
+     not what the keyword prints — a `noop` must describe the clause in
+     front of it (v3.16), and this one described an approximation. */
+  if(/^phantasm$/.test(c)) return NOOP("drawback — a non-Illusionist attack action card with 6 or more power destroys this attack (checked when defenders are declared)");
   /* RULING: "the crowd boos you" leaves a per-turn state and nothing else;
      Reviled is a static talent. Other cards read the state. */
   if(/^the crowd boos (?:you|each reviled hero)$/.test(c)) return R([["boo",1]]);
@@ -6911,6 +6915,58 @@ const isActionCard = c => {
   return ty.some(t => /^action$/i.test(String(t)));
 };
 
+/* ---- DOES THIS DECLARED DEFENDER POP A PHANTASM ATTACK? (v4.31) ------
+
+   The database prints no reminder text for any keyword, and this project
+   has said so in six places while reading printed CARD FACES one at a
+   time to settle them. SAT011 — a card face from a set upstream does not
+   carry yet — prints phantasm's reminder in full, and upstream's OWN
+   `csvs/english/keyword.csv` says the same thing independently:
+
+     "When this is defended by a NON-ILLUSIONIST ATTACK ACTION CARD with
+      6 or more {p}, destroy this."            — SAT011, fetched and read
+     "When an attack with phantasm is defended by a 6{p}+ non-Illusionist
+      attack action card, the attack is destroyed and the combat chain
+      closes."                        — the-fab-cube keyword.csv, develop
+
+   THE ENGINE ASKED ONLY FOR THE SIX. `(c.power||0) >= 6` over the wall,
+   so TWO printed restrictions were dropped — and the Illusionist half is
+   LIVE, measured: the pool's nine 6+-power Illusionist attack action
+   cards are Enigma's OWN phantasm attacks at every pitch (Enigma Chimera,
+   Phantasmal Haze, Spectral Rider), so an Enigma blocking with one popped
+   the opponent's, which the keyword forbids by name.
+
+   IT IS WEAKER THAN PRINTED for the attacking card, which is why nothing
+   here could see it: the one-sided fairness sweep looks only for cards
+   that are too STRONG, and coverage reads all four phantasm cards `full`
+   because the keyword line is correctly consumed as a `noop`.
+
+   THE ATTACK-ACTION-CARD HALF IS LATENT, and that is measured too rather
+   than assumed: nothing in the pool can reach a wall without being one.
+   `wall` is the declared NON-EQUIPMENT cards, so the Sledge and
+   Teklovossen go down the gear branch, the three demon Tokens are never
+   in a hand, and the two 6+-power Ally cards print no defence at all, so
+   `legal` refuses to declare them. It is still a printed restriction,
+   and a reader that ignores one is reading the card wrong whether or not
+   anything notices today (v3.73) — so it is drilled with a synthetic.
+
+   THE POWER IS THE PRINTED ONE, deliberately and unchanged: this reads
+   the DEFENDING card, which is the opponent's and is already on the
+   combat chain, the one zone Kayo's clause 2 excludes. Both reasons say
+   printed, and that reading is a RULING (user, 2026-08-08).
+
+   "Illusionist" is a literal here beside the 6, and that is the same kind
+   of literal: it is part of what the WORD phantasm means, not a fact
+   about any card. A card NAME in the parser breaks the golden rule
+   because the card is data; a keyword's own printed definition is rules.
+   Read off the STRUCTURED ARRAY (v2.44), never `tt`. */
+const phantasmPops = c => {
+  if(!c) return false;
+  if((c.power || 0) < 6) return false;
+  if(!isAtkActionCard(c)) return false;
+  return !((c.ty || []).some(t => /^illusionist$/i.test(String(t))));
+};
+
 /* ---- HOW MUCH ARCANE DAMAGE THIS CARD'S EFFECT DEALS (v3.39) --------
    Blaze's ability asks it twice — once as a FILTER ("with an effect that
    deals arcane damage equal to X") and once as the COST — so it lives in
@@ -7656,7 +7712,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
-        isAtkActionCard, zonePow, pow6, kwGated, hasKwNow, printedKw,
+        isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,

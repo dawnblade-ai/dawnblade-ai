@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.30
+**Current version:** v4.31
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2435 drills** at v4.30.
+This is `node --test "test/*.test.js"` — **2447 drills** at v4.31.
 `# skipped` must read **0** with a live database cached, and **4** without
 one: those four are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing.
@@ -835,6 +835,78 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### UPSTREAM SHIPS A KEYWORD DICTIONARY, AND WE HAD READ ONE ROW (v4.31)
+
+> **Phantasm** *(When this is defended by a **non-Illusionist attack
+> action card** with 6 or more {p}, destroy this.)* — SAT001's set
+>
+> *"When an attack with phantasm is defended by a 6{p}+ non-Illusionist
+> attack action card, the attack is destroyed and the combat chain
+> closes."* — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+**THE DATABASE PRINTS NO REMINDER TEXT FOR ANY KEYWORD**, which this file
+says in six places — and every one of those places goes on to read a
+printed CARD FACE, one at a time, to settle one keyword. Eleventh outing
+of *try the printing*, and the first where a second source agreed.
+
+**`csvs/english/keyword.csv` IS A SIBLING OF THE FILE THE GAME ALREADY
+FETCHES**, and this project had read exactly one row of it — `retrieve`,
+whose description is empty (v3.54), which is presumably why nobody went
+back. It carries real definitions for **26 of the ledger's keywords**.
+Before booking a keyword question, read it.
+
+**THE POP SITE ASKED FOR THE SIX AND NOTHING ELSE.** `(c.power||0) >= 6`
+over the wall, so both printed restrictions were dropped. Measured over
+the pinned pool: **90 records carry 6+ power, 74 pop, SIXTEEN are excluded
+by name.**
+
+**THE ILLUSIONIST HALF IS LIVE, AND IT IS ENIGMA'S.** Nine of the sixteen
+are her own phantasm attacks at every pitch — Enigma Chimera, Phantasmal
+Haze, Spectral Rider — so an Enigma who blocked with one **destroyed the
+opponent's phantasm attack**, which the keyword forbids by name.
+
+**THE ATTACK-ACTION-CARD HALF IS LATENT, MEASURED RATHER THAN ASSUMED.**
+`wall` is the declared NON-EQUIPMENT cards, so the other seven never
+arrive: the Sledge and Teklovossen take the gear branch, the three demon
+Tokens are never in a hand, and the two 6+-power Ally cards print **no
+defence at all**, so `legal` refuses to declare one. Drilled with a
+synthetic (v3.73).
+
+**"Illusionist" IS A LITERAL BESIDE THE 6, AND THAT IS THE SAME KIND OF
+LITERAL.** A card NAME in the parser breaks the golden rule because the
+card is data; a keyword's own printed definition is RULES — the 4 in
+crush and the 1 in dominate are already literals here. Read off the
+**structured array** (v2.44), never `tt`: a substring scan claims a class
+that merely contains the word.
+
+**THE `noop` DESCRIBED THE ENGINE, NOT THE CARD** — *"a single 6+ power
+blocker"*, which is what the pop site asked for and not what the keyword
+prints. v3.16's rule at the keyword level; it names the printed
+restriction now.
+
+**AND NO TOOL HERE COULD SEE IT.** All four cards read `tier: full`
+because the keyword line IS consumed, and an attack popped when it should
+not be is WEAKER than printed — the direction the one-sided sweep is built
+not to look in.
+
+**AND `npm run play` COULD NOT HAVE REACHED IT — `if(a === b) continue`.**
+The ladder skips MIRRORS, and only Enigma decks Illusionist cards, so the
+one matchup where a phantasm attack meets an Illusionist blocker is the
+one matchup 210 games never run (`node tools/tourney.js enigma enigma`
+plays **0 games**). Recorded rather than fixed: a mirror's win says
+nothing about a hero ladder, and adding fifteen pairings moves every
+number in the report. It is a real limit of the instrument — a defect
+that needs two of the same class on the table is invisible to it — and
+the drills and the scene are what cover this one.
+
+**THE PREDICATE AT THE FIRE SITE IS PINNED RATHER THAN NARROWED.** `hasKw`
+claims 14 pool records and `printedKw` 12; the two that disagree are
+**Ash** (which GRANTS phantasm) and **Silent Stilettos** (which WATCHES
+for it), and neither can ever be the resolving attack. Safe **by
+measurement** rather than by rule, so the measurement is a drill.
+Narrowing to `printedKw` drops a legitimately granted phantasm — that is
+`defCap`'s shape (v3.71) and needs the grant wired first.
 
 ### THE REFUSAL v4.29 CAME DUE ON (v4.30)
 

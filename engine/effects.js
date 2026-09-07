@@ -53,7 +53,7 @@ const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
        allyAttack, abilityGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
-       pow6, zonePow, isAtkActionCard, defCap} = P;
+       pow6, zonePow, isAtkActionCard, phantasmPops, defCap} = P;
 const {resolveEntry} = C;
 
 /* ---- THE CONDITIONS THAT CANNOT BE ANSWERED AT DECLARATION (v3.71) ----
@@ -4840,18 +4840,22 @@ function makeEffects(ctx){
        phantasm reads no other kind. */
     const card = d ? d.card : (n.pend && n.pend.card);
     if(!card) return n;
-    /* RULING 2026-07-25 — phantasm: a single blocker with 6+ printed POWER
-       destroys this attack outright ("popping" it). Because the card is
-       destroyed its go again never resolves and the action point is not
-       refunded, so the pend is torn down here rather than resolved. */
+    /* PHANTASM: a defender destroys this attack outright ("popping" it).
+       Because the card is destroyed its go again never resolves and the
+       action point is not refunded, so the pend is torn down here rather
+       than resolved — which is also what upstream's own keyword
+       definition says ("the attack is destroyed and the combat chain
+       closes").
+
+       WHICH defender is `parser.phantasmPops`'s answer and nothing
+       else's (v4.31). It used to be an inline `(c.power||0) >= 6` here,
+       which asked for the six and dropped the two printed restrictions
+       beside it — see that function's header for both sources and the
+       measurement. A keyword read at its one fire site is the shape this
+       file keeps finding wrong; the reader is one body, and the drills
+       drive it. */
     if(hasKw(card,"phantasm")){
-      const popper = (wall || [])
-        /* PRINTED power, deliberately — not zonePow. This is phantasm
-           reading the DEFENDING card, which is (a) the opponent's, and
-           Kayo's clause 2 reads "attack action cards YOU OWN", and
-           (b) already declared, so it is ON THE COMBAT CHAIN, the one
-           zone the clause excludes. Both reasons say printed. */
-        .find(c=>(c.power||0) >= 6);
+      const popper = (wall || []).find(c => phantasmPops(c));
       if(popper){
         n.pend = null; n.stack = [];
         actMut(n).ap = act(n).ap - 1;

@@ -1,3 +1,92 @@
+## v4.31 — phantasm asked for the six and dropped the two beside it
+
+> **Phantasm** *(When this is defended by a **non-Illusionist attack
+> action card** with 6 or more {p}, destroy this.)* — SAT001's set
+
+The database prints no reminder text for any keyword. This project has
+said so in six places while reading printed **card faces** one at a time
+to settle them — Clash of Agility, Thunder Quake, Pick Up the Point,
+Drill Shot, Boom Grenade, Overpower. This is the eleventh outing, and the
+first where a **second, independent source** said the same thing:
+
+> *"When an attack with phantasm is defended by a 6{p}+ non-Illusionist
+> attack action card, the attack is destroyed and the combat chain
+> closes."*
+> — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+That file is a **sibling of the very database the game already fetches**,
+and this project had read it exactly once — for `retrieve`, whose
+description is empty (v3.54). It carries real definitions for **26 of the
+ledger's keywords**.
+
+### The pop site asked for the six and nothing else
+
+```js
+.find(c => (c.power || 0) >= 6)      // both printed restrictions, gone
+```
+
+Measured over the pinned pool: **90 records carry 6+ power, 74 really do
+pop, and SIXTEEN are excluded by name.**
+
+**THE ILLUSIONIST HALF IS LIVE, AND IT IS ENIGMA'S.** Nine of the sixteen
+are her own phantasm attacks at every pitch — Enigma Chimera, Phantasmal
+Haze, Spectral Rider — so an Enigma who blocked with one **destroyed the
+opponent's phantasm attack**, which the keyword forbids by name. Driven,
+same board twice: blocked by Enigma Chimera the attack resolves; blocked
+by a Generic six it is popped.
+
+**THE ATTACK-ACTION-CARD HALF IS LATENT, MEASURED RATHER THAN ASSUMED.**
+`wall` is the declared NON-EQUIPMENT cards, so the other seven excluded
+records never arrive: the Sledge and Teklovossen go down the gear branch,
+the three demon Tokens are never in a hand, and the two 6+-power Ally
+cards print **no defence at all**, so `legal` refuses to declare one. It
+is still a printed restriction, and a reader that ignores one is reading
+the card wrong whether or not anything notices today (v3.73) — so it is
+drilled with a synthetic.
+
+**`parser.phantasmPops` IS THE ONE READER** of all three printed facts,
+and the fire site asks it. `"Illusionist"` is a literal there beside the
+6, and it is the same kind of literal: part of what the WORD phantasm
+means, not a fact about any card. A card NAME in the parser breaks the
+golden rule because the card is data; a keyword's own printed definition
+is rules. Read off the **structured array** (v2.44), never `tt` — a
+substring scan claims a class that merely contains the word.
+
+**THE `noop` DESCRIBED THE ENGINE, NOT THE CARD.** Its reason read *"a
+single 6+ power blocker pops this attack"* — which is what the pop site
+asked for and not what the keyword prints. v3.16's rule exactly, and it
+names the printed restriction now.
+
+**AND NO TOOL HERE COULD SEE IT.** All four phantasm cards read `tier:
+full`, because the keyword line IS consumed. An attack popped when it
+should not be is **weaker than printed**, which is the direction the
+one-sided fairness sweep is built not to look in. Only reading the
+printed words finds it — and only driving the card proves the fix.
+
+**AND `npm run play` COULD NOT HAVE REACHED IT — `if(a === b) continue`.**
+The ladder skips MIRRORS, and only Enigma decks Illusionist cards, so the
+one matchup where a phantasm attack meets an Illusionist blocker is the
+one matchup 210 games never run (`node tools/tourney.js enigma enigma`
+plays **0 games**). Recorded rather than fixed: a mirror's win says
+nothing about a hero ladder, and adding fifteen pairings moves every
+number in the report. It is a real limit of the instrument — a defect
+that needs two of the same class on the table is invisible to it — and
+the drills and the scene are what cover this one.
+
+Eight sabotages, eight applied, eight bite. `test/phantasm.test.js` (11
+drills) plus an Enigma scene, because `test/` is organised per MECHANIC
+and *"does Enigma work"* is a different question.
+
+**AND THE PREDICATE AT THE FIRE SITE IS PINNED RATHER THAN NARROWED.**
+`hasKw` claims 14 pool records and `printedKw` 12; the two that disagree
+are **Ash** (which GRANTS phantasm to a permanent) and **Silent
+Stilettos** (which WATCHES for it), and neither can ever be the resolving
+attack — a Token under a permanent and a Legs equipment never swing.
+So the loose predicate is safe *by measurement* rather than by rule, and
+that measurement is a drill. Narrowing it to `printedKw` would drop a
+legitimately granted phantasm, which is `defCap`'s shape (v3.71) and
+needs the grant wired first.
+
 ## v4.30 — the refusal v4.29 came due on
 
 > *"When this leaves the arena, **if you've pitched a blue card this

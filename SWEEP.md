@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-06 from `tools/audit.json`.
+Generated 2026-09-07 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 19 cards | understood ≠ built |
-| **Fail states** | 50 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 18 cards | understood ≠ built |
+| **Fail states** | 49 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -59,7 +59,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Topsy Turvy** (part, 1/2 unread)
 - **V of the Vanguard** (part, 1/3 unread)
 - **Walk in My Shoes** (part, 1/2 unread)
-- **Waning Vengeance** (part, 1/2 unread)
 - **Wreck Havoc** (part, 1/2 unread)
 
 ## 4. Fail states — how cards go WRONG at the table
@@ -76,15 +75,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| No schedule to fire on | 8 |
 | Choice never offered | 7 |
+| No schedule to fire on | 7 |
 | Displayed total is wrong | 6 |
 | Ability inert — cost not modelled | 6 |
-| Earned value denied | 6 |
+| Earned value denied | 5 |
 | Unread, effect unknown | 5 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 18 entries
+### WRONG — 17 entries
 
 - **Danger Digits** · tier `none` · arakni
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
@@ -144,11 +143,6 @@ can be overruled. Same discipline as the mention count.
 - **V of the Vanguard** (2) · tier `part` · boltyn
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Your attacks this combat chain get +1{p} for each Light card charged this way.
-- **Waning Vengeance** (1) · tier `part` · enigma
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > When this leaves the arena, if you've pitched a blue card this turn, create a Spectral Shield token.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this leaves the arena, if you've pitched a blue card this turn, create a Spectral Shield token.
 - **Banneret of Salvation** (2) · tier `none` · boltyn
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.

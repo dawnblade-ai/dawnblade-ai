@@ -72,7 +72,16 @@ const KEYWORDS = {
    "meld":                {status:"live",        note:"v3.34 built the whole declaration — isSplit/splitFx/splitCostsAP, the half is chosen before the payment, and judge refuses half:\"both\" without the keyword. RULED 2026-07-25 (spec in tools/rulings.json)"},
    "opt":                 {status:"partial",     note:"v4.02 — the NOTE was stale, not the status. The sheet has existed since v2.17: an `opt` op queues a real {tag:\"opt\"} prompt and the player toggles each looked-at card to the bottom, so 'auto-sorted by advisor value, popup still pending' was false. It stays PARTIAL for the half the ruling names that is genuinely not offered — ordering the cards KEPT on top; `applyPrompt` preserves their printed order. With N=1 that is complete"},
    "overpower":           {status:"live",        note:"v4.22 - the database carries no reminder text, and the DYN229 face of Spectral Rider prints the parenthetical it omits: \"(This can't be defended by more than 1 ACTION card.)\" So it is `parser.defCap`'s THIRD source and its counted set is its own - neither dominate's cards-from-hand nor Confidence's non-block cards, because an equipment, a Block card and a Defense Reaction are none of them action cards. Granted conditionally on Spectral Rider (Enigma decks two), so it arrives through `_kwGrant` exactly as a granted dominate does"},
-   "phantasm":            {status:"live",        note:"RULED 2026-07-25: a drawback — one blocker with 6+ printed POWER pops the attack; destroyed, so no go again and no action-point refund"},
+   /* THE RULING WAS RIGHT ABOUT THE SIX AND SILENT ABOUT THE OTHER TWO
+      FACTS (v4.31). Two sources agree independently — the SAT011 card
+      face, and upstream's own `csvs/english/keyword.csv`, a file this
+      project had read exactly once (for retrieve, which is empty):
+
+        "When this is defended by a NON-ILLUSIONIST ATTACK ACTION CARD
+         with 6 or more {p}, destroy this."
+
+      `parser.phantasmPops` is the one reader of all three facts. */
+   "phantasm":            {status:"live",        note:"a drawback — a NON-ILLUSIONIST ATTACK ACTION CARD with 6+ printed POWER pops the attack; destroyed, so no go again and no action-point refund. The two restrictions beside the six were dropped until v4.31 (parser.phantasmPops)"},
    "piercing":            {status:"live",        note:"v4.20 — the database carries no reminder text, and the AAZ010 face of Drill Shot prints the parenthetical it omits: \"(If this is defended by an EQUIPMENT, this gets +N{p}.)\" So it is a conditional pump settled at the WALL and `perEquipDef`'s FLAT twin — Fender Bender's is +N for EACH equipment, this is +N if there is at least one. Two pool cards grant it, both decked, and neither did anything: Drill Shot read `part` with the clause unread, Puncture read `full` with the +3 landing and the piercing silently dropped"},
    "quickstrike":         {status:"live",        note:"v3.99 — the printed gate ('if this has go again') is read into a hasGa condition and settled in linkPumps beside `pumped`. Was UNREVIEWED while the keyword prefix let the loose pump matcher eat the gate, so all three printings pumped unconditionally"},
    "reload":              {status:"live",        note:"v3.69 — the parser rule, the op, the arsEmpty gate and the prompt had all existed for versions and the RECORD was stale. The 1HP237 printing of Take Aim carries the reminder text the database omits: FACE DOWN, a different event from the face-UP put Azalea's arrows trigger on"},
