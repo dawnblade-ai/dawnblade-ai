@@ -1,0 +1,464 @@
+{
+ "_README": [
+  "FETCHED DATA, NEVER AUTHORED — the two Silver Age precon lists that dropped",
+  "after v4.30, extracted from their published deck pages one tile per copy and",
+  "reconciled against each section's own claimed count.",
+  "",
+  "NEITHER IS BUILDABLE TODAY, and the reason is the golden rule: card text",
+  "streams at runtime from the-fab-cube `develop`, and that branch carries",
+  "NEITHER SET. Its own csvs/english/set.csv lists 15 Silver Age sets — exactly",
+  "the 15 heroes this project decks — and SAT and SBW are not among them.",
+  "",
+  "So this file is the SPEC, not the build: names, print codes, quantities and",
+  "sections, which is the same shape `window.DECKS` already holds for the 15.",
+  "NO CARD TEXT IS RECORDED HERE and none may be. The day upstream publishes,",
+  "adding these two heroes is a data drop; `test/newsets.test.js` is the probe",
+  "that comes due by itself rather than a note somebody has to remember."
+ ],
+ "fetched": "2026-09-07",
+ "source": "fabrary.net published precon deck pages",
+ "upstream": {
+  "checked": "the-fab-cube/flesh-and-blood-cards@develop csvs/english/set.csv + json/english/card.json",
+  "records": 4952,
+  "silverAgeSetsUpstream": [
+   "SAR",
+   "SAZ",
+   "SBA",
+   "SBL",
+   "SBR",
+   "SBZ",
+   "SDA",
+   "SDO",
+   "SEN",
+   "SFA",
+   "SGB",
+   "SIY",
+   "SKA",
+   "SLY",
+   "SVI"
+  ],
+  "satPrintings": 0,
+  "sbwPrintings": 0
+ },
+ "prism": {
+  "set": "SAT",
+  "hero": "Prism, Advent of Thrones",
+  "cardsExcludingHero": 55,
+  "sections": {
+   "Arena": {
+    "claimed": 10,
+    "rows": [
+     {
+      "q": 1,
+      "code": "SAT001",
+      "name": "Prism, Advent of Thrones"
+     },
+     {
+      "q": 1,
+      "code": "SAT002",
+      "name": "Iris of Reality"
+     },
+     {
+      "q": 1,
+      "code": "SAT003",
+      "name": "Luminaris, Celestial Fury"
+     },
+     {
+      "q": 1,
+      "code": "SAT004",
+      "name": "Halo of Illumination"
+     },
+     {
+      "q": 1,
+      "code": "SAT005",
+      "name": "Blossom of Spring"
+     },
+     {
+      "q": 1,
+      "code": "SAT006",
+      "name": "Dream Weavers"
+     },
+     {
+      "q": 1,
+      "code": "SAT007",
+      "name": "Ironhide Gauntlet"
+     },
+     {
+      "q": 1,
+      "code": "SAT008",
+      "name": "Wave of Reality"
+     },
+     {
+      "q": 1,
+      "code": "SAT009",
+      "name": "Blade Beckoner Boots"
+     },
+     {
+      "q": 1,
+      "code": "SAT010",
+      "name": "Silent Stilettos"
+     }
+    ]
+   },
+   "Deck": {
+    "claimed": 46,
+    "rows": [
+     {
+      "q": 2,
+      "code": "SAT011",
+      "name": "Herald of Hope"
+     },
+     {
+      "q": 2,
+      "code": "SAT012",
+      "name": "Herald of Protection"
+     },
+     {
+      "q": 2,
+      "code": "SAT013",
+      "name": "Herald of Ravages"
+     },
+     {
+      "q": 2,
+      "code": "SAT014",
+      "name": "Herald of Triumph"
+     },
+     {
+      "q": 2,
+      "code": "SAT015",
+      "name": "Wartune Herald"
+     },
+     {
+      "q": 2,
+      "code": "SAT016",
+      "name": "Spectral Manifestations"
+     },
+     {
+      "q": 2,
+      "code": "SAT017",
+      "name": "Herald of Hope"
+     },
+     {
+      "q": 2,
+      "code": "SAT018",
+      "name": "Herald of Judgment"
+     },
+     {
+      "q": 2,
+      "code": "SAT019",
+      "name": "Herald of Protection"
+     },
+     {
+      "q": 2,
+      "code": "SAT020",
+      "name": "Herald of Victoria"
+     },
+     {
+      "q": 2,
+      "code": "SAT021",
+      "name": "Wartune Herald"
+     },
+     {
+      "q": 2,
+      "code": "SAT022",
+      "name": "Lay Low"
+     },
+     {
+      "q": 4,
+      "code": "SAT023",
+      "name": "Figment of Hope"
+     },
+     {
+      "q": 2,
+      "code": "SAT024",
+      "name": "Herald of Hope"
+     },
+     {
+      "q": 2,
+      "code": "SAT025",
+      "name": "Herald of Protection"
+     },
+     {
+      "q": 2,
+      "code": "SAT026",
+      "name": "Herald of Ravages"
+     },
+     {
+      "q": 2,
+      "code": "SAT027",
+      "name": "Herald of Triumph"
+     },
+     {
+      "q": 2,
+      "code": "SAT028",
+      "name": "Phantasmal Haze"
+     },
+     {
+      "q": 2,
+      "code": "SAT029",
+      "name": "Wartune Herald"
+     },
+     {
+      "q": 2,
+      "code": "SAT030",
+      "name": "Passing Mirage"
+     },
+     {
+      "q": 2,
+      "code": "SAT031",
+      "name": "Pierce Reality"
+     },
+     {
+      "q": 2,
+      "code": "SAT032",
+      "name": "Angelic Wrath"
+     }
+    ]
+   },
+   "Extras": {
+    "claimed": 1,
+    "rows": [
+     {
+      "q": 1,
+      "code": "SAT033",
+      "name": "Spectral Shield"
+     }
+    ]
+   }
+  },
+  "upstreamMissing": [
+   "Figment of Hope",
+   "Herald of Hope"
+  ],
+  "cardsBlocked": 10,
+  "pitchShort": [],
+  "namesResolving": 22,
+  "namesTotal": 24
+ },
+ "viseraiBetweenWorlds": {
+  "set": "SBW",
+  "hero": "Viserai, Between Worlds",
+  "cardsExcludingHero": 55,
+  "sections": {
+   "Arena": {
+    "claimed": 6,
+    "rows": [
+     {
+      "q": 1,
+      "code": "SBW001",
+      "name": "Viserai, Between Worlds"
+     },
+     {
+      "q": 1,
+      "code": "SBW003",
+      "name": "Seven Sin Nebula"
+     },
+     {
+      "q": 1,
+      "code": "SBW004",
+      "name": "Corrupted Crown"
+     },
+     {
+      "q": 1,
+      "code": "SBW006",
+      "name": "Blossom of Spring"
+     },
+     {
+      "q": 1,
+      "code": "SBW007",
+      "name": "Runehold Release"
+     },
+     {
+      "q": 1,
+      "code": "SBW009",
+      "name": "Olde Leather Boots"
+     }
+    ]
+   },
+   "Deck": {
+    "claimed": 40,
+    "rows": [
+     {
+      "q": 2,
+      "code": "SBW010",
+      "name": "Bloodfrenzy Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW011",
+      "name": "Cullingsong Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW012",
+      "name": "Demonbound Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW013",
+      "name": "Embrace Ursur"
+     },
+     {
+      "q": 2,
+      "code": "SBW015",
+      "name": "Murmuring Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW016",
+      "name": "Plundersong Gloomblade"
+     },
+     {
+      "q": 1,
+      "code": "SBW017",
+      "name": "Runic Disposition"
+     },
+     {
+      "q": 2,
+      "code": "SBW018",
+      "name": "Vexing Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW020",
+      "name": "Malefic Incantation"
+     },
+     {
+      "q": 2,
+      "code": "SBW021",
+      "name": "Otherworldly Sins"
+     },
+     {
+      "q": 2,
+      "code": "SBW022",
+      "name": "Pull from Beyond"
+     },
+     {
+      "q": 2,
+      "code": "SBW024",
+      "name": "Embrace Ursur"
+     },
+     {
+      "q": 2,
+      "code": "SBW025",
+      "name": "Malefic Incantation"
+     },
+     {
+      "q": 2,
+      "code": "SBW026",
+      "name": "Runechant of Lust"
+     },
+     {
+      "q": 2,
+      "code": "SBW027",
+      "name": "Runechant of Sloth"
+     },
+     {
+      "q": 2,
+      "code": "SBW028",
+      "name": "Bloodfrenzy Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW029",
+      "name": "Demonbound Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW030",
+      "name": "Embrace Ursur"
+     },
+     {
+      "q": 2,
+      "code": "SBW031",
+      "name": "Murmuring Gloomblade"
+     },
+     {
+      "q": 2,
+      "code": "SBW032",
+      "name": "Vexing Malice"
+     },
+     {
+      "q": 1,
+      "code": "SBW033",
+      "name": "Pull from Beyond"
+     }
+    ]
+   },
+   "Inventory": {
+    "claimed": 10,
+    "rows": [
+     {
+      "q": 1,
+      "code": "SBW002",
+      "name": "Galaxxi Black"
+     },
+     {
+      "q": 1,
+      "code": "SBW005",
+      "name": "Crown of Dichotomy"
+     },
+     {
+      "q": 1,
+      "code": "SBW008",
+      "name": "Nullrune Boots"
+     },
+     {
+      "q": 2,
+      "code": "SBW014",
+      "name": "Looking for a Scrap"
+     },
+     {
+      "q": 2,
+      "code": "SBW019",
+      "name": "Weeping Battleground"
+     },
+     {
+      "q": 2,
+      "code": "SBW023",
+      "name": "Arcane Polarity"
+     },
+     {
+      "q": 1,
+      "code": "SBW033",
+      "name": "Pull from Beyond"
+     }
+    ]
+   },
+   "Extras": {
+    "claimed": 2,
+    "rows": [
+     {
+      "q": 1,
+      "code": "SBW034",
+      "name": "Gate to i'Arathael"
+     },
+     {
+      "q": 1,
+      "code": "SBW035",
+      "name": "Runechant"
+     }
+    ]
+   }
+  },
+  "upstreamMissing": [
+   "Bloodfrenzy Gloomblade",
+   "Corrupted Crown",
+   "Cullingsong Gloomblade",
+   "Demonbound Gloomblade",
+   "Embrace Ursur",
+   "Murmuring Gloomblade",
+   "Otherworldly Sins",
+   "Plundersong Gloomblade",
+   "Pull from Beyond",
+   "Runic Disposition",
+   "Seven Sin Nebula",
+   "Vexing Gloomblade",
+   "Viserai, Between Worlds"
+  ],
+  "cardsBlocked": 34,
+  "pitchShort": [],
+  "namesResolving": 13,
+  "namesTotal": 26
+ }
+}

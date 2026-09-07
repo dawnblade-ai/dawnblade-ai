@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.31
+**Current version:** v4.32
 
 ---
 
@@ -185,10 +185,13 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2447 drills** at v4.31.
-`# skipped` must read **0** with a live database cached, and **4** without
-one: those four are `test/drift.test.js`, which reads the live wire on
-purpose. Anything else skipping means a fixture went missing.
+This is `node --test "test/*.test.js"` — **2454 drills** at v4.32.
+`# skipped` must read **0** with a live database cached, and **5** without
+one: those five are `test/drift.test.js`, which reads the live wire on
+purpose. Anything else skipping means a fixture went missing. **The
+number is a PIN, not a constant** — it went 4 → 5 at v4.32, when the
+*upstream has published* probe joined that file, and CI asserts it so
+that moving it is a deliberate edit in both places.
 
 **AND THAT NUMBER IS RE-DERIVED, NEVER TRUSTED** — it read **2264** for
 long enough that the suite had grown by forty drills underneath it, which
@@ -835,6 +838,57 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### TWO PRECONS WE CANNOT BUILD, AND A PROBE THAT COMES DUE ITSELF (v4.32)
+
+Two new Silver Age precons dropped after v4.30 — **Prism, Advent of
+Thrones** (`SAT`) and **Viserai, Between Worlds** (`SBW`). Both lists are
+extracted, reconciled and pinned in **`data/newsets.json`** as FETCHED
+data: names, print codes, quantities, sections, and **no card text**,
+which is the same shape `window.DECKS` already holds for the fifteen.
+
+**NEITHER IS BUILDABLE, AND THE GOLDEN RULE IS WHY.** Card text streams
+at runtime from the-fab-cube's `develop`, and that branch carries neither
+set — its own `csvs/english/set.csv` lists exactly **15 Silver Age sets**,
+the fifteen heroes this project decks, and these two are not among them.
+Measured over 4,952 live records: **SAT 0 printings, SBW 0 printings**,
+with SAZ/SDO/SEN/SKA as the control that proves the scan alive.
+
+| | names resolve | missing | of its 55 cards |
+|---|---|---|---|
+| Prism, Advent of Thrones | 22 / 24 | Herald of Hope · Figment of Hope | **10** |
+| Viserai, Between Worlds | 13 / 26 | 13, its own HERO record included | **34** |
+
+**AND NO RESOLVING NAME IS PITCH-SHORT**, which is the sharper question: a
+deck entry is `name|pitch`, and the three-code cycles in these lists are
+one card at three pitches. So the gap is exactly the fifteen absent names
+and nothing subtler.
+
+**A RECORDED GAP IS A DEBT (v3.61), AND A NOTE IS NOT A PROBE.** The
+offline half is `test/newsets.test.js` — the lists reconcile to 55 against
+each section's own claimed count, every row carries a code from its own
+set, and the recorded gap agrees with its own rows. The live half is a
+fifth drill in **`drift.test.js`**, the one file allowed the wire: it
+asserts the DEVIATION, so it goes **RED the day upstream publishes**,
+which is the `stated`/`open` direction (v4.02). Both the set identifier
+and the blocking NAMES are watched, because an identifier can lag records.
+
+**THE POOL IS THE WRONG ORACLE FOR "IS THIS BUILDABLE", AND THE FIRST
+DRAFT ASKED IT ANYWAY.** `data/pool.json` is what the FIFTEEN can reach —
+797 records — so almost every card in a sixteenth list is missing from it
+and the answer looked like a finding. The measurement is fetched data
+taken against the live database; the offline drill checks the record
+against the lists. A scan aimed at the wrong data set fails exactly as a
+real gap does (v3.81, v4.07).
+
+**THE SKIP COUNT IS A PIN, NOT A CONSTANT.** It went **4 → 5** here,
+deliberately, in CI and in this file — which is the whole point of
+asserting it.
+
+**AND `git checkout <file>` ON AN UNCOMMITTED DRILL DELETES IT.** Used to
+revert a sabotage mid-pass, it silently took the new drill with it and the
+next run reported `pass 4` where it had just reported 5. Revert a sabotage
+with the inverse edit, never with the branch.
 
 ### UPSTREAM SHIPS A KEYWORD DICTIONARY, AND WE HAD READ ONE ROW (v4.31)
 
@@ -3546,7 +3600,7 @@ one is a deliberate edit.
 test`** — the project has zero dependencies and the suite takes 31
 seconds, so there was never a cost argument. It runs on a fresh clone with
 no card-database cache (verified by moving `tools/.cache` aside), and it
-**asserts the skip count is 4**, because v3.00's whole lesson is that a
+**asserts the skip count** (5 as of v4.32), because v3.00's whole lesson is that a
 silent skip is not a pass. It also runs `npm run scenes`, compiles both
 `text/babel` blocks, and — after a push to `main` — curls the live URL,
 every engine module the page loads (count DERIVED from `index.html`, never

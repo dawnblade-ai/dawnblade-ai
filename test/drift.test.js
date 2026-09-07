@@ -181,3 +181,55 @@ test("the pinned pool maps to the same cards the live database does", {skip}, ()
     + "`pin-pool.js` is dropping a field `mapDbCard` reads, or upstream changed more than text. "
     + "Re-pin and review the diff.");
 });
+
+/* ---- THE OTHER DIRECTION UPSTREAM MOVES: IT PUBLISHES (v4.32) --------
+
+   Every drill above asks whether a rewording COST a card. Upstream also
+   ADDS, and this project has a standing debt that discharges the moment
+   it does: two Silver Age precons dropped after v4.30, their lists are
+   pinned in `data/newsets.json`, and neither is buildable because
+   `develop` carries neither set. Building one anyway would mean
+   inventing card effects.
+
+   A RECORDED GAP IS A DEBT (v3.61), and a note somebody has to remember
+   to check is not a probe. This is the probe: it asserts the DEVIATION
+   is still there — the `stated`/`open` direction (v4.02) — so it goes
+   RED the day the set appears, which is the day the record, the lists
+   and CLAUDE.md all have to be brought up to date and the two heroes
+   become a data drop.
+
+   IT LIVES HERE, not in `test/newsets.test.js`, for the reason this
+   whole file exists: this is the ONE drill allowed to read the live
+   wire, and the suite's skip count is a pinned number precisely so that
+   adding a fifth is a deliberate edit. The offline half — that the
+   lists reconcile to 55, and that the recorded gap agrees with its own
+   rows — is in that file and needs no network. */
+test("upstream has not yet published the two precons we are waiting on", {skip}, () => {
+  const NEW = JSON.parse(fs.readFileSync(
+    require("path").join(__dirname, "..", "data", "newsets.json"), "utf8"));
+  const live = JSON.parse(fs.readFileSync(liveDbPath(), "utf8")).filter(c => c && c.name);
+
+  /* PROVE THE SCAN IS ALIVE BEFORE TRUSTING ITS GAPS (v4.00, v3.81). Its
+     first draft read `set_printing_unique_id` and answered ABSENT for
+     every set in the database, including the fifteen — a census aimed at
+     the wrong field reports zero exactly as a missing set does. */
+  const sets = new Set();
+  for(const c of live) for(const p of (c.printings || [])) if(p.set_id) sets.add(p.set_id);
+  for(const s of ["SAZ", "SDO", "SEN", "SKA"])
+    assert.ok(sets.has(s), "the scan is alive — the live database carries " + s);
+
+  const byName = new Set(live.map(c => String(c.name).toLowerCase().trim()));
+  const arrived = [];
+  for(const k of ["prism", "viseraiBetweenWorlds"]){
+    const d = NEW[k];
+    if(sets.has(d.set)) arrived.push(d.set + " (" + d.hero + ") now has printings upstream");
+    /* AND BY NAME TOO, because a set identifier can lag the records. */
+    for(const n of d.upstreamMissing)
+      if(byName.has(n.toLowerCase().trim())) arrived.push(d.hero + ": \"" + n + "\" now resolves");
+  }
+  assert.deepEqual(arrived, [],
+    "UPSTREAM HAS PUBLISHED — the debt in data/newsets.json has come due. Re-pin with "
+    + "`node tools/pin-pool.js`, add the hero to HEROES/DECKS in index.html, re-measure "
+    + "`upstreamMissing`/`cardsBlocked`, bump DATA_VER, and update this drill's premise:\n  "
+    + arrived.join("\n  "));
+});

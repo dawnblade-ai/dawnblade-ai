@@ -39,9 +39,12 @@ jobs:
           skip=$(grep -oP '^# skipped \K[0-9]+' /tmp/out.txt)
           echo "fail=$fail skipped=$skip"
           [ "$fail" = "0" ] || { echo "::error::$fail drills failed"; exit 1; }
-          # 4 = test/drift.test.js, which reads the live wire on purpose.
-          # ANY other skip means a fixture went missing (v3.00).
-          [ "$skip" = "4" ] || { echo "::error::expected 4 skips (drift), got $skip — a fixture is missing"; exit 1; }
+          # 5 = test/drift.test.js, which reads the live wire on purpose.
+          # ANY other skip means a fixture went missing (v3.00). The number
+          # is a PIN, not a constant — it went 4 -> 5 at v4.32, when the
+          # "upstream has published" probe joined the file, and moving it
+          # is meant to be a deliberate edit here and in CLAUDE.md.
+          [ "$skip" = "5" ] || { echo "::error::expected 5 skips (drift), got $skip — a fixture is missing"; exit 1; }
 
       - name: does the card DO what it prints
         run: |

@@ -1,3 +1,60 @@
+## v4.32 — two precons we cannot build, and a probe that comes due itself
+
+Two new Silver Age precons dropped: **Prism, Advent of Thrones** (`SAT`)
+and **Viserai, Between Worlds** (`SBW`). Both lists are extracted,
+reconciled and pinned in **`data/newsets.json`** as fetched data — names,
+print codes, quantities, sections, and **no card text**, which is the
+same shape `window.DECKS` already holds for the fifteen. Each reconciles
+to **exactly 55 cards** excluding the hero, section by section against
+each section's own claimed count.
+
+### Neither is buildable, and the golden rule is why
+
+Card text streams at runtime from the-fab-cube's `develop`, and that
+branch carries **neither set**. Its own `csvs/english/set.csv` lists
+exactly 15 Silver Age sets — the fifteen heroes this project decks — and
+these two are not among them. Measured over 4,952 live records: SAT **0**
+printings, SBW **0**, with SAZ/SDO/SEN/SKA as the control that proves the
+scan alive.
+
+| | names resolve | missing | of its 55 cards |
+|---|---|---|---|
+| Prism, Advent of Thrones | 22 / 24 | Herald of Hope · Figment of Hope | **10** |
+| Viserai, Between Worlds | 13 / 26 | 13, its own HERO record included | **34** |
+
+**AND NO RESOLVING NAME IS PITCH-SHORT** — the sharper question, since a
+deck entry is `name|pitch` and the three-code cycles in these lists are
+one card at three pitches. The gap is exactly the fifteen absent names.
+
+Building either anyway would mean inventing card effects, which is the
+one thing this project never does.
+
+### A recorded gap is a debt, and a note is not a probe
+
+- **offline** — `test/newsets.test.js`: the lists reconcile, every row
+  carries a code from its own set, and the recorded gap agrees with its
+  own rows. Needs no network.
+- **live** — a fifth drill in `drift.test.js`, the one file allowed the
+  wire. It asserts the **deviation**, so it goes RED the day upstream
+  publishes (v4.02's `stated`/`open` direction) — and it watches both the
+  set identifier **and** the blocking names, because an identifier can lag
+  records. Driven against a real 4,952-record database and sabotaged three
+  ways: an injected `SAT` printing, an injected name, and the alive-check
+  itself.
+
+**THE POOL IS THE WRONG ORACLE FOR "IS THIS BUILDABLE", AND THE FIRST
+DRAFT ASKED IT ANYWAY.** `data/pool.json` is what the fifteen can reach —
+797 records — so almost every card in a sixteenth list is missing from it
+and the answer looked like a finding.
+
+**THE SKIP COUNT IS A PIN, NOT A CONSTANT** — 4 → 5, deliberately, in CI
+and in CLAUDE.md, which is the whole point of asserting it.
+
+**AND `git checkout <file>` ON AN UNCOMMITTED DRILL DELETES IT.** Used to
+revert a sabotage mid-pass it took the new drill with it, and the next run
+reported `pass 4` where it had just reported 5. Revert a sabotage with the
+inverse edit, never with the branch.
+
 ## v4.31 — phantasm asked for the six and dropped the two beside it
 
 > **Phantasm** *(When this is defended by a **non-Illusionist attack
