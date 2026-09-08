@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.32
+**Current version:** v4.33
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2454 drills** at v4.32.
+This is `node --test "test/*.test.js"` — **2470 drills** at v4.33.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,81 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A "YOU MAY" THAT WAS TAKEN WITHOUT BEING OFFERED (v4.33)
+
+> *"As an additional cost to play this, **YOU MAY** charge your hero's
+> soul."* — BOLT OF COURAGE · ENGULFING LIGHT · TAKE FLIGHT, nine records
+>
+> *"You may elect to **not** pay the additional cost of charge — however
+> this would mean you did not charge."*
+> — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+**THE PARSE HAS READ THE "YOU MAY" SINCE CHARGE WAS BUILT**, and `execute`
+ignored it: it auto-picked from hand whenever the hand was non-empty,
+preferring whatever pitch the card's own rider asked for. **v4.27's
+fusion, one cost over** — and this one moves a card between zones, where
+fusion only reveals.
+
+**THE BLOCK'S OWN COMMENT SAID WHY, AND IT STOPPED BEING TRUE.** *"The
+trainer has no prompt wired for a cost paid before the card's own total is
+struck"* — false since **v4.27**, which built exactly that machinery for
+fusion. **A recorded reason is only as good as the day it was measured**
+(v3.69, v4.26); fourth recorded refusal to come due this cycle.
+
+**IT IS A COST, so being unable to refuse is WEAKER than printed** for its
+controller, not stronger — which is why the one-sided fairness sweep is
+blind and all nine records read `tier: full`. **Bolt of Courage is the
+sharpest**: charged, it gets *"when this hits, draw a card"*, so the
+engine spent a card from hand for a CONDITIONAL draw on every copy and a
+blocked swing paid it for nothing. In a training sim that is a losing
+trade made quietly on the player's behalf — the same reason `selfPayOr`
+never pitches for them (v3.09).
+
+**THE ANSWER IS WHICH CARD, NOT YES/NO**, and more so than fusion's: a
+revealed card stays in the hand and a charged one is **gone to the soul**.
+`parser.chargeOffer` is the ONE reader of what could pay, `PENDING_KINDS`
+five → six, and the answer rides as `_chargeUid` beside `_fuseUid`.
+
+**MEASURED: three pool cards, nine records, all Boltyn's, and NO pool
+record prints two additional costs of any kind** — so where charge sits in
+the cost chain cannot change an outcome today, which is stated rather than
+assumed (the same note `maybeFuse` and `doAddPay` carry).
+
+**`multi` IS DELIBERATELY NOT CARRIED.** `fx.chargeCost.multi` reads the
+printed *"any number of times"* and nothing consumes it — a field with no
+reader is a no-op wearing a name (v3.55). No pool record prints it, and
+the drill pins that SET empty so the day one appears somebody decides
+rather than it being silently charged once.
+
+**AND `execute`'s RE-DERIVATION IS `hand.find` ALONE.** Fusion's twin also
+tests `offer.uids.indexOf(...)` and is right to — `fusionOffer` filters by
+TALENT, so its offer is a strict SUBSET of the hand. `chargeOffer`'s is
+not: it is every card in hand bar the one being played, and `execute`
+removed that one three hundred lines up. The same test here could refuse
+nothing the `find` accepts — **sabotaging it open is SILENT**, which makes
+it dead code that reads like a rule (v4.11, v3.67). Deleted, and **the
+PREMISE it rested on is a drill instead**: move the charge block above the
+splice and that drill fails.
+
+**THE POLICY DECLINES, AND THAT IS A STATED CHOICE WITH A NUMBER.**
+v4.24's standing rule is to decline a price this policy cannot weigh.
+Fusion escaped it because nothing moves zones and its price is provably
+zero for a policy holding full state; charge's is not — a card LEAVES THE
+HAND, and `takeUpTo` is built on a card in hand being a blocker. What it
+buys is card text, which `sparring.js` reads none of. **Measured on his
+own slice: taking it wins 4 of 14, declining wins 2** — so the
+conservative answer costs Boltyn about two games in fourteen, and that is
+a POLICY fact rather than an engine one. The accept path is driven
+end-to-end by `test/charge.test.js` and a Boltyn scene, so the payload is
+not left with no caller (v3.50).
+
+**AND THE FIXTURES THAT DEPENDED ON THE AUTO-CHARGE HAD TO SAY SO.**
+`rxlayer.test.js`'s premise is *"the declared attack charges"* — it takes
+the offer explicitly now — and `journey.test.js` declines it and records
+that it was ASKED, pinned as a SET, because until v4.33 all three of these
+walked through that census with a card silently leaving the hand and
+nothing there knew.
 
 ### TWO PRECONS WE CANNOT BUILD, AND A PROBE THAT COMES DUE ITSELF (v4.32)
 

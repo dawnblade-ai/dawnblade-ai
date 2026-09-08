@@ -289,5 +289,58 @@ module.exports = [
     "…and draws nothing — only the DRAW is gated": ""
   }
 }
+,
+
+{
+  name: "charge is OFFERED now, and declining charges nothing",
+  why: "\"As an additional cost to play this, YOU MAY charge your hero's " +
+       "soul\" — and `execute` used to auto-pick from hand whenever the hand " +
+       "was non-empty, so the printed choice was never offered and a card " +
+       "left the hand on the engine's judgement. Upstream's own keyword.csv " +
+       "spells the refusal out: \"You may elect to not pay the additional " +
+       "cost of charge - however this would mean you did not charge.\" The " +
+       "block's stated reason - \"the trainer has no prompt wired for a cost " +
+       "paid before the card's own total is struck\" - stopped being true at " +
+       "v4.27, which built exactly that for fusion. Bolt of Courage is the " +
+       "sharpest: charged, it gets \"when this hits, draw a card\", so a " +
+       "blocked swing paid a card for nothing. It is a COST, so being unable " +
+       "to refuse is WEAKER than printed - the one-sided sweep is blind, and " +
+       "all nine records read `tier: full` throughout (v4.33).",
+  run(c){
+    const swing = answer => {
+      const atk   = c.card("Bolt of Courage", 1, "ch");
+      const spare = c.card("Bolt of Courage", 3, "sp");
+      let g = c.acting(c.state({name: "Boltyn", hand: [atk, spare], res: 9, ap: 3},
+                               {name: "Them", hp: 20}, {turn: 3}));
+      let n = c.reduce(g, {t: "play", uid: "ch", from: "hand"}, 0);
+      const asked = !!(n.pending && n.pending.kind === "charge");
+      if(asked) n = c.reduce(n, {t: "charge", uid: answer}, 0);
+      for(let i = 0; i < 4 && n.pending; i++){
+        const k = n.pending.kind;
+        n = c.reduce(n, k === "boost" || k === "addPay" ? {t: k, yes: false}
+                      : k === "fuse" ? {t: "fuse", uid: null}
+                      : {t: "payConfirm"}, n.pending.seat);
+      }
+      return {asked, n};
+    };
+    const took = swing("sp"), declined = swing(null);
+    return {
+      "the offer is made at all":              took.asked,
+      "taking it puts the CHOSEN card in the soul": took.n.sides[0].soul.map(x => x.uid).join(","),
+      "…and hist.charged records it":          took.n.sides[0].hist.charged,
+      "declining leaves the soul empty":       declined.n.sides[0].soul.length,
+      "…and the card is still in hand":        declined.n.sides[0].hand.map(x => x.uid).join(","),
+      "…and nothing was charged":              !declined.n.sides[0].hist.charged
+    };
+  },
+  want: {
+    "the offer is made at all": true,
+    "taking it puts the CHOSEN card in the soul": "sp",
+    "…and hist.charged records it": 1,
+    "declining leaves the soul empty": 0,
+    "…and the card is still in hand": "sp",
+    "…and nothing was charged": true
+  }
+}
 
 ];

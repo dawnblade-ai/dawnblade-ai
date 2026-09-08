@@ -72,6 +72,16 @@ function settle(n, skip){
   let g = 0;
   while(J.pendingOf(n) && g++ < 40){
     const p = J.pendingOf(n), sd = n.sides[p.seat];
+    /* THE CHARGE IS TAKEN, AND SAYING SO IS THE POINT (v4.33). This
+       fixture's whole premise is that the declared attack CHARGES —
+       Courageous Steelhand reads "if you've charged this turn", and the
+       assertion below is what stops that being luck. Until v4.33
+       `execute` took the cost without asking and the fixture got it for
+       free; now it is a printed choice and the drill has to make it. */
+    if(p.kind === "charge"){
+      n = J.reduce(n, {t: "charge", uid: (p.uids || [])[0] || null}, p.seat).state;
+      continue;
+    }
     if(p.need - sd.res - J.paySum(sd) > 0){
       const pk = sd.hand.find(x => x.uid !== skip && (x.pitch || 0) > 0 && !(sd.paySel || []).includes(x.uid));
       if(!pk) break;

@@ -7198,6 +7198,57 @@ function fusionOffer(card, sd, uid){
 const crankCost = c => printedKw(c, "crank")
   ? {kind: "steam", n: 1, ops: [["ap", 1]]} : null;
 
+/* ---- WHICH CARDS COULD PAY A CHARGE (v4.33) -------------------------
+
+   > "As an additional cost to play this, YOU MAY charge your hero's soul."
+   >
+   > "As an additional cost to playing a card with charge you may put a
+   >  card from your hand into your hero's soul. … *You may elect to not
+   >  pay the additional cost of charge — however this would mean you did
+   >  not charge.*"    — the-fab-cube `csvs/english/keyword.csv`, develop
+
+   THE PARSE HAS READ THE "YOU MAY" SINCE CHARGE WAS BUILT, and `execute`
+   ignored it: the block auto-picked from hand whenever the hand was
+   non-empty, preferring whatever pitch the card's own rider asked for.
+   Its own comment said why — *"the trainer has no prompt wired for a cost
+   paid before the card's own total is struck"* — and that stopped being
+   true at v4.27, which built exactly that for fusion. A recorded reason
+   is only as good as the day it was measured (v3.69, v4.26).
+
+   IT IS A COST, NOT A BONUS, so being unable to refuse is WEAKER than
+   printed for its controller, not stronger — which is why the one-sided
+   fairness sweep is blind and all nine records read `tier: full`. Bolt
+   of Courage is the sharpest: charged, it gets *"when this hits, draw a
+   card"*, so the engine spent a card from hand for a CONDITIONAL draw on
+   every copy, and a swing that got blocked paid it for nothing. In a
+   training sim that is a losing trade made quietly on the player's
+   behalf — the same reason `selfPayOr` never pitches for them (v3.09).
+
+   THE ANSWER IS WHICH CARD, NOT YES/NO — fusion's shape one cost over,
+   and more so: a revealed card stays in the hand and a charged one is
+   GONE to the soul, so which one leaves is the whole decision.
+
+   MEASURED: three pool cards print charge, nine records, all Boltyn's,
+   and none prints `multi` ("any number of times"). No pool record prints
+   two additional costs of any kind, so where this sits in the cost chain
+   cannot change an outcome today — stated rather than assumed, the same
+   note `maybeFuse` and `doAddPay` carry. */
+function chargeOffer(card, sd, uid){
+  const fx = fxParse(card);
+  if(!fx.chargeCost || !sd) return null;
+  const uids = (sd.hand || [])
+    .filter(c => c && c.uid !== (uid != null ? uid : (card && card.uid)))
+    .map(c => c.uid);
+  /* `multi` IS DELIBERATELY NOT CARRIED. `fx.chargeCost.multi` reads the
+     printed "any number of times", and NOTHING consumes it — a field with
+     no reader is a no-op wearing a name (v3.55), and offering it here
+     would be parsing ahead of wiring. Measured: no pool record prints it,
+     so a single offer is the whole rule today, and `test/charge.test.js`
+     pins that SET empty so the day one appears a drill fails and somebody
+     decides rather than it being silently charged once. */
+  return uids.length ? {uids} : null;
+}
+
 /* ---- WHICH ZONE A CARD MAY BE PLAYED FROM (v3.00) -------------------
 
    A card is played from the HAND. The graveyard and the banished zone are
@@ -7713,7 +7764,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
-        crankCost, fusionOffer,
+        crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,

@@ -198,6 +198,7 @@ const ACTIONS = [
   "payCancel",   /*              abandon it; nothing has been spent yet   */
   "boost",       /* {yes}        pay boost's additional cost, or decline  */
   "fuse",        /* {uid|null}   reveal that card for Fusion, or decline  */
+  "charge",      /* {uid|null}   put that card into your soul, or decline   */
   "addPay",      /* {yes}        pay an optional additional cost, or decline */
   "split",       /* {half}       declare which half of a split card is played */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
@@ -227,7 +228,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline"];
 
 /* ---- reading and writing ---------------------------------------------
@@ -676,6 +677,18 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "fuse") return "nothing is asking for a fusion reveal";
+  if(p && p.kind === "charge"){
+    if(a.t !== "charge") return "answer the charge for " + p.card.name + " first";
+    /* NULL IS THE DECLINE and is always legal — upstream's own keyword
+       definition says so in as many words: "You may elect to not pay the
+       additional cost of charge." A uid that is not on the offer is
+       REFUSED rather than silently declined, because `legal` and
+       `reduce` must agree about what a seat may send (fuzz.test.js). */
+    if(a.uid != null && (p.uids || []).indexOf(a.uid) < 0)
+      return "that card is not in hand to charge";
+    return null;
+  }
+  if(a.t === "charge") return "nothing is asking for a charge";
 
   if(["paySel", "payConfirm", "payCancel"].indexOf(a.t) >= 0) return "nothing to pay for";
 
@@ -1772,6 +1785,7 @@ function reduce(g, a, seat){
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
+    case "charge":    n = doCharge(n, a, seat); break;
     case "defend":    n = doDefend(n, a, seat); break;
     case "arsenal":   n = doArsenal(n, a, seat); break;
     case "pass":      n = settle(P.pass(n)); break;
@@ -1843,7 +1857,7 @@ function doPlay(g, a, seat){
      cannot change the outcome — declining a boost refunds nothing and
      costs nothing. It matches the trainer's order deliberately, so a
      player who learns one board is not surprised by the other. */
-  return maybeFuse(g, card, zone, seat, window, target);
+  return maybeCharge(g, card, zone, seat, window, target);
 }
 
 /* The window a card is actually being played in: the intersection of
@@ -2054,7 +2068,7 @@ function doPayConfirm(g, seat){
   /* A weapon swing never boosts (boost is printed on attack ACTIONS), but
      this asks rather than assuming — `boostable` reads the keyword, and a
      predicate that reads the card cannot be wrong about a card. */
-  return maybeFuse(n, p.card, p.from, seat, p.window, p.target);
+  return maybeCharge(n, p.card, p.from, seat, p.window, p.target);
 }
 
 /* THE CARD RESOLVES, AND ITS TEXT RESOLVES WITH IT (v2.77).
@@ -2117,9 +2131,10 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
   const out = commitPlay({...g, _doBoost: !!doBoost, _addPaid: !!addPaid},
                          card, zone, seat, window, target);
   if(out && (out._doBoost !== undefined || out._addPaid !== undefined
-          || out._half !== undefined || out._fuseUid !== undefined)){
+          || out._half !== undefined || out._fuseUid !== undefined
+          || out._chargeUid !== undefined)){
     const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half;
-    delete n._fuseUid; return n;
+    delete n._fuseUid; delete n._chargeUid; return n;
   }
   return out;
 }
@@ -2145,6 +2160,47 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
    pool, no record prints Fusion alongside boost or an additional
    resource cost — Fusion is Iyslander's and Briar's, boost is Dash's —
    so the order cannot change an outcome today. */
+/* CHARGE — "As an additional cost to play this, YOU MAY charge your
+   hero's soul", and upstream's keyword definition spells the refusal out:
+   "You may elect to not pay the additional cost of charge — however this
+   would mean you did not charge."
+
+   FUSION'S SHAPE ONE COST OVER, and more so. A COST is settled at play
+   time so it cannot be a queued prompt (v3.34), `pending` holds the
+   half-finished interaction, and the answer rides to `execute` on the
+   state. What is different from boost is that the answer is not yes/no —
+   a revealed card stays in the hand and a CHARGED one is gone to the
+   soul, so WHICH card leaves is the whole decision.
+
+   ASKED ONLY WHEN THERE IS A REAL CHOICE — `parser.chargeOffer` returns
+   null on an empty hand and the play goes straight through uncharged,
+   the same rule `buildPrompt` follows for an empty spec.
+
+   IT SITS AHEAD OF THE OTHER THREE, and the ordering is stated rather
+   than assumed (`maybeFuse` and `doAddPay` carry the same note):
+   measured over the pool, NO record prints two additional costs of any
+   kind — charge is Boltyn's, fusion is Iyslander's and Briar's, boost is
+   Dash's — so the order cannot change an outcome today. */
+function maybeCharge(g, card, zone, seat, window, target){
+  const offer = PR.chargeOffer(card, at(g, seat), card && card.uid);
+  if(!offer) return maybeFuse(g, card, zone, seat, window, target);
+  return say({...g, pending: {kind: "charge", seat, card, from: zone, window, target,
+                              uids: offer.uids}},
+    card.name + " has charge — " + at(g, seat).name
+    + " may put a card from hand into their hero's soul.");
+}
+
+function doCharge(g, a, seat){
+  const p = g.pending;
+  const n = {...g, pending: null};
+  /* A uid that is not on the offer DECLINES rather than throwing — this
+     is a reducer fed by JSON off a wire (v2.48), and `execute`
+     re-derives the answer anyway. `legal` refuses it first. */
+  const uid = (a.uid != null && (p.uids || []).indexOf(a.uid) >= 0) ? a.uid : null;
+  return maybeFuse(uid == null ? n : {...n, _chargeUid: uid},
+                   p.card, p.from, seat, p.window, p.target);
+}
+
 function maybeFuse(g, card, zone, seat, window, target){
   const offer = PR.fusionOffer(card, at(g, seat), card && card.uid);
   if(!offer) return maybeAddPay(g, card, zone, seat, window, target);

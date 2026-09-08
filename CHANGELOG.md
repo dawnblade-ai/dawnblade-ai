@@ -1,3 +1,87 @@
+## v4.33 — a "you may" that was taken without being offered
+
+> *"As an additional cost to play this, **YOU MAY** charge your hero's
+> soul."* — BOLT OF COURAGE · ENGULFING LIGHT · TAKE FLIGHT, nine records
+>
+> *"You may elect to **not** pay the additional cost of charge — however
+> this would mean you did not charge."*
+> — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+The parse has read the "you may" since charge was built, and `execute`
+ignored it: it auto-picked from hand whenever the hand was non-empty,
+preferring whatever pitch the card's own rider asked for. **v4.27's
+fusion, one cost over** — and this one moves a card between zones, where
+fusion only reveals.
+
+**THE BLOCK'S OWN COMMENT SAID WHY, AND IT STOPPED BEING TRUE.** *"The
+trainer has no prompt wired for a cost paid before the card's own total is
+struck"* — false since v4.27, which built exactly that machinery. A
+recorded reason is only as good as the day it was measured (v3.69, v4.26).
+
+**IT IS A COST**, so being unable to refuse is WEAKER than printed for its
+controller — the one-sided sweep is blind, and all nine records read
+`tier: full` throughout. Bolt of Courage is the sharpest: charged, it gets
+*"when this hits, draw a card"*, so the engine spent a card from hand for
+a conditional draw on every copy and a blocked swing paid it for nothing.
+
+### The build
+
+- `parser.chargeOffer` — the ONE reader of what could pay: every card in
+  hand except the one being played. `null` on an empty hand, and the play
+  goes straight through uncharged.
+- `judge.maybeCharge` / `doCharge`, `PENDING_KINDS` **five → six**, and the
+  answer rides as `_chargeUid` beside `_fuseUid`, cleared per resolution on
+  both boards.
+- **The answer is WHICH card, not yes/no** — more so than fusion's: a
+  revealed card stays in the hand and a charged one is gone to the soul.
+  One button per card in hand, on both boards, plus a real **No charge**.
+- **`multi` is deliberately not carried.** `fx.chargeCost.multi` reads the
+  printed *"any number of times"* and nothing consumes it — a field with no
+  reader is a no-op wearing a name (v3.55). No pool record prints it, and
+  the drill pins that set empty.
+
+**MEASURED**: three pool cards, nine records, all Boltyn's, and **no pool
+record prints two additional costs of any kind** — so where charge sits in
+the cost chain cannot change an outcome today, stated rather than assumed.
+
+### `execute`'s re-derivation is `hand.find` alone
+
+Fusion's twin also tests `offer.uids.indexOf(...)` and is right to:
+`fusionOffer` filters by TALENT, so its offer is a strict SUBSET of the
+hand. `chargeOffer`'s is not — it is every card in hand bar the one being
+played, and `execute` removed that one three hundred lines up. The same
+test here could refuse nothing the `find` accepts, and **sabotaging it
+open is SILENT**, which makes it dead code that reads like a rule (v4.11,
+v3.67). Deleted, and **the premise it rested on is a drill instead**: move
+the charge block above the splice and that drill fails.
+
+### The policy declines, and that is a stated choice with a number
+
+v4.24's standing rule is to decline a price this policy cannot weigh.
+Fusion escaped it because nothing moves zones and its price is provably
+zero for a policy holding full state; charge's is not — a card **leaves
+the hand**, and `takeUpTo` is built on a card in hand being a blocker.
+What it buys is card text, which `sparring.js` reads none of.
+
+**Measured on Boltyn's own 14-game slice: taking it wins 4, declining wins
+2.** The conservative answer costs him about two games in fourteen, and
+that is a POLICY fact rather than an engine one. The accept path is driven
+end-to-end by `test/charge.test.js` (15 drills) and a Boltyn scene, so the
+payload is not left with no caller (v3.50).
+
+### And the fixtures that depended on the auto-charge had to say so
+
+`rxlayer.test.js`'s whole premise is *"the declared attack charges"* — it
+takes the offer explicitly now. `journey.test.js` declines it and records
+that it was **asked**, pinned as a SET, because until v4.33 all three of
+these walked through that census with a card silently leaving the hand and
+nothing there knew.
+
+Ten sabotages, ten applied, ten bite, zero silent — after two came back
+silent and were re-aimed: the trainer's branch needed the whole ternary
+pinned rather than the call (v3.94), and `multi` is latent, so only
+asserting the offer's exact keys sees it.
+
 ## v4.32 — two precons we cannot build, and a probe that comes due itself
 
 Two new Silver Age precons dropped: **Prism, Advent of Thrones** (`SAT`)

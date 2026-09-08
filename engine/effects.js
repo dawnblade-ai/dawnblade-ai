@@ -2624,32 +2624,55 @@ function makeEffects(ctx){
       if(_iq && _iq.amp){ actMut(n).amp = act(n).amp + _iq.amp;
         n = L(n, `${card.name} is what that grant was waiting for — +${_iq.amp} arcane.`); }
       else if(_iq) n = L(n, `${card.name} is what that grant was waiting for.`); }
-    /* CHARGE (Boltyn) — "As an additional cost to play this, you may charge
-       your hero's soul." A real additional cost paid BEFORE the rest of the
-       card resolves, so it has to happen here, ahead of the conds loop below
-       that reads it ("if a yellow card is charged this way"). Real play is a
-       genuine choice; the trainer has no prompt wired for a cost paid before
-       the card's own total is struck (prompts drain only after resolution —
-       see engine/prompts.js), so this follows the SAME honest approximation
-       already in place for fx.addCost.discard: auto-pick from hand, cheapest
-       card first. The pick prefers whatever pitch this card's OWN rider is
-       asking for (read off fx.conds — never guessed or special-cased by
-       name) so the "may" is worth taking when it would actually pay off. */
+    /* CHARGE (Boltyn) — "As an additional cost to play this, YOU MAY
+       charge your hero's soul", and upstream's own keyword definition
+       spells the refusal out: "You may elect to not pay the additional
+       cost of charge — however this would mean you did not charge."
+
+       IT WAS TAKEN WITHOUT BEING OFFERED UNTIL v4.33. This block
+       auto-picked from hand whenever the hand was non-empty, preferring
+       whatever pitch the card's own rider asked for. The comment that
+       stood here said why — "the trainer has no prompt wired for a cost
+       paid before the card's own total is struck" — and that stopped
+       being true at v4.27, which built exactly that machinery for
+       fusion. A recorded reason is only as good as the day it was
+       measured (v3.69, v4.26).
+
+       A COST CANNOT BE A QUEUED PROMPT (v3.34, prompts drain after the
+       card has resolved), so the answer rides on the state as
+       `_chargeUid` — the seam `_doBoost`, `_addPaid`, `_half` and
+       `_fuseUid` already use — and `parser.chargeOffer` is the ONE
+       reader of what could pay, so the offer, the legality of the
+       answer, and this re-derivation cannot disagree.
+
+       AND IT IS RE-DERIVED HERE RATHER THAN TRUSTED, because `reduce` is
+       fed by JSON off a wire (v2.48): a uid naming a card that is not in
+       the hand must charge nothing. `null` means declined, or never
+       offered — both of which are simply "did not charge". */
     let chargedPitch = null;
-    if(fx.chargeCost && act(n).hand.length){
-      const wantCond = fx.conds.concat(fx.condOnHit||[]).map(x=>x.cond).find(c2=>/^chargedPitch\d$/.test(c2));
-      const wantPitch = wantCond ? +wantCond.match(/\d+/)[0] : null;
-      let idx = wantPitch!=null ? act(n).hand.findIndex(c2=>c2.pitch===wantPitch) : -1;
-      if(idx===-1){
-        const ranked = act(n).hand.map((c2,i2)=>({i2,v:advValue(c2,n,{runeDmg:bAct(n).runeDmg})})).sort((a,b)=>a.v-b.v);
-        idx = ranked[0].i2;
+    if(fx.chargeCost){
+      /* THE RE-DERIVATION IS `hand.find`, AND THAT IS THE WHOLE CHECK.
+         Fusion's twin also tests `offer.uids.indexOf(...)` and is right
+         to: `fusionOffer` filters by TALENT, so its offer is a strict
+         SUBSET of the hand and a forged uid naming an ordinary card in
+         hand has to be refused. `chargeOffer`'s offer is not a subset —
+         it is every card in hand bar the one being played, and `execute`
+         removed that one three hundred lines up — so the same test here
+         could refuse nothing the `find` accepts. Measured: sabotaging it
+         open is SILENT against every driven fixture, which makes it dead
+         code that reads like a rule (v4.11, v3.67). Deleted, and the
+         PREMISE it rested on is a drill instead. */
+      const picked = n._chargeUid != null
+        ? act(n).hand.find(c2 => c2 && c2.uid === n._chargeUid) : null;
+      if(picked){
+        chargedPitch = picked.pitch;
+        actMut(n).soul = [picked, ...act(n).soul];
+        actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
+        actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
+        /* THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a
+           zone both players can read, so the charge is public. */
+        n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
       }
-      const picked = act(n).hand[idx];
-      chargedPitch = picked.pitch;
-      actMut(n).soul = [picked, ...act(n).soul];
-      actMut(n).hand = act(n).hand.filter((_,i2)=>i2!==idx);
-      actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
-      n = L(n, `${card.name}: charged ${picked.name} into your hero's soul (Charge).`);
     }
     /* FUSION — "[TALENT] Fusion" means "as an additional cost to play
        this, YOU MAY reveal a [TALENT] card from your hand."

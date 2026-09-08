@@ -164,6 +164,29 @@ function payAction(g, seat, p, o){
      supplied the eligible uids with the question. */
   if(p.kind === "fuse")
     return {t: "fuse", uid: [...(p.uids || [])].sort((a, b) => byUid({uid:a}, {uid:b}))[0] || null};
+  /* CHARGE (v4.33) — DECLINED, and it is boost's answer rather than
+     fusion's.
+
+     v4.24's standing rule is to decline a price this policy cannot
+     weigh. Fusion escaped it because nothing moves zones and both peers
+     hold full state, so its price is provably ZERO for this policy.
+     Charge's price is not: a card LEAVES THE HAND for the soul, and a
+     card in hand can always block — this file's own `takeUpTo` is built
+     on exactly that. What it buys is card text (a draw, a go again, a
+     soul put), which this policy reads none of. So there is a real cost,
+     an unweighable payoff, and "no" is a complete answer to "you may".
+
+     THE CONSERVATIVE DIRECTION. Declining can never make the seat
+     stronger than printed, which is the direction that steals games.
+
+     AND THE ZERO IS DELIBERATE, NOT AN UNWIRED ROUTE. This leaves the
+     charge payload — `hist.charged` and the `chargedPitchN` riders on
+     Boltyn's three cards — fired never in self-play, which is the shape
+     v3.50 and v3.84 warn about. The difference is that the route IS
+     reachable and IS driven: `test/charge.test.js` takes the offer
+     end-to-end through `judge.reduce` for all three cards. What is
+     unexercised here is a policy branch that says no on purpose. */
+  if(p.kind === "charge") return {t: "charge", uid: null};
   /* ---- THE TWO KINDS THIS POLICY HAD NEVER MET (v3.80) --------------
      `judge.PENDING_KINDS` is a census of four and this function branched
      on ONE, falling through to `paySel` for the rest — which is v3.35's

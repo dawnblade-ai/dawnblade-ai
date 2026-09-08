@@ -122,7 +122,7 @@ function inDefendStep(card){
 /* Resolve a play all the way through its payment. */
 /* Every card in the pool that prints boost is asked, so the census
    records that it saw the question rather than merely tolerating it. */
-const boostsAsked = [], splitsAsked = [];
+const boostsAsked = [], splitsAsked = [], chargesAsked = [];
 
 function settle(n){
   for(let i = 0; i < 12 && J.pendingOf(n); i++){
@@ -148,6 +148,17 @@ function settle(n){
     if(p.kind === "split"){
       splitsAsked.push(p.card.name);
       n = J.reduce(n, {t: "split", half: 0}, p.seat).state;
+      continue;
+    }
+    /* CHARGE IS DECLINED (v4.33), for the same reason as `addPay` below:
+       the census is about where the PLAYED card lands, and declining is
+       the branch that moves nothing extra. Recorded rather than merely
+       tolerated — until v4.33 `execute` took this cost without asking, so
+       these three cards walked through this census with a card silently
+       leaving the hand and nothing here knew. */
+    if(p.kind === "charge"){
+      chargesAsked.push(p.card.name);
+      n = J.reduce(n, {t: "charge", uid: null}, p.seat).state;
       continue;
     }
     /* An optional additional cost is DECLINED here: the census is about
@@ -244,6 +255,14 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
   for(const ref of ["Hyper Driver", "Re-Charge!"])
     assert.ok(!names.includes(ref),
       ref + " only MENTIONS boost — it must never be offered the additional cost");
+  /* AND THE CHARGE WAS ACTUALLY ASKED (v4.33). Until then `execute` took
+     the cost without asking, so all three of these walked through this
+     census with a card silently leaving the hand and nothing here knew.
+     Pinned as a SET, because "3 charges asked" is the same number on an
+     engine that asks the wrong three. */
+  assert.deepEqual([...new Set(chargesAsked)].sort(),
+    ["Bolt of Courage", "Engulfing Light", "Take Flight"],
+    "every card printing charge must be asked the question");
 });
 
 test("anything printing defence, bar a defence reaction, can be declared", {skip}, () => {
