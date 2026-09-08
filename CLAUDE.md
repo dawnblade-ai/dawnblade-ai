@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.35
+**Current version:** v4.36
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2502 drills** at v4.35.
+This is `node --test "test/*.test.js"` — **2512 drills** at v4.36.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,70 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "THEY" IS THE HERO THE PREVENTION TARGETED (v4.36)
+
+> *"Prevent the next 4 damage that would be dealt to **target hero** this
+> turn by a source of your choice. If **they** have less {h} than each
+> other hero, **they** may gain 1{h}."* — OASIS RESPITE ×3
+
+The second sentence has read NOTHING since the card was dealt, in three
+decks — and **it cannot be fixed at clause level**, because in
+`classifyClause` *"they"* means the **OPPONENT** everywhere else it
+appears: *"they discard a card"* is `foeDiscard`, *"they lose N{h}"* is
+damage to the foe. Read there, the card pays the player who is AHEAD.
+
+**THE HEAD IS THE DISCRIMINATOR**, so it is a whole-card fold — v2.33's
+Bull's Eye Bracers trap for the seventh time, in the shape v4.12's
+two-"it"s fold uses one block up. **`lifeLt` already existed and is
+already evaluated**, so nothing is invented; what was missing is that the
+printed SUBJECT differs from the anchor beside it (*"**you** have less
+{h} than an opposing hero"*).
+
+**The amount is READ** though all three printings say 1 (synthetic drill,
+v3.32); **the "may" is taken**, because gaining life while BEHIND is
+dominated-positive and `lifeLock` fizzles only when you are AHEAD; and
+*"each other hero"* is the opponent **because there are two seats**,
+stated rather than derived. **Only the RIDER is marked handled** — the
+head already reads, and claiming it deletes the prevention.
+
+**WHAT THE HEAD STILL DROPS IS RECORDED, AND NO TOOL HERE CAN SEE IT.**
+*"to TARGET hero"* and *"by a SOURCE of your choice"* are both dropped —
+stronger than printed — and **all three of `npm run fairness`'s
+`RESTRICTION-DROPPED` checks match on the word "attack"**, so the
+prevention family is outside the tool's model entirely. **A check was
+deliberately NOT added**: with one claimant it would sit red on every
+ship, which is exactly how UNFAIR came to read 1 for nineteen versions.
+`prevention-target-and-source` carries it with a driven probe.
+
+### A RECORD THAT OUTLIVED ITS OWN ANSWER, BECAUSE ITS PROBE DROVE NOTHING (v4.36)
+
+`aura-ward-prevention-pool` was **answered at v4.34** and was still `open`
+a version later. Its probe built a side, put the aura on its board and
+asserted `sd.ward === 0` — **a field `makeSide` had just defaulted**, with
+nothing run in between — so it passed identically on both sides of the
+ruling. A hand-written state answering its own question (v2.80), which is
+one of the four shapes v4.02 caught when this ledger was built.
+
+**FIX THE FAMILY** (v4.21): `test/approx.test.js` holds a standing census
+that every probe reaches an engine module, a helper that drives one, or a
+real source file. Three came back clean once the scan learned `W.`, and a
+clean result is worth having PROVED (v3.97, v4.00). **Its control string
+is built by CONCATENATION**, because written as a literal it appears in
+the very file the scan reads — the drill reported its own control as an
+inert probe on the first run.
+
+### A REVERT ANCHOR MUST BE UNIQUE (v4.36)
+
+v4.32 recorded that `git checkout` on an uncommitted drill deletes it, and
+the answer was to revert a sabotage with the **inverse edit**. This is the
+other half: an inverse edit anchored on `handled.add(ri);` — which **two**
+folds contain — put the sabotaged line back at the WRONG site, corrupting
+v4.12's fold and silently deleting this version's. Four drills went red in
+the full suite while the file passed alone, and `--write-baseline` was run
+against the corrupted parser. **Assert the revert anchor is unique, not
+merely present**, and re-derive any number taken while a sabotage was in
+flight.
 
 ### "PREVENT … DAMAGE" MEANS DAMAGE, AND THREE ROUTES NEVER ASKED (v4.35)
 

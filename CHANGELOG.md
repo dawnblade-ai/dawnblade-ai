@@ -1,3 +1,107 @@
+## v4.36 — "they" is the hero the prevention targeted, and a record that outlived its own answer
+
+> *"Prevent the next 4 damage that would be dealt to **target hero** this
+> turn by a source of your choice. If **they** have less {h} than each
+> other hero, **they** may gain 1{h}."* — OASIS RESPITE ×3
+
+The second sentence has read **nothing** since the card was dealt — three
+records, in Dorinthea's, Enigma's and Lyath's lists — and it cannot be
+fixed at clause level. In `classifyClause` **"they" means the OPPONENT
+everywhere else it appears**: *"they discard a card"* is `foeDiscard`,
+*"they lose N{h}"* is damage to the foe. Read there, this line pays a life
+gain to the player who is **ahead** — the card exactly backwards.
+
+**SO THE HEAD IS THE DISCRIMINATOR** and it is a whole-card fold: v2.33's
+Bull's Eye Bracers trap for the seventh time (*"it"/"they" is the object
+the head sentence named, never the source*), using the same shape v4.12's
+two-"it"s fold uses one block up.
+
+**`lifeLt` ALREADY EXISTED AND IS ALREADY EVALUATED** (`act(n).hp <
+foe(n).hp`), so no condition vocabulary is invented. What was missing is
+only that the printed SUBJECT differs from the anchor beside it, which
+spells *"**you** have less {h} than an opposing hero"*.
+
+- **The amount is READ**, and no pool fixture can prove it: all three
+  printings say 1{h} while the prevention above them says 4 / 3 / 2, so a
+  hardcoded 1 is silent against every real card and the drill is synthetic
+  (v3.32, twelfth outing).
+- **The "may" is taken.** Gaining 1{h} while BEHIND is strictly
+  dominated-positive — the same argument v4.23 makes for the reprieve —
+  and `lifeLock` cannot conflict, because it fizzles a gain only when you
+  are AHEAD and this gate says you are not.
+- **"Each other hero" is the opponent** because there are two seats.
+  Stated rather than derived.
+- **Only the RIDER is marked handled**; the head already reads correctly,
+  and claiming it would delete the prevention. A sabotage checks exactly
+  that.
+
+### What the head still drops is RECORDED, and no tool here can see it
+
+*"to **target** hero"* and *"by a **source of your choice**"* are both
+dropped: the pool is the actor's and it soaks the next N damage from any
+source, which is **stronger than printed**. It is the pool's only
+prevention that names either restriction — every other one says *"you"*
+and names no source.
+
+**`npm run fairness` cannot see it by construction.** All three of its
+`RESTRICTION-DROPPED` checks match on the word *"attack"*, so the
+prevention family is outside the tool's model entirely — the tool going
+stale rather than the card being right (v3.12, v3.87). **A check was
+deliberately NOT added**: with one claimant it would sit red on every
+ship, which is precisely how UNFAIR came to read 1 for nineteen versions.
+`tools/approx.js` carries it as `prevention-target-and-source` with a
+driven probe instead.
+
+### v4.34's own answer left a record standing
+
+`aura-ward-prevention-pool` — *"whether a board aura's `Ward N` feeds its
+controller's prevention pool"* — was **answered at v4.34, from the
+printing**, and was still `open` a version later.
+
+**BECAUSE ITS PROBE DROVE NOTHING.** It built a side, put the aura on its
+board and asserted `sd.ward === 0` — a field `makeSide` had just defaulted
+to 0, with nothing run in between — so it passed identically on both sides
+of the ruling. **A hand-written state answering its own question** (v2.80),
+which is one of the four shapes v4.02 caught when this ledger was built.
+The probe resolves the card now and then hits the hero.
+
+**FIX THE FAMILY, NOT THE ONE YOU FOUND** (v4.21). `test/approx.test.js`
+carries a standing census: every probe body must reach an engine module, a
+helper that drives one, or a real source file. Three came back clean once
+the scan was widened to include `W.` — a source scan about a deletion and
+two about display are legitimately not driven — and a clean result is worth
+having **proved** (v3.97, v4.00).
+
+**AND THE CONTROL STRING IS BUILT BY CONCATENATION.** Written as a literal
+it appears in the very file the scan reads, so the census reported its own
+control as an inert probe. Check your own fixture — the drill found it on
+its first run.
+
+### The harness lesson
+
+**A REVERT ANCHOR MUST BE UNIQUE.** v4.32 recorded that `git checkout` on
+an uncommitted drill deletes it, and the answer was to revert a sabotage
+with the inverse edit. This version found the other half: one inverse edit
+anchored on `handled.add(ri);`, which **two** folds contain, so the revert
+put the sabotaged line back at the wrong site — corrupting v4.12's fold
+and silently deleting this one. Four drills went red in the full suite
+while the file passed alone. The harness asserts a **unique** anchor now.
+
+### Measured
+
+| | |
+|---|---|
+| audit | **387 → 388 full**, 14 → 13 part |
+| pool records moved | **3**, all Oasis Respite `part` → `full` |
+| the ladder | **byte-identical** — a non-attack, ranked last by the policy (v3.80) |
+| sabotages | **10, all bite** |
+| scenes | 77 → **78** |
+
+The audit's 405 are the **decked** printings, and all three lists carry
+Oasis Respite at pitch 1 only — so one audit card moves where three pool
+records do. Coverage floor re-pinned after reading the diff: one entry,
+upward.
+
 ## v4.35 — "prevent … damage" means damage, and three routes never asked
 
 **THE POOL DRAWS THE DISTINCTION ITSELF, and the engine had half of it:**

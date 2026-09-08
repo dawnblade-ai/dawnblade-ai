@@ -4760,6 +4760,68 @@ function fxParse(card){
     }
   }
 
+  /* ---- "THEY" IS THE HERO THE PREVENTION TARGETED (v4.36) -----------
+     Oasis Respite prints TWO sentences about ONE hero:
+
+       "Prevent the next 4 damage that would be dealt to TARGET HERO this
+        turn by a source of your choice. If THEY have less {h} than each
+        other hero, THEY may gain 1{h}."
+
+     The second sentence has read NOTHING since the card was dealt — three
+     records, in Dorinthea's, Enigma's and Lyath's lists — and it cannot be
+     fixed at clause level, because in `classifyClause` "they" means the
+     OPPONENT everywhere else it appears: "they discard a card" is
+     `foeDiscard` and "they lose N{h}" is damage to the foe. Read there,
+     this line would give the opponent a life gain for being behind, which
+     is the card exactly backwards.
+
+     SO THE HEAD IS THE DISCRIMINATOR and this is a whole-card pre-pass —
+     v2.33's Bull's Eye Bracers trap for the seventh time ("it"/"they" is
+     the object the head sentence named, never the source), and the same
+     shape v4.12's fold one block up uses for two different "it"s.
+
+     `lifeLt` ALREADY EXISTS AND IS ALREADY EVALUATED (`act(n).hp <
+     foe(n).hp`), so no condition vocabulary is invented — what was missing
+     is that the printed subject is different: the anchor beside it spells
+     "YOU have less {h} than an opposing hero".
+
+     "EACH OTHER HERO" IS THE OPPONENT because there are two seats. Stated
+     rather than derived; a third seat would need the comparison widened
+     rather than this reading corrected.
+
+     THE AMOUNT IS READ, and no pool fixture can prove it: all three
+     printings say 1 while the prevention above says 4 / 3 / 2, so a
+     hardcoded 1 is silent against every real card and the drill is
+     synthetic (v3.32, twelfth outing).
+
+     AND THE "MAY" IS TAKEN. Gaining 1{h} while BEHIND on life is strictly
+     dominated-positive — there is nothing to weigh — which is the same
+     argument v4.23 makes for the reprieve. `lifeLock` (Reaping Blade)
+     cannot conflict with it either: that fizzles a gain only when you are
+     AHEAD, and this gate says you are not.
+
+     WHAT IS NOT READ IS RECORDED. The head drops two printed restrictions
+     — "to TARGET hero" and "by a SOURCE of your choice" — and both are in
+     `tools/approx.js` as `prevention-target-and-source` with a driven
+     probe, because the fairness sweep's RESTRICTION-DROPPED checks are all
+     about attack buffs and cannot see this family at all. */
+  {
+    const hi = clauses.findIndex(c =>
+      /^prevent the next \d+ damage that would be dealt to target hero this turn/i
+        .test(levelIdiom(c.trim())));
+    if(hi >= 0 && !handled.has(hi)){
+      for(let ri = 0; ri < clauses.length; ri++){
+        if(ri === hi || handled.has(ri)) continue;
+        const rm = levelIdiom(clauses[ri].toLowerCase().trim())
+          .match(/^if they have less \{h\} than each other hero, they may gain (\d+)\s*\{h\}\.?$/);
+        if(!rm) continue;
+        fx.conds.push({cond: "lifeLt", op: ["life", +rm[1]], instead: false, atkHero: false});
+        handled.add(ri);
+        break;
+      }
+    }
+  }
+
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     /* v4.19: a ladder whose rungs do not all read is refused whole rather

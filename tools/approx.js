@@ -84,6 +84,33 @@ const APPROX = {
       "gear sweep — specific readers first). Letting a player reorder them would "+
       "need a prompt in a phase where CR 4.4.1 gives nobody priority."},
 
+"prevention-target-and-source": {
+  status:"stated", cr:null, board:"both", since:"v3.67", swept:"v4.36",
+  claim:"Oasis Respite prints \"prevent the next N damage that would be dealt to "+
+        "TARGET HERO this turn BY A SOURCE OF YOUR CHOICE\" and the engine reads "+
+        "neither restriction: the pool is the actor's, and it soaks the next N "+
+        "damage from ANY source.",
+  why:"The SOURCE half is the one that matters and it is STRONGER than printed — a "+
+      "pool that soaks whatever arrives is strictly better than one locked to a "+
+      "source named in advance. Three records, in Dorinthea's, Enigma's and "+
+      "Lyath's lists, and it is the pool's ONLY prevention that names either "+
+      "restriction: every other one (Cloud Cover, Toe the Line, Radiant Touch, "+
+      "Throw Caution, Pyroglyphic Protection, and every printed `Ward N`) says "+
+      "\"you\" and names no source. "+
+      "NO TOOL HERE CAN SEE IT. `npm run fairness`'s three RESTRICTION-DROPPED "+
+      "checks are all about attack BUFFS — they match on the word \"attack\" — so "+
+      "the prevention family is outside the tool's model entirely, which is the "+
+      "tool going stale rather than the card being right (v3.12, v3.87). A check "+
+      "was deliberately NOT added: with one claimant it would sit red on every "+
+      "ship, which is how UNFAIR came to read 1 for nineteen versions. "+
+      "WHAT IT WOULD TAKE: a source identity on the pool entry and a choice at "+
+      "resolution, from candidates that mostly do not exist yet — you name the "+
+      "source BEFORE seeing what attacks. `preventDamage` already takes a "+
+      "`srcName`, but the trainer passes the literal \"The attack\" on one of its "+
+      "two paths, so matching on it would be right on one board and wrong on the "+
+      "other (v3.01). The TARGET half is separately near-harmless: preventing "+
+      "damage to an opponent is never a line anyone takes."},
+
 "ward-spend-order": {
   status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v4.34",
   claim:"A seat holding more than one ward chooses which to spend. Here the order "+
@@ -386,26 +413,27 @@ const APPROX = {
 /* ---- D. OPEN DESIGN QUESTIONS — recorded, not decided -------------- */
 
 "aura-ward-prevention-pool": {
-  status:"open", cr:null, board:"both", since:"v3.84", swept:"v4.02",
-  claim:"A board aura's printed `Ward N` DOES feed its controller's prevention "+
-        "pool today — once, at resolution, through the generic `ward` op — and "+
-        "whether that is right is not decided.",
-  why:"Cosmo's own text settles what the number MEANS for an aura weapon — 'base "+
-      "{p} equal to their ward' — and says nothing about prevention. The database "+
-      "prints no reminder text for ward, so deciding it is a RULING rather than an "+
-      "engineering call, and half-building a value change is worse than the honest "+
-      "gap (v3.23). "+
-      "THE CLAIM WAS CORRECTED AT v4.07: it read 'not decided', which implied "+
-      "nothing happened. Measured — Spectral Shield, Waxing Specter and Uphold "+
-      "Tradition all parse to `[[\"ward\", N]]` and `execute` adds it — so the "+
-      "question was answered by accident, in the affirmative, as a ONE-SHOT that "+
-      "outlives the aura. v3.69's rule: when a record says a thing is undecided, "+
-      "go and ask the engine. "+
-      "AND v4.07's ward sweep DELIBERATELY DOES NOT TOUCH IT. Every printed "+
-      "prevention says 'this turn' and expires; the aura keyword prints no window, "+
-      "so `wardTurn` records only the windowed portion and the sweep takes exactly "+
-      "that. Sweeping the pool whole would have decided this ruling by accident a "+
-      "second time."},
+  status:"closed", cr:null, board:"both", since:"v3.84", swept:"v4.35",
+  claim:"Whether a board aura's printed `Ward N` feeds its controller's prevention "+
+        "pool was recorded as an open RULING for six versions. ANSWERED AT v4.34, "+
+        "from the PRINTING: there is no pool — the permanent carries the number and "+
+        "destroys itself to spend it.",
+  why:"The database prints no reminder text for ward, which is why this was booked "+
+      "as a ruling rather than an engineering call. SEN037 — the Silver Age "+
+      "Spectral Shield this project deals — carries it on the CARD FACE: \"Ward 1 "+
+      "(If you would be dealt damage, DESTROY THIS to prevent 1 of that damage.)\", "+
+      "and upstream's own csvs/english/keyword.csv agrees independently. Twelfth "+
+      "time reading the printing has answered a question this project had booked. "+
+      "THE CLAIM WAS CORRECTED ONCE ALREADY, at v4.07: it read 'not decided', which "+
+      "implied nothing happened, when in fact all eight records parsed to "+
+      "`[[\"ward\", N]]` and `execute` added it — so the question had been answered "+
+      "by accident, in the affirmative, as a one-shot that outlived the aura. "+
+      "AND THE RECORD SURVIVED ITS OWN ANSWER BY ONE VERSION, because its probe "+
+      "built a side, put an aura on the board and asserted `sd.ward === 0` — a "+
+      "field `makeSide` had just defaulted to 0, with nothing driven in between. "+
+      "A hand-written state answering its own question (v2.80), which is one of "+
+      "the four shapes v4.02 caught when this ledger was built and is the reason "+
+      "the probe below now RESOLVES the card."},
 
 "cloaked-face-down-values": {
   status:"open", cr:null, board:"both", since:"v3.99", swept:"v4.02",

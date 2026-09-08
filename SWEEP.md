@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 18 cards | understood ≠ built |
-| **Fail states** | 49 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 17 cards | understood ≠ built |
+| **Fail states** | 48 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -54,7 +54,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
 - **Line Crossers** (part, 1/2 unread)
-- **Oasis Respite** (part, 1/2 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
 - **V of the Vanguard** (part, 1/3 unread)
@@ -80,10 +79,10 @@ can be overruled. Same discipline as the mention count.
 | Displayed total is wrong | 6 |
 | Ability inert — cost not modelled | 6 |
 | Earned value denied | 5 |
-| Unread, effect unknown | 5 |
+| Unread, effect unknown | 4 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 17 entries
+### WRONG — 16 entries
 
 - **Danger Digits** · tier `none` · arakni
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
@@ -114,9 +113,6 @@ can be overruled. Same discipline as the mention count.
 - **Jack Be Quick** (1) · tier `part` · briar
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- **Oasis Respite** (1) · tier `part` · dorinthea, enigma, lyath
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > If they have less {h} than each other hero, they may gain 1{h}.
 - **Plasma Barrel Shot** · tier `part` · dash
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.

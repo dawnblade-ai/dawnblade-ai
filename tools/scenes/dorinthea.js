@@ -120,6 +120,43 @@ module.exports = [
     "declining keeps the iron": false,
     "…and the point stays spent": 0
   }
+},
+
+{
+  name: "Oasis Respite pays her back when she is behind — a line that read nothing",
+  why: "\"Prevent the next 4 damage that would be dealt to TARGET HERO " +
+       "this turn by a source of your choice. If THEY have less {h} than " +
+       "each other hero, THEY may gain 1{h}.\" The second sentence has " +
+       "read nothing since the card was dealt, in three decks — hers, " +
+       "Enigma's and Lyath's — and it could not be fixed at clause level: " +
+       "in `classifyClause` \"they\" means the OPPONENT everywhere else " +
+       "(\"they discard a card\", \"they lose N{h}\"), so read there the " +
+       "card pays the player who is AHEAD. The head sentence is what says " +
+       "who \"they\" is, so it is a whole-card fold — v2.33's Bull's Eye " +
+       "Bracers trap, seventh outing (v4.36).",
+  run(c){
+    const oa = c.card("Oasis Respite", 1, "o1");
+    const play = (mine, theirs) => c.exec(
+      c.state({hand: [oa], res: 9, ap: 1, hp: mine}, {hp: theirs}, {turn: 4}),
+      oa, "hand", 0, {});
+    const behind = play(14, 20), ahead = play(20, 14), level = play(17, 17);
+    return {
+      "behind on life, she gains 1":            behind.sides[0].hp,
+      "…and the opponent gains nothing":        behind.sides[1].hp,
+      "…and the prevention still lands":        behind.sides[0].ward,
+      "…carrying its printed \"this turn\"":     behind.sides[0].wardTurn,
+      "ahead on life, nothing happens":         ahead.sides[0].hp,
+      "and LEVEL is not behind — the test is strict": level.sides[0].hp
+    };
+  },
+  want: {
+    "behind on life, she gains 1": 15,
+    "…and the opponent gains nothing": 20,
+    "…and the prevention still lands": 4,
+    "…carrying its printed \"this turn\"": 4,
+    "ahead on life, nothing happens": 20,
+    "and LEVEL is not behind — the test is strict": 17
+  }
 }
 
 ];

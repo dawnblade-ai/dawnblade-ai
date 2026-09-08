@@ -143,9 +143,58 @@ test("every record carries a status the probes know how to point at", () => {
    "everything is accounted for", so the counts are asserted. Moving one
    is a deliberate edit to this line — the same discipline as
    `wire.test.js`'s HEADLESS list and the symmetry ledger. */
+/* EVERY PROBE REACHES SOMETHING REAL (v4.35).
+
+   v4.02 built this ledger and named the failure in its own header — "the
+   probes must DRIVE" — listing four that did not, one of them "a
+   hand-written state answering its own question (v2.80)". A fifth slipped
+   through and was found the hard way: `aura-ward-prevention-pool` built a
+   side, put an aura on its board and asserted `sd.ward === 0`, a field
+   `makeSide` had just defaulted, with nothing driven in between. It
+   therefore passed identically before and after v4.34 ANSWERED the
+   ruling, and the record outlived its own version.
+
+   FIX THE FAMILY, NOT THE ONE YOU FOUND (v4.21). This is the standing
+   version: every probe body must reach an engine module, a helper that
+   drives one, or a real source file. It is a coarse check and says so —
+   it cannot tell a driven assertion from a decorative call — but it is
+   the half that IS mechanical, and the sabotage below proves the scan
+   alive rather than passing by finding nothing (v3.00, v3.81, v4.07). */
+test("every probe reaches the engine or a real source file", () => {
+  const src = fs.readFileSync(__filename, "utf8");
+  const rx = /probe\("([a-z0-9-]+)",\s*\(\)\s*=>\s*\{/g;
+  const spans = []; let m;
+  while((m = rx.exec(src))) spans.push({id: m[1], at: m.index});
+  assert.ok(spans.length >= 25, "the probe scan is aimed wrong — it found almost nothing");
+
+  const REACHES = /\b(E|PR|P|G|GM|PM|W|S|X)\.[a-zA-Z]|H\.(J\.)?(withEffects|execute|runOps|fx|state)\(|J\.(reduce|withEffects|newMatch|legal)\(|\btable\(|\bone\(|\bbyName\(|\bpool\(\)|HTML|readFileSync/;
+  const inert = [];
+  for(let i = 0; i < spans.length; i++){
+    const body = src.slice(spans[i].at, i + 1 < spans.length ? spans[i + 1].at : src.length)
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    if(!REACHES.test(body)) inert.push(spans[i].id);
+  }
+  assert.deepEqual(inert, [],
+    "a probe that reaches nothing is a claim nothing checks — it will pass on both " +
+    "sides of the change it exists to watch");
+
+  /* THE SCAN IS PROVED ALIVE. A probe body with no engine call must be
+     reported, or "found nothing" is indistinguishable from "aimed
+     wrong". */
+  /* BUILT BY CONCATENATION ON PURPOSE. Written as a literal it appears in
+     the very file the scan reads, so the census above reports the CONTROL
+     as an inert probe — which is what the first draft of this drill did.
+     Check your own fixture. */
+  const fake = "pro" + "be(\"control-nothing\", () => {\n  assert.equal(1, 1);\n});\n";
+  const rx2 = /probe\("([a-z0-9-]+)",\s*\(\)\s*=>\s*\{/g;
+  const hit = rx2.exec(fake);
+  assert.equal(hit && hit[1], "control-nothing", "the probe pattern no longer matches a probe");
+  assert.ok(!REACHES.test(fake), "the reach pattern claims a body that reaches nothing");
+});
+
 test("the ledger's shape is pinned — moving a record is a deliberate edit", () => {
   const n = s => Object.values(APPROX).filter(v => v.status === s).length;
-  assert.equal(Object.keys(APPROX).length, 29, "record count moved");
+  assert.equal(Object.keys(APPROX).length, 30, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -153,13 +202,19 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 12 -> 11 stated, 9 -> 10 closed AT v4.35: `ward-does-not-stop-arcane`
      was built one version after it was recorded and is
      `prevention-is-per-damage-type` now. Its probe turned round. */
-  assert.equal(n("stated"), 11, "stated count moved");
+  /* 11 -> 12 stated AT v4.36: `prevention-target-and-source`, which no
+     tool here can see — the fairness sweep's three RESTRICTION-DROPPED
+     checks are all about attack buffs. */
+  assert.equal(n("stated"), 12, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
      it is a deliberate edit to this line rather than a stale sentence. */
-  assert.equal(n("open"),    8, "open count moved");
-  assert.equal(n("closed"), 10, "closed count moved");
+  /* 8 -> 7 open, 10 -> 11 closed AT v4.35: `aura-ward-prevention-pool`
+     was ANSWERED at v4.34 and the record survived its own version by one,
+     because its probe drove nothing. */
+  assert.equal(n("open"),    7, "open count moved");
+  assert.equal(n("closed"), 11, "closed count moved");
 });
 
 /* ============================================================
@@ -209,6 +264,25 @@ probe("simultaneous-trigger-order", () => {
   const a = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   const b = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   assert.deepEqual(a.msgs, b.msgs, "the end-phase order is no longer deterministic");
+});
+
+/* Oasis Respite names a TARGET HERO and a SOURCE and the engine reads
+   neither. DRIVEN: the pool lands on the actor and soaks two different
+   sources, which one locked to a named source could not. */
+probe("prevention-target-and-source", () => {
+  const oa = one("Oasis Respite");                            /* prevents 4 */
+  const g = H.state({hand: [{...oa, uid: 71}], res: 9, ap: 1, hp: 20}, {hp: 20}, {turn: 4});
+  const played = H.execute(g, {...oa, uid: 71}, "hand", 0, {});
+  assert.equal(played.sides[0].ward, 4, "fixture: the prevention must actually be granted");
+  /* THE DEVIATION, BOTH HALVES. The pool is the ACTOR's, though the card
+     says "target hero"; and it soaks a second, different source, though
+     the card says "a source of your choice". */
+  assert.equal(played.sides[1].ward || 0, 0, "the target is no longer defaulted to the actor");
+  const a = H.J.withEffects(played, (fx, s2) => fx.preventDamage(s2, 0, 2, "First Source").game);
+  const b = H.J.withEffects(a,      (fx, s2) => fx.preventDamage(s2, 0, 2, "Second Source").game);
+  assert.equal(b.sides[0].ward, 0,
+    "the pool now refuses a second source — the printed restriction is READ and " +
+    "the record must move");
 });
 
 /* CR gives the controller the order two replacement effects apply in.
@@ -822,15 +896,27 @@ probe("dummy-no-action-phase", () => {
 
 /* A board aura's printed Ward does NOT feed the prevention pool. */
 probe("aura-ward-prevention-pool", () => {
-  const shield = byName("Spectral Shield")[0];
-  assert.ok(shield, "Spectral Shield left the pool");
-  assert.ok(/ward/i.test(shield.tx || "") || (shield.kw || []).some(k => /ward/i.test(k)),
-    "Spectral Shield no longer prints a ward");
-  const sd = S.makeSide({id:0});
-  sd.board = [{...shield, uid:21}];
-  assert.equal(sd.ward || 0, 0,
-    "a board aura's ward now seeds the prevention pool — that is a RULING and the " +
-    "record must say it was made");
+  /* CLOSED AT v4.34, AND THE PROBE HAD TO BE REWRITTEN TO SEE IT. The old
+     one built a side, put the aura on its board and asserted `sd.ward === 0`
+     — a field `makeSide` had just defaulted to 0, with nothing driven in
+     between — so it passed identically before and after the answer, and the
+     record outlived its own version. A hand-written state answering its own
+     question (v2.80), which is one of the four shapes v4.02 caught when this
+     ledger was built. This one RESOLVES the card and then hits the hero. */
+  const spec = one("Waxing Specter");                         /* Ward 3 */
+  const g = H.state({hand: [{...spec, uid: 61}], res: 9, ap: 1}, {}, {turn: 5});
+  const played = H.execute(g, {...spec, uid: 61}, "hand", 0, {});
+  assert.equal(played.sides[0].ward || 0, 0,
+    "playing a ward aura banks a prevention POOL again — the permanent carries it");
+  assert.equal((played.sides[0].board || []).length, 1, "fixture: the aura must reach the arena");
+
+  const hit = H.J.withEffects(played, (fx, s2) => {
+    const r = fx.preventDamage(s2, 0, 1, "probe");
+    return Object.assign({}, r.game, {_p: r.prevented});
+  });
+  assert.equal(hit._p, 1, "…and it is what prevents");
+  assert.deepEqual(hit.sides[0].board, [],
+    "…by destroying itself, which is what SEN037's reminder text prints");
 });
 
 /* A face-down (Cloaked) piece keeps its printed values: nothing changes

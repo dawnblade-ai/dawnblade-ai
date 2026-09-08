@@ -810,3 +810,142 @@ test("a leave payout cannot deal damage, so the two bodies cannot recurse", {ski
   }
   assert.deepEqual(bad, [], "a leave payout deals damage — bound the recursion explicitly");
 });
+
+/* ============================================================
+   §7 — "THEY" IS THE HERO THE PREVENTION TARGETED (v4.36)
+
+   > "Prevent the next 4 damage that would be dealt to TARGET HERO this
+   >  turn by a source of your choice. If THEY have less {h} than each
+   >  other hero, THEY may gain 1{h}."   — OASIS RESPITE ×3
+
+   The second sentence has read NOTHING since the card was dealt, and it
+   cannot be fixed at clause level: in `classifyClause` "they" means the
+   OPPONENT everywhere else — "they discard a card" is `foeDiscard`, "they
+   lose N{h}" is damage to the foe — so read there this line gives the
+   OPPONENT a life gain for being behind, which is the card backwards.
+
+   THE HEAD IS THE DISCRIMINATOR, so it is a whole-card fold: v2.33's
+   Bull's Eye Bracers trap for the seventh time, and the same shape
+   v4.12's two-"it"s fold uses.
+   ============================================================ */
+
+const oasisRecs = () => {
+  const raw = require("../data/pool.json");
+  return raw.filter(r => r && r.name === "Oasis Respite")
+    .map(r => ({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text || "", ty: r.types || [],
+                tx: r.functional_text || "", kw: r.card_keywords || [], cost: r.cost}));
+};
+
+test("all three printings read the rider, and NOTHING else in the pool does", () => {
+  const recs = oasisRecs();
+  assert.equal(recs.length, 3, "the pool no longer holds three Oasis Respite printings");
+  for(const c of recs){
+    P.fxReset();
+    const fx = P.fxParse(c);
+    assert.deepEqual((fx.conds || []).map(e => [e.cond, e.op]), [["lifeLt", ["life", 1]]],
+      c.name + " p" + c.pitch + " lost its rider");
+    assert.equal(fx.tier, "full");
+  }
+  /* THE BLAST RADIUS, PINNED AS A SET (v3.33, v4.17). The first draft of
+     this drill asserted that NOTHING else in the pool carries `lifeLt` and
+     failed against a correct engine: NINE records already do, through the
+     pre-existing anchor "you have less {h} than an opposing hero". Check
+     your own fixture — the question is not who HAS the condition, it is
+     who GAINED one, so the whole set is pinned and a fold that claims a
+     tenth card fails here. */
+  const raw = require("../data/pool.json");
+  const seen = new Set(); const carriers = [];
+  for(const r of raw){
+    if(!r || !r.name) continue;
+    const k = r.name + "|" + (r.pitch || 0); if(seen.has(k)) continue; seen.add(k);
+    P.fxReset();
+    const fx = P.fxParse({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text || "",
+      ty: r.types || [], tx: r.functional_text || "", kw: r.card_keywords || []});
+    if((fx.conds || []).some(e => e.cond === "lifeLt")) carriers.push(k);
+  }
+  assert.deepEqual(carriers.sort(), [
+    "Fyendal's Fighting Spirit|1", "Fyendal's Fighting Spirit|2", "Fyendal's Fighting Spirit|3",
+    "Oasis Respite|1", "Oasis Respite|2", "Oasis Respite|3",
+    "Scar for a Scar|1", "Scar for a Scar|2", "Scar for a Scar|3",
+    "Wounded Bull|1", "Wounded Bull|2", "Wounded Bull|3"
+  ], "the set of cards reading \"less {h} than\" moved — say which way and why");
+});
+
+test("`lifeLt` was already there — the fold invents no condition", () => {
+  /* The evaluator has answered `act(n).hp < foe(n).hp` since Mocking
+     Blow's twin was built; what was missing is that the printed SUBJECT
+     is different. The anchor beside it spells "YOU have less {h} than an
+     opposing hero". */
+  const SRC = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "engine", "effects.js"), "utf8");
+  assert.ok(/cond==="lifeLt" \? act\(n\)\.hp < foe\(n\)\.hp/.test(SRC),
+    "the evaluator moved — the fold now emits a condition nobody answers");
+});
+
+test("DRIVEN: behind gains, ahead does not, and LEVEL does not", {skip}, () => {
+  /* THE PAIR EITHER SIDE OF THE THRESHOLD IS THE ONLY ROW THAT TESTS
+     ANYTHING (v3.92, v3.99). "Less than" is strict, and a drill at 14-vs-20
+     and 20-vs-14 agrees under `<` and `<=` alike. */
+  H.db();
+  const oa = H.card("Oasis Respite", 1);
+  const play = (mine, theirs) => H.execute(
+    H.state({hand: [{...oa, uid: 71}], res: 9, ap: 1, hp: mine}, {hp: theirs}, {turn: 4}),
+    {...oa, uid: 71}, "hand", 0, {});
+  assert.equal(play(14, 20).sides[0].hp, 15, "behind on life, so the gain happens");
+  assert.equal(play(20, 14).sides[0].hp, 20, "ahead, so it does not");
+  assert.equal(play(17, 17).sides[0].hp, 17, "and LEVEL is not behind — the test is strict");
+});
+
+test("…and the gain is the ACTOR's, not the opponent's", {skip}, () => {
+  /* THE WHOLE REASON THIS IS A WHOLE-CARD FOLD. "They" is the hero the
+     head sentence targeted; read at clause level it is the OPPONENT, and
+     the card would pay the player who is ahead. */
+  H.db();
+  const oa = H.card("Oasis Respite", 1);
+  const n = H.execute(H.state({hand: [{...oa, uid: 71}], res: 9, ap: 1, hp: 14}, {hp: 20}, {turn: 4}),
+                      {...oa, uid: 71}, "hand", 0, {});
+  assert.equal(n.sides[1].hp, 20, "the OPPONENT gained life — \"they\" was read as the foe");
+});
+
+test("…and the prevention still lands beside it", {skip}, () => {
+  /* A FOLD THAT MARKS THE WRONG CLAUSE HANDLED deletes the head. Only the
+     RIDER is claimed here; the head already reads correctly on its own. */
+  H.db();
+  const oa = H.card("Oasis Respite", 1);
+  const n = H.execute(H.state({hand: [{...oa, uid: 71}], res: 9, ap: 1, hp: 14}, {hp: 20}, {turn: 4}),
+                      {...oa, uid: 71}, "hand", 0, {});
+  assert.equal(n.sides[0].ward, 4, "the prevention is gone — the fold claimed the head too");
+  assert.equal(n.sides[0].wardTurn, 4, "…and it must still carry its printed window");
+});
+
+test("the AMOUNT is read, and only a synthetic can prove it", {skip}, () => {
+  /* All three printings say 1{h} while the prevention above them says
+     4 / 3 / 2, so a hardcoded 1 is SILENT against every real card
+     (v3.32, twelfth outing). */
+  H.db();
+  P.fxReset();
+  const fake = {name: "Probe Oasis " + Date.now(), pitch: 1, tt: "Generic Instant",
+                ty: ["Generic", "Instant"], kw: [], cost: 1,
+                tx: "Prevent the next 5 damage that would be dealt to target hero this turn " +
+                    "by a source of your choice.\n\nIf they have less {h} than each other hero, " +
+                    "they may gain 3{h}."};
+  const fx = P.fxParse(fake);
+  assert.deepEqual((fx.conds || []).map(e => e.op), [["life", 3]],
+    "the gain is hardcoded — a printing with a different number would be read wrong");
+  assert.deepEqual(fx.ops, [["ward", 5, {until: "turn"}]], "…and so is the prevention");
+});
+
+test("a rider with NO head prevention is left alone", {skip}, () => {
+  /* THE HEAD IS THE DISCRIMINATOR, so a card printing the rider and no
+     targeted prevention must not pick up a life gain out of nowhere —
+     which is what a clause-level widening would have done, to the wrong
+     hero. No pool card can express this, so the fixture is synthetic
+     (v3.73). */
+  H.db();
+  P.fxReset();
+  const fx = P.fxParse({name: "Probe Riderless " + Date.now(), pitch: 1, tt: "Generic Instant",
+    ty: ["Generic", "Instant"], kw: [], cost: 1,
+    tx: "Draw a card.\n\nIf they have less {h} than each other hero, they may gain 1{h}."});
+  assert.deepEqual((fx.conds || []).filter(e => e.cond === "lifeLt"), [],
+    "the rider was claimed without the head that says who \"they\" is");
+});

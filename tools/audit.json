@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-08T23:29:55.134Z",
- "appVer": "4.35",
+ "generated": "2026-09-08T23:47:26.966Z",
+ "appVer": "4.36",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 387,
-  "part": 14,
+  "full": 388,
+  "part": 13,
   "none": 4
  },
  "heroes": {
@@ -6706,7 +6706,7 @@
     "{h}"
    ],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -6716,12 +6716,10 @@
     },
     {
      "t": "If they have less {h} than each other hero, they may gain 1{h}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If they have less {h} than each other hero, they may gain 1{h}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Prevent the next 4 damage that would be dealt to target hero this turn by a source of your choice. If they have less {h} than each other hero, they may gain 1{h}.",
