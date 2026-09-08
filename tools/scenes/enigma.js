@@ -264,6 +264,51 @@ module.exports = [
     "Waning Vengeance leaves and pays out": "Spectral Shield",
     "…and with nothing blue pitched, nothing": 0
   }
+},
+
+{
+  name: "and her Shields stop ARCANE and direct damage too, because both say \"damage\"",
+  why: "The pool draws the distinction ITSELF — Pyroglyphic Protection " +
+       "prints \"if you would be dealt ARCANE damage\" and feeds a separate " +
+       "shield, while Cloud Cover, Toe the Line, Radiant Touch and every " +
+       "printed `Ward N` say damage unqualified. `preventDamage` was " +
+       "reached from the two COMBAT paths only, so a Spectral Shield " +
+       "watched a Runechant's arcane point go straight through and Boom " +
+       "Grenade's printed 4 landed on a hero holding a full prevention " +
+       "pool. v2.74's own sentence one prevention family over: that " +
+       "version made `arcaneHit` the single place arcane damage lands " +
+       "because a bare `hp -= total` \"is why arcane ward, the shield, " +
+       "Arcane Barrier and Spellvoid were ALL dead — there was nowhere " +
+       "for a prevention to stand\" (v4.35).",
+  run(c){
+    const spec = c.card("Waxing Specter", 1, "b3");            /* Ward 3 */
+    const armed = () => c.state({}, {board: [{uid: "b3", card: spec, sd: null}],
+                                     ward: 2, wardTurn: 2, hp: 20}, {turn: 7});
+    const arc  = c.ops(armed(), [["arcane", 3]], "a Runechant");
+    const over = c.ops(armed(), [["arcane", 9]], "a Runechant");
+    const dir  = c.ops(armed(), [["dmg", 3]], "Boom Grenade");
+    const mine = c.ops(c.state({board: [{uid: "b3", card: spec, sd: null}],
+                                ward: 2, wardTurn: 2, hp: 20}, {}, {turn: 7}),
+                       [["dmgSelf", 3]], "Bloodrot Pox");
+    return {
+      "three arcane, all of it prevented":        arc.sides[1].hp,
+      "…the pool paid what it could":             arc.sides[1].ward,
+      "…and the aura paid the rest, with itself": arc.sides[1].board.length,
+      "…and a fully prevented hit is NOT a hit":  arc._dmgWay || 0,
+      "nine arcane still gets four through":      over.sides[1].hp,
+      "Boom Grenade's direct 4 asks it now":      dir.sides[1].hp,
+      "…and so does damage a card deals to YOU":  mine.sides[0].hp
+    };
+  },
+  want: {
+    "three arcane, all of it prevented": 20,
+    "…the pool paid what it could": 0,
+    "…and the aura paid the rest, with itself": 0,
+    "…and a fully prevented hit is NOT a hit": 0,
+    "nine arcane still gets four through": 16,
+    "Boom Grenade's direct 4 asks it now": 20,
+    "…and so does damage a card deals to YOU": 20
+  }
 }
 
 ];

@@ -150,13 +150,16 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
      prose, because a doc claim is a test with no assertion — v3.41). */
-  assert.equal(n("stated"), 12, "stated count moved");
+  /* 12 -> 11 stated, 9 -> 10 closed AT v4.35: `ward-does-not-stop-arcane`
+     was built one version after it was recorded and is
+     `prevention-is-per-damage-type` now. Its probe turned round. */
+  assert.equal(n("stated"), 11, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
      it is a deliberate edit to this line rather than a stale sentence. */
   assert.equal(n("open"),    8, "open count moved");
-  assert.equal(n("closed"),  9, "closed count moved");
+  assert.equal(n("closed"), 10, "closed count moved");
 });
 
 /* ============================================================
@@ -232,21 +235,38 @@ probe("ward-spend-order", () => {
     "nothing asked the seat which ward to spend — the record must move");
 });
 
-/* Arcane damage is damage, and neither prevention family stops it.
-   DRIVEN: a seat with a full pool AND a ward permanent takes arcane in
-   full. */
-probe("ward-does-not-stop-arcane", () => {
+/* CLOSED AT v4.35 — the probe TURNED ROUND, which is what a `stated`
+   record exists to force (v4.02): it asserted the deviation, went RED the
+   day `preventDamage` became the choke point, and now asserts the thing is
+   BUILT so a regression is a failure. All four routes are driven. */
+probe("prevention-is-per-damage-type", () => {
   /* THE WARD MUST BE WHERE THE DAMAGE LANDS. `arcane` is dealt to the
      OTHER seat, so the fixture arms SEAT 1 — armed at seat 0 the probe
      would pass against a fixed engine, which is the shape this project
      keeps catching in its own drills. */
   const spec = one("Waxing Specter");                          /* Ward 3 */
-  const g = H.state({}, {board:[{uid:"b3", card:spec, sd:null}], ward:5, wardTurn:5, hp:20},
-                    {turn:7});
-  const m = H.J.withEffects(g, (fx, s2) => fx.runOps(s2, [["arcane", 2]], "probe"));
-  assert.equal(m.sides[1].hp, 18, "arcane went straight through both preventions");
-  assert.equal(m.sides[1].ward, 5, "…the pool is untouched");
-  assert.equal(m.sides[1].board.length, 1, "…and the permanent stands");
+  const armed = () => H.state({}, {board:[{uid:"b3", card:spec, sd:null}], ward:2, wardTurn:2, hp:20},
+                              {turn:7});
+  /* (1) ARCANE — the pool first, then the permanent. */
+  const arc = H.J.withEffects(armed(), (fx, s2) => fx.runOps(s2, [["arcane", 3]], "probe"));
+  assert.equal(arc.sides[1].hp, 20, "arcane is prevented now");
+  assert.equal(arc.sides[1].ward, 0, "…the pool paid what it could");
+  assert.equal(arc.sides[1].board.length, 0, "…and the permanent paid the rest");
+
+  /* (2) DIRECT damage — Boom Grenade's 4, Danger Digits' 1, a clash payoff. */
+  const dir = H.J.withEffects(armed(), (fx, s2) => fx.runOps(s2, [["dmg", 3]], "probe"));
+  assert.equal(dir.sides[1].hp, 20, "`dmg` took life with nothing in between");
+
+  /* (3) DAMAGE TO YOURSELF — Bloodrot Pox's "it deals 2 damage to YOU". */
+  const own = H.state({board:[{uid:"b3", card:spec, sd:null}], ward:2, wardTurn:2, hp:20}, {}, {turn:7});
+  const self = H.J.withEffects(own, (fx, s2) => fx.runOps(s2, [["dmgSelf", 3]], "probe"));
+  assert.equal(self.sides[0].hp, 20, "`dmgSelf` did too");
+
+  /* (4) AND A PREVENTION THAT RUNS OUT STILL LETS THE REST THROUGH — a
+     probe that only ever sees zero passes against an engine that prevents
+     everything (v3.98: ask for the refusal). */
+  const over = H.J.withEffects(armed(), (fx, s2) => fx.runOps(s2, [["arcane", 9]], "probe"));
+  assert.equal(over.sides[1].hp, 16, "2 from the pool and 3 from the aura, and the other 4 land");
 });
 
 /* The CR files a destroyed permanent immediately; this files it at the

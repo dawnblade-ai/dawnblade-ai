@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.34
+**Current version:** v4.35
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2493 drills** at v4.34.
+This is `node --test "test/*.test.js"` — **2502 drills** at v4.35.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -839,6 +839,57 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### "PREVENT … DAMAGE" MEANS DAMAGE, AND THREE ROUTES NEVER ASKED (v4.35)
+
+**THE POOL DRAWS THE DISTINCTION ITSELF, and the engine had half of it.**
+Pyroglyphic Protection prints *"if you would be dealt **arcane** damage"*
+and feeds `arcShield`; Cloud Cover, Toe the Line, Radiant Touch and every
+printed `Ward N` say **damage** unqualified. `preventDamage` was reached
+from the two COMBAT paths only, so a Spectral Shield watched a Runechant's
+arcane point go straight through, Boom Grenade's printed 4 landed on a hero
+holding a full prevention pool, and Bloodrot Pox's *"it deals 2 damage to
+YOU"* was unpreventable.
+
+**IT IS v2.74's OWN SENTENCE ONE PREVENTION FAMILY OVER.** That version
+made `arcaneHit` the single place arcane damage lands and wrote down why:
+a bare `hp -= total` *"is why arcane ward, Pyroglyphic Protection's shield,
+Arcane Barrier and Spellvoid were ALL dead — there was nowhere for a
+prevention to stand."* **When a choke point fixes one family, ask which
+other family arrives by the same door.**
+
+**FOUR ROUTES NOW, AND THE ORDER IS CHEAPEST-FIRST.** Inside `arcaneHit`
+the general prevention sits **after** the two arcane-only pools (which can
+be spent on nothing else) and **before** the paid soak sheet, because that
+is where a hero spends RESOURCES and nobody should be asked to pay for
+damage a mandatory prevention has already stopped. `dmg` and `dmgSelf` get
+it too, and so does the trainer's own `resolveStack` — the path the
+PLAYER's swing takes, which applied `hp -= total` with nothing in between
+while `takeIt` has asked since v3.67 and judge asks on both. **That one is
+LATENT and measured**: seat 1 in the trainer is always the vanilla pile, so
+its fixture is synthetic (v3.73).
+
+**CR 7.5.5 COMES FREE**, because `creditArc` and `_dmgWay` both sit inside
+`arcaneHit`'s `left > 0` branch (v3.28, v3.62) — and that only stays true
+while the prevention happens above the branch, which a sabotage checks.
+
+**THE RECURSION IS BOUNDED BY A MEASUREMENT, NOT BY A GUARD.**
+`preventDamage` calls `payLeave`, which calls `runOps`, whose `dmg` case
+calls `preventDamage`. Each call fixes its own candidate set, so the only
+way to spin is a leave payout that deals damage back to the same seat —
+and **no record in the pool prints one**. A drill fails the day one does,
+rather than a reducer whose contract is that it never hangs, hanging.
+
+**AND THE RECORD WRITTEN ONE VERSION AGO FORCED ITS OWN EDIT.**
+`ward-does-not-stop-arcane` was `stated` at v4.34 with a driven probe; the
+probe went RED the moment this landed and the record is
+`prevention-is-per-damage-type`, `closed`, with the probe turned round.
+That is the whole point of the two probe directions (v4.02).
+
+Measured: the `ward` route fires **136 → 155** times in 210 games and the
+ladder is unchanged, which is the honest read — the extension is reachable
+(a fifth of ward spends are now non-combat damage) and it is not a balance
+change. **7 sabotages, 7 bite.**
+
 ### THE `Ward N` KEYWORD IS THE PERMANENT, NOT A POOL (v4.34)
 
 > **Ward 1** *(If you would be dealt damage, **destroy this** to prevent 1
@@ -904,10 +955,9 @@ its own feed line said *"this turn"* while the state kept it forever.
 pool emits carries its printed window — so the field is kept rather than
 retired and the day one arrives without a window, somebody decides.
 
-**NEITHER FAMILY STOPS ARCANE DAMAGE**, unchanged by this version rather
-than introduced by it, and recorded as `ward-does-not-stop-arcane` with a
-driven probe. It needs its own version: the ordering against the PAID soak
-sheet is a real decision, and Runechants arrive as separate sources of 1.
+**NEITHER FAMILY STOPPED ARCANE DAMAGE** — recorded here with a driven
+probe, and **BUILT AT v4.35**, one version later. The probe went RED the
+day the gap closed, which is what a `stated` record is for.
 
 **NO TOOL HERE COULD SEE ANY OF IT.** All eight read `tier: full` because
 the clause WAS consumed; the sweep is one-sided toward cards stronger than

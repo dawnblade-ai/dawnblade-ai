@@ -659,3 +659,154 @@ test("the feed phrase and the self-play counter are pinned TOGETHER", () => {
   assert.ok(/destroys itself — ward soaks/.test(eff), "the engine's phrase moved");
   assert.ok(/destroys itself — ward soaks/.test(sp),  "…and the counter did not follow it");
 });
+
+/* ============================================================
+   §6 — "PREVENT … DAMAGE" MEANS DAMAGE (v4.35)
+
+   THE POOL DRAWS THE DISTINCTION ITSELF, and the engine had half of it:
+
+     "If you would be dealt ARCANE damage, prevent N of that damage"
+        — PYROGLYPHIC PROTECTION, and it feeds `arcShield`
+     "The next time you would be dealt damage this turn, prevent N of
+      that damage"        — CLOUD COVER · TOE THE LINE · RADIANT TOUCH
+     "If you would be dealt damage, destroy this to prevent N of that
+      damage"             — SEN037's `Ward N`
+
+   `preventDamage` was reached from the two COMBAT paths only, so a
+   Spectral Shield watched an arcane point go straight through and Boom
+   Grenade's printed 4 landed on a hero holding a full prevention pool.
+   WEAKER than printed, the direction the one-sided sweep is built not to
+   look in, with every record reading `tier: full`.
+
+   IT IS v2.74's OWN SENTENCE ONE PREVENTION FAMILY OVER. That version
+   made `arcaneHit` the single place arcane damage lands, and said why: a
+   bare `hp -= total` "is why arcane ward, Pyroglyphic Protection's
+   shield, Arcane Barrier and Spellvoid were ALL dead — there was nowhere
+   for a prevention to stand."
+   ============================================================ */
+
+const armedFoe = (spec) => H.state({}, {board: [{uid: "b3", card: spec, sd: null}],
+                                        ward: 2, wardTurn: 2, hp: 20}, {turn: 7});
+
+test("DRIVEN: arcane damage asks the prevention — pool, then permanent", {skip}, () => {
+  H.db();
+  const spec = H.card("Waxing Specter", 1);          /* Ward 3 */
+  const n = J.withEffects(armedFoe(spec), (fx, s) => fx.runOps(s, [["arcane", 3]], "probe"));
+  assert.equal(n.sides[1].hp, 20, "three arcane, all of it prevented");
+  assert.equal(n.sides[1].ward, 0, "the pool paid 2");
+  assert.equal(n.sides[1].board.length, 0, "…and the Ward 3 paid the last point, for the whole card");
+});
+
+test("…and what the prevention does not cover still LANDS", {skip}, () => {
+  /* ASK FOR THE REFUSAL (v3.98). A drill that only ever sees 0 passes
+     against an engine that prevents everything. */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);          /* Ward 3 */
+  const n = J.withEffects(armedFoe(spec), (fx, s) => fx.runOps(s, [["arcane", 9]], "probe"));
+  assert.equal(n.sides[1].hp, 16, "2 from the pool, 3 from the aura, and the other four land");
+});
+
+test("…and a FULLY prevented arcane hit is not a hit (CR 7.5.5)", {skip}, () => {
+  /* `creditArc` and `_dmgWay` both sit inside the `left > 0` branch, so
+     prevention governs them without being restated (v3.28, v3.62) — and
+     that only stays true while the prevention happens BEFORE the branch. */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);
+  const n = J.withEffects(armedFoe(spec), (fx, s) => fx.runOps(s, [["arcane", 3]], "probe"));
+  assert.equal(n._dmgWay || 0, 0, "\"if this deals damage\" must read nothing");
+  assert.equal((n.sides[0].hist || {}).arc || 0, 0, "…and the DEALER is credited nothing");
+  assert.equal((n.sides[1].hist || {}).arcTaken || 0, 0, "…and the victim took nothing");
+});
+
+test("DRIVEN: `dmg` and `dmgSelf` ask it too", {skip}, () => {
+  /* Boom Grenade's printed 4, Danger Digits' 1, Arakni's dagger drain and
+     a clash payoff all arrive through `dmg`; Bloodrot Pox's "it deals 2
+     damage to YOU unless you pay" through `dmgSelf`. */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);
+  const foe = J.withEffects(armedFoe(spec), (fx, s) => fx.runOps(s, [["dmg", 3]], "Boom Grenade"));
+  assert.equal(foe.sides[1].hp, 20, "direct damage took life with nothing in between");
+
+  const own = H.state({board: [{uid: "b3", card: spec, sd: null}], ward: 2, wardTurn: 2, hp: 20},
+                      {}, {turn: 7});
+  const me = J.withEffects(own, (fx, s) => fx.runOps(s, [["dmgSelf", 3]], "Bloodrot Pox"));
+  assert.equal(me.sides[0].hp, 20, "…and so did damage a card deals to YOU");
+});
+
+test("…and the two ARCANE-ONLY pools still go first", {skip}, () => {
+  /* CHEAPEST FIRST, and each step is an argument: `arcShield` is a
+     standing prevention that is never spent, `awd` can be spent on
+     nothing but arcane, and only then the general pool and the
+     permanents that cost a card. */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);          /* Ward 3 */
+  const g = H.state({}, {board: [{uid: "b3", card: spec, sd: null}],
+                         ward: 2, wardTurn: 2, awd: 1, arcShield: 1, hp: 20}, {turn: 7});
+  const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["arcane", 2]], "probe"));
+  assert.equal(n.sides[1].hp, 20);
+  assert.equal(n.sides[1].awd, 0, "the arcane-only pool paid the point the shield did not");
+  assert.equal(n.sides[1].ward, 2, "…and the GENERAL pool was never touched");
+  assert.equal(n.sides[1].board.length, 1, "…nor the permanent, which costs a whole card");
+});
+
+test("…and the free prevention is spent BEFORE a hero is asked to PAY", {skip}, () => {
+  /* `arcaneSoaks` raises a sheet where a hero spends RESOURCES for Arcane
+     Barrier. Nobody should be asked to pay for damage a mandatory
+     prevention has already stopped, so the drain sits above the sheet —
+     and with the damage fully prevented no sheet is raised at all. */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);          /* Ward 3 */
+  const iron = {uid: 51, name: "Probe Nullrune", tt: "Generic Equipment - Head",
+                ty: ["Generic", "Equipment"], tx: "", kw: ["Arcane Barrier 1"], def: 2};
+  const g = H.state({}, {board: [{uid: "b3", card: spec, sd: null}], gear: [iron],
+                         ward: 0, res: 5, hp: 20}, {turn: 7});
+  assert.equal(P.arcaneSoaks(g.sides[1]).length, 1, "fixture: the iron must actually offer a soak");
+  const n = J.withEffects(g, (fx, s) => fx.runOps(s, [["arcane", 2]], "probe"));
+  assert.deepEqual(n.promptQ || [], [],
+    "the hero was asked to pay for damage the ward had already stopped");
+  assert.equal(n.sides[1].hp, 20);
+  assert.equal(n.sides[1].res, 5, "…and paid nothing");
+});
+
+test("DRIVEN: the TRAINER's own combat path asks it as well", {skip}, () => {
+  /* `takeIt` (the dummy's swing) has asked since v3.67 and judge's
+     `strike` asks on both, while `resolveStack` — the path the PLAYER's
+     swing takes — applied `hp -= total` with nothing in between. LATENT,
+     because seat 1 in the trainer is always the vanilla pile, so the
+     fixture has to arm it (v3.73). */
+  H.db();
+  const spec = H.card("Waxing Specter", 1);          /* Ward 3 */
+  const atk = swing();
+  let g = H.state({res: 9, ap: 1, hand: []},
+                  {hp: 20, hand: [], gear: [], board: [{uid: "b3", card: spec, sd: null}]},
+                  {actor: 0, turnPlayer: 0, turn: 3, seed: "ward35"});
+  g = {...g, pend: {card: atk, by: 0, total: 5, from: "hand", ga: false,
+                    ops: [], onHit: [], onHitHero: [], lateOps: [], lateConds: []},
+             stack: [{k: "atk", card: atk, total: 5}]};
+  const n = J.withEffects(g, (fx, s) => fx.resolveStack(s));
+  assert.equal(n.sides[1].hp, 18, "a 5-power swing into a Ward 3 lands 2");
+  assert.equal(n.sides[1].board.length, 0, "…and the aura paid for it");
+});
+
+test("a leave payout cannot deal damage, so the two bodies cannot recurse", {skip}, () => {
+  /* `preventDamage` calls `payLeave`, which calls `runOps`, whose `dmg`
+     case calls `preventDamage`. Each call bounds itself with a fixed
+     candidate set, so the only way to spin is a leave payout that deals
+     damage back to the same seat. MEASURED over the pinned pool: none
+     does — and this fails the day one is printed, rather than the engine
+     hanging inside a reducer whose contract is that it never does. */
+  H.db();
+  const raw = require("../data/pool.json");
+  const sd = S.makeSide({id: 0});
+  sd.pitch = [{pitch: 3}];                       /* so a gated payout is reachable */
+  const seen = new Set(), bad = [];
+  for(const r of raw){
+    if(!r || !r.name) continue;
+    const k = r.name + "|" + (r.pitch || 0); if(seen.has(k)) continue; seen.add(k);
+    P.fxReset();
+    const pay = E.leavePayout({name: r.name, pitch: +(r.pitch || 0), tt: r.type_text || "",
+      ty: r.types || [], tx: r.functional_text || "", kw: r.card_keywords || []}, sd);
+    if(pay.some(o => o[0] === "dmg" || o[0] === "dmgSelf" || o[0] === "arcane")) bad.push(r.name);
+  }
+  assert.deepEqual(bad, [], "a leave payout deals damage — bound the recursion explicitly");
+});

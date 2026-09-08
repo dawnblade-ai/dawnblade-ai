@@ -767,6 +767,26 @@ function makeEffects(ctx){
       n = L(n, `${srcName}: arcane ward soaks ${off}${pool-off>0?` (${pool-off} left)`:" and is spent"}.`);
     }
 
+    /* AND THEN THE GENERAL PREVENTION (v4.35). "Prevent the next N DAMAGE"
+       and "if you would be dealt DAMAGE, destroy this to prevent N of it"
+       are both printed without qualifying the type, and the pool draws
+       that distinction ITSELF: Pyroglyphic Protection says "arcane damage"
+       and feeds `arcShield`, while Cloud Cover, Toe the Line, Radiant
+       Touch and every `Ward N` say damage and feed this. The engine had
+       half of it — the qualified half — so a Spectral Shield watched an
+       arcane point go straight through.
+
+       IT COMES AFTER THE TWO ARCANE-ONLY POOLS, because those can be spent
+       on nothing else, and BEFORE the sheet, because that is where a hero
+       pays RESOURCES and nobody should be asked to pay for damage a
+       mandatory prevention has already stopped. Both are the same
+       cheapest-first argument `ward-spend-order` records, and the CR gives
+       the order to the controller. */
+    if(left > 0){
+      const pv = preventDamage(n, seat, left, srcName);
+      n = pv.game; left = pv.dealt;
+    }
+
     /* WHAT THE PRINTED IRON OFFERS. `avail` is what the threatened hero
        can actually reach — floating resources plus what their hand would
        pitch for, because pitching is on demand (RULING, 2026-08-01) and a
@@ -1770,7 +1790,22 @@ function makeEffects(ctx){
         if((act(n).hist.atk||0)===0){ actMut(n).buffNext += v; n = L(n, `First attack this turn will carry +${v}.`); }
         else n = L(n, `${srcName}: you've already attacked this turn — no first-attack bonus.`);
       }
-      else if(k==="dmg"){ foeMut(n).hp -= v; n = L(n, `${srcName}: ${v} damage.`); }
+      /* DIRECT DAMAGE GOES THROUGH THE ONE CHOKE POINT TOO (v4.35) —
+         v2.74's sentence one prevention family over. That version made
+         `arcaneHit` the single place arcane damage lands, because a bare
+         `foeMut(n).hp -= total` right here is why arcane ward, the shield,
+         Arcane Barrier and Spellvoid were ALL dead: there was nowhere for
+         a prevention to stand. The general prevention had the same hole.
+         Boom Grenade's 4, Danger Digits' 1, Arakni's dagger drain and a
+         clash payoff all arrive here. */
+      else if(k==="dmg"){
+        const seat = 1 - actorOf(n);
+        const pv = preventDamage(n, seat, v, srcName);
+        n = pv.game;
+        n = L(n, pv.dealt > 0 ? `${srcName}: ${pv.dealt} damage.`
+                              : `${srcName}: every point of it prevented.`);
+        if(pv.dealt > 0) foeMut(n).hp -= pv.dealt;
+      }
       /* RULING (Pouncing Paws): mint a real card into the banished zone,
          playable this turn only. Resolved from the database like any card. */
       else if(k==="mkBanish"){
@@ -2177,7 +2212,18 @@ function makeEffects(ctx){
          parser lines that intercepted them were deleted rather than
          rewritten. See parser.js for the full note. */
       else if(k==="dmgSelf"){
-        if(v>0){ actMut(n).hp -= v; n = L(n, `${srcName}: ${v} damage — ${act(n).name} to ${act(n).hp}{h}.`); n = winCheck(n); }
+        if(v>0){
+          /* THE SAME CHOKE POINT, AIMED AT THE ACTOR (v4.35). Bloodrot Pox
+             prints "it deals 2 damage to YOU unless you pay", and a
+             prevention says damage without asking who dealt it. */
+          const pv = preventDamage(n, actorOf(n), v, srcName);
+          n = pv.game;
+          if(pv.dealt > 0){
+            actMut(n).hp -= pv.dealt;
+            n = L(n, `${srcName}: ${pv.dealt} damage — ${act(n).name} to ${act(n).hp}{h}.`);
+            n = winCheck(n);
+          } else n = L(n, `${srcName}: every point of it prevented.`);
+        }
       }
       /* THE ACTING SEAT IS THE ONE BILLED, which is why this is not
          `payOr`. Bloodrot Pox prints "it deals 2 damage to YOU unless YOU
@@ -6157,6 +6203,20 @@ function makeEffects(ctx){
       blkNote = ` Wall of ${wall} — ${parts.join(", ")} — stops ${stopped}.`;
     }
     foeMut(n).blockedHand = handBlockers;
+    /* AND THE PREVENTION IS ASKED HERE TOO (v4.35). This is the TRAINER's
+       own combat path — the one the PLAYER's swing takes — and it applied
+       `hp -= total` with nothing in between, while `takeIt` (the dummy's
+       swing) has asked `preventDamage` since v3.67 and judge's `strike`
+       asks it on both. v3.01's shape: a rule that exists on one board and
+       one direction only.
+
+       LATENT, AND MEASURED. Seat 1 in the trainer is always the vanilla
+       pile (the 2026-08-16 ruling), which holds no ward and no ward
+       permanent, so nothing moves today. A printed rule reachable from
+       one direction only is still a hole (v3.01), and the number this
+       hands on is the one CR 7.5.5 makes every rider read. */
+    { const _pv = preventDamage(n, 1 - actorOf(n), total, (n.pend && n.pend.card || {}).name);
+      n = _pv.game; total = _pv.dealt; }
     foeMut(n).hp -= total;
     /* Runechants no longer pop here. They trigger on PLAY and resolve above
        the attack on the stack, so they are dealt with at declaration in

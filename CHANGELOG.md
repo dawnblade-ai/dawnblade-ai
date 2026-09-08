@@ -1,3 +1,84 @@
+## v4.35 — "prevent … damage" means damage, and three routes never asked
+
+**THE POOL DRAWS THE DISTINCTION ITSELF, and the engine had half of it:**
+
+| printed | feeds |
+|---|---|
+| *"if you would be dealt **arcane** damage, prevent N of that damage"* — PYROGLYPHIC PROTECTION | `arcShield` |
+| *"the next time you would be dealt damage this turn, prevent N of that damage"* — CLOUD COVER · TOE THE LINE · RADIANT TOUCH | the `ward` pool |
+| *"if you would be dealt damage, destroy this to prevent N of that damage"* — SEN037's `Ward N` | the permanent (v4.34) |
+
+`preventDamage` was reached from the two COMBAT paths only. So a Spectral
+Shield watched a Runechant's arcane point go straight through, Boom
+Grenade's printed 4 landed on a hero holding a full prevention pool, and
+Bloodrot Pox's *"it deals 2 damage to **you**"* was unpreventable.
+
+**IT IS v2.74's OWN SENTENCE ONE PREVENTION FAMILY OVER.** That version
+made `arcaneHit` the single place arcane damage lands, and said why: a bare
+`hp -= total` *"is why arcane ward, Pyroglyphic Protection's shield, Arcane
+Barrier and Spellvoid were ALL dead — there was nowhere for a prevention to
+stand."* **When a choke point fixes one family, ask which other family
+arrives by the same door.**
+
+### The four routes
+
+- **`arcaneHit`** — the general prevention sits **after** the two
+  arcane-only pools, which can be spent on nothing else, and **before** the
+  paid soak sheet, because that is where a hero spends RESOURCES and nobody
+  should be asked to pay for damage a mandatory prevention has already
+  stopped. Both halves are the same cheapest-first argument
+  `ward-spend-order` records, and both are drilled.
+- **`dmg`** — Boom Grenade's 4, Danger Digits' 1, Arakni's dagger drain,
+  and a clash payoff.
+- **`dmgSelf`** — Bloodrot Pox's *"it deals 2 damage to you unless you
+  pay"*, which fires in its controller's own end phase.
+- **`resolveStack`** — the TRAINER's own combat path, the one the PLAYER's
+  swing takes, which applied `hp -= total` with nothing in between while
+  `takeIt` has asked since v3.67 and judge's `strike` asks on both.
+  v3.01's shape. **LATENT and measured**: seat 1 in the trainer is always
+  the vanilla pile (the 2026-08-16 ruling), so its fixture is synthetic
+  (v3.73).
+
+### Two things that came free, and one that is a measurement
+
+**CR 7.5.5 COMES FREE.** `creditArc` and `_dmgWay` both sit inside
+`arcaneHit`'s `left > 0` branch (v3.28, v3.62), so a fully prevented arcane
+hit credits neither side and answers nothing to *"if this deals damage"* —
+without the rule being restated. That only stays true while the prevention
+happens **above** the branch, and a sabotage checks exactly that.
+
+**THE RECURSION IS BOUNDED BY A MEASUREMENT, NOT BY A GUARD.**
+`preventDamage` calls `payLeave`, which calls `runOps`, whose `dmg` case
+calls `preventDamage`. Each call fixes its own candidate set (v4.34), so
+the only way to spin is a leave payout that deals damage back to the same
+seat — and **no record in the pinned pool prints one**. A drill fails the
+day one does, rather than a reducer whose contract is that it never hangs,
+hanging.
+
+**AND THE RECORD WRITTEN ONE VERSION AGO FORCED ITS OWN EDIT.**
+`ward-does-not-stop-arcane` was `stated` at v4.34 with a driven probe. The
+probe went **RED** the moment this landed, and the record is
+`prevention-is-per-damage-type`, `closed`, with the probe turned round to
+assert the thing is built. That is the whole point of the two probe
+directions (v4.02) — and it is a version's turnaround rather than a
+sentence left standing.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| `ward` route, 210 games | 136 | **155** |
+| stalls · refusals · violations | 0 · 0 · 0 | 0 · 0 · 0 |
+| the ladder | — | **unchanged** (Enigma 12 → 11, within noise) |
+
+The honest read: the extension is genuinely reachable — about a fifth of
+ward spends are now non-combat damage — and it is **not** a balance change,
+unlike v4.34 which moved Enigma 20 → 12. **WEAKER than printed throughout**,
+which is the direction the one-sided sweep is built not to look in, and
+every affected record reads `tier: full`.
+
+**7 sabotages, 7 bite.**
+
 ## v4.34 — the `Ward N` keyword is the permanent, not a pool
 
 > **Ward 1** *(If you would be dealt damage, **destroy this** to prevent 1

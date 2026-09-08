@@ -105,22 +105,26 @@ const APPROX = {
       "hit), and the machinery for pausing at the damage step already exists — "+
       "`arcaneHit` defers a hit to raise the paid-soak sheet."},
 
-"ward-does-not-stop-arcane": {
-  status:"stated", cr:"CR 7.5.5", board:"both", since:"v3.67", swept:"v4.34",
-  claim:"Neither prevention family stops ARCANE damage. `arcaneHit` reads "+
-        "`arcShield` and `awd` and never `ward`, so Oasis Respite's \"prevent the "+
-        "next N damage that would be dealt to you this turn\" and a Spectral "+
-        "Shield's `Ward 1` both sit there while an arcane point goes through.",
-  why:"Arcane damage is damage, and both printed lines say damage without "+
-      "qualifying it — SEN037 says \"if you would be dealt damage\" — so this is "+
-      "WEAKER than printed, which is the direction the one-sided fairness sweep "+
-      "is built not to look in, and all of the records read `tier: full`. It is "+
-      "unchanged by v4.34 rather than introduced by it: the keyword never reached "+
-      "`arcaneHit` when it was a pool either. What it needs is its own version, "+
-      "because the ordering against the PAID soak sheet is a real decision (a "+
-      "free prevention must be spent before a hero is asked to pay for one) and "+
-      "because Runechants arrive as separate sources of 1, so a board of Spectral "+
-      "Shields would pop one per Runechant."},
+"prevention-is-per-damage-type": {
+  status:"closed", cr:"CR 7.5.5", board:"both", since:"v3.67", swept:"v4.35",
+  claim:"Neither prevention family stopped ARCANE or DIRECT damage. `arcaneHit` "+
+        "read `arcShield` and `awd` and never `ward`; the `dmg` and `dmgSelf` ops "+
+        "took life with nothing in between. BUILT AT v4.35 — `preventDamage` is "+
+        "the one choke point for damage dealt to a hero, on all four routes.",
+  why:"Arcane damage is damage, and the POOL DRAWS THE DISTINCTION ITSELF: "+
+      "Pyroglyphic Protection prints \"if you would be dealt ARCANE damage\" and "+
+      "feeds `arcShield`, while Cloud Cover, Toe the Line, Radiant Touch and every "+
+      "printed `Ward N` say damage unqualified. The engine had the qualified half "+
+      "only, so a Spectral Shield watched an arcane point go straight through — "+
+      "WEAKER than printed, which the one-sided sweep is built not to see, with "+
+      "every record reading `tier: full`. It is v2.74's own sentence one "+
+      "prevention family over: that version made `arcaneHit` the single place "+
+      "arcane damage lands precisely because a bare `hp -= total` is why arcane "+
+      "ward, the shield, Arcane Barrier and Spellvoid were ALL dead. The general "+
+      "prevention comes after the two arcane-only pools (which can be spent on "+
+      "nothing else) and before the paid soak sheet (where a hero spends "+
+      "RESOURCES), which is the same cheapest-first argument `ward-spend-order` "+
+      "records."},
 
 "gear-sweep-timing": {
   status:"stated", cr:"CR 4.4.3", board:"both", since:"v3.54", swept:"v4.02",
