@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-08T01:01:42.439Z · app v4.33 · data sage-v13 · db 797 records
+Generated 2026-09-08T23:16:50.732Z · app v4.34 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -72,7 +72,7 @@ Generated 2026-09-08T01:01:42.439Z · app v4.33 · data sage-v13 · db 797 recor
 | the crowd cheers | info — RULED 2026-07-25: Revered is a static talent — nothing to resolve | Prime the Crowd |
 | transcend | live — RULED 2026-07-25: the card flips to Inner Chi and returns to hand instead of the graveyard | A Drop in the Ocean, Homage to Ancestors, Pass Over, Preserve Tradition, Rising Sun, Setting Moon |
 | unity | live — v3.27 — 'when this defends together with a card from hand'; BOTH walls count their hand defenders before either loop starts, which is the whole of the rule | Gauntlets of Unity, Helm of Unity |
-| ward | live — soaks incoming; arcane ward tracked separately (awd) | Uphold Tradition, Waning Vengeance, Waxing Specter |
+| ward | live — two sources: the printed `Ward N` keyword is a number the PERMANENT carries and destroys itself to spend (parser.wardValue / parser.wardBearers), and "prevent the next N damage this turn" is a windowed pool on the side; arcane ward is tracked separately (awd) | Uphold Tradition, Waning Vengeance, Waxing Specter |
 | watery grave | live — RULED 2026-07-25: Gravy Bones' ability — playable from the graveyard once a blue card has hit it this turn, and a dead ally goes FACE-DOWN so it cannot be replayed | Barnacle, Cutty Shark, Quick Clip, Limpit, Hop-a-long, Oysten, Heart of Gold, Riggermortis, Swabbie |
 
 ## Granted keywords in pool (conditional grants — never merged with printed)

@@ -130,6 +130,17 @@ function play(g, limit){
            POLICY, and a number in this block means a FEATURE FIRED
            (v4.17). v3.84: when you build a route, go and count. */
         if(/leaves the arena — and it pays out/.test(line)) events.push(["leave", line]);
+        /* A WARD SPENDS ITS PERMANENT (v4.34). SEN037 prints "destroy this
+           to prevent 1 of that damage" and the engine banked a standing
+           pool at play instead, so the permanent was immortal and its ward
+           outlived it. This counts the times one actually paid.
+
+           IT IS ITS OWN COUNTER RATHER THAN A SHARE OF `leave`, because
+           `leave` counts a PAYOUT and only Waning Vengeance has one — a
+           Spectral Shield destroying itself pays nothing and would be
+           invisible there. The phrase is the engine's own (v3.81) and
+           test/ward.test.js pins the two spellings against each other. */
+        if(/destroys itself — ward soaks/.test(line)) events.push(["ward", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

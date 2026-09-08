@@ -145,8 +145,12 @@ test("every record carries a status the probes know how to point at", () => {
    `wire.test.js`'s HEADLESS list and the symmetry ledger. */
 test("the ledger's shape is pinned — moving a record is a deliberate edit", () => {
   const n = s => Object.values(APPROX).filter(v => v.status === s).length;
-  assert.equal(Object.keys(APPROX).length, 27, "record count moved");
-  assert.equal(n("stated"), 10, "stated count moved");
+  assert.equal(Object.keys(APPROX).length, 29, "record count moved");
+  /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
+     controller the order two wards apply in) and `ward-does-not-stop-
+     arcane` (unchanged by that version and recorded rather than left as
+     prose, because a doc claim is a test with no assertion — v3.41). */
+  assert.equal(n("stated"), 12, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -202,6 +206,47 @@ probe("simultaneous-trigger-order", () => {
   const a = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   const b = E.beginEndPhase(H.state({hand:[{uid:1,name:"X",tt:"Generic Action",ty:["Generic","Action"],tx:"",kw:[]}]}, {}), 0);
   assert.deepEqual(a.msgs, b.msgs, "the end-phase order is no longer deterministic");
+});
+
+/* CR gives the controller the order two replacement effects apply in.
+   DRIVEN: the fixed order is observable — a seat holding a pool AND two
+   permanents of different ward spends them in exactly one sequence, and a
+   prompt would let it spend them in another. */
+probe("ward-spend-order", () => {
+  const spec = one("Waxing Specter"), shield = one("Spectral Shield");  /* Ward 3 · Ward 1 */
+  const ent = (c, u) => ({uid:u, card:c, sd:null});
+  const g = H.state({board:[ent(spec,"b3"), ent(shield,"b1")], ward:1, wardTurn:1, hp:20}, {}, {turn:7});
+  const out = H.J.withEffects(g, (fx, s2) => {
+    const r = fx.preventDamage(s2, 0, 2, "probe");
+    return Object.assign({}, r.game, {_d:r.dealt});
+  });
+  assert.equal(out._d, 0, "fixture: two points, and three sources that cover them");
+  /* THE DEVIATION: the pool went first and the Ward 1 followed, with no
+     choice put to the seat. A build that asks would leave `promptQ`
+     non-empty here — which is what makes this probe fail the day it is
+     built rather than leaving a stale sentence (v4.02). */
+  assert.equal(out.sides[0].ward, 0, "the pool was spent first, unasked");
+  assert.deepEqual(out.sides[0].board.map(b => b.card.name), ["Waxing Specter"],
+    "…and the Ward 1 followed it, not the Ward 3");
+  assert.deepEqual(out.promptQ || [], [],
+    "nothing asked the seat which ward to spend — the record must move");
+});
+
+/* Arcane damage is damage, and neither prevention family stops it.
+   DRIVEN: a seat with a full pool AND a ward permanent takes arcane in
+   full. */
+probe("ward-does-not-stop-arcane", () => {
+  /* THE WARD MUST BE WHERE THE DAMAGE LANDS. `arcane` is dealt to the
+     OTHER seat, so the fixture arms SEAT 1 — armed at seat 0 the probe
+     would pass against a fixed engine, which is the shape this project
+     keeps catching in its own drills. */
+  const spec = one("Waxing Specter");                          /* Ward 3 */
+  const g = H.state({}, {board:[{uid:"b3", card:spec, sd:null}], ward:5, wardTurn:5, hp:20},
+                    {turn:7});
+  const m = H.J.withEffects(g, (fx, s2) => fx.runOps(s2, [["arcane", 2]], "probe"));
+  assert.equal(m.sides[1].hp, 18, "arcane went straight through both preventions");
+  assert.equal(m.sides[1].ward, 5, "…the pool is untouched");
+  assert.equal(m.sides[1].board.length, 1, "…and the permanent stands");
 });
 
 /* The CR files a destroyed permanent immediately; this files it at the

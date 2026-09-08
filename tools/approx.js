@@ -84,6 +84,44 @@ const APPROX = {
       "gear sweep — specific readers first). Letting a player reorder them would "+
       "need a prompt in a phase where CR 4.4.1 gives nobody priority."},
 
+"ward-spend-order": {
+  status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v4.34",
+  claim:"A seat holding more than one ward chooses which to spend. Here the order "+
+        "is fixed: the windowed POOL first, then the smallest PERMANENT whose "+
+        "printed ward alone covers what is left, else the largest — and BOARD "+
+        "before GEAR at equal ward.",
+  why:"Every ward is an independent replacement effect and the CR gives the "+
+      "controller the order they apply in, which this project does not model "+
+      "anywhere (`simultaneous-trigger-order` is the same sentence one trigger "+
+      "over). The rule chosen destroys the fewest permanents and wastes the least, "+
+      "and each key is an argument rather than a tie-break: the pool is the half "+
+      "CR 4.4.3e takes back at the end of the turn either way, and an equipment "+
+      "also carries a printed defence and an ability, so losing one gives up "+
+      "strictly more than losing an aura that carries only its ward. It is NOT "+
+      "claimed optimal — a controller may want a Waning Vengeance destroyed for "+
+      "its own leave trigger. It is REACHABLE rather than theoretical: Enigma "+
+      "decks four ward auras and equips a fifth ward on her Arms piece. The "+
+      "answer is a prompt (`prompts.js`'s `pick`, addressed to the seat being "+
+      "hit), and the machinery for pausing at the damage step already exists — "+
+      "`arcaneHit` defers a hit to raise the paid-soak sheet."},
+
+"ward-does-not-stop-arcane": {
+  status:"stated", cr:"CR 7.5.5", board:"both", since:"v3.67", swept:"v4.34",
+  claim:"Neither prevention family stops ARCANE damage. `arcaneHit` reads "+
+        "`arcShield` and `awd` and never `ward`, so Oasis Respite's \"prevent the "+
+        "next N damage that would be dealt to you this turn\" and a Spectral "+
+        "Shield's `Ward 1` both sit there while an arcane point goes through.",
+  why:"Arcane damage is damage, and both printed lines say damage without "+
+      "qualifying it — SEN037 says \"if you would be dealt damage\" — so this is "+
+      "WEAKER than printed, which is the direction the one-sided fairness sweep "+
+      "is built not to look in, and all of the records read `tier: full`. It is "+
+      "unchanged by v4.34 rather than introduced by it: the keyword never reached "+
+      "`arcaneHit` when it was a pool either. What it needs is its own version, "+
+      "because the ordering against the PAID soak sheet is a real decision (a "+
+      "free prevention must be spent before a hero is asked to pay for one) and "+
+      "because Runechants arrive as separate sources of 1, so a board of Spectral "+
+      "Shields would pop one per Runechant."},
+
 "gear-sweep-timing": {
   status:"stated", cr:"CR 4.4.3", board:"both", since:"v3.54", swept:"v4.02",
   claim:"A destroyed piece of gear is filed to the graveyard at the beginning of "+

@@ -111,7 +111,19 @@ const KEYWORDS = {
    "the crowd cheers":    {status:"info",        note:"RULED 2026-07-25: Revered is a static talent — nothing to resolve"},
    "transcend":           {status:"live",        note:"RULED 2026-07-25: the card flips to Inner Chi and returns to hand instead of the graveyard"},
    "unity":               {status:"live",        note:"v3.27 — 'when this defends together with a card from hand'; BOTH walls count their hand defenders before either loop starts, which is the whole of the rule"},
-   "ward":                {status:"live",        note:"soaks incoming; arcane ward tracked separately (awd)"},
+   /* TWO SOURCES, TWO SHAPES (v4.34). SEN037's own reminder text —
+      "Ward 1 (If you would be dealt damage, DESTROY THIS to prevent 1 of
+      that damage.)" — and upstream's keyword.csv agree that the KEYWORD
+      is a number the permanent carries and pays for with itself. It used
+      to parse to the same op as the "prevent the next N this turn"
+      family, so the number was banked in a standing pool at play and the
+      permanent then outlived it. `parser.wardValue` reads the printed
+      line, `parser.wardBearers` finds them across the board AND the gear
+      (Uphold Tradition prints it on EQUIPMENT, which never resolves, so
+      its ward did nothing at all), and `effects.preventDamage` spends
+      them. Neither family stops ARCANE damage yet — recorded in
+      tools/approx.js as `ward-does-not-stop-arcane`. */
+   "ward":                {status:"live",        note:"two sources: the printed `Ward N` keyword is a number the PERMANENT carries and destroys itself to spend (parser.wardValue / parser.wardBearers), and \"prevent the next N damage this turn\" is a windowed pool on the side; arcane ward is tracked separately (awd)"},
    /* BOTH HALVES BUILT (v3.00). The upside was live for a long time and
       the drawback was not, which left the six Pirate allies an infinite
       loop that every coverage tool reported as `tier: full`. An ally that

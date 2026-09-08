@@ -53,7 +53,7 @@ const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
        allyAttack, abilityGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
-       pow6, zonePow, isAtkActionCard, phantasmPops, defCap} = P;
+       pow6, zonePow, isAtkActionCard, phantasmPops, defCap, wardValue, wardBearers} = P;
 const {resolveEntry} = C;
 
 /* ---- THE CONDITIONS THAT CANNOT BE ANSWERED AT DECLARATION (v3.71) ----
@@ -629,38 +629,124 @@ function makeEffects(ctx){
      approximation rather than derived. */
   const preventDamage = (n, seat, amount, srcName) => {
     let left = Math.max(0, amount | 0);
-    const sd = n.sides[seat] || {};
-    const pool = sd.ward || 0;
-    /* THIS EARLY RETURN IS WHAT MAKES "A PREVENTION THAT PREVENTS NOTHING
-       TRIGGERS NOTHING" TRUE — CR 7.5.5's shape, and the property the
-       rider below depends on. An empty pool or a swing already blocked to
-       nothing leaves the rider waiting, which is what the card's "the NEXT
-       time" prints. A second `off > 0` guard around the rider read as
-       belt-and-braces and was DEAD: past this line both numbers are
-       positive, so `off` is always at least 1. Dead rules code is worse
-       than dead code elsewhere — it is a second description of a rule
-       nobody can reach and everybody can read. */
-    if(!(pool > 0) || left <= 0) return {game: n, dealt: left, prevented: 0};
-    const off = Math.min(pool, left);
-    left -= off;
+    /* NOTHING TO PREVENT PREVENTS NOTHING — CR 7.5.5's shape, and the
+       property both halves below depend on. A swing already blocked to
+       nothing leaves the pool's rider waiting (which is what "the NEXT
+       time" prints) and leaves every ward permanent standing. */
+    if(left <= 0) return {game: n, dealt: left, prevented: 0};
     const mut = () => seat === actorOf(n) ? actMut(n) : foeMut(n);
-    mut().ward = pool - off;
-    n = L(n, `${srcName || "The attack"}: ward soaks ${off}`
-           + (pool - off > 0 ? ` (${pool - off} left).` : " and is spent."));
-    /* WHAT THE PREVENTION TRIGGERS (v3.67) — Toe the Line's "if you
-       prevent damage this way, create a Flurry token". The grant was made
-       on an earlier resolution and fires here, which is why it cannot be
-       a `way:` condition (those are cleared with the resolution that set
-       them). Spent when it fires: the card prints "the NEXT time". */
-    const rid = (n.sides[seat] || {}).wardRider || [];
-    if(rid.length){
-      mut().wardRider = [];
-      const prev = actorOf(n);
-      n = Object.assign({}, n, {actor: seat});
-      for(const r of rid) n = runOps(n, r.ops || [], r.src || srcName || "prevention");
-      n = Object.assign({}, n, {actor: prev});
+    let prevented = 0;
+
+    /* ---- (1) THE POOL, which is the windowed family ------------------
+       "Prevent the next N damage that would be dealt to you THIS TURN" —
+       Cloud Cover, Oasis Respite, Toe the Line, Throw Caution, Radiant
+       Touch. Measured over the pinned pool: every one of them prints the
+       window, and none of them is a permanent.
+
+       IT IS SPENT FIRST, and that is a stated choice rather than a rule:
+       CR gives the controller the order, and the pool is the half CR
+       4.4.3e takes back at the end of the turn either way, so spending it
+       ahead of a permanent gives up strictly less. `tools/approx.js`
+       carries the record.
+
+       A second `off > 0` guard around the rider read as belt-and-braces
+       and was DEAD: inside this branch both numbers are positive, so
+       `off` is always at least 1 (v3.67). */
+    const pool = (n.sides[seat] || {}).ward || 0;
+    if(pool > 0){
+      const off = Math.min(pool, left);
+      left -= off; prevented += off;
+      mut().ward = pool - off;
+      n = L(n, `${srcName || "The attack"}: ward soaks ${off}`
+             + (pool - off > 0 ? ` (${pool - off} left).` : " and is spent."));
+      /* WHAT THE PREVENTION TRIGGERS (v3.67) — Toe the Line's "if you
+         prevent damage this way, create a Flurry token". The grant was made
+         on an earlier resolution and fires here, which is why it cannot be
+         a `way:` condition (those are cleared with the resolution that set
+         them). Spent when it fires: the card prints "the NEXT time".
+
+         IT BELONGS TO THE POOL, NOT TO A PERMANENT (v4.34). "This way"
+         names the prevention the card that granted it describes, and a
+         permanent destroying itself is a different one — so the rider
+         stays inside this branch rather than being asked again below. */
+      const rid = (n.sides[seat] || {}).wardRider || [];
+      if(rid.length){
+        mut().wardRider = [];
+        const prev = actorOf(n);
+        n = Object.assign({}, n, {actor: seat});
+        for(const r of rid) n = runOps(n, r.ops || [], r.src || srcName || "prevention");
+        n = Object.assign({}, n, {actor: prev});
+      }
     }
-    return {game: n, dealt: left, prevented: off};
+
+    /* ---- (2) THE PERMANENTS THAT PRINT `Ward N` (v4.34) --------------
+       "Ward 1 (If you would be dealt damage, DESTROY THIS to prevent 1 of
+       that damage.)" — SEN037's own reminder text, which the database
+       omits and which upstream's keyword dictionary agrees with.
+
+       SO THE DESTROY IS THE PRICE, and until now nothing paid it: the
+       keyword filled a standing pool when the card RESOLVED and the
+       permanent then outlived it, so an Enigma kept every Spectral Shield
+       she had ever made — each still a Cosmo weapon, each still counted by
+       every "auras you control" clause — while its ward went on soaking.
+
+       IT IS MANDATORY. Neither printed source says "you may", and Arcane
+       Barrier one keyword over says it in as many words, so the absence is
+       a distinction upstream draws rather than one to read past.
+
+       WHICH ONE IS THE CONTROLLER'S CALL IN THE CR AND IS APPROXIMATED:
+       the smallest ward that alone covers what is left, else the largest.
+       That destroys the fewest permanents and wastes the least, which is
+       what makes it a defensible default — NOT an optimal one, because a
+       controller may want a Waning Vengeance destroyed for its own leave
+       trigger. `tools/approx.js` carries the record and a probe. */
+    /* THE CANDIDATE SET BELONGS TO THE MOMENT THE DAMAGE WOULD BE DEALT,
+       and it is captured before any of it is spent — v2.23's rule for the
+       Runechant pop, one replacement over. Waning Vengeance's own leave
+       trigger MINTS A SPECTRAL SHIELD, which carries Ward 1 of its own, so
+       a set re-derived each pass would let a token created by one
+       prevention soak the very damage that created it. It is also what
+       bounds the loop: each pass destroys one member of a fixed set, so a
+       reducer fed by JSON off a wire cannot be made to spin.
+
+       THE LIST IS STILL RE-DERIVED INSIDE IT, filtered to that set — a
+       payout could destroy another bearer, and spending a permanent that
+       has already left would pay its ward twice. */
+    const eligible = new Set(wardBearers(n.sides[seat] || {}).map(x => String(x.uid)));
+    const live = () => wardBearers(n.sides[seat] || {}).filter(x => eligible.has(String(x.uid)));
+    let bearers = live();
+    while(left > 0 && bearers.length){
+      const pick = bearers.find(x => x.ward >= left) || bearers[bearers.length - 1];
+      const off = Math.min(pick.ward, left);
+      left -= off; prevented += off;
+      if(pick.where === "board"){
+        mut().board = ((n.sides[seat] || {}).board || []).filter(b => b.uid !== pick.uid);
+        mut().grave = [...gy(n.turn, pick.card), ...((n.sides[seat] || {}).grave || [])];
+      } else {
+        /* MARKED, NOT SPLICED (v3.54): a wall may be declared out of the
+           gear zone by INDEX on one board and by uid on the other, and
+           `sweepGear` files it at the end phase where no wall can be live. */
+        mut().gear = ((n.sides[seat] || {}).gear || [])
+          .map(x => x && x.uid === pick.uid ? {...x, destroyed: true} : x);
+      }
+      n = L(n, `${pick.card.name} destroys itself — ward soaks ${off}`
+             + (pick.ward > off ? ` of the ${pick.ward} it printed.` : "."));
+      /* WHAT A DEPARTING PERMANENT PAYS OUT — the eighth route into the
+         one body (v4.29). Waning Vengeance is why it matters: its ward IS
+         its exit, and its printed "when this leaves the arena, if you've
+         pitched a blue card this turn, create a Spectral Shield token" is
+         the loop the card is designed around.
+
+         BOARD ONLY. "Leaves the ARENA" is a statement about that zone, and
+         a gear piece was never in it. Measured over the pinned pool: the
+         one ward-bearing equipment prints no leave clause, so nothing is
+         lost — and `test/ward.test.js` fails the day one does. */
+      if(pick.where === "board") n = payLeave(n, pick.card, seat);
+      eligible.delete(String(pick.uid));
+      bearers = live();
+    }
+
+    return {game: n, dealt: left, prevented};
   };
 
   const arcaneHit = (n, seat, amount, srcName) => {
@@ -1252,9 +1338,15 @@ function makeEffects(ctx){
            two SOURCES have different windows: a printed "prevent the next
            N damage THIS TURN" is a one-shot the turn takes back, and an
            aura's `Ward N` keyword is a value the permanent carries.
-           Sweeping the whole pool would decide the open aura-ward ruling
-           by accident; sweeping only what was granted for the turn decides
-           nothing. */
+
+           SINCE v4.34 THE KEYWORD NEVER REACHES THIS OP AT ALL — SEN037's
+           printed reminder text spends it by DESTROYING the permanent, so
+           `wardBearers` finds them and `preventDamage` pays them. Measured
+           over the pinned pool, every ward op that DOES reach here prints
+           "this turn", and `test/expiry.test.js` fails the day one does
+           not. The field is kept rather than retired because it still
+           carries the distinction — a pool with no window would otherwise
+           outlive the turn silently (v3.82). */
         if(op[2] && op[2].until === "turn") actMut(n).wardTurn += v;
         n=L(n,`Ward ${v}.`);
         /* THE RIDER WAITS WITH THE POOL (v3.67). Toe the Line prints
@@ -1958,6 +2050,14 @@ function makeEffects(ctx){
         const p = n.revealed.pitch || 0;
         if(p <= 0){ n = L(n, `${n.revealed.name} prints no pitch — nothing is prevented.`); return; }
         actMut(n).ward = act(n).ward + p;
+        /* AND IT IS WINDOWED (v4.34). The card prints "the next time you
+           would be dealt damage THIS TURN" and the feed line below says
+           so, while the state kept it forever — v4.07 built `wardTurn` so
+           the end phase could sweep exactly this family and this writer,
+           which reaches `.ward` directly rather than through the `ward`
+           op, was never told. The feed and the state disagreeing is the
+           sev-2 category the player TRUSTS. */
+        actMut(n).wardTurn = act(n).wardTurn + p;
         n = L(n, `${n.revealed.name} is pitch ${p} — the next ${p} damage this turn is prevented.`);
       }
       /* RULING (Saltwater Swell): reads the SAME n.revealed the reveal op
@@ -7512,8 +7612,11 @@ function beginEndPhase(game, seat, db){
           printed, which the one-sided fairness sweep cannot see. */
        amp: 0, runeHitNext: 0,
        /* AND ONLY THE WINDOWED PART OF THE PREVENTION POOLS. Sweeping
-          `ward` whole would take an aura's printed `Ward N` with it and
-          decide the open aura-ward ruling by accident. */
+          `ward` whole would have taken an aura's printed `Ward N` with it
+          while the keyword still filled this pool. It no longer does
+          (v4.34) — the permanent carries the number and destroys itself to
+          spend it — so the two now always move together, and the split is
+          kept for the day a prevention arrives with no printed window. */
        ward: Math.max(0, (sd.ward || 0) - (sd.wardTurn || 0)), wardTurn: 0,
        awd:  Math.max(0, (sd.awd  || 0) - (sd.awdTurn  || 0)), awdTurn: 0,
        atkBuff: (sd.atkBuff || []).filter(b => b.until === "chain"),

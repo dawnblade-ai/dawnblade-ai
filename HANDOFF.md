@@ -498,7 +498,7 @@ after the work.
 | `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
 | `crush-halving-rider` | — | Walk in My Shoes — the ONE of twelve crush riders that refuses |
 | `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
-| `aura-ward-prevention-pool` | — | a RULING, not an engineering call (v3.84) |
+| ~~`aura-ward-prevention-pool`~~ | **ANSWERED v4.34** | the PRINTING settled it — SEN037 reads *"destroy this to prevent 1 of that damage"*, so there is no pool: the permanent carries the number and pays with itself |
 | `cloaked-face-down-values` | — | a RULING (v3.99) |
 | `cloaked-display` | — | deferred with the UI pass, on the record |
 
@@ -853,7 +853,7 @@ after the work.
 | `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
 | `crush-halving-rider` | — | Walk in My Shoes, the ONE of twelve crush riders that refuses |
 | `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
-| `aura-ward-prevention-pool` | — | a RULING, not an engineering call (v3.84) |
+| ~~`aura-ward-prevention-pool`~~ | **ANSWERED v4.34** | the PRINTING settled it — SEN037 reads *"destroy this to prevent 1 of that damage"*, so there is no pool: the permanent carries the number and pays with itself |
 | `cloaked-face-down-values` | — | a RULING (v3.99) |
 | `cloaked-display` | — | deferred with the UI pass, on the record |
 

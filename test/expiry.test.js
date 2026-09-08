@@ -99,7 +99,7 @@ test("EVERY prevention the parser reads carries the window its clause prints", {
   const raw = JSON.parse(fs.readFileSync(require("path").join(__dirname, "..", "data", "pool.json"), "utf8"));
   const seen = new Set();
   let pools = 0, windowed = 0, keywords = 0;
-  const wrong = [];
+  const wrong = [], unwindowed = [];
   for(const r of raw){
     if(!r || !r.name) continue;
     const k = r.name + "|" + (r.pitch || 0); if(seen.has(k)) continue; seen.add(k);
@@ -114,22 +114,41 @@ test("EVERY prevention the parser reads carries the window its clause prints", {
       for(const part of String(cl).split(/(?<=\.)\s+/)){
         let out; try{ out = P.classifyClause(String(part).toLowerCase().trim()); }catch(e){ continue; }
         for(const o of ((out && out.ops) || [])){
+          /* THE KEYWORD IS NO LONGER AN OP (v4.34) — `Ward N` on a
+             permanent is a number `wardValue` reads and `preventDamage`
+             spends by DESTROYING the card, so it never reaches the pool.
+             Counted here as the other half of the partition, because a
+             census that stopped seeing it could not tell "the keyword is
+             read elsewhere" from "the keyword stopped being read". */
+          if(o[0] === "noop" && /^ward \d+ —/.test(String(o[1]))){ keywords++; continue; }
           if(o[0] !== "ward" && o[0] !== "awd") continue;
           pools++;
           const says = /\bthis turn\b/i.test(part);
           const has  = !!(o[2] && o[2].until === "turn");
-          if(says) windowed++; else keywords++;
+          if(!says) unwindowed.push(r.name + " :: " + String(part).slice(0, 60));
+          if(says) windowed++;
           if(says !== has) wrong.push(r.name + " :: " + String(part).slice(0, 60));
         }
       }
     }
   }
-  assert.ok(pools >= 8, "the scan found almost no prevention ops — it is aimed wrong");
+  assert.ok(pools >= 6, "the scan found almost no prevention ops — it is aimed wrong");
   assert.deepEqual(wrong, [],
     "a prevention's op disagrees with its own printed clause about whether it expires");
   assert.ok(windowed > 0 && keywords > 0,
     "the pool no longer holds BOTH sources, so this drill can no longer tell them apart — " +
     "which is the whole reason `ward` needed a window rather than a blanket sweep");
+
+  /* AND THE PREMISE `wardTurn` RESTS ON, PINNED (v4.34). Since the
+     keyword left the pool, EVERY ward op the pool emits prints its
+     window — so `ward` and `wardTurn` always move together and step (8)
+     of the end phase sweeps the pool whole. The field is kept rather
+     than retired because it still carries the distinction, and this is
+     what fails the day a record emits a prevention with no window: at
+     that point somebody decides, rather than it quietly outliving the
+     turn (v3.82). */
+  assert.deepEqual(unwindowed, [],
+    "a pool prevention with no printed window — decide whether it should expire");
 });
 
 /* ============================================================

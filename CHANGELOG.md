@@ -1,3 +1,143 @@
+## v4.34 — the `Ward N` keyword is the permanent, not a pool
+
+> **Ward 1** *(If you would be dealt damage, **destroy this** to prevent 1
+> of that damage.)* — SEN037, the Silver Age Spectral Shield this project
+> deals, whose reminder text the database omits
+>
+> *"If your hero would be dealt damage, prevent X of that damage and
+> destroy this."* — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+**TRY THE PRINTING — TWELFTH TIME, and the first where the card is
+SHARPER than the keyword file.** Upstream's dictionary reads the destroy
+as a rider beside the prevention; the printed card makes it the **price**
+— *destroy this **to** prevent* — and both agree the permanent pays.
+
+`classifyClause` read the keyword as `[["ward", N]]`, which is the op that
+fills a side's prevention POOL when a card RESOLVES. So the number was
+banked at **play** and the permanent then outlived it. **Stronger than
+printed three ways at once:**
+
+- the aura **survived** — still a Cosmo weapon, still counted by every
+  *"auras you control"* clause;
+- its ward **outlived it** when anything else destroyed it, because the
+  pool never knew where its points came from;
+- a **partial spend wasted nothing** — a Ward 3 turning aside 1 kept 2.
+
+**AND UNREACHABLE A FOURTH WAY.** Uphold Tradition prints `Ward 1` on
+**EQUIPMENT**, and a gear piece is dealt straight into the gear zone and
+never resolves — so its op never ran at all and Enigma's Arms piece
+printed a prevention worth exactly zero. That is what decides the
+architecture: a gear piece has no "play" moment to bank a pool at, so the
+ward has to be read off the permanent.
+
+**AND THE READER WAS ALREADY THERE.** `parser.wardValue` has read the
+printed line since v3.84, built for Cosmo's *"base {p} equal to their
+ward"*, and it already answered for all eight records — **before building
+machinery for a shape, check whether the machinery is the shape you
+already have** (v3.58, v3.73). What was new is a scan and a spend.
+
+### The build
+
+- **`parser.wardBearers(sd)`** — board **AND** gear, because the pool
+  prints the keyword on both. A board-only scan finds seven of the eight
+  and loses the one that was inert (v3.33, v3.55, v4.25). A **destroyed**
+  gear piece carries nothing, the guard `auraAttackOf` and `gearDef`
+  already keep.
+- **`effects.preventDamage`** spends the windowed pool first, then the
+  permanents, destroying each as it goes — board entries to the graveyard
+  turn-stamped, gear **marked rather than spliced** (v3.54: a wall is
+  declared out of the gear zone by INDEX on one board and by uid on the
+  other).
+- **The eighth route into `payLeave`** (v4.29's one body), and it is what
+  finally makes Waning Vengeance's printed loop work: **its ward IS its
+  exit**, and its gated *"when this leaves the arena, if you've pitched a
+  blue card this turn, create a Spectral Shield token"* mints the Shield
+  that replaces it. Board only — *"leaves the ARENA"* is a statement about
+  that zone and a gear piece was never in it; measured, the one
+  ward-bearing equipment prints no leave clause, and a drill fails the day
+  one does.
+- **The candidate set is captured BEFORE any of it is spent** — v2.23's
+  Runechant rule one replacement over. The Shield that Waning Vengeance
+  mints carries Ward 1 of its own, so a set re-derived each pass would let
+  a token created by one prevention soak the very damage that created it.
+  It is also what **bounds the loop**, which matters for a reducer whose
+  contract is that it never throws or hangs.
+- **`parser.wardTotal`** for the screen. Three sites put a `ward N` pip up
+  and all three read the side field, which now holds only the windowed
+  family — a seat holding a Ward 3 aura would have rendered as **nothing**,
+  and a number on screen that disagrees with what happens is the sev-2
+  category the player TRUSTS.
+
+### Which ward is spent is the CONTROLLER's, and it is recorded
+
+Every ward is an independent replacement effect and the CR gives the
+controller the order they apply in — the same sentence
+`simultaneous-trigger-order` makes one trigger over. **It is reachable
+rather than theoretical:** Enigma decks four ward auras and equips a fifth
+ward on her Arms piece. The rule chosen is the pool, then the smallest
+permanent whose printed ward alone covers what is left, else the largest,
+with **BOARD before GEAR** at equal ward — and each key is an argument
+rather than a tie-break: the pool is the half CR 4.4.3e takes back at the
+end of the turn either way, and an equipment also carries a printed
+defence and an ability, so losing one gives up strictly more.
+
+It is **not** claimed optimal — a controller may want a Waning Vengeance
+destroyed for its own leave trigger. `tools/approx.js` carries it as
+`ward-spend-order` with a probe that goes RED the day a prompt is built,
+and the answer is `prompts.js`'s `pick` addressed to the seat being hit;
+`arcaneHit` already defers a hit to raise the paid-soak sheet.
+
+### Two more, one built and one recorded
+
+**`revWard` PRINTED ITS WINDOW AND NEVER CARRIED IT.** Throw Caution to
+the Wind's *"the next time you would be dealt damage **this turn**"*
+writes `.ward` directly rather than through the `ward` op, so v4.07 built
+`wardTurn` for exactly this family and never told this writer. Its own
+feed line said *"this turn"* while the state kept it forever — the feed
+and the state disagreeing, which is the sev-2 category again. **And the
+premise `wardTurn` rests on is a drill now:** every ward op the pool emits
+carries its printed window, so the field is kept rather than retired and
+the day a record emits one without a window, somebody decides (v3.82).
+
+**NEITHER PREVENTION FAMILY STOPS ARCANE DAMAGE**, and that is unchanged
+by this version rather than introduced by it — `arcaneHit` reads
+`arcShield` and `awd` and never `ward`. Arcane damage is damage and both
+printed lines say damage without qualifying it, so it is WEAKER than
+printed and every record reads `tier: full`. Recorded as
+`ward-does-not-stop-arcane` with a driven probe, because it needs its own
+version: the ordering against the PAID soak sheet is a real decision (a
+free prevention must be spent before a hero is asked to pay for one), and
+Runechants arrive as separate sources of 1, so a board of Spectral Shields
+would pop one per Runechant.
+
+### Measured
+
+| | before | after |
+|---|---|---|
+| records whose **ops** move | — | **8**, exactly the `wardValue` set |
+| records whose **tier** moves | — | **0** — all eight read `full` throughout |
+| Enigma, full ladder | **20 wins** (2nd) | **12** (9th) |
+| Enigma, her own 14-game slice | 9 | 5 |
+| `leave` route, 210 games | 126 | **147** |
+| `ward` route, 210 games | — | **136** |
+
+Every other hero moves within noise, which is the right answer: she is the
+only one who decks the keyword.
+
+**NO TOOL HERE COULD HAVE SEEN ANY OF IT.** All eight records read
+`tier: full`, because the clause WAS consumed; the fairness sweep is
+one-sided toward cards stronger than printed **in the parse**, and this
+was the rules machine; and the equipment half is weaker than printed, the
+direction the sweep is built not to look in. Driving the card is the only
+thing that sees it.
+
+**17 sabotages, 17 bite** — and one was silent first, because the drill was
+weak rather than the sabotage: the permanents are guarded a second time by
+`while(left > 0)`, so a drill watching only the board passes with the
+zero-damage early return **deleted**, while the POOL half then logs *"ward
+soaks 0"* and fires its rider off damage that never existed. The fixture
+now watches both halves.
+
 ## v4.33 — a "you may" that was taken without being offered
 
 > *"As an additional cost to play this, **YOU MAY** charge your hero's

@@ -121,15 +121,24 @@ test("the grant's cost is read off the QUOTED ability, by weaponCost", {skip}, (
 
 test("a ward is a NUMBER the aura carries, read off its printed line", {skip}, () => {
   /* COSMO'S OWN TEXT SETTLES WHICH READING IS WANTED — "base {p} equal to
-     their WARD" is a number, not the side's prevention pool. `fx.ops`
-     gives Spectral Shield `[["ward",1]]`, which is the op that fills that
-     pool when a card RESOLVES, and a token minted onto the board never
-     takes that path. */
+     their WARD" is a number, not the side's prevention pool.
+
+     AND SINCE v4.34 IT IS THE ONLY READING. `fx.ops` used to ALSO give
+     Spectral Shield `[["ward",1]]`, the op that fills a side's prevention
+     pool when a card resolves — so the keyword was a standing pool banked
+     at play that the permanent then outlived. SEN037's own reminder text
+     says otherwise ("destroy this to prevent 1 of that damage"), so the
+     clause is a `noop` naming this reader and `preventDamage` spends the
+     permanent. Two readers of one printed value is where the drift
+     starts; there is one. */
   assert.equal(P.wardValue(mk("Spectral Shield")), 1);
   assert.equal(P.wardValue(mk("Waxing Specter")), 3, "and it is read, not hardcoded");
   assert.equal(P.wardValue(mk("Act of Glory")), 0);
-  assert.deepEqual(P.fxParse(mk("Spectral Shield")).ops, [["ward", 1]],
-    "the op is still there — this reader is a second question about the same line");
+  const ops = P.fxParse(mk("Spectral Shield")).ops;
+  assert.equal(ops.filter(o => o[0] === "ward").length, 0,
+    "the keyword must not ALSO fill the prevention pool at play — that is the v4.34 bug");
+  assert.ok(ops.some(o => o[0] === "noop" && /ward 1/.test(o[1])),
+    "…and the clause is still accounted for, by a reason that names what happens");
 });
 
 test("every gate on the grant answers, and a silent caller gets NOTHING", {skip}, () => {

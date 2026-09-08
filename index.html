@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.33"; /* v4.33 - A "YOU MAY" THAT WAS TAKEN WITHOUT BEING OFFERED. "As an additional cost to play this, YOU MAY charge your hero's soul" - three pool cards, nine records, all Boltyn's - and the parse has read the "you may" since charge was built while `execute` ignored it, auto-picking from hand whenever the hand was non-empty and preferring whatever pitch the card's own rider asked for. Upstream's own csvs/english/keyword.csv spells the refusal out ("You may elect to not pay the additional cost of charge - however this would mean you did not charge"), and THE BLOCK'S OWN COMMENT SAID WHY IT COULD NOT BE ASKED - "the trainer has no prompt wired for a cost paid before the card's own total is struck" - which stopped being true at v4.27, the version that built exactly that machinery for fusion; a recorded reason is only as good as the day it was measured. IT IS A COST, so being unable to refuse is WEAKER than printed for its controller, which is why the one-sided sweep is blind and all nine records read tier full: Bolt of Courage charged gets "when this hits, draw a card", so the engine spent a card from hand for a conditional draw on every copy and a blocked swing paid it for nothing. parser.chargeOffer is the ONE reader of what could pay, PENDING_KINDS goes five to six, the answer rides as _chargeUid beside _fuseUid, and WHICH card is the decision - more so than fusion, because a revealed card stays in the hand and a charged one is gone to the soul. `multi` is deliberately not carried (nothing consumes it, and the drill pins that set empty), and execute's re-derivation is hand.find ALONE because chargeOffer's offer is not a subset of the hand the way fusion's is - the extra test could refuse nothing the find accepts, sabotaging it open is SILENT, and the premise it rested on is a drill instead. THE POLICY DECLINES, per v4.24's standing rule that a price it cannot weigh is declined: measured on Boltyn's own 14-game slice, taking it wins 4 and declining wins 2, which is a POLICY fact rather than an engine one, and the accept path is driven end-to-end by test/charge.test.js and a Boltyn scene. Ten sabotages, ten bite. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.34"; /* v4.34 - THE `Ward N` KEYWORD IS THE PERMANENT, NOT A POOL. SEN037 - the Silver Age Spectral Shield this project deals - prints reminder text the database omits: "Ward 1 (If you would be dealt damage, DESTROY THIS to prevent 1 of that damage.)", and upstream's own csvs/english/keyword.csv agrees independently. The parser read the keyword as the op that fills a side's prevention POOL when a card resolves, so the number was banked at PLAY and the permanent then outlived it - stronger than printed three ways at once (the aura survived, still a Cosmo weapon and still counted by every "auras you control" clause; its ward outlived it when anything else destroyed it; and a partial spend wasted nothing) and UNREACHABLE a fourth, because Uphold Tradition prints Ward 1 on EQUIPMENT and a gear piece never resolves, so its op never ran at all. parser.wardValue has been the ONE reader of the printed line since v3.84 and already answered for all eight records, so the machinery was the shape we already had; parser.wardBearers finds them across the BOARD and the GEAR and effects.preventDamage spends them, destroying each as it goes - the eighth route into payLeave, which is what finally makes Waning Vengeance's printed loop work: its ward IS its exit, and its gated leave trigger mints the Spectral Shield that replaces it. The candidate set is captured BEFORE any of it is spent (v2.23's Runechant rule one replacement over) so a token minted by one prevention cannot soak the hit that minted it, and that is what bounds the loop. WHICH ward is spent is the controller's call in the CR and is a recorded approximation with a probe. Measured both directions: exactly 8 records' ops move and NO tier does, all eight read tier full throughout, and on the full ladder exactly one hero moves - Enigma 20 wins to 12 - because she is the only one who decks the keyword. Also: revWard prints "this turn" and never set wardTurn, so Throw Caution's prevention outlived its own feed line; and the three ward pips now ask parser.wardTotal, since a seat holding a Ward 3 aura used to render as nothing. 17 sabotages, 17 bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1473,6 +1473,7 @@ var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser
     attackQual = DawnParser.attackQual, qualMatches = DawnParser.qualMatches,
     abWindow = DawnParser.abWindow,
     isRunechant = DawnParser.isRunechant, runeCount = DawnParser.runeCount,
+    wardTotal = DawnParser.wardTotal,
     isAura = DawnParser.isAura, auraCount = DawnParser.auraCount,
     isFrostbite = DawnParser.isFrostbite, frostCount = DawnParser.frostCount,
     arsCap = DawnParser.arsCap, arsCount = DawnParser.arsCount,
@@ -4578,7 +4579,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        and render as the actual token card. A text chip alongside the card
        would just be the old counter wearing a disguise. */
     you(g).buffNext>0 && ["Next atk +"+you(g).buffNext],
-    you(g).amp>0 && ["Amp "+you(g).amp], you(g).ward>0 && ["Ward "+you(g).ward], you(g).awd>0 && ["ArcWard "+you(g).awd],
+    you(g).amp>0 && ["Amp "+you(g).amp],
+    /* THE POOL **PLUS** THE PERMANENTS (v4.34). `sd.ward` is only the
+       windowed "prevent the next N this turn" family now; a Ward 3 aura
+       on the board prevents just as much and used to show as nothing.
+       `wardTotal` is the one reader of "what can this seat turn aside". */
+    wardTotal(you(g))>0 && ["Ward "+wardTotal(you(g))], you(g).awd>0 && ["ArcWard "+you(g).awd],
     you(g).soul.length>0 && ["Soul ×"+you(g).soul.length]
   ].filter(Boolean);
   const handGear = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
@@ -4905,7 +4911,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 if(you(g).amp>0)       pips.push(["amp "+you(g).amp, "on"]);
                 if(you(g).buffNext>0)  pips.push(["next atk +"+you(g).buffNext, "on"]);
                 if(you(g).gaNext)      pips.push(["next atk go again", "on"]);
-                if(you(g).ward>0)      pips.push(["ward "+you(g).ward, "on"]);
+                if(wardTotal(you(g))>0) pips.push(["ward "+wardTotal(you(g)), "on"]);
                 if(you(g).awd>0)       pips.push(["arcane ward "+you(g).awd, "on"]);
                 if(runeCount(you(g))>0) pips.push(["runechant ×"+runeCount(you(g)), "on"]);
                 if(opp(g).marked)     pips.push(["dummy marked", "on"]);
@@ -6455,7 +6461,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   if(me.res>0)             pips.push(["floating "+me.res, "on"]);
   if(me.ap>0)              pips.push(["action point", "on"]);
   if(runeCount(me)>0)      pips.push(["runechant ×"+runeCount(me), "on"]);
-  if(me.ward>0)            pips.push(["ward "+me.ward, "on"]);
+  if(wardTotal(me)>0)      pips.push(["ward "+wardTotal(me), "on"]);
   if(frostCount(them)>0)   pips.push(["they are frostbitten "+frostCount(them), ""]);
   if(g.chain.length)       pips.push(["chain link "+g.chain.length, ""]);
   if(link!=="connected")   pips.push([link, "warn"]);

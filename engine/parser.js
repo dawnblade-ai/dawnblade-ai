@@ -1847,7 +1847,27 @@ function classifyClause(raw){
   if(m=c.match(/^the next time an attack you control hits a hero this turn, deal (\d+) arcane damage to them$/))
     return R([["buffNext", 0, null, {onHit: [["arcane", +m[1]]]}]]);
 
-  if(m=c.match(/^ward (\d+)/)) return R([["ward",+m[1]]]);
+  /* THE `Ward N` KEYWORD IS A PROPERTY OF THE PERMANENT, NOT A POOL (v4.34).
+
+     SEN037 — the Silver Age Spectral Shield this project deals — prints
+     reminder text the database omits: "Ward 1 (If you would be dealt
+     damage, DESTROY THIS to prevent 1 of that damage.)" Upstream's own
+     keyword dictionary agrees: "If your hero would be dealt damage,
+     prevent X of that damage and destroy this."
+
+     So the number is spent by DESTROYING the permanent that carries it,
+     and reading it as an op filled a standing pool at PLAY that the
+     permanent then outlived — stronger than printed twice over, and
+     unreachable a third time, because Uphold Tradition prints Ward 1 on
+     EQUIPMENT and a gear piece is never played, so its op never ran at
+     all.
+
+     `wardValue` is the ONE reader of the printed line (v3.84, built for
+     Cosmo) and it already answers for all eight records. `preventDamage`
+     spends them. Nothing is lost by refusing the op — the clause is
+     accounted for, by a reader that was already there. */
+  if(m=c.match(/^ward (\d+)/))
+    return NOOP("ward " + m[1] + " — it destroys itself to prevent that much damage to you");
   /* THE WINDOW IS READ OFF THE PRINTED WORDS (v3.87, v4.07). Every
      prevention in this pool prints "this turn" — Cloud Cover, Oasis
      Respite, Toe the Line, Throw Caution, Radiant Touch, Seeker's Mitts,
@@ -6551,22 +6571,90 @@ function auraWeaponGrant(c){
 
 /* THE NUMBER AN AURA CARRIES, read off its printed keyword line.
 
-   IT IS A PROPERTY, NOT THE PREVENTION POOL. `fx.ops` gives Spectral
-   Shield `[["ward",1]]`, which is the op that fills a side's prevention
-   pool when a card RESOLVES — and a token minted onto the board never
-   takes that path, so the pool is untouched (verified). Cosmo's own text
-   settles which reading is wanted here: "base {p} equal to their WARD"
-   is a number the aura CARRIES, so this reads the printed line.
+   IT IS A PROPERTY, NOT THE PREVENTION POOL, and since v4.34 that is the
+   ONLY reading. Cosmo's own text says so — "base {p} equal to their WARD"
+   is a number the aura CARRIES — and SEN037's reminder text settles what
+   spends it: "Ward 1 (If you would be dealt damage, DESTROY THIS to
+   prevent 1 of that damage.)"
 
-   WHETHER A BOARD AURA'S WARD ALSO FEEDS THE PREVENTION POOL IS AN OPEN
-   RULING and is deliberately not decided here — see HANDOFF.md. Reading
-   it as a standing prevention would be inventing a rule; reading it as a
-   number is what the card that talks about it says it is. */
+   THE OPEN RULING THIS HEADER USED TO CARRY IS ANSWERED. It read
+   "whether a board aura's ward ALSO feeds the prevention pool is an open
+   ruling" — and `fx.ops` was giving Spectral Shield `[["ward",1]]` all
+   along, so the question was answered by accident, in the affirmative, as
+   a standing pool banked at play that the permanent then outlived. The
+   printed card answers it in the other direction: there is no pool, the
+   permanent carries the number and pays for it with itself.
+   `wardBearers` finds them and `effects.preventDamage` spends them. */
 function wardValue(c){
   if(!c) return 0;
   const line = String(c.tx || "").split(/\n+/).map(l => clean(l).trim().toLowerCase())
     .find(l => /^ward\s+\d+$/.test(l));
   return line ? +line.split(/\s+/)[1] : 0;
+}
+
+/* THE PERMANENTS THAT CARRY A PRINTED `Ward N` (v4.34).
+
+   BOARD **AND** GEAR, because the pool prints the keyword on both — seven
+   auras and Uphold Tradition, a Mystic Arms piece. A board-only scan
+   finds seven of the eight (v3.33's Magmatic Carapace, v3.55, v4.25), and
+   the gear half is the one that was doing NOTHING before this: an
+   equipment is dealt straight into the gear zone and never resolves, so
+   the op that used to fill a prevention pool at play never ran for it.
+
+   `wardValue` (v3.84) is the ONE reader of the printed line and it
+   already answered for all eight — Cosmo asks it for an aura's base {p}
+   and this asks it for the same number. Two readers of one printed value
+   is where the drift starts, so there is one.
+
+   A DESTROYED GEAR PIECE CARRIES NOTHING. `sweepGear` files it at the end
+   phase (v3.54's index hazard), so it is still in the array while this
+   scan runs — the same guard `auraAttackOf` and `gearDef` keep.
+
+   THE ORDER IS STABLE, because two peers and a replay must destroy the
+   same permanent, and it is a TOTAL order — a ranking that leaves ties
+   unbroken is a desync waiting for two equal wards (`sparring.js` states
+   the same rule for two equal blockers). Three keys, and the middle one
+   is an argument rather than a tie-break:
+
+     1. printed ward ASCENDING — the caller takes the smallest that
+        covers what is left, so the cheapest sufficient one goes first
+     2. BOARD before GEAR at equal ward — an equipment also carries a
+        printed defence and an activated ability, so losing one gives up
+        strictly more than losing an aura that carries only its ward
+     3. uid as a string, which is what makes it total */
+function wardBearers(sd){
+  if(!sd) return [];
+  const out = [];
+  for(const b of (sd.board || [])){
+    if(!b || !b.card) continue;
+    const w = wardValue(b.card);
+    if(w > 0) out.push({where: "board", uid: b.uid, card: b.card, ward: w, ent: b});
+  }
+  for(const gp of (sd.gear || [])){
+    if(!gp || gp.destroyed) continue;
+    const w = wardValue(gp);
+    if(w > 0) out.push({where: "gear", uid: gp.uid, card: gp, ward: w, ent: gp});
+  }
+  const zone = x => x.where === "board" ? 0 : 1;
+  return out.sort((a, b) =>
+    a.ward - b.ward || zone(a) - zone(b)
+    || (String(a.uid) < String(b.uid) ? -1 : String(a.uid) > String(b.uid) ? 1 : 0));
+}
+
+/* WHAT THIS SIDE CAN PREVENT RIGHT NOW — the pool PLUS its permanents.
+
+   THREE PLACES PUT A `ward N` PIP ON THE SCREEN and all three read the
+   side field, which since v4.34 holds only the WINDOWED family. A seat
+   holding a Ward 3 Waxing Specter would have shown nothing at all — and a
+   number on screen that disagrees with what actually happens is the sev-2
+   category the player TRUSTS (v3.39: a resource the player cannot see is
+   one they cannot plan around).
+
+   The two really are additive: the pool is spent first and the permanents
+   after it, so their sum is the damage this seat turns aside. */
+function wardTotal(sd){
+  if(!sd) return 0;
+  return (sd.ward || 0) + wardBearers(sd).reduce((a, x) => a + x.ward, 0);
 }
 
 /* CAN THIS BOARD AURA ATTACK RIGHT NOW, AND FOR HOW MUCH? (v3.84)
@@ -7761,7 +7849,7 @@ const fxReset = () => FXMEMO.clear();
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,

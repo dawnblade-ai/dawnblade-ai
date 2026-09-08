@@ -62,7 +62,10 @@ test("classifyClause — unmet condition wrapper with unparsed body returns null
 test("classifyClause — op vocabulary", () => {
   assert.deepEqual(cc("Target defending card gains +2 {d}.").ops, [["defBuff",2]]);
   assert.deepEqual(cc("Target attack gets -1 {p}.").ops, [["atkMinus",1]]);
-  assert.deepEqual(cc("Ward 3").ops, [["ward",3]]);
+  /* THE `Ward N` KEYWORD IS NOT AN OP (v4.34) — it is a number the
+     permanent carries, spent by destroying it. `parser.wardValue` reads
+     it and `effects.preventDamage` spends it; see the pin below. */
+  assert.equal(cc("Ward 3").status, "noop");
   assert.deepEqual(cc("Prevent the next 2 arcane damage that would be dealt to you.").ops, [["awd",2]]);
   assert.deepEqual(cc("Deal 2 arcane damage to any target.").ops, [["arcane",2]]);
   assert.deepEqual(cc("Draw two cards.").ops, [["draw",2]]);
@@ -127,8 +130,18 @@ test("classifyClause — soul: self-entombing and soul spend", () => {
   assert.deepEqual(hit.ops, [["soulSelf"]]);
   // note: an inner effect like "draw a card" is claimed by the earlier
   // unanchored draw regex; ^-anchored effects (Ward) reach the soul branch
-  const spend = cc("Banish a card from your soul: Ward 2");
-  assert.deepEqual(spend.ops, [["soulSpend",1,[["ward",2]]]]);
+  /* THE FIXTURE MOVED AT v4.34 and the reason is the drill. `Ward 2` was
+     chosen here because it was `^`-anchored; it is a `noop` now, and an
+     unreadable payload REFUSES the whole clause (v2.29) — a cost paid for
+     a keyword an ability cannot grant is the free-ability bug inverted
+     (v2.04, v3.93). `Opt N` is the anchored payload that still reads.
+
+     ZERO POOL RECORDS EMIT `soulSpend` and zero print `Ward N` after a
+     colon, measured — so both halves here are synthetic and say so. */
+  const spend = cc("Banish a card from your soul: Opt 1");
+  assert.deepEqual(spend.ops, [["soulSpend",1,[["opt",1]]]]);
+  assert.equal(cc("Banish a card from your soul: Ward 2"), null,
+    "a payload with no reader refuses the whole clause rather than charging for nothing");
 });
 
 test("classifyClause — foe discard (live vs a real opponent, logged inert vs dummy)", () => {
@@ -588,10 +601,21 @@ test("classifyClause — 'prevent N of that damage' reads as ward, WITH its wind
   assert.deepEqual(cc("Prevent the next 2 damage that would be dealt to you"),
     {status:"run", ops:[["ward",2]]});
 
-  /* THE AURA KEYWORD IS THE ONE SOURCE THAT MUST NOT BE SWEPT — `Ward N`
-     is a value the permanent CARRIES, and its window is the open
-     aura-ward ruling rather than this one. */
-  assert.deepEqual(cc("Ward 1"), {status:"run", ops:[["ward",1]]});
+  /* THE AURA KEYWORD IS NOT A POOL AT ALL (v4.34). It was the one source
+     that must not be SWEPT, and the reason it needed protecting is that
+     it should never have been in the pool: SEN037 prints "Ward 1 (If you
+     would be dealt damage, DESTROY THIS to prevent 1 of that damage.)" So
+     it is a number the permanent carries, `wardValue` reads it, and
+     `preventDamage` spends the permanent. The clause is a `noop` whose
+     reason names what happens rather than an op that banks a pool. */
+  const kw = cc("Ward 1");
+  assert.equal(kw.status, "noop");
+  assert.equal(kw.ops.filter(o => o[0] === "ward").length, 0);
+
+  /* AND THE TWO FAMILIES STAY APART. The windowed one is still an op, so
+     a rewrite that folded the keyword back in would break here too. */
+  assert.deepEqual(cc("Prevent the next 2 damage that would be dealt to you this turn"),
+    {status:"run", ops:[["ward",2,{until:"turn"}]]});
 });
 
 test("classifyClause — activated abilities defer to the weapon/equipment readers", () => {

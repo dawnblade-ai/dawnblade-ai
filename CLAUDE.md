@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.33
+**Current version:** v4.34
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2470 drills** at v4.33.
+This is `node --test "test/*.test.js"` — **2493 drills** at v4.34.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,90 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE `Ward N` KEYWORD IS THE PERMANENT, NOT A POOL (v4.34)
+
+> **Ward 1** *(If you would be dealt damage, **destroy this** to prevent 1
+> of that damage.)* — SEN037, the Silver Age Spectral Shield this project
+> deals, whose reminder text the database omits
+>
+> *"If your hero would be dealt damage, prevent X of that damage and
+> destroy this."* — the-fab-cube `csvs/english/keyword.csv`, `develop`
+
+**TRY THE PRINTING — TWELFTH TIME, and the first where the CARD is sharper
+than the keyword file.** Upstream reads the destroy as a rider beside the
+prevention; the printing makes it the **price** — *destroy this **to**
+prevent*.
+
+`classifyClause` read the keyword as `[["ward", N]]`, the op that fills a
+side's prevention POOL when a card RESOLVES — so the number was banked at
+**play** and the permanent outlived it. **Stronger than printed three ways
+at once**: the aura survived (still a Cosmo weapon, still counted by every
+*"auras you control"* clause), its ward outlived it when anything else
+destroyed it, and a partial spend wasted nothing.
+
+**AND UNREACHABLE A FOURTH WAY, WHICH IS WHAT DECIDES THE ARCHITECTURE.**
+Uphold Tradition prints `Ward 1` on **EQUIPMENT**, and a gear piece is
+dealt straight into the gear zone and never resolves — so its op never ran
+and Enigma's Arms piece printed a prevention worth zero. A gear piece has
+no play moment to bank a pool at, so the ward must be read off the
+PERMANENT. `runeCount`'s shape (v2.23): the board is the source of truth
+and the number is derived.
+
+**AND THE READER WAS ALREADY THERE.** `parser.wardValue` has read the
+printed line since v3.84, built for Cosmo, and already answered for all
+eight records — **before building machinery for a shape, check whether the
+machinery is the shape you already have** (v3.58, v3.73). What was new is
+`wardBearers` (board **AND** gear — a board-only scan loses the one record
+that was inert) and the spend.
+
+**IT IS THE EIGHTH ROUTE INTO `payLeave`** (v4.29's one body), and that is
+what finally makes Waning Vengeance's printed loop work: **its ward IS its
+exit**, and its gated leave trigger mints the Spectral Shield that replaces
+it. Board only — *"leaves the ARENA"* is about that zone and a gear piece
+was never in it; measured, the one ward-bearing equipment prints no leave
+clause and a drill fails the day one does.
+
+**THE CANDIDATE SET IS CAPTURED BEFORE ANY OF IT IS SPENT** — v2.23's
+Runechant rule one replacement over. The minted Shield carries Ward 1 of
+its own, so a set re-derived each pass lets a token created by one
+prevention soak the damage that created it. It also **bounds the loop**,
+which a reducer fed by JSON off a wire needs.
+
+**WHICH WARD IS SPENT IS THE CONTROLLER'S IN THE CR**, and it is
+`ward-spend-order` in `tools/approx.js` with a probe that goes RED the day
+a prompt is built. Reachable rather than theoretical: Enigma decks four
+ward auras and equips a fifth. Each key of the order is an argument rather
+than a tie-break — the pool first because CR 4.4.3e takes it back either
+way, then the smallest permanent that covers what is left, **BOARD before
+GEAR** because an equipment also carries a printed defence and an ability.
+
+**`revWard` PRINTED ITS WINDOW AND NEVER CARRIED IT.** Throw Caution to
+the Wind writes `.ward` directly rather than through the `ward` op, so
+v4.07 built `wardTurn` for exactly this family and never told this writer:
+its own feed line said *"this turn"* while the state kept it forever.
+**And the premise `wardTurn` rests on is a drill now** — every ward op the
+pool emits carries its printed window — so the field is kept rather than
+retired and the day one arrives without a window, somebody decides.
+
+**NEITHER FAMILY STOPS ARCANE DAMAGE**, unchanged by this version rather
+than introduced by it, and recorded as `ward-does-not-stop-arcane` with a
+driven probe. It needs its own version: the ordering against the PAID soak
+sheet is a real decision, and Runechants arrive as separate sources of 1.
+
+**NO TOOL HERE COULD SEE ANY OF IT.** All eight read `tier: full` because
+the clause WAS consumed; the sweep is one-sided toward cards stronger than
+printed **in the parse** and this was the rules machine; and the equipment
+half is WEAKER than printed. Measured both directions: **8 records' ops
+move, 0 tiers move**, and on the full ladder exactly one hero moves —
+**Enigma 20 wins → 12** — because she is the only one who decks it.
+
+**AND ONE SABOTAGE WAS SILENT BECAUSE THE DRILL WAS WEAK, NOT THE ENGINE.**
+The permanents are guarded a second time by `while(left > 0)`, so a drill
+watching only the board passes with the zero-damage early return DELETED —
+while the POOL half then logs *"ward soaks 0"* and fires its rider off
+damage that never existed. **When a sabotage comes back silent, ask which
+half of the guard your fixture reaches** (v3.62). 17 of 17 bite now.
 
 ### A "YOU MAY" THAT WAS TAKEN WITHOUT BEING OFFERED (v4.33)
 
@@ -3064,8 +3148,10 @@ CARRIES, not the side's prevention pool. Spectral Shield prints 1 and
 Waxing Specter prints 3, so a hardcoded 1 is right for one and wrong for
 the other — fifth time that fixture rule has been needed.
 
-**WHETHER A BOARD AURA'S WARD ALSO FEEDS THE PREVENTION POOL IS OPEN** and
-is deliberately not decided — see HANDOFF.md.
+**WHETHER A BOARD AURA'S WARD ALSO FEEDS THE PREVENTION POOL WAS RECORDED
+AS OPEN HERE, AND v4.34 ANSWERED IT FROM THE PRINTING** — SEN037 reads
+*"destroy this to prevent 1 of that damage"*, so there is no pool at all:
+the permanent carries the number and pays for it with itself.
 
 ### A GUARD BELONGS TO THE SHAPE — THIRD OUTING (v3.84)
 

@@ -352,9 +352,12 @@ test("the one-board reader sets are pinned", {skip}, () => {
   assert.deepEqual(onlyT.sort(),
     ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady", "isArrow",
      "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm", "parseHeroPower",
-     "runeCount", "rxAllowed"].sort(),
+     "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
-    "`instantAbilityReady`) or reached through types.js/effects.js on the other side.");
+    "`instantAbilityReady`) or reached through types.js/effects.js on the other side. " +
+    "v4.34: `wardTotal` is a DISPLAY reader — the pool plus the permanents that " +
+    "print `Ward N` — and judge renders nothing. The rules half of the same " +
+    "question is `wardBearers`, which both boards reach through `effects.preventDamage`.");
 });
 
 test("every trainer `effCost` call passes the game's half of the cost", {skip}, () => {
