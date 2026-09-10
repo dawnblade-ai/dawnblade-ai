@@ -390,5 +390,52 @@ module.exports = [
     "and the brood itself never drains": 0
   }
 }
+,
+
+{
+  name: "Mark of the Huntsman OFFERS its destroy — it no longer marks for free",
+  why: "v4.37 — the card prints \"you may choose to destroy this and mark " +
+       "them\" and the loose `mark` matcher claimed the whole payload, so " +
+       "the mark landed FREE and unrefusable. Wrong in both directions at " +
+       "once: taking the mark without paying is stronger than printed, and " +
+       "being unable to decline is weaker. It read `tier: full` throughout " +
+       "and 2512 drills stayed green with the destroy deleted.",
+  run(c){
+    c.H.db(); c.P.fxReset();
+    const dagger = u => Object.assign({}, c.card("Mark of the Huntsman", 0), {uid: u});
+    const swing = () => {
+      const g = c.state({gear: [dagger(950)], res: 9, ap: 1, hand: []},
+                        {hp: 20, hand: []},
+                        {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+      const n = c.H.execute(g, g.sides[0].gear[0], "weapon", 0, {});
+      return c.J.withEffects(n, (fx, st) => fx.resolveStack(st));
+    };
+    const answer = (g, choice) => {
+      const r = c.J.withEffects(g, (fx, m) => fx.applyAnswer(m, c.PM.promptChoose(m.prompt, choice)));
+      return r.game || r;
+    };
+    const offered = swing();
+    const paid = answer(swing(), "pay");
+    const kept = answer(swing(), "decline");
+    return {
+      "the swing alone marks nobody":       offered.sides[1].marked,
+      "a sheet is offered instead":         !!offered.prompt && offered.prompt.tag,
+      "and its price is the dagger itself": offered.prompt && offered.prompt.destroyUid,
+      "paying marks them":                  paid.sides[1].marked,
+      "…and pays the printed price":        !!paid.sides[0].gear[0].destroyed,
+      "declining marks nobody":             kept.sides[1].marked,
+      "…and keeps the dagger":              !!kept.sides[0].gear[0].destroyed
+    };
+  },
+  want: {
+    "the swing alone marks nobody":       false,
+    "a sheet is offered instead":         "pay",
+    "and its price is the dagger itself": 950,
+    "paying marks them":                  true,
+    "…and pays the printed price":        true,
+    "declining marks nobody":             false,
+    "…and keeps the dagger":              false
+  }
+}
 
 ];

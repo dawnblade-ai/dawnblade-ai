@@ -5802,6 +5802,30 @@ function makeEffects(ctx){
       else if(total>0) n = L(n, `${pc.name} hit an ally — its "when this hits a hero" ability does not fire.`);
       else n = L(n, "Fully blocked — on-hit effects fizzle.");
     }
+    /* ---- "WHEN THIS HITS A HERO, YOU MAY … DESTROY THIS AND …" (v4.37)
+
+       Mark of the Huntsman, and it is `offerPayCost`'s scan with the one
+       thing that body was built to allow for: `ok` is THE TRIGGER'S OWN
+       EXTRA QUESTION, asked per watcher (v3.88). v3.93's two records are
+       Legs pieces watching an event somewhere else, so their `ok` asks
+       about the EVENT; this one asks whether the watcher is the piece
+       that hit.
+
+       THE OFFER IS THE WHOLE POINT. Read as a plain `onHitHero` payload
+       the mark landed FREE and unrefusable — a printed drawback skipped
+       and a printed "you may" taken — while the card read `tier: full`,
+       because the clause was consumed either way.
+
+       IT IS QUEUED, NEVER OPENED INLINE, like every other prompt: the
+       damage step has to finish resolving first and `openPrompt` drains
+       at the tail of the caller. The `hits` optional cost eight lines
+       down is the same site's precedent (v3.92).
+
+       AND THE PIECE IS NOT DESTROYED HERE. The answer carries
+       `destroyUid` and `applyAnswer` marks it — one description of what
+       destroying a paying permanent costs, rather than a second beside
+       it (v3.93). */
+    if(heroHit) n = offerPayCost(n, "selfHitHero", (px, w) => w.uid === pc.uid);
     /* ---- THE `hits` OPTIONAL COST (v3.92) ---------------------------
        Mounting Anger and Rising Resentment: "When this HITS, you may
        banish an attack action card from your hand with cost less than the

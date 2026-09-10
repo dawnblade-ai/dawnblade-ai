@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.27 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.37 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -203,6 +203,76 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.37 — A "YOU MAY" THAT WAS TAKEN WITHOUT BEING OFFERED, AND A PRICE THAT WAS NOT PAID
+
+> *"When this hits a hero, **you may choose to destroy this and** mark
+> them."* — MARK OF THE HUNTSMAN ×2, Arakni's own gear
+
+**FOUND BY GOING ONE CARD SIDEWAYS.** The thread was Danger Digits (still
+`tier: none` — see below), whose printed *"the dagger has hit"* fiction
+exists to fire the daggers' own on-hit triggers. Asking what Mark of the
+Huntsman's on-hit actually DOES is what turned this up: it marks, free,
+unrefusable, and keeps the dagger.
+
+| | |
+|---|---|
+| what it printed | destroy the dagger, **may**, then mark |
+| what it did | mark, always, and keep the dagger |
+| what every tool said | `tier: full` · fairness CLEAN · 2512 drills green |
+
+**v3.93 BUILT THE VERB AND THIS WORDING WALKED PAST IT.** That version
+reads *"you may destroy this. **If you do,** X"* across TWO clauses; this
+prints the identical cost in ONE, joined by AND, so the loose `mark`
+matcher took the whole payload. **v3.60's rule, and it is worth quoting
+because it keeps coming due: A FIXED WORDING IS NOT A FIXED SHAPE — when
+you anchor a rule to stop a loose one stealing a clause, ask which OTHER
+printed wordings of that shape the loose rule still reaches.**
+
+**THE ROUTE NEEDED NOTHING NEW.** `offerPayCost`'s `ok` predicate is *the
+trigger's own extra question, asked per watcher* (v3.88) — v3.93's two
+records are Legs pieces watching an event somewhere else, so theirs ask
+about the EVENT; this one asks whether the watcher is **the piece that
+hit**. Before building machinery for a shape, check whether the machinery
+is the shape you already have (v3.58, v3.73, and now again).
+
+**AND THE FEED NAMED TWO OF FOUR COST VERBS.** `effects.payPolicy` has
+enumerated all four non-resource prices since v4.24; the feed enumerated
+two, so declining a destroy read *"You declined to pay 0."* and **paying a
+HERO TAP read "You paid 0"** — v4.24's own rule, with three of its four
+members left behind. `prompts.payVerb` is one body for both answers now.
+
+### THE NEXT THREAD, PICKED UP AND MEASURED
+
+**DANGER DIGITS** — Arakni's Arms piece, `tier: none`, `parseHeroPower`
+returns null so `build.js` builds **no powCard** and neither board can
+offer it (v3.47's shape: reading the payload is what creates the route).
+
+> *"**Attack Reaction** - Destroy this: Target dagger you control that
+> isn't on the active chain link deals 1 damage to the defending hero. If
+> damage is dealt this way, the dagger has hit. Destroy the dagger."*
+
+- The **SAR007 printing was fetched and read** and adds nothing — the
+  database text is complete, no reminder text. (Try the printing first; it
+  is one `curl`, and this time it settled the question by agreeing.)
+- **v3.63 made it refuse ON PURPOSE**, and the comment says why: read as a
+  bare `[["dmg",1]]` it drops the chosen dagger, the "has hit" fiction and
+  the printed **"Destroy the dagger"** drawback all at once.
+- Measured over 797 records, it is the pool's **only** claimant of every
+  shape in the sentence: *"target dagger you control"*, *"isn't on the
+  active chain link"*, *"destroy the \<noun\>"*. Only **Salt the Wound**
+  shares *"has hit"*, and that is about ATTACKS on the chain.
+- **It is a designed loop entirely inside one hero.** Both pool Daggers
+  are Arakni's — Mark of the Huntsman (her gear) and Graphene Chelicera
+  (the token `equipTok` mints, v4.15) — and *"the dagger has hit"* is what
+  feeds **Tarantula's drain** (v3.77) and Mark's own on-hit, which v4.37
+  has just made a real decision.
+- The build is a **whole-card reader** (three sentences reaching across
+  the clause split, v3.71's Azalea shape) plus a NAMED shape in
+  `parseHeroPower`, plus a targeted pick over the gear AND arena filtered
+  to the printed subtype and excluding the active chain link, plus the
+  fiction, plus the destroy. The `ok`-predicate route v4.37 just built is
+  what the fiction fires through.
 
 ## ⚠ v4.24 — THE KEYWORD, AND WHAT DRIVING IT FOUND
 

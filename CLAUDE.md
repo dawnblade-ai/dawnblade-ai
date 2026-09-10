@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.36
+**Current version:** v4.37
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2512 drills** at v4.36.
+This is `node --test "test/*.test.js"` — **2529 drills** at v4.37.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,94 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "YOU MAY CHOOSE TO DESTROY THIS AND …" (v4.37)
+
+> *"When this hits a hero, **you may choose to destroy this and** mark
+> them."* — MARK OF THE HUNTSMAN ×2, Arakni's own gear
+
+v3.93 built the destroy-as-a-cost verb for the two records that print it
+across **two clauses** — a cost sentence and an *"If you do"* rider. This
+prints the identical cost in **ONE sentence, joined by AND**, so it fell
+past that reader and the loose `mark` matcher claimed the whole payload:
+the printed **destroy** dropped and the printed **"you may"**
+unrefusable. Driven: the dagger hit for 1, marked the opponent, and stayed
+in the gear zone with no sheet offered.
+
+**WRONG IN BOTH DIRECTIONS AT ONCE, AND ONLY ONE IS VISIBLE.** Taking the
+mark without the destroy is STRONGER than printed; being unable to decline
+is WEAKER, which the one-sided sweep is built not to look in (v4.33's
+charge, one cost over). The card read `tier: full` throughout, because the
+clause WAS consumed — so **2512 drills stayed green with the destroy
+deleted.**
+
+**v4.25's SPLIT, ONE JOINER OVER.** `classifyClause("destroy this and mark
+them")` answers `[["mark",1]]` — the payload with the drawback gone — so
+the destroy is carried, never read. **And v3.60's rule is why it belongs
+in the SAME reader: a fixed wording is not a fixed shape.** When you anchor
+a rule to stop a loose one stealing a clause, ask which OTHER printed
+wordings of that shape the loose rule still reaches. *"choose to"* is an
+optional middle (v3.79), measured at 1 long form and 0 short in the pool.
+
+**THE ROUTE IS `offerPayCost`'s `ok` PREDICATE DOING ITS JOB.** `ok` is
+the trigger's own extra question, asked per watcher (v3.88): v3.93's two
+records are Legs pieces watching an event somewhere else, so theirs ask
+about the EVENT — **this one asks whether the watcher is the piece that
+HIT.** That is the load-bearing half; without it a second dagger doing
+nothing is offered its own destroy off somebody else's hit.
+
+**"A HERO" IS PART OF THE TRIGGER, NOT DECORATION** (v3.45) — a bare
+*"when this hits"* fires on a hit at an ALLY, so it stays out of the
+closed vocabulary and refuses, with the hero form beside it as the
+positive control. **CR 7.5.5 comes free**, because `heroHit` is the gate
+both boards already derive: a blocked swing offers nothing and an ally hit
+offers nothing. **Three halves, not two.**
+
+**THE SEAT DECLINES, AND THAT IS v4.24's STANDING RULE** — a price this
+policy cannot weigh is not no price. `sparring.js` reads no card text, so
+it cannot know that marking is Arakni's whole deck, and declining can
+never make the seat stronger than printed. Prey Spotters still reaches a
+mark.
+
+Measured: **exactly 1 pool record's parse moves and 0 tiers do**; the
+route fires **218 in 210 games** (125 Beaten Trackers, 95 Refraction
+Bolters, **16 Mark of the Huntsman** — every one of those 16 previously a
+free mark); the ladder is byte-identical. **12 sabotages, 12 bite.**
+
+### THE FEED NAMED TWO OF FOUR COST VERBS (v4.37)
+
+`effects.payPolicy` has enumerated all four non-resource prices since
+v4.24 — the permanent's tap, the HERO's tap, the destroy and the counter.
+**The FEED enumerated two.**
+
+**v4.24 IS THE VERSION THAT NAMED THE RULE AND STOPPED AT ONE MEMBER.** It
+gave the counter a decline line on the grounds that *"a cost that is not
+resources must not say declined to pay 0"* and left the destroy and the
+hero-tap saying exactly that, live on three pool records since v3.93 and
+v3.91. **And the ACCEPT line had the same hole**, which only asking both
+halves finds (v3.98): tapping your hero for Turn to Mindfire read *"You
+paid 0 — the rider resolves."*
+
+`prompts.payVerb` is ONE body for both answers, so a fifth verb cannot be
+named on one side and not the other (v4.21). **No possessive is built by
+hand** (v4.22): `who` is "You" or "The opponent" and a hand-rolled `'s` on
+the first reads *"You's hero"*, so the hero-tap lines name the CARD being
+powered — which is what the sheet's own title is about.
+
+### A REVERT-ANCHOR CHECK THAT THROWS BEFORE REVERTING IS WORSE THAN NONE (v4.37)
+
+v4.36 learned to assert a sabotage's revert anchor is **unique**. This is
+the other half. The harness asserted **before** writing the revert, so the
+first non-unique anchor threw with the sabotage still in place — and the
+next eleven sabotages all reported *BITES* against an engine that was
+already broken, with the fail counts flattened to a suspiciously uniform 9
+and 10. **Revert first, then report the fault**, and re-derive every count
+taken while a sabotage was in flight (v4.36, again).
+
+**AN EMPTY STRING IS NEVER A UNIQUE ANCHOR**, which is what made the first
+one non-unique: a sabotage written as a DELETION has `""` as its inverse.
+Every sabotage is a REPLACEMENT now — an inert but textually unique
+substitute — so the uniqueness assertion can mean something.
 
 ### "THEY" IS THE HERO THE PREVENTION TARGETED (v4.36)
 

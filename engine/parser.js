@@ -4377,6 +4377,57 @@ function fxParse(card){
     break;                                       /* one pay-cost rider per card in the pool */
   }
 
+  /* ---- THE SAME COST IN ONE SENTENCE (v4.37) -------------------------
+
+     > "When this hits a hero, YOU MAY CHOOSE TO DESTROY THIS AND mark
+     >  them."                              — MARK OF THE HUNTSMAN x2
+
+     THE LOOP ABOVE NEEDS TWO CLAUSES — a cost sentence and an "If you
+     do" rider — and this card prints one, joined by AND. So the loose
+     `mark` matcher claimed the whole payload and answered `[["mark",1]]`:
+     the printed DESTROY silently dropped and the printed "you may"
+     unrefusable. Driven, the dagger hit for 1, marked the opponent and
+     stayed in the gear zone with no sheet offered.
+
+     v4.25's SPLIT, ONE JOINER OVER. Boom Grenade prints "destroy this and
+     deal 4 damage to them" and that version records why the tail must not
+     be read whole: `classifyClause` answers the payload with the drawback
+     gone. This is the same sentence with a "you may" in front of it, so
+     it is the same split plus an OFFER — and v3.60's rule is the reason
+     it is here rather than in a second reader: A FIXED WORDING IS NOT A
+     FIXED SHAPE, so when you anchor a rule to stop a loose one stealing a
+     clause, ask which other printed wordings of that shape it still
+     reaches.
+
+     BOTH DIRECTIONS ARE WRONG AND ONLY ONE IS VISIBLE. Taking the mark
+     without the destroy is STRONGER than printed, which is what steals
+     games; being unable to decline is WEAKER, which the one-sided sweep
+     is built not to see (v4.33's charge, one cost over). The card read
+     `tier: full` throughout, because the clause WAS consumed.
+
+     "CHOOSE TO" IS AN OPTIONAL MIDDLE, NOT A SECOND READER (v3.79).
+     Measured over 797 records: one card prints "you may choose to destroy
+     this and", none prints the phrase without "choose to", so the
+     alternation moves nothing today and is right the day upstream levels
+     it — v3.36's rule, where the database prints both wordings at once.
+
+     AN UNREADABLE PAYLOAD REFUSES, AND SO DOES A `noop` ONE, for the
+     reason the loop above states: a cost with no reward is v2.04's
+     free-ability rule read from the other end, and it matters most on
+     this verb, where the price is a permanent rather than resources. */
+  if(!fx.payCost) for(let i = 0; i < clauses.length; i++){
+    if(handled.has(i)) continue;
+    const dm1 = clauses[i].match(/^when(?:ever)? (.+?), you may (?:choose to )?destroy this and (.+?)\.?$/i);
+    if(!dm1) continue;
+    const trig1 = destroyTrigger(dm1[1]);
+    if(!trig1) continue;                       /* unknown event — leave the card unclaimed */
+    const rr1 = classifyClause(dm1[2].trim());
+    if(!rr1 || rr1.status !== "run" || !rr1.ops || !rr1.ops.length) continue;
+    fx.payCost = Object.assign({cost: 0, taps: false, destroySelf: true, ops: rr1.ops}, trig1);
+    handled.add(i);
+    break;                                     /* one pay-cost rider per card in the pool */
+  }
+
   /* ---- A MANDATORY WATCHER ON SOMEBODY ELSE'S HIT (v4.25) -----------
 
      > "When a Mechanologist attack action card you control hits a hero,
@@ -7156,6 +7207,19 @@ function destroyTrigger(phrase){
     return {trigger: "discardRandom", trigN: +m[1]};
   if(/^an? weapon attack you control hits$/.test(p))
     return {trigger: "weaponHit"};
+  /* THE WATCHER CAN BE THE CARD THAT HIT (v4.37). Both v3.93 records are
+     Legs pieces watching an event somewhere else; Mark of the Huntsman
+     prints the same cost on the DAGGER ITSELF, so `offerPayCost`'s `ok`
+     predicate is what tells the two apart — it is asked per watcher, and
+     here it asks whether this piece is the one that hit.
+
+     "A HERO" IS PART OF THE TRIGGER, NOT DECORATION (v3.45). A bare
+     "when this hits" fires on a hit at an ALLY too, which is a different
+     event and a different card; no pool record prints the bare form on
+     this cost, so it stays out of the vocabulary and an unknown trigger
+     leaves the card unclaimed. */
+  if(/^this hits a hero$/.test(p))
+    return {trigger: "selfHitHero"};
   return null;
 }
 

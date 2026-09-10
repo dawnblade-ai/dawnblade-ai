@@ -1,3 +1,121 @@
+## v4.37 — "you may choose to destroy this and …" — a cost skipped and a choice never offered
+
+> *"When this hits a hero, **you may choose to destroy this and** mark
+> them."* — MARK OF THE HUNTSMAN ×2, Arakni's own gear
+
+v3.93 built the destroy-as-a-cost verb for the two pool records that print
+it across **two clauses** — a cost sentence and an *"If you do"* rider.
+This card prints the identical cost in **one sentence, joined by AND**, so
+it fell past that reader and the loose `mark` matcher claimed the whole
+payload: `[["mark",1]]`, the printed **destroy** silently dropped and the
+printed **"you may"** unrefusable.
+
+**DRIVEN, SAME CARD, SAME STATE:** the dagger hit for 1, marked the
+opponent, and stayed in the gear zone with no sheet offered.
+
+**IT IS WRONG IN BOTH DIRECTIONS AT ONCE, AND ONLY ONE IS VISIBLE.**
+Taking the mark without the destroy is **stronger** than printed, which is
+the direction that steals games; being unable to decline is **weaker**,
+which the one-sided fairness sweep is built not to look in (v4.33's
+charge, one cost over). And the card read `tier: full` throughout, because
+the clause **was** consumed — so coverage is blind too, and **2512 drills
+stayed green with the destroy deleted.**
+
+**IT IS LIVE, AND IT IS THE LOOP THE DECK IS BUILT AROUND.** The destroy
+is what puts a dagger in the graveyard for Pick Up the Point to `retrieve`
+(v3.54's designed loop), and the mark is what Graphene Chelicera and Mark
+of the Huntsman's own +1{p} condition read.
+
+### v4.25's split, one joiner over
+
+`classifyClause("destroy this and mark them")` answers `[["mark",1]]` —
+the payload with the drawback gone — which is exactly what v4.25 records
+about Boom Grenade. So the destroy is **split off and carried**, never
+read as payload.
+
+**AND v3.60's RULE IS WHY IT BELONGS IN THE SAME READER: a fixed wording
+is not a fixed shape.** When you anchor a rule to stop a loose one
+stealing a clause, ask which OTHER printed wordings of that shape the
+loose rule still reaches. *"choose to"* is an **optional middle**, not a
+second reader (v3.79) — measured over 797 records, one card prints the
+long form and none prints the short, so the alternation moves nothing
+today and is right the day upstream levels it (v3.36).
+
+### The route: `offerPayCost`'s `ok` predicate, doing the job it was built for
+
+`ok` is **the trigger's own extra question, asked per watcher** (v3.88).
+v3.93's two records are Legs equipment watching an event somewhere else,
+so their `ok` asks about the EVENT; this one asks whether the watcher is
+**the piece that hit**.
+
+**THAT IS THE LOAD-BEARING HALF.** Without it, a second Mark of the
+Huntsman sitting in the gear zone doing nothing is offered its own destroy
+off somebody else's hit — drilled with two daggers, because one cannot
+tell the two readings apart.
+
+**"A HERO" IS PART OF THE TRIGGER, NOT DECORATION** (v3.45). A bare
+*"when this hits"* fires on a hit at an ALLY, which is a different event,
+so it stays out of the closed vocabulary and refuses — with the hero form
+beside it as the positive control, or a reader that refuses everything
+passes perfectly.
+
+**AND CR 7.5.5 COMES FREE**, because `heroHit` is the gate and both boards
+already derive it: a fully blocked swing offers nothing, and a hit on an
+ally offers nothing. Three halves, not two.
+
+### The feed named two of four cost verbs (v4.21's rule, in `prompts.js`)
+
+`effects.payPolicy` has enumerated **all four** non-resource prices since
+v4.24 — the permanent's tap, the HERO's tap, the destroy and the counter.
+The FEED enumerated two.
+
+**v4.24 IS THE VERSION THAT NAMED THE RULE AND STOPPED AT ONE MEMBER.** It
+gave the COUNTER a decline line on the grounds that *"a cost that is not
+resources must not say declined to pay 0 — the feed is the observable in a
+training sim, and a number that is not the price is the sev-2 category the
+player trusts"*, and left the destroy and the hero-tap saying exactly
+that, live on three pool records since v3.93 and v3.91.
+
+**AND THE ACCEPT LINE HAD THE SAME HOLE**, which only asking both halves
+finds (v3.98): tapping your hero for Turn to Mindfire read **"You paid 0 —
+the rider resolves."** `payVerb` is one body for both answers, so a fifth
+verb cannot be named on one side and not the other.
+
+**NO POSSESSIVE IS BUILT BY HAND** (v4.22). `who` is "You" or "The
+opponent", and a hand-rolled `'s` on the first reads *"You's hero"* — so
+the hero-tap lines name the CARD being powered instead, which is what the
+sheet's own title is about and needs no inflection at all.
+
+### Measured
+
+- **Exactly 1 pool record's parse moves and 0 tiers do** — 388 full / 13
+  part / 4 none, unchanged, which is the point.
+- The three sibling `payCost` triggers are pinned **both sides** (v4.17):
+  `discardRandom` Beaten Trackers · `weaponHit` Refraction Bolters ·
+  `playAura` Magmatic Carapace · `defends` Brothers in Arms.
+- The route fires **218 times in 210 games** with its own `selfplay.js`
+  counter — 125 Beaten Trackers, 95 Refraction Bolters, **16 Mark of the
+  Huntsman**, and every one of those 16 was previously a free mark.
+- **The ladder is byte-identical.** dorinthea 26 · fai 22 · briar 21 ·
+  kayo 20 · arakni 20 · … · boltyn 4, before and after.
+- **The seat DECLINES**, and that is v4.24's standing rule rather than an
+  accident: a price this policy cannot weigh is not no price, and
+  `sparring.js` reads no card text, so it cannot know that marking is
+  Arakni's whole deck. Declining can never make the seat stronger than
+  printed, and Prey Spotters is the route that still reaches a mark.
+- **12 sabotages, 12 bite.**
+
+### AND A REVERT-ANCHOR CHECK THAT THROWS BEFORE REVERTING IS WORSE THAN NONE
+
+v4.36 learned to assert a sabotage's revert anchor is **unique**. This
+pass learned the other half: the harness asserted **before** writing the
+revert, so the first non-unique anchor threw with the sabotage still in
+place — and the next eleven sabotages all reported "BITES" against an
+engine that was already broken, with fail counts flattened to 9 and 10.
+**Revert first, then report the fault.** Re-derived on a clean baseline
+the counts are 9/1/1/6/3/1/5/2/1/1/1/1, which is what a real per-sabotage
+signal looks like.
+
 ## v4.36 — "they" is the hero the prevention targeted, and a record that outlived its own answer
 
 > *"Prevent the next 4 damage that would be dealt to **target hero** this

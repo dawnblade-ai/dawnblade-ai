@@ -516,6 +516,48 @@ function moveCards(game, side, from, to, cards){
   return {...game, sides};
 }
 
+/* ---- WHAT THE PRICE IS CALLED, IN ONE PLACE (v4.37) ------------------
+   A `pay` sheet carries FOUR cost verbs — resources, the permanent's tap,
+   the HERO's tap, the destroy and the counter — and `effects.payPolicy`
+   has enumerated all of them since v4.24 (`otherPrice`). The FEED named
+   two.
+
+   v4.24 IS THE VERSION THAT NAMED THE RULE and stopped at one member of
+   the family: it gave the COUNTER a decline line because "a cost that is
+   not resources must not say declined to pay 0", and left the destroy
+   and the hero-tap saying exactly that — a number that is not the price,
+   which is the sev-2 category the player TRUSTS. Live on three pool
+   records (Beaten Trackers, Refraction Bolters, Turn to Mindfire) since
+   v3.93 and v3.91 respectively. v4.21's rule: when you fix two members of
+   a family, census the family.
+
+   AND THE ACCEPT LINE HAD THE SAME HOLE, which only asking both halves
+   finds (v3.98): tapping your hero for Turn to Mindfire read "You paid 0
+   — the rider resolves." So one body answers for both, and a fifth verb
+   cannot be named on one side and not the other.
+
+   NO POSSESSIVE IS BUILT BY HAND (v4.22). `who` is "You" or "The
+   opponent" and a hand-rolled "'s" on the first reads "You's hero", so
+   the hero-tap lines name the CARD being powered instead — which is what
+   the sheet's own title is about, and needs no inflection at all. */
+function payVerb(prompt, took){
+  if(prompt.destroyUid != null)
+    /* THE DECLINE LINE NAMES THE PRICE, not just the card. In a training
+       sim the feed is the lesson, and "kept X" alone does not say what
+       keeping it cost — it also gives the self-play harness a phrase to
+       count that cannot collide with the counter verb below (v3.81). */
+    return took ? " destroyed " + prompt.src
+                : " kept " + prompt.src + " rather than destroy it";
+  if(prompt.spendCtr)
+    return took ? " took a " + prompt.spendCtr.kind + " counter off " + prompt.src
+                : " kept the " + prompt.spendCtr.kind + " counter on " + prompt.src;
+  if(prompt.tapHero)
+    return took ? " tapped to power " + prompt.src
+                : " declined to tap for " + prompt.src;
+  return took ? " paid " + prompt.cost + (prompt.taps ? " and tapped " + prompt.src : "")
+              : " declined to pay " + prompt.cost;
+}
+
 /* Resolve a confirmed prompt.
    Returns {game, msgs, ops, pay} — the trainer logs `msgs`, feeds `ops`
    to runOps and charges `pay`. This module runs no effects and touches no
@@ -592,12 +634,10 @@ function applyPrompt(game, prompt){
   if(prompt.tag === "pay"){
     if(prompt.choice !== "pay"){
       /* A COST THAT IS NOT RESOURCES MUST NOT SAY "declined to pay 0"
-         (v4.24). The feed is the observable in a training sim, and a
-         number that is not the price is the sev-2 category the player
-         trusts. */
-      out.msgs.push(who + (prompt.spendCtr
-        ? " kept the " + prompt.spendCtr.kind + " counter on " + prompt.src + "."
-        : " declined to pay " + prompt.cost + "."));
+         (v4.24), and there are FOUR such verbs rather than the two this
+         line used to know — see `payVerb`, which is now the one place
+         either answer is named. */
+      out.msgs.push(who + payVerb(prompt, false) + ".");
       /* "…unless they pay" — declining is what makes the consequence
          happen. These are actor-relative to the ASKED side, because that
          is the actor a prompt resolves at. */
@@ -619,12 +659,7 @@ function applyPrompt(game, prompt){
        "You" or "The opponent" and those take different verb forms — the
        existing "paid" dodges it the same way, and v2.83 is the version
        that had to learn a cross-seat line names one seat. */
-    out.msgs.push(who + (prompt.destroyUid != null
-      ? " destroyed " + prompt.src
-      : prompt.spendCtr
-      ? " took a " + prompt.spendCtr.kind + " counter off " + prompt.src
-      : " paid " + prompt.cost + (prompt.taps ? " and tapped " + prompt.src : ""))
-      + " — the rider resolves.");
+    out.msgs.push(who + payVerb(prompt, true) + " — the rider resolves.");
     return out;
   }
   /* SOAK. This module runs no effects and touches no resources, so the

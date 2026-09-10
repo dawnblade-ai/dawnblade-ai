@@ -141,6 +141,14 @@ function play(g, limit){
            invisible there. The phrase is the engine's own (v3.81) and
            test/ward.test.js pins the two spellings against each other. */
         if(/destroys itself — ward soaks/.test(line)) events.push(["ward", line]);
+        /* v4.37 — a DESTROY-COST sheet answered. Both outcomes are
+           counted, because the seat DECLINES by standing rule (v4.24: a
+           price this policy cannot weigh is not no price), so a counter
+           narrowed to the accept half would print a 0 that is about the
+           POLICY rather than about the route (v4.29). The two phrases are
+           `prompts.payVerb`'s own and are pinned against it (v3.81). */
+        if(/ destroyed .+ — the rider resolves\.| rather than destroy it\./.test(line))
+          events.push(["destroycost", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads
