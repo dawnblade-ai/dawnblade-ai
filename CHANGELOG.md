@@ -1,3 +1,149 @@
+## v4.38 — a targeted jab from a second weapon, and the reaction window had no ability caller
+
+> *"**Attack Reaction** - Destroy this: Target dagger you control that
+> isn't on the active chain link deals 1 damage to the defending hero. If
+> damage is dealt this way, the dagger has hit. Destroy the dagger."*
+> — DANGER DIGITS, Arakni's Arms piece
+
+`tier: none`. `parseHeroPower` returned null, so `build.js` built **no
+powCard** and neither board could offer it — **v3.47's shape, fifth
+outing: reading the payload is what creates the route.**
+
+**v3.63 MADE THE HEAD REFUSE ON PURPOSE**, and wrote down why: the `dmg`
+matcher is unanchored, so read loose this is a bare `[["dmg",1]]` from the
+EQUIPMENT — the chosen dagger, the *"has hit"* fiction and a printed
+**DRAWBACK** all silently gone. That was the honest report while it
+lasted, and **a recorded refusal is a DEBT** (v3.38): four drills, a
+ledger record and a scene all went red the day it was discharged, which is
+exactly what they exist for.
+
+**THE PRINTING WAS FETCHED AND READ FIRST** (SAR007) and settled nothing
+new — the database text is complete and the card carries no reminder text.
+Reading it is still the cheapest thing to try; this time it paid by
+**agreeing**.
+
+### Three sentences about one object
+
+They reach across the clause split — *"this way"*, *"the dagger"* — so the
+reader is a **WHOLE-CARD** one (v3.71's Azalea shape), and *"the dagger"*
+is the card the FIRST sentence targeted, never the Arms piece the cost has
+already destroyed (v2.33's Bull's Eye Bracers trap, v3.47's Scuttle Toes).
+
+**THE WHOLE PRINTED SHAPE, OR NOTHING** (v2.29):
+
+- the subject goes through **`optFilter`**, so no vocabulary is invented —
+  the closed list answers for *dagger* and *sword* and a bare *"card"*
+  refuses (v3.53), and `promptFilter` is then the ONE matcher the offer,
+  the legality and the resolution all ask;
+- **both readers agree.** `parseHeroPower` decides whether a powCard is
+  built at all, so a sentence it accepts and the fold then refuses is an
+  ability activated, paying its destroy, doing nothing — v2.04's
+  free-ability shape;
+- the rider sentences must **name the head's subject**, or *"destroy the
+  top card of your deck"* is claimed by the same verb;
+- **both contraction spellings read** (v3.36, v3.65). Measured: the
+  database prints `isn't` on one record and `is not` on none, so the
+  alternation moves nothing today and is right the day upstream levels it;
+- **the amount and the subject are READ.** It is the pool's only record of
+  the shape, so no real fixture can tell a read value from a hardcoded one
+  (v3.32, thirteenth outing) — the drills are synthetic.
+
+**`jabTargets` IS THE ONE READER** of what may be named — the shape
+`fusionOffer`, `chargeOffer` and `wardBearers` all keep. **GEAR AND
+ARENA** (v3.55, v3.33), because `optFilter`'s closed list also answers for
+*ally*, which is a board entry. A destroyed piece is not a target (marked
+rather than spliced until the end-phase sweep, v3.54). And the *"isn't on
+the active chain link"* exclusion is the **CALLER's uid**, because
+`fxParse` memoizes on `name|pitch` and a uid baked into the parse names
+whichever copy parsed first (v3.20's `notUid`).
+
+**THE PRINTED ORDER IS LOAD-BEARING**: damage, then the fiction, then the
+destroy. Reversed, `offerPayCost` skips a piece the drawback has already
+removed — and Mark of the Huntsman's own trigger, which is **the whole
+point of "the dagger has hit"**, never fires. A sabotage that moves the
+destroy up is what pins it.
+
+**CR 7.5.5 FALLS OUT OF THE MEASUREMENT.** `dmg` routes through
+`preventDamage` (v4.35), so the printed *"IF damage is dealt this way"* is
+answered by the life total rather than restated, and a jab a ward eats
+fires nothing.
+
+**"THE DAGGER HAS HIT" IS ONE BODY NOW** (`heroHitBy`). Both things a hero
+hit fires — Tarantula's drain (v3.77) and v4.37's destroy-cost offer — used
+to live inline in `linkPayload`, where the only thing that can hit is the
+resolving card. The jabbed dagger is not `pend.card`, so the uid is taken
+explicitly (v3.48's `tapFoeHero` inversion).
+
+**IT IS A DESIGNED LOOP ENTIRELY INSIDE ONE HERO.** Both pool Daggers are
+Arakni's — Mark of the Huntsman and the Graphene Chelicera `equipTok`
+mints (v4.15) — and the destroy is what puts a dagger in the graveyard for
+Pick Up the Point to `retrieve` (v3.54).
+
+### And the reaction window had no ability caller
+
+`sparring.reaction` looked at the HAND and the ARSENAL and nowhere else,
+so **every attack-reaction ABILITY in the pool had no caller.** Measured:
+**nine records** — four Equipment (Prey Spotters, Stalker's Steps, Bolt'n
+Boots, Danger Digits) and five heroes (Boltyn and four of Arakni's
+Agents). v3.63 built the whole route and gave it a window; nothing ever
+asked for one.
+
+**FIFTH OUTING OF THE SAME SENTENCE** — v3.50's allies, v3.80's
+non-attacks, v3.84's aura attacks, v4.03's whole reaction step, and now
+the abilities inside it. *A feature with no caller looks exactly like a
+feature that works, until you count.*
+
+**IT IS NARROWED TO ABILITIES PRINTED FOR THIS WINDOW, AND THE NARROWING
+IS THE WHOLE DIFFERENCE BETWEEN BUILDING A ROUTE AND CHANGING THE GAME.**
+An INSTANT ability is legal here **and** in the action phase, where
+`offence` already proposes it last with a stated reason — so proposing it
+here as well is a **timing** judgement, which is exactly what v4.24's
+standing rule says this policy cannot make. Measured before narrowing:
+
+| | unnarrowed | narrowed |
+|---|---|---|
+| Fai | **4** | 23 |
+| Iyslander | **2** | 15 |
+| Blaze | **3** | 16 |
+
+— the policy playing worse, not the engine changing.
+
+**`judge.abWindowOf` IS HOW IT ASKS.** `sparring.js` reads no card text by
+contract, so judge answers and there is still ONE reader — v3.84's rule,
+built for `boardAttackOf` for the identical reason.
+
+**THEY GO AFTER THE CARDS, ORDERED BY UID**, and that is a stated choice
+rather than a ranking: a card from hand costs a CARD, an ability usually
+costs a PERMANENT or nothing, and weighing those against each other is the
+judgement v4.24 forbids.
+
+### Two feed lines that named the wrong thing
+
+- **`"plays at instant speed"`** was printed for anything with no action-
+  point cost — so all three of v3.63's attack-reaction abilities, and the
+  fourth this version makes reachable, announced the wrong window. The
+  line names it now, off `_attackRx`, the flag both boards already gate on.
+- **`"is destroyed — Danger Digits — ability says so"`** — `build.js`
+  names an equipment ability *"\<piece\> — ability"*, so the raw name gave
+  two dashes and a word the player never saw on a card. The jab's lines
+  strip the suffix, as the trainer already does where it names a piece in
+  a refusal.
+
+### Measured
+
+- **exactly 1 pool record's parse moves**: `none` → `full`. Pool **388 →
+  389 full, 4 → 3 none**; floor re-pinned after reading the diff, which
+  named that one card and nothing else.
+- the jab fires **31 times in 210 games** with its own `selfplay.js`
+  counter, its phrase pinned against the engine's (v3.81).
+- **on the ladder only the heroes that own an attack-reaction ability
+  move** — Arakni 20 → 26, Boltyn 4 → 5, azalea 5 → 3, everyone else ±1.
+- **32 sabotages, 32 bite** (25 on the card, 7 on the policy). Two came
+  back silent first and both were the fixture, not the engine: the
+  `applyAnswer` lookup needed TWO board permanents to be reachable at all,
+  and the card-before-ability ordering needed a hand holding a reaction
+  the link could actually take — v3.62, twice in one pass.
+
 ## v4.37 — "you may choose to destroy this and …" — a cost skipped and a choice never offered
 
 > *"When this hits a hero, **you may choose to destroy this and** mark

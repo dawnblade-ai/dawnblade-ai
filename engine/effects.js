@@ -4008,6 +4008,36 @@ function makeEffects(ctx){
       if(card._attackRx){
         if(!(n.pend && n.pend.by === actorOf(n)))
           n = L(n, `${card.name}: no attack of yours to react to.`);
+        /* ---- A TARGETED JAB IS NOT A PUMP (v4.38) --------------------
+           `attackRx` is entirely about the attack on the chain — target
+           legality against `pend.card`, the go-again grant onto it,
+           riders and modes. Danger Digits targets a PERMANENT IN YOUR
+           OWN GEAR and does not touch the link at all, so routing it
+           there would ask `qualMatches` about the wrong object. It is a
+           different family, and the parse is the discriminator.
+
+           IT STILL NEEDS THE WINDOW. `_attackRx` is what both boards gate
+           on (v3.63), and the printed "defending hero" and "active chain
+           link" both presuppose a combat — so the guard above stays. */
+        else if(fx.daggerJab){
+          const jb = fx.daggerJab;
+          const cands = jabTargets(act(n), jb.filter, (n.pend.card || {}).uid);
+          if(!cands.length)
+            n = L(n, `${card.name}: ${sp(act(n))} board holds no ${jb.sub} off the active chain link.`);
+          /* WITH ONE LEGAL TARGET IT JUST HAPPENS (v3.55) — a sheet
+             offering a single forced choice is a tap that teaches
+             nothing. */
+          else if(cands.length === 1) n = jabResolve(n, jb, cands[0], card.name);
+          else n.promptQ = [...(n.promptQ || []), {
+            tag: "pick", side: actorOf(n), src: card.name, min: 1, max: 1, jab: jb,
+            /* THE CANDIDATES ARE THE CALLER'S, like the freeze's and the
+               attack-target's: a choice does not always live in one zone,
+               and teaching `promptZone` a synthetic third would put a
+               rules decision inside a data-driven module. */
+            cards: cands.map(x => Object.assign({}, x.card, {_jab: {where: x.where, uid: x.uid}})),
+            title: `Which ${jb.sub} strikes?`,
+            hint: `It deals ${jb.amt} to the defending hero, counts as having hit, and is then destroyed.`}];
+        }
         else {
           const rx = attackRx(n, card, {handBlockers: (opts && opts.handBlockers) || 0,
             /* AND WHICH CARDS THEY ARE (v3.89) — Shred targets one of
@@ -4216,7 +4246,15 @@ function makeEffects(ctx){
     const apCost = P.splitCostsAP(card, _half, opts && opts.window) ? 1 : 0;
     actMut(n).ap = act(n).ap - apCost + (ga ? 1 : 0);
     if(ga) n = L(n, apCost ? "Go again — action point kept." : "Go again on an instant — an action point gained (CR 5.3.5).");
-    else if(!apCost) n = L(n, `${card.name} plays at instant speed — no action point spent.`);
+    /* AND THE LINE NAMES THE WINDOW IT WAS ACTUALLY PLAYED IN (v4.38).
+       `apCost` is 0 for an instant AND for anything played in a reaction
+       window (CR 8.1.1's point is charged to an ACTION), so this said
+       "instant speed" about all three of v3.63's attack-reaction
+       abilities and about the fourth v4.38 makes reachable. In a training
+       sim the feed is the lesson, and a line naming the wrong window is
+       the sev-2 category the player TRUSTS (v4.24). `_attackRx` is the
+       flag both boards already gate on, so nothing is re-derived. */
+    else if(!apCost) n = L(n, `${card.name} plays ${card._attackRx ? "as an attack reaction" : "at instant speed"} — no action point spent.`);
     return openPrompt(winCheck(n));
   };
 
@@ -4773,6 +4811,24 @@ function makeEffects(ctx){
         n = L(n, `${p.src}: ${chosen.name} untaps and can attack again`
                + (st.sd ? " — it is destroyed at the beginning of the end phase." : "."));
       }
+    }
+    /* ---- THE TARGETED JAB, ONCE THE PLAYER HAS NAMED ITS OBJECT (v4.38)
+       The choice IS which permanent, so everything the card does rides on
+       the answer. The card handed back is the sheet's own copy — spread,
+       with `_jab` stamped on it — so the LIVE object is looked up by uid
+       in the zone the spec recorded, or the destroy would mark a
+       throwaway and the graveyard would hold a card carrying a private
+       field (v3.53: a spec's own fields, READ).
+
+       THE ACTOR IS ALREADY BORROWED to the asked side for this whole
+       body, so `act(n)` is the seat that owns the dagger. */
+    if(p.tag === "pick" && p.jab && (r.picked || []).length){
+      const loc = (r.picked[0] || {})._jab || {};
+      const live = loc.where === "board"
+        ? ((act(n).board || []).find(b => b && b.uid === loc.uid) || {}).card
+        : (act(n).gear || []).find(x => x && x.uid === loc.uid);
+      if(live) n = jabResolve(n, p.jab, {where: loc.where, uid: loc.uid, card: live}, p.src);
+      else n = L(n, `${p.src}: that ${p.jab.sub} is no longer there.`);
     }
     if(p.tag === "pick" && p.freezeSide != null && (r.picked||[]).length){
       /* The actor is borrowed to the ASKED side for this whole body, and
@@ -5727,6 +5783,114 @@ function makeEffects(ctx){
      It does not clear `pend` and does not say what phase follows. Both
      callers do that themselves, because that is the half this split
      exists to keep apart. */
+  /* ---- "THE DAGGER HAS HIT", WHEREVER THE HIT CAME FROM (v4.38) -----
+
+     A hit on a HERO by a named permanent fires two things that do not
+     care HOW it hit, and until now both lived inline in `linkPayload`,
+     where the only thing that can hit is the resolving card.
+
+     DANGER DIGITS PRINTS A HIT THAT IS NOT ONE. "Target dagger you
+     control … deals 1 damage to the defending hero. If damage is dealt
+     this way, THE DAGGER HAS HIT." — a fiction whose entire purpose is
+     to fire hit-triggers on a card that never attacked. So the body is
+     shared rather than copied: two descriptions of what a dagger hitting
+     a hero means is where the drift starts (the no-mirror rule inside a
+     single file, v3.20's `optCostSpec`).
+
+     IT TAKES THE UID EXPLICITLY, because the offer below asks whether the
+     watcher is the piece that hit and the jabbed dagger is not `pend.card`
+     — a body that reached for the resolving card would be right on one
+     route and silently wrong on the other (v3.48's `tapFoeHero`). */
+  const heroHitBy = (s, card, uid) => {
+    let n = s;
+    /* ---- ARAKNI, TARANTULA (v3.77) --------------------------------
+       "Whenever a DAGGER you own hits a HERO, they lose 1{h}."
+
+       "LOSE {h}" IS READ AS DAMAGE HERE, which is the reading the parser
+       already gives the printed phrase one rule over. THE PIECE MUST BE A
+       DAGGER, read off its printed type line — she also swings nothing
+       else, but a passive that fires on any weapon is wrong the moment
+       she equips one. AND THE PRINTED SUBJECT IS AN OBJECT, NOT A ROUTE:
+       "a dagger you own hits a hero" says nothing about HOW it hit, which
+       is exactly why this body can serve the jab as well. */
+    if(bAct(n).daggerDrain && /\bdagger\b/i.test((card.tt) || "")){
+      const _dd = bAct(n).daggerDrain;
+      /* THE REASON FIRST, THEN THE OP'S OWN LINE. `dmg` reports "1 damage"
+         and says nothing about why; announcing after it reads as a second,
+         separate hit. In a training sim the sequence IS the lesson. */
+      n = L(n, `${card.name} bites — a dagger of ${sp(act(n))}, and ${act(n).name} is the Tarantula.`);
+      n = runOps(n, [["dmg", _dd]], card.name);
+    }
+    /* ---- "WHEN THIS HITS A HERO, YOU MAY … DESTROY THIS AND …" (v4.37)
+       `ok` is the trigger's own extra question, asked per watcher (v3.88):
+       v3.93's two records are Legs pieces watching an event somewhere
+       else, so theirs ask about the EVENT — this one asks whether the
+       watcher is the piece that hit. Queued, never opened inline. */
+    return offerPayCost(n, "selfHitHero", (px, w) => w.uid === uid);
+  };
+
+  /* ---- THE JAB ITSELF, ONE BODY (v4.38) -----------------------------
+     Called directly when the printed target is forced (one candidate,
+     v3.55: a sheet offering a single choice is a tap that teaches
+     nothing) and from `applyAnswer` when the player picked — one body,
+     because two copies of a three-sentence card is where the drift
+     starts.
+
+     THE PRINTED ORDER IS LOAD-BEARING: damage, then the fiction, then
+     the destroy. Reversed, the fiction fires on a card the drawback has
+     already removed and `offerPayCost` skips it (it refuses a destroyed
+     piece) — so Mark of the Huntsman's own trigger, which is the whole
+     point of "the dagger has hit", would never be offered.
+
+     CR 7.5.5 FALLS OUT OF THE MEASUREMENT rather than being restated:
+     `dmg` routes through `preventDamage` (v4.35), so a jab turned
+     entirely aside moves no life and the printed "IF damage is dealt
+     this way" is answered by the difference. */
+  const jabResolve = (s, jab, ent, rawSrc) => {
+    let n = s;
+    const nm = ent.card.name;
+    /* THE PIECE'S NAME, NOT THE POWCARD'S. `build.js` names an equipment
+       ability "<piece> — ability", so the raw name reads "…is destroyed —
+       Danger Digits — ability says so" — two dashes and a word the player
+       never saw on a card. The trainer strips the same suffix where it
+       names a piece in a refusal. */
+    const src = String(rawSrc || "").replace(/ — ability$/, "");
+    n = L(n, `${src}: ${nm} lashes out at ${foe(n).name} for ${jab.amt}.`);
+    const before = foe(n).hp;
+    n = runOps(n, [["dmg", jab.amt]], nm);
+    if(before - foe(n).hp > 0){
+      n = L(n, `${nm} counts as having HIT — its own on-hit abilities fire, though it never attacked.`);
+      /* THE CARD'S OWN PRINTED WHEN-THIS-HITS-A-HERO PAYLOAD. Measured
+         over the pool: both Daggers are Arakni's and NEITHER carries a
+         bare one today — Mark of the Huntsman's is behind a destroy cost
+         (v4.37) and reaches the player through `heroHitBy` below, and
+         Graphene Chelicera prints an attacks-trigger, not a hit one. So
+         this line is LATENT and drilled with a synthetic (v3.73); it is
+         here because it is the printed reading, and a reader that
+         ignores one is reading the card wrong whether or not anything
+         notices today (v3.73's ally-attack rule). */
+      const _oh = fxParse(ent.card).onHitHero || [];
+      if(_oh.length) n = runOps(n, _oh, nm);
+      n = heroHitBy(n, ent.card, ent.uid);
+    } else {
+      n = L(n, `Every point of it was prevented — ${nm} did not hit, so nothing fires (CR 7.5.5).`);
+    }
+    /* THE PRINTED DRAWBACK, AND IT LANDS. Reading the head without it
+       files an unbounded repeatable jab (v4.25's rule, one card over).
+       A destroyed gear piece is MARKED and filed by `sweepGear` at the
+       end phase (v3.54); a board permanent leaves the arena now and pays
+       out what it printed on the way (v4.29). */
+    if(ent.where === "gear"){
+      actMut(n).gear = (act(n).gear || [])
+        .map(x => x && x.uid === ent.uid ? {...x, destroyed: true} : x);
+    } else {
+      actMut(n).board = (act(n).board || []).filter(b => b && b.uid !== ent.uid);
+      actMut(n).grave = [...gy(n.turn, ent.card), ...act(n).grave];
+      n = payLeave(n, ent.card, actorOf(n));
+    }
+    return L(n, `${nm} is destroyed — ${src} says so.`);
+  };
+
   const linkPayload = (s, info) => {
     let n = {...s};
     let total = info.total;
@@ -5824,8 +5988,7 @@ function makeEffects(ctx){
        AND THE PIECE IS NOT DESTROYED HERE. The answer carries
        `destroyUid` and `applyAnswer` marks it — one description of what
        destroying a paying permanent costs, rather than a second beside
-       it (v3.93). */
-    if(heroHit) n = offerPayCost(n, "selfHitHero", (px, w) => w.uid === pc.uid);
+       it (v3.93). It moved into `heroHitBy` at v4.38 with the drain. */
     /* ---- THE `hits` OPTIONAL COST (v3.92) ---------------------------
        Mounting Anger and Rising Resentment: "When this HITS, you may
        banish an attack action card from your hand with cost less than the
@@ -6024,14 +6187,9 @@ function makeEffects(ctx){
        CR 7.5.5 sitting beside the one that governs. Sabotage found it, as
        it found v3.67's identical `off > 0`: dead RULES code is worse than
        dead code elsewhere, because it reads as a rule somebody can reach. */
-    if(heroHit && bAct(n).daggerDrain && /\bdagger\b/i.test((pc.tt)||"")){
-      const _dd = bAct(n).daggerDrain;
-      /* THE REASON FIRST, THEN THE OP'S OWN LINE. `dmg` reports "1 damage"
-         and says nothing about why; announcing after it reads as a second,
-         separate hit. In a training sim the sequence IS the lesson. */
-      n = L(n, `${pc.name} bites — a dagger of ${sp(act(n))}, and ${act(n).name} is the Tarantula.`);
-      n = runOps(n, [["dmg", _dd]], pc.name);
-    }
+    /* v4.38 MOVED THE BODY UP, unchanged, so Danger Digits' printed
+       "the dagger has hit" fires the same two things this does. */
+    if(heroHit) n = heroHitBy(n, pc, pc.uid);
     /* ---- REFRACTION BOLTERS (v3.93) ---------------------------------
        "When a weapon attack you control HITS, you may destroy this. If
         you do, the attack gets go again."
@@ -6729,6 +6887,50 @@ function defendValue(defSide, card, opts){
    seat's own resources, which is what keeps the sheet honest about who is
    paying. `pay` is what `applyPrompt` returns for the caller to charge —
    this module runs no effects and takes no resources. */
+/* ---- WHICH PERMANENTS A TARGETED JAB MAY NAME (v4.38) ---------------
+
+   > "Target DAGGER YOU CONTROL that isn't on the active chain link …"
+   >                                              — DANGER DIGITS
+
+   THE ONE READER, so the offer, the legality on both boards and the
+   resolution cannot disagree about what is a legal target — the shape
+   `fusionOffer`, `chargeOffer` and `wardBearers` all keep.
+
+   BOTH ZONES, ALWAYS (v3.55, v3.33). A dagger is a Weapon and lives in
+   the GEAR zone, but the printed subject is read through `optFilter`,
+   whose closed list also answers for "ally" — which is a board entry. A
+   scan of either zone alone finds nothing for half the family, and
+   `sweepArena` had to be told the same thing (v3.07).
+
+   `promptFilter` IS THE MATCHER, never a second `tt` test: the subject
+   was read into a prompts.js filter by `optFilter`, and two matchers for
+   one subject is where the drift starts (v3.53).
+
+   A DESTROYED PIECE IS NOT A TARGET. It is marked rather than spliced
+   until the end-phase sweep (v3.54), so it is still sitting in the zone.
+
+   AND THE EXCLUSION IS STRUCTURAL, NOT A PRINTED FIELD. "Isn't on the
+   active chain link" is the card the attack was declared with, so the
+   uid comes from the CALLER — `fxParse` memoizes on `name|pitch` and a
+   uid baked into the parse names whichever copy parsed first (v3.20's
+   `notUid`). A caller that says nothing excludes nothing, which is the
+   faithful reading when there is no chain link at all. */
+function jabTargets(sd, filt, exclUid){
+  if(!sd || !filt) return [];
+  const ok = promptFilter(filt);
+  const out = [];
+  for(const gp of (sd.gear || []))
+    if(gp && !gp.destroyed && ok(gp) && String(gp.uid) !== String(exclUid))
+      out.push({where: "gear", uid: gp.uid, card: gp});
+  for(const b of (sd.board || []))
+    if(b && b.card && ok(b.card) && String(b.uid) !== String(exclUid))
+      out.push({where: "board", uid: b.uid, card: b.card});
+  /* A TOTAL ORDER, so two peers replaying one log offer the same list
+     (sparring.js's own rule about leaving a tie unbroken). */
+  return out.sort((a, b) => String(a.uid) < String(b.uid) ? -1
+                          : String(a.uid) > String(b.uid) ? 1 : 0);
+}
+
 function payCostSpec(px, card, side){
   /* THE THIRD COST VERB (v3.93) — the price is the piece itself. It is
      still a `pay` sheet, because the shape of the question is identical
@@ -7963,6 +8165,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

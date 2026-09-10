@@ -3042,6 +3042,45 @@ const CLS_SUBJECTS = /^(?:non-attack action cards?|attack action cards?|action c
    purpose — see `optFilter`. */
 const WPN_SUBTYPES = /^(?:swords?|daggers?)$/;
 
+/* ---- A TARGETED JAB FROM A SECOND WEAPON (v4.38) ---------------------
+
+   > "**Attack Reaction** - Destroy this: Target dagger you control that
+   >  isn't on the active chain link deals 1 damage to the defending
+   >  hero. If damage is dealt this way, the dagger has hit. Destroy the
+   >  dagger."                                        — DANGER DIGITS ×1
+
+   Three sentences about ONE object, reaching across the clause split, so
+   the reader is a WHOLE-CARD one in `fxParse` — v3.71's Azalea shape, and
+   v2.33's Bull's Eye Bracers rule about whose "it" it is: *the dagger* is
+   the card the FIRST sentence targeted, never the Arms piece, which the
+   cost has already destroyed.
+
+   v3.63 MADE THE HEAD REFUSE ON PURPOSE and wrote down why: the `dmg`
+   matcher is unanchored, so read loose this is a bare `[["dmg",1]]` from
+   the EQUIPMENT with the chosen dagger, the "has hit" fiction AND the
+   printed "Destroy the dagger" drawback all silently gone. That refusal
+   was the honest report while it lasted; a recorded refusal is a DEBT
+   (v3.38).
+
+   MEASURED OVER 797 RECORDS: it is the pool's ONLY claimant of every
+   shape in the sentence — "target dagger you control", "isn't on the
+   active chain link", "destroy the <noun>". Only Salt the Wound shares
+   "has hit", and that clause is about ATTACKS on the combat chain.
+
+   BOTH SPELLINGS OF THE CONTRACTION ARE READ (v3.36, v3.65): the database
+   prints "isn't" today and no record prints "is not", so the alternation
+   moves nothing and is right the day upstream levels it. `SYNONYMS` does
+   not reach this shape, and widening the table would change every other
+   reader.
+
+   THE SUBJECT GOES THROUGH `optFilter`, so no vocabulary is invented and
+   the CLOSED list above is what decides: "dagger" and "sword" answer,
+   a bare "card" refuses (v3.53), and `promptFilter` is then the one
+   matcher both the offer and the resolution ask. */
+const JAB_HEAD = /^target (.+?) you control that (?:isn't|is not) on the active chain link deals (\d+) damage to the defending hero$/i;
+const JAB_HIT  = /^if damage is dealt this way, the (.+?) has hit$/i;
+const JAB_KILL = /^destroy the (.+?)$/i;
+
 /* THE CLASS WORDS THAT MAY QUALIFY A BARE "CARD" (v4.09).
 
    `optFilter` refuses a bare "card" on purpose (v3.53): a cost whose
@@ -4873,6 +4912,52 @@ function fxParse(card){
     }
   }
 
+  /* ---- THE TARGETED JAB, READ WHOLE (v4.38) -------------------------
+     See `JAB_HEAD` above for the card and for why the head refuses at
+     clause level. The three sentences are folded here because the second
+     and third both name the object the FIRST one targeted.
+
+     ONLY THE RIDERS ARE MARKED HANDLED. The head is credited by the
+     attack-reaction block at the tail of this function, which is
+     CONDITIONAL on `parseHeroPower` answering (v3.63) — so an ability
+     whose line that reader refuses reports `part` and never `full`, which
+     is the under-report that keeps a card with no route honest.
+
+     THE WHOLE PRINTED SHAPE, OR NOTHING (v2.29). Claiming the head and
+     dropping the destroy would file an unbounded repeatable jab, which is
+     v4.25's rule one card over; claiming the destroy without the fiction
+     drops the only reason the card exists. A subject `optFilter` cannot
+     pin refuses outright (v3.53). */
+  {
+    const strip = c => levelIdiom(String(c).toLowerCase().trim())
+      .replace(/^(?:once per turn )?attack reaction\s*[-—]\s*[^:]*:\s*/i, "")
+      .replace(/\.$/, "").trim();
+    let hi = -1, hm = null;
+    for(let i = 0; i < clauses.length && hi < 0; i++){
+      if(handled.has(i)) continue;
+      const m0 = strip(clauses[i]).match(JAB_HEAD);
+      if(m0){ hi = i; hm = m0; }
+    }
+    if(hi >= 0){
+      const sub = hm[1].trim(), filt = optFilter(sub);
+      let hit = -1, kill = -1;
+      for(let i = 0; i < clauses.length; i++){
+        if(i === hi || handled.has(i)) continue;
+        const c0 = strip(clauses[i]);
+        const mh = c0.match(JAB_HIT), mk = c0.match(JAB_KILL);
+        /* THE SUBJECT MUST BE THE HEAD'S. "Destroy the top card of your
+           deck" is a different sentence entirely, and matching on the verb
+           alone would claim it. */
+        if(hit < 0 && mh && mh[1].trim() === sub) hit = i;
+        else if(kill < 0 && mk && mk[1].trim() === sub) kill = i;
+      }
+      if(filt && hit >= 0 && kill >= 0){
+        fx.daggerJab = {sub, amt: +hm[2], filter: filt};
+        handled.add(hit); handled.add(kill);
+      }
+    }
+  }
+
   clauses.forEach((raw,ci)=>{
     if(handled.has(ci)){ fx.clauses.push({t:raw, st:"run"}); return; }
     /* v4.19: a ladder whose rungs do not all read is refused whole rather
@@ -5904,7 +5989,12 @@ function fxParse(card){
      That is the trainer's "no scripted effect yet" refusal, and it was
      caught by the audit diff rather than by a drill. When you split a
      list, grep for everyone who was reading the whole of it. */
-  fx.playable = fx.ops.length>0 || fx.onHit.length>0 || (fx.onHitHero||[]).length>0
+  /* AND A JAB IS A PAYLOAD (v4.38). The powCard's own clauses are the
+     three sentences with no activation prefix, so `classifyClause`
+     refuses all three on their own — without this the piece would build
+     an ability the trainer then dims as "no scripted effect yet". */
+  fx.playable = !!fx.daggerJab
+             || fx.ops.length>0 || fx.onHit.length>0 || (fx.onHitHero||[]).length>0
              || (fx.onAtkHero||[]).length>0 || (fx.onDeath||[]).length>0
              || (fx.onLeave||[]).length>0
              || fx.conds.length>0 || !!fx.perm || fx.ga;
@@ -6157,7 +6247,25 @@ function parseHeroPower(tx, allowDestroy){
      `execute` re-reads it, so nothing is lost by this reader answering on
      the first sentence alone. A NAMED pattern, never a relaxation of the
      guard below — that is the never-parse-ahead-of-wiring rule. */
-  const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim()) || ARS_TURN.test(m[4].trim());
+  /* THE TARGETED JAB IS THE THIRD (v4.38), and it is here for the reason
+     the two above are: its reader is a WHOLE-CARD one in `fxParse`,
+     because all three of Danger Digits' sentences reach across the clause
+     split ("this way", "the dagger"). The powCard carries the ability's
+     whole printed line and `execute` re-reads it, so nothing is lost by
+     this reader answering on the first sentence alone.
+
+     A NAMED PATTERN, NEVER A RELAXATION of the guard below — that is the
+     never-parse-ahead-of-wiring rule, and it is what keeps `classifyClause`'s
+     own v3.63 refusal intact for every other third-person "deals". */
+  /* AND THE SUBJECT MUST BE ONE `optFilter` CAN PIN (v3.53, v4.09's rule
+     one shape over). Accepting the SENTENCE alone would build a powCard
+     whose whole-card fold then refuses — an ability offered, activated,
+     and paying its destroy for nothing, which is the free-ability shape
+     v2.04 fixed. The two readers ask the same question, so the offer and
+     the resolution cannot disagree. */
+  const _jabM = m[4].trim().match(JAB_HEAD);
+  const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim()) || ARS_TURN.test(m[4].trim())
+              || !!(_jabM && optFilter(_jabM[1].trim()));
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);

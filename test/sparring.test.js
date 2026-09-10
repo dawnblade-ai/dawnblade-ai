@@ -662,3 +662,164 @@ test("the route counter spells what the FEED spells", {skip: false}, () => {
     "…and judge.js must still print the word `layer` when one resolves " +
     "(CR 4.2.2). Naming the card alone is what zeroed this counter once.");
 });
+
+/* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------- */
+
+test("`judge.abWindowOf` answers for both routes, and null where there is none", {skip}, () => {
+  /* THIS FILE READS NO CARD TEXT BY CONTRACT, so the policy asks JUDGE
+     and judge asks the parser — one reader (v3.84's rule, built for
+     `boardAttackOf` for the identical reason). */
+  const H = require("./helpers/judged.js");
+  H.db();
+  const W = require("./helpers/extract.js").loadData();
+  const bd = k => B.buildSide(W.HEROES.find(x => x.k === k),
+                              G.parseDeck(W.DECKS[k]), H.db(), {},
+                              RNG.make("abwin-" + k), {n: 0}).b;
+  const ara = bd("arakni");
+  const g = Object.assign(H.state({gear: ara.gear}, {}, {turn: 3, actor: 0}),
+                          {builds: [ara, {}]});
+  const named = nm => (ara.gear.find(x => new RegExp(nm).test(x.name)) || {}).uid;
+  assert.equal(J.abWindowOf(g, 0, named("Danger Digits")), "attack-reaction");
+  assert.equal(J.abWindowOf(g, 0, named("Prey Spotters")), "attack-reaction");
+  /* A WEAPON IS NOT AN ABILITY. Mark of the Huntsman prints an Action
+     attack, so it builds no powCard and this must say so rather than
+     guessing a window. */
+  assert.equal(J.abWindowOf(g, 0, named("Mark of the Huntsman")), null);
+  assert.equal(J.abWindowOf(g, 0, 99999), null, "and an unknown uid answers null");
+
+  /* THE HERO ROUTE, and both answers. Boltyn prints an attack reaction;
+     Arakni's brood prints a passive, so her HPOW is absent. */
+  const bol = bd("boltyn");
+  const gb = Object.assign(H.state({}, {}, {turn: 3, actor: 0}), {builds: [bol, {}]});
+  assert.equal(J.abWindowOf(gb, 0, "hpow"), "attack-reaction");
+  assert.equal(J.abWindowOf(g, 0, "hpow"), null, "the brood prints no activated ability");
+});
+
+test("the reaction branch proposes an ABILITY when nothing in hand is legal", {skip}, () => {
+  /* IT LOOKED AT THE HAND AND THE ARSENAL AND NOWHERE ELSE, so every
+     attack-reaction ABILITY in the pool had no caller — measured, NINE
+     records across four Equipment and five heroes. Fifth outing of
+     v3.50's sentence: a feature with no caller looks exactly like a
+     feature that works, until you count. */
+  const H = require("./helpers/judged.js");
+  H.db();
+  const W = require("./helpers/extract.js").loadData();
+  const ara = B.buildSide(W.HEROES.find(x => x.k === "arakni"),
+                          G.parseDeck(W.DECKS.arakni), H.db(), {},
+                          RNG.make("rxcall"), {n: 0}).b;
+  const dd = ara.gear.find(x => /Danger Digits/.test(x.name));
+  const dag = ara.gear.find(x => /Mark of the Huntsman/.test(x.name));
+  const plain = {uid: 800, name: "Plain Swing", tt: "Generic Action - Attack",
+                 ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0,
+                 power: 4, def: 2, tx: "", kw: []};
+  const g = Object.assign(
+    H.state({gear: [dd, dag], res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
+            {turn: 3, actor: 0, builds: [ara, {}]}),
+    {phase: "action", step: "reaction", priority: 0, passed: [], attacker: 0, stack: [],
+     pend: {card: plain, by: 0, total: 4, ga: false, ops: [], onHit: []}});
+  const a = SP.act(g, 0);
+  assert.ok(a, "an empty hand used to mean nothing to do here");
+  assert.deepEqual(a, {t: "activate", uid: dd.uid});
+  /* AND EVERY ACTION IT EMITS IS LEGAL — this file's own first contract. */
+  assert.equal(J.legal(g, a, 0), null, "a refusal is always a bug in the policy");
+});
+
+test("a CARD in hand is proposed before an ability, and that ordering is a stated choice", {skip}, () => {
+  /* A card from hand costs a CARD; an ability usually costs a PERMANENT
+     or nothing at all, and weighing those against each other is the
+     judgement v4.24 says this policy cannot make. So the cards are
+     exhausted first and the abilities follow, ordered by uid.
+
+     THE FIXTURE MUST HOLD BOTH AT ONCE, or the ordering is untestable —
+     the first sabotage pass on this branch came back SILENT because
+     every drill had an empty hand (v3.62: a sabotage that cannot express
+     the bug proves nothing). */
+  const H = require("./helpers/judged.js");
+  H.db();
+  const W = require("./helpers/extract.js").loadData();
+  const ara = B.buildSide(W.HEROES.find(x => x.k === "arakni"),
+                          G.parseDeck(W.DECKS.arakni), H.db(), {},
+                          RNG.make("rxorder"), {n: 0}).b;
+  const dd = ara.gear.find(x => /Danger Digits/.test(x.name));
+  const plain = {uid: 800, name: "Plain Swing", tt: "Generic Action - Attack",
+                 ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0,
+                 power: 4, def: 2, tx: "", kw: []};
+  /* AND IT MUST BE A REACTION THIS LINK CAN ACTUALLY TAKE. Four of her
+     six print a target restriction the plain swing fails, so picking the
+     first `isAR` card gives a fixture whose card is REFUSED — and the
+     ability is then proposed for the right reason by accident. */
+  const rx = ara.deck.find(c => PR.isAR(c) && /Two Sides to the Blade/.test(c.name));
+  assert.ok(rx, "her deck must hold a reaction with no target restriction");
+  const mk = hand => Object.assign(
+    H.state({gear: ara.gear, res: 9, ap: 1, hand}, {hp: 20, hand: []},
+            {turn: 3, actor: 0, builds: [ara, {}]}),
+    {phase: "action", step: "reaction", priority: 0, passed: [], attacker: 0, stack: [],
+     pend: {card: plain, by: 0, total: 8, ga: false, ops: [], onHit: []}});
+  const withCard = SP.act(mk([rx]), 0);
+  assert.equal((withCard || {}).t, "play", "the card in hand goes first");
+  assert.equal((withCard || {}).uid, rx.uid);
+  /* BOTH HALVES: empty the hand and the SAME state proposes the ability. */
+  assert.deepEqual(SP.act(mk([]), 0), {t: "activate", uid: dd.uid});
+});
+
+test("…and NOT an instant ability, because that is a timing judgement", {skip}, () => {
+  /* v4.24's standing rule: a price — or here a MOMENT — this policy
+     cannot weigh is not no price. An instant ability is legal in the
+     reaction window AND in the action phase, where `offence` already
+     proposes it last with a stated reason, so proposing it here as well
+     is the policy deciding WHEN. Measured before narrowing: unnarrowed,
+     the ladder moved up to 5x for heroes with no attack-reaction ability
+     at all (Fai 22 wins to 4, Iyslander 15 to 2). */
+  const H = require("./helpers/judged.js");
+  H.db();
+  const W = require("./helpers/extract.js").loadData();
+  /* BLAZE IS THE FIXTURE, and CHECK YOUR OWN FIXTURE (v3.50): the first
+     draft used Iyslander, whose hero prints a PASSIVE — `abWindowOf`
+     answered null and the drill would have passed for the wrong reason.
+     Measured across the fifteen: four heroes print an instant ability
+     (Fai, Blaze, Gravy Bones, Lyath) and exactly one prints an attack
+     reaction (Boltyn). */
+  const blz = B.buildSide(W.HEROES.find(x => x.k === "blaze"),
+                          G.parseDeck(W.DECKS.blaze), H.db(), {},
+                          RNG.make("rxinstant"), {n: 0}).b;
+  const iys = blz;
+  const g0 = Object.assign(H.state({}, {}, {turn: 3, actor: 0}), {builds: [blz, {}]});
+  assert.equal(J.abWindowOf(g0, 0, "hpow"), "instant",
+    "the fixture must actually print an instant, or this proves nothing");
+  assert.ok(blz.gear.some(x => x.powCard && J.abWindowOf(
+      Object.assign(H.state({gear: blz.gear}, {}, {turn: 3, actor: 0}), {builds: [blz, {}]}),
+      0, x.uid) === "instant"),
+    "…and so must its gear, or only the hero half is tested");
+  const plain = {uid: 800, name: "Plain Swing", tt: "Generic Action - Attack",
+                 ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0,
+                 power: 4, def: 2, tx: "", kw: []};
+  const g = Object.assign(
+    H.state({gear: iys.gear, res: 9, ap: 1, hand: []}, {hp: 20, hand: []},
+            {turn: 3, actor: 0, builds: [iys, {}]}),
+    {phase: "action", step: "reaction", priority: 0, passed: [], attacker: 0, stack: [],
+     pend: {card: plain, by: 0, total: 4, ga: false, ops: [], onHit: []}});
+  const got = SP.act(g, 0);
+  assert.notEqual((got || {}).t, "activate",
+    "with nothing printed for THIS window, the seat does not reach for an instant");
+
+  /* THE POSITIVE CONTROL, in the same state shape. Without it this drill
+     passes just as well against a branch that proposes nothing at all —
+     which is the state the file was in before v4.38 (v3.98: ask for both
+     answers). */
+  const bol = B.buildSide(W.HEROES.find(x => x.k === "boltyn"),
+                          G.parseDeck(W.DECKS.boltyn), H.db(), {},
+                          RNG.make("rxpos"), {n: 0}).b;
+  /* AND HIS PRINTED TARGET IS "an attack with {p} greater than its base",
+     so the link has to be PUMPED or `rxTargetWhy` refuses him before the
+     policy is ever consulted — a control that cannot be proposed proves
+     nothing (v3.50: check your own fixture). */
+  const soulCard = Object.assign({}, plain, {uid: 801, name: "Soul Card"});
+  const gb = Object.assign(
+    H.state({gear: bol.gear, res: 9, ap: 1, hand: [], soul: [soulCard]}, {hp: 20, hand: []},
+            {turn: 3, actor: 0, builds: [bol, {}]}),
+    {phase: "action", step: "reaction", priority: 0, passed: [], attacker: 0, stack: [],
+     pend: {card: plain, by: 0, total: 8, ga: false, ops: [], onHit: []}});
+  assert.equal(J.abWindowOf(gb, 0, "hpow"), "attack-reaction", "his is the one hero that prints one");
+  assert.deepEqual(SP.act(gb, 0), {t: "activate", from: "hero", uid: "hpow"},
+    "…and it IS proposed, so the narrowing is a narrowing rather than a deletion");
+});

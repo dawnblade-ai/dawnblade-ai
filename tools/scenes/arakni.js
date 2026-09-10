@@ -223,20 +223,60 @@ module.exports = [
 },
 
 {
-  name: "Danger Digits has no route at all, and that is the honest state",
-  why: "v3.63 — its payload names a SUBJECT (\"target dagger you control that " +
-       "isn't on the active chain link\") that the unanchored `dmg` matcher " +
-       "dropped along with the printed \"Destroy the dagger\". A drawback " +
-       "silently deleted, so it must refuse rather than half-read.",
+  name: "Danger Digits jabs with a SECOND dagger, and destroys only that one",
+  why: "v3.63 made it REFUSE and wrote down why — its payload names a " +
+       "SUBJECT (\"target dagger you control that isn't on the active chain " +
+       "link\") that the unanchored `dmg` matcher dropped along with the " +
+       "printed \"Destroy the dagger\". That refusal was the honest report " +
+       "and a DEBT (v3.38); v4.38 discharges it with a whole-card reader, " +
+       "and the clause-level refusal is kept so the fold stays the ONE " +
+       "reader of the line.",
   run(c){
-    const piece = c.card("Danger Digits", 0, 75);
+    const B = require("../../engine/build.js");
+    const G = require("../../engine/game.js");
+    const RNG = require("../../engine/rng.js");
+    const {loadData} = require("../../test/helpers/extract.js");
+    const W = loadData();
+    c.H.db(); c.P.fxReset();
+    const h = W.HEROES.find(x => x.k === "arakni");
+    const bd = B.buildSide(h, G.parseDeck(W.DECKS.arakni), c.H.db(), {},
+                           RNG.make("scene-jab"), {n: 0}).b;
+    const dd = bd.gear.find(g => /Danger Digits/.test(g.name));
+    const daggers = bd.gear.filter(g => /\bdagger\b/i.test(g.tt || ""));
+    const gear = [Object.assign({}, dd), ...daggers.map(d => Object.assign({}, d))];
+    const atk = {uid: 800, name: "Plain Swing", tt: "Generic Action - Attack",
+                 ty: ["Generic", "Action", "Attack"], pitch: 1, cost: 0,
+                 power: 4, def: 2, tx: "", kw: []};
+    const g = c.state({gear, res: 9, ap: 1, hand: [atk]}, {hp: 20, hand: []},
+                      {actor: 0, turnPlayer: 0, turn: 3, builds: [bd, {}]});
+    /* declare an attack, then react to it with the Arms piece */
+    let n = c.H.execute(g, atk, "hand", 0, {});
+    n = c.H.execute(n, gear[0].powCard, "hero", 0, {});
+    const sheet = n.prompt;
+    /* name the FIRST dagger */
+    let m = c.J.withEffects(n, (fx, st) =>
+      fx.applyAnswer(st, c.PM.promptToggleSel(sheet, 0)));
+    m = m.game || m;
+    const gz = u => (m.sides[0].gear.find(x => x.uid === u) || {});
     return {
-      "an ability is parsed": c.P.parseHeroPower(piece.tx || "", true) !== null,
-      "the damage clause reads": c.P.classifyClause(
-        "target dagger you control that isn't on the active chain link deals 1 damage to the defending hero") !== null
+      "the piece builds an ability":        !!gear[0].powCard,
+      "the sheet offers both daggers":      (sheet && sheet.cards || []).length,
+      "the Arms piece pays with itself":    !!gz(gear[0].uid).destroyed,
+      "the defending hero takes the jab":   20 - m.sides[1].hp,
+      "the chosen dagger is destroyed":     !!gz(gear[1].uid).destroyed,
+      "the other dagger is untouched":      !!gz(gear[2].uid).destroyed,
+      "and its own on-hit ability is offered": !!m.prompt && m.prompt.src
     };
   },
-  want: {"an ability is parsed": false, "the damage clause reads": false}
+  want: {
+    "the piece builds an ability":        true,
+    "the sheet offers both daggers":      2,
+    "the Arms piece pays with itself":    true,
+    "the defending hero takes the jab":   1,
+    "the chosen dagger is destroyed":     true,
+    "the other dagger is untouched":      false,
+    "and its own on-hit ability is offered": "Mark of the Huntsman"
+  }
 },
 
 {

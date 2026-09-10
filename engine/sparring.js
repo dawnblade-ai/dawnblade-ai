@@ -343,7 +343,52 @@ function reaction(g, seat){
     .filter(x => legal(g, {t: "play", uid: x.c.uid, from: x.from}, seat))
     .sort((a, b) => num(a.c, "cost") - num(b.c, "cost") || byUid(a.c, b.c));
   const pick = legalRx[0];
-  return pick ? {t: "play", uid: pick.c.uid, from: pick.from} : null;
+  if(pick) return {t: "play", uid: pick.c.uid, from: pick.from};
+
+  /* ---- AN ACTIVATED ABILITY IS A REACTION TOO (v4.38) ----------------
+
+     This looked at the HAND and the ARSENAL and nowhere else, so every
+     attack-reaction ABILITY in the pool had no caller — measured, NINE
+     records: four Equipment (Prey Spotters, Stalker's Steps, Bolt'n
+     Boots and v4.38's Danger Digits) and five heroes (Boltyn and four of
+     Arakni's Agents). v3.63 built the whole route and gave it a window;
+     nothing here ever asked for one.
+
+     FIFTH OUTING OF THE SAME SENTENCE — v3.50's allies, v3.80's
+     non-attacks, v3.84's aura attacks, v4.03's whole reaction step, and
+     now the abilities inside it. A feature with no caller looks exactly
+     like a feature that works, until you count.
+
+     ONLY THE ONES PRINTED FOR THIS WINDOW, and that narrowing is the
+     whole difference between building a route and changing the game. An
+     INSTANT ability is legal here AND in the action phase, where
+     `offence` already proposes it last with a stated reason — so
+     proposing it here as well is a TIMING judgement, which is exactly
+     what v4.24's standing rule says this policy cannot make. Measured:
+     unnarrowed, the ladder moved by up to 5x for heroes with no
+     attack-reaction ability at all (Fai 22 wins to 4, Iyslander 15 to 2)
+     — the policy playing worse, not the engine changing.
+
+     `judge.abWindowOf` IS HOW IT ASKS. This file reads no card text by
+     contract, so judge answers and there is still ONE reader (v3.84's
+     rule, built for `boardAttackOf` for the identical reason).
+
+     THEY GO AFTER THE CARDS, ORDERED BY UID, and that is a stated choice
+     rather than a ranking. A card from hand costs a CARD; an ability
+     usually costs a PERMANENT or nothing at all, and weighing those
+     against each other is the judgement v4.24 forbids. Uid keeps it a
+     total order, so two peers replaying one log propose the same thing.
+
+     `legal` DECIDES EVERYTHING ELSE, as always: whether the piece is
+     spent, whether its cost can be paid, and — since v4.38 — whether it
+     has a legal target at all. */
+  const rxAb = w => w === "attack-reaction" || w === "defense-reaction";
+  const ab = (sd.gear || []).slice().sort(byUid).map(x => x.uid)
+    .concat(["hpow"])
+    .filter(uid => rxAb(J.abWindowOf(g, seat, uid)))
+    .map(uid => uid === "hpow" ? {t: "activate", from: "hero", uid} : {t: "activate", uid})
+    .find(a => legal(g, a, seat));
+  return ab || null;
 }
 
 function offence(g, seat, o){

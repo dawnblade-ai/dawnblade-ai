@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.37
+**Current version:** v4.38
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2529 drills** at v4.37.
+This is `node --test "test/*.test.js"` — **2555 drills** at v4.38.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,99 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A TARGETED JAB FROM A SECOND WEAPON (v4.38)
+
+> *"**Attack Reaction** - Destroy this: Target dagger you control that
+> isn't on the active chain link deals 1 damage to the defending hero. If
+> damage is dealt this way, the dagger has hit. Destroy the dagger."*
+> — DANGER DIGITS, Arakni's Arms piece
+
+`tier: none`, `parseHeroPower` returned null, so `build.js` built **no
+powCard** and neither board could offer it — **v3.47's shape, fifth
+outing: reading the payload is what creates the route.**
+
+**v3.63 MADE THE HEAD REFUSE ON PURPOSE** and wrote down why: the `dmg`
+matcher is unanchored, so read loose this is a bare `[["dmg",1]]` from the
+EQUIPMENT with the chosen dagger, the fiction and a printed **DRAWBACK**
+all gone. **A recorded refusal is a DEBT** (v3.38) — four drills, a ledger
+record and a scene went red the day it was discharged, which is what they
+exist for. The **SAR007 printing was fetched and read first** and settled
+nothing new; this time reading it paid by AGREEING.
+
+**THREE SENTENCES ABOUT ONE OBJECT**, reaching across the clause split, so
+the reader is a WHOLE-CARD one (v3.71's Azalea shape) and *"the dagger"*
+is the card the FIRST sentence targeted, never the Arms piece the cost has
+already destroyed (v2.33).
+
+**THE WHOLE PRINTED SHAPE, OR NOTHING** (v2.29): the subject goes through
+`optFilter` so no vocabulary is invented and a bare *"card"* refuses
+(v3.53); **both readers agree**, because a sentence `parseHeroPower`
+accepts and the fold then refuses is an ability activated, paying its
+destroy, doing nothing (v2.04); the rider sentences must NAME the head's
+subject, or *"destroy the top card of your deck"* is claimed by the same
+verb; and both contraction spellings read (v3.36 — measured at 1 and 0).
+
+**`jabTargets` IS THE ONE READER** of what may be named — GEAR AND ARENA
+(v3.55, v3.33, because `optFilter` also answers for *ally*), a destroyed
+piece excluded (v3.54), and the *"isn't on the active chain link"*
+exclusion is the **CALLER's uid** because `fxParse` memoizes on
+`name|pitch` (v3.20's `notUid`).
+
+**THE PRINTED ORDER IS LOAD-BEARING**: damage, fiction, destroy. Reversed,
+`offerPayCost` skips a piece the drawback has already removed and Mark of
+the Huntsman's own trigger — the whole point of *"the dagger has hit"* —
+never fires. **CR 7.5.5 falls out of the measurement** rather than being
+restated: `dmg` routes through `preventDamage` (v4.35), so the printed
+*"IF damage is dealt this way"* is answered by the life total.
+
+**AND THE FICTION IS ONE BODY** (`heroHitBy`). Tarantula's drain (v3.77)
+and v4.37's destroy-cost offer both lived inline in `linkPayload`, where
+the only thing that can hit is the resolving card; the jabbed dagger is
+not `pend.card`, so the uid is taken explicitly (v3.48's inversion).
+
+Measured: **exactly 1 record moves, `none` → `full`** (388 → 389 full,
+4 → 3 none); the jab fires **31 times in 210 games**.
+
+### THE REACTION WINDOW HAD NO ABILITY CALLER (v4.38)
+
+`sparring.reaction` looked at the HAND and the ARSENAL and nowhere else,
+so **every attack-reaction ABILITY in the pool had no caller** — measured,
+**nine records**: four Equipment (Prey Spotters, Stalker's Steps, Bolt'n
+Boots, Danger Digits) and five heroes (Boltyn and four of Arakni's
+Agents). v3.63 built the whole route and gave it a window; nothing here
+ever asked for one.
+
+**FIFTH OUTING OF THE SAME SENTENCE** — v3.50's allies, v3.80's
+non-attacks, v3.84's aura attacks, v4.03's whole reaction step, and now
+the abilities inside it. *A feature with no caller looks exactly like a
+feature that works, until you count.*
+
+**THE NARROWING IS THE WHOLE DIFFERENCE BETWEEN BUILDING A ROUTE AND
+CHANGING THE GAME.** An INSTANT ability is legal here AND in the action
+phase, where `offence` already proposes it last with a stated reason — so
+proposing it here as well is a TIMING judgement, which is exactly what
+v4.24's standing rule says this policy cannot make. **Measured before
+choosing**: unnarrowed, Fai went 22 wins → **4**, Iyslander 15 → **2**,
+Blaze 16 → **3**, all three heroes with no attack reaction at all. That is
+the policy playing worse, not the engine changing.
+
+**`judge.abWindowOf` IS HOW IT ASKS.** `sparring.js` reads no card text by
+contract, so judge answers and there is still ONE reader — v3.84's rule,
+built for `boardAttackOf` for the identical reason. Narrowed, only the
+heroes that OWN one move: **Arakni 20 → 26, Boltyn 4 → 5**, everyone else
+±1.
+
+### TWO FEED LINES THAT NAMED THE WRONG THING (v4.38)
+
+- **`"plays at instant speed"`** was printed for anything with no
+  action-point cost (CR 8.1.1 charges the point to an ACTION), so all
+  three of v3.63's attack-reaction abilities announced the wrong window.
+  It names it off `_attackRx` now, the flag both boards already gate on.
+- **`"is destroyed — Danger Digits — ability says so"`** — `build.js`
+  names an equipment ability *"\<piece\> — ability"*, so the raw name
+  gave two dashes and a word the player never saw. The jab strips the
+  suffix, as the trainer already does in a refusal.
 
 ### "YOU MAY CHOOSE TO DESTROY THIS AND …" (v4.37)
 

@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 17 cards | understood ≠ built |
-| **Fail states** | 48 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 16 cards | understood ≠ built |
+| **Fail states** | 47 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -42,7 +42,6 @@ At the beginning of your end phase, destroy this.
 
 Cards whose ruling exists but which still do not resolve in full.
 
-- **Danger Digits** (none, 3/3 unread)
 - **Glisten** (none, 2/2 unread)
 - **Banneret of Salvation** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
@@ -74,23 +73,16 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| Choice never offered | 7 |
 | No schedule to fire on | 7 |
-| Displayed total is wrong | 6 |
-| Ability inert — cost not modelled | 6 |
+| Choice never offered | 6 |
 | Earned value denied | 5 |
+| Displayed total is wrong | 5 |
+| Ability inert — cost not modelled | 5 |
 | Unread, effect unknown | 4 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 16 entries
+### WRONG — 15 entries
 
-- **Danger Digits** · tier `none` · arakni
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
-  - *Ability inert — cost not modelled* — The cost cannot be charged, so the whole ability is deliberately inert (the v2.04 fix). Safe, but the player simply cannot use it — and the `pay` prompt variant now exists to build it.
-    > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.

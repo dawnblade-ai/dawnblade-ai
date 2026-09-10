@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-10T15:47:10.645Z",
- "appVer": "4.36",
+ "generated": "2026-09-10T16:24:24.513Z",
+ "appVer": "4.38",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 388,
+  "full": 389,
   "part": 13,
-  "none": 4
+  "none": 3
  },
  "heroes": {
   "kayo": {
@@ -9244,30 +9244,26 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "If damage is dealt this way, the dagger has hit",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Destroy the dagger.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
-    "If damage is dealt this way, the dagger has hit",
-    "Destroy the dagger."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero",
    "tx": "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero. If damage is dealt this way, the dagger has hit. Destroy the dagger.",
    "flags": []
   },

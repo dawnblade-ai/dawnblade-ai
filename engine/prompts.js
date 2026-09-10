@@ -244,6 +244,12 @@ function buildPrompt(game, spec){
          that was chosen rather than to the source. `applyAnswer` reads it
          off `out.picked`. */
       freezeSide: spec.freezeSide != null ? spec.freezeSide : null,
+      /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34,
+         v3.53, v4.01) — SIXTH field to prove it. `jab` is Danger Digits'
+         whole payload, applied by `applyAnswer` to the permanent that was
+         CHOSEN: this module runs no effects, so returning it as `ops`
+         would hand it to runOps, which would aim it at the source. */
+      jab: spec.jab || null,
       /* A CROSS-SEAT MOVE, and it is DATA for the same reason `arsStamp`
          is: this module moves cards within ONE side, so a pick whose
          candidates came from the other seat reports the choice and the

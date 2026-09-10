@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.37 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.38 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -203,6 +203,70 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.38 — READING THE PAYLOAD IS WHAT CREATES THE ROUTE, AND THE ROUTE STILL NEEDED A CALLER
+
+> *"**Attack Reaction** - Destroy this: Target dagger you control that
+> isn't on the active chain link deals 1 damage to the defending hero. If
+> damage is dealt this way, the dagger has hit. Destroy the dagger."*
+> — DANGER DIGITS, Arakni's Arms piece
+
+**THE LAST `none` CARD THAT WAS ACTUALLY BUILDABLE.** `parseHeroPower`
+returned null, so `build.js` built no powCard and neither board could
+offer it. Three are left and none of them is one clause away:
+
+| card | what it waits on |
+|---|---|
+| Glisten | a DISTRIBUTION sheet — "up to four +1{p} counters among any number of weapons" |
+| Hope Merchant's Hood | a ZONE MOVE — shuffle any number of cards from hand into the deck, then draw that many |
+| Banneret of Salvation | the **delayed on-hit grant** — see the standing thread below |
+
+**FOUR DRILLS, A LEDGER RECORD AND A SCENE WENT RED THE DAY IT WAS
+BUILT**, every one of them asserting the v3.63 refusal. That is precisely
+what a recorded refusal is for (v3.38) and what an `open` record's probe
+direction is for (v4.02) — closing the gap FORCES the record to be
+corrected rather than leaving a stale sentence behind.
+
+**AND THE ROUTE STILL HAD NO CALLER.** `sparring.reaction` looked at the
+HAND and the ARSENAL and nowhere else, so every attack-reaction ABILITY in
+the pool was driven **never** — nine records, four Equipment and five
+heroes, with v3.63's whole route built and drilled. Fifth outing of
+v3.50's sentence. **The narrowing is the interesting half**: proposing
+INSTANT abilities there too moved the ladder by up to 5x for heroes that
+own no attack reaction at all, which is the policy playing worse rather
+than the engine changing (v4.24's standing rule about a price — here a
+MOMENT — this policy cannot weigh).
+
+### THE STANDING THREAD, MEASURED AND STILL OPEN
+
+**THE DELAYED ON-HIT GRANT.** Burn Up // Shock (Briar ×2) prints *"the
+next time an attack you control **HITS** a hero this turn, deal 4
+arcane"*, and it is expressed as `["buffNext", 0, null, {onHit: […]}]` —
+so it is **SPENT BY AN ATTACK THAT MISSES**. Driven: a fully blocked swing
+prints *"Fully blocked — on-hit effects fizzle"* with `grantLeft: 0`.
+Weaker than printed, `tier: full`, and invisible to every tool here.
+
+The fix is a distinct `hitNext` side field: a parser op, a `runOps` case,
+consumed in `linkPayload` **on a hit**, expired in `beginEndPhase` step
+(8), plus `SIDE_FIELDS` / `makeSide` / `wire.js` / `report.js`'s `seat()`
+and a `WIRE_V` bump with its shape digest (v4.26). **It also unblocks
+Banneret of Salvation**, whose Solflare rider is the same shape.
+
+### KEYWORD LEADS BANKED FROM `csvs/english/keyword.csv`, UNSTARTED
+
+- **Temper** — the file describes it as presenting a CHOICE at 1{d}.
+- **Surge** — confirmed to be about damage DEALT versus the printed
+  amount; the ledger says `partial` and the engine approximates it as
+  `amp > 0` (`surge-approximated` in `tools/approx.js`).
+
+Spellvoid was checked and is already correctly `partial`: the plain form
+is live and the X printing is refused, recorded as `spellvoid-x`.
+
+### TWO RULINGS STILL WANTED FROM THE USER
+
+`cloaked-face-down-values` (does a face-down piece keep its printed
+defence and its Ward?) and `cloaked-display` — the latter explicitly
+deferred with the phone/UI pass.
 
 ## ⚠ v4.37 — A "YOU MAY" THAT WAS TAKEN WITHOUT BEING OFFERED, AND A PRICE THAT WAS NOT PAID
 

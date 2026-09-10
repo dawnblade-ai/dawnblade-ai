@@ -307,16 +307,17 @@ const APPROX = {
       "the coach shows, so the pick is at least explicable."},
 
 "unbuilt-three": {
-  status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.21",
-  claim:"FOUR pool DECK cards read tier `none`: Glisten (distribute up to four +1{p} "+
-        "counters among any number of weapons), Danger Digits (a 'has hit' fiction "+
-        "for a dagger that never attacked), Hope Merchant's Hood (shuffle any "+
+  status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.38",
+  claim:"THREE pool DECK cards read tier `none`: Glisten (distribute up to four +1{p} "+
+        "counters among any number of weapons), Hope Merchant's Hood (shuffle any "+
         "number of cards from hand into the deck, then draw that many), and "+
         "BANNERET OF SALVATION since v4.21 — 'Solflare - When this is charged to "+
-        "your hero's soul, the next time you hit this turn, gain 1{h}.'",
-  why:"NONE of the first three is waiting on its payload — every effect reads. What "+
-      "refuses is a PROMPT shape (a distribution sheet), a FICTION (a hit by a "+
-      "card that did not attack), and a ZONE MOVE (deck manipulation). "+
+        "your hero's soul, the next time you hit this turn, gain 1{h}.' "+
+        "DANGER DIGITS LEFT AT v4.38 — the FICTION was built (a hit by a card "+
+        "that never attacked), and with it the pool's only targeted jab.",
+  why:"NEITHER of the first two is waiting on its payload — every effect reads. What "+
+      "refuses is a PROMPT shape (a distribution sheet) and a ZONE MOVE (deck "+
+      "manipulation). "+
       "BANNERET ARRIVED HERE AS A CORRECTION, NOT A REGRESSION (v4.21): its "+
       "'Solflare -' keyword prefix was being eaten by the loose matchers, so the "+
       "card read `tier: full` while granting 1{h} UNCONDITIONALLY ON PLAY — the "+

@@ -149,6 +149,11 @@ function play(g, limit){
            `prompts.payVerb`'s own and are pinned against it (v3.81). */
         if(/ destroyed .+ — the rider resolves\.| rather than destroy it\./.test(line))
           events.push(["destroycost", line]);
+        /* v4.38 — Danger Digits' targeted jab. The phrase is
+           `effects.jabResolve`'s own and is pinned against it (v3.81:
+           a counter that spells the wrong word reports zero exactly as a
+           missing feature does). */
+        if(/ lashes out at /.test(line)) events.push(["jab", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

@@ -682,8 +682,11 @@ probe("unbuilt-three", () => {
      PLAY — the charge trigger and the "next time you hit this turn"
      delay both dropped. Refusing the clause is weaker than printed and
      VISIBLE; the tier going down is the number improving (v3.16). */
-  const want = ["Glisten", "Danger Digits", "Hope Merchant's Hood",
-                "Banneret of Salvation"];
+  /* -Danger Digits AT v4.38, and that is what an `open` record is FOR
+     (v4.02): its probe asserts the DEVIATION, so building the card turns
+     this drill red and forces the record to be corrected rather than
+     leaving a stale sentence behind. */
+  const want = ["Glisten", "Hope Merchant's Hood", "Banneret of Salvation"];
   /* A HERO IS NOT A DECK CARD AND NEITHER IS A TOKEN, and the pool holds
      all three (v3.21 keeps tokens by TYPE, v3.76 put Arakni's six Agents in
      the same way). The audit's headline "3 none" is over DECK cards; a flat

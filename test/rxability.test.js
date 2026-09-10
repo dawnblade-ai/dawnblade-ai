@@ -75,16 +75,48 @@ test("…and the anchor did not cost an ordinary Action or Instant ability", () 
   assert.equal(P.parseHeroPower("Once per Turn Action - {r}: Draw a card", true).kind, "action");
 });
 
-test("a SUBJECT before the damage verb refuses — Danger Digits keeps its drawback", () => {
+test("a SUBJECT before the damage verb still refuses at CLAUSE level (v3.63)", () => {
   /* "Target dagger you control THAT ISN'T ON THE ACTIVE CHAIN LINK deals 1
      damage to the defending hero. … Destroy the dagger."  The unanchored
      `dmg` matcher read that as a bare [["dmg",1]] from the EQUIPMENT: the
-     chosen dagger, the "has hit" fiction and a printed DRAWBACK all gone. */
+     chosen dagger, the "has hit" fiction and a printed DRAWBACK all gone.
+
+     THE CLAUSE-LEVEL REFUSAL IS THE HALF THAT SURVIVES v4.38. The card is
+     built now, by a WHOLE-CARD reader that sees all three sentences — so
+     `classifyClause` must still refuse, or the loose `dmg` matcher becomes
+     a second claimant for the same line and the fold is not the only
+     reader (v3.56: ask the function that holds the reader). */
   assert.equal(cc("target dagger you control that isn't on the active chain link deals 1 damage to the defending hero"),
     null, "a damage clause whose subject is not the resolving card must refuse");
+});
+
+test("…and `parseHeroPower` accepts it as a NAMED shape, subject and all (v4.38)", () => {
+  /* THE REFUSAL ABOVE USED TO SAY "so no powCard is built for it, and it
+     cannot be activated at all" — a recorded refusal, and a DEBT (v3.38).
+     v4.38 discharges it, and this is the positive control it becomes.
+
+     A NAMED SHAPE, NEVER A RELAXATION: the subject must be one `optFilter`
+     can pin, or the piece would build an ability whose whole-card fold
+     then refuses — activated, paying its destroy, doing nothing (v2.04's
+     free-ability shape). */
+  const L = sub => "Attack Reaction - Destroy this: Target " + sub
+    + " you control that isn't on the active chain link deals 1 damage to the defending hero.";
+  for(const sub of ["dagger", "sword"]){
+    const pw = P.parseHeroPower(L(sub), true);
+    assert.notEqual(pw, null, sub + ": the printed shape must build a powCard");
+    assert.equal(pw.kind, "attackRx", sub + ": and in the printed window");
+    assert.equal(pw.sd, true, sub + ": the cost destroys the source");
+    assert.equal(pw.cost, 0, sub + ": the price is the piece, not resources");
+  }
+  /* BOTH HALVES (v3.98) — ask for the REFUSAL, or the gate is vacuous. */
+  for(const sub of ["thingamajig", "card"])
+    assert.equal(P.parseHeroPower(L(sub), true), null,
+      sub + ': a subject `optFilter` cannot pin must refuse (v3.53)');
+  /* AND THE SENTENCE MUST BE WHOLE. Dropping the printed exclusion is a
+     different card — it could then name the weapon that is swinging. */
   assert.equal(P.parseHeroPower(
-    "Attack Reaction - Destroy this: Target dagger you control that isn't on the active chain link deals 1 damage to the defending hero.", true),
-    null, "…so no powCard is built for it, and it cannot be activated at all");
+    "Attack Reaction - Destroy this: Target dagger you control deals 1 damage to the defending hero.", true),
+    null, "the printed restriction is part of the shape");
 });
 
 test("…and the two printed subjects that ARE the resolving card still read", () => {
@@ -141,11 +173,24 @@ test("the three readable pieces get an `_attackRx` powCard carrying the WHOLE li
   }
 });
 
-test("Danger Digits gets NO powCard, and that is the honest state", {skip}, () => {
+test("Danger Digits gets a powCard NOW, with the window and the cost (v4.38)", {skip}, () => {
+  /* THE REFUSAL THIS DRILL RECORDED HAS COME DUE. It read "its payload
+     drops a printed drawback, so nothing may offer it" — true from v3.63
+     until the drawback was carried, and a recorded refusal is a DEBT. */
   const gr = gearOf("arakni", "Danger Digits");
   assert.ok(gr, "the piece must still be in the gear list");
-  assert.equal(gr.powCard, undefined,
-    "its payload drops a printed drawback, so nothing may offer it");
+  assert.ok(gr.powCard, "reading the PAYLOAD is what creates the route (v3.47)");
+  assert.equal(gr.powCard._attackRx, true, "the printed window");
+  assert.equal(gr.powCard.sd, true, "and the cost destroys the Arms piece");
+  assert.ok(!/attack reaction/i.test(gr.powCard.tx),
+    "the cost prefix is stripped, or `execute` re-reads it and refuses");
+  /* THE WHOLE PRINTED LINE RIDES ON IT (v2.34), because two of the three
+     sentences are read by a fold that needs to see all of them. */
+  assert.match(gr.powCard.tx, /has hit/, "the fiction must survive onto the powCard");
+  assert.match(gr.powCard.tx, /destroy the dagger/i, "…and so must the drawback");
+  assert.deepEqual(P.fxParse(gr.powCard).daggerJab,
+    {sub: "dagger", amt: 1, filter: {tt: "dagger"}},
+    "and `execute` re-reads the powCard, so the fold must answer for it too");
 });
 
 test("an attack-reaction ability costs NO action point", () => {
@@ -359,23 +404,30 @@ test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}
     P.fxReset();
     return (P.fxParse(mk(r)).clauses || []).find(c => /^(?:once per turn )?attack reaction\s*[-—]/i.test(c.t));
   };
-  for(const nm of ["Danger Digits", "Bait"]){
+  /* DANGER DIGITS LEFT THIS LIST AT v4.38, exactly as Boltyn left it at
+     v3.74 — its payload has a reader now, so the credit is earned. Bait
+     is what is left: on a reaction route "this" is the SOURCE and not the
+     attack, so reading its pump onto the link would be deciding what
+     "this" refers to (v2.33, v3.47) — and nothing in the pool can create
+     it either way. */
+  for(const nm of ["Bait"]){
     const r = pool.find(x => x.name === nm);
     assert.ok(r, nm + " must be in the pinned pool");
     const cl = rxClause(r);
     assert.ok(cl, nm + ": its attack-reaction line must still be a clause");
     assert.equal(cl.st, "skip",
       nm + ": no reader answers for this line, so crediting it is the no-op blind spot"
-      + (nm === "Bait" ? " (and nothing in the pool can even create Bait)" : ""));
+      + " (and nothing in the pool can even create Bait)");
   }
-  /* THE POSITIVE CONTROL. A drill that only ever asserts `skip` passes
-     against a credit that was deleted outright. */
-  {
-    const r = pool.find(x => x.name === "Boltyn");
+  /* THE POSITIVE CONTROLS. A drill that only ever asserts `skip` passes
+     against a credit that was deleted outright — and there are two now,
+     each discharging a refusal this file used to carry. */
+  for(const [nm, why] of [["Boltyn", "his soul-banish cost has a reader as of v3.74"],
+                          ["Danger Digits", "its whole-card fold reads all three sentences as of v4.38"]]){
+    const r = pool.find(x => x.name === nm);
     const cl = rxClause(r);
-    assert.ok(cl, "Boltyn's attack-reaction line must still be a clause");
-    assert.equal(cl.st, "run",
-      "his soul-banish cost has a reader as of v3.74, so the credit is earned");
+    assert.ok(cl, nm + ": its attack-reaction line must still be a clause");
+    assert.equal(cl.st, "run", why + ", so the credit is earned");
   }
   P.fxReset();
 });

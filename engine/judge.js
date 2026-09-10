@@ -177,8 +177,20 @@ function abCostWhy(sd, ab){
   }
   return null;
 }
-function rxTargetWhy(g, ab, want){
+function rxTargetWhy(g, sd, ab, want){
   if(want !== "attack-reaction") return null;
+  /* A TARGETED JAB NAMES A PERMANENT IN YOUR OWN GEAR (v4.38), not the
+     attack on the chain — so it is a different target question from the
+     qualifier below, asked of a different object. It is still a LEGALITY:
+     refusing AFTER the ability resolves costs the player the Arms piece
+     for a play the rules never allowed (v3.11, v3.63).
+
+     `jabTargets` IS THE ONE READER, so the offer, this refusal and the
+     resolution cannot disagree about what is a legal target. */
+  { const jb = PR.fxParse(ab).daggerJab;
+    if(jb && !E.jabTargets(sd, jb.filter, (g.pend && g.pend.card || {}).uid).length)
+      return ab.name + " targets a " + jb.sub + " off the active chain link, and "
+           + sd.name + " controls none"; }
   const q = PR.fxParse(ab).selfQ || PR.fxParse(ab).gaQ;
   if(!q) return null;
   const tgt = g.pend && g.pend.card;
@@ -927,7 +939,7 @@ function legal(g, a, seat){
       /* CR 8.1.1 / 8.1.6 — an ACTIVATED ability costs an action point; an
          instant does not. Blaze's is an Instant, so it costs none. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
-      { const why = rxTargetWhy(g, ab, want); if(why) return why; }
+      { const why = rxTargetWhy(g, sd, ab, want); if(why) return why; }
       /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
          This read the PRINTED cost while `execute` charges `effCost`, and
          the two are different numbers the moment anything modifies one:
@@ -1078,7 +1090,7 @@ function legal(g, a, seat){
          one", which is `costsAP`'s own note and the reason Den of the
          Spider costs a point as an Action and none as a Defense Reaction. */
       if(want === "action" && !(sd.ap > 0)) return "no action point left";
-      { const why = rxTargetWhy(g, ab, want); if(why) return why; }
+      { const why = rxTargetWhy(g, sd, ab, want); if(why) return why; }
       /* THE AFFORDABILITY CHECK MUST ASK WHAT `execute` CHARGES (v3.80).
          This read the PRINTED cost while `execute` charges `effCost`, and
          the two are different numbers the moment anything modifies one:
@@ -1281,6 +1293,26 @@ const boardAttackOf = (g, seat, uid) => {
   const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
                                             discount: bOf(g, seat).auraDiscount});
   return aura ? {cost: aura.cost || 0, power: aura.power || 0, kind: "aura"} : null;
+};
+/* ---- WHICH WINDOW AN ACTIVATED ABILITY IS PRINTED IN (v4.38) --------
+
+   `parser.abWindow` is the one reader (v3.63) and `sparring.js` may not
+   call it: that file reads NO card text by contract, so a policy bug and
+   a card being read wrong can never be confusable. **ASKING JUDGE IS IN
+   CONTRACT** — v3.84's rule, built for `boardAttackOf` for exactly this
+   reason: judge asks the parser, so there is still ONE reader.
+
+   IT ANSWERS FOR BOTH ROUTES an ability can take — a gear piece's
+   powCard and the hero's own — and `null` where there is no ability at
+   all, which is the answer a caller can act on without knowing which. */
+const abWindowOf = (g, seat, uid) => {
+  const sd = at(g, seat);
+  if(uid === "hpow" || uid === "hero"){
+    const hp = bOf(g, seat).HPOW;
+    return hp ? abWindow(hp) : null;
+  }
+  const gr = (sd.gear || []).find(x => x && x.uid === uid);
+  return gr && gr.powCard ? abWindow(gr.powCard) : null;
 };
 const targetOf = (g, seat, spec) => {
   const def = P.other(seat);
@@ -2783,7 +2815,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, boardAttackOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, boardAttackOf, abWindowOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer, PENDING_KINDS};
