@@ -1,3 +1,92 @@
+## v4.39 — THE JUDGES' WARN BAND HAD NO READER
+
+Sixteen entrants, one trophy, and four judges — one of whom had never been
+hired before.
+
+### `tools/tournament.js` / `npm run cup` — a bracket on the table
+
+`tools/tourney.js` runs a LADDER: every pairing, counted, ranked. That
+answers *which hero wins most* and deliberately answers nothing about a
+single meeting. This runs a BRACKET — fifteen ties, each one decisive.
+Same instrument underneath: `judge.reduce`, `sparring.act` in both seats,
+`invariants.check` on every intermediate state.
+
+- **THE FIELD IS SIXTEEN AND THE SIXTEENTH IS THE DUMMY.** This project
+  decks fifteen heroes; a bracket of sixteen needs sixteen, and there is
+  exactly one other thing a seat may legally hold (ruling, 2026-08-16).
+  **At twenty life, not the trainer's forty-two** — `buildVanilla`'s own
+  header calls 42 "a training prop's number, not a rule". A tournament
+  ruling, printed in the report rather than defaulted quietly.
+- **SEEDING IS EARNED.** Every entrant plays every other twice, once in
+  each chair: 240 games, 30 apiece, no seat bias carried into the knockout.
+- **THE FORMAT ESCALATES, FOR A MEASURED REASON.** Bo3, Bo5, Bo5, Bo7.
+  Arakni beats Blaze **74-6 over 80 games** (92%) — and 92% still loses a
+  best-of-three about once in 180. The first running produced exactly that:
+  Blaze put the top qualifier out 2-0 in the quarters. At Bo5 the same tie
+  is 3-2 the other way. **A short tie is a test of variance, not of decks.**
+- **THERE IS NO COIN.** The chairs alternate and the spare chair in an odd
+  format is the higher seed's — what the qualifier bought. Measured, the
+  chair is worth about 2:1 in a close matchup (Dorinthea beats Arakni 24
+  times with it, 12 without, over 80 games), so handing a decider that big
+  to a random draw puts back the variance the long formats remove. **The
+  whole event is a pure function of the card database and its own name.**
+- **THE BRACKET IS REPORTED AGAINST THE LADDER.** The qualifier is thirty
+  games an entrant and a tie is a handful, so any tie won by the entrant
+  who LOST their qualifier meeting is named. A trophy read as a ranking is
+  the failure mode; naming the disagreement is what stops it.
+
+**CHAMPION: Arakni, Web of Deceit.** Runner-up Dorinthea, third Kayo, and
+a clean sheet from all four judges over 286 games.
+
+### THE WARN BAND HAD NO READER, AND ITS ONE GUARD READ THE WRONG FIELD
+
+`invariants.js` produces **two** severities and this project has only ever
+read one. `errors()` filters warnings out, and **every caller in the repo**
+— every drill, every scene, `tools/selfplay.js`, and the trainer's own
+`setG` funnel — calls `errors()`. So `HP-ABOVE-START`,
+`CHAIN-CLOSED-WITH-LINKS` and `DEAD-BUT-RUNNING` have been produced and
+consulted by **nobody, ever**: v3.55's *a counter with no reader is a no-op
+wearing a number*, at the scale of a whole severity band. Found by hiring
+the fourth judge to read it.
+
+**`CHAIN-CLOSED-WITH-LINKS` CITED CR 7.7 AND ASKED THE WRONG "CHAIN".**
+`g.chain` is the chain-link **DISPLAY** strip — `effects.js` pushes an
+entry for any damage, arcane included — while `g.chainCards` is the **ZONE**
+that rule is about, and CLAUDE.md's own *"THE COMBAT CHAIN IS A ZONE"* note
+put it in the census for exactly this reason. **Measured both readings over
+77,225 states** (the full 210-game ladder): the display strip trips it
+**336 times and every single link is `kind:"arc"`** — not one is an attack
+— while the zone trips it **zero**. Every firing this guard has produced
+was an arcane non-attack drawing a chip on a UI strip; the rule it cites
+was never once in question. Repointed, and **both halves drilled**: a card
+held on the chain past a close fires it, an arcane display link does not.
+
+**`HP-ABOVE-START` IS RETIRED, AND ITS OWN MESSAGE IS WHY.** It read
+*"legal in FaB (there is no life cap), flagged only because most gains in
+this pool are capped"* — a guard whose text admits the state it flags is
+LEGAL, resting on a premise about the pool nobody had re-measured. Measured:
+**3,062 firings in 274 games**, about eleven a game. A guard that fires on
+a legal state is one people learn to edit past (v4.26). The premise is a
+**drill** instead: a hero above starting life is legal and the judges say
+nothing (v4.33's move). `sd.maxHp` stays — `report.js` prints it, so the
+field still has a reader.
+
+**NO WARNING IS WHITELISTED AS "KNOWN NOISE."** A triage census of
+known-noisy kinds would be the blacklist shape this project rejects — the
+next kind added walks into the fallthrough (v3.35, v3.80). The fix is to
+stop producing warnings that are lies, so every warning counts toward the
+trophy's asterisk and **the band now reads 0 over a whole tournament.**
+
+`selfplay.play` returns `warns` beside `viols`, never folded into it: a
+warning and *a rule is broken NOW* must not be the same number (v3.81, one
+severity over), and folding them would move the violation count in every
+existing report.
+
+**Measured: 2571 drills, the ladder byte-identical, 0 tiers moved, 26
+sabotages and 23 bite** (the three silent ones are a comment-only edit, a
+pair-order swap the event is invariant to because `tie` re-derives hi/lo
+from the seeds, and one that could not express its bug — v3.62).
+
 ## v4.38 — a targeted jab from a second weapon, and the reaction window had no ability caller
 
 > *"**Attack Reaction** - Destroy this: Target dagger you control that

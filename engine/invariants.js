@@ -175,9 +175,22 @@ function check(game){
     /* CR 4.4.3e — resource and action points are lost, never owed. */
     if(sd.res < 0) err("NEGATIVE-RES", "sides[" + si + "].res is " + sd.res + " — a player cannot owe resources", "res");
     if(sd.ap  < 0) err("NEGATIVE-AP",  "sides[" + si + "].ap is " + sd.ap + " — a player cannot owe action points", "ap");
-    if(sd.hp > sd.maxHp)
-      warn("HP-ABOVE-START", "sides[" + si + "] is at " + sd.hp + " of a starting " + sd.maxHp +
-           " — legal in FaB (there is no life cap), flagged only because most gains in this pool are capped", "hp");
+    /* `HP-ABOVE-START` WAS RETIRED AT v4.39, AND ITS OWN MESSAGE IS WHY.
+       It read "legal in FaB (there is no life cap), flagged only because
+       most gains in this pool are capped" — a guard whose text admits the
+       state it flags is LEGAL, resting on a premise about the pool that
+       nobody had re-measured. Measured: **3,062 firings in 274 games**,
+       about eleven a game, every one of them a hero who had gained life.
+       A guard that fires on a legal state is one people learn to edit
+       past (v4.26), and this one was worse than that — the whole WARN
+       band has no reader (see `errors()` below), so it was noise nobody
+       could even hear. The premise is a DRILL now, in
+       `test/invariants.test.js`: a hero above starting life is legal and
+       produces nothing. v4.33's move — keep the claim, delete the thing
+       that only looked like one.
+
+       `sd.maxHp` is NOT retired with it: `report.js` prints it, so the
+       field still has a reader (v3.82's `sd.rune`, the other way round). */
   });
 
   /* ---- the clock and the machine ------------------------------------ */
@@ -223,10 +236,37 @@ function check(game){
         else seen.set(uid, li + 1);
       });
     });
-    if(!game.chainOpen && game.chain.length)
+    /* CR 7.7 — WHICH "CHAIN"? `g.chain` and `g.chainCards` are two
+       different things wearing one word, and this guard read the wrong
+       one for as long as it existed.
+
+         `g.chain`       the chain-link DISPLAY strip. `effects.js` pushes
+                         an entry for anything that dealt damage, arcane
+                         included (`kind:"arc"`, line ~4216), so a non-
+                         attack arcane card legitimately adds one with no
+                         combat chain open at all.
+         `g.chainCards`  the ZONE. A declared attack has left its hand and
+                         not reached a graveyard; CLAUDE.md's own "THE
+                         COMBAT CHAIN IS A ZONE" note put it in the census
+                         for exactly that reason, and CR 7.7 is about it.
+
+       MEASURED BOTH READINGS OVER 77,225 STATES (the full 210-game
+       ladder): the display strip trips this **336 times and every single
+       link is `kind:"arc"`** — not one is an attack — while the ZONE
+       trips it **zero**. So every firing this guard has ever produced was
+       an arcane non-attack drawing a chip on a UI strip, and the rule it
+       cites was never once in question.
+
+       A clean result is worth having PROVED rather than assumed (v3.97,
+       v4.00), and both halves are drilled: a card held on the chain past
+       a close fires it, an arcane display link does not. Found by hiring
+       a judge to read the WARN band in `tools/tournament.js` — nothing
+       in this project had ever read it. */
+    if(!game.chainOpen && (game.chainCards || []).length)
       warn("CHAIN-CLOSED-WITH-LINKS",
-           "the chain is closed but still holds " + game.chain.length + " link(s) — links should clear when it closes (CR 7.7)",
-           "chain");
+           "the chain is closed but " + game.chainCards.length + " card(s) are still on it — "
+           + "the chain zone should empty when the chain closes (CR 7.7)",
+           "chainCards");
   }
 
   /* ---- prompts ------------------------------------------------------ */

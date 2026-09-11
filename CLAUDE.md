@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.38
+**Current version:** v4.39
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2555 drills** at v4.38.
+This is `node --test "test/*.test.js"` — **2571 drills** at v4.39.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,118 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE JUDGES' WARN BAND HAD NO READER (v4.39)
+
+`invariants.js` produces **two** severities and this project has only ever
+read one. `errors()` filters the warnings out, and **every caller in the
+repo** — every drill, every scene, `tools/selfplay.js`, and the trainer's
+own `setG` funnel — calls `errors()`. So `HP-ABOVE-START`,
+`CHAIN-CLOSED-WITH-LINKS` and `DEAD-BUT-RUNNING` have been produced and
+consulted by **nobody, ever**: v3.55's *a counter with no reader is a no-op
+wearing a number*, at the scale of a whole severity band. **Found by
+hiring a fourth judge to read it** (`npm run cup`, below) — the guard rails
+had a whole channel nobody was listening on.
+
+**`CHAIN-CLOSED-WITH-LINKS` CITED CR 7.7 AND ASKED THE WRONG "CHAIN".**
+
+| | is |
+|---|---|
+| `g.chain` | the chain-link **DISPLAY** strip. `effects.js` pushes an entry for anything that dealt damage, **arcane included** (`kind:"arc"`), so a non-attack legitimately adds one with no combat chain open at all |
+| `g.chainCards` | the **ZONE**. CLAUDE.md's own *"THE COMBAT CHAIN IS A ZONE"* note put it in the census for exactly this reason, and CR 7.7 is about it |
+
+**MEASURED BOTH READINGS OVER 77,225 STATES** (the full 210-game ladder):
+the display strip trips it **336 times and every single link is
+`kind:"arc"`** — not one is an attack — while the ZONE trips it **zero**.
+So every firing this guard has ever produced was an arcane non-attack
+drawing a chip on a UI strip, and the rule it cites was never once in
+question. A clean result is worth having PROVED rather than assumed
+(v3.97, v4.00), so **both halves are drilled**: a card held on the chain
+past a close fires it, an arcane display link does not.
+
+**`HP-ABOVE-START` IS RETIRED AND ITS OWN MESSAGE IS WHY.** It read *"legal
+in FaB (there is no life cap), flagged only because most gains in this pool
+are capped"* — a guard whose text admits the state it flags is LEGAL,
+resting on a premise about the pool nobody had re-measured. Measured:
+**3,062 firings in 274 games**, about eleven a game, every one a hero who
+had gained life. A guard that fires on a legal state is one people learn to
+edit past (v4.26). **The premise is a DRILL now** — a hero above starting
+life is legal and the judges say nothing (v4.33's move). `sd.maxHp` stays,
+because `report.js` prints it (v3.82's `sd.rune`, the other way round).
+
+**NO WARNING IS WHITELISTED AS "KNOWN NOISE."** A triage census of
+known-noisy kinds is the blacklist shape this project rejects — the next
+kind added walks into the fallthrough (v3.35, v3.80). The fix is to stop
+producing warnings that are lies, so every warning counts toward the
+report's verdict and **the band now reads 0 over a whole tournament.**
+
+**AND THE TWO LISTS STAY APART.** `selfplay.play` returns `warns` beside
+`viols`, never folded in: a warning and *a rule is broken NOW* must not be
+the same number (v3.81, one severity over), and folding them would move the
+violation count in every report this project already prints.
+
+### `npm run cup` — SIXTEEN SEATS, ONE TROPHY (v4.39)
+
+```
+npm run cup                          # the full event, ~20s
+node tools/tournament.js --name "X"  # a different event, reproducibly
+```
+
+`tools/tourney.js` runs a **LADDER** — every pairing, counted, ranked by
+wins. That answers *which hero wins most* and deliberately answers nothing
+about a single meeting. This runs a **BRACKET**: fifteen ties, each one
+decisive. Same instrument underneath (`judge.reduce`, `sparring.act` in both
+seats, `invariants.check` on every intermediate state), different question.
+
+**THE FIELD IS SIXTEEN AND THE SIXTEENTH IS THE DUMMY.** This project decks
+fifteen heroes and there is exactly one other thing a seat may legally hold
+(ruling, 2026-08-16). **At twenty life, not the trainer's forty-two** —
+`buildVanilla`'s own header calls 42 *"a training prop's number, not a
+rule"*, and a competitor on double everybody else's life is not in the same
+event. A tournament ruling, **printed in the report** rather than defaulted
+quietly, and pinned by a drill.
+
+**THE FORMAT ESCALATES, AND THE REASON IS MEASURED.** Bo3 · Bo5 · Bo5 ·
+Bo7. Arakni beats Blaze **74-6 over 80 games** (92%) — and 92% still loses
+a best-of-three about once in 180. **The first running produced exactly
+that**: Blaze put the top qualifier out 2-0 in the quarters. At Bo5 the
+same tie is 3-2 the other way. *A short tie is a test of variance, not of
+decks.*
+
+**THERE IS NO COIN.** The chairs alternate and the spare chair in an odd
+format is the HIGHER SEED's — what the qualifier bought. Measured, the
+chair is worth about **2:1** in a close matchup (Dorinthea beats Arakni 24
+times with it and 12 without, over 80 games), so handing a decider that big
+to a random draw puts back the variance the long formats exist to remove.
+**So the whole event is a pure function of the card database and its own
+name** — nothing in it draws from a random stream, and a drill asserts
+`chairOf` never reaches for one. The first draft's coin is recorded for its
+bug: **`RNG.int(_, 2)` is a COIN and `RNG.roll` is a DIE** (1..sides), so
+`roll(_,2).v === 0` is never true and every decider would have seated the
+same entrant — a bias that looks exactly like a coin toss from outside, and
+that no test which merely CALLS the function can see.
+
+**THE BRACKET IS REPORTED AGAINST THE LADDER.** The qualifier is thirty
+games an entrant and a tie is a handful, so any tie won by the entrant who
+LOST their qualifier meeting is **named**. A trophy read as a ranking is
+the failure mode; naming the disagreement is what stops it. (The first
+event's champion won the final 4-1 having lost the qualifier meeting 0-2 —
+and the 80-game measurement says the FINAL was right.)
+
+**THE JUDGES RULE ON THE BOARD, NEVER ON A PLAYER.** Nothing a judge
+reports can change a result — a violation means the ENGINE is wrong, and a
+trophy awarded over a broken board is one this project should not trust.
+So the report prints what each judge WATCHED as well as what they found,
+and any finding at all puts an asterisk on the winner.
+
+**WHAT IS DRILLED IS THE RULES, NOT THE GAMES.** It is an instrument like
+`selfplay.js` and asserts nothing; `test/tournament.test.js` drives the
+pure rules it runs on, with synthetic legs. Each is a place a silent
+mistake still produces a plausible champion: a bracket that drops a seed
+crowns somebody, a coin that only lands one way still seats a decider, and
+**a tiebreak that reads a fixed `hp` index reads the opponent's life on
+half the legs** — so that drill asserts the LIFE and not the winner, since
+both readings name the same entrant.
 
 ### A TARGETED JAB FROM A SECOND WEAPON (v4.38)
 
@@ -6961,6 +7073,10 @@ keyword level. Answer one, then teach the parser and re-run the audit.
 6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
    games in about four minutes. Read refusals / violations / **stalls**;
    see "PLAY THE GAME" below. It found a bug 1488 drills had not.
+   **`npm run cup`** is the same instrument as a BRACKET with a fourth
+   judge on the WARN band — 286 games in about 20 seconds, and it is what
+   found v4.39. Use it when you want a decisive answer about a MATCHUP;
+   the ladder is still the better evidence about a hero.
 Always, regardless of what the tests say:
 7. **On a real phone.** Type checking and drills verify the parser is
    correct, not that the feature is fun or legible — validate on-device

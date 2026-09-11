@@ -157,11 +157,31 @@ test("the same card defending once on each of two separate chains is fine", () =
   assert.deepEqual(I.errors(st).filter(v => v.code === "DEFENDER-REUSED-ON-CHAIN"), []);
 });
 
-test("CHAIN-CLOSED-WITH-LINKS warns when a closed chain still holds links", () => {
+/* CR 7.7 — AND IT IS THE ZONE, NOT THE DISPLAY STRIP (v4.39).
+   `g.chain` is the chain-link strip the UI draws and `effects.js` pushes
+   an entry onto it for ANY damage, arcane included — so an arcane
+   non-attack legitimately leaves one there with no combat chain open.
+   `g.chainCards` is the ZONE CR 7.7 is about. Measured over the full
+   210-game ladder (77,225 states): the old reading fired 336 times and
+   every link was `kind:"arc"`; the zone fired zero.
+
+   BOTH HALVES, or the drill proves nothing (v3.98) — a guard repointed at
+   a field nothing ever sets is silent for the wrong reason. */
+test("CHAIN-CLOSED-WITH-LINKS warns when the chain ZONE still holds cards", () => {
   const st = g();
   st.chainOpen = false;
-  st.chain = [{defs:[]}];
+  st.chainCards = [card(77, "Wounding Blow")];
   assert.ok(codes(st).includes("CHAIN-CLOSED-WITH-LINKS"));
+});
+
+test("…and an arcane DISPLAY link on a closed chain is not a finding", () => {
+  const st = g();
+  st.chainOpen = false;
+  st.chainCards = [];
+  /* exactly what effects.js pushes when a non-attack deals arcane damage */
+  st.chain = [{n: "Photon Splicing", dmg: 3, kind: "arc"}];
+  assert.ok(!codes(st).includes("CHAIN-CLOSED-WITH-LINKS"),
+    "the display strip is not the chain zone — this is the false positive v4.39 removed");
 });
 
 /* ---- CR 4.2.1 / 4.4.1: no priority in the start or end phase -------- */
@@ -210,8 +230,21 @@ test("assertClean throws with a readable report and passes clean states", () => 
 
 test("warnings alone never make a state unclean", () => {
   const st = g();
-  st.sides[0].hp = st.sides[0].maxHp + 5;   /* legal in FaB, warn only */
-  assert.ok(I.check(st).some(v => v.code === "HP-ABOVE-START"));
+  st.sides[1].hp = 0;                       /* DEAD-BUT-RUNNING — warn only */
+  assert.ok(I.check(st).some(v => v.severity === "warn"));
+  assert.equal(I.clean(st), true);
+});
+
+/* THE PREMISE `HP-ABOVE-START` RESTED ON, AS A DRILL (v4.39).
+   The warning's own message said the state it flagged was "legal in FaB
+   (there is no life cap)" — so it was retired, and what it claimed is
+   kept here instead: a hero above starting life is legal and the judges
+   say NOTHING about it. v4.33's move, one guard over. */
+test("a hero above its starting life is legal and produces no finding", () => {
+  const st = g();
+  st.sides[0].hp = st.sides[0].maxHp + 5;
+  assert.deepEqual(I.check(st).map(v => v.code), [],
+    "gaining past starting life is legal — CR has no life cap");
   assert.equal(I.clean(st), true);
 });
 

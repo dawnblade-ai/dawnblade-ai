@@ -52,7 +52,7 @@ function match(k0, k1, seed, first){
 function play(g, limit){
   limit = limit || 4000;
   let n = g, steps = 0;
-  const errs = [], viols = [], events = [];
+  const errs = [], viols = [], warns = [], events = [];
   const feedSeen = new Set();
   for(let i = 0; i < limit && !n.over; i++){
     let moved = false;
@@ -64,8 +64,27 @@ function play(g, limit){
       const before = n;
       n = out.state; steps++; moved = true;
       try {
-        for(const v of INV.errors(n))
-          viols.push({code: v.code, msg: v.msg, where: v.where, turn: n.turn, after: a.t});
+        /* `invariants.js` produces TWO severities and this project has only
+           ever read one. `errors()` filters the warnings out, and every
+           drill, every scene, the trainer's own `setG` funnel and this
+           harness all call `errors()` — so `HP-ABOVE-START`,
+           `CHAIN-CLOSED-WITH-LINKS` and `DEAD-BUT-RUNNING` have been
+           produced and consulted by NOBODY, ever. The last of those is
+           CR 4.5.3's life-to-zero loss not having been applied, which is
+           not a cosmetic complaint.
+
+           THEY ARE COLLECTED SEPARATELY, NEVER FOLDED INTO `viols`. Folding
+           them in would move the violation count in every existing report
+           and make "a warning" and "a rule is broken NOW" the same number —
+           v3.81's rule about a grammar fault and a corruption counter, one
+           severity over. Opt-in (v3.58): nothing that reads `viols` moves,
+           and `tools/tournament.js` is the first caller to read the other
+           half. */
+        const all = INV.check(n);
+        for(const v of all){
+          const row = {code: v.code, msg: v.msg, where: v.where, turn: n.turn, after: a.t};
+          (v.severity === "error" ? viols : warns).push(row);
+        }
       } catch(e){ viols.push({code: "JUDGE-THREW", msg: e.message, turn: n.turn, after: a.t}); }
       /* Which of the new routes actually FIRED. */
       const nf = (n.feed || []).slice((before.feed || []).length);
@@ -175,7 +194,7 @@ function play(g, limit){
     }
     if(!moved) break;
   }
-  return {game: n, steps, errs, viols, events, feedSeen};
+  return {game: n, steps, errs, viols, warns, events, feedSeen};
 }
 
 /* THE FAULT LIST IS A CENSUS, AND IT LIVES BESIDE THE COUNTERS (v4.17).
