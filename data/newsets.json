@@ -17,6 +17,23 @@
  ],
  "fetched": "2026-09-07",
  "source": "fabrary.net published precon deck pages",
+ "announced": {
+  "_why": [
+   "THE ANNOUNCED STREET DATE IS A CALENDAR HINT, NOT THE ORACLE.",
+   "What decides whether these two are buildable is whether the-fab-cube's",
+   "`develop` branch carries the sets — that is what the golden rule rests on",
+   "and what test/drift.test.js measures on the live wire. A street date says",
+   "roughly WHEN to expect that probe to go red; it can never say that it has.",
+   "Recorded with its source so the next reader knows which is which."
+  ],
+  "block": "Silver Age: Usurp the Shadow Throne",
+  "street": "2026-09-18",
+  "source": "Flesh and Blood World Tour Weekly announcement graphic (screenshot supplied by the user, 2026-09-11)",
+  "heroes": [
+   "Prism, Advent of Thrones",
+   "Viserai, Between Worlds"
+  ]
+ },
  "upstream": {
   "checked": "the-fab-cube/flesh-and-blood-cards@develop csvs/english/set.csv + json/english/card.json",
   "records": 4952,
@@ -38,7 +55,12 @@
    "SVI"
   ],
   "satPrintings": 0,
-  "sbwPrintings": 0
+  "sbwPrintings": 0,
+  "checkedOn": [
+   "2026-09-07",
+   "2026-09-11"
+  ],
+  "_note": "re-measured 2026-09-11, one week before the announced street date: every number below is UNCHANGED — 15 Silver Age sets, 4952 records, 0 printings for either set, and all 15 blocking names still absent."
  },
  "prism": {
   "set": "SAT",

@@ -184,12 +184,33 @@ the CARD was sharper than the keyword file, so read both.
 
 ## WHAT IS DELIBERATELY NOT NEXT
 
-- **The two new precons (SAT / SBW).** `data/newsets.json` pins both lists
-  as fetched data and `drift.test.js`'s fifth drill asserts the DEVIATION,
-  so it goes **RED the day upstream publishes**. Fifteen names do not
-  resolve; nothing can be built until the-fab-cube's `develop` carries the
-  sets. Standing instruction: *don't worry about the new heroes until the
-  official updates.*
+- **The two new precons (SAT / SBW) — but the date is now known.**
+  *Silver Age: Usurp the Shadow Throne* is announced for **2026-09-18**,
+  which falls **inside this week**. That changes nothing about the work and
+  one thing about the watch:
+
+  **THE STREET DATE IS NOT THE ORACLE.** What decides buildability is
+  whether the-fab-cube's `develop` carries the sets — the golden rule's own
+  question — and upstream publishes on its own schedule, not the printer's.
+  **Re-measured 2026-09-11**, one week out: `set.csv` still lists exactly
+  15 Silver Age sets, 4,952 records, **SAT 0 printings, SBW 0**, all 15
+  blocking names still absent. So nothing is buildable yet and the probe is
+  correctly green.
+
+  **DO NOT POLL FOR IT.** `drift.test.js`'s fifth drill asserts the
+  DEVIATION and goes RED by itself the day the set appears — that is what a
+  `stated`/`open` probe is for (v4.02), and a note somebody has to remember
+  to check is not a probe (v3.61). `npm test` is the watch.
+
+  **WHEN IT DOES GO RED, it is a DATA DROP and the drill says so in its own
+  failure message**: re-pin with `node tools/pin-pool.js`, add the hero to
+  `HEROES`/`DECKS` in `index.html`, re-measure `upstreamMissing` /
+  `cardsBlocked`, **bump `DATA_VER`** (a warm cache has no new hero), and
+  update the drill's premise. Budget for the parser work separately —
+  Prism's 10 blocked cards and Viserai's 34 are unread text, not just an
+  absent record. Standing instruction unchanged: *don't worry about the new
+  heroes until the official updates* — this is the official update's date,
+  not the update.
 - **The phone/UI pass**, including Cloaked's display half. A separate
   project, desktop-only, recorded in the ledger as outstanding.
 - **Supabase** (accounts, saved games, reporting) — investigated and

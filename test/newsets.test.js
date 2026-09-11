@@ -168,3 +168,92 @@ test("the fifteen built precons are unchanged by any of this", () => {
     assert.equal(k in W.DECKS, false, k + " is a SPEC, not a playable deck");
   assert.ok(C.buildMaps, "and the loader is untouched");
 });
+
+/* ---- THE ANNOUNCEMENT, AND WHICH SOURCE IS THE ORACLE (v4.40) --------
+
+   Flesh and Blood Weekly announced *Silver Age: Usurp the Shadow Throne*
+   for 2026-09-18 — the two precons this file pins. That date is recorded
+   because a reader who does not know it cannot tell "upstream has not
+   published yet" from "nobody is coming", and those want different
+   responses.
+
+   IT IS A CALENDAR HINT AND NOTHING MORE. What decides whether these are
+   buildable is whether the-fab-cube's `develop` carries the sets, which
+   is the golden rule's own question and which `test/drift.test.js`
+   measures on the live wire. A street date can say roughly WHEN to expect
+   that probe to go red; it can never say that it HAS. So the announcement
+   keeps its own provenance block rather than being folded into `source`
+   (the fabrary deck pages the lists came from) or `upstream` (the
+   measurement), and this drill pins that separation. */
+test("the announced street date is recorded with its own source, apart from the measurement", () => {
+  const a = NEW.announced;
+  assert.ok(a, "the announcement block is gone");
+  assert.match(a.street, /^\d{4}-\d{2}-\d{2}$/, "an ISO date, so it can be compared");
+  assert.ok(a.source && /weekly|announc/i.test(a.source), "an announcement needs its source named");
+  assert.ok(a.block && a.block.length, "the product carries a name, not only two print codes");
+  assert.deepEqual([...a.heroes].sort(),
+    [NEW.prism.hero, NEW.viseraiBetweenWorlds.hero].sort(),
+    "the announcement names the same two heroes the lists pin");
+
+  /* THE THREE PROVENANCES STAY APART. Folding a street date into the
+     upstream measurement would make a CLAIM look like an OBSERVATION —
+     the shape v4.25 found when one scan fed two consumers. */
+  assert.ok(!("street" in NEW.upstream), "a street date is not an upstream measurement");
+  assert.ok(!/announc/i.test(String(NEW.source)), "the lists' source is fabrary, not the announcement");
+});
+
+/* ---- THE HEADER'S OWN STANDING CLAIM, AS A DRILL (v4.40) -------------
+
+   This file has said "NO CARD TEXT IS RECORDED HERE and none may be"
+   since v4.32 and nothing asserted it — a doc claim is a test with no
+   assertion (v3.41). It is the one claim that matters most here, because
+   recording a single line of rules text for an unpublished set is the
+   golden rule broken at the point where nobody could check it against a
+   printing.
+
+   THE SCAN IS AIMED AT WHAT CARD TEXT ACTUALLY LOOKS LIKE, measured over
+   the file first: 203 string values, 0 pip tokens, 0 rules verbs. A pip
+   token cannot appear in a card NAME, so there is no false positive to
+   trade away. The control is a literal here rather than by concatenation
+   because the scan reads `data/newsets.json` and never this file — the
+   opposite of v4.36's probe census, which had to dodge its own source. */
+const CARD_TEXT = /\{[rpdh]\}|\b(?:go again|when this|whenever|target \w|deals \d|gets \+)\b/i;
+
+test("no card text is recorded for an unpublished set — the golden rule, where nobody could check it", () => {
+  /* ONE BODY, DRIVEN TWICE. The first draft asserted the REGEX could see a
+     keyword and left the FILTER unproven — so neutering the filter
+     (`false && CARD_TEXT.test(s)`) came back SILENT, because the real file
+     is clean and an empty result is an empty result either way. That is
+     v4.00's own finding verbatim: a check that only ever sees zero cannot
+     tell a live scan from a dead one. The control goes through the SAME
+     census now. */
+  const cardTextIn = obj => {
+    const strs = [];
+    (function walk(x){
+      if(typeof x === "string") strs.push(x);
+      else if(Array.isArray(x)) x.forEach(walk);
+      else if(x && typeof x === "object") Object.values(x).forEach(walk);
+    })(obj);
+    return {seen: strs.length, found: strs.filter(s => CARD_TEXT.test(s))};
+  };
+
+  const real = cardTextIn(NEW);
+  assert.ok(real.seen > 100, "the walk found almost nothing — it is aimed at the wrong shape");
+  assert.deepEqual(real.found, [],
+    "card text recorded in newsets.json: " + JSON.stringify(real.found.slice(0, 3)));
+
+  /* THE POSITIVE CONTROL, through the census rather than beside it — and
+     NESTED, because a walk that stops descending is the other way this
+     passes by finding nothing.
+
+     TWO ROWS, EACH REACHABLE BY ONLY ONE HALF OF THE PATTERN. Written as
+     one row printing "…it gets +1{p}. Go again" the fixture carries a pip
+     AND a verb, so dropping either half of the alternation stayed SILENT —
+     a fixture where two things coincide has tested neither (v3.26). */
+  const planted = cardTextIn({prism: {sections: [{rows: [
+    {name: "Herald of Hope"},
+    {name: "a pip and no verb",  tx: "Prevent 2{h}"},
+    {name: "a verb and no pip",  tx: "When this attacks, draw a card"}]}]}});
+  assert.equal(planted.found.length, 2,
+    "the census misses card text two levels down, or one half of the pattern is dead");
+});

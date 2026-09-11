@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2571 drills** at v4.39.
+This is `node --test "test/*.test.js"` — **2573 drills** at v4.39.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -1446,6 +1446,32 @@ and the answer looked like a finding. The measurement is fetched data
 taken against the live database; the offline drill checks the record
 against the lists. A scan aimed at the wrong data set fails exactly as a
 real gap does (v3.81, v4.07).
+
+**AND THE DATE IS ANNOUNCED: 2026-09-18** — *Silver Age: Usurp the Shadow
+Throne*, both precons, recorded in `data/newsets.json` under its own
+`announced` block with its own source. **A STREET DATE IS A CALENDAR HINT
+AND NEVER THE ORACLE**: what decides buildability is whether the-fab-cube's
+`develop` carries the sets, which is the golden rule's own question and
+which the live probe measures. Re-measured **2026-09-11**, a week out:
+every number is UNCHANGED — 15 Silver Age sets in `set.csv`, 4,952
+records, **SAT 0 printings, SBW 0**, and all 15 blocking names still
+absent. **The three provenances stay apart** and a drill pins that — the
+fabrary deck pages the lists came from, the announcement, and the upstream
+measurement — because folding a date into the measurement makes a CLAIM
+read as an OBSERVATION (v4.25's one-scan-two-consumers, one file over).
+
+**AND THE FILE'S OWN STANDING CLAIM IS A DRILL NOW.** It has said *"NO
+CARD TEXT IS RECORDED HERE and none may be"* since v4.32 with nothing
+asserting it — a doc claim is a test with no assertion (v3.41), and it is
+the claim that matters most here, because a line of rules text recorded
+for an UNPUBLISHED set is the golden rule broken at the one point where
+nobody could check it against a printing. **The control goes through the
+census, not beside it**: the first draft asserted the REGEX could see a
+keyword and left the FILTER unproven, so neutering the filter came back
+SILENT against a clean file (v4.00, verbatim). And the planted fixture is
+**two rows, one reachable by each half of the pattern** — written as one
+row carrying a pip AND a verb, dropping either half was silent, which is
+v3.26's coincident fixture. 9 sabotages, 9 bite.
 
 **THE SKIP COUNT IS A PIN, NOT A CONSTANT.** It went **4 → 5** here,
 deliberately, in CI and in this file — which is the whole point of
