@@ -1,3 +1,72 @@
+## v4.40 — THE LADDER IS REPRODUCIBLE, NOT REPEATABLE
+
+`npm run play` derives each game's seed from the pairing, so re-running it
+gives the same answer — and this project has read that determinism as
+**precision** for eighty versions. It is not the same thing.
+
+### Measured: twelve identical ladders, on an engine that never changed
+
+| | |
+|---|---|
+| median spread per hero | **6** |
+| observed maximum | **10** |
+| Lyath | **0 to 8** wins |
+| Dorinthea | **19 to 27** |
+| Fai | 23 · 13 · 16 — and the **23 is the default ladder every version quotes** |
+
+**So a version-to-version comparison is a CROSS-SEED comparison.** Any
+change that alters which actions get proposed reshuffles every draw after
+it — a reseed wearing a diff — and a move smaller than the band cannot be
+told apart from it. The band is wider than most of the moves this file has
+recorded as findings.
+
+### The instrument already had the samples and threw them away
+
+`SEEDS` has been `tourney.js`'s third argument since it was written, and
+every run **pooled** its samples into one figure: five readings of a hero,
+reported as their sum, with no dispersion anywhere in the output. It now
+reports `mean` and `spread` per hero and a `NOISE BAND` line.
+
+- **The band is printed only where it was measured.** With one sample
+  there is nothing to observe, so that branch quotes the standing figure
+  and says it came from an unchanged engine — quoting it as though this
+  run produced it is a claim wearing an observation's clothes (v4.39, one
+  instrument over).
+- **It is the spreads' MEDIAN and MAX, never their mean.** Fourteen steady
+  heroes beside one that swings by 10 averages to about 1 — a number that
+  reads as "the ladder is precise" while the instrument is not.
+- **A hero absent from a sample counts as ZERO**, not as no sample.
+  Dropping it loses exactly the reading that makes the band wide: Lyath
+  ran 0 in two of twelve ladders, half of its own spread.
+- **The arithmetic is extracted and drilled with synthetic counts** rather
+  than 630 games — v4.17's own rule, which moved `summaryLine` and
+  `routeNames` out of this report for the same reason.
+
+### v4.38's own claim, re-measured — and it split in two
+
+| | without the caller | with it | verdict |
+|---|---|---|---|
+| Arakni | 20 · 22 · 23 (21.7) | 26 · 26 · 27 (26.3) | intervals disjoint — **REAL** |
+| Boltyn | 4 · 7 · 7 (6.0) | 5 · 7 · 7 (6.3) | intervals identical — **NOISE** |
+
+One claim confirmed and one retracted from the same version. v4.34's
+*"Enigma 20 → 12"* is marked **ONE SAMPLE** rather than deleted: the
+measurement was real and its resolution was not what it looked like.
+**Route counters are unaffected** — a number there means a feature FIRED
+and is not a sample of a distribution (v4.17).
+
+### And two of my own drills were weak first
+
+- the sort fixture asked for `["a","b"]` and expected `["a","b"]`, so the
+  input order and the sorted order coincided and deleting the sort was
+  SILENT. A fixture where two things coincide has tested neither (v3.26).
+- a sabotage replaced a string with `""`, which is not a unique revert
+  anchor — the revert put the text back at the **wrong site**, corrupting
+  the header comment (v4.36, v4.37, verbatim). Caught because the check
+  after it asked whether the file still printed what it should.
+
+**2578 drills, 0 fail, 5 skipped · 9 sabotages, 9 bite.**
+
 ## v4.39 — THE JUDGES' WARN BAND HAD NO READER
 
 Sixteen entrants, one trophy, and four judges — one of whom had never been

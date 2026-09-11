@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.39
+**Current version:** v4.40
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2573 drills** at v4.39.
+This is `node --test "test/*.test.js"` — **2578 drills** at v4.40.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -839,6 +839,69 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### THE LADDER IS REPRODUCIBLE, NOT REPEATABLE (v4.40)
+
+`npm run play` derives each game's seed from the pairing, so **re-running
+it gives the same answer** — and this project has read that determinism as
+precision for eighty versions. It is not the same thing.
+
+**MEASURED: TWELVE IDENTICAL LADDERS, DIFFERING ONLY IN SEED, ON AN
+ENGINE THAT NEVER CHANGED.** A hero's win count moves by a **median of 6**,
+and the observed spread reaches **10**:
+
+| | |
+|---|---|
+| Lyath | **0 to 8** wins across twelve runs |
+| Dorinthea | **19 to 27** |
+| Fai | 23 · 13 · 16 on three seeds — and **the 23 is `npm run play`'s own default ladder**, the one every version has quoted |
+
+**SO A VERSION-TO-VERSION COMPARISON IS A CROSS-SEED COMPARISON.** Any
+change that alters which actions get proposed reshuffles every draw after
+it, which is a reseed wearing a diff. A move smaller than the band cannot
+be told apart from that reshuffle — and the band is wider than most of the
+moves this file has recorded as findings.
+
+**THE INSTRUMENT ALREADY HAD THE SAMPLES AND THREW THEM AWAY.** `SEEDS`
+has been `tourney.js`'s third argument since it was written, and every run
+**POOLED** its samples into one figure: five readings of a hero, reported
+as their sum, with no dispersion anywhere in the output. It reports
+`mean` and `spread` per hero now, and a `NOISE BAND` line under them.
+
+**THE BAND IS PRINTED ONLY WHERE IT WAS MEASURED.** With one sample there
+is no dispersion to observe, so that branch quotes the standing figure and
+says it came from an unchanged engine — quoting it as though this run had
+produced it is a claim wearing an observation's clothes, which is v4.39's
+own finding one instrument over. **And it is the spreads' MEDIAN and MAX,
+never their mean**: fourteen steady heroes and one that swings by 10 is
+exactly this pool's shape, and a mean reports that as ~1.
+
+**WHAT TO DO BEFORE CALLING A BALANCE MOVE REAL.** Run the ladder at
+several seeds on BOTH sides of the change and compare the intervals. It is
+42 seconds at three seeds, and it settles the question:
+
+```sh
+npm run play '' '' 3     # both sides of the change; compare the spreads
+```
+
+**DONE FOR v4.38's OWN CLAIM, AND IT SPLIT IN TWO.** That version reported
+*"Arakni 20 → 26, Boltyn 4 → 5"* off one sample. Re-measured at three
+seeds with the ability caller toggled:
+
+| | without | with | verdict |
+|---|---|---|---|
+| Arakni | 20 · 22 · 23 (21.7) | 26 · 26 · 27 (26.3) | **intervals do not overlap — REAL** |
+| Boltyn | 4 · 7 · 7 (6.0) | 5 · 7 · 7 (6.3) | **they overlap entirely — NOISE** |
+
+One claim confirmed, one retracted, from the same version. **The route
+counters are unaffected** — `jab 45` is a feature firing, not a sample of
+a distribution, and v4.17's rule already keeps those two kinds of number
+in different blocks.
+
+**AND A SINGLE-SAMPLE DELTA IS NOT WORTHLESS, IT IS UNRESOLVED.** The
+honest report says which it is. Where this file quotes a move inside the
+band off one ladder it now says so, rather than being quietly deleted —
+the measurement was real, its resolution was not what it looked like.
+
 ### THE JUDGES' WARN BAND HAD NO READER (v4.39)
 
 `invariants.js` produces **two** severities and this project has only ever
@@ -1032,6 +1095,14 @@ contract, so judge answers and there is still ONE reader — v3.84's rule,
 built for `boardAttackOf` for the identical reason. Narrowed, only the
 heroes that OWN one move: **Arakni 20 → 26, Boltyn 4 → 5**, everyone else
 ±1.
+
+> **RE-MEASURED AT v4.40 AND IT SPLIT IN TWO.** Those were one sample
+> each, and the ladder's own noise band is a median of 6. Driven at three
+> seeds with the caller toggled: **Arakni 20·22·23 → 26·26·27, intervals
+> disjoint — REAL**; **Boltyn 4·7·7 → 5·7·7, intervals identical —
+> NOISE**. The "everyone else ±1" half is inside the band throughout and
+> says nothing either way. See "THE LADDER IS REPRODUCIBLE, NOT
+> REPEATABLE".
 
 ### TWO FEED LINES THAT NAMED THE WRONG THING (v4.38)
 
@@ -1322,6 +1393,9 @@ printed **in the parse** and this was the rules machine; and the equipment
 half is WEAKER than printed. Measured both directions: **8 records' ops
 move, 0 tiers move**, and on the full ladder exactly one hero moves —
 **Enigma 20 wins → 12** — because she is the only one who decks it.
+(**ONE SAMPLE**, and the ladder's band is a median of 6 with a max of 10 —
+so the direction is consistent with the reasoning and the magnitude is not
+resolved. v4.40; re-run at three seeds before quoting the number.)
 
 **AND ONE SABOTAGE WAS SILENT BECAUSE THE DRILL WAS WEAK, NOT THE ENGINE.**
 The permanents are guarded a second time by `while(left > 0)`, so a drill
@@ -7097,7 +7171,11 @@ keyword level. Answer one, then teach the parser and re-run the audit.
    per-hero answer. It is the only tool here that asks whether a reading
    was OBEYED rather than made; see "DOES THE CARD *DO* WHAT IT PRINTS?".
 6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
-   games in about four minutes. Read refusals / violations / **stalls**;
+   games in about 20 seconds. **A WIN COUNT IS ONE SAMPLE**: the ladder is
+   reproducible and not repeatable, and a hero moves by a median of 6 on an
+   unchanged engine, so run `npm run play '' '' 3` on BOTH sides before
+   calling any balance move real (v4.40).
+   Read refusals / violations / **stalls**;
    see "PLAY THE GAME" below. It found a bug 1488 drills had not.
    **`npm run cup`** is the same instrument as a BRACKET with a fourth
    judge on the WARN band — 286 games in about 20 seconds, and it is what

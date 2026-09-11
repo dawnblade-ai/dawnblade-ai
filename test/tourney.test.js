@@ -132,3 +132,79 @@ test("tourney reads the census rather than restating it", () => {
   assert.equal((t.match(/"MALFORMED"|'MALFORMED'/g) || []).length, 0,
     "tourney names a fault literally — the list is a census, not a spelling");
 });
+
+/* ============================================================
+   THE LADDER'S OWN DISPERSION (v4.40)
+
+   `npm run play` has taken a seed count since it was written and POOLED
+   the samples into one win figure, so the instrument could take five
+   readings of a hero and report their sum with no dispersion anywhere in
+   the output. Measured over twelve identical ladders on an UNCHANGED
+   engine, a hero's count moves by a median of 6 and has been observed at
+   10 — Lyath ran 0 to 8, Dorinthea 19 to 27 — so a version-to-version
+   move smaller than that is not resolvable by a single ladder.
+
+   THE ARITHMETIC IS DRIVEN WITH SYNTHETIC COUNTS, not with 630 games:
+   v4.17 moved `summaryLine` and `routeNames` out of the report for this
+   exact reason — a rule that lives inline in a report is a rule no drill
+   can reach, and a source slice rots where it moves.
+   ============================================================ */
+const TY = require("../tools/tourney.js");
+
+test("seedRows reports the mean and the spread of each hero's samples", () => {
+  /* THE NAMES ARE GIVEN IN THE WRONG ORDER ON PURPOSE. Listed as ["a","b"]
+     with `a` also winning most, the input order and the sorted order
+     coincide and deleting the sort is SILENT — a fixture where two things
+     coincide has tested neither (v3.26). `low` is asked for first and must
+     come out second. */
+  const rows = TY.seedRows([{low: 2, high: 10}, {low: 3, high: 14}, {low: 1, high: 12}],
+                           ["low", "high"]);
+  assert.deepEqual(rows.map(r => r.k), ["high", "low"], "rows sort by mean, highest first");
+  assert.deepEqual(rows[0].v, [10, 14, 12]);
+  assert.equal(rows[0].mean, 12);
+  assert.equal(rows[0].spread, 4, "spread is max minus min, not a variance");
+  assert.equal(rows[1].spread, 2);
+});
+
+/* THE LOAD-BEARING HALF. A hero that won NOTHING in one sample has no key
+   in that tally, and reading the absence as "no sample" drops exactly the
+   reading that makes the band wide — Lyath ran 0 in two of twelve
+   ladders, which is half of its own observed spread. */
+test("a hero absent from a sample counts as ZERO, never as no sample", () => {
+  const rows = TY.seedRows([{x: 8}, {}, {x: 4}], ["x"]);
+  assert.deepEqual(rows[0].v, [8, 0, 4], "the empty ladder dropped out of the sample");
+  assert.equal(rows[0].spread, 8);
+});
+
+/* THE BAND IS THE SPREADS' MEDIAN AND MAX, NEVER THEIR MEAN. Fourteen
+   well-behaved heroes and one that swings by 10 is exactly the shape this
+   pool produces, and a mean would report that as ~1 — a number that reads
+   as "the ladder is precise" while the instrument is not. */
+test("the band is the spreads' median and MAX, not their mean", () => {
+  const rows = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,10].map((sp, i) => ({k: "h" + i, spread: sp}));
+  const b = TY.band(rows);
+  assert.equal(b.max, 10, "the widest hero is the band");
+  assert.equal(b.median, 0);
+  assert.notEqual(b.max, rows.reduce((t, r) => t + r.spread, 0) / rows.length,
+    "the band collapsed into an average");
+});
+
+test("the band is an observation of the rows in front of it", () => {
+  assert.deepEqual(TY.band([]), {min: 0, median: 0, max: 0},
+    "an empty sample must answer zeros rather than throw or invent a band");
+  const b = TY.band([{spread: 3}, {spread: 1}, {spread: 7}]);
+  assert.deepEqual([b.min, b.median, b.max], [1, 3, 7]);
+});
+
+/* AND THE REPORT PRINTS A BAND ONLY WHEN IT MEASURED ONE. With a single
+   sample there is no dispersion to observe, so the one-sample branch
+   quotes the STANDING measurement and says where it came from — quoting
+   it as though this run had produced it would be a claim wearing an
+   observation's clothes (v4.39, one instrument over). */
+test("a band is printed only where it was measured", () => {
+  const t = require("fs").readFileSync(require("path").join(__dirname, "..", "tools", "tourney.js"), "utf8");
+  assert.ok(/if\(SEEDS > 1\)\{[\s\S]*?NOISE BAND/.test(t),
+    "the measured band escaped its SEEDS > 1 guard");
+  assert.ok(/ONE SAMPLE PER PAIRING/.test(t), "the single-sample branch says so");
+  assert.ok(/UNCHANGED/.test(t), "the standing measurement is not attributed to this run");
+});
