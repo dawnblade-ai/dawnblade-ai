@@ -233,3 +233,104 @@ What is worth reading out of it anyway:
    engine bug, one a policy gap. Neither was visible to any tool in the repo.
 5. **Do not tune from the ladder until Finding 3 is fixed.** A seat that cannot
    play non-attacks is measuring itself, not the decks.
+
+---
+
+# The Dawnblade Invitational (2026-09-11, at v4.39) — a BRACKET, not a ladder
+
+`npm run cup`. Sixteen entrants, four judges, 286 games in eighteen seconds.
+**Champion: Arakni, Web of Deceit.** Runner-up Dorinthea, third Kayo, and a
+clean sheet from every judge.
+
+The point of running a bracket rather than the ladder was not the trophy. A
+ladder counts; a bracket has to DECIDE, and forcing a decision is what
+surfaced the three findings below.
+
+## 1. A whole severity band had no reader
+
+**`invariants.js` produces `error` and `warn`. Nothing in this repo has ever
+read the second one.** `errors()` filters warnings out, and every caller —
+every drill, every scene, `tools/selfplay.js`, the trainer's own `setG`
+funnel — calls `errors()`. So `HP-ABOVE-START`, `CHAIN-CLOSED-WITH-LINKS`
+and `DEAD-BUT-RUNNING` had been produced and consulted by nobody, ever.
+
+Hiring a fourth judge to read it took four lines and found two:
+
+| | firings in 274 games | verdict |
+|---|---|---|
+| `HP-ABOVE-START` | **3,062** | its own message says the state is LEGAL. Retired |
+| `CHAIN-CLOSED-WITH-LINKS` | **409** | cites CR 7.7 and read the wrong field. Repointed |
+| `DEAD-BUT-RUNNING` | 0 | the one that would have meant something |
+
+Both fixes and their measurements are in `CHANGELOG.md` v4.39. The lesson
+for this file is narrower: **when you hire an instrument, read everything it
+produces.** The band was not broken — it was unheard.
+
+## 2. Bo3 is a coin flip even at 92%
+
+The first running had **Blaze (seed 8) put the top qualifier out 2-0 in the
+quarter-finals**. Measured afterwards over 80 games:
+
+```
+Arakni, Web of Deceit  74 — 6  Blaze, Firemind      (80 games, 9.3 turns avg)
+Dorinthea              74 — 6  Blaze, Firemind      (80 games, 10.6 turns avg)
+Dorinthea              36 — 44 Arakni, Web of Deceit (80 games, 9.0 turns avg)
+```
+
+92.5% still loses a best-of-three about **once in 180**, and that is what
+happened. So the format escalates now — Bo3 / Bo5 / Bo5 / Bo7 — and at Bo5
+the same tie came out **3-2 the other way**. *A short tie is a test of
+variance, not of decks.*
+
+**This is the number to keep**: the spread between the top of this pool and
+the middle is enormous, and any conclusion drawn from one or two games
+between two decks here is worthless. `npm run play`'s 210-game ladder has
+always been the better evidence; now there is a measurement saying how much
+better.
+
+## 3. The chair is worth about 2:1 in a close matchup
+
+Dorinthea v Arakni, 80 games, split by who had seat 0 (and therefore the
+first turn):
+
+```
+Dorinthea: 24 wins with the chair, 12 without
+Arakni:    28 wins with the chair, 16 without
+```
+
+`sparring.js`'s stated property is that *"the winner follows the HERO, not
+the chair"* — and it does, over a sample. Inside a single tie the chair is a
+big thumb on the scale, which is why the bracket alternates them leg by leg
+and why the spare chair in an odd format is given to the higher seed as the
+qualifier's reward rather than to a coin.
+
+**Related, and previously only a prose claim**: CLAUDE.md has said since
+v2.22 that *"going second costs an extra swing"* and that opponent-first was
+untuned. This is the first number attached to it at the table.
+
+## 4. The bracket disagreed with the ladder, and the ladder was wrong
+
+The final was **Arakni 4-1 Dorinthea**, and Arakni had lost their qualifier
+meeting **0-2**. The report names that disagreement on purpose. Measured
+over 80 games the head-to-head is **44-36 to Arakni** — so the *final* was
+the better evidence and the two-game qualifier meeting was the noise.
+
+That is the whole argument for printing the disagreement rather than only
+the winner: with a 44-36 matchup, both results are ordinary, and a report
+that showed only the trophy would invite a reader to treat it as a ranking.
+
+## Route coverage at this event
+
+Every mechanic built in the last fortnight fired, which is the other reason
+to run a big event — `v3.84`'s rule, *when you build a route, go and count
+how often it fires*:
+
+```
+ally 5915 · tap 5538 · layer 467 · reaction 415 · crush 385
+destroycost 364 · death 224 · ward 198 · leave 178 · gold 76
+fusion 60 · jab 45 · hitwatch 25
+```
+
+`destroycost` (v4.37) and `jab` (v4.38) are five days old and both are well
+into three figures of firings and forty-plus respectively. `leave` still
+counts only the self-scheduled exits in practice — v4.29 records why.

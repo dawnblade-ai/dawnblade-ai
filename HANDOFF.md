@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.38 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.39 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -236,6 +236,34 @@ INSTANT abilities there too moved the ladder by up to 5x for heroes that
 own no attack reaction at all, which is the policy playing worse rather
 than the engine changing (v4.24's standing rule about a price — here a
 MOMENT — this policy cannot weigh).
+
+### v4.39 — A WHOLE SEVERITY BAND HAD NO READER
+
+`invariants.js` produces `error` and `warn`. **Nothing in this repo has
+ever read the second one** — `errors()` filters warnings out and every
+caller (every drill, every scene, `tools/selfplay.js`, the trainer's own
+`setG` funnel) calls `errors()`. Found by hiring a fourth judge in the new
+`tools/tournament.js` (`npm run cup`) to read it:
+
+| | firings in 274 games | verdict |
+|---|---|---|
+| `HP-ABOVE-START` | **3,062** | its own message says the state is LEGAL. **Retired**, premise kept as a drill |
+| `CHAIN-CLOSED-WITH-LINKS` | **409** | cites CR 7.7 and read `g.chain`, the DISPLAY strip, not `g.chainCards`, the ZONE. **Repointed** — measured over 77,225 states the strip trips 336 times and every link is `kind:"arc"`, the zone trips ZERO |
+| `DEAD-BUT-RUNNING` | 0 | the one that would have meant something |
+
+**No warning is whitelisted as "known noise"** — a triage census is the
+blacklist shape this project rejects. The fix is to stop producing
+warnings that are lies; the band now reads 0 over a whole event.
+
+**`npm run cup`** is a 16-seat bracket on the table: fifteen heroes plus
+the vanilla pile **at 20 life, not the trainer's 42**, seeded on a
+240-game double round robin, ties at Bo3/Bo5/Bo5/Bo7. The escalation is
+measured — Arakni beats Blaze **74-6 over 80 games** and 92% still loses a
+Bo3 once in 180, which the first running produced. No coin: the chairs
+alternate and the spare chair is the higher seed's, so the whole event is
+a pure function of the database and its own name. **Champion: Arakni, Web
+of Deceit**; `PLAYNOTES.md` has the working, including that the chair is
+worth about 2:1 in a close matchup.
 
 ### THE STANDING THREAD, MEASURED AND STILL OPEN
 
