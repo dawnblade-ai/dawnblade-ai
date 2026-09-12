@@ -4,6 +4,71 @@
 module.exports = [
 
 {
+  name: "Burn Up's delayed grant waits for a HIT, not for the next attack",
+  why: "v4.41 — read as a `buffQ` entry of zero power with a rider (v3.34), " +
+       "and with `q: null` such an entry is spent by whatever is DECLARED " +
+       "next. Driven: swing 1 blocked to nothing took the grant and lost it, " +
+       "so swing 2 connected for its base with `pend.onHit` empty. The card " +
+       "read `tier: full` throughout and WEAKER than printed, so the one-" +
+       "sided fairness sweep was blind too. Briar decks it twice.",
+  run(c){
+    const vanilla = uid => ({uid, name: "Probe Swing " + uid,
+      tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"],
+      tx: "", kw: [], gkw: [], power: 4, pitch: 1, cost: 0, def: 2});
+    const burn = c.card("Burn Up // Shock", 1, 70);
+    /* THE TOP HALF IS DECLARED. Melding would resolve Shock's own 1 arcane
+       too and the life total could not tell the two apart. */
+    let g = c.acting(c.state({res: 9, ap: 3, hand: [burn, vanilla(71), vanilla(72)]},
+      {hp: 20, hand: [], gear: []}, {actor: 0, turnPlayer: 0, turn: 3, seed: "burnup"}));
+    g = Object.assign({}, g, {builds: [{}, {}]});
+    g = c.reduce(g, {t: "play", uid: 70, from: "hand"}, 0);
+    g = c.reduce(g, {t: "split", half: 0}, 0);
+    const armed = (g.sides[0].hitNext || []).length;
+    const hpOnPlay = g.sides[1].hp;
+
+    /* SWING ONE IS BLOCKED TO NOTHING — CR 7.5.5, no damage is no hit. */
+    g = Object.assign({}, g, {phase: "action", step: "layer", priority: 0,
+                              passed: [], stack: [], pend: null});
+    g = c.reduce(g, {t: "play", uid: 71, from: "hand"}, 0);
+    g = c.passTo(g, "defend");
+    const wall = {uid: 73, name: "Iron Wall", tt: "Generic Action - Attack",
+                  ty: ["Generic", "Action", "Attack"], tx: "", kw: [], gkw: [],
+                  power: 1, pitch: 1, cost: 0, def: 9};
+    const sides = g.sides.slice();
+    sides[1] = Object.assign({}, sides[1], {hand: [wall]});
+    g = Object.assign({}, g, {sides});
+    g = c.reduce(g, {t: "defend", uid: 73, from: "hand"}, 1);
+    g = c.passTo(g, "resolution");
+    const afterMiss = {hp: g.sides[1].hp, kept: (g.sides[0].hitNext || []).length};
+
+    /* SWING TWO CONNECTS — printed, THIS is the hit that pays. */
+    g = Object.assign({}, g, {phase: "action", step: "layer", priority: 0,
+                              passed: [], stack: [], pend: null, chainOpen: false,
+                              chain: [], chainCards: []});
+    g = c.reduce(g, {t: "play", uid: 72, from: "hand"}, 0);
+    g = c.passTo(g, "resolution");
+
+    return {
+      "grants armed by the top half": armed,
+      "life lost on PLAY": 20 - hpOnPlay,
+      "life lost to the BLOCKED swing": 20 - afterMiss.hp,
+      "the grant survives the miss": afterMiss.kept,
+      "life left after the swing that HITS": g.sides[1].hp,
+      "and the grant is spent": (g.sides[0].hitNext || []).length
+    };
+  },
+  want: {
+    "grants armed by the top half": 1,
+    "life lost on PLAY": 0,
+    "life lost to the BLOCKED swing": 0,
+    "the grant survives the miss": 1,
+    /* 20 - 4 swing - 4 arcane */
+    "life left after the swing that HITS": 12,
+    "and the grant is spent": 0
+  }
+},
+
+{
   name: "ward soaks damage AT THE TABLE",
   why: "v3.67 — `judge.js` applied `hp - total` and read `.ward` nowhere at " +
        "all, so Cloud Cover did nothing there while reading `tier: full`. " +

@@ -685,8 +685,17 @@ probe("unbuilt-three", () => {
   /* -Danger Digits AT v4.38, and that is what an `open` record is FOR
      (v4.02): its probe asserts the DEVIATION, so building the card turns
      this drill red and forces the record to be corrected rather than
-     leaving a stale sentence behind. */
-  const want = ["Glisten", "Hope Merchant's Hood", "Banneret of Salvation"];
+     leaving a stale sentence behind.
+
+     -Banneret of Salvation AT v4.41, for the second time in four
+     versions and by the same mechanism — this drill went red the moment
+     the card was built. What it was waiting on was named in its own
+     v4.21 note above: the charge TRIGGER and the "next time you hit"
+     DELAY, neither of them the payload. Both exist now (`onChargeSoul`,
+     `hitNext`), so the card reads `full` and leaves the ledger. TWO
+     LEFT, and both need machinery `prompts.js` does not have — Glisten
+     an allocator, Hope Merchant's Hood deck manipulation. */
+  const want = ["Glisten", "Hope Merchant's Hood"];
   /* A HERO IS NOT A DECK CARD AND NEITHER IS A TOKEN, and the pool holds
      all three (v3.21 keeps tokens by TYPE, v3.76 put Arakni's six Agents in
      the same way). The audit's headline "3 none" is over DECK cards; a flat

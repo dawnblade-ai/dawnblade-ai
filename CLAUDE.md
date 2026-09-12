@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.40
+**Current version:** v4.41
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2578 drills** at v4.40.
+This is `node --test "test/*.test.js"` — **2599 drills** at v4.41.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,81 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A GRANT THAT WAITS FOR A HIT IS NOT ONE THAT WAITS FOR AN ATTACK (v4.41)
+
+> *"The next time an attack you control hits a **HERO** this turn, deal 4
+> arcane damage to them."* — BURN UP // SHOCK, Briar ×2
+>
+> *"**Solflare** - When this is charged to your soul, the next time you hit
+> this turn, gain 1{h}."* — BANNERET OF SALVATION, Boltyn
+
+v3.34 read the first as a `buffQ` entry of zero power carrying a rider and
+**wrote the argument down**: such an entry *"already waits rather than being
+spent by a card it does not name"*. True of every other member of that
+family **because each carries a QUALIFIER**, and false here — the clause
+names no card at all, so `q` is `null`, `qualMatches` answers TRUE for
+everything **by design** (v3.98), and the entry is spent by the next attack
+**DECLARED**:
+
+| | driven |
+|---|---|
+| swing 1, blocked to nothing | `buffQ 0` — the grant is **GONE** |
+| swing 2, hits the hero | `pend.onHit []` — nothing fires |
+
+**WEAKER THAN PRINTED** (the sweep is one-sided) and `tier: full`
+throughout (the clause IS consumed) — v4.18's pair of blindnesses. It is
+v3.87's standing-versus-single-shot split asked about a different axis: not
+how LONG a grant lasts, but **which EVENT spends it**.
+
+**AND THE PRINTED "A HERO" WENT WITH IT**, filed into `pend.onHit` where a
+BARE trigger lives, so the 4 arcane fired off a swing at an **ALLY**. Read
+off the clause now, never defaulted (v3.69) — and **both cards are named in
+the drill**, because asserting the flag on one of them cannot tell a read
+gate from a hardcoded one.
+
+**SPENT WHERE IT IS READ** (v4.06), in `linkPayload`; a fully blocked swing
+spends nothing (CR 7.5.5); it **accumulates**, because two copies are two
+grants; and it expires in step (8) — **COUNTED by `held`** as well as
+swept, or it expires only on a turn something else happens to (v4.07).
+
+**`onChargeSoul` IS `boostBanish`'s SHAPE ONE COST OVER** (v3.56): a
+schedule that fires on a card its controller never played, out of a zone
+nothing else triggers from, at the single site v4.33 built. Held off
+`fx.ops` or the 1{h} lands when Banneret is PLAYED (v3.07). **Both wordings
+read** — v4.21's own comment quotes *"your HERO'S soul"* and the database
+prints *"your soul"* today (v3.00). **Third recorded refusal discharged by
+reading its own sentence**: v4.21 named what it waited on as *"the TRIGGER
+and the SCHEDULE, not the payload"*, and the drill asserting the refusal
+went red the day both arrived (v3.38).
+
+**THE BOUND IS THE PRINTED WORD "hit", AND THAT IS A MEASUREMENT.** Written
+to match the delay alone it swallowed a family that has its own reader: the
+pool prints SEVEN *"the next time … this turn,"* clauses and **FIVE are
+preventions**, so Cloud Cover ×3, Toe the Line and Throw Caution went `full`
+→ `none` in one edit — v3.57, a reader that cannot read its own match must
+not CONSUME the clause. **And an unknown subject still refuses**, because
+anchored to the two printed wordings alone a third fell THROUGH to the
+loose matchers and read as an immediate op fired on PLAY.
+
+**THE ROUTE COUNTER READS ZERO, AND THAT IS ABOUT THE POLICY.** Measured
+rather than assumed: Burn Up gets 28 feed lines and every one is at INSTANT
+speed, where half 0 is refused and only Shock is legal — in the ACTION
+phase **both halves are legal and `payAction` tries half 0 first**, but
+v4.03 gave the reaction branch priority and v3.80 ranks a non-attack last.
+Banneret's charge is **offered 14 times and taken 0**, which is v4.33's
+recorded decision. Neither is fixed: which half to play is a TIMING
+judgement and v4.24's standing rule is that this policy does not make one
+(v4.38 measured three heroes collapsing when it was allowed to). The 0
+stays a number that says something true, like v4.29's forced-exit half.
+
+Measured: **exactly 2 records move, 389 → 390 `full`, 3 → 2 `none`**;
+symmetry ledger **50 → 51**; `WIRE_V` **8 → 9**. **20 sabotages, 20 bite** —
+and the one that came back silent was **my own fixture**, which built both
+grants by hand and so drove the FIRE site rather than `runOps` (v3.20).
+**The Boltyn scene was wrong before the engine was** too: it read the board
+after passing to resolution, and Bolt of Courage is itself an attack, so
+its own swing was the *"next time you hit"* (v3.70).
 
 ### THE LADDER IS REPRODUCIBLE, NOT REPEATABLE (v4.40)
 

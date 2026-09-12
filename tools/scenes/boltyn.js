@@ -5,6 +5,63 @@
 module.exports = [
 
 {
+  name: "charging Banneret arms its delayed grant, and the next hit pays it",
+  why: "v4.21 refused this card's line and RECORDED what it was waiting on — " +
+       "\"the TRIGGER and the SCHEDULE, not the payload\". A recorded refusal " +
+       "is a debt (v3.38) and v4.41 discharges it: `onChargeSoul` is " +
+       "`boostBanish`'s shape one cost over (v3.56) and `hitNext` is the " +
+       "delay. Before that the card read `tier: none` and did nothing at all; " +
+       "before v4.21 it granted the 1{h} unconditionally ON PLAY.",
+  run(c){
+    const bann = c.card("Banneret of Salvation", 2, 80);
+    const bolt = c.card("Bolt of Courage", 1, 81);
+    /* Bolt of Courage prints "as an additional cost to play this, you MAY
+       charge your hero's soul" — so the charge is a real OFFER (v4.33) and
+       the scene has to ANSWER it rather than assuming it was taken.
+
+       AND BOLT IS ITSELF AN ATTACK, which is what makes this fixture the
+       whole route in one play: it charges Banneret as its own cost, and
+       its own swing is then the "next time you hit". The first draft of
+       this scene passed to resolution BEFORE reading the state and then
+       reported the payout as "life gained at the moment of charging" —
+       check your own fixture (v3.70), and read the board at the moment
+       you mean to. */
+    let g = c.acting(c.state({res: 9, ap: 3, hp: 18, hand: [bolt, bann]},
+      {hp: 20, hand: [], gear: []}, {actor: 0, turnPlayer: 0, turn: 3, seed: "bann"}));
+    g = Object.assign({}, g, {builds: [{}, {}]});
+    g = c.reduce(g, {t: "play", uid: 81, from: "hand"}, 0);
+    const offered = !!(g.pending && g.pending.kind === "charge");
+    if(offered) g = c.reduce(g, {t: "charge", uid: 80}, 0);
+    const inSoul  = g.sides[0].soul.some(x => x && x.uid === 80);
+    const armed   = (g.sides[0].hitNext || []).length;
+    const hpArmed = g.sides[0].hp;
+
+    /* THE HIT. Banneret prints a BARE "the next time you hit" — no hero
+       gate — so the connecting swing is what pays it. */
+    g = c.passTo(g, "resolution");
+
+    return {
+      "the charge was OFFERED": offered ? 1 : 0,
+      "Banneret reached the soul": inSoul ? 1 : 0,
+      "delayed grants armed": armed,
+      "life gained at the moment of charging": hpArmed - 18,
+      "life gained when the swing HITS": g.sides[0].hp - hpArmed,
+      "and the grant is spent": (g.sides[0].hitNext || []).length
+    };
+  },
+  want: {
+    "the charge was OFFERED": 1,
+    "Banneret reached the soul": 1,
+    "delayed grants armed": 1,
+    /* NOTHING on the charge itself — that is v3.07's suspense bug, and
+       exactly what this card did before v4.21 refused the line. */
+    "life gained at the moment of charging": 0,
+    "life gained when the swing HITS": 1,
+    "and the grant is spent": 0
+  }
+},
+
+{
   name: "Edict sharpens a sword, and the Flurry token lands",
   why: "v3.66 — Sharpen had a recorded ruling and no reader. The MPW103 " +
        "PRINTING carries the reminder text the database omits, and its " +

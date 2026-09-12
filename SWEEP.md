@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-10 from `tools/audit.json`.
+Generated 2026-09-12 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 16 cards | understood ≠ built |
-| **Fail states** | 47 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 15 cards | understood ≠ built |
+| **Fail states** | 46 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -43,7 +43,6 @@ At the beginning of your end phase, destroy this.
 Cards whose ruling exists but which still do not resolve in full.
 
 - **Glisten** (none, 2/2 unread)
-- **Banneret of Salvation** (none, 1/1 unread)
 - **Hope Merchant's Hood** (none, 1/1 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
@@ -73,7 +72,7 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| No schedule to fire on | 7 |
+| No schedule to fire on | 6 |
 | Choice never offered | 6 |
 | Earned value denied | 5 |
 | Displayed total is wrong | 5 |
@@ -81,7 +80,7 @@ can be overruled. Same discipline as the mention count.
 | Unread, effect unknown | 4 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 15 entries
+### WRONG — 14 entries
 
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -131,9 +130,6 @@ can be overruled. Same discipline as the mention count.
 - **V of the Vanguard** (2) · tier `part` · boltyn
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Your attacks this combat chain get +1{p} for each Light card charged this way.
-- **Banneret of Salvation** (2) · tier `none` · boltyn
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.
 - **Briar** · tier `hero` · briar
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Earth and Lightning

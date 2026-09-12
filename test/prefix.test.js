@@ -155,24 +155,48 @@ test("DRIVEN: Static Shock's arcane needs the Lightning card AND the hit",
   assert.equal(hit(false), 20, "none was — and nothing happens");
 });
 
-test("Banneret of Salvation REFUSES rather than granting 1{h} on play", {skip}, () => {
-  /* AN UNREADABLE REMAINDER REFUSES (v2.29), and refusing is the whole
-     point: the old reading gave the life unconditionally the moment the
-     card was played, with the charge trigger and the "next time you hit
-     this turn" delay both gone. A RECORDED REFUSAL IS A DEBT (v3.38) —
-     the tail already reads on its own, so what this waits on is the
-     trigger and the schedule, not the payload. */
+test("Banneret of Salvation — the recorded refusal, DISCHARGED (v4.41)", {skip}, () => {
+  /* THIS DRILL ASSERTED THE REFUSAL UNTIL v4.41 AND WENT RED THE DAY THE
+     GAP CLOSED, which is exactly what a recorded refusal is FOR (v3.38).
+     Its own text named what it was waiting on — "the TRIGGER and the
+     SCHEDULE, not the payload" — and both are built: `onChargeSoul` is
+     `boostBanish`'s shape one cost over (v3.56) and `hitNext` is the
+     delayed grant. It is the POSITIVE control now.
+
+     THE HALF THE REFUSAL WAS PROTECTING IS KEPT, and it is the one that
+     matters: NOTHING fires on play. The old reading granted the 1{h} the
+     instant the card was played, both the trigger and the delay gone —
+     so `fx.ops` staying EMPTY is still the assertion, and the payload
+     riding on `fx.chargeSoul` is what changed. */
   P.fxReset();
   const fx = P.fxParse(H.card("Banneret of Salvation", 2));
-  assert.deepEqual(fx.ops, [], "no life is granted on play");
-  assert.deepEqual(fx.clauses.map(c => c.st), ["skip"],
-    "and the clause reports UNREAD, which is what makes the gap visible");
+  assert.deepEqual(fx.ops, [], "no life may be granted on PLAY — v3.07's suspense bug");
+  assert.deepEqual(fx.chargeSoul, [["hitNext", [["life", 1]], false]],
+    "the payload rides on the charge trigger, held off fx.ops");
+  assert.deepEqual(fx.clauses.map(c => c.st), ["run"], "and the clause now reports read");
 
-  /* THE PREMISE THE REFUSAL RESTS ON, DRIVEN (v4.11's rule): the tail
-     reads perfectly on its own, so this is a missing TRIGGER and a
-     missing SCHEDULE rather than a missing payload. */
+  /* THE HERO GATE IS `false`, AND IT IS READ (v3.69). Banneret prints a
+     bare "the next time YOU HIT"; Burn Up prints "hits a HERO". Asserting
+     only that the flag exists cannot tell a read gate from a defaulted
+     one, so both cards are named here. */
   assert.deepEqual(P.classifyClause("the next time you hit this turn, gain 1{h}"),
-    {status: "run", ops: [["life", 1]]});
+    {status: "run", ops: [["hitNext", [["life", 1]], false]]});
+  assert.deepEqual(P.classifyClause(
+    "the next time an attack you control hits a hero this turn, deal 4 arcane damage to them"),
+    {status: "run", ops: [["hitNext", [["arcane", 4]], true]]});
+});
+
+test("BOTH WORDINGS of the charge trigger read — upstream moved under the note", {skip}, () => {
+  /* v4.21's comment quotes this line as "charged to your HERO'S soul" and
+     the database prints "charged to your soul" today. `DATA_VER` keys a
+     localStorage cache, so the two populations coexist until every cache
+     turns over (v3.00) — an anchor that knows one wording is a card
+     waiting to be found. */
+  for(const w of ["this is charged to your soul", "this is charged to your hero's soul",
+                  "this is charged to your heros soul"])
+    assert.deepEqual(P.classifyClause("when " + w + ", gain 1{h}"),
+      {status: "run", ops: [["life", 1]], onChargeSoul: true},
+      w + " was not recognised as the charge trigger");
 });
 
 test("the twelve CRUSH cards are untouched — the boundary is measured", {skip}, () => {

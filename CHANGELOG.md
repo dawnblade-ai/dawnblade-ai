@@ -1,3 +1,125 @@
+## v4.41 — a delayed grant that waited for the wrong event
+
+> **`hitNext`** — the two pool records that print *"the next time … hits
+> this turn, …"*, and a recorded refusal that named its own price.
+
+### A GRANT THAT WAITS FOR A HIT IS NOT A GRANT THAT WAITS FOR AN ATTACK
+
+> *"The next time an attack you control hits a **HERO** this turn, deal 4
+> arcane damage to them."* — BURN UP // SHOCK, Briar ×2
+
+v3.34 read it as a `buffQ` entry of zero power carrying a rider and wrote
+the argument down: such an entry *"already waits rather than being spent by
+a card it does not name"*. **True of every other member of that family
+because each carries a QUALIFIER, and false here** — the clause names no
+card at all, so `q` is `null`, `qualMatches` answers TRUE for everything by
+design (v3.98), and the entry is spent by the next attack **DECLARED**.
+
+| | driven |
+|---|---|
+| swing 1, blocked to nothing | `buffQ 0` — the grant is **GONE** |
+| swing 2, hits the hero | `pend.onHit []` — nothing fires |
+
+**WEAKER THAN PRINTED**, so the one-sided fairness sweep is blind, and the
+card read `tier: full` throughout because the clause IS consumed — v4.18's
+pair of blindnesses. It is v3.87's standing-versus-single-shot split asked
+about a different axis: not how LONG a grant lasts, but which EVENT spends
+it.
+
+**AND THE PRINTED "A HERO" WAS DROPPED TOO**, filed into `pend.onHit` where
+a BARE trigger lives, so the 4 arcane landed off a swing at an **ALLY** —
+the direction v3.45 built that list to stop. The gate is READ off the
+clause now, never defaulted (v3.69): defaulted true, Banneret loses a
+printed hit; defaulted false, Burn Up fires off an ally.
+
+`hitNext` is its own side field because no existing one can hold it. It is
+**spent where it is READ** (v4.06), in `linkPayload`, so the two cannot
+disagree; a fully blocked swing spends nothing (CR 7.5.5); it accumulates,
+because two copies are two grants; and it expires in `beginEndPhase` step
+(8) — **counted by `held` as well as swept**, or it expires only on a turn
+something else happens to (v4.07).
+
+### THE REFUSAL THAT NAMED ITS OWN PRICE
+
+> *"**Solflare** - When this is charged to your soul, the next time you hit
+> this turn, gain 1{h}."* — BANNERET OF SALVATION, Boltyn
+
+v4.21 refused this line and recorded what it waited on — *"the TRIGGER and
+the SCHEDULE, not the payload"*. Both are built: `onChargeSoul` is
+**`boostBanish`'s shape one cost over** (v3.56), a schedule that fires on a
+card its controller never played, out of a zone nothing else triggers from,
+at the single site v4.33 built for the offer.
+
+**IT IS HELD OFF `fx.ops`**, which is the whole of why: left in `ops` the
+1{h} lands when Banneret is PLAYED as an attack, which is v3.07's suspense
+bug and exactly what v4.21 found it doing. **Both wordings of the trigger
+read** — v4.21's own comment quotes *"charged to your HERO'S soul"* and the
+database prints *"charged to your soul"* today, so upstream moved under the
+note (v3.00).
+
+The drill that asserted the refusal went RED the day the gap closed, which
+is what a recorded refusal is FOR (v3.38), and it is the POSITIVE control
+now — keeping the half it was protecting: **nothing fires on play**.
+
+### THE BOUND IS THE PRINTED WORD "hit", AND THAT IS A MEASUREMENT
+
+Written to match the delay alone, this reader **swallowed a family that has
+its own**: the pool prints SEVEN *"the next time … this turn,"* clauses and
+**FIVE are preventions** — *"the next time you WOULD BE DEALT DAMAGE this
+turn, prevent N of that damage"* — so Cloud Cover ×3, Toe the Line and
+Throw Caution all went `full` → `none` in one edit, a working prevention
+deleted by a guard. **v3.57 exactly: a reader that cannot read its own
+match must not CONSUME the clause.** The split is pinned as a partition,
+both sides (v4.17).
+
+**AN UNKNOWN SUBJECT STILL REFUSES**, and that is the other half. Anchored
+to the two printed wordings alone, a third fell THROUGH to the loose
+matchers and read as an immediate op fired on PLAY — *"the next time a
+weapon you control hits this turn, gain 1{h}"* answered `[["life",1]]`,
+the delay gone. So the shape is matched wide and the subject is a closed
+table.
+
+Measured: **exactly 2 records move, 389 → 390 `full`, 3 → 2 `none`**;
+symmetry ledger **50 → 51**; `WIRE_V` **8 → 9** with its shape digest;
+floor re-pinned after reading the diff (one line, an improvement).
+
+### 20 SABOTAGES, 20 BITE — AND THE SILENT ONE WAS MY FIXTURE
+
+The accumulation sabotage (`runOps` overwriting the list instead of
+appending) came back **SILENT**, because the drill built both grants by
+hand and so drove the FIRE site rather than `runOps`. **A drill that
+constructs its own fixture proves the fixture** (v3.20); it arms them by
+running the op twice now, which is what a second copy of Burn Up does.
+
+### THE ROUTE COUNTER READS ZERO, AND THAT IS ABOUT THE POLICY
+
+v3.84's rule — when you build a route, go and count — and the answer is 0
+in 210 games. Measured both ways rather than assumed:
+
+| | |
+|---|---|
+| **Burn Up** | 28 feed lines in 14 games, every one at **INSTANT** speed. In the ACTION phase BOTH halves are legal and `payAction` tries half 0 first; in a REACTION window half 0 is refused and only Shock is legal. v4.03 gave the reaction branch priority and v3.80 ranks a non-attack LAST, so an instant-speed non-attack is always spent in a reaction window first |
+| **Banneret** | the charge is **OFFERED 14 times and TAKEN 0** — v4.33's recorded decision, which measured the cost at about two games in fourteen |
+
+**NEITHER IS FIXED HERE.** Playing the Action half instead of the Instant
+half is a TIMING judgement, and v4.24's standing rule is that this policy
+does not make one — v4.38 measured what happens when it is allowed to.
+So the 0 stays a number that says something true, the way v4.29's
+forced-exit half and v4.31's mirror limit do, and the **18 drills and two
+SCENES** are what cover the route.
+
+### AND THE BOLTYN SCENE WAS WRONG BEFORE THE ENGINE WAS
+
+Its first draft passed to resolution BEFORE reading the board and then
+reported the payout as *"life gained at the moment of charging"* — because
+**Bolt of Courage is itself an attack**, so its own swing is the *"next
+time you hit"*. Check your own fixture (v3.70), and read the board at the
+moment you mean to. The Briar scene was verified the other way: with its
+wall's defence dropped to 0 the numbers move to 8 / 0 / 8, which proves the
+blocked swing is genuinely being resolved.
+
+---
+
 ## v4.40 — THE LADDER IS REPRODUCIBLE, NOT REPEATABLE
 
 `npm run play` derives each game's seed from the pairing, so re-running it

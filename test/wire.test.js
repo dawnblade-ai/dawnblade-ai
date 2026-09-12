@@ -313,10 +313,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      that the shape and the number moved together. */
   let h = 5381;
   for(let i = 0; i < shape.length; i++) h = ((h * 33) ^ shape.charCodeAt(i)) >>> 0;
-  assert.equal(W.WIRE_V, 8,
+  assert.equal(W.WIRE_V, 9,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
-  assert.equal(h, 109932619,
+  assert.equal(h, 984219989,
     "the payload SHAPE moved and WIRE_V did not. A stale key decodes fine (the " +
     "lists are read by name) — what breaks is the FINGERPRINT, so two honest " +
     "peers desync on the opening state instead of being refused at the handshake.");

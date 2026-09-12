@@ -126,8 +126,15 @@
    does not have. The field is inert, but the FINGERPRINT is not: a v7
    peer's side carries `fatigue:false` and a v8 peer's does not, so two
    honest peers would hash differently on the opening state and every
-   action would read as a desync. Refused at the handshake instead. */
-const WIRE_V = 8;
+   action would read as a desync. Refused at the handshake instead.
+
+   8 -> 9 AT v4.41: `sd.hitNext` ARRIVES — the delayed on-hit grant Burn
+   Up // Shock and Banneret of Salvation print. A field arriving is as
+   deliberate an edit as one leaving (v3.29) and moves the fingerprint the
+   same way: a v8 peer's side has no `hitNext` and a v9 peer's has `[]`,
+   so two honest peers hash differently on the opening state and every
+   action reads as a desync. Refused at the handshake instead. */
+const WIRE_V = 9;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
@@ -149,7 +156,7 @@ const ENTRY_ZONES = ["board"];                   /* {card, kind, spent, uid} */
    every SIDE_FIELD is accounted for one way or the other. */
 const NON_CARD_SIDE_FIELDS = [
   "id","name","hero","heroKey","hp","maxHp","int","baseInt","intWas",
-  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider",
+  "res","ap","wasted","counters","weaponUsed","heroTapped","buffNext","buffQ","atkBuff","defMod","gaNext","gaNextQ","costOff","instantNextQ","defCapNext","defActionBuff","wardRider","hitNext",
   "runeHitNext","amp","ward","awd","wardTurn","awdTurn","arcShield",
   "lifeLock","namedBuff","dracNext","dracChain","marked","hist",
   "blockH","blockG","blockRx","blockedHand","chainBlocked","intimidated","paySel",

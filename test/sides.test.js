@@ -382,10 +382,18 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      not the thing implementing it. Dead rules STATE is worse than dead
      code elsewhere: it reads as a rule somebody can reach.
 
-     A FIELD LEAVING IS AS DELIBERATE AN EDIT AS ONE ARRIVING (v3.29). */
-  assert.equal(gap.fields, 50);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26 */
-  assert.equal(gap.player.length, 50);
-  assert.equal(gap.opponent.length, 50);
+     A FIELD LEAVING IS AS DELIBERATE AN EDIT AS ONE ARRIVING (v3.29).
+
+     50 -> 51 AT v4.41, IN THE OTHER DIRECTION. `hitNext` arrives: the
+     delayed on-hit grant Burn Up // Shock and Banneret of Salvation
+     print. It is a genuinely new record because no existing field can
+     hold it — every other single-shot grant is spent by the next attack
+     that MATCHES, at declaration, and this one waits for a HIT. Read as
+     a bare `buffQ` entry (v3.34) it was spent by an attack that missed
+     and lost. */
+  assert.equal(gap.fields, 51);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41 */
+  assert.equal(gap.player.length, 51);
+  assert.equal(gap.opponent.length, 51);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -395,8 +403,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 50);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26 */
-  assert.equal(gap.nativeForOpponent.length, 50);
+  assert.equal(gap.nativeForPlayer.length, 51);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41 */
+  assert.equal(gap.nativeForOpponent.length, 51);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

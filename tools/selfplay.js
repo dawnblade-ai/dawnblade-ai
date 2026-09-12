@@ -125,6 +125,47 @@ function play(g, limit){
            of the shape, destroy or no destroy, so the count cannot be
            silently halved by the printed drawback (v3.81). */
         if(/goes off —/.test(line))                events.push(["hitwatch", line]);
+        /* THE DELAYED ON-HIT GRANT (v4.41). Two pool records print it —
+           Burn Up // Shock (Briar x2) and Banneret of Salvation (Boltyn) —
+           and read as a `buffQ` entry with a null qualifier it was spent
+           by whatever was DECLARED next and lost if that attack missed.
+           v3.84's rule: when you build a route, go and count how often it
+           fires. The phrase is the engine's own (v3.81) and
+           test/hitnext.test.js pins the two spellings against each other.
+
+           IT COUNTS THE ARMING, NOT THE PAYOUT, and deliberately: the
+           payout runs the granted card's OWN ops through `runOps`, so it
+           prints whatever that payload prints (an arcane line, a life
+           line) and has no phrase of its own to watch. What this number
+           answers is whether any deck reaches the clause at all.
+
+           AND IT READS ZERO, WHICH IS A FACT ABOUT THIS POLICY AND NOT
+           ABOUT THE ROUTE — measured both ways rather than assumed:
+
+             Burn Up   28 feed lines in 14 games, every one at INSTANT
+                       speed. In the ACTION phase BOTH halves are legal
+                       and `payAction` tries half 0 first, so that route
+                       would arm it; in a REACTION window half 0 is
+                       refused ("Burn Up is an action") and only Shock is
+                       legal. v4.03 gave the reaction branch priority and
+                       v3.80 ranks a non-attack LAST in the action phase,
+                       so an instant-speed non-attack is always spent in a
+                       reaction window before the action phase offers it.
+             Banneret  the charge is OFFERED 14 times and TAKEN 0. That is
+                       v4.33's recorded decision: a price this policy
+                       cannot weigh is declined, and it measured the cost
+                       at about two games in fourteen.
+
+           NEITHER IS FIXED HERE. Playing the Action half instead of the
+           Instant half is a TIMING judgement — the grant is worth more
+           only if an attack later connects — and v4.24's standing rule is
+           that this policy does not make one; v4.38 measured what happens
+           when it is allowed to (three heroes with no attack reaction at
+           all went 22 -> 4, 16 -> 3, 15 -> 2). So the number stays a 0
+           that says something true, the way v4.29's forced-exit half and
+           v4.31's mirror limit do, and the DRILLS and the two SCENES are
+           what cover the route. */
+        if(/this turn, it pays off/.test(line))     events.push(["hitnext", line]);
         /* FUSION'S REVEAL (v4.27). The printed "you MAY reveal" is a real
            additional cost now rather than something the engine took for
            itself, so this counts the times a seat actually paid it — 16

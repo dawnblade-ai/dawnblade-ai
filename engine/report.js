@@ -92,7 +92,7 @@ function seat(sd){
       frost: PR.frostCount ? PR.frostCount(sd) : undefined,
       lifeLock: sd.lifeLock, marked: sd.marked, buffNext: sd.buffNext, buffQ: sd.buffQ,
       dracNext: sd.dracNext, dracChain: sd.dracChain,
-      atkBuff: sd.atkBuff, defMod: sd.defMod, gaNext: sd.gaNext, gaNextQ: sd.gaNextQ, costOff: sd.costOff, instantNextQ: sd.instantNextQ, defCapNext: sd.defCapNext, defActionBuff: sd.defActionBuff, wardRider: sd.wardRider, weaponUsed: sd.weaponUsed, heroTapped: sd.heroTapped},
+      atkBuff: sd.atkBuff, defMod: sd.defMod, gaNext: sd.gaNext, gaNextQ: sd.gaNextQ, costOff: sd.costOff, instantNextQ: sd.instantNextQ, defCapNext: sd.defCapNext, defActionBuff: sd.defActionBuff, wardRider: sd.wardRider, hitNext: sd.hitNext, weaponUsed: sd.weaponUsed, heroTapped: sd.heroTapped},
     hist: sd.hist
   };
 }

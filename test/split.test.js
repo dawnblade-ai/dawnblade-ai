@@ -107,17 +107,25 @@ test("a half's KEYWORDS are its own textbox, not the card's index", {skip}, () =
 test("Burn Up is a DELAYED trigger, not damage", () => {
   /* The prefix was swallowed and the clause read as immediate arcane
      damage — the unanchored-match shape v3.00 names, on the card where it
-     was worth four points a play. */
+     was worth four points a play.
+
+     AND IT IS NOT A `buffQ` ENTRY EITHER (v4.41). v3.34 read it as a
+     grant of zero power carrying a rider, on the argument that such an
+     entry "already waits rather than being spent by a card it does not
+     name" — true of every other member of that family because each
+     carries a QUALIFIER, and false here, where the clause names no card
+     and `q` is null. Driven, the grant was spent by the next attack
+     DECLARED and lost if it missed. */
   assert.deepEqual(
     P.classifyClause("The next time an attack you control hits a hero this turn, deal 4 arcane damage to them"),
-    {status: "run", ops: [["buffNext", 0, null, {onHit: [["arcane", 4]]}]]});
+    {status: "run", ops: [["hitNext", [["arcane", 4]], true]]});
   /* AND THE NUMBER IS THE CARD'S. */
   assert.equal(P.classifyClause(
     "The next time an attack you control hits a hero this turn, deal 7 arcane damage to them")
-    .ops[0][3].onHit[0][1], 7);
+    .ops[0][1][0][1], 7);
 });
 
-test("driven: Burn Up deals NOTHING on play, and 4 when an attack hits", {skip}, () => {
+test("driven: Burn Up deals NOTHING on play, and waits on the HIT", {skip}, () => {
   H.db();
   P.fxReset();
   const bu = {...H.card("Burn Up // Shock", 1), uid: "b1"};
@@ -125,16 +133,23 @@ test("driven: Burn Up deals NOTHING on play, and 4 when an attack hits", {skip},
   g.builds = [{}, {}];
   const played = H.execute({...g, _half: 0}, bu, "hand", 0, {});
   assert.equal(played.sides[1].hp, 20, "NOTHING on play — this was 5 damage before v3.34");
-  assert.equal(played.sides[0].buffQ.length, 1, "a rider waits instead");
-  assert.deepEqual(played.sides[0].buffQ[0].rider, {onHit: [["arcane", 4]]});
+  assert.deepEqual(played.sides[0].hitNext,
+    [{ops: [["arcane", 4]], heroOnly: true, src: "Burn Up // Shock"}],
+    "the grant waits on a HIT, not on the next attack declared");
+  assert.deepEqual(played.sides[0].buffQ, [],
+    "and it is NOT a buffQ entry — with q:null that is spent by whatever swings next");
 
+  /* IT IS NOT TAKEN BY THE DECLARATION. Until v4.41 it was: `qualMatches`
+     answers true for a null qualifier, so declaring an attack moved the
+     rider onto `pend.onHit` and emptied the grant — whether or not the
+     attack went on to hit anything. */
   let mid = {...played, pend: null, stack: [], _half: null};
   mid.sides = played.sides.slice();
   mid.sides[0] = {...mid.sides[0], ap: 1};
   const atk = {...H.card("Raging Onslaught", 1), uid: "a1"};
   const swung = H.execute(mid, atk, "hand", 0, {});
-  assert.deepEqual(swung.pend.onHit, [["arcane", 4]], "it rides onto the attack");
-  assert.equal(swung.sides[0].buffQ.length, 0, "and is spent");
+  assert.deepEqual(swung.pend.onHit, [], "declaring an attack collects nothing");
+  assert.equal((swung.sides[0].hitNext || []).length, 1, "the grant is still waiting");
 });
 
 /* ---- 3. THE DECLARATION --------------------------------------------- */
@@ -238,15 +253,15 @@ test("driven: each declaration resolves its own half at the table", {skip}, () =
 
   const shock = J.reduce(asked, {t: "split", half: 1}, 0).state;
   assert.equal(shock.sides[1].hp, 19, "Shock's 1 arcane, and only that");
-  assert.equal((shock.sides[0].buffQ || []).length, 0, "no delayed rider");
+  assert.equal((shock.sides[0].hitNext || []).length, 0, "no delayed grant");
 
   const burn = J.reduce(asked, {t: "split", half: 0}, 0).state;
   assert.equal(burn.sides[1].hp, 20, "Burn Up deals nothing on play");
-  assert.equal((burn.sides[0].buffQ || []).length, 1, "it arms the rider instead");
+  assert.equal((burn.sides[0].hitNext || []).length, 1, "it arms the delayed grant instead");
 
   const meld = J.reduce(asked, {t: "split", half: "both"}, 0).state;
   assert.equal(meld.sides[1].hp, 19, "meld does both");
-  assert.equal((meld.sides[0].buffQ || []).length, 1);
+  assert.equal((meld.sides[0].hitNext || []).length, 1);
 });
 
 test("the pending blocks everything else, and refuses a half that is not there", {skip}, () => {

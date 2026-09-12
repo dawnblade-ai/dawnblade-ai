@@ -1267,6 +1267,24 @@ function makeEffects(ctx){
           n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
+      /* ---- THE DELAYED ON-HIT GRANT (v4.41) --------------------------
+         "The next time an attack you control hits a hero this turn, deal
+          4 arcane damage to them."                  — BURN UP // SHOCK
+
+         IT ACCUMULATES AND IT IS NOT A BOOLEAN. Two copies of Burn Up in
+         one turn are two grants, each spent by its own hit — the same
+         reason `buffQ` is a list and `gaNext` is not.
+
+         op[1] is the payload and op[2] is the printed HERO GATE, read off
+         the clause (v3.69) rather than defaulted: Burn Up says "hits a
+         HERO" and Banneret says a bare "you hit". */
+      else if(k==="hitNext"){
+        const ops = Array.isArray(v) ? v : [];
+        if(ops.length){
+          actMut(n).hitNext = [...(act(n).hitNext||[]), {ops, heroOnly: !!op[2], src: srcName}];
+          n = L(n, `${srcName}: the next time ${sv(act(n), "hit")}${op[2] ? " a hero" : ""} this turn, it pays off.`);
+        }
+      }
       /* a keyword this resolution has GRANTED — read beside the printed
          ones, so a gated keyword works when its condition actually fires */
       else if(k==="gainKw"){ n._kwGrant=[...(n._kwGrant||[]), String(v).toLowerCase()];
@@ -2818,6 +2836,19 @@ function makeEffects(ctx){
         /* THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a
            zone both players can read, so the charge is public. */
         n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
+        /* ---- "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) -------------
+           `boostBanish`'s site one cost over (v3.56): the CHARGED card's
+           own trigger, fired at the one place a card goes to the soul as
+           an additional cost. Banneret of Salvation is the pool's only
+           record and it is Boltyn's, who decks three cards that print the
+           charge — so the card and its enabler are in the same box, which
+           is the sign v3.54 names that the loop was designed.
+
+           IT IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S (v3.56):
+           read off the card being PLAYED it would fire whenever Banneret
+           pays for something else, which is the opposite card. */
+        const _cs = fxParse(picked).chargeSoul;
+        if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
       }
     }
     /* FUSION — "[TALENT] Fusion" means "as an additional cost to play
@@ -5966,6 +5997,46 @@ function makeEffects(ctx){
       else if(total>0) n = L(n, `${pc.name} hit an ally — its "when this hits a hero" ability does not fire.`);
       else n = L(n, "Fully blocked — on-hit effects fizzle.");
     }
+    /* ---- THE DELAYED ON-HIT GRANT COMES DUE (v4.41) -------------------
+
+       "The next time an attack you control hits a hero this turn, …"
+
+       SPENT WHERE IT IS READ, so the two cannot disagree (v4.06's rule,
+       written after `dracNext` was a grant nothing ever spent). The three
+       halves the printed words decide:
+
+         a hit on a HERO      spends every grant, gated or not
+         a hit on an ALLY     spends the BARE grants only — `heroOnly`
+                              is the same distinction `onHitHero` keeps
+                              one list up, and for the same reason
+         fully blocked        spends NOTHING. CR 7.5.5: if no damage is
+                              dealt it is not a hit, so "the next time"
+                              has not happened yet
+
+       IT FIRES AFTER THE ATTACK'S OWN PAYLOAD, and that is a stated
+       choice rather than an accident: CR 4.1.8a gives the order of
+       simultaneous triggers to the controller and this project does not
+       model that, so the attack's own on-hit — the thing the hit is
+       ABOUT — goes first and the waiting grant rides behind it. No pool
+       pairing makes the order observable; it would take a lethal delayed
+       payload meeting an on-hit that gains life.
+
+       THE ENTRY CARRIES ITS OWN `src`, because `runOps` prints the source
+       name into the feed and the card that granted this is not the card
+       now swinging — without it Burn Up's 4 arcane is announced under the
+       name of whatever attack happened to connect (v4.24: a reason a
+       player reads is the player's line). */
+    const _hn = act(n).hitNext || [];
+    if(_hn.length && total > 0){
+      const due  = _hn.filter(e => e && (!e.heroOnly || heroHit));
+      const keep = _hn.filter(e => e && (e.heroOnly && !heroHit));
+      if(due.length){
+        actMut(n).hitNext = keep;
+        for(const e of due) n = runOps(n, e.ops || [], e.src || pc.name);
+      }
+      else if(keep.length)
+        n = L(n, `${pc.name} hit an ally — a waiting "the next time you hit a hero" grant still waits.`);
+    }
     /* ---- "WHEN THIS HITS A HERO, YOU MAY … DESTROY THIS AND …" (v4.37)
 
        Mark of the Huntsman, and it is `offerPayCost`'s scan with the one
@@ -7882,7 +7953,17 @@ function beginEndPhase(game, seat, db){
                   expire on the same turn — which is a sweep that works by
                   coincidence. */
                + (sd.amp ? 1 : 0) + (sd.runeHitNext ? 1 : 0)
-               + (sd.wardTurn ? 1 : 0) + (sd.awdTurn ? 1 : 0);
+               + (sd.wardTurn ? 1 : 0) + (sd.awdTurn ? 1 : 0)
+               /* AND THE DELAYED ON-HIT GRANT (v4.41). Both cards that
+                  print it say "this turn", and it is the case v4.07's
+                  note is about: the bug only shows when the grant is NOT
+                  spent, because a grant a hit collects looks correct in
+                  every drill that collects it. An unspent one following
+                  its controller into the next turn is STRONGER than
+                  printed — the direction the one-sided sweep is built not
+                  to look in. COUNTED here as well as swept below, or it
+                  expires only on a turn something else happens to. */
+               + (sd.hitNext || []).length;
     if(!held) continue;
     const sides = n.sides.slice();
     sides[i] = Object.assign({}, sd,
@@ -7896,7 +7977,7 @@ function beginEndPhase(game, seat, db){
           unspent one followed its controller into every later turn.
           A grant that outlives its printed window is STRONGER than
           printed, which the one-sided fairness sweep cannot see. */
-       amp: 0, runeHitNext: 0,
+       amp: 0, runeHitNext: 0, hitNext: [],
        /* AND ONLY THE WINDOWED PART OF THE PREVENTION POOLS. Sweeping
           `ward` whole would have taken an aura's printed `Ward N` with it
           while the keyword still filled this pool. It no longer does

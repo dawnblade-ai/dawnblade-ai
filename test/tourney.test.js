@@ -63,8 +63,8 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "crush", "death", "destroycost", "fusion", "gold", "hitwatch", "jab",
-    "layer", "leave", "reaction", "tap", "ward",
+    "ally", "crush", "death", "destroycost", "fusion", "gold", "hitnext", "hitwatch",
+    "jab", "layer", "leave", "reaction", "tap", "ward",
   ]);
 });
 
@@ -91,8 +91,16 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    MADE and answered. It counts BOTH outcomes deliberately, because the
    seat declines by standing rule (v4.24) and a counter narrowed to the
    accept half would print a 0 that is about the POLICY (v4.29). */
+/* `hitnext` is a ROUTE (v4.41) and it reads ZERO on the ladder, which is a
+   fact about this POLICY and not about the route — Burn Up is always
+   reached at INSTANT speed where only its Shock half is legal, and
+   Banneret's charge is offered 14 times and declined 14 by v4.33's
+   standing rule. A route counter at 0 is still a route counter: `destroycost`
+   above makes the same argument from the other end, and the drills and two
+   scenes are what cover this one. */
 const ROUTES_PINNED = ["ally", "crush", "death", "destroycost", "fusion", "gold",
-                       "hitwatch", "jab", "layer", "leave", "reaction", "tap", "ward"];
+                       "hitnext", "hitwatch", "jab", "layer", "leave", "reaction",
+                       "tap", "ward"];
 
 test("faults and routes partition the emitted kinds", () => {
   assert.deepEqual([...SP.FAULTS].sort(), FAULTS_PINNED);

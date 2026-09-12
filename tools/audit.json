@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-11T23:56:38.572Z",
+ "generated": "2026-09-12T00:32:29.931Z",
  "appVer": "4.40",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 389,
+  "full": 390,
   "part": 13,
-  "none": 3
+  "none": 2
  },
  "heroes": {
   "kayo": {
@@ -11341,18 +11341,16 @@
    "mentions": [
     "solflare"
    ],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
    "playable": false,
    "clauses": [
     {
      "t": "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Solflare - When this is charged to your soul, the next time you hit this turn, gain 1{h}.",

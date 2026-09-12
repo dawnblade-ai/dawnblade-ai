@@ -334,6 +334,17 @@ const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow", "
 const CTR_WORDS = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6};
 const RX_CTR_PUT = /^put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (.+)$/;
 
+/* THE DELAYED-HIT SUBJECTS, CLOSED AND MEASURED (v4.41).
+
+   Exactly two pool records print "the next time … this turn, …" and these
+   are their two subjects. The value is the printed HERO GATE: Burn Up
+   says "hits a HERO" and Banneret says a bare "you hit", and `onHit` /
+   `onHitHero` are two lists precisely because a bare trigger fires on a
+   hit at an ALLY and a gated one does not (v3.45). A third wording
+   refuses the clause rather than being read as whichever of these two it
+   most resembles — see the reader in `classifyClause`. */
+const HITNEXT_SUBJ = {"an attack you control hits a hero": true, "you hit": false};
+
 function classifyClause(raw){
   /* modal options print with a leading dash ("- Target dagger attack gets +3{p}") */
   const c = levelIdiom(clean(raw).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
@@ -799,6 +810,29 @@ function classifyClause(raw){
        Tagged rather than run, exactly like `onHit` and `onLeave`, so the
        site that files the corpse fires it. */
     if(/^this dies$/.test(cond)) return Object.assign(rest,{onDeath:true});
+    /* ---- "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) -----------------
+       > "Solflare - When this is charged to your soul, the next time you
+       >  hit this turn, gain 1{h}."      — BANNERET OF SALVATION, Boltyn
+
+       `boostBanish`'s shape ONE COST OVER (v3.56): a schedule that fires
+       on a card its controller never PLAYED, out of a zone nothing else
+       triggers from. Charge sends a card from the hand to the soul as an
+       additional cost of some OTHER card, so this card's own text has to
+       be read at the moment it leaves — and `execute` has had exactly one
+       such site since v4.33 built the offer.
+
+       IT IS TAGGED, NEVER RUN, and that is the whole of why: left in
+       `fx.ops` the 1{h} lands when Banneret is PLAYED as an attack, which
+       is v3.07's suspense bug — a printed condition collected as a bonus,
+       and precisely what v4.21 found this card doing before it refused.
+
+       THE OLD WORDING IS READ TOO. v4.21's own comment quotes this line as
+       "charged to your HERO'S soul" and the database prints "charged to
+       your soul" today — upstream moved under the note (v3.00), and both
+       populations coexist while caches turn over, so the anchor admits
+       either. */
+    if(/^this is charged to your (?:hero'?s? )?soul$/.test(cond.trim()))
+      return Object.assign(rest,{onChargeSoul:true});
     if(/^this hits a marked hero$/.test(cond)) return Object.assign(rest,{cond:"marked", onHit:true, heroOnly:true});
     /* ---- WHOSE HIT? (v3.45) --------------------------------------------
        CR 1.4.5 makes an ALLY an attack-target, so "hits" and "hits a HERO"
@@ -1830,22 +1864,76 @@ function classifyClause(raw){
   /* mandatory hand-banish — same shape as foeDiscard, banish zone instead */
   if(/(?:they|the defending hero|target hero|defending hero|opponent|each opponent) banish(?:es)? a card from (?:their|his|her) hand/.test(c))
     return R([["foeBanish",1]]);
-  /* "THE NEXT TIME AN ATTACK YOU CONTROL HITS A HERO THIS TURN, DEAL N
-     ARCANE DAMAGE TO THEM" — Burn Up (v3.34).
+  /* ---- "THE NEXT TIME … HITS THIS TURN, …" — A DELAYED GRANT (v4.41)
 
-     A DELAYED TRIGGER, NOT DAMAGE. The whole prefix was being swallowed
-     and the clause read as immediate arcane damage, so Burn Up dealt its
-     4 the instant it was played — no attack, no hit, no condition. It is
-     the unanchored-match shape v3.00 names, on a card that reads `part`
-     so no coverage tool ever looked at it.
+     > "The next time an attack you control hits a HERO this turn, deal 4
+     >  arcane damage to them."            — BURN UP // SHOCK, Briar x2
+     > "Solflare - When this is charged to your soul, the next time YOU
+     >  HIT this turn, gain 1{h}."         — BANNERET OF SALVATION, Boltyn
 
-     IT RIDES ON `buffQ`, WITH NO POWER. That entry already means "the
-     next attack that matches, with this rider attached", already waits
-     rather than being spent by a card it does not name, and already
-     expires with the turn. An amount of 0 is a rider and nothing else —
-     which is exactly what this clause is. */
-  if(m=c.match(/^the next time an attack you control hits a hero this turn, deal (\d+) arcane damage to them$/))
-    return R([["buffNext", 0, null, {onHit: [["arcane", +m[1]]]}]]);
+     A GRANT THAT WAITS FOR A HIT IS NOT A GRANT THAT WAITS FOR AN ATTACK,
+     and v3.34 read this one as the latter: `[["buffNext", 0, null,
+     {onHit: […]}]]`, a `buffQ` entry of zero power carrying a rider. The
+     argument written down for it was that such an entry "already waits
+     rather than being spent by a card it does not name" — TRUE of every
+     other member of that family, because each carries a QUALIFIER. This
+     clause names no card at all, so `q` is `null`, `qualMatches` answers
+     TRUE for everything, and the entry is spent by the next attack
+     DECLARED. Driven, seat 0 holding the grant:
+
+       swing 1, blocked to nothing   buffQ 0 ... the grant is GONE
+       swing 2, hits the hero        pend.onHit [] ... nothing fires
+
+     WEAKER THAN PRINTED, so the one-sided fairness sweep is blind, and
+     the card reads `tier: full` throughout because the clause IS
+     consumed — v4.18's lesson one grant over. It is v3.87's
+     standing-versus-single-shot split asked about a different axis: not
+     how LONG a grant lasts, but which EVENT spends it.
+
+     AND THE PRINTED "A HERO" WAS DROPPED TOO. `pend.onHit` fires on any
+     hit and `pend.onHitHero` only on a hero (v3.45), and the old reading
+     filed Burn Up's arcane into the first — so 4 arcane landed off a
+     swing at an ALLY, which is exactly the direction that list exists to
+     stop. The gate is READ off the clause here, never defaulted either
+     way (v3.69): defaulted true, Banneret loses a printed hit; defaulted
+     false, Burn Up fires off an ally.
+
+     THE SUBJECT VOCABULARY IS CLOSED AND MEASURED — exactly these two
+     wordings in the pool, so a third refuses and is visible rather than
+     being read as whichever of the two it resembles. THE PAYLOAD GOES
+     BACK THROUGH `classifyClause` (v4.21's strip-and-recurse), so it
+     shares every reader, AND AN UNREADABLE PAYLOAD REFUSES (v2.29). */
+  if(m=c.match(/^the next time ([^,]*\bhits?\b[^,]*) this turn, (.+)$/)){
+    /* AN UNKNOWN SUBJECT REFUSES THE WHOLE CLAUSE, and that is the half
+       that needed measuring rather than reasoning about. Anchored to the
+       two printed wordings alone, a third fell THROUGH to the loose
+       matchers below and read as an immediate op fired on PLAY — driven,
+       "the next time a weapon you control hits this turn, gain 1{h}"
+       answered `[["life",1]]`, the delay gone. That is v4.19's rule about
+       an unreadable rung and v3.59's about an activation prefix: when a
+       guard exists to stop a loose rule stealing a clause, the guard has
+       to reach every wording of the shape, not only the ones with a
+       reader. So the SHAPE is matched wide and the SUBJECT is a closed
+       table — a third wording is weaker than printed and visible in the
+       audit rather than being read as whichever of these two it resembles.
+
+       AND THE SHAPE IS BOUNDED BY THE WORD "HIT", WHICH IS A MEASUREMENT.
+       Written to match the delay alone this swallowed a family that has
+       its own reader: the pool prints SEVEN "the next time … this turn,"
+       clauses and FIVE are preventions — "the next time you WOULD BE
+       DEALT DAMAGE this turn, prevent N of that damage" — so Cloud Cover,
+       Toe the Line and Throw Caution all went `full` -> `none` in one
+       edit, a working prevention deleted by a guard. That is v3.57
+       exactly: a reader that cannot read its own match must not CONSUME
+       the clause. The event this op is about is a HIT, so the bound is
+       the printed word, and every other wording of the shape reaches the
+       reader that owns it. */
+    const heroOnly = HITNEXT_SUBJ[m[1]];
+    if(heroOnly === undefined) return null;
+    const sub = classifyClause(m[2]);
+    if(!sub || sub.status !== "run" || !sub.ops || !sub.ops.length || sub.cond) return null;
+    return R([["hitNext", sub.ops, heroOnly]]);
+  }
 
   /* THE `Ward N` KEYWORD IS A PROPERTY OF THE PERMANENT, NOT A POOL (v4.34).
 
@@ -5170,6 +5258,10 @@ function fxParse(card){
          moment nothing has checked it in. A blacklist is the bug (v3.35,
          v3.80): the next kind added walks into the new site. */
       else if(r.onAtk && DECL_OPS.has(op[0])){ fx.onAtk.push(op); return; }
+      /* HELD OFF `fx.ops` FOR `boostBanish`'s REASON (v3.56, v4.41): the
+         card is never PLAYED on this route, so an op left in `ops` fires
+         on the play instead of on the charge. */
+      else if(r.onChargeSoul){ fx.chargeSoul = [...(fx.chargeSoul||[]), op]; return; }
       else if(r.onDeath){ fx.onDeath.push(op); return; }
       else fx.ops.push(op);
     });
