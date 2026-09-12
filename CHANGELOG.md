@@ -1,3 +1,134 @@
+## v4.43 — Hope Merchant's Hood, and the cost half was never the blocker
+
+> **"Instant - Destroy this: Shuffle any number of cards from your hand
+> into your deck, then draw that many cards."** — SFA004, in **Dash's** and
+> **Fai's** lists, `tier: none` since the pool was pinned.
+
+### THE CHEAPEST DIAGNOSTIC IN THIS PROJECT, AND IT MOVED THE CARD
+
+v3.79's rule: **a card at `none` whose payload parses is a COST or a
+TRIGGER.** Run backwards it is sharper still — hand the SAME printed line a
+payload that HAS a reader and see what the reader says:
+
+| | `parseHeroPower` answers |
+|---|---|
+| `Instant - Destroy this: Draw a card.` | `{cost:0, sd:true, kind:"instant"}` |
+| the Hood's real line | **`null`** |
+
+Identical cost, identical prefix, identical window — so the destroy, the
+instant speed and the powCard itself were **every one of them waiting on
+one sentence.** Until now `build.js` built the piece no powCard at all and
+neither board could offer it. **v3.47's shape, SIXTH outing: reading the
+payload is what creates the route.**
+
+### AND THE APPROXIMATION LEDGER WAS WRONG ABOUT WHY IT WAS THERE
+
+`tools/approx.js` named the blocker as *"a ZONE MOVE (deck manipulation) —
+machinery `prompts.js` does not have"*. **`moveCards` has routed a pick to
+the deck since the module was written**, and every destination on the way
+(`hand`, `grave`, `soul`, `deckTop`, `deckBottom`, `gear`, `arsenal`) was
+already live. **A recorded reason is only as good as the day it was
+measured** (v3.69), and the way to check one is to ASK THE ENGINE rather
+than to read the note — which is how this record's last three cards left
+(Danger Digits v4.38, Banneret v4.41, this). The record is `unbuilt-one`
+now, and Glisten is the one whose blocker was named correctly: an
+**ALLOCATOR**, a sixth prompt variant that apportions rather than selects.
+
+### IT IS ONE PICK CARRYING A COUPLING, NOT THREE OPS
+
+*"That many"* names the cards the player just chose, so the count is the
+**ANSWER's own size**. Three independent ops would need `runOps` to thread
+*"how many did the last one move"* between them — state no op carries
+(v3.71's whole-card argument, v3.88's one-op-for-both-seats). `shuffleDraw`
+rides on the spec and `applyAnswer` reads `r.picked.length`, which is
+exactly what that field was added for (v3.41).
+
+**THE ORDER IS THE CARD.** `applyPrompt` puts the chosen cards at the FRONT
+of the deck, so **with the shuffle dropped the controller draws back
+exactly what they put down** — every zone count correct, the feed saying
+the cards went back, and the hand unchanged. A visible no-op wearing the
+appearance of a card that worked. Drawing before shuffling is the same bug
+spelled the other way. Both are sabotages and both bite.
+
+**AND WHAT WENT BACK CAN COME OUT AGAIN**, which is the whole card: this is
+a **RE-RANDOMISATION**, not a cycle to fresh cards, so the deck is shuffled
+with the returned cards IN it. Driven with an empty deck, shuffling three
+back and drawing three gives those same three, freshly ordered — and that
+is the line-finding the card exists for.
+
+**THE DRAW CANNOT BE SHORT**, and it falls out rather than being guarded: N
+cards were just shuffled in, so the deck holds at least N.
+
+### THE POOL'S FIRST MULTI-CARD PICK
+
+Measured: every other `pickPrompt` in the parser is `max: 1`. `maxAll` is
+the printed *"any number"* and **`buildPrompt` resolves it against the
+candidate pool it has already filtered** — never at the queue site, which
+would have to re-derive the same filter, and never in the parse, where
+`fxParse`'s `name|pitch` memo would freeze a hand size at whatever the
+first reader saw (v3.39, v3.92). The clamp was already there; *"all of
+them"* is that clamp with no other bound.
+
+**"ANY NUMBER" INCLUDES ZERO**, so `min: 0` and the sheet offers **Choose
+none**. Refusing zero is a restriction the card does not print — and the
+Hood is already destroyed by then, so the decision is the player's to get
+wrong. Declining shuffles nothing, draws nothing and **does not even touch
+the seeded stream** (v2.04).
+
+**`shuffleDraw` IS THE SEVENTH FIELD TO PROVE v2.34's RULE** — a spec only
+carries fields `buildPrompt` knows about. Dropped there, the sheet opens,
+the right cards go into the deck and the printed redraw never happens.
+Now with a standing census behind it (`test/speccensus.test.js`, v4.42).
+
+### THE TAIL IS A CLOSED READING, AND THAT DECIDES WHERE THE RULE SITS
+
+The shape is matched wide and an unreadable tail **REFUSES** — which is
+what takes the clause away from the unanchored plain-draw matcher rather
+than leaving it read half-way. Measured: a `"…then draw TWO cards"` variant
+reads as a bare `[["draw",2]]`, the payload with the card's entire printed
+cost gone. **v3.00's unanchored match and v3.60's rule verbatim: when you
+anchor a rule to stop a loose one stealing a clause, it has to come FIRST.**
+So this lives above the plain draw rather than beside its `pickPrompt`
+family — and **the premise is a drill**, so widening that pattern to accept
+*"that many"* fails a test instead of silently eating the shuffle.
+
+**"ANY NUMBER OF" IS IN THE ANCHOR**, because `pickSubject` answers NULL
+for the whole phrase (measured) — so a rule that handed it over would
+simply refuse, and one that STRIPPED it first would read *"shuffle A CARD …
+then draw that many"* as unbounded too, inventing a bound on the one card
+where the bound is the decision. The SUBJECT still goes through
+`pickSubject`, so a restricted wording carries its printed filter.
+
+### THE ROUTE COUNTER READS ZERO, AND THAT IS ABOUT THE LOADOUT
+
+v3.84's rule: when you build a route, go and count how often it fires.
+Measured rather than assumed — **the Hood prints 0 defence and Blade
+Beckoner Helm prints 1**, so `defaultPicks` takes the Helm in the head slot
+of **both** lists that deck the Hood, and the piece is never worn in a
+driven game. Which armour to wear is a deck-building judgement and
+`defaultPicks` reads no card text by contract, exactly as `sparring.js`
+does not (v4.24's standing rule). **A player picks it on the loadout
+screen**, which is the route the drills seat explicitly for both heroes —
+and **that premise is a drill too**, so a `defaultPicks` that starts
+ranking by text has to re-measure the recorded reason (v3.69).
+
+### MEASURED
+
+**Exactly 1 record moves, `none` → `full`** (390 → 391 full, 2 → 1 none);
+the ladder is **byte-identical**, verified by running it on both sides of
+the change rather than by reasoning about it. **17 sabotages, 16 bite** —
+and the two that came back silent could not express their bug (v3.62):
+`applyPick` strips a same-slot pre-seed, so pre-seeding `defaultPicks` with
+the Hood proves nothing (the sabotage that bites reverses the defence
+sort), and making `moveCards` APPEND instead of prepend is **unobservable
+behind the shuffle**, which is the property itself.
+
+**AND THE HARNESS HIT v4.37's OWN LESSON AGAIN.** A revert guard that
+asserted before writing left one sabotage in flight, and the next script's
+"baseline" was taken under it — reading 24/0 and looking like a silent
+sabotage. **Revert first, then report, and re-derive every count taken
+while a sabotage was live.** Third recorded outing.
+
 ## v4.42 — two censuses this project had been running by hand
 
 > **`test/fxcensus.test.js`** and **`test/speccensus.test.js`** — every

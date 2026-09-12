@@ -166,6 +166,29 @@ function play(g, limit){
            v4.31's mirror limit do, and the DRILLS and the two SCENES are
            what cover the route. */
         if(/this turn, it pays off/.test(line))     events.push(["hitnext", line]);
+        /* SHUFFLE-AND-REDRAW (v4.43). Hope Merchant's Hood, and v3.84's
+           rule: when you build a route, go and count how often it fires.
+
+           IT READS ZERO, AND THAT IS A FACT ABOUT THE LOADOUT RATHER THAN
+           ABOUT THE ROUTE — measured, not assumed. `sparring.act` seats
+           `build.buildSideDefault`, and `defaultPicks` takes the best
+           armour in each slot: the Hood prints 0 defence, so Blade
+           Beckoner Helm wins the head slot in BOTH lists that deck it
+           (Dash and Fai). The piece is therefore never worn in a driven
+           game and the ability has nothing to activate.
+
+           THAT IS NOT A GAP TO CLOSE HERE. Which armour to wear is a
+           DECK-BUILDING judgement — a 0-defence Head whose whole value is
+           its text against a Helm that blocks — and v4.24's standing rule
+           is that this policy does not make one; `defaultPicks` reads no
+           card text by contract, exactly as `sparring.js` does not. A
+           player picks it on the loadout screen, which is the route the
+           drills drive (test/hood.test.js seats it explicitly, both
+           heroes) and where the card is reachable today.
+
+           So the number stays a 0 that says something true, like v4.41's
+           own counter and v4.29's forced-exit half. */
+        if(/back into .* deck — shuffled/.test(line)) events.push(["hood", line]);
         /* FUSION'S REVEAL (v4.27). The printed "you MAY reveal" is a real
            additional cost now rather than something the engine took for
            itself, so this counts the times a seat actually paid it — 16

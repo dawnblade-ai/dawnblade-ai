@@ -64,7 +64,7 @@ test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
     "ally", "crush", "death", "destroycost", "fusion", "gold", "hitnext", "hitwatch",
-    "jab", "layer", "leave", "reaction", "tap", "ward",
+    "hood", "jab", "layer", "leave", "reaction", "tap", "ward",
   ]);
 });
 
@@ -98,9 +98,17 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    standing rule. A route counter at 0 is still a route counter: `destroycost`
    above makes the same argument from the other end, and the drills and two
    scenes are what cover this one. */
+/* `hood` is a ROUTE (v4.43) and it reads ZERO for a reason of its own:
+   the route works, and `defaultPicks` never EQUIPS the piece. Measured —
+   Hope Merchant's Hood prints 0 defence and Blade Beckoner Helm prints 1,
+   so the Helm wins the head slot in both lists that deck it (Dash, Fai).
+   Which armour to wear is a deck-building judgement and `defaultPicks`
+   reads no card text by contract, exactly as `sparring.js` does not
+   (v4.24's standing rule). A player picks it on the loadout screen, which
+   is the route `test/hood.test.js` drives explicitly for both heroes. */
 const ROUTES_PINNED = ["ally", "crush", "death", "destroycost", "fusion", "gold",
-                       "hitnext", "hitwatch", "jab", "layer", "leave", "reaction",
-                       "tap", "ward"];
+                       "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
+                       "reaction", "tap", "ward"];
 
 test("faults and routes partition the emitted kinds", () => {
   assert.deepEqual([...SP.FAULTS].sort(), FAULTS_PINNED);

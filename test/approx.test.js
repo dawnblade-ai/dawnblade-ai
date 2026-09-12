@@ -675,7 +675,7 @@ probe("auto-pitch-discard", () => {
 });
 
 /* Four pool DECK cards read tier `none`. */
-probe("unbuilt-three", () => {
+probe("unbuilt-one", () => {
   /* +Banneret of Salvation AT v4.21, AND IT ARRIVED AS A CORRECTION.
      Its "Solflare -" keyword prefix was eaten by the loose matchers, so
      the card read `tier: full` while granting 1{h} UNCONDITIONALLY ON
@@ -692,10 +692,21 @@ probe("unbuilt-three", () => {
      the card was built. What it was waiting on was named in its own
      v4.21 note above: the charge TRIGGER and the "next time you hit"
      DELAY, neither of them the payload. Both exist now (`onChargeSoul`,
-     `hitNext`), so the card reads `full` and leaves the ledger. TWO
-     LEFT, and both need machinery `prompts.js` does not have — Glisten
-     an allocator, Hope Merchant's Hood deck manipulation. */
-  const want = ["Glisten", "Hope Merchant's Hood"];
+     `hitNext`), so the card reads `full` and leaves the ledger.
+
+     -HOPE MERCHANT'S HOOD AT v4.43, third in six versions and by the same
+     mechanism — this drill went red the moment the card was built, which
+     is what an `open` record is FOR. And it corrected the record's own
+     stated REASON: the note said the blocker was deck manipulation
+     "machinery prompts.js does not have", and `moveCards` has routed a
+     pick to the deck since the module was written. What was missing was
+     one sentence in the parser. A recorded reason is only as good as the
+     day it was measured (v3.69).
+
+     ONE LEFT, and it is the only one of the four whose blocker was named
+     correctly: Glisten needs an ALLOCATOR, a sixth prompt variant that
+     apportions rather than selects. */
+  const want = ["Glisten"];
   /* A HERO IS NOT A DECK CARD AND NEITHER IS A TOKEN, and the pool holds
      all three (v3.21 keeps tokens by TYPE, v3.76 put Arakni's six Agents in
      the same way). The audit's headline "3 none" is over DECK cards; a flat

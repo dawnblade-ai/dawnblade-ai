@@ -306,28 +306,30 @@ const APPROX = {
       "the cards that print a real CHOICE. The advisor value is the same ranking "+
       "the coach shows, so the pick is at least explicable."},
 
-"unbuilt-three": {
-  status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.41",
-  claim:"TWO pool DECK cards read tier `none`: Glisten (distribute up to four +1{p} "+
-        "counters among any number of weapons) and Hope Merchant's Hood (shuffle "+
-        "any number of cards from hand into the deck, then draw that many). "+
-        "DANGER DIGITS LEFT AT v4.38 — the FICTION was built (a hit by a card "+
-        "that never attacked), and with it the pool's only targeted jab. "+
-        "BANNERET OF SALVATION LEFT AT v4.41, four versions after arriving.",
-  why:"NEITHER of the two is waiting on its payload — every effect reads. What "+
-      "refuses is a PROMPT shape (a distribution sheet) and a ZONE MOVE (deck "+
-      "manipulation). Both are machinery `prompts.js` does not have, which is why "+
-      "these two are the last and why neither is a card-text job. "+
-      "BANNERET ARRIVED HERE AS A CORRECTION AND LEFT AS A BUILD. v4.21 found its "+
-      "'Solflare -' keyword prefix being eaten by the loose matchers, so the card "+
-      "read `tier: full` while granting 1{h} UNCONDITIONALLY ON PLAY — the charge "+
-      "trigger and the 'next time you hit this turn' delay both dropped; a "+
-      "downgrade that corrects over-reporting is the number improving (v3.16). "+
-      "This record then named exactly what it waited on — 'a when this is charged "+
-      "to your soul trigger and a next-hit schedule' — and v4.41 built both: "+
-      "`onChargeSoul` is `boostBanish`'s shape one cost over (v3.56) and `hitNext` "+
-      "is the delayed grant. A RECORDED GAP IS A DEBT (v3.61) and this one was "+
-      "discharged by reading its own sentence. "+
+"unbuilt-one": {
+  status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.43",
+  claim:"ONE pool DECK card reads tier `none`: GLISTEN — 'distribute up to four "+
+        "+1{p} counters among any number of weapons you control'. "+
+        "DANGER DIGITS LEFT AT v4.38 (the FICTION was built, and with it the "+
+        "pool's only targeted jab); BANNERET OF SALVATION AT v4.41, four versions "+
+        "after arriving; HOPE MERCHANT'S HOOD AT v4.43.",
+  why:"GLISTEN IS NOT WAITING ON ITS PAYLOAD — `ctrPut` has read a +1{p} counter "+
+      "since v3.55 and `parser.wardValue`'s neighbours read every number on the "+
+      "line. What refuses is a PROMPT SHAPE: an ALLOCATOR, where the player "+
+      "spreads N counters over M permanents and every distribution is legal. "+
+      "`prompts.js` has five variants and not one of them apportions — `pick` "+
+      "chooses a SET and a set cannot say 'two of these on that one'. That is why "+
+      "this is the last and why it is not a card-text job. "+
+      "HOPE MERCHANT'S HOOD LEFT AT v4.43, AND THIS RECORD WAS WRONG ABOUT WHY IT "+
+      "WAS HERE. It said the blocker was 'a ZONE MOVE (deck manipulation) — "+
+      "machinery prompts.js does not have', and `moveCards` has routed a pick to "+
+      "the deck since the module was written. What was missing was one SENTENCE "+
+      "in the parser: hand the same printed cost a payload that reads and "+
+      "`parseHeroPower` answers in full (v3.79's diagnostic), so the destroy, the "+
+      "instant window and the powCard were all waiting on the payload. v3.47's "+
+      "shape, sixth outing. A RECORDED REASON IS ONLY AS GOOD AS THE DAY IT WAS "+
+      "MEASURED (v3.69) — and the way to check one is to ASK THE ENGINE rather "+
+      "than to read the note. "+
       "THE PROBE PINS THE HERO AND TOKEN SETS SEPARATELY, and that is what "+
       "found INERTIA at v4.03: a token reading `none` that WORKED, because "+
       "`effects.isInertia` matched it by NAME. Its wipe is read now and the "+

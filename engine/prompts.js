@@ -177,7 +177,16 @@ function buildPrompt(game, spec){
     const pool = (spec.cards ? spec.cards.filter(Boolean) : promptZone(game, side, zone))
       .filter(promptFilter(spec.filter));
     if(!pool.length) return null;
-    const max = Math.min(spec.max != null ? spec.max : 1, pool.length);
+    /* "ANY NUMBER OF CARDS" IS RESOLVED HERE, AGAINST THE POOL THIS
+       FUNCTION HAS ALREADY FILTERED (v4.43). Hope Merchant's Hood is the
+       pool's first multi-card pick — every other `pickPrompt` in the
+       parser is `max: 1` — and its bound is the CANDIDATE COUNT, not a
+       number anybody can write down: `fxParse` memoizes on `name|pitch`,
+       so a hand size in the parse freezes at whatever the first reader
+       saw (v3.39, v3.92), and supplying it at the queue site would be a
+       second place that has to re-derive the same filter. The clamp is
+       already here; "all of them" is just the clamp with no other bound. */
+    const max = Math.min(spec.maxAll ? pool.length : (spec.max != null ? spec.max : 1), pool.length);
     const min = Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
     return {...base, zone: spec.cards ? null : zone, cards:pool, min, max,
       to: spec.to || null, optional: min === 0,
@@ -276,6 +285,21 @@ function buildPrompt(game, spec){
          coming back out of the graveyard is equipped fresh: its `destroyed`
          flag and its battleworn `curDef` are cleared by `applyAnswer`. */
       equipStamp: !!spec.equipStamp,
+      /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34, and
+         this is the seventh field to prove it — now with a standing census
+         behind it in `test/speccensus.test.js`). `shuffleDraw` is Hope
+         Merchant's Hood's whole payload: the deck is shuffled and the
+         controller draws AS MANY CARDS AS THEY CHOSE. Dropped here, the
+         sheet opens, the right cards go back into the deck, and the
+         printed redraw never happens — the player has thrown their hand
+         away and destroyed the Hood for nothing.
+
+         It is DATA rather than ops for this module's founding reason: the
+         count is not known until the answer, and shuffling needs the
+         seeded rng, which `applyAnswer` owns and this module must not
+         touch (a shuffle here would consume the replay stream from a
+         function whose contract is that it runs no effects). */
+      shuffleDraw: !!spec.shuffleDraw,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }

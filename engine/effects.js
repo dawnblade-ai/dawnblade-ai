@@ -102,7 +102,7 @@ const {advValue} = A;
    prompt ANSWER moved here from the trainer: resolving a sheet is one
    shared body now, and both boards call it. */
 const {buildPrompt, applyPrompt, promptReady, promptFilter} = PR;
-const rngRoll = R.roll, rngInt = R.int;
+const rngRoll = R.roll, rngInt = R.int, rngShuffle = R.shuffle;
 
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
    that this module cannot own: the logger, the actor helpers, the card
@@ -4638,6 +4638,61 @@ function makeEffects(ctx){
       actMut(n).counters = Object.assign({}, act(n).counters,
         {[r.spendCtr.uid]: Object.assign({}, bag,
           {[r.spendCtr.kind]: Math.max(0, (bag[r.spendCtr.kind] || 0) - r.spendCtr.n)})});
+    }
+    /* ============================================================
+       SHUFFLE-AND-REDRAW — HOPE MERCHANT'S HOOD (v4.43)
+
+       > "Shuffle any number of cards from your hand into your deck, then
+       >  draw that many cards."
+
+       THE ORDER IS THE CARD. `applyPrompt` has already moved the chosen
+       cards out of the hand, and `moveCards`' generic branch puts them at
+       the FRONT of the deck — so without the shuffle the controller draws
+       back exactly what they just put down, in the same order. That is a
+       visible no-op wearing the appearance of a card that worked: the feed
+       says the cards went back, the hand size is right, and the hand is
+       unchanged. Drawing before shuffling is the same bug spelled the
+       other way. Both are sabotages, and both bite.
+
+       AND THE WHOLE POINT IS THAT WHAT WENT BACK CAN COME OUT AGAIN. This
+       is not a cycle to fresh cards — it is a RE-RANDOMISATION, which is
+       why the deck must be shuffled with the returned cards in it rather
+       than shuffled first.
+
+       THE COUNT IS THE ANSWER'S, never a literal (v3.32). `r.picked` is
+       the structural record of the choice, which is exactly what it was
+       added for (v3.41) — one card back draws one, three draw three.
+
+       THE DRAW GOES THROUGH `runOps`, not through a second hand splice, so
+       it shares the one draw body: CR 4.5.3 has no deck-out loss (v4.26)
+       and an empty deck draws what is there. It cannot be short anyway —
+       N cards were just shuffled IN, so the deck holds at least N.
+
+       THE RNG IS STORED BACK. `rngShuffle` is pure and returns a new
+       stream beside the shuffled array (rng.js's founding discipline); a
+       dropped store means the NEXT shuffle in the match repeats this one,
+       which no single-game drill can see. `rng.n` only ever goes up, so
+       the drill asserts on the counter as well as on the order.
+
+       IT IS THE ASKED SIDE'S DECK. The actor is borrowed to `p.side` for
+       this whole body (twenty lines up), so `act(n)` is the seat that
+       activated the Hood — the same reason the leave payout below reads
+       `act(n)` rather than the ambient actor (v3.46's inversion). */
+    if(p.tag === "pick" && p.shuffleDraw && (r.picked || []).length){
+      const back = r.picked.length;
+      const sh = rngShuffle(n.rng, act(n).deck || []);
+      n.rng = sh.rng;
+      actMut(n).deck = sh.arr;
+      /* NO VERB TO INFLECT, AND THE SEAT IS STILL NAMED (v2.83, v4.22).
+         The subject would need `sv` and the possessive `sp`, and the seat
+         that shuffles is the seat whose deck it is — "Dash shuffles 3
+         cards into Dash's deck" is what naming both gives you, and a
+         hand-rolled "'s" on seat 0 reads "You's deck". Stating the count
+         and the possessive alone says everything and agrees with either
+         seat, and `runOps`' own "Drew N" completes the sequence — which in
+         a training sim IS the lesson (v3.60). */
+      n = L(n, `${p.src || "Shuffle"}: ${back} card${back === 1 ? "" : "s"} back into ${sp(act(n))} deck — shuffled.`);
+      n = runOps(n, [["draw", back]], p.src || "");
     }
     if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
     /* AND A CARD THAT LEFT THE ARENA PAYS FOR LEAVING IT (v4.29).

@@ -300,6 +300,19 @@ const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
 const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
 const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
+/* SHUFFLE-AND-REDRAW (Hope Merchant's Hood) — and "ANY NUMBER OF" IS IN
+   THE ANCHOR, not left to the subject reader. `pickSubject` answers NULL
+   for "any number of cards" (measured), so a rule that handed it the whole
+   phrase would simply refuse; and a rule that stripped the phrase before
+   asking would read "shuffle A CARD from your hand … then draw that many"
+   as unbounded too — a bound the card never prints, on the one card in the
+   pool where the bound IS the decision. Anchored, a bounded variant
+   refuses: weaker than printed and visible (v2.29).
+
+   THE SUBJECT STILL GOES THROUGH `pickSubject` (v3.53), so no vocabulary
+   is invented and a restricted wording ("shuffle any number of RED cards")
+   carries its printed filter rather than dropping it. */
+const RX_SHUF_DRAW = /^shuffle any number of (.+) from your hand into your deck,? then (.+)$/;
 
 /* PUTTING COUNTERS ON A PERMANENT YOU CONTROL.
 
@@ -2121,6 +2134,58 @@ function classifyClause(raw){
     return R([["draw",num(m[1])],["selfDiscard",num(m[2])]]);
   if(m=c.match(/^discards? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)draws? (a|an|one|two|three|\d+) cards?$/))
     return R([["selfDiscard",num(m[1])],["draw",num(m[2])]]);
+  /* ============================================================
+     SHUFFLE-AND-REDRAW — HOPE MERCHANT'S HOOD (v4.43)
+
+     > "Instant - Destroy this: Shuffle any number of cards from your hand
+     >  into your deck, then draw that many cards."
+
+     THE COST HALF HAS BEEN BUILT FOR VERSIONS AND THE WHOLE CARD READ
+     `tier: none`. Handed the identical printed line with a payload that
+     HAS a reader, `parseHeroPower` answers in full — `{kind:"instant",
+     sd:true}` — so the destroy, the window and the powCard were all
+     waiting on this sentence. v3.47's shape, sixth outing: READING THE
+     PAYLOAD IS WHAT CREATES THE ROUTE. Until now `build.js` built the
+     piece no powCard and neither board could offer it.
+
+     IT IS ONE PICK CARRYING A COUPLING, NOT THREE OPS. The count is the
+     ANSWER's own size — "that many" names the cards the player just chose
+     — so three independent ops would need `runOps` to thread "how many did
+     the last one move" between them, which is state no op carries (v3.71's
+     whole-card argument, v3.88's one-op-for-both-seats). `shuffleDraw`
+     rides on the spec and `applyAnswer` reads `r.picked.length`.
+
+     "ANY NUMBER" INCLUDES ZERO, so `min: 0` — which is what gives the
+     sheet its "Choose none" button. Refusing zero would be a restriction
+     the card does not print; and the Hood is already destroyed by then, so
+     the decision is the player's to get wrong.
+
+     AND IT IS THE POOL'S FIRST MULTI-CARD PICK. Measured: every other
+     `pickPrompt` in the parser is `max: 1`. `maxAll` is the printed "any
+     number" and `buildPrompt` resolves it against the CANDIDATE POOL it
+     has already filtered — never at the queue site and never in the parse,
+     because `fxParse` memoizes on `name|pitch` and a hand size stored
+     there would freeze at whatever the first reader saw (v3.39, v3.92).
+     ============================================================ */
+  if(m=c.match(RX_SHUF_DRAW)){
+    /* THE TAIL IS A CLOSED READING, AND THAT IS WHY THIS RULE SITS HERE
+       rather than beside its `pickPrompt` family three hundred lines down.
+       The plain-draw rule immediately below is UNANCHORED, so a variant
+       printing "…then draw TWO cards" reads as a bare [["draw",2]] —
+       measured — with the card's entire printed cost gone. That is v3.00's
+       unanchored match and v3.60's rule verbatim: when you anchor a rule to
+       stop a loose one stealing a clause, it has to come FIRST. So the
+       shape is matched wide and an unreadable tail REFUSES (v2.29, v4.41),
+       which takes the clause away from the loose rule rather than leaving
+       it to be read half-way. */
+    if(!/^draw that many cards?$/.test(m[2])) return null;
+    const filter = pickSubject(String(cased(RX_SHUF_DRAW, 1, m[1]) || "").trim());
+    if(!filter) return null;
+    return R([["pickPrompt", {zone:"hand", to:"deck", filter,
+      min:0, maxAll:true, shuffleDraw:true,
+      title:"Shuffle any number of cards back?",
+      hint:"They go into your deck, it is shuffled, and you draw that many — what you put back can come off the top again."}]]);
+  }
   if(m=c.match(/draw (a|an|one|two|three|\d+) cards?/)) return R([["draw",num(m[1])]]);
   if(m=c.match(/gains? (\d+)\s*(?:\{r\}|resource)/)) return R([["res",+m[1]]]);
   /* Bare pip costs: "Gain {r}{r}" is two resources — count the symbols. */

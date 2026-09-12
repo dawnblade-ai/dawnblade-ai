@@ -71,6 +71,64 @@ module.exports = [
     "Scorpio is NOT once per turn": false,
     "…it TAPS instead": true
   }
+},
+
+{
+  name: "the Hood shuffles her hand back and REDRAWS it",
+  why: "v4.43. `applyPrompt` puts the chosen cards at the FRONT of the " +
+       "deck, so with the shuffle dropped she draws back exactly what she " +
+       "put down — every zone count correct, the feed saying the cards " +
+       "went back, and the hand unchanged. A visible no-op wearing the " +
+       "appearance of a card that worked. Drawing before shuffling is the " +
+       "same bug spelled the other way. And the card read `tier: none` " +
+       "for versions while its COST half was complete: hand the same " +
+       "printed line a payload that reads and `parseHeroPower` answers " +
+       "(v3.79's diagnostic) — reading the payload is what creates the " +
+       "route (v3.47).",
+  run(c){
+    const hood = c.card("Hope Merchant's Hood", 0, "hd");
+    /* A DECK BIG ENOUGH THAT DRAWING THREE CANNOT BE MISTAKEN FOR LUCK,
+       and three named cards in hand so the redraw is identifiable. */
+    const hand = [1,2,3].map(i => Object.assign({}, c.card("Sink Below", 1), {uid: "h"+i, name: "H"+i}));
+    const deck = Array.from({length: 20}, (_, i) =>
+      Object.assign({}, c.card("Sink Below", 1), {uid: "d"+i, name: "D"+i}));
+    let g = c.acting(c.state({name: "Dash", res: 9, ap: 3, hand, deck, gear: []},
+                             {name: "Them", hp: 20, deck: [c.card("Sink Below", 1)]},
+                             {seed: "hood-scene", turn: 4}));
+    const pw = c.P.parseHeroPower(hood.tx, true);
+    const before = g.rng.n;
+    g = c.ops(g, c.P.classifyClause(String(pw.eff).toLowerCase()).ops, "Hope Merchant's Hood");
+    g = c.open(g);
+    const offered = g.prompt ? g.prompt.max : -1;
+    /* pick all three */
+    let n = g;
+    for(const i of [0,1,2]) n = c.J.reduce(n, {t: "promptSel", i}, 0).state;
+    n = c.J.reduce(n, {t: "promptConfirm"}, 0).state;
+    const drew = n.sides[0].hand.map(x => x.name);
+    return {
+      "the ability reads at all":      !!pw,
+      "…at instant speed":             pw && pw.kind,
+      "…paying with the piece":        !!(pw && pw.sd),
+      "cards she may shuffle back":    offered,
+      "cards in hand afterwards":      n.sides[0].hand.length,
+      "cards left in the deck":        n.sides[0].deck.length,
+      "the deck was SHUFFLED":         n.rng.n > before,
+      "she drew back the same three, in order": drew.join(",") === "H1,H2,H3",
+      "no card is in two zones":       new Set([...n.sides[0].deck, ...n.sides[0].hand]
+                                         .map(x => x.uid)).size
+    };
+  },
+  want: {
+    "the ability reads at all": true,
+    "…at instant speed": "instant",
+    "…paying with the piece": true,
+    "cards she may shuffle back": 3,
+    "cards in hand afterwards": 3,
+    "cards left in the deck": 20,
+    "the deck was SHUFFLED": true,
+    "she drew back the same three, in order": false,
+    "no card is in two zones": 23
+  }
 }
 
 ];
