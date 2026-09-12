@@ -1,3 +1,183 @@
+## v4.44 — Glisten, the allocator, and a sheet the table never had
+
+> **"Distribute up to four +1{p} counters among any number of weapons you
+> control. At the beginning of your end phase, remove all +1{p} counters
+> from weapons you control."** — SBL, **Boltyn**'s list ×2, and **the last
+> deck card in the pool at `tier: none`.**
+
+### THE ONE RECORD WHOSE BLOCKER WAS NAMED CORRECTLY
+
+`tools/approx.js` has carried a standing list of unbuilt deck cards since
+v3.79, and **every other departure from it corrected the record's own
+stated reason by asking the engine** — Danger Digits' fiction (v4.38),
+Banneret's trigger and delay (v4.41), the Hood's one parser sentence
+(v4.43), each of them a *recorded reason is only as good as the day it was
+measured* (v3.69). This one needed exactly what the note said:
+
+> *"an ALLOCATOR, where the player spreads N counters over M permanents and
+> every distribution is legal. `prompts.js` has five variants and not one of
+> them apportions — `pick` chooses a SET and a set cannot say 'two of these
+> on that one'."*
+
+**`alloc` is the sixth variant, and its selection is a MULTISET.** Every
+other sheet's `sel` is a set of indices and `promptToggleSel` is its own
+inverse; here a second tap places a second counter, so the undo has to be
+its own operation (`promptTakeBack`) and — at the table, where the sheet is
+sequenced state — its own ACTION. `PROMPT_ACTIONS` four → five.
+
+**Read as a single target the card is wrong in one direction only and
+invisibly**: four counters on one weapon where the printed line permits 2/2.
+The clause WAS refused rather than half-read, so coverage reported it
+honestly — which is the one blind spot this project's tools do not have.
+
+**THE POOL PROVES THE NUMBER IS READ.** Glisten prints four / three / two
+across its three pitches, so no synthetic is needed to tell a read number
+from a hardcoded one — second time the pool has settled that on its own
+(v3.89's Shred, measured at -4/-3/-2).
+
+**THE SUBJECT IS A TYPE, AND `pickSubject` HAD NO WORD FOR IT.** *"Weapons
+you control"* answered `null` — the closed subject vocabulary knew
+`sword`, `dagger` and `ally` and not the type above them. Read off `ty`
+rather than `tt`, because the structured array is the authority for a TYPE
+(v2.39); measured over 796 records, the two readings claim the same 16
+today and the array is right the day `type_text` carries a stray word,
+which it already does on five database records.
+
+**AND A BARE "card" SUBJECT REFUSES, IN ALL THREE COUNTER READERS.** An
+empty filter over the board AND the gear claims **every permanent its
+controller holds** — v3.53's sev-3, *"an unknown key that falls through
+admits every card"*. `ctrSubject` is the one body all three share, which is
+v4.21's rule: **fix the family, not the two members you found.**
+
+### THE SECOND SENTENCE IS A SIDE-LEVEL DELAYED TRIGGER, NOT A STAMP
+
+Sharpen's wipe (v3.66) marks the PIECE it sharpened, because the card says
+*"remove all +1{p} counters from **it**"*. This names a SET — *"weapons you
+control"* — **evaluated when the trigger fires**, so a weapon equipped
+afterwards is inside it and a counter Glisten never placed comes off.
+Neither reading can be derived from the other, so `sd.ctrEnd` is a genuinely
+new record: symmetry ledger **51 → 52**, `WIRE_V` **9 → 10**.
+
+It **accumulates** (two printed sentences are two triggers), it fires at the
+**controller's own** end phase as step (4a2), and it is **CONSUMED** — left
+standing it wipes every end phase for the rest of the game, a one-turn
+drawback turned into a permanent ban on holding a counter.
+
+### THE POLICY TAKES THE MAXIMUM, AND THAT IS A MEASUREMENT
+
+v4.24's standing rule is to **decline** a price this policy cannot weigh.
+An allocation has no price, so v4.23's reprieve governs instead — and the
+premise is drilled rather than asserted: **measured over 797 records, nine
+cards read a `+1{p}` counter and not one spends it as a cost.** The only two
+that REMOVE any are idle-wipe schedules (Dawnblade's own and Glisten's), which
+take them whether they were placed or not. So placing fewer is strictly
+dominated, and `autoAnswer`'s fallthrough — `promptConfirm`, placing NONE —
+would have left the whole route with no caller (v3.50, five outings).
+
+**WHERE THEY GO IS PRINTED NUMBERS AND A TOTAL ORDER.** A counter is spent
+by a SWING, so they concentrate on the highest printed power with ties broken
+on uid (v2.46: a ranking that leaves ties unbroken is a desync waiting for
+two equal permanents).
+
+**AND THE FORCED PATH IS THE ONE BOLTYN FACES.** `defaultPicks` equips him
+one weapon, so the spread sits BELOW `ctrPut`'s single-candidate fast path
+and no sheet opens at all — *a sheet offering a single forced choice is a tap
+that teaches nothing* (v3.55).
+
+### THE TABLE HAD NO PROMPT SHEET AT ALL
+
+Found while adding a seventh variant, which would have been unanswerable
+there in exactly the same way. **Measured: the word "prompt" did not appear
+once in `TableBoard`** — and `judge.legal` freezes the game for BOTH seats
+while one is live, refusing every action but the four that answer it. So a
+card that asked its controller a question was a **hard livelock** on the
+board this project calls CR-exact, and `judge.js`'s own comment says why
+that is a missing RULE rather than a missing screen:
+
+> *"several cards defer their whole payload into the answer — `arcaneHit`
+> rides the damage out on a soak, a printed 'unless they pay' hangs its
+> consequence off a toll."*
+
+**v3.01's shape at the scale of a whole interaction layer**, and CLAUDE.md
+has stated the opposite (*"prompts are answerable there too"*) since v2.78:
+a doc claim is a test with no assertion (v3.41).
+
+`PromptSheet` is one props-only component both boards render, like
+`ArmorGrid` and `PeekDock` (v2.50) — the two boards speak different state
+vocabularies and the sheet needs neither. It renders for **both** seats (a
+table where you cannot see what your opponent is being asked is a table that
+has silently stopped) with its controls inert unless the sheet is yours,
+which is what `judge.legal` already enforces. The table's five answers each
+travel as an ACTION.
+
+**AND THE COLLISION GUARD CAUGHT THE FIRST DRAFT.** It declared a local
+`seat`, which CLAUDE.md names by name — `priority.js` exports a `seat`
+helper meaning *"seat a game"*, and a local one meaning *"which chair is
+this client in"* is the same-name-different-meaning trap. Renamed `viewer`,
+exactly as v2.25 renamed `tapTwice`'s `act`.
+
+### TWO CENSUSES WERE READING THE DOCUMENTATION
+
+**`test/speccensus.test.js` scanned RAW source, comments included** — v4.27's
+own defect (`failstates.js` counting a keyword named in a comment) inside a
+drill, and it cost this file's sharpest claim. `ANSWER_READS` held `optional`
+on the strength of two comments using the ordinary English word, and
+`applyPrompt` reads no such field: **a member that is in the set for a
+comment's sake can never LEAVE it**, so v3.53's *consumer that stopped
+obeying its spec* was unwatchable for it. Measured both ways before changing
+it — the file scan and `buildPrompt`'s are unchanged, with the body going
+21,830 chars to 5,546, so both clean results get strictly stronger.
+
+**AND THE ROUTE CENSUS WAS AIMED AT TWO OF THREE NAMING CONVENTIONS.**
+`test/tourney.test.js` read event kinds off `events.push(["…"` with the
+pattern `[A-Z-]+|[a-z]+`, so a **camelCase** counter was invisible to the
+whole partition and could have printed nowhere while the census looked
+complete — the exact defect v4.17 built it to stop. Widened, and `ctrWipe` is
+what exercises the widening.
+
+### MEASURED
+
+**Exactly 1 record moves, `none` → `full`** (391 → 392 full, **1 → 0
+none**): every deck card in the pool now reads something, so the ledger
+record is `closed` and its probe is turned round — a deck card arriving at
+`none` is a regression rather than a backlog item. The HERO and TOKEN sets
+stay pinned as its positive control (five and seven), because an empty set
+is exactly what a census that stopped censusing returns.
+
+Route counters `powctr 48` / `ctrWipe 29` in 210 games. `powctr` is the
+FAMILY and is named for it: the placement line names the permanent TAKING
+the counter and not the source, so it also counts Astral Etchings and
+Spectral Manifestations putting them on auras.
+
+**THE LADDER MOVE IS NOISE, MEASURED AT THREE SEEDS ON BOTH SIDES** — which
+is v4.40's rule, and it is the right instrument here because the policy
+genuinely changed (it answers an `alloc` where before it confirmed with
+nothing placed, and that reshuffles every draw after it):
+
+| | v4.43 | v4.44 | verdict |
+|---|---|---|---|
+| Boltyn — the only hero who decks it | 5 · 7 · 7 (6.3) | 5 · 8 · 6 (6.3) | **identical mean, intervals overlap — NOISE** |
+| Kayo | 19 · 22 · 19 (20.0) | 19 · 21 · 19 (19.7) | inside the band |
+| Azalea | 3 · 7 · 2 (4.0) | 3 · 7 · 3 (4.3) | inside the band |
+| the other twelve | — | **byte-identical** | |
+
+Kayo and Azalea deck no Glisten; they PLAY Boltyn, so a changed line of his
+reshuffles those pairings. The band's median is 4 and every move here is 1.
+
+**28 sabotages, 28 bite** — and five of the first pass came back silent for
+reasons that were all mine. Three fixtures could not express their bug
+(v3.62): the wipe's subject guard needed a NON-weapon holding a counter, the
+take-back needed driving through `reduce` rather than through `prompts.js`
+(v3.20), and the accumulation needed **two** weapons, because with one the
+`ctrPut` fast path runs and `applyAnswer` is never reached. A fourth was the
+render count, which cannot tell a live component from one behind
+`{false && …}` (v4.00, verbatim) — that shape is refused by name now and the
+reach of the scan is stated rather than papered over. And a fifth was a pin
+**named from memory**: the single-target `ctrPut` set is Astral Etchings,
+Edict of Steel and **Re-Charge!**, not Uphold Tradition, whose put sits
+inside a cloaked instant ability and is read off the powCard (v4.09 — check
+your own fixture by ASKING rather than by remembering).
+
 ## v4.43 — Hope Merchant's Hood, and the cost half was never the blocker
 
 > **"Instant - Destroy this: Shuffle any number of cards from your hand

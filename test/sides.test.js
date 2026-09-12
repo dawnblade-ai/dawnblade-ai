@@ -390,10 +390,20 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
      hold it — every other single-shot grant is spent by the next attack
      that MATCHES, at declaration, and this one waits for a HIT. Read as
      a bare `buffQ` entry (v3.34) it was spent by an attack that missed
-     and lost. */
-  assert.equal(gap.fields, 51);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41 */
-  assert.equal(gap.player.length, 51);
-  assert.equal(gap.opponent.length, 51);
+     and lost.
+
+     51 -> 52 AT v4.44. `ctrEnd` arrives: Glisten's second sentence, a
+     DELAYED TRIGGER that removes every +1{p} counter from the weapons
+     its controller holds at the beginning of their own end phase. It
+     cannot ride on the permanents the way sharpen's wipe does (v3.66),
+     because the printed subject is *"weapons you control"* evaluated
+     WHEN THE TRIGGER FIRES — a weapon equipped afterwards is inside it
+     and a counter Glisten never placed comes off. So the schedule
+     belongs to the SIDE, and it ACCUMULATES: two Glistens are two
+     printed sentences. */
+  assert.equal(gap.fields, 52);   /* +buffQ v2.30, -frost v2.74, -rot -fra v3.09, +nextTurn v3.29, +gaNextQ v3.31, +costOff v3.32, +instantNextQ v3.37, +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defMod v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44 */
+  assert.equal(gap.player.length, 52);
+  assert.equal(gap.opponent.length, 52);
   assert.deepEqual(gap.missingForPlayer, []);
   assert.equal(gap.missingForOpponent.length, 0);
 });
@@ -403,8 +413,8 @@ test("symmetry gap: coverage — how much of a hero each seat carries", () => {
    must reach zero, and it is counters and statuses from here on. */
 test("symmetry gap: migration — what has moved onto sides[]", () => {
   const gap = S.symmetryGap();
-  assert.equal(gap.nativeForPlayer.length, 51);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41 */
-  assert.equal(gap.nativeForOpponent.length, 51);
+  assert.equal(gap.nativeForPlayer.length, 52);   /* … +heroTapped v3.48, +defCapNext v3.64, +wardRider v3.67, +defActionBuff v3.78, -rune v3.82, +atkBuff v3.87, +defDebuff v3.89, +wardTurn +awdTurn v4.07, +dracChain v4.19, -fatigue v4.26, +hitNext v4.41, +ctrEnd v4.44 */
+  assert.equal(gap.nativeForOpponent.length, 52);
   assert.equal(gap.flatRemaining, 0, "the migration is complete — nothing left flat");
 });
 

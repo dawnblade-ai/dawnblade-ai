@@ -1,13 +1,13 @@
 {
- "generated": "2026-09-12T13:26:43.462Z",
- "appVer": "4.43",
+ "generated": "2026-09-12T18:14:37.374Z",
+ "appVer": "4.44",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 391,
+  "full": 392,
   "part": 13,
-  "none": 1
+  "none": 0
  },
  "heroes": {
   "kayo": {
@@ -11171,23 +11171,20 @@
     "{p}"
    ],
    "mentions": [],
-   "tier": "none",
+   "tier": "full",
    "approx": false,
-   "playable": false,
+   "playable": true,
    "clauses": [
     {
      "t": "Distribute up to four +1{p} counters among any number of weapons you control.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "At the beginning of your end phase, remove all +1{p} counters from weapons you control.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Distribute up to four +1{p} counters among any number of weapons you control.",
-    "At the beginning of your end phase, remove all +1{p} counters from weapons you control."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Distribute up to four +1{p} counters among any number of weapons you control.\nAt the beginning of your end phase, remove all +1{p} counters from weapons you control.",

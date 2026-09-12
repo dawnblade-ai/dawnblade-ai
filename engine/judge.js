@@ -227,7 +227,15 @@ const ACTIONS = [
   "promptSel",    /* {i}          toggle a card / an option on the sheet  */
   "promptChoose", /* {choice}     pick a printed mode, pay or decline     */
   "promptConfirm",/*              resolve it                             */
-  "promptDecline" /*              the declining half of an OPTIONAL sheet */
+  "promptDecline",/*              the declining half of an OPTIONAL sheet */
+  /* AN UNDO, AND IT IS AN ACTION BECAUSE THE SHEET IS SHARED STATE
+     (v4.44). An `alloc` selection is a MULTISET — tapping a permanent
+     twice puts two counters on it — so `promptSel` cannot be its own
+     inverse the way it is for a `pick`. At the table the sheet lives in
+     the sequenced state, so the undo has to travel as an action or one
+     peer's board disagrees with the other's about what has been placed.
+     `alloc` only: every other tag toggles. */
+  "promptTakeBack"
 ];
 
 /* EVERY KIND `pending` CAN HOLD (v3.35). One field, four kinds — and a UI
@@ -241,7 +249,8 @@ const ACTIONS = [
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
 const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge"];
-const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline"];
+const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
+                        "promptTakeBack"];
 
 /* ---- reading and writing ---------------------------------------------
    `act`/`foe` are ACTOR-relative and are what rules code uses. There is
@@ -449,6 +458,35 @@ function autoAnswer(g){
         if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
     }
     return {t: "promptConfirm"};
+  }
+  /* AN ALLOCATION IS TAKEN IN FULL, AND THAT IS A MEASUREMENT (v4.44).
+     v4.24's standing rule is to DECLINE a price this policy cannot weigh,
+     and an allocation has NO price: the card is already paid for and
+     nothing in the pool spends the counter. Measured over 797 records —
+     nine cards read a `+1{p}` counter and not one spends it as a cost;
+     the only two that REMOVE any are idle-wipe schedules (Dawnblade's own
+     and Glisten's second sentence), which take them whether they were
+     placed or not. So placing fewer is strictly dominated, which is
+     v4.23's reprieve read one counter over — and the fallthrough below
+     would have placed NONE, leaving the whole route with no caller
+     (v3.50, five outings).
+
+     WHERE THEY GO IS PRINTED NUMBERS AND A TOTAL ORDER. A counter is
+     spent by a SWING, so they concentrate on the highest printed power —
+     the weapon this policy would attack with first — and ties break on
+     uid, because a ranking that leaves ties unbroken is a desync waiting
+     for two equal permanents (v2.46). Spreading them instead is a
+     judgement about a board this policy cannot read. */
+  if(p.tag === "alloc"){
+    const sel = p.sel || [], cards = p.cards || [];
+    if(sel.length >= (p.max || 0) || !cards.length) return {t: "promptConfirm"};
+    let best = 0;
+    for(let i = 1; i < cards.length; i++){
+      const a = cards[i], c = cards[best];
+      const pa = a.power || 0, pc = c.power || 0;
+      if(pa > pc || (pa === pc && (a.uid || 0) < (c.uid || 0))) best = i;
+    }
+    return {t: "promptSel", i: best};
   }
   return {t: "promptConfirm"};
 }
@@ -1804,6 +1842,7 @@ function reduce(g, a, seat){
     case "promptSel":    n = {...n, prompt: PM.promptToggleSel(n.prompt, a.i)}; break;
     case "promptChoose": n = {...n, prompt: PM.promptChoose(n.prompt, a.choice)}; break;
     case "promptDecline":n = {...n, prompt: PM.promptDecline(n.prompt)}; break;
+    case "promptTakeBack":n = {...n, prompt: PM.promptTakeBack(n.prompt)}; break;
     case "promptConfirm":
       n = withEffects(n, (fx, s2) => fx.applyAnswer(s2, s2.prompt));
       break;
@@ -2818,5 +2857,6 @@ return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf, boardAttackOf, abWindowOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
-        setDb, effectsFor, withEffects, openPrompt, autoAnswer, PENDING_KINDS};
+        setDb, effectsFor, withEffects, openPrompt, autoAnswer,
+        PENDING_KINDS, PROMPT_ACTIONS};
 });

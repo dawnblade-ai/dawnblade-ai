@@ -303,6 +303,53 @@ function buildPrompt(game, spec){
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }
+  /* ============================================================
+     ALLOC — THE SIXTH VARIANT, AND THE ONE THAT APPORTIONS (v4.44)
+
+     > "Distribute up to four +1{p} counters among any number of weapons
+     >  you control."                                          — GLISTEN
+
+     Every other variant here answers a question about a SET or a single
+     choice. `pick` chooses which cards, and a set cannot say "two of
+     these on that one" — so this was the last pool card at `tier: none`
+     and the one whose recorded blocker was named correctly.
+
+     `sel` IS A MULTISET, which is what makes the whole sheet reuse the
+     `pick` machinery: an index may appear more than once, `sel.length` is
+     how many units are placed, and `max` is the pool. `promptReady` then
+     needs no new case at all — "up to" means `min: 0`, so it is ready the
+     moment it opens, and Confirm with nothing placed is a printed line of
+     play rather than a cancel.
+
+     REMOVAL IS AN UNDO, NOT A SECOND TAP. Tapping a card that already
+     holds counters to take one back is modal and unguessable on a phone;
+     `promptTakeBack` pops the LAST placement, which is why `sel` is an
+     ORDERED array rather than a count per card.
+
+     IT RETURNS NULL ONLY ON AN EMPTY POOL. The single-candidate case is
+     deliberately NOT refused here — a forced distribution still has to
+     LAND, and the caller (`effects.ctrPut`) places it directly with no
+     sheet, which is where that fast path already lived (v3.55: a sheet
+     offering one forced choice is a tap that teaches nothing). Refusing
+     it here as well would lose the counters, and an unreachable guard is
+     dead code that reads like a rule (v4.11). */
+  if(spec.tag === "alloc"){
+    const zone = spec.zone || null;
+    const pool = (spec.cards ? spec.cards.filter(Boolean) : promptZone(game, side, zone || "board"))
+      .filter(promptFilter(spec.filter));
+    if(!pool.length) return null;
+    const n = Math.max(1, spec.n != null ? spec.n : 1);
+    return {...base, zone, cards: pool, min: 0, max: n,
+      /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34, and
+         this is the EIGHTH field to prove it). `ctrStamp` is what the
+         answer applies to each card that took counters — the kind, and
+         sharpen's own wipe/rider if a future card prints both. Dropped
+         here, the sheet asks a real question and places nothing. */
+      ctrStamp: spec.ctrStamp || null,
+      title: spec.title || ("Distribute " + n + " counters"),
+      hint: spec.hint || ("Tap a permanent to place one. Up to " + n
+            + " — placing fewer is legal, and Take back undoes the last.")};
+  }
   if(spec.tag === "modal"){
     const options = (spec.options||[]).filter(Boolean);
     if(options.length < 2) return null;
@@ -473,6 +520,16 @@ function promptToggleSel(prompt, i){
     if(prompt.sel.length >= prompt.max) return prompt;
     return {...prompt, sel: [...prompt.sel, i]};
   }
+  /* ALLOC — the same tap, and the difference is that an index may REPEAT
+     (v4.44). `sel` is a multiset, so a second tap on the same card places
+     a second counter rather than un-choosing the first; taking one back
+     is `promptTakeBack`, because a tap that sometimes adds and sometimes
+     removes is unguessable. The cap is the printed pool. */
+  if(prompt.tag === "alloc"){
+    if(prompt.sel.length >= prompt.max) return prompt;
+    if(!prompt.cards[i]) return prompt;
+    return {...prompt, sel: [...prompt.sel, i]};
+  }
   /* SOAK has no `max`: every barrier and spellvoid the hero controls
      triggers, so any subset is legal. What it does have is a BUDGET —
      un-toggling must always work, and toggling on must refuse anything the
@@ -507,11 +564,22 @@ function promptChoose(prompt, choice){
    It lived as three lines inside `Battle` and both boards need it now, so
    it lives beside the toggles it belongs with. A prompt that cannot be
    declined is returned unchanged rather than forced. */
+/* UNDO THE LAST PLACEMENT (v4.44). Only `alloc` has anything to undo —
+   every other variant is a set or a single choice, and its own control
+   already reverses it. `sel` is ordered for exactly this. */
+function promptTakeBack(prompt){
+  if(!prompt || prompt.tag !== "alloc" || !prompt.sel.length) return prompt;
+  return {...prompt, sel: prompt.sel.slice(0, -1)};
+}
 function promptDecline(prompt){
   if(!prompt) return prompt;
   if(prompt.tag === "pay") return promptChoose(prompt, "decline");
   if(prompt.tag === "modal" && prompt.optional) return promptChoose(prompt, "decline");
   if(prompt.tag === "pick" && prompt.optional) return {...prompt, sel: []};
+  /* "UP TO" INCLUDES ZERO, so clearing is a legal answer rather than a
+     cancel — and the rider (if a future card prints one) does NOT fire,
+     which is v2.04's rule the `pick` line above already states. */
+  if(prompt.tag === "alloc") return {...prompt, sel: []};
   return prompt;
 }
 
@@ -648,6 +716,39 @@ function applyPrompt(game, prompt){
     if(prompt.cost) out.pay = prompt.cost;
     return out;
   }
+  /* ALLOC — THE ALLOCATION LEAVES AS DATA (v4.44), for this module's
+     founding reason: it runs no effects and touches no state, so it
+     reports WHICH permanent took HOW MANY and `applyAnswer` writes the
+     counters. That is `ctrStamp`'s existing split (v3.53) rather than a
+     new one.
+
+     THE COUNTS COME OUT OF THE MULTISET, so the sheet's own tally and the
+     placement cannot disagree about a number — one record of one fact.
+
+     THE RECORD'S FIELD IS `put`, NEVER `n`. `spec.n` is the BUDGET the
+     printed line grants and this is what LANDED on one permanent; naming
+     them alike is the same-name-different-meaning trap `KNOWN_COLLISIONS`
+     polices, one object over.
+
+     AND PLACING NOTHING IS AN ANSWER, NOT A DECLINE. "Up to four" permits
+     zero, so the early return says so in the feed and returns no ops; the
+     `pick` branch above makes the same distinction for a cost that was
+     not paid (v2.04). */
+  if(prompt.tag === "alloc"){
+    const counts = new Map();
+    for(const i of prompt.sel) counts.set(i, (counts.get(i) || 0) + 1);
+    const placed = [...counts.entries()]
+      .map(([i, k]) => ({card: prompt.cards[i], put: k}))
+      .filter(x => x.card);
+    if(!placed.length){
+      out.msgs.push(who + " placed no counters.");
+      return out;
+    }
+    out.alloc = placed;
+    out.msgs.push(placed.map(x => x.card.name + " +" + x.put).join(", ")
+      + " — " + prompt.sel.length + " of " + prompt.max + " placed.");
+    return out;
+  }
   if(prompt.tag === "modal"){
     /* DECLINING IS A CHOICE, NOT A CANCEL (v3.90, and v2.77's rule for
        `pay`). An optional modal that was declined runs NOTHING — neither
@@ -751,5 +852,5 @@ function applyPrompt(game, prompt){
 }
 
 return {PROMPT_ZONES, promptZone, promptFilter, buildPrompt,
-        promptToggleSel, promptChoose, promptDecline, promptReady, moveCards, applyPrompt};
+        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, moveCards, applyPrompt};
 });

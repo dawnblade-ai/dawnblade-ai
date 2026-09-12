@@ -346,6 +346,49 @@ const RX_SHUF_DRAW = /^shuffle any number of (.+) from your hand into your deck,
 const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow", "verse":"verse"};
 const CTR_WORDS = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6};
 const RX_CTR_PUT = /^put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (.+)$/;
+/* WHAT A COUNTER CLAUSE MAY NAME, AND WHY AN EMPTY ANSWER REFUSES (v4.44).
+
+   `pickSubject` answers `{}` for a bare "card" and is RIGHT to: a zone
+   pick's subject genuinely can be any card in that zone (v3.53, Pass
+   Over). A COUNTER clause is a different question — its candidates are
+   the board AND the gear (v3.55) — so an unrestricted filter there claims
+   every permanent the seat controls, which is the sev-3 the closed
+   subject vocabulary exists to prevent.
+
+   MEASURED OVER THE PINNED POOL: of the sixteen records that emit a
+   counter put or wipe, the printed subjects are "sword", "aura with
+   ward", "Hyper Driver" and "weapons" — and NOT ONE answers `{}`. So the
+   guard costs no card today and refuses the shape rather than admitting
+   everything, which is the direction v2.29 chose for every unreadable
+   subject.
+
+   FIX THE FAMILY, NOT THE MEMBER YOU FOUND (v4.21): all three counter
+   readers ask this, so the put that has been live since v3.55 gains the
+   same refusal as the two arriving here. */
+function ctrSubject(raw){
+  const subj = String(raw || "").trim()
+                 .replace(/\s+you control\b/i, " ")
+                 .replace(/^target\s+/i, "")
+                 .replace(/\s+/g, " ").trim();
+  const f = pickSubject(subj);
+  if(!f || !Object.keys(f).length) return null;
+  return f;
+}
+
+/* DISTRIBUTE — the pool's only ALLOCATION, and the only clause where the
+   player splits one pool of counters across several permanents (v4.44).
+   Glisten prints FOUR / THREE / TWO across its three pitches, so the
+   number is read off the printed word like every other counter clause and
+   no pool fixture is needed to prove it (v3.89's Shred, the second time
+   the pool has settled a magnitude by itself). */
+const RX_CTR_SPREAD = /^distribute (?:up to )?(a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? among any number of (.+)$/;
+/* AND THE DELAYED WIPE ITS SECOND SENTENCE SCHEDULES. "Weapons you
+   control" is evaluated AT THE END PHASE rather than at resolution, which
+   is the whole reason this cannot be `wipeEnd`'s per-entry stamp (v3.66):
+   sharpen removes counters "from IT", the piece it sharpened, and this
+   removes them from every weapon the seat controls when the trigger
+   fires — including one equipped after Glisten resolved. */
+const RX_CTR_END = /^at the beginning of your end phase, remove all ([a-z+{}0-9-]+) counters from (.+)$/;
 
 /* THE DELAYED-HIT SUBJECTS, CLOSED AND MEASURED (v4.41).
 
@@ -2731,14 +2774,87 @@ function classifyClause(raw){
     const n = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
     if(!(n > 0)) return null;
     /* the SUBJECT keeps its printed capitalisation — "a Hyper Driver" is
-       a NAME, and `optFilter`'s name branch is anchored on a proper noun */
-    let subj = String(cased(RX_CTR_PUT, 3, m[3]) || "").trim()
-                 .replace(/\s+you control\b/i, " ")
-                 .replace(/^target\s+/i, "")
-                 .replace(/\s+/g, " ").trim();
-    const filter = pickSubject(subj);
+       a NAME, and `optFilter`'s name branch is anchored on a proper noun.
+       `ctrSubject` is the one reader for all three counter clauses and
+       refuses an UNRESTRICTED answer; see its header. */
+    const filter = ctrSubject(cased(RX_CTR_PUT, 3, m[3]));
     if(!filter) return null;
     return R([["ctrPut", {kind, n, filter, label:m[2]}]]);
+  }
+  /* ============================================================
+     GLISTEN — AN ALLOCATION, AND A WIPE WITH A WIDER SCOPE (v4.44)
+
+     > "Distribute up to four +1{p} counters among any number of weapons
+     >  you control.
+     >  At the beginning of your end phase, remove all +1{p} counters from
+     >  weapons you control."
+
+     THE LAST POOL CARD AT `tier: none`, and the one whose recorded
+     blocker was named correctly: `prompts.js` has five variants and not
+     one APPORTIONS. `pick` chooses a SET, and a set cannot say "two of
+     these on that one" — so the sixth variant is the work, and `ctrPut`
+     carries `spread` to ask for it.
+
+     "UP TO" INCLUDES ZERO, so the sheet's floor is 0 and declining is a
+     printed line of play rather than a cancel. And the whole distribution
+     is ONE op: the count is a single pool split across targets, so four
+     single-counter ops would need `runOps` to thread "how many are left"
+     between them — state no op carries (v3.71, v3.88, v4.43).
+
+     IT SHARES EVERYTHING ELSE `ctrPut` ALREADY HAS — the closed
+     `CTR_KINDS` vocabulary (a counter nothing consumes is a no-op wearing
+     a number, v3.55), the printed number, `pickSubject`, the board AND
+     gear candidate scan (v3.33, v3.55), and the single-candidate fast
+     path that places a FORCED distribution with no sheet at all. That
+     last one is not a nicety: Boltyn is the only hero who decks Glisten
+     and he prints exactly ONE weapon, two-handed, so his loadout can
+     never wear a second and the allocation he faces is forced. A sheet
+     offering a single forced choice is a tap that teaches nothing
+     (v3.55). The MULTI-target path is therefore LATENT and drilled with a
+     synthetic (v3.73) — measured: the pool's only runtime gear-equips are
+     Arakni's `equipTok` and the two `retrieve` cards, and none is in
+     Boltyn's list. It is still a printed decision, and a reader that
+     cannot express one is reading the card wrong whether or not anything
+     notices today. */
+  if((m=c.match(RX_CTR_SPREAD)) && CTR_KINDS[m[2]]){
+    const kind = CTR_KINDS[m[2]];
+    const n = CTR_WORDS[m[1]] != null ? CTR_WORDS[m[1]] : parseInt(m[1], 10);
+    if(!(n > 0)) return null;
+    const filter = ctrSubject(cased(RX_CTR_SPREAD, 3, m[3]));
+    if(!filter) return null;
+    return R([["ctrPut", {kind, n, filter, label:m[2], spread:true}]]);
+  }
+  /* THE SECOND SENTENCE IS A DELAYED TRIGGER ON THE SIDE, NOT A STAMP.
+     `wipeEnd` (v3.66) marks the PIECE that was sharpened, because sharpen
+     prints "remove all +1{p} counters FROM IT". This prints "from weapons
+     you control" and is evaluated when the trigger fires, so a weapon
+     that was equipped after Glisten resolved loses its counters too and a
+     weapon Glisten never touched is not spared. Read as a stamp it would
+     spare both — weaker than printed, and invisible while the one deck
+     that holds it wears a single weapon.
+
+     AND GLISTEN IS AN INSTANT, which is what makes the side-level record
+     load-bearing rather than tidy: played on the opponent's turn the
+     counters land now and the wipe waits for the controller's NEXT end
+     phase, a full turn of +{p} later. `beginEndPhase(game, seat)` is
+     already per-seat, so that falls out.
+
+     THE SCOPE IS CARRIED, not baked into the field's name. Both halves
+     are read off this line anyway — the kind through `CTR_KINDS` and the
+     subject through `pickSubject` — so storing them costs nothing and is
+     the faithful reading; a `powWipeEnd` boolean would move "+1{p}" and
+     "weapons" into `effects.js`, which is the golden rule broken at the
+     schedule level. */
+  if((m=c.match(RX_CTR_END)) && CTR_KINDS[m[1]]){
+    const kind = CTR_KINDS[m[1]];
+    const filter = ctrSubject(cased(RX_CTR_END, 2, m[2]));
+    if(!filter) return null;
+    /* THE PRINTED SUBJECT PHRASE RIDES ALONG, because the FEED is a reader
+       (v4.24) and a line that says "on a weapon" while the spec carries a
+       filter has the noun written into `effects.js` — the golden rule one
+       message over. Read off the same capture the filter came from, so the
+       two cannot disagree about what the card named. */
+    return R([["ctrEnd", {kind, filter, label:m[1], subj:String(m[2]).trim()}]]);
   }
   /* RETRIEVE — and THE PRINTED CARD IS THE ORACLE FOR A KEYWORD (v3.32),
      for the third time. The database carries no reminder text for any
@@ -3414,6 +3530,20 @@ function optFilter(phrase){
      So this claims exactly one live card and one that refuses earlier for
      its own reasons — no cost or pick anywhere else changes answer. */
   if(WPN_SUBTYPES.test(low))              { f.tt = low.replace(/s$/, ""); return f; }
+  /* "WEAPONS YOU CONTROL" — a printed TYPE, so it is read off the
+     STRUCTURED ARRAY and never off `tt` (v4.44). The two lines above and
+     below this one are the split: Sword and Dagger are SUBTYPES, which
+     the display string is the only field carrying, and Weapon is a TYPE,
+     which `ty` carries and `types.isWeaponType` is the authority on.
+
+     MEASURED BOTH WAYS (v3.33): `{ty:"weapon"}` and `{tt:"weapon"}` agree
+     on all 796 pool records and both claim exactly 16 — so nothing moves
+     today and the `ty` read is right the day they diverge, which is the
+     same argument `promptFilter`'s own header makes about Den of the
+     Spider. CLOSED, like its neighbours: Glisten is the pool's only card
+     printing this subject, and an open "any word before `you control`"
+     would claim every dynamic subject these readers exist to refuse. */
+  if(/^weapons?$/.test(low))              { f.ty = "weapon";   return f; }
   if(/^attack action cards?$/.test(low))  { f.type = "attack"; return withCls(f); }
   /* "A NON-ATTACK ACTION CARD" — the pair, off the STRUCTURED array. An
      attack action card carries Action AND Attack, so excluding Attack is

@@ -34,6 +34,22 @@
    instead of raising — so the census found nothing and looked exactly
    like a feature that does not exist (v3.81). The leg count and the
    throw count are both asserted now.
+
+   AND THE SCANS READ THE DOCUMENTATION (v4.44). Every naming scan here
+   ran over the RAW source, comments included — which is v4.27's own
+   defect (`failstates.js` counting a keyword named in a comment) inside
+   a drill. It cost this file's sharpest claim: `ANSWER_READS` held
+   `optional` on the strength of two comments using the ordinary English
+   word, and `applyPrompt` reads no such field. **A member that is in the
+   set for a comment's sake can never LEAVE it**, so the one thing this
+   drill exists to catch — v3.53's consumer that stopped obeying its spec
+   — was unwatchable for that field.
+
+   MEASURED BOTH WAYS (v3.33) BEFORE CHANGING IT: the file scan and
+   `buildPrompt`'s are UNCHANGED — all 35 fields are named in CODE, with
+   the body going 21,830 chars to 5,546 — so both clean results get
+   strictly stronger. Only `applyPrompt`'s set moves, losing exactly the
+   two comment-only members.
    ============================================================ */
 const test = require("node:test");
 const assert = require("node:assert");
@@ -56,7 +72,14 @@ PM.buildPrompt = function(game, spec){
 const T = require("../tools/tournament.js");
 
 const ROOT = path.join(__dirname, "..");
-const PROMPTS = fs.readFileSync(path.join(ROOT, "engine/prompts.js"), "utf8");
+const RAW = fs.readFileSync(path.join(ROOT, "engine/prompts.js"), "utf8");
+/* CODE ONLY. A census of what a function READS must not count what a
+   comment MENTIONS (v4.27) — and `//` is stripped at line start only,
+   because a `https://` in a citation is not a comment (v4.27 again). */
+const stripComments = src => src
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/^\s*\/\/.*$/gm, "");
+const PROMPTS = stripComments(RAW);
 
 /* 32 legs: each entrant against the next and against the fourth along,
    with the seed naming the pairing. Deterministic, ~1.5s.
@@ -77,8 +100,9 @@ let legs = 0, threw = 0;
    (v3.53). The rest are the sheet's alone: a title, a hint, a stamp that
    rides onto the card the answer moves. */
 const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "elseOps",
-                      "filter", "max", "min", "ops", "optional", "options",
+                      "filter", "max", "min", "ops", "options",
                       "side", "src", "tag", "tapHero", "tapUid", "taps", "to", "zone"];
+/* -optional v4.44: it was here for two comments' sake and nothing reads it. */
 
 const drive = () => {
   if(legs) return;
@@ -140,6 +164,17 @@ test("the scan is proved alive against a control", () => {
      unnamed, or the drill above proves only that the regex works. */
   assert.equal(/\bthisSpecFieldDoesNotExist\b/.test(PROMPTS), false);
   assert.ok(/\barsStamp\b/.test(PROMPTS), "the scan cannot see arsStamp — it is aimed wrong");
+  /* AND THE STRIPPER IS PROVED ALIVE THROUGH THE CENSUS, not beside it
+     (v4.32): the control word is built by CONCATENATION, because written
+     as a literal it would appear in this very file and only prompts.js is
+     scanned — so it is the STRIPPED SOURCE that must not contain it while
+     the raw source does. */
+  const marker = "optional" + " " + "cost can be modelled";
+  assert.ok(RAW.includes(marker), "the control phrase left prompts.js — pick another");
+  assert.equal(PROMPTS.includes(marker), false,
+    "stripComments did not remove a block comment, so every scan here is reading prose");
+  assert.ok(PROMPTS.length < RAW.length / 2,
+    "the stripped source is barely smaller than the raw one — the stripper is aimed wrong");
 });
 
 test("`buildPrompt` itself names EVERY field that arrives", () => {
@@ -149,9 +184,11 @@ test("`buildPrompt` itself names EVERY field that arrives", () => {
      all 35 — there is no half the sheet ignores, which is a stronger
      result than the one this drill's first draft reported. */
   const body = fnBody("buildPrompt");
-  assert.ok(body && body.length > 10000,
+  assert.ok(body && body.length > 4000,
     "buildPrompt's body came out " + (body ? body.length : 0) + " chars — the bound is wrong, "
-    + "and a bound that is too narrow INVENTS findings (v4.05)");
+    + "and a bound that is too narrow INVENTS findings (v4.05). The figure is CODE ONLY "
+    + "(5,546 of 21,830 raw), because a scan that counts comments reports a field as read "
+    + "when a sentence merely mentions it (v4.27)");
   const unread = [...reached].filter(k => !new RegExp("\\b" + k + "\\b").test(body)).sort();
   assert.deepEqual(unread, [],
     "spec fields `buildPrompt` never names — v2.34's `arsStamp`, silently dropped: "
@@ -167,7 +204,7 @@ test("the fields that ride to the ANSWER are read there too", () => {
      `applyPrompt` names are pinned, and a field leaving that set is a
      consumer that stopped obeying its spec. */
   const tail = fnBody("applyPrompt");
-  assert.ok(tail && tail.length > 3000, "applyPrompt's body came out wrong — check the bound");
+  assert.ok(tail && tail.length > 2000, "applyPrompt's body came out wrong — check the bound");
   const inAnswer = [...reached].filter(k => new RegExp("\\b" + k + "\\b").test(tail)).sort();
   assert.deepEqual(inAnswer, ANSWER_READS,
     "the set of spec fields `applyPrompt` reads moved — say which step reads it now");

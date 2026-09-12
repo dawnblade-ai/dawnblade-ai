@@ -306,34 +306,30 @@ const APPROX = {
       "the cards that print a real CHOICE. The advisor value is the same ranking "+
       "the coach shows, so the pick is at least explicable."},
 
-"unbuilt-one": {
-  status:"open", cr:null, board:"both", since:"v3.79", swept:"v4.43",
-  claim:"ONE pool DECK card reads tier `none`: GLISTEN — 'distribute up to four "+
-        "+1{p} counters among any number of weapons you control'. "+
-        "DANGER DIGITS LEFT AT v4.38 (the FICTION was built, and with it the "+
-        "pool's only targeted jab); BANNERET OF SALVATION AT v4.41, four versions "+
-        "after arriving; HOPE MERCHANT'S HOOD AT v4.43.",
-  why:"GLISTEN IS NOT WAITING ON ITS PAYLOAD — `ctrPut` has read a +1{p} counter "+
-      "since v3.55 and `parser.wardValue`'s neighbours read every number on the "+
-      "line. What refuses is a PROMPT SHAPE: an ALLOCATOR, where the player "+
-      "spreads N counters over M permanents and every distribution is legal. "+
-      "`prompts.js` has five variants and not one of them apportions — `pick` "+
-      "chooses a SET and a set cannot say 'two of these on that one'. That is why "+
-      "this is the last and why it is not a card-text job. "+
-      "HOPE MERCHANT'S HOOD LEFT AT v4.43, AND THIS RECORD WAS WRONG ABOUT WHY IT "+
-      "WAS HERE. It said the blocker was 'a ZONE MOVE (deck manipulation) — "+
-      "machinery prompts.js does not have', and `moveCards` has routed a pick to "+
-      "the deck since the module was written. What was missing was one SENTENCE "+
-      "in the parser: hand the same printed cost a payload that reads and "+
-      "`parseHeroPower` answers in full (v3.79's diagnostic), so the destroy, the "+
-      "instant window and the powCard were all waiting on the payload. v3.47's "+
-      "shape, sixth outing. A RECORDED REASON IS ONLY AS GOOD AS THE DAY IT WAS "+
-      "MEASURED (v3.69) — and the way to check one is to ASK THE ENGINE rather "+
-      "than to read the note. "+
-      "THE PROBE PINS THE HERO AND TOKEN SETS SEPARATELY, and that is what "+
-      "found INERTIA at v4.03: a token reading `none` that WORKED, because "+
-      "`effects.isInertia` matched it by NAME. Its wipe is read now and the "+
-      "token set went 8 -> 7. The remaining seven are the honest kind."},
+"pool-deck-complete": {
+  status:"closed", cr:null, board:"both", since:"v3.79", swept:"v4.44",
+  claim:"WAS, AND HAS BEEN SINCE THIS LEDGER WAS WRITTEN: a standing list of pool "+
+        "DECK cards reading tier `none` — three at v4.43, one at v4.43, and GLISTEN "+
+        "last. **EVERY DECK CARD IN THE POOL NOW READS SOMETHING.** "+
+        "DANGER DIGITS LEFT AT v4.38, BANNERET OF SALVATION AT v4.41, HOPE "+
+        "MERCHANT'S HOOD AT v4.43, GLISTEN AT v4.44.",
+  why:"CLOSED AT v4.44, AND GLISTEN IS THE ONE WHOSE BLOCKER WAS NAMED CORRECTLY. "+
+      "Every other departure from this record corrected its own stated reason by "+
+      "asking the engine (v3.69, v4.38, v4.41, v4.43); this one needed exactly what "+
+      "the note said — an ALLOCATOR, a prompt variant that APPORTIONS rather than "+
+      "selects, because `pick` chooses a SET and a set cannot say 'two of these on "+
+      "that one'. `alloc` is the sixth variant and its selection is a MULTISET. "+
+      "THE PROBE IS TURNED ROUND (v4.02): it asserted the deviation and went RED "+
+      "the day the card was built; it asserts the ABSENCE now, and a deck card "+
+      "arriving at `none` is a regression. "+
+      "THE HERO AND TOKEN SETS ARE STILL PINNED AND ARE THE POSITIVE CONTROL — an "+
+      "empty set can be reached by a census that stopped censusing (v4.00), so a "+
+      "drill asserting only the empty half passes by finding nothing. Those two are "+
+      "non-empty and the honest kind: five heroes whose whole printed line is read "+
+      "off the build, and seven tokens whose text has no reader. That split is what "+
+      "found INERTIA at v4.03 — a token reading `none` that WORKED, because "+
+      "`effects.isInertia` matched it by NAME. A tier that says `none` on a card "+
+      "that works is a LEAD (v3.93)."},
 
 /* ---- C. RECORDS THIS SWEEP FOUND STALE ----------------------------- */
 

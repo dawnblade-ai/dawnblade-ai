@@ -158,9 +158,11 @@ questions for the user rather than engineering:
 | `cloaked-face-down-values` | does a face-down equipment keep its printed **defence** and its **Ward**? v3.99 built the flip deliberately narrow — it gates the one thing the card's own text spends it on — because half-building a value change is worse than the honest gap (v3.23) |
 | `cloaked-display` | the *"show card back on the player's board"* half is **deferred with the UI pass** and the ledger says so. Not work; it is parked on purpose |
 
-The other five open records are each a stated design decision with a probe
+The other four open records are each a stated design decision with a probe
 (`layer-step-window`, `simultaneous-trigger-order`, `x-cost`,
-`crush-halving-rider`, `unbuilt-three`) and none is this week's work.
+`crush-halving-rider`) and none is this week's work. **`unbuilt-three` is
+GONE** — it closed at v4.44 as `pool-deck-complete` when Glisten, its last
+claimant, was built; every deck card in the pool now reads something.
 
 ### 4. Two keyword leads, from the file upstream actually ships
 

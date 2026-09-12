@@ -2175,6 +2175,42 @@ function makeEffects(ctx){
          forced choice is a tap that teaches nothing; with two or more the
          choice is real and is put to the player. Addressed to the ACTOR,
          because the permanents are theirs. */
+      /* ============================================================
+         GLISTEN'S SECOND SENTENCE — A DELAYED WIPE ON THE SIDE (v4.44)
+
+         > "At the beginning of your end phase, remove all +1{p} counters
+         >  from weapons you control."
+
+         IT IS NOT `wipeEnd`'s STAMP (v3.66). Sharpen prints "remove all
+         +1{p} counters FROM IT" and marks the piece it sharpened; this
+         names "weapons you control" and is evaluated when the trigger
+         FIRES, so a weapon equipped after Glisten resolved loses its
+         counters too and one Glisten never touched is not spared. A stamp
+         spares both — weaker than printed, and invisible while the one
+         deck that holds it wears a single weapon.
+
+         AND GLISTEN IS AN INSTANT, which is what makes the side record
+         load-bearing rather than tidy: played on the opponent's turn the
+         counters land now and the wipe waits for its controller's NEXT
+         end phase. `beginEndPhase(game, seat)` is already per-seat, so
+         that costs nothing.
+
+         IT ACCUMULATES rather than being assigned. Two copies resolve two
+         delayed triggers, and the SECOND is a provable no-op because the
+         first already removed all of them — but "one pending wipe" is not
+         what two resolutions create, and a boolean that silently drops
+         the second is a claim about idempotence rather than a reading of
+         the card. Measured: Boltyn decks two copies, so the list is
+         bounded at two in a turn. */
+      else if(k==="ctrEnd"){
+        const spec = v || {};
+        if(!spec.kind) return;
+        actMut(n).ctrEnd = [...(act(n).ctrEnd||[]), spec];
+        /* NO VERB TO INFLECT AND NO NOUN HARDCODED (v4.22, v4.43): `sp`
+           gives "your" for seat 0 and "Boltyn's" for a named hero, and the
+           SUBJECT is the card's own printed phrase. */
+        n = L(n, `${srcName}: at the beginning of ${sp(act(n))} end phase, every ${spec.label || spec.kind} counter on ${spec.subj || "a permanent"} falls away.`);
+      }
       else if(k==="ctrPut"){
         const spec = v || {};
 
@@ -2203,6 +2239,27 @@ function makeEffects(ctx){
            DATA the answer applies, which is `untapStamp`'s shape (v3.47)
            and `arsStamp`'s rule (v2.34): a spec only carries fields
            `buildPrompt` knows about. */
+        /* AN ALLOCATION IS A DIFFERENT SHEET (v4.44). `pick` chooses one
+           permanent to take ALL of them, which is the printed answer for
+           Edict of Steel and Astral Etchings and the WRONG one for
+           Glisten: "distribute among any number of weapons" is a split,
+           and read as a single target it deletes a printed line of play
+           (concentrating four on one weapon where the card permits 2/2).
+
+           IT SITS BELOW THE SINGLE-CANDIDATE FAST PATH, so a forced
+           distribution never opens a sheet at all — which is the case
+           Boltyn actually faces, because he prints one weapon. */
+        if(spec.spread){
+          n.promptQ = [...(n.promptQ||[]), {
+            tag:"alloc", side:actorOf(n), src:srcName,
+            cards:cands, n:amt,
+            ctrStamp:Object.assign({kind, label},
+                                   spec.wipeEnd ? {wipeEnd:true} : {},
+                                   spec.then    ? {then:spec.then} : {}),
+            title:`Distribute ${amt} ${label} counters`,
+            hint:`Tap a permanent to place one — up to ${amt}, and placing fewer is legal.`}];
+          return;
+        }
         n.promptQ = [...(n.promptQ||[]), {
           tag:"pick", side:actorOf(n), src:srcName,
           cards:cands, min:1, max:1,
@@ -4915,6 +4972,35 @@ function makeEffects(ctx){
         : (act(n).gear || []).find(x => x && x.uid === loc.uid);
       if(live) n = jabResolve(n, p.jab, {where: loc.where, uid: loc.uid, card: live}, p.src);
       else n = L(n, `${p.src}: that ${p.jab.sub} is no longer there.`);
+    }
+    /* ============================================================
+       THE ALLOCATION LANDS (v4.44)
+
+       `prompts.js` runs no effects and touches no state — that is the
+       contract that makes it drillable without a deck — so an `alloc`
+       answer reports WHICH permanent took HOW MANY and this writes the
+       counters. Exactly `ctrStamp`'s existing split (v3.53), one variant
+       over.
+
+       THE ACTOR IS ALREADY BORROWED to the asked side for this whole body
+       (twenty lines up), so `act(n)` is the seat whose permanents these
+       are — the same reason the leave payout below reads `act(n)` rather
+       than the ambient actor (v3.46's inversion).
+
+       `ctrLanded` IS THE ONE BODY for what a landed counter triggers —
+       sharpen's wipe stamp and its Flurry rider (v3.66) — so a card that
+       printed a distribution AND a rider gets both without this site
+       knowing either. Called once per permanent that took counters,
+       because the stamp belongs to the piece. */
+    if(p.tag === "alloc" && (r.alloc || []).length && p.ctrStamp){
+      const kind = p.ctrStamp.kind;
+      for(const {card, put: got} of r.alloc){
+        const cur = act(n).counters[card.uid] || {};
+        actMut(n).counters = Object.assign({}, act(n).counters,
+          {[card.uid]: Object.assign({}, cur, {[kind]: (cur[kind] || 0) + got})});
+        n = L(n, `${card.name} takes ${got} ${p.ctrStamp.label || kind} counter${got === 1 ? "" : "s"} — now ${(cur[kind]||0) + got}.`);
+        n = ctrLanded(n, card, p.ctrStamp, p.src);
+      }
     }
     if(p.tag === "pick" && p.freezeSide != null && (r.picked||[]).length){
       /* The actor is borrowed to the ASKED side for this whole body, and
@@ -7901,6 +7987,60 @@ function beginEndPhase(game, seat, db){
       me.gear  = (me.gear  || []).map(strip);
       me.board = (me.board || []).map(strip);
       me.counters = ctr; sides[seat] = me; n = Object.assign({}, n, {sides});
+    }
+  }
+
+  /* (4a2) GLISTEN'S DELAYED WIPE (v4.44). The card's second sentence —
+     "at the beginning of your end phase, remove all +1{p} counters from
+     weapons you control" — armed on the SIDE by the `ctrEnd` op.
+
+     IT IS (4a)'s SIBLING WITH A WIDER SCOPE, and the two are separate
+     steps for the reason (4a) is separate from (4): sharpen marks the
+     PIECE it sharpened ("from IT") and this names a SET evaluated when the
+     trigger fires, so a weapon equipped after Glisten resolved is included
+     and one Glisten never touched is not spared. Neither can be derived
+     from the other.
+
+     THE SCOPE COMES OFF THE CARD, NOT FROM HERE. `spec.filter` is what
+     `pickSubject` read from the printed subject and `spec.kind` is the
+     closed `CTR_KINDS` answer, so the noun and the counter are the card's
+     (v3.55) and this step names neither.
+
+     IT RUNS BEFORE THE GENERIC SWEEP, for the order this function already
+     states: specific readers first, the filing last.
+
+     AND THE RECORD IS CONSUMED. Left on the side it wipes every end phase
+     for the rest of the game, which is the trap (4a)'s stamp-clear names
+     one step up — a one-turn drawback turned into a permanent ban on ever
+     holding a counter. */
+  {
+    const sd = (n.sides || [])[seat] || {};
+    const due = sd.ctrEnd || [];
+    if(due.length){
+      const sides = n.sides.slice(), me = Object.assign({}, sides[seat]);
+      const ctr = Object.assign({}, me.counters);
+      /* GEAR AND ARENA (v3.55, v3.33) — the same both-zones scan `ctrPut`
+         uses to find its candidates, so the wipe cannot reach a permanent
+         the put could not. A gear entry IS the card; a board entry wraps
+         one. */
+      const held = [
+        ...((me.gear || []).filter(Boolean).map(g => ({uid: g.uid, name: g.name, card: g}))),
+        ...((me.board || []).filter(b => b && b.card).map(b => ({uid: b.uid, name: b.card.name, card: b.card})))
+      ];
+      for(const spec of due){
+        const match = promptFilter(spec.filter);
+        for(const h of held){
+          if(!match(h.card)) continue;
+          const lost = (ctr[h.uid] || {})[spec.kind] || 0;
+          if(!lost) continue;
+          ctr[h.uid] = Object.assign({}, ctr[h.uid], {[spec.kind]: 0});
+          msgs.push(h.name + " loses its " + lost + " " + (spec.label || spec.kind)
+            + " counter" + (lost === 1 ? "" : "s") + " — " + (spec.subj || "the permanent")
+            + " are wiped at the beginning of this end phase.");
+        }
+      }
+      me.ctrEnd = []; me.counters = ctr;
+      sides[seat] = me; n = Object.assign({}, n, {sides});
     }
   }
 

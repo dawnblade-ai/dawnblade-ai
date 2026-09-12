@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 14 cards | understood ≠ built |
-| **Fail states** | 45 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 13 cards | understood ≠ built |
+| **Fail states** | 44 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -42,7 +42,6 @@ At the beginning of your end phase, destroy this.
 
 Cards whose ruling exists but which still do not resolve in full.
 
-- **Glisten** (none, 2/2 unread)
 - **Ice Eternal** (part, 2/4 unread)
 - **Plasma Barrel Shot** (part, 2/4 unread)
 - **Silent Stilettos** (part, 2/3 unread)
@@ -71,15 +70,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| No schedule to fire on | 6 |
 | Choice never offered | 6 |
+| No schedule to fire on | 5 |
 | Earned value denied | 5 |
-| Displayed total is wrong | 5 |
+| Displayed total is wrong | 4 |
 | Unread, effect unknown | 4 |
 | Ability inert — cost not modelled | 4 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 14 entries
+### WRONG — 13 entries
 
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -88,11 +87,6 @@ can be overruled. Same discipline as the mention count.
     > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
   - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
     > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
-- **Glisten** (1) · tier `none` · boltyn
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Distribute up to four +1{p} counters among any number of weapons you control.
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > At the beginning of your end phase, remove all +1{p} counters from weapons you control.
 - **Ice Eternal** (3) · tier `part` · iyslander
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.

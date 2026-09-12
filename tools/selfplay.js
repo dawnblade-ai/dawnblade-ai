@@ -189,6 +189,39 @@ function play(g, limit){
            So the number stays a 0 that says something true, like v4.41's
            own counter and v4.29's forced-exit half. */
         if(/back into .* deck — shuffled/.test(line)) events.push(["hood", line]);
+        /* THE +1{p} PLACEMENT, AND GLISTEN'S DELAYED WIPE (v4.44).
+           v3.84's rule: when you build a route, go and count how often it
+           fires. The PHRASE is the engine's own in both cases (v3.81) — a
+           counter spelling a word the engine does not print reports zero
+           exactly as a missing feature does.
+
+           `powCtr` IS THE FAMILY, NOT THE CARD, AND THAT IS MEASURED
+           RATHER THAN ASSUMED. The placement line names the permanent
+           TAKING the counter and not the source, so it also counts Astral
+           Etchings and Spectral Manifestations putting them on auras —
+           driven, the examples are a Spectral Shield and a Waxing Specter
+           beside Boltyn's Raydn. Naming it `glisten` would have been a
+           number about one card standing on a line four cards print
+           (v4.25's own shape, one counter over). `ctrWipe` IS
+           card-specific today, because the pool has exactly one `ctrEnd`
+           claimant and a drill pins that set.
+
+           AND THE PLACEMENT COUNTS THE FORCED PATH TOO, deliberately.
+           Boltyn is the only hero who decks Glisten and `defaultPicks`
+           equips him ONE weapon, so the distribution is forced in a driven
+           game and no sheet opens — the same measurement the Hood's note
+           above makes about a loadout. A counter narrowed to the SPLIT
+           would print a 0 that is about the seat's gear.
+
+           ONE IS camelCase ON PURPOSE. `test/tourney.test.js`'s census
+           reads these names off the pushes, and its pattern accepted only
+           all-upper or all-lower — so a camelCase counter was invisible to
+           the partition and could have printed nowhere while the census
+           looked complete, which is the exact defect v4.17 built it to
+           stop. The scan is widened and this name is what exercises it. */
+        if(/takes \d+ \+1\{p\} counters? — now/.test(line)) events.push(["powctr", line]);
+        if(/counters? — weapons you control are wiped/.test(line))
+          events.push(["ctrWipe", line]);
         /* FUSION'S REVEAL (v4.27). The printed "you MAY reveal" is a real
            additional cost now rather than something the engine took for
            itself, so this counts the times a seat actually paid it — 16

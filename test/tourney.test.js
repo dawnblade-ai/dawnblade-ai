@@ -47,9 +47,18 @@ const SRC = fs.readFileSync(path.join(__dirname, "..", "tools", "selfplay.js"), 
 
 /* The kinds `play()` can actually emit, read off its own pushes. Proved
    ALIVE by its count before anything is concluded from its gaps (v4.00) —
-   a scan aimed at the wrong shape passes by finding nothing. */
+   a scan aimed at the wrong shape passes by finding nothing.
+
+   AND IT WAS AIMED AT TWO OF THE THREE NAMING CONVENTIONS (v4.44). The
+   pattern read `[A-Z-]+|[a-z]+`, so a camelCase counter was invisible to
+   the whole census — `glistenWipe` could have printed nowhere and left
+   the partition looking complete, which is the exact defect this census
+   exists to stop (v4.17: `SECOND-PERSON` landed in the ROUTE block and
+   the split was a hardcoded list of one name). Measured before widening:
+   accepting any letter finds exactly the same set plus that one, and the
+   unrestricted `[^"]+` form finds nothing further still. */
 const EMITTED = [...new Set(
-  [...SRC.matchAll(/events\.push\(\["([A-Z-]+|[a-z]+)"/g)].map(m => m[1])
+  [...SRC.matchAll(/events\.push\(\["([A-Za-z][A-Za-z-]*)"/g)].map(m => m[1])
 )].sort();
 
 test("the emitted-kind scan is alive", () => {
@@ -63,8 +72,8 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "crush", "death", "destroycost", "fusion", "gold", "hitnext", "hitwatch",
-    "hood", "jab", "layer", "leave", "reaction", "tap", "ward",
+    "ally", "crush", "ctrWipe", "death", "destroycost", "fusion", "gold", "hitnext",
+    "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "tap", "ward",
   ]);
 });
 
@@ -106,9 +115,9 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    reads no card text by contract, exactly as `sparring.js` does not
    (v4.24's standing rule). A player picks it on the loadout screen, which
    is the route `test/hood.test.js` drives explicitly for both heroes. */
-const ROUTES_PINNED = ["ally", "crush", "death", "destroycost", "fusion", "gold",
-                       "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
-                       "reaction", "tap", "ward"];
+const ROUTES_PINNED = ["ally", "crush", "ctrWipe", "death", "destroycost", "fusion",
+                       "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
+                       "powctr", "reaction", "tap", "ward"];
 
 test("faults and routes partition the emitted kinds", () => {
   assert.deepEqual([...SP.FAULTS].sort(), FAULTS_PINNED);

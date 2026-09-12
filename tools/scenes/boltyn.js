@@ -5,6 +5,71 @@
 module.exports = [
 
 {
+  name: "Glisten splits its counters, and the end phase takes them back",
+  why: "THE LAST DECK CARD IN THE POOL AT `tier: none` (v4.44), and the one " +
+       "`tools/approx.js` record whose blocker was named correctly: an " +
+       "ALLOCATOR. `pick` chooses a SET and a set cannot say \"two of these " +
+       "on that one\", so read as a single target the card concentrates all " +
+       "four on one weapon and a printed line of play is gone. The second " +
+       "sentence is the half no parse assertion can see: it names \"weapons " +
+       "you control\" evaluated WHEN THE TRIGGER FIRES, so a weapon equipped " +
+       "afterwards is inside it — which is why the record lives on the SIDE " +
+       "rather than being stamped on the cards the distribution touched.",
+  run(c){
+    const gl = Object.assign({}, c.card("Glisten", 1), {uid: 70});
+    /* TWO WEAPONS, or the sheet never opens: with one candidate `ctrPut`
+       takes its fast path and the whole allocator is untouched — the trap
+       this scene's own drill walked into first (v3.62). Raydn is Boltyn's
+       own printed weapon; Scorpio is in his gear list too. */
+    const raydn = Object.assign({}, c.card("Raydn, Duskbane", 0), {uid: 71});
+    const scorp = Object.assign({}, c.card("Scorpio, Comet Tail", 0), {uid: 72});
+    let g = c.acting(c.state({res: 9, ap: 3, hand: [gl], gear: [raydn, scorp]},
+      {hp: 20, hand: [], gear: []}, {actor: 0, turnPlayer: 0, turn: 3, seed: "glist"}));
+    g = Object.assign({}, g, {builds: [{}, {}]});
+    g = c.reduce(g, {t: "play", uid: 70, from: "hand"}, 0);
+    const asked  = g.prompt ? g.prompt.cards.length : 0;
+    const budget = g.prompt ? g.prompt.max : 0;
+    /* A SPLIT, not a pile — two on each, which is the thing a `pick` cannot
+       express at all. */
+    for(const i of [0, 0, 1, 1]) g = c.reduce(g, {t: "promptSel", i}, 0);
+    g = c.reduce(g, {t: "promptConfirm"}, 0);
+    const ctr = g.sides[0].counters || {};
+    const on = u => (ctr[u] || {}).pow || 0;
+    const armed = (g.sides[0].ctrEnd || []).length;
+    const E = require(require("path").join(__dirname, "..", "..", "engine", "effects.js"));
+    const foe  = E.beginEndPhase(g, 1).game;
+    const mine = E.beginEndPhase(g, 0).game;
+    const after = u => ((mine.sides[0].counters || {})[u] || {}).pow || 0;
+    return {
+      "weapons offered the counters": asked,
+      "the printed budget": budget,
+      "counters on the first weapon": on(71),
+      "counters on the second": on(72),
+      "the wipe is armed": armed,
+      "the OPPONENT's end phase leaves them": ((foe.sides[0].counters||{})[71]||{}).pow || 0,
+      "after your own end phase": after(71) + after(72),
+      "and the trigger is spent": (mine.sides[0].ctrEnd || []).length
+    };
+  },
+  want: {
+    "weapons offered the counters": 2,
+    "the printed budget": 4,
+    /* THE SPLIT IS THE CARD. Both at 2 is the answer a `pick` can never
+       give; concentrating four on one is what the single-target reader
+       would have done. */
+    "counters on the first weapon": 2,
+    "counters on the second": 2,
+    "the wipe is armed": 1,
+    "the OPPONENT's end phase leaves them": 2,
+    "after your own end phase": 0,
+    /* CONSUMED — left standing it wipes every end phase for the rest of
+       the game, a one-turn drawback turned permanent (v3.66's stamp-clear
+       one step up). */
+    "and the trigger is spent": 0
+  }
+},
+
+{
   name: "charging Banneret arms its delayed grant, and the next hit pays it",
   why: "v4.21 refused this card's line and RECORDED what it was waiting on — " +
        "\"the TRIGGER and the SCHEDULE, not the payload\". A recorded refusal " +

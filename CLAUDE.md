@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.43
+**Current version:** v4.44
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2636 drills** at v4.43.
+This is `node --test "test/*.test.js"` — **2662 drills** at v4.44.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -839,6 +839,175 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### AN ALLOCATOR — THE POOL'S LAST UNBUILT DECK CARD (v4.44)
+
+> *"Distribute up to four +1{p} counters among any number of weapons you
+> control. At the beginning of your end phase, remove all +1{p} counters
+> from weapons you control."* — GLISTEN, Boltyn's list ×2
+
+**THE ONE `tools/approx.js` RECORD WHOSE BLOCKER WAS NAMED CORRECTLY.**
+Every other departure from that standing list corrected the record's own
+stated reason by ASKING THE ENGINE — Danger Digits' fiction (v4.38),
+Banneret's trigger and delay (v4.41), the Hood's one parser sentence
+(v4.43). This one needed exactly what the note said: an **ALLOCATOR**,
+where the player spreads N counters over M permanents and every
+distribution is legal. **`pick` chooses a SET and a set cannot say "two of
+these on that one"** — read as a single target the card concentrates four
+counters on one weapon where the printed line permits 2/2.
+
+**THE POOL PROVES THE NUMBER IS READ**: four / three / two across the three
+pitches, so no synthetic is needed to tell a read number from a hardcoded
+one. Second time the pool has settled that on its own (v3.89's Shred at
+-4/-3/-2).
+
+**THE SUBJECT IS A TYPE, AND `pickSubject` HAD NO WORD FOR IT.** The closed
+vocabulary knew `sword`, `dagger` and `ally` and not the type above them.
+Read off **`ty`, never `tt`** (v2.39) — measured over 796 records the two
+readings claim the same 16 today, so it moves nothing and is right the day
+`type_text` carries a stray word, which it already does on five database
+records.
+
+**AND A BARE "card" SUBJECT REFUSES, IN ALL THREE COUNTER READERS.** An
+empty filter over the board AND the gear claims **every permanent its
+controller holds** — v3.53's sev-3 (*an unknown key that falls through
+admits every card*). `ctrSubject` is the one body all three share, which is
+v4.21's rule: **fix the family, not the two members you found.** Measured:
+no pool record needs an unrestricted counter target.
+
+### A DELAYED TRIGGER'S SUBJECT IS A SET, NOT THE CARDS IT TOUCHED (v4.44)
+
+Sharpen's wipe (v3.66) marks the PIECE, because the card says *"remove all
++1{p} counters from **it**"*. Glisten names *"weapons you control"*
+**evaluated when the trigger fires** — so a weapon equipped afterwards is
+inside it and a counter Glisten never placed comes off. Neither reading
+can be derived from the other, so `sd.ctrEnd` is a genuinely new record:
+symmetry ledger **51 → 52**, `WIRE_V` **9 → 10**.
+
+It **ACCUMULATES** (two printed sentences are two triggers), it fires at
+the **controller's own** end phase as step (4a2) — before the generic
+sweep, per that function's own specific-readers-first order — and it is
+**CONSUMED**. Left standing it wipes every end phase for the rest of the
+game: a one-turn drawback turned into a permanent ban on holding a
+counter, which is the trap the sharpen stamp's own clear names one step up.
+
+**THE SCOPE AND THE KIND COME OFF THE CARD**, so the step names neither:
+`spec.filter` is what `pickSubject` read and `spec.kind` is the closed
+`CTR_KINDS` answer (v3.55).
+
+### AN ALLOCATION HAS NO PRICE, SO THE POLICY TAKES IT ALL (v4.44)
+
+v4.24's standing rule is to **DECLINE** a price this policy cannot weigh.
+An allocation has none — the card is already paid for — so v4.23's
+reprieve governs instead, and **the premise is a DRILL rather than a
+sentence**: measured over 797 records, nine cards read a `+1{p}` counter
+and **not one spends it as a cost.** The only two that REMOVE any are
+idle-wipe schedules (Dawnblade's own and Glisten's), which take them
+whether they were placed or not. So placing fewer is strictly dominated —
+and `autoAnswer`'s fallthrough, `promptConfirm`, would have placed **NONE**,
+leaving the whole route with no caller (v3.50, six outings).
+
+**WHERE THEY GO IS PRINTED NUMBERS AND A TOTAL ORDER.** A counter is spent
+by a SWING, so they concentrate on the highest printed power with ties
+broken on uid — a ranking that leaves ties unbroken is a desync waiting for
+two equal permanents (v2.46). Spreading them instead is a judgement about a
+board this policy cannot read.
+
+**AND THE FORCED PATH IS THE ONE BOLTYN FACES**: `defaultPicks` equips him
+one weapon, so the spread sits BELOW `ctrPut`'s single-candidate fast path
+and no sheet opens in a driven game at all.
+
+### THE PROMPT SHEET IS ONE BODY, AND THE TABLE HAD NONE (v4.44)
+
+Found while adding a SIXTH prompt variant, which would have been
+unanswerable there in exactly the same way. **Measured: the word "prompt"
+did not appear once in `TableBoard`** — and `judge.legal` freezes the game
+for BOTH seats while one is live, refusing every action but the ones that
+answer it. So a card that asked its controller a question was a **hard
+livelock** on the board this project calls CR-exact. `judge.js`'s own
+comment says why that is a missing RULE rather than a missing screen:
+
+> *"several cards defer their whole payload into the answer — `arcaneHit`
+> rides the damage out on a soak, a printed 'unless they pay' hangs its
+> consequence off a toll."*
+
+**v3.01's SHAPE AT THE SCALE OF A WHOLE INTERACTION LAYER**, and this file
+stated the opposite since v2.78: a doc claim is a test with no assertion
+(v3.41).
+
+`PromptSheet` is **props-only**, like `ArmorGrid` and `PeekDock` (v2.50) —
+the two boards speak different state vocabularies and the sheet needs
+neither. It renders for **BOTH** seats, because a table where you cannot
+see what your opponent is being asked is a table that has silently
+stopped, with its controls inert unless the sheet is yours (which is what
+`judge.legal` already enforces — a dead control reads as a broken screen
+rather than as a rule, v2.83). The table's answers each travel as an
+ACTION, because the sheet lives in the sequenced state.
+
+**AND THE COLLISION GUARD CAUGHT THE FIRST DRAFT.** It declared a local
+`seat`, which this file names by name: `priority.js` exports a `seat`
+helper meaning *"seat a game"*, so a local one meaning *"which chair is
+this client in"* is the same-name-different-meaning trap. Renamed
+`viewer`, exactly as v2.25 renamed `tapTwice`'s `act`.
+
+**A SOURCE SCAN CANNOT TELL A LIVE RENDER FROM A DEAD ONE** (v4.00,
+verbatim: `if(false && …)` keeps the name intact), so the count drill
+refuses that one shape by name and the reach of the scan is STATED. What
+carries the real property is the driven census beside it: **every action
+`judge.PROMPT_ACTIONS` accepts, the table can send** — v3.35's
+`PENDING_KINDS` one field over.
+
+### TWO CENSUSES WERE READING THE DOCUMENTATION (v4.44)
+
+**`test/speccensus.test.js` scanned RAW source, comments included.** That
+is v4.27's own defect — `failstates.js` counting a keyword named in a
+comment — inside a drill, and within two versions of the drill being
+written it cost that file's sharpest claim: `ANSWER_READS` held
+**`optional`** on the strength of two comments using the ordinary English
+word, and `applyPrompt` reads no such field. **A member that is in the set
+for a comment's sake can never LEAVE it**, so v3.53's *consumer that
+stopped obeying its spec* was unwatchable for that field.
+
+**MEASURED BOTH WAYS BEFORE CHANGING IT** (v3.33): the file scan and
+`buildPrompt`'s are UNCHANGED — all 35 fields are named in CODE, with the
+body going 21,830 chars to 5,546 — so both clean results get strictly
+stronger and only `applyPrompt`'s set moves, losing exactly the two
+comment-only members. **The stripper's control goes THROUGH the census**
+(v4.32): the phrase is built by concatenation, because written as a
+literal it appears in this file rather than in the one being scanned.
+
+**AND THE ROUTE CENSUS WAS AIMED AT TWO OF THREE NAMING CONVENTIONS.**
+`test/tourney.test.js` reads event kinds off `events.push(["…"` and its
+pattern was `[A-Z-]+|[a-z]+`, so a **camelCase** counter was invisible to
+the whole partition and could have printed nowhere while the census looked
+complete — the exact defect v4.17 built it to stop. Widened after measuring
+that the unrestricted form finds nothing further, and `ctrWipe` is the name
+that exercises it.
+
+**THE ROUTE COUNTER IS THE FAMILY, AND IT IS NAMED FOR IT.** `powctr`
+counts the PLACEMENT line, which names the permanent TAKING the counter and
+not the source — so it also counts Astral Etchings and Spectral
+Manifestations putting them on auras. Calling it `glisten` would have been
+a number about one card standing on a line four cards print (v4.25's shape,
+one counter over). **48 placements and 29 wipes in 210 games.**
+
+Measured: **exactly 1 record moves, `none` → `full`** (391 → 392 full,
+**1 → 0 none** — every deck card in the pool now reads something, so the
+ledger record is `closed` and its probe is TURNED ROUND); the ladder move
+is **NOISE at three seeds on both sides** (Boltyn 5·7·7 → 5·8·6, identical
+mean; twelve heroes byte-identical); **28 sabotages, 28 bite.**
+
+**AND FIVE OF THE FIRST PASS CAME BACK SILENT FOR REASONS THAT WERE ALL
+MINE.** Three fixtures could not express their bug (v3.62): the wipe's
+subject guard needed a NON-weapon holding a counter, the take-back needed
+driving through `reduce` rather than through `prompts.js` (v3.20), and the
+accumulation needed **two** weapons, because with one the `ctrPut` fast
+path runs and `applyAnswer` is never reached. A fourth was the render
+count above. **And the fifth was a pin named from MEMORY**: the
+single-target `ctrPut` set is Astral Etchings, Edict of Steel and
+**Re-Charge!**, not Uphold Tradition — whose put sits inside a cloaked
+instant ability and is read off the powCard. v4.09, verbatim: check your
+own fixture by ASKING rather than by remembering.
+
 ### THE COST HALF WAS NEVER THE BLOCKER (v4.43)
 
 > *"**Instant** - Destroy this: Shuffle any number of cards from your hand
@@ -867,7 +1036,9 @@ measured** (v3.69) — the way to check one is to ASK the engine, which is how
 all three of that record's departures happened (v4.38, v4.41, this). It is
 `unbuilt-one` now, and **Glisten is the one whose blocker was named
 correctly**: an ALLOCATOR, a sixth prompt variant that apportions rather
-than selects.
+than selects. **BUILT AT v4.44, and the record is `pool-deck-complete`** —
+every deck card in the pool reads something, so the probe is turned round
+and a card arriving at `none` is a regression.
 
 **IT IS ONE PICK CARRYING A COUPLING, NOT THREE OPS.** *"That many"* names
 the cards the player just chose, so the count is the ANSWER's own size;
@@ -7505,7 +7676,7 @@ n.promptQ = [...(n.promptQ||[]), {tag:"pick", src:card.name, zone:"grave",
 spec has nothing to ask — empty zone, fewer than two modes — `buildPrompt`
 returns `null` and it politely skips itself instead of showing an empty sheet.
 
-### The five variants
+### The six variants
 
 | tag | what it asks | spec fields | unlocks |
 |---|---|---|---|
@@ -7514,10 +7685,28 @@ returns `null` and it politely skips itself instead of showing an empty sheet.
 | `modal` | choose one printed mode | `options:[{label,ops}]` | Pummel, meld |
 | `pay` | pay a cost, or decline | `cost`, `avail`, `ops` | Look Tuff, Cold Snap, crank, heave, and the whole "If you do, …" family |
 | `reveal` | information both players see | `cards` or `zone`+`n` | Ravenous Rabble, Knucklehead, intimidate's random pick |
+| `alloc` | **apportion** N counters over M permanents | `cards`, `n`, `filter`, `ctrStamp` | Glisten (v4.44) |
+
+**`alloc`'s SELECTION IS A MULTISET, and that is the whole difference.**
+Every other sheet's `sel` is a set of indices and `promptToggleSel` is its
+own inverse; a distribution's second tap on one permanent places a SECOND
+counter, so the undo is its own operation (`promptTakeBack`) and — at the
+table, where the sheet is sequenced state — its own ACTION. `min` is 0
+because *"up to N"* permits zero, so confirming with nothing placed is a
+complete ANSWER rather than a decline, and `applyPrompt` returns
+`{card, put}` records as DATA: `put` is what LANDED and `spec.n` is the
+BUDGET, which is why they are not the same name (`KNOWN_COLLISIONS`' rule,
+one object over). A single candidate never reaches it — `ctrPut`'s fast
+path places the lot, because a sheet offering one forced choice is a tap
+that teaches nothing (v3.55).
 
 `min:0` makes a `pick` optional and adds a **Choose none** button. `to` is the
 destination zone and accepts `deckTop` / `deckBottom` as well as the named zones;
 omit it and the pick is a reveal that moves nothing.
+
+**`target` IS A SEVENTH TAG AND IS NOT IN THAT TABLE** — it is documented
+under "Attack targets (CR 1.4.5)" below, because it is the one variant whose
+candidates the CALLER supplies and whose choice is MANDATORY.
 
 ### Two rules that keep it honest
 
@@ -9630,8 +9819,14 @@ looks finished:
 to sit here said it did not, and that was true for three versions. The
 table now calls `engine/effects.js` — the one copy of the semantics —
 through `judge.js`, which supplies the context and adds none of its own.
-Prompts are answerable there too (v2.78), which matters because several
-cards defer their whole payload into the answer.
+
+> **AND THE SENTENCE THAT FOLLOWED — "prompts are answerable there too
+> (v2.78)" — WAS FALSE FOR SIXTEEN VERSIONS (v4.44).** `judge.js` has
+> carried the four prompt ACTIONS since v2.78 and **the table had no
+> sheet**: measured, the word "prompt" did not appear once in
+> `TableBoard`. A doc claim is a test with no assertion (v3.41), and this
+> one described a whole interaction layer. **A prompt sheet exists on both
+> boards now** — see "THE PROMPT SHEET IS ONE BODY" below.
 
 `Battle` is untouched by all of it and remains the regression harness.
 Its retirement gate — those five drills passing while driving

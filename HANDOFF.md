@@ -656,10 +656,10 @@ after the work.
 |---|---|---|
 | `layer-step-window` | 7.1.2 | an ATTACK goes straight onto the chain. **A played REACTION does become a layer** (v4.03 drove it), so what is missing is only the attack's own layer |
 | `simultaneous-trigger-order` | 4.1.8a | the order is fixed; the CR hands it to the turn-player |
-| `trainer-fatigue-loss` | 4.5.3 | judge dropped the invented deck-out loss at v2.45; `index.html` still has it |
+| ~~`trainer-fatigue-loss`~~ | **CLOSED v4.26** | both boards draw what the deck holds; `sd.fatigue`, which named the rule and implemented none of it, is retired |
 | `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
 | `crush-halving-rider` | — | Walk in My Shoes — the ONE of twelve crush riders that refuses |
-| `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
+| ~~`unbuilt-three`~~ | **CLOSED v4.44** as `pool-deck-complete` | every deck card in the pool reads something. Danger Digits v4.38, Banneret v4.41, the Hood v4.43, GLISTEN v4.44 — and Glisten is the only one of the four whose recorded blocker turned out to be right (an ALLOCATOR). The probe is turned round: a deck card arriving at `none` is a regression |
 | ~~`aura-ward-prevention-pool`~~ | **ANSWERED v4.34** | the PRINTING settled it — SEN037 reads *"destroy this to prevent 1 of that damage"*, so there is no pool: the permanent carries the number and pays with itself |
 | `cloaked-face-down-values` | — | a RULING (v3.99) |
 | `cloaked-display` | — | deferred with the UI pass, on the record |
@@ -1011,10 +1011,10 @@ after the work.
 |---|---|---|
 | `layer-step-window` | 7.1.2 | an attack goes straight onto the chain; in the CR it sits on the stack as a layer first. `priority.js` already has the hooks (`queueEmpty`, `passOutcome`'s `resolve-layer`) |
 | `simultaneous-trigger-order` | 4.1.8a | the order is fixed; the CR hands it to the turn-player. Needs a prompt in a phase where CR 4.4.1 gives nobody priority |
-| `trainer-fatigue-loss` | 4.5.3 | **v3.01's shape** — judge dropped the invented deck-out loss at v2.45 and `index.html` still has it |
+| ~~`trainer-fatigue-loss`~~ | **CLOSED v4.26** | both boards draw what the deck holds; `sd.fatigue` is retired with the invented rule it named |
 | `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
 | `crush-halving-rider` | — | Walk in My Shoes, the ONE of twelve crush riders that refuses |
-| `unbuilt-three` | — | Glisten, Danger Digits, Hope Merchant's Hood |
+| ~~`unbuilt-three`~~ | **CLOSED v4.44** as `pool-deck-complete` | every deck card in the pool reads something. Danger Digits v4.38, Banneret v4.41, the Hood v4.43, GLISTEN v4.44 — and Glisten is the only one of the four whose recorded blocker turned out to be right (an ALLOCATOR). The probe is turned round: a deck card arriving at `none` is a regression |
 | ~~`aura-ward-prevention-pool`~~ | **ANSWERED v4.34** | the PRINTING settled it — SEN037 reads *"destroy this to prevent 1 of that damage"*, so there is no pool: the permanent carries the number and pays with itself |
 | `cloaked-face-down-values` | — | a RULING (v3.99) |
 | `cloaked-display` | — | deferred with the UI pass, on the record |
@@ -1084,10 +1084,12 @@ in that set and `effects.resolveInertia` implements it — through
 Runechant shape exactly: *"Runechant was built by NAME and the other three
 tokens printing the identical trigger read `tier: none` and did nothing."*
 
-The set is pinned by `tools/approx.js`'s `unbuilt-three` probe: **Ash,
-Fealty, Gate to i'Arathael, Goldkiss Rum, Inertia, Soul Shackle,
-Toughness, Zen State.** Each needs its own text read before anyone can say
-whether it is inert or merely unlisted — and **a tier that says `none` on
+The set is pinned by `tools/approx.js`'s `pool-deck-complete` probe (named
+`unbuilt-three` until v4.44, when its DECK half emptied): **Ash, Fealty,
+Gate to i'Arathael, Goldkiss Rum, Soul Shackle, Toughness, Zen State** —
+seven, because INERTIA left at v4.03 when its printed wipe was read. Each
+needs its own text read before anyone can say whether it is inert or merely
+unlisted — and **a tier that says `none` on
 a card that works is a LEAD** (v3.93, third outing).
 
 ## THE METHOD THAT FOUND ALL OF IT

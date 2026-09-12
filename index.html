@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.43"; /* v4.43 - HOPE MERCHANT'S HOOD, AND THE COST HALF WAS NEVER THE BLOCKER. "Instant - Destroy this: Shuffle any number of cards from your hand into your deck, then draw that many cards" read `tier: none` in TWO live precons (Dash, Fai) - and handed the SAME printed line a payload that has a reader, `parseHeroPower` answers in full (`kind:"instant"`, `sd:true`), so the destroy, the instant window and the powCard were every one of them waiting on one sentence. v3.47 shape, SIXTH outing: reading the payload is what creates the route, and v3.79 diagnostic is the two-minute way to see it. THE APPROXIMATION LEDGER WAS WRONG ABOUT WHY THE CARD WAS THERE - it said the blocker was "deck manipulation, machinery prompts.js does not have", and `moveCards` has routed a pick to the deck since the module was written; a recorded reason is only as good as the day it was measured (v3.69), and the way to check one is to ASK the engine. IT IS ONE PICK CARRYING A COUPLING, NOT THREE OPS: "that many" names the cards the player just chose, so the count is the ANSWER own size and three ops would need `runOps` to thread it between them - state no op carries (v3.71, v3.88). THE ORDER IS THE CARD: `applyPrompt` puts the chosen cards at the FRONT of the deck, so with the shuffle dropped the controller draws back exactly what they put down - every zone count correct, the feed saying the cards went back, a visible no-op wearing the look of a card that worked; drawing before shuffling is the same bug spelled the other way, and both bite. AND WHAT WENT BACK CAN COME OUT AGAIN, which is the whole card: it is a RE-RANDOMISATION rather than a cycle, so the deck is shuffled with the returned cards IN it. It is the pool FIRST multi-card pick - every other `pickPrompt` is max 1 - and `maxAll` is the printed "any number", resolved by `buildPrompt` against the candidate pool it has already filtered, never in the parse where `fxParse` name|pitch memo would freeze a hand size (v3.39, v3.92). `shuffleDraw` is the SEVENTH field to prove v2.34 rule. The tail is a CLOSED reading and the rule sits above the unanchored plain-draw matcher, or a "...then draw TWO cards" variant reads as a bare draw with the entire printed cost gone (v3.00, v3.60) - and that premise is a drill. Measured: exactly 1 record moves, 390 -> 391 full, 2 -> 1 none; the route counter reads 0 and that is about the LOADOUT (the Hood prints 0 defence, Blade Beckoner Helm prints 1, so `defaultPicks` - which reads no card text by contract - takes the Helm in both lists), which is also a drill. 17 sabotages, 16 bite; the two that came back silent could not express their bug (v3.62) - `applyPick` strips a same-slot pre-seed, and the prepend is unobservable BEHIND the shuffle, which is the property itself. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.44"; /* v4.44 - GLISTEN, THE ALLOCATOR, AND A SHEET THE TABLE NEVER HAD. "Distribute up to four +1{p} counters among any number of weapons you control. At the beginning of your end phase, remove all +1{p} counters from weapons you control" was the pool LAST deck card at `tier: none`, and the one approximation-ledger record whose blocker was named correctly: `pick` chooses a SET and a set cannot say "two of these on that one", so read as a single target the card piles four counters on one weapon where the printed line permits 2/2. `alloc` is the SIXTH prompt variant and its selection is a MULTISET - a second tap places a second counter, so the undo is its own operation (`promptTakeBack`) and, at the table where the sheet is sequenced state, its own ACTION. "Up to four" permits ZERO, so confirming with nothing placed is a complete answer rather than a decline. The AMOUNT is read off the printed word and the POOL proves it (4/3/2 across the pitches, v3.89 Shred a second time); the SUBJECT is a TYPE read off `ty` rather than `tt` (v2.39, measured identical on 796 records today); and a bare "card" subject REFUSES in all three counter readers, because an empty filter over board AND gear claims every permanent its controller holds - one `ctrSubject` body, v4.21 fix-the-family. THE SECOND SENTENCE IS A SIDE-LEVEL DELAYED TRIGGER, not sharpen stamp: it names a SET evaluated WHEN THE TRIGGER FIRES, so a weapon equipped afterwards is inside it and a counter Glisten never placed comes off. It accumulates, fires at the CONTROLLER own end phase as step (4a2), and is CONSUMED - left standing it wipes every end phase for the rest of the game. Symmetry ledger 51 -> 52, WIRE_V 9 -> 10. THE POLICY TAKES THE MAXIMUM and that is a measurement rather than v4.24 standing decline: an allocation has no price, and over 797 records nine cards read a +1{p} counter and NOT ONE spends it as a cost, so placing fewer is strictly dominated (v4.23 reprieve) - the fallthrough would have placed none and left the route with no caller. Where they go is printed numbers and a total order: highest printed power, uid tie-break. AND THE TABLE HAD NO PROMPT SHEET AT ALL - the word "prompt" did not appear once in TableBoard while judge.legal freezes the game for both seats until one is answered, so any card that asked its controller a question was a hard livelock on the CR-exact board, and this project has claimed the opposite since v2.78. `PromptSheet` is one props-only component both boards render. Measured: exactly 1 record moves, 391 -> 392 full, 1 -> 0 none - every deck card in the pool now reads something; powctr 48 / ctrWipe 29 in 210 games; the ladder move is NOISE at three seeds on both sides; 28 sabotages, 28 bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1505,6 +1505,7 @@ var PROMPT_ZONES = DawnPrompts.PROMPT_ZONES, promptZone = DawnPrompts.promptZone
     promptFilter = DawnPrompts.promptFilter, buildPrompt = DawnPrompts.buildPrompt,
     promptToggleSel = DawnPrompts.promptToggleSel, promptChoose = DawnPrompts.promptChoose,
     promptReady = DawnPrompts.promptReady, moveCards = DawnPrompts.moveCards,
+    promptTakeBack = DawnPrompts.promptTakeBack,
     promptDeclineSpec = DawnPrompts.promptDecline,
     applyPrompt = DawnPrompts.applyPrompt;
 var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
@@ -2260,6 +2261,153 @@ const COPY_MSG = {copied:"Copied to clipboard.",
   manual:"This browser blocked the clipboard — use Save report instead.",
   downloaded:"Saved to your downloads."};
 
+/* ============================================================
+   THE PROMPT SHEET — ONE BODY, BOTH BOARDS (v4.44)
+
+   `judge.js` has carried four prompt ACTIONS since v2.78 and its own
+   comment says why an unanswerable sheet is not a missing screen but a
+   missing RULE: "several cards defer their whole payload into the
+   answer — `arcaneHit` rides the damage out on a soak, a printed
+   'unless they pay' hangs its consequence off a toll." THE TABLE HAD NO
+   SHEET AT ALL. Measured: the word "prompt" did not appear once in
+   `TableBoard`, and `judge.legal` freezes the game for BOTH seats while
+   one is live — so a card that asked its controller a question was a
+   hard livelock on the board this project calls CR-exact.
+
+   v3.01's shape at the scale of a whole interaction layer, and this was
+   stated the other way round ("prompts are answerable there too") for
+   sixteen versions: a doc claim is a test with no assertion (v3.41).
+   Found while adding a SEVENTH variant, which would have been
+   unanswerable there in exactly the same way.
+
+   PROPS ONLY, like `ArmorGrid` and `PeekDock` (v2.50) — the two boards
+   speak different state vocabularies and the sheet needs neither. `me`
+   is the VIEWER's seat, so it renders for both players (a table where
+   you cannot see what your opponent is being asked is a table that has
+   silently stopped) and its controls are inert unless the sheet is
+   addressed to you, which is what `judge.legal` already enforces.
+   ============================================================ */
+function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}){
+  if(!p) return null;
+  /* `viewer`, NEVER `seat` — CLAUDE.md names that collision by name:
+     `priority.js` exports a `seat` helper meaning "seat a game", and a
+     local one meaning "which chair is this client in" is the
+     same-name-different-meaning trap `KNOWN_COLLISIONS` polices. The
+     guard caught this on its first run, exactly as it caught `tapTwice`'s
+     `act` in v2.25. */
+  const viewer = me || 0;
+  const mine = (p.side || 0) === viewer;
+  /* A DEAD CONTROL READS AS A BROKEN SCREEN RATHER THAN AS A RULE
+     (v2.83's "Done defending"), so a sheet that is not yours takes no
+     taps at all instead of taking them and being refused. */
+  const go = fn => mine ? fn : undefined;
+  const ready = promptReady(p);
+  /* AN `alloc`'s SELECTION IS A MULTISET (v4.44) — one entry per counter
+     placed — so the per-card tally is a count and not a tick, and the
+     rail must be able to show two on one permanent. */
+  const put = i => p.tag==="alloc" ? p.sel.filter(j=>j===i).length : 0;
+  return <div className="psheet">
+    <div className="ph"><span className="pt">{p.title}</span>
+      <span className="psrc">{p.src}</span>
+      {!mine && <span className="pside">opponent's call</span>}</div>
+    <div className="phint">{p.hint}</div>
+
+    {(p.tag==="opt" || p.tag==="pick" || p.tag==="reveal" || p.tag==="alloc")
+      && !!p.cards.length &&
+      <div className="prow2">
+        {p.cards.map((c,i)=>{
+          const down = p.tag==="opt" && p.down.includes(i);
+          const sel  = p.tag==="pick" && p.sel.includes(i);
+          const n    = put(i);
+          const topOrder = p.tag==="opt"
+            ? p.cards.filter((_,j)=>!p.down.includes(j)).indexOf(c)+1 : 0;
+          const tap = p.tag==="reveal" ? undefined : go(()=>onToggle(i));
+          return <button key={c.uid||i}
+            className={"pcard"+(down?" down":"")+((sel||n>0)?" sel":"")+(p.tag==="reveal"?" flat":"")}
+            onClick={tap}>
+            <CardFrame card={c} className="sm"/>
+            {p.tag==="opt" && <span className="ptag">{down ? "bottom" : "top "+topOrder}</span>}
+            {p.tag==="pick" && sel && <span className="ptag">✓ chosen</span>}
+            {p.tag==="alloc" && n>0 && <span className="ptag">+{n}</span>}
+          </button>;
+        })}
+      </div>}
+
+    {p.tag==="modal" && <div className="pmodal">
+      {p.options.map((o,i)=>(
+        <button key={i} className={"popt"+(p.choice===i?" on":"")} onClick={go(()=>onPick(i))}>
+          {o.label || String(o)}
+        </button>
+      ))}
+    </div>}
+
+    {p.tag==="pay" && <div className="pmodal">
+      <button className={"popt"+(p.choice==="pay"?" on":"")}
+        disabled={p.avail < p.cost} onClick={go(()=>onPick("pay"))}>
+        Pay {p.cost}
+        <span className="sub">{p.avail < p.cost ? `only ${p.avail} floating` : `${p.avail} floating`}</span>
+      </button>
+      <button className={"popt"+(p.choice==="decline"?" on":"")} onClick={go(()=>onPick("decline"))}>
+        Decline<span className="sub">the rider does not resolve</span>
+      </button>
+    </div>}
+
+    {/* SOAK — arcane incoming, and the iron that could stop it. Every
+        option is a separate trigger, so this is multi-select and
+        "take none" is always legal: the running total says how much
+        is still getting through, because THAT is the number the
+        decision is actually about. A barrier that costs more than it
+        prevents is still offered (Arcane Barrier 2 costs 2 to stop 1)
+        — it is printed that way and the player may still want it at
+        lethal. */}
+    {p.tag==="soak" && (()=>{
+      const spent  = p.sel.reduce((a,i)=>a+(p.options[i].cost||0),0);
+      const soaked = p.sel.reduce((a,i)=>a+(p.options[i].amount||0),0);
+      const through = Math.max(0, p.amount - soaked);
+      return <div className="pmodal">
+        {p.options.map((o,i)=>{
+          const on = p.sel.includes(i);
+          const afford = on || o.kind==="spellvoid" || spent + (o.cost||0) <= p.avail;
+          return <button key={o.uid+o.kind} className={"popt"+(on?" on":"")}
+            disabled={!afford} onClick={go(()=>onToggle(i))}>
+            {o.name} — stops {o.amount}
+            <span className="sub">{o.kind==="spellvoid"
+              ? "spellvoid: destroy it"
+              : `arcane barrier: pay ${o.cost}${afford?"":" — can't reach it"}`}</span>
+          </button>;
+        })}
+        <div className="phint">
+          {through>0 ? `${through} of ${p.amount} still gets through` : `all ${p.amount} prevented`}
+          {spent>0 ? ` · costs ${spent}{r} of ${p.avail} reachable` : ""}
+        </div>
+      </div>;
+    })()}
+
+    <div className="pact">
+      {p.tag==="pick" && p.optional &&
+        <button onClick={go(onDecline)}>Choose none</button>}
+      {p.tag==="pick" && p.max>1 &&
+        <span className="pcount">{p.sel.length}/{p.max}</span>}
+      {/* AN ALLOCATION IS PLACE-THEN-CONFIRM, so the undo is the one
+          control the other sheets have no need of: `onToggle` adds a
+          counter every time, which is what "distribute" means. And
+          "Place none" is not a DECLINE — "up to four" permits zero, so
+          confirming with nothing placed is a complete answer (v2.04's
+          split, one sheet over), which is why it clears the selection
+          rather than ending the sheet. */}
+      {p.tag==="alloc" && <>
+        <button disabled={!p.sel.length} onClick={go(onTakeBack)}>Take back</button>
+        {!!p.sel.length && <button onClick={go(onDecline)}>Clear</button>}
+        <span className="pcount">{p.sel.length}/{p.max}</span>
+      </>}
+      <button className={"go"+(ready&&mine?"":" off")} disabled={!ready||!mine}
+        onClick={go(onConfirm)}>
+        {p.tag==="reveal" ? "OK" : p.tag==="alloc" && !p.sel.length ? "Place none" : "Confirm"}
+      </button>
+    </div>
+  </div>;
+}
+
 /* One sheet, both boards. `report` is a thunk so the state is read at the
    moment the player presses the button, not when the sheet opened. */
 function JudgeSheet({open, onClose, report, meta, warn}){
@@ -2925,6 +3073,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      the rule for which sheets CAN be declined moved to prompts.js in
      v2.77, because both boards ask it now. */
   const promptDecline = () => setG(s => s.prompt ? {...s, prompt:DawnPrompts.promptDecline(s.prompt)} : s);
+  /* THE UNDO FOR AN `alloc` (v4.44). A distribution's selection is a
+     MULTISET, so `promptToggleSel` is not its own inverse there — tapping
+     a permanent twice places two counters rather than taking one back. */
+  const promptTakeBackC = () => setG(s=> s.prompt ? {...s, prompt:promptTakeBack(s.prompt)} : s);
 
   /* ---- the dummy's defence -------------------------------------------
      It wears iron and now holds cards, so it defends the way an opponent
@@ -5141,97 +5293,12 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       {!g.over && !g.prompt &&
         <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
           verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
-      {g.prompt && !g.over && (()=>{
-        const p = g.prompt;
-        /* One sheet, every variant. The side badge is shown whenever the
-           prompt is NOT addressed to you — in multiplayer that is the
-           difference between "your call" and "waiting on them". */
-        const ready = promptReady(p);
-        return <div className="psheet">
-          <div className="ph"><span className="pt">{p.title}</span>
-            <span className="psrc">{p.src}</span>
-            {p.side !== 0 && <span className="pside">opponent's call</span>}</div>
-          <div className="phint">{p.hint}</div>
-
-          {(p.tag==="opt" || p.tag==="pick" || p.tag==="reveal") && !!p.cards.length &&
-            <div className="prow2">
-              {p.cards.map((c,i)=>{
-                const down = p.tag==="opt" && p.down.includes(i);
-                const sel  = p.tag==="pick" && p.sel.includes(i);
-                const topOrder = p.tag==="opt"
-                  ? p.cards.filter((_,j)=>!p.down.includes(j)).indexOf(c)+1 : 0;
-                const tap = p.tag==="reveal" ? undefined : ()=>promptToggle(i);
-                return <button key={c.uid||i}
-                  className={"pcard"+(down?" down":"")+(sel?" sel":"")+(p.tag==="reveal"?" flat":"")}
-                  onClick={tap}>
-                  <CardFrame card={c} className="sm"/>
-                  {p.tag==="opt" && <span className="ptag">{down ? "bottom" : "top "+topOrder}</span>}
-                  {p.tag==="pick" && sel && <span className="ptag">✓ chosen</span>}
-                </button>;
-              })}
-            </div>}
-
-          {p.tag==="modal" && <div className="pmodal">
-            {p.options.map((o,i)=>(
-              <button key={i} className={"popt"+(p.choice===i?" on":"")} onClick={()=>promptPick(i)}>
-                {o.label || String(o)}
-              </button>
-            ))}
-          </div>}
-
-          {p.tag==="pay" && <div className="pmodal">
-            <button className={"popt"+(p.choice==="pay"?" on":"")}
-              disabled={p.avail < p.cost} onClick={()=>promptPick("pay")}>
-              Pay {p.cost}
-              <span className="sub">{p.avail < p.cost ? `only ${p.avail} floating` : `${p.avail} floating`}</span>
-            </button>
-            <button className={"popt"+(p.choice==="decline"?" on":"")} onClick={()=>promptPick("decline")}>
-              Decline<span className="sub">the rider does not resolve</span>
-            </button>
-          </div>}
-
-          {/* SOAK — arcane incoming, and the iron that could stop it. Every
-              option is a separate trigger, so this is multi-select and
-              "take none" is always legal: the running total says how much
-              is still getting through, because THAT is the number the
-              decision is actually about. A barrier that costs more than it
-              prevents is still offered (Arcane Barrier 2 costs 2 to stop 1)
-              — it is printed that way and the player may still want it at
-              lethal. */}
-          {p.tag==="soak" && (()=>{
-            const spent  = p.sel.reduce((a,i)=>a+(p.options[i].cost||0),0);
-            const soaked = p.sel.reduce((a,i)=>a+(p.options[i].amount||0),0);
-            const through = Math.max(0, p.amount - soaked);
-            return <div className="pmodal">
-              {p.options.map((o,i)=>{
-                const on = p.sel.includes(i);
-                const afford = on || o.kind==="spellvoid" || spent + (o.cost||0) <= p.avail;
-                return <button key={o.uid+o.kind} className={"popt"+(on?" on":"")}
-                  disabled={!afford} onClick={()=>promptToggle(i)}>
-                  {o.name} — stops {o.amount}
-                  <span className="sub">{o.kind==="spellvoid"
-                    ? "spellvoid: destroy it"
-                    : `arcane barrier: pay ${o.cost}${afford?"":" — can't reach it"}`}</span>
-                </button>;
-              })}
-              <div className="phint">
-                {through>0 ? `${through} of ${p.amount} still gets through` : `all ${p.amount} prevented`}
-                {spent>0 ? ` · costs ${spent}{r} of ${p.avail} reachable` : ""}
-              </div>
-            </div>;
-          })()}
-
-          <div className="pact">
-            {p.tag==="pick" && p.optional &&
-              <button onClick={promptDecline}>Choose none</button>}
-            {p.tag==="pick" && p.max>1 &&
-              <span className="pcount">{p.sel.length}/{p.max}</span>}
-            <button className={"go"+(ready?"":" off")} disabled={!ready} onClick={promptConfirm}>
-              {p.tag==="reveal" ? "OK" : "Confirm"}
-            </button>
-          </div>
-        </div>;
-      })()}
+      {/* THE SHEET IS ONE BODY, SHARED WITH THE TABLE (v4.44). It was 90
+          lines inline here and the table had none at all, which made every
+          prompt a livelock there — see PromptSheet's own header. */}
+      <PromptSheet p={g.over ? null : g.prompt} me={0}
+        onToggle={promptToggle} onPick={promptPick} onTakeBack={promptTakeBackC}
+        onDecline={promptDecline} onConfirm={promptConfirm}/>
     </div>
   );
 }
@@ -6873,8 +6940,23 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
             seq:sess.current.seq(), hash:sess.current.hash(),
             link, ...sess.current.stats()} : null
         }]}/>
-      {!over && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
+      {!over && !g.prompt && <PeekDock card={peek && peekables().find(c=>c.uid===peek.uid)}
         verb={peek && peek.verb} onClose={()=>setPeek(null)}/>}
+      {/* THE SHEET THIS BOARD NEVER HAD (v4.44). `judge.legal` stops the
+          game for BOTH seats while a prompt is live and refuses every
+          action but the five that answer it — so until now a card that
+          asked its controller a question froze the table outright. The
+          body is the trainer's, unchanged and shared; what is local is
+          that every answer travels as an ACTION, because the sheet lives
+          in the sequenced state and two peers must agree about what has
+          been chosen. Hidden while a prompt is open, the peek dock docks
+          in exactly this spot (v2.52's measurement). */}
+      <PromptSheet p={over ? null : g.prompt} me={mySeat}
+        onToggle={i=>fire({t:"promptSel", i})}
+        onPick={choice=>fire({t:"promptChoose", choice})}
+        onTakeBack={()=>fire({t:"promptTakeBack"})}
+        onDecline={()=>fire({t:"promptDecline"})}
+        onConfirm={()=>fire({t:"promptConfirm"})}/>
     </div>
   );
 }

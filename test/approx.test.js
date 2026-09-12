@@ -213,8 +213,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 8 -> 7 open, 10 -> 11 closed AT v4.35: `aura-ward-prevention-pool`
      was ANSWERED at v4.34 and the record survived its own version by one,
      because its probe drove nothing. */
-  assert.equal(n("open"),    7, "open count moved");
-  assert.equal(n("closed"), 11, "closed count moved");
+  assert.equal(n("open"),    6, "open count moved");
+  assert.equal(n("closed"), 12, "closed count moved");
 });
 
 /* ============================================================
@@ -674,46 +674,36 @@ probe("auto-pitch-discard", () => {
     "a forced discard now queues a prompt — the record is closed and must move");
 });
 
-/* Four pool DECK cards read tier `none`. */
-probe("unbuilt-one", () => {
-  /* +Banneret of Salvation AT v4.21, AND IT ARRIVED AS A CORRECTION.
-     Its "Solflare -" keyword prefix was eaten by the loose matchers, so
-     the card read `tier: full` while granting 1{h} UNCONDITIONALLY ON
-     PLAY — the charge trigger and the "next time you hit this turn"
-     delay both dropped. Refusing the clause is weaker than printed and
-     VISIBLE; the tier going down is the number improving (v3.16). */
-  /* -Danger Digits AT v4.38, and that is what an `open` record is FOR
-     (v4.02): its probe asserts the DEVIATION, so building the card turns
-     this drill red and forces the record to be corrected rather than
-     leaving a stale sentence behind.
+/* EVERY pool DECK card reads something. The probe is turned round. */
+probe("pool-deck-complete", () => {
+  /* THE HISTORY IS KEPT BECAUSE EACH DEPARTURE TAUGHT THE SAME LESSON.
+     -Danger Digits AT v4.38, -Banneret of Salvation AT v4.41,
+     -Hope Merchant's Hood AT v4.43: each time this drill went RED the
+     moment the card was built, which is what an `open` record is FOR
+     (v4.02), and each time it corrected the record's own stated REASON,
+     because a recorded reason is only as good as the day it was measured
+     (v3.69). Banneret's blocker was the TRIGGER and the DELAY, not the
+     payload; the Hood's was one sentence in the parser and not "machinery
+     prompts.js does not have".
 
-     -Banneret of Salvation AT v4.41, for the second time in four
-     versions and by the same mechanism — this drill went red the moment
-     the card was built. What it was waiting on was named in its own
-     v4.21 note above: the charge TRIGGER and the "next time you hit"
-     DELAY, neither of them the payload. Both exist now (`onChargeSoul`,
-     `hitNext`), so the card reads `full` and leaves the ledger.
-
-     -HOPE MERCHANT'S HOOD AT v4.43, third in six versions and by the same
-     mechanism — this drill went red the moment the card was built, which
-     is what an `open` record is FOR. And it corrected the record's own
-     stated REASON: the note said the blocker was deck manipulation
-     "machinery prompts.js does not have", and `moveCards` has routed a
-     pick to the deck since the module was written. What was missing was
-     one sentence in the parser. A recorded reason is only as good as the
-     day it was measured (v3.69).
-
-     ONE LEFT, and it is the only one of the four whose blocker was named
-     correctly: Glisten needs an ALLOCATOR, a sixth prompt variant that
-     apportions rather than selects. */
-  const want = ["Glisten"];
+     -GLISTEN AT v4.44, and it is the ONE whose blocker was named
+     correctly: an ALLOCATOR, a prompt variant that APPORTIONS. So the
+     record is CLOSED and this probe asserts the ABSENCE — a deck card
+     arriving at `none` is a regression now, not a backlog item. */
+  const want = [];
   /* A HERO IS NOT A DECK CARD AND NEITHER IS A TOKEN, and the pool holds
      all three (v3.21 keeps tokens by TYPE, v3.76 put Arakni's six Agents in
-     the same way). The audit's headline "3 none" is over DECK cards; a flat
-     census reports twenty and reads as seventeen regressions that are in
+     the same way). The audit's headline "none" is over DECK cards; a flat
+     census reports twelve and reads as twelve regressions that are in
      fact the pool being complete. So all three sets are pinned SEPARATELY
      — which is worth more than the one number, because it says where an
-     arrival landed. */
+     arrival landed.
+
+     AND THE OTHER TWO SETS ARE THIS DRILL'S POSITIVE CONTROL (v4.00,
+     v3.98). An empty set is exactly what a census that stopped censusing
+     returns, so a drill asserting only the empty half passes by finding
+     nothing. Those two are non-empty and pinned by COUNT, so the walk is
+     proved alive by the same pass that reports the deck set clean. */
   const kind = c => {
     const ty = (c.ty || []).join(" ") + " " + (c.tt || "");
     if(/\bDemi-Hero\b|\bHero\b/i.test(ty)) return "hero";
@@ -721,15 +711,20 @@ probe("unbuilt-one", () => {
     return "deck";
   };
   const none = {deck:[], hero:[], token:[]};
+  let seen = 0;
   for(const c of pool()){
+    seen++;
     if(PR.fxParse(c).tier !== "none") continue;
     const k = kind(c);
     if(!none[k].includes(c.name)) none[k].push(c.name);
   }
+  assert.ok(seen > 700,
+    "only " + seen + " records were walked — an empty deck set off a census that " +
+    "stopped censusing is the one way this drill passes by finding nothing");
   assert.deepEqual(none.deck.sort(), want.slice().sort(),
-    "the set of DECK cards reading NOTHING moved — a card built here must leave " +
-    "the ledger, and a card arriving here is a regression");
-  /* 9 -> 5 AT v4.09, AND EVERY ONE OF THE FOUR IS AN AGENT OF CHAOS.
+    "a DECK card reads NOTHING again. This set was emptied at v4.44 and a card " +
+    "arriving in it is a regression — check whether a reader stopped matching");
+  /* 9 -> 5 AT v4.09, AND FOUR OF THE FOUR THAT LEFT ARE AGENTS OF CHAOS.
      Five printed `Attack Reaction - Discard an Assassin card: …`, a cost
      `parseHeroPower` declined by design — so the transformation swapped
      Arakni's whole ability half for one nothing could read (v3.77's
