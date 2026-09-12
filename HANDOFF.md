@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.39 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.45 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -203,6 +203,44 @@ Keep both. Neither can see the other's defect:
 That is why v4.15's second-person family needed both, and why v4.17's
 whole find was that one of the driven counters was being **printed in the
 wrong column**.
+
+## ⚠ v4.45 — THE REDUCER HAD THE RULE AND THE BOARD COULD NOT SAY IT
+
+**`judge.reduce` has declared, validated and resolved attack-targets since
+v2.45. Nothing ever asked whether the board a PLAYER uses can send one.**
+
+`judge.targets()` answers **ENTRIES** (a card carrying `_target` and
+`_life`, because a rail renders a card frame); an **ACTION** carries a
+**SPEC** (`"hero"` or an ally uid). The table sent the entry, so `targetOf`
+answered `null` and `legal` refused — **one living opposing ally and no
+attack was playable at all.** A hard **sev-3 BLOCK**, not a wrong target,
+and Gravy Bones decks six allies.
+
+| route | was |
+|---|---|
+| a card from hand | sent the **ENTRY** → every attack refused |
+| the weapon swing | sent **no target** → the rail's pick silently discarded |
+| the arsenal | bypassed the helper entirely → same silence |
+| **the arena row** | **only handler was the zoom** — 10 attacking allies and the four Cosmo ward auras, *Enigma's whole engine*, had no caller at the table since v3.44/v3.84 |
+| the rail's LABEL | read `t.kind` (an entry keeps `t._target.kind`) → **both buttons read "ally"** |
+
+**`judge.targetSpec` IS THE ONE READER** of that conversion and a drill
+pins that no `target:` in the table is built any other way — **both
+spellings**, because `playAct` ASSIGNS (`a.target =`) and `actAct` uses a
+KEY, which is what the first draft of that census missed.
+
+**THE WEAPON SWING CANNOT BE GATED ON `isAttack`** — a weapon's type line
+carries no "Attack" (v3.43), and CR 1.4.5 names an attack-**LAYER**.
+
+**AND `npm run play` COULD NEVER HAVE FOUND IT.** `sparring.targetFor`
+answers the CORRECT shape, so 210 games a version cannot reach a defect
+that needs a human UI on one side. Recorded as a limit of the instrument
+(like v4.31's mirrors) and pinned by a drill that fails if the policy's
+shape changes. **The ladder is byte-identical**, which is the honest read
+rather than a clean bill.
+
+**THE FIFTH DEFECT IS AN ENGINE BUILD**, so it is `arena-ability-no-table-route`
+in the ledger above rather than half-wired here.
 
 ## ⚠ v4.38 — READING THE PAYLOAD IS WHAT CREATES THE ROUTE, AND THE ROUTE STILL NEEDED A CALLER
 
@@ -639,7 +677,7 @@ as weak as a card gets), and 2221 drills were green.
 | `tools/ledger.js` | every KEYWORD this project claims to understand | `test/ledger.test.js` |
 | `tools/approx.js` | every place the engine knowingly differs from the CR | `test/approx.test.js` |
 
-**26 approximation records: 10 `stated`, 9 `open`, 7 `closed`.** Each
+**31 approximation records: 12 `stated`, 7 `open`, 12 `closed`.** Each
 carries its status, the CR rule it deviates from, and the **BOARD** it
 lives on — v3.01's shape is the recurring defect in exactly this area.
 
@@ -650,12 +688,13 @@ than left to rot. A `closed` one asserts the thing IS built. Pointing one
 the wrong way is the failure mode to watch for — it passes both before and
 after the work.
 
-### THE NINE `open` RECORDS ARE THE WORK LIST
+### THE SEVEN `open` RECORDS ARE THE WORK LIST
 
 | id | CR | what is missing |
 |---|---|---|
 | `layer-step-window` | 7.1.2 | an ATTACK goes straight onto the chain. **A played REACTION does become a layer** (v4.03 drove it), so what is missing is only the attack's own layer |
 | `simultaneous-trigger-order` | 4.1.8a | the order is fixed; the CR hands it to the turn-player |
+| `arena-ability-no-table-route` | — | **NEW v4.45.** `judge.legal`'s arena branch reads `allyAttack`/`auraAttackOf` and refuses everything else, so an arena permanent's activated **ABILITY** cannot be activated at the table. Measured: **11 pool records print one and SEVEN have a line `parseHeroPower` reads** — Concealed Object, Energy Potion, Timesnap Potion and Gravy Bones' whole treasure economy. The trainer built `boardPow` at v2.35 as UI, so judge has **no branch at all** — v3.01's shape, and the last of that family standing |
 | ~~`trainer-fatigue-loss`~~ | **CLOSED v4.26** | both boards draw what the deck holds; `sd.fatigue`, which named the rule and implemented none of it, is retired |
 | `x-cost` | — | Ice Eternal's XX, refused rather than guessed |
 | `crush-halving-rider` | — | Walk in My Shoes — the ONE of twelve crush riders that refuses |

@@ -1,3 +1,96 @@
+## v4.45 — CR 1.4.5 at the table, and four routes the UI could not reach
+
+> *"If a player plays, activates, or triggers an attack or attack-layer, the
+> player **MUST** declare an attackable object controlled by an opponent as
+> the attack-target."* — CR 1.4.5
+
+`judge.reduce` has declared, validated and resolved attack-targets since
+v2.45, and `targets()` has answered the list for as long. **Nothing ever
+checked whether the board a player uses can say it.**
+
+### TWO SHAPES FOR ONE FACT, AND FOUR DEFECTS OUT OF IT
+
+`targets()` answers **ENTRIES** — a card object carrying `_target` and
+`_life`, because a rail and a prompt sheet both render a card frame. An
+**ACTION** carries a **SPEC**: `"hero"`, or an ally's UID.
+
+**1. THE TABLE SENT THE ENTRY — A HARD BLOCK, sev-3.** `targetOf` then
+answers `null` and `legal` refuses with *"no such attack-target"*, so the
+moment the opposing board held **one living ally** no attack could be played
+at all. Not a wrong target: the tap produced a refusal and there was no way
+forward. Any hero who deploys an ally — Gravy Bones decks six — froze their
+opponent's whole hand.
+
+**2. THE WEAPON SWING CARRIED NO TARGET**, so the rail's selection was
+discarded and every swing went at the hero, silently. It cannot be gated on
+`isAttack`: **a weapon's type line carries no "Attack"** (v3.43), and CR 1.4.5
+names an attack-*layer*, which an activated weapon attack is.
+
+**3. THE ARSENAL PLAY BYPASSED THE HELPER** entirely — same silence.
+
+**4. THE ARENA ROW COULD ONLY ZOOM.** `judge.doActivate` has had the
+board-attack route since **v3.44** for allies and **v3.84** for auras, and
+this row's only handler opened the card — so at the table **nothing could
+attack out of the arena at all.** Measured over the pinned pool: **10
+attacking allies**, and the four ward-bearing auras Cosmo turns into weapons,
+which is **Enigma's entire engine**. v3.50's sentence at the UI: *a feature
+with no caller looks exactly like a feature that works, until you count.*
+
+**AND THE RAIL'S OWN LABEL HAD THE SAME BUG.** It read `t.kind`, which an
+entry keeps at `t._target.kind` — so it was `undefined` and **both buttons
+read "ally"**, the hero included. The one place a player looks to tell the
+choices apart could not. An ally is NAMED now with its life, because an entry
+IS the card and two Swabbies were otherwise two identical buttons.
+
+### `judge.targetSpec` IS THE ONE READER
+
+The conversion is a function rather than an expression at each call site, so
+no route can get the shape wrong, and a drill pins that **no `target:` in the
+table is built any other way**. An absent entry answers `"hero"` — the choice
+that is always available (CR 1.4.5a) and the one `targetOf` already defaults
+to.
+
+**AND `npm run play` COULD NEVER HAVE FOUND ANY OF IT.**
+`sparring.targetFor` answers `kill.uid` or `"hero"` — the *correct* shape — so
+210 games a version cannot reach a defect that needs a human UI on one side.
+A real limit of that instrument, recorded the way v4.31 recorded mirrors, and
+pinned by a drill that fails if the policy's shape ever changes.
+
+### THE FIFTH DEFECT IS AN ENGINE BUILD, SO IT IS RECORDED
+
+`judge.legal`'s arena branch reads `allyAttack`/`auraAttackOf` and refuses
+everything else — *"X prints no attack to activate"* — so an arena
+permanent's activated **ABILITY** cannot be activated at the table at all.
+Measured: **eleven pool records print one and SEVEN have a line
+`parseHeroPower` reads** — Concealed Object, Energy Potion, Timesnap Potion,
+and Gold / Silver / Copper / Diamond, which is Gravy Bones' whole treasure
+economy.
+
+**v3.01's shape, and the last of that family still standing.** The trainer
+built `boardPow` at v2.35 as UI, so judge has no branch — an engine build
+rather than a wire, which is why it is `arena-ability-no-table-route` in
+`tools/approx.js` with a driven probe instead of being half-done here. The
+four defects above were all UI-to-reducer wiring against routes the reducer
+already had. The probe asserts the deviation, so it goes RED the day the
+branch arrives (v4.02).
+
+### MEASURED
+
+No pool record's parse moves and no tier moves — this is the rules machine,
+not the parser. **The ladder is byte-identical**, which is the honest read:
+every change is in the table's UI plus one new judge export, and the policy
+path is untouched. **No route counter was added**: the ladder cannot reach
+these routes at all, so a counter would print a 0 that is about the
+instrument rather than the feature (v4.41's rule).
+
+**11 sabotages, 11 bite** — after two came back silent for the two reasons
+this project keeps naming. One could not express its bug (v3.62): `targetOf`
+builds a FRESH entry list, so a reference-equality sabotage compares against a
+different object; re-aimed at `spec._target` it bites. The other was a
+genuinely weak drill — the inline-action census asked about `activate` and not
+`play`, so putting the arsenal's own literal back was invisible. Both verbs
+now.
+
 ## v4.44 — Glisten, the allocator, and a sheet the table never had
 
 > **"Distribute up to four +1{p} counters among any number of weapons you

@@ -111,6 +111,31 @@ const APPROX = {
       "other (v3.01). The TARGET half is separately near-harmless: preventing "+
       "damage to an opponent is never a line anyone takes."},
 
+"arena-ability-no-table-route": {
+  status:"open", cr:null, board:"table", since:"v2.35", swept:"v4.45",
+  claim:"An ARENA permanent's activated ABILITY is routable on the TRAINER only. "+
+        "`judge.legal`'s arena branch reads `allyAttack`/`auraAttackOf` and refuses "+
+        "anything else with \"X prints no attack to activate\", so at the table an "+
+        "Item or Aura printing `Action -`/`Instant - <cost>:` cannot be activated at "+
+        "all. MEASURED over the pinned pool: ELEVEN records print one and SEVEN have "+
+        "a line `parseHeroPower` reads — Concealed Object, Energy Potion, Timesnap "+
+        "Potion, and Gold/Silver/Copper/Diamond, which is Gravy Bones' whole treasure "+
+        "economy.",
+  why:"v3.01's SHAPE, and the last of that family still standing: the trainer built "+
+      "`boardPow` at v2.35 as UI — a powCard minted lazily off the board entry — and "+
+      "judge has no branch for one. So it is an ENGINE build rather than a wire, which "+
+      "is why v4.45 recorded it instead of half-doing it: the four defects that version "+
+      "DID fix were all UI-to-reducer wiring against routes `judge.reduce` already had "+
+      "(CR 1.4.5's target on four routes, plus the arena ATTACK route, which `legal` and "+
+      "`doActivate` have carried since v3.44 and v3.84). "+
+      "WHAT IT NEEDS: the `boardPow` construction moved out of `Battle` into a shared "+
+      "reader — v3.04's move for the seventeen dead EQUIPMENT abilities, one zone over "+
+      "— and an arena-ability branch in both `legal` and `doActivate` beside the "+
+      "attack one. `execute` already finds a piece back off a powCard uid for a "+
+      "destroy-cost, and every one of these seven prints exactly that cost. "+
+      "AND THE PROBE ASSERTS THE DEVIATION (v4.02), so it goes RED the day the branch "+
+      "arrives and this record has to be corrected rather than left standing."},
+
 "ward-spend-order": {
   status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v4.34",
   claim:"A seat holding more than one ward chooses which to spend. Here the order "+

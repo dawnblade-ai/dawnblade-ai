@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.44
+**Current version:** v4.45
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2662 drills** at v4.44.
+This is `node --test "test/*.test.js"` — **2673 drills** at v4.45.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,71 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### AN ENTRY IS NOT A SPEC, AND THE TABLE SENT THE WRONG ONE (v4.45)
+
+> *"If a player plays, activates, or triggers an attack or attack-layer, the
+> player **MUST** declare an attackable object controlled by an opponent as
+> the attack-target."* — CR 1.4.5
+
+`judge.reduce` has declared, validated and resolved attack-targets since
+v2.45 and `judge.targets` has answered the list for as long. **Nothing ever
+asked whether the board a PLAYER uses can say one.**
+
+**TWO SHAPES FOR ONE FACT.** `targets()` answers **ENTRIES** — a card
+object carrying `_target` and `_life`, because a rail and a prompt sheet
+both render a card frame. An **ACTION** carries a **SPEC**: `"hero"`, or an
+ally's UID. The table sent the entry, `targetOf` answered `null`, and
+`legal` refused — so the moment the opposing board held **one living ally**
+no attack could be played at all. **A hard sev-3 BLOCK, not a wrong
+target**: Gravy Bones decks six allies, and deploying one froze his
+opponent's whole hand with a refusal and no way forward.
+
+**`judge.targetSpec` IS THE ONE READER** of that conversion, because three
+more routes were each getting it wrong in their own way — and a drill pins
+that **no `target:` in the table is built any other way**, both spellings
+(`playAct` ASSIGNS `a.target =`, `actAct` uses a KEY), which is what the
+first draft of that census missed.
+
+**THE WEAPON SWING CANNOT BE GATED ON `isAttack`.** A weapon's type line
+carries no "Attack" (v3.43) and CR 1.4.5 names an attack-**LAYER**, which an
+activated weapon attack is. Gated that way the swing silently discards the
+rail's selection and goes at the hero.
+
+**AND THE ARENA ROW'S ONLY HANDLER WAS THE ZOOM.** `judge.doActivate` has
+had the board-attack route since **v3.44** for allies and **v3.84** for
+auras, and this row opened the card. Measured over the pinned pool: **10
+attacking allies** plus the four ward auras Cosmo turns into weapons, which
+is **Enigma's entire engine** — so at the table nothing could attack out of
+the arena at all. v3.50's sentence at the UI layer: *a feature with no
+caller looks exactly like a feature that works, until you count.* Fifth
+place that sentence has landed, and the first where the missing caller is a
+tap rather than a policy.
+
+**THE RAIL'S LABEL HAD THE SAME BUG AS THE ACTION.** It read `t.kind`,
+which an entry keeps at `t._target.kind` — `undefined`, so **both buttons
+read "ally"**, the hero included. The one place a player looks to tell the
+choices apart could not, and two Swabbies were two identical buttons; an
+ally is NAMED with its life now.
+
+**AND `npm run play` COULD NEVER HAVE FOUND ANY OF IT.**
+`sparring.targetFor` answers `kill.uid` or `"hero"` — the CORRECT shape — so
+210 games a version cannot reach a defect that needs a human UI on one side.
+A real limit of that instrument, recorded the way v4.31 recorded mirrors and
+**pinned by a drill** that fails if the policy's shape ever changes. The
+ladder is byte-identical here and that is the honest read rather than a
+clean bill.
+
+**THE FIFTH DEFECT IS AN ENGINE BUILD, SO IT IS RECORDED RATHER THAN
+HALF-WIRED.** `judge.legal`'s arena branch reads `allyAttack`/`auraAttackOf`
+and refuses everything else, so an arena permanent's activated **ABILITY**
+cannot be activated at the table — measured, **eleven pool records print one
+and SEVEN have a line `parseHeroPower` reads**: Concealed Object, Energy
+Potion, Timesnap Potion and Gravy Bones' whole treasure economy (Gold,
+Silver, Copper, Diamond). The trainer built `boardPow` at v2.35 as UI, so
+judge has no branch at all — v3.01's shape, and the last of that family
+still standing. `arena-ability-no-table-route` carries it with a driven
+probe that goes RED the day the branch arrives (v4.02).
 
 ### AN ALLOCATOR — THE POOL'S LAST UNBUILT DECK CARD (v4.44)
 
@@ -8342,8 +8407,17 @@ with nothing — block-or-hold stops being a decision, which is the game.
 `{t:"play", uid, from, target}` where `target` is an ally's uid or
 `"hero"`. That keeps `reduce` pure and serializable — one action drives a
 tap, a replay and a peer. `J.targets(g, defSeat)` is the list to offer.
-Omitting it means the hero, always a legal choice; **making the choice
-mandatory (CR 1.4.5) is the caller's half and is not built.**
+Omitting it means the hero, always a legal choice (CR 1.4.5a).
+
+> **THE CALLER'S HALF WAS "NOT BUILT" HERE FOR THIRTY-TWO VERSIONS, AND IT
+> WAS A HARD BLOCK RATHER THAN AN OMISSION (v4.45).** The table DID offer
+> the list — and sent back the ENTRY `targets()` answers rather than the
+> SPEC an action carries, so `targetOf` answered `null` and `legal`
+> refused. One living opposing ally and no attack was playable at all.
+> `judge.targetSpec` is the one reader of that conversion now and four
+> routes go through it; see "AN ENTRY IS NOT A SPEC". The TRAINER still
+> offers no choice, deliberately and measured — its opponent is 12 vanilla
+> attacks with no allies (v3.46).
 
 Still deliberately not modelled, and each is honest rather than hidden:
 
@@ -10314,13 +10388,17 @@ to the wrong player behind a plausible-looking prompt.
 
 ---
 
-## Attack targets (CR 1.4.5) — wired in `judge.js` (v2.45), trainer NOT (v2.23)
+## Attack targets (CR 1.4.5) — wired in `judge.js` (v2.45), at the TABLE (v4.45), trainer NOT (v2.23)
 
-> **`engine/judge.js` now declares, validates and resolves attack-targets**
-> — see "THE CR REVIEW" above. The section below describes the original
-> `game.js` groundwork and the TRAINER's remaining wiring, which is still
+> **`engine/judge.js` declares, validates and resolves attack-targets**
+> — see "THE CR REVIEW" above — **and as of v4.45 the table's four attack
+> routes all send a SPEC through `judge.targetSpec`** (hand, weapon swing,
+> arsenal, arena). The section below describes the original `game.js`
+> groundwork and the TRAINER's remaining wiring, which is still
 > outstanding: `execute` declares the attack and calls `dummyDefence` in
-> one pass, so a target choice has to land before that.
+> one pass, so a target choice has to land before that — and is
+> deliberately not worth building there, because that board's opponent
+> fields no allies (v3.46).
 
 **With an ally in the arena, declaring an attack is a choice, and it is
 mandatory.** CR 1.4.5: "If a player plays, activates, or triggers an attack or

@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.44"; /* v4.44 - GLISTEN, THE ALLOCATOR, AND A SHEET THE TABLE NEVER HAD. "Distribute up to four +1{p} counters among any number of weapons you control. At the beginning of your end phase, remove all +1{p} counters from weapons you control" was the pool LAST deck card at `tier: none`, and the one approximation-ledger record whose blocker was named correctly: `pick` chooses a SET and a set cannot say "two of these on that one", so read as a single target the card piles four counters on one weapon where the printed line permits 2/2. `alloc` is the SIXTH prompt variant and its selection is a MULTISET - a second tap places a second counter, so the undo is its own operation (`promptTakeBack`) and, at the table where the sheet is sequenced state, its own ACTION. "Up to four" permits ZERO, so confirming with nothing placed is a complete answer rather than a decline. The AMOUNT is read off the printed word and the POOL proves it (4/3/2 across the pitches, v3.89 Shred a second time); the SUBJECT is a TYPE read off `ty` rather than `tt` (v2.39, measured identical on 796 records today); and a bare "card" subject REFUSES in all three counter readers, because an empty filter over board AND gear claims every permanent its controller holds - one `ctrSubject` body, v4.21 fix-the-family. THE SECOND SENTENCE IS A SIDE-LEVEL DELAYED TRIGGER, not sharpen stamp: it names a SET evaluated WHEN THE TRIGGER FIRES, so a weapon equipped afterwards is inside it and a counter Glisten never placed comes off. It accumulates, fires at the CONTROLLER own end phase as step (4a2), and is CONSUMED - left standing it wipes every end phase for the rest of the game. Symmetry ledger 51 -> 52, WIRE_V 9 -> 10. THE POLICY TAKES THE MAXIMUM and that is a measurement rather than v4.24 standing decline: an allocation has no price, and over 797 records nine cards read a +1{p} counter and NOT ONE spends it as a cost, so placing fewer is strictly dominated (v4.23 reprieve) - the fallthrough would have placed none and left the route with no caller. Where they go is printed numbers and a total order: highest printed power, uid tie-break. AND THE TABLE HAD NO PROMPT SHEET AT ALL - the word "prompt" did not appear once in TableBoard while judge.legal freezes the game for both seats until one is answered, so any card that asked its controller a question was a hard livelock on the CR-exact board, and this project has claimed the opposite since v2.78. `PromptSheet` is one props-only component both boards render. Measured: exactly 1 record moves, 391 -> 392 full, 1 -> 0 none - every deck card in the pool now reads something; powctr 48 / ctrWipe 29 in 210 games; the ladder move is NOISE at three seeds on both sides; 28 sabotages, 28 bite. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.45"; /* v4.45 - CR 1.4.5 AT THE TABLE, AND FOUR ROUTES THE UI COULD NOT REACH. `judge.reduce` has declared, validated and resolved attack-targets since v2.45 and `targets()` has answered the list for as long, and nothing ever asked whether the board a PLAYER uses can say one: `targets()` answers ENTRIES (a card carrying `_target` and `_life`, because a rail renders a card frame) and an ACTION carries a SPEC ("hero" or an ally uid), the table sent the entry, `targetOf` answered null, and `legal` refused - so one living opposing ally made every attack unplayable, a hard sev-3 BLOCK rather than a wrong target, and Gravy Bones decks six allies. `judge.targetSpec` is the ONE reader of that conversion and four routes go through it: the hand, the weapon swing (which cannot be gated on `isAttack`, because a weapon type line carries no "Attack" (v3.43) and CR 1.4.5 names an attack-LAYER), the arsenal, and the ARENA ROW, whose only handler was the zoom - `doActivate` has had the board-attack route since v3.44 for allies and v3.84 for auras, so 10 attacking allies and the four ward auras Cosmo turns into weapons, which is Enigma whole engine, had no caller at the table at all (v3.50, fifth outing, first one where the missing caller is a TAP). The rail label had the same bug as the action - it read `t.kind` where an entry keeps `t._target.kind`, so BOTH buttons read "ally", the hero included, in the one place a player looks to tell the choices apart; an ally is NAMED with its life now. AND `npm run play` COULD NEVER HAVE FOUND ANY OF IT: `sparring.targetFor` answers the CORRECT shape, so 210 games a version cannot reach a defect needing a human UI on one side - a real limit of that instrument, recorded like v4.31 mirrors and pinned by a drill, and the ladder is byte-identical here as the honest read rather than a clean bill. THE FIFTH DEFECT IS AN ENGINE BUILD so it is RECORDED rather than half-wired: `legal` arena branch reads allyAttack/auraAttackOf and refuses everything else, so an arena permanent activated ABILITY cannot be activated at the table - eleven pool records print one and SEVEN have a line `parseHeroPower` reads, including Gravy Bones whole treasure economy - and the trainer built `boardPow` at v2.35 as UI so judge has no branch, v3.01 shape and the last of that family standing. `arena-ability-no-table-route` carries it with a probe that goes RED the day the branch arrives. Measured: no record parse and no tier moves (this is the rules machine, not the parser); 11 sabotages, 11 bite. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6445,11 +6445,29 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const targets = DawnJudge.targets(g, 1-mySeat, them.heroCard);
   const [tgt,setTgt] = uS(null);
   const needTarget = targets.length > 1;
+  /* THE ACTION CARRIES A SPEC, NOT THE DISPLAY ENTRY (v4.45).
+     `targets()` answers entries so the rail can render a name; `reduce`
+     wants `"hero"` or an ally's uid. Handing over the entry made
+     `targetOf` answer null and `legal` refuse EVERY attack with "no such
+     attack-target" the moment the opposing board held one living ally — a
+     hard block with no way forward. `judge.targetSpec` is the one reader
+     of that conversion, so no route here can get the shape wrong. */
+  const tgtSpec = () => DawnJudge.targetSpec(tgt || targets[0]);
+  /* AND CR 1.4.5 IS ABOUT AN ATTACK OR ATTACK-LAYER, so every route that
+     declares one says it — a card from hand, a card from the ARSENAL, a
+     weapon swing and an ARENA attack. Omitted, `targetOf` reads the hero,
+     silently, and the rail's own selection is discarded. */
   const playAct = (c, from) => {
     const a = {t:"play", uid:c.uid, from};
-    if(needTarget && DawnParser.isAttack(c)) a.target = tgt || targets[0];
+    if(needTarget && DawnParser.isAttack(c)) a.target = tgtSpec();
     return a;
   };
+  /* An ACTIVATION's target, for a weapon swing or an arena attack. A
+     weapon's type line carries no "Attack" (`isAttack` is false for every
+     weapon in the pool, v3.43), and an ally's route is an ability — so
+     neither can be gated on `isAttack` and both are attacks. */
+  const actAct = (uid) => needTarget ? {t:"activate", uid, target:tgtSpec()}
+                                     : {t:"activate", uid};
 
   const peekables = () => [...me.hand, ...me.gear, ...(me.arsenal?[me.arsenal]:[]),
                            ...me.board.map(b=>b.card)];
@@ -6475,7 +6493,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
         <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
           <CardFrame card={{...gr, def}} className="sm"/></span>
       </button>);
-    const swing  = {t:"activate", uid:gr.uid};
+    const swing  = actAct(gr.uid);
     const defend = {t:"defend", uid:gr.uid};
     /* `cellAct`, never `act` — a local named `act` shadows the global actor
        helper for its whole closure. That is not hypothetical: the identical
@@ -6708,17 +6726,33 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               {pips.length ? <div className="rail">{pips.map(([t,cl],i)=>
                 <span key={i} className={"rp"+(cl?" "+cl:"")}>{t}</span>)}</div> : null}
 
+              {/* CR 1.4.5 — the declaration is MANDATORY, so the rail is the
+                  one place the choice is made and every attack route reads
+                  it (`tgtSpec`). An attack on an ally cannot be blocked
+                  (CR 7.3.2a) and ally life resets at end of turn
+                  (CR 4.4.3a), so it is a real decision rather than a worse
+                  way to hit the hero.
+
+                  THE LABEL READ `t.kind` AND AN ENTRY KEEPS IT AT
+                  `t._target.kind` (v4.45), so it was undefined and BOTH
+                  buttons read "ally" — the hero included. The same
+                  two-shapes-for-one-fact defect the action carried, in the
+                  one place a player looks to tell them apart. And an ally
+                  is NAMED: an entry IS the card, so two Swabbies were
+                  otherwise two identical buttons. */}
               {needTarget && <div className="rail">
                 <span className="rp">attack:</span>
                 {targets.map((t,i)=>(
                   <button key={i} className={"rp"+((tgt||targets[0])===t?" on":"")}
-                    onClick={()=>setTgt(t)}>{t.kind==="hero"?them.name.split(",")[0]:"ally"}</button>))}
+                    onClick={()=>setTgt(t)}>{t._target.kind==="hero"
+                      ? them.name.split(",")[0]
+                      : t.name + (t._life!=null ? " ♥"+t._life : "")}</button>))}
               </div>}
 
               <div className="phand"><span className="hlbl">Hand</span>
                 {me.hand.map(handCell)}
                 {me.arsenal && (()=>{
-                  const a = {t:"play", uid:me.arsenal.uid, from:"arsenal"};
+                  const a = playAct(me.arsenal, "arsenal");
                   const ok = mine(a);
                   return <button key={me.arsenal.uid}
                     className={"hc clip-sm"+(ok?"":" dis")+(peek&&peek.uid===me.arsenal.uid?" peek":"")}
@@ -6744,13 +6778,34 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
               <div className="paneflag"><span>Your board · seat {mySeat}</span><span>swipe → graveyard</span></div>
               {!myTurn && !defending && !myArsStep && !over &&
                 <div className="modehint">Waiting on {them.name} — flick up to the chain screen</div>}
-              <InPlayRow entries={me.board} cell={(b,i)=>(
-                <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")} style={{width:52,flex:"none"}}
-                  onClick={()=>setZoom(b.card)}>
+              {/* THE ARENA COULD ONLY ZOOM (v4.45). `judge.doActivate` has had
+                  the board-attack route since v3.44 and `legal`'s arena
+                  branch since v3.84 — and this row's only handler opened the
+                  card, so at the table NOTHING could attack out of the
+                  arena: measured, 10 attacking allies in the pool and the
+                  four ward-bearing auras Cosmo turns into weapons, which is
+                  Enigma's whole engine. v3.50's sentence at the UI: a
+                  feature with no caller looks exactly like a feature that
+                  works, until you count.
+
+                  `judge.boardAttackOf` IS HOW IT ASKS (v3.84's own reader),
+                  so there is still one place that knows an aura's power is
+                  its printed ward — the tile reads no card text. */}
+              <InPlayRow entries={me.board} cell={(b,i)=>{
+                const bp = DawnJudge.boardAttackOf(g, mySeat, b.uid);
+                const swing = bp ? actAct(b.uid) : null;
+                const can = swing && mine(swing);
+                return (
+                <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")
+                    +(peek&&peek.uid===b.uid?" peek":"")} style={{width:52,flex:"none"}}
+                  onClick={can ? tapTwice(b.card, bp.kind==="aura" ? "attack with this aura" : "swing",
+                                          ()=>fire(swing))
+                               : ()=>setZoom(b.card)}>
                   <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}>
                     <CardFrame card={b.card} className="sm" noType={b.kind==="ally"&&b.card.power>0}/></span>
                   {b.kind==="ally" && b.life!=null && <span className="sw">♥ {b.life}</span>}
-                </button>)}/>
+                </button>);
+              }}/>
               <div className="heror">
                 <div className={"wslot clip-sm"+(myHands[0]?" filled":"")}>
                   {myHands[0] ? gearTile(true)(myHands[0]) : <span className="wempty">weapon 1</span>}

@@ -1359,6 +1359,29 @@ const targetOf = (g, seat, spec) => {
   const hit = list.find(t => t._target.kind === "ally" && t._target.uid === spec);
   return hit ? hit._target : null;
 };
+/* THE ONE READER THAT TURNS A DISPLAY ENTRY INTO AN ACTION'S TARGET
+   (v4.45).
+
+   `targets()` answers ENTRIES — a card object carrying `_target` and
+   `_life`, because the prompt sheet and the table's rail both render a
+   card frame. An ACTION carries a SPEC: `"hero"`, or an ally's UID. Those
+   are two shapes for one fact, and the table passed the first where the
+   reducer wanted the second — so `targetOf` answered null and `legal`
+   refused **every attack** with "no such attack-target" the moment the
+   opposing board held one living ally.
+
+   A HARD BLOCK, not a wrong target: the tap produced a refusal and there
+   was no way to proceed. And `sparring.act` is why 210 games a version
+   never saw it — `targetFor` returns `kill.uid` or `"hero"`, the correct
+   shape, so the policy-versus-policy ladder cannot reach the defect at
+   all (v4.31's mirror limit, one field over).
+
+   So the conversion is a FUNCTION rather than an expression at each call
+   site: one reader, asked by every UI that offers the choice, and a drill
+   pins that no board hands `reduce` a raw entry. */
+const targetSpec = t => (t && t._target && t._target.kind === "ally")
+  ? t._target.uid : "hero";
+
 function targetWhy(g, seat, c, spec){
   if(spec == null || !isAttack(c)) return null;
   return targetOf(g, seat, spec) ? null : "no such attack-target";
@@ -2854,7 +2877,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, boardAttackOf, abWindowOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, abWindowOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer,

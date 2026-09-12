@@ -194,7 +194,14 @@ test("every probe reaches the engine or a real source file", () => {
 
 test("the ledger's shape is pinned — moving a record is a deliberate edit", () => {
   const n = s => Object.values(APPROX).filter(v => v.status === s).length;
-  assert.equal(Object.keys(APPROX).length, 30, "record count moved");
+  /* 30 -> 31 AT v4.45: `arena-ability-no-table-route`. v3.01's shape and
+     the last of that family standing — the trainer's `boardPow` (v2.35)
+     is UI, so judge has no branch and an arena permanent's activated
+     ABILITY cannot be activated at the table at all. Recorded rather than
+     half-built, because the four defects that version fixed were all
+     UI-to-reducer wiring against routes the reducer already had, and this
+     one is an engine build. */
+  assert.equal(Object.keys(APPROX).length, 31, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -213,7 +220,7 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 8 -> 7 open, 10 -> 11 closed AT v4.35: `aura-ward-prevention-pool`
      was ANSWERED at v4.34 and the record survived its own version by one,
      because its probe drove nothing. */
-  assert.equal(n("open"),    6, "open count moved");
+  assert.equal(n("open"),    7, "open count moved");
   assert.equal(n("closed"), 12, "closed count moved");
 });
 
@@ -289,6 +296,34 @@ probe("prevention-target-and-source", () => {
    DRIVEN: the fixed order is observable — a seat holding a pool AND two
    permanents of different ward spends them in exactly one sequence, and a
    prompt would let it spend them in another. */
+/* An arena permanent's activated ABILITY is trainer-only. */
+probe("arena-ability-no-table-route", () => {
+  /* IT DRIVES `legal`, not a grep (v4.36's census): a source scan for the
+     missing branch would pass by finding nothing exactly as a real gap
+     does. The fixture is an Energy Potion — an Item whose whole printed
+     line is `Instant - Destroy this: Gain {r}{r}`, which `parseHeroPower`
+     reads in full, so what refuses is the ROUTE and not the text. */
+  const pot = {uid: 9403, name: "Energy Potion", tt: "Generic Item",
+               ty: ["Generic", "Item"], tx: "Instant - Destroy this: Gain {r}{r}"};
+  const g0 = H.state({res: 3}, {hp: 20});
+  const g = {...g0, phase: "action", step: "layer", priority: 0, turnPlayer: 0, actor: 0};
+  g.sides[0] = {...g.sides[0], ap: 1, board: [{uid: 9403, kind: "item", card: pot}]};
+  const why = J.legal(g, {t: "activate", uid: 9403}, 0);
+  assert.equal(why, "Energy Potion prints no attack to activate",
+    "the table now routes an arena ABILITY — close this record and delete the probe, " +
+    "which is what an `open` record is for (v4.02)");
+  /* AND THE ATTACK ROUTE BESIDE IT WORKS, which is the control: without it
+     a `legal` that refused everything in the arena would satisfy the
+     assertion above and say nothing about the gap (v3.98). */
+  const ally = {uid: 9404, name: "Probe Ally", tt: "Pirate Ally", ty: ["Pirate", "Ally"],
+                power: 2, life: 3, cost: 0, tx: "Action - {r}: Attack"};
+  const g2 = {...g};
+  g2.sides = g.sides.slice();
+  g2.sides[0] = {...g.sides[0], board: [{uid: 9404, kind: "ally", card: ally, life: 3}]};
+  assert.equal(J.legal(g2, {t: "activate", uid: 9404}, 0), null,
+    "the arena ATTACK route stopped working, so the refusal above says nothing");
+});
+
 probe("ward-spend-order", () => {
   const spec = one("Waxing Specter"), shield = one("Spectral Shield");  /* Ward 3 · Ward 1 */
   const ent = (c, u) => ({uid:u, card:c, sd:null});
