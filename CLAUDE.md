@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.41
+**Current version:** v4.42
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2599 drills** at v4.41.
+This is `node --test "test/*.test.js"` — **2611 drills** at v4.42.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,64 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### TWO CENSUSES THIS PROJECT HAD BEEN RUNNING BY HAND (v4.42)
+
+`tools/ledger.js` does it for KEYWORDS and `tools/approx.js` for the RULES
+MACHINE. Two more had only ever been run by a person, once each.
+
+**EVERY `fx.*` FIELD THE POOL EMITS HAS A CONSUMER** —
+`test/fxcensus.test.js`. `parser.js` writes about sixty fields onto a
+parse and nothing asked, as a standing check, whether anything READS each
+one: v3.55 at the scale of the whole parse, and the shape behind
+`sd.rune` (v3.82), `sd.fatigue` (v4.26), `enterCounters` (v4.23),
+`game.costTax` (v4.06) and `fx.chargeCost.multi` (v4.33). **62 emitted,
+62 consumed.**
+
+**THE INDIRECTION IS THE INTERESTING HALF.** Seven are named by no
+consumer file and are read inside a `parser.js` READER the consumers call
+— `playsAsInstant`, `isHandWipe`, `rustedThrough`, `idleCounterWipes`,
+`gyFirstGaKw`, `auraAttackOf` — plus `quotedUnread`, read by the AUDIT,
+which is that field's whole purpose (v3.41). A census stopping at *"is it
+named in effects.js"* reports all seven as orphans, which is v4.00's false
+POSITIVE one file over. **So the reader and its CALLERS are pinned as
+pairs**: not *"something reads it"* but *"THIS function does, and a
+consumer calls THIS function"* — a reader losing its last caller fails
+even though the field is still read.
+
+**A SPEC ONLY CARRIES FIELDS `prompts.js` READS** —
+`test/speccensus.test.js`, and **this file states that rule in six places
+with nothing enforcing it.** It has cost six defects (`arsStamp` v2.34,
+`taps` v3.33, `by` v3.28, `faceUp` v3.69, `lateGa` v3.93, `spendCtr`
+v4.24) and once at the CONSUMER end, where `moveFoe` was obeyed by nothing
+for four versions (v3.53). **Driven over 32 deterministic legs: 35 fields
+arrive and `buildPrompt` names every one.** The set is sample-dependent —
+16 legs reach 32 — so the drill drives an exact named set, which works
+only because the tournament is a pure function of the database and its
+seeds (v4.39).
+
+**AND I CORRECTED MY OWN BANKED NOTE.** `fx.auraWeapon` is NOT *"two
+records of one fact"*: it is set on Cosmo's own parse while `auraAttackOf`
+asks about the EQUIPPED piece — a different card — so the re-derivation is
+required. What is true is narrower: the field holds the grant OBJECT and
+one site reads its truthiness, which is the faithful reading because a
+boolean would be a second encoding. **Check your own fixture by ASKING
+rather than by remembering** (v4.09).
+
+**THREE FIXTURES WERE WRONG BEFORE THE ENGINE WAS**, each a named shape:
+a scan written inline in a shell string reported **62 of 62 orphaned,
+`fx.ops` included**, because `"\\."` reached the regex as a literal
+BACKSLASH (v3.81 — a wrong-shape scan fails by finding nothing exactly as
+a real gap does); **`H.card("Cosmo")` answers a TRUTHY card with EMPTY
+TEXT**, so a bare `assert.ok` passed against a blank; and bounding
+`buildPrompt` at `indexOf(...) + 9000` **invented eight findings** against
+a 17,519-character body — **v4.05 with the sign flipped, a bound too
+NARROW inventing findings exactly as one too wide hides them.**
+
+**9 sabotages, 9 bite.** The silent one named a spec site 32 legs never
+reach (crank's own `pay` prompt, v4.24), recorded as a reach limit of the
+fixture rather than as a weak drill (v3.62, v4.34) — the honest widening
+is more legs, not a looser claim.
 
 ### A GRANT THAT WAITS FOR A HIT IS NOT ONE THAT WAITS FOR AN ATTACK (v4.41)
 

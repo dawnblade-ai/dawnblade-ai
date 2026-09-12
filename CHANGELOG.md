@@ -1,3 +1,96 @@
+## v4.42 — two censuses this project had been running by hand
+
+> **`test/fxcensus.test.js`** and **`test/speccensus.test.js`** — every
+> `fx.*` field the pool emits against its reader, and every prompt-spec
+> field that arrives against `prompts.js`. **Both came back clean, and a
+> clean result is worth having PROVED** (v3.97, v4.00).
+
+### EVERY `fx.*` FIELD THE POOL EMITS HAS A CONSUMER
+
+`parser.js` writes about sixty fields onto a card's parse and nothing ever
+asked, as a standing check, whether anything READS each one. That is
+v3.55's rule at the scale of the whole parse — **a field with no reader is
+a no-op wearing a name** — and it is the shape behind a string of findings:
+`sd.rune` (v3.82), `sd.fatigue` (v4.26), `enterCounters` (v4.23),
+`game.costTax` (v4.06), `fx.chargeCost.multi` (v4.33). Every one was found
+by somebody looking, once, by hand.
+
+Measured: **62 fields emitted, all 62 consumed.**
+
+**THE INDIRECTION IS THE INTERESTING HALF.** Seven are named by no consumer
+file at all and are read inside a `parser.js` READER the consumers call:
+
+| field | reader | called by |
+|---|---|---|
+| `asInstant` | `playsAsInstant` | judge.js, index.html |
+| `auraWeapon` | `auraAttackOf` | effects.js, judge.js |
+| `gyFirstGa` | `gyFirstGaKw` | effects.js |
+| `handWipe` | `isHandWipe` | effects.js |
+| `rustDestroy` | `rustedThrough` | effects.js |
+| `wipePowIfIdle` | `idleCounterWipes` | effects.js |
+| `quotedUnread` | — | **`tools/audit.js`**, which is that field's whole purpose (v3.41) |
+
+A census that stopped at *"is the field named in effects.js"* reports all
+seven as orphans — v4.00's false POSITIVE one file over. So the reader and
+its **CALLERS** are pinned as pairs: the claim is not *"something somewhere
+reads it"* but *"THIS function does, and a consumer calls THIS function"*,
+so a reader losing its last caller fails even though the field is still
+read.
+
+### A SPEC ONLY CARRIES FIELDS `prompts.js` READS
+
+CLAUDE.md states this in **six places** and nothing enforced it. It has
+cost six real defects — `arsStamp` (v2.34), `taps` (v3.33), `by` (v3.28),
+`faceUp` (v3.69), `lateGa` (v3.93), `spendCtr` (v4.24) — and once at the
+CONSUMER end, where `moveFoe` carried `{from, to}` for four versions while
+`applyAnswer` moved hand to deck-top whatever it was told: **the sheet
+opened, the right card was offered, the feed said it moved, and nothing
+moved** (v3.53).
+
+**SO THE CENSUS IS DRIVEN, NOT GREPPED.** Over 32 legs of real Flesh and
+Blood, **35 fields arrive and `buildPrompt` names every one.** The set is
+sample-dependent — 16 legs reach 32 fields — so the drill drives an exact,
+named set of legs; the tournament is a pure function of the database and
+its seeds (v4.39), and the 35 was verified reproducible across runs.
+
+### AND I CORRECTED MY OWN BANKED NOTE
+
+I had `fx.auraWeapon` down as *"two records of one fact"* — the field
+beside `auraAttackOf`'s call to `auraWeaponGrant`. **Measured, they ask
+about different CARDS**: `fx.auraWeapon` is set on Cosmo's own parse and
+says *"this card grants it"*, while `auraAttackOf` asks *"does this SIDE
+have such a piece equipped"* and must re-derive from the equipped piece.
+The re-derivation is required. What is true is narrower — the field holds
+the whole grant object and exactly one site reads it, for its truthiness,
+to suppress `quotedUnread` on an ability the grant consumed (v3.84), which
+is the faithful reading because a boolean would be a second encoding.
+**Check your own fixture by ASKING rather than by remembering** (v4.09).
+
+### THREE FIXTURES WERE WRONG BEFORE THE ENGINE WAS
+
+Each is a shape this project already names:
+
+- **a scan written inline in a shell string** reported **62 of 62
+  orphaned, including `fx.ops`** — `"\\\\."` reached the regex as `\\.`, a
+  literal BACKSLASH followed by any character, matching nothing anywhere.
+  A scan aimed at the wrong shape fails by finding nothing exactly as a
+  real gap does (v3.81).
+- **`H.card("Cosmo")` answers a card with EMPTY TEXT** — truthy, so a bare
+  `assert.ok` passed against a blank fixture. The record is *"Cosmo, Scroll
+  of Ancestral Tapestry"*; asserting the TEXT is what tells a real card
+  from a placeholder.
+- **bounding `buildPrompt` at `indexOf(...) + 9000`** reported eight fields
+  the sheet "ignores", every one an artefact of the cut: the real body is
+  **17,519 characters**. v4.05's lesson with the sign flipped — a bound too
+  narrow INVENTS findings exactly as one too wide hides them.
+
+**9 sabotages, 9 bite.** The one that came back silent named a spec site
+32 legs never reach — CRANK's own `pay` prompt (v4.24, Dash's Hyper
+Driver). Recorded as a reach limit of the fixture rather than as a weak
+drill (v3.62, v4.34): the honest widening is more legs, not a looser claim.
+
+---
+
 ## v4.41 — a delayed grant that waited for the wrong event
 
 > **`hitNext`** — the two pool records that print *"the next time … hits
