@@ -202,18 +202,34 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
      knows). Pinned so a fourth vocabulary cannot appear unnoticed. */
   const pool = require("../data/pool.json");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
-  const defSelf = new Set(), asInstant = new Set(), actIf = new Set();
+  const defSelf = new Set(), defPer = new Set(), asInstant = new Set(), actIf = new Set();
   for(const c of arr){
     P.fxReset();
     const fx = P.fxParse({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
       ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
       cost: c.cost, power: c.power, def: c.defense});
-    if(fx.defSelf) defSelf.add(fx.defSelf.when);
+    /* A `defSelf` ENTRY CARRIES A GATE **OR** A COUNT (v4.48). Big Blue
+       Sky prints "+1{d} for each blue card you've pitched this turn" — a
+       MULTIPLIER, so it has no `when` at all and `defendValue` must not ask
+       `defSelfMet` about it (that answers FALSE for a `when` it does not
+       know, which would read the whole clause as zero). Collecting them
+       into one set put a bare `undefined` in the census, which is the
+       census doing its job: the shape changed and the pin had to move. */
+    if(fx.defSelf && fx.defSelf.per) defPer.add(fx.defSelf.per);
+    else if(fx.defSelf) defSelf.add(fx.defSelf.when);
     if(fx.asInstant && fx.asInstant.cond) asInstant.add(fx.asInstant.cond);
     if(fx.activateIf) actIf.add(fx.activateIf.kind);
   }
   assert.deepEqual([...defSelf].sort(),
     ["addCostPaid", "arcDealt", "atkActionCostLe", "fromArsenal", "weaponAttack", "withHandDefender"]);
+  /* THE COUNTABLE HALF IS PINNED SEPARATELY, and `undefined` may appear in
+     NEITHER set — a `defSelf` entry carrying neither a gate nor a count is
+     a clause read into a field nothing can evaluate. */
+  assert.deepEqual([...defPer].sort(), ["bluePitched"],
+    "the {d} multiplier vocabulary — Big Blue Sky is the pool's only record");
+  for(const [nm, set] of [["gate", defSelf], ["count", defPer]])
+    assert.ok(![...set].includes(undefined),
+      "a defSelf entry reached the census with no " + nm + " and no other key");
   assert.deepEqual([...actIf].sort(),
     ["atkNamed", "boosted", "controlPow", "defending", "foeTurn", "hits", "playedNamed", "unreadable"],
     "`unreadable` is in the list on purpose — an activation condition with no " +
@@ -222,6 +238,11 @@ test("the other three evaluators' vocabularies are closed too", {skip}, () => {
   for(const w of defSelf)
     assert.ok(SRC.indexOf('when === "' + w + '"') > 0 || SRC.indexOf('when==="' + w + '"') > 0,
       w + " has no branch in defSelfMet");
+  /* the counting half has its own evaluator, and `test/foreach.test.js`
+     DRIVES it; here the claim is only that a branch exists at all. */
+  for(const k of defPer)
+    assert.ok(SRC.indexOf('per === "' + k + '"') > 0 || SRC.indexOf('per==="' + k + '"') > 0,
+      k + " has no branch in defPerCount");
 });
 
 /* ---- THE QUALIFIER ATOMS, CENSUSED THE SAME WAY (v3.98) -------------- */

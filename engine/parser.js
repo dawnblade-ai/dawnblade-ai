@@ -174,6 +174,61 @@ const SYNONYMS = [
 ];
 const levelIdiom = c => SYNONYMS.reduce((s, [re, to]) => s.replace(re, to), c);
 
+/* ---- "+N{p} FOR EACH <countable>" — THE MULTIPLIER VOCABULARY (v4.48)
+   The pool prints a printed number MULTIPLIED by something countable, and
+   the loose `this gets +N{p}` matcher four hundred lines down claimed the
+   clause and DROPPED the multiplier — so Fender Bender, Overblast and Salt
+   the Wound each granted a flat +1 whatever the count was. Wrong in BOTH
+   directions at once (stronger at a count of 0, weaker at 2 or more), all
+   `tier: full` because the clause IS consumed, so coverage is blind and
+   the one-sided fairness sweep looks the other way.
+
+   AND THE TWO OPS THIS PROJECT ALREADY BUILT FOR IT HAD **ZERO** POOL
+   EMITTERS. `perEquipDef` (v2.11) and `perBoost` were anchored on
+   "this gains +X{p}, WHERE X IS THE NUMBER OF …", which no record prints:
+   measured over 797, the printed form is "+1{p} FOR EACH …" on every one.
+   v3.00's drift, and the sharpest instance of it in the project — the
+   DRILL that pinned `perBoost` wrote the stale wording out BY HAND, so it
+   was green against text the database had stopped printing.
+
+   THE KEYS ARE THE **LEVELLED** SPELLING (v3.71). `SYNONYMS` rewrites
+   "you've" to "you have" and a pip-leading "gains"/"has" to "gets" before
+   `classifyClause` sees a word, so a key spelling the printed contraction
+   matches nothing and looks exactly like a pattern that is simply wrong.
+
+   IT IS KEYED BY THE PRINTED SYMBOL, and `{d}` is deliberately EMPTY.
+   Big Blue Sky prints "+1{d} for each blue card you've pitched this turn"
+   — a DEFENCE buff, whose landing site is the wall rather than the
+   attack's power, and whose own refusal `parser.js` already records four
+   hundred lines below ("the pool prints a whole self-buff family on other
+   gates … each needs its own reader"). Keyed by symbol, a countable added
+   for `{d}` cannot be silently fired as a POWER op — which is what a
+   single flat table would have allowed the moment somebody built it. The
+   empty set is pinned by a drill, so the day an entry arrives somebody
+   decides where it lands (v4.33's `multi` rule). */
+const PER_COUNT = {
+  "{p}": {
+    "equipment defending it":                  "perEquipDef",
+    "time you have boosted this combat chain": "perBoost",
+    "attack that has hit this combat chain":   "perChainHit"
+  },
+  "{d}": {}
+};
+
+/* ---- WHAT A DEFENDER'S "+N{d} FOR EACH …" COUNTS (v4.48) ------------
+   `PER_COUNT`'s twin for the WALL rather than for the attack's power, and
+   it is a separate table because the two land in different places: an op
+   pumps the resolving attack, and this moves what a card is worth when it
+   blocks. `fx.defSelf.per` carries it and `effects.defendValue` — already
+   the ONE reader of what a defender is worth (v3.23) — multiplies.
+
+   ONE ENTRY, MEASURED: Big Blue Sky is the pool's only record of the
+   shape. `effects.defPerCount` is the one counter, and an unknown key
+   leaves the clause UNREAD rather than counting zero (v3.55). */
+const DEF_PER = {
+  "blue card you have pitched this turn": "bluePitched"
+};
+
 /* ---- A GRANTED ABILITY RIDING IN QUOTES ------------------------------
    FaB prints a granted ability in QUOTES, which is what makes it readable
    rather than guessable: the quoted text is a clause in its own right and
@@ -1700,6 +1755,28 @@ function classifyClause(raw){
   if(m=c.match(/^destroy an? ([a-z' -]+?) token they control$/))
     return R([["destroyFoeToken", m[1].trim()]]);
   if(/^as an additional cost/.test(c)) return NOOP("additional cost — enforced when played");
+  /* ---- A MULTIPLIER, NOT A PUMP (v4.48) ------------------------------
+     "This gets +1{p} for each <countable>." It sits ABOVE the two loose
+     `defBuff` matchers below it AND the loose `self` matcher four hundred
+     lines down, because those are what were eating the multiplier —
+     v3.60's rule: when you anchor a rule to stop a loose one stealing a
+     clause, ask which OTHER matchers read the same shape.
+
+     AN UNKNOWN COUNTABLE REFUSES THE WHOLE CLAUSE (v2.29), and that is
+     the load-bearing half rather than caution: falling through IS the
+     bug. A countable the engine cannot count, read as a flat +N, is a
+     card granting a number its text never grants — so the clause is left
+     unread, visible in the audit, which is the direction this project
+     chooses for every unreadable payload.
+
+     THE AMOUNT IS READ. All four pool records print 1, so a hardcoded 1
+     is SILENT against every real fixture and the drill that sees it is
+     synthetic (v3.32). */
+  if(m=c.match(/^(?:this(?: attack)?|it) gets \+(\d+)\s*(\{p\}|\{d\}) for each (.+?)\.?$/)){
+    const _pk = (PER_COUNT[m[2]] || {})[m[3].trim()];
+    if(!_pk) return null;
+    return R([[_pk, +m[1]]]);
+  }
   if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:^|this |it )(?:gains?|gets?|has) \+(\d+)\s*(?:\{d\}|defense)/)) return R([["defBuff",+m[1]]]);
   if(m=c.match(/(?:target )?attack(?:ing card)? (?:gets?|gains?) -(\d+)\s*(?:\{p\}|power)/)) return R([["atkMinus",+m[1]]]);
@@ -4062,6 +4139,36 @@ function fxParse(card){
       m = cl.match(/^if the additional cost is paid, (?:this|it) gets \+(\d+)\{d\}\.?$/i);
       if(m) ds = {amt: +m[1], when: "addCostPaid"};
     }
+    /* "+N{d} FOR EACH <countable>" — A MULTIPLIER, NOT A GATE (v4.48).
+       Big Blue Sky prints "This gets +1{d} for each blue card you've
+       pitched this turn", and the note above this loop has RECORDED it as
+       deliberately unread since v3.24 — while the loose `defBuff` matcher
+       nine hundred lines up claimed it anyway, into an op `runOps` only
+       LOGS. So the card reported `tier: full`, the feed said "+1 defense to
+       the wall", and no number moved on either board: the no-op blind spot
+       with a feed line asserting the opposite, which is the sev-2 category
+       the player TRUSTS.
+
+       IT CARRIES A COUNT WHERE ITS SIBLINGS CARRY A GATE, so `per` is a
+       field of its own and `defendValue` MULTIPLIES rather than asking
+       `defSelfMet` — which answers FALSE for a `when` it does not know
+       (v3.26), so an entry smuggled in with no gate would read as zero.
+
+       THE COUNTABLE VOCABULARY IS CLOSED and an unknown one leaves the
+       clause unread (v3.55's rule, one field over): a count the engine
+       cannot make, read as a flat +N, is a defender blocking for a number
+       its text never grants.
+
+       THE {p} TWIN IS AN OP AND THIS IS NOT, and that is the reason
+       `PER_COUNT["{d}"]` is empty rather than this living there: an op
+       lands on the attack's POWER, and what this moves is what a card is
+       worth at the WALL — `defendValue`'s number, on a card that may never
+       be on the chain at all. Big Blue Sky is a Defense Reaction. */
+    if(!ds){
+      m = cl.match(/^this gets \+(\d+)\{d\} for each (.+?)\.?$/i);
+      if(m && DEF_PER[levelIdiom(m[2].toLowerCase().trim())])
+        ds = {amt: +m[1], per: DEF_PER[levelIdiom(m[2].toLowerCase().trim())]};
+    }
     if(!ds) continue;
     fx.defSelf = ds;
     handled.add(ci);
@@ -5834,8 +5941,27 @@ function fxParse(card){
   }
   /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
      because it may name the card instead of saying "this"; the pattern
-     therefore skips either rather than requiring one. */
-  const chgm = tl.match(/as an additional cost to play(?: this| [a-z' ]+)?,? you may charge your hero'?s? soul( any number of times)?/);
+     therefore skips either rather than requiring one.
+
+     BOTH PRINTED SPELLINGS READ (v4.48). Measured over the pinned pool, 16
+     records print an additional-cost charge and the database prints the
+     subject TWO WAYS AT ONCE: NINE say "your HERO'S soul" and SEVEN say
+     "your soul". This anchor required the word "hero", so those seven read
+     NOTHING — and v4.41 had already taught `onChargeSoul` both spellings
+     and left this reader on one, which is v3.53's "a fix for one matcher is
+     not a fix for the shape" and v4.21's "fix the family, not the two
+     members you found".
+
+     SIX OF THE SEVEN ARE LIVE AND READ `tier: full` WITH A RIDER THAT
+     COULD NEVER FIRE. Beaming Bravado ×3 prints "if a YELLOW card is
+     charged this way, this gets +1{p}" and Light the Way ×3 "when this
+     hits, if a yellow card was charged this way, this gets GO AGAIN" —
+     both riders parse perfectly and both are gated on a charge that never
+     happened, so the +1 and an ACTION POINT (CR 5.3.5) were simply
+     unreachable. WEAKER than printed, which the one-sided fairness sweep is
+     built not to look in, and the clause IS consumed, so coverage is blind
+     too. All of them are BOLTYN's, the hero the mechanic exists for. */
+  const chgm = tl.match(/as an additional cost to play(?: this| [a-z' ]+)?,? you may charge your (?:hero'?s? )?soul( any number of times)?/);
   if(chgm) fx.chargeCost = {multi: !!chgm[1]};
   /* the blocker limit itself, hoisted so the declare step can read it */
   const dl = tl.match(/can only defend an attack with (\d+) or less base \{p\}/);
@@ -6967,6 +7093,31 @@ function costCtx(g, seat){
    the same number, and Fai's discount is its second consumer. */
 function dracLinks(chain){
   return (chain || []).filter(l => l && l.drac && l.kind === "atk").length;
+}
+
+/* HOW MANY ATTACKS HAVE HIT ON THIS COMBAT CHAIN — Salt the Wound (v4.48).
+   `dracLinks`' sibling, and the ONE printed word separates them: a
+   Draconic LINK exists whether or not it connected, so that reader asks
+   nothing about damage, while this one asks about a HIT. CR 7.5.5 — if
+   prevention means no damage is dealt it is no longer a hit — so `dmg > 0`
+   is the test rather than decoration: `linkPayload` pushes an attack's
+   link UNCONDITIONALLY, with `dmg: total`, so a swing blocked to nothing
+   is on the strip at zero.
+
+   IT READS THE DISPLAY STRIP, AND THAT IS THE RIGHT RECORD (v4.39).
+   `g.chain` is what `effects.js` pushes an entry onto for anything that
+   dealt damage, ARCANE INCLUDED (`kind:"arc"`) — so the `kind === "atk"`
+   filter is what makes this count attacks rather than every source of
+   damage on the chain. `g.chainCards` is the ZONE and answers a different
+   question entirely.
+
+   THE ASKING ATTACK IS NOT YET ON THE STRIP (v3.99): `linkPayload` pushes
+   it, so a card reading this at declaration counts only the links BEFORE
+   it, which is what "have hit" says. A fixture at 0 hits and one at 3
+   agree under both the broken flat reading and the correct one at a count
+   of 1, so only the pair either side of that tells them apart. */
+function chainHits(chain){
+  return (chain || []).filter(l => l && l.kind === "atk" && (l.dmg || 0) > 0).length;
 }
 function weaponCost(tx){
   const t = clean(tx||"");
@@ -8367,7 +8518,8 @@ function rustedThrough(gear, counters){
 /* test hook — fxParse memoizes on name|pitch; drills must clear between fixtures */
 const fxReset = () => FXMEMO.clear();
 
-return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
+return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
+  PER_COUNT, DEF_PER, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,

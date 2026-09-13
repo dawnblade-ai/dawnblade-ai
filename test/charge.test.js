@@ -46,7 +46,17 @@ const INV = require("../engine/invariants.js");
 const SRC = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
 const gate = t => H.hasDb() ? t : { skip: true };
 
-const CARDS = ["Bolt of Courage", "Engulfing Light", "Take Flight"];
+/* WIDENED 3 -> 6 AT v4.48, AND THE REASON IS AN ANCHOR NOT A NEW CARD.
+   The database prints the subject TWO WAYS AT ONCE — nine records say "your
+   HERO'S soul" and seven say "your soul" — and this reader required the word
+   "hero", so those seven read NOTHING while v4.41 had already taught
+   `onChargeSoul` both spellings (v3.53: a fix for one matcher is not a fix
+   for the shape). Six of the seven read `tier: full` with a rider that could
+   never fire: Beaming Bravado's +1{p} and Light the Way's GO AGAIN are both
+   gated on "if a yellow card is charged THIS WAY", and no charge ever
+   happened. Every one of the six is Boltyn's. */
+const CARDS = ["Beaming Bravado", "Bolt of Courage", "Engulfing Light",
+               "Light the Way", "Take Flight", "V of the Vanguard"];
 
 /* ---- the pool census, pinned as a SET ------------------------------- */
 
@@ -66,17 +76,43 @@ const POOL = () => {
   return out;
 };
 
-test("exactly three pool cards print charge, none of them `multi`", () => {
+test("six pool cards print charge, and BOTH printed spellings read", () => {
   const hits = POOL().filter(c => P.fxParse(c).chargeCost);
-  assert.ok(hits.length >= 3, "the scan is alive — it found " + hits.length + " records");
+  assert.ok(hits.length >= 6, "the scan is alive — it found " + hits.length + " records");
   assert.deepEqual([...new Set(hits.map(c => c.name))].sort(), CARDS,
-    "pinned as a SET: three cards, all Boltyn's");
-  assert.equal(hits.length, 9, "nine records, three pitches each");
-  /* `multi` — "any number of times" — is parsed and no pool card prints
-     it, so the offer deliberately asks ONCE. Pinned so that a card which
-     does print it fails here rather than being quietly charged once. */
-  assert.deepEqual(hits.filter(c => P.fxParse(c).chargeCost.multi).map(c => c.name), [],
-    "no pool card prints `any number of times`, so a single offer is the whole rule");
+    "pinned as a SET: six cards, all Boltyn's");
+  assert.equal(hits.length, 16, "sixteen records");
+
+  /* BOTH SPELLINGS, COUNTED. This is the measurement the widening rests on,
+     so it is asserted rather than described: an anchor that knows one of two
+     printed wordings is a card waiting to be found (v3.36), and the day
+     upstream levels one away this drill says which half moved. */
+  const spell = w => hits.filter(c => new RegExp(w, "i").test(c.tx || ""))
+    .map(c => c.name + "|" + c.pitch).sort();
+  assert.equal(spell("charge your hero'?s? soul").length, 9,
+    "nine records print \"your HERO'S soul\"");
+  assert.deepEqual(spell("charge your soul"),
+    ["Beaming Bravado|1", "Beaming Bravado|2", "Beaming Bravado|3",
+     "Light the Way|1", "Light the Way|2", "Light the Way|3",
+     "V of the Vanguard|2"],
+    "and seven print plain \"your soul\" — the seven that read NOTHING before v4.48");
+
+  /* `multi` — "any number of times" — WAS PINNED EMPTY AT v4.33 with the
+     reason that the day a card printed it somebody would decide rather than
+     it being quietly charged once. THIS IS THAT DAY: widening the anchor
+     brought V of the Vanguard in, and it is the pool's only `multi` record.
+
+     THE DECISION IS TO OFFER **ONE** CHARGE, and to say so. `chargeOffer`
+     still carries only `uids` — the field has no reader — so a card printing
+     "any number of times" is offered a single charge: WEAKER than printed,
+     visible in the audit (its own payload clause still reads `skip`), and
+     recorded in `tools/approx.js` as `charged-this-way-count` with a probe
+     that goes red the day the count is built. Charging more than once
+     silently would be the other direction. */
+  assert.deepEqual(hits.filter(c => P.fxParse(c).chargeCost.multi)
+    .map(c => c.name + "|" + c.pitch),
+    ["V of the Vanguard|2"],
+    "one record prints `any number of times`, and the offer still asks ONCE");
 });
 
 /* ---- the offer is the one reader ------------------------------------ */
@@ -287,4 +323,121 @@ test("both boards offer it, and neither hard-codes what the other reads", () => 
      census; this pins the two buttons a player actually taps. */
   assert.match(htm, /confirmCharge\(null\)/, "the trainer offers a decline");
   assert.match(htm, /fire\(\{t:"charge",uid:null\}\)/, "and so does the table");
+});
+
+/* ---- v4.48 — THE SIX RECORDS THE OLD ANCHOR COULD NOT REACH ---------- */
+
+test("DRIVEN: Beaming Bravado's colour gate, all three rows", gate({}), () => {
+  /* IT PRINTS "if a YELLOW card is charged this way, this gets +1{p}", read
+     `run`, and could never once fire — the charge it is gated on never
+     happened, because the anchor required "your HERO'S soul" and the card
+     prints "your soul". `tier: full` throughout, so coverage was blind, and
+     the loss is WEAKER than printed, which the one-sided sweep does not
+     look for.
+
+     THREE ROWS, AND THE THIRD IS THE ONE THAT BITES. A colour-blind reader
+     passes the first two perfectly: declining grants nothing and charging a
+     yellow grants +1 under either reading. Only charging a RED separates
+     them (v3.26). */
+  H.db();
+  const run = (charge, pitch) => {
+    P.fxReset();
+    const atk = {...H.card("Beaming Bravado", 1), uid: 51};
+    const pay = {...H.card("Beaming Bravado", pitch), uid: 52};
+    const g = {...H.state({res: 9, ap: 1, hand: [atk, pay]}, {},
+                          {turn: 3, actor: 0, turnPlayer: 0}),
+               stack: [], chain: [], phase: "action", step: "layer",
+               priority: 0, passed: []};
+    let out = J.reduce(g, {t: "play", uid: 51, from: "hand"}, 0);
+    assert.ok(!out.error, "the play was refused: " + out.error);
+    const kind = out.state.pending && out.state.pending.kind;
+    assert.equal(kind, "charge", "the charge offer must open — that is the whole fix");
+    out = J.reduce(out.state, charge ? {t: "charge", uid: 52} : {t: "charge"}, 0);
+    assert.ok(!out.error, "the answer was refused: " + out.error);
+    return {total: out.state.pend.total, soul: out.state.sides[0].soul.length,
+            pitch: out.state.pend.chargedPitch};
+  };
+  assert.equal(H.card("Beaming Bravado", 1).power, 3, "the printed power, so the sum is visible");
+  assert.deepEqual(run(false, 2), {total: 3, soul: 0, pitch: null},
+    "declined — the printed power and nothing in the soul");
+  assert.deepEqual(run(true, 2), {total: 4, soul: 1, pitch: 2},
+    "a YELLOW charged — the printed +1 lands for the first time");
+  assert.deepEqual(run(true, 1), {total: 3, soul: 1, pitch: 1},
+    "a RED charged — the cost is paid and the gate is NOT met");
+});
+
+test("the subject is CLOSED to your own soul — the near-miss is synthetic",
+     gate({}), () => {
+  /* THE WIDENING IS MEASURED, NOT GENEROUS. `charge your (hero's )? soul`
+     admits both printed spellings and NOTHING ELSE — widened to
+     `charge[^.]*soul` every sabotage comes back SILENT, because no pool
+     card prints a different phrase in that position, so the guard's value
+     is entirely latent and only a synthetic can see it (v3.73).
+
+     WHAT IT PROTECTS IS THE SEAT. `chargeOffer` reads the ACTOR's hand and
+     `execute` puts the card into the ACTOR's own soul, so a clause naming
+     somebody else's soul read by this anchor would bill the wrong player —
+     `tapFoeHero`'s inversion (v3.48) one cost over. And a charge out of a
+     zone other than the hand is a different mechanic entirely. */
+  const at = tx => { P.fxReset();
+    return P.fxParse({name: "SYN-CHG-" + tx.length, pitch: 1, cost: 1, power: 3,
+      tt: "Light Warrior Action - Attack", ty: ["Light", "Warrior", "Action", "Attack"],
+      tx, kw: [], gkw: []}).chargeCost; };
+
+  /* BOTH PRINTED FORMS — the positive controls, or a guard that refuses
+     everything passes the refusals below perfectly (v3.98). */
+  assert.deepEqual(at("As an additional cost to play this, you may charge your soul."),
+    {multi: false}, "the plain printed form reads");
+  assert.deepEqual(at("As an additional cost to play this, you may charge your hero's soul."),
+    {multi: false}, "and so does the hero's form");
+  assert.deepEqual(at("As an additional cost to play this, you may charge your soul any number of times."),
+    {multi: true}, "and `multi` comes off the printed words");
+
+  /* THE NEAR MISSES. */
+  assert.equal(at("As an additional cost to play this, you may charge your opponent's soul."),
+    undefined, "somebody ELSE's soul is a different cost, billed to a different seat");
+  assert.equal(at("As an additional cost to play this, you may charge a card from your graveyard into your soul."),
+    undefined, "a charge out of another zone is a different mechanic");
+});
+
+test("DRIVEN: Light the Way's rider is an ACTION POINT, and it was unreachable",
+     gate({}), () => {
+  /* "When this hits, if a yellow card was charged this way, this gets GO
+     AGAIN" — CR 5.3.5 makes that a GAIN of one action point, which this
+     project's own notes call the most valuable keyword in the game to get
+     wrong. Same root: no charge, so the gate never met. */
+  H.db();
+  P.fxReset();
+  const fx = P.fxParse(H.card("Light the Way", 1));
+  assert.ok(fx.chargeCost, "its charge cost reads at all — the v4.48 half");
+  const gate = (fx.condOnHit || []).find(e => /charg/i.test(e.cond || ""));
+  assert.ok(gate, "and the rider is a gated ON-HIT, not an unconditional grant");
+  assert.deepEqual(gate.op, ["ga"], "whose payload is the action point");
+});
+
+test("the offer's feed line names ONE seat, and agrees with it", gate({}), () => {
+  /* Seat 0 is literally named "You" (v2.83), so the hardcoded "their" in
+     this line read "You may put a card from hand into THEIR hero's soul" —
+     naming one seat and agreeing with the other, on all 16 records. `sp`
+     inflects the NAME (v4.22) rather than replacing it with "your", so a
+     hero name keeps its apostrophe-s. */
+  H.db();
+  P.fxReset();
+  const atk = {...H.card("Beaming Bravado", 1), uid: 55};
+  const pay = {...H.card("Beaming Bravado", 2), uid: 56};
+  const line = who => {
+    const g = {...H.state({res: 9, ap: 1, hand: [atk, pay], name: who}, {},
+                          {turn: 3, actor: 0, turnPlayer: 0}),
+               stack: [], chain: [], phase: "action", step: "layer",
+               priority: 0, passed: []};
+    const out = J.reduce(g, {t: "play", uid: 55, from: "hand"}, 0);
+    assert.ok(!out.error, out.error);
+    return (out.state.feed || []).find(l => /has charge/.test(l)) || "";
+  };
+  assert.match(line("You"), /You may put a card from hand into your soul/,
+    "a seat genuinely called \"You\" still reads in the second person");
+  assert.ok(!/their/.test(line("You")), "and never disagrees with itself");
+  assert.match(line("Boltyn, Breaker of Dawn"),
+    /Boltyn, Breaker of Dawn may put a card from hand into Boltyn, Breaker of Dawn's soul/,
+    "a named seat is NAMED, and its possessive keeps the apostrophe-s");
 });

@@ -472,4 +472,48 @@ module.exports = [
   }
 },
 
+/* ---- v4.48 — SALT THE WOUND COUNTS HITS, NOT LINKS ------------------ */
+{
+  name: "Salt the Wound counts attacks that HIT, not chain links",
+  why: "It prints \"+1{p} for each attack that has hit this combat chain\" " +
+       "and read as a FLAT +1 — the loose `this gets +N{p}` matcher dropping " +
+       "everything after the pip, `tier: full` throughout. `parser.chainHits` " +
+       "is `dracLinks`' sibling and ONE PRINTED WORD separates them: a " +
+       "Draconic LINK exists whether or not it connected, so that reader " +
+       "asks nothing about damage, while this asks about a HIT. CR 7.5.5 — " +
+       "if prevention means no damage is dealt it is no longer a hit — and " +
+       "`linkPayload` pushes an attack's link UNCONDITIONALLY at `dmg: total`, " +
+       "so a swing blocked to nothing is on the strip at zero. The strip also " +
+       "carries ARCANE entries (v4.39), which is why the kind is tested too.",
+  run(c){
+    const lk = (kind, dmg) => ({n: "x", dmg, kind});
+    const swing = chain => {
+      c.P.fxReset();
+      const atk = c.card("Salt the Wound", 2, 63);
+      const g = Object.assign(c.acting(c.state({res: 9, ap: 1}, {},
+                                {turn: 3, actor: 0, turnPlayer: 0})), {chain});
+      const out = c.exec(g, atk, "hand", 0);
+      return c.J.withEffects(out, (fx, s) => fx.linkPumps(s, {})).total;
+    };
+    return {
+      "printed power":                            c.card("Salt the Wound", 2).power,
+      "opening the chain, nothing has hit":        swing([]),
+      "…after one attack connected":               swing([lk("atk", 3)]),
+      "…after two":                                swing([lk("atk", 3), lk("atk", 2)]),
+      "a swing BLOCKED to nothing has not hit":    swing([lk("atk", 0)]),
+      "an arcane link is not an attack":           swing([lk("arc", 1)]),
+      "one of three counts":                       swing([lk("atk", 3), lk("atk", 0), lk("arc", 2)])
+    };
+  },
+  want: {
+    "printed power": 2,
+    "opening the chain, nothing has hit": 2,
+    "…after one attack connected": 3,
+    "…after two": 4,
+    "a swing BLOCKED to nothing has not hit": 2,
+    "an arcane link is not an attack": 2,
+    "one of three counts": 3
+  }
+}
+
 ];

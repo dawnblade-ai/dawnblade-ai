@@ -2388,8 +2388,14 @@ function maybeCharge(g, card, zone, seat, window, target){
   if(!offer) return maybeFuse(g, card, zone, seat, window, target);
   return say({...g, pending: {kind: "charge", seat, card, from: zone, window, target,
                               uids: offer.uids}},
+    /* THE POSSESSIVE IS `sp`'s, NEVER HAND-BUILT (v4.22, v4.48). Seat 0 is
+       literally named "You" (v2.83), so a hardcoded "their" here read
+       "You may put a card from hand into THEIR hero's soul" — the line
+       naming one seat and agreeing with the other, on every one of the
+       pool's 16 charge records. `sp` inflects the NAME rather than
+       replacing it with "your", so a hero name keeps its apostrophe-s. */
     card.name + " has charge — " + at(g, seat).name
-    + " may put a card from hand into their hero's soul.");
+    + " may put a card from hand into " + GM.sp(at(g, seat)) + " soul.");
 }
 
 function doCharge(g, a, seat){

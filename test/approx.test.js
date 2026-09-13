@@ -206,7 +206,14 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `arena-ability-policy-declines` is the new `stated` record beside it —
      the route works and the POLICY declines it, which is v4.24's standing
      rule and a number about the policy rather than the route. */
-  assert.equal(Object.keys(APPROX).length, 32, "record count moved");
+  /* 32 -> 33 AT v4.48: `charged-this-way-count`. V of the Vanguard is the
+     pool's NINTH "+N{p} for each …" record and the one member of that family
+     the new reader refuses — its subject is a STANDING grant over a window
+     rather than a pump on the resolving card, and its countable ("Light
+     cards charged THIS WAY") is a number nothing keeps. Recorded rather
+     than half-built, and the record's own first draft named the wrong
+     blocker until the engine was asked (v4.09). */
+  assert.equal(Object.keys(APPROX).length, 33, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -230,7 +237,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      built one version after it was recorded, and its probe went RED the
      moment the branch landed — which is the reversal an `open` record
      exists to force (v4.02). */
-  assert.equal(n("open"),    6, "open count moved");
+  /* 6 -> 7 AT v4.48: `charged-this-way-count`. */
+  assert.equal(n("open"),    7, "open count moved");
   assert.equal(n("closed"), 13, "closed count moved");
 });
 
@@ -703,6 +711,57 @@ probe("spellvoid-x", () => {
 
 /* Walk in My Shoes' crush rider halves the opponent's base values for a
    turn and has no reader — so it arms no next-turn entry. */
+probe("charged-this-way-count", () => {
+  /* AN `open` PROBE ASSERTS THE **DEVIATION**, so it goes RED the day
+     somebody builds it (v4.02). Both halves of the refusal are asked, and
+     the POSITIVE CONTROL is the eight records v4.48 does read — a reader
+     that refused the whole family would satisfy the refusal line perfectly
+     (v3.98: ask for both halves). */
+  const rows = [];
+  for(const c of pool()){
+    if(!(c.tx && /\+\d+\{[pd]\} for each /i.test(c.tx))) continue;
+    PR.fxReset();
+    const fx = PR.fxParse(c);
+    const read = (fx.ops || []).some(o => Object.values(PR.PER_COUNT["{p}"]).includes(o[0]))
+              || !!(fx.defSelf && fx.defSelf.per);
+    rows.push({name: c.name + "|" + c.pitch, read, tier: fx.tier});
+  }
+  assert.equal(rows.length, 9, "the number of pool records printing FOR-EACH moved");
+  assert.deepEqual(rows.filter(r => !r.read).map(r => r.name), ["V of the Vanguard|2"],
+    "the set of REFUSED for-each records moved — if this one was built the record "
+    + "must move; if another joined it, that is a regression");
+  assert.equal(rows.filter(r => r.read).length, 8,
+    "THE CONTROL: eight are read, so this is not a reader that refuses everything");
+
+  /* AND THE NAMED BLOCKER IS THE **COUNT**, WHICH NOTHING KEEPS.
+     `fx.chargeCost.multi` reads the printed "any number of times" and has no
+     consumer, so `chargeOffer` asks ONCE — which this probe asserts in both
+     directions: the card's charge cost DOES parse now (v4.48 widened the
+     anchor, which is the half that closed), and the offer still carries only
+     `uids` (which is the half still open). It goes red the day the count is
+     built. */
+  const multi = pool().filter(c => { PR.fxReset();
+    const cc = PR.fxParse(c).chargeCost; return !!(cc && cc.multi); })
+    .map(c => c.name + "|" + c.pitch).sort();
+  assert.deepEqual(multi, ["V of the Vanguard|2"],
+    "the set of records whose charge cost reads `multi` moved — V of the "
+    + "Vanguard is the only one");
+  PR.fxReset();
+  const vovC = pool().find(c => c.name === "V of the Vanguard");
+  assert.ok(PR.fxParse(vovC).chargeCost,
+    "its charge cost parses — the anchor half is CLOSED (v4.48)");
+  const off = PR.chargeOffer({...vovC, uid: "src"},
+    {hand: [{...vovC, uid: "src"}, {uid: "a1", name: "A", pitch: 2, tt: "Generic Action",
+             ty: ["Generic", "Action"], tx: ""}]}, "src");
+  assert.deepEqual(Object.keys(off || {}), ["uids"],
+    "and the offer carries no count — charging once is the standing gap");
+
+  PR.fxReset();
+  const vov = PR.fxParse(pool().find(c => c.name === "V of the Vanguard"));
+  assert.equal(vov.tier, "part", "reported as unfinished rather than guessed at");
+  assert.ok(!vov.self, "and no flat pump is granted in its place");
+});
+
 probe("crush-halving-rider", () => {
   /* THE FIRST DRAFT PASSED VACUOUSLY. It read `(fx.crush && fx.crush.ops)`
      and filtered for a halve op — but Walk in My Shoes sets no `fx.crush`

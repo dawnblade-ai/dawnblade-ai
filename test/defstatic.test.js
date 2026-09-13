@@ -195,7 +195,25 @@ test("the four Blade Beckoner pieces read the clause, and only they", {skip}, ()
      paid, this gets +3{d}". Like `fromArsenal` the answer belongs to the
      PLAY rather than to the card — by the time the wall asks, the payment
      is long settled — so the caller carries it in `opts.addPaid`. */
+  /* WIDENED AGAIN AT v4.48, AND THIS ONE IS NOT A GATE. Big Blue Sky
+     prints "This gets +1{d} for each blue card you've pitched this turn" —
+     a MULTIPLIER, so its entry carries `per` where all eleven above carry
+     `when`, and `defendValue` multiplies instead of asking `defSelfMet`
+     (which answers FALSE for a `when` it does not know, so an entry with
+     no gate would read the whole clause as zero).
+
+     IT WAS ALREADY BEING CLAIMED, JUST NOT HERE. The loose `defBuff`
+     matcher nine hundred lines up in `parser.js` took the clause into an
+     op `runOps` only LOGS — so the card read `tier: full`, the feed said
+     "+1 defense to the wall", and no number moved on either board. This
+     census could not see that, because the claim it makes is about
+     `fx.defSelf` and the theft happened one field over.
+
+     ONE RECORD ACROSS THE WHOLE CACHED DATABASE, not just the pool — this
+     scan reads all 4,952, which is a stronger measurement than
+     `test/foreach.test.js`'s pool-wide one and agrees with it. */
   assert.deepEqual([...claimed].sort(), [
+    "Big Blue Sky",
     "Blade Beckoner Boots", "Blade Beckoner Gauntlets",
     "Blade Beckoner Helm", "Blade Beckoner Plating",
     "Gauntlets of Unity", "Helm of Unity",

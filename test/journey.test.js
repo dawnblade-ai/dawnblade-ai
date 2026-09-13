@@ -260,8 +260,18 @@ test("a card played in an open window lands in the zone its TYPE sends it to", {
      census with a card silently leaving the hand and nothing here knew.
      Pinned as a SET, because "3 charges asked" is the same number on an
      engine that asks the wrong three. */
+  /* 3 -> 6 AT v4.48, AND THIS CENSUS REPORTING IT IS THE POINT. The
+     database prints the subject TWO WAYS AT ONCE — nine records say "your
+     HERO'S soul" and seven say "your soul" — and `fx.chargeCost`'s anchor
+     required the word "hero", so the seven plain ones were never asked and
+     their riders could never fire. Six of those seven are live: Beaming
+     Bravado's +1{p} and Light the Way's GO AGAIN are both gated on "if a
+     yellow card is charged THIS WAY", and no charge ever happened. This set
+     is pinned rather than counted precisely so a widening shows up here as
+     a named edit. */
   assert.deepEqual([...new Set(chargesAsked)].sort(),
-    ["Bolt of Courage", "Engulfing Light", "Take Flight"],
+    ["Beaming Bravado", "Bolt of Courage", "Engulfing Light",
+     "Light the Way", "Take Flight", "V of the Vanguard"],
     "every card printing charge must be asked the question");
 });
 

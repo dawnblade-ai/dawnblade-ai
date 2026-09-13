@@ -311,4 +311,46 @@ module.exports = [
   }
 }
 
+,
+
+/* ---- v4.48 — BIG BLUE SKY BLOCKED FOR ITS PRINTED NUMBER ------------ */
+{
+  name: "Big Blue Sky blocks for its printed def PLUS the blues pitched",
+  why: "It prints \"+1{d} for each blue card you've pitched this turn\" and " +
+       "`parser.js`'s own comment has RECORDED that clause as deliberately " +
+       "unread since v3.24 — while the loose `defBuff` matcher nine hundred " +
+       "lines up claimed it anyway, into an op `runOps` only LOGS. So the " +
+       "card reported `tier: full`, the feed said \"+1 defense to the wall\", " +
+       "and NO NUMBER MOVED on either board: the no-op blind spot with a " +
+       "feed line asserting the opposite, which is the sev-2 category the " +
+       "player TRUSTS. It carries a COUNT where its siblings carry a gate, " +
+       "so `defendValue` multiplies rather than asking `defSelfMet` — which " +
+       "answers FALSE for a `when` it does not know (v3.26) and would read " +
+       "the whole clause as zero.",
+  run(c){
+    const S = require("../../engine/sides.js");
+    const bbs = c.card("Big Blue Sky", 3, 71);
+    const at = zone => c.E.defendValue(Object.assign(S.makeSide(), {pitch: zone}), bbs, {});
+    const blue = n => Array.from({length: n}, (_, i) => ({name: "B" + i, uid: 800 + i, pitch: 3}));
+    return {
+      "printed defence":                     bbs.def,
+      "blocks for, nothing pitched":         at([]),
+      "…with one blue in the pitch zone":    at(blue(1)),
+      "…with two":                           at(blue(2)),
+      "…with three":                         at(blue(3)),
+      "a red and a yellow count for nothing":
+        at([{name: "R", uid: 810, pitch: 1}, {name: "Y", uid: 811, pitch: 2},
+            {name: "B", uid: 812, pitch: 3}])
+    };
+  },
+  want: {
+    "printed defence": 2,
+    "blocks for, nothing pitched": 2,
+    "…with one blue in the pitch zone": 3,
+    "…with two": 4,
+    "…with three": 5,
+    "a red and a yellow count for nothing": 3
+  }
+}
+
 ];

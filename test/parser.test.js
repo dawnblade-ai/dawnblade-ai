@@ -784,15 +784,19 @@ test("rulings — Out Pace refuses equipment defenders", () => {
   assert.equal(fx.tier, "full");
 });
 
-test("rulings — Fender Bender counts equipment defenders, Overblast counts boosts", () => {
-  assert.deepEqual(cc("This gets +X{p}, where X is the number of equipment defending it").ops,
-    [["perEquipDef",1]]);
-  P.fxReset();
-  const ob = P.fxParse({name:"Overblast", pitch:1, tt:"Mechanologist Action - Attack", power:5,
-    kw:["Boost"], tx:"Overblast gains +X{p}, where X is the number of times you have boosted this combat chain."});
-  assert.deepEqual(ob.ops, [["perBoost",1]]);
-  assert.equal(ob.tier, "full");
-});
+/* THE FENDER BENDER / OVERBLAST DRILL MOVED TO `test/foreach.test.js`
+   (v4.48), AND ITS FIXTURES WERE WHY. Both anchors were written against
+   "gains +X{p}, WHERE X IS THE NUMBER OF …" and this drill wrote that
+   phrase out BY HAND — so it stayed green against text the database does
+   not print, while the two cards it names read a FLAT +1 in production.
+   Measured over 797 records: zero print the WHERE-X-IS form, nine print
+   "+N{p} for each …". v3.00's editorial drift in its sharpest form yet —
+   the fixture WAS the old text.
+
+   It is driven off the real pool record now, which this file cannot do:
+   `parser.test.js` takes no database by design. The whole family lives in
+   one place with the census that would have caught it (an op with a fire
+   site and no pool emitter). */
 
 test("rulings — Under Loop recycles on hit, via the normal on-hit path", () => {
   const r = cc("When this hits, put it on the bottom of its owner's deck");

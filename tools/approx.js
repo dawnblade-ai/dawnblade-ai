@@ -332,6 +332,28 @@ const APPROX = {
       "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+
       "versions."},
 
+"charged-this-way-count": {
+  status:"open", cr:null, board:"both", since:"v4.48", swept:"v4.48",
+  claim:"V of the Vanguard prints \"Your attacks this combat chain get +1{p} for "+
+        "each Light card charged this way\" and the clause is REFUSED. It is the "+
+        "pool's ninth FOR-EACH record and the one member of that family v4.48 "+
+        "does not read. Its charge cost — \"charge your soul ANY NUMBER OF "+
+        "TIMES\" — is offered as a SINGLE charge.",
+  why:"TWO HALVES ARE MISSING AND NEITHER IS THE MULTIPLIER. The subject is "+
+      "\"YOUR ATTACKS this combat chain\" — a STANDING grant over a window "+
+      "(`dracChain`'s shape, v4.19), not a pump on the resolving card, so it "+
+      "lands nowhere near `perBoost`'s site and v4.48's \"this\"/\"it\" anchor is "+
+      "right to refuse it. AND \"CHARGED THIS WAY\" IS A COUNT NOTHING KEEPS: "+
+      "`fx.chargeCost.multi` reads the printed \"any number of times\" and has no "+
+      "consumer, so `chargeOffer` asks ONCE — weaker than printed, visible, and "+
+      "the honest direction (charging more than once silently is the other). "+
+      "NOTE — MY OWN FIRST DRAFT OF THIS RECORD WAS WRONG ABOUT WHY, and asking "+
+      "the engine is what corrected it (v4.09): it said the blocker was `multi` "+
+      "being unread, and measured, V of the Vanguard's charge cost did not parse "+
+      "AT ALL — the anchor spelled \"your HERO'S soul\" and the card prints \"your "+
+      "soul\". Widening that anchor is v4.48's other half and brought SIX MORE "+
+      "live records with it; what is left open is only the COUNT."},
+
 "crush-halving-rider": {
   status:"open", cr:null, board:"both", since:"v3.29", swept:"v4.02",
   claim:"Walk in My Shoes' crush rider halves the base {p} and {d} of the "+

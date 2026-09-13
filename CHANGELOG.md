@@ -1,3 +1,178 @@
+## v4.48 — "FOR EACH" IS THE WORDING THE DATABASE PRINTS
+
+Four pool cards print a value **MULTIPLIED** by something countable, and every
+one of them was read as a **FLAT +1**:
+
+| card | records | prints | read as |
+|---|---|---|---|
+| Fender Bender | 3 | `+1{p} for each equipment defending it` | a flat `self: 1` |
+| Overblast | 3 | `+1{p} for each time you've boosted this combat chain` | a flat `self: 1` |
+| Salt the Wound | 1 | `+1{p} for each attack that has hit this combat chain` | a flat `self: 1` |
+| Big Blue Sky | 1 | `+1{d} for each blue card you've pitched this turn` | a `defBuff` op that only LOGS |
+
+Four heroes — Dash ×2, Fai, Enigma. The three `{p}` cards fell to the loose
+`this gets +N{p}` matcher and the `{d}` card to the loose `defBuff` one, and
+both drop everything after the pip.
+
+**WRONG IN BOTH DIRECTIONS AT ONCE, which is why no tool here could see any of
+it.** At a count of 0 the engine grants a point the card does not (STRONGER);
+at 2 or more it grants less than printed (WEAKER, the direction the one-sided
+fairness sweep is built not to look in); all eight records read `tier: full`
+throughout, so coverage is blind too. **The two readings agree at a count of
+exactly 1** — so a fixture at one count cannot see this at all, and the pair
+either side is what bites (v3.92, v3.99).
+
+**AND THE TWO OPS THIS PROJECT HAD ALREADY BUILT FOR THE SHAPE HAD ZERO POOL
+EMITTERS.** `perEquipDef` (v2.11) and `perBoost` were anchored on *"this gains
++X{p}, **WHERE X IS THE NUMBER OF** …"* — measured over 797 records, **not one
+prints that**; the printed form is *"+N{p} **FOR EACH** …"* on every one. So
+both carefully-reasoned fire sites in `effects.js` had never once run in a real
+game — dead rules code that reads like a rule (v4.11) — and v4.20's own
+argument about `piercing` (*"Fender Bender's is +N for EACH equipment, this is
++N if there is at least one"*) was a comparison drawn against a reader with no
+card.
+
+**THE DRILL THAT PINNED `perBoost` WROTE THE STALE WORDING OUT BY HAND.** That
+is v3.00's editorial drift in its sharpest form yet: the fixture *was* the old
+text, so the drill stayed green against a wording the database had stopped
+printing while the card it names was broken in production. It is driven off the
+real pool record now, and it MOVED to `test/foreach.test.js` — `parser.test.js`
+takes no database by design, which is why it could only ever have been asked by
+hand-writing the text.
+
+**THE COUNTABLE VOCABULARY IS CLOSED AND AN UNKNOWN ONE REFUSES** — the
+load-bearing half rather than caution, because **falling through IS the bug**.
+A countable the engine cannot count, read as a flat +N, is the defect itself, so
+the clause is left unread and visible in the audit (v2.29).
+
+**IT IS KEYED BY THE PRINTED SYMBOL, AND `{d}` IS A SEPARATE TABLE.** An op
+lands on the resolving attack's POWER; what a `{d}` countable moves is what a
+card is worth at the WALL — `defendValue`'s number, on a card that may never be
+on the chain at all (Big Blue Sky is a Defense Reaction). A single flat table
+would have let a `{d}` countable be fired as a power pump the moment somebody
+added one. `fx.defSelf.per` carries it and `effects.defPerCount` counts it;
+`PER_COUNT["{d}"]` is pinned EMPTY with that reason (v4.33's `multi` rule).
+
+**THE KEYS ARE THE LEVELLED SPELLING** (v3.71). `SYNONYMS` rewrites *"you've"*
+to *"you have"* and a pip-leading *"gains"/"has"* to *"gets"* before
+`classifyClause` sees a word, so a key spelling the printed contraction matches
+nothing and looks exactly like a pattern that is simply wrong. Every printed
+variant reads identically, and that is a drill.
+
+**`parser.chainHits` IS `dracLinks`' SIBLING, AND ONE PRINTED WORD SEPARATES
+THEM.** A Draconic LINK exists whether or not it connected, so that reader asks
+nothing about damage; this one asks about a **HIT**. CR 7.5.5 — if prevention
+means no damage is dealt it is no longer a hit — and `linkPayload` pushes an
+attack's link UNCONDITIONALLY at `dmg: total`, so a swing blocked to nothing is
+on the strip at zero. The strip also carries ARCANE entries (v4.39), which is
+why the kind is tested too. The asking attack is not yet on the strip (v3.99),
+which is what *"have hit"* says.
+
+**AND BIG BLUE SKY'S CLAUSE WAS A RECORDED REFUSAL BEING CLAIMED ANYWAY.**
+`parser.js`'s own comment has listed *"for each blue card you've pitched this
+turn"* as deliberately unread since v3.24 — while the loose `defBuff` matcher
+nine hundred lines up took it into an op `runOps` only LOGS. So the card read
+`tier: full`, the feed said *"+1 defense to the wall"*, and **no number moved on
+either board**: the no-op blind spot with a feed line asserting the opposite,
+which is the sev-2 category the player TRUSTS. It needed no new machinery —
+`defendValue` has been the ONE reader of what a defender is worth since v3.23
+and `defSide` is already the CONTROLLER, so the pitch zone is right there
+(v3.58, v3.73: check whether the machinery is the shape you already have). Blue
+is **pitch 3**, read off the printed value rather than a colour word, because
+the colour is not a field.
+
+### THE SAME DEFECT ONE READER OVER — THE CHARGE COST (v4.48)
+
+**Measured: 16 pool records print an additional-cost charge, NINE say *"your
+HERO'S soul"* and SEVEN say *"your soul"*, and `fx.chargeCost`'s anchor required
+the word "hero" — so the seven read NOTHING.** v3.36's rule verbatim: the
+database prints both spellings *at once*. And **v4.41 had already taught
+`onChargeSoul` both spellings and left this reader on one**, which is v3.53's *a
+fix for one matcher is not a fix for the shape* and v4.21's *fix the family, not
+the two members you found*.
+
+**SIX OF THE SEVEN ARE LIVE AND READ `tier: full` WITH A RIDER THAT COULD NEVER
+FIRE.** Beaming Bravado ×3 prints *"if a **YELLOW** card is charged this way,
+this gets +1{p}"* and Light the Way ×3 *"when this hits, if a yellow card was
+charged this way, this gets **GO AGAIN**"* — both riders parse perfectly, both
+are gated on a charge that never happened, so the +1 and an ACTION POINT
+(CR 5.3.5, this project's own *"most valuable keyword in the game to get
+wrong"*) were simply unreachable. All six are **BOLTYN's**, the hero the whole
+mechanic exists for. Driven: declined → 3 power; a YELLOW charged → **4**; a RED
+charged → 3 with *"the card charged this way wasn't the right colour"*. Three
+rows, and the third is the one that bites — a colour-blind reader passes the
+first two perfectly.
+
+**`multi` WAS PINNED EMPTY AT v4.33 AND THIS IS THE DAY IT MOVED.** That version
+left `fx.chargeCost.multi` uncarried and pinned the set empty *"so the day one
+appears somebody decides rather than it being silently charged once"*. Widening
+the anchor brought V of the Vanguard in — the pool's only `multi` record. **The
+decision is to offer ONE charge and say so**: weaker than printed, visible (its
+payload clause still reads `skip`), and recorded as `charged-this-way-count`
+with a probe that goes red the day the count is built. Charging more than once
+silently is the other direction.
+
+**AND THE OFFER'S FEED LINE NAMED ONE SEAT AND AGREED WITH THE OTHER.** It read
+`at(g, seat).name + " may put a card from hand into their hero's soul"`, and
+seat 0 is literally named *"You"* (v2.83) — so on all 16 records it said *"You
+may put a card from hand into **their** hero's soul."* `game.sp` is v4.22's
+possessive helper and existed for exactly this; it inflects the NAME rather than
+replacing it with "your", so a hero name keeps its apostrophe-s.
+
+### THE CENSUS THAT WOULD HAVE CAUGHT IT
+
+v3.99 ran *"every op kind the parser emits, against `runOps`' vocabulary"* **by
+hand, once** — the third census this project had been running by hand (v4.42
+promoted two others). `test/foreach.test.js` holds the standing version, and it
+is the direction that hand-run missed: **an op with a FIRE SITE and NO
+EMITTER**. Both directions are pinned (v4.17's partition rule) — pinning the
+emitters alone cannot see a countable leaving the table, and pinning the fire
+sites alone is what let this rot.
+
+### MEASURED
+
+- **8 records' ops move and 7 more gain a `chargeCost`; 0 tiers move** — the
+  audit reads **392 full / 13 part / 0 none**, unchanged, which is the point
+  (v4.18). `pool-deck-complete` is intact: Big Blue Sky stays `full` because the
+  multiplier was built rather than the clause refused.
+- **My own scan found a NINTH for-each record.** The first draft of the pin
+  listed eight from memory; the scan corrected it to nine — **V of the
+  Vanguard**, whose subject is *"YOUR attacks this combat chain"* (a standing
+  grant, `dracChain`'s shape) rather than a pump on the resolving card, so the
+  reader is right to refuse it. v4.09's rule inside the drill written to state a
+  measurement. Both halves are pinned: the eight claimed and the one refused.
+- **Ladder at three seeds on both sides: eleven of fifteen heroes
+  BYTE-IDENTICAL, four inside the band.** Dash is the only hero whose move is
+  consistent in direction (12·7·10 → 13·8·11, +1 on every seed) and he decks
+  both `{p}` multipliers — but the intervals overlap entirely, so by this
+  project's own standing rule (v4.40) that is **NOISE** and the magnitude is not
+  resolved. **Boltyn is byte-identical**, because `sparring.act` DECLINES the
+  charge (v4.33's recorded decision) — so the six newly-reachable records are
+  offered and refused, and the number is about the POLICY rather than the route
+  (v4.24, v4.29, v4.41).
+- **26 sabotages, 26 bite**, and the two that came back silent first were both
+  cases where only the REPORT moves: dropping the `{d}` guard leaves the defence
+  number identical (an `undefined` `per` falls through to `defSelfMet`, which
+  refuses), and widening the charge anchor to any soul phrase is unobservable
+  against every real card. Both fixtures ask for the refusal instead (v3.98),
+  and the charge near-miss is synthetic (v3.73).
+- **Three pins moved as deliberate edits, each reporting the fix**:
+  `test/defstatic.test.js` (one record across all 4,952 cached, a stronger
+  measurement than the pool-wide one), `test/journey.test.js`'s charge census
+  3 → 6, and `test/condcensus.test.js`, which put a bare `undefined` in its
+  `defSelf` set — the census doing its job when a shape changed. And
+  `test/speccensus.test.js` gained `avail` and `spendCtr` for a reason worth
+  naming: that census is sample-dependent, so changing what three attacks are
+  WORTH makes the same 32 deterministic legs play a different game — **which
+  discharges the reach limit v4.42 recorded** for crank's own `pay` prompt,
+  by the engine moving rather than the claim loosening.
+- **A feed line that had never once fired was wrong.** `perBoost`'s said
+  *"0 **boostes**"* — nothing could reach it, so nobody proofread it. In a
+  training sim the feed is the lesson (v3.60, v4.24, v4.46).
+- Four scenes added (Dash ×2, Fai, Enigma), all four proven to bite under
+  sabotage; `npm run scenes` 88/88; fairness clean; UNFAIR 0; `crindex --check`
+  exit 0; both `text/babel` blocks compile; **2755 drills, 0 fail, 5 skipped**.
+
 ## v4.47 — THE LAST ONE-BOARD ROUTE, AND A `{t}` NOBODY CHARGED
 
 **`judge.legal`'s arena branch read `allyAttack`/`auraAttackOf` and refused

@@ -3440,7 +3440,17 @@ function makeEffects(ctx){
       const pb = fx.ops.filter(o=>o[0]==="perBoost").reduce((a2,o)=>a2+o[1],0);
       if(pb){ const add = pb*(n.boostChain||0);
         n._condSelf = (n._condSelf||0)+add;
-        n = L(n, `${card.name}: ${n.boostChain||0} boost${(n.boostChain||0)===1?"":"es"} on this chain — +${add} power.`); }
+        n = L(n, `${card.name}: ${n.boostChain||0} boost${(n.boostChain||0)===1?"":"s"} on this chain — +${add} power.`); }
+      /* +N PER ATTACK THAT HAS **HIT** THIS COMBAT CHAIN — Salt the Wound
+         (v4.48), and it lands here for `perBoost`'s reason: the count is a
+         fact about links ALREADY on the chain, so nothing about this
+         attack's own resolution can change it. `parser.chainHits` is the
+         one reader (`dracLinks`' sibling) and the asking attack is not yet
+         on the strip, which is what "have hit" says. */
+      const pch = fx.ops.filter(o=>o[0]==="perChainHit").reduce((a2,o)=>a2+o[1],0);
+      if(pch){ const _hits = P.chainHits(n.chain), add = pch*_hits;
+        n._condSelf = (n._condSelf||0)+add;
+        n = L(n, `${card.name}: ${_hits} attack${_hits===1?" has":"s have"} hit this chain — +${add} power.`); }
       /* qualified buffs only apply to an attack the printed restriction
          allows — qualMatches reads printed fields and printed keyword
          lines, never free rules text.
@@ -3903,7 +3913,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -7097,6 +7107,30 @@ function defSelfMet(self, defSide, opts){
   return false;                       /* an unread condition never fires */
 }
 
+/* WHAT A DEFENDER'S "+N{d} FOR EACH …" ACTUALLY COUNTS (v4.48).
+   `parser.DEF_PER` reads WHICH countable off the printed line; this is the
+   one place each is counted, and an unknown key answers ZERO — which is
+   unreachable by construction, because the parser leaves a clause whose
+   countable is not in that table UNREAD. A drill walks the table and fails
+   the day a key arrives here with no branch (v3.96's rule: when you have a
+   second vocabulary, census what reaches it).
+
+   "BLUE CARD YOU HAVE PITCHED THIS TURN" IS THE PITCH ZONE, not a turn
+   history — the same reading `pitchBlue1` takes (v4.30), and for the same
+   reason: CR 4.4.3c sends the pitch zone to the bottom of its owner's deck
+   at end of turn, so "this turn" and "in the pitch zone" name the same
+   cards and two readers of one fact cannot disagree.
+
+   BLUE IS PITCH 3. It is read off the printed pitch value rather than a
+   colour word, because the colour is not a field — `{pitch:3}` is what
+   `promptFilter` means by blue everywhere else in this engine. */
+function defPerCount(per, defSide){
+  const sd = defSide || {};
+  if(per === "bluePitched")
+    return ((sd.pitch) || []).filter(c => c && c.pitch === 3).length;
+  return 0;
+}
+
 function defendValue(defSide, card, opts){
   opts = opts || {};
   /* THE BASE IS THE CALLER'S WHEN IT KNOWS BETTER. A piece of equipment's
@@ -7135,7 +7169,15 @@ function defendValue(defSide, card, opts){
      already answers 0 for one, and without this the buff would lift that
      back to 1 — a piece that has left the arena blocking for a point.
      Found by driving it, not by a drill. */
-  if(self && !(card && card.destroyed) && defSelfMet(self, defSide, opts)) d += self.amt;
+  if(self && !(card && card.destroyed)){
+    /* A MULTIPLIER, NOT A GATE (v4.48). `defSelf.per` carries a COUNT
+       where every sibling carries a condition, so `defSelfMet` must not be
+       asked: it answers FALSE for a `when` it does not know (v3.26), which
+       would read the whole clause as zero. Big Blue Sky is the pool's only
+       record — "+1{d} for each blue card you've pitched this turn". */
+    if(self.per) d += self.amt * defPerCount(self.per, defSide);
+    else if(defSelfMet(self, defSide, opts)) d += self.amt;
+  }
 
   /* A CHAIN-SCOPED SHIFT ON THIS PARTICULAR DEFENDER (v3.89, signed at
      v3.90). Two pool cards move one named defender's defence for the rest
@@ -8529,6 +8571,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defPerCount, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

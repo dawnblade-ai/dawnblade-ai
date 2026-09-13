@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.47 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.48 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -243,6 +243,48 @@ rather than a clean bill.
 in the ledger above rather than half-wired here — **and it was BUILT at
 v4.47, one version later**, which is what the two probe directions are for:
 the `open` record's probe went RED the moment the branch landed.
+
+## ⚠ v4.48 — "FOR EACH" IS THE WORDING THE DATABASE PRINTS
+
+**Four pool cards print a value MULTIPLIED by something countable and every
+one read a FLAT +1.** Fender Bender ×3, Overblast ×3, Salt the Wound and Big
+Blue Sky — four heroes, eight records, all `tier: full`. The loose
+`this gets +N{p}` matcher and the loose `defBuff` one both drop everything
+after the pip.
+
+**WRONG IN BOTH DIRECTIONS AT ONCE**, which is why nothing here could see it:
+at a count of 0 the engine grants a point the card does not, at 2 or more it
+grants less than printed (the direction the one-sided sweep does not look in),
+and the clause IS consumed, so coverage is blind. **The two readings agree at
+exactly 1**, so a one-count fixture sees nothing.
+
+**AND THE TWO OPS ALREADY BUILT FOR THE SHAPE HAD ZERO POOL EMITTERS.**
+`perEquipDef` and `perBoost` were anchored on *"where X is the number of …"* —
+**no record prints that**; every one prints *"for each …"*. Two fire sites in
+`effects.js` that had never once run, and **the drill pinning `perBoost` wrote
+the stale wording out by hand**, so it was green against text the database had
+stopped printing. v3.00's editorial drift in its sharpest form yet.
+
+**THE SAME DEFECT ONE READER OVER.** 16 records print an additional-cost
+charge; **nine say "your HERO'S soul" and seven say "your soul"**, and the
+anchor required "hero" — so six live records (Beaming Bravado ×3, Light the
+Way ×3, all Boltyn's) read `tier: full` with riders gated on a charge that
+never happened. Light the Way's is **go again**.
+
+**WHAT IS LEFT OPEN**, recorded rather than half-built: V of the Vanguard's
+*"for each Light card charged this way"* — its subject is a STANDING grant
+over a window and its countable needs `fx.chargeCost.multi`, which v4.33 left
+uncarried and pinned empty. `charged-this-way-count` in `tools/approx.js`, with
+a probe that goes red the day the count is built. Its charge is offered ONCE:
+weaker than printed, visible.
+
+**WHERE TO LOOK NEXT.** The same question asked of a third reader: which other
+anchors in `parser.js` spell a wording the database has moved off? The cheapest
+form is the one that found both of these — take a printed clause the pool
+actually carries, hand it to `classifyClause`, and compare what comes back
+against what the card says. `test/foreach.test.js` holds the standing census
+that makes the *op with a fire site and no emitter* shape fail a drill rather
+than rot.
 
 ## ⚠ v4.47 — THE LAST ONE-BOARD ROUTE, AND A `{t}` NOBODY CHARGED
 

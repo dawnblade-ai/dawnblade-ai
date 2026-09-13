@@ -131,4 +131,82 @@ module.exports = [
   }
 }
 
+,
+
+/* ---- v4.48 — HER TWO MULTIPLIERS, AND THEY WERE FLAT ---------------- */
+{
+  name: "Overblast multiplies by the boosts on this chain",
+  why: "It prints \"+1{p} for each time you've boosted this combat chain\" " +
+       "and the loose `this gets +N{p}` matcher claimed the clause, dropping " +
+       "everything after the pip — so all three printings granted a FLAT +1 " +
+       "whatever the count. WRONG IN BOTH DIRECTIONS at once: a point the " +
+       "card does not grant at zero boosts, and less than printed at two or " +
+       "more. `tier: full` throughout, so coverage was blind, and the " +
+       "one-sided fairness sweep only looks for too-STRONG. The two readings " +
+       "AGREE at exactly one boost, which is why a scene must watch more " +
+       "than one count.",
+  run(c){
+    const swing = n => {
+      c.P.fxReset();
+      const atk = c.card("Overblast", 1, 61);
+      const g = Object.assign(c.acting(c.state({res: 9, ap: 1}, {},
+                                {turn: 3, actor: 0, turnPlayer: 0})),
+                              {chain: [], boostChain: n});
+      const out = c.exec(g, atk, "hand", 0);
+      return c.J.withEffects(out, (fx, s) => fx.linkPumps(s, {})).total;
+    };
+    return {
+      "printed power":                    c.card("Overblast", 1).power,
+      "swings for, with no boosts":       swing(0),
+      "…after one boost":                 swing(1),
+      "…after two":                       swing(2),
+      "…after three":                     swing(3)
+    };
+  },
+  want: {
+    "printed power": 5,
+    "swings for, with no boosts": 5,
+    "…after one boost": 6,
+    "…after two": 7,
+    "…after three": 8
+  }
+},
+
+{
+  name: "Fender Bender multiplies by the equipment defending it",
+  why: "The same defect on the same reader, and the count is only knowable " +
+       "once defenders are declared — so it rides on `pend.lateOps` and is " +
+       "struck in `linkPumps`. `perEquipDef` has existed since v2.11 and had " +
+       "ZERO pool emitters: its anchor spelled \"where X is the number of\", " +
+       "a wording no record prints. A fire site nothing can reach is dead " +
+       "rules code that reads like a rule (v4.11). It is also the card " +
+       "v4.20 compared `piercing` against — 'Fender Bender's is +N for EACH " +
+       "equipment, this is +N if there is at least one' — a comparison drawn " +
+       "against a reader with no card.",
+  run(c){
+    const swing = eq => {
+      c.P.fxReset();
+      const atk = c.card("Fender Bender", 1, 62);
+      const g = Object.assign(c.acting(c.state({res: 9, ap: 1}, {},
+                                {turn: 3, actor: 0, turnPlayer: 0})), {chain: []});
+      const out = c.exec(g, atk, "hand", 0);
+      return c.J.withEffects(out, (fx, s) => fx.linkPumps(s, {equipDefenders: eq})).total;
+    };
+    return {
+      "printed power":                       c.card("Fender Bender", 1).power,
+      "swings for, unblocked by iron":       swing(0),
+      "…through one piece of equipment":     swing(1),
+      "…through two":                        swing(2),
+      "…through three":                      swing(3)
+    };
+  },
+  want: {
+    "printed power": 4,
+    "swings for, unblocked by iron": 4,
+    "…through one piece of equipment": 5,
+    "…through two": 6,
+    "…through three": 7
+  }
+}
+
 ];

@@ -101,8 +101,17 @@ let legs = 0, threw = 0;
    rides onto the card the answer moves. */
 const ANSWER_READS = ["amount", "by", "cards", "cost", "destroyUid", "elseOps",
                       "filter", "max", "min", "ops", "options",
-                      "side", "src", "tag", "tapHero", "tapUid", "taps", "to", "zone"];
+                      "side", "spendCtr", "src", "tag", "tapHero", "tapUid", "taps",
+                      "to", "zone"];
 /* -optional v4.44: it was here for two comments' sake and nothing reads it. */
+/* +spendCtr v4.48: THE REACH LIMIT v4.42 RECORDED IS DISCHARGED. That
+   version's one silent sabotage named crank's own `pay` prompt as a spec
+   site "32 legs never reach", and wrote down that the honest widening is
+   MORE LEGS rather than a looser claim. The legs did widen — not by adding
+   any, but because v4.48 corrected three attacks from a flat +1 to a
+   printed multiplier, so the policy's own power arithmetic changed and the
+   same 32 deterministic legs now play a different game. A sample-dependent
+   census moving when the ENGINE moves is the property, not a fault. */
 
 const drive = () => {
   if(legs) return;
@@ -141,11 +150,21 @@ test("the driven census is alive — the legs really ran", () => {
 test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
-    "amount", "arsStamp", "banStamp", "by", "cards", "cost", "costRider",
+    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
-    "ops", "optional", "options", "playThisTurn", "side", "src", "tag",
+    "ops", "optional", "options", "playThisTurn", "side", "spendCtr", "src", "tag",
     "tapHero", "tapUid", "taps", "title", "to", "zone",
+  /* +avail +spendCtr v4.48, AND NEITHER IS A NEW QUEUE SITE. The set is
+     sample-dependent — this file's own header says so — and v4.48 changed
+     what three attacks are WORTH, from a flat +1 to the printed multiplier,
+     so the same 32 deterministic legs play a different game and reach two
+     more sheets. `spendCtr` is crank's (v4.24) and `avail` is a `pay`
+     spec's; both were already read by `prompts.js`, which is what the two
+     assertions below then confirm. v4.42 recorded `spendCtr` as a REACH
+     LIMIT of this fixture and said the honest widening is more legs — this
+     is that limit closing, by the engine moving rather than the claim
+     loosening. */
   ], "the set of spec fields reaching prompts.js moved — a NEW one is the v2.34 "
    + "defect waiting to happen, and one LEAVING is a queue site that stopped saying it");
 });
