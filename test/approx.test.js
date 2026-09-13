@@ -213,7 +213,14 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      cards charged THIS WAY") is a number nothing keeps. Recorded rather
      than half-built, and the record's own first draft named the wrong
      blocker until the engine was asked (v4.09). */
-  assert.equal(Object.keys(APPROX).length, 33, "record count moved");
+  /* 33 -> 34 AT v4.49: `steam-build-powcard-handwritten`. Making Plasma
+     Barrel Shot swingable at all made its OTHER printed ability reachable,
+     and that one is a powCard `build.js` writes by hand because the payload
+     has no parser reader (three readers' worth of work). The behaviour is
+     right — the printed gate is enforced at resolution AND, from this
+     version, as a legality — so what is recorded is that the CLAUSE is
+     unread and the card honestly reports `part`. */
+  assert.equal(Object.keys(APPROX).length, 34, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -225,7 +232,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      tool here can see — the fairness sweep's three RESTRICTION-DROPPED
      checks are all about attack buffs. */
   /* 12 -> 13 stated AT v4.47: `arena-ability-policy-declines`. */
-  assert.equal(n("stated"), 13, "stated count moved");
+  /* 13 -> 14 AT v4.49: `steam-build-powcard-handwritten`. */
+  assert.equal(n("stated"), 14, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -711,6 +719,35 @@ probe("spellvoid-x", () => {
 
 /* Walk in My Shoes' crush rider halves the opponent's base values for a
    turn and has no reader — so it arms no next-turn entry. */
+probe("steam-build-powcard-handwritten", () => {
+  /* A `stated` PROBE ASSERTS THE DEVIATION, so it goes red the day the
+     clause is read (v4.02). Both halves: the payload genuinely has NO
+     reader (which is why the hand-written powCard is there), and the
+     BEHAVIOUR is nonetheless right — the printed gate is enforced. */
+  for(const t of ["put a steam counter on this", "put a steam counter on it",
+                  "if this has no steam counters, put a steam counter on it"])
+    assert.equal(PR.classifyClause(t), null,
+      "`" + t + "` has a reader now — the hand-written powCard can go");
+  assert.equal(PR.parseHeroPower(
+    "Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again",
+    true), null, "parseHeroPower reads the line now — build the powCard from it");
+
+  /* AND IT IS ONE CARD. `needSteam` is what makes `equipPiece` write the
+     piece, so the set is the measurement the record rests on. */
+  const steam = pool().filter(c => { const wc = PR.weaponCost(c.tx || "");
+    return !!(wc && wc.needSteam); }).map(c => c.name).sort();
+  assert.deepEqual(steam, ["Plasma Barrel Shot"],
+    "the set of `needSteam` records moved — the hand-written powCard now serves more than one card");
+
+  /* THE CLAUSE IS REPORTED UNREAD, which is the whole of what makes this
+     honest rather than hidden. */
+  PR.fxReset();
+  const fx = PR.fxParse(pool().find(c => c.name === "Plasma Barrel Shot"));
+  assert.equal(fx.tier, "part", "the card reports unfinished");
+  const cl = (fx.clauses || []).find(x => /put a steam counter/i.test(x.t));
+  assert.ok(cl && cl.st === "skip", "and its steam-build clause reads `skip`");
+});
+
 probe("charged-this-way-count", () => {
   /* AN `open` PROBE ASSERTS THE **DEVIATION**, so it goes RED the day
      somebody builds it (v4.02). Both halves of the refusal are asked, and

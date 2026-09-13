@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-13T20:28:36.512Z",
- "appVer": "4.47",
+ "generated": "2026-09-13T21:02:56.697Z",
+ "appVer": "4.49",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -3625,14 +3625,19 @@
     },
     {
      "t": "This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.",
-     "st": "skip"
+     "st": "run"
     }
    ],
    "skipped": [
-    "Action - {r}{r}: If this has no steam counters, put a steam counter on it",
-    "This card's {p} is equal to 1 plus the number of times you've boosted this combat chain."
+    "Action - {r}{r}: If this has no steam counters, put a steam counter on it"
    ],
-   "weaponCost": null,
+   "weaponCost": {
+    "cost": 0,
+    "addRust": false,
+    "needSteam": true,
+    "taps": false,
+    "oncePerTurn": true
+   },
    "eqAbility": null,
    "tx": "Once per Turn Action - Remove a steam counter from this: Attack\nAction - {r}{r}: If this has no steam counters, put a steam counter on it. Go again\nThis card's {p} is equal to 1 plus the number of times you've boosted this combat chain.",
    "flags": []

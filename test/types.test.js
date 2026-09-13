@@ -179,36 +179,58 @@ test("types.js agrees with game.js on every equipment slot", {skip}, () => {
   assert.deepEqual(dis, []);
 });
 
-/* PINNED, WITH ITS REASON. `parser.isWeapon` is `/weapon/i.test(tt) &&
-   power != null`, so four weapons that print no power do not answer to
-   it: Death Dealer (Bow), Plasma Barrel Shot (Gun), Cosmo (Scroll) and
-   Crucible of Aetherweave (Staff).
+/* PINNED, WITH ITS REASON — AND IT WENT 4 -> 3 AT v4.49.
 
-   That looks like the bow bug and it is NOT the same thing. In build.js
-   the predicate decides whether a piece is routed as a swinging weapon
-   or as an activated ability, and the four powerless ones need the
-   ability route: Crucible's "Once per Turn Instant - {r}: …" is reached
-   only because `isWeapon` says false. Making it type-accurate would take
-   that ability away — a regression to fix one.
+   This pin used to read FOUR and argue that "the four powerless ones need
+   the ability route". It was right about three and, about the fourth, it
+   was a guard pinning an anomaly — which legitimises it (v3.13). PLASMA
+   BARREL SHOT prints its own weapon attack ("Once per Turn Action - Remove
+   a steam counter from this: Attack") and prints no power only because its
+   power is a printed FORMULA ("this card's {p} is equal to 1 plus the
+   number of times you've boosted this combat chain"). So the predicate
+   that decides whether it swings refused it BECAUSE of the very line that
+   says what it swings for — and with `parseHeroPower` refusing a payload
+   of "Attack" as well, the piece had NO ROUTE AT ALL on either board: a
+   Gun in Dash's gear zone with three printed lines and not one button.
 
-   So the two names mean two things and both are correct for their job:
+   `parser.isWeapon` ASKS THE QUESTION ITS NINE CALLERS ACTUALLY ASK now —
+   does this piece print its OWN weapon attack — and the discriminator is
+   the QUOTE: `weaponCost` matches a quoted GRANTED ability inside a card's
+   own text (Cosmo's), which v3.83 recorded as 254 illegal 0-power swings,
+   so quoted text is stripped first. Measured over 797 records, that
+   reading and the old one differ on Plasma Barrel Shot alone.
+
+   The two names still mean two things and both are correct for their job:
 
      types.isWeaponType(c)   is this card's TYPE Weapon
-     parser.isWeapon(c)      is this a weapon with a printed power
+     parser.isWeapon(c)      does it print its own weapon attack
 
-   Renaming parser's to say so belongs with the Phase 3 pass over
-   equipment abilities. Until then this list is the ledger; a fifth entry
-   appearing means something changed that nobody decided. */
-test("the parser/types weapon split is exactly the four powerless weapons", {skip}, () => {
+   THREE REMAIN, and for each the ability route is right: Death Dealer's
+   printed ability is an arsenal put, Cosmo GRANTS an attack to auras
+   rather than having one, and Crucible's "Once per Turn Instant - {r}: …"
+   is reached only because this answers false. A FOURTH entry appearing
+   means something changed that nobody decided. */
+test("the parser/types weapon split is exactly the three that print no attack",
+     {skip}, () => {
   const dis = pool().filter(c => TY.isWeaponType(c) !== PR.isWeapon(c)).map(c => c.name).sort();
   assert.deepEqual(dis, [
     "Cosmo, Scroll of Ancestral Tapestry",
     "Crucible of Aetherweave",
-    "Death Dealer",
-    "Plasma Barrel Shot"
+    "Death Dealer"
   ]);
   for(const c of pool().filter(c => dis.indexOf(c.name) >= 0))
     assert.equal(c.power, null, `${c.name} is in the split list but prints power`);
+  /* AND THE ONE THAT LEFT IS PINNED TOO, or its departure is invisible to
+     the very drill that exists to notice a change here. It is a Weapon by
+     TYPE, prints NO power, and answers TRUE — the whole shape in one row. */
+  const pbs = pool().find(c => c.name === "Plasma Barrel Shot");
+  assert.ok(pbs, "Plasma Barrel Shot is in the pool");
+  assert.equal(TY.isWeaponType(pbs), true, "its type is Weapon");
+  assert.equal(pbs.power, null, "and it prints no power — the power is a formula");
+  assert.equal(PR.isWeapon(pbs), true,
+    "yet it prints its own weapon attack, so it swings (v4.49)");
+  assert.deepEqual(PR.fxParse(pbs).powFormula, {base: 1, per: "perBoost"},
+    "and the formula is what gives it one");
 });
 
 /* ---- the three shapes a naive reader gets wrong -------------------------- */

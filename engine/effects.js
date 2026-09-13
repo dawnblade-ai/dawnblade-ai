@@ -51,7 +51,7 @@
    treatment advisor.js, cards.js and prompts.js already get. */
 const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
-       allyAttack, abilityGa,
+       allyAttack, abilityGa, attackLineGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
        pow6, zonePow, isAtkActionCard, phantasmPops, defCap, wardValue, wardBearers} = P;
 const {resolveEntry} = C;
@@ -2889,6 +2889,33 @@ function makeEffects(ctx){
               payload's. The ops are already held back for exactly the
               same reason one line down. */
            : card._attackRx ? (card.kw||[]).some(k=>/^go again$/i.test(String(k)))
+           /* ---- A WEAPON'S GO AGAIN IS ITS **ATTACK LINE'S** (v4.49) ----
+              The comment above says reading `fx.ga` "for a weapon is
+              exactly right", and it was — measured at v3.44, when the ONE
+              pool weapon that tells the two apart had no route at all.
+              PLASMA BARREL SHOT prints its go again on its STEAM-BUILD
+              line, not on its attack line:
+
+                Once per Turn Action - Remove a steam counter from this: Attack
+                Action - {r}{r}: If this has no steam counters, put a steam
+                                 counter on it. Go again
+
+              The clause splitter breaks on the period, so `Go again`
+              arrives as a clause of its own and sets `fx.ga` — the CARD's
+              — and driven, the swing kept an ACTION POINT the attack line
+              never grants. STRONGER than printed, the direction that
+              steals games, and v3.72's rule: building a SOURCE makes a
+              defect reachable that was wrong the whole time it could not
+              be reached.
+
+              `attackLineGa` IS THE READER AND IT ALREADY EXISTED — built
+              for Cutty Shark, who prints two activated abilities where
+              only one carries the keyword, which is the identical shape
+              (v3.58, v3.73: check whether the machinery is the shape you
+              already have). Measured over the pool's thirteen swinging
+              weapons, exactly ONE record moves: Mark of the Huntsman's go
+              again IS on its attack line and is kept. */
+           : from === "weapon" ? attackLineGa(card)
            : fx.ga;
     if(card._arsGA && card._upTurn === n.turn) ga = true;
     /* ---- THE FIRST GRAVEYARD PLAY OF A KEYWORD EACH TURN (v4.01) -----
@@ -3610,7 +3637,23 @@ function makeEffects(ctx){
          nothing, which is what a 0-power weapon looked like before v3.83
          routed it away. The number comes from the grant, which read it
          off the aura's own printed keyword line. */
-      const base = card._powBoost ? (1 + (n.boostChain||0))
+      /* A PRINTED BASE-POWER **DEFINITION** (v4.49). Plasma Barrel Shot
+         prints "this card's {p} is equal to 1 plus the number of times
+         you've boosted this combat chain" and prints no power at all, so
+         `card.power||0` gives 0 and the Gun swung for nothing.
+
+         IT REPLACED AN INLINE REGEX OVER RAW TEXT IN `build.js` that was
+         DEAD TWICE OVER: gated on `isWeapon`, which was false for the one
+         card that needs it, and spelling "you have boosted" where the card
+         prints "you've". So this branch had never once run — dead rules
+         code that reads like a rule (v4.11).
+
+         AND THE COUNTERS RIDE ON TOP, which the old branch dropped. A
+         +1{p} counter is not the printed base (v3.78's rule at the other
+         end: the card says BASE, so the counter goes on top), and the aura
+         branch beside this one has always added it. */
+      const _pfm = fx.powFormula;
+      const base = _pfm ? _pfm.base + powPer(n, _pfm.per) + powCtr
                  : _auraAtk ? _auraAtk.power + powCtr
                  : (card.power||0) + powCtr;
       let total = base + bonus;
@@ -4049,7 +4092,14 @@ function makeEffects(ctx){
          1". Reading `card.power` here printed "(printed 0)" beside a
          perfectly correct 1, which is the feed teaching the player that
          something added a point that never did. */
-      const _printed = _auraAtk ? _auraAtk.power : (card.power || 0);
+      /* A PRINTED BASE-POWER DEFINITION IS THE SAME SHAPE (v4.49). Plasma
+         Barrel Shot prints no power, so `card.power || 0` said "(printed
+         0)" beside a perfectly correct 1 — the feed teaching the player
+         that something added a point that never did, which is the aura
+         case one card over and the reason that comment is here. */
+      const _printed = _auraAtk ? _auraAtk.power
+                     : _pfm ? _pfm.base + powPer(n, _pfm.per)
+                     : (card.power || 0);
       /* seat 0 is called "You", so the verb has to agree with it */
       const _s = /^you$/i.test(act(n).name || "") ? "" : "s";
       /* AND AN AURA IS ACTIVATED, NOT PLAYED. It is already on the board;
@@ -7124,6 +7174,23 @@ function defSelfMet(self, defSide, opts){
    BLUE IS PITCH 3. It is read off the printed pitch value rather than a
    colour word, because the colour is not a field — `{pitch:3}` is what
    `promptFilter` means by blue everywhere else in this engine. */
+/* WHAT A `PER_COUNT` COUNTABLE IS WORTH RIGHT NOW (v4.49).
+   `parser.PER_COUNT` says WHICH countable a printed line names; this is the
+   one place each is counted for a value read at DECLARATION. `perEquipDef`
+   is deliberately absent: it is only knowable once defenders are declared,
+   so it rides on `pend.lateOps` and is struck in `linkPumps` (v2.11, v4.20)
+   — a base power cannot wait for the wall, so a formula naming it would be
+   asking a question that has no answer yet. A drill pins that partition.
+
+   AN UNKNOWN KEY ANSWERS ZERO rather than throwing, because `reduce` is fed
+   JSON off a wire (v2.48) — and it is unreachable by construction, since the
+   parser emits only what `PER_COUNT` names. */
+function powPer(n, per){
+  if(per === "perBoost")     return n.boostChain || 0;
+  if(per === "perChainHit")  return P.chainHits(n.chain);
+  return 0;
+}
+
 function defPerCount(per, defSide){
   const sd = defSide || {};
   if(per === "bluePitched")
@@ -8571,6 +8638,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defPerCount, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defPerCount, powPer, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

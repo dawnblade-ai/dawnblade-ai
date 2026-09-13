@@ -73,10 +73,18 @@ function table(k, piece){
   return Object.assign({}, g, {sides});
 }
 
-test("the pool prints exactly four Weapon-typed pieces with no power", {skip}, () => {
-  /* THE MEASUREMENT THE SPLIT RESTS ON. `types.test.js` pins the same
-     four from the other end; a fifth means something changed that nobody
-     decided, and it would land on whichever route this file chose. */
+test("the pool prints exactly three Weapon-typed pieces with no ATTACK",
+     {skip}, () => {
+  /* THE MEASUREMENT THE SPLIT RESTS ON, and it went 4 -> 3 AT v4.49.
+     `types.test.js` pins the same set from the other end. This drill used
+     to say "with no POWER" and list four; `isWeapon` now asks whether the
+     piece prints its OWN weapon attack, and PLASMA BARREL SHOT does — it
+     prints no power because its power is a printed FORMULA, so the old
+     proxy refused it BECAUSE of the line that says what it swings for, and
+     the piece had no route at all on either board.
+
+     A FOURTH entry means something changed that nobody decided, and it
+     would land on whichever route this file chose. */
   const W = loadData();
   const found = new Set();
   for(const h of W.HEROES)
@@ -85,15 +93,33 @@ test("the pool prints exactly four Weapon-typed pieces with no power", {skip}, (
   assert.deepEqual([...found].sort(), [
     "Cosmo, Scroll of Ancestral Tapestry",
     "Crucible of Aetherweave",
-    "Death Dealer",
-    "Plasma Barrel Shot"
+    "Death Dealer"
   ]);
+  /* AND THE ONE THAT LEFT, pinned from this end too — the departure is
+     invisible to a drill that only lists who remains. It is Weapon-typed,
+     prints no power, and is on the SWING route. */
+  const pbs = gearOf("dash", /Plasma Barrel/);
+  assert.ok(pbs, "it is in Dash's gear list");
+  assert.equal(T.isWeaponType(pbs), true);
+  assert.equal(pbs.power, null, "no printed power — the power is a formula");
+  assert.equal(P.isWeapon(pbs), true, "and it prints its own attack, so it swings");
 });
 
 test("judge routes on parser.isWeapon, never on the TYPE", {skip}, () => {
   const src = fs.readFileSync(__dirname + "/../engine/judge.js", "utf8");
-  assert.equal((src.match(/if\(!PR\.isWeapon\(piece\)\)\{/g) || []).length, 2,
+  /* THE ROUTE IS `_abUid || !PR.isWeapon(piece)` AT v4.49. A piece can
+     print BOTH an attack and an ability — exactly one pool record does —
+     and until then this branch chose by ELIMINATION, so whichever route it
+     picked the other button did not exist at the table. The `gp`-prefixed
+     uid names the ability; a bare uid on a piece with no attack still
+     means the ability, so elimination stays the DEFAULT and is now only a
+     default. Both sites must read the same test, or the two disagree about
+     which route an action asked for. */
+  assert.equal((src.match(/if\(_abUid \|\| !PR\.isWeapon\(piece\)\)\{/g) || []).length, 2,
     "both activation sites — `legal` and `doActivate`");
+  assert.equal((src.match(/const _abUid = typeof a\.uid === "string" && \/\^gp\/\.test\(a\.uid\);/g) || []).length, 2,
+    "and each derives the route from the uid the SAME way — two spellings of "
+    + "one conversion is where the drift starts (v4.45)");
   assert.doesNotMatch(src, /if\(!TY\.isWeaponType\(piece\)\)/,
     "the TYPE question is not the route question");
 });

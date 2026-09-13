@@ -209,4 +209,104 @@ module.exports = [
   }
 }
 
+,
+
+/* ---- v4.49 — THE GUN WITH NO BUTTON -------------------------------- */
+{
+  name: "Plasma Barrel Shot swings at all, for 1 plus the boosts",
+  why: "It is in her gear list, prints three lines, and had NO ROUTE ON " +
+       "EITHER BOARD. `parser.isWeapon` asked whether a weapon carries a " +
+       "PRINTED POWER — a proxy for \"does this swing\" — and this card's " +
+       "power is a printed FORMULA, so it carries none: the predicate that " +
+       "decides whether it swings refused it BECAUSE of the very line that " +
+       "says what it swings for. `parseHeroPower` refuses a payload of " +
+       "\"Attack\" too, so the ability branch built nothing either. A Gun in " +
+       "the gear zone with not one button. And the formula was an inline " +
+       "regex over raw text in `build.js` (v3.58), dead TWICE over: gated on " +
+       "`isWeapon`, and spelling \"you have boosted\" where the card prints " +
+       "\"you've\" — `SYNONYMS` never reaches a raw scan (v3.36).",
+  run(c){
+    const B = require("../../engine/build.js");
+    const swing = (boosts, ctrs) => {
+      c.P.fxReset();
+      const gr = Object.assign({}, c.card("Plasma Barrel Shot", 0), {uid: 41});
+      B.equipPiece(gr);
+      const g = Object.assign(c.acting(c.state(
+        {res: 9, ap: 1, gear: [gr],
+         counters: {41: Object.assign({steam: 1}, ctrs ? {pow: ctrs} : {})}},
+        {}, {turn: 3, actor: 0, turnPlayer: 0})),
+        {chain: [], boostChain: boosts});
+      const out = c.exec(g, gr, "weapon", 0);
+      return {total: c.J.withEffects(out, (fx, s) => fx.linkPumps(s, {})).total,
+              ga: !!(out.pend && out.pend.ga)};
+    };
+    const gr = Object.assign({}, c.card("Plasma Barrel Shot", 0), {uid: 41});
+    B.equipPiece(gr);
+    return {
+      "printed power":                       c.card("Plasma Barrel Shot", 0).power,
+      "is it routed as a weapon at all":     c.P.isWeapon(c.card("Plasma Barrel Shot", 0)),
+      "it gets a steam button":              !!(gr.pow && gr.powCard),
+      "swings for, with no boosts":          swing(0).total,
+      "…after two boosts":                   swing(2).total,
+      "…and with two +1{p} counters on top": swing(2, 2).total,
+      "does the swing keep an action point": swing(2).ga
+    };
+  },
+  want: {
+    "printed power": null,
+    "is it routed as a weapon at all": true,
+    "it gets a steam button": true,
+    "swings for, with no boosts": 1,
+    "…after two boosts": 3,
+    "…and with two +1{p} counters on top": 5,
+    "does the swing keep an action point": false
+  }
+},
+
+{
+  name: "the Gun's two routes are both reachable at the table",
+  why: "A piece can print BOTH a weapon attack and an activated ability, " +
+       "and judge chose by ELIMINATION — `isWeapon` false meant the " +
+       "ability. Right for 32 of the pool's 33 ability-bearing pieces and " +
+       "wrong for the one with both, so whichever branch it landed in the " +
+       "OTHER button did not exist: the swing needs a steam counter that " +
+       "only the ability puts there, which makes the card unplayable by " +
+       "construction. And the steam cost was refused on the TRAINER only " +
+       "(v3.01), so at the table the swing was free and REPEATABLE.",
+  run(c){
+    const B = require("../../engine/build.js");
+    const seat = ctrs => {
+      c.P.fxReset();
+      const gr = Object.assign({}, c.card("Plasma Barrel Shot", 0), {uid: 41});
+      B.equipPiece(gr);
+      return Object.assign(c.acting(c.state(
+        {res: 20, ap: 9, gear: [gr], counters: ctrs || {}}, {},
+        {turn: 3, actor: 0, turnPlayer: 0})), {chain: [], boostChain: 0});
+    };
+    const why = (g, a) => { const o = c.J.reduce(g, a, 0); return o.error || null; };
+    const built = c.J.reduce(seat({}), {t: "activate", uid: "gp41"}, 0);
+    return {
+      "swinging with no steam is refused":
+        /steam counter/.test(String(why(seat({}), {t: "activate", uid: 41, target: "hero"}))),
+      "the steam button is reachable":       !built.error,
+      "…and it puts one counter on":
+        ((built.state && built.state.sides[0].counters || {})[41] || {}).steam,
+      "then the swing is legal":
+        why(seat({41: {steam: 1}}), {t: "activate", uid: 41, target: "hero"}),
+      "and building a SECOND is refused before it is paid":
+        /already carries a steam counter/.test(String(
+          why(Object.assign({}, built.state, {sides: built.state.sides.map(
+            (s, i) => i === 0 ? Object.assign({}, s, {weaponUsed: {}, ap: 9}) : s)}),
+            {t: "activate", uid: "gp41"})))
+    };
+  },
+  want: {
+    "swinging with no steam is refused": true,
+    "the steam button is reachable": true,
+    "…and it puts one counter on": 1,
+    "then the swing is legal": null,
+    "and building a SECOND is refused before it is paid": true
+  }
+}
+
 ];

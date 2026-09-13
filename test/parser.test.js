@@ -400,7 +400,29 @@ test("card predicates — attack/arrow/weapon/reaction/instant typing", () => {
   assert.equal(P.isAttack({tt:"Attack Action", power:4}), true);
   assert.equal(P.isAttack({tt:"Action", power:null}), false);
   assert.equal(P.isArrow({tt:"Attack Action - Arrow"}), true);
-  assert.equal(P.isWeapon({tt:"Weapon - Sword 1H", power:3}), true);
+  /* v4.49 — `isWeapon` ASKS WHETHER THE PIECE PRINTS ITS OWN WEAPON
+     ATTACK, not whether it carries a printed power. The old fixture had no
+     rules text at all, which no real weapon has: measured over the pool,
+     every one of the 13 swinging weapons prints an "Action - <cost>:
+     Attack" line, so a power with no line was never a card. */
+  assert.equal(P.isWeapon({tt:"Weapon - Sword 1H", power:3,
+    tx:"Once per Turn Action - {r}: Attack"}), true);
+  assert.equal(P.isWeapon({tt:"Weapon - Sword 1H", power:3, tx:""}), false,
+    "a printed power with nothing to activate prints no swing");
+  /* AND A DERIVED POWER STILL SWINGS. Plasma Barrel Shot's power is a
+     printed FORMULA, so it carries none — and the predicate that decides
+     whether it swings used to refuse it because of the very line that says
+     what it swings for. */
+  assert.equal(P.isWeapon({tt:"Mechanologist Weapon - Gun (2H)", power:null,
+    tx:"Once per Turn Action - Remove a steam counter from this: Attack"}), true,
+    "a derived power is still a weapon that swings");
+  /* THE QUOTE IS THE DISCRIMINATOR (Cosmo). A card whose only attack line
+     is a QUOTED granted ability prints no attack of its own — read loose it
+     swings for 0, which is v3.83's 254 illegal swings. */
+  assert.equal(P.isWeapon({tt:"Wizard Weapon - Scroll (1H)", power:null,
+    tx:'During your turn, auras you control with ward are weapons with '
+     + '"Once per Turn Action - {r}: Attack".'}), false,
+    "a quoted granted ability is somebody else's attack");
   assert.equal(P.isAR({tt:"Instant - Attack Reaction"}), true);
   assert.equal(P.isInstantT({tt:"Instant"}), true);
   assert.equal(P.isInstantT({tt:"Instant - Defense Reaction"}), false);

@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.48 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.49 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -243,6 +243,44 @@ rather than a clean bill.
 in the ledger above rather than half-wired here — **and it was BUILT at
 v4.47, one version later**, which is what the two probe directions are for:
 the `open` record's probe went RED the moment the branch landed.
+
+## ⚠ v4.49 — THE GUN WITH NO BUTTON
+
+**Plasma Barrel Shot is in Dash's gear list, prints three lines, and had NO
+ROUTE AT ALL on either board.** `parser.isWeapon` asked whether a weapon
+carries a PRINTED POWER — a proxy for "does this swing", asked at nine sites —
+and this card's power is a printed FORMULA, so it carries none: the predicate
+that decides whether it swings refused it BECAUSE of the line that says what it
+swings for. `parseHeroPower` refuses a payload of "Attack" too, so the ability
+branch built nothing either.
+
+**FOUR MORE DEFECTS ONLY BECAME VISIBLE ONCE THE ROUTE EXISTED** — v3.72, and
+the fifth time this cycle that making a mechanic legible is what found what was
+wrong with it (v4.46, v4.47, v4.48):
+
+1. the base power was an inline regex in `build.js`, **dead twice over** (gated
+   on `isWeapon`, and spelling "you have" where the card prints "you've");
+2. the swing kept a **free action point** off the STEAM line's go again;
+3. the **steam cost** was refused on the TRAINER only — sev-3 at the table;
+4. **one tile, two routes**: the gear branch chose by ELIMINATION, right for 32
+   of 33 pieces and wrong for the one with both, so the card was unplayable by
+   construction.
+
+Plus a **PAID cost that resolved to nothing** — v2.04's rule inverted — now a
+legality in `abCostWhy`.
+
+**WHAT IS LEFT OPEN**, recorded rather than half-built: the steam-build powCard
+is written BY HAND by `equipPiece` (v3.58's shape), because the payload has no
+parser reader at all — `classifyClause` answers null for "put a steam counter on
+this", for "…on it" and for the whole gated line, so it needs THREE readers.
+`steam-build-powcard-handwritten` in `tools/approx.js`, probe included. The card
+honestly reports `part`.
+
+**WHERE TO LOOK NEXT.** The pattern that found v4.46 through v4.49 without
+exception: **make a route legible, then DRIVE it and READ THE FEED.** Every one
+of those versions' extra defects came out of the first driven game, not out of a
+scan. The remaining `part` cards and the 7 `open` ledger records are the list;
+`npm run gaps` ranks the cards and `node tools/approx.js` ranks the rules.
 
 ## ⚠ v4.48 — "FOR EACH" IS THE WORDING THE DATABASE PRINTS
 

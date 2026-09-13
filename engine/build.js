@@ -645,7 +645,15 @@ function equipPiece(gr){
     if(isCloaked(gr)) gr._faceDown = true;
     if(isWeapon(gr) && gr.tx){ const wc=weaponCost(gr.tx);
       if(wc){ if(gr.cost==null) gr.cost=wc.cost; gr.addRust=wc.addRust; gr.needSteam=wc.needSteam; }
-      if(/is equal to 1 plus the number of times you have boosted/i.test(gr.tx)) gr._powBoost=true;
+      /* -_powBoost v4.49: AN INLINE REGEX OVER RAW TEXT IS A CARD
+         SPECIAL-CASED BY ITS OWN WORDS (v3.58), and this one was DEAD TWICE
+         OVER — it sat inside `if(isWeapon(gr))`, which was false for the one
+         card that needs it, and it spelled "you have boosted" where the card
+         prints "you've". `SYNONYMS` never reaches a raw scan (v3.36), so the
+         contraction alone would have been enough. `fx.powFormula` reads it
+         off the LEVELLED clause now and `effects.js` strikes the base from
+         it, with the +1{p} counters riding on top the way the aura branch
+         beside it always has. */
       if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
     }
     /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death

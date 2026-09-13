@@ -17,7 +17,41 @@
 const norm = s => s.toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const isAttack = c => /attack/i.test(c.tt) && /action/i.test(c.tt) && c.power!=null;
 const isArrow  = c => /arrow/i.test(c.tt);
-const isWeapon = c => /weapon/i.test(c.tt) && c.power!=null;
+/* ---- DOES THIS PIECE PRINT ITS OWN WEAPON ATTACK? (v4.49) -----------
+   Every caller of this asks that one question — "may I swing it" — at nine
+   sites across `build.js`, `judge.js`, `advisor.js` and the trainer. It used
+   to ANSWER a proxy: a weapon with a PRINTED POWER. That proxy is wrong for
+   exactly one card in the pool, and wrong in the way a proxy always is —
+   PLASMA BARREL SHOT's power is DERIVED ("this card's {p} is equal to 1 plus
+   the number of times you've boosted this combat chain"), so it prints none,
+   and the predicate that decides whether it swings refused it BECAUSE of the
+   very line that says what it swings for.
+
+   IT HAD NO ROUTE AT ALL. `equipPiece`'s swing branch is gated on this, so
+   the piece got no folded cost, no steam button and no `_powBoost`; and
+   `parseHeroPower` refuses a payload of "Attack" (that is the weapon
+   reader's job), so the ABILITY branch built nothing either. A Gun in
+   Dash's gear zone with three printed lines and not one button, on both
+   boards. Measured over the 16 Weapon records: two reach no route, and the
+   other is COSMO, whose route is `fx.auraWeapon` (v3.84) — so it is
+   correct for Cosmo and wrong for exactly one card.
+
+   THE DISCRIMINATOR IS THE **QUOTE**, and that is a measurement. `weaponCost`
+   will happily match a quoted GRANTED ability inside a card's own rules text
+   — Cosmo's "auras you control … are weapons with \"Once per Turn Action -
+   {r}: Attack\"" — which is what v3.83 recorded as 254 illegal 0-power
+   swings when judge asked the TYPE instead. Stripping quoted text first
+   separates exactly Cosmo and moves no other record: measured over 797,
+   `isWeapon` and this reading differ on Plasma Barrel Shot alone.
+
+   `types.isWeaponType` IS STILL THE TYPE QUESTION and the two still differ,
+   on THREE records rather than four — Death Dealer, Cosmo and the Crucible,
+   each of which prints no weapon attack and needs the ability route.
+   `test/types.test.js` pinned that split at FOUR and argued "the powerless
+   four need the ability route": right about three, and about the fourth it
+   was a guard pinning an anomaly, which legitimises it (v3.13). */
+const isWeapon = c => !!(c && /weapon/i.test(c.tt || "")
+                         && weaponCost(String(c.tx || "").replace(/"[^"]*"/g, "")));
 /* THE KEYWORDS A PRINTED QUALIFIER MAY NAME — a CLOSED vocabulary, and
    one copy of it (v4.01). It answers "which words can a card mean when it
    says `with <X>`", and `printedKw` is what actually resolves one — so
@@ -227,6 +261,28 @@ const PER_COUNT = {
    leaves the clause UNREAD rather than counting zero (v3.55). */
 const DEF_PER = {
   "blue card you have pitched this turn": "bluePitched"
+};
+
+/* ---- THE SAME COUNTABLE IN TWO PRINTED GRAMMARS (v4.49) -------------
+   `PER_COUNT` is keyed on the countable as the FOR-EACH form prints it,
+   and the pool prints one of them a second way:
+
+     Overblast           "for each TIME you have boosted this combat chain"
+     Plasma Barrel Shot  "the number of TIMES you have boosted this combat chain"
+
+   The head noun is plural after "the number of" and singular after "for
+   each" — English grammar rather than a difference in meaning, and exactly
+   the shape `SYNONYMS` exists for except that it is governed by the words
+   in front of it rather than standing free.
+
+   SO THE LOOKUP TRIES THE PHRASE AND THEN ITS SINGULAR HEAD, and nothing
+   else. The vocabulary stays CLOSED — this widens which STRINGS reach a key,
+   never which keys exist — and the alternative is the same countable written
+   into the table twice, which is where drift starts. Measured: exactly one
+   of the three countables is reached by both grammars today. */
+const perCountKey = (tab, phrase) => {
+  const k = String(phrase || "").trim();
+  return tab[k] || tab[k.replace(/^(\w+?)s\b/, "$1")] || null;
 };
 
 /* ---- A GRANTED ABILITY RIDING IN QUOTES ------------------------------
@@ -1773,7 +1829,7 @@ function classifyClause(raw){
      is SILENT against every real fixture and the drill that sees it is
      synthetic (v3.32). */
   if(m=c.match(/^(?:this(?: attack)?|it) gets \+(\d+)\s*(\{p\}|\{d\}) for each (.+?)\.?$/)){
-    const _pk = (PER_COUNT[m[2]] || {})[m[3].trim()];
+    const _pk = perCountKey(PER_COUNT[m[2]] || {}, m[3]);
     if(!_pk) return null;
     return R([[_pk, +m[1]]]);
   }
@@ -4166,8 +4222,8 @@ function fxParse(card){
        be on the chain at all. Big Blue Sky is a Defense Reaction. */
     if(!ds){
       m = cl.match(/^this gets \+(\d+)\{d\} for each (.+?)\.?$/i);
-      if(m && DEF_PER[levelIdiom(m[2].toLowerCase().trim())])
-        ds = {amt: +m[1], per: DEF_PER[levelIdiom(m[2].toLowerCase().trim())]};
+      const _dk = m && perCountKey(DEF_PER, levelIdiom(m[2].toLowerCase()));
+      if(_dk) ds = {amt: +m[1], per: _dk};
     }
     if(!ds) continue;
     fx.defSelf = ds;
@@ -5938,6 +5994,45 @@ function fxParse(card){
     const ap = clean(card.tx||"").toLowerCase()
       .match(/as an additional cost to (?:play|activate) this, you may pay ((?:\{r\})+|\d+)/);
     if(ap) fx.addPay = {cost: /^\d+$/.test(ap[1]) ? +ap[1] : (ap[1].match(/\{r\}/g)||[]).length};
+  }
+  /* ---- "THIS CARD'S {p} IS EQUAL TO N PLUS <countable>" (v4.49) ------
+     A BASE, NOT A PUMP. Cosmo's is the precedent — "weapons with base {p}
+     equal to their ward" (v3.84) — and the difference from v4.49's
+     multiplier family matters in both directions: "gets +N for each" ADDS
+     to a printed base, "is equal to" REPLACES it. Plasma Barrel Shot prints
+     no power at all, so read as a pump it swings for 0 + N and read as a
+     base for N; those coincide only because its printed power is null, and
+     a card printing both would be wrong under either collapse.
+
+     IT USED TO BE AN INLINE REGEX OVER RAW TEXT IN `build.js`, which is a
+     card special-cased by its own words (v3.58) and DEAD TWICE OVER: it sat
+     inside `if(isWeapon(gr))`, which was false for the one card that needs
+     it, and it spelled "you have boosted" where the card prints "you've".
+     So `effects.js`'s `_powBoost` branch was dead rules code reading like a
+     rule (v4.11). Read here it is levelled for free.
+
+     THE COUNTABLE VOCABULARY IS v4.49's OWN — one table, so a countable
+     built for a pump is countable for a base and neither can drift. An
+     unknown one leaves the clause unread (v2.29). */
+  {
+    /* `tl` IS `clean(tx).toLowerCase()` AND IS **NOT** LEVELLED — a raw-text
+       scan must level for itself (v3.36), or "this card's" and "you've"
+       never match and the pattern looks exactly like one that is simply
+       wrong. `clean` also collapses the newlines, so the clause is bounded
+       by its own printed period. */
+    const pf = levelIdiom(tl).match(/this(?:'s)? \{p\} is equal to (\d+) plus the number of ([^.]+)\.?/);
+    const pk = pf && perCountKey(PER_COUNT["{p}"], pf[2]);
+    if(pk){
+      fx.powFormula = {base: +pf[1], per: pk};
+      /* THE CLAUSE LEDGER IS BUILT DURING THE PER-CLAUSE WALK and this is a
+         whole-card read running after it, so the clause's own status is
+         corrected here — the same fixup and the same guard `handAbility`
+         uses. Only ever the clause this reader actually folded, so a formula
+         whose countable refused stays `skip` and the card stays honestly
+         unfinished. */
+      const FORM = /\{p\} is equal to \d+ plus the number of /i;
+      fx.clauses.forEach(cl => { if(cl.st === "skip" && FORM.test(clean(cl.t))) cl.st = "run"; });
+    }
   }
   /* CHARGE — hoisted off the raw text (not the name-rewritten clauses)
      because it may name the card instead of saying "this"; the pattern
@@ -8519,7 +8614,7 @@ function rustedThrough(gear, counters){
 const fxReset = () => FXMEMO.clear();
 
 return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilter,
-  PER_COUNT, DEF_PER, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
+  PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
         DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,

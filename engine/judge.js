@@ -184,6 +184,31 @@ function abCostWhy(sd, ab){
     return ab.name + " costs " + (/^[aeiou]/i.test(_sub) ? "an " : "a ") + _sub
          + " discarded, and " + sd.name + " holds none";
   }
+  /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49) ------------------
+     Plasma Barrel Shot's steam-build ability prints "Action - {r}{r}: IF
+     THIS HAS NO STEAM COUNTERS, put a steam counter on it" and
+     `effects.js` honours that gate at RESOLUTION — it logs "It already
+     carries a steam counter" and puts nothing. So activating it with a
+     counter already on the piece charged {r}{r} AND the action point for
+     a log line.
+
+     v2.04 SETTLED THE OPPOSITE CASE AND THIS IS ITS MIRROR. An UNPAYABLE
+     cost is deliberately INERT rather than free; a PAID cost that does
+     nothing is the player losing value for a play the rules should have
+     refused before they paid. Every cost above this is here for exactly
+     that reason (v3.11), and `fuzz.test.js` holds the property it rests
+     on: `legal` and `reduce` must agree.
+
+     THE LEGALITY ASKS WHAT THE RESOLUTION ASKS, and no card text is read
+     here — `equipPiece` stamps `_steamFor` and `effects.js` reads the same
+     counter bag, so the two cannot disagree about when the gate is met.
+     Whether the printed clause itself is READ is a separate and open
+     question (`steam-build-powcard-handwritten` in tools/approx.js): the
+     powCard's text is hand-written by `equipPiece`, which is v3.58's
+     inline-reader shape, and the real payload has no parser reader at all. */
+  if(ab._buildSteam && (((sd.counters || {})[ab._steamFor] || {}).steam || 0) > 0)
+    return ab.name.replace(" — build steam", "")
+         + " already carries a steam counter — building another does nothing";
   return null;
 }
 function rxTargetWhy(g, sd, ab, want){
@@ -1129,7 +1154,34 @@ function legal(g, a, seat){
         return b.card.name + " costs " + aa.cost + " to attack and you cannot raise it";
       return null;
     }
-    const gi = find(sd.gear, a.uid);
+    /* ---- WHICH OF THE PIECE'S ROUTES DID THE ACTION NAME? (v4.49) -----
+       A piece can print BOTH a weapon attack and an activated ability, and
+       until now this branch chose by ELIMINATION — `isWeapon` false meant
+       the ability. That was right for 32 of the pool's 33 ability-bearing
+       pieces and wrong for the one that has both: PLASMA BARREL SHOT
+       prints "Once per Turn Action - Remove a steam counter from this:
+       Attack" AND "Action - {r}{r}: … put a steam counter on it", so
+       whichever branch it landed in the OTHER button was unreachable.
+
+       THE DISCRIMINATOR ALREADY EXISTED. `equipPiece` keys the powCard
+       `"gp"+uid` and this file's own comment says `execute` "finds the
+       piece back off the powCard's uid" — so an action naming `gp41` is
+       the ABILITY and one naming `41` is the SWING, and nothing new is
+       invented. The TRAINER has always said which by passing the powCard
+       itself (`tryPlay(gr.powCard, "hero", i)`); at the table the action
+       carries only a uid, so the uid is where it has to be said.
+
+       A BARE UID STILL MEANS THE ABILITY when the piece prints no attack,
+       or every one of those 32 routes would need its caller changed —
+       elimination stays the DEFAULT and is now only a default. */
+    /* MATCHED THE WAY `execute` MATCHES IT — `("gp"+x.uid) === card.uid`,
+       never by slicing the prefix off: a real uid is a NUMBER and the
+       powCard's is the string concatenation, so `"gp41".slice(2)` is "41"
+       and finds nothing. Driven, not reasoned about: the first draft of
+       this line refused with "no such equipment". */
+    const _abUid = typeof a.uid === "string" && /^gp/.test(a.uid);
+    const gi = _abUid ? (sd.gear || []).findIndex(x => x && ("gp" + x.uid) === a.uid)
+                      : find(sd.gear, a.uid);
     if(gi < 0) return "no such equipment";
     const piece = sd.gear[gi];
     if(piece.destroyed) return piece.name + " is destroyed";
@@ -1166,7 +1218,7 @@ function legal(g, a, seat){
        The trainer has always asked `isWeapon` here, and `build.js` builds
        the powCard off the same predicate. v3.01's shape: a rule that
        exists on one board. */
-    if(!PR.isWeapon(piece)){
+    if(_abUid || !PR.isWeapon(piece)){
       if(!piece.pow || !piece.powCard) return piece.name + " prints no activated ability";
       const ab = piece.powCard;
       /* Matching the trainer, deliberately: an ability is available once
@@ -1219,8 +1271,27 @@ function legal(g, a, seat){
                         untap until CR 4.4.3d in the end phase
 
        Sledge of Anvilheim has neither and is genuinely repeatable. */
-    if((wc.oncePerTurn || wc.taps) && (sd.weaponUsed || {})[a.uid])
+    if((wc.oncePerTurn || wc.taps) && (sd.weaponUsed || {})[piece.uid])
       return piece.name + (wc.taps ? " is tapped until your end phase" : " has already swung this turn");
+    /* ---- A STEAM COUNTER IS A THIRD LIMIT ON A SWING (v4.49) ----------
+       `weaponCost` has answered `needSteam` off the printed cost ("Once
+       per Turn Action - REMOVE A STEAM COUNTER FROM THIS: Attack") since
+       it was written, and the TRAINER has refused a swing without one
+       since v2.35 — `index.html`'s "needs a steam counter to fire". This
+       branch asked NOTHING about it, so at the table the swing was free
+       and REPEATABLE: sev-3 *illegal play allowed*, the direction that
+       steals games. v3.01's shape, one limit over from the two above it.
+
+       IT WAS UNREACHABLE UNTIL THIS VERSION, which is why it went unseen:
+       Plasma Barrel Shot is the pool's only `needSteam` record and
+       `isWeapon` refused it (its power is DERIVED, so it prints none), so
+       neither board could route the swing at all. v3.72's rule — building
+       a source makes a defect reachable that was wrong the whole time it
+       could not be reached. `execute` spends the counter on BOTH boards
+       and always has, so the state was right and only the legality was
+       missing: the seat could swing from an empty bag and go to -1. */
+    if(piece.needSteam && !(((sd.counters || {})[piece.uid] || {}).steam > 0))
+      return piece.name + " needs a steam counter to fire — build steam first";
     const win = P.speedAllowed(g, seat);
     if(win.indexOf("action") < 0) return "no action-speed window — a weapon cannot swing here";
     if(!(sd.ap > 0)) return "no action point left";
@@ -2212,12 +2283,19 @@ function doActivate(g, a, seat){
       return commitPlay(g, b.card, route, seat, null, target);
     }
   }
-  const piece = sd.gear[find(sd.gear, a.uid)];
+  /* THE SAME ROUTE CONVERSION `legal` MAKES (v4.49) — a `gp`-prefixed uid
+     names the piece's ABILITY, a bare one its swing, and a bare uid on a
+     piece with no attack still means the ability. Two readers of one
+     spelling is where the drift starts, so it is the same two lines. */
+  const _abUid = typeof a.uid === "string" && /^gp/.test(a.uid);
+  const piece = sd.gear[_abUid
+    ? (sd.gear || []).findIndex(x => x && ("gp" + x.uid) === a.uid)
+    : find(sd.gear, a.uid)];
   /* THE ABILITY ROUTE (v3.04). `execute` finds the piece back off the
      powCard's uid ("gp"+uid) for a destroy-cost, so no index is needed —
      the "hero" zone is not a list and nothing splices it. */
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
-  if(!PR.isWeapon(piece)){
+  if(_abUid || !PR.isWeapon(piece)){
     const ab = piece.powCard, acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
     if(acost > sd.res)
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
@@ -2665,7 +2743,14 @@ function declareAttack(g, card, seat, fromZone, target, declared){
                        : [...(g.chainCards || []), {by: seat, card, from: fromZone}],
     featured: {card, chip: "LINK " + ((g.chain || []).length + 1)}};
   n = P.declareAttack(n, seat);
-  n = say(n, at(n, seat).name + (fromWeapon ? " swings " : " attacks with ") + card.name + " for " + total + ".");
+  /* THE VERB AGREES WITH THE SEAT (v4.15). Seat 0 is literally named "You"
+     (v2.83), so this read "You SWINGS Plasma Barrel Shot for 3" — and
+     `game.sv` has existed since v4.15 for exactly this, taking the SIDE
+     rather than the name so a caller cannot read one seat's name and agree
+     with the other's. The BASE form is the argument, because third person
+     is derivable from it and the reverse is not. */
+  n = say(n, GM.sv(at(n, seat), fromWeapon ? "swing" : "attack")
+    + (fromWeapon ? " " : " with ") + card.name + " for " + total + ".");
   if(declared && declared.declNote && declared.declNote.trim()) n = say(n, declared.declNote.trim());
   return settle(n);
 }

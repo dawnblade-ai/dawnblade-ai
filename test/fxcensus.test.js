@@ -117,9 +117,15 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "handAbility", "handWipe", "hitCounter", "hitWatch", "millCost", "modes",
     "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
-    "playable", "quotedUnread", "rustDestroy", "self", "selfQ", "tapCost",
-    "tier", "wipePowIfIdle",
+    "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
+    "tapCost", "tier", "wipePowIfIdle",
   ]);
+  /* +powFormula v4.49 — a printed BASE-POWER DEFINITION ("this card's {p}
+     is equal to 1 plus the number of times you've boosted this combat
+     chain"). It replaced an inline regex over raw text in `build.js` that
+     was dead twice over, and `effects.js` strikes the swing's base from it
+     with the +1{p} counters riding on top. One pool record: Plasma Barrel
+     Shot, whose printed power is null, so this IS its power. */
 });
 
 test("every emitted field has a CONSUMER — directly, or through its reader", () => {

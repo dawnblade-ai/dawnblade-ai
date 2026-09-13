@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-13T20:28:36.512Z · app v4.47 · data sage-v13 · db 797 records
+Generated 2026-09-13T21:02:56.697Z · app v4.49 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -221,7 +221,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 - ○ Once per Turn Action - Remove a steam counter from this: Attack
 - — Action - {r}{r}: If this has no steam counters, put a steam counter on it
 - ▶ Go again
-- — This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
+- ▶ This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
 
 ### Roaring Beam (pitch 2) — part · [boltyn]
 - type: Light Warrior Attack Reaction · printed: Charge

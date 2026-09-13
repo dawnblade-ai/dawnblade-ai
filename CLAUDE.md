@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.48
+**Current version:** v4.49
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2755 drills** at v4.48.
+This is `node --test "test/*.test.js"` — **2773 drills** at v4.49.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,110 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE GUN WITH NO BUTTON (v4.49)
+
+**PLASMA BARREL SHOT is in Dash's gear list, prints three lines, and had NO
+ROUTE AT ALL on either board.**
+
+```
+Once per Turn Action - Remove a steam counter from this: Attack
+Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again
+This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
+```
+
+`parser.isWeapon` asked whether a weapon carries a **printed power** — a proxy
+for *"does this swing"*, asked at nine sites — and this card's power is a printed
+**FORMULA**, so it carries none: **the predicate that decides whether it swings
+refused it BECAUSE of the very line that says what it swings for.** And
+`parseHeroPower` refuses a payload of *"Attack"*, so the ability branch built
+nothing either.
+
+**FOUR MORE DEFECTS ONLY BECAME VISIBLE ONCE THE ROUTE EXISTED** — v3.72's rule,
+and the fifth time this cycle that making a mechanic legible is what found what
+was wrong with it (v4.46, v4.47).
+
+**THE DISCRIMINATOR IS THE QUOTE.** `weaponCost` matches a quoted GRANTED
+ability inside a card's own text — Cosmo's — which v3.83 recorded as 254 illegal
+0-power swings when judge asked the TYPE instead. Measured over 797 records, the
+old reading and this one differ on **Plasma Barrel Shot alone**, which is what
+makes it safe at every call site rather than a fourth predicate to migrate to.
+
+**AND `test/types.test.js` PINNED THE SPLIT AT FOUR, ARGUING "the four powerless
+ones need the ability route".** Right about three; about the fourth it was **a
+guard pinning an anomaly, which legitimises it** (v3.13). 4 → 3, and the one
+that left is pinned from BOTH ends — a drill that only lists who remains cannot
+see a departure (v4.12).
+
+**THE BASE POWER IS A PRINTED DEFINITION, NOT A PUMP.** Cosmo's is the precedent
+(v3.84), and the difference from v4.48's multipliers matters both ways: *"gets +N
+for each"* ADDS to a printed base, *"is equal to"* REPLACES it. It was an inline
+regex over raw text in `build.js` (v3.58) and **dead twice over** — inside
+`if(isWeapon(gr))`, false for the one card that needs it, *and* spelling *"you
+have boosted"* where the card prints *"you've"*, because `SYNONYMS` never reaches
+a raw scan (v3.36). **And the +1{p} counters ride on top**, which that branch
+dropped: the card says BASE (v3.78 from the other end).
+
+**THE SAME COUNTABLE IN TWO PRINTED GRAMMARS.** Overblast prints *"for each
+**TIME**"*, this prints *"the number of **TIMES**"* — plural after *"the number
+of"*, singular after *"for each"*. `perCountKey` tries the phrase then its
+singular head, so the vocabulary stays **CLOSED** (which STRINGS reach a key
+widens, never which keys exist) and the countable is not in the table twice.
+
+**A FREE ACTION POINT OFF THE WRONG LINE.** The Gun's go again is on its
+STEAM-BUILD line; the splitter breaks on the period so `Go again` sets `fx.ga` —
+the CARD's — and the swing kept a point the attack line never grants (CR 5.3.5).
+`effects.js`'s own comment said reading `fx.ga` *"for a weapon is exactly
+right"*, and it was — **measured at v3.44, when the one weapon that tells the two
+apart had no route at all.** `attackLineGa` is the reader and it **already
+existed** (Cutty Shark's shape, v3.58/v3.73); one record moves, and Mark of the
+Huntsman keeps its printed go again.
+
+**THE STEAM COST WAS ENFORCED ON ONE BOARD.** `weaponCost` has answered
+`needSteam` since it was written and the TRAINER has refused since v2.35;
+`judge.legal` asked nothing, so at the table the swing was **free and
+REPEATABLE** — sev-3, v3.01's shape, one limit over from `oncePerTurn` and
+`taps`. `execute` spends the counter on both boards, so the state was right and
+only the legality was missing.
+
+**ONE TILE, TWO ROUTES.** The gear branch chose by ELIMINATION — right for **32**
+of 33 ability-bearing pieces and wrong for the **one** with both, so whichever
+branch it landed in the other button did not exist, and the swing needs a counter
+only the ability puts there: **unplayable by construction.** The discriminator
+already existed — `equipPiece` keys the powCard `"gp"+uid` and `execute` finds
+the piece back off it — so `gp41` names the ability and a bare `41` the swing,
+with **a bare uid on a piece with no attack still meaning the ability**, so none
+of the other 32 callers move. Matched the way `execute` matches it, never by
+slicing the prefix: a real uid is a NUMBER, and the first draft refused with *"no
+such equipment"*.
+
+**AND A PAID COST THAT RESOLVED TO NOTHING.** The steam-build ability's printed
+gate is honoured at RESOLUTION, so activating it with a counter already there
+charged {r}{r} and the action point to log *"it already carries a steam
+counter"*. **v2.04's rule inverted**: an unpayable cost is rightly INERT; a PAID
+cost that does nothing is the player losing value for a play the rules should
+have refused first (v3.11). It is a legality in `abCostWhy`, the one body both
+boards call (v3.99).
+
+**WHAT IS RECORDED RATHER THAN HALF-BUILT** is that the steam-build powCard is
+written BY HAND by `equipPiece`. The payload has no parser reader at all —
+measured, `classifyClause` answers null for *"put a steam counter on this"*, for
+*"…on it"* and for the whole gated line — so building it needs THREE readers.
+`steam-build-powcard-handwritten`, with a probe that goes red the day the clause
+is read.
+
+**THE LADDER IS BYTE-IDENTICAL ON ALL FIFTEEN HEROES, AND THAT IS ABOUT THE
+LOADOUT.** `defaultPicks` takes the 2H Talishar in Dash's weapon slots, so the
+Gun is never worn in a driven game — v4.43's Hope Merchant's Hood exactly. A
+player picks it on the loadout screen, which is the route the drills seat.
+
+Measured: **1 record's parse moves, 0 tiers** (392 / 13 / 0); **21 sabotages, 21
+bite** — the silent one was my own control, which asserted about the PARSER, so a
+site refusing EVERY weapon's go again passed it; and the first fix for THAT
+asserted on `ap`, which fails against a correct engine because on an attack the
+point is settled at RESOLUTION (`pend.ga` is what resolves). **A drill bound too
+NARROW invented a finding** (v4.05): a 3000-character slice reported the tile's
+verb line missing from a body that contains it.
 
 ### "FOR EACH" IS THE WORDING THE DATABASE PRINTS (v4.48)
 

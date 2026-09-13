@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.48"; /* v4.48 - "FOR EACH" IS THE WORDING THE DATABASE PRINTS. Four pool cards print a value MULTIPLIED by something countable and every one read a FLAT +1, because the loose matchers drop everything after the pip - and the two ops this project had already built for the shape (perEquipDef, perBoost) were anchored on "where X is the number of", which NO record prints, so both had ZERO pool emitters and the drill pinning one wrote the stale wording out by hand. The charge cost had the same defect one reader over: nine records say "your HERO'S soul" and seven say "your soul", and the seven read nothing. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.49"; /* v4.49 - THE GUN WITH NO BUTTON. Plasma Barrel Shot is in Dash's gear list, prints three lines, and had NO ROUTE ON EITHER BOARD: `parser.isWeapon` asked whether a weapon carries a PRINTED POWER - a proxy for "does this swing" - and this card's power is a printed FORMULA, so the predicate that decides whether it swings refused it because of the very line that says what it swings for. Four more defects only became visible once the route existed (v3.72): a base power read by a doubly-dead inline regex, a free action point off the STEAM line's go again, a steam cost enforced on the trainer only, and one tile for two routes. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6500,17 +6500,53 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       </button>);
     const swing  = actAct(gr.uid);
     const defend = {t:"defend", uid:gr.uid};
+    /* ---- A PIECE CAN HAVE TWO ROUTES AND THE TILE HAS ONE TAP (v4.49) --
+       The TRAINER's `playables()` has two rows — one for the swing, one
+       for `gr.powCard` — and this had one, so whichever route `judge.legal`
+       chose the OTHER button did not exist here. Measured over the pinned
+       pool: 32 pieces print an ability alone (for those a bare uid IS the
+       ability, by elimination, and nothing below moves) and exactly ONE
+       prints both — Plasma Barrel Shot, whose swing needs a steam counter
+       its own ability is what puts there. With one tap that card is
+       unplayable by construction.
+
+       `"gp"+uid` NAMES THE ABILITY, which is the uid `equipPiece` already
+       gives the powCard and the one `execute` finds the piece back off —
+       so nothing is invented and `judge.legal` is still the only thing
+       that decides (v3.84's contract: the UI reads no card text). The
+       SWING is offered first because it is the play; the ability is the
+       fallback, which is exactly the state a player is in when the swing
+       is refused for want of steam. */
+    const ability = (gr.pow && gr.powCard) ? {t:"activate", uid:"gp"+gr.uid} : null;
     /* `cellAct`, never `act` — a local named `act` shadows the global actor
        helper for its whole closure. That is not hypothetical: the identical
        shape with `foe` in takeIt's clash loop crashed the trainer outright
        (v2.54). Nothing here needs the acting side today, which is exactly
        how the other one survived unnoticed for so long. */
-    const cellAct = mine(swing) ? swing : mine(defend) ? defend : null;
-    const verb = cellAct ? (cellAct.t==="activate" ? "swing" : blocking ? "stop defending" : "defend") : null;
+    const cellAct = mine(swing) ? swing
+                  : (ability && mine(ability)) ? ability
+                  : mine(defend) ? defend : null;
+    /* THE VERB NAMES THE ROUTE. It read "swing" for every `activate`, so
+       tapping any of the 32 ability-only pieces promised a swing the piece
+       does not print — and the ability's own card is what the two-tap peek
+       shows, so the word and the picture disagreed. */
+    const abTap = !!(cellAct && cellAct.t === "activate"
+                     && (cellAct === ability || !isWeapon(gr)));
+    const verb = cellAct ? (cellAct.t==="activate" ? (abTap ? "activate" : "swing")
+                  : blocking ? "stop defending" : "defend") : null;
     return (
       <button key={gr.uid} className={"g clip-sm"+(worn?" used":"")+(blocking?" sel":"")
-        +(peek&&peek.uid===gr.uid?" peek":"")+(cellAct?"":" dis")} style={style}
-        onClick={cellAct ? tapTwice(gr, verb, ()=>fire(cellAct)) : ()=>setZoom(gr)}>
+        /* THE HIGHLIGHT FOLLOWS THE PEEKED CARD, which may be the powCard —
+           the trainer's `gearBtn` matches both uids for the same reason, or
+           the tile you are peeking looks unpeeked (v2.52). */
+        +(peek&&(peek.uid===gr.uid||peek.uid===("gp"+gr.uid))?" peek":"")
+        +(cellAct?"":" dis")} style={style}
+        /* PEEK THE THING YOU ARE ABOUT TO COMMIT TO — the ability's own
+           card when the tap is the ability, which is the trainer's own
+           rule in `gearBtn` and the reason the word and the picture must
+           agree. `peekables()` has always carried the powCard. */
+        onClick={cellAct ? tapTwice(abTap && gr.powCard ? gr.powCard : gr, verb, ()=>fire(cellAct))
+                         : ()=>setZoom(gr)}>
         {blocking && <span className="defsel">⛨ DEF</span>}
         <span className={"tapwrap"+(spent&&/\btap\b|\{t\}/i.test(gr.tx||"")?" tapped":"")}>
           <CardFrame card={{...gr, def}} className="sm"/></span>

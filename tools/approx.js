@@ -332,6 +332,29 @@ const APPROX = {
       "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+
       "versions."},
 
+"steam-build-powcard-handwritten": {
+  status:"stated", cr:null, board:"both", since:"v4.49", swept:"v4.49",
+  claim:"Plasma Barrel Shot's steam-build ability is a powCard `build.js` writes "+
+        "BY HAND — cost, text and all — rather than one `parseHeroPower` read off "+
+        "the printed line. Its real clause reads `skip`.",
+  why:"THE PAYLOAD HAS NO READER AT ALL, which is why the hand-written piece is "+
+      "there: measured, `classifyClause` answers null for \"put a steam counter on "+
+      "this\", for \"put a steam counter on it\" and for the whole gated line, and "+
+      "`parseHeroPower` refuses the line for its condition. Building it properly "+
+      "needs THREE readers — a self-subject for `ctrPut`, a new `noSteam` "+
+      "condition, and a second conditional shape in `parseHeroPower`, which this "+
+      "file's own rule says not to relax. So it is v3.58's inline-reader shape "+
+      "left standing on purpose, and it is one card: Plasma Barrel Shot is the "+
+      "pool's only `needSteam` record.\n"+
+      "WHAT IS NOT WRONG is the behaviour. The printed gate (\"if this has NO "+
+      "steam counters\") is honoured by `effects.js` at resolution, and v4.49 made "+
+      "it a LEGALITY too in `abCostWhy` — before that the ability charged {r}{r} "+
+      "and an action point to log \"it already carries a steam counter\", which is "+
+      "v2.04's rule inverted: an unpayable cost is rightly INERT, a PAID cost that "+
+      "does nothing is the player losing value for a play the rules should have "+
+      "refused. So the gap is that the CLAUSE is unread and the card reports "+
+      "`part` — honest, visible, and the tier says so."},
+
 "charged-this-way-count": {
   status:"open", cr:null, board:"both", since:"v4.48", swept:"v4.48",
   claim:"V of the Vanguard prints \"Your attacks this combat chain get +1{p} for "+

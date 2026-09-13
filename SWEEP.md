@@ -43,13 +43,13 @@ At the beginning of your end phase, destroy this.
 Cards whose ruling exists but which still do not resolve in full.
 
 - **Ice Eternal** (part, 2/4 unread)
-- **Plasma Barrel Shot** (part, 2/4 unread)
 - **Silent Stilettos** (part, 2/3 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Crown of Dichotomy** (part, 1/2 unread)
 - **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
 - **Line Crossers** (part, 1/2 unread)
+- **Plasma Barrel Shot** (part, 1/4 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
 - **V of the Vanguard** (part, 1/3 unread)
@@ -73,9 +73,9 @@ can be overruled. Same discipline as the mention count.
 | Choice never offered | 6 |
 | No schedule to fire on | 5 |
 | Earned value denied | 5 |
-| Displayed total is wrong | 4 |
-| Unread, effect unknown | 4 |
+| Unread, effect unknown | 5 |
 | Ability inert — cost not modelled | 4 |
+| Displayed total is wrong | 3 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
 ### WRONG — 13 entries
@@ -98,8 +98,8 @@ can be overruled. Same discipline as the mention count.
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
 - **Plasma Barrel Shot** · tier `part` · dash
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
+  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
+    > Action - {r}{r}: If this has no steam counters, put a steam counter on it
 - **Roaring Beam** (2) · tier `part` · boltyn
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If there are no cards in your soul, return this to its owner's hand, then charge your soul.

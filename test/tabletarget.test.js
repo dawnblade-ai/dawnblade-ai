@@ -184,11 +184,19 @@ test("every attack-declaring route at the table carries one", () => {
      ATTACK, so CR 1.4.5 does not apply and `targetOf` is never asked
      about it.
 
-       `from:"hero"`  the hero power
-       `uid:b.uid`    an arena permanent's ABILITY (v4.47) — the arena tile
-                      offers the attack through `actAct` and the ability
-                      bare, because sending a target on an ability is a
-                      field `legal` never validates
+       `from:"hero"`   the hero power
+       `uid:b.uid`     an arena permanent's ABILITY (v4.47) — the arena tile
+                       offers the attack through `actAct` and the ability
+                       bare, because sending a target on an ability is a
+                       field `legal` never validates
+       `uid:"gp"+uid`  a GEAR piece's ability (v4.49). A piece can print
+                       both a weapon attack and an ability, and exactly one
+                       pool record does (Plasma Barrel Shot) — so the tile
+                       offers the swing through `actAct` and the ability by
+                       the powCard's own uid, which is the uid `equipPiece`
+                       gives it and the one `execute` finds the piece back
+                       off. Safe for the SAME fact as the other two: an
+                       ability is not an attack.
 
      THE EXEMPTION IS AN ALLOW-LIST AND NOT A WIDENING (v3.35, v3.80): a
      third shape that is not one of these two fails here, which is the
@@ -205,7 +213,8 @@ test("every attack-declaring route at the table carries one", () => {
   const outside = TABLE.slice(0, ai) + TABLE.slice(bodyEnd);
   const inline = [...outside.matchAll(/\{\s*t\s*:\s*"activate"[^}]*\}/g)].map(m => m[0].replace(/\s+/g, " "));
   const EXEMPT = [/from\s*:\s*"hero"/,
-                  /^\{\s*t\s*:\s*"activate",\s*uid\s*:\s*b\.uid\s*\}$/];
+                  /^\{\s*t\s*:\s*"activate",\s*uid\s*:\s*b\.uid\s*\}$/,
+                  /^\{\s*t\s*:\s*"activate",\s*uid\s*:\s*"gp"\s*\+\s*gr\.uid\s*\}$/];
   for(const a of inline)
     assert.ok(EXEMPT.some(rx => rx.test(a)),
       "an `activate` action is built outside `actAct` at the table: " + a
@@ -215,6 +224,8 @@ test("every attack-declaring route at the table carries one", () => {
      none — so the exemptions must actually be PRESENT. */
   assert.ok(inline.some(a => /from\s*:\s*"hero"/.test(a)),
     "the hero-power exemption is gone — the scan is passing on nothing");
+  assert.ok(inline.some(a => /uid:"gp"\+gr\.uid/.test(a)),
+    "the gear-ability exemption is gone — the scan is passing on nothing");
   assert.ok(inline.some(a => /uid:b\.uid/.test(a)),
     "the arena-ability exemption is gone — either the route left or the scan is aimed wrong");
   /* AND NEITHER MAY A `play`, which is defect 3 — the arsenal card built

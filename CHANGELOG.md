@@ -1,3 +1,180 @@
+## v4.49 — THE GUN WITH NO BUTTON
+
+**PLASMA BARREL SHOT is in Dash's gear list, prints three lines, and had NO
+ROUTE AT ALL on either board.**
+
+```
+Once per Turn Action - Remove a steam counter from this: Attack
+Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again
+This card's {p} is equal to 1 plus the number of times you've boosted this combat chain.
+```
+
+`parser.isWeapon` asked whether a weapon carries a **printed power** — a proxy
+for *"does this swing"*, asked at nine sites across `build.js`, `judge.js`,
+`advisor.js` and the trainer. This card's power is a printed **FORMULA**, so it
+carries none: **the predicate that decides whether it swings refused it BECAUSE
+of the very line that says what it swings for.** And `parseHeroPower` refuses a
+payload of *"Attack"* (that is the weapon reader's job), so the ability branch
+built nothing either. A Gun in the gear zone with not one button.
+
+**FIVE THINGS WERE WRONG AND FOUR ONLY BECAME VISIBLE ONCE THE ROUTE EXISTED**
+— v3.72's rule: building a SOURCE makes a defect reachable that was wrong the
+whole time it could not be reached.
+
+### 1 — THE PREDICATE ASKS THE QUESTION ITS CALLERS ASK
+
+`isWeapon` now asks whether the piece prints its own weapon attack, and **the
+discriminator is the QUOTE**: `weaponCost` matches a quoted GRANTED ability
+inside a card's own rules text — Cosmo's *"auras you control … are weapons with
+\"Once per Turn Action - {r}: Attack\""* — which v3.83 recorded as **254
+illegal 0-power swings** when judge asked the TYPE instead. Stripping quoted
+text first separates exactly Cosmo. **Measured over 797 records, the old reading
+and this one differ on Plasma Barrel Shot alone.**
+
+**`test/types.test.js` PINNED THE SPLIT AT FOUR AND ARGUED "the four powerless
+ones need the ability route".** Right about three — Death Dealer's printed
+ability is an arsenal put, Cosmo GRANTS an attack rather than having one, and
+Crucible's instant is reached only because the predicate says false — and about
+the fourth it was **a guard pinning an anomaly, which legitimises it** (v3.13).
+The pin is 4 → 3, and **the one that left is pinned from both ends**, because a
+drill that only lists who remains cannot see a departure.
+
+### 2 — THE BASE POWER IS A PRINTED DEFINITION, NOT A PUMP
+
+*"This card's {p} **IS EQUAL TO** 1 plus the number of times you've boosted this
+combat chain."* Cosmo's is the precedent (*"weapons with base {p} equal to their
+ward"*, v3.84) and the difference from v4.48's multiplier family matters both
+ways: *"gets +N for each"* **ADDS** to a printed base, *"is equal to"*
+**REPLACES** it.
+
+**IT WAS AN INLINE REGEX OVER RAW TEXT IN `build.js` — a card special-cased by
+its own words (v3.58) — AND IT WAS DEAD TWICE OVER**: it sat inside
+`if(isWeapon(gr))`, false for the one card that needs it, *and* it spelled
+*"you have boosted"* where the card prints *"you've"*. `SYNONYMS` never reaches
+a raw scan (v3.36), so the contraction alone would have been enough. So
+`effects.js`'s `_powBoost` branch had never once run: dead rules code that reads
+like a rule (v4.11).
+
+**AND THE COUNTERS RIDE ON TOP, which that branch dropped.** The card says
+BASE, so a +1{p} counter is not part of it (v3.78's rule from the other end) —
+and the aura branch beside it has always added them.
+
+**THE SAME COUNTABLE IN TWO PRINTED GRAMMARS.** Overblast says *"for each
+**TIME** you have boosted"*; this says *"the number of **TIMES** you have
+boosted"* — the head noun is plural after *"the number of"* and singular after
+*"for each"*. `perCountKey` tries the phrase and then its singular head, so **the
+vocabulary stays CLOSED** (it widens which STRINGS reach a key, never which keys
+exist) and the countable is not written into the table twice, which is where
+drift starts.
+
+### 3 — A FREE ACTION POINT OFF THE WRONG LINE
+
+The Gun's go again is printed on its **STEAM-BUILD** line. The clause splitter
+breaks on the period, so `Go again` arrives as its own clause and sets `fx.ga` —
+the CARD's — and driven, **the swing kept an ACTION POINT** the attack line
+never grants (CR 5.3.5). STRONGER than printed.
+
+`effects.js`'s own comment said reading `fx.ga` *"for a weapon is exactly
+right"* — and it was, **measured at v3.44, when the one pool weapon that tells
+the two apart had no route at all.** `attackLineGa` is the reader and **it
+already existed**, built for Cutty Shark, who prints two activated abilities
+where only one carries the keyword (v3.58, v3.73). Measured over the pool's 13
+swinging weapons, **exactly one record moves**: Mark of the Huntsman's go again
+IS on its attack line and is kept.
+
+### 4 — THE STEAM COST WAS ENFORCED ON ONE BOARD
+
+`weaponCost` has answered `needSteam` since it was written and the **TRAINER**
+has refused a swing without one since v2.35. `judge.legal` asked nothing, so at
+the table the swing was **free and REPEATABLE**: sev-3 *illegal play allowed*.
+v3.01's shape, one limit over from `oncePerTurn` and `taps` — and unreachable
+until this version, which is why it went unseen. `execute` spends the counter on
+both boards and always has, so the state was right and only the legality was
+missing.
+
+### 5 — ONE TILE, TWO ROUTES
+
+The gear branch chose by **ELIMINATION** — `isWeapon` false meant the ability.
+Right for **32** of the pool's 33 ability-bearing pieces and wrong for the **one**
+with both, so whichever branch it landed in the OTHER button did not exist at
+the table — and the swing needs a steam counter that only the ability puts
+there, which makes the card **unplayable by construction**.
+
+**THE DISCRIMINATOR ALREADY EXISTED**: `equipPiece` keys the powCard `"gp"+uid`
+and judge's own comment says `execute` *"finds the piece back off the powCard's
+uid"*. So an action naming `gp41` is the ABILITY and a bare `41` is the SWING,
+and **a bare uid on a piece with no attack still means the ability** —
+elimination stays the DEFAULT and is now only a default, so none of the other 32
+callers move. The trainer has always said which by passing the powCard itself;
+at the table the action carries only a uid, so the uid is where it has to be
+said. Matched the way `execute` matches it (`("gp"+x.uid) === card.uid`), never
+by slicing the prefix — a real uid is a NUMBER, and the first draft refused with
+*"no such equipment"*.
+
+### AND A PAID COST THAT RESOLVED TO NOTHING
+
+The steam-build ability prints *"**IF THIS HAS NO STEAM COUNTERS**, put a steam
+counter on it"* and `effects.js` honours that at RESOLUTION — it logs *"it
+already carries a steam counter"* and puts nothing. So activating it with a
+counter already there charged {r}{r} **and** the action point for a log line.
+**v2.04 settled the opposite case and this is its mirror**: an unpayable cost is
+deliberately INERT; a PAID cost that does nothing is the player losing value for
+a play the rules should have refused before they paid (v3.11). It is a legality
+in `abCostWhy` — the one body both boards call (v3.99) — and `fuzz.test.js`
+holds the property it rests on: `legal` and `reduce` agree.
+
+**WHAT IS RECORDED RATHER THAN HALF-BUILT** is that the steam-build powCard is
+written BY HAND by `equipPiece` — v3.58's shape left standing on purpose,
+because the payload has no parser reader at all: measured, `classifyClause`
+answers null for *"put a steam counter on this"*, for *"…on it"* and for the
+whole gated line, and `parseHeroPower` refuses the line for its condition.
+Building it properly needs **three** readers. `steam-build-powcard-handwritten`
+in `tools/approx.js`, with a probe that goes red the day the clause is read.
+
+### TWO FEED LINES
+
+- **`"You swings Plasma Barrel Shot for 3"`** — `game.sv` has existed since
+  v4.15 for exactly this, taking the SIDE rather than the name so a caller
+  cannot read one seat's name and agree with the other's. Verified in both
+  directions: a named seat gets the third person.
+- **`"(printed 0)"`** beside a perfectly correct 1 — the feed teaching the
+  player that something added a point that never did. `effects.js`'s own comment
+  names this shape for the AURA case one card over, which is why the fix is the
+  same line. `npm run sweep`'s *"Displayed total is wrong"* went **4 → 3**.
+- And the table's tile verb said **"swing"** for every `activate`, so tapping any
+  of the 32 ability-only pieces promised a swing the piece does not print —
+  while the two-tap peek shows the ABILITY's card, so the word and the picture
+  disagreed.
+
+### MEASURED
+
+- **Exactly 1 pool record's parse moves and 0 tiers move** — 392 full / 13 part
+  / 0 none, unchanged. Plasma Barrel Shot stays `part`, honestly: its
+  steam-build clause still reads `skip`.
+- **The ladder is BYTE-IDENTICAL on all fifteen heroes at three seeds**, and the
+  reason is the LOADOUT rather than the route: `defaultPicks` takes the 2H
+  Talishar in Dash's weapon slots, so the Gun is never worn in a driven game —
+  v4.43's Hope Merchant's Hood situation exactly. A player picks it on the
+  loadout screen, which is the route the drills seat explicitly.
+- **21 sabotages, 21 bite.** The one that came back silent was my own control:
+  it asserted about the PARSER, so a swing site refusing EVERY weapon's go again
+  passed it perfectly. It drives both cards now and asserts the PAIR — and the
+  first draft of that fix asserted on `ap`, which fails against a correct engine
+  because on an ATTACK the action point is settled at RESOLUTION, not at
+  declaration. `pend.ga` is what resolves.
+- **Six pins moved as deliberate edits**, each reporting the fix:
+  `test/types.test.js` and `test/wproute.test.js` (the split, 4 → 3, pinned from
+  both ends), `test/fxcensus.test.js` (`powFormula`), `test/parser.test.js`
+  (whose fixture was a Weapon with no rules text, which no real weapon is),
+  `test/tabletarget.test.js` (a third named exemption — an ability is not an
+  attack), and the approximation ledger (34 records, 14 stated).
+- **A drill bound that was too narrow invented a finding** (v4.05): the tile
+  scan used a 3000-character slice and reported the verb line missing from a
+  body that contains it. Bounded at the next same-indent declaration, with the
+  body length asserted.
+- 2773 drills, 0 fail, 5 skipped; scenes 90/90 (two added, both proven to bite);
+  fairness clean; `crindex --check` exit 0; both `text/babel` blocks compile.
+
 ## v4.48 — "FOR EACH" IS THE WORDING THE DATABASE PRINTS
 
 Four pool cards print a value **MULTIPLIED** by something countable, and every
