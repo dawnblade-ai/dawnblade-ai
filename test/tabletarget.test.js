@@ -179,9 +179,20 @@ test("every attack-declaring route at the table carries one", () => {
     "the two helpers that carry the target are gone");
   /* NO ACTIVATE MAY BE BUILT OUTSIDE `actAct`, or it is defect 2 again —
      the swing and the arena tile each built their own and neither said a
-     target. The HERO POWER is the one exemption and it is named rather
-     than matched loosely: a hero ability is not an attack, so `targetOf`
-     is never asked about it.
+     target. TWO exemptions, and BOTH are named rather than matched
+     loosely, because what makes them safe is the same fact: neither is an
+     ATTACK, so CR 1.4.5 does not apply and `targetOf` is never asked
+     about it.
+
+       `from:"hero"`  the hero power
+       `uid:b.uid`    an arena permanent's ABILITY (v4.47) — the arena tile
+                      offers the attack through `actAct` and the ability
+                      bare, because sending a target on an ability is a
+                      field `legal` never validates
+
+     THE EXEMPTION IS AN ALLOW-LIST AND NOT A WIDENING (v3.35, v3.80): a
+     third shape that is not one of these two fails here, which is the
+     moment somebody states whether it declares an attack.
 
      `actAct`'s OWN two branches are excluded by bounding its body, because
      it is the thing every other route is required to call — and its
@@ -193,10 +204,19 @@ test("every attack-declaring route at the table carries one", () => {
   const bodyEnd = ai + 1 + (rest.match(/\n  const /) || {index: 400}).index;
   const outside = TABLE.slice(0, ai) + TABLE.slice(bodyEnd);
   const inline = [...outside.matchAll(/\{\s*t\s*:\s*"activate"[^}]*\}/g)].map(m => m[0].replace(/\s+/g, " "));
+  const EXEMPT = [/from\s*:\s*"hero"/,
+                  /^\{\s*t\s*:\s*"activate",\s*uid\s*:\s*b\.uid\s*\}$/];
   for(const a of inline)
-    assert.ok(/from\s*:\s*"hero"/.test(a),
+    assert.ok(EXEMPT.some(rx => rx.test(a)),
       "an `activate` action is built outside `actAct` at the table: " + a
       + " — a swing or an arena attack must go through it, or it declares the hero silently");
+  /* BOTH HALVES OR THE CENSUS PROVES NOTHING (v3.98). A scan that only
+     ever finds exempt literals passes vacuously on a table that built
+     none — so the exemptions must actually be PRESENT. */
+  assert.ok(inline.some(a => /from\s*:\s*"hero"/.test(a)),
+    "the hero-power exemption is gone — the scan is passing on nothing");
+  assert.ok(inline.some(a => /uid:b\.uid/.test(a)),
+    "the arena-ability exemption is gone — either the route left or the scan is aimed wrong");
   /* AND NEITHER MAY A `play`, which is defect 3 — the arsenal card built
      its own action and so declared the hero whatever the rail said. The
      scan needs BOTH verbs: aimed at `activate` alone it came back silent

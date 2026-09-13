@@ -373,8 +373,28 @@ test("THE TRAINER ASKS `abWindow` AND REFUSES THE WRONG WINDOW", {skip: false}, 
     "…and must NOT tell it to close the chain first — the open chain is the only time it is legal");
   assert.ok(/abWindow = DawnParser\.abWindow/.test(src),
     "the trainer must ask the ONE reader, not re-derive the window");
-  assert.ok(/_attackRx:pw\.kind==="attackRx"/.test(src),
+  /* AND THE THIRD POWCARD BUILDER STAMPS THE WINDOW TOO (v3.63's rule).
+     DRIVEN as of v4.47 rather than grepped: the builder moved into
+     `build.js` so both boards could reach it, and a source slice rots
+     where a rule moves (v3.22, v3.28, v3.94). Stamped off it, an arena
+     permanent printing "Attack Reaction - …" is built with NO window and
+     is therefore offered at action speed — the sev-3 v3.63 removed from
+     `build.js`, waiting in a third place. Bait is the pool's only such
+     record and nothing can create it, so this is a guard; the fixture is
+     synthetic for that reason (v3.73). */
+  const BD = require("../engine/build.js");
+  const rx = BD.boardPow({uid: 88, kind: "token", card: {name: "Probe Snare", uid: 88,
+    tt: "Generic Token - Aura", ty: ["Generic", "Aura"],
+    tx: "Attack Reaction - 0: Target attack gets +1{p}"}});
+  assert.ok(rx, "the arena builder reads an attack-reaction ability");
+  assert.equal(rx._attackRx, true,
     "boardPow must stamp the window flag too, or an arena ability is offered at action speed");
+  assert.equal(rx._instant, false, "…and the two windows are told apart");
+  const inst = BD.boardPow({uid: 89, kind: "token", card: {name: "Probe Flask", uid: 89,
+    tt: "Generic Token - Item", ty: ["Generic", "Item"],
+    tx: "Instant - Destroy this: Gain {r}{r}"}});
+  assert.equal(inst._instant, true);
+  assert.equal(inst._attackRx, false);
 });
 
 test("THE CREDIT IS CONDITIONAL — the clauses that refuse stay `skip`", {skip}, () => {

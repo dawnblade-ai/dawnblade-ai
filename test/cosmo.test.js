@@ -352,7 +352,7 @@ test("DRIVEN: without Cosmo the aura cannot attack at all", {skip}, () => {
   const t = table({noCosmo: true});
   const why = J.legal(t.g, {t: "activate", uid: t.uid}, 0);
   assert.ok(why != null, "it must be refused");
-  assert.match(String(why), /prints no attack to activate/);
+  assert.match(String(why), /prints no attack or ability to activate/);
 });
 
 test("DRIVEN: it is once per turn", {skip}, () => {

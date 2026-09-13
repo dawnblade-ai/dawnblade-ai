@@ -48,6 +48,13 @@ const TAPPED = "Bravo — hero power: Bravo, Flattering Showman taps to pay — 
              + "tapped until their own untap step (CR 4.4.3d).";
 const UNTAP  = "(d) Bravo, Flattering Showman untaps.";
 const POWER  = "Kayo tapped to power Turn to Mindfire — the rider resolves.";
+/* THE THIRD ROUTE (v4.47) — an ARENA permanent's own `{t}`, which was
+   charged on NEITHER board until that version. Verbatim from a driven
+   game; it is deliberately a DIFFERENT sentence from the hero's, because
+   what taps is the permanent rather than the hero and the feed must say
+   which. */
+const ARENA  = "Concealed Object: Lyath Goldmane taps it to pay — "
+             + "untaps in their own untap step (CR 4.4.3d).";
 
 /* Asked of the SOURCE's own pattern rather than restated, or this drill is
    a second copy of the thing it checks (v4.25). */
@@ -63,6 +70,11 @@ test("the tap counter spells the engine's own tap lines", () => {
   const rx = tapPattern();
   assert.ok(rx.test(TAPPED), "the activation route's line must count");
   assert.ok(rx.test(POWER),  "the pay sheet's line is the same event by another route");
+  assert.ok(rx.test(ARENA),
+    "and the ARENA permanent's own {t} (v4.47) — one cost verb, three routes. It " +
+    "reads ZERO on the ladder because `sparring.act` declines an arena ability " +
+    "(v4.24), and a counter that cannot SEE its event is the defect this block " +
+    "was rewritten to remove");
 });
 
 /* BOTH HALVES (v3.98) — a pattern that counts nothing passes the refusal

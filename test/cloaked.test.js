@@ -258,8 +258,13 @@ test("both activation branches ask the SAME cost body", {skip}, () => {
   /* THE DEFINITION MATCHES THE CALL AND MUST BE EXCLUDED (v3.24, where
      the same slip made a call-site guard match its own definition and
      pass on a dropped argument). Count the CALLS. */
-  assert.equal((src.match(/= abCostWhy\(sd, ab\)/g) || []).length, 2,
-    "…called from BOTH the hero branch and the gear branch");
+  /* THREE BRANCHES AS OF v4.47 — the hero's, the gear piece's and the
+     ARENA permanent's. A branch that does not call it is a cost nobody
+     refuses, which is the sev-1 category wearing a legal move's clothes;
+     the count is a PIN, so a fourth activation route is a deliberate edit
+     in both places (v4.32's own rule about a pinned number). */
+  assert.equal((src.match(/= abCostWhy\(sd, ab\)/g) || []).length, 3,
+    "…called from ALL THREE activation branches — hero, gear and arena");
   assert.equal((src.match(/PR\.abSoulCost\(/g) || []).length, 1,
     "and the readers are asked in that body ONLY — a second site is the drift");
   assert.equal((src.match(/PR\.abDestroyBoard\(/g) || []).length, 1);

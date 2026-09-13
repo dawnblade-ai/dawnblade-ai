@@ -201,7 +201,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      half-built, because the four defects that version fixed were all
      UI-to-reducer wiring against routes the reducer already had, and this
      one is an engine build. */
-  assert.equal(Object.keys(APPROX).length, 31, "record count moved");
+  /* 31 -> 32 AT v4.47: `arena-ability-no-table-route` was BUILT and is
+     `arena-ability-routed-at-the-table` (closed, probe turned round), and
+     `arena-ability-policy-declines` is the new `stated` record beside it —
+     the route works and the POLICY declines it, which is v4.24's standing
+     rule and a number about the policy rather than the route. */
+  assert.equal(Object.keys(APPROX).length, 32, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -212,7 +217,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 11 -> 12 stated AT v4.36: `prevention-target-and-source`, which no
      tool here can see — the fairness sweep's three RESTRICTION-DROPPED
      checks are all about attack buffs. */
-  assert.equal(n("stated"), 12, "stated count moved");
+  /* 12 -> 13 stated AT v4.47: `arena-ability-policy-declines`. */
+  assert.equal(n("stated"), 13, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -220,8 +226,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 8 -> 7 open, 10 -> 11 closed AT v4.35: `aura-ward-prevention-pool`
      was ANSWERED at v4.34 and the record survived its own version by one,
      because its probe drove nothing. */
-  assert.equal(n("open"),    7, "open count moved");
-  assert.equal(n("closed"), 12, "closed count moved");
+  /* 7 -> 6 open, 12 -> 13 closed AT v4.47: the arena-ability route was
+     built one version after it was recorded, and its probe went RED the
+     moment the branch landed — which is the reversal an `open` record
+     exists to force (v4.02). */
+  assert.equal(n("open"),    6, "open count moved");
+  assert.equal(n("closed"), 13, "closed count moved");
 });
 
 /* ============================================================
@@ -297,31 +307,78 @@ probe("prevention-target-and-source", () => {
    permanents of different ward spends them in exactly one sequence, and a
    prompt would let it spend them in another. */
 /* An arena permanent's activated ABILITY is trainer-only. */
-probe("arena-ability-no-table-route", () => {
-  /* IT DRIVES `legal`, not a grep (v4.36's census): a source scan for the
-     missing branch would pass by finding nothing exactly as a real gap
-     does. The fixture is an Energy Potion — an Item whose whole printed
-     line is `Instant - Destroy this: Gain {r}{r}`, which `parseHeroPower`
-     reads in full, so what refuses is the ROUTE and not the text. */
+probe("arena-ability-routed-at-the-table", () => {
+  /* THE PROBE IS TURNED ROUND AT v4.47 (v4.02's two directions). It used
+     to assert the DEVIATION — `legal` refusing "prints no attack to
+     activate" — and went red the day the branch arrived, which is the
+     whole point of an `open` record. It asserts the BRANCH now, so a
+     regression is a red drill.
+
+     IT DRIVES `legal`, not a grep (v4.36's census): a source scan would
+     pass by finding nothing exactly as a real gap does. The fixture is an
+     Energy Potion — an Item whose whole printed line is `Instant - Destroy
+     this: Gain {r}{r}`, which `parseHeroPower` reads in full, so what was
+     refusing was the ROUTE and not the text. */
   const pot = {uid: 9403, name: "Energy Potion", tt: "Generic Item",
                ty: ["Generic", "Item"], tx: "Instant - Destroy this: Gain {r}{r}"};
   const g0 = H.state({res: 3}, {hp: 20});
   const g = {...g0, phase: "action", step: "layer", priority: 0, turnPlayer: 0, actor: 0};
   g.sides[0] = {...g.sides[0], ap: 1, board: [{uid: 9403, kind: "item", card: pot}]};
-  const why = J.legal(g, {t: "activate", uid: 9403}, 0);
-  assert.equal(why, "Energy Potion prints no attack to activate",
-    "the table now routes an arena ABILITY — close this record and delete the probe, " +
-    "which is what an `open` record is for (v4.02)");
-  /* AND THE ATTACK ROUTE BESIDE IT WORKS, which is the control: without it
-     a `legal` that refused everything in the arena would satisfy the
-     assertion above and say nothing about the gap (v3.98). */
+  assert.equal(J.legal(g, {t: "activate", uid: 9403}, 0), null,
+    "the table has lost the arena-ability route again — v3.01's shape, restored");
+  /* AND IT RESOLVES, because a `legal` that permits and a `reduce` that
+     does nothing is the sev-1 category wearing a legal move's clothes
+     (v3.50, and `fuzz.test.js`'s own agreement property). */
+  const out = J.reduce(g, {t: "activate", uid: 9403}, 0);
+  assert.equal(out.error, null, "…and `reduce` agrees with `legal`");
+  assert.equal(out.state.sides[0].res, 5, "the ability RESOLVED — +2 resource");
+  assert.equal(out.state.sides[0].board.length, 0, "…and the destroy cost was paid");
+  /* AND THE ATTACK ROUTE BESIDE IT STILL WORKS, which is the control: a
+     `legal` that permits everything in the arena satisfies the assertion
+     above and says nothing (v3.98 — ask for the refusal too). */
   const ally = {uid: 9404, name: "Probe Ally", tt: "Pirate Ally", ty: ["Pirate", "Ally"],
                 power: 2, life: 3, cost: 0, tx: "Action - {r}: Attack"};
   const g2 = {...g};
   g2.sides = g.sides.slice();
   g2.sides[0] = {...g.sides[0], board: [{uid: 9404, kind: "ally", card: ally, life: 3}]};
   assert.equal(J.legal(g2, {t: "activate", uid: 9404}, 0), null,
-    "the arena ATTACK route stopped working, so the refusal above says nothing");
+    "the arena ATTACK route stopped working");
+  /* AND A PERMANENT THAT PRINTS NEITHER IS STILL REFUSED — the other half,
+     or the branch is a widening rather than a reading. */
+  const inert = {uid: 9405, name: "Probe Sigil", tt: "Generic Token - Aura",
+                 ty: ["Generic", "Aura"], tx: "Ward 1"};
+  const g3 = {...g};
+  g3.sides = g.sides.slice();
+  g3.sides[0] = {...g.sides[0], board: [{uid: 9405, kind: "token", card: inert}]};
+  assert.match(String(J.legal(g3, {t: "activate", uid: 9405}, 0)),
+    /prints no attack or ability to activate/,
+    "a permanent printing neither must still refuse, and the refusal must name both");
+});
+
+probe("arena-ability-policy-declines", () => {
+  /* THE DEVIATION IS THAT `sparring.js` NEVER PROPOSES ONE, and that is a
+     stated choice (v4.24) rather than a gap. What this asserts is the
+     STATE the claim describes: the policy reads no card text, so it cannot
+     price a cost paid with the permanent, and the file names no such
+     route. It goes red the day somebody wires one — which is the moment to
+     re-measure the ladder on both sides (v4.40).
+
+     A SOURCE SCAN IS HONEST HERE because the claim is about ABSENCE, and
+     absence is the one thing a driven probe cannot show: a policy that
+     returns nothing for a board with an ability on it is indistinguishable
+     from one that never looked. Both halves are asked. */
+  const src = require("fs").readFileSync(
+    require("path").join(__dirname, "..", "engine", "sparring.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/boardAbilityOf/.test(src),
+    "the policy now asks for an arena ABILITY — close this record and re-measure the " +
+    "ladder at three seeds on BOTH sides before quoting any move (v4.40)");
+  /* THE CONTROL: it DOES ask for the arena ATTACK, so the scan is alive
+     and the absence above is about this route rather than about the scan
+     (v4.00, v3.81 — a scan aimed at the wrong shape reports nothing
+     exactly as a real absence does). */
+  assert.ok(/boardAttackOf/.test(src),
+    "the policy stopped asking for the arena ATTACK either — the scan is aimed wrong");
 });
 
 probe("ward-spend-order", () => {

@@ -111,8 +111,8 @@ const APPROX = {
       "other (v3.01). The TARGET half is separately near-harmless: preventing "+
       "damage to an opponent is never a line anyone takes."},
 
-"arena-ability-no-table-route": {
-  status:"open", cr:null, board:"table", since:"v2.35", swept:"v4.45",
+"arena-ability-routed-at-the-table": {
+  status:"closed", cr:null, board:"both", since:"v2.35", swept:"v4.47",
   claim:"An ARENA permanent's activated ABILITY is routable on the TRAINER only. "+
         "`judge.legal`'s arena branch reads `allyAttack`/`auraAttackOf` and refuses "+
         "anything else with \"X prints no attack to activate\", so at the table an "+
@@ -133,8 +133,36 @@ const APPROX = {
       "— and an arena-ability branch in both `legal` and `doActivate` beside the "+
       "attack one. `execute` already finds a piece back off a powCard uid for a "+
       "destroy-cost, and every one of these seven prints exactly that cost. "+
-      "AND THE PROBE ASSERTS THE DEVIATION (v4.02), so it goes RED the day the branch "+
-      "arrives and this record has to be corrected rather than left standing."},
+      "BUILT AT v4.47, and the probe is TURNED ROUND (v4.02): it asserts the branch "+
+      "now, so a regression is a red drill rather than a stale sentence. `build.boardPow` "+
+      "is the shared reader — build.js's THIRD powCard builder, which the other two "+
+      "comment blocks have named since v3.79 — and the three legalities the gear branch "+
+      "asks (`abCostWhy`, `activateIfOk`, `abWindow`) are asked out of the same bodies. "+
+      "`judge.boardAbilityOf` is `boardAttackOf`'s sibling, so the arena tile can offer it "+
+      "without reading card text. AND BUILDING IT EXPOSED A SECOND DEFECT ON BOTH BOARDS: "+
+      "Concealed Object prints `Instant - {t}:` and nothing charged the tap, so driven "+
+      "three times on one turn it queued +1/+2/+3 for free — see "+
+      "`arena-ability-policy-declines` for what is deliberately left to the seat."},
+
+/* THE POLICY DOES NOT ACTIVATE ONE, AND THAT IS v4.24's STANDING RULE. */
+"arena-ability-policy-declines": {
+  status:"stated", cr:null, board:"both", since:"v4.47", swept:"v4.47",
+  claim:"`sparring.act` never activates an arena permanent's ABILITY, so the route reads "+
+        "ZERO firings on the 210-game ladder however well it works. The table offers it "+
+        "(a human taps the arena tile) and so does the trainer; what has no caller is the "+
+        "POLICY.",
+  why:"v4.24's STANDING RULE: a price this policy cannot weigh is DECLINED, because "+
+      "declining can never make the seat stronger than printed. Six of the seven readable "+
+      "records pay with the PERMANENT ITSELF — `Action - {r}{r}, destroy this: Draw a "+
+      "card` — and whether a Gold is worth a card is a judgement about card text, which "+
+      "`sparring.js` reads none of by contract. v4.38 measured what happens when this "+
+      "policy is allowed a timing judgement it cannot make: three heroes with no attack "+
+      "reaction at all went 22 -> 4, 15 -> 2 and 16 -> 3. "+
+      "SO THE ZERO IS A NUMBER ABOUT THE POLICY, NOT THE ROUTE (v4.41's Burn Up, v4.33's "+
+      "charge, v4.29's forced exits) — and the route is DRIVEN instead, by "+
+      "`test/arenaability.test.js` through `judge.reduce`, so it is not left with no "+
+      "caller at all (v3.50). Asking judge would be in contract (`boardAbilityOf` exists "+
+      "for exactly that, v3.84's rule) the day somebody decides the ranking."},
 
 "ward-spend-order": {
   status:"stated", cr:"CR 4.1.8a", board:"both", since:"v4.34", swept:"v4.34",

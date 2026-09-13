@@ -537,6 +537,83 @@ function halveCard(c, on){
   return out;
 }
 
+/* ---- THE ACTIVATED ABILITY OF A PERMANENT IN THE ARENA (v2.35, here at
+   v4.47) -----------------------------------------------------------------
+
+   THE THIRD POWCARD BUILDER, AND THE ONLY ONE THAT LIVED IN A BOARD.
+   `equipPiece` above and `buildSide`'s HPOW are the other two, and both
+   their comment blocks have named this one by name since v3.79 — "there
+   are three (hero, here, and `boardPow`)" — while it sat inside `Battle`
+   as a React closure. So v3.63's rule (when you add a flag to one powCard
+   builder, grep for the others) was a grep across two files, one of which
+   no drill could reach, and it had already cost the flags below.
+
+   MOVING IT IS WHAT GIVES THE TABLE THE ROUTE. `judge.legal`'s arena
+   branch read `allyAttack`/`auraAttackOf` and refused everything else
+   with "prints no attack to activate", so an arena permanent's ABILITY
+   could not be activated at the table at all — v3.01's shape, and the
+   last of the family (v3.04's seventeen equipment abilities, v3.39's hero
+   branch, v3.44's ally, v3.84's aura). Measured over the pinned pool: 11
+   records print one and SEVEN have a line `parseHeroPower` reads —
+   Concealed Object, Energy Potion, Timesnap Potion, and Gravy Bones'
+   whole treasure economy (Gold, Silver, Copper, Diamond).
+
+   LAZY, NOT STAMPED. A gear piece is equipped once at the deal, so its
+   powCard rides on the entry; a board entry arrives whenever a card
+   resolves or a token is minted, so building it on demand is what keeps
+   every board write from having to carry one. Keyed `"bp"+uid` so it
+   cannot collide with gear's `"gp"+uid` (v2.71's namespacing).
+
+   AN ALLY IS NOT ONE OF THESE. Its attack is an activated ability read by
+   `parser.allyAttack` and routed through the ATTACK path (v3.44), so this
+   answers null for one and both boards try the ally route first. */
+function boardPow(b){
+  if(!b || !b.card || b.kind === "ally" || !b.card.tx) return null;
+  const pw = parseHeroPower(b.card.tx, true);
+  if(!pw) return null;
+  return Object.assign({name: b.card.name + " — ability", pitch: 0, cost: pw.cost,
+    power: null, def: null, tt: "Arena Ability", kw: pw.ga ? ["Go again"] : [],
+    tx: pw.eff, sd: pw.sd,
+    /* THE WINDOW FLAG BELONGS ON EVERY ROUTE THAT BUILDS A POWCARD
+       (v3.63). Left off, an arena permanent printing an "Attack Reaction
+       - …" ability is built with no window at all and is therefore
+       offered at ACTION speed — the sev-3 the anchor fix removed from
+       `build.js`, waiting in a third place. Bait is the pool's only such
+       record and nothing can create it, so this is a guard rather than a
+       fix; `fxParse` credits the clause as read, and a credit with no
+       route is the no-op blind spot. */
+    _instant: pw.kind === "instant", _attackRx: pw.kind === "attackRx",
+    img: b.card.img, dbImg: b.card.dbImg, _gearArt: true, uid: "bp" + b.uid},
+    /* ---- THE COSTS THAT GENERALISE, AND THE TWO THAT DO NOT ----------
+       v3.63's rule, SIXTH outing, and the first time answering it needed
+       a measurement in both directions rather than a copy. `equipPiece`
+       stamps five cost flags and this builder stamped NONE of them, so a
+       cost read by the parser was charged on the gear route and free on
+       this one.
+
+       THREE OF THE FIVE ARE ZONE-AGNOSTIC. `execute` charges the soul
+       cost out of `sd.soul`, the discard out of `sd.hand` and the named
+       permanent off the board — none of which is a fact about GEAR — and
+       `judge.abCostWhy` refuses each before the ability resolves (v3.11),
+       out of the one body both branches call. So they are stamped, and
+       they are GUARDS: measured over the pinned pool, no arena record
+       prints any of the three.
+
+       AND TWO OF THEM WOULD BE WRONG RATHER THAN LATENT. `_selfBanish`
+       carries `_banishGear` and `_flipUp` carries `_flipGear`, and both
+       `execute` and `abCostWhy` resolve those uids against `sd.gear` — so
+       an arena permanent stamped with either has its ability refused
+       forever (the flip, which can never find a face-down piece) or
+       banishes nothing at all (the self-banish, whose entry is on the
+       board). Half-building a cost is worse than the honest gap (v3.23),
+       so they are left off and `test/arenaability.test.js` fails the day
+       a pool record prints one. */
+    pw.soul ? {_soulCost: pw.soul} : {},
+    pw.discardCost ? {_discardCost: pw.discardCost.filter,
+                      _discardSubject: pw.discardCost.subject} : {},
+    pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {});
+}
+
 /* ---- WHAT MAKES A RESOLVED RECORD AN EQUIPPED PIECE (v4.15) --------
    Extracted from `buildSide`'s gear loop, unchanged, because there is now
    a SECOND caller: Orb-Weaver Spinneret prints "Equip a Graphene
@@ -897,7 +974,8 @@ const PASSIVE_TYPE = {
   startItem: "object", startGrave: "object"
 };
 
-return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, buildSide, buildSideDefault,
+return {ARMOR_Z, HAND_Z, gearSlots, applyPick, defaultPicks, equipPiece, boardPow,
+  buildSide, buildSideDefault,
   halveCard,
         buildSeed, buildMatch, buildVanilla, heroAbilityLine, heroAbilities,
         agentsOf, PASSIVES, PASSIVE_TYPE};

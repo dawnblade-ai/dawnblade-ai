@@ -2583,6 +2583,44 @@ function makeEffects(ctx){
       n = L(n, `${card.name}: ${sv(act(n), "tap")} to pay — `
              + "tapped until their own untap step (CR 4.4.3d).");
     }
+    /* ---- AND AN ARENA PERMANENT THAT PAYS {t} IS TAPPED TOO (v4.47) ----
+       THE SAME COST, ONE ZONE OVER, AND IT WAS CHARGED ON NEITHER BOARD.
+       Concealed Object prints "Instant - {t}: Target attack gets +1{p}" —
+       Lyath's, twice — and the trainer's board route marked nothing at
+       all, so driven three times on one turn it queued +1, +2, +3 for
+       free. STRONGER than printed, unbounded, the direction that steals
+       games; and `tier: full` throughout, because the clause IS read, so
+       coverage is blind and the one-sided sweep is looking the other way.
+
+       v4.46 FOUND THE HERO'S HALF AND THIS IS THE THIRD ROUTE. That
+       version made `uid === "hpow"` the discriminator because `from ===
+       "hero"` also carries every non-weapon EQUIPMENT ability; `from ===
+       "board"` is its own route and needs no such test, but it does need
+       the same reading — the PERMANENT's own printed line, because
+       `build.boardPow` strips the cost prefix off the ability exactly as
+       the hero builder does.
+
+       THE RECORD IS `spent` ON THE ENTRY, NOT `weaponUsed` (v2.46's
+       Sledge/Scorpio split). A tap is a STATE only the controller's own
+       untap step lifts (CR 4.4.3d) — `beginEndPhase`'s step (d) already
+       clears every `spent` board entry — while `weaponUsed` comes back at
+       every turn boundary for both seats. Writing the wrong one makes the
+       cost payable again on the opponent's turn.
+
+       BOTH BOARDS REFUSE A TAPPED ONE FIRST (a legality — v3.11), so
+       reaching here spent means a stale or crafted action off the wire.
+       Charging it anyway is what keeps an unpayable cost inert rather than
+       free (v2.04). Measured over the pinned pool: exactly ONE readable
+       arena record prints a `{t}` cost, and it is the only one of the
+       seven that does NOT print "destroy this". */
+    if(from === "board"){
+      const _te = act(n).board.find(x => x && ("bp" + x.uid) === card.uid);
+      if(_te && P.tapsToActivate(_te.card.tx || "")){
+        actMut(n).board = act(n).board.map(x => x === _te ? {...x, spent: true} : x);
+        n = L(n, `${_te.card.name}: ${sv(act(n), "tap")} it to pay — `
+               + "untaps in their own untap step (CR 4.4.3d).");
+      }
+    }
     /* A SOUL BANISH IS PAID ON ACTIVATION (v3.74), beside the tap and the
        allowance — not after the effect, the way an equipment's destroy
        cost is. Boltyn prints "Attack Reaction - Banish a card from your

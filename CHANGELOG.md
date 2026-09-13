@@ -1,3 +1,155 @@
+## v4.47 — THE LAST ONE-BOARD ROUTE, AND A `{t}` NOBODY CHARGED
+
+**`judge.legal`'s arena branch read `allyAttack`/`auraAttackOf` and refused
+everything else** — *"X prints no attack to activate"* — so at the table an
+Item or an Aura printing `Action -` / `Instant - <cost>:` could not be
+activated at all, while the trainer has had the route since v2.35.
+**v3.01's shape, and the last member of that family still standing**:
+v3.04's seventeen dead EQUIPMENT abilities, v3.39's hero branch, v3.44's
+ally attack, v3.84's aura attack, and this. Recorded at v4.45 rather than
+half-done, because that version's four defects were all UI-to-reducer
+wiring against routes `judge.reduce` already had and this one is an engine
+build.
+
+**MEASURED over the pinned pool: ELEVEN arena records print an activation
+line and SEVEN have one `parseHeroPower` reads** — Concealed Object (Lyath
+×2), Energy Potion (Dorinthea, Fai), Timesnap Potion (Gravy Bones) and
+Gravy Bones' whole treasure economy (Gold, Silver, Copper, Diamond). Four
+are decked; three are tokens with no creator yet. The four that refuse are
+pinned too (v4.29: pinning the readers alone cannot see a name leaving).
+
+**`build.boardPow` IS THE SHARED READER, and it is build.js's THIRD powCard
+builder.** The other two comment blocks have named it *by name* since v3.79
+— *"there are three (hero, here, and `boardPow`)"* — while it sat inside
+`Battle` as a React closure. So v3.63's rule (when you add a flag to one
+builder, grep for the others) was a grep across two files, one of which no
+drill could reach, **and it had already cost the cost flags**: `equipPiece`
+stamps five and this builder stamped NONE.
+
+**THREE OF THE FIVE GENERALISE AND TWO WOULD BE WRONG RATHER THAN LATENT.**
+`execute` takes the soul cost out of `sd.soul`, the discard out of
+`sd.hand` and the named permanent off the board — none of which is a fact
+about GEAR — so those three are stamped, as guards (measured: no arena
+record prints any of them). `_selfBanish` carries `_banishGear` and
+`_flipUp` carries `_flipGear`, and **both `execute` and `abCostWhy` resolve
+those uids against `sd.gear`**, so an arena permanent stamped with either
+has its ability refused forever or banishes nothing at all. Half-building a
+cost is worse than the honest gap (v3.23), so they are left off and a drill
+fails the day a pool record prints one.
+
+**THE LEGALITIES ARE THE GEAR BRANCH'S, OUT OF THE SAME BODIES** —
+`abCostWhy` (v3.99), `activateIfOk`, `abWindow`, `rxTargetWhy`, and
+`effCost` with the game's half (v3.80: the affordability read must ask what
+the charge asks, or a Frostbite tax puts the seat on `NEGATIVE-RES`).
+Nothing is restated: **`abCostWhy`'s call count is a PIN and went 2 → 3**,
+so a fourth activation route is a deliberate edit in both places.
+
+### AND BUILDING THE ROUTE EXPOSED A COST NOBODY CHARGED — ON BOTH BOARDS
+
+> *"**Instant - {t}:** Target attack gets +1{p}."* — CONCEALED OBJECT,
+> Lyath's, ×2
+
+**Nothing charged the tap.** Driven three times on one turn it queued +1,
++2, +3 — unbounded, free, **STRONGER than printed**, and `tier: full`
+throughout because the clause IS read, so coverage is blind and the
+one-sided fairness sweep is looking the other way. **v4.46's own defect one
+zone over, found the same way**: make the cost legible, then drive it.
+
+**MEASURED: exactly ONE readable arena record prints a `{t}` cost, and it
+is the only one of the seven that does NOT print "destroy this"** — which
+is why nothing else limited it. The other six pay with the permanent
+itself, so they are single-use by construction.
+
+**THE RECORD IS `spent` ON THE ENTRY, NEVER `weaponUsed`** (v2.46's
+Sledge/Scorpio split, one zone in). A tap is a STATE only the controller's
+own untap step lifts (CR 4.4.3d) — judge's step (d) already clears every
+`spent` board entry — while `weaponUsed` comes back at every turn boundary
+for both seats. Writing the wrong one makes the cost payable again on the
+opponent's turn, and **the drill drives a whole turn cycle from both
+seats**, because that is the only thing that can tell the two records
+apart.
+
+**AND IT SAYS SO** (v3.60, v4.24, v4.46 — in a training sim the feed is the
+lesson): the line names the PERMANENT, names the seat through `sv`, and
+names **CR 4.4.3d** rather than a turn number, because *"until your untap
+step"* is the thing a player plans around.
+
+**BOTH BOARDS REFUSE A TAPPED ONE FIRST** (a legality — v3.11), or the seat
+pays a cost for a play the rules never allowed.
+
+### `judge.boardAbilityOf` — AND THE TILE THAT STILL HAD NO CALLER
+
+With only the ATTACK asked, the table's arena row — which v4.45 had just
+given a handler — still could not reach any of the seven. **v3.50's
+sentence for the sixth time.** `boardAbilityOf` is `boardAttackOf`'s
+sibling and answers the powCard itself, so the tile reads no card text and
+there is still ONE reader of the printed line (v3.84's contract).
+
+**AN ABILITY CARRIES NO ATTACK-TARGET**, so it sends the bare action rather
+than `actAct`: CR 1.4.5 is about an attack or an attack-layer, and sending
+a target would be a field `legal` never validates. v4.45's own census
+learned the exemption **as an allow-list with both halves asserted** — a
+third shape fails there, which is the moment somebody states whether it
+declares an attack.
+
+### THE POLICY DECLINES, AND THAT IS A STATED CHOICE
+
+`sparring.act` never activates one, so the route reads **ZERO** on the
+210-game ladder however well it works. **v4.24's standing rule**: a price
+this policy cannot weigh is declined, because declining can never make the
+seat stronger than printed — and six of the seven pay with the PERMANENT,
+so whether a Gold is worth a card is a judgement about card text that
+`sparring.js` reads none of by contract. v4.38 measured what happens when
+this policy is allowed a timing judgement it cannot make: three heroes went
+22 → 4, 15 → 2 and 16 → 3. So the zero is a number about the POLICY
+(v4.41's Burn Up, v4.33's charge, v4.29's forced exits), and the route is
+DRIVEN instead — `test/arenaability.test.js` through `judge.reduce` — so it
+is not left with no caller at all. `arena-ability-policy-declines` carries
+it.
+
+### THREE DRILLS WERE GREPPING A RULE THAT MOVED
+
+**A source slice rots where a rule moves** (v3.22, v3.28, v3.94 — fourth
+outing). `priority.test.js` grepped `index.html` for `const boardPow = b =>
+{` and `rxability.test.js` grepped the same body for the window flag; both
+DRIVE `build.boardPow` now, which is driving the trainer's own reader
+because the trainer's `boardPow` **is** it. And **`parseHeroPower` LEFT
+`keycensus`'s trainer-only set**: its one caller there was `boardPow`, so
+the bridge alias became a global nothing calls — dead code that reads like
+a reader (v3.77, v4.11, v4.33) — and is deleted. **A name leaving a census
+is as deliberate an edit as one arriving** (v4.12).
+
+### THE POOL IS THE WRONG ORACLE FOR WHAT A BUILDER BUILDS
+
+The extraction was measured against the old body over the whole pool first
+and reported **TEN differences** — every one a hero record or an Equipment
+record, which can never be a board entry. Restricted to what `boardPow`
+can actually be handed (`destination === "arena"`, non-ally): **7 records,
+0 differing.** v4.32's lesson one builder over, and the first draft asked
+the wrong set exactly as that version's did.
+
+Measured: **`arena-ability-no-table-route` is CLOSED** and its probe is
+turned round (records 31 → 32, stated 12 → 13, open 7 → 6, closed 12 → 13);
+**no pool record's parse or tier moves** — 392 full / 13 part / 0 none,
+unchanged, because this is the rules machine and not the parser; and **the
+ladder is BYTE-IDENTICAL at three seeds on both sides**, which is the
+stronger claim than "noise" and is why it was run rather than reasoned
+about (v4.43). The `tap` route counter learns the third spelling and reads
+ZERO on that ladder, which is a number about the POLICY — a counter that
+cannot see its own event is the defect v4.46 rewrote that block to remove.
+
+**29 sabotages, 29 bite, 0 silent — and FIVE of them were my own fixtures
+first.** Two window guards shared one state where the action-point test was
+unreachable behind the window test, so each half needed the OTHER guard
+satisfied (v3.62, v4.34); `boardAbilityOf`'s ally guard was silent because
+`classifyClause("Attack")` answers null, so the fixture needed Cutty
+Shark's shape — an attack line PLUS a readable ability — before the `kind`
+check was the thing refusing; the trainer's gate came back silent to a
+source scan because **`if(false && …)` keeps every name intact** (v4.00,
+verbatim), so the scan refuses that shape by name and its reach is STATED;
+and the soul-cost anchor was not unique, because `equipPiece` prints the
+identical line (v4.36).
+
 ## v4.46 — EIGHT SEATS, TWO COMMENTATORS, AND A COST NOBODY COULD SEE BEING PAID
 
 > *"Sounds like it should be tournament time — best of 1. Play carefully

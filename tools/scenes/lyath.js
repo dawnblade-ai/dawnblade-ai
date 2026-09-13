@@ -144,5 +144,43 @@ module.exports = [
     "…but the end phase does": 0
   }
 }
+,
+
+{
+  name: "Concealed Object taps to pay, once, and the second use is refused",
+  why: "v4.47 — his card, twice in his list, and the printed {t} was " +
+       "charged on NEITHER board. Driven three times on one turn it queued " +
+       "+1, +2, +3 for free: it is the pool's only readable arena record " +
+       "with a {t} cost AND the only one that does not print \"destroy " +
+       "this\", so nothing else limited it. The clause reads `full` " +
+       "throughout, so coverage is blind, and it is STRONGER than printed, " +
+       "which is the half the one-sided sweep is built not to see. Found by " +
+       "building the table's arena-ability route and then driving it.",
+  run(c){
+    const co = c.card("Concealed Object", 3, 9901);
+    let g = c.acting(c.state({res: 0, ap: 1, name: "Lyath Goldmane",
+      board: [{uid: 9901, kind: "token", card: co, spent: false}]}, {hp: 20}));
+    g = Object.assign({}, g, {turnPlayer: 0});
+    const first = c.reduce(g, {t: "activate", uid: 9901}, 0);
+    const why   = c.J.legal(first, {t: "activate", uid: 9901}, 0);
+    return {
+      "the printed line carries {t}":        c.P.tapsToActivate(co.tx || ""),
+      "the pump lands once":                 first.sides[0].buffNext,
+      "…and the permanent is tapped":        first.sides[0].board[0].spent,
+      "it is NOT filed as an allowance":     Object.keys(first.sides[0].weaponUsed || {}).length,
+      "a second use is refused by name":     /is tapped until your end phase/.test(String(why)),
+      "and the feed says the tap was paid":  (first.feed || [])
+        .some(l => /Concealed Object: Lyath Goldmane taps it to pay/.test(l))
+    };
+  },
+  want: {
+    "the printed line carries {t}": true,
+    "the pump lands once": 1,
+    "…and the permanent is tapped": true,
+    "it is NOT filed as an allowance": 0,
+    "a second use is refused by name": true,
+    "and the feed says the tap was paid": true
+  }
+}
 
 ];

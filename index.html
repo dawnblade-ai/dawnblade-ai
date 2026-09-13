@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.46"; /* v4.46 - EIGHT SEATS, TWO COMMENTATORS, AND A COST NOBODY COULD SEE BEING PAID. `npm run eight` is a third hat on the same instrument - eight entrants, ONE GAME a round, seven ties printed line by line by two DERIVED commentators (Tally reads a timeline row and may say only its feed lines and a life total reachable from the row before; Ledger adds a reason the row carries) with all four judges awake - and a Bo1 is a variance test rather than a deck test, which the report prints because a 92% favourite in this pool loses one game in twelve and the chair is worth 2:1. A ROUTE COUNTER MEASURED THE OPPOSITE OF ITS FEATURE: `tap` read /tapped|taps/i and fired 335 times in 15 games, every one of them "(d) <name> untaps." - the end-phase step that announces itself unconditionally, in which "un-TAPS" contains "taps" - and `ally` was the same shape at 350 firings, 335 of them "(a) Allies recover." plus three for a card NAMED Rally the Coast Guard (v2.44 trap, third outing). 95.7% noise, and v3.81 with the sign flipped: not a silence but a confident 335 in the block where a number means a FEATURE FIRED. AND THE ROUTE THE COUNTER HEADER NAMED HAD NEVER BEEN MEASURED - an ally ATTACK prints "sends <Ally> - N power on the chain", in which the word ally never appears, and it fires 15 times in 15 games. ally 350 -> 12, allyatk 0 -> 15, tap 335 -> 10. A COST CHARGED IN TOTAL SILENCE: aimed properly `tap` had nothing to aim at - zero feed lines mentioned a tap while `heroTapped` was true across 83 states of one Bravo game, and the only line the mechanic ever produced was the REFUSAL, so a player learned their hero was tapped by being refused a play. In a training sim the feed IS the lesson, and the board was announcing the UNTAP unconditionally while silent about the half that costs something. AND ANNOUNCING IT EXPOSED A RULES DEFECT INSIDE A MINUTE: `from === "hero"` is not "the hero acted" - judge.js calls it THE ABILITY ROUTE and commits every non-weapon equipment ability down it, so the branch fired for a Compass of Sunken Depths and then asked whether the HERO printed {t}. Measured, 35 of 41 hero taps were an equipment ability tapping the hero for a cost it never printed, and since heroTapped blocks a later {t} Gravy Bones activating a Compass locked himself out of his own ability for the turn - WEAKER than printed, which the one-sided sweep cannot see, with the clause READ throughout so coverage cannot either. `uid === "hpow"` is the discriminator because build strips the cost prefix off the powCard. Same pairing and seed: turn 37 -> 23, 565 actions -> 375, and 41 taps -> 7. A PROMPT RESULT CALLED THE READER OPPONENT "You": applyPrompt built its subject as side===0?"You":"The opponent" and every one of its lines goes straight into the feed, which is v2.83 exact split - 55 feed lines in 15 games opened with a hardcoded seat name while both seats were named after heroes, v4.15 own defect one variable over, now 55 -> 0 with the trainer seat 0 byte-identical. Measured: no record parse and no tier moves (392 full / 13 part / 0 none); the ladder is NOISE on all three tap heroes at three seeds both sides. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.47"; /* v4.47 - THE LAST ONE-BOARD ROUTE, AND A {t} NOBODY CHARGED. `judge.legal`'s arena branch read allyAttack/auraAttackOf and refused everything else - "X prints no attack to activate" - so at the table an Item or Aura printing "Action -"/"Instant - <cost>:" could not be activated at all while the trainer has had the route since v2.35: v3.01's shape and the LAST member of that family (v3.04's seventeen equipment abilities, v3.39's hero branch, v3.44's ally, v3.84's aura). Measured over the pinned pool: ELEVEN arena records print an activation line and SEVEN have one parseHeroPower reads - Concealed Object (Lyath x2), Energy Potion (Dorinthea, Fai), Timesnap Potion and Gravy Bones' whole treasure economy (Gold, Silver, Copper, Diamond). `build.boardPow` is the shared reader and it is build.js's THIRD powCard builder, which the other two comment blocks have named BY NAME since v3.79 while it sat inside Battle as a React closure - so v3.63's rule (add a flag to one builder, grep the others) was a grep across two files, one of which no drill could reach, and it had already cost the cost flags: equipPiece stamps five and this stamped NONE. Three generalise (soul, discard, named permanent - execute takes them from the soul, the hand and the board, none of which is a fact about GEAR) and TWO WOULD BE WRONG RATHER THAN LATENT, because _selfBanish carries _banishGear and _flipUp carries _flipGear and both execute and abCostWhy resolve those uids against sd.gear - so an arena permanent stamped with either is refused forever or banishes nothing. Half-building a cost is worse than the honest gap (v3.23). The legalities are the gear branch's out of the SAME bodies and abCostWhy's call count is a pin that went 2 -> 3. AND BUILDING THE ROUTE EXPOSED A COST NOBODY CHARGED ON EITHER BOARD: Concealed Object prints "Instant - {t}: Target attack gets +1{p}" and driven three times on one turn it queued +1, +2, +3 for free - unbounded, STRONGER than printed, tier full throughout so coverage is blind and the one-sided sweep looks the other way. v4.46's own defect one zone over, found the same way: make the cost legible, then drive it. Measured, exactly ONE readable arena record prints {t} and it is the only one of the seven that does NOT print "destroy this". The record is `spent` on the ENTRY and never weaponUsed (v2.46's Sledge/Scorpio split, one zone in - a tap is a STATE only the controller's own untap step lifts, CR 4.4.3d), the drill drives a whole turn cycle from BOTH seats because that is the only thing that can tell the two records apart, and it SAYS SO in the feed naming the permanent, the seat and the rule. judge.boardAbilityOf is boardAttackOf's sibling so the arena tile reads no card text; an ability carries no attack-target so it sends the bare action, and v4.45's census learned that exemption as an allow-list with both halves asserted. The POLICY declines the route (v4.24's standing rule - six of seven pay with the permanent itself and sparring.js reads no card text), so the route reads ZERO on the ladder and is DRIVEN by test/arenaability.test.js instead. Three drills that GREPPED a rule that moved now drive it, and parseHeroPower LEFT keycensus' trainer-only set. Measured: no record parse or tier moves (392/13/0); the ladder is BYTE-IDENTICAL at three seeds both sides; 29 sabotages, 29 bite, and five of them were my own fixtures first. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1460,7 +1460,14 @@ DawnCards.setCDN(window.CDN);
 var norm = DawnParser.norm, isAttack = DawnParser.isAttack, isArrow = DawnParser.isArrow,
     isWeapon = DawnParser.isWeapon, hasGA = DawnParser.hasGA, arcaneDmg = DawnParser.arcaneDmg,
     num = DawnParser.num, clean = DawnParser.clean, classifyClause = DawnParser.classifyClause,
-    fxParse = DawnParser.fxParse, parseHeroPower = DawnParser.parseHeroPower,
+    fxParse = DawnParser.fxParse,
+    /* `parseHeroPower` LEFT THE BRIDGE AT v4.47. Its one caller here was
+       `boardPow`, which moved into `build.js` so the table could reach
+       the arena-ability route — so the alias became a global nothing
+       calls, and a dead bridge entry reads as a reader this board asks
+       (v3.77, v4.11, v4.33). `test/keycensus.test.js` records the move.
+       Both boards still reach it: through `build.boardPow` and through
+       `effects.js`. */
     runeRed = DawnParser.runeRed, boardRed = DawnParser.boardRed, effCost = DawnParser.effCost,
     costCtx = DawnParser.costCtx,
     weaponCost = DawnParser.weaponCost, perTurnCleared = DawnParser.perTurnCleared,
@@ -3788,6 +3795,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(from === "hero" && act(s).heroTapped
        && DawnParser.tapsToActivate(((bAct(s).heroRec)||{}).tx || ""))
       return L(s, `${act(s).name} is tapped — that ability costs {t}, and a tapped hero cannot pay it again.`);
+    /* ---- AND A TAPPED ARENA PERMANENT CANNOT PAY {t} EITHER (v4.47) ----
+       The same rule one zone over, and the same reason it is HERE: a
+       legality refused before the ability resolves (v3.11), or the seat
+       spends its cost on a play the rules never allowed. `judge.legal`'s
+       arena branch asks the identical question out of the identical
+       reader, so neither board has a rule the other does not (v3.01).
+
+       `b.spent` is the arena's TAP record — lifted only by the
+       controller's own untap step (CR 4.4.3d), which `beginEndPhase` step
+       (d) does — and the printed `{t}` is read off the PERMANENT's line,
+       because `build.boardPow` strips the cost prefix off the ability. */
+    if(from === "board"){
+      const _tb = act(s).board[idx];
+      if(_tb && _tb.spent && DawnParser.tapsToActivate(_tb.card.tx || ""))
+        return L(s, `${_tb.card.name} is tapped — that ability costs {t}, and it does not untap until your end phase.`);
+    }
     /* A SOUL BANISH IS A COST, SO IT IS A LEGALITY (v3.74). Boltyn's
        ability reads "Attack Reaction - Banish a card from your soul: …",
        and refusing AFTER it resolves would cost the player a soul card for
@@ -3877,38 +3900,20 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   });
   const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; return n; });
 
-  /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA (v2.35).
-     Gear has carried a `powCard` since v2.x; a permanent on the board never
-     did, so an item with "Action - Destroy this: …" was decoration. Built
-     lazily rather than stamped on at play time so nothing new has to be
-     carried through every board write, and keyed "bp"+uid so it cannot
-     collide with gear's "gp"+uid. AN ALLY IS NOT ONE OF THESE: its attack
-     is an activated ability read by `parser.allyAttack` and routed through
-     `tryPlay(card, "ally", i)` as of v3.44, so `boardPow` deliberately
-     returns null for an ally and the cell tries the ally route first. */
-  const boardPow = b => {
-    if(!b || !b.card || b.kind==="ally" || !b.card.tx) return null;
-    const pw = parseHeroPower(b.card.tx, true);
-    if(!pw) return null;
-    return {name:b.card.name+" — ability", pitch:0, cost:pw.cost, power:null, def:null,
-      tt:"Arena Ability", kw:pw.ga?["Go again"]:[], tx:pw.eff, sd:pw.sd,
-      /* THE WINDOW FLAG BELONGS ON EVERY ROUTE THAT BUILDS A POWCARD
-         (v3.63). Left off here, an arena permanent printing an
-         "Attack Reaction - …" ability is built with no window at all and
-         is therefore offered at ACTION speed — the exact sev-3 the anchor
-         fix removed from `build.js`, waiting in a third place. Bait is the
-         pool's only such token and nothing can create it, so this is a
-         guard rather than a fix; `fxParse` credits the clause as read, and
-         a credit with no route is the no-op blind spot. */
-      _instant:pw.kind==="instant", _attackRx:pw.kind==="attackRx",
-      /* v3.63's rule again (v3.99): a cost flag left off one builder is a
-         cost charged on one route and free on another. No pool ARENA
-         permanent prints the flip cost — measured, the one record is an
-         Equipment — so this is a guard. */
-      ...(pw.flipUp ? {_flipUp:true} : {}),
-      img:b.card.img, dbImg:b.card.dbImg,
-      _gearArt:true, uid:"bp"+b.uid};
-  };
+  /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA — `build.boardPow`
+     (v2.35, SHARED at v4.47).
+
+     This was thirty lines of React closure, which is the whole reason
+     `judge.legal`'s arena branch had no ability route: the trainer built
+     the powCard as UI and the table could not reach it. v3.01's shape, and
+     the last of the family (v3.04's seventeen equipment abilities, v3.39's
+     hero branch, v3.44's ally, v3.84's aura attack).
+
+     It is `build.js`'s THIRD powCard builder and both of the others'
+     comment blocks have named it since v3.79 — so v3.63's rule (when you
+     add a flag to one builder, grep for the others) is now a grep in ONE
+     file rather than across two, one of which no drill could reach. */
+  const boardPow = DawnBuild.boardPow;
   /* ---- A CARD IN HAND WITH AN ACTIVATED ABILITY (v2.61) ----------------
      Two pool cards print one and NEITHER had any route to it: only gear
      (build.js) and arena permanents (boardPow) ever got a powCard, so
@@ -6791,14 +6796,31 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                   `judge.boardAttackOf` IS HOW IT ASKS (v3.84's own reader),
                   so there is still one place that knows an aura's power is
                   its printed ward — the tile reads no card text. */}
+              {/* AND AN ARENA PERMANENT'S ABILITY IS THE OTHER HALF OF THAT
+                  SENTENCE (v4.47). With only the attack asked, the seven
+                  pool records that print an ACTIVATED ABILITY in the arena
+                  still had no caller here — v3.50's sentence for the sixth
+                  time, in the row v4.45 had just given a handler.
+
+                  `judge.boardAbilityOf` is how it asks, `boardAttackOf`'s
+                  sibling: one action (`activate`) covers both, `legal`
+                  decides which, and the tile reads no card text. */}
               <InPlayRow entries={me.board} cell={(b,i)=>{
                 const bp = DawnJudge.boardAttackOf(g, mySeat, b.uid);
-                const swing = bp ? actAct(b.uid) : null;
+                const bab = bp ? null : DawnJudge.boardAbilityOf(g, mySeat, b.uid);
+                /* AN ABILITY CARRIES NO ATTACK-TARGET, so it sends the bare
+                   action rather than `actAct`: CR 1.4.5 is about an attack
+                   or an attack-layer, and `doActivate`'s ability branch
+                   drops a target anyway — sending one would be a field
+                   `legal` never validates (v4.45's two-shapes lesson read
+                   from the other end). */
+                const swing = bp ? actAct(b.uid) : bab ? {t:"activate", uid:b.uid} : null;
                 const can = swing && mine(swing);
                 return (
                 <button key={b.uid} className={"b clip-sm"+(b.spent?" spent":"")
                     +(peek&&peek.uid===b.uid?" peek":"")} style={{width:52,flex:"none"}}
-                  onClick={can ? tapTwice(b.card, bp.kind==="aura" ? "attack with this aura" : "swing",
+                  onClick={can ? tapTwice(b.card, bab ? "activate its ability"
+                                          : bp.kind==="aura" ? "attack with this aura" : "swing",
                                           ()=>fire(swing))
                                : ()=>setZoom(b.card)}>
                   <span className={"tapwrap"+((b.spent&&/\btap\b|\{t\}/i.test(b.card.tx||""))?" tapped":"")}>

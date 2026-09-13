@@ -127,13 +127,22 @@ function play(g, limit, opts){
            now, and announcing it is what immediately exposed that 35 of
            41 of those taps were an EQUIPMENT ability tapping the hero.
 
-           TWO ROUTES, ONE EVENT. The activation charges it at `execute`
-           and the `pay` sheet charges it through `payVerb` ("tapped to
-           power"), and both are the hero paying `{t}`. Both phrases are
-           the engine's own (v3.81) and `test/tapcount.test.js` pins them
-           against it — including the untap line, which must stay
-           uncounted. */
-        if(/to pay — tapped until|tapped to power/.test(line))
+           THREE ROUTES, ONE EVENT. The activation charges it at `execute`,
+           the `pay` sheet charges it through `payVerb` ("tapped to power"),
+           and v4.47 added the ARENA permanent's own `{t}` — the same cost
+           verb one zone over, and it was charged on neither board until
+           that version. All three phrases are the engine's own (v3.81) and
+           `test/tapcount.test.js` pins them against it — including the
+           untap line, which must stay uncounted.
+
+           THE ARENA HALF READS ZERO, AND THAT IS ABOUT THE POLICY.
+           `sparring.act` never activates an arena ability (v4.24's
+           standing rule — a price it cannot weigh is declined, and six of
+           the seven pool records pay with the permanent itself), so the
+           route is DRIVEN by `test/arenaability.test.js` instead. The
+           counter still spells it, because a counter that cannot see its
+           event is the defect this block was rewritten to remove. */
+        if(/to pay — tapped until|tapped to power|taps it to pay/.test(line))
           events.push(["tap", line]);
         /* AN ALLY EVENT, NOT THE WORD "ally" (v4.46). This read
            `/ally|allies/i` over the feed and therefore counted, measured

@@ -774,10 +774,25 @@ test("arena — the two destroy-cost items parse as real activated abilities", (
 });
 
 test("arena — the trainer offers board abilities and pays their destroy cost", () => {
-  /* The wiring itself is inside a React component, so this is a textual
-     guard the way the CR-order drills above are: it fails if the path is
-     removed, which is what would silently make these cards decoration again. */
-  assert.match(HTML, /const boardPow = b => \{/, "the board powCard builder must exist");
+  /* A SOURCE SLICE ROTS WHERE A RULE MOVES (v3.22, v3.28, v3.94), and this
+     drill is the fourth time that has come due: it grepped `index.html`
+     for `const boardPow = b => {`, and at v4.47 the builder MOVED into
+     `build.js` so both boards could reach it. The builder half is DRIVEN
+     now — the trainer's `boardPow` is `build.boardPow`, so driving the
+     module is driving the trainer's own reader — and only the two-tap
+     commit, which genuinely lives in a React closure, stays textual. */
+  const BD = require("../engine/build.js");
+  const ent = {uid: 77, kind: "token", card: {name: "Probe Potion", uid: 77,
+    tt: "Generic Action - Item", ty: ["Generic", "Action", "Item"],
+    tx: "Instant - Destroy this: Gain {r}{r}"}};
+  const ab = BD.boardPow(ent);
+  assert.ok(ab, "the board powCard builder must answer for an arena activation line");
+  assert.equal(ab.uid, "bp77", "keyed \"bp\"+uid so it cannot collide with gear's \"gp\"");
+  assert.equal(ab.sd, true, "and it carries the destroy cost the card prints");
+  assert.equal(BD.boardPow({...ent, kind: "ally"}), null,
+    "…and refuses an ALLY, whose attack is the other route (v3.44)");
+  assert.match(HTML, /const boardPow = DawnBuild\.boardPow/,
+    "the trainer reads the SHARED builder — a second copy is the no-mirror rule");
   assert.match(HTML, /tapTwice\(bp, "activate", \(\)=>tryPlay\(bp,"board",i\)\)/,
     "the board must offer its ability through the two-tap commit");
   /* the destroy-cost payment lives in `execute`, which moved to

@@ -351,13 +351,19 @@ test("the one-board reader sets are pinned", {skip}, () => {
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady", "isArrow",
-     "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm", "parseHeroPower",
+     "isAttack", "isInstantT", "isNonAtkActionCard", "isRx", "norm",
      "runeCount", "rxAllowed", "wardTotal"].sort(),
     "a reader the trainer asks and judge does not — mostly UI (`norm`, `clean`, " +
     "`instantAbilityReady`) or reached through types.js/effects.js on the other side. " +
     "v4.34: `wardTotal` is a DISPLAY reader — the pool plus the permanents that " +
     "print `Ward N` — and judge renders nothing. The rules half of the same " +
-    "question is `wardBearers`, which both boards reach through `effects.preventDamage`.");
+    "question is `wardBearers`, which both boards reach through `effects.preventDamage`.\n" +
+    "v4.47: `parseHeroPower` LEFT this set, and it left because a reader stopped " +
+    "being one board's. Its only trainer caller was `boardPow`, which moved into " +
+    "`build.js` so `judge.legal` could offer the arena-ability route at all — so " +
+    "NEITHER board asks it directly now and both reach it through `build.boardPow` " +
+    "and `effects.js`. A name leaving is as deliberate an edit as one arriving " +
+    "(v4.12: a census that only ever goes up is half a census).");
 });
 
 test("every trainer `effCost` call passes the game's half of the cost", {skip}, () => {

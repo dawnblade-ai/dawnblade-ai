@@ -85,11 +85,20 @@
   if(typeof module==="object" && module.exports)
     module.exports = factory(require("./priority.js"), require("./sides.js"), require("./rng.js"),
                              require("./parser.js"), require("./game.js"), require("./types.js"),
-                             require("./effects.js"), require("./cards.js"), require("./prompts.js"));
+                             require("./effects.js"), require("./cards.js"), require("./prompts.js"),
+                             require("./build.js"));
   else root.DawnJudge = factory(root.DawnPriority, root.DawnSides, root.DawnRNG,
                                 root.DawnParser, root.DawnGame, root.DawnTypes,
-                                root.DawnEffects, root.DawnCards, root.DawnPrompts);
-})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM, TY, E, C, PM){
+                                root.DawnEffects, root.DawnCards, root.DawnPrompts,
+                                root.DawnBuild);
+/* `build.js` IS THE TENTH FACTORY ARGUMENT (v4.47) — for `boardPow`, its
+   third powCard builder, which the arena-ability branch below asks. It
+   loads at tag 12 and this file at tag 17, and `build.js` depends only on
+   parser / cards / game / rng, so the edge is acyclic; the builder is
+   there rather than here because the other two live there and v3.63's
+   rule (grep the other builders when you add a flag) is then a grep in
+   one file. */
+})(typeof self!=="undefined" ? self : this, function(P, S, RNG, PR, GM, TY, E, C, PM, BD){
 
 const {effCost, fxParse} = PR;
 const {gearDef, gearBlockApply} = GM;
@@ -1042,7 +1051,59 @@ function legal(g, a, seat){
       const aa = PR.allyAttack(b.card)
         || PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
                                         discount: bOf(g, seat).auraDiscount});
-      if(!aa) return b.card.name + " prints no attack to activate";
+      /* ---- AN ARENA PERMANENT'S ACTIVATED ABILITY (v4.47) -------------
+         The last member of v3.01's family. This branch refused everything
+         that was not an attack — "prints no attack to activate" — and a
+         refusal that names the wrong thing teaches the wrong lesson
+         (v3.84, three lines down). An arena permanent's ABILITY is not an
+         attack, and it had no route here at all: measured over the pinned
+         pool, ELEVEN records print one and SEVEN have a line
+         `parseHeroPower` reads — Concealed Object, Energy Potion,
+         Timesnap Potion and Gravy Bones' whole treasure economy (Gold,
+         Silver, Copper, Diamond), which is four decked records across
+         four heroes plus three tokens with no creator yet.
+
+         IT IS ASKED AFTER BOTH ATTACK READERS and never instead of them,
+         because `build.boardPow` answers null for an ally and Cosmo's
+         grant is a fact about the EQUIPPED piece rather than the aura.
+
+         THE LEGALITIES ARE THE GEAR BRANCH'S, out of the same bodies —
+         `abCostWhy` (v3.99), `activateIfOk`, `abWindow`, `rxTargetWhy`
+         and `effCost` with the game's half (v3.80). Nothing is restated:
+         a cost refused in one place and re-derived in another is two
+         descriptions of one price. */
+      if(!aa){
+        const ab = BD.boardPow(b);
+        if(!ab) return b.card.name + " prints no attack or ability to activate";
+        /* A TAP IS THE ARENA'S RECORD, NOT AN ALLOWANCE (v2.46's
+           Sledge/Scorpio split, and the ally branch's own rule four lines
+           down). `b.spent` is lifted only by the controller's own untap
+           step (CR 4.4.3d); `weaponUsed` comes back at every turn
+           boundary. Measured: exactly ONE readable arena record prints a
+           `{t}` cost — Concealed Object, Lyath's, twice — and it is the
+           only one of the seven that does NOT print "destroy this", so
+           the other six are single-use because the permanent is gone.
+
+           READ THE PERMANENT'S OWN PRINTED LINE, never the powCard's:
+           `boardPow` strips the cost prefix, so the `{t}` lives in the
+           half that was removed — the same reason the hero's tap reads
+           `heroRec.tx` (v3.48, v4.46). */
+        if(PR.tapsToActivate(b.card.tx || "") && b.spent)
+          return b.card.name + " is tapped until your end phase";
+        { const why = abCostWhy(sd, ab); if(why) return why; }
+        const bgate = PR.fxParse(ab).activateIf;
+        if(bgate && !E.activateIfOk({...g, actor: seat}, bgate, b))
+          return b.card.name + " can't be activated — " + bgate.why;
+        const bwant = abWindow(ab);
+        if(P.speedAllowed(g, seat).indexOf(bwant) < 0)
+          return "no " + bwant + "-speed window for " + b.card.name;
+        if(bwant === "action" && !(sd.ap > 0)) return "no action point left";
+        { const why = rxTargetWhy(g, sd, ab, bwant); if(why) return why; }
+        { const _ec = effCost(ab, sd, PR.costCtx(g, seat));
+          if(_ec > sd.res + payCeiling(sd, null))
+            return b.card.name + " costs " + _ec + " to activate and you cannot raise it"; }
+        return null;
+      }
       /* THE ROUTE NAMES ITSELF IN EVERY REFUSAL BELOW (v3.84). It used to
          say "an ally cannot attack here" for an aura — a refusal that
          names the wrong thing teaches the wrong lesson, which is the same
@@ -1331,6 +1392,28 @@ const boardAttackOf = (g, seat, uid) => {
   const aura = PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
                                             discount: bOf(g, seat).auraDiscount});
   return aura ? {cost: aura.cost || 0, power: aura.power || 0, kind: "aura"} : null;
+};
+/* ---- AND WHAT CAN IT DO THAT IS NOT AN ATTACK? (v4.47) ---------------
+
+   `boardAttackOf`'s sibling, for the same reason and with the same
+   contract: the arena row at the table and `sparring.js` must both be
+   able to ask what a permanent offers WITHOUT reading card text, so judge
+   asks `build.boardPow` and there is still ONE reader of the printed
+   line.
+
+   IT ANSWERS THE POWCARD ITSELF rather than a summary, because the caller
+   needs the name to show and `legal`/`doActivate` re-derive it from the
+   same body — a second shape for one fact is what v4.45 spent a version
+   on. `null` where there is no ability, which is the answer a caller can
+   act on without knowing why.
+
+   ASKED AFTER `boardAttackOf`, never instead: `boardPow` answers null for
+   an ally, but an AURA that Cosmo has turned into a weapon can also print
+   an ability, and the attack is the route the pool's four ward auras are
+   decked for. */
+const boardAbilityOf = (g, seat, uid) => {
+  const b = (at(g, seat).board || []).find(x => x && x.uid === uid);
+  return b ? BD.boardPow(b) : null;
 };
 /* ---- WHICH WINDOW AN ACTIVATED ABILITY IS PRINTED IN (v4.38) --------
 
@@ -2094,6 +2177,31 @@ function doActivate(g, a, seat){
       const _aura = _ally ? null
         : PR.auraAttackOf(b.card, sd, {yourTurn: seat === g.turnPlayer,
                                        discount: bOf(g, seat).auraDiscount});
+      /* ---- AN ARENA PERMANENT'S ACTIVATED ABILITY (v4.47) -------------
+         `legal` has asked for it one function up; this is where it
+         commits. It is the ABILITY ROUTE's shape one zone over — the
+         powCard is the card that resolves, `effCost` is what is charged
+         (v3.80: the affordability read must ask what the charge asks), and
+         `execute` finds the permanent back off `"bp"+uid` for its destroy
+         cost exactly as the gear branch's `"gp"+uid` does.
+
+         `from: "board"` IS THE ROUTE and it is NOT "hero". `execute`
+         already has a `from === "board"` case (v2.35) that files the
+         destroyed permanent to the turn-stamped graveyard and pays its
+         leave trigger; committing down the "hero" route instead would
+         shatter a GEAR piece that is not there and tap the hero for a cost
+         the permanent never printed — which is v4.46's defect, and the
+         reason that version made `uid === "hpow"` the discriminator. */
+      if(!_ally && !_aura){
+        const ab = BD.boardPow(b);
+        const bcost = effCost(ab, sd, PR.costCtx(g, seat));
+        if(bcost > sd.res)
+          return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
+                                      need: bcost, target: null}},
+            ab.name + " costs " + bcost + " and " + sd.name + " holds " + sd.res
+            + " — pitch, or cancel.");
+        return commitPlay(g, ab, "board", seat, null, null);
+      }
       const aa = _ally || _aura || {cost: 0};
       const route = _ally ? "ally" : _aura ? "aura" : "ally";
       const target = targetOf(g, seat, a.target);
@@ -2877,7 +2985,7 @@ function drawTo(g, i){
 }
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
-        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, abWindowOf,
+        playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf,
         actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer,

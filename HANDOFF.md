@@ -1,4 +1,4 @@
-# Handoff — Dawnblade, at v4.45 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.47 · READ THE PRINTED CARD
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
@@ -239,8 +239,67 @@ that needs a human UI on one side. Recorded as a limit of the instrument
 shape changes. **The ladder is byte-identical**, which is the honest read
 rather than a clean bill.
 
-**THE FIFTH DEFECT IS AN ENGINE BUILD**, so it is `arena-ability-no-table-route`
-in the ledger above rather than half-wired here.
+**THE FIFTH DEFECT IS AN ENGINE BUILD**, so it was `arena-ability-no-table-route`
+in the ledger above rather than half-wired here — **and it was BUILT at
+v4.47, one version later**, which is what the two probe directions are for:
+the `open` record's probe went RED the moment the branch landed.
+
+## ⚠ v4.47 — THE LAST ONE-BOARD ROUTE, AND A `{t}` NOBODY CHARGED
+
+**`judge.legal`'s arena branch refused everything that was not an attack**
+— *"X prints no attack to activate"* — so an arena permanent's activated
+ABILITY could not be activated at the table at all, while the trainer has
+had the route since v2.35. **v3.01's shape, and the LAST member of that
+family**: v3.04's seventeen equipment abilities, v3.39's hero branch,
+v3.44's ally, v3.84's aura, and this.
+
+**MEASURED: 11 arena records print an activation line, 7 read** — Concealed
+Object (Lyath ×2), Energy Potion (Dorinthea, Fai), Timesnap Potion and
+Gravy Bones' treasure economy (Gold, Silver, Copper, Diamond). Four decked,
+three tokens with no creator. **Both halves pinned** (v4.29).
+
+**`build.boardPow` IS THE SHARED READER — build.js's THIRD powCard builder,
+and the other two comment blocks have named it BY NAME since v3.79** while
+it sat in a React closure. So v3.63's grep-the-others rule spanned two
+files, one unreachable by any drill, **and it had already cost the cost
+flags**: `equipPiece` stamps five and this stamped none.
+
+| flag | and why |
+|---|---|
+| `_soulCost` · `_discardCost` · `_destroyBoard` | **stamped, as guards** — `execute` takes them from the soul, the hand and the board, none of which is a fact about GEAR |
+| `_selfBanish` · `_flipUp` | **deliberately NOT** — both carry a GEAR uid that `execute` and `abCostWhy` resolve against `sd.gear`, so an arena permanent stamped with either is refused forever or banishes nothing. Half-building a cost is worse than the honest gap (v3.23) |
+
+**AND BUILDING IT EXPOSED A COST NOBODY CHARGED, ON EITHER BOARD.**
+Concealed Object prints *"Instant - **{t}**: Target attack gets +1{p}"* and
+driven three times on one turn it queued **+1, +2, +3** for free.
+Unbounded, STRONGER than printed, `tier: full` throughout. **v4.46's own
+defect one zone over, found the same way: make the cost legible, then drive
+it.** The record is `spent` on the ENTRY and never `weaponUsed` (v2.46's
+split, one zone in), and **the drill drives a whole turn cycle from BOTH
+seats**, because that is the only thing that can tell the two apart.
+
+**`judge.boardAbilityOf` is `boardAttackOf`'s sibling**, so the arena tile
+offers it while reading no card text — without it the row v4.45 had just
+given a handler still had no caller for any of the seven (**v3.50's
+sentence, sixth time**).
+
+**THE POLICY DECLINES** (v4.24's standing rule — six of seven pay with the
+permanent, and `sparring.js` reads no card text), so the route reads ZERO
+on the ladder and is DRIVEN by `test/arenaability.test.js` instead. The
+`tap` counter still learns the third spelling, because a counter that
+cannot see its event is what v4.46 rewrote that block to remove.
+
+**29 sabotages, 29 bite, and FIVE were my own fixtures first** — two window
+guards sharing a state where one was unreachable behind the other; an ally
+fixture whose payload `classifyClause` refuses anyway; a source scan that
+**`if(false && …)` walks straight through** (v4.00, so the scan refuses
+that shape by name and its reach is STATED); and a revert anchor
+`equipPiece` prints identically (v4.36).
+
+**And the first blast-radius measurement asked the wrong set** — the whole
+pool, which reported TEN differences on records that can never be a board
+entry. Restricted to `destination === "arena"` non-ally: **7 records, 0
+differing** (v4.32's lesson one builder over).
 
 ## ⚠ v4.38 — READING THE PAYLOAD IS WHAT CREATES THE ROUTE, AND THE ROUTE STILL NEEDED A CALLER
 
@@ -677,7 +736,7 @@ as weak as a card gets), and 2221 drills were green.
 | `tools/ledger.js` | every KEYWORD this project claims to understand | `test/ledger.test.js` |
 | `tools/approx.js` | every place the engine knowingly differs from the CR | `test/approx.test.js` |
 
-**31 approximation records: 12 `stated`, 7 `open`, 12 `closed`.** Each
+**32 approximation records: 13 `stated`, 6 `open`, 13 `closed`.** Each
 carries its status, the CR rule it deviates from, and the **BOARD** it
 lives on — v3.01's shape is the recurring defect in exactly this area.
 

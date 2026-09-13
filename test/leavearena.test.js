@@ -144,8 +144,10 @@ const PAYS = [
   "applyAnswer",        /* a board->grave PICK — Condemn's cost and its cross-seat rider */
   "destroyFoeToken",    /* a named token on the opposing board */
   "abDestroyBoard",     /* v3.86's named-permanent activation cost */
-  "card.sd",            /* an arena permanent's own "destroy this" cost — the
-                           trainer's `boardPow` builds the powCard, and
+  "card.sd",            /* an arena permanent's own "destroy this" cost —
+                           `build.boardPow` builds the powCard (the trainer's
+                           since v2.35, SHARED at v4.47 so the table has the
+                           route too), and
                            `execute` recognises the route by the schedule
                            stamped on it (v2.35). Named for what is in THIS
                            file, because a pin that names a symbol living in
