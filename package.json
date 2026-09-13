@@ -15,6 +15,7 @@
     "play": "node tools/tourney.js",
     "cup": "node tools/tournament.js",
     "gaps": "node tools/gaps.js",
-    "scenes": "node tools/scenes.js"
+    "scenes": "node tools/scenes.js",
+    "eight": "node tools/cup8.js"
   }
 }

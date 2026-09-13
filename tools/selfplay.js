@@ -49,10 +49,18 @@ function match(k0, k1, seed, first){
 /* Drive one game, auditing every state on the way. `sparring.run` returns
    only the end state, so the loop is inlined to get at the intermediates —
    a game that ends clean can still have passed through a broken board. */
-function play(g, limit){
+/* `opts.timeline` is OPT-IN (v3.58) — nothing that already calls this moves.
+   What it buys is the one thing `events` cannot give a reader: the STATE
+   beside the line. A commentator, a per-seat replay and a "what did the
+   board look like when that landed" question all need life totals and the
+   CR step at the moment of each action, and the alternative is a SECOND
+   drive loop in the caller — the no-mirror rule broken in a tool (v4.25's
+   two scans, one grading function). One loop, one caller asking for more. */
+function play(g, limit, opts){
   limit = limit || 4000;
+  opts = opts || {};
   let n = g, steps = 0;
-  const errs = [], viols = [], warns = [], events = [];
+  const errs = [], viols = [], warns = [], events = [], timeline = [];
   const feedSeen = new Set();
   for(let i = 0; i < limit && !n.over; i++){
     let moved = false;
@@ -83,14 +91,82 @@ function play(g, limit){
         const all = INV.check(n);
         for(const v of all){
           const row = {code: v.code, msg: v.msg, where: v.where, turn: n.turn, after: a.t};
+          /* THE ROW INDEX, so a caller holding a timeline can put a finding
+             BESIDE the action that produced it. `timeline.length` is the
+             index this action's row is about to get — the push happens a
+             few lines below — and it is omitted entirely when no timeline
+             was asked for, because a field that is always 0 reads as an
+             answer (v2.83's frozen `mode`, one field over). */
+          if(opts.timeline) row.i = timeline.length;
           (v.severity === "error" ? viols : warns).push(row);
         }
       } catch(e){ viols.push({code: "JUDGE-THREW", msg: e.message, turn: n.turn, after: a.t}); }
       /* Which of the new routes actually FIRED. */
       const nf = (n.feed || []).slice((before.feed || []).length);
+      /* WHERE the event list stood before this action, so a timeline row can
+         name the routes THIS action fired without a second copy of the
+         pattern list below. A caller re-matching those regexes against
+         `lines` is the no-mirror rule broken in a tool, and the copy drifts
+         the day a pattern here is reworded (v4.25). */
+      const evAt = events.length;
       for(const line of nf){
-        if(/tapped|taps/i.test(line))            events.push(["tap", line]);
-        if(/ally|allies/i.test(line))            events.push(["ally", line]);
+        /* A TAP, NOT THE WORD "tap" (v4.46). This read `/tapped|taps/i`
+           and therefore counted, measured over 15 games: **335 firings,
+           every single one `"(d) <name> untaps."`** — the end-phase step
+           that announces itself unconditionally every turn, in which
+           "un-TAPS" contains "taps". NOT ONE was a tap. The counter has
+           never measured its feature, and it reported 335 in the block
+           where a number means a FEATURE FIRED (v4.17).
+
+           AND WHEN IT WAS AIMED PROPERLY THERE WAS NOTHING TO AIM AT.
+           Measured: zero feed lines in 15 games mentioned a tap at all
+           other than that announcement, while `heroTapped` was true across
+           **83 states of one Bravo game** — a cost charged in total
+           silence, which v3.60's rule (in a training sim the feed IS the
+           lesson) says is the sev-2 category. `effects.js` announces it
+           now, and announcing it is what immediately exposed that 35 of
+           41 of those taps were an EQUIPMENT ability tapping the hero.
+
+           TWO ROUTES, ONE EVENT. The activation charges it at `execute`
+           and the `pay` sheet charges it through `payVerb` ("tapped to
+           power"), and both are the hero paying `{t}`. Both phrases are
+           the engine's own (v3.81) and `test/tapcount.test.js` pins them
+           against it — including the untap line, which must stay
+           uncounted. */
+        if(/to pay — tapped until|tapped to power/.test(line))
+          events.push(["tap", line]);
+        /* AN ALLY EVENT, NOT THE WORD "ally" (v4.46). This read
+           `/ally|allies/i` over the feed and therefore counted, measured
+           over 15 games: **350 firings, of which 335 were "(a) Allies
+           recover."** — the end-phase step that announces itself EVERY
+           turn whether or not an ally exists, deliberately, because in a
+           training sim the sequence is the lesson (judge.js's own note
+           there). Three more were a card NAMED **Rally** the Coast Guard,
+           which is v2.44's *"Reaction" contains "action"* trap and v4.25's
+           *"Lightning Fusion" falls back to "lightning"* — the third
+           outing, in an instrument this time.
+
+           95.7% NOISE IS WORSE THAN A ZERO. v3.81 records a counter that
+           spelled the wrong word and reported nothing; this is the same
+           defect with the sign flipped, in the block where a number means
+           a FEATURE FIRED (v4.17) — so the honest count was invisible
+           behind a number twenty times its size.
+
+           AND THE ROUTE THIS COUNTER'S OWN HEADER NAMES HAD NEVER ONCE
+           BEEN MEASURED. An ally ATTACK — v3.44's whole build — prints
+           `"<hero> sends <Ally> — N power on the chain"`, in which the
+           word "ally" does not appear: `from==="ally"` selects the VERB
+           and nothing else. Measured, it fires **15 times in 15 games**
+           and read zero for as long as the counter has existed.
+
+           TWO EVENTS ARE TWO RECORDS (v3.40), so deploying and attacking
+           are counted apart: an ally reaching the arena and an ally
+           swinging are different routes, and one number cannot say which
+           fired. Both phrases are the ENGINE's own (v3.81) and
+           `test/allycount.test.js` pins them against it. */
+        if(/enters play \(ally\)/.test(line))     events.push(["ally", line]);
+        if(/\bsends? .+ — \d+ power on the chain/.test(line))
+          events.push(["allyatk", line]);
         /* THE COUNTER MUST SPELL WHAT THE FEED SPELLS (v3.81). This read
            /dies|died/ and the engine prints "<name> takes N and GOES
            DOWN" — so `death 0` was reported for three versions while the
@@ -287,11 +363,24 @@ function play(g, limit){
         if(/\bYou [a-z]+s\b/.test(line)) events.push(["SECOND-PERSON", line]);
         feedSeen.add(line.replace(/\d+/g, "#"));
       }
+      /* THE ROW IS TAKEN AFTER the reduce, so `hp` is what the action LEFT
+         and `lines` is exactly what it printed. A row taken before would
+         describe the board the seat was deciding against, which is a
+         different question and not the one a reader asks of a log. */
+      if(opts.timeline) timeline.push({
+        i: timeline.length, turn: n.turn, seat: s, act: a.t, uid: a.uid,
+        phase: n.phase, step: n.step, tp: n.turnPlayer,
+        hp: [n.sides[0].hp, n.sides[1].hp],
+        hand: [n.sides[0].hand.length, n.sides[1].hand.length],
+        deck: [n.sides[0].deck.length, n.sides[1].deck.length],
+        lines: nf.slice(),
+        routes: events.slice(evAt).map(e => e[0])
+      });
       break;
     }
     if(!moved) break;
   }
-  return {game: n, steps, errs, viols, warns, events, feedSeen};
+  return {game: n, steps, errs, viols, warns, events, feedSeen, timeline};
 }
 
 /* THE FAULT LIST IS A CENSUS, AND IT LIVES BESIDE THE COUNTERS (v4.17).

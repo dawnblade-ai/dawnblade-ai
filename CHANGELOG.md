@@ -1,3 +1,209 @@
+## v4.46 — EIGHT SEATS, TWO COMMENTATORS, AND A COST NOBODY COULD SEE BEING PAID
+
+> *"Sounds like it should be tournament time — best of 1. Play carefully
+> from each perspective and from the judges' perspectives as well. Test the
+> mechanics hard and see where things could be problematic."*
+
+`npm run eight` — eight entrants, **one game a round**, seven ties, read
+line by line by two commentators, with all four judges awake. And the
+point of reading a game rather than counting one: **four defects, three of
+them invisible to every tool in this project.**
+
+### THE INSTRUMENT — `tools/cup8.js`
+
+`npm run play` is a LADDER and answers which hero wins most. `npm run cup`
+is a sixteen-seat bracket with an earned seeding and escalating formats,
+and answers a MATCHUP. This is the shortest tie there is, and it exists to
+be **READ**.
+
+**BEST OF ONE IS A TEST OF VARIANCE, AND THE REPORT SAYS SO** — this
+project's own measurement, not a hedge. Arakni beats Blaze 74-6 over 80
+games and a 92% favourite still loses a single game about once in twelve;
+the chair is worth about 2:1 in a close matchup. So nothing here is
+evidence about a deck, and the report prints that above the draw.
+
+**THE TWO VOICES ARE READERS, NOT AUTHORS**, and that is a drilled
+contract rather than a promise — a commentator that narrates reads exactly
+like one that reports, which is v4.27's `failstates.js` counting a keyword
+named in a comment, wearing a headset.
+
+| | reads | may say |
+|---|---|---|
+| **Tally** (play-by-play) | ONE timeline row | its feed lines, and life totals reachable by comparing with the row before |
+| **Ledger** (colour) | the same row | the SWING, the routes it fired, its CR step, its own hand size |
+
+`test/cup8.test.js` drives **synthetic** rows (v3.73), because a real
+timeline cannot express the near-miss: every real row's numbers are
+consistent with the game, so an invented one would be indistinguishable.
+A row at 20-20 whose lines carry no number is what tells a reader from an
+author — and the drill fails if Tally speaks a digit that is on neither
+row.
+
+**ONE DRIVE LOOP, NOT TWO.** The booth needs the STATE beside the line, so
+`selfplay.play` records a timeline **opt-in** (v3.58) rather than the
+caller re-driving the game — a second loop in a tool is the no-mirror rule
+broken where nothing watches it (v4.25). Per-row route kinds come off the
+event list's own length rather than by re-matching the patterns, for the
+same reason.
+
+### 1. A ROUTE COUNTER THAT MEASURED THE OPPOSITE OF ITS FEATURE
+
+`tap` read `/tapped|taps/i` over the feed. Measured over 15 driven games:
+**335 firings, every single one `"(d) <name> untaps."`** — the end-phase
+step that announces itself unconditionally every turn, in which
+**"un-TAPS" contains "taps"**. Not one was a tap.
+
+v3.81 records a counter that spelled the wrong word and reported zero.
+This is that defect **with the sign flipped**, in the block where a number
+means a FEATURE FIRED (v4.17) — so it was not a silence, it was a
+confident 335.
+
+`ally` was the same shape: **350 firings, 335 of them `"(a) Allies
+recover."`**, plus three for a card NAMED **Rally** the Coast Guard, which
+is v2.44's *"Reaction" contains "action"* trap and v4.25's *"Lightning
+Fusion" falls back to "lightning"* — third outing, in an instrument this
+time. **95.7% noise.**
+
+**AND THE ROUTE ITS OWN HEADER NAMES HAD NEVER BEEN MEASURED.** An ally
+ATTACK — v3.44's whole build — prints `"<hero> sends <Ally> — N power on
+the chain"`, in which the word "ally" does not appear: `from === "ally"`
+selects the VERB and nothing else. It fires **15 times in 15 games** and
+read zero for as long as the counter has existed. Two events are two
+records (v3.40), so `ally` is the deploy and **`allyatk`** is the attack.
+
+> `ally` 350 → **12** · `allyatk` **0 → 15** · `tap` 335 → **10**
+
+### 2. A COST CHARGED IN TOTAL SILENCE
+
+Aimed properly, `tap` had nothing to aim at: **zero** feed lines in 15
+games mentioned a tap other than that announcement — while `heroTapped`
+was true across **83 states of one Bravo game**. The only line the whole
+mechanic ever produced was the REFUSAL (`"<name> is already tapped"`), so
+a player learned their hero was tapped **by being refused a play**.
+
+**IN A TRAINING SIM THE FEED IS THE LESSON** (v3.60, v4.24), and the tap
+is not cosmetic: `heroTapped` is a STATE only the controller's own untap
+step lifts (CR 4.4.3d), so it is a cost still being paid on the
+opponent's turn. The board was announcing the UNTAP unconditionally and
+staying silent about the half that costs something.
+
+The seat is named and the verb agrees through `sv` (v2.83, v4.15): *"You
+tap"*, *"Bravo taps"*.
+
+### 3. AND ANNOUNCING IT EXPOSED A RULES DEFECT INSIDE A MINUTE
+
+The first driven game printed **"Compass of Sunken Depths — ability: Gravy
+Bones taps to pay"**. An *equipment* ability, tapping the hero.
+
+`from === "hero"` is not "the hero acted". `judge.js`'s own comment calls
+it **"THE ABILITY ROUTE (v3.04)"** and commits every non-weapon equipment
+ability down it — so the branch fired for a Compass and then asked whether
+the **HERO's** printed line contains `{t}`. Two different cards, one route
+name, and the wrong one answering.
+
+**MEASURED: 35 of 41 hero taps were an equipment ability tapping the hero
+for a cost it never printed.** Three of fifteen heroes print a tap (Bravo,
+Gravy Bones, Lyath — v3.48's own count), and since `heroTapped` blocks a
+later `{t}`, **Gravy Bones activating a Compass locked himself out of his
+own hero ability for the turn.**
+
+**WEAKER THAN PRINTED**, which is the direction the one-sided fairness
+sweep is built not to look in — and the clause was READ throughout, so
+coverage is blind too. `uid === "hpow"` is the discriminator, because the
+powCard's own text cannot be: `build.js` strips the cost prefix off the
+ability, which is exactly why the line reads the hero record instead.
+
+**DRIVEN, SAME PAIRING, SAME SEED, SAME CHAIR** — the one tie in the field
+where both heroes print `{t}`:
+
+| Bravo v Gravy Bones | before | after |
+|---|---|---|
+| turn | 37 | **23** |
+| actions | 565 | **375** |
+| life | -2 v 1 | **-4 v 7** |
+
+Same winner, materially different game. **41 hero taps → 7**, every one a
+genuine hero-power activation.
+
+### 4. A PROMPT'S RESULT CALLED THE READER'S OPPONENT "You"
+
+`applyPrompt` built its subject as `side === 0 ? "You" : "The opponent"`,
+and every line it puts in `out.msgs` goes **straight into the feed** —
+`effects.js` does `r.msgs.forEach(m => { n = L(n, m); })`. v2.83's rule is
+exactly that split: a `say(...)` reaches a feed BOTH seats read, so it
+names the seat; only a `return "reason"` speaks in the second person.
+
+**MEASURED: 55 feed lines over 15 games** opened with a hardcoded seat
+name while both seats were named after heroes — so half called the
+reader's opponent "You" and the other half called a named hero "The
+opponent". It is **v4.15's own defect one variable over**: that version
+found 86 "You soaks" lines and built `svName` to fix the VERB, which it
+did — against a name that was wrong. **55 → 0.**
+
+The trainer is unaffected where it matters: `index.html` names seat 0
+literally "You", so those lines are byte-identical, and seat 1 stops being
+called "The opponent" when it has a name (v3.46's direction).
+
+### WHAT THE EVENT ITSELF FOUND
+
+**Champion: Dorinthea**, over Iyslander in the final, 0 v 5 on turn 19.
+Clean sheet — **0 violations, 0 refusals, 0 malformed, 0 second-person, 0
+stalls, 0 warnings** across all seven ties, every intermediate state
+audited.
+
+Four observations per tie, each a shape this project has paid for:
+**SILENT ACTIONS** reported as a SET of action kinds rather than a count
+(`pass` and `paySel` are legitimately silent and a raw number would drown
+the one that is not); **IDLE RUNS** ≥ 8 rows that changed nothing, the
+livelock precursor behind v3.49; **THE SWING**, with the row it happened
+on; and **TURN SHAPE**.
+
+**THE BIGGEST SWING IN EVERY GAME LANDS ON A `pass`, AND THAT IS
+CR-CORRECT.** Damage lands on ENTERING the damage step (CR 7.5) and the
+step is entered by both seats passing over the reaction window — so the
+action that spends the life is a pass, not the attack. The booth says so
+once, because a reader who is not told reads it as a bug in the log.
+
+**AND THE LIFE DISPLAY COULD BE READ TWO WAYS.** Overkill is ordinary — a
+hero finishes on -4 — and `[-4, 4].join("-")` renders `"-4-4"`, which
+parses as 4 against 4 with a stray sign. Printed `a v b` now.
+
+### MY OWN TOOL HAD THE SHAPE IT WAS BUILT TO FIND
+
+The report built its `flagged` set from `v.i` on the judges' rows — **and
+those rows carried no `i`**, so the set could never be non-empty: v4.11's
+*a guard that cannot express a bug* in the harness looking for exactly
+that. Findings carry the row index now, omitted entirely when no timeline
+was asked for, because a field that is always 0 reads as an answer
+(v2.83's frozen `mode`). Verified end to end by making the judge speak on
+purpose and checking the finding landed on the right row.
+
+**AND A NAME TAKEN FROM A NEIGHBOURING BLOCK THREW FROM INSIDE A
+REDUCER.** The tap announcement's first draft used `srcName`, which is not
+in scope there — v4.09 verbatim, caught because it was DRIVEN rather than
+reasoned about. One of the new drills also failed against a correct engine
+by checking the wrong half of its own fixture: the card prefix is
+`"Bravo — hero power"` and the seat is `"Bravo, Flattering Showman"`
+(v4.09's *check your own fixture*).
+
+### MEASURED
+
+No pool record's parse moves and no tier moves — **392 full / 13 part / 0
+none**, unchanged; this is the rules machine, not the parser. The ladder
+at **three seeds on both sides** (v4.40), with the tap gate toggled:
+
+| | before | after | verdict |
+|---|---|---|---|
+| Bravo | 10 · 10 · 12 (10.7) | 11 · 10 · 12 (11.0) | intervals overlap — **NOISE** |
+| Gravy Bones | 8 · 12 · 9 (9.7) | 6 · 12 · 10 (9.3) | overlap — **NOISE** |
+| Lyath | 5 · 5 · 4 (4.7) | 5 · 5 · 4 (4.7) | **identical** |
+
+All three inside the median-4 band, and the one stall (`enigma-dash-1`) is
+present on both sides, so it is pre-existing. **A single-sample delta is
+not worthless, it is unresolved** — and this one resolves to noise, which
+is the honest read for a defect that cost a once-per-turn ability only
+sometimes, on a policy that rarely activates a hero ability at all.
+
 ## v4.45 — CR 1.4.5 at the table, and four routes the UI could not reach
 
 > *"If a player plays, activates, or triggers an attack or attack-layer, the

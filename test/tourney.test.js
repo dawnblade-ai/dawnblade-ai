@@ -72,7 +72,8 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "crush", "ctrWipe", "death", "destroycost", "fusion", "gold", "hitnext",
+    "ally", "allyatk", "crush", "ctrWipe", "death", "destroycost", "fusion", "gold",
+    "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "tap", "ward",
   ]);
 });
@@ -115,7 +116,7 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    reads no card text by contract, exactly as `sparring.js` does not
    (v4.24's standing rule). A player picks it on the loadout screen, which
    is the route `test/hood.test.js` drives explicitly for both heroes. */
-const ROUTES_PINNED = ["ally", "crush", "ctrWipe", "death", "destroycost", "fusion",
+const ROUTES_PINNED = ["ally", "allyatk", "crush", "ctrWipe", "death", "destroycost", "fusion",
                        "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "tap", "ward"];
 

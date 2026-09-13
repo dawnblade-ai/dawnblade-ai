@@ -664,7 +664,33 @@ function applyPrompt(game, prompt){
   const out = {game, msgs:[], ops:[], pay:0};
   if(!prompt) return out;
   const side = prompt.side;
-  const who = side === 0 ? "You" : "The opponent";
+  /* THE SEAT IS NAMED, NEVER ASSUMED (v4.46). This read
+     `side === 0 ? "You" : "The opponent"`, and every one of the six lines
+     below goes into `out.msgs`, which `effects.js` pushes STRAIGHT INTO THE
+     FEED (`r.msgs.forEach(m => { n = L(n, m); })`). v2.83's rule is exactly
+     this split — `say(...)` reaches a feed BOTH seats read, so it names the
+     seat; only a `return "reason"` speaks in the second person — and these
+     are the first kind.
+
+     MEASURED: 55 feed lines over 15 driven games opened with a hardcoded
+     seat name while both seats were named after heroes, so half of them
+     called the reader's opponent "You" and the other half called a named
+     hero "The opponent". It is v4.15's own defect (86 "You soaks" lines in
+     210 games) one variable over: that version built `svName` and fixed the
+     VERB here, so the agreement was already correct — against a name that
+     was wrong.
+
+     THE FALLBACK IS THE TRAINER'S, AND IT COSTS NOTHING THERE. `index.html`
+     names seat 0 literally "You" and seat 1 "The Dummy", so seat 0's lines
+     are byte-identical and seat 1's stop saying "The opponent" about a seat
+     that has a name — which is the same direction v3.46 moved and the rule
+     v4.22 restates. `svName` reads the name, so the verb still agrees:
+     "You soak", "Kayo soaks", "The Dummy soaks".
+
+     NOT A POSSESSIVE (v4.22). Every site below uses `who` bare; the one
+     apostrophe in this family is on a CARD's name, which is never "You". */
+  const who = (game.sides && game.sides[side] && game.sides[side].name)
+              || (side === 0 ? "You" : "The opponent");
   if(prompt.tag === "opt"){
     const keep = prompt.cards.filter((_,i)=>!prompt.down.includes(i));
     const bottom = prompt.cards.filter((_,i)=>prompt.down.includes(i));

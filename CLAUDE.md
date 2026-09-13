@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.45
+**Current version:** v4.46
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2673 drills** at v4.45.
+This is `node --test "test/*.test.js"` — **2705 drills** at v4.46.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,174 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### `npm run eight` — READ A GAME, DON'T COUNT IT (v4.46)
+
+```
+npm run eight                    # eight entrants, Bo1, 7 ties, ~2 min
+node tools/cup8.js --name "X"    # a different draw, reproducibly
+node tools/cup8.js --full        # every timeline row beside the call
+```
+
+`npm run play` is a LADDER and answers which hero wins most. `npm run cup`
+is a sixteen-seat bracket with an earned seeding and escalating formats,
+and answers a MATCHUP. This is the shortest tie there is and it exists to
+be **READ** — and reading seven games found **four defects, three of them
+invisible to every other tool here.**
+
+**BEST OF ONE IS A TEST OF VARIANCE, AND THE REPORT PRINTS THAT.** This
+project's own measurement: a 92% favourite loses a single game about once
+in twelve, and the chair is worth about 2:1 in a close matchup. So nothing
+this instrument produces is evidence about a deck, which is the claim a
+bracket most invites and the one it cannot support.
+
+**THE TWO VOICES ARE READERS, NOT AUTHORS** — `test/cup8.test.js`, and it
+is a drilled contract because a commentator that narrates reads exactly
+like one that reports (v4.27's `failstates.js` counting a keyword named in
+a comment, wearing a headset). **Tally** gets ONE timeline row and may say
+its feed lines and a life total reachable from the row before; **Ledger**
+may add a reason the row carries — the swing, a route it fired, its CR
+step. The drills are **synthetic** (v3.73), because every real row's
+numbers are consistent with the game and an invented one would be
+indistinguishable: a row at 20-20 whose lines carry no digit is what tells
+a reader from an author.
+
+**ONE DRIVE LOOP.** `selfplay.play` records a timeline **opt-in** (v3.58)
+rather than the caller re-driving the game — a second loop in a tool is the
+no-mirror rule broken where nothing watches it (v4.25) — and per-row route
+kinds come off the event list's own LENGTH rather than by re-matching the
+patterns, for the identical reason.
+
+### A COUNTER THAT MEASURED THE OPPOSITE OF ITS FEATURE (v4.46)
+
+**`tap` read `/tapped|taps/i` and fired 335 times in 15 games. Every single
+one was `"(d) <name> untaps."`** — the end-phase step that announces itself
+unconditionally every turn, in which **"un-TAPS" contains "taps"**. Not one
+was a tap.
+
+v3.81 records a counter that spelled the wrong word and reported ZERO. This
+is that defect **with the sign flipped**, in the block where a number means
+a FEATURE FIRED (v4.17): not a silence, a confident 335.
+
+**`ally` WAS THE SAME SHAPE — 350 firings, 335 of them `"(a) Allies
+recover."`**, plus three for a card NAMED **Rally** the Coast Guard, which
+is v2.44's *"Reaction" contains "action"* and v4.25's *"Lightning Fusion"
+falls back to "lightning"* — third outing, in an instrument. **95.7%
+noise.**
+
+**AND THE ROUTE ITS OWN HEADER NAMED HAD NEVER BEEN MEASURED.** An ally
+ATTACK — v3.44's whole build — prints *"\<hero\> **sends** \<Ally\> — N
+power on the chain"*, in which the word "ally" does not appear:
+`from === "ally"` selects the VERB and nothing else. It fires **15 times in
+15 games** and read zero for as long as the counter existed. **Two events
+are two records** (v3.40), so `ally` is the deploy and `allyatk` the
+attack.
+
+> `ally` 350 → **12** · `allyatk` **0 → 15** · `tap` 335 → **10**
+
+**THE END PHASE ANNOUNCES EVERY STEP BY NAME, INCLUDING THE ONES THAT DO
+NOTHING** — deliberately (judge.js: *"a step that announces itself and does
+nothing is worse than one that is missing"*). That is right for the FEED
+and it means **the feed is full of the words a route counter wants**. Spell
+the EVENT, never the word.
+
+### A COST CHARGED IN TOTAL SILENCE (v4.46)
+
+Aimed properly, `tap` had nothing to aim at: **zero** feed lines in 15
+games mentioned a tap other than that announcement — while `heroTapped` was
+true across **83 states of one Bravo game**. The only line the mechanic
+ever produced was the REFUSAL (*"\<name\> is already tapped"*), so a player
+learned their hero was tapped **by being refused a play**.
+
+**IN A TRAINING SIM THE FEED IS THE LESSON** (v3.60, v4.24). The tap is not
+cosmetic: `heroTapped` is a STATE only the controller's own untap step lifts
+(CR 4.4.3d), so it is a cost still being paid on the opponent's turn — and
+the board was announcing the UNTAP unconditionally while staying silent
+about the half that costs something.
+
+**AND THE ANNOUNCEMENT IS WHAT FOUND THE NEXT ONE, INSIDE A MINUTE.** That
+is the whole argument for making a mechanic legible before trusting it.
+
+### `from === "hero"` IS NOT "THE HERO ACTED" (v4.46)
+
+The first driven game printed **"Compass of Sunken Depths — ability: Gravy
+Bones taps to pay"**. An *equipment* ability, tapping the hero.
+
+`judge.js`'s own comment calls that route **"THE ABILITY ROUTE (v3.04)"**
+and commits every non-weapon equipment ability down it — so the branch
+fired for a Compass and then asked whether the **HERO's** printed line
+contains `{t}`. **Two different cards, one route name, and the wrong one
+answering.**
+
+**MEASURED: 35 of 41 hero taps were an equipment ability tapping the hero
+for a cost it never printed.** Three of fifteen heroes print one (Bravo,
+Gravy Bones, Lyath — v3.48's count), and `heroTapped` blocks a later `{t}`,
+so **Gravy Bones activating a Compass locked himself out of his own hero
+ability for the turn.**
+
+**WEAKER THAN PRINTED**, the direction the one-sided sweep is built not to
+look in — and the clause was READ throughout, so coverage is blind too.
+**`uid === "hpow"` is the discriminator and the powCard's own text cannot
+be**: `build.js` strips the cost prefix off the ability, which is exactly
+why the line reads the hero record instead.
+
+Driven at the same pairing, seed and chair — the one tie where BOTH heroes
+print `{t}`: **turn 37 → 23, 565 actions → 375, life -2 v 1 → -4 v 7**,
+same winner. **41 hero taps → 7**, every one genuine. The ladder at three
+seeds both sides is NOISE on all three heroes (v4.40), which is the honest
+read for a defect that cost a once-per-turn ability only sometimes.
+
+### A PROMPT'S RESULT CALLED THE READER'S OPPONENT "You" (v4.46)
+
+`applyPrompt` built its subject as `side === 0 ? "You" : "The opponent"`,
+and every line it puts in `out.msgs` goes **straight into the feed** —
+`effects.js` does `r.msgs.forEach(m => { n = L(n, m); })`. **v2.83's rule is
+exactly that split**: a `say(...)` reaches a feed BOTH seats read, so it
+names the seat; only a `return "reason"` speaks in the second person.
+
+**MEASURED: 55 feed lines over 15 games** opened with a hardcoded seat name
+while both seats were named after heroes — half calling the reader's
+opponent "You", half calling a named hero "The opponent". **It is v4.15's
+own defect one variable over**: that version found 86 *"You soaks"* lines
+and built `svName` to fix the VERB, which it did — against a name that was
+wrong. **55 → 0.**
+
+**THE FALLBACK IS THE TRAINER'S AND COSTS NOTHING THERE.** `index.html`
+names seat 0 literally "You", so those lines are byte-identical; seat 1
+stops being called "The opponent" when it has a name, which is v3.46's
+direction. `test/promptvoice.test.js` drives **both** (v3.98) — a named
+seat must be named AND a seat genuinely called "You" must still read in the
+second person, or the fix is a regression wearing a fix's clothes.
+
+**THE DEBT LEDGER COVERS `effects.js` ONLY.** `test/judge.test.js` pins 46
+second-person literals there and `prompts.js` was never in it — which is
+how six message sites shared one hardcoded subject for as long as they did.
+
+### AND THE HARNESS HAD THE SHAPE IT WAS BUILT TO FIND (v4.46)
+
+`cup8`'s report built its `flagged` set from `v.i` on the judges' rows —
+**and those rows carried no `i`**, so the set could never be non-empty:
+v4.11's *a guard that cannot express a bug*, in the instrument looking for
+exactly that. Findings carry the row index now, **omitted entirely when no
+timeline was asked for**, because a field that is always 0 reads as an
+answer (v2.83's frozen `mode`). Verified by making the judge speak on
+purpose and checking the finding landed on the right row.
+
+**AND A NAME TAKEN FROM A NEIGHBOURING BLOCK THREW FROM INSIDE A REDUCER.**
+The tap announcement's first draft used `srcName`, not in scope there —
+v4.09 verbatim, caught because it was DRIVEN. One new drill also failed
+against a correct engine by checking the wrong half of its own fixture: the
+card prefix is `"Bravo — hero power"` and the seat is
+`"Bravo, Flattering Showman"`.
+
+**THE BIGGEST SWING IN EVERY GAME LANDS ON A `pass`, AND THAT IS
+CR-CORRECT.** Damage lands on ENTERING the damage step (CR 7.5) and the
+step is entered by both seats passing over the reaction window, so the
+action that spends the life is a pass rather than the attack. The booth says
+so once — a reader who is not told reads it as a bug in the log. And
+**overkill makes a life display ambiguous**: `[-4, 4].join("-")` renders
+`"-4-4"`, which parses as 4 against 4 with a stray sign, so it prints
+`a v b`.
 
 ### AN ENTRY IS NOT A SPEC, AND THE TABLE SENT THE WRONG ONE (v4.45)
 
@@ -7646,6 +7814,12 @@ keyword level. Answer one, then teach the parser and re-run the audit.
    judge on the WARN band — 286 games in about 20 seconds, and it is what
    found v4.39. Use it when you want a decisive answer about a MATCHUP;
    the ladder is still the better evidence about a hero.
+   **`npm run eight`** is the third hat: eight entrants, Bo1, seven ties
+   printed LINE BY LINE with two derived commentators and all four judges.
+   It is evidence about nothing (a Bo1 is a variance test and the report
+   says so) and it is the only instrument here that makes a game legible
+   enough to read — which is what found v4.46's four defects, three of
+   them invisible to every other tool in this list.
 Always, regardless of what the tests say:
 7. **On a real phone.** Type checking and drills verify the parser is
    correct, not that the feature is fun or legible — validate on-device

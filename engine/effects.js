@@ -2531,8 +2531,58 @@ function makeEffects(ctx){
        READ THE HERO'S OWN PRINTED LINE, never the powCard's: `build.js`
        strips the cost prefix off the ability when it builds HPOW, so the
        `{t}` this asks about lives in the half that was removed. */
-    if(from==="hero" && P.tapsToActivate(((bAct(n).heroRec)||{}).tx || ""))
+    /* AND IT MUST BE THE HERO'S OWN ABILITY (v4.46). `from === "hero"` is
+       not "the hero acted" — `judge.js`'s own comment calls it "THE ABILITY
+       ROUTE (v3.04)" and commits EVERY non-weapon equipment ability down
+       it, so this branch fired for a Compass of Sunken Depths and then
+       asked whether the HERO's printed line contains `{t}`. Two different
+       cards, one route name, and the wrong one answering.
+
+       MEASURED: three of fifteen heroes print a tap (Bravo, Gravy Bones,
+       Lyath — v3.48's own count), and over three driven games **35 of 41
+       hero taps were an equipment ability tapping the hero for a cost it
+       never printed.** Gravy Bones activating a Compass locked himself out
+       of his own `{t}` ability for the turn, because `heroTapped` is a
+       STATE only his untap step lifts (CR 4.4.3d) — so it is WEAKER than
+       printed, which is the direction the one-sided fairness sweep is
+       built not to look in, and the clause was READ throughout, so no
+       coverage tool could see it either.
+
+       `uid === "hpow"` is `build.js`'s own name for the hero powCard, and
+       it is the discriminator because the powCard's own text cannot be:
+       build strips the cost prefix off the ability, which is exactly why
+       the line below reads the hero record instead.
+
+       AND IT WAS INVISIBLE UNTIL THE TAP WAS ANNOUNCED. The feed line
+       below is what surfaced it, within a minute of being added — v3.60's
+       rule paying out: in a training sim the feed IS the lesson, and a
+       cost paid in silence is a cost nobody can check. */
+    if(from==="hero" && card.uid === "hpow"
+       && P.tapsToActivate(((bAct(n).heroRec)||{}).tx || "")){
       actMut(n).heroTapped = true;
+      /* AND IT SAYS SO (v4.46). This charged the tap and printed NOTHING.
+         Measured over 15 driven games: `heroTapped` is true across 83
+         states of one Bravo game, and the only feed line the whole
+         mechanic ever produces is the REFUSAL one screen up ("<name> is
+         already tapped") — so a player learns their hero is tapped by
+         being refused a play, which is the lesson arriving as a wall.
+
+         IN A TRAINING SIM THE FEED IS THE LESSON (v3.60, v4.24), and the
+         tap is not cosmetic: `heroTapped` is a STATE only the controller's
+         own untap step lifts (CR 4.4.3d), so it is a cost that is still
+         being paid on the opponent's turn. The end phase announces the
+         UNTAP unconditionally — judge.js:2715, "(d) <name> untaps." — so
+         the board was telling the player about the half that costs
+         nothing and staying silent about the half that does.
+
+         THE SEAT IS NAMED AND THE VERB AGREES (v2.83, v4.15): `sv` reads
+         the side, so seat 0 called "You" gets "You tap" and a hero gets
+         "Bravo taps". And the line names the CR rule rather than a turn,
+         because "until your untap step" is the thing a player has to plan
+         around and a turn number is not. */
+      n = L(n, `${card.name}: ${sv(act(n), "tap")} to pay — `
+             + "tapped until their own untap step (CR 4.4.3d).");
+    }
     /* A SOUL BANISH IS PAID ON ACTIVATION (v3.74), beside the tap and the
        allowance — not after the effect, the way an equipment's destroy
        cost is. Boltyn prints "Attack Reaction - Banish a card from your
