@@ -220,7 +220,13 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      right — the printed gate is enforced at resolution AND, from this
      version, as a legality — so what is recorded is that the CLAUSE is
      unread and the card honestly reports `part`. */
-  assert.equal(Object.keys(APPROX).length, 34, "record count moved");
+  /* 34 -> 35 AT v4.52: `paycost-defends-trainer-only`. Found sideways
+     while merging the two `payTrigger` readers into one — Brothers in
+     Arms emits a `defends` payCost, reads `tier: full`, and `offerPayCost`
+     is never called with that trigger, so the sheet exists on the TRAINER
+     alone. v3.01's shape, and v4.21's rule finding it: census the family,
+     not the member in front of you. */
+  assert.equal(Object.keys(APPROX).length, 35, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -246,7 +252,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      moment the branch landed — which is the reversal an `open` record
      exists to force (v4.02). */
   /* 6 -> 7 AT v4.48: `charged-this-way-count`. */
-  assert.equal(n("open"),    7, "open count moved");
+  /* 7 -> 8 AT v4.52: `paycost-defends-trainer-only` — found sideways
+     while merging the two `payTrigger` readers, which is what a census
+     of a family is for (v4.21). */
+  assert.equal(n("open"),    8, "open count moved");
   assert.equal(n("closed"), 13, "closed count moved");
 });
 
@@ -257,6 +266,39 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
 /* CR 7.1.2 — an attack should sit on the STACK as a layer before it
    becomes a chain link. Here it goes straight onto the chain, so the
    observable is that nothing is ever on `stack` while a link exists. */
+/* A `payCost` WHOSE TRIGGER IS `defends` IS OFFERED ON ONE BOARD (v4.52).
+   An `open` record, so the probe asserts the DEVIATION: it goes red the
+   day `effects.js` grows the site, which is what forces the record to be
+   deleted rather than left to rot (v4.02). */
+probe("paycost-defends-trainer-only", () => {
+  /* THE PREMISE, DRIVEN: a real pool record emits the trigger. */
+  PR.fxReset();
+  const bia = PR.fxParse(H.card("Brothers in Arms", 1));
+  assert.equal(bia.tier, "full", "the clause IS consumed — which is why coverage cannot see this");
+  assert.deepEqual(bia.payCost,
+    {cost: 1, taps: false, ops: [["defBuff", 2]], trigger: "defends"});
+  PR.fxReset();
+
+  /* THE TRAINER HAS THE SITE — the half that makes this v3.01's shape
+     rather than an unbuilt card. A claim about `index.html`'s babel
+     blocks, which no drill can execute, so it is pinned precisely
+     enough that neutering it breaks this test. */
+  assert.match(HTML, /px\.trigger\s*===\s*"defends"/,
+    "the trainer's declared-wall scan is gone — this record may be closable");
+  assert.match(HTML, /mode:\s*"defpay"/, "…and so is the pause it opens");
+
+  /* AND THE TABLE DOES NOT. `offerPayCost` is the one body every shared
+     watcher goes through, and `defends` is not among the triggers it is
+     called with — which is the deviation, stated as the census that
+     `parser.OFFER_TRIGGERS` pins from the other end. */
+  const fired = [...X.effects().matchAll(/offerPayCost\([a-zA-Z]+,\s*"([a-zA-Z]+)"/g)].map(m => m[1]);
+  assert.ok(fired.length >= 5, "the scan is alive: " + fired.length + " call sites");
+  assert.ok(fired.indexOf("defends") < 0,
+    "effects.js now fires a `defends` payCost — the table has the route, so close this record");
+  assert.ok(PR.OFFER_TRIGGERS.indexOf("defends") < 0,
+    "and the parser still keeps the destroy cost away from it for the same reason");
+});
+
 probe("layer-step-window", () => {
   /* CHECK YOUR OWN FIXTURE (v3.82, and this one bit). The first draft drove
      `effects.execute` and asserted `stack` was empty — but `stack` is the

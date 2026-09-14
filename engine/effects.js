@@ -5413,6 +5413,33 @@ function makeEffects(ctx){
            Phantasmal Haze sat at `part` with a mechanic that works. */
         const dOps = fxParse(card).onDestroy || [];
         if(dOps.length) n = runOps(n, dOps, card.name);
+        /* AND A WATCHER MAY PAY OFF ON SOMEBODY ELSE BEING POPPED (v4.52).
+           This is one of the two events Silent Stilettos names — "an
+           attack action card you control is destroyed by phantasm" — and
+           it is the LIVE half: every pool record a pop can destroy is an
+           `Illusionist Action - Attack` and Enigma decks four of them.
+
+           THE PRINTED RESTRICTION IS TESTED, NOT ASSUMED. `isAtkActionCard`
+           is true for all four of those records, so it changes no answer
+           today and is right the day a permanent or a weapon carries
+           phantasm — v4.31 is the version that found this very block
+           asking for a card's power and dropping both of the keyword's
+           own printed restrictions, so a fire site here reasoning "it can
+           only be an attack action card anyway" is the shape that cost.
+
+           THE POPPED CARD'S OWN TRIGGER FIRES FIRST, above. Two triggers
+           answer one event and CR 4.1.8a gives the order to the
+           controller, which this project does not model (a stated
+           approximation); the resolving card's own printed line going
+           first is `sweepArena`'s rule — specific reader, then the
+           generic watcher (v3.17).
+
+           THE ACTOR IS THE ATTACK'S CONTROLLER, which is what "you
+           control" asks: judge enters `afterDefenders` with
+           `actor: attackingPlayer` and the trainer is inside the
+           attacker's own resolution, so `offerPayCost`'s scan of `act(n)`
+           is the right seat on both boards without either being asked. */
+        if(isAtkActionCard(card)) n = offerPayCost(n, "allyDiesOrPhantasm");
         n._fizzled = true;
         return openPrompt(winCheck(n));
       }
@@ -5804,11 +5831,39 @@ function makeEffects(ctx){
      Pure, and it takes the side as an argument rather than reading a
      phase: `game.js` owns the zone move and reports the corpse, this owns
      what the card SAYS, and the caller knows whose ally it was. */
-  const allyDeath = (s, card, side) => {
-    const fx = fxParse(card);
-    if(!card || !(fx.onDeath || []).length) return {game: s, fired: false};
+  /* A WATCHER MAY BE WAITING ON THE DEATH TOO (v4.52), and it is asked
+     BEFORE the corpse's own early return: Silent Stilettos watches for an
+     ally dying and does not care what that ally prints, so a scan placed
+     below the `onDeath` guard would only ever see allies that happen to
+     carry a death trigger of their own.
+
+     "ATTACKING" IS THE CALLER'S ANSWER, NEVER DEFAULTED (v3.69). The card
+     says "an ATTACKING ally you control dies", and an ally that dies
+     while being attacked is a different event — this function's one live
+     caller is handed `link.target`, the ally the attack was aimed AT, so
+     it answers false and no offer is made. That is weaker than printed
+     and visible; defaulting the other way pays out on every ally death in
+     the game, which is the direction that steals games.
+
+     SO THIS HALF IS LATENT, AND THAT IS MEASURED RATHER THAN ASSUMED:
+     nothing in the pinned pool can kill an attacking ally, and Silent
+     Stilettos is the pool's ONLY record printing the phrase. The route is
+     complete and the EVENT is unreachable, which is a fact about the pool
+     rather than a gap here — so it is drilled with a synthetic (v3.73).
+
+     THE SEAT IS THE ALLY'S CONTROLLER for the offer exactly as it is for
+     the payload: inside a combat link the actor is the ATTACKER, and the
+     watcher belongs to the player who lost the ally (v3.46). */
+  const allyDeath = (s, card, side, attacking) => {
     const prev = s.actor;
-    let n = runOps({...s, actor: side}, fx.onDeath, card.name);
+    let n = s;
+    if(attacking){
+      const borrowed = offerPayCost({...n, actor: side}, "allyDiesOrPhantasm");
+      n = {...borrowed, actor: prev};
+    }
+    const fx = fxParse(card);
+    if(!card || !(fx.onDeath || []).length) return {game: n, fired: false};
+    n = runOps({...n, actor: side}, fx.onDeath, card.name);
     return {game: {...n, actor: prev}, fired: true};
   };
 
@@ -7410,12 +7465,37 @@ function payCostSpec(px, card, side){
     title:"Destroy " + card.name + "?",
     hint:"Optional — decline and the rider does not resolve. Destroyed gear goes to the graveyard."
   };
+  /* A DESTROY CAN RIDE WITH A RESOURCE COST (v4.52) — Silent Stilettos
+     prints "you may pay {r}{r}{r}. If you do, DESTROY THIS and gain 1
+     action point", so the piece is spent as well as the resources.
+
+     IT REUSES `destroyUid` RATHER THAN A SECOND FIELD, because that is
+     already the one description of "this permanent is spent when the
+     answer is taken" — `applyAnswer` reads it, and a parallel field
+     would be the no-mirror rule broken inside one file (v3.20). Two
+     things fall out of that reuse and BOTH are wanted: `applyAnswer`
+     destroys the piece only on the accept branch, which is what "if you
+     do" says; and `payPolicy`'s `otherPrice` sees a non-resource price
+     and DECLINES, which is v4.24's standing rule — a policy with no
+     model of board value must not price a Legs piece at zero.
+
+     WHAT DOES NOT FALL OUT IS THE FEED, and `payVerb` is where that is
+     fixed: the destroy branch there answered before the cost was ever
+     read, so this sheet would have said "destroyed Silent Stilettos" and
+     never mentioned the three resources the player actually spent. */
+  const alsoDestroys = !!px.selfDestroy;
   return {
     tag:"pay", side, src:card.name,
     cost:px.cost, ops:px.ops,
     taps:!!px.taps, tapUid:px.taps ? card.uid : undefined,
+    destroyUid: alsoDestroys ? card.uid : undefined,
     title:"Pay " + px.cost + " to power " + card.name + "?",
-    hint: px.taps
+    hint: alsoDestroys
+      /* THE SHEET NAMES THE WHOLE PRICE. A hint that says only "decline
+         and the rider does not resolve" hides half of what accepting
+         costs, and in a training sim the sheet is the lesson (v4.24). */
+      ? "Optional — paying also destroys " + card.name + ", which goes to the graveyard."
+      : px.taps
       /* SEAT-NEUTRAL ON PURPOSE. A hint CAN be second person (a prompt is
          addressed to one side) but it does not have to be, and the debt
          ledger is a budget rather than a licence. */

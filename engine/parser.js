@@ -4846,8 +4846,12 @@ function fxParse(card){
        what sees it (v3.32, tenth outing). */
     const dm = clauses[i].match(/^when(?:ever)? (.+?), you may destroy this$/i);
     if(dm){
-      const trig = destroyTrigger(dm[1]);
-      if(!trig) continue;                        /* unknown event — leave the card unclaimed */
+      const trig = payTrigger(dm[1]);
+      /* AN EVENT `offerPayCost` DOES NOT FIRE CANNOT CARRY THIS COST
+         (v4.52) — see `OFFER_TRIGGERS`. Unknown, or known and fired
+         somewhere that drops the destroy: either way the card is left
+         unclaimed rather than destroyed for free. */
+      if(!trig || OFFER_TRIGGERS.indexOf(trig.trigger) < 0) continue;
       const rr2 = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
       /* AN UNREADABLE PAYLOAD REFUSES (v2.29) — AND SO DOES A `noop` ONE.
          `classifyClause` answers `{status:"noop", ops:[["noop", …]]}` for
@@ -4868,17 +4872,59 @@ function fxParse(card){
       handled.add(i); handled.add(i+1);
       break;
     }
-    const cm = clauses[i].match(/^(?:when(?:ever)? (this attacks|this defends|this hits|you play an aura),\s*)?you may (\{t\} this and )?pay ((?:\{r\})+|\d+)$/i);
+    /* THE TRIGGER IS `payTrigger`'s ANSWER (v4.52). This used to spell its
+       own four-phrase alternation here and munge the capture into a name,
+       which is the same question `destroyTrigger` was already answering
+       one cost verb over — see that function's header. An unknown event
+       leaves the card unclaimed, exactly as it does for the destroy cost:
+       a rider that fires on an event nobody built is a payload with no
+       schedule, which is the one shape `failstates.js` cannot reach. */
+    const cm = clauses[i].match(/^(?:when(?:ever)? (.+?),\s*)?you may (\{t\} this and )?pay ((?:\{r\})+|\d+)$/i);
     if(!cm) continue;
-    const rr = classifyClause(rider.replace(/^if you do,?\s*/i, ""));
-    if(!rr || !rr.ops || !rr.ops.length) continue;   /* unreadable payload — do not claim the card */
+    const trigP = cm[1] ? payTrigger(cm[1]) : {trigger: "play"};
+    if(!trigP) continue;                         /* unknown event — leave the card unclaimed */
+    /* "IF YOU DO, DESTROY THIS AND …" — THE PRINTED DRAWBACK (v4.52).
+       `classifyClause("destroy this and gain 1 action point")` answers
+       `[["ap",1]]` — the payload with the destroy SILENTLY DROPPED — so
+       read whole this is an unbounded, repeatable free action point off a
+       permanent that never leaves. That is v4.37's Mark of the Huntsman
+       verbatim and v4.25's Boom Grenade one joiner over, and it was
+       LATENT here for exactly as long as the trigger refused: building
+       the trigger is what makes the payload path reachable, which is
+       v3.72's rule (when you build a SOURCE, ask what it just exposed).
+
+       IT RIDES AS A FLAG, NOT AS AN OP — `hitWatch.selfDestroy`'s shape
+       (v4.37) — because the destroy happens IF THE COST IS PAID and the
+       one body that already knows that is the answer, not `runOps`.
+
+       AND IT IS OPT-IN (v3.58), set only when the card prints it, so the
+       drills that `deepEqual` a whole `payCost` keep their shape. */
+    let tail = rider.replace(/^if you do,?\s*/i, "").trim(), selfDestroy = false;
+    const sd1 = tail.match(/^destroy this and (.+?)\.?$/i);
+    if(sd1){ selfDestroy = true; tail = sd1[1].trim(); }
+    /* AN UNREADABLE PAYLOAD REFUSES — AND SO DOES A `noop` ONE (v4.52).
+       This branch tested only `ops.length`, which is the exact hole
+       v3.93's header describes and guards against in the destroy branch
+       twenty lines up: `classifyClause` answers
+       `{status:"noop", ops:[["noop", …]]}` for a keyword it reads and
+       deliberately does nothing about, so the length is 1 and a length
+       test alone lets it through — the cost is charged for a reward
+       nothing delivers, which is v2.04's free-ability rule read from the
+       other end. v4.21's rule: fix the family, not the member in front
+       of you.
+
+       IT MATTERS MORE NOW THAN IT DID, because a `payCost` can carry a
+       printed DESTROY as of this version, so the price a noop payload
+       would charge is a permanent as well as the resources.
+
+       Measured over the pinned pool: NO record's payCost rider is
+       nothing but noops, so this refuses nothing that exists and the
+       drill for it uses a synthetic (v3.73). */
+    const rr = classifyClause(tail);
+    if(!rr || rr.status !== "run" || !rr.ops || !rr.ops.length) continue;
     const cost = /^\d+$/.test(cm[3]) ? +cm[3] : (cm[3].match(/\{r\}/g)||[]).length;
-    fx.payCost = {
-      trigger: cm[1] ? cm[1].toLowerCase().replace(/^this /,"").replace(/^you play an aura$/,"playAura") : "play",
-      cost,
-      taps: !!cm[2],
-      ops: rr.ops
-    };
+    fx.payCost = Object.assign({cost, taps: !!cm[2], ops: rr.ops}, trigP);
+    if(selfDestroy) fx.payCost.selfDestroy = true;
     handled.add(i); handled.add(i+1);
     break;                                       /* one pay-cost rider per card in the pool */
   }
@@ -4925,8 +4971,8 @@ function fxParse(card){
     if(handled.has(i)) continue;
     const dm1 = clauses[i].match(/^when(?:ever)? (.+?), you may (?:choose to )?destroy this and (.+?)\.?$/i);
     if(!dm1) continue;
-    const trig1 = destroyTrigger(dm1[1]);
-    if(!trig1) continue;                       /* unknown event — leave the card unclaimed */
+    const trig1 = payTrigger(dm1[1]);
+    if(!trig1 || OFFER_TRIGGERS.indexOf(trig1.trigger) < 0) continue;   /* see OFFER_TRIGGERS */
     const rr1 = classifyClause(dm1[2].trim());
     if(!rr1 || rr1.status !== "run" || !rr1.ops || !rr1.ops.length) continue;
     fx.payCost = Object.assign({cost: 0, taps: false, destroySelf: true, ops: rr1.ops}, trig1);
@@ -7942,11 +7988,22 @@ const arcAmount = c => !c ? 0 : (fxParse(c).ops || [])
 
 const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
   + ((b && b.atkPowOffChain && isAtkActionCard(c)) ? b.atkPowOffChain : 0);
-/* THE EVENTS A `destroy this` COST MAY WATCH FOR (v3.93). A CLOSED
-   vocabulary, and closed harder than most: the cost DESTROYS the
-   player's own equipment, so a trigger nobody built would spend a piece
-   on an event that never happens — or worse, on one that happens for a
-   different reason. Two entries, one per pool record.
+/* THE EVENTS A `payCost` WATCHER MAY WATCH FOR (v3.93, one body v4.52).
+   A CLOSED vocabulary, and closed harder than most: one of the two cost
+   verbs DESTROYS the player's own equipment, so a trigger nobody built
+   would spend a piece on an event that never happens — or worse, on one
+   that happens for a different reason.
+
+   IT WAS TWO READERS OF ONE QUESTION (v4.52). This answered for the
+   `destroy this` cost while the `you may pay` branch carried its own
+   inline alternation of four more phrases — the same question, asked
+   twice, so a trigger could be (and was) added to one half and not the
+   other. The cost VERB and the EVENT are orthogonal: which of the two
+   prices a card charges says nothing about what it is watching for, and
+   v4.21's rule is to fix the family rather than the member in front of
+   you. Measured over the pinned pool before merging: the seven phrases
+   are pairwise disjoint under their own anchors (`this hits` and `this
+   hits a hero` are separate patterns), and NO record's parse moves.
 
    THE THRESHOLD TRAVELS WITH THE TRIGGER rather than being known by the
    site that fires it (v3.88's `thisWayMet` rule): Beaten Trackers prints
@@ -7957,7 +8014,34 @@ const zonePow = (c, b) => (c && c.power != null ? +c.power : 0)
    fires on ANY discard; this one only on a random one, and reading the
    two as the same event hands out a free action point every time a cost
    is paid by choice. */
-function destroyTrigger(phrase){
+/* WHICH OF THOSE EVENTS `offerPayCost` ACTUALLY FIRES (v4.52) — a
+   census, pinned as a SET the way `PENDING_KINDS` and `CTR_KINDS` are,
+   because the two cost verbs this vocabulary serves are not equally
+   supported at every site.
+
+   `effects.offerPayCost` builds its sheet through `payCostSpec`, which
+   knows BOTH prices — the resources and the permanent. `defends` is the
+   one trigger it never fires: a declared defender is not a watcher
+   sitting in a zone, so the trainer scans the WALL for it in a site of
+   its own, and that site carries `{uid, name, cost, ops}` and drops
+   `destroySelf` on the floor. A `destroy this` cost routed there would
+   hand its payload over for free, which is v2.04 read from the other
+   end.
+
+   SO THE DESTROY VERB REQUIRES MEMBERSHIP AND THE PAY VERB DOES NOT.
+   Both prices are honoured at every site in this set; only the resource
+   price is honoured at the wall. Measured: no pool record prints a
+   `destroy this` cost on a defends trigger, so this refuses nothing that
+   exists and is the never-parse-ahead-of-wiring rule stated as data.
+
+   IT IS ALSO WHY `defends` IS NOT SIMPLY DELETED as unreachable here:
+   Brothers in Arms is live in two precon lists and its resource cost IS
+   offered — on ONE board. See `tools/approx.js`,
+   `paycost-defends-trainer-only`. */
+const OFFER_TRIGGERS = ["discardRandom", "weaponHit", "selfHitHero",
+                        "playAura", "allyDiesOrPhantasm"];
+
+function payTrigger(phrase){
   const p = String(phrase||"").trim().toLowerCase();
   let m;
   if((m = p.match(/^you discard a random card with (\d+) or more \{p\}$/)))
@@ -7977,6 +8061,52 @@ function destroyTrigger(phrase){
      leaves the card unclaimed. */
   if(/^this hits a hero$/.test(p))
     return {trigger: "selfHitHero"};
+  /* THE TWO THE `you may pay` BRANCH USED TO SPELL INLINE. Their names
+     are that branch's own, because the sites that consume them were
+     written against these strings.
+
+     IT SPELLED FOUR, AND TWO HAD NO CARD (v4.52). `this attacks` and
+     `this hits` were written as a generalisation and measured over the
+     pinned pool they have ZERO claimants — the ten records printing
+     "when this attacks/hits, you may …" all pay with a DISCARD or a
+     BANISH and are `optCost`'s, not this reader's. Unclaimed vocabulary
+     is v4.50's finding one reader over, and here it is worse than inert
+     twice over:
+
+       - `attacks` and `hits` have no `offerPayCost` fire site either, so
+         a card reaching one would parse a payload with no schedule —
+         the single shape `failstates.js` cannot see (v3.07).
+       - and the bare `hits` is a phrase v3.45 measured and EXCLUDED by
+         name: "a hero" is part of the trigger, so a bare "when this
+         hits" fires on a hit at an ALLY, which is a different event.
+         Merging the two readers quietly brought it back.
+
+     So they are deleted rather than carried, and the near-miss stays
+     refused: a drill drives both wordings and fails if either is read. */
+  if(/^this defends$/.test(p))     return {trigger: "defends"};
+  if(/^you play an aura$/.test(p)) return {trigger: "playAura"};
+  /* ONE PRINTED CLAUSE NAMING TWO EVENTS (v4.52) — `entersLeaves`'s shape
+     (v3.20), which is this file's answer for exactly this sentence:
+
+     > "Whenever an attacking ally you control dies OR an attack action
+     >  card you control is destroyed by phantasm, you may pay {r}{r}{r}.
+     >  If you do, destroy this and gain 1 action point."
+     >                                   — SILENT STILETTOS, Enigma's Legs
+
+     ONE TRIGGER NAME, TWO SITES ANSWER TO IT. Splitting it into two
+     triggers would need `payCost.trigger` to become a list, and every
+     existing record then carries a one-element array for a card that
+     names one event — a shape change with no card behind it.
+
+     THE TWO HALVES ARE NOT EQUALLY REACHABLE, AND THAT IS MEASURED.
+     Every pool record a phantasm pop can destroy is an `Illusionist
+     Action - Attack` (4 cards, 12 records) and Enigma decks four of
+     them, so that half is LIVE. The other half needs an ATTACKING ally
+     to die, and `effects.allyDeath`'s one caller is handed the ally that
+     was the attack TARGET — so it is latent, gated on the caller's own
+     answer (v3.69), and drilled with a synthetic (v3.73). */
+  if(/^an attacking ally you control dies or an attack action card you control is destroyed by phantasm$/.test(p))
+    return {trigger: "allyDiesOrPhantasm"};
   return null;
 }
 
@@ -8733,7 +8863,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        DECL_OPS, dracLinks, weaponCost, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,

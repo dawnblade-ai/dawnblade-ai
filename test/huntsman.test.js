@@ -36,6 +36,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+const fs = require("node:fs");
+const path = require("node:path");
 const P = require("../engine/parser.js");
 const PM = require("../engine/prompts.js");
 const E = require("../engine/effects.js");
@@ -109,13 +111,119 @@ test("MEASURED: the short form has no pool claimant, so its drill is synthetic",
 
 test("THE TRIGGER VOCABULARY IS CLOSED — an unknown event leaves the card unclaimed", () => {
   /* The alternative is a piece destroyed by an event nobody built, which
-     is the never-parse-ahead-of-wiring rule at its most literal. */
+     is the never-parse-ahead-of-wiring rule at its most literal.
+
+     THERE ARE TWO KINDS OF REFUSAL NOW (v4.52), and only asking for one
+     of them cannot tell them apart. `payTrigger` is the one reader of
+     what event a `payCost` watches — the pay verb and the destroy verb
+     share it — but `OFFER_TRIGGERS` is the narrower set whose fire site
+     actually honours a DESTROY. `defends` is the live example: Brothers
+     in Arms' resource cost is offered by a scan over the declared WALL
+     that carries `{uid, name, cost, ops}` and drops `destroySelf`, so a
+     destroy routed there hands its payload over free.
+
+     AND THE POSITIVE CONTROL IS THE HALF THIS DRILL USED TO LACK. Written
+     as three refusals it passes perfectly against a reader that refuses
+     EVERYTHING, which is what "you play an aura" now proves it does not
+     (v3.98: ask for the refusal, then ask for the acceptance). */
   P.fxReset();
-  for(const trig of ["this defends", "you play an aura", "the sun rises"]){
-    const fx = P.fxParse(syn("When " + trig + ", you may choose to destroy this and mark them."));
-    assert.equal(fx.payCost, undefined, trig + " has no route, so nothing claims the clause");
-  }
+  assert.equal(P.payTrigger("the sun rises"), null, "the premise: an unknown event is unknown");
+  assert.equal(P.fxParse(syn("When the sun rises, you may choose to destroy this and mark them.")).payCost,
+    undefined, "an unknown event leaves the card unclaimed");
+
+  assert.deepEqual(P.payTrigger("this defends"), {trigger: "defends"},
+    "the premise: `defends` IS a known event…");
+  assert.ok(P.OFFER_TRIGGERS.indexOf("defends") < 0,
+    "…and is NOT one `offerPayCost` fires");
   P.fxReset();
+  assert.equal(P.fxParse(syn("When this defends, you may choose to destroy this and mark them.")).payCost,
+    undefined, "so the destroy cost refuses it — its one site would drop the destroy");
+
+  P.fxReset();
+  assert.ok(P.OFFER_TRIGGERS.indexOf("playAura") >= 0, "the premise for the control");
+  assert.deepEqual(P.fxParse(syn("When you play an aura, you may choose to destroy this and mark them.")).payCost,
+    {cost: 0, taps: false, destroySelf: true, ops: [["mark", 1]], trigger: "playAura"},
+    "a trigger `offerPayCost` DOES fire reads in full — so the refusals above are the rule, not a dead reader");
+  P.fxReset();
+});
+
+test("`payTrigger` is the ONE reader, and its vocabulary is pinned as a SET (v4.52)", () => {
+  /* IT WAS TWO READERS OF ONE QUESTION until this version — this one for
+     the `destroy this` cost and an inline alternation in the `you may
+     pay` branch — so a phrase could be (and was) known to one half and
+     not the other. Pinned as a set in BOTH directions (v4.17): a phrase
+     arriving is a deliberate edit, and so is one LEAVING.
+
+     TWO LEFT, AND NEITHER HAD A CARD. `this attacks` and `this hits`
+     were the pay branch's own generalisation with zero pool claimants
+     and no `offerPayCost` fire site — and the bare `this hits` is a
+     phrase v3.45 measured and EXCLUDED by name, because "a hero" is part
+     of the trigger. Asserting only that the DESTROY cost refuses them is
+     not enough: `OFFER_TRIGGERS` would refuse them anyway, so restoring
+     either to this reader came back SILENT. Ask the reader itself. */
+  for(const dead of ["this attacks", "this hits"])
+    assert.equal(P.payTrigger(dead), null, "`" + dead + "` has no card and no fire site");
+  assert.deepEqual(P.payTrigger("this hits a hero"), {trigger: "selfHitHero"},
+    "…and the hero form, which v3.45 kept, still reads");
+  assert.deepEqual(P.payTrigger("this defends"), {trigger: "defends"},
+    "…so the two refusals above are the vocabulary, not a dead reader");
+
+  /* THE WHOLE SET, DRIVEN OFF THE READER rather than read off the source. */
+  const phrases = {
+    "you discard a random card with 6 or more {p}": "discardRandom",
+    "a weapon attack you control hits":             "weaponHit",
+    "this hits a hero":                             "selfHitHero",
+    "this defends":                                 "defends",
+    "you play an aura":                             "playAura",
+    "an attacking ally you control dies or an attack action card you control is destroyed by phantasm":
+                                                    "allyDiesOrPhantasm"
+  };
+  for(const k of Object.keys(phrases))
+    assert.equal((P.payTrigger(k) || {}).trigger, phrases[k], k);
+  /* AND EVERY ONE HAS A POOL CLAIMANT — vocabulary with no card is what
+     v4.50 deleted one reader over, and it is what left this one. */
+  P.fxReset();
+  const claimed = new Set();
+  for(const r of pool){ const px = P.fxParse(rec(r)).payCost; if(px) claimed.add(px.trigger); }
+  assert.deepEqual([...claimed].sort(), [...new Set(Object.values(phrases))].sort(),
+    "every phrase the reader knows is printed by a pool record, and vice versa");
+  P.fxReset();
+});
+
+test("BOTH destroy branches are gated on `OFFER_TRIGGERS` (v4.52)", () => {
+  /* THE TWO-CLAUSE FORM AND THE ONE-SENTENCE FORM ARE SEPARATE LOOPS,
+     and a sabotage of one is covered by the other unless both are driven
+     (v4.50, verbatim). v3.93's shape prints a cost sentence and an "if
+     you do" rider; v4.37's joins them with AND. `defends` is the fixture
+     for both, because it is a KNOWN event whose one fire site drops the
+     destroy. */
+  P.fxReset();
+  assert.equal(P.fxParse(syn("When this defends, you may destroy this. If you do, mark them.")).payCost,
+    undefined, "the TWO-CLAUSE branch refuses it");
+  P.fxReset();
+  assert.equal(P.fxParse(syn("When this defends, you may choose to destroy this and mark them.")).payCost,
+    undefined, "and so does the ONE-SENTENCE branch");
+  /* THE POSITIVE CONTROL FOR EACH, or a reader that refuses everything
+     passes both perfectly (v3.98). */
+  P.fxReset();
+  assert.ok(P.fxParse(syn("When you play an aura, you may destroy this. If you do, mark them.")).payCost,
+    "the two-clause branch reads a trigger that IS fired");
+  P.fxReset();
+  assert.ok(P.fxParse(syn("When you play an aura, you may choose to destroy this and mark them.")).payCost,
+    "and so does the one-sentence branch");
+  P.fxReset();
+});
+
+test("`OFFER_TRIGGERS` is the census of what `offerPayCost` is actually called with (v4.52)", () => {
+  /* PINNED BOTH DIRECTIONS (v4.17), against the source rather than a
+     memory of it: a trigger added to the set with no fire site is a
+     payload with no schedule (v3.07's shape, the one `failstates.js`
+     cannot reach), and a fire site added with no set member is a destroy
+     cost that silently refuses a card somebody just wired. */
+  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  const fired = [...src.matchAll(/offerPayCost\([a-zA-Z]+,\s*"([a-zA-Z]+)"/g)].map(m => m[1]);
+  assert.ok(fired.length >= 5, "the scan is alive: " + fired.length + " call sites");
+  assert.deepEqual([...new Set(fired)].sort(), [...P.OFFER_TRIGGERS].sort());
 });
 
 test('a BARE "when this hits" refuses — an ally is an attack-target (v3.45)', () => {
@@ -164,11 +272,14 @@ test("exactly one pool record emits the new trigger, and the siblings are unmove
      record LEAVING one of v3.93's, which is exactly what a widened anchor
      would do. */
   assert.deepEqual(Object.keys(sibs).sort(),
-    ["defends", "discardRandom", "playAura", "weaponHit"]);
+    ["allyDiesOrPhantasm", "defends", "discardRandom", "playAura", "weaponHit"]);
   assert.deepEqual([...sibs.discardRandom], ["Beaten Trackers"]);
   assert.deepEqual([...sibs.weaponHit],     ["Refraction Bolters"]);
   assert.deepEqual([...sibs.playAura],      ["Magmatic Carapace"]);
   assert.deepEqual([...sibs.defends],       ["Brothers in Arms"]);
+  /* v4.52 — the set moved by ONE because a card was BUILT, which is what
+     a census pinned in both directions is for (v4.12). */
+  assert.deepEqual([...sibs.allyDiesOrPhantasm], ["Silent Stilettos"]);
   P.fxReset();
 });
 

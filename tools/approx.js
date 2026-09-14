@@ -61,6 +61,16 @@
    ============================================================ */
 
 const APPROX = {
+  /* ---------------------------------------------------------------- */
+  "paycost-defends-trainer-only": {
+    status: "open",
+    cr: null,
+    board: "trainer",
+    since: "v4.52",
+    swept: "v4.52",
+    claim: "\"When this defends, you may pay {r}. If you do, it gets +2{d}\" — Brothers in Arms, live in Kayo's and Gravy Bones' lists at three pitches — is offered on the TRAINER only. `index.html` scans the declared wall for a `payCost` whose trigger is `defends` and pauses into `mode: \"defpay\"`; `engine/effects.js` has no such site, so at the TABLE the sheet is never shown and the card blocks for its printed 3 with a printed line of play that does not exist.",
+    why: "v3.01's shape, found sideways at v4.52 while merging the two `payTrigger` readers: `offerPayCost` is called with five triggers and `defends` is not one of them, yet a pool record emits it and reads `tier: full`. Coverage cannot see it (the clause IS consumed) and the one-sided fairness sweep cannot either (a defender worth LESS than printed is the direction it does not look in). It is not `offerPayCost`'s shape as it stands: that body scans the GEAR and the ARENA for a watcher, and a declared defender is in neither — it is a card in the wall, which `afterDefenders` already receives as its `wall` and `gearWall` arguments. The answer also has to reach what the card is WORTH at the wall, which is `defendValue`'s `defMod` (v3.89, v3.90) rather than the trainer's own `defBonus`. Until it is built, `OFFER_TRIGGERS` keeps the `destroy this` cost away from this trigger, because the trainer's site carries {uid, name, cost, ops} and drops `destroySelf` on the floor."
+  },
 
 /* ---- A. THE RULES MACHINE — the two-player question ---------------- */
 

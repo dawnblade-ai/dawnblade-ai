@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.51
+**Current version:** v4.52
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2795 drills** at v4.51.
+This is `node --test "test/*.test.js"` — **2821 drills** at v4.52.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,103 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE TRIGGER WAS THE WHOLE BLOCKER, AND BUILDING IT EXPOSED THE DROP (v4.52)
+
+> *"Whenever an attacking ally you control dies or an attack action card
+> you control is destroyed by **phantasm**, you may pay {r}{r}{r}. If you
+> do, destroy this and gain 1 action point."*
+> — SILENT STILETTOS, Enigma's Legs piece
+
+Both clauses read `skip` since the card was dealt. **The cheapest
+diagnostic in this project, run from the head end** (v3.79, v4.43): hand
+the SAME printed line a trigger that already has a reader and it parses in
+full — cost 3, the *"you may"*, the payload, all of it. So the TRIGGER was
+the whole gap and every piece of machinery was already here.
+
+**AND BUILDING IT MADE A SECOND DEFECT REACHABLE THAT HAD BEEN LATENT THE
+WHOLE TIME.** `classifyClause("destroy this and gain 1 action point")`
+answers `[["ap",1]]` — the payload with the printed **DESTROY** dropped,
+which is v4.37's Mark of the Huntsman and v4.25's Boom Grenade one joiner
+over. Built without the split, the card is an **unbounded, repeatable free
+action point** off a permanent that never leaves. **v3.72's rule: when you
+build a SOURCE, ask which payload paths it just made reachable** — and the
+answer is that the drop was wrong the whole time it could not be reached.
+
+**ONE PRINTED CLAUSE NAMES TWO EVENTS**, so it is ONE trigger that TWO
+sites answer to — `entersLeaves`'s shape (v3.20). They are not equally
+reachable and that is MEASURED: every pool record a phantasm pop can
+destroy is an `Illusionist Action - Attack` (4 cards, 12 records) and
+Enigma decks four, so that half is **LIVE**; the other needs an ATTACKING
+ally to die and `allyDeath`'s one caller is handed `link.target` — the ally
+the attack was aimed **AT** — so it is latent, gated on the caller's own
+explicit answer (v3.69) and drilled with a synthetic (v3.73). Silent
+Stilettos is the pool's **only** record printing the phrase.
+
+**AND THE PRINTED TYPE IS TESTED, NOT ASSUMED.** `isAtkActionCard` changes
+no answer today; v4.31 is the version that found this very block asking for
+a card's power and dropping both of the keyword's printed restrictions, so
+a fire site reasoning *"it can only be an attack action card anyway"* is
+the shape that cost.
+
+### `payTrigger` IS ONE READER, AND TWO OF ITS PHRASES HAD NO CARD (v4.52)
+
+It was **two readers of one question** — `destroyTrigger` for the destroy
+cost and an inline four-phrase alternation in the `you may pay` branch — so
+a trigger could be added to one half and not the other. The cost VERB and
+the EVENT are orthogonal (v4.21: fix the family).
+
+**MERGING THEM MEASURED TWO PHRASES OUT OF EXISTENCE.** `this attacks` and
+`this hits` had **zero pool claimants** and no `offerPayCost` fire site, so
+a card reaching either parses a payload with no schedule — the single shape
+`failstates.js` cannot see (v3.07). And the bare `this hits` is a phrase
+**v3.45 measured and EXCLUDED by name**. v4.50's finding one reader over:
+unclaimed vocabulary is dead rules code that reads like a rule.
+
+**`OFFER_TRIGGERS` IS THE CAPABILITY SPLIT, PINNED AS A SET.** The two cost
+verbs are not equally supported at every site, so the DESTROY verb requires
+membership and the PAY verb does not — stated as data, drilled against
+`effects.js`'s own call sites in **both directions**.
+
+**AND ASSERTING THE REFUSAL ONE LAYER TOO HIGH PROVES NOTHING.** Restoring
+`this hits` to the reader came back SILENT, because `OFFER_TRIGGERS` refuses
+it anyway — the drill was asking the gate, not the reader. Ask the reader
+itself (v3.56: a probe must ask the function that holds the reader).
+
+### A ONE-BOARD RULE FOUND BY CENSUSING THE FAMILY (v4.52)
+
+**`offerPayCost` is never called with `defends`, and a pool record emits
+it.** Brothers in Arms — *"When this defends, you may pay {r}. If you do, it
+gets +2{d}"*, live in **Kayo's and Gravy Bones' lists** at three pitches —
+is scanned off the declared wall by `index.html` ALONE, which pauses into
+`mode: "defpay"`. At the TABLE the sheet is never shown and the card blocks
+for its printed 3 with a printed line of play that does not exist there.
+
+**v3.01's shape, and NO TOOL HERE COULD SEE IT**: coverage counts the clause
+consumed (`tier: full`), and a defender worth LESS than printed is the
+direction the one-sided sweep is built not to look in.
+
+**RECORDED RATHER THAN HALF-BUILT** (v3.23). It is not `offerPayCost`'s
+shape as it stands — that body scans the GEAR and the ARENA for a watcher,
+and a declared defender is in neither; it is a card in the wall, which
+`afterDefenders` already receives. And the answer has to reach what the card
+is WORTH at the wall, which is `defendValue`'s `defMod` (v3.89, v3.90)
+rather than the trainer's own `defBonus`. `tools/approx.js`:
+`paycost-defends-trainer-only`, `open`, with a **driven probe that goes RED
+the day the site arrives** — verified by sabotage in both directions.
+
+Measured: **exactly 1 record moves, `part` → `full`** (393 → 394 full, 12 →
+11 part), floor re-pinned after reading the diff; the **ladder is
+BYTE-IDENTICAL at three seeds on both sides**, run rather than reasoned
+about (v4.43); the route reads **ZERO** on the ladder and that is about the
+LOADOUT — `defaultPicks` ranks by printed defence and takes Enigma's Boots
+(1) over the Stilettos (0), so the piece is never worn in a driven game
+(v4.43's Hood, v4.49's Gun — third outing), with the premise as a drill and
+the accept path driven end to end; **21 sabotages, 21 bite**, three of the
+first pass silent for reasons that were all mine — a near-miss that dropped
+the word under test AND the half of the phrase that was not being tested, a
+fixture reaching only ONE of two destroy branches where the other covers it
+(v4.50, verbatim), and the refusal asked one layer too high.
 
 ### A TIE THAT COUNTS AS A LEAD, ONE WAY ONLY (v4.51)
 

@@ -1877,7 +1877,13 @@ function strike(g){
        the actor here is the attacker, and Oysten's Gold belongs to the
        player who lost the ally, not the one who shot it. */
     if(out.killed && dying){
-      const dth = withEffects(n, (fx, st) => fx.allyDeath(st, dying.card, link.target.side).game);
+      /* AND THIS ALLY WAS NOT ATTACKING (v4.52). `dying` is `link.target`
+         — the ally the attack was aimed AT — so the fourth argument is
+         the explicit `false` that Silent Stilettos' "an ATTACKING ally
+         you control dies" asks for. Stated rather than left to default,
+         because a caller that says nothing and a caller that has measured
+         its answer read identically at the call site (v3.69). */
+      const dth = withEffects(n, (fx, st) => fx.allyDeath(st, dying.card, link.target.side, false).game);
       n = dth;
     }
   } else {

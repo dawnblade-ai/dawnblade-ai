@@ -353,4 +353,89 @@ module.exports = [
   }
 }
 
+
+,
+
+/* ---- v4.52 — SILENT STILETTOS, HER LEGS PIECE ---------------------- */
+{
+  name: "a popped phantasm attack offers her Legs piece, and paying destroys it",
+  why: "\"Whenever an attacking ally you control dies or an attack action " +
+       "card you control is destroyed by phantasm, you may pay {r}{r}{r}. " +
+       "If you do, destroy this and gain 1 action point.\" Both clauses " +
+       "read `skip` from the day the card was dealt: the TRIGGER was the " +
+       "whole blocker, and handing the same printed line a known trigger " +
+       "parses it in full (v3.79's diagnostic, run backwards). Building it " +
+       "made a SECOND defect reachable that had been latent the whole time " +
+       "— `classifyClause(\"destroy this and gain 1 action point\")` answers " +
+       "`[[\"ap\",1]]`, the payload with the printed DESTROY dropped, so a " +
+       "trigger built without the split hands its controller an unbounded, " +
+       "repeatable free action point off a permanent that never leaves " +
+       "(v3.72: when you build a SOURCE, ask what it just exposed). It is " +
+       "the PHANTASM half that is live — she decks four of the pool's " +
+       "phantasm attack records and wears this piece.",
+  run(c){
+    const C = require("../../engine/cards.js");
+    const atk = Object.assign({}, c.card("Spears of Surreality", 1), {uid: "ph"});
+    const ss  = Object.assign({}, c.card("Silent Stilettos", 0), {uid: 41});
+    /* a 6-power NON-Illusionist attack action card is what pops it */
+    const big = {uid: "w1", name: "Six Power", def: 3, power: 6, pitch: 1,
+                 tt: "Generic Action - Attack", ty: ["Generic", "Action", "Attack"]};
+
+    const play = (withPiece) => {
+      let g = c.acting(c.state({name: "You", res: 9, ap: 3, hand: [atk],
+                                gear: withPiece ? [ss] : []},
+                               {name: "Them", hand: [big]},
+                               {actor: 0, turnPlayer: 0, seed: "scene-ss"}));
+      let n = c.reduce(g, {t: "play", uid: "ph", from: "hand"}, 0);
+      if(n.pending && n.pending.kind === "boost") n = c.reduce(n, {t: "boost", yes: false}, 0);
+      n = c.passTo(n, "defend");
+      n = c.reduce(n, {t: "defend", uid: "w1"}, 1);
+      for(let i = 0; i < 16 && n.phase === "action" && n.step !== "layer"; i++){
+        let moved = false;
+        for(const seat of [0, 1]){
+          const out = c.J.reduce(n, {t: "pass"}, seat);
+          if(!out.error){ n = out.state; moved = true; break; }
+        }
+        if(!moved) break;
+      }
+      return n;
+    };
+
+    const offered = play(true);
+    const bare    = play(false);
+    const pay = (n, choice) => {
+      const a = c.J.reduce(n, {t: "promptChoose", choice}, 0);
+      return c.J.reduce(a.state, {t: "promptConfirm"}, 0).state;
+    };
+    const paid = pay(offered, "pay");
+    const kept = pay(offered, "decline");
+    const piece = n => ((n.sides[0].gear || []).find(x => x && x.uid === 41) || {});
+
+    return {
+      "the attack really was popped":            offered.sides[0].grave.filter(x => x.uid === "ph").length,
+      "…and the sheet is offered":               !!offered.prompt && offered.prompt.src,
+      "…to the seat that CONTROLLED it":         offered.prompt && offered.prompt.side,
+      "…for the printed three":                  offered.prompt && offered.prompt.cost,
+      "with no piece worn, nothing is offered":  !bare.prompt,
+      "paying spends the three":                 offered.sides[0].res - paid.sides[0].res,
+      "…gains the printed action point":         paid.sides[0].ap - offered.sides[0].ap,
+      "…and the printed DESTROY lands":          !!piece(paid).destroyed,
+      "declining costs nothing":                 offered.sides[0].res - kept.sides[0].res,
+      "…and keeps the piece":                    !piece(kept).destroyed
+    };
+  },
+  want: {
+    "the attack really was popped": 1,
+    "…and the sheet is offered": "Silent Stilettos",
+    "…to the seat that CONTROLLED it": 0,
+    "…for the printed three": 3,
+    "with no piece worn, nothing is offered": true,
+    "paying spends the three": 3,
+    "…gains the printed action point": 1,
+    "…and the printed DESTROY lands": true,
+    "declining costs nothing": 0,
+    "…and keeps the piece": true
+  }
+}
+
 ];

@@ -639,13 +639,32 @@ function moveCards(game, side, from, to, cards){
    the hero-tap lines name the CARD being powered instead — which is what
    the sheet's own title is about, and needs no inflection at all. */
 function payVerb(prompt, took){
-  if(prompt.destroyUid != null)
+  if(prompt.destroyUid != null){
+    /* A DESTROY CAN RIDE WITH A RESOURCE COST (v4.52). This branch
+       answered before `prompt.cost` was ever read — right while the only
+       records were v3.93's, where the destroy IS the whole price and the
+       cost is 0, and WRONG the moment a card charges both. Silent
+       Stilettos prints "you may pay {r}{r}{r}. If you do, destroy this
+       and gain 1 action point", so a line saying only "destroyed Silent
+       Stilettos" omits three resources the player actually spent — which
+       is the sev-2 category the player TRUSTS, and the same hole v4.37
+       found in this very function one verb over.
+
+       THE EXISTING PHRASES ARE EXTENDED, NEVER REPLACED (v3.81).
+       `tools/selfplay.js`'s `destroycost` counter matches " destroyed X
+       — the rider resolves." and "… rather than destroy it.", and a
+       reworded line would report ZERO exactly as a missing route does.
+       Both spellings still end the same way, and the drill pins the
+       counter's regex against what this function emits. */
+    const paid = prompt.cost > 0;
+    return took ? (paid ? " paid " + prompt.cost + " and" : "") + " destroyed " + prompt.src
+                : (paid ? " declined to pay " + prompt.cost + " and kept " + prompt.src + " rather than destroy it"
     /* THE DECLINE LINE NAMES THE PRICE, not just the card. In a training
        sim the feed is the lesson, and "kept X" alone does not say what
        keeping it cost — it also gives the self-play harness a phrase to
        count that cannot collide with the counter verb below (v3.81). */
-    return took ? " destroyed " + prompt.src
-                : " kept " + prompt.src + " rather than destroy it";
+                        : " kept " + prompt.src + " rather than destroy it");
+  }
   if(prompt.spendCtr)
     return took ? " took a " + prompt.spendCtr.kind + " counter off " + prompt.src
                 : " kept the " + prompt.spendCtr.kind + " counter on " + prompt.src;
