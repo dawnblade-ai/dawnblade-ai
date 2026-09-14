@@ -1214,7 +1214,7 @@ function makeEffects(ctx){
       else if(k==="ap"){ actMut(n).ap+=v; n=L(n,`+${v} action point${v>1?"s":""} — the turn stretches.`); }
       else if(k==="life"){
         /* RULING (Reaping Blade): if you are the hero ahead, the gain fizzles */
-        if(act(n).lifeLock && act(n).hp > foe(n).hp){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
+        if(act(n).lifeLock && lifeAhead(act(n), foe(n))){ n = L(n, `${srcName}: you are ahead on life — the gain fizzles.`); return; }
         actMut(n).hp+=v; n=L(n,`+${v} life.`);
       }
       /* ARCANE DAMAGE GOES THROUGH THE ONE CHOKE POINT (v2.74). It used to
@@ -3214,8 +3214,10 @@ function makeEffects(ctx){
         : cond==="discard6way" ? (n._discWay||[]).some(c=>pow6(c, bAct(n)))
         : cond==="pitch6" ? act(n).pitch.some(c=>pow6(c, bAct(n)))
         : cond==="arsenal" ? from==="arsenal"
-        : cond==="lifeLt" ? act(n).hp < foe(n).hp
-        : cond==="lifeGt" ? act(n).hp > foe(n).hp
+        /* THE ONE PAIR (v4.51) — Line Crossers makes a tie read as a lead,
+           one direction per seat. Never `act(n).hp > foe(n).hp` inline. */
+        : cond==="lifeLt" ? lifeBehind(act(n), foe(n))
+        : cond==="lifeGt" ? lifeAhead(act(n), foe(n))
         : cond==="marked" ? !!foe(n).marked
         /* "IF IT'S NOT YOUR TURN" IS A QUESTION ABOUT THE TURN, NOT ABOUT
            A COMBAT WINDOW (v2.73). Read as `mode==="block"` this meant
@@ -3286,7 +3288,6 @@ function makeEffects(ctx){
         : cond==="dealtDmg" ? (act(n).hist.atk||0)>0 || (act(n).hist.arc||0)>0
         : cond==="isDraconic" ? (/draconic/i.test(card.tt||"") || !!act(n).dracNext || !!act(n).dracChain)
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
-        : cond==="lifeTie" ? act(n).hp === foe(n).hp
         /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
            asks about the SPECIFIC card just charged as THIS card's own cost
            (chargedPitch is computed above, before this loop runs). */
@@ -3348,7 +3349,6 @@ function makeEffects(ctx){
         dealtDmg:"you haven't dealt damage this turn",
         isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
-        lifeTie:"life totals aren't level",
         charged:"you didn't charge your hero's soul this turn",
         fused:"no qualifying card in hand to reveal for Fusion",
         /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
@@ -7198,6 +7198,64 @@ function defPerCount(per, defSide){
   return 0;
 }
 
+/* ---- EVERY CROSS-SEAT LIFE COMPARISON, THROUGH ONE PAIR (v4.51) -------
+
+   Three sites in this file compare the two heroes' life totals, and until
+   v4.51 all three did it inline with `act(n).hp > foe(n).hp`:
+
+     `lifeLock`'s gate     Reaping Blade — "a hero ahead on life can't gain {h}"
+     `lifeGt`              Mocking Blow
+     `lifeLt`              Fyendal's Fighting Spirit · Scar for a Scar ·
+                           Wounded Bull · Oasis Respite
+
+   LINE CROSSERS MOVES ALL OF THEM, and it is the reason these are a named
+   pair rather than three expressions. Its printed line —
+
+     "If you have the same {h} as a hero, it also counts as you having more
+      {h} than them, and them having less {h} than you."
+
+   — makes a TIE read as a lead, and it does so ASYMMETRICALLY. So which
+   side holds the piece decides which question it answers, and the two
+   readers take their sides in opposite orders on purpose:
+
+     lifeAhead(mine, theirs)   granted by MY OWN grant     ("YOU having more")
+     lifeBehind(mine, theirs)  granted by THEIR grant       ("THEM having less")
+
+   Read the other way round, a Line Crossers controller would count as
+   BEHIND on a tie — turning on their own Fyendal's Fighting Spirit, which
+   the card never says — and their opponent would count as AHEAD, which it
+   never says either. The four combinations are drilled.
+
+   THE GRANT IS DERIVED FROM THE PERMANENT, NEVER BANKED. `wardValue`'s
+   shape (v4.34) and `runeCount`'s before it: a gear piece is dealt straight
+   into the gear zone and never resolves, so there is no play moment to bank
+   a side field at, and a banked flag would outlive the piece anyway.
+
+   BOARD *AND* GEAR, and a DESTROYED piece grants nothing (v3.54, v4.34).
+   Measured over the pinned pool: exactly ONE record prints the clause and
+   it is Equipment, so the board half is LATENT and drilled with a
+   synthetic — a board-only scan would find nothing at all, and a gear-only
+   scan is a guess about the next card (v3.33, v3.55). */
+function tieGrantOf(sd){
+  const out = {ahead: false, behind: false};
+  const bearers = [...((sd && sd.board) || []), ...((sd && sd.gear) || [])];
+  for(const b of bearers){
+    if(!b) continue;
+    const c = b.card || b;
+    if(!c || b.destroyed || c.destroyed) continue;
+    let g = null;
+    try { g = P.fxParse(c).lifeTie; } catch(e){ g = null; }
+    if(!g) continue;
+    if(g.ahead)  out.ahead  = true;
+    if(g.behind) out.behind = true;
+  }
+  return out;
+}
+const lifeAhead  = (mine, theirs) =>
+  (mine.hp > theirs.hp) || (mine.hp === theirs.hp && tieGrantOf(mine).ahead);
+const lifeBehind = (mine, theirs) =>
+  (mine.hp < theirs.hp) || (mine.hp === theirs.hp && tieGrantOf(theirs).behind);
+
 function defendValue(defSide, card, opts){
   opts = opts || {};
   /* THE BASE IS THE CALLER'S WHEN IT KNOWS BETTER. A piece of equipment's
@@ -8638,6 +8696,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defPerCount, powPer, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

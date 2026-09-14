@@ -182,5 +182,58 @@ module.exports = [
     "and the feed says the tap was paid": true
   }
 }
+,
+
+{
+  name: "LINE CROSSERS: a tie counts as a lead for him and a deficit for them",
+  why: "v4.51 — his Arms piece prints \"if you have the same {h} as a hero, it " +
+       "also counts as you having more {h} than them, and them having less {h} " +
+       "than you\", and the clause read NOTHING since the card was dealt. Wrong " +
+       "in BOTH directions at once, which is why neither the coverage audit nor " +
+       "the one-sided sweep could see it: he lost Mocking Blow's boo on a tie " +
+       "(and the Might token his own hero passive makes of one), while the " +
+       "opponent lost every \"if you have less {h}\" clause they hold. And the " +
+       "asymmetry is the card — nothing makes HIM count as behind.",
+  run(c){
+    const lc = c.card("Line Crossers", 0, 5);
+    const mb = c.card("Mocking Blow", 1, 11);
+    const wb = c.card("Wounded Bull", 1, 12);
+
+    /* HIS OWN HALF: Mocking Blow's `lifeGt`, at 20 v 20. */
+    const boo = wear => {
+      const g = c.acting(c.state({hp: 20, res: 9, ap: 2, name: "Lyath Goldmane",
+        hand: [mb], gear: wear ? [lc] : []}, {hp: 20}, {turnPlayer: 0}));
+      return c.exec(g, mb, "hand", 0, {target: "hero"}).sides[0].hist.booed || 0;
+    };
+
+    /* THEIR HALF: the opponent's Wounded Bull grows, because the piece says
+       they count as BEHIND. It prints 7. */
+    const bull = wear => {
+      const g = c.acting(c.state({hp: 20, res: 9, ap: 2, hand: [wb], gear: []},
+        {hp: 20, name: "Lyath Goldmane", gear: wear ? [lc] : []}, {turnPlayer: 0}));
+      return c.exec(g, wb, "hand", 0, {target: "hero"}).pend.total;
+    };
+
+    const C = {hp: 20, board: [], gear: [lc]}, O = {hp: 20, board: [], gear: []};
+    return {
+      "the static is read off the printed line": JSON.stringify(c.P.fxParse(lc).lifeTie),
+      "no piece, a tie: the crowd says nothing": boo(false),
+      "worn, a tie: the crowd boos him":         boo(true),
+      "no piece: their Wounded Bull is its 7":   bull(false),
+      "worn: theirs counts as behind, so 8":     bull(true),
+      "he is never BEHIND on a tie":             c.E.lifeBehind(C, O),
+      "they are never AHEAD on a tie":           c.E.lifeAhead(O, C)
+    };
+  },
+  want: {
+    "the static is read off the printed line": "{\"ahead\":true,\"behind\":true}",
+    "no piece, a tie: the crowd says nothing": 0,
+    "worn, a tie: the crowd boos him": 1,
+    "no piece: their Wounded Bull is its 7": 7,
+    "worn: theirs counts as behind, so 8": 8,
+    "he is never BEHIND on a tie": false,
+    "they are never AHEAD on a tie": false
+  }
+}
 
 ];

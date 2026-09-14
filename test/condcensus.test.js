@@ -391,3 +391,104 @@ test("driven: a stale defCap entry caps NOTHING", {skip}, () => {
   assert.deepEqual(live.pend.defCap, {n: 2, count: "hand"},
     "…so the refusal above is the SHAPE, not the reader giving up");
 });
+
+/* ---- THE OTHER DIRECTION: AN EVALUATOR WITH NO EMITTER (v4.51) -------
+
+   This file has asked one question since v3.97 — *is every condition the
+   pool emits answered?* — and a census that only goes one way is half a
+   census (v4.12, v4.17, v4.50). The reverse is *does every condition the
+   MAIN LOOP answers have something that emits it?*, and it found a real
+   one the day it was asked:
+
+     `lifeTie` was read by `classifyClause` for Line Crossers and evaluated
+     as `act(n).hp === foe(n).hp`, and it had **ZERO emitters for as long as
+     it existed** — the clause's payload has no reader, so the whole line
+     refused and the evaluator could never once run. Its comment also
+     asserted the wrong semantics ("ties count as more and less BOTH
+     ways"), which is the card's two printed sentences collapsed into one.
+     Deleted at v4.51; the static lives on the permanent instead
+     (`fx.lifeTie`, `effects.lifeAhead`/`lifeBehind`).
+
+   THE THREE THAT REMAIN ARE LATENT READERS WITH HONEST VOCABULARIES, and
+   the set is pinned so a fourth is a deliberate edit. `arcDealt` IS
+   printed — by Sigil of Suffering — but as a DEFENCE self-buff condition
+   (`fx.defSelf.when`, v3.26), so the main loop's copy of the name waits
+   for a card that gates an ordinary payload on it; `atk` and `non` are
+   printed by no pool record at all.
+
+   THE EMITTER WALK IS DEEP AND COVERS THE POWCARDS. A rider carries conds
+   too (v3.95's `way:took` lives in a granted ability), and a hero or
+   equipment ability is parsed as a card that is not in the pool (v3.73) —
+   a scan that stops at top-level `fx.conds` over pool records alone
+   reports both as orphans, which is v4.00's false POSITIVE twice over and
+   is exactly what the first draft of this scan produced. */
+
+function allEmittedConds(legs){
+  legs = legs || {card: 1, equip: 1, arena: 1, hero: 1};
+  const pool = require("../data/pool.json");
+  const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
+  const B = require("../engine/build.js");
+  const out = new Set(), seen = new WeakSet();
+  const deep = v => {
+    if(!v || typeof v !== "object") return;
+    if(seen.has(v)) return;
+    seen.add(v);
+    if(Array.isArray(v)){ v.forEach(deep); return; }
+    if(typeof v.cond === "string") out.add(v.cond);
+    for(const k of Object.keys(v)) deep(v[k]);
+  };
+  let n = 0;
+  for(const c of arr){
+    const rc = {name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
+      ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
+      cost: c.cost, power: c.power, def: c.defense};
+    n++;
+    if(legs.card){ P.fxReset(); try { deep(P.fxParse(rc)); } catch(e){} }
+    if(legs.equip) try { const gr = B.equipPiece(Object.assign({}, rc, {uid: 900000 + n}));
+          if(gr.powCard){ P.fxReset(); deep(P.fxParse(gr.powCard)); } } catch(e){}
+    if(legs.arena) try { const bp = B.boardPow({card: rc, kind: "aura", uid: 800000 + n});
+          if(bp){ P.fxReset(); deep(P.fxParse(bp)); } } catch(e){}
+    if(legs.hero) try { const hp = P.parseHeroPower(rc.tx);
+          if(hp){ P.fxReset(); deep(P.fxParse({name: rc.name + " — hero power", pitch: 0,
+            cost: hp.cost, power: null, def: null, tt: "Hero Ability", kw: [],
+            tx: B.heroAbilityLine(rc, hp), uid: "hpow"})); } } catch(e){}
+  }
+  return out;
+}
+
+test("every condition the main loop ANSWERS has an emitter, or is pinned", {skip}, () => {
+  const body = metChain();
+  const answered = [...body.matchAll(/cond\s*===\s*"([a-zA-Z][\w:]*)"/g)].map(m => m[1]);
+  assert.ok(answered.length > 20,
+    "only " + answered.length + " conditions found in the loop — the scan is aimed wrong");
+  const emitted = allEmittedConds();
+  assert.ok(emitted.size > 40, "the emitter walk found only " + emitted.size + " — aimed wrong");
+  const orphan = [...new Set(answered)].filter(c => !emitted.has(c)).sort();
+  assert.deepEqual(orphan, ["arcDealt", "atk", "non"],
+    "an evaluator with no emitter is dead rules code that reads like a rule (v4.11)");
+  /* THE THREE POWCARD LEGS CONTRIBUTE NOTHING TODAY, AND THAT IS PINNED
+     RATHER THAN ASSUMED. They are there for v3.73's reason — a hero or
+     equipment ability is parsed as a card that is not in the pool — and
+     measured, every condition they reach is also emitted by a pool record,
+     so a sabotage that deletes all three comes back SILENT and correctly
+     so. The day a powCard emits one on its own this fails and somebody
+     re-reads the reach, which is what a premise-as-a-drill buys (v4.44)
+     over a sentence nothing checks (v3.41). */
+  const cardLeg = allEmittedConds({card: 1});
+  assert.deepEqual([...emitted].filter(c => !cardLeg.has(c)).sort(), [],
+    "a condition only a powCard emits — the legs now carry the census");
+  /* THE DEEP WALK DOES CARRY ONE, so it is not redundant: `way:took` lives
+     inside a GRANTED ability's rider (v3.95), which a top-level `fx.conds`
+     scan never sees. */
+  assert.ok(emitted.has("way:took"),
+    "the deep walk stopped reaching a rider's condition — v4.00's false positive is back");
+
+  /* AND THE THREE ARE NOT A WHITELIST TO GROW. `arcDealt` is printed as a
+     DEFENCE condition, so its name really does reach a parse — the walk
+     must see that, or the pin above is passing for the wrong reason. */
+  const P2 = require("../engine/parser.js");
+  const sig = H.card("Sigil of Suffering", 1) || H.card("Sigil of Suffering", 2);
+  assert.ok(sig, "Sigil of Suffering left the pool");
+  assert.equal((P2.fxParse(sig).defSelf || {}).when, "arcDealt",
+    "`arcDealt` is printed, as a defence condition — the reason it is pinned");
+});

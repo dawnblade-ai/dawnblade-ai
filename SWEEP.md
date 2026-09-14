@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-13 from `tools/audit.json`.
+Generated 2026-09-14 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 13 cards | understood ≠ built |
-| **Fail states** | 44 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 12 cards | understood ≠ built |
+| **Fail states** | 43 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -48,7 +48,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Crown of Dichotomy** (part, 1/2 unread)
 - **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
-- **Line Crossers** (part, 1/2 unread)
 - **Plasma Barrel Shot** (part, 1/4 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
@@ -73,7 +72,7 @@ can be overruled. Same discipline as the mention count.
 | Choice never offered | 6 |
 | No schedule to fire on | 5 |
 | Earned value denied | 5 |
-| Unread, effect unknown | 5 |
+| Unread, effect unknown | 4 |
 | Ability inert — cost not modelled | 4 |
 | Displayed total is wrong | 3 |
 | Keyword filed as no-op, but it has meaning | 1 |
@@ -224,10 +223,4 @@ can be overruled. Same discipline as the mention count.
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Watery Grave" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 14 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: Because gravy can often play allies from the grave - they must be turned face down when they die so they can not be used infinitely. allow the player to check their own faced down cards but not their opponents update - g
     > Watery Grave
 - … and 5 more (see the station)
-
-### INERT — 1 entries
-
-- **Line Crossers** · tier `part` · lyath
-  - *Unread, effect unknown* — Nothing on this card resolves. It is inert, and at least visibly so.
-    > If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.
 

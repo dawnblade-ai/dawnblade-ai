@@ -114,12 +114,19 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "clashReveal", "clauses", "condOnHit", "condOnLeave", "conds", "crush",
     "ctrTick", "daggerJab", "deckFaceUp", "defDebuff", "defGrant", "defLimit",
     "defSelf", "dr", "emptyDies", "fusionCost", "ga", "gaQ", "gyFirstGa",
-    "handAbility", "handWipe", "hitCounter", "hitWatch", "millCost", "modes",
+    "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
     "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "wipePowIfIdle",
   ]);
+  /* +lifeTie v4.51 — Line Crossers' static: "if you have the same {h} as a
+     hero, it also counts as you having more {h} than them, and them having
+     less {h} than you." Read as a property of the PERMANENT (`wardValue`'s
+     shape, v4.34) rather than banked, because a gear piece never resolves
+     and so has no play moment to bank at. Consumed by `effects.tieGrantOf`,
+     which `lifeAhead`/`lifeBehind` call — the ONE pair every cross-seat
+     life comparison goes through. */
   /* +powFormula v4.49 — a printed BASE-POWER DEFINITION ("this card's {p}
      is equal to 1 plus the number of times you've boosted this combat
      chain"). It replaced an inline regex over raw text in `build.js` that

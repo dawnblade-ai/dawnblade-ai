@@ -1,3 +1,92 @@
+## v4.51 — a tie that counts as a lead, one way only
+
+> *"If you have the same {h} as a hero, it also counts as **you having more
+> {h} than them**, and **them having less {h} than you**."*
+> — LINE CROSSERS, Lyath's Arms piece
+
+The clause has read **nothing since the card was dealt**, and it is wrong in
+**both directions at once** — which is exactly why neither the coverage audit
+nor the one-sided fairness sweep could see it:
+
+| | |
+|---|---|
+| **weaker than printed** | Lyath lost Mocking Blow's boo on a tie — and with it the Might token his own hero passive makes of one |
+| **stronger than printed** | the opponent lost every *"if you have less {h}"* clause they hold — Fyendal's Fighting Spirit, Scar for a Scar, Wounded Bull, across five other decks |
+
+**THE ASYMMETRY IS THE CARD.** Its controller counts as AHEAD; their opponent
+counts as BEHIND. Nothing makes the controller count as behind and nothing
+makes the opponent count as ahead, so `effects.lifeAhead` and `lifeBehind`
+take their two sides in **opposite orders** on purpose:
+
+```
+lifeAhead(mine, theirs)    granted by MY OWN grant   ("YOU having more")
+lifeBehind(mine, theirs)   granted by THEIR grant    ("THEM having less")
+```
+
+Read the other way round, the holder turns on their own Fyendal's Fighting
+Spirit and the opponent collects Mocking Blow's boo — two grants the printed
+line withholds. All four combinations are drilled.
+
+**EVERY CROSS-SEAT LIFE COMPARISON GOES THROUGH THAT ONE PAIR.** Measured,
+`effects.js` holds exactly three sites and all three did it inline with
+`act(n).hp > foe(n).hp`: `lifeGt` (Mocking Blow), `lifeLt` (four cards) and
+`lifeLock`'s gate (Reaping Blade). A fourth written inline would silently
+ignore the piece, so a drill scans for one — **with comments stripped and the
+stripper's own control routed through the scan** (v4.32), because this
+project's prose names the shape it forbids and a raw scan reports that
+sentence as the defect (v4.27, `sync.test.js`).
+
+**THE GRANT IS DERIVED FROM THE PERMANENT, NEVER BANKED** — `wardValue`'s
+shape (v4.34) and `runeCount`'s before it. A gear piece is dealt straight into
+the gear zone and never resolves, so there is no play moment to bank a side
+field at, and a banked flag would outlive the piece anyway. Board **and** gear,
+a destroyed piece grants nothing (v3.54), and the board half is latent and
+drilled with a synthetic.
+
+### A CONDITION NAMED FOR THIS CARD, WITH ZERO EMITTERS AND THE WRONG READING
+
+`classifyClause` already carried `lifeTie`, and `effects.js` already evaluated
+it as `act(n).hp === foe(n).hp`. It had **never once run**: the clause's
+payload has no reader, so the whole line refused and nothing ever emitted the
+condition. Its comment also asserted the collapse the card does not print —
+
+> *"ties count as 'more' and 'less' both ways (Line Crossers)"*
+
+— which is the two printed sentences folded into one. And a condition is the
+wrong SHAPE besides: a `fx.conds` entry gates a payload, and this card has
+none. Deleted.
+
+**SO `condcensus` ASKS THE REVERSE DIRECTION NOW.** That file has asked *is
+every condition the pool EMITS answered?* since v3.97, and a census that only
+goes one way is half a census (v4.12, v4.17, v4.50). The reverse — *does every
+condition the main loop ANSWERS have an emitter?* — found this one the day it
+was asked. **30 answered, 3 orphans**, pinned: `arcDealt` (printed by Sigil of
+Suffering, but as a DEFENCE condition), `atk` and `non` (printed by no pool
+record at all).
+
+**AND THE EMITTER WALK IS DEEP AND COVERS THE POWCARDS**, because a rider
+carries conditions too (v3.95's `way:took`) and a hero or equipment ability is
+parsed as a card that is not in the pool (v3.73). A scan that stops at
+top-level `fx.conds` over pool records reports both as orphans — v4.00's false
+POSITIVE twice over, and what the first draft produced. **The powCard legs are
+measured to contribute nothing today and that is PINNED rather than assumed**
+(v4.44): their sabotage is correctly silent, and the day one emits a condition
+on its own the pin moves.
+
+Measured: **exactly 1 unique card moves, `part` → `full`** (392 → 393 full,
+13 → 12 part; 746 → 747 over the 797-record pool), floor re-pinned after
+reading the diff; **the tie grant decides 3 of 339 life comparisons in 210
+games**, and unlike v4.43's Hood and v4.49's Gun the piece **is** worn by
+`defaultPicks`, so the route is genuinely driven; the ladder at three seeds is
+byte-identical on **thirteen of fifteen heroes** and the two that move
+(Lyath 5·5·4 → 5·6·4, Gravy 6·12·10 → 6·11·10) have intervals that overlap
+entirely — **NOISE** by the standing rule (v4.40). **15 sabotages, 15 bite** —
+and three of the first pass came back silent for reasons that were all mine: a
+"counts as both" sabotage no fixture could express until the half-piece was
+driven through the SIDE reader rather than only through the parse (v3.62), an
+inverse anchor that appeared twice (v4.36), and a powCard leg another leg
+covers (v4.50, verbatim).
+
 ## v4.50 — the readers the pool never reaches
 
 **`npm run anchors` — WHICH PARSER READINGS HAS NOTHING EVER REACHED?**

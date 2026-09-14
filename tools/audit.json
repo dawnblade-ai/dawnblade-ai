@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-13T21:02:56.697Z",
- "appVer": "4.49",
+ "generated": "2026-09-14T02:17:33.110Z",
+ "appVer": "4.50",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 392,
-  "part": 13,
+  "full": 393,
+  "part": 12,
   "none": 0
  },
  "heroes": {
@@ -13608,22 +13608,20 @@
    "mentions": [
     "blade break"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.",
-     "st": "skip"
+     "st": "run"
     },
     {
      "t": "Blade Break",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If you have the same {h} as a hero, it also counts as you having more {h} than them, and them having less {h} than you.\nBlade Break",

@@ -871,15 +871,26 @@ test("all three printings read the rider, and NOTHING else in the pool does", ()
   ], "the set of cards reading \"less {h} than\" moved — say which way and why");
 });
 
-test("`lifeLt` was already there — the fold invents no condition", () => {
-  /* The evaluator has answered `act(n).hp < foe(n).hp` since Mocking
-     Blow's twin was built; what was missing is that the printed SUBJECT
-     is different. The anchor beside it spells "YOU have less {h} than an
-     opposing hero". */
-  const SRC = require("fs").readFileSync(
-    require("path").join(__dirname, "..", "engine", "effects.js"), "utf8");
-  assert.ok(/cond==="lifeLt" \? act\(n\)\.hp < foe\(n\)\.hp/.test(SRC),
-    "the evaluator moved — the fold now emits a condition nobody answers");
+test("`lifeLt` was already there — the fold invents no condition", {skip}, () => {
+  /* The evaluator has answered the life comparison since Mocking Blow's
+     twin was built; what was missing is that the printed SUBJECT is
+     different. The anchor beside it spells "YOU have less {h} than an
+     opposing hero".
+
+     DRIVEN, NOT GREPPED (v3.22, v3.28, v3.94, v4.50 — fifth outing). This
+     drill read the evaluator's source line verbatim and went red at v4.51,
+     when the comparison moved behind `effects.lifeBehind` so Line Crossers
+     could reach it. The CLAIM is that the fold emits `lifeLt` and something
+     answers it — which is what the two assertions below say, and neither
+     can rot when the reader is renamed. */
+  H.db();
+  const oa = H.card("Oasis Respite", 1);
+  assert.ok(oa, "Oasis Respite left the pool");
+  const cond = (P.fxParse(oa).conds || []).map(e => e.cond);
+  assert.ok(cond.includes("lifeLt"),
+    "the fold stopped emitting `lifeLt` — it emits " + JSON.stringify(cond));
+  assert.equal(E.lifeBehind({hp: 14, board: [], gear: []}, {hp: 20, board: [], gear: []}), true,
+    "…and nothing answers it — the fold now emits a condition that reads FALSE");
 });
 
 test("DRIVEN: behind gains, ahead does not, and LEVEL does not", {skip}, () => {

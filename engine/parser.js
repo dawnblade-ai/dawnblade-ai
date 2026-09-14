@@ -1321,8 +1321,21 @@ function classifyClause(raw){
     /* a pitch-zone card fatter than this card's own printed power */
     if(/^there is a card in your pitch zone with \{p\} greater than this'?s? base \{p\}$/.test(cond))
       return Object.assign(rest,{cond:"pitchOverBase"});
-    /* ties count as "more" and "less" both ways (Line Crossers) */
-    if(/^you have the same \{h\} as a hero$/.test(cond)) return Object.assign(rest,{cond:"lifeTie"});
+    /* THE `lifeTie` CONDITION IS DELETED (v4.51), AND ITS COMMENT WAS THE
+       REASON. It read "ties count as 'more' and 'less' both ways (Line
+       Crossers)" — which is the card's two printed sentences collapsed
+       into one, and the collapse is wrong: the piece's controller counts
+       as AHEAD and their OPPONENT counts as BEHIND, so a tie is never
+       both for the same seat. It also had ZERO emitters for as long as it
+       existed, because the clause's payload has no reader and
+       `classifyClause` refuses the whole line — so the evaluator in
+       `effects.js` could never once run.
+
+       And a condition is the wrong SHAPE for it either way: a `fx.conds`
+       entry gates a payload, and this card has none. It is a static that
+       changes how a comparison reads, so it lives on the permanent as
+       `fx.lifeTie` and `effects.lifeAhead`/`lifeBehind` answer it — see
+       the whole-card fold in `fxParse`. */
     if(m=cond.match(/^you'?(?:ve| have) attacked with a ([a-z' -]+) this turn$/))
       return Object.assign(rest,{cond:"atkNamed:"+m[1].trim()});
     if(m=cond.match(/^you'?(?:ve| have) hit (\d+) or more times this combat chain$/))
@@ -5363,6 +5376,66 @@ function fxParse(card){
         handled.add(ri);
         break;
       }
+    }
+  }
+
+  /* ---- A TIE THAT COUNTS AS A LEAD, ONE WAY ONLY (v4.51) ------------
+     LINE CROSSERS, Lyath's Arms piece, and the pool's only record of the
+     shape:
+
+       "If you have the same {h} as a hero, it also counts as YOU HAVING
+        MORE {h} than them, and THEM HAVING LESS {h} than you."
+
+     It is not a trigger and not a payload — it changes how a COMPARISON
+     reads, for as long as the piece is worn. So it is a property of the
+     PERMANENT, derived off the printed line wherever the piece is, which
+     is `wardValue`'s shape (v4.34) and `runeCount`'s before it: a static
+     banked as a side field at the deal would outlive the piece, and a
+     gear piece never resolves anyway so it has no play moment to bank at.
+
+     THE ASYMMETRY IS THE CARD, AND READING IT AS "A TIE COUNTS AS BOTH"
+     WOULD BE TWO PRINTED SENTENCES COLLAPSED INTO ONE. Its controller
+     counts as AHEAD; its controller's OPPONENT counts as BEHIND. Nothing
+     makes the controller count as behind, and nothing makes the opponent
+     count as ahead, so the two halves are read separately and each names
+     whose comparison it moves. A synthetic piece printing only the first
+     half is what proves that (v3.73), because the one real record prints
+     both and no pool fixture can tell a read pair from a hardcoded one.
+
+     AND ONE HALF HELPS THE OPPONENT, WHICH IS WHY IT IS READ RATHER THAN
+     DROPPED. "Them having less {h} than you" is what turns on Fyendal's
+     Fighting Spirit, Scar for a Scar and Wounded Bull — five decks' worth
+     of life-behind cards, none of them Lyath's. Reading only the upside is
+     the direction that steals games; reading neither is what shipped, and
+     it is wrong in BOTH directions at once (Lyath loses Mocking Blow's boo
+     on a tie, the opponent loses their behind-clauses), which is exactly
+     why neither the coverage audit nor the one-sided sweep could see it.
+
+     MEASURED over the pinned pool: FIVE conditions across five cards read
+     a life comparison — `lifeGt` (Mocking Blow) and `lifeLt` (Fyendal's,
+     Scar for a Scar, Wounded Bull, Oasis Respite) — plus Reaping Blade's
+     `lifeLock`, and `effects.js` holds every one of the three sites that
+     compares the two heroes' life. Lyath decks Line Crossers, Mocking
+     Blow AND Oasis Respite, so all of it is reachable in one list.
+
+     IT IS MATCHED ON THE LEVELLED CLAUSE (v3.36) — a whole-card scan sees
+     `fx.clauses` RAW, so `SYNONYMS` has not reached it — and AN
+     UNREADABLE TAIL REFUSES (v2.29): a clause whose head matches and
+     whose halves do not is left `skip` rather than filed with a grant
+     nobody read. */
+  {
+    const HEAD = /^if you have the same \{h\} as a hero, it also counts as (.+?)\.?$/;
+    for(let ri = 0; ri < clauses.length; ri++){
+      if(handled.has(ri)) continue;
+      const m = levelIdiom(clauses[ri].toLowerCase().trim()).match(HEAD);
+      if(!m) continue;
+      const tail = m[1];
+      const ahead  = /\byou having more \{h\} than them\b/.test(tail);
+      const behind = /\bthem having less \{h\} than you\b/.test(tail);
+      if(!ahead && !behind) continue;          /* v2.29 — refuse, do not guess */
+      fx.lifeTie = {ahead, behind};
+      handled.add(ri);
+      break;
     }
   }
 
