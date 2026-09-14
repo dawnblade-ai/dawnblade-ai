@@ -16,6 +16,7 @@
     "cup": "node tools/tournament.js",
     "gaps": "node tools/gaps.js",
     "scenes": "node tools/scenes.js",
-    "eight": "node tools/cup8.js"
+    "eight": "node tools/cup8.js",
+    "anchors": "node tools/anchors.js"
   }
 }

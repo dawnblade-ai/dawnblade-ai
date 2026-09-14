@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.49
+**Current version:** v4.50
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2773 drills** at v4.49.
+This is `node --test "test/*.test.js"` — **2780 drills** at v4.50.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,95 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### `npm run anchors` — WHICH READERS HAS THE POOL NEVER REACHED? (v4.50)
+
+```
+npm run anchors                   the report
+npm run anchors -- --json         machine-readable, for test/anchors.test.js
+```
+
+**EVERY OTHER TOOL HERE ASKS ABOUT A CARD.** The audit asks how much of a
+card's text was read, the fairness sweep whether the reading was too
+generous, `failstates.js` whether unread text is dangerous, `npm run
+scenes` whether the card DOES what it prints. **Nothing asked about the
+READER** — and that is the question v4.48 answered twice by accident:
+`perEquipDef` and `perBoost` were anchored on the RULING's paraphrase
+(*"where X is the number of …"*) while the database prints *"for each …"*
+on every one of 797 records, so both had **never once fired** while the
+four cards they were written for read a flat +1 through a loose matcher.
+
+**TWO HALVES, BECAUSE THEY FAIL DIFFERENTLY** and no single scan sees both:
+
+| half | asks | answer |
+|---|---|---|
+| **ANCHORS** | V8 coverage over a run that parses every pool record AND every powCard the three builders make — a `return R([…])` whose first byte never executed | **15 of 158** return sites |
+| **OP KINDS** | every op kind something a match can DEAL emits, against `runOps`'s own dispatcher vocabulary, **both directions** | **84 of 89** kinds claimed |
+
+**THE POWCARD HALF IS LOAD-BEARING, NOT THOROUGHNESS.** Asked of pool
+records alone, TWELVE op kinds look orphaned and SEVEN are claimed by an
+equipment or hero ABILITY — `arsCycle` (Azalea), `arsTurn` (Bravo),
+`untapAlly` (Scuttle Toes), `roll` (Knucklehead), `mkBanish` (Pouncing
+Paws), `namedBuff` (Tearing Shuko), `awd` (Runebleed Robe). A hero
+powCard is built by `build.js` out of a printed line and is NOT a pool
+card (v3.73), so a census stopping at the pool reports seven false
+positives — v4.00's false-POSITIVE shape, and what the first run produced.
+
+**AND THE FIRE-SITE HALF IS DELIBERATELY NOT COVERAGE.** An `else if(k ===
+…)` in `effects.js` that no parse reaches says nothing — it needs a DRIVEN
+GAME, which is `npm run play`'s job. The op census answers the sharper
+question without a game: not *was this line executed* but **can anything a
+match deals ever produce this op at all.**
+
+**A DEAD ANCHOR IS A LEAD, NOT A FINDING** (v3.17, v4.18). Most of the
+fifteen are honest — six NOOPs shadowed by a whole-card reader built later
+(the four clash reasons, both inertia reasons, plus the `reprise`/`mark`
+prefixes v4.21 strips) and three whose op kind is live through a DIFFERENT
+anchor (`defBuff`, `atkMinus`, `res`). What makes one a DEFECT is the
+v4.48 question: **does the pool print a near-miss of this wording, and is
+that near-miss read by something ELSE, wrongly?**
+
+### A BARE DIGIT THAT OUTRANKED THE PIPS (v4.50)
+
+> *"Action - {r}{r}{r}, banish 2 cards from your soul: Attack"*
+> — TEKLOVOSSEN, THE MECHROPOTENT
+
+`weaponCost`'s cost read was `(\d+)\s*(?:resource|\{r\})` **else any
+`(\d+)` anywhere in the cost string**, so a digit belonging to a different
+half of a COMPOUND cost won over the pip count: **cost 2**, the `2` from
+*"banish 2 cards"*. A pip CHEAPER than printed, at a reader **nine sites
+ask**.
+
+**FOUND BY ASKING THE CENSUS**, not by reading the card — `soulSpend` came
+back with zero claimants, and the only two records printing that phrase
+are Boltyn's activation cost and this one.
+
+**AND MY OWN FIRST COMMENT GOT THE FALLBACK BACKWARDS.** It said the
+bare-digit rung had four claimants — the Demon Ally tokens printing
+*"Action - 0: Attack"* — *"so dropping it would read all four as free."*
+**They ARE free.** A cost string with no pips already counts 0, so
+measured over all 26 Action-Attack records the rung **changes the answer
+on none of them**, and its sabotage came back SILENT for exactly that
+reason (v4.11: a guard that cannot express a bug is dead code that reads
+like a rule). Deleted, and **the premise is a drill instead** — a record
+printing `Action - 3: Attack` fails a test rather than reading as free,
+with a SYNTHETIC control routed THROUGH the scan (v4.32), because no pool
+record can express the counterexample.
+
+**THE TWO ANCHORS v4.48 NAMED AS DEAD AND LEFT STANDING ARE GONE.** Both
+RULINGS are unchanged and honoured by the `for each` reader the cards
+actually print, and both live readings are asserted beside the deletion.
+
+Measured: **exactly 1 record's `weaponCost` moves, 0 tiers** (746 / 39 /
+12 unchanged), and the move is LATENT — nothing becomes or equips
+Teklovossen and `isWeapon` is false for a Demi-Hero Equipment, so
+`equipPiece` builds it no powCard at all; **the ladder is BYTE-IDENTICAL
+at three seeds on both sides**, run rather than reasoned about (v4.43);
+**13 sabotages, 13 bite** — two of the first pass silent for reasons that
+were both mine: disabling ONE powCard builder is covered by another
+(`boardPow` needs only a readable activation line, so it builds the same
+ability powCard for an equipment record), and the rung could not express
+its own bug.
 
 ### THE GUN WITH NO BUTTON (v4.49)
 
@@ -8160,6 +8249,11 @@ keyword level. Answer one, then teach the parser and re-run the audit.
    in `npm test` as drills and in CI, but run the REPORT when you want the
    per-hero answer. It is the only tool here that asks whether a reading
    was OBEYED rather than made; see "DOES THE CARD *DO* WHAT IT PRINTS?".
+6b3. **ANCHORS** (`npm run anchors`) after any PARSER change — the only
+   tool here that asks about the READER rather than the card. A new anchor
+   that never fires, or an existing one the pool has started to reach, both
+   show up as a move in its pinned set; `test/anchors.test.js` runs it, so
+   `npm test` carries the claim and the report is for reading the leads.
 6c. **PLAY IT** (`npm run play`) after any rules change — 210 self-play
    games in about 20 seconds. **A WIN COUNT IS ONE SAMPLE**: the ladder is
    reproducible and not repeatable, and a hero moves by a median of 6 on an

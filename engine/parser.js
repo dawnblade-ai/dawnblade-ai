@@ -2697,13 +2697,21 @@ function classifyClause(raw){
   /* RULING (Out Pace): a restriction on what may be declared against it */
   if(/^this can'?t be defended by equipment$/.test(c))
     return NOOP("defence restriction — the opponent may not raise equipment against this");
-  /* RULING (Fender Bender): +1 per separate equipment the opponent defended
-     with. Only knowable after defenders are declared, so it resolves late. */
-  if(/^this gets \+x\s*\{p\}, where x is the number of equipment defending it$/.test(c))
-    return R([["perEquipDef",1]]);
-  /* RULING (Overblast): Dash's per-chain boost count */
-  if(/^this gains? \+x\s*\{p\}, where x is the number of times you have boosted this combat chain$/.test(c))
-    return R([["perBoost",1]]);
+  /* ---- TWO ANCHORS THAT HAD NEVER ONCE FIRED (v4.50) ----------------
+     Two readers lived here, for Fender Bender and Overblast, anchored on
+     "this gets +X{p}, WHERE X IS THE NUMBER OF …" — which is the RULING's
+     paraphrase and **not a wording the database prints on any of 797
+     records**. v4.48 measured that, built the `for each` reader the cards
+     actually print (see `PER_COUNT`), named these two as "dead rules code
+     that reads like a rule (v4.11)" — and left them standing.
+
+     Deleted. The two RULINGS are unchanged and honoured by the `for each`
+     reader: Fender Bender is +1 per separate equipment the opponent
+     defended with (knowable only after defenders are declared, so it
+     resolves late) and Overblast is Dash's per-chain boost count. The op
+     KINDS and their fire sites are untouched — only the unreachable
+     anchors go, and `tools/anchors.js` is the standing question that
+     would have caught them the version they were written. */
   /* RULING (Under Loop): on hit it recycles instead of hitting the graveyard,
      and the combat chain stays open. Written as the bare payload so the
      if/when handler above applies the onHit wrapper itself. */
@@ -7219,7 +7227,41 @@ function weaponCost(tx){
   const m = t.match(/((?:once per turn )?)action\s*[-—]*\s*([^:]{0,90}?):\s*attack\b/i);
   if(!m) return null;
   const cs = (m[2]||"").trim();
-  const dm = cs.match(/(\d+)\s*(?:resource|\{r\})/i) || cs.match(/(\d+)/);
+  /* ---- A BARE DIGIT IN A COMPOUND COST OUTRANKED THE PIPS (v4.50) ----
+     The cost read was `(\d+)\s*(?:resource|\{r\})` ELSE any `(\d+)`
+     anywhere in the cost string, so a digit belonging to a DIFFERENT half
+     of a compound cost won over the pip count:
+
+       Teklovossen  "Action - {r}{r}{r}, banish 2 cards from your soul: Attack"
+                    read as cost 2 — the `2` from "banish 2 cards"
+
+     A pip CHEAPER than printed, and `weaponCost` is asked at nine sites.
+     THE EXPLICIT DIGIT FORM, THEN THE PIP COUNT, AND NOTHING ELSE.
+
+     AND THE BARE-DIGIT FALLBACK IS DELETED, WHICH MY OWN FIRST COMMENT
+     GOT BACKWARDS. It said the rung had four claimants — "Action - 0:
+     Attack" on Blasmophet, Nasreth, Raydn and Ursur — "so dropping it
+     would read all four as free." **They ARE free.** The pip count of a
+     cost string with no pips is already 0, so measured over all 26
+     Action-Attack records the rung **changes the answer on none of them**
+     and no record prints a NON-ZERO bare digit: a guard that cannot
+     express a bug is dead code that reads like a rule (v4.11), and its
+     sabotage came back silent for exactly that reason. The premise is a
+     drill instead, so a record printing `Action - 3: Attack` fails a test
+     rather than being read as free.
+
+     Exactly ONE record's cost moves (2 -> 3) and it is LATENT: nothing in
+     the pool becomes or equips Teklovossen, and `isWeapon` is false for a
+     Demi-Hero Equipment so `equipPiece` builds it no powCard at all. The
+     reading is still what the card prints, which is the whole standard
+     (v3.23: half-building a value is worse than the honest gap, and this
+     is the other end — a value read wrong is worse than one not read).
+
+     FOUND BY A CENSUS, not by reading the card: `tools/anchors.js` asks
+     which parser readers the pool never reaches, and `soulSpend` came
+     back with zero claimants, which is what put this line in front of
+     anybody. */
+  const dm = cs.match(/(\d+)\s*(?:resource|\{r\})/i);
   const rs = (cs.match(/\{r\}/gi)||[]).length;
   /* "ONCE PER TURN" IS PRINTED, NOT UNIVERSAL — and it is not the only
      thing that limits a weapon to one swing.
@@ -7242,7 +7284,8 @@ function weaponCost(tx){
      `oncePerTurn` and ignoring `{t}` would make Scorpio stronger than
      printed, which is the direction that steals games. Both are read,
      and the caller must honour both. */
-  return {cost: dm ? +dm[1] : rs, addRust:/rust counter/i.test(cs),
+  return {cost: dm ? +dm[1] : rs,
+          addRust:/rust counter/i.test(cs),
           needSteam:/remove a steam counter/i.test(cs),
           taps: /\{t\}/i.test(cs),
           oncePerTurn: !!m[1]};

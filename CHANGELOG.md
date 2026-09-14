@@ -1,3 +1,90 @@
+## v4.50 — the readers the pool never reaches
+
+**`npm run anchors` — WHICH PARSER READINGS HAS NOTHING EVER REACHED?**
+
+Every other tool here asks about a CARD. The audit asks how much of a card's
+text was read, the fairness sweep whether the reading was too generous,
+`failstates.js` whether unread text is dangerous, `npm run scenes` whether the
+card DOES what it prints. **Nothing asked about the READER** — and that is the
+question v4.48 answered twice by accident: `perEquipDef` and `perBoost` were
+anchored on the RULING's paraphrase (*"where X is the number of …"*) while the
+database prints *"for each …"* on every one of 797 records, so both had **never
+once fired** while the four cards they were written for read a flat +1 through a
+loose matcher.
+
+Two halves, because they fail differently and no single scan sees both:
+
+| half | asks | answer |
+|---|---|---|
+| **ANCHORS** | V8 coverage over a run that parses every pool record AND every powCard the three builders make — a `return R([…])` whose first byte never executed | **15 of 158 return sites** |
+| **OP KINDS** | every op kind something a match can DEAL emits, against `runOps`'s own dispatcher vocabulary, **both directions** | **84 of 89 kinds claimed** |
+
+**THE POWCARD HALF IS LOAD-BEARING, NOT THOROUGHNESS.** Asked of pool records
+alone, TWELVE op kinds look orphaned and SEVEN of the twelve are claimed by an
+equipment or hero ABILITY — `arsCycle` (Azalea), `arsTurn` (Bravo), `untapAlly`
+(Scuttle Toes), `roll` (Knucklehead), `mkBanish` (Pouncing Paws), `namedBuff`
+(Tearing Shuko), `awd` (Runebleed Robe). A hero powCard is built by `build.js`
+out of a printed line and is not a pool card (v3.73), so a census that stops at
+the pool reports seven false positives — v4.00's false-POSITIVE shape, and
+exactly what the first run of this tool produced.
+
+**AND THE FIRE-SITE HALF IS DELIBERATELY NOT COVERAGE.** An `else if(k === …)`
+in `effects.js` that no parse reaches says nothing — it needs a DRIVEN GAME,
+which is `npm run play`'s job. The op census answers the sharper question
+without a game: not *was this line executed* but *can anything a match deals
+ever produce this op at all.*
+
+### A BARE DIGIT THAT OUTRANKED THE PIPS
+
+`weaponCost`'s cost read was `(\d+)\s*(?:resource|\{r\})` **else any `(\d+)`
+anywhere in the cost string**, so a digit belonging to a different half of a
+COMPOUND cost won over the pip count:
+
+> *"Action - {r}{r}{r}, banish 2 cards from your soul: Attack"* — TEKLOVOSSEN
+
+read as **cost 2** — the `2` from *"banish 2 cards"*. A pip CHEAPER than
+printed, at a reader nine sites ask. **Found by asking the census**, not by
+reading the card: `soulSpend` came back with zero claimants, and the only
+records printing that phrase are Boltyn's ability cost and this one.
+
+**AND MY OWN FIRST COMMENT GOT THE FALLBACK BACKWARDS.** It said the bare-digit
+rung had four claimants — the Demon Ally tokens printing *"Action - 0: Attack"*
+— *"so dropping it would read all four as free."* **They ARE free.** A cost
+string with no pips already counts 0, so measured over all 26 Action-Attack
+records the rung **changes the answer on none of them**, and its sabotage came
+back SILENT for exactly that reason: a guard that cannot express a bug is dead
+code that reads like a rule (v4.11). Deleted, and **the premise is a drill
+instead** — a record printing `Action - 3: Attack` fails a test rather than
+being read as free, with a SYNTHETIC control through the scan (v4.32) because
+no pool record can express the counterexample.
+
+### TWO ANCHORS v4.48 NAMED AS DEAD AND LEFT STANDING
+
+The `where X is the number of …` readers for Fender Bender and Overblast are
+deleted. Both RULINGS are unchanged and honoured by the `for each` reader the
+cards actually print, and both live readings are asserted beside the deletion.
+
+**A DEAD ANCHOR IS A LEAD, NOT A FINDING** (v3.17, v4.18). Most of the fifteen
+are honest: six NOOPs shadowed by a whole-card reader built later (the four
+clash reasons via `fx.clash`/`clashReveal` at v3.94, both inertia reasons via
+`isHandWipe` at v4.04, plus the `reprise` and `mark` prefixes v4.21 strips), and
+three whose op kind is live through a DIFFERENT anchor (`defBuff`, `atkMinus`,
+`res` — the pool spells resources as PIPS and Look Tuff's -1{p} inside a printed
+toll). What makes one a DEFECT is the v4.48 question — *does the pool print a
+near-miss of this wording, and is that near-miss read by something else,
+wrongly?* The tool prints the set; a person asks that of each.
+
+Measured: **exactly 1 record's `weaponCost` moves (2 → 3), 0 tiers move**
+(746 full / 39 part / 12 none unchanged); the move is **LATENT** — nothing in
+the pool becomes or equips Teklovossen and `isWeapon` is false for a Demi-Hero
+Equipment, so `equipPiece` builds it no powCard at all; **the ladder is
+BYTE-IDENTICAL at three seeds on both sides**, run rather than reasoned about
+(v4.43); **13 sabotages, 13 bite** — and two of the first pass came back silent
+for reasons that were both mine: disabling ONE powCard builder is covered by
+another (`boardPow` needs only a readable activation line, so it builds the same
+ability powCard for an equipment record), and the bare-digit rung could not
+express its own bug.
+
 ## v4.49 — THE GUN WITH NO BUTTON
 
 **PLASMA BARREL SHOT is in Dash's gear list, prints three lines, and had NO
