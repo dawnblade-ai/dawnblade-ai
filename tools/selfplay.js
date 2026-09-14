@@ -350,6 +350,18 @@ function play(g, limit, opts){
            `prompts.payVerb`'s own and are pinned against it (v3.81). */
         if(/ destroyed .+ — the rider resolves\.| rather than destroy it\./.test(line))
           events.push(["destroycost", line]);
+        /* v4.53 — a DEFENDER RAISED. The line is `applyDefMod`'s own, the
+           one body both walls' +{d} and -{d} land through, so this counts
+           Brothers in Arms' paid brace, Rally the Coast Guard's, Shred's
+           debuff and the clash payoff together. IT IS THE FAMILY, NOT ONE
+           CARD (v4.44's `powctr`): a counter called `brothers` would be a
+           number about one card standing on a line four sources print.
+           The phrase is spelled here and in the engine, and
+           test/defmod.test.js pins the two against each other (v3.81 — a
+           counter that spells the wrong word reports zero exactly as a
+           missing feature does, and v4.46 found one reporting 335 of the
+           opposite). */
+        if(/ defends for \d+ (?:more|less) /.test(line)) events.push(["defmod", line]);
         /* v4.38 — Danger Digits' targeted jab. The phrase is
            `effects.jabResolve`'s own and is pinned against it (v3.81:
            a counter that spells the wrong word reports zero exactly as a

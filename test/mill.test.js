@@ -258,9 +258,19 @@ test("a defBuff payload lands as a per-card `defMod`, not a wall number",
      belongs to that piece for the rest of the chain. Run as a generic
      `defBuff` the number would go to a defence REACTION being played,
      which is a different card entirely. */
+  /* THE EXTRACTOR IS ONE BODY AS OF v4.53 (`defBuffOf`), because there
+     were FOUR hand-rolled copies of this filter and four copies is how
+     one comes to be written `o[1]` instead of summed. It SUMS, and this
+     is the shared claim rather than a slice of this site's source. */
+  assert.equal(E.defBuffOf([["defBuff", 2], ["ap", 1], ["defBuff", 3]]), 5,
+    "two printed sentences about one defender are two numbers; dropping either is weaker than printed");
+  assert.equal(E.defBuffOf([["ap", 1]]), 0);
+  assert.equal(E.defBuffOf(null), 0, "and an absent payload is 0, never a throw from inside a reducer");
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  assert.match(src, /const dbuff = \(cr\.ops \|\| \[\]\)\.filter\(o => o\[0\] === "defBuff"\)/);
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.equal((code.match(/o\[0\] === "defBuff"/g) || []).length, 1,
+    "exactly one site tests for the op kind, and it is `defBuffOf` — a second is a copy of the filter");
   /* AND IT IS NOT ALSO RUN GENERICALLY. `runOps`' own `defBuff` only
      LOGS, so the state is identical and the feed is the observable
      (v3.60) — a line telling the player the number went to the wall when

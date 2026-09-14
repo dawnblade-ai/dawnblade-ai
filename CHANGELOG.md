@@ -1,3 +1,119 @@
+## v4.53 — ONE PER-DEFENDER BONUS MAP, AND A REFUSAL AGAINST MACHINERY THAT WAS ALREADY THERE
+
+**`runOps`'s `defBuff` case only LOGS.** It prints *"+N defense to the
+wall"* and moves no number, because `runOps` cannot raise ONE named
+defender. So every caller that can receive one lifts it out before calling
+`runOps` — and there were **SIX hand-rolled copies of that filter across
+two files**, one of which wrote into a SECOND per-defender map that only
+the trainer kept.
+
+**`applyDefMod` HAS BEEN THE ONE SUCH MAP SINCE v3.89, AND `defendValue`
+HAS READ IT ON BOTH BOARDS FOR AS LONG.** So `index.html`'s `defBonus` was
+two records of one fact — and it cost exactly what a second record always
+costs:
+
+> *"`runOps` cannot raise ONE defender, so a +{d} needs a per-defender
+> bonus map: the trainer keeps one (`defBonus`) and this board does not."*
+> — `engine/judge.js`, refusing **Rally the Coast Guard BY NAME**
+
+That reason was true when it was written and went false at v3.89, and
+nobody went back. **v3.69: a recorded reason is only as good as the day it
+was measured** — third outing this cycle, and the fourth time a refusal has
+been discharged by reading its own sentence rather than by building
+anything.
+
+**AND THE SECOND MAP HAD ALREADY COST A BUG IN THE OTHER DIRECTION.**
+v2.64 found Rally's +3{d} written to `s.defBonus` and thrown away one line
+before the wall was totalled, because the no-pause path called
+`finishBlock(s, {})`. The fix then was to CARRY it; the defect was that
+there was a second thing to carry at all. Held on the SIDE there is nothing
+to carry and nothing to drop.
+
+**THE FLOOR MOVES WITH IT, AND THAT IS A CORRECTION.** The trainer added
+its bonus AFTER `defendValue` returned — `max(0, base + debuff) + bonus` —
+so a defender a DEBUFF had taken below zero was un-floored by a later buff.
+Inside, it is `max(0, base + debuff + bonus)`, which is the printed
+arithmetic. Reachable: Shred is Arakni's and Brothers in Arms is in Kayo's
+and Gravy Bones' lists.
+
+### THE ROUTE v4.52 RECORDED, BUILT
+
+> *"When this defends, you may pay {r}. If you do, it gets +2{d}"*
+> — BROTHERS IN ARMS ×3, Kayo's and Gravy Bones' lists
+
+`paycost-defends-trainer-only` was recorded rather than half-built at
+v4.52, with a driven probe that **went RED the moment the site landed** —
+which is the reversal an `open` record exists to force (v4.02). It is
+`paycost-defends-at-the-table` now, closed, probe turned round.
+
+**IT WAS NEVER `offerPayCost`'s SHAPE**, which is why it waited: that body
+scans the GEAR and the ARENA for a WATCHER, and a declared defender is in
+neither — it is a card in the wall, which `afterDefenders` already
+receives. The scan sits beside the two `defends` families that body already
+carried (`optCost`, `millCost`), and **all three are pinned as a set, both
+directions** (v4.17): pinning the readers alone cannot see a family leaving
+the list.
+
+**THE PAYLOAD RIDES AS `defUid`, DECLARED IN `buildPrompt`** (v2.34's
+`arsStamp` rule, the eighth field to prove it). Dropped, Brothers in Arms'
++2{d} is paid for, logged and no number moves — which is v4.48's Big Blue
+Sky exactly.
+
+**THE DESTROY COST VERB IS STILL WITHHELD FROM THIS TRIGGER, AND THAT IS
+MEASURED RATHER THAN LEFT OVER.** No pool record prints a `defends`
+`payCost` carrying `destroySelf`, and `applyAnswer` resolves a `destroyUid`
+against the GEAR and the ARENA — a card in the HAND wall would pay nothing.
+Half-building a cost is worse than the honest gap (v3.23), and vocabulary
+with no claimant is dead rules code that reads like a rule (v4.52, one
+version earlier, on the same list).
+
+### AND BUILDING IT MEASURED A SECOND ONE-BOARD WALL
+
+**The trainer has TWO walls and only one of them reaches a shared `defends`
+body.** When the PLAYER attacks, `resolvePlay` calls `afterDefenders` and
+gets all three families. When the PLAYER BLOCKS — which in the trainer is
+most of the game — `takeIt` calls `resolveClash` and its own `payCost` scan
+and nothing else, so **Crash and Bash's `optCost` (3 records) and Washed Up
+Wave's `millCost` (1 record) are never offered on the wall the player
+actually raises.**
+
+v3.01's shape with the boards swapped: here the TABLE has the rule and the
+trainer's own player-facing path does not. **RECORDED RATHER THAN
+HALF-BUILT** (v3.23) — what blocks the call is TIMING, not machinery:
+`afterDefenders` queues prompts and drains them through `openPrompt`, which
+pauses and is answered asynchronously, while `finishBlock` totals the wall
+SYNCHRONOUSLY on the next line. The trainer already solves that for the
+`payCost` family by pausing into `mode: "defpay"`; closing this means
+generalising that pause to the whole queue, which is a control-flow change
+inside `Battle` — the file the Phase 1 rebuild exists to retire.
+`trainer-blocks-wall-no-defends-body`, `open`, with a driven probe.
+
+### THE FEED SAID THE NAME TWICE
+
+`applyDefMod`'s line was `${src}: ${card.name} defends for N more`, and
+driving the new route printed *"Brothers in Arms: Brothers in Arms defends
+for 2 more"*. Shred and Washed Up Wave name a DIFFERENT card as the source,
+so the prefix is the whole point there; Brothers in Arms and Rally raise
+THEMSELVES. **In a training sim the feed is the lesson** (v3.60), so the
+prefix is dropped where it is the same card — never the name, which is what
+the reader is following.
+
+Measured: **no pool record's parse or tier moves** (394 / 11 / 0 — no
+reader changed); the ladder at three seeds moves **one game on two heroes**
+(gravy 27 → 28, lyath 15 → 14), with both intervals overlapping entirely
+and the noise band at median 4 — so it is inside the band and the direction
+is what the reasoning predicts, since Gravy Bones is one of the two lists
+that decks the card; the route is DRIVEN instead, and the new `defmod`
+counter reads **7 in 210 games** across all three of its sources, which is
+the number that says something true (v4.17: in that block a number means a
+feature FIRED). **27 sabotages, 27 bite** — four of the first pass silent
+for reasons that were all mine: a scene that read a printed defence of 3
+off a card that prints 2 (v4.09, check by ASKING), a probe bounded by a
+byte count that swallowed the next two handlers (v4.05), a scan that found
+`afterDefenders` inside this very body's own PROSE (v4.27, v4.32 — the
+stripper's control is routed THROUGH the scan now), and a `buildPrompt`
+called with its two arguments the wrong way round.
+
 ## v4.52 — SILENT STILETTOS, AND THE DESTROY THAT WAS NEVER CARRIED
 
 > *"Whenever an attacking ally you control dies or an attack action card

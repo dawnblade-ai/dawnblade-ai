@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.52"; /* v4.52 - SILENT STILETTOS, AND THE DESTROY THAT WAS NEVER CARRIED. Both of its clauses read `skip` since the card was dealt, and the cheapest diagnostic says which half was the blocker: hand the same printed line a KNOWN trigger and it parses in full, so the trigger was the whole gap and the machinery was already here. Building it made a SECOND defect reachable that had been latent the whole time - `classifyClause("destroy this and gain 1 action point")` answers the payload with the printed DESTROY dropped, so a trigger built without the split hands an unbounded repeatable free action point off a permanent that never leaves (v3.72). One printed clause names TWO events, so it is ONE trigger two sites answer to (`entersLeaves`'s shape); the phantasm half is live and the attacking-ally half is latent, gated on the caller's own answer. And merging the two trigger readers into one found a THIRD thing: `defends` has no `offerPayCost` site at all, so Brothers in Arms works on the trainer and does nothing at the table - recorded with a driven probe. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.53"; /* v4.53 - ONE PER-DEFENDER BONUS MAP. `runOps`'s `defBuff` case only LOGS, so every caller lifts it out first - and there were SIX hand-rolled copies of that filter across two files, one of which wrote into a SECOND per-defender map the trainer kept for itself. `applyDefMod` has been the one such map since v3.89 and `defendValue` has read it on BOTH boards for as long, so judge refused Rally the Coast Guard BY NAME for four dozen versions against machinery it already had (v3.69: a recorded reason is only as good as the day it was measured). Retiring the second map also moves the FLOOR into the right place - the old order un-floored a defender a debuff had taken below zero. And the route v4.52 recorded is BUILT: `afterDefenders` scans the declared wall for a `defends` payCost beside the two families it already carried, so Brothers in Arms is offered at the table and the +{d} lands as a `defMod` rather than a per-board number. Building it measured a SECOND one-board wall - the trainer's own player-blocks path reaches no shared `defends` body at all - recorded with a driven probe. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3304,7 +3304,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       n = rx.game;
       return L(n, `${c.name} on the stack (+${rx.pump}). ${foe(n).name} passes back.`);
     }
-    const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
+    /* ONE EXTRACTOR (v4.53). `runOps` only LOGS a `defBuff`, so every
+       caller lifts it out first — and there were SIX hand-rolled copies
+       of this filter across two files. What differs is the ROUTING, and
+       legitimately so: a played defence reaction is a LAYER, so its
+       number goes into `blockRx`, while a declared defender's goes onto
+       the card as a `defMod`. The extraction is the same question. */
+    const dbuff = DawnEffects.defBuffOf(fx.ops);
     /* A PLAYED DEFENCE REACTION IS WORTH `defendValue` TOO (v3.34) — judge
        has asked it since v3.25 and this path summed the printed number.
        Sigil of Suffering's own ruling (user, 2026-08-22) lives here. */
@@ -3326,7 +3332,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       : `${c.name} isn't a defense reaction or an instant.`);
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
-    const dbuff = fx.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
+    const dbuff = DawnEffects.defBuffOf(fx.ops);
     /* …and from the ARSENAL, which is the one place `fromArsenal` is true
        — Springboard Somersault and Unmovable print exactly that. */
     const dv = _EFX.defendValue(act(s), c,
@@ -3944,21 +3950,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(["pay","arsenal","boostpick","fusepick","chargepick","defpay"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
-  /* THE PAYMENT AND THE OPS ARE SHARED; the DEFENCE BUFF is this board's.
-     `finishBlock` reads a per-uid bonus map, which is how confirmDefPay
-     already routes a +{d} onto a specific defender, and `runOps` has no
-     way to raise one — so `activateHandAbility` hands the number back and
-     this routes it. Same split as `linkPumps`/`linkPayload`. */
+  /* THE PAYMENT, THE OPS **AND** THE DEFENCE BUFF ARE ALL SHARED (v4.53).
+     This used to route the +{d} itself, into a per-uid map called
+     `defBonus` that only this board kept — a SECOND record of the fact
+     `applyDefMod` has held since v3.89 and `defendValue` reads on both
+     boards. Two records of one fact, in one file, is the no-mirror rule
+     broken where nothing watches; and the same stale reason is what made
+     judge refuse Rally the Coast Guard by name. `activateHandAbility`
+     lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
     if(["pay","arsenal","boostpick","fusepick","chargepick","defpay"].indexOf(s.mode) >= 0) return s;
     const r = _EFX.activateHandAbility(s, c);
     if(r.why) return L(s, r.why + ".");
-    let n = r.game;
-    if(r.dbuff){
-      n.defBonus = {...(n.defBonus||{}), [c.uid]:((n.defBonus||{})[c.uid]||0)+r.dbuff};
-      n = L(n, `${c.name} braces — +${r.dbuff} defence on the wall.`);
-    }
-    return winCheck(openPrompt(n));
+    return winCheck(openPrompt(r.game));
   });
   /* AN ALLY ATTACKS THROUGH THE ONE COMBAT PATH (v3.44).
 
@@ -4475,12 +4479,19 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   /* Split out of takeIt (v2.39) so a pay-cost defender (Brothers in Arms)
      can PAUSE the block after clash but before damage, then resume into
      the exact same finish every other block already used. Takes the
-     clash bonus and any paid defBuff bonuses (by uid) as parameters
-     because both are already-settled facts by the time this runs — this
-     function itself makes no further decisions. */
-  const finishBlock = (s, defBonus) => {
+     clash bonus as a parameter because it is an already-settled fact by
+     the time this runs — this function itself makes no further decisions.
+
+     AND THE PAID +{d} IS NO LONGER A PARAMETER EITHER (v4.53). It rode in
+     as a per-uid `defBonus` map this board kept on its own, beside the
+     `defMod` `defendValue` has read since v3.89 — two records of one
+     fact. `applyDefMod` is the one map now, so the wall below counts it
+     without being told, and the floor lands in the right place: the old
+     order was `max(0, base) + bonus`, which double-counts the floor when
+     a DEBUFF has already taken the defender below zero. Arakni's Shred
+     into a Brothers in Arms wall is exactly that board. */
+  const finishBlock = (s) => {
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
-    const bonus = defBonus || {};
     /* WHAT A DEFENDER IS WORTH IS `defendValue`'s, ON THIS WALL TOO (v3.34).
        This wall summed `c.def || 0` and `gearDef(piece)`, so every
        defensive self-buff built since v3.23 applied when the DUMMY blocked
@@ -4497,13 +4508,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        is weaker than printed and visible. They come alive the moment seat
        1 swings a real card. */
     const _atkOpts = {weaponAttack:false, atkCard:null, handDefenders:bcards.length};
-    const dh = bcards.reduce((a,c)=>a+_EFX.defendValue(act(s), c, _atkOpts)+(bonus[c.uid]||0),0);
+    const dh = bcards.reduce((a,c)=>a+_EFX.defendValue(act(s), c, _atkOpts),0);
     const dg = act(s).blockG.reduce((a,i)=>{
       const piece = act(s).gear[i];
       /* the WEAR stays `gearDef`'s and rides in as `base` — re-deriving
          Guardwell, Temper, battleworn and destruction inside `defendValue`
          would be a second copy of the wear rules (v3.24). */
-      return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)}) + (bonus[piece.uid]||0);
+      return a + _EFX.defendValue(act(s), piece, {..._atkOpts, base:gearDef(piece)});
     },0);
     const drx = act(s).blockRx.reduce((a,l)=>a+l.def,0);
     /* NO `clashDef` TERM ANY MORE (v3.94). The clash defence bonus is a
@@ -4524,10 +4535,13 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const defSide = actMut(n);
     defSide.hist = {...act(s).hist, blueGY:(act(s).hist.blueGY||0)+bcards.filter(c=>c.pitch===3).length};
     defSide.blockH = []; defSide.blockG = []; defSide.blockRx = [];
-    /* the wall has done its job, so the bonuses raised onto it go with the
-       declarations — same rule and same place blockH/blockG clear (v2.46),
-       or a defender would carry its +{d} into the next link for free */
-    n.defBonus = {};
+    /* THE BONUSES USED TO BE CLEARED HERE and are not any more (v4.53).
+       They are `defMod` entries now, swept by `closeChainGrants` — which
+       is the window the cards actually print: "this combat chain", the
+       same one Shred prints. Clearing at the strike was right only while
+       the map was this board's own, and it was never the card's window;
+       what stops a defender spending a +{d} twice on one chain is
+       `chainBlocked` (CR 7.3.2b), which refuses the re-declaration. */
     defSide.hp = act(s).hp - through;
     defSide.hand = act(s).hand.filter(c=>!act(s).blockH.includes(c.uid));
     defSide.grave = [...gy(s.turn, ...bcards),...act(s).grave];
@@ -4586,20 +4600,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       .map(c=>({c, px:fxParse(c).payCost}))
       .filter(({px})=>px && px.trigger==="defends");
     if(payable.length){
+      /* NOTHING IS CARRIED ANY MORE (v4.53). This used to seed the cycle
+         with `{...s.defBonus}`, because an activated ability could raise
+         a defender before this point (Rally the Coast Guard) and an empty
+         start silently discarded a cost the player had already paid. The
+         map is `defMod` now — held on the SIDE, not on a per-cycle game
+         key — so nothing can be dropped by forgetting to carry it, which
+         is what a second record of a fact always eventually costs. */
       return {...s, mode:"defpay",
-        defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops})),
-        /* CARRY WHAT IS ALREADY ON THE WALL. `defBonus` used to exist only
-           inside a defpay cycle, so starting it empty was harmless; an
-           activated ability can now raise a defender before this point
-           (Rally the Coast Guard), and wiping it here would silently
-           discard a cost the player already paid. */
-        defBonus:{...(s.defBonus||{})}};
+        defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops}))};
     }
-    /* …and the no-pause path must pass it too. It passed `{}`, so Rally's
-       +3{d} was written to the state and then thrown away one line before
-       the wall was totalled: "Defense locked at 3" for a 2 + 3 defender.
-       Found by playing the mirror, not by a drill. */
-    return finishBlock(s, s.defBonus || {});
+    return finishBlock(s);
   });
   /* THE ANSWER RE-ENTERS `playRx`, which is what keeps ONE description of
      what playing a reaction does. A second body that paid and pushed
@@ -4609,28 +4620,33 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     setG(s => { if(s.mode==="rxaddpay" && s.rxAdd){ idx = s.rxAdd.idx; return {...s, mode:"block", rxAdd:null}; } return s; });
     if(idx != null) playRx(idx, !!pay);
   };
+  /* THE +{d} LANDS THROUGH `applyDefMod` (v4.53) — the one per-defender
+     map, which `defendValue` already counts on both boards, in place of
+     the `defBonus` game key this board kept for itself. `defBuffOf` is
+     the one extractor, because `runOps` only LOGS a `defBuff`. */
   const confirmDefPay = pay => setG(s=>{
     if(s.mode!=="defpay" || !(s.defPayQueue||[]).length) return s;
     const [cur, ...rest] = s.defPayQueue;
     let n = {...s};
-    const bonus = {...(n.defBonus||{})};
     if(pay && act(n).res >= cur.cost){
       const ps = actMut(n);
       ps.res = ps.res - cur.cost;
-      const dbAdd = cur.ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0);
-      if(dbAdd) bonus[cur.uid] = (bonus[cur.uid]||0) + dbAdd;
+      const dbAdd = DawnEffects.defBuffOf(cur.ops);
       const otherOps = cur.ops.filter(o=>o[0]!=="defBuff");
       if(otherOps.length) n = runOps(n, otherOps, cur.name);
       n = L(n, `${cur.name}: paid ${cur.cost}${dbAdd?` — +${dbAdd}{d}`:""}.`);
+      if(dbAdd){
+        const dc = DawnEffects.defenderByUid(act(n), cur.uid);
+        if(dc) n = _EFX.applyDefMod(n, actorOf(n), dc, dbAdd, cur.name);
+      }
     } else if(pay){
       n = L(n, `${cur.name}: not enough floating to pay ${cur.cost}.`);
     } else {
       n = L(n, `${cur.name}: declined.`);
     }
     n.defPayQueue = rest;
-    n.defBonus = bonus;
     if(rest.length) return {...n, mode:"defpay"};
-    return finishBlock({...n, mode:"block"}, bonus);
+    return finishBlock({...n, mode:"block"});
   });
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
@@ -5070,7 +5086,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
               </div>}
               {g.mode==="defpay" && (g.defPayQueue||[]).length>0 && <div className="statusline">
-                <b>{g.defPayQueue[0].name}</b> is defending — pay <b>{g.defPayQueue[0].cost}</b> for +{g.defPayQueue[0].ops.filter(o=>o[0]==="defBuff").reduce((a,o)=>a+o[1],0)}{"{d}"}? You have {you(g).res} floating.
+                <b>{g.defPayQueue[0].name}</b> is defending — pay <b>{g.defPayQueue[0].cost}</b> for +{DawnEffects.defBuffOf(g.defPayQueue[0].ops)}{"{d}"}? You have {you(g).res} floating.
                 {g.defPayQueue.length>1 && <span> ({g.defPayQueue.length-1} more waiting.)</span>}
               </div>}
               {(()=>{ /* v2.07: the engine tracks all of this; the board never showed it */

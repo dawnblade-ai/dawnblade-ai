@@ -72,7 +72,7 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "allyatk", "crush", "ctrWipe", "death", "destroycost", "fusion", "gold",
+    "ally", "allyatk", "crush", "ctrWipe", "death", "defmod", "destroycost", "fusion", "gold",
     "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "tap", "ward",
   ]);
@@ -116,8 +116,14 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    reads no card text by contract, exactly as `sparring.js` does not
    (v4.24's standing rule). A player picks it on the loadout screen, which
    is the route `test/hood.test.js` drives explicitly for both heroes. */
-const ROUTES_PINNED = ["ally", "allyatk", "crush", "ctrWipe", "death", "destroycost", "fusion",
-                       "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
+/* `defmod` JOINED AT v4.53 — a DEFENDER RAISED, counted as the FAMILY.
+   `applyDefMod` is the one body every +{d} and -{d} on a named defender
+   lands through, so the line carries Brothers in Arms' paid brace (built
+   at the table that version), Rally the Coast Guard's, Shred's debuff and
+   the clash payoff alike. Naming it `brothers` would be a number about one
+   card standing on a line four sources print (v4.44's `powctr`). */
+const ROUTES_PINNED = ["ally", "allyatk", "crush", "ctrWipe", "death", "defmod", "destroycost",
+                       "fusion", "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "tap", "ward"];
 
 test("faults and routes partition the emitted kinds", () => {

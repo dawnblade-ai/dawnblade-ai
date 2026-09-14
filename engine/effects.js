@@ -4558,22 +4558,26 @@ function makeEffects(ctx){
          `activateIf.kind === "defending"`, the one case its own pool card
          needed. Any other printed restriction — including v3.04's
          `unreadable` — slipped through. `activateIfOk` is the reader.
-       * THE DEFENCE BUFF IS RETURNED, NOT WRITTEN. `runOps` cannot raise
-         one specific defender, so a +{d} has to reach the wall through
-         the caller's own per-defender map: `defBonus` in the trainer,
-         and judge.js keeps its wall somewhere else. Same split as
-         `linkPumps`/`linkPayload`. */
-  /* Pays the printed cost, runs what `runOps` can run, and hands back the
-     defence buff for the caller to route. `{game, dbuff, why}` — `why` is
-     set when nothing happened, so a caller can report a refusal rather
-     than silently doing nothing. */
+       * THE DEFENCE BUFF LANDS HERE NOW (v4.53). It used to be RETURNED
+         for the caller to route, on the stated grounds that "`defBonus`
+         in the trainer, and judge.js keeps its wall somewhere else" —
+         and the second half stopped being true at v3.89, when
+         `applyDefMod` became the one per-defender map BOTH boards read
+         through `defendValue`. So judge refused Rally the Coast Guard by
+         name for four dozen versions against a map it already had, and
+         the trainer kept a SECOND record of the same fact. v3.69: a
+         recorded reason is only as good as the day it was measured. */
+  /* Pays the printed cost, runs what `runOps` can run, and lands the
+     defence buff on the card itself. `{game, why}` — `why` is set when
+     nothing happened, so a caller can report a refusal rather than
+     silently doing nothing. */
   const activateHandAbility = (s, c) => {
     const fx = fxParse(c), ha = fx.handAbility;
-    if(!ha) return {game: s, dbuff: 0, why: c.name + " prints no ability to activate"};
-    if(!handAbilityOK(s, c)) return {game: s, dbuff: 0, why: c.name + "'s ability can't be activated right now"};
+    if(!ha) return {game: s, why: c.name + " prints no ability to activate"};
+    if(!handAbilityOK(s, c)) return {game: s, why: c.name + "'s ability can't be activated right now"};
     let n = {...s};
     if(ha.oncePerTurn) actMut(n).hist = {...act(n).hist, handAb: {...(act(n).hist.handAb || {}), [c.uid]: 1}};
-    const dbuff = ha.ops.filter(o => o[0] === "defBuff").reduce((a, o) => a + o[1], 0);
+    const dbuff = defBuffOf(ha.ops);
     const rest  = ha.ops.filter(o => o[0] !== "defBuff");
     let paid = [];
     if(ha.cost === "self"){
@@ -4590,7 +4594,7 @@ function makeEffects(ctx){
         .filter(h => h.uid !== c.uid && (act(n).blockH || []).indexOf(h.uid) < 0)
         .map(h => ({h, v: advValue(h, n, {runeDmg: bAct(n).runeDmg})}))
         .sort((a, b) => a.v - b.v);
-      if(!pool.length) return {game: s, dbuff: 0, why: c.name + ": nothing spare in hand to discard"};
+      if(!pool.length) return {game: s, why: c.name + ": nothing spare in hand to discard"};
       const pick = pool[0].h;
       paid = [pick];
       actMut(n).hand = act(n).hand.filter(x => x.uid !== pick.uid);
@@ -4601,7 +4605,13 @@ function makeEffects(ctx){
     /* the cost was a DISCARD, so everything that watches a discard sees it —
        Kayo's clause 3 among them. Never `random`: this one is chosen. */
     n = afterDiscard(n, paid, {random: false});
-    return {game: n, dbuff, why: null};
+    /* AND THE +{d} GOES ON THE CARD, not into a map the caller keeps.
+       Rally the Coast Guard is the pool's only record of this shape
+       (measured: 3 printings, and no other `handAbility` in 797 emits a
+       `defBuff`) and it is reachable only while it is itself defending,
+       so the entry is chain-scoped exactly like Shred's. */
+    if(dbuff) n = applyDefMod(n, actorOf(n), c, dbuff, c.name + " braces");
+    return {game: n, why: null};
   };
 
   /* ---- TURNING THE ARSENAL CARD FACE UP (v2.33, one body at v3.71) ----
@@ -4899,7 +4909,21 @@ function makeEffects(ctx){
       n = L(n, `${p.src || "Shuffle"}: ${back} card${back === 1 ? "" : "s"} back into ${sp(act(n))} deck — shuffled.`);
       n = runOps(n, [["draw", back]], p.src || "");
     }
-    if(r.ops && r.ops.length) n = runOps(n, r.ops, p.src || "prompt");
+    /* A `defBuff` IN AN ANSWERED PAYLOAD IS THE NAMED DEFENDER'S (v4.53).
+       `runOps` only LOGS one, so it is lifted out here and landed on the
+       card the queue site named — the same split `defBuffOf`'s header
+       describes, and the same `applyDefMod` the cost-rider below uses.
+       `r.defUid` is present only where a sheet was queued off a wall. */
+    let _ops = r.ops || [];
+    if(r.defUid != null){
+      const db = defBuffOf(_ops);
+      if(db){
+        const dc = defenderByUid(act(n), r.defUid);
+        if(dc) n = applyDefMod(n, actorOf(n), dc, db, p.src || "");
+        _ops = _ops.filter(o => o[0] !== "defBuff");
+      }
+    }
+    if(_ops.length) n = runOps(n, _ops, p.src || "prompt");
     /* AND A CARD THAT LEFT THE ARENA PAYS FOR LEAVING IT (v4.29).
        `prompts.js` runs no effects and touches no resources — that is the
        contract that makes it drillable without a deck, and it is right —
@@ -5021,11 +5045,9 @@ function makeEffects(ctx){
       else if(!hit) n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has no ${cr.kw} — no bonus.`);
       else {
         n = L(n, `${p.src}: ${took.map(c=>c.name).join(", ")} has ${cr.kw} — the bonus is live.`);
-        const dbuff = (cr.ops || []).filter(o => o[0] === "defBuff")
-          .reduce((a, o) => a + o[1], 0);
+        const dbuff = defBuffOf(cr.ops);
         if(dbuff){
-          const src = (act(n).gear || []).find(x => x.uid === cr.uid)
-                   || ((act(n).board || []).map(b => b && b.card).find(c => c && c.uid === cr.uid));
+          const src = defenderByUid(act(n), cr.uid);
           if(src) n = applyDefMod(n, actorOf(n), src, dbuff, p.src || "");
         }
         const rest = (cr.ops || []).filter(o => o[0] !== "defBuff");
@@ -5492,6 +5514,29 @@ function makeEffects(ctx){
           n.promptQ = [...(n.promptQ||[]), millCostSpec(dfx.millCost, dc, defSeat)];
           queued++;
         }
+        /* AND THE PAY-COST FAMILY (v4.53) — Brothers in Arms, "when this
+           defends, you may pay {r}. If you do, it gets +2{d}", live in
+           Kayo's and Gravy Bones' lists at three pitches and scanned by
+           `index.html` ALONE since it was built. At the TABLE the sheet
+           was never shown and the card blocked for its printed 3 with a
+           printed line of play that did not exist there — v3.01's shape,
+           and v4.52 recorded it rather than half-building it.
+
+           IT IS NOT `offerPayCost`'s SHAPE and that is why it waited:
+           that body scans the GEAR and the ARENA for a WATCHER, and a
+           declared defender is in neither — it is a card in the wall,
+           which this function already receives. So the scan is here,
+           beside the two `defends` families that were already in it.
+
+           THE `defBuff` PAYLOAD RIDES AS `defUid`, because `runOps`
+           only LOGS one (`defBuffOf`'s header) and the number has to
+           reach what the card is WORTH at the wall, which is
+           `defendValue`'s `defMod` (v3.89, v3.90). */
+        if(dfx.payCost && dfx.payCost.trigger === "defends"){
+          n.promptQ = [...(n.promptQ||[]),
+            Object.assign(payCostSpec(dfx.payCost, dc, defSeat), {defUid: dc.uid})];
+          queued++;
+        }
         const oc = dfx.optCost;
         if(!oc || oc.trigger !== "defends") continue;
         n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
@@ -5618,7 +5663,16 @@ function makeEffects(ctx){
       {defMod: [...(sd.defMod || []), until && until !== "chain"
         ? {uid: card.uid, d, until} : {uid: card.uid, d}]});
     n = Object.assign({}, n, {sides});
-    return L(n, `${src}: ${card.name} defends for ${Math.abs(d)} ${d < 0 ? "less" : "more"}`
+    /* THE LINE DOES NOT SAY THE NAME TWICE (v4.53). Shred and Washed Up
+       Wave name a DIFFERENT card as the source, so the prefix is the
+       whole point there; Brothers in Arms and Rally the Coast Guard raise
+       THEMSELVES, and "Brothers in Arms: Brothers in Arms defends for 2
+       more" reads like a bug in the log. In a training sim the feed is
+       the lesson (v3.60), so the prefix is dropped where it is the same
+       card — never the name, which is what the reader is following. */
+    const same = !src || String(src).indexOf(String(card.name)) === 0;
+    return L(n, (same ? "" : `${src}: `)
+              + `${card.name} defends for ${Math.abs(d)} ${d < 0 ? "less" : "more"}`
               + (until === "turn" ? " until end of turn." : " for the rest of this combat chain."));
   };
 
@@ -6873,6 +6927,15 @@ function makeEffects(ctx){
   return {runOps, execute, afterDefenders, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, foeTurnIce, takeInstantNext,
+          /* EXPOSED FOR THE TRAINER'S OWN WALL (v4.53). `defendValue` is
+             module-level and has read `defMod` since v3.89; the WRITER is
+             in here because it logs. `index.html`'s `confirmDefPay` is the
+             one caller outside this file — the player-blocks wall, which
+             reaches no shared `defends` body (see `tools/approx.js`:
+             `trainer-blocks-wall-no-defends-body`). Exposed rather than
+             copied: a second `defMod` writer is the exact shape v4.53
+             deleted. */
+          applyDefMod,
           /* EXPOSED FOR HEAVE (v4.05). `heave` is module-level — it returns
              `{game,msgs,ops}` rather than threading `n` — so it could not
              reach this closure, and v3.71 recorded it as "a THIRD site that
@@ -7451,6 +7514,49 @@ function jabTargets(sd, filt, exclUid){
      (sparring.js's own rule about leaving a tie unbroken). */
   return out.sort((a, b) => String(a.uid) < String(b.uid) ? -1
                           : String(a.uid) > String(b.uid) ? 1 : 0);
+}
+
+/* ONE READER OF A `defBuff` PAYLOAD (v4.53).
+
+   `runOps`'s `defBuff` case only LOGS — it says "+N defense to the wall"
+   and moves no number, because `runOps` cannot raise ONE named defender.
+   So every caller that can receive one has to lift it out before calling
+   `runOps`, and there were FOUR hand-rolled copies of that filter:
+   `activateHandAbility`, the modal cost-rider in `applyAnswer`, the
+   trainer's `confirmDefPay`, and `playRx`'s own reaction total. Four
+   copies of a filter is how one of them comes to be written `o[1]`
+   instead of summed, or omitted entirely — which is exactly what a
+   `defBuff` reaching `runOps` unfiltered looks like: a feed line saying
+   the wall went up, and a wall that did not (v4.48's Big Blue Sky).
+
+   IT SUMS RATHER THAN TAKING THE FIRST. Two `defBuff` ops in one payload
+   are two printed sentences about the same defender; dropping either is
+   weaker than printed. No pool record prints two today — the premise is
+   a drill rather than a sentence. */
+/* AND ONE READER OF "WHICH DECLARED DEFENDER IS THIS" (v4.53).
+
+   A card that is DEFENDING can be in three zones at once as far as a uid
+   is concerned: in the hand (the wall's non-equipment half), in the gear
+   zone (a declared piece), or in the arena (Cosmo's weaponised auras, and
+   anything else `judge.targets` can put on a wall). The cost-rider site
+   scanned GEAR AND BOARD only, which is right for Washed Up Wave — an
+   equipment — and narrower than the family it belongs to, exactly the
+   shape v3.33 and v3.55 each cost a card.
+
+   THE HAND IS FIRST because that is where the wall's cards live on both
+   boards (`blockH` is uids into the hand), and it is the half the old
+   scan could not see at all. */
+function defenderByUid(sd, uid){
+  if(!sd || uid == null) return null;
+  return (sd.hand || []).find(x => x && x.uid === uid)
+      || (sd.gear || []).find(x => x && x.uid === uid)
+      || ((sd.board || []).map(b => b && b.card).find(c => c && c.uid === uid))
+      || null;
+}
+
+function defBuffOf(ops){
+  return (ops || []).filter(o => o && o[0] === "defBuff")
+                    .reduce((a, o) => a + (+o[1] || 0), 0);
 }
 
 function payCostSpec(px, card, side){
@@ -8776,6 +8882,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

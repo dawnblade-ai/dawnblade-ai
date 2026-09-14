@@ -133,15 +133,51 @@ test("the whole gate is asked, not just the `defending` case", {skip}, () => {
   P.fxReset();
 });
 
-/* ---- WHAT THIS BOARD DOES NOT DO, SAID OUT LOUD ------------------------ */
+/* ---- THE RECORDED REFUSAL CAME DUE (v4.53) -----------------------------
+   This drill asserted, for four dozen versions, that judge REFUSED Rally
+   the Coast Guard by name — "`runOps` cannot raise ONE defender; the
+   trainer keeps a `defBonus` map and this board does not." That reason
+   went false at v3.89, when `applyDefMod` became the one per-defender map
+   and `defendValue` began reading it on BOTH boards, and nobody went back.
+   A recorded refusal is a DEBT (v3.38) and this drill is what made paying
+   it a deliberate edit rather than a silent widening.
 
-test("a defence buff is refused by name at the table, never silently dropped", {skip}, () => {
+   IT IS THE POSITIVE NOW, AND IT DRIVES. Asserting the refusal is gone
+   proves nothing on its own — a `legal` that answers null for everything
+   passes that perfectly — so the buff is followed all the way onto the
+   card and then off the wall's own total. */
+
+test("Rally the Coast Guard raises the wall AT THE TABLE", {skip}, () => {
   const rally = {...card("Rally the Coast Guard", 3), uid: "r1"};
   const def = table([rally, {uid: "x1", name: "Spare", pitch: 1}], {blockH: ["r1"]});
-  assert.match(String(J.legal(def, {t: "activate", uid: "r1", from: "hand"}, 0)),
-    /needs a per-defender bonus this board does not keep yet/,
-    "`runOps` cannot raise ONE defender; the trainer keeps a `defBonus` map and this board " +
-    "does not. Refusing by name is honest — dropping it silently is a card that does nothing.");
+  assert.equal(J.legal(def, {t: "activate", uid: "r1", from: "hand"}, 0), null,
+    "the +{d} refusal is gone: `applyDefMod` IS the per-defender map this board was said to lack");
+
+  const printed = E.defendValue(def.sides[0], rally, {});
+  const out = J.reduce(def, {t: "activate", uid: "r1", from: "hand"}, 0).state;
+  const still = out.sides[0].hand.find(c => c.uid === "r1") || rally;
+  assert.equal(E.defendValue(out.sides[0], still, {}) - printed, 3,
+    "and the number LANDS — a `defMod` entry on the card, counted by the one reader both walls use");
+
+  /* THE ENTRY NAMES THE CARD, not the seat. A `defMod` keyed to anything
+     but this uid raises whatever else happens to be in the wall (v3.89). */
+  const ent = (out.sides[0].defMod || []).filter(e => e.uid === "r1");
+  assert.equal(ent.length, 1, "exactly one entry, on the card that braced");
+  assert.equal(ent[0].d, 3, "signed and read off the printed line");
+  /* AND IT IS CHAIN-SCOPED, which is the window the card prints: nothing
+     says "this turn", so the default applies and `closeChainGrants` takes
+     it (v3.94's `until` split). */
+  assert.equal(ent[0].until, undefined, "no window on the entry means the chain — what the card prints");
+});
+
+test("a second defender is NOT raised by Rally's brace", {skip}, () => {
+  const rally = {...card("Rally the Coast Guard", 3), uid: "r1"};
+  const mate  = {...card("Rally the Coast Guard", 3), uid: "r2"};
+  const def = table([rally, mate, {uid: "x1", name: "Spare", pitch: 1}], {blockH: ["r1", "r2"]});
+  const out = J.reduce(def, {t: "activate", uid: "r1", from: "hand"}, 0).state;
+  const before = E.defendValue(def.sides[0], mate, {});
+  assert.equal(E.defendValue(out.sides[0], mate, {}), before,
+    "the entry is keyed by UID — a second copy of the same card keeps its printed value");
 });
 
 /* ---- ONE COPY ---------------------------------------------------------- */
@@ -153,10 +189,16 @@ test("the trainer delegates rather than keeping a second copy", () => {
     "the question is the shared one");
   assert.match(html, /_EFX\.activateHandAbility\(s, c\)/,
     "and so is the payment and the ops");
-  /* The DEFENCE BUFF stays this board's, and that is the split, not a
-     mirror: `finishBlock` reads a per-uid map and runOps cannot raise one. */
-  assert.match(html, /n\.defBonus = \{\.\.\.\(n\.defBonus\|\|\{\}\), \[c\.uid\]/,
-    "Rally's +3{d} reaches the wall through the trainer's own defBonus map");
+  /* AND SO IS THE DEFENCE BUFF, AS OF v4.53. It used to be this board's
+     own: `activateHandAbility` returned the number and this file wrote it
+     into a per-uid `defBonus` map that only `finishBlock` read — a SECOND
+     record of the fact `applyDefMod` has held since v3.89. The scan is
+     for its ABSENCE, because what makes a mirror a mirror is the copy
+     existing at all. */
+  assert.ok(!/\bdefBonus\b/.test(html.replace(/\/\*[\s\S]*?\*\//g, "")),
+    "no second per-defender map survives in the trainer — `defMod` is the one map, on both boards");
+  assert.ok(!/r\.dbuff/.test(html),
+    "and nothing routes a returned buff: the shared body lands it");
   for(const nm of ["Agile Windup", "Rally the Coast Guard", "Arcane Twining"])
     assert.ok(!new RegExp('"' + nm + '"').test(html), nm + " must not be special-cased by name");
 });

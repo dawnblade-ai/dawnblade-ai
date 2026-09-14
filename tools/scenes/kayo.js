@@ -187,6 +187,89 @@ module.exports = [
     "the revealed card lashes out on a win": 19,
     "the borrowed seat is handed back": 0
   }
-}
+},
 
+{
+  name: "Brothers in Arms is offered at the wall, and paying raises THAT card",
+  why: "v4.52 recorded this as a one-board rule: the sheet was scanned off " +
+       "the declared wall by `index.html` ALONE, so at the TABLE the card " +
+       "blocked for its printed 3 with a printed line of play that did not " +
+       "exist. It read `tier: full` throughout — the clause IS consumed — and " +
+       "a defender worth LESS than printed is the direction the one-sided " +
+       "fairness sweep is built not to look in. Driving the card is the only " +
+       "thing that sees either.",
+  run(c){
+    const bia = c.card("Brothers in Arms", 1, 9101);
+    const atk = c.card("Raging Onslaught", 1, 9102);
+    const g0 = c.state({res: 9, ap: 1},
+      {hp: 20, res: 5, hand: [bia], blockH: [9101], deck: [{uid: 9110, name: "F"}]},
+      {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+    const g = Object.assign({}, g0, {
+      pend: {card: atk, by: 0, total: atk.power, ga: false, ops: [], onHit: [],
+             _qCtx: {from: "hand", atk: true}},
+      stack: [{k: "atk", label: "x"}]});
+    let n = c.J.withEffects(g, (fx, s) => ({game: fx.afterDefenders(s, [bia], [])})).game;
+    const asked = !!n.prompt, side = n.prompt ? n.prompt.side : null;
+    const printed = c.E.defendValue(n.sides[1], bia, {});
+    n = c.reduce(n, {t: "promptChoose", choice: "pay"}, 1);
+    n = c.reduce(n, {t: "promptConfirm"}, 1);
+    /* AND A SECOND DEFENDER IS NOT RAISED. The entry is keyed by uid, so a
+       wall-wide number would be the v3.89 defect one direction over. */
+    const mate = c.card("Brothers in Arms", 1, 9103);
+    return {
+      "the sheet opens off the declared wall": asked,
+      "and it is addressed to the DEFENDER": side,
+      "the printed cost is charged": n.sides[1].res,
+      "the +{d} reaches what the card is WORTH": c.E.defendValue(n.sides[1], bia, {}) - printed,
+      "as a per-card entry, not a wall number": (n.sides[1].defMod || []).length,
+      /* ITS PRINTED DEFENCE IS 2, and writing 3 here from memory is what
+         made this scene fail before the engine did — check your own
+         fixture by ASKING rather than by remembering (v4.09). */
+      "a different card keeps its printed value": c.E.defendValue(n.sides[1], mate, {})
+    };
+  },
+  want: {
+    "the sheet opens off the declared wall": true,
+    "and it is addressed to the DEFENDER": 1,
+    "the printed cost is charged": 4,
+    "the +{d} reaches what the card is WORTH": 2,
+    "as a per-card entry, not a wall number": 1,
+    "a different card keeps its printed value": 2
+  }
+},
+
+{
+  name: "Rally the Coast Guard braces from HAND, and the number lands",
+  why: "judge refused this BY NAME for four dozen versions — \"needs a " +
+       "per-defender bonus this board does not keep yet\" — against " +
+       "`applyDefMod`, which has been exactly that map since v3.89 and which " +
+       "`defendValue` reads on both boards. A recorded reason is only as good " +
+       "as the day it was measured (v3.69), and the trainer meanwhile kept a " +
+       "SECOND record of the same fact in a game key called `defBonus`.",
+  run(c){
+    const rally = c.card("Rally the Coast Guard", 3, 9201);
+    const g = c.state({name: "You", res: 9, ap: 3,
+                       hand: [rally, {uid: 9202, name: "Spare", pitch: 1}],
+                       deck: [{uid: 9203, name: "F"}], blockH: [9201]},
+                      {name: "Them", deck: [{uid: 9204, name: "F2"}]},
+                      {actor: 0, turnPlayer: 0, seed: "rally"});
+    const printed = c.E.defendValue(g.sides[0], rally, {});
+    const n = c.J.withEffects(g, (fx, s) => fx.activateHandAbility(s, rally).game);
+    const ent = (n.sides[0].defMod || []).filter(e => e.uid === 9201);
+    return {
+      "the brace lands on the card": c.E.defendValue(n.sides[0], rally, {}) - printed,
+      "one entry, on the card that braced": ent.length,
+      "read off the printed line": ent.length ? ent[0].d : null,
+      /* NO WINDOW ON THE ENTRY MEANS THE CHAIN, which is what the card
+         prints — nothing says "this turn" (v3.94's `until` split). */
+      "chain-scoped, which is what it prints": ent.length ? ent[0].until : "MISSING"
+    };
+  },
+  want: {
+    "the brace lands on the card": 3,
+    "one entry, on the card that braced": 1,
+    "read off the printed line": 3,
+    "chain-scoped, which is what it prints": undefined
+  }
+},
 ];

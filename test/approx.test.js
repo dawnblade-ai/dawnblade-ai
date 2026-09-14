@@ -226,7 +226,13 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      is never called with that trigger, so the sheet exists on the TRAINER
      alone. v3.01's shape, and v4.21's rule finding it: census the family,
      not the member in front of you. */
-  assert.equal(Object.keys(APPROX).length, 35, "record count moved");
+  /* 35 -> 36 AT v4.53: `paycost-defends-trainer-only` was BUILT and is
+     `paycost-defends-at-the-table` (closed, probe turned round), and
+     building it measured a SECOND one-board wall — the trainer's own
+     player-blocks path reaches no shared `defends` body at all, so Crash
+     and Bash and Washed Up Wave are dead on the wall the player raises.
+     One record closed, one opened, net +1. */
+  assert.equal(Object.keys(APPROX).length, 36, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -255,8 +261,11 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 7 -> 8 AT v4.52: `paycost-defends-trainer-only` — found sideways
      while merging the two `payTrigger` readers, which is what a census
      of a family is for (v4.21). */
+  /* 8 open holds AT v4.53: one closed (`paycost-defends-at-the-table`),
+     one opened (`trainer-blocks-wall-no-defends-body`) — which is why the
+     RECORD count is the one that moves and the open count does not. */
   assert.equal(n("open"),    8, "open count moved");
-  assert.equal(n("closed"), 13, "closed count moved");
+  assert.equal(n("closed"), 14, "closed count moved");
 });
 
 /* ============================================================
@@ -266,37 +275,112 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
 /* CR 7.1.2 — an attack should sit on the STACK as a layer before it
    becomes a chain link. Here it goes straight onto the chain, so the
    observable is that nothing is ever on `stack` while a link exists. */
-/* A `payCost` WHOSE TRIGGER IS `defends` IS OFFERED ON ONE BOARD (v4.52).
-   An `open` record, so the probe asserts the DEVIATION: it goes red the
-   day `effects.js` grows the site, which is what forces the record to be
-   deleted rather than left to rot (v4.02). */
-probe("paycost-defends-trainer-only", () => {
+/* BUILT AT v4.53, AND THE PROBE IS TURNED ROUND. It was `open` at v4.52
+   and asserted the DEVIATION — that `effects.js` had no `defends` site —
+   which is exactly what made closing it a deliberate edit here rather
+   than a stale sentence (v4.02). `closed` now, so it asserts the thing is
+   BUILT and goes red if it regresses. */
+probe("paycost-defends-at-the-table", () => {
   /* THE PREMISE, DRIVEN: a real pool record emits the trigger. */
   PR.fxReset();
   const bia = PR.fxParse(H.card("Brothers in Arms", 1));
-  assert.equal(bia.tier, "full", "the clause IS consumed — which is why coverage cannot see this");
+  assert.equal(bia.tier, "full", "the clause IS consumed — which is why coverage could not see this");
   assert.deepEqual(bia.payCost,
     {cost: 1, taps: false, ops: [["defBuff", 2]], trigger: "defends"});
   PR.fxReset();
 
-  /* THE TRAINER HAS THE SITE — the half that makes this v3.01's shape
-     rather than an unbuilt card. A claim about `index.html`'s babel
-     blocks, which no drill can execute, so it is pinned precisely
-     enough that neutering it breaks this test. */
-  assert.match(HTML, /px\.trigger\s*===\s*"defends"/,
-    "the trainer's declared-wall scan is gone — this record may be closable");
-  assert.match(HTML, /mode:\s*"defpay"/, "…and so is the pause it opens");
+  /* THE TABLE HAS THE ROUTE, DRIVEN END TO END through the shared body —
+     the sheet, the charge, and the number reaching what the card is
+     WORTH at the wall. A source scan cannot tell a live render from a
+     dead one (v4.00), and this is the half that was missing. */
+  const card = Object.assign({}, H.card("Brothers in Arms", 1), {uid: 3301});
+  const atk  = Object.assign({}, H.card("Raging Onslaught", 1), {uid: 3302});
+  const g0 = H.state({res: 9, ap: 1},
+    {hp: 20, res: 5, hand: [card], blockH: [3301], deck: [{uid: 3310, name: "F"}]},
+    {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+  const g = Object.assign({}, g0, {
+    pend: {card: atk, by: 0, total: atk.power, ga: false, ops: [], onHit: [],
+           _qCtx: {from: "hand", atk: true}},
+    stack: [{k: "atk", label: "x"}]});
+  let n = J.withEffects(g, (fx, st) => ({game: fx.afterDefenders(st, [card], [])})).game;
+  assert.ok(n.prompt, "the sheet opens off the declared wall at the table");
+  assert.equal(n.prompt.side, 1, "addressed to the DEFENDER");
+  const printed = E.defendValue(n.sides[1], card, {});
+  n = J.reduce(n, {t: "promptChoose", choice: "pay"}, 1).state;
+  n = J.reduce(n, {t: "promptConfirm"}, 1).state;
+  assert.equal(n.sides[1].res, 4, "the printed cost is charged");
+  assert.equal(E.defendValue(n.sides[1], card, {}) - printed, 2,
+    "and the +{d} reaches `defendValue`, which is the one reader both walls use");
 
-  /* AND THE TABLE DOES NOT. `offerPayCost` is the one body every shared
-     watcher goes through, and `defends` is not among the triggers it is
-     called with — which is the deviation, stated as the census that
-     `parser.OFFER_TRIGGERS` pins from the other end. */
-  const fired = [...X.effects().matchAll(/offerPayCost\([a-zA-Z]+,\s*"([a-zA-Z]+)"/g)].map(m => m[1]);
-  assert.ok(fired.length >= 5, "the scan is alive: " + fired.length + " call sites");
-  assert.ok(fired.indexOf("defends") < 0,
-    "effects.js now fires a `defends` payCost — the table has the route, so close this record");
+  /* AND THE TRAINER STILL HAS ITS OWN PAUSE. A claim about `index.html`'s
+     babel blocks, which no drill can execute, pinned precisely enough
+     that neutering it breaks this test. */
+  assert.match(HTML, /px\.trigger\s*===\s*"defends"/, "the trainer's declared-wall scan");
+  assert.match(HTML, /mode:\s*"defpay"/, "…and the pause it opens");
+
+  /* THE DESTROY VERB IS STILL WITHHELD, AND ON PURPOSE. Measured: no pool
+     record prints a `defends` payCost carrying `destroySelf`, and
+     `applyAnswer` resolves a `destroyUid` against the GEAR and the ARENA
+     — a card in the HAND wall would pay nothing. Vocabulary with no
+     claimant is dead rules code that reads like a rule (v4.52). */
   assert.ok(PR.OFFER_TRIGGERS.indexOf("defends") < 0,
-    "and the parser still keeps the destroy cost away from it for the same reason");
+    "the destroy cost verb stays away from this trigger until a record prints one");
+});
+
+/* THE TRAINER HAS TWO WALLS AND ONE OF THEM REACHES NO SHARED `defends`
+   BODY (v4.53). An `open` record, so the probe asserts the DEVIATION: it
+   goes red the day `takeIt` reaches `afterDefenders`, which is what forces
+   the record to be deleted rather than left to rot (v4.02). */
+probe("trainer-blocks-wall-no-defends-body", () => {
+  /* THE PREMISE, DRIVEN: two pool families emit a `defends` trigger that
+     is NOT the payCost the trainer's own scan handles. */
+  const pool = require("../data/pool.json");
+  const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
+  const orphan = new Set();
+  for(const c of arr){
+    PR.fxReset();
+    const fx = PR.fxParse({name: c.name, pitch: +(c.pitch || 0), tt: c.type_text || "",
+      ty: c.types || [], tx: c.functional_text || "", kw: c.card_keywords || [],
+      cost: c.cost, power: c.power, def: c.defense});
+    for(const k of ["optCost", "millCost"])
+      if(fx[k] && fx[k].trigger === "defends") orphan.add(c.name);
+  }
+  PR.fxReset();
+  assert.deepEqual([...orphan].sort(), ["Crash and Bash", "Washed Up Wave"],
+    "the two families the trainer's player-blocks wall cannot offer");
+
+  /* THE DEVIATION. `takeIt` is the player-blocks path and it calls
+     `resolveClash` and its own payCost scan — and never `afterDefenders`,
+     which is the body that carries all three families. The ATTACKER path
+     (`resolvePlay`) does call it, so the scan is bounded to the block
+     handler or it reports the wrong one. */
+  /* BOUNDED AT THE NEXT SAME-INDENT DECLARATION, never by a byte count.
+     A bound too WIDE hides findings and one too NARROW invents them
+     (v4.05), and the first draft of this probe used `i + 6000` — which
+     swallowed `confirmDefPay` and everything after it and reported the
+     deviation closed. */
+  const i = HTML.indexOf("const takeIt = () => setG");
+  assert.ok(i > 0, "takeIt moved — re-anchor this probe");
+  const j = HTML.indexOf("\n  const confirmDefPay", i);
+  assert.ok(j > i, "the next declaration moved — re-anchor this probe");
+  /* AND COMMENTS ARE STRIPPED, WITH THE CONTROL ROUTED THROUGH THE SCAN
+     (v4.27, v4.32). This body's own prose names `afterDefenders` — "on
+     the attacker's path `afterDefenders` hands in 1 - actorOf" — so a raw
+     scan reports the deviation closed on the strength of a sentence
+     describing the OTHER path. The control is built by concatenation,
+     because written as a literal it would appear in THIS file rather than
+     in the one being scanned. */
+  const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*/gm, "");
+  const ctrl = "/* " + "afterDefenders" + " */";
+  assert.equal(strip("x " + ctrl + " y").indexOf("afterDefenders"), -1,
+    "the stripper works, proved through the scan rather than beside it");
+  const body = strip(HTML.slice(i, j));
+  assert.match(body, /_EFX\.resolveClash\(/, "the scan is alive: it finds the clash call");
+  assert.match(body, /px\.trigger\s*===\s*"defends"/,
+    "…and the ONE family this path does handle, which is what makes the other two a gap");
+  assert.ok(!/afterDefenders/.test(body),
+    "takeIt now reaches the shared defends body — the trainer's block wall has all three " +
+    "families, so close this record");
 });
 
 probe("layer-step-window", () => {

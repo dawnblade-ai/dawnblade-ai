@@ -129,7 +129,7 @@ const ANCHORS = [
      grown here — but they still need their own anchors or their bodies
      would be silently swallowed into takeIt's slice (finishBlock, defined
      just before it) or newTurn's (confirmDefPay, defined just after). */
-  ["finishBlock",  "  const finishBlock = (s, defBonus) => {"],
+  ["finishBlock",  "  const finishBlock = (s) => {"],
   ["takeIt",       "  const takeIt = () => setG(s=>{"],
   ["confirmDefPay","  const confirmDefPay = pay => setG(s=>{"],
   ["newTurn",      "  function newTurn(s){"],

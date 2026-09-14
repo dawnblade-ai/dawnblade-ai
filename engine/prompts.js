@@ -422,6 +422,18 @@ function buildPrompt(game, spec){
          It leaves as DATA like the tap and the destruction — this module
          runs no effects and touches no state. */
       spendCtr: spec.spendCtr || null,
+      /* AND WHOSE +{d} THE PAYLOAD IS (v4.53). Not a cost — the PAYLOAD's
+         subject. `runOps` cannot raise one named defender, so a `defBuff`
+         in a sheet's ops has to reach `defendValue`'s per-defender map,
+         and the only thing that can say WHICH defender is the queue site
+         that saw the wall. A spec only carries fields `buildPrompt` knows
+         about (v2.34, v3.33, v3.91, v3.93, v4.24), so this is declared
+         here rather than threaded: dropped, Brothers in Arms' +2{d} is
+         paid for and logged and no number moves — the shape v4.48 found
+         on Big Blue Sky. It leaves as DATA like the tap, the destruction
+         and the counter; this module runs no effects and touches no
+         state. */
+      defUid: spec.defUid,
       /* AND WHETHER THE LAYER THAT QUEUED THIS HAS ALREADY SETTLED ITS
          ACTION POINT (v3.93). A spec only carries fields `buildPrompt`
          knows about (v2.34), and the two boards clear `pend` at different
@@ -831,6 +843,9 @@ function applyPrompt(game, prompt){
        permanent was spent and the caller destroys it (v3.93). */
     if(prompt.destroyUid != null) out.destroy = prompt.destroyUid;
     if(prompt.spendCtr) out.spendCtr = prompt.spendCtr;
+    /* AND THE DEFENDER THE +{d} BELONGS TO (v4.53), for the same reason
+       and in the same shape: the caller routes it. */
+    if(prompt.defUid != null) out.defUid = prompt.defUid;
     /* PAST TENSE, SO THE VERB NEED NOT AGREE WITH THE NAME. `who` is
        "You" or "The opponent" and those take different verb forms — the
        existing "paid" dodges it the same way, and v2.83 is the version

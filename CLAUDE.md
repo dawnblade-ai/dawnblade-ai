@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.52
+**Current version:** v4.53
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2821 drills** at v4.52.
+This is `node --test "test/*.test.js"` — **2837 drills** at v4.53.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,99 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A SECOND RECORD OF ONE FACT, AND THE REFUSAL THAT RESTED ON IT (v4.53)
+
+**`runOps`'s `defBuff` case only LOGS** — it prints *"+N defense to the
+wall"* and moves no number, because `runOps` cannot raise ONE named
+defender. So every caller lifts it out first, and there were **SIX
+hand-rolled copies of that filter across two files**, one of which wrote
+into a SECOND per-defender map that only the trainer kept (`defBonus`).
+
+**`applyDefMod` HAS BEEN THE ONE SUCH MAP SINCE v3.89 AND `defendValue`
+READS IT ON BOTH BOARDS**, so the second map cost exactly what a second
+record always costs:
+
+> *"a +{d} needs a per-defender bonus map: the trainer keeps one
+> (`defBonus`) and this board does not."* — `judge.js`, refusing **Rally
+> the Coast Guard BY NAME** for four dozen versions against machinery it
+> already had.
+
+v3.69 verbatim, and v2.64 is the same map costing a bug in the OTHER
+direction: Rally's +3 written to `defBonus` and thrown away one line before
+the wall was totalled. The fix then was to CARRY it; the defect was that
+there was a second thing to carry. Held on the SIDE there is nothing to
+drop.
+
+**THE FLOOR MOVES WITH IT, AND THAT IS A CORRECTION.** The trainer added
+its bonus AFTER `defendValue` returned — `max(0, base + debuff) + bonus` —
+so a defender a DEBUFF had taken below zero was un-floored by a later buff.
+Reachable: Shred is Arakni's, Brothers in Arms is Kayo's and Gravy Bones'.
+
+**`defBuffOf` IS THE ONE EXTRACTOR AND `defenderByUid` THE ONE LOOKUP.**
+The old cost-rider scan read GEAR AND BOARD only — right for Washed Up
+Wave, an equipment, and narrower than the family, since `blockH` is uids
+into the HAND. v3.33/v3.55's both-zones lesson with a third zone.
+
+### THE ROUTE v4.52 RECORDED, BUILT — AND A SECOND WALL MEASURED (v4.53)
+
+> *"When this defends, you may pay {r}. If you do, it gets +2{d}"*
+> — BROTHERS IN ARMS ×3
+
+`paycost-defends-trainer-only` was recorded rather than half-built, with a
+probe that **went RED the moment the site landed** (v4.02). **It was never
+`offerPayCost`'s shape**: that body scans the GEAR and the ARENA for a
+WATCHER and a declared defender is in neither — it is a card in the wall,
+which `afterDefenders` already receives. The scan sits beside the two
+`defends` families that body carried, and **all three are pinned as a set,
+both directions** (v4.17).
+
+**THE PAYLOAD RIDES AS `defUid`, DECLARED IN `buildPrompt`** — v2.34's
+`arsStamp` rule, eighth field to prove it. Dropped, the +2{d} is paid for,
+logged, and no number moves: v4.48's Big Blue Sky exactly.
+
+**THE DESTROY VERB STAYS OFF THIS TRIGGER, MEASURED RATHER THAN LEFT
+OVER.** No pool record prints a `defends` payCost carrying `destroySelf`,
+and `applyAnswer` resolves a `destroyUid` against the GEAR and the ARENA —
+a card in the HAND wall would pay nothing. Half-building a cost is worse
+than the honest gap (v3.23), and vocabulary with no claimant is dead rules
+code that reads like a rule (v4.52, one version earlier, same list).
+
+**AND BUILDING IT MEASURED A SECOND ONE-BOARD WALL.** The trainer has TWO
+and only one reaches a shared `defends` body: when the PLAYER attacks,
+`resolvePlay` calls `afterDefenders` and gets all three families; when the
+PLAYER BLOCKS — most of the game there — `takeIt` calls `resolveClash` and
+its own `payCost` scan and nothing else, so **Crash and Bash's `optCost`
+(3 records) and Washed Up Wave's `millCost` (1) are never offered on the
+wall the player raises.** v3.01's shape with the boards swapped. What
+blocks the call is TIMING rather than machinery — `afterDefenders` drains
+through `openPrompt`, which pauses, while `finishBlock` totals the wall on
+the next line — so closing it means generalising the `defpay` pause to the
+whole queue, a control-flow change inside `Battle`.
+`trainer-blocks-wall-no-defends-body`, `open`, with a driven probe.
+
+**AND THE FEED SAID THE NAME TWICE.** `applyDefMod`'s line was
+`${src}: ${card.name} defends for N more`, so driving the route printed
+*"Brothers in Arms: Brothers in Arms defends for 2 more"*. Shred and Washed
+Up Wave name a DIFFERENT card as the source, so the prefix is the point
+there; these two raise THEMSELVES. In a training sim the feed is the lesson
+(v3.60), so the prefix is dropped where it is the same card.
+
+Measured: **no pool record's parse or tier moves** (394 / 11 / 0 — no
+reader changed); the ladder at three seeds moves **one game on two heroes**
+with both intervals overlapping entirely against a band of median 4, so it
+is inside the band and the direction is what the reasoning predicts; the
+route is DRIVEN instead and the new `defmod` counter reads **7 in 210
+games** across all three of its sources (v4.17: in that block a number
+means a feature FIRED). **28 sabotages, 28 bite** — four of the first pass
+silent for reasons that were all mine: a scene reading a printed defence of
+3 off a card that prints 2 (v4.09), a probe bounded by a byte count that
+swallowed the next two handlers (v4.05), a scan that found `afterDefenders`
+inside the body's own PROSE (v4.27, v4.32 — the stripper's control is
+routed THROUGH the scan now), and a `buildPrompt` called with its two
+arguments the wrong way round. **Two more could not be APPLIED at all** and
+the harness said so rather than reporting SILENT, which is v4.37's rule
+working: a deletion-shaped replacement is not textually unique.
 
 ### THE TRIGGER WAS THE WHOLE BLOCKER, AND BUILDING IT EXPOSED THE DROP (v4.52)
 

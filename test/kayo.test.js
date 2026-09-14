@@ -595,24 +595,44 @@ test("Agile Windup and Rally the Coast Guard both read their ability", {skip}, (
     "and it may only be activated while it is defending");
 });
 
-/* FOUND BY PLAYING THE MIRROR (v2.64). Rally's +3{d} was written to
-   `s.defBonus` and then thrown away one line before the wall was totalled:
-   `takeIt`'s no-pause path called `finishBlock(s, {})`. A 2+3
-   defender locked the defence at 3, and the whole suite was green — the
-   bonus map had only ever been produced and consumed inside a single
-   defpay cycle, so nothing had reason to check the other path. */
+/* FOUND BY PLAYING THE MIRROR (v2.64), AND THE MAP IS GONE (v4.53).
+   Rally's +3{d} was written to `s.defBonus` and thrown away one line
+   before the wall was totalled: `takeIt`'s no-pause path called
+   `finishBlock(s, {})`. A 2+3 defender locked the defence at 3, and the
+   whole suite was green — the bonus map had only ever been produced and
+   consumed inside a single defpay cycle, so nothing checked the other
+   path.
+
+   THE CARRY WAS THE FIX AND THE MAP WAS THE DEFECT. `defBonus` was a
+   SECOND record of what `applyDefMod` has held since v3.89 and
+   `defendValue` reads on both boards, and a second record is dropped by
+   whoever forgets to carry it — which is what happened. Held on the SIDE
+   there is nothing to carry and nothing to drop, so this drill pins the
+   PROPERTY by driving the one reader, and the trainer's half is that no
+   second map survives to be forgotten again. */
 test("a defence bonus raised before the block reaches the wall", {skip}, () => {
+  const rally = {...C.resolveEntry(DB(), {name: "Rally the Coast Guard", p: 3, code: null, q: 1}), uid: "rl1"};
+  let g = H.state({name: "You", res: 9, ap: 3, hand: [rally, {uid: "sp", name: "Spare", pitch: 1}],
+                   deck: [{uid: "d1", name: "F"}], blockH: ["rl1"]},
+                  {name: "Them", deck: [{uid: "d2", name: "F2"}]},
+                  {actor: 0, turnPlayer: 0, seed: "rally"});
+  const printed = E.defendValue(g.sides[0], rally, {});
+  const r = H.fx(g, (f, st) => f.activateHandAbility(st, rally).game);
+  assert.equal(E.defendValue(r.sides[0], rally, {}) - printed, 3,
+    "the brace reaches the one reader both walls use — no caller has to carry it");
+  /* AND IT IS STILL THERE AFTER A REBUILD, which is the half `defBonus`
+     could not promise: a per-cycle game key is dropped by any code path
+     that rebuilds the state without naming it. */
+  const rebuilt = {...r, mode: "block"};
+  assert.equal(E.defendValue(rebuilt.sides[0], rally, {}) - printed, 3,
+    "held on the SIDE, so a state rebuild that names no bonus map cannot lose it");
+
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.match(html, /return finishBlock\(s, s\.defBonus \|\| \{\}\);/,
-    "the no-pause path must pass the accrued bonus, not an empty object — an " +
-    "activated ability can raise a defender before takeIt is ever reached");
-  assert.match(html, /defBonus:\{\.\.\.\(s\.defBonus\|\|\{\}\)\}/,
-    "and entering the defpay pause must carry it rather than wiping a cost already paid");
-  /* and it must not outlive the wall it was raised on */
-  const fb = html.slice(html.indexOf("const finishBlock = (s, defBonus) => {"),
-                        html.indexOf("const takeIt = () => setG"));
-  assert.match(fb, /n\.defBonus = \{\};/,
-    "cleared where blockH/blockG clear, or a defender carries its +{d} into the next link");
+  const code = html.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/\bdefBonus\b/.test(code),
+    "and no second per-defender map survives in the trainer to be forgotten again");
+  assert.ok(/const finishBlock = \(s\) => \{/.test(code),
+    "so the wall is told nothing — `defendValue` counts the `defMod` itself");
 });
 
 test("the hand-ability route is wired, and nothing is named", {skip}, () => {
@@ -624,10 +644,11 @@ test("the hand-ability route is wired, and nothing is named", {skip}, () => {
     "peekables must span it, or the preview fails silently while the tap still arms");
   assert.match(html, /hand\.flatMap\(handCell\)/,
     "the ability is its own cell — one tap target cannot mean two things");
-  /* the defence buff must NOT go through runOps: finishBlock reads a
-     per-uid bonus map, and runOps cannot raise one specific defender */
-  assert.match(html, /n\.defBonus = \{\.\.\.\(n\.defBonus\|\|\{\}\), \[c\.uid\]/,
-    "Rally's +3{d} reaches the wall through defBonus, the way confirmDefPay already routes one");
+  /* THE DEFENCE BUFF STILL MUST NOT GO THROUGH `runOps` — that case only
+     LOGS (v4.53's `defBuffOf` header) — and as of v4.53 the trainer does
+     not route it either: `activateHandAbility` lands it on the card. */
+  assert.ok(!/r\.dbuff/.test(html),
+    "the shared body lands the +{d}; a caller that routes one is a second record of it");
   for(const nm of ["Agile Windup", "Rally the Coast Guard"])
     assert.ok(!new RegExp('"' + nm + '"').test(html), `${nm} must not be special-cased by name`);
 });

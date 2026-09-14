@@ -949,14 +949,17 @@ function legal(g, a, seat){
         return c.name + (gate ? " can't be activated — " + gate.why
                               : "'s ability can't be activated right now");
       }
-      /* AND THEN what this board cannot yet route. `runOps` cannot raise
-         ONE defender, so a +{d} needs a per-defender bonus map: the
-         trainer keeps one (`defBonus`) and this board does not. Rally the
-         Coast Guard is the only pool card in that shape, and it is
-         reachable only while it is itself defending. Refused by name
-         rather than silently dropped. */
-      if(ha.ops.some(o => o[0] === "defBuff"))
-        return c.name + "'s +{d} needs a per-defender bonus this board does not keep yet";
+      /* THE +{d} REFUSAL IS GONE (v4.53), AND IT WAS STALE. It read
+         "a +{d} needs a per-defender bonus map: the trainer keeps one
+         (`defBonus`) and this board does not" — true when it was written
+         and false since v3.89, when `applyDefMod` became the one such map
+         and `defendValue` began reading it on BOTH boards. So Rally the
+         Coast Guard was refused BY NAME at the table against machinery
+         that was already there, while the trainer kept a second record of
+         the same fact. `activateHandAbility` lands the buff itself now,
+         so neither caller routes anything and there is nothing here to
+         refuse. v3.69: a recorded reason is only as good as the day it
+         was measured. */
       const want = ha.kind === "instant" ? "instant" : "action";
       if(P.speedAllowed(g, seat).indexOf(want) < 0)
         return "no " + want + "-speed window for " + c.name;

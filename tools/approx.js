@@ -62,14 +62,24 @@
 
 const APPROX = {
   /* ---------------------------------------------------------------- */
-  "paycost-defends-trainer-only": {
+  "paycost-defends-at-the-table": {
+    status: "closed",
+    cr: null,
+    board: "both",
+    since: "v4.53",
+    swept: "v4.53",
+    claim: "\"When this defends, you may pay {r}. If you do, it gets +2{d}\" — Brothers in Arms, live in Kayo's and Gravy Bones' lists at three pitches — is offered on BOTH boards. `afterDefenders` scans the declared wall for a `payCost` whose trigger is `defends` beside the `optCost` and `millCost` families it already carried, and the answered +{d} lands on the card as a `defMod`, which `defendValue` counts on both boards.",
+    why: "RECORDED AT v4.52 AND BUILT AT v4.53, which is what an `open` record is for (v4.02) — its probe asserted the deviation and is turned round here. It was never `offerPayCost`'s shape: that body scans the GEAR and the ARENA for a WATCHER, and a declared defender is in neither — it is a card in the wall, which `afterDefenders` already receives. The +{d} reaches `defendValue`'s `defMod` (v3.89, v3.90) rather than a per-board map, because v4.53 retired the trainer's `defBonus` as a second record of that same fact. `OFFER_TRIGGERS` still keeps the `destroy this` cost verb away from this trigger and that is DELIBERATE rather than left over: measured, no pool record prints a `defends` payCost carrying `destroySelf`, and `applyAnswer` resolves a `destroyUid` against the gear and the arena — a card in the HAND wall would pay nothing. Half-building a cost is worse than the honest gap (v3.23), and vocabulary with no claimant is dead rules code that reads like a rule (v4.52)."
+  },
+
+  "trainer-blocks-wall-no-defends-body": {
     status: "open",
     cr: null,
     board: "trainer",
-    since: "v4.52",
-    swept: "v4.52",
-    claim: "\"When this defends, you may pay {r}. If you do, it gets +2{d}\" — Brothers in Arms, live in Kayo's and Gravy Bones' lists at three pitches — is offered on the TRAINER only. `index.html` scans the declared wall for a `payCost` whose trigger is `defends` and pauses into `mode: \"defpay\"`; `engine/effects.js` has no such site, so at the TABLE the sheet is never shown and the card blocks for its printed 3 with a printed line of play that does not exist.",
-    why: "v3.01's shape, found sideways at v4.52 while merging the two `payTrigger` readers: `offerPayCost` is called with five triggers and `defends` is not one of them, yet a pool record emits it and reads `tier: full`. Coverage cannot see it (the clause IS consumed) and the one-sided fairness sweep cannot either (a defender worth LESS than printed is the direction it does not look in). It is not `offerPayCost`'s shape as it stands: that body scans the GEAR and the ARENA for a watcher, and a declared defender is in neither — it is a card in the wall, which `afterDefenders` already receives as its `wall` and `gearWall` arguments. The answer also has to reach what the card is WORTH at the wall, which is `defendValue`'s `defMod` (v3.89, v3.90) rather than the trainer's own `defBonus`. Until it is built, `OFFER_TRIGGERS` keeps the `destroy this` cost away from this trigger, because the trainer's site carries {uid, name, cost, ops} and drops `destroySelf` on the floor."
+    since: "v4.53",
+    swept: "v4.53",
+    claim: "The trainer has TWO walls and only one of them reaches a shared `defends` body. When the PLAYER attacks, `resolvePlay` calls `afterDefenders`, which scans the wall for all three `defends` families. When the PLAYER BLOCKS — which in the trainer is most of the game — `takeIt` calls `resolveClash` and its own `payCost` scan and nothing else, so Crash and Bash's `optCost` (3 records) and Washed Up Wave's `millCost` (1 record) are never offered on the wall the player actually raises.",
+    why: "v3.01's shape with the boards swapped — here the TABLE has the rule and the trainer's own player-facing path does not. It is not a reader: `afterDefenders` is the body and the trainer simply does not call it from `takeIt`. What blocks the call is TIMING rather than machinery: `afterDefenders` queues prompts and drains them through `openPrompt`, which on this board pauses and is answered asynchronously, while `finishBlock` totals the wall SYNCHRONOUSLY on the next line. The trainer already solves exactly that for the `payCost` family by pausing into `mode: \"defpay\"` and re-entering `finishBlock` from the answer, so closing this means generalising that pause to the whole queue — a control-flow change inside `Battle`, which is the file the Phase 1 rebuild exists to retire. Recorded rather than half-built (v3.23); the TABLE has all three families and is the board this project calls CR-exact."
   },
 
 /* ---- A. THE RULES MACHINE — the two-player question ---------------- */
