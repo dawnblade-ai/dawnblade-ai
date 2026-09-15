@@ -45,7 +45,7 @@ open index.html          # that is the whole setup
 ## The engine
 
 `engine/*.js` is a pure rules engine with no UI and no network in it. It is
-where every rule actually lives, and it is covered by **790 drills**:
+where every rule actually lives, and it is covered by **2856 drills**:
 
 ```
 npm test          # node --test "test/*.test.js" — no network, run on every change
@@ -65,16 +65,22 @@ was never noticing — it was reconstructing what went wrong afterwards.
 | `CLAUDE.md` | the working manual — conventions, traps, and every rule that cost a real bug |
 | `CHANGELOG.md` | per-version history, newest first |
 | `HANDOFF.md` | current state and what to pick up next |
-| `ARCHITECTURE.md` | how the project uses Flesh and Blood materials |
+| `ARCHITECTURE.md` | how the project uses Flesh and Blood materials, and the engine map |
+| `FINISH.md` | what "finished" means, as five measurable conditions |
+| `UI-GUIDE.md` | the UI surface — components, screens, the design system |
 | `ROADMAP-MULTIPLAYER.md` | the road to online play, and why in this order |
 
 ## Status
 
-Solo play is complete and plays real cards. Table play runs two real hero decks
-through the CR turn structure, priority, the combat chain and printed costs —
-**card text does not resolve there yet**, because the parser's effects still
-live in the solo trainer. Moving them into a shared module both sides call is
-the next piece of work.
+Both boards play real cards. Solo runs the tuned training dummy; table play
+runs two real hero decks through the CR turn structure, priority, the combat
+chain and printed costs — and **card text resolves on both**, through one
+shared `engine/effects.js`. Every deck card in the pool now reads something
+(`node tools/approx.js`, `pool-deck-complete`).
+
+What is left is written down rather than guessed at: `node tools/approx.js`
+lists every stated approximation with a drill behind it, `FINISH.md` orders the
+remaining work, and the difficulty curve is still untuned at the table.
 
 ---
 

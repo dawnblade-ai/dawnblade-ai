@@ -8776,6 +8776,26 @@ omit it and the pick is a reveal that moves nothing.
 under "Attack targets (CR 1.4.5)" below, because it is the one variant whose
 candidates the CALLER supplies and whose choice is MANDATORY.
 
+**AND THERE IS AN EIGHTH — `soak`, WHICH WAS IN NEITHER LIST (v4.54).** The
+paid arcane-barrier sheet is a `buildPrompt` branch and an `applyPrompt`
+branch, and this section has said "the six variants" throughout, so the count
+was a **sentence that stated a count** (v4.17) with nothing re-deriving it —
+found while rewriting `ARCHITECTURE.md`, which had quoted it. **When it
+arrived is not derivable from this tree**: `git log -S` answers one squashed
+import commit for every path in `engine/`, which is worth knowing before
+citing a version from history rather than from `CHANGELOG.md`.
+
+It is the one variant whose `avail` is computed at BUILD time rather than
+carried from the queue — three Runechants queue three soaks off one attack and
+answering the first one PITCHES, so a figure worked out when the spec was
+queued is already wrong by the second sheet, and wrong in the direction that
+offers a barrier the hero can no longer reach. **Ask the file rather than this
+table:**
+
+```sh
+grep -o 'spec\.tag === "[a-z]*"' engine/prompts.js | sort -u
+```
+
 ### Two rules that keep it honest
 
 **Prompts are addressed to a SIDE.** `spec.side` is 0 (you) or 1 (the opponent) —

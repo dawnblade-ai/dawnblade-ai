@@ -390,13 +390,23 @@ do not "fix" it while doing the display.
 Deliberately last, because it ages worst if the foundation moves. The one hard
 constraint that governs it: **every asset self-hosted, no build step.**
 
-### 8.5 `ARCHITECTURE.md` is badly stale — do not read it
+### 8.5 `ARCHITECTURE.md` was badly stale — FIXED at v4.54
 
-It describes `engine/state.js`, an `engine/engine.js` with
+It described `engine/state.js`, an `engine/engine.js` with
 `getView`/`processInput`, and *"cards never contain code; effects.js is the
-association layer"*. **None of that is true.** There is no `state.js` and no
-`engine.js`; `effects.js` is the one copy of the card semantics; cards are read
-by a parser at runtime. `CLAUDE.md` is the accurate one.
+association layer"*. **None of that was true** — it accurately described a
+prototype deleted around v2.0 and never revisited. It is rewritten against the
+source now and carries the command that reproduces every count it states, so
+read it for orientation; `CLAUDE.md` is still the working manual.
+
+What that rewrite turned up, and is still open: **four files from that
+prototype are in the tree and none of them is reachable** — `demo.js` and
+`sim/demo.js` (byte-identical, and they throw `ERR_MODULE_NOT_FOUND` on
+import), `data/demo-cards.js` (**invented placeholder cards**, the one file
+here with hand-typed card data) and `data/ingest-fab-cube.js` (emits a file
+that does not exist). Nothing in `index.html`, `engine/`, `test/` or `tools/`
+references any of them. Not a UI job; see `ARCHITECTURE.md`, "The prototype
+this file used to describe".
 
 ---
 
