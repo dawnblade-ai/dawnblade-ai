@@ -437,6 +437,15 @@ function heroAbilities(heroRec, displayName, code){
        fixed. OPT-IN (v3.58). */
     heroPow.destroyBoard ? {_destroyBoard: heroPow.destroyBoard} : {},
     heroPow.flipUp ? {_flipUp: true} : {},
+    /* ENIGMA — "{c}{c}{c}" (v4.54). A Chi cost is the resource cost PLUS
+       a restriction on which points may pay it, and `heroAbilityLine`
+       strips the cost prefix, so a cost not carried here is a
+       restriction nothing can enforce — the free-ability shape v2.04
+       fixed, one symbol over. ZONE-AGNOSTIC like the soul cost and the
+       discard: `parser.chiFloating` reads the side's pitch zone and
+       hand, nothing about gear or the arena, so all three builders
+       stamp it. v3.63's rule, FIFTH outing. */
+    heroPow.chi ? {_chiCost: heroPow.chi} : {},
     /* FAI — "this ability costs {r} less to activate for each DRACONIC
        CHAIN LINK you control" (v3.86). A DYNAMIC reduction: it depends on
        the chain, which is game state rather than a fact about the side,
@@ -611,7 +620,16 @@ function boardPow(b){
     pw.soul ? {_soulCost: pw.soul} : {},
     pw.discardCost ? {_discardCost: pw.discardCost.filter,
                       _discardSubject: pw.discardCost.subject} : {},
-    pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {});
+    pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {},
+    /* ENIGMA — "{c}{c}{c}" (v4.54). A Chi cost is the resource cost PLUS
+       a restriction on which points may pay it, and `heroAbilityLine`
+       strips the cost prefix, so a cost not carried here is a
+       restriction nothing can enforce — the free-ability shape v2.04
+       fixed, one symbol over. ZONE-AGNOSTIC like the soul cost and the
+       discard: `parser.chiFloating` reads the side's pitch zone and
+       hand, nothing about gear or the arena, so all three builders
+       stamp it. v3.63's rule, FIFTH outing. */
+    pw.chi ? {_chiCost: pw.chi} : {});
 }
 
 /* ---- WHAT MAKES A RESOLVED RECORD AN EQUIPPED PIECE (v4.15) --------
@@ -708,7 +726,16 @@ function equipPiece(gr){
          record — an EQUIPMENT — so the hero builder and `boardPow` are
          given it as a guard rather than a fix, exactly as `_attackRx` was
          (v3.63) and `_destroyBoard` (v3.86). */
-      pw.flipUp ? {_flipUp: true, _flipGear: gr.uid} : {}); } }
+      pw.flipUp ? {_flipUp: true, _flipGear: gr.uid} : {},
+      /* ENIGMA — "{c}{c}{c}" (v4.54). A Chi cost is the resource cost PLUS
+         a restriction on which points may pay it, and `heroAbilityLine`
+         strips the cost prefix, so a cost not carried here is a
+         restriction nothing can enforce — the free-ability shape v2.04
+         fixed, one symbol over. ZONE-AGNOSTIC like the soul cost and the
+         discard: `parser.chiFloating` reads the side's pitch zone and
+         hand, nothing about gear or the arena, so all three builders
+         stamp it. v3.63's rule, FIFTH outing. */
+      pw.chi ? {_chiCost: pw.chi} : {}); } }
   /* IT MUTATES AND RETURNS. The loadout loop discards the value and the
      runtime equip needs it, which is the whole reason this body left the
      `forEach` — a second copy that only returned would drift. */

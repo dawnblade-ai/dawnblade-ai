@@ -1,3 +1,186 @@
+## v4.54 — CHI: A RESOURCE THAT PAYS FOR MORE THAN A RESOURCE, AND THE LAST UNREAD HERO CLAUSE
+
+> **Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with
+> a +1{p} counter.** — ENIGMA, clause 2
+
+**THE LAST UNREAD HERO CLAUSE IN THE POOL.** Measured across all fifteen
+heroes: `analyzeHero` reports exactly three uncovered clauses and the other
+two are printed ability NAMES — Iyslander's *"Essence of Ice"* and Briar's
+*"Essence of Earth and Lightning"* — which v3.86 annotates rather than
+suppresses. Hers was the only rule.
+
+**IT WAS WRONG IN THREE PLACES AT ONCE, AND EACH ONE HID THE NEXT.**
+
+| | |
+|---|---|
+| the PAYLOAD | the token matcher's tail alternation had no ` with`, so *"create a … token **with** a +1{p} counter"* matched **NOTHING** |
+| the COST | `parseHeroPower` counts a digit else `{r}` pips, and `{c}{c}{c}` has neither — **cost 0** |
+| CHI ITSELF | pitching an Inner Chi credited three ordinary resources, so a `{c}` cost was indistinguishable from an `{r}` one |
+
+`classifyClause` answered null, so `parseHeroPower` refused the line and
+`build.js` built her **no powCard at all** — neither board could offer the
+ability. **v3.47's shape, SEVENTH outing: reading the payload is what
+creates the route.** And fixing that half alone would have **SHIPPED** the
+free ability: v2.04's free-ability bug arriving through the door a fix
+opened.
+
+### TRY THE PRINTING — THIRTEENTH TIME, AND THE SYMBOL IS NAMED ON A DIFFERENT CARD
+
+Upstream's own keyword dictionary could not settle it: `csvs/english/
+keyword.csv` carries a **`Transcend` row with an EMPTY description**,
+exactly as `Retrieve`'s did (v3.54). The two card faces carry the whole
+mechanic between them:
+
+> *"…**transcend**. (Put this into its owner's hand **FLIPPED**.)"*
+> — A DROP IN THE OCEAN, SEN031
+>
+> *"(**{c}** can pay for **{c}** and/or **{r}** costs.)"*
+> — INNER CHI, `Mystic Resource - Chi`, pitch **THREE CHI**
+
+**AND THE DATABASE SAYS THEY ARE ONE CARD.** `Inner Chi`'s printings are
+the `_BACK` images of exactly the printing ids the five Legendary Mystic
+instants carry — SEN031..SEN035 are Enigma's five. Transcend flips the card
+over; its back face is a Chi.
+
+**A SYMBOL UNNAMED ON THE CARD THAT SPENDS IT CAN BE NAMED ON THE CARD THAT
+MAKES IT.** The scene this discharges was right about the golden rule and
+looked at one card face: *"SEN001 shows three blue-grey spirals and names
+them nowhere"*. True — and Inner Chi's face names them, and Inner Chi is in
+the pool. **A RECORDED REFUSAL IS A DEBT** (v3.38), and this is the fifth
+discharged this cycle.
+
+**SO THE RELATION IS ONE-WAY, AND READING IT THE OTHER WAY ROUND GUTS THE
+CARD.** A Chi pays a `{c}` cost AND an `{r}` cost; a resource point pays
+only an `{r}` cost. Read as plain resources her ability is *"pitch any blue
+card"* and the transcend loop her deck is built around is decoration —
+**STRONGER than printed**, the direction that steals games and the one the
+one-sided fairness sweep is built not to look in.
+
+### IT IS DERIVED, NEVER BANKED
+
+There is **no `sd.chi`** — no side field, no `WIRE_V` bump, no symmetry
+ledger move. The floating pool is ONE number and `parser.chiFloating` says
+how much of it is Chi, off the **PITCH ZONE**, which CR 4.4.3c empties at
+end of turn — so *"floating Chi"* and *"Chi pitched this turn"* coincide and
+nothing has to expire it. `runeCount`'s rule (v2.23), `frostCount`'s
+(v2.74), `wardValue`'s (v4.34), and the one v3.82 had to enforce after
+`sd.rune` rode the wire for sixty versions with no reader.
+
+**SPEND NON-CHI FIRST, AND THAT IS A MEASUREMENT RATHER THAN A JUDGEMENT.**
+A Chi does everything a resource does and more, so preserving it is weakly
+dominant for its controller — v4.23's reprieve argument. `min(res, chi
+pitched)` is exactly what that spend order leaves floating, and it needs no
+per-site knowledge at any of the seven places `res` moves.
+
+**OFF THE STRUCTURED ARRAY, NEVER THE NAME OR `tt`** (v2.39, v2.44).
+Measured over the live database: **SIX records have "Chi" in the NAME and
+are not Chi cards** — the Tenets — and **Second Tenet of Chi: Wind is in
+Enigma's own deck**, so a name scan hands her three Chi for pitching an
+attack. v4.25's *"Lightning Fusion"* falling back to *"lightning"*, with the
+near-miss printed on a card the drills already deal (v4.18: rarer and better
+than a synthetic).
+
+### THREE LEGALITIES, THREE LAYERS, AND ONLY THE LAST CAN SEE THE THIRD ROW
+
+| layer | refuses |
+|---|---|
+| `judge.abCostWhy` + the trainer's `tryPlay` | a seat that cannot **REACH** the Chi |
+| `payConfirm` on both boards | a pitch selection that covers the **cost** and covers no **Chi** |
+| `execute`, above the charge | a stale or crafted action off the wire (v2.04) |
+
+**THE CEILING, NOT THE FLOATING POOL.** The recorded ruling is that a
+player cannot pitch to bank resources — the pool is filled only when a cost
+demands it — so refusing unless the Chi is ALREADY floating makes a `{c}`
+cost unpayable by construction rather than merely hard. `chiCeiling` is
+`payCeiling`'s twin.
+
+**AND THE GUARD SITS ABOVE THE CHARGE, NOT BESIDE THE SOUL BANISH AND THE
+DISCARD.** Those two are guarded three hundred lines down, where the pool
+has already been debited; `chiFloating` is `min(res, chi pitched)`, so asked
+there it reads three points short of the truth and refuses every payment
+that had just covered itself. **Check where the state you read is written**
+(v4.09, v4.20).
+
+### THE PAYLOAD NEEDED NO MACHINERY
+
+`enterWithCounters` has taken an override spec as its **fifth argument since
+v4.24** and every caller passed `null`; the spec shape is `ctrSelf`'s
+exactly. **Before building machinery for a shape, check whether the
+machinery is the shape you already have** (v3.58, v3.73). What was missing
+was one word in a regex tail.
+
+**READ WHOLE OR REFUSE** (v2.29), exactly as the exposed-zone list beside it
+is: widening the tail makes *"token with \<anything\>"* reach that rule for
+the FIRST time, so a counter clause the reader cannot read must take the
+clause back rather than mint a bare token and drop a printed value. The kind
+vocabulary stays **CLOSED** (v3.55).
+
+**AND IT IS AN OVERRIDE, NEVER AN ADDITION.** `enterWithCounters` falls back
+to the TOKEN's own `ctrSelf` when handed nothing; added instead, a creator's
+counter would stack on the token's. Latent and measured — no pool record
+creates a token that also prints one — so the drill is synthetic (v3.73),
+with Golden Cog as the control.
+
+**BOTH NUMBERS OFF THE LINE.** She prints ONE and is the pool's only record,
+so a hardcoded 1 is silent against every real fixture and the drill that
+sees it is synthetic (v3.32, **twelfth** outing).
+
+### THE LADDER FOUND A LIVELOCK NO DRILL COULD
+
+`legal` asks whether the seat could **REACH** the Chi (the ceiling counts the
+hand, because a player cannot pitch to bank resources); the payment sheet
+opened only when `acost > sd.res`. So a seat holding three ordinary resources
+and an **unpitched** Inner Chi passed `legal`, opened no sheet, and was then
+refused inside `execute` for want of floating Chi — a legal action that
+changes nothing. `sparring.act` proposed it again every tick.
+
+**ONE GAME IN 630 SAT AT TURN 8 FOR 4,000 STEPS**, and every drill in
+`test/chi.test.js` passed. It is the `legal`/`reduce` agreement
+`fuzz.test.js` exists to hold, and v3.80's own sentence one reader further
+on: *an activation reads its cost three times, and each read must ask what
+its own charge site asks.* `judge.chiShort` is the fourth reader, at all
+three ability-commit sites, with the trainer asking the same question.
+
+**AND THE POLICY HAD TO BE TOLD.** `payAction` confirms the moment the
+RESOURCE need is covered and `pitchPick` ranks on printed pitch, so a seat
+holding an Inner Chi and an ordinary blue of the same pitch would take either
+and be refused — and a refusal is always a bug in `sparring.js` (its own
+contract). **`judge.chiNeed` answers**, because that file reads no card text:
+`boardAttackOf`'s seam (v3.84) and `abWindowOf`'s (v4.38), with the uids
+riding with the question the way fusion's do (v4.27).
+
+### AND THE COST SAYS SO
+
+v4.46 found `heroTapped` true across 83 states of one game with not a line in
+the feed — a cost charged in total silence, learned about only by being
+REFUSED — and making it legible found the next defect inside a minute. This
+is the one price in the game whose whole point is WHICH points paid it, so
+`execute` prints it, and `tools/selfplay.js` counts the EVENT rather than the
+word (v4.46: the feed says *"Inner Chi"* on every pitch and *"Spectral
+Shield"* on four cards' mints). **`chi` reads 180 in 630 games.**
+
+### MEASURED
+
+- **exactly 1 record moves, `none` → `part`** (748 full unchanged, 37 → 38
+  part, 12 → 11 none). The pool's own tiers are untouched (394 / 11 / 0),
+  because a hero's clause is read by `analyzeHero` off the powCard rather
+  than by `fxParse` off the record.
+- the audit's hero flag clears: `npm run sweep`'s hero block goes **3 heroes
+  → 2**, and both survivors are printed ability NAMES.
+- **the ladder at three seeds, run on both sides rather than reasoned about**
+  (v4.43): Enigma **10 · 10 · 11 → 14 · 13 · 14**, intervals disjoint —
+  **REAL** by v4.40's standard, and the only hero whose interval moves.
+  **Stalls 1 → 0**, refusals 0, violations 0.
+- ledger **36 → 37 records**, stated **14 → 15**; `tools/approx.js`'s hero
+  set **5 → 4** and the drill went red, which is what pinning a SET buys.
+- **32 sabotages, 32 bite.** Seven of the first passes came back silent and
+  every one was my own fixture: a hardcoded counter kind no REAL card can
+  separate from a read one (v3.32), two source scans that cannot tell a live
+  guard from `if(false && …)` (v4.00, verbatim), a `chiNeed` fixture whose
+  hand held only the Chi so every wrong answer was also the right one
+  (v3.26), a policy branch covered by the branch above it, a feed line
+  nothing pinned, and a sabotage that could not express its own bug (v3.62).
+
 ## v4.53 — ONE PER-DEFENDER BONUS MAP, AND A REFUSAL AGAINST MACHINERY THAT WAS ALREADY THERE
 
 **`runOps`'s `defBuff` case only LOGS.** It prints *"+N defense to the

@@ -10,34 +10,154 @@
    the pool — her own — for which the database prints no reminder text. */
 const P = require("../../engine/parser.js");
 
+/* ONE BUILD HELPER FOR THE SCENES THAT DRIVE HER ABILITY — five lines
+   copied three times is the no-mirror rule broken where nothing watches
+   it (v4.25). The seed is the caller's, because a scene that names its
+   own seed can say what it holds. */
+function enigmaBuild(c, seed){
+  const B = require("../../engine/build.js");
+  const G = require("../../engine/game.js");
+  const RNG = require("../../engine/rng.js");
+  const {loadData} = require("../../test/helpers/extract.js");
+  const W = loadData();
+  const h = W.HEROES.find(x => x.k === "enigma");
+  return B.buildSide(h, G.parseDeck(W.DECKS.enigma), c.H.db(), {},
+                     RNG.make(seed), {n: 0}).b;
+}
+
 module.exports = [
 
 {
-  name: "the {c} symbol is unruled, and refusing it is the honest answer",
-  why: "The golden rule at the keyword level. `{c}` appears on ONE record " +
-       "in 797 — hers — and the database prints no reminder text for it. " +
-       "The SEN001 card face shows three blue-grey spirals, visually " +
-       "distinct from the red {r} pip on the line above, and names them " +
-       "nowhere. Guessing what resource it is would be inventing card " +
-       "text; creating a Spectral Shield for free would be strictly " +
-       "stronger than printed. It is booked as a question, not built.",
+  name: "the {c} symbol is CHI, and the card that NAMES it is the card that makes it",
+  why: "A RECORDED REFUSAL, DISCHARGED (v3.38). This scene used to assert " +
+       "that `{c}` was unruled and that refusing it was honest — and it " +
+       "was, on the evidence it looked at: SEN001 shows three blue " +
+       "spirals and names them nowhere, so guessing would have been the " +
+       "golden rule broken at the keyword level. What it missed is that a " +
+       "symbol unnamed on the card that SPENDS it can be named on the " +
+       "card that MAKES it. Inner Chi's own printed reminder reads " +
+       "\"({c} can pay for {c} and/or {r} costs.)\" and its pitch symbol " +
+       "is three Chi — so the relation is ONE-WAY: a Chi pays a Chi cost " +
+       "AND a resource cost; a resource point pays only a resource cost. " +
+       "Read the other way round her ability is \"pitch any blue card\" " +
+       "and the transcend loop her deck is built around is decoration.",
   run(c){
     const pool = require("../../data/pool.json");
-    const withC = pool.filter(x => /\{c\}/.test(x.functional_text || ""));
+    const ic = pool.find(x => x.name === "Inner Chi");
     const her = pool.find(x => x.name === "Enigma" && /Hero/.test(x.type_text || ""));
-    const hp = P.parseHeroPower(her.functional_text, true);
+    const hp = c.P.parseHeroPower(her.functional_text, true);
+    /* THE NEAR-MISS IS A CARD IN HER OWN DECK (v4.18's point — rarer and
+       better than a synthetic). Six live records have "Chi" in the NAME
+       and are not Chi cards, and one of them is decked here. */
+    const tenet = c.card("Second Tenet of Chi: Wind", 3, 803);
     return {
-      "records in the pool printing {c}": withC.length,
-      "…and the only one is":             withC.map(x => x.name).join(","),
-      "no reminder text explains it":     !/\{c\}[^]*\(/.test(her.functional_text || ""),
-      "so her ability is REFUSED rather than made free": hp === null
+      "records in the pool printing {c}":  pool.filter(x => /\{c\}/.test(x.functional_text || "")).length,
+      "…and the only one is":              pool.filter(x => /\{c\}/.test(x.functional_text || "")).map(x => x.name).join(","),
+      "Inner Chi is typed Chi":            (ic.types || []).indexOf("Chi") >= 0,
+      "…and pitches for three of them":    c.P.chiValue(c.card("Inner Chi", 3, 801)),
+      "her ability reads its cost now":    hp ? hp.cost : null,
+      "…and knows how much must be CHI":   hp ? hp.chi : null,
+      "a card merely NAMED for Chi is not one": c.P.chiValue(tenet)
     };
   },
   want: {
     "records in the pool printing {c}": 1,
     "…and the only one is": "Enigma",
-    "no reminder text explains it": true,
-    "so her ability is REFUSED rather than made free": true
+    "Inner Chi is typed Chi": true,
+    "…and pitches for three of them": 3,
+    "her ability reads its cost now": 3,
+    "…and knows how much must be CHI": 3,
+    "a card merely NAMED for Chi is not one": 0
+  }
+},
+
+{
+  name: "three Chi buys a Spectral Shield WITH its printed counter",
+  why: "v3.47's shape, SEVENTH outing: reading the payload is what " +
+       "creates the route. The token matcher's tail alternation had no " +
+       "` with`, so \"Create a Spectral Shield token WITH a +1{p} " +
+       "counter\" matched NOTHING — `classifyClause` answered null, " +
+       "`parseHeroPower` refused the whole line and `build.js` built her " +
+       "no powCard at all, so neither board could offer the ability. It " +
+       "was the LAST unread hero clause in the pool. The machinery was " +
+       "already here: `enterWithCounters` has taken an override spec as " +
+       "its fifth argument since v4.24 and the mint passed `null` " +
+       "(v3.58, v3.73 — check whether the machinery is the shape you " +
+       "already have).",
+  run(c){
+    const b = enigmaBuild(c, "scene-chi");
+    const chi = c.card("Inner Chi", 3, 801);
+    const g = c.acting(c.state({res: 3, ap: 1, pitch: [chi], hand: [], board: []},
+                               {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}));
+    const n = c.exec(g, b.HPOW, "hero", -1);
+    const sd = n.sides[0];
+    const tok = (sd.board || [])[0];
+    return {
+      "she has a hero power at all":        !!b.HPOW,
+      "…priced in Chi":                     b.HPOW ? b.HPOW._chiCost : null,
+      "three Chi are floating":             c.P.chiFloating(g.sides[0]),
+      "what lands on the board":            tok ? tok.card.name : null,
+      "…carrying its printed counter":      tok ? ((sd.counters || {})[tok.uid] || {}).pow || 0 : null,
+      "the pool is spent":                  sd.res
+    };
+  },
+  want: {
+    "she has a hero power at all": true,
+    "…priced in Chi": 3,
+    "three Chi are floating": 3,
+    "what lands on the board": "Spectral Shield",
+    "…carrying its printed counter": 1,
+    "the pool is spent": 0
+  }
+},
+
+{
+  name: "three RESOURCES buy nothing, and the board says so before she pays",
+  why: "The half that bites. Read as three ordinary resources her " +
+       "ability costs one pitched blue card a turn — STRONGER than " +
+       "printed, the direction that steals games, and the direction the " +
+       "one-sided fairness sweep is built not to look in. Three " +
+       "legalities, at three layers, and only the LAST of them can " +
+       "express the third row: `abCostWhy` refuses a seat that cannot " +
+       "REACH the Chi, `payConfirm` refuses a pitch selection that covers " +
+       "the cost without covering the Chi, and `execute` guards the " +
+       "charge because `reduce` is fed by JSON off a wire (v2.04).",
+  run(c){
+    const b = enigmaBuild(c, "scene-chi2");
+    const chi  = c.card("Inner Chi", 3, 801);
+    const blue = c.card("Unmovable", 3, 802);
+    /* (1) nothing but resources floating — `execute`'s own guard */
+    const floated = c.acting(c.state({res: 3, ap: 1, pitch: [blue], hand: [], board: []},
+                                     {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}));
+    const ran = c.exec(floated, b.HPOW, "hero", -1);
+    /* (2) a blue card in hand worth 3 — refused before the sheet opens */
+    const inHand = c.acting(c.state({res: 0, ap: 1, hand: [blue], pitch: [], board: []},
+                                    {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}));
+    /* (3) BOTH in hand, and only the blue one selected — the row no other
+       layer can see, because the cost IS covered in resources */
+    const both = c.acting(c.state({res: 0, ap: 1, hand: [chi, blue], pitch: [], board: []},
+                                  {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3, builds: [b, {}]}));
+    const opened = c.J.reduce(both, {t: "activate", uid: "hpow", from: "hero"}, 0).state;
+    const pickBlue = c.J.reduce(opened, {t: "paySel", uid: 802}, 0).state;
+    const pickChi  = c.J.reduce(opened, {t: "paySel", uid: 801}, 0).state;
+    return {
+      "(1) it mints nothing off plain resources": (ran.sides[0].board || []).length,
+      "…and the pool is untouched":               ran.sides[0].res,
+      "(2) the board refuses it by name":
+        /only a Chi pays a Chi cost/.test(String(c.J.legal(inHand, {t: "activate", uid: "hpow", from: "hero"}, 0) || "")),
+      "(3) the sheet opens when a Chi is reachable": opened.pending ? opened.pending.need : null,
+      "…and pitching the BLUE one is refused":
+        /Chi short/.test(String(c.J.legal(pickBlue, {t: "payConfirm"}, 0) || "")),
+      "…while pitching the CHI is accepted":       c.J.legal(pickChi, {t: "payConfirm"}, 0)
+    };
+  },
+  want: {
+    "(1) it mints nothing off plain resources": 0,
+    "…and the pool is untouched": 3,
+    "(2) the board refuses it by name": true,
+    "(3) the sheet opens when a Chi is reachable": 3,
+    "…and pitching the BLUE one is refused": true,
+    "…while pitching the CHI is accepted": null
   }
 },
 

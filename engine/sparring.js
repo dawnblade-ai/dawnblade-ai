@@ -230,7 +230,26 @@ function payAction(g, seat, p, o){
      is a complete answer to "you may", and declining can never make the
      seat stronger than printed. */
   if(p.kind === "addPay") return {t: "addPay", yes: false};
-  if(p.need - sd.res - J.paySum(sd) <= 0) return {t: "payConfirm"};
+  /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
+     Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
+     a resource point does not. `pitchPick` ranks on printed pitch, so a
+     seat holding an Inner Chi and an ordinary blue of the same pitch
+     would take either, cover the 3, and be REFUSED at `payConfirm` — and
+     a refusal is always a bug in THIS file (the module's own contract).
+     v3.80's and v4.03's shape a third time: a fallback that is "always
+     available" is a claim about the states that can reach it.
+
+     JUDGE ANSWERS, because this file reads no card text — the same seam
+     `boardAttackOf` (v3.84) and `abWindowOf` (v4.38) already use, and the
+     uids ride with the question the way fusion's do (v4.27). Taken in
+     the order judge sorted them, so two equal Chi cannot desync two
+     peers (v2.46). */
+  const chi = J.chiNeed(g, seat);
+  if(chi.short > 0){
+    const u = chi.uids.find(x => (sd.paySel || []).indexOf(x) < 0);
+    if(u != null) return {t: "paySel", uid: u};
+  }
+  if(p.need - sd.res - J.paySum(sd) <= 0 && chi.short <= 0) return {t: "payConfirm"};
   const c = pitchPick(sd, p.card, o);
   /* Unreachable after a play this policy proposed — `legal` guarantees
      the hand covers the cost. It is here for a payment the policy did not

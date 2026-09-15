@@ -1599,7 +1599,20 @@ function makeEffects(ctx){
         /* AFTER THE LINE THAT SAYS IT ARRIVED. In a training sim the
            sequence IS the lesson (v3.60), and a counter announced before
            the token it sits on reads as a counter on something else. */
-        for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, null);
+        /* AND THE CREATOR CAN NAME THEM (v4.54). `enterWithCounters` has
+           taken an override spec as its fifth argument since v4.24 and
+           every caller passed `null`, so the one printed shape that uses
+           it — Enigma's "Create a Spectral Shield token WITH a +1{p}
+           counter" — had nothing to hand it. The spec rides in the op
+           (`op[4].ctr`) and is `ctrSelf`'s exactly, so the token's own
+           printed clause and a creator's stay one reader.
+
+           THE OVERRIDE, NOT AN ADDITION. `enterWithCounters` falls back
+           to the TOKEN's own `ctrSelf` when handed nothing, and Waxing
+           Specter is the one pool record that prints both shapes on
+           different cards — a spec that ADDED would give a token minted
+           this way its own counter as well as the creator's. */
+        for(const tok of _minted) n = enterWithCounters(n, tok, tok.uid, _tseat, (where && where.ctr) || null);
         /* THE "SITS IDLE" NOTE IS GONE (v2.74) and it had to go. It read
            "pays no costs and takes no action phase, so anything that taxes
            those sits idle" — true of the training prop it was written for,
@@ -2442,6 +2455,38 @@ function makeEffects(ctx){
        against a marked defending hero) would have had to be threaded by
        hand at four sites, which is v3.80's bug waiting to happen again. */
     const _costO = P.costCtx(s, actorOf(s));
+    /* ---- A CHI COST IS GUARDED BEFORE THE POOL IS TOUCHED (v4.54) -----
+       Enigma prints "{c}{c}{c}", and Inner Chi's own reminder text makes
+       the relation one-way — "{c} can pay for {c} and/or {r} costs" — so
+       the three points this is about to spend must BE Chi.
+
+       ABOVE THE CHARGE, NOT BESIDE THE SOUL BANISH AND THE DISCARD. Those
+       two are guarded three hundred lines down, where the pool has
+       already been debited; `chiFloating` is `min(res, chi pitched)`, so
+       asked there it would read three points short of the truth and
+       refuse every payment that had just covered itself. Check where the
+       state you read is written (v4.09, v4.20).
+
+       BOTH BOARDS REFUSE IT FIRST (`judge.abCostWhy` and the trainer's
+       own `tryPlay`, plus the pitch selection at `payConfirm`), so
+       reaching here short means a stale or crafted action off the wire.
+       AN UNPAYABLE COST IS INERT, NEVER FREE (v2.04). */
+    { const _chi = P.abChiCost(card);
+      if(_chi){
+        if(P.chiFloating(act(s)) < _chi)
+          return L(n, `${card.name} costs ${_chi} Chi and ${act(s).name} `
+                    + `${sv(act(s), "hold")} ${P.chiFloating(act(s))} — `
+                    + "only a Chi pays a Chi cost. Nothing happens.");
+        /* AND IT SAYS SO (v4.46). A cost charged in total silence is one
+           the player learns about by being REFUSED — that version found
+           `heroTapped` true across 83 states of one game with not a line
+           in the feed, and making the mechanic legible is what found the
+           next defect inside a minute. In a training sim the feed IS the
+           lesson (v3.60), and this is the one price in the game whose
+           whole point is WHICH points paid it. */
+        n = L(n, `${act(s).name}: ${_chi} Chi spent — a Chi pays for Chi `
+               + "and resource costs alike; a resource point pays only its own.");
+      } }
     exSide.res = act(s).res - (_allyCost != null ? _allyCost : effCost(card, act(s), _costO));
     exSide.paySel = [];
     /* THE OPTIONAL ADDITIONAL COST IS CHARGED HERE, beside the resource

@@ -3200,7 +3200,7 @@ function classifyClause(raw){
   /* RULING: a token is a card — put one copy on the correct player's board.
      "under their control" sends it to the opponent instead.
      (Runechant is handled above; Frostbite falls through here.) */
-  if(m=c.match(/create (a|an|\d+|one|two|three|x) ([a-z][a-z' ,-]*?) tokens?(?: in| under| on|,|\.|$)/)){
+  if(m=c.match(/create (a|an|\d+|one|two|three|x) ([a-z][a-z' ,-]*?) tokens?(?: in| under| on| with|,|\.|$)/)){
     /* AN "X" QUANTITY IS REFUSED, NOT READ AS ONE. Ice Eternal prints
        "Create X Frostbite tokens" for a printed cost of "XX", and nothing
        in this engine models an X cost — so there is no value of X to read.
@@ -3248,8 +3248,45 @@ function classifyClause(raw){
        always had. A fifth slot carrying `null` on 30-odd cards would churn
        the drills that pin this vocabulary and the wire format, for no card
        that can ever read it. */
-    return R(names.map(nm=> ez ? ["token", nm, qty, foe?"foe":"self", {zone:"exposed"}]
-                               : ["token", nm, qty, foe?"foe":"self"]));
+    /* ---- A TOKEN CAN BE CREATED WITH COUNTERS ON IT (v4.54) ---------
+       "Create a Spectral Shield token with a +1{p} counter" — ENIGMA's
+       hero ability, and the pool's ONLY record that creates a token
+       carrying counters (measured; the six that print "enters the arena
+       with" say it on the TOKEN, which is `ctrSelf`'s clause and has read
+       since v3.57).
+
+       IT NEEDED NO MACHINERY. `enterWithCounters` has taken an override
+       spec as its fifth argument since v4.24 and the token mint passes
+       `null`; the spec shape is `ctrSelf`'s exactly. Before building
+       machinery for a shape, check whether the machinery is the shape you
+       already have (v3.58, v3.73).
+
+       AND IT WAS THE WHOLE BLOCKER. The tail alternation above had no
+       ` with`, so the clause matched NOTHING, `classifyClause` answered
+       null, `parseHeroPower` refused the line and `build.js` built her no
+       powCard at all — so her ability could not be offered on either
+       board. v3.47's shape, seventh outing: reading the payload is what
+       creates the route. It was the LAST unread hero clause in the pool.
+
+       READ WHOLE OR REFUSE, exactly as the exposed-zone list above is
+       (v2.29). Widening the tail makes "token with <anything>" reach this
+       rule for the first time, so a counter clause this reader cannot
+       read must take the clause back rather than mint a bare token and
+       drop a printed value.
+
+       THE KIND VOCABULARY IS CLOSED (v3.55) — a counter nothing consumes
+       is a counter that does nothing, filed `full`. And BOTH NUMBERS come
+       off the line: she prints ONE, and is the pool's only record, so a
+       hardcoded 1 is silent against every real fixture and the drill that
+       sees it is synthetic (v3.32, twelfth outing). */
+    const cw = c.match(/tokens? with (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters?\b/);
+    if(/tokens? with\b/.test(c) && !(cw && CTR_KINDS[cw[2]])) return null;
+    const cn = cw ? (CTR_WORDS[cw[1]] != null ? CTR_WORDS[cw[1]] : parseInt(cw[1], 10)) : 0;
+    if(cw && !(cn > 0)) return null;
+    const extra = (ez || cw) ? Object.assign({}, ez ? {zone:"exposed"} : {},
+                     cw ? {ctr:{kind: CTR_KINDS[cw[2]], n: cn, label: cw[2]}} : {}) : null;
+    return R(names.map(nm=> extra ? ["token", nm, qty, foe?"foe":"self", extra]
+                                  : ["token", nm, qty, foe?"foe":"self"]));
   }
   if(/inertia/.test(c)) return NOOP("live — see the Inertia token; the wipe resolves in its controller's end phase");
   if(/put (?:it|this card) into your (?:hero'?s? )?soul/.test(c)) return R([["soulSelf"]]);
@@ -6861,7 +6898,24 @@ function parseHeroPower(tx, allowDestroy){
   if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
   const rsym = (costStr.match(/\{r\}/gi)||[]).length;
-  const cost = dm ? +dm[1] : rsym;
+  /* A CHI PIP IS A RESOURCE PIP PLUS A RESTRICTION (v4.54). Enigma prints
+     "Once per Turn Instant - {c}{c}{c}: …" and the count above sees no
+     digit and no {r}, so her ability read **cost 0** — free, once a turn,
+     forever, on both boards. Latent only because the PAYLOAD refused and
+     `build.js` therefore built her no powCard at all; reading the payload
+     without this would have SHIPPED the free ability, which is v2.04's
+     free-ability bug arriving through the door a fix opened.
+
+     THREE CHI IS THREE POINTS OUT OF THE POOL, so it counts into `cost`
+     like any pip and every cost reader, payment sheet and charge site is
+     untouched. What the symbol adds is `chi` — how many of those points
+     must BE Chi — which is a LEGALITY both boards refuse before the
+     ability resolves (v3.11, v3.99). Read as plain resources instead, her
+     ability becomes "pitch any blue card" and the transcend loop her deck
+     is built around is decoration: STRONGER than printed, the direction
+     that steals games. */
+  const csym = (costStr.match(/\{c\}/gi)||[]).length;
+  const cost = dm ? +dm[1] : rsym + csym;
   const eff = classifyClause(m[4]);
   /* THE ARSENAL PUT IS THE ONE CONDITIONAL SHAPE THIS READER ACCEPTS (v2.34).
      Bull's Eye Bracers and Death Dealer both print "If you have no cards in
@@ -6904,8 +6958,13 @@ function parseHeroPower(tx, allowDestroy){
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
-  return {cost, ga, sd:!!sd, kind, eff:m[4].trim(),
-    label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()+(cost?" ["+cost+"r]":"")+(ga?" · go again":"")};
+  return Object.assign({cost, ga, sd:!!sd, kind, eff:m[4].trim(),
+    label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()
+          +(cost?" ["+cost+(csym?"c":"r")+"]":"")+(ga?" · go again":"")},
+    /* OPT-IN, like every other named cost this reader answers (v3.58): a
+       key present on every ability would churn the drills that `deepEqual`
+       this shape for no card that can read it. */
+    csym ? {chi: csym} : {});
 }
 /* ---- A CARD IN YOUR HAND WITH AN ACTIVATED ABILITY -------------------
    `parseHeroPower` deliberately REFUSES a discard/banish/sacrifice cost —
@@ -7028,6 +7087,67 @@ const frostCount = sd => (sd && sd.board) ? sd.board.filter(isFrostbite).length 
    swing, where the token prints a much narrower scope. See `execute`. */
 const isFrailty = b => !!(b && b.card && norm(b.card.name) === "frailty");
 const frailtyCount = sd => (sd && sd.board) ? sd.board.filter(isFrailty).length : 0;
+
+/* ---- CHI IS A RESOURCE THAT PAYS FOR MORE THAN A RESOURCE (v4.54) ----
+   THE PRINTING SETTLES IT, THIRTEENTH TIME — and upstream's own keyword
+   dictionary could not, because its `Transcend` row has an EMPTY
+   description, exactly as `Retrieve`'s did (v3.54). The card face carries
+   both halves of the mechanic:
+
+     A Drop in the Ocean  "…**transcend**. (Put this into its owner's hand
+                           FLIPPED.)"
+     Inner Chi            "({c} can pay for {c} and/or {r} costs.)"
+                          `Mystic Resource - Chi`, pitch THREE CHI
+
+   And the DATABASE says the two are one card: `Inner Chi`'s printings are
+   the `_BACK` images of exactly the printing ids the five Legendary
+   Mystic instants carry (SEN031..SEN035 are Enigma's). Transcend flips
+   the card over; its back face is a Chi.
+
+   SO THE RELATION IS ONE-WAY AND THE CARD SAYS SO: a Chi pays a {c} cost
+   AND an {r} cost; a resource point pays only an {r} cost. Read the other
+   way round Enigma's hero ability becomes "pitch any blue card" and her
+   whole transcend loop is decoration.
+
+   IT IS DERIVED, NEVER BANKED — `runeCount`'s rule (v2.23), `frostCount`'s
+   (v2.74), `wardValue`'s (v4.34), and the one v3.82 had to enforce after
+   `sd.rune` sat on the wire for sixty versions with no reader. There is no
+   `sd.chi`: the floating pool is ONE number and this says how much of it
+   is Chi, off the PITCH ZONE, which CR 4.4.3c empties at end of turn — so
+   "floating Chi" and "Chi pitched this turn" coincide and nothing has to
+   expire it.
+
+   SPEND NON-CHI FIRST, AND THAT IS A MEASUREMENT RATHER THAN A JUDGEMENT.
+   A Chi does everything a resource does and more, so preserving it is
+   weakly dominant for its controller — the same argument v4.23 makes for
+   taking the reprieve without asking. `min(res, chiPitched)` is what that
+   spend order leaves floating. */
+const CHI_TYPE = "Chi";
+/* WHAT ONE CARD IS WORTH IN CHI — its printed pitch value if the card's
+   TYPE says Chi, else nothing.
+
+   OFF THE STRUCTURED ARRAY, NEVER THE NAME OR `tt` (v2.39, v2.44). The
+   live database prints SIX records whose NAME contains "Chi" and which
+   are not Chi cards — the Tenets of Chi — and **Second Tenet of Chi: Wind
+   is in Enigma's own deck**, so a name scan claims a real decked card and
+   hands her three Chi for pitching an attack. v4.25's "Lightning Fusion"
+   falling back to "lightning", with the near-miss printed on a card the
+   drills already deal. */
+const chiValue = c => (c && (c.ty || []).indexOf(CHI_TYPE) >= 0) ? (c.pitch || 0) : 0;
+/* WHAT A LIST OF CARDS IS WORTH IN CHI. One body, because both boards sum
+   it over their own pitch selection and six hand-rolled copies of one
+   filter is what v4.53 had to collapse. */
+const chiSum = cards => (cards || []).reduce((t, c) => t + chiValue(c), 0);
+/* HOW MUCH OF THE FLOATING POOL IS CHI. */
+const chiFloating = sd => !sd ? 0 : Math.min(sd.res || 0, chiSum(sd.pitch || []));
+/* THE MOST CHI THIS SEAT COULD REACH RIGHT NOW — what is floating plus
+   every Chi still in hand. `payCeiling`'s twin: a seat cannot pre-pitch
+   (the recorded ruling is that the pool is filled only when a cost
+   demands it), so refusing on the FLOATING number alone would make a {c}
+   cost unpayable by construction rather than merely hard. A card never
+   pitches for itself. */
+const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd)
+  + chiSum((sd.hand || []).filter(c => !(self && c && c.uid === self.uid)));
 
 /* ---- ARCANE BARRIER AND SPELLVOID (v2.74) ---------------------------
    Two keywords, 21 pieces of equipment across ALL FIFTEEN heroes, and
@@ -8684,6 +8804,14 @@ function gyFirstGaKw(sd){
   return null;
 }
 const abFlipUp = ab => !!(ab && ab._flipUp);
+/* THE CHI AN ACTIVATION COSTS (v4.54), or 0. One reader, for the reason
+   `abSoulCost` and its siblings each have one: a cost read in one place
+   and re-derived in another is two descriptions of one price (v3.79,
+   v3.86). The RESOURCE half of a {c} cost is `ab.cost` like any other —
+   three Chi really is three points out of the pool — so this says only
+   the extra thing the printed symbol asks: that at least this many of
+   them be Chi. */
+const abChiCost = ab => (ab && ab._chiCost) || 0;
 /* CLOAKED — "Equip this face-down", off the card's PRINTED reminder line.
    `printedKw` is the question (v2.84's three), not `hasKw`: a card that
    merely MENTIONED the keyword would otherwise be equipped face-down,
@@ -8870,6 +8998,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
-        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

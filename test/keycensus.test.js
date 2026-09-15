@@ -342,12 +342,18 @@ test("the one-board reader sets are pinned", {skip}, () => {
     assert.ok(both.includes(n), n + " is demonstrably asked by both boards");
 
   assert.deepEqual(onlyJ.sort(),
-    ["auraAttackOf", "defCounts", "isAtkActionCard", "isDR",
+    ["auraAttackOf", "chiValue", "defCounts", "isAtkActionCard", "isDR",
      "printedKw", "splitCostsAP", "weaponCost"].sort(),
     "a reader judge asks and the trainer does not. TWO LEFT this list at " +
     "v3.99: `tapsToActivate` (the trainer now refuses a tapped hero) and " +
     "`costCtx` (it now threads the game's half of every cost). Adding one is " +
-    "fine when the two boards genuinely have different jobs; say which here.");
+    "fine when the two boards genuinely have different jobs; say which here.\n" +
+    "v4.54: `chiValue` ARRIVED, and the job is genuinely judge's. It is read " +
+    "inside `judge.chiNeed`, which exists so `sparring.js` can ask WHICH cards " +
+    "in hand are Chi without reading card text — the seam `boardAttackOf` " +
+    "(v3.84) and `abWindowOf` (v4.38) already use. The trainer needs no such " +
+    "list: a human picks the cards, and its own two checks ask `chiCeiling` " +
+    "and `chiFloating`/`chiSum`, which BOTH boards call.");
 
   assert.deepEqual(onlyT.sort(),
     ["clean", "costsAP", "frostCount", "hasKwNow", "instantAbilityReady", "isArrow",

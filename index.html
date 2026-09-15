@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.53"; /* v4.53 - ONE PER-DEFENDER BONUS MAP. `runOps`'s `defBuff` case only LOGS, so every caller lifts it out first - and there were SIX hand-rolled copies of that filter across two files, one of which wrote into a SECOND per-defender map the trainer kept for itself. `applyDefMod` has been the one such map since v3.89 and `defendValue` has read it on BOTH boards for as long, so judge refused Rally the Coast Guard BY NAME for four dozen versions against machinery it already had (v3.69: a recorded reason is only as good as the day it was measured). Retiring the second map also moves the FLOOR into the right place - the old order un-floored a defender a debuff had taken below zero. And the route v4.52 recorded is BUILT: `afterDefenders` scans the declared wall for a `defends` payCost beside the two families it already carried, so Brothers in Arms is offered at the table and the +{d} lands as a `defMod` rather than a per-board number. Building it measured a SECOND one-board wall - the trainer's own player-blocks path reaches no shared `defends` body at all - recorded with a driven probe. Full history in CHANGELOG.md; this comment stays one sentence. */
+window.APP_VER = "4.54"; /* v4.54 - CHI. Enigma's clause 2 was the LAST unread hero clause in the pool and it was wrong in three places at once: the token matcher had no " with" so "Create a Spectral Shield token WITH a +1{p} counter" matched nothing and build.js made her no powCard at all; {c}{c}{c} read as cost ZERO; and a pitched Inner Chi credited three ordinary resources. The PRINTING settled it where upstream's keyword dictionary could not - Inner Chi reads "({c} can pay for {c} and/or {r} costs)" and the database gives it the _BACK images of the five Legendary instants that transcend into it. The floating Chi is DERIVED off the pitch zone, never banked (v2.23), with the one case where that is a BOUND rather than the exact number recorded and measured unreachable. Three legalities on both boards, and the LADDER found a livelock the drills could not: legal asked the Chi CEILING while the payment sheet only opened on resources, so a rich seat holding an unpitched Chi proposed a legal action that changed nothing, forever. Full history in CHANGELOG.md; this comment stays one sentence. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3851,6 +3851,15 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const _dn = DawnParser.abDestroyBoard(card);
       if(_dn && !DawnParser.boardEntryNamed(act(s), _dn))
         return L(s, `${card.name} costs a ${_dn}, and you control none.`); }
+    /* AND A CHI COST IS A RESTRICTION ON WHICH POINTS MAY PAY (v4.54).
+       Enigma prints "Once per Turn Instant - {c}{c}{c}", and Inner Chi's
+       own reminder text says the relation is one-way — "{c} can pay for
+       {c} and/or {r} costs" — so the ordinary res/pitch test below cannot
+       express it. `parser.chiCeiling` is the one reader and
+       `judge.abCostWhy` asks the same question of the same side. */
+    { const _ch = DawnParser.abChiCost(card);
+      if(_ch && DawnParser.chiCeiling(act(s), null) < _ch)
+        return L(s, `${card.name} costs ${_ch} Chi, and you can reach ${DawnParser.chiCeiling(act(s), null)} — only a Chi pays a Chi cost.`); }
     /* AND A TARGETED JAB NAMES A PERMANENT IN YOUR OWN GEAR (v4.38).
        Danger Digits reads "Target dagger you control that isn't on the
        active chain link …", and its cost DESTROYS THE ARMS PIECE — so
@@ -3883,7 +3892,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        cost to DEPLOY; its attack prints its own. */
     const cost = from==="ally" ? ((DawnParser.allyAttack(card)||{}).cost || 0)
                                : effCost(card, act(s), costCtx(s, actorOf(s)));
-    if(act(s).res>=cost) return maybeCharge(s,card,from,idx);
+    /* AND THE SHEET OPENS FOR A CHI COST TOO (v4.54). Asked only of the
+       resources this LIVELOCKS: a seat holding enough {r} and an
+       unpitched Inner Chi is allowed to activate (the ceiling counts the
+       hand), no payment opens, and `execute` then refuses for want of
+       floating Chi — a legal action that changes nothing. `judge.chiShort`
+       is the same question on the other board. */
+    const _chiShort = Math.max(0, DawnParser.abChiCost(card) - DawnParser.chiFloating(act(s)));
+    if(act(s).res>=cost && _chiShort<=0) return maybeCharge(s,card,from,idx);
     const pn = {...s, mode:"pay", pending:{card,from,idx}, log:[`Pitch ${cost-act(s).res} more for ${card.name}.`,...s.log].slice(0,LOG_KEEP)};
     actMut(pn).paySel = [];
     return pn;
@@ -3893,6 +3909,16 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     const gain = you(s).paySel.reduce((a,i)=>a+(you(s).hand[i].pitch||0),0);
     const need = effCost(s.pending.card, you(s), costCtx(s, 0))-you(s).res;
     if(gain<need) return L(s,`Selected pitch ${gain}, need ${need}.`);
+    /* AND A CHI COST ASKS A SECOND QUESTION OF THE SAME SELECTION (v4.54):
+       not only how much was pitched but how much of it is Chi. RE-DERIVED
+       off the card, so the offer, the legality and the charge cannot
+       disagree; `judge.legal`'s `payConfirm` asks the identical pair. */
+    { const _ch = DawnParser.abChiCost(s.pending.card);
+      if(_ch){
+        const _hv = DawnParser.chiFloating(you(s))
+                  + DawnParser.chiSum(you(s).paySel.map(i=>you(s).hand[i]));
+        if(_hv < _ch) return L(s,`Selected ${_hv} Chi, need ${_ch} — only a Chi pays a Chi cost.`);
+      } }
     const pitched = you(s).paySel.map(i=>you(s).hand[i]);
     const keepIdx = you(s).hand.map((_,i)=>i).filter(i=>!you(s).paySel.includes(i));
     let pendIdx = s.pending.from==="hand" ? keepIdx.indexOf(s.pending.idx) : s.pending.idx;

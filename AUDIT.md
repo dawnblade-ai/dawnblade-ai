@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-14T19:43:47.761Z · app v4.53 · data sage-v13 · db 797 records
+Generated 2026-09-14T21:39:20.062Z · app v4.53 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -118,9 +118,8 @@ Generated 2026-09-14T19:43:47.761Z · app v4.53 · data sage-v13 · db 797 recor
 - static: Fai — the ability costs {r} less per Draconic chain link (no passive: `_dracDiscount` rides on the powCard and `effCost` reads it)
 
 ### Enigma (Mystic Illusionist)
+- hero power: once/turn: Create a Spectral Shield token with a +1{p} counter [3c]
 - static: Enigma — her first Spectral Shield attack each turn costs {r} less to activate
-- ⚠ unrecognized: "Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter."
-- 🚩 1 hero-text clause(s) not recognized by any ability reader
 
 ### Arakni, Web of Deceit (Chaos Assassin)
 - static: Arakni — a stealth attack on a marked hero gets +1{p} and an on-hit go again

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.53
+**Current version:** v4.54
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2837 drills** at v4.53.
+This is `node --test "test/*.test.js"` — **2856 drills** at v4.54.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -838,6 +838,115 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### CHI PAYS FOR CHI AND FOR RESOURCES; A RESOURCE PAYS ONLY ITS OWN (v4.54)
+
+> *"Once per Turn Instant - **{c}{c}{c}**: Create a Spectral Shield token
+> **with a +1{p} counter**."* — ENIGMA, clause 2
+
+**THE LAST UNREAD HERO CLAUSE IN THE POOL.** Measured across all fifteen:
+`analyzeHero` reports exactly three uncovered clauses and the other two are
+printed ability NAMES (v3.86 annotates rather than suppresses those). Hers
+was the only rule — and it was wrong in **THREE places at once, each hiding
+the next**:
+
+| | |
+|---|---|
+| the PAYLOAD | the token matcher's tail had no ` with`, so the clause matched **NOTHING** |
+| the COST | `parseHeroPower` counts a digit else `{r}` pips — **cost 0** |
+| CHI ITSELF | pitching an Inner Chi credited three ordinary resources |
+
+`classifyClause` answered null, so the line refused and `build.js` built her
+**no powCard at all**. **v3.47's shape, SEVENTH outing: reading the payload
+is what creates the route.** And fixing that half alone would have SHIPPED
+the free ability — v2.04's free-ability bug through the door a fix opened.
+
+**TRY THE PRINTING — THIRTEENTH TIME, AND THE SYMBOL IS NAMED ON A DIFFERENT
+CARD.** Upstream's dictionary could not settle it: `csvs/english/keyword.csv`
+carries a **`Transcend` row with an EMPTY description**, exactly as
+`Retrieve`'s did (v3.54). Two card faces carry the whole mechanic:
+
+```
+A Drop in the Ocean  "…transcend. (Put this into its owner's hand FLIPPED.)"
+Inner Chi            "({c} can pay for {c} and/or {r} costs.)"
+                     Mystic Resource - Chi, pitch THREE CHI
+```
+
+**AND THE DATABASE SAYS THEY ARE ONE CARD**: `Inner Chi`'s printings are the
+`_BACK` images of exactly the printing ids the five Legendary Mystic instants
+carry — SEN031..SEN035 are Enigma's. **A symbol unnamed on the card that
+SPENDS it can be named on the card that MAKES it**; the scene this discharges
+looked at one face and said so in as many words (v3.38, fifth refusal
+discharged this cycle).
+
+**IT IS DERIVED, NEVER BANKED.** There is **no `sd.chi`** — no side field, no
+`WIRE_V` bump, no symmetry-ledger move. `parser.chiFloating` is
+`min(res, Chi pitched this turn)`, off the PITCH ZONE, which CR 4.4.3c
+empties at end of turn so nothing has to expire it. `runeCount`'s rule
+(v2.23), `frostCount`'s (v2.74), `wardValue`'s (v4.34), and the one v3.82
+had to enforce after `sd.rune` rode the wire for sixty versions with no
+reader.
+
+**SPEND NON-CHI FIRST IS A MEASUREMENT, NOT A JUDGEMENT** — a Chi does
+everything a resource does and more, so preserving it is weakly dominant
+(v4.23's reprieve). **AND THE BOUND IS HONEST ABOUT WHERE IT IS ONLY A
+BOUND**: spend all your Chi, then pitch an ordinary card, and `min` reads the
+new points as Chi. The exact answer is path-dependent and neither zone
+records the order. `chi-floating-is-a-bound`, `stated`, with a driven probe —
+**unreachable in this pool and that is measured**: `{c}` has ONE claimant in
+797 records and it prints **Once per Turn**, so a second Chi payment inside
+one turn cannot happen. Both halves of that premise are drilled.
+
+**OFF THE STRUCTURED ARRAY, NEVER THE NAME OR `tt`** (v2.39, v2.44). Six
+live records have "Chi" in the NAME and are not Chi cards — the Tenets — and
+**Second Tenet of Chi: Wind is in Enigma's own deck**, so a name scan hands
+her three Chi for pitching an attack. v4.25's *"Lightning Fusion"* falling
+back to *"lightning"*, with the near-miss on a card the drills already deal
+(v4.18: rarer and better than a synthetic).
+
+**THREE LEGALITIES, THREE LAYERS, AND ONLY THE LAST SEES THE THIRD ROW** —
+`abCostWhy` + the trainer's `tryPlay` refuse a seat that cannot **REACH** the
+Chi; `payConfirm` on both boards refuses a pitch selection that covers the
+COST and covers no CHI; `execute` guards the charge because `reduce` is fed
+by JSON off a wire (v2.04). **The CEILING, not the floating pool**: a player
+cannot pitch to bank resources, so refusing unless the Chi is already
+floating makes a `{c}` cost unpayable by construction. **And the guard sits
+ABOVE the charge**, not beside the soul banish and the discard three hundred
+lines down — `chiFloating` is `min(res, …)`, so asked there it reads three
+points short and refuses every payment that had just covered itself (v4.09,
+v4.20: check where the state you read is written).
+
+**THE PAYLOAD NEEDED NO MACHINERY.** `enterWithCounters` has taken an
+override spec as its **fifth argument since v4.24** and every caller passed
+`null`; the spec shape is `ctrSelf`'s exactly (v3.58, v3.73). **READ WHOLE OR
+REFUSE** (v2.29) — widening the tail makes *"token with \<anything\>"* reach
+that rule for the first time. **AND IT IS AN OVERRIDE, NEVER AN ADDITION**:
+handed nothing, `enterWithCounters` falls back to the TOKEN's own `ctrSelf`,
+so adding would stack a creator's counter on the token's. Latent and
+measured; drilled with a synthetic, with Golden Cog as the control.
+
+**AND THE POLICY HAD TO BE TOLD**, or the route is a REFUSAL rather than a
+number. `payAction` confirms the moment the RESOURCE need is covered and
+`pitchPick` ranks on printed pitch, so a seat holding an Inner Chi and an
+ordinary blue of the same pitch would take either and be refused — and a
+refusal is always a bug in `sparring.js` (its own contract). **`judge.chiNeed`
+answers**, because that file reads no card text: `boardAttackOf`'s seam
+(v3.84) and `abWindowOf`'s (v4.38), with the uids riding with the question
+the way fusion's do (v4.27). v3.80's and v4.03's shape a third time: *a
+fallback that is "always available" is a claim about the states that can
+reach it.*
+
+**THE LADDER FOUND A LIVELOCK NO DRILL COULD.** `legal` asks whether the seat
+could **REACH** the Chi; the payment sheet opened only when `acost > sd.res`.
+So a seat holding three ordinary resources and an **unpitched** Inner Chi
+passed `legal`, opened no sheet, and was refused inside `execute` — a legal
+action that changes nothing, proposed again every tick. **One game in 630 sat
+at turn 8 for 4,000 steps** while every drill passed. `judge.chiShort` is the
+FOURTH cost reader (v3.80's three, plus this), at all three ability-commit
+sites, with the trainer asking the same question. Measured: Enigma
+**10·10·11 → 14·13·14**, intervals disjoint (REAL, v4.40); **stalls 1 → 0**;
+`chi` fires **180 times in 630 games**.
+
 
 ### A SECOND RECORD OF ONE FACT, AND THE REFUSAL THAT RESTED ON IT (v4.53)
 

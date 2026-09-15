@@ -6,10 +6,10 @@ axes it never covered.
 
 | area | entries | note |
 |---|---|---|
-| Hero abilities | 3 heroes, 3 unread clauses | never charged by the stack |
+| Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
 | Ruled but not built | 11 cards | understood ≠ built |
-| **Fail states** | 42 entries, 0 break a rule | how cards go *wrong* at the table |
+| **Fail states** | 41 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -17,10 +17,6 @@ axes it never covered.
 - ❌ Essence of Earth and Lightning  _(the ability's printed NAME — a heading, not a rule)_
 - ✅ The first time an attack action card you control deals damage to an opposing hero each turn, create an Embodiment of Earth token.
 - ✅ The second time you play a non-attack action card each turn, create an Embodiment of Lightning token.
-
-### Enigma — 1/2 unread
-- ✅ Your first Spectral Shield attack each turn costs {r} less to activate.
-- ❌ Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 
 ### Iyslander — 1/3 unread
 - ❌ Essence of Ice  _(the ability's printed NAME — a heading, not a rule)_
@@ -70,13 +66,13 @@ can be overruled. Same discipline as the mention count.
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
 | Choice never offered | 5 |
 | No schedule to fire on | 4 |
-| Earned value denied | 4 |
 | Unread, effect unknown | 4 |
-| Displayed total is wrong | 3 |
+| Earned value denied | 3 |
 | Ability inert — cost not modelled | 3 |
+| Displayed total is wrong | 2 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 12 entries
+### WRONG — 11 entries
 
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -115,11 +111,6 @@ can be overruled. Same discipline as the mention count.
 - **Briar** · tier `hero` · briar
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Earth and Lightning
-- **Enigma** · tier `hero` · enigma
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.
 - **Iyslander** · tier `hero` · iyslander
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Ice

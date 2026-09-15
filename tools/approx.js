@@ -62,6 +62,17 @@
 
 const APPROX = {
   /* ---------------------------------------------------------------- */
+  "chi-floating-is-a-bound": {
+    status: "stated",
+    cr: null,
+    board: "both",
+    since: "v4.54",
+    swept: "v4.54",
+    claim: "`parser.chiFloating` derives the floating Chi as `min(res, Chi pitched this turn)`. That is EXACT while the pool has not been spent below the Chi total and then raised again — spend all your Chi, pitch an ordinary card, and the bound reads the new points as Chi. The exact quantity is path-dependent (it depends on the ORDER of the spends), so it cannot be derived from the two zones alone.",
+    why: "A `sd.chi` side field would be exact, and a stored count is the thing this project keeps having to retire: v2.23 replaced the runechant counter with a board walk, v2.74 the frostbite counter, v3.82 had to delete `sd.rune` after it rode the wire for sixty versions with NO READER, and v4.34 derives a permanent's ward rather than banking it. A field also costs a `WIRE_V` bump and a symmetry-ledger move for a number one card reads. THE GAP IS UNREACHABLE IN THIS POOL AND THAT IS MEASURED: `{c}` has exactly ONE claimant in 797 records — Enigma's hero ability — and it is printed **Once per Turn**, so a second Chi payment inside one turn cannot happen; CR 4.4.3c empties the pitch zone at end of turn, so the bound resets with it. `test/chi.test.js` pins both halves of that premise, and the probe below asserts the DEVIATION — it goes RED the day a second {c} cost is dealt, the once-per-turn limit moves, or somebody banks the count."
+  },
+
+  /* ---------------------------------------------------------------- */
   "paycost-defends-at-the-table": {
     status: "closed",
     cr: null,

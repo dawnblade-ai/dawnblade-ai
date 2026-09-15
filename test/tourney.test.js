@@ -72,7 +72,7 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "allyatk", "crush", "ctrWipe", "death", "defmod", "destroycost", "fusion", "gold",
+    "ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost", "fusion", "gold",
     "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "tap", "ward",
   ]);
@@ -122,7 +122,15 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    at the table that version), Rally the Coast Guard's, Shred's debuff and
    the clash payoff alike. Naming it `brothers` would be a number about one
    card standing on a line four sources print (v4.44's `powctr`). */
-const ROUTES_PINNED = ["ally", "allyatk", "crush", "ctrWipe", "death", "defmod", "destroycost",
+/* `chi` JOINED AT v4.54 — a Chi SPENT on a {c} cost, and SPELL THE EVENT,
+   NEVER THE WORD (v4.46). The feed says "Inner Chi" every time one is
+   pitched and "Spectral Shield" every time one of four cards creates one,
+   so a counter aimed at either word measures something else entirely —
+   v4.46 found `tap` reporting 335 firings of which every single one was
+   the end phase announcing an UNTAP. What this version built is a Chi
+   being SPENT, and `execute` prints that line nowhere else. */
+const ROUTES_PINNED = ["ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod",
+                       "destroycost",
                        "fusion", "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "tap", "ward"];
 

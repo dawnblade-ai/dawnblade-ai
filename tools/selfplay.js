@@ -367,6 +367,13 @@ function play(g, limit, opts){
            a counter that spells the wrong word reports zero exactly as a
            missing feature does). */
         if(/ lashes out at /.test(line)) events.push(["jab", line]);
+        /* CHI (v4.54) — SPELL THE EVENT, NEVER THE WORD (v4.46). The feed
+           says "Inner Chi" every time one is pitched and "Spectral
+           Shield" every time one is created by any of four cards, so a
+           counter aimed at either word measures something else entirely.
+           What this version BUILT is a Chi being SPENT on a {c} cost,
+           and that line is printed nowhere else. */
+        if(/: \d+ Chi spent —/.test(line)) events.push(["chi", line]);
         if(/undefined|NaN|\[object/i.test(line)) events.push(["MALFORMED", line]);
         /* SEAT 0 IS LITERALLY NAMED "You" (v2.83, v3.90), so a feed line
            that NAMES the seat and then uses a third-person verb reads

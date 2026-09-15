@@ -232,7 +232,14 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      player-blocks path reaches no shared `defends` body at all, so Crash
      and Bash and Washed Up Wave are dead on the wall the player raises.
      One record closed, one opened, net +1. */
-  assert.equal(Object.keys(APPROX).length, 36, "record count moved");
+  /* 36 -> 37 AT v4.54: `chi-floating-is-a-bound`. There is no `sd.chi` —
+     the floating Chi is DERIVED as `min(res, Chi pitched this turn)`,
+     which is a BOUND rather than the exact number: spend all your Chi,
+     then pitch an ordinary card, and the bound reads the new points as
+     Chi. Unreachable in this pool and that is MEASURED — {c} has one
+     claimant in 797 records and it prints Once per Turn — so the record
+     carries the measurement and the probe asserts the deviation. */
+  assert.equal(Object.keys(APPROX).length, 37, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -245,7 +252,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      checks are all about attack buffs. */
   /* 12 -> 13 stated AT v4.47: `arena-ability-policy-declines`. */
   /* 13 -> 14 AT v4.49: `steam-build-powcard-handwritten`. */
-  assert.equal(n("stated"), 14, "stated count moved");
+  /* 14 -> 15 AT v4.54: `chi-floating-is-a-bound`. */
+  assert.equal(n("stated"), 15, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -280,6 +288,31 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
    which is exactly what made closing it a deliberate edit here rather
    than a stale sentence (v4.02). `closed` now, so it asserts the thing is
    BUILT and goes red if it regresses. */
+probe("chi-floating-is-a-bound", () => {
+  /* THE PREMISE THE RECORD RESTS ON, MEASURED RATHER THAN ASSERTED IN
+     PROSE (v3.41): one claimant, and it is Once per Turn. */
+  const pool = require("../data/pool.json");
+  const prints = pool.filter(r => /\{c\}/.test(r.functional_text_plain || r.functional_text || ""));
+  assert.deepEqual([...new Set(prints.map(r => r.name))], ["Enigma"],
+    "a second {c} cost makes the bound reachable — close the record or bank the count");
+  assert.ok(/Once per Turn Instant - \{c\}\{c\}\{c\}/.test(prints[0].functional_text_plain || ""),
+    "…and the once-per-turn limit is what stops a second payment inside one turn");
+
+  /* THE DEVIATION, DRIVEN. Spend the Chi, then raise the pool with an
+     ordinary card: the bound reads the new points as Chi. A `sd.chi`
+     field would answer 0 here, which is what turns this record round. */
+  H.db();
+  const chi  = Object.assign({}, H.card("Inner Chi", 3), {uid: 7701});
+  const blue = Object.assign({}, H.card("Unmovable", 3), {uid: 7702});
+  const spent = {res: 0, pitch: [chi]};
+  assert.equal(PR.chiFloating(spent), 0, "with the pool empty the bound is right");
+  const refilled = {res: 3, pitch: [chi, blue]};
+  assert.equal(PR.chiFloating(refilled), 3,
+    "AND HERE IT OVER-REPORTS: the three points came from the blue card, and " +
+    "the bound cannot tell, because the exact answer depends on the ORDER of " +
+    "the spends and neither zone records it");
+});
+
 probe("paycost-defends-at-the-table", () => {
   /* THE PREMISE, DRIVEN: a real pool record emits the trigger. */
   PR.fxReset();
@@ -1046,7 +1079,15 @@ probe("pool-deck-complete", () => {
      fifth NAMED cost now, and four of them read. The fifth, Orb-Weaver,
      still refuses on its PAYLOAD (a token equip), which is v2.29 working
      rather than a gap in that build. */
-  assert.equal(none.hero.length, 5,
+  /* 5 -> 4 AT v4.54, AND THE ONE THAT LEFT IS ENIGMA. Her clause 2 —
+     "Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token
+     WITH a +1{p} counter" — was the LAST unread hero clause in the pool,
+     and the blocker was the PAYLOAD: the token matcher's tail had no
+     ` with`, so the clause matched nothing, `parseHeroPower` refused the
+     line and `build.js` built her no powCard at all (v3.47, seventh
+     outing). The {c} cost read ZERO beside it, so reading the payload
+     alone would have shipped a free Spectral Shield every turn. */
+  assert.equal(none.hero.length, 4,
     "the set of HEROES reading nothing moved. Exactly ONE is now an Agent of " +
     "Chaos — Trap-Door, refusing on its PAYLOAD (a deck search) rather than on " +
     "the cost; the rest are Arakni's own base form and heroes whose whole " +

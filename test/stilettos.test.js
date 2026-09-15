@@ -390,8 +390,14 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
     tiers[fx.tier] = (tiers[fx.tier] || 0) + 1;
     if(fx.payCost) (carriers[fx.payCost.trigger] = carriers[fx.payCost.trigger] || new Set()).add(r.name);
   }
-  /* 747/38/12 before this version; Silent Stilettos is the one that moved. */
-  assert.deepEqual(tiers, {full: 748, part: 37, none: 12});
+  /* 747/38/12 before v4.52; Silent Stilettos is the record that moved
+     there. RE-PINNED AT v4.54 after reading the diff: Enigma's hero record
+     went `none` -> `part` when her ability's payload gained a reader, so
+     `part` 37 -> 38 and `none` 12 -> 11 and the `full` count is untouched.
+     A whole-pool pin inside a card's own drill is deliberate — it is this
+     version's blast-radius measurement standing (v4.17) — and moving it is
+     an edit somebody makes on purpose. */
+  assert.deepEqual(tiers, {full: 748, part: 38, none: 11});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

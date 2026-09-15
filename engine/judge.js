@@ -167,6 +167,24 @@ function abCostWhy(sd, ab){
   const _dn = PR.abDestroyBoard(ab);
   if(_dn && !PR.boardEntryNamed(sd, _dn))
     return ab.name + " costs a " + _dn + ", and " + sd.name + " controls none";
+  /* AND A CHI COST IS A RESTRICTION ON WHICH POINTS MAY PAY (v4.54).
+     Enigma prints "Once per Turn Instant - {c}{c}{c}", and Inner Chi's own
+     reminder text says the relation is one-way: "{c} can pay for {c}
+     and/or {r} costs". So a resource point cannot pay this and the
+     ordinary `res + payCeiling` test cannot express it.
+
+     THE CEILING, NOT THE FLOATING POOL. The recorded ruling is that a
+     player cannot pitch to bank resources — the pool is filled only when
+     a cost demands it (v2.35's flow) — so refusing unless the Chi is
+     ALREADY floating makes a {c} cost unpayable by construction rather
+     than merely hard. `chiCeiling` is `payCeiling`'s twin and asks what
+     this seat could reach; `payConfirm` then asks what they actually
+     selected, and `execute` guards the charge (v2.04), because `reduce`
+     is fed by JSON off a wire. */
+  const _ch = PR.abChiCost(ab);
+  if(_ch && PR.chiCeiling(sd, null) < _ch)
+    return ab.name + " costs " + _ch + " Chi, and " + sd.name + " can reach "
+         + PR.chiCeiling(sd, null) + " — only a Chi pays a Chi cost";
   /* AND A DISCARD FROM HAND (v4.09) — Arakni's Agents print "Attack
      Reaction - Discard an Assassin card: …". Refusing AFTER the ability
      resolves would spend the seat's once-per-turn allowance on a play the
@@ -706,7 +724,20 @@ function legal(g, a, seat){
     }
     if(a.t === "payConfirm"){
       const have = at(g, seat).res + paySum(at(g, seat));
-      return have >= p.need ? null : "still " + (p.need - have) + " short";
+      if(have < p.need) return "still " + (p.need - have) + " short";
+      /* AND A CHI COST ASKS A SECOND QUESTION OF THE SAME SELECTION
+         (v4.54): not only how MUCH was pitched but how much of it is Chi.
+         RE-DERIVED off the card rather than carried on `pending`, so the
+         wire shape does not move and the offer, the legality and the
+         charge cannot disagree (v4.27's fusion re-derivation). */
+      const _ch = PR.abChiCost(p.card);
+      if(_ch){
+        const sd = at(g, seat);
+        const _sel = (sd.paySel || []).map(u => (sd.hand || []).find(x => x.uid === u)).filter(Boolean);
+        const _hv = PR.chiFloating(sd) + PR.chiSum(_sel);
+        if(_hv < _ch) return "still " + (_ch - _hv) + " Chi short — only a Chi pays a Chi cost";
+      }
+      return null;
     }
     return null;
   }
@@ -1557,6 +1588,62 @@ const paySum = sd => (sd.paySel || []).reduce((t, uid) => {
   return t + ((c && c.pitch) || 0);
 }, 0);
 
+/* ---- HOW MUCH MORE CHI THE OPEN PAYMENT NEEDS (v4.54) ----------------
+   `sparring.js` reads NO CARD TEXT by contract — a drill fails it for
+   requiring the parser at all — so judge answers, exactly as
+   `boardAttackOf` does for an aura's attack (v3.84) and `abWindowOf` for
+   a reaction ability (v4.38). One reader, and the policy asks it.
+
+   IT IS NOT OPTIONAL POLITENESS. `payAction` confirms the moment the
+   RESOURCE need is covered, and `pitchPick` ranks on printed pitch — so a
+   seat holding an Inner Chi and an ordinary blue card of the same pitch
+   would pick either, cover the 3, and be REFUSED at `payConfirm`. A
+   refusal is always a bug in that file (its own contract), and this is
+   v3.80's and v4.03's shape a third time: a fallback that is "always
+   available" is a claim about the states that can reach it.
+
+   THE UIDS RIDE WITH THE ANSWER, the way v4.27's fusion offer supplies
+   the cards that could pay — so the policy picks from a list judge built
+   rather than testing a card itself. SORTED, because a ranking that
+   leaves ties unbroken is a desync waiting for two equal Chi (v2.46). */
+/* ---- AND THE PAYMENT SHEET HAS TO OPEN FOR IT (v4.54) ---------------
+   AN ACTIVATION READS ITS COST THREE TIMES (v3.80) and a Chi cost has a
+   fourth question of its own: `legal` asks whether this seat could RAISE
+   the Chi, `execute` asks whether it is floating when the charge lands,
+   and THIS asks whether a payment must open at all.
+
+   ASKED ONLY OF THE RESOURCES, IT LIVELOCKS — and the ladder is what
+   found it, not a drill. A seat holding three ordinary resources and an
+   unpitched Inner Chi passed `legal` (the ceiling counts the hand), then
+   `acost > sd.res` was FALSE so no sheet opened, then `execute` refused
+   for want of floating Chi — and `sparring.act`, offered a legal action
+   that changes nothing, proposed it again every tick. One game in 630 sat
+   at turn 8 for 4,000 steps. It is the `legal`/`reduce` agreement
+   `fuzz.test.js` exists to hold, and v3.80's own sentence one reader
+   further on: each read must ask what its own charge site asks. */
+const chiShort = (sd, ab) => Math.max(0, PR.abChiCost(ab) - PR.chiFloating(sd));
+
+function chiNeed(g, seat){
+  const p = pendingOf(g);
+  const sd = at(g, seat);
+  const none = {short: 0, uids: []};
+  if(!p || p.kind !== "pay" || p.seat !== seat || !p.card) return none;
+  const want = PR.abChiCost(p.card);
+  if(!want) return none;
+  const sel = (sd.paySel || []).map(u => (sd.hand || []).find(x => x.uid === u)).filter(Boolean);
+  const have = PR.chiFloating(sd) + PR.chiSum(sel);
+  return {short: Math.max(0, want - have),
+          /* A CARD NEVER PITCHES FOR ITSELF — `legal` refuses that
+             (`paySel`), so a policy handed the card it is paying for would
+             propose a refusal. `payCeiling`'s own exclusion, one list
+             over. Today `p.card` is always a powCard and never in hand, so
+             this costs nothing and is right the day a CARD prints {c}. */
+          uids: (sd.hand || [])
+                  .filter(c => c && c.uid !== p.card.uid && PR.chiValue(c) > 0)
+                  .map(c => c.uid)
+                  .sort((a, b) => String(a).localeCompare(String(b)))};
+}
+
 /* ---- driving the machine ----------------------------------------------
    priority.js owns no zones by design, so every step's zone work happens
    here. `settle` runs after any priority change: it asks the machine
@@ -2233,7 +2320,7 @@ function doActivate(g, a, seat){
        direction. Each read asks what its own charge site asks. */
     const ab = bOf(g, seat).HPOW;
     const acost = effCost(ab, sd, PR.costCtx(g, seat));
-    if(acost > sd.res)
+    if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
@@ -2275,7 +2362,7 @@ function doActivate(g, a, seat){
       if(!_ally && !_aura){
         const ab = BD.boardPow(b);
         const bcost = effCost(ab, sd, PR.costCtx(g, seat));
-        if(bcost > sd.res)
+        if(bcost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
           return say({...g, pending: {kind: "pay", seat, card: ab, from: "board",
                                       need: bcost, target: null}},
             ab.name + " costs " + bcost + " and " + sd.name + " holds " + sd.res
@@ -2306,7 +2393,7 @@ function doActivate(g, a, seat){
   /* THE SAME SPLIT, AND THE SAME ROUTE (v3.83) — see `legal`. */
   if(_abUid || !PR.isWeapon(piece)){
     const ab = piece.powCard, acost = effCost(ab, sd, PR.costCtx(g, seat));   /* v3.80 — see doActivate's hero branch */
-    if(acost > sd.res)
+    if(acost > sd.res || chiShort(sd, ab) > 0)   /* v4.54 — see `chiShort` */
       return say({...g, pending: {kind: "pay", seat, card: ab, from: "hero", need: acost, target: null}},
         ab.name + " costs " + acost + " and " + sd.name + " holds " + sd.res + " — pitch, or cancel.");
     return commitPlay(g, ab, "hero", seat, null, null);
@@ -3086,7 +3173,7 @@ function drawTo(g, i){
 
 return {ACTIONS, newMatch, legal, reduce, settle, strike, closeChain,
         playableWhy, drawTo, winCheck, targets, targetOf, targetSpec, boardAttackOf, boardAbilityOf, abWindowOf,
-        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, pendingOf,
+        actorOf, act, foe, at, put, bAct, bOf, say, toGrave, mint, paySum, chiNeed, pendingOf,
         /* the card semantics seam (v2.77) */
         setDb, effectsFor, withEffects, openPrompt, autoAnswer,
         PENDING_KINDS, PROMPT_ACTIONS};

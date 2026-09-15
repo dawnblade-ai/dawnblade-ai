@@ -1,5 +1,5 @@
 {
- "generated": "2026-09-14T19:43:47.761Z",
+ "generated": "2026-09-14T21:39:20.062Z",
  "appVer": "4.53",
  "dataVer": "sage-v13",
  "dbCount": 797,
@@ -210,7 +210,7 @@
    "statics": [
     "Enigma — her first Spectral Shield attack each turn costs {r} less to activate"
    ],
-   "power": null,
+   "power": "once/turn: Create a Spectral Shield token with a +1{p} counter [3c]",
    "clauses": [
     {
      "t": "Your first Spectral Shield attack each turn costs {r} less to activate.",
@@ -218,12 +218,10 @@
     },
     {
      "t": "Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with a +1{p} counter.",
-     "covered": false
+     "covered": true
     }
    ],
-   "flags": [
-    "1 hero-text clause(s) not recognized by any ability reader"
-   ]
+   "flags": []
   },
   "arakni": {
    "name": "Arakni, Web of Deceit",
