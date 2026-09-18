@@ -244,7 +244,16 @@ const PER_COUNT = {
   "{p}": {
     "equipment defending it":                  "perEquipDef",
     "time you have boosted this combat chain": "perBoost",
-    "attack that has hit this combat chain":   "perChainHit"
+    "attack that has hit this combat chain":   "perChainHit",
+    /* v4.56 — THE ONE COUNTABLE THAT COUNTS A COST RATHER THAN A BOARD.
+       The other three ask about the table (the wall, the chain, the boost
+       record); this asks what the card's OWN additional cost just paid,
+       which is why it is counted off `_chgWay` — a per-resolution trace of
+       the `_discWay` family (v3.62) — rather than off any zone. It is also
+       the only one that lands on a STANDING grant instead of the resolving
+       card's power, and the table is shared deliberately: a countable
+       built for a pump must be countable for a grant or the two drift. */
+    "light card charged this way":             "perChargedLight"
   },
   "{d}": {}
 };
@@ -4178,21 +4187,91 @@ function fxParse(card){
      `part`. Neither could be seen by the fairness sweep — both are WEAKER
      than printed, which is the direction it is built not to look in. */
   for(let ci = 0; ci < clauses.length; ci++){
-    const ag = clauses[ci].match(
-      /^your (.*?)attacks?( .+?)? gets? \+(\d+)\{p\} (this turn|this combat chain)\.?$/i);
+    /* `clauses[ci]` IS RAW, so this levels for itself (v3.36, v3.71) —
+       `SYNONYMS` is applied inside `classifyClause` and does not reach a
+       whole-card scan, and an anchor spelling the printed contraction
+       matches nothing while looking exactly like one that is simply
+       wrong. Lowercased with it, because `PER_COUNT`'s keys are. */
+    const agl = levelIdiom(String(clauses[ci]).toLowerCase());
+    const ag = agl.match(
+      /^your (.*?)attacks(?: (this turn|this combat chain))?( .+?)? gets? \+(\d+)\{p\}(?: (this turn|this combat chain))?(?: for each ([^.]+?))?\.?$/i);
     if(!ag) continue;
+    /* THE WINDOW IS PRINTED IN EITHER POSITION, AND THE POOL PRINTS BOTH
+       (v4.56). This anchor required it at the END of the clause, and the
+       database puts it right after the SUBJECT on the other of its two
+       records — so a grant four words apart from a grant this reader has
+       read since v3.87 read NOTHING:
+
+         "Your attacks with stealth get +1{p} THIS TURN."   Night's Embrace
+         "Your attacks THIS COMBAT CHAIN get +1{p} for …"   V of the Vanguard
+
+       Driven, the clause with the window moved and nothing else changed
+       refuses, and the same clause with it at the end reads in full. That
+       is v3.36's rule verbatim — the database prints both spellings at
+       once — and the comment block above has named V of the Vanguard as
+       one of its two examples since v3.87 while the anchor could not
+       reach it, which is v4.48's dead `perBoost` one reader over.
+
+       NEVER BOTH. A clause naming its window twice is one nobody has
+       measured, so it refuses rather than picking a side.
+
+       AND THE VERB IS PLURAL, WHICH IS THE WHOLE THING SEPARATING THIS
+       FAMILY FROM `buffQ`'s. It read `attacks?` and that was harmless only
+       while the window had to come LAST: "your NEXT arrow attack THIS TURN
+       gets +3{p}" prints its window mid-clause too, so accepting either
+       position made the optional `s` live and this reader swallowed
+       `buffQ`'s whole single-shot family — measured, 31 records across ten
+       cards, every one turned into a grant that is never spent. That is
+       v3.87's own distinction inverted in the direction that steals games,
+       and it is v3.72's rule about a SOURCE one reader over: widening one
+       thing makes a looseness somewhere else reachable that was wrong the
+       whole time it could not be.
+
+       The plural is a RULE and not a coincidence of this pool — "your next
+       attack" names ONE card by construction and "your attacks" names the
+       standing set — which is v4.49's grammar argument one family over.
+       Measured: all four of the pool's standing records print the plural
+       and no record prints "your next/first … attackS", so an exclusion
+       beside this would be a guard that cannot express a bug (v4.11). */
+    const win = ag[2] || ag[5];
+    if(!win || (ag[2] && ag[5])) continue;
     /* TWO ARGUMENTS, BECAUSE THE PRINTED RESTRICTION CAN SIT ON EITHER
        SIDE OF THE WORD (v3.31): "your ARROW attacks" is a leading class
        group and "your attacks WITH STEALTH" is a tail. `attackQual` is
        the one reader of both, so nothing here re-derives either. */
-    const q = attackQual(ag[1] || "", ag[2] || "");
+    const q = attackQual(ag[1] || "", ag[3] || "");
     /* `false` means "a restriction I cannot read", which is a DIFFERENT
        answer from `null` ("nothing restricts this") — collapsing the two
        is how v3.31's bug shipped, and `qualMatches` answers TRUE for a
        falsy qualifier, so a `false` reaching it grants to everything. */
     if(q === false) continue;
-    fx.ops.push(["atkBuff", +ag[3], q || null,
-                 /this turn/i.test(ag[4]) ? "turn" : "chain"]);
+    /* ---- "+N{p} FOR EACH …" ON A STANDING GRANT (v4.56) -------------
+       v4.48 built the multiplier for the RESOLVING CARD's power
+       (`PER_COUNT`) and v4.48's twin for the WALL (`DEF_PER`); a standing
+       grant is the third place one can land, and it shares v4.48's table
+       so a countable built for a pump is countable here too.
+
+       AN UNKNOWN COUNTABLE REFUSES THE WHOLE CLAUSE, and that is the
+       load-bearing half rather than caution (v4.48, v2.29): read as a
+       flat +N it is wrong in BOTH directions at once — a point the card
+       does not grant at a count of 0, and less than printed at 2 or more
+       — which is exactly the pair of blindnesses that kept the four
+       for-each cards reading `tier: full` for eight versions. */
+    let per = null;
+    if(ag[6]){
+      per = perCountKey(PER_COUNT["{p}"], ag[6].trim());
+      if(!per) continue;
+    }
+    /* THE OP CARRIES THE COUNTABLE AND `runOps` RESOLVES IT ONCE, because
+       "for each Light card charged this way" counts a PAST EVENT — the
+       cost this card's own play just paid — which is fixed the moment the
+       grant is made and cannot move again. A countable re-counted at each
+       attack would be the same number on every one of them, and storing
+       it on the entry would be a second record of it (v3.61). Without a
+       for-each the op is four elements exactly as before, so Night's
+       Embrace's parse is byte-identical. */
+    fx.ops.push(per ? ["atkBuff", +ag[4], q || null, /this turn/i.test(win) ? "turn" : "chain", per]
+                    : ["atkBuff", +ag[4], q || null, /this turn/i.test(win) ? "turn" : "chain"]);
     handled.add(ci);
     break;
   }
@@ -8529,25 +8608,37 @@ const crankCost = c => printedKw(c, "crank")
    and more so: a revealed card stays in the hand and a charged one is
    GONE to the soul, so which one leaves is the whole decision.
 
-   MEASURED: three pool cards print charge, nine records, all Boltyn's,
-   and none prints `multi` ("any number of times"). No pool record prints
-   two additional costs of any kind, so where this sits in the cost chain
-   cannot change an outcome today — stated rather than assumed, the same
-   note `maybeFuse` and `doAddPay` carry. */
-function chargeOffer(card, sd, uid){
+   MEASURED: 16 pool records print an additional-cost charge — three
+   Boltyn cards at nine records and V of the Vanguard, plus the six v4.48
+   brought in when it taught this reader the second printed spelling. No
+   pool record prints two additional costs of any kind, so where this sits
+   in the cost chain cannot change an outcome today — stated rather than
+   assumed, the same note `maybeFuse` and `doAddPay` carry.
+
+   AND THE COUNT (v4.56). The two sentences that stood here said "none
+   prints `multi`" and "`test/charge.test.js` pins that SET empty", and
+   BOTH stopped being true at v4.48 — the same edit that widened the
+   spelling brought V of the Vanguard in, and that drill has pinned the set
+   as exactly that card ever since. A measurement is only as good as the
+   day it was taken (v3.69), and this one sat inside the function the next
+   reader would open. */
+function chargeOffer(card, sd, uid, taken){
   const fx = fxParse(card);
   if(!fx.chargeCost || !sd) return null;
-  const uids = (sd.hand || [])
-    .filter(c => c && c.uid !== (uid != null ? uid : (card && card.uid)))
-    .map(c => c.uid);
-  /* `multi` IS DELIBERATELY NOT CARRIED. `fx.chargeCost.multi` reads the
-     printed "any number of times", and NOTHING consumes it — a field with
-     no reader is a no-op wearing a name (v3.55), and offering it here
-     would be parsing ahead of wiring. Measured: no pool record prints it,
-     so a single offer is the whole rule today, and `test/charge.test.js`
-     pins that SET empty so the day one appears a drill fails and somebody
-     decides rather than it being silently charged once. */
-  return uids.length ? {uids} : null;
+  /* WHAT IS ALREADY CHOSEN IS EXCLUDED, AND THE CALLER ANSWERS IT (v3.58,
+     opt-in): a caller that says nothing gets exactly the single offer this
+     made before. It cannot be derived here, because a charge is settled in
+     `execute` and nothing has LEFT the hand yet while the offer is being
+     re-made — so a re-offer that asked the hand alone would offer the same
+     card again, and the same uid charged twice moves one card and counts
+     two (v2.48: `reduce` is fed by JSON off a wire). */
+  const skip = new Set([uid != null ? uid : (card && card.uid), ...(taken || [])]);
+  const uids = (sd.hand || []).filter(c => c && !skip.has(c.uid)).map(c => c.uid);
+  /* `multi` RIDES ON THE OFFER so this stays the ONE reader of the charge
+     cost — the offer, the legality of the answer and `execute`'s own
+     re-derivation all come from here, and a board that asked `fxParse`
+     itself would be a second reader of the same printed words (v3.61). */
+  return uids.length ? {uids, multi: !!fx.chargeCost.multi} : null;
 }
 
 /* ---- WHICH ZONE A CARD MAY BE PLAYED FROM (v3.00) -------------------

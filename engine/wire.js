@@ -143,8 +143,18 @@
    deliberate an edit as one leaving (v3.29) and moves the fingerprint the
    same way: a v8 peer's side has no `hitNext` and a v9 peer's has `[]`,
    so two honest peers hash differently on the opening state and every
-   action reads as a desync. Refused at the handshake instead. */
-const WIRE_V = 10;
+   action reads as a desync. Refused at the handshake instead.
+
+   10 -> 11 AT v4.56: the charge PENDING gains `picked` and `multi`, and
+   `pend.chargedPitch` became `pend.chargedWay`. Both are the one-layer-in
+   change v3.98 and v4.12 already bumped for: the digest below covers the
+   zone and side-field LISTS and cannot see a shape change inside a value
+   those lists ship whole. A v10 client handed a v11 charge pending drops
+   `picked` and `multi`, so it re-offers nothing and charges only what the
+   last answer named — silently weaker than printed; and a v10 client
+   reading a v11 link finds no `chargedPitch`, so every "if a yellow card
+   is charged this way" rider answers FALSE. Refused at the handshake. */
+const WIRE_V = 11;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

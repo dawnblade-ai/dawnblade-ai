@@ -2508,9 +2508,9 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
                          card, zone, seat, window, target);
   if(out && (out._doBoost !== undefined || out._addPaid !== undefined
           || out._half !== undefined || out._fuseUid !== undefined
-          || out._chargeUid !== undefined)){
+          || out._chargeUids !== undefined)){
     const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half;
-    delete n._fuseUid; delete n._chargeUid; return n;
+    delete n._fuseUid; delete n._chargeUids; return n;
   }
   return out;
 }
@@ -2557,19 +2557,46 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
    measured over the pool, NO record prints two additional costs of any
    kind — charge is Boltyn's, fusion is Iyslander's and Briar's, boost is
    Dash's — so the order cannot change an outcome today. */
-function maybeCharge(g, card, zone, seat, window, target){
-  const offer = PR.chargeOffer(card, at(g, seat), card && card.uid);
-  if(!offer) return maybeFuse(g, card, zone, seat, window, target);
-  return say({...g, pending: {kind: "charge", seat, card, from: zone, window, target,
-                              uids: offer.uids}},
+/* ---- "ANY NUMBER OF TIMES" IS A REPEATED OFFER (v4.56) --------------
+   V of the Vanguard prints "you may charge your soul ANY NUMBER OF TIMES",
+   and `fx.chargeCost.multi` has read those words since charge was built
+   with NOTHING consuming them — a field with no reader is a no-op wearing
+   a name (v3.55), and the consequence was that the pool's one multi record
+   was offered a single charge. Weaker than printed, which is the direction
+   the one-sided fairness sweep is built not to look in.
+
+   THE OFFER SHRINKS RATHER THAN THE HAND, because nothing has left it yet:
+   a charge is settled in `execute`, three hundred lines after the last
+   answer, so a re-offer that asked the hand alone would offer the same
+   card again. What has been chosen rides on the PENDING as `picked` and
+   `chargeOffer` excludes it — one reader of the cost, one answer.
+
+   A DECLINE ENDS THE CHARGING, it does not skip one round. That is
+   upstream's own wording — "you may elect to NOT pay the additional cost
+   of charge" — and it is also the only reading under which the sheet
+   terminates on a hand the player refuses to spend. */
+function maybeCharge(g, card, zone, seat, window, target, picked){
+  const got = picked || [];
+  const offer = PR.chargeOffer(card, at(g, seat), card && card.uid, got);
+  /* THE ANSWER RIDES OUT ON EVERY EXIT, including the one where the offer
+     runs dry mid-charge (a hand emptied by charging it). Set only on the
+     way past, so a play with no charge carries no field at all. */
+  const nx = got.length ? {...g, _chargeUids: got} : g;
+  if(!offer) return maybeFuse(nx, card, zone, seat, window, target);
+  return say({...nx, pending: {kind: "charge", seat, card, from: zone, window, target,
+                              uids: offer.uids, picked: got, multi: offer.multi}},
     /* THE POSSESSIVE IS `sp`'s, NEVER HAND-BUILT (v4.22, v4.48). Seat 0 is
        literally named "You" (v2.83), so a hardcoded "their" here read
        "You may put a card from hand into THEIR hero's soul" — the line
        naming one seat and agreeing with the other, on every one of the
        pool's 16 charge records. `sp` inflects the NAME rather than
        replacing it with "your", so a hero name keeps its apostrophe-s. */
-    card.name + " has charge — " + at(g, seat).name
-    + " may put a card from hand into " + GM.sp(at(g, seat)) + " soul.");
+    got.length
+      ? card.name + " charges again — " + at(g, seat).name
+        + " may put ANOTHER card from hand into " + GM.sp(at(g, seat)) + " soul ("
+        + got.length + " so far)."
+      : card.name + " has charge — " + at(g, seat).name
+        + " may put a card from hand into " + GM.sp(at(g, seat)) + " soul.");
 }
 
 function doCharge(g, a, seat){
@@ -2579,7 +2606,14 @@ function doCharge(g, a, seat){
      is a reducer fed by JSON off a wire (v2.48), and `execute`
      re-derives the answer anyway. `legal` refuses it first. */
   const uid = (a.uid != null && (p.uids || []).indexOf(a.uid) >= 0) ? a.uid : null;
-  return maybeFuse(uid == null ? n : {...n, _chargeUid: uid},
+  const got = uid == null ? (p.picked || []) : [...(p.picked || []), uid];
+  /* ONLY A REAL PICK RE-OPENS IT. A decline with `multi` set must not ask
+     again or the sheet never terminates — and `maybeCharge` is what
+     re-opens it, so the offer, the exclusion and the message all come from
+     the one body rather than being restated here. */
+  if(uid != null && p.multi)
+    return maybeCharge(n, p.card, p.from, seat, p.window, p.target, got);
+  return maybeFuse(got.length ? {...n, _chargeUids: got} : n,
                    p.card, p.from, seat, p.window, p.target);
 }
 

@@ -2057,11 +2057,32 @@ function makeEffects(ctx){
         }
       }
       else if(k==="atkBuff"){
-        actMut(n).atkBuff = [...(act(n).atkBuff||[]),
-                             {amt: v, q: op[2] || null, until: op[3] || "turn"}];
-        const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
-        n = L(n, `${act(n).name}: every ${who} gets +${v}{p} `
-               + (op[3] === "chain" ? "for the rest of this combat chain." : "this turn."));
+        /* A MULTIPLIED GRANT IS RESOLVED ONCE, HERE (v4.56). `op[4]` is a
+           `PER_COUNT` countable and V of the Vanguard's counts what this
+           card's own additional cost just charged — a past event, fixed at
+           the moment the grant is made — so the ENTRY stores the resolved
+           number and its shape does not move (no `WIRE_V` for this half).
+           A countable re-counted at each attack would answer the same on
+           every one of them and be a second record of it (v3.61). */
+        const mult = op[4] ? powPer(n, op[4]) : 1;
+        const amt  = v * mult;
+        const who  = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
+        /* AT A COUNT OF ZERO THE CARD GRANTS NOTHING, and it SAYS SO.
+           v4.48's whole finding is that the old readers granted a flat +1
+           at a count of 0 — a point the card does not print — so pushing a
+           `+0{p}` entry here would be that bug wearing an entry, and it is
+           also a no-op wearing a number (v3.55). In a training sim the feed
+           is the lesson (v3.60): a player who declined the charge has to be
+           told that is why the pump did not arrive. */
+        if(amt <= 0){
+          n = L(n, `${act(n).name}: ${srcName} grants nothing — `
+                 + `its bonus counts something there is none of.`);
+        } else {
+          actMut(n).atkBuff = [...(act(n).atkBuff||[]),
+                               {amt, q: op[2] || null, until: op[3] || "turn"}];
+          n = L(n, `${act(n).name}: every ${who} gets +${amt}{p} `
+                 + (op[3] === "chain" ? "for the rest of this combat chain." : "this turn."));
+        }
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
@@ -3030,7 +3051,37 @@ function makeEffects(ctx){
        fed by JSON off a wire (v2.48): a uid naming a card that is not in
        the hand must charge nothing. `null` means declined, or never
        offered — both of which are simply "did not charge". */
-    let chargedPitch = null;
+    /* ---- WHAT THE CHARGE PUT INTO THE SOUL (v4.56) -------------------
+       ONE RECORD, NOT TWO (v3.61). `chargedPitch` was a scalar naming the
+       one card charged; the multi charge makes it a list, and rather than
+       keep a second list beside it the CARDS are the record and every
+       question is asked of them — "was a yellow card charged this way" is
+       a pitch test over it, and "for each LIGHT card charged this way" is
+       a class test over the same objects.
+
+       IT IS ASSIGNED UNCONDITIONALLY AND IT IS CLEARED HERE, not in the
+       per-resolution clear three hundred lines below (v4.09): that block
+       runs AFTER this one, so a trace listed there would be wiped between
+       the charge and the ops that read it. A trace belongs where the fact
+       becomes true (v3.62), and assigning `[]` on every resolution is what
+       stops the NEXT card's "…this way" reading a charge it never paid.
+
+       AND THAT IS ALSO WHY IT RIDES ON `pend` (v4.09, MEASURED rather than
+       reasoned about). `_chgWay` is per-resolution and an ATTACK's ops ride
+       to RESOLUTION, so anything played in the gap reassigns it: driven, a
+       defence reaction in the reaction window took V of the Vanguard's
+       count from 2 to 0 and the grant announced *"grants nothing"*. The
+       same hazard `fused` and the charge colours already ride on `pend` for
+       — a DECLARATION-TIME fact the resolution needs — so the record is
+       copied there and `chargedRec` is the ONE reader of whichever is live.
+
+       IT IS A PROJECTION, NOT THE CARDS. Nothing asks the charged card
+       anything but its PITCH (the colour gate) and its printed CLASS (the
+       for-each countable), and `pend` is a GAME_KEY that ships whole and
+       uninterned — card objects there are paid for in the opening budget
+       (v2.49). `{pitch, ty}` answers both questions and a card object
+       answers them the same way, so one shape serves both lifetimes. */
+    const chargedWay = [];
     if(fx.chargeCost){
       /* THE RE-DERIVATION IS `hand.find`, AND THAT IS THE WHOLE CHECK.
          Fusion's twin also tests `offer.uids.indexOf(...)` and is right
@@ -3042,11 +3093,21 @@ function makeEffects(ctx){
          could refuse nothing the `find` accepts. Measured: sabotaging it
          open is SILENT against every driven fixture, which makes it dead
          code that reads like a rule (v4.11, v3.67). Deleted, and the
-         PREMISE it rested on is a drill instead. */
-      const picked = n._chargeUid != null
-        ? act(n).hand.find(c2 => c2 && c2.uid === n._chargeUid) : null;
-      if(picked){
-        chargedPitch = picked.pitch;
+         PREMISE it rested on is a drill instead.
+
+         A LIST, NOT A SCALAR (v4.56). "You may charge your soul ANY NUMBER
+         OF TIMES" is V of the Vanguard's printed cost, so the answer is a
+         list of cards and the single charge is a list of one — a second
+         field beside `_chargeUid` would be two records of one fact, and
+         the day they disagreed one board would charge what the other
+         counted. The re-derivation is per uid and a name that is not in
+         the hand charges nothing, which is what makes a REPEATED uid off a
+         wire harmless: the first pass removes the card, the second finds
+         nothing. */
+      for(const cu of (n._chargeUids || [])){
+        const picked = act(n).hand.find(c2 => c2 && c2.uid === cu);
+        if(!picked) continue;
+        chargedWay.push({pitch: picked.pitch, ty: picked.ty || []});
         actMut(n).soul = [picked, ...act(n).soul];
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
         actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
@@ -3063,11 +3124,13 @@ function makeEffects(ctx){
 
            IT IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S (v3.56):
            read off the card being PLAYED it would fire whenever Banneret
-           pays for something else, which is the opposite card. */
+           pays for something else, which is the opposite card. IT FIRES
+           PER CHARGED CARD, because two cards charged is two triggers. */
         const _cs = fxParse(picked).chargeSoul;
         if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
       }
     }
+    n._chgWay = chargedWay;
     /* FUSION — "[TALENT] Fusion" means "as an additional cost to play
        this, YOU MAY reveal a [TALENT] card from your hand."
 
@@ -3335,9 +3398,14 @@ function makeEffects(ctx){
         : cond==="pitchOverBase" ? act(n).pitch.some(c=>(c.power||0) > (card.power||0))
         /* CHARGE (Boltyn): "charged" is a turn-scoped boolean; "chargedPitchN"
            asks about the SPECIFIC card just charged as THIS card's own cost
-           (chargedPitch is computed above, before this loop runs). */
+           (chargedWay is filled above, before this loop runs). */
         : cond==="charged" ? (act(n).hist.charged||0)>0
-        : /^chargedPitch\d$/.test(cond) ? chargedPitch === +cond.match(/\d+/)[0]
+        /* "IF A YELLOW CARD IS CHARGED THIS WAY" asks whether AT LEAST ONE
+           was (v4.56) — the article is "a", and with a multi charge the
+           answer is a membership test over what the cost paid rather than
+           a scalar comparison. At one charge the two readings agree
+           exactly, which is why this could be a scalar until now. */
+        : /^chargedPitch\d$/.test(cond) ? chargedWay.some(c => c.pitch === +cond.match(/\d+/)[0])
         /* FUSION: `fused` is computed above, before this loop runs. */
         : cond==="fused" ? fused
         : /^atkNamed:/.test(cond) ? (act(n).hist.atkNames||[]).includes(cond.slice(9))
@@ -4001,7 +4069,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedPitch, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedWay, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that
@@ -6568,7 +6636,13 @@ function makeEffects(ctx){
         const met = /^way:/.test(cond)
             ? thisWayMet(cond, {disc: n._discWay, dmg: n._dmgWay, ars: n._arsWay, took: n._tookWay})
           : cond==="charged" ? (act(n).hist.charged||0)>0
-          : /^chargedPitch\d$/.test(cond) ? n.pend.chargedPitch === +cond.match(/\d+/)[0]
+          /* A LIST SINCE v4.56, AND RENAMED WITH THE SHAPE — `chargedPitch`
+             was a scalar naming the one card charged, and "any number of
+             times" makes it a set. Keeping the old name for a new shape is
+             the same-name-different-meaning trap `KNOWN_COLLISIONS`
+             polices, so the name moved with it. */
+          : /^chargedPitch\d$/.test(cond) ? (n.pend.chargedWay||[])
+              .some(c => c.pitch === +cond.match(/\d+/)[0])
           : cond==="marked" ? !!foe(n).marked
           : cond==="pumped" ? (n.pend._struck != null ? n.pend._struck : (n.pend.total||0)) > (pc.power||0)
           /* THREE CONDITIONS REACHED HERE AND ANSWERED FALSE (v3.96).
@@ -6588,7 +6662,7 @@ function makeEffects(ctx){
           : /^drac\d+$/.test(cond) ? P.dracLinks(n.chain) >= +cond.slice(4)
           /* FUSED IS A DECLARATION-TIME FACT — how the card was PLAYED,
              which no board state can answer at the hit. It rides on `pend`
-             for `chargedPitch`'s reason, and a link built without it
+             for `chargedPitches`'s reason, and a link built without it
              answers FALSE: weaker than printed and visible (v3.24). */
           : cond==="fused" ? !!n.pend.fused
           /* v4.21 — Static Shock's "Lightning Flow - When this hits a
@@ -7348,9 +7422,32 @@ function defSelfMet(self, defSide, opts){
    AN UNKNOWN KEY ANSWERS ZERO rather than throwing, because `reduce` is fed
    JSON off a wire (v2.48) — and it is unreachable by construction, since the
    parser emits only what `PER_COUNT` names. */
+/* WHICH CHARGE RECORD IS LIVE (v4.56). `_chgWay` is the per-resolution
+   trace, written where the charge happens; `pend.chargedWay` is the copy
+   that survives the declaration-to-resolution gap, because an ATTACK's ops
+   ride to resolution and anything played in between reassigns the trace
+   (measured: a defence reaction in the window took the count to 0). ONE
+   fact at two lifetimes, and this is the one reader that picks — so no
+   caller can read the trace where the pend is the live copy. */
+function chargedRec(n){
+  return (n.pend && n.pend.chargedWay) || n._chgWay || [];
+}
+
 function powPer(n, per){
   if(per === "perBoost")     return n.boostChain || 0;
   if(per === "perChainHit")  return P.chainHits(n.chain);
+  /* v4.56 — THE ONE COUNTABLE THAT COUNTS A COST. `_chgWay` is the
+     per-resolution trace of what this card's own charge cost put into the
+     soul (`_discWay`'s family, v3.62), so it answers "charged THIS WAY"
+     rather than "charged this turn" — `hist.charged` is the turn-scoped
+     record and reading it here would count a charge some other card paid.
+
+     THE CLASS COMES OFF THE STRUCTURED ARRAY (v2.39, v2.44), never `tt`:
+     that field carries stray words on five database records and would
+     claim any class whose printed line merely contains the word. */
+  if(per === "perChargedLight")
+    return chargedRec(n).filter(c => (c && c.ty || [])
+      .some(t => /^light$/i.test(String(t)))).length;
   return 0;
 }
 

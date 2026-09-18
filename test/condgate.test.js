@@ -150,11 +150,15 @@ test("driven: Hot on Their Heels marks at two Draconic links", {skip}, () => {
 
 test("FUSED rides on `pend` — it is a declaration-time fact", {skip}, () => {
   /* No board state can answer "was this card fused" at the hit; it is how
-     the card was PLAYED. It rides for `chargedPitch`'s reason, and a link
-     built without it answers FALSE — weaker than printed and visible. */
+     the card was PLAYED. It rides for `chargedPitches`'s reason, and a link
+     built without it answers FALSE — weaker than printed and visible.
+     (That sibling became a LIST at v4.56 — "any number of times" is a
+     printed cost, so the link carries a record of everything the charge
+     paid, and it rides here for the identical reason: an ATTACK's ops run
+     at RESOLUTION, and the per-resolution trace is gone by then.) */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  assert.match(src, /condOnHit:\[\.\.\.\(fx\.condOnHit\|\|\[\]\), \.\.\.qRiderCond\], chargedPitch, fused,/,
+  assert.match(src, /condOnHit:\[\.\.\.\(fx\.condOnHit\|\|\[\]\), \.\.\.qRiderCond\], chargedWay, fused,/,
     "the declaration folds it onto the link");
   assert.match(src, /cond==="fused" \? !!n\.pend\.fused/, "and the hit-time gate reads it from there");
 });

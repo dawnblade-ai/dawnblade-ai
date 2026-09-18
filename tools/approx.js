@@ -387,26 +387,31 @@ const APPROX = {
       "`part` — honest, visible, and the tier says so."},
 
 "charged-this-way-count": {
-  status:"open", cr:null, board:"both", since:"v4.48", swept:"v4.48",
+  status:"closed", cr:null, board:"both", since:"v4.48", swept:"v4.56",
   claim:"V of the Vanguard prints \"Your attacks this combat chain get +1{p} for "+
-        "each Light card charged this way\" and the clause is REFUSED. It is the "+
-        "pool's ninth FOR-EACH record and the one member of that family v4.48 "+
-        "does not read. Its charge cost — \"charge your soul ANY NUMBER OF "+
-        "TIMES\" — is offered as a SINGLE charge.",
-  why:"TWO HALVES ARE MISSING AND NEITHER IS THE MULTIPLIER. The subject is "+
-      "\"YOUR ATTACKS this combat chain\" — a STANDING grant over a window "+
-      "(`dracChain`'s shape, v4.19), not a pump on the resolving card, so it "+
-      "lands nowhere near `perBoost`'s site and v4.48's \"this\"/\"it\" anchor is "+
-      "right to refuse it. AND \"CHARGED THIS WAY\" IS A COUNT NOTHING KEEPS: "+
-      "`fx.chargeCost.multi` reads the printed \"any number of times\" and has no "+
-      "consumer, so `chargeOffer` asks ONCE — weaker than printed, visible, and "+
-      "the honest direction (charging more than once silently is the other). "+
-      "NOTE — MY OWN FIRST DRAFT OF THIS RECORD WAS WRONG ABOUT WHY, and asking "+
-      "the engine is what corrected it (v4.09): it said the blocker was `multi` "+
-      "being unread, and measured, V of the Vanguard's charge cost did not parse "+
-      "AT ALL — the anchor spelled \"your HERO'S soul\" and the card prints \"your "+
-      "soul\". Widening that anchor is v4.48's other half and brought SIX MORE "+
-      "live records with it; what is left open is only the COUNT."},
+        "each Light card charged this way\", and its charge cost prints \"charge "+
+        "your soul ANY NUMBER OF TIMES\". BUILT AT v4.56: the clause reads in "+
+        "full and the offer re-opens until it is declined.",
+  why:"AND THE RECORD WAS WRONG ABOUT WHY, IN THE HALF IT WAS MOST CONFIDENT "+
+      "ABOUT — which is what asking the engine is for (v3.69, v4.09). It said "+
+      "the subject \"lands nowhere near `perBoost`'s site\" so the anchor was "+
+      "\"right to refuse it\", naming a missing MECHANISM. Measured, the "+
+      "standing grant has had a reader since v3.87 — whose comment block names "+
+      "THIS CARD as one of its two examples — and what refused was the printed "+
+      "WORD ORDER: that anchor wanted the window at the END of the clause and "+
+      "the database prints it right after the SUBJECT here. Driven, the same "+
+      "clause with the window moved and nothing else changed reads in full. "+
+      "v3.36's rule verbatim (the database prints both spellings at once), and "+
+      "v4.48's dead `perBoost` one reader over — a comment naming a card the "+
+      "anchor cannot reach. THE COUNT HALF WAS REAL AND IS BUILT: `chargeOffer` "+
+      "carries `multi`, the offer SHRINKS rather than the hand (a charge is "+
+      "settled in `execute`, long after the last answer, so nothing has left "+
+      "the hand while the offer is re-made), `_chargeUid` became a LIST rather "+
+      "than gaining a second field beside it (v3.61), and a DECLINE ends the "+
+      "charging. The countable is counted off `_chgWay`, a per-resolution "+
+      "trace of the `_discWay` family, with the class read off the STRUCTURED "+
+      "ARRAY. Second recorded refusal this project has discharged by asking "+
+      "which of its two stated halves was actually the blocker."},
 
 "crush-halving-rider": {
   status:"open", cr:null, board:"both", since:"v3.29", swept:"v4.02",

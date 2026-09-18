@@ -102,17 +102,20 @@ test("six pool cards print charge, and BOTH printed spellings read", () => {
      it being quietly charged once. THIS IS THAT DAY: widening the anchor
      brought V of the Vanguard in, and it is the pool's only `multi` record.
 
-     THE DECISION IS TO OFFER **ONE** CHARGE, and to say so. `chargeOffer`
-     still carries only `uids` — the field has no reader — so a card printing
-     "any number of times" is offered a single charge: WEAKER than printed,
-     visible in the audit (its own payload clause still reads `skip`), and
-     recorded in `tools/approx.js` as `charged-this-way-count` with a probe
-     that goes red the day the count is built. Charging more than once
-     silently would be the other direction. */
+     v4.33's DECISION WAS TO OFFER **ONE** CHARGE and say so, recorded in
+     `tools/approx.js` as `charged-this-way-count` with a probe that goes red
+     the day the count is built. **v4.56 IS THAT DAY** — the probe went red
+     the moment `chargeOffer` started carrying `multi`, which is exactly what
+     an `open` record is for (v4.02). This pin is the POSITIVE control now:
+     the SET is unchanged, and the drills below drive the repeated offer.
+
+     PIN THE SET RATHER THAN THE COUNT, both directions (v4.12, v4.17): a
+     record leaving this list is as deliberate an edit as one arriving, and
+     with one member a count alone cannot tell the two apart. */
   assert.deepEqual(hits.filter(c => P.fxParse(c).chargeCost.multi)
     .map(c => c.name + "|" + c.pitch),
     ["V of the Vanguard|2"],
-    "one record prints `any number of times`, and the offer still asks ONCE");
+    "one record prints `any number of times`, and the offer re-asks for it");
 });
 
 /* ---- the offer is the one reader ------------------------------------ */
@@ -128,9 +131,24 @@ test("`chargeOffer` offers every card in hand except the one being played", () =
   const sd = {hand: [card, mk("A", "a1"), mk("B", "b1")]};
   const off = P.chargeOffer(card, sd, "src");
   assert.deepEqual(off.uids, ["a1", "b1"], "the card paying its own cost is never on the offer");
-  assert.deepEqual(Object.keys(off), ["uids"],
-    "and the offer carries NOTHING else — `multi` has no reader, so forwarding it "
-    + "would be a field nobody consumes (v3.55)");
+  assert.deepEqual(Object.keys(off).sort(), ["multi", "uids"],
+    "and the offer carries `multi` and nothing else — v4.56 gave that field its "
+    + "reader, so this stays the ONE reader of the cost and no board asks "
+    + "`fxParse` itself (v3.61)");
+  assert.equal(off.multi, false, "this card prints a single charge");
+  /* WHAT IS ALREADY PICKED IS EXCLUDED, AND THE CALLER ANSWERS IT (v4.56).
+     It cannot be derived here: a charge is settled in `execute`, long after
+     the last answer, so nothing has LEFT the hand while the offer is being
+     re-made — a re-offer that asked the hand alone would offer the same card
+     again, and one uid charged twice moves one card and counts two. */
+  assert.deepEqual(P.chargeOffer(card, sd, "src", ["a1"]).uids, ["b1"],
+    "a card already chosen is off the next offer");
+  assert.equal(P.chargeOffer(card, sd, "src", ["a1", "b1"]), null,
+    "and when the offer runs dry there is nothing left to ask");
+  /* AND IT IS OPT-IN (v3.58) — a caller that says nothing gets exactly the
+     single offer this made before v4.56. */
+  assert.deepEqual(P.chargeOffer(card, sd, "src").uids, ["a1", "b1"],
+    "a caller that says nothing excludes nothing");
   /* NO OTHER CARD IN HAND MEANS NO OFFER — the play goes straight
      through uncharged, which is `buildPrompt`'s rule for an empty spec
      and the reason an empty deck never shows a boost sheet. */
@@ -205,10 +223,19 @@ test(gate("a uid that is not on the offer is REFUSED, not silently declined"), (
      SOURCE CARD'S OWN — the one card the offer excludes. */
   for(const [uid, why] of [["nope", "a uid nothing holds charges nothing"],
                            ["ch",   "and the card paying its own cost can never be the payment"]]){
-    const forged = J.withEffects({...n, pending: null, _chargeUid: uid, actor: 0},
+    const forged = J.withEffects({...n, pending: null, _chargeUids: [uid], actor: 0},
       (fx, s) => fx.execute(s, atk, "hand", 0, {}));
     assert.deepEqual(forged.sides[0].soul, [], why);
   }
+  /* AND THE SAME UID TWICE MOVES ONE CARD (v4.56). "Any number of times"
+     makes the answer a list, so a duplicate off a wire is a shape the list
+     can now express — and the `find` is what makes it harmless: the first
+     pass removes the card from hand and the second finds nothing. Without
+     that the soul would hold one card and `hist.charged` would read two. */
+  const dbl = J.withEffects({...n, pending: null, _chargeUids: ["sp", "sp"], actor: 0},
+    (fx, s) => fx.execute(s, atk, "hand", 0, {}));
+  assert.equal(dbl.sides[0].soul.length, 1, "one card, however many times it is named");
+  assert.equal(dbl.sides[0].hist.charged, 1, "and it is counted once");
 });
 
 test(gate("the offer is not made when there is nothing to charge"), () => {
@@ -279,8 +306,15 @@ test("`execute` re-derives the answer and no longer picks a card itself", () => 
      mentioning `advValue` and then missed the `find` because the header
      had pushed it past the slice. */
   const body = SRC.slice(i, i + 2400).replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.match(body, /n\._chargeUid/, "the answer rides on the state");
-  assert.match(body, /act\(n\)\.hand\.find\(c2 => c2 && c2\.uid === n\._chargeUid\)/,
+  assert.match(body, /n\._chargeUids/, "the answer rides on the state");
+  /* A LIST, AND RE-DERIVED PER UID (v4.56). "Any number of times" makes the
+     answer a list and the single charge a list of one — a second field
+     beside a scalar would be two records of one fact (v3.61) — and the
+     `find` is what makes a REPEATED uid off a wire harmless: the first pass
+     removes the card and the second finds nothing. */
+  assert.match(body, /for\(const cu of \(n\._chargeUids \|\| \[\]\)\)/,
+    "every answered uid is charged, not just one");
+  assert.match(body, /act\(n\)\.hand\.find\(c2 => c2 && c2\.uid === cu\)/,
     "and is RE-DERIVED against the hand, because reduce is fed by JSON off a wire");
   /* THE AUTO-PICK IS THE DEFECT, and it must be gone rather than guarded:
      a scan for the flag alone passes on an engine that still ranks the
@@ -294,11 +328,24 @@ test("the answer is cleared per resolution, so a spent charge cannot ride", () =
      hard way: left on the state, the NEXT card printing the keyword is
      played as whatever the last one answered, without asking. */
   const jsrc = fs.readFileSync(path.join(__dirname, "..", "engine", "judge.js"), "utf8");
-  assert.match(jsrc, /delete n\._fuseUid; delete n\._chargeUid;/,
+  assert.match(jsrc, /delete n\._fuseUid; delete n\._chargeUids;/,
     "judge strips it with its siblings");
   const htm = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.match(htm, /if\(n\._chargeUid !== undefined\)\{ n = \{\.\.\.n\}; delete n\._chargeUid; \}/,
+  assert.match(htm, /if\(n\._chargeUids !== undefined\)\{ n = \{\.\.\.n\}; delete n\._chargeUids; \}/,
     "and so does the trainer");
+  /* AND THE TRACE THE COUNT READS IS CLEARED WHERE THE FACT BECOMES TRUE
+     (v3.62), never in the per-resolution clear block three hundred lines
+     below — that block runs AFTER the charge, so a trace listed there is
+     wiped between the charge and the ops that read it, which is v4.09's
+     third defect exactly. An unconditional `[]` on every resolution is what
+     stops the NEXT card's "…this way" reading a charge it never paid. */
+  const esrc = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
+  assert.match(esrc, /const chargedWay = \[\];/, "the trace is reset per resolution");
+  assert.match(esrc, /\n    n\._chgWay = chargedWay;/,
+    "and assigned unconditionally, beside the charge rather than in the clear block");
+  const clr = esrc.slice(esrc.indexOf("n._discWay = [];"), esrc.indexOf("n._discWay = [];") + 1800);
+  assert.doesNotMatch(clr, /_chgWay/,
+    "and it is NOT in the clear block, which runs after the charge (v4.09)");
 });
 
 test("both boards offer it, and neither hard-codes what the other reads", () => {
@@ -312,11 +359,19 @@ test("both boards offer it, and neither hard-codes what the other reads", () => 
      rots where a rule moves) with the trainer's `tryPlay` unreachable
      from Node because it is a closure inside a React component. What a
      source scan can honestly carry here is the whole expression. */
-  assert.match(htm, /return off \? \{\.\.\.s, mode:"chargepick", pending:\{card,from,idx,uids:off\.uids\}\}/,
+  assert.match(htm, /return off \? \{\.\.\.ns, mode:"chargepick",\s*\n\s*pending:\{card,from,idx,uids:off\.uids,picked:got,multi:off\.multi\}\}/,
     "the trainer opens the pending on the OFFER, not on a constant");
-  assert.match(htm, /DawnParser\.chargeOffer\(card, act\(s\), card && card\.uid\)/,
-    "and it asks the one reader");
-  assert.match(jsrc, /PR\.chargeOffer\(card, at\(g, seat\), card && card\.uid\)/,
+  assert.match(htm, /DawnParser\.chargeOffer\(card, act\(s\), card && card\.uid, got\)/,
+    "and it asks the one reader, saying what is already picked");
+  assert.match(jsrc, /PR\.chargeOffer\(card, at\(g, seat\), card && card\.uid, got\)/,
+    "and so does judge");
+  /* AND ONLY A REAL PICK RE-OPENS IT, ON BOTH BOARDS (v4.56). A decline
+     with `multi` set must not ask again or the sheet never terminates — and
+     each board re-enters its own `maybeCharge`, so the offer, the exclusion
+     and the message come from one body rather than being restated. */
+  assert.match(htm, /if\(pick != null && multi\)\s*\n\s*return maybeCharge\(/,
+    "the trainer re-opens on a pick and not on a decline");
+  assert.match(jsrc, /if\(uid != null && p\.multi\)\s*\n\s*return maybeCharge\(/,
     "and so does judge");
   /* AND EVERY BOARD RENDERS A BRANCH FOR IT — a kind demuxed and never
      rendered is a screen with no exit (v3.35). `split.test.js` holds the
@@ -355,14 +410,22 @@ test("DRIVEN: Beaming Bravado's colour gate, all three rows", gate({}), () => {
     out = J.reduce(out.state, charge ? {t: "charge", uid: 52} : {t: "charge"}, 0);
     assert.ok(!out.error, "the answer was refused: " + out.error);
     return {total: out.state.pend.total, soul: out.state.sides[0].soul.length,
-            pitch: out.state.pend.chargedPitch};
+            pitch: (out.state.pend.chargedWay || []).map(c => c.pitch)};
   };
   assert.equal(H.card("Beaming Bravado", 1).power, 3, "the printed power, so the sum is visible");
-  assert.deepEqual(run(false, 2), {total: 3, soul: 0, pitch: null},
+  /* A LIST SINCE v4.56 — the link carries a RECORD of everything the cost
+     charged, because "if A YELLOW card is charged this way" asks whether AT
+     LEAST ONE was. At one charge the two readings agree exactly, which is
+     why it could be a scalar until now.
+
+     AND IT RIDES ON `pend` BECAUSE AN ATTACK'S OPS RUN AT RESOLUTION. The
+     per-resolution trace is reassigned by the next `execute`, so anything
+     played in the reaction window wipes it — driven below. */
+  assert.deepEqual(run(false, 2), {total: 3, soul: 0, pitch: []},
     "declined — the printed power and nothing in the soul");
-  assert.deepEqual(run(true, 2), {total: 4, soul: 1, pitch: 2},
+  assert.deepEqual(run(true, 2), {total: 4, soul: 1, pitch: [2]},
     "a YELLOW charged — the printed +1 lands for the first time");
-  assert.deepEqual(run(true, 1), {total: 3, soul: 1, pitch: 1},
+  assert.deepEqual(run(true, 1), {total: 3, soul: 1, pitch: [1]},
     "a RED charged — the cost is paid and the gate is NOT met");
 });
 
@@ -413,6 +476,75 @@ test("DRIVEN: Light the Way's rider is an ACTION POINT, and it was unreachable",
   const gate = (fx.condOnHit || []).find(e => /charg/i.test(e.cond || ""));
   assert.ok(gate, "and the rider is a gated ON-HIT, not an unconditional grant");
   assert.deepEqual(gate.op, ["ga"], "whose payload is the action point");
+});
+
+/* ---- THE HIT-TIME TWIN, DRIVEN (v4.57) -------------------------------- */
+
+test("DRIVEN: Light the Way's colour gate is read AT THE HIT, all three rows",
+     gate({}), () => {
+  /* THE SABOTAGE PASS FOUND THIS GAP, NOT A READING OF THE CODE. v4.56 made
+     the charge record a LIST and rewrote BOTH colour gates to ask whether
+     any MEMBER matches — the declaration-time one (Beaming Bravado, above)
+     and this one. Neutering the declaration gate failed a drill; neutering
+     the HIT-TIME gate came back SILENT, because the only drill naming this
+     card asserted on the PARSE. A gate nothing drives is a gate a later
+     change can delete in silence (v3.62, v4.11).
+
+     THE TWO GATES ARE ANSWERED IN DIFFERENT PLACES AND THAT IS THE POINT.
+     `chargedPitch2` reaches `execute`'s condition loop for Beaming Bravado,
+     where the local `chargedWay` is still in scope; here it is a
+     `condOnHit`, re-checked inside `linkPayload` off `n.pend.chargedWay`
+     (v3.96's second, smaller evaluator). Two readers of one printed shape,
+     so a drill on one says nothing about the other.
+
+     THREE ROWS, AND THE THIRD IS THE ONE THAT BITES, for the twin's reason:
+     declining grants nothing and a YELLOW grants the point under either
+     reading. Only a RED separates a colour-blind reader from a correct one.
+
+     AND THE PAYLOAD IS AN ACTION POINT (CR 5.3.5), which is what makes the
+     observable `ap` rather than a feed line — go again is a GAIN, so the
+     hero that took it holds one more point after the swing resolves. */
+  H.db();
+  const run = (charge, pitch) => {
+    P.fxReset();
+    const atk = {...H.card("Light the Way", 1), uid: 61};
+    const pay = {...H.card("Light the Way", pitch), uid: 62};
+    /* THE SWING MUST CONNECT, or CR 7.5.5 means it never hit and the rider
+       is not asked at all — an empty opposing hand is what guarantees it. */
+    const g = {...H.state({res: 9, ap: 1, hand: [atk, pay]}, {hand: [], gear: []},
+                          {turn: 3, actor: 0, turnPlayer: 0}),
+               stack: [], chain: [], phase: "action", step: "layer",
+               priority: 0, passed: []};
+    let out = J.reduce(g, {t: "play", uid: 61, from: "hand", target: "hero"}, 0);
+    assert.ok(!out.error, "the play was refused: " + out.error);
+    assert.equal(out.state.pending && out.state.pending.kind, "charge",
+      "the charge offer must open");
+    out = J.reduce(out.state, charge ? {t: "charge", uid: 62} : {t: "charge"}, 0);
+    assert.ok(!out.error, "the answer was refused: " + out.error);
+    /* DRIVE THE CHAIN TO RESOLUTION. The rider fires in `linkPayload`,
+       which is reached through the damage step, and the step is entered by
+       BOTH seats passing over the reaction window (CR 7.5). */
+    let guard = 0;
+    while(out.state.pend && guard++ < 40){
+      const seat = out.state.priority == null ? 0 : out.state.priority;
+      const nx = J.reduce(out.state, {t: "pass"}, seat);
+      if(nx.error) break;
+      out = nx;
+    }
+    return {ap: out.state.sides[0].ap, hp: out.state.sides[1].hp,
+            soul: out.state.sides[0].soul.length};
+  };
+  const a = run(false, 2), b = run(true, 2), c = run(true, 1);
+  assert.equal(a.soul, 0, "declined — nothing in the soul");
+  assert.equal(b.soul, 1, "a YELLOW charged");
+  assert.equal(c.soul, 1, "a RED charged — the cost was still paid");
+  /* THE POINT IS THE OBSERVABLE. The yellow row keeps one the other two
+     spend, and the RED row is what tells a colour-blind reader from a
+     correct one. */
+  assert.equal(b.ap, a.ap + 1,
+    "a YELLOW charged — the printed go again is an action point GAINED (CR 5.3.5)");
+  assert.equal(c.ap, a.ap,
+    "a RED charged — the cost is paid and the gate is NOT met, so no point");
 });
 
 test("the offer's feed line names ONE seat, and agrees with it", gate({}), () => {

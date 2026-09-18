@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.55
+**Current version:** v4.56
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2873 drills** at v4.55.
+This is `node --test "test/*.test.js"` — **2888 drills** at v4.56.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -845,6 +845,125 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A GRANT FOUR WORDS OUT OF REACH (v4.56)
+
+> *"As an additional cost to play this, you may charge your soul **any number
+> of times**. Your attacks **this combat chain** get +1{p} for each Light card
+> charged this way."* — V OF THE VANGUARD, the pool's ninth FOR-EACH record
+
+`tools/approx.js` carried this as `charged-this-way-count` and named **two**
+missing halves. **The half the record was most confident about was wrong**, and
+the cheapest diagnostic in this project found it in one call (v3.79, v4.43).
+
+The record said the subject *"lands nowhere near `perBoost`'s site"* so
+v4.48's anchor *"is right to refuse it"* — a missing MECHANISM for the standing
+grant. **Measured, `atkBuff`'s reader has existed since v3.87 and its own
+comment block names THIS CARD.** What refused was the printed WORD ORDER:
+
+| clause | read |
+|---|---|
+| `Your attacks get +2{p} THIS COMBAT CHAIN.` | in full |
+| `Your attacks THIS COMBAT CHAIN get +2{p}.` | **nothing** |
+
+Night's Embrace prints the window at the END and this prints it right after
+the SUBJECT — **v3.36's rule verbatim** (the database prints both spellings at
+once) and **v4.48's dead `perBoost` one reader over**. A recorded reason is
+only as good as the day it was measured (v3.69); the way to check one is to
+ASK THE ENGINE (v4.09).
+
+**THE PLURAL IS WHAT KEEPS `buffQ`'s FAMILY OUT, AND THE BLAST RADIUS SAID
+SO.** The anchor read `attacks?`, harmless **only while the window had to come
+LAST** — *"your NEXT arrow attack THIS TURN gets +3{p}"* prints its window
+mid-clause too, so accepting either position made the optional `s` live and
+this reader swallowed the whole single-shot family: **31 records across ten
+cards**, every one turned into a grant that is never spent. v3.87's own
+distinction inverted, in the direction that steals games, and v3.72's rule one
+reader over. The plural is a RULE rather than a coincidence of this pool —
+*"your next attack"* names ONE card by construction.
+
+**THE COUNT HALF WAS REAL AND IS BUILT.** `fx.chargeCost.multi` has read the
+printed *"any number of times"* since charge was built with **nothing
+consuming it** (v3.55), so the pool's one `multi` record was offered a SINGLE
+charge — weaker than printed, `tier: full` on a clause that WAS read.
+**The OFFER shrinks, never the hand**: a charge is settled in `execute` three
+hundred lines after the last answer, so nothing has left the hand while the
+offer is re-made and one uid charged twice moves one card and counts two.
+`chargeOffer` takes what is already picked as a fourth OPT-IN parameter
+(v3.58) and stays the ONE reader; a DECLINE ends the charging, which is
+upstream's own wording and the only reading under which the sheet terminates.
+**And `_chargeUid` became a LIST rather than gaining a sibling** (v3.61) — the
+single charge is a list of one, so there is no second record to disagree.
+
+**THE COUNTABLE COUNTS A COST, WHICH IS WHY IT IS THE FIRST OF ITS KIND.**
+v4.48's other three `{p}` countables ask about the TABLE — the wall, the
+chain, the boost record. This asks what the card's own additional cost just
+PAID, off `_chgWay` (the `_discWay` family, v3.62), with the class read off
+the **structured array** (v2.39, v2.44): `tt` carries stray words on five
+records and *"Lightning"* is not *"Light"* (v4.25's fallback trap).
+
+**IT IS ALSO THE FIRST COUNTABLE THAT RIDES AS A PARAMETER RATHER THAN AS ITS
+OWN OP KIND**, because the line grants to a STANDING set of attacks rather
+than pumping the resolving card. So `test/foreach.test.js`'s emitter census
+learned a **second landing site** and pins which one each countable takes,
+both directions (v4.17) — asked for an op kind alone it reported the new
+countable as having no emitter, which reads exactly like v4.48's dead
+`perEquipDef` and would send the next reader hunting a defect that is not
+there (v4.00's false POSITIVE).
+
+**AT A COUNT OF ZERO THE CARD GRANTS NOTHING, AND IT SAYS SO.** v4.48's whole
+finding is that the old readers granted a flat +1 at a count of 0, so pushing
+a `+0{p}` entry here is that bug wearing an entry. In a training sim the feed
+is the lesson (v3.60): a player who declined the charge is told that is why.
+
+**AND THE BUILD'S OWN FIRST DRAFT HAD v4.09's DEFECT.** `_chgWay` is a
+per-resolution trace and **an ATTACK's ops ride to RESOLUTION**. Driven with a
+defence reaction in the reaction window, the next `execute` reassigned the
+trace and the grant announced *"grants nothing"* — the count went **2 → 0**.
+That is the hazard `pend.fused` already rides on `pend` for: a
+DECLARATION-TIME fact the resolution needs. **`chargedRec` is the ONE reader**
+of whichever lifetime is live, and it carries `{pitch, ty}` rather than card
+objects, because `pend` is a GAME_KEY that ships whole and uninterned (v2.49).
+**`pend.chargedPitch` → `pend.chargedWay`, the name moving with the shape**;
+`WIRE_V` **10 → 11**, because a v10 client handed a v11 charge pending drops
+`picked` and `multi`, re-offers nothing and charges only what the last answer
+named (v3.98, v4.12, v4.26).
+
+**THE LADDER IS BYTE-IDENTICAL AT THREE SEEDS ON BOTH SIDES, AND THE REASON IS
+THE POLICY.** Measured over Boltyn's 28 ladder games: the card reaches the
+table **141** times, the charge is **OFFERED 125** times and **TAKEN 0**,
+because `sparring.act` declines a price it cannot weigh (v4.24, v4.33). So the
+grant resolves at a count of zero and says so **14** times — the new op's ZERO
+branch is genuinely driven while its accept path reads 0 on the ladder, which
+is a number about the POLICY rather than the route (v4.29, v4.41, and v4.48's
+own Boltyn line). The accept path is driven end to end by
+`test/vanguard.test.js` and by a scene instead, so it is not left with no
+caller (v3.50).
+
+**28 SABOTAGES, 28 BITE — AND THE ONE THAT CAME BACK SILENT WAS A DRILL GAP.**
+Both colour gates were rewritten to ask whether any MEMBER of the record
+matches, and they are answered in DIFFERENT PLACES: the declaration-time one
+in `execute`'s condition loop, the hit-time one inside `linkPayload`'s own
+smaller evaluator (v3.96). Neutering the first failed a drill; neutering the
+second failed nothing, because the only drill naming Light the Way asserted on
+the PARSE. **A gate nothing drives is a gate a later change can delete in
+silence.** It is driven now, with the ACTION POINT as the observable.
+
+**AND THE HARNESS HAD TWO FAULTS OF ITS OWN.** Its scenes reader spelled the
+summary line's separator as an ERE `.` and that separator is a MIDDOT — two
+bytes in UTF-8 — so the line was missed and reported as `-1`, which the bite
+test read as SILENT: a scan aimed at the wrong shape (v3.81, v4.07) inside the
+instrument built to catch them. And its residue check grepped for a MARKER,
+which a deletion-shaped replacement does not carry (v4.37); it asks **git**
+now. **Writing a failing drill into `test/` while a pass is running inflates
+every later count** — v4.36's rule with the causality reversed, and the five
+readings at risk were re-derived rather than trusted.
+
+**AND TWO SENTENCES INSIDE `chargeOffer` WERE STALE** — *"none prints
+`multi`"* and *"the drill pins that SET empty"*. **Both stopped being true at
+v4.48**, which widened the spelling and brought this card in, and that drill
+has pinned the set as exactly this card ever since. A measurement rotting
+inside the function the next reader would open.
 
 ### A COST PAID HALF, AND THE CENSUS THAT FOUND IT (v4.55)
 

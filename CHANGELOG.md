@@ -1,3 +1,194 @@
+## v4.56 — a grant four words out of reach, and a count nothing kept
+
+> *"As an additional cost to play this, you may charge your soul **any number
+> of times**.*
+> *Your attacks **this combat chain** get +1{p} for each Light card charged
+> this way."*
+> — V OF THE VANGUARD, the pool's ninth FOR-EACH record
+
+`tools/approx.js` carried this as `charged-this-way-count` and named **two**
+missing halves. **One of them was wrong, in the half the record was most
+confident about** — and the cheapest diagnostic in this project found it in
+one call.
+
+The record said the subject *"lands nowhere near `perBoost`'s site"* so
+v4.48's anchor *"is right to refuse it"*, naming a missing MECHANISM for the
+standing grant. **Measured, that reader has existed since v3.87 — and its own
+comment block names THIS CARD as one of its two examples.** What refused was
+the printed WORD ORDER:
+
+| clause | read |
+|---|---|
+| `Your attacks get +2{p} THIS COMBAT CHAIN.` | in full |
+| `Your attacks THIS COMBAT CHAIN get +2{p}.` | **nothing** |
+
+One clause, one word moved, two answers. Night's Embrace prints the window at
+the END and V of the Vanguard prints it right after the SUBJECT — **v3.36's
+rule verbatim** (the database prints both spellings at once), and **v4.48's
+dead `perBoost` one reader over**: a carefully-reasoned comment naming a card
+the anchor cannot reach.
+
+**A RECORDED REASON IS ONLY AS GOOD AS THE DAY IT WAS MEASURED** (v3.69), and
+the way to check one is to ASK THE ENGINE (v4.09). Second record this project
+has closed by asking which of its own stated halves was actually the blocker.
+
+### THE PLURAL IS WHAT KEEPS `buffQ`'s FAMILY OUT, AND THE BLAST RADIUS SAID SO
+
+The anchor read `attacks?`, which was harmless **only while the window had to
+come LAST**: `"your NEXT arrow attack THIS TURN gets +3{p}"` prints its window
+mid-clause too, so accepting either position made the optional `s` live and
+this reader swallowed `buffQ`'s whole single-shot family — **measured, 31
+records across ten cards**, every one turned into a grant that is never spent.
+That is **v3.87's own distinction inverted** in the direction that steals
+games, and **v3.72's rule about a SOURCE one reader over**: widening one thing
+makes a looseness elsewhere reachable that was wrong the whole time it could
+not be.
+
+Caught by measuring the pool BEFORE and AFTER rather than by reading the diff.
+The plural is a RULE and not a coincidence of this pool — *"your next attack"*
+names ONE card by construction — which is **v4.49's grammar argument** one
+family over, and an exclusion beside it would be a guard that cannot express a
+bug (v4.11).
+
+### THE COUNT HALF WAS REAL, AND IT IS BUILT
+
+`fx.chargeCost.multi` has read the printed *"any number of times"* since
+charge was built with **NOTHING consuming it** — a field with no reader is a
+no-op wearing a name (v3.55) — so the pool's one `multi` record was offered a
+SINGLE charge. **Weaker than printed**, which the one-sided sweep is built not
+to look in, and `tier: full` on the clause that WAS read.
+
+**THE OFFER SHRINKS RATHER THAN THE HAND.** A charge is settled in `execute`,
+three hundred lines after the last answer, so nothing has LEFT the hand while
+the offer is re-made — a re-offer asking the hand alone would offer the same
+card again, and one uid charged twice moves one card and counts two.
+`chargeOffer` takes what is already picked as a fourth OPT-IN parameter
+(v3.58) and stays the ONE reader of the cost; `maybeCharge` re-opens on both
+boards so the offer, the exclusion and the message come from one body.
+
+**A DECLINE ENDS THE CHARGING** — upstream's own wording (*"you may elect to
+NOT pay the additional cost of charge"*), and the only reading under which the
+sheet terminates.
+
+**AND `_chargeUid` BECAME A LIST RATHER THAN GAINING A SIBLING** (v3.61): the
+single charge is a list of one, so there is no second record to disagree with
+the first. `execute` re-derives per uid, which is what makes a REPEATED uid
+off a wire harmless — the first pass removes the card and the second finds
+nothing (v2.48).
+
+### THE COUNTABLE COUNTS A COST, WHICH IS WHY IT IS THE FIRST OF ITS KIND
+
+v4.48's other three `{p}` countables ask about the TABLE — the wall, the
+chain, the boost record. This asks what the card's **own additional cost just
+paid**, so it is counted off `_chgWay`, a per-resolution trace of the
+`_discWay` family (v3.62), and the CLASS comes off the **structured array**
+(v2.39, v2.44) — `tt` carries stray words on five database records, and
+*"Lightning"* is not *"Light"* (v4.25's fallback trap).
+
+**IT IS ALSO THE FIRST COUNTABLE THAT RIDES AS A PARAMETER RATHER THAN AS ITS
+OWN OP KIND**, because the printed line grants to a STANDING set of attacks
+rather than pumping the resolving card. So `test/foreach.test.js`'s emitter
+census learned a second landing site and PINS which one each countable takes,
+both directions (v4.17) — asked for an op kind alone it reported the new
+countable as having no emitter at all, which reads exactly like v4.48's dead
+`perEquipDef` and would have sent the next reader hunting a defect that is not
+there (v4.00's false POSITIVE).
+
+**AT A COUNT OF ZERO THE CARD GRANTS NOTHING, AND IT SAYS SO.** v4.48's whole
+finding is that the old readers granted a flat +1 at a count of 0, so pushing
+a `+0{p}` entry here would be that bug wearing an entry. In a training sim the
+feed is the lesson (v3.60): a player who declined the charge is told that is
+why the pump did not arrive.
+
+### AND THE BUILD'S OWN FIRST DRAFT HAD v4.09's DEFECT
+
+`_chgWay` is a per-resolution trace and **an ATTACK's ops ride to
+RESOLUTION**. Driven with a defence reaction in the reaction window, the next
+`execute` reassigned the trace and the grant announced *"grants nothing"* —
+the count went **2 → 0**.
+
+That is exactly the hazard `pend.fused` and the charge colours already ride on
+`pend` for: a DECLARATION-TIME fact the resolution needs. The record is copied
+there and **`chargedRec` is the ONE reader** of whichever lifetime is live, so
+no caller can read the trace where the pend is the live copy. It carries
+`{pitch, ty}` rather than card objects, because `pend` is a GAME_KEY that
+ships whole and uninterned (v2.49) and nothing asks a charged card anything
+but its colour and its class.
+
+**`pend.chargedPitch` → `pend.chargedWay`, and the name moved with the
+shape** — keeping the old name for a new one is the same-name-different-
+meaning trap `KNOWN_COLLISIONS` polices. `WIRE_V` **10 → 11**: a v10 client
+handed a v11 charge pending drops `picked` and `multi`, re-offers nothing and
+charges only what the last answer named — silently weaker than printed, which
+is what the handshake exists to refuse (v3.98, v4.12, v4.26).
+
+### AND TWO SENTENCES INSIDE `chargeOffer` WERE STALE
+
+Its own comment said *"none prints `multi`"* and *"`test/charge.test.js` pins
+that SET empty"*. **Both stopped being true at v4.48**, which widened the
+spelling and brought V of the Vanguard in — and that drill has pinned the set
+as exactly that card ever since. A measurement rotting inside the function the
+next reader would open.
+
+### Measured
+
+- **exactly 1 record's parse moves, 1 tier moves.** RECORDS 748 / 38 / 11 →
+  **749 / 37 / 11**; the audit's UNIQUE-CARD count 394 / 11 / 0 → **395 / 10 /
+  0** — two different denominators, so both are stated rather than one
+  standing for the other. Blast radius taken over all 797 records in both
+  directions; the only other pool record reading the widened anchor is
+  Night's Embrace, pinned BYTE-IDENTICAL as the control (v4.12, v4.17). No
+  floor repin is needed: a tier that only goes up cannot fail the coverage
+  baseline (v4.18), and the audit diff is that one card plus a timestamp.
+- **`buffQ`'s family measured at zero movement.** The plural guard's own
+  premise is a drill: relax it and 31 records across ten cards turn into
+  standing grants, which the pool proves rather than a synthetic.
+- **`npm run scenes boltyn` 11/11 → 12/12**, and the new scene FAILS against the
+  pre-fix engine on the game fact itself — the grant never arrives, so the
+  chain's second swing lands for its printed power.
+- **the ladder is BYTE-IDENTICAL at three seeds on both sides**, all fifteen
+  heroes, run rather than reasoned about (v4.43) — **and the reason is the
+  POLICY, measured rather than assumed.** Driven over Boltyn's 28 ladder
+  games: the card reaches the table **141** times, the charge is **OFFERED
+  125** times and **TAKEN 0**, because `sparring.act` declines a price it
+  cannot weigh (v4.24's standing rule, v4.33's recorded decision). So the
+  grant resolves at a count of zero and says so **14** times, which means the
+  new op's ZERO branch is genuinely driven while its accept path reads 0 on
+  the ladder — a number about the policy rather than the route (v4.29, v4.41,
+  v4.48's own Boltyn line). The accept path is driven end to end by
+  `test/vanguard.test.js` and by the scene instead, so it is not left with no
+  caller (v3.50).
+- **2888 drills, 0 fail, 5 skipped** — re-derived after the last drill landed,
+  never carried over from before it (v4.17: a live count is only true at the
+  moment it is taken).
+- fairness CLEAN, sweep UNFAIR **0**, `crindex --check` 0, `npm run anchors`
+  unchanged.
+- **28 sabotages, 28 bite** — and one came back SILENT on the first pass,
+  which was a real DRILL GAP rather than a weak sabotage. v4.56 rewrote BOTH
+  colour gates to ask whether any MEMBER of the charge record matches, and the
+  two are answered in different places: the declaration-time one in
+  `execute`'s condition loop, the HIT-TIME one inside `linkPayload`'s own
+  smaller evaluator (v3.96). Neutering the first failed a drill; neutering the
+  second failed nothing, because the only drill naming Light the Way asserted
+  on the PARSE. It is DRIVEN now, three rows, with the **action point** as the
+  observable — declined, a YELLOW, and the RED row that tells a colour-blind
+  reader from a correct one (v3.26).
+- **and the harness itself had two faults, both mine and both named here.**
+  Its scenes reader grepped `"passing . [0-9]+ failing"` and the separator is
+  a MIDDOT — two bytes in UTF-8, so an ERE `.` matches half of it and the
+  summary line was missed, reported as `-1`, which the bite test read as
+  SILENT: a scan aimed at the wrong shape (v3.81, v4.07) inside the instrument
+  built to catch them. And its residue check grepped for a MARKER, which a
+  deletion-shaped replacement does not carry (v4.37); it asks **git** now,
+  which cannot be fooled by the absence of one, and it refuses to start
+  against a dirty tree.
+- **AND I CONTAMINATED THE PASS MID-RUN**, which the fixed check is exactly
+  for: writing a new, deliberately-failing drill into `test/` while the
+  harness was running inflates every later `fails()` count, so every remaining
+  sabotage reads as a bite whatever it does. The same lesson as re-deriving a
+  count taken while a sabotage was in flight (v4.36, v4.37) with the causality
+  reversed — and the five readings at risk were re-derived rather than trusted.
+
 ## v4.55 — a cost paid half, and the census that found it
 
 > *"**Instant** - Destroy this **and a Runechant you control**: Prevent the

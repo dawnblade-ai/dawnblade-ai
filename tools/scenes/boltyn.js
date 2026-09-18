@@ -465,4 +465,74 @@ module.exports = [
   }
 }
 
+
+,
+
+/* ------------------------------------------------------------------ *
+ * V OF THE VANGUARD — a grant whose multiplier counts its OWN COST   *
+ * ------------------------------------------------------------------ */
+{
+  name: "V of the Vanguard pumps the chain by the Light cards it charged",
+  why: "Its clause read NOTHING and `tools/approx.js` named the wrong blocker "  +
+       "(`charged-this-way-count`): it said the STANDING grant had no reader, "  +
+       "and that reader has existed since v3.87 — whose own comment names this " +
+       "card. What refused was the printed WORD ORDER, four words apart from "   +
+       "Night's Embrace (v3.36: the database prints both spellings at once). "   +
+       "The COUNT half was real — `fx.chargeCost.multi` read \"any number of "  +
+       "times\" with no consumer, so the offer asked ONCE. Re-sabotage by "     +
+       "moving the window to the end of the anchor, by dropping the for-each "   +
+       "tail, or by not re-opening the offer after a pick.",
+  run(c){
+    const atk = c.card("V of the Vanguard", 2, "vov");
+    const l1  = c.card("Bolt of Courage", 1, "l1");
+    const l2  = c.card("Take Flight", 1, "l2");
+    const gen = c.card("Brutal Assault", 1, "gn");
+    /* charge the two LIGHT cards and leave the Generic one in hand — the row
+       that separates a CLASS test from a bare count of charges. */
+    let g = c.acting(c.state({name: "Boltyn", hand: [atk, l1, l2, gen], res: 9, ap: 3},
+                             {name: "Them", hp: 20}, {turn: 3}));
+    let n = c.reduce(g, {t: "play", uid: "vov", from: "hand"}, 0);
+    const offers = [];
+    for(let i = 0; i < 8 && n.pending && n.pending.kind === "charge"; i++){
+      offers.push((n.pending.uids || []).join("|"));
+      const pick = offers.length <= 2 ? n.pending.uids[0] : null;
+      n = c.reduce(n, pick == null ? {t: "charge"} : {t: "charge", uid: pick}, 0);
+    }
+    for(let i = 0; i < 4 && n.pending; i++){
+      const k = n.pending.kind;
+      n = c.reduce(n, k === "boost" || k === "addPay" ? {t: k, yes: false}
+                    : k === "fuse" ? {t: "fuse", uid: null}
+                    : {t: "payConfirm"}, n.pending.seat);
+    }
+    /* PASS TO THE RESOLUTION STEP AND STOP THERE. One pass further the chain
+       CLOSES and `closeChainGrants` correctly takes a "this combat chain"
+       grant, so a drive to `!pend` reads an empty board and reports the
+       feature missing (v4.41's own scene defect). */
+    for(let i = 0; i < 40 && n.pend && n.step !== "resolution"; i++){
+      const who = n.priority;
+      if(who == null) break;
+      n = c.reduce(n, {t: "pass"}, who);
+    }
+    const sd = n.sides[0];
+    return {
+      "the offer re-opens, shrinking each round": offers.join(" / "),
+      "both Light cards reached the soul":        sd.soul.map(x => x.uid).sort().join(","),
+      "the Generic card stayed in hand":          sd.hand.map(x => x.uid).join(","),
+      "each charge was counted":                 sd.hist.charged,
+      "the chain is still open at resolution":    n.step,
+      "the grant is the printed pip TIMES the Light count": sd.atkBuff.map(b => b.amt).join(","),
+      "…with the printed window":                sd.atkBuff.map(b => b.until).join(",")
+    };
+  },
+  want: {
+    "the offer re-opens, shrinking each round": "l1|l2|gn / l2|gn / gn",
+    "both Light cards reached the soul": "l1,l2",
+    "the Generic card stayed in hand": "gn",
+    "each charge was counted": 2,
+    "the chain is still open at resolution": "resolution",
+    "the grant is the printed pip TIMES the Light count": "2",
+    "…with the printed window": "chain"
+  }
+}
+
 ];

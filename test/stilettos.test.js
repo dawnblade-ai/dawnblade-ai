@@ -396,8 +396,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      `part` 37 -> 38 and `none` 12 -> 11 and the `full` count is untouched.
      A whole-pool pin inside a card's own drill is deliberate — it is this
      version's blast-radius measurement standing (v4.17) — and moving it is
-     an edit somebody makes on purpose. */
-  assert.deepEqual(tiers, {full: 748, part: 38, none: 11});
+     an edit somebody makes on purpose. RE-PINNED AGAIN AT v4.56, after
+     reading the diff: V of the Vanguard went `part` -> `full` when the
+     standing-grant anchor learned the window's other printed position, so
+     `full` 748 -> 749 and `part` 38 -> 37 with `none` untouched. Exactly
+     one record moves, which is the measurement that version rests on. */
+  assert.deepEqual(tiers, {full: 749, part: 37, none: 11});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

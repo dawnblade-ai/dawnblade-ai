@@ -313,7 +313,7 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      that the shape and the number moved together. */
   let h = 5381;
   for(let i = 0; i < shape.length; i++) h = ((h * 33) ^ shape.charCodeAt(i)) >>> 0;
-  assert.equal(W.WIRE_V, 10,
+  assert.equal(W.WIRE_V, 11,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

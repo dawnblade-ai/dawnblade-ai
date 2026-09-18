@@ -311,7 +311,7 @@ test("DRIVEN: charging Banneret arms the grant, and the next hit pays it", {skip
   let g = H.state({hand: [bolt, bann], res: 9, ap: 2, hp: 18}, {hp: 20},
                   {actor: 0, turnPlayer: 0, turn: 3});
   g.builds = [{}, {}];
-  const out = (o => o.game || o)(H.execute({...g, _chargeUid: "bn1"}, bolt, "hand", 0, {}));
+  const out = (o => o.game || o)(H.execute({...g, _chargeUids: ["bn1"]}, bolt, "hand", 0, {}));
   assert.ok(out.sides[0].soul.some(c => c && c.uid === "bn1"),
     "Banneret did not reach the soul — the charge itself did not happen");
   assert.deepEqual((out.sides[0].hitNext || []).map(e => e.ops), [[["life", 1]]],
@@ -330,7 +330,7 @@ test("THE TRIGGER IS THE CHARGED CARD'S, NOT THE PLAYED CARD'S", {skip}, () => {
   let g = H.state({hand: [bolt, plain], res: 9, ap: 2}, {hp: 20},
                   {actor: 0, turnPlayer: 0, turn: 3});
   g.builds = [{}, {}];
-  const out = (o => o.game || o)(H.execute({...g, _chargeUid: "pl1"}, bolt, "hand", 0, {}));
+  const out = (o => o.game || o)(H.execute({...g, _chargeUids: ["pl1"]}, bolt, "hand", 0, {}));
   assert.ok(out.sides[0].soul.some(c => c && c.uid === "pl1"), "the plain card was charged");
   assert.deepEqual(out.sides[0].hitNext || [], [],
     "charging a card that prints no such trigger armed one anyway");

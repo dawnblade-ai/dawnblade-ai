@@ -210,18 +210,65 @@ test("the two anchors' own cards, driven off the real record", {skip}, () => {
    emitters alone cannot see a countable leaving the table, and pinning the
    fire sites alone is what let this rot for as long as it did. */
 
+/* A COUNTABLE LANDS IN ONE OF THREE PLACES, AND THE SITE IS PINNED (v4.56).
+   Until v4.56 every `{p}` countable was its own OP KIND, so "is it emitted"
+   and "is it an op" were the same question and this census asked the second
+   one. `perChargedLight` is the first that rides as a PARAMETER — `op[4]` on
+   the `atkBuff` op — because the printed line grants it to a STANDING set of
+   attacks rather than pumping the resolving card, and a bare op of its own
+   would pump the card that made the grant.
+
+   SO THE WALK COVERS BOTH POSITIONS AND THE PARTITION IS PINNED (v4.17).
+   Asking only for an op kind reported the new countable as having no emitter
+   at all — which reads exactly like v4.48's dead `perEquipDef`, so a census
+   that cannot see the second position would have sent the next reader
+   hunting a defect that is not there (v4.00's false POSITIVE). */
+const SITE_OF = {
+  perEquipDef:      "op",     /* its own op kind, dispatched by kind */
+  perBoost:         "op",
+  perChainHit:      "op",
+  perChargedLight:  "atkBuff" /* a parameter on the standing-grant op */
+};
+
 const emittersOf = () => {
   const seen = {};
+  const note = (key, c) => (seen[key] = seen[key] || []).push(c.name + "|" + c.pitch);
   for(const c of pool){
     P.fxReset();
     const fx = P.fxParse(c);
     for(const o of [...(fx.ops || []), ...(fx.lateOps || []),
-                    ...(fx.conds || []).map(x => x.op)])
-      if(o && Object.values(P.PER_COUNT["{p}"]).includes(o[0]))
-        (seen[o[0]] = seen[o[0]] || []).push(c.name + "|" + c.pitch);
+                    ...(fx.conds || []).map(x => x.op)]){
+      if(!o) continue;
+      if(Object.values(P.PER_COUNT["{p}"]).includes(o[0])) note(o[0], c);
+      /* THE PARAMETER POSITION. `atkBuff` is four elements without a
+         multiplier and five with one, so Night's Embrace contributes
+         nothing here and V of the Vanguard contributes its countable. */
+      if(o[0] === "atkBuff" && o[4]) note(o[4], c);
+    }
   }
   return seen;
 };
+
+test("CENSUS: every {p} countable's LANDING SITE is pinned, both ways", {skip}, () => {
+  assert.deepEqual(Object.keys(SITE_OF).sort(),
+    Object.values(P.PER_COUNT["{p}"]).sort(),
+    "a countable arriving in or leaving PER_COUNT is a deliberate edit to this map");
+  /* AND THE SITE IS DRIVEN, NOT DECLARED. A countable whose site moved
+     would otherwise pass this drill while the census above looked in the
+     wrong place for it. */
+  const seen = emittersOf();
+  for(const c of pool){
+    P.fxReset();
+    for(const o of P.fxParse(c).ops || []){
+      if(!o) continue;
+      if(Object.values(P.PER_COUNT["{p}"]).includes(o[0]))
+        assert.equal(SITE_OF[o[0]], "op", o[0] + " is emitted as an op kind");
+      if(o[0] === "atkBuff" && o[4])
+        assert.equal(SITE_OF[o[4]], "atkBuff", o[4] + " is emitted as an atkBuff parameter");
+    }
+  }
+  assert.ok((seen.perChargedLight || []).length > 0, "the atkBuff walk is alive");
+});
 
 test("CENSUS: every {p} countable in the table has at least one pool emitter",
      {skip}, () => {
@@ -235,9 +282,29 @@ test("CENSUS: every {p} countable in the table has at least one pool emitter",
 
 test("CENSUS: and every emitted countable has a fire site", {skip}, () => {
   const src = fs.readFileSync(path.join(ROOT, "engine", "effects.js"), "utf8");
-  for(const op of Object.values(P.PER_COUNT["{p}"]))
-    assert.ok(src.includes(`o[0]==="${op}"`) || src.includes(`op[0]==="${op}"`),
-      `${op} is emitted by the parser and nothing in effects.js dispatches it`);
+  for(const op of Object.values(P.PER_COUNT["{p}"])){
+    /* A PARAMETER IS DISPATCHED BY `powPer`, NOT BY KIND, so the two sites
+       are asked for separately — and the SOURCE scan is only half of it:
+       `powPer` is DRIVEN below, because a branch that reads the right name
+       and answers zero is the defect this census exists to catch (v3.55). */
+    if(SITE_OF[op] === "atkBuff")
+      assert.match(src, new RegExp('per === "' + op + '"'),
+        `${op} rides on an op parameter and powPer has no branch for it`);
+    else
+      assert.ok(src.includes(`o[0]==="${op}"`) || src.includes(`op[0]==="${op}"`),
+        `${op} is emitted by the parser and nothing in effects.js dispatches it`);
+  }
+  /* DRIVEN: the parameter countable answers a real number off a real trace.
+     `_chgWay` holds the cards the card's own charge cost paid, and the class
+     comes off the STRUCTURED array (v2.39) — so a non-Light card charged
+     alongside contributes nothing, which is the row that separates a class
+     test from a bare count. */
+  const lit = {name: "L", pitch: 2, ty: ["Light", "Warrior", "Action"]};
+  const gen = {name: "G", pitch: 1, ty: ["Generic", "Action"]};
+  assert.equal(E.powPer({_chgWay: [lit, lit, gen]}, "perChargedLight"), 2,
+    "two Light cards charged, and the Generic one does not count");
+  assert.equal(E.powPer({_chgWay: []}, "perChargedLight"), 0, "nothing charged is zero");
+  assert.equal(E.powPer({}, "perChargedLight"), 0, "and no trace at all is zero, not a throw");
   /* AND IT MUST BE KEPT OFF `pend.ops`, or the multiplier runs a second
      time at resolution — v2.30's VALUE-DOUBLED, one field over. */
   const line = src.split("\n").find(l => l.includes("n.pend = {card, from, by: actorOf(n)"));
@@ -423,33 +490,70 @@ test("the WHERE-X-IS wording the old anchors spelled is printed by NO pool recor
   for(const c of pool.filter(c => c.tx && /\+\d+\{[pd]\} for each /i.test(c.tx))){
     P.fxReset();
     const fx = P.fxParse(c);
-    const got = (fx.ops || []).some(o => Object.values(P.PER_COUNT["{p}"]).includes(o[0]))
+    const got = (fx.ops || []).some(o => Object.values(P.PER_COUNT["{p}"]).includes(o[0])
+                                      || (o[0] === "atkBuff" && !!o[4]))
              || !!(fx.defSelf && fx.defSelf.per);
     (got ? read : refused).push(c.name + "|" + c.pitch);
   }
+  /* ALL NINE ARE CLAIMED AS OF v4.56, and the partition is still pinned
+     both ways so a record going quiet is a red drill rather than a silence. */
   assert.deepEqual(read.sort(),
     ["Big Blue Sky|3", "Fender Bender|1", "Fender Bender|2", "Fender Bender|3",
-     "Overblast|1", "Overblast|2", "Overblast|3", "Salt the Wound|2"],
-    "the eight this reader claims");
+     "Overblast|1", "Overblast|2", "Overblast|3", "Salt the Wound|2",
+     "V of the Vanguard|2"],
+    "the nine this reader claims");
+  assert.deepEqual(refused, [], "and none is refused");
 
-  /* V OF THE VANGUARD IS THE REFUSAL, AND ITS SUBJECT IS WHY. It prints
-     "YOUR ATTACKS this combat chain get +1{p} for each Light card charged
-     this way" — a STANDING grant over a window (`dracChain`'s shape,
-     v4.19), not a pump on the resolving card, so it lands somewhere else
-     entirely and this reader's "this"/"it" anchor is right to refuse it.
+  /* V OF THE VANGUARD WAS THE ONE REFUSAL, AND THE STATED REASON WAS
+     WRONG IN BOTH HALVES — which is what asking the engine is for (v3.69,
+     v4.09). The sentences that stood here said its subject "lands somewhere
+     else entirely" so the anchor "is right to refuse it", and that its
+     countable "needs a field this project deliberately left uncarried".
 
-     AND ITS COUNTABLE NEEDS A FIELD THIS PROJECT DELIBERATELY LEFT
-     UNCARRIED. "Charged THIS WAY" counts the cards that card's own
-     additional cost charged, which is `fx.chargeCost.multi` — read from
-     the printed "any number of times" and consumed by nothing, pinned as
-     an EMPTY SET at v4.33 precisely so the day something needs it
-     somebody decides rather than it being silently charged once. So this
-     card is the standing reason that set is not empty by accident, and it
-     stays `part` until `multi` is built. */
-  assert.deepEqual(refused, ["V of the Vanguard|2"],
-    "and the one it refuses, on a printed subject that is not this card");
+     MEASURED, neither was the blocker this reader could see. The STANDING
+     grant has had a reader since v3.87 — whose own comment block names this
+     card as one of its two examples — and what refused was the printed WORD
+     ORDER: that anchor wanted the window at the END of the clause and the
+     database prints it right after the SUBJECT here. Driven, the same
+     clause with the window moved and nothing else changed reads in full.
+     The `multi` half was real and is built; the other half was four words
+     of position (v3.36: the database prints both spellings at once). */
   P.fxReset();
   const vov = P.fxParse(pool.find(c => c.name === "V of the Vanguard"));
-  assert.equal(vov.tier, "part", "reported as unfinished rather than guessed at");
-  assert.ok(!vov.self, "and it grants no flat pump either");
+  assert.equal(vov.tier, "full", "read in full since v4.56");
+  assert.ok(!vov.self, "and it grants no flat pump — the multiplier is the whole value");
+  assert.deepEqual((vov.ops || []).find(o => o[0] === "atkBuff"),
+    ["atkBuff", 1, null, "chain", "perChargedLight"],
+    "one printed pip, no qualifier, the printed window, and the countable");
+
+  /* THE WINDOW POSITION IS THE FINDING, SO IT IS DRIVEN (v4.56). Both
+     wordings read, and a clause naming its window TWICE refuses — a shape
+     nobody has measured picks no side. */
+  const probe = tx => {
+    P.fxReset();
+    return (P.fxParse({name: "ZZwin" + Math.random(), tx, tt: "Generic Action",
+                       ty: ["Generic", "Action"], pitch: 1, cost: 0}).ops || [])
+      .find(o => o[0] === "atkBuff") || null;
+  };
+  assert.deepEqual(probe("Your attacks get +2{p} this combat chain."),
+    ["atkBuff", 2, null, "chain"], "the window at the END reads");
+  assert.deepEqual(probe("Your attacks this combat chain get +2{p}."),
+    ["atkBuff", 2, null, "chain"], "and so does the window after the SUBJECT");
+  assert.equal(probe("Your attacks this turn get +2{p} this turn."), null,
+    "a clause naming its window twice refuses rather than picking a side");
+  /* AND AN UNKNOWN COUNTABLE REFUSES THE WHOLE CLAUSE (v4.48, v2.29) —
+     read as a flat +N it is wrong in BOTH directions at once. */
+  assert.equal(probe("Your attacks this turn get +2{p} for each goat you control."), null,
+    "an unreadable countable takes the clause with it");
+  /* AND THE PLURAL IS WHAT KEEPS `buffQ`'s FAMILY OUT. Accepting either
+     window position made the old optional `s` live, and this reader
+     swallowed 31 single-shot records — grants that are SPENT by the card
+     they land on — turning every one into a standing grant. v3.87's own
+     distinction inverted, in the direction that steals games. */
+  assert.equal(probe("Your next arrow attack this turn gets +3{p}."), null,
+    "the singular single-shot grant is buffQ's and stays there");
+  P.fxReset();
+  const cig = P.fxParse(pool.find(c => c.name === "Call in the Big Guns"));
+  assert.ok((cig.ops || []).some(o => o[0] === "buffNext"),
+    "driven on the real record: it is still a buffNext, not a standing grant");
 });

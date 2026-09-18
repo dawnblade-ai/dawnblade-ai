@@ -265,15 +265,23 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      built one version after it was recorded, and its probe went RED the
      moment the branch landed — which is the reversal an `open` record
      exists to force (v4.02). */
-  /* 6 -> 7 AT v4.48: `charged-this-way-count`. */
+  /* 6 -> 7 AT v4.48: `charged-this-way-count`, and 7 -> 6 at v4.56 when it
+     was BUILT — the probe went red the moment the site landed, and the
+     record is `closed` with its probe turned round (v4.02). */
   /* 7 -> 8 AT v4.52: `paycost-defends-trainer-only` — found sideways
      while merging the two `payTrigger` readers, which is what a census
      of a family is for (v4.21). */
   /* 8 open holds AT v4.53: one closed (`paycost-defends-at-the-table`),
      one opened (`trainer-blocks-wall-no-defends-body`) — which is why the
      RECORD count is the one that moves and the open count does not. */
-  assert.equal(n("open"),    8, "open count moved");
-  assert.equal(n("closed"), 14, "closed count moved");
+  /* 8 -> 7 AT v4.56: `charged-this-way-count` was BUILT. And the record it
+     closed had a STATED REASON THAT WAS WRONG in the half it was most
+     confident about — it named a missing MECHANISM for the standing grant,
+     which has had a reader since v3.87, when what refused was four words of
+     printed word order. Asking the engine is what corrected it (v3.69,
+     v4.09), which is the second record this project has closed that way. */
+  assert.equal(n("open"),    7, "open count moved");
+  assert.equal(n("closed"), 15, "closed count moved");
 });
 
 /* ============================================================
@@ -908,34 +916,41 @@ probe("steam-build-powcard-handwritten", () => {
 });
 
 probe("charged-this-way-count", () => {
-  /* AN `open` PROBE ASSERTS THE **DEVIATION**, so it goes RED the day
-     somebody builds it (v4.02). Both halves of the refusal are asked, and
-     the POSITIVE CONTROL is the eight records v4.48 does read — a reader
-     that refused the whole family would satisfy the refusal line perfectly
+  /* A `closed` PROBE ASSERTS THE THING IS **BUILT**, so it goes red when it
+     REGRESSES (v4.02) — the probe this replaces asserted the deviation and
+     went red the moment v4.56 landed, which is the whole point of the two
+     directions. The POSITIVE CONTROL is still the eight records v4.48 read:
+     a reader that claimed everything would satisfy the line below perfectly
      (v3.98: ask for both halves). */
   const rows = [];
   for(const c of pool()){
     if(!(c.tx && /\+\d+\{[pd]\} for each /i.test(c.tx))) continue;
     PR.fxReset();
     const fx = PR.fxParse(c);
-    const read = (fx.ops || []).some(o => Object.values(PR.PER_COUNT["{p}"]).includes(o[0]))
+    const read = (fx.ops || []).some(o => Object.values(PR.PER_COUNT["{p}"]).includes(o[0])
+                                       || (o[0] === "atkBuff" && !!o[4]))
               || !!(fx.defSelf && fx.defSelf.per);
     rows.push({name: c.name + "|" + c.pitch, read, tier: fx.tier});
   }
   assert.equal(rows.length, 9, "the number of pool records printing FOR-EACH moved");
-  assert.deepEqual(rows.filter(r => !r.read).map(r => r.name), ["V of the Vanguard|2"],
-    "the set of REFUSED for-each records moved — if this one was built the record "
-    + "must move; if another joined it, that is a regression");
-  assert.equal(rows.filter(r => r.read).length, 8,
-    "THE CONTROL: eight are read, so this is not a reader that refuses everything");
+  assert.deepEqual(rows.filter(r => !r.read).map(r => r.name), [],
+    "every for-each record is read since v4.56 — one arriving here is a regression");
 
-  /* AND THE NAMED BLOCKER IS THE **COUNT**, WHICH NOTHING KEEPS.
-     `fx.chargeCost.multi` reads the printed "any number of times" and has no
-     consumer, so `chargeOffer` asks ONCE — which this probe asserts in both
-     directions: the card's charge cost DOES parse now (v4.48 widened the
-     anchor, which is the half that closed), and the offer still carries only
-     `uids` (which is the half still open). It goes red the day the count is
-     built. */
+  /* THE WINDOW POSITION WAS THE HALF THIS RECORD GOT WRONG, so it is the
+     half driven hardest: the standing grant has read since v3.87 and the
+     database simply prints its window in the other position. */
+  PR.fxReset();
+  const vov = PR.fxParse(pool().find(c => c.name === "V of the Vanguard"));
+  assert.equal(vov.tier, "full", "the card reads in full");
+  assert.deepEqual((vov.ops || []).find(o => o[0] === "atkBuff"),
+    ["atkBuff", 1, null, "chain", "perChargedLight"],
+    "one printed pip, the printed window, and the countable");
+  assert.ok(!vov.self, "and no flat pump is granted in its place");
+
+  /* AND THE COUNT HALF WAS REAL. `multi` has a reader now, the offer carries
+     it, and the offer SHRINKS as cards are chosen — which cannot be derived
+     from the hand, because a charge is settled in `execute` long after the
+     last answer. */
   const multi = pool().filter(c => { PR.fxReset();
     const cc = PR.fxParse(c).chargeCost; return !!(cc && cc.multi); })
     .map(c => c.name + "|" + c.pitch).sort();
@@ -944,18 +959,20 @@ probe("charged-this-way-count", () => {
     + "Vanguard is the only one");
   PR.fxReset();
   const vovC = pool().find(c => c.name === "V of the Vanguard");
-  assert.ok(PR.fxParse(vovC).chargeCost,
-    "its charge cost parses — the anchor half is CLOSED (v4.48)");
-  const off = PR.chargeOffer({...vovC, uid: "src"},
-    {hand: [{...vovC, uid: "src"}, {uid: "a1", name: "A", pitch: 2, tt: "Generic Action",
-             ty: ["Generic", "Action"], tx: ""}]}, "src");
-  assert.deepEqual(Object.keys(off || {}), ["uids"],
-    "and the offer carries no count — charging once is the standing gap");
-
-  PR.fxReset();
-  const vov = PR.fxParse(pool().find(c => c.name === "V of the Vanguard"));
-  assert.equal(vov.tier, "part", "reported as unfinished rather than guessed at");
-  assert.ok(!vov.self, "and no flat pump is granted in its place");
+  const mk = (uid, nm, pitch, ty) => ({uid, name: nm, pitch, tt: "Generic Action",
+                                       ty: ty || ["Generic", "Action"], tx: ""});
+  const hand = [{...vovC, uid: "src"}, mk("a1", "A", 2), mk("a2", "B", 1)];
+  const off = PR.chargeOffer({...vovC, uid: "src"}, {hand}, "src");
+  assert.deepEqual(Object.keys(off || {}).sort(), ["multi", "uids"],
+    "the offer carries the count");
+  assert.equal(off.multi, true, "and reads it as a repeated charge");
+  assert.deepEqual(PR.chargeOffer({...vovC, uid: "src"}, {hand}, "src", ["a1"]).uids, ["a2"],
+    "a card already chosen is off the next offer");
+  /* AND THE COUNTABLE IS DRIVEN off the trace, with a non-Light card
+     charged alongside as the row that separates a class test from a count. */
+  assert.equal(E.powPer({_chgWay: [mk(1, "L", 2, ["Light", "Action"]),
+                                   mk(2, "G", 1, ["Generic", "Action"])]},
+    "perChargedLight"), 1, "only the Light card counts");
 });
 
 probe("crush-halving-rider", () => {
