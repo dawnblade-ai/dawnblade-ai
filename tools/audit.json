@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-14T21:39:20.062Z",
- "appVer": "4.53",
+ "generated": "2026-09-18T14:36:50.489Z",
+ "appVer": "4.54",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -2743,7 +2743,7 @@
    ],
    "skipped": [],
    "weaponCost": null,
-   "eqAbility": "destroy: Prevent the next 1 arcane damage that would be dealt to you this turn",
+   "eqAbility": "destroy this and a Runechant: Prevent the next 1 arcane damage that would be dealt to you this turn",
    "tx": "Instant - Destroy this and a Runechant you control: Prevent the next 1 arcane damage that would be dealt to you this turn.\nArcane Barrier 1",
    "flags": []
   },

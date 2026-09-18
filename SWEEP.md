@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-14 from `tools/audit.json`.
+Generated 2026-09-18 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 

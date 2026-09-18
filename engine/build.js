@@ -715,11 +715,18 @@ function equipPiece(gr){
                         _discardSubject: pw.discardCost.subject} : {},   /* v4.09, v3.63's rule */
       pw.selfBanish ? {_selfBanish: true, _banishGear: gr.uid} : {},
       /* v3.63's rule, THIRD outing: when you add a flag to one powCard
-         builder, grep for the others. No pool EQUIPMENT prints this cost
-         today — measured, all 38 non-hero destroy costs say "destroy
-         this" — so this is latent; `execute` reads the flag off the
-         powCard without caring which builder stamped it, so a card that
-         printed the shape would work rather than be silently free. */
+         builder, grep for the others — and it was stamped here as a
+         LATENT GUARD, on the measurement that "no pool EQUIPMENT prints
+         this cost today; all 38 non-hero destroy costs say destroy this".
+
+         **THAT MEASUREMENT MOVED AT v4.55 AND THE GUARD IS WHY THE FIX
+         WAS ONE PARSER LINE.** Runebleed Robe prints "Destroy this AND A
+         RUNECHANT YOU CONTROL" and `parseHeroPower` dropped the second
+         half — so the stamp had been waiting here, correct, for the card
+         that arrived. A guard placed for a shape rather than for the
+         version that found it (v3.43) is what makes the next card cheap;
+         `execute` reads the flag off the powCard without caring which
+         builder stamped it. LIVE now, in Viserai's chest. */
       pw.destroyBoard ? {_destroyBoard: pw.destroyBoard} : {},
       /* v3.63's rule, FOURTH outing: when you add a flag to one powCard
          builder, grep for the others. Uphold Tradition is the pool's only

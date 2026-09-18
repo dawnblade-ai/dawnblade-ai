@@ -89,6 +89,76 @@ module.exports = [
     "there is no integer field for them": true,
     "each is a real card with the token's own text": true
   }
+},
+
+{
+  name: "the Robe spends a Runechant — the second half of its printed cost",
+  why: "v4.55 — \"Instant - Destroy this AND A RUNECHANT YOU CONTROL: " +
+       "Prevent the next 1 arcane damage…\" parsed BYTE-IDENTICALLY to a " +
+       "control printing only \"Destroy this:\". The second half of the " +
+       "cost was silently dropped, so the ability shattered the piece and " +
+       "left the Runechant on the board — and in the hero whose engine IS " +
+       "Runechants, each one kept is a point of arcane damage on the next " +
+       "swing the card had already charged for. `tier: full` throughout, " +
+       "and the one-sided sweep models a payload read too generously, " +
+       "never a COST that was skipped. Found by censusing the cost atoms.",
+  run(c){
+    const W = loadData();
+    const h = W.HEROES.find(x => x.k === "viserai");
+    const hk = W.HEROES.find(x => x.k === "kayo");
+    const ctr = {n: 0};
+    let rng = RNG.make("scene-robe");
+    /* SEATED EXPLICITLY. `defaultPicks` ranks a chest by printed defence
+       and takes Beckoning Haunt (2) over the Robe (0), so a driven game
+       never wears it — v4.43's Hood, v4.49's Gun, v4.52's Stilettos. A
+       player picks it on the loadout screen, which is this route. */
+    const b0 = B.buildSide(h, G.parseDeck(W.DECKS.viserai), c.H.db(),
+      {chest: "Runebleed Robe"}, rng, ctr); rng = b0.rng;
+    const b1 = B.buildSideDefault(hk, G.parseDeck(W.DECKS.kayo), c.H.db(), rng, ctr);
+    const g0 = c.J.newMatch({builds: [b0.b, b1.b], names: [h.n, hk.n],
+      heroKeys: ["viserai", "kayo"], rng: b1.rng, first: 0, tokSeq: ctr.n});
+    const robe = (g0.sides[0].gear || []).find(x => /Runebleed/.test(x.name));
+    const rune = Object.assign({}, c.card("Runechant", 0), {uid: "runeSC"});
+    const withRune = Object.assign({}, g0, {turn: 4, sides: g0.sides.map((s, i) =>
+      i === 0 ? Object.assign({}, s, {res: 0, board: [{uid: "runeSC", kind: "aura",
+                                       spent: false, card: rune}]}) : s)});
+    /* WITH NO RUNECHANT IT IS REFUSED, and refused BEFORE the piece
+       shatters — a cost is a legality (v3.11). */
+    const broke = c.J.legal(g0, {t: "activate", uid: robe && robe.uid}, 0);
+    const n = c.reduce(withRune, {t: "activate", uid: robe.uid}, 0);
+    const sd = n.sides[0];
+    return {
+      "the cost names the permanent it spends": c.P.abDestroyBoard(robe && robe.powCard),
+      "…and still destroys the piece itself":   !!(robe && robe.powCard && robe.powCard.sd),
+      "with no Runechant it is refused":        /Runechant/.test(String(broke || "")),
+      "…and the piece survives that refusal":   (g0.sides[0].gear || [])
+                                                 .some(x => x.destroyed),
+      "the Runechant leaves the arena":         (sd.board || []).length,
+      "…for the GRAVEYARD, turn-stamped":      (sd.grave.find(x => x.name === "Runechant") || {})._gy,
+      "none survives to pop on the next swing": P.runeCount(sd),
+      "the printed prevention lands":           sd.awd,
+      "…carrying its printed window":           sd.awdTurn,
+      "and the piece shatters too":             (sd.gear || [])
+                                                 .some(x => /Runebleed/.test(x.name) && x.destroyed),
+      /* AN INSTANT COSTS NO ACTION POINT (CR 8.1.6). */
+      "action points spent":                    withRune.sides[0].ap - sd.ap,
+      "the board is clean":                     require("../../engine/invariants.js").errors(n).length
+    };
+  },
+  want: {
+    "the cost names the permanent it spends": "Runechant",
+    "…and still destroys the piece itself": true,
+    "with no Runechant it is refused": true,
+    "…and the piece survives that refusal": false,
+    "the Runechant leaves the arena": 0,
+    "…for the GRAVEYARD, turn-stamped": 4,
+    "none survives to pop on the next swing": 0,
+    "the printed prevention lands": 1,
+    "…carrying its printed window": 1,
+    "and the piece shatters too": true,
+    "action points spent": 0,
+    "the board is clean": 0
+  }
 }
 
 ];

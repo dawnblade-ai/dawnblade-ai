@@ -6786,14 +6786,74 @@ function parseHeroPower(tx, allowDestroy){
      printed line for the `{t}` in the cost half (v3.48), and Gravy's line
      is the shape it already answers for; carrying the tap a second time
      would be two records of one fact. */
-  const destM = costStr.match(/^\{t\},? destroy (?:a|an|one) ([A-Z][A-Za-z'\u2019 -]*?) you control$/);
+  /* AND THE SECOND OBJECT IS AN OPTIONAL MIDDLE, NOT A SECOND READER
+     (v4.55) — v3.79's Radiant Touch move one cost verb over.
+
+         "Instant - Destroy this AND A RUNECHANT YOU CONTROL: Prevent the
+          next 1 arcane damage that would be dealt to you this turn."
+                                        — RUNEBLEED ROBE, Viserai's Chest
+
+     THE SECOND HALF OF THE PRINTED COST WAS SILENTLY DROPPED, and the
+     proof is that it parsed BYTE-IDENTICALLY to a control printing only
+     "Destroy this:" — same cost, same `sd`, same label. So the ability
+     was offered, resolved, shattered the piece, and left on the board the
+     Runechant the card is printed to spend. **Stronger than printed**, in
+     the one hero whose engine IS Runechants: each one the player keeps is
+     a point of arcane damage on their next swing that the card had
+     already charged them for.
+
+     NO TOOL HERE COULD SEE IT. The activation line is filed `noop` (the
+     powCard is its reader, which is correct), so the card reads
+     `tier: full` and coverage counts the text accounted for; and the
+     one-sided fairness sweep looks for a PAYLOAD read too generously,
+     never for a COST that was skipped (v4.27's fusion, one verb over).
+     `test/costcensus.test.js` is what found it — every cost ATOM the pool
+     prints, against the reader that accounts for it, and this was the one
+     accepted cost with an atom no flag named.
+
+     ONE RECORD, MEASURED, so the near-miss is SYNTHETIC (v3.73): the pool
+     prints 29 distinct activation costs and exactly one of this shape.
+
+     THE `{t}` GOES OPTIONAL WITH IT and that moves nothing today — no
+     pool record prints a bare "destroy a <Name> you control" — but a
+     required tap is a restriction the printed line does not carry, and
+     Gravy Bones' own cost is pinned unchanged as the control.
+
+     THE NAME STILL KEEPS ITS PRINTED CAPITALISATION (v3.53). `costStr`
+     comes off the raw cleaned text, so "destroy a card you control" is
+     refused by the `[A-Z]` — the guard that separates a token's NAME
+     from a common noun, and the half a widening is most likely to lose.
+
+     WHICH IS WHY THE VERB IS `[Dd]estroy` AND THE RULE IS NOT `/i`.
+     The same printed verb arrives in two cases: Gravy's follows a pip
+     ("{t}, destroy a Gold…") and is lowercase, and the Robe's OPENS the
+     cost ("Destroy this and…") so the printing capitalises it. Adding
+     `/i` reads both — and takes the `[A-Z]` on the name down with it,
+     claiming "destroy a card you control" for a reader that would then
+     look for a permanent named "card". **The case-sensitivity three
+     tokens later is what the flag would delete**, so the one letter that
+     legitimately varies is spelled out instead. Found by driving it: the
+     first draft of this widening came back BYTE-IDENTICAL to the old
+     answer, because the Robe never reached the branch at all. */
+  const destM = costStr.match(/^(?:\{t\},? )?[Dd]estroy (this and )?(?:a|an|one) ([A-Z][A-Za-z'\u2019 -]*?) you control$/);
+  /* AND `allowDestroy` GATES THE NEW HALF, BECAUSE A HERO DESTROYING
+     "THIS" DESTROYS THE HERO (v4.14's gate, its sibling owed — v3.43:
+     a guard belongs to the SHAPE, not to the version that wrote it).
+     This branch never had to ask before, because it always answered
+     `sd: false`; the moment it can answer TRUE it inherits the question
+     every other destroy-this reader here already asks. Measured over
+     797 records: no HERO prints the shape, so it is latent and drilled
+     with a synthetic — and the first draft without it handed a hero
+     record a self-destroying cost where the old reader had refused. */
+  if(destM && destM[1] && !allowDestroy) return null;
   if(destM){
     const eff2 = classifyClause(m[4]);
     if(!eff2 || eff2.status !== "run" || eff2.cond || eff2.onHit) return null;
     const after2 = t.slice(m.index + m[0].length);
-    return {cost: 0, ga: /^\.?\s*go again/i.test(after2), sd: false, kind,
-            destroyBoard: destM[1].trim(), eff: m[4].trim(),
-            label: (m[1] ? "once/turn: " : "") + "destroy a " + destM[1].trim()
+    return {cost: 0, ga: /^\.?\s*go again/i.test(after2), sd: !!destM[1], kind,
+            destroyBoard: destM[2].trim(), eff: m[4].trim(),
+            label: (m[1] ? "once/turn: " : "") + "destroy "
+                 + (destM[1] ? "this and " : "") + "a " + destM[2].trim()
                  + ": " + m[4].trim()};
   }
   /* TURNING THE SOURCE FACE-UP IS THE FOURTH NAMED COST (v3.99), beside
@@ -6896,6 +6956,26 @@ function parseHeroPower(tx, allowDestroy){
   }
   if(!sd && /(discard|banish|remove|destroy|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
   if(sd && /(discard|banish|remove|sacrifice|put |reveal|soul|life|\{h\})/i.test(costStr)) return null;
+  /* A SECOND DESTROY OBJECT THIS READER CANNOT NAME REFUSES THE WHOLE LINE
+     (v4.55) — READ WHOLE OR REFUSE (v2.29).
+
+     `sd` two guards up is a LOOSE test for the word "destroy" anywhere in
+     the cost, which is what let the Robe's "Destroy this AND A RUNECHANT
+     YOU CONTROL" fall through here and read as a bare `destroy this`:
+     the piece shattered, the Runechant stayed, and the second half of a
+     printed cost was simply free. The `destM` branch above reads that
+     shape in full now — and anything of the shape it CANNOT read must
+     not be handed to the loose reader instead, because half a cost paid
+     is the free-ability bug v2.04 fixed, one object over.
+
+     LATENT AND MEASURED: the pool prints 29 distinct activation costs and
+     exactly one names a second destroy object, which `destM` claims. So
+     this guard changes no pool record today and refuses the day one
+     arrives that `destM` cannot name — weaker than printed and VISIBLE
+     in the audit, which is the direction v2.29 chose for every cost this
+     reader will not guess at. A synthetic near-miss drills it, because
+     no real card can express the counterexample (v3.73). */
+  if(sd && /^destroy this and /i.test(costStr)) return null;
   const dm = costStr.match(/(\d+)/);
   const rsym = (costStr.match(/\{r\}/gi)||[]).length;
   /* A CHI PIP IS A RESOURCE PIP PLUS A RESTRICTION (v4.54). Enigma prints

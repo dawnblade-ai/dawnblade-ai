@@ -1,3 +1,123 @@
+## v4.55 — a cost paid half, and the census that found it
+
+> *"**Instant** - Destroy this **and a Runechant you control**: Prevent the
+> next 1 arcane damage that would be dealt to you this turn."*
+> — RUNEBLEED ROBE, Viserai's Chest
+
+**THE SECOND HALF OF A PRINTED COST WAS SILENTLY DROPPED, AND THE PROOF IS
+THAT IT PARSED BYTE-IDENTICALLY TO A CONTROL.** Handed only
+`Instant - Destroy this: Prevent the next 1 arcane damage…`, `parseHeroPower`
+answers the same `cost`, the same `sd`, the same `label` — so the ability was
+offered, resolved, shattered the piece, and left on the board the Runechant
+the card is printed to spend. **In the one hero whose whole engine IS
+Runechants**: each one kept is a point of arcane damage on his next swing
+that the card had already charged him for. Live, in Viserai's chest slot.
+
+**NO OTHER TOOL HERE COULD SEE IT.** The activation line is filed `noop` and
+that is correct — the powCard is its reader — so the card reads `tier: full`
+and coverage counts the text accounted for. And the one-sided fairness sweep
+models a PAYLOAD read too generously, never a **COST that was skipped**
+(v4.27's fusion, one verb over; v4.33's charge, one more).
+
+### `test/costcensus.test.js` — EVERY ATOM OF AN ACTIVATION COST
+
+`tools/ledger.js` censuses KEYWORDS, `tools/approx.js` the RULES MACHINE,
+`test/fxcensus.test.js` the parse's own fields, `test/condcensus.test.js` the
+conditions. **Nothing asked it of a COST** — and a cost is the half of an
+activated ability where being wrong is free value rather than a missing
+feature (v2.04).
+
+Measured: the pool prints **29 distinct activation costs over 104 records**.
+Each is split into ATOMS and each atom names the flag or the named reader
+that accounts for it — and **the Robe was the one ACCEPTED cost carrying an
+atom no flag named.**
+
+**IT IS DRIVEN, NOT A TABLE OF REGEXES AGAINST REGEXES** (v3.56). The
+assertion is that the engine's real parse carries the flag, so the census is
+green against a pattern and red against an engine. **Verified by pointing it
+at the pre-fix parser**: it goes RED naming the card, the cost, the atom and
+the missing flag. Neutering the driven half instead costs exactly one
+failure of the eight, which is what says the DRIVE is carrying it.
+
+**BOTH DIRECTIONS ARE PINNED** (v4.12, v4.17): the nine readers the pool
+reaches AND the four printed atoms this reader refuses. A reader with no
+claimant is dead rules code that reads like a rule (v4.11, v4.50, v4.52) —
+and the drill's own first draft carried two such rows, for a counted soul
+banish and the Gun's steam counter, both already described by a general
+sibling. The pin failing is what found them.
+
+### THE WHOLE BUILD WAS THE PARSER
+
+`equipPiece` has stamped `_destroyBoard` **since v3.86**, as a latent guard
+whose own comment says *"no pool EQUIPMENT prints this cost today"* — the
+measurement this version moves. `judge.abCostWhy` and the trainer's
+`tryPlay` both refuse a cost naming a permanent the seat does not control,
+and `execute` destroys it into the **turn-stamped** graveyard through
+`payLeave`. **Before building machinery for a shape, check whether the
+machinery is the shape you already have** (v3.58, v3.73).
+
+**IT IS AN OPTIONAL MIDDLE, NOT A SECOND READER** — v3.79's Radiant Touch
+(*"Banish **this and** a card from your soul"*) one cost verb over, and
+v4.14's Carrion Crown comma-joined.
+
+**AND `/i` IS NOT THE FIX.** The same printed verb arrives in two cases:
+Gravy Bones' follows a pip (*"{t}, destroy a Gold…"*) and is lowercase; the
+Robe's OPENS the cost, so the printing capitalises it. An `/i` flag reads
+both — **and takes the `[A-Z]` on the NAME down with it**, claiming
+*"destroy a card you control"* for a reader that would then hunt a permanent
+called "card". The case-sensitivity three tokens later is v3.53's guard and
+is what the flag would delete, so the one letter that legitimately varies is
+spelled `[Dd]` instead. **Found by driving it**: the first draft of the
+widening came back byte-identical to the old answer, because the Robe never
+reached the branch at all.
+
+**READ WHOLE OR REFUSE** (v2.29). `sd` is a LOOSE test for the word
+"destroy" anywhere in the cost, which is exactly what let the Robe fall
+through to the generic reader and pay half its price — so a
+`destroy this and <something this reader cannot name>` now refuses the whole
+line rather than reading as a bare `destroy this` at a discount. Latent and
+measured; drilled with a synthetic (v3.73) **and with its positive control**,
+because a guard that refuses everything passes the four negative rows
+perfectly (v3.98).
+
+**AND `allowDestroy` OWED THIS BRANCH ITS SIBLING** (v3.43: a guard belongs
+to the SHAPE, not to the version that wrote it). v4.14's gate exists because
+the HERO builder passes false and a hero destroying "this" destroys the hero;
+this branch never had to ask while it always answered `sd: false`, and the
+moment it can answer TRUE it inherits the question. **The first draft without
+it handed a hero record a self-destroying cost where the old reader had
+refused outright** — caught by measuring the blast radius at both
+`allowDestroy` values rather than one.
+
+### Measured
+
+- **exactly 1 pool record's parse moves, 0 tiers move** (394 / 11 / 0
+  unchanged — v4.18's point: the card was already `full`), so the coverage
+  floor needs no repin and the audit diff is one timestamp line.
+- **Gravy Bones' cost is byte-identical** and pinned as the control.
+- **the ladder is BYTE-IDENTICAL at three seeds on both sides**, run rather
+  than reasoned about (v4.43) — and that is about the LOADOUT: `defaultPicks`
+  ranks a chest by printed defence and takes Beckoning Haunt (2) over the
+  Robe (0), so a driven game never wears it. v4.43's Hood, v4.49's Gun,
+  v4.52's Silent Stilettos — **fourth outing**. No route counter is added
+  for that reason: a number that can only read 0 because of the loadout is a
+  number about the loadout (v4.24, v4.29, v4.41, v4.52). The premise is a
+  drill, and the accept path is driven end to end plus a scene.
+- **`npm run scenes viserai` 2/2 → 3/3**, and the new scene FAILS against
+  the pre-fix engine on the game fact itself — *"none survives to pop on the
+  next swing: 1 (want 0)"*.
+- fairness CLEAN, sweep UNFAIR **0**, `crindex --check` 0.
+- **16 sabotages, 16 bite.** One came back silent on the first pass and it
+  was my own drill: the trainer scan pinned the bare identifier, so
+  `if(… && false)` passed it — v4.00's defect verbatim and v4.54's lesson one
+  cost over. **The whole conditional is pinned now**, opening paren included,
+  comments stripped with the stripper's control routed through the scan
+  (v4.27, v4.32). A second needed a two-part sabotage, because a census with
+  no faults cannot express a weakened check on its own (v3.62) — neutering
+  the drive against the PRE-FIX parser is what shows the drive carrying it.
+- and a drill named `INV` without requiring it, which only DRIVING found
+  (v4.09, again).
+
 ## v4.54 — CHI: A RESOURCE THAT PAYS FOR MORE THAN A RESOURCE, AND THE LAST UNREAD HERO CLAUSE
 
 > **Once per Turn Instant - {c}{c}{c}: Create a Spectral Shield token with
