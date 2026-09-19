@@ -207,7 +207,7 @@ Only rules cited in code. A rules revision is a lookup here, not an archaeology 
 *drills:* test/invariants.test.js:160, test/invariants.test.js:164, test/priority.test.js:347
 
 **CR 7.2** — engine/effects.js:4131, engine/parser.js:119, engine/parser.js:898, engine/priority.js:223  
-*drills:* test/decksearch.test.js:133, test/decksearch.test.js:294, test/onatk.test.js:2, test/onatk.test.js:19, test/priority.test.js:151
+*drills:* test/decksearch.test.js:133, test/decksearch.test.js:324, test/onatk.test.js:2, test/onatk.test.js:19, test/priority.test.js:151
 
 **CR 7.7.1** — engine/actions.js:196, engine/invariants.js:207, engine/invariants.js:212, engine/judge.js:1659, engine/priority.js:25, engine/priority.js:93, engine/priority.js:249, engine/priority.js:428  
 *drills:* test/actions.test.js:170, test/priority.test.js:173, test/priority.test.js:349, test/priority.test.js:364

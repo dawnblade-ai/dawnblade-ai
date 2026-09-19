@@ -248,6 +248,36 @@ test("DRIVEN: taking one moves it to HAND, shuffles, and draws nothing", {skip},
   P.fxReset();
 });
 
+test("the route counter's regex and the engine's phrase are pinned TOGETHER", {skip}, () => {
+  /* A COUNTER THAT SPELLS THE WRONG WORD REPORTS ZERO EXACTLY AS A MISSING
+     FEATURE DOES (v3.81), and pinning the route SET in `test/tourney.test.js`
+     cannot see it — that census asks which KINDS exist, never whether the
+     regex still matches anything the engine prints. Measured: rewriting this
+     counter's pattern to a word `effects.js` does not say came back SILENT
+     across the whole suite, which is the gap this drill closes.
+
+     The regex is taken OUT OF `selfplay.js` and applied to a line this drill
+     DROVE, so a rewording of either side fails rather than zeroing a count —
+     `test/hood.test.js`'s shape, one route over. */
+  const src = fs.readFileSync(path.join(ROOT, "tools", "selfplay.js"), "utf8");
+  const rx = src.match(/if\((\/[^/]+\/)\.test\(line\)\) events\.push\(\["search"/);
+  assert.ok(rx, "the search counter is gone from selfplay.js");
+  const {game} = openSheet();
+  const took = R(R(game, {t: "promptSel", i: 0}, 0), {t: "promptConfirm"}, 0);
+  const pat = new RegExp(rx[1].slice(1, -1));
+  const line = feed(took).split(" | ").find(l => pat.test(l));
+  assert.ok(line, "the counter's own regex matches no line the engine printed");
+  assert.match(line, /deck is shuffled/);
+  /* AND IT COUNTS THE DECLINE TOO, which is the whole reason the counter
+     spells the SHUFFLE rather than the pick (v4.58). A counter on the pick
+     would report only the accepts and read as a route half-built. */
+  const {game: g2} = openSheet();
+  const declined = R(g2, {t: "promptConfirm"}, 0);
+  assert.ok(feed(declined).split(" | ").some(l => pat.test(l)),
+    "the counter misses the decline, so its number is about the ACCEPTS");
+  P.fxReset();
+});
+
 test("DRIVEN: DECLINING still shuffles — the distinction from `shuffleDraw`", {skip}, () => {
   /* THIS IS THE ROW THAT BITES. `shuffleDraw` is gated on `picked.length`,
      and `applyPrompt`'s decline path returns BEFORE it sets `picked` — so a
