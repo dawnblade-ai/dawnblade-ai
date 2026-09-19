@@ -68,6 +68,35 @@ test("the printed line reads, and the NAME keeps its capitalisation", () => {
   P.fxReset();
 });
 
+test("an UNREADABLE subject refuses, and a bare `card` is the whole zone", () => {
+  /* AN EMPTY FILTER OVER A DECK CLAIMS EVERY CARD IN IT — v3.53's sev-3
+     (an unknown key that falls through admits every card), and here the
+     zone is HIDDEN and ORDERED, so it is a free look at the whole library.
+     `pickSubject` answers `{}` for a bare "card" ON PURPOSE (v3.53: the
+     subject genuinely IS any card in that zone) and `null` for a subject
+     it cannot read, so BOTH answers are pinned — the guard's whole job is
+     to tell those two apart, and `pickSubject(...) || {}` collapses them.
+
+     SYNTHETIC, because no pool record prints an unreadable search subject
+     (v3.73): the pool's two searches are "a Phoenix Flame" and Trap-Door's
+     bare "a card", and Trap-Door's DISPOSITION refuses before the subject
+     is ever reached. So nothing real can express this and the sabotage for
+     it came back SILENT until this drill existed. */
+  const mk = sub => P.classifyClause("you may search your deck for " + sub
+    + ", reveal it, put it into your hand, then shuffle");
+  assert.equal(P.pickSubject("a Draconic card"), null,
+    "fixture: this subject must be one `pickSubject` cannot read");
+  assert.equal(mk("a Draconic card"), null,
+    "an unreadable subject must refuse the whole clause (v2.29) — read as an empty "
+    + "filter it offers the ENTIRE deck, face up, and the controller keeps the order");
+  assert.deepEqual(P.pickSubject("a card"), {},
+    "fixture: a bare `card` is a FAITHFUL empty filter for a zone pick (v3.53)");
+  const any = mk("a card");
+  assert.ok(any && any.ops[0][0] === "pickPrompt",
+    "…so a search naming no restriction still reads, as the whole zone");
+  assert.deepEqual(any.ops[0][1].filter, {});
+});
+
 test("the OPTIONAL sheet's title tells the player they may decline", () => {
   /* IN A TRAINING SIM THE FEED IS THE LESSON (v3.60), and the sheet's title
      is where a player learns whether a choice is theirs. `min: 0` is what
