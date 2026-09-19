@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.56
+**Current version:** v4.57
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2888 drills** at v4.56.
+This is `node --test "test/*.test.js"` — **2911 drills** at v4.57.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -282,6 +282,11 @@ drill that passed.**
    the gap is closed, which is v3.41's rule as a test rather than as prose.
    `test/crindex.test.js` pins the CR index's verdict SETS and runs
    `--check`, which could never be green before v4.02.
+6e. **Source-slice widths** (`test/slicecensus.test.js`) — every drill that
+   reads a function out of a source file, with its width and its file pinned.
+   A slice that widens has started reading its neighbours; v4.57 found two,
+   one of which was asserting about a different function than the one the
+   drill names. See "EVERY SOURCE SLICE A DRILL TAKES".
 7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -845,6 +850,149 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE SECOND WALL, AND A PAYMENT NOBODY COULD AFFORD (v4.57)
+
+**THE TRAINER RAISES TWO WALLS AND ONLY ONE REACHED A SHARED `defends` BODY.**
+When the player ATTACKS, `resolvePlay` calls `afterDefenders` and gets all four
+*"when this defends"* families. When the player BLOCKS — most of the game —
+`takeIt` called `resolveClash` and its own hand-rolled `payCost` scan and
+**nothing else**, so Crash and Bash's `optCost` (3 records) and Washed Up
+Wave's `millCost` (1) were never offered on the wall the player raises.
+v3.01's shape with the boards swapped; v4.53 recorded it `open` with a driven
+probe, **and that probe went RED the moment the body landed** (v4.02).
+
+**IT COULD NOT SIMPLY CALL `afterDefenders`, AND THE RECORD DID NOT DRAW THAT
+DISTINCTION.** That function opens `if(!card) return n;` and the block path has
+no attacking card — `foeSwing` fabricates the swing as the `[3,4,5]`
+escalation — so the call would have returned immediately, done nothing, and
+**looked exactly like a fix** (v3.50, sixth outing). What needs the card is
+PHANTASM alone; the four families are about the DEFENDERS. So it is an
+EXTRACTION: `effects.defendsTriggers` is the one body and `afterDefenders` is
+one of its two callers. **Before deciding a shared body is the answer, read its
+first line** — a guard written for its own caller's needs is what makes a call
+a no-op.
+
+**THE SEAT IS THE CALLER'S ANSWER, EXACTLY AS THE WALL IS** — `1 - actorOf` on
+the attacker's path, `actorOf` on the block path, where the player defends AND
+acts. A derived seat is right on one wall and wrong on the other
+(`tapFoeHero`'s inversion, v3.48).
+
+**AND THE PAUSE GENERALISED RATHER THAN GROWING.** `finishBlock` totals the
+wall and strikes on the next line, and both `millCost` and `payCost` pay out a
+`defBuff`, so a queued sheet must be answered BEFORE the total. `_wallPending`
+rides into `openPrompt` — the one place that knows the queue is empty — and the
+marker is **deleted before** `finishBlock` is called, or a resume inside a
+resume re-enters it. That retires `defpay`'s entire private copy of the same
+control flow: a mode, a queue, an action-bar branch, a statusline and a peek
+chip, for one family. 922 bytes of `index.html` left.
+
+**AND IT CLOSED A SECOND DEFECT THE RECORD NEVER NAMED.** `confirmDefPay` paid
+from FLOATING resources only, and **CR 4.4.3e takes every floating resource
+from BOTH seats at every end phase** — so on the opponent's turn, the only turn
+this wall is raised on, the player held **0** and the Pay button was disabled.
+Brothers in Arms' printed +2{d}, built at v4.53 *for this exact wall*, was
+unreachable unless the player had overpaid for an instant in the same window.
+The shared sheet pitches on demand (RULING 2026-08-01), which is what the
+DUMMY's wall has always done with the identical card. **When you retire a
+bespoke copy of a shared mechanism, diff what the copy could not do** — the
+record named the control flow and missed the arithmetic.
+
+**NO TOOL HERE COULD SEE ANY OF IT.** All four records read `tier: full`; a
+defender worth less than printed and a printed line of play never offered are
+both the direction the one-sided sweep is built not to look in; and `npm run
+play` drives `judge.reduce`, so **no ladder number can speak about a trainer
+wall at all.** Hence the route is DRIVEN and **no route counter is added** — a
+counter that cannot see its own event is v4.46's defect (v4.24, v4.41, v4.52).
+
+**`applyDefMod` LEFT THE CLOSURE'S EXPORTS AND `defBuffOf`'s TRAINER CALLERS
+WENT 4 → 2.** Both are departures rather than drops: the `defpay` cycle and its
+sheet's own label are gone, so two hand-rolled readers left, not two askers.
+A name leaving a census is as deliberate an edit as one arriving (v4.12), and
+both counts are pinned.
+
+**FIVE PINS MOVED AND EACH WAS READ FIRST.** A pin edited without being read is
+a guard switched off. Two anchored the family scan at `afterDefenders`, which
+was only ever HALF the claim — v4.53 had already measured the second wall — and
+both now anchor at `defendsTriggers` and assert BOTH callers, bounded at the
+next declaration (v4.05). `test/clash.test.js` was **widened rather than
+relaxed**: the block path must call the shared body, must NOT reach past it to
+the clash half alone, and the body must run the clash on the caller's seat
+BEFORE the sheets, because a clash moves a defender's value. And
+`test/actor.test.js` lost `confirmDefPay`'s anchor with a recorded reason —
+**an anchor naming a deleted function keeps reporting green** (v2.53).
+
+Measured: **no pool record's parse or tier moves** (395 / 10 / 0 — no reader
+changed, so no floor repin and the audit diff is one timestamp line, v4.18);
+**the ladder is FULLY BYTE-IDENTICAL at three seeds on both sides**, run rather
+than reasoned about (v4.43), and that result is narrow on purpose — the ladder
+can only see the EXTRACTION, never the new wall.
+
+### A DRILL THAT WAS READING THE DOCUMENTATION, FOUND BY AN `APP_VER` COMMENT (v4.57)
+
+`test/priority.test.js` pins CR 4.4.3d's untap to the end phase by slicing
+`index.html` **between the rule numbers**. v4.57's own `APP_VER` comment cited
+`CR 4.4.3e`, 3,400 lines above the end phase, so the slice's END moved above
+its START and the drill went red. v4.27's defect in the one line that ships to
+every player — and the answer is this project's own: **reword the prose, never
+weaken the scan.**
+
+**BUT IT HAD BEEN READING PROSE ALL ALONG AND PASSING BY COINCIDENCE.** Three
+comments cite `CR 4.4.3d`, the first **394 lines above the step marker**, so
+`indexOf` had never once found the step. **The slice was 24,952 characters
+where the step is 1,680** — fifteen times the code it meant to read — and the
+one `weaponUsed = {}` in that range was the right one by accident. A bound too
+wide reads exactly like a drill that passes (v4.05).
+
+**THE FALSELY-GREEN DIRECTION IS THE DANGEROUS ONE, AND IT IS DEMONSTRATED
+RATHER THAN ARGUED.** Delete the untap from step (d), plant `weaponUsed = {}`
+in a comment 370 lines up, and the old anchor answers **TRUE**: the drill
+passes with a CR rule's site gone. Its two siblings in the same file already
+spelled the `" —"` the step markers carry; this one did not.
+
+**AND THE FIRST DECOY COULD NOT EXPRESS THE BUG** (v3.62) — planted *before*
+the first citation it fell outside the slice, both anchors read `false`, and
+that reads exactly like a tightening that buys nothing. **A decoy has to sit
+AFTER the anchor it is fooling.**
+
+### `test/slicecensus.test.js` — EVERY SOURCE SLICE A DRILL TAKES (v4.57)
+
+v4.21's rule: when you fix two members of a family, census the family. Both of
+v4.57's drill findings are **a source slice whose anchors did not bound the body
+the drill names**, so the census measures every one.
+
+**WIDTH IS MEASURABLE WITHOUT KNOWING INTENT, AND INTENT IS NOT.** A comment is
+a legitimate anchor — the end-phase step markers are comments *by design* — so a
+check that flagged every comment anchor would sit red on every ship, which is how
+`UNFAIR` came to read 1 for nineteen versions. **18 slices; the widths AND the
+file distribution are pinned as data**, so one growing, or one changing which
+file it reads, is a deliberate edit.
+
+**ITS REACH IS STATED, BECAUSE A SCAN'S BLIND SPOT IS PART OF ITS CLAIM.** It
+sees one shape — two quoted `indexOf` anchors on the same holder — so it is
+blind to the SAFER form (bounding at the next same-indent declaration with a
+`search`, which the two corrected slices now use) and to a fixed-width window,
+which fails in the OPPOSITE direction (v4.05: too narrow INVENTS findings). Both
+blind spots are pinned by the pattern's own control.
+
+**AND THE INSTRUMENT HAD EVERY FAULT IT WAS BUILT TO FIND**, which is the whole
+argument for sabotaging a new instrument before trusting it:
+
+| fault | shape |
+|---|---|
+| reported a slice of `judge.js` no drill takes | pairing each literal against every file where both anchors happen to exist — **v4.00's false POSITIVE, in the instrument for it.** The holder's own assignment decides now |
+| found ITSELF | its header spelled the pattern with quoted anchors — v4.27, v4.32, **third time in one version** |
+| stripping comments to fix that ate a legitimate ANCHOR | `phasebar.test.js` bounds on a literal that IS a block-comment divider — `html-balance.test.js`'s pre-neutralize list, exactly. **Reword the prose, never weaken the scan** |
+| writing that divider into the note **closed the note early** | the orphaned-terminator bug that shipped in v2.27 and broke the whole page — inside a comment about stripping comments |
+
+**AND THREE MORE FAULTS WERE MINE.** Its control asserted the pattern REJECTS a
+fixed-width window; measured, the pattern matches it and `ib <= ia` drops it, so
+what is pinned is **which guard does the excluding**. The holder resolver had no
+drill until a sabotage forced every holder to one file and came back **SILENT** —
+the single non-`index.html` row simply dropped out and the count stayed above the
+alive-check's floor, because **a census that loses a row reads exactly like one
+with nothing to report** (v3.81, v4.07). And a `resolveClash` anchor was written
+from the signature I remembered rather than the one in the file (v4.09).
 
 ### A GRANT FOUR WORDS OUT OF REACH (v4.56)
 

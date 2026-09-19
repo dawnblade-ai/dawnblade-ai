@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.56"; /* v4.56 - A CLAUSE REFUSED ON FOUR WORDS OF WORD ORDER. The approximation ledger named the blocker for V of the Vanguard as a missing charged-this-way COUNT, and the standing attack grant has had a reader since v3.87 whose own comment names the card: what refused was that the anchor demanded the window at the END of the clause and this record prints it in the MIDDLE. See CHANGELOG.md. */
+window.APP_VER = "4.57"; /* v4.57 - THE WALL THE PLAYER RAISES. The trainer has two walls and only the attacker's path reached a shared "when this defends" body, so two printed lines of play were never offered on the wall the player raises - and the one family that was reached could only be paid out of floating resources, which the end-phase fizzle makes 0 on exactly that turn. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2968,7 +2968,24 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      resources have not migrated onto sides[] yet. */
   function openPrompt(s){
     const q = s.promptQ || [];
-    if(!q.length) return {...s, prompt:null, promptQ:[]};
+    if(!q.length){
+      const done = {...s, prompt:null, promptQ:[]};
+      /* A HELD WALL RESUMES HERE (v4.57). `takeIt` raises a sheet off the
+         declared defenders and must not total the wall until it is answered,
+         because two of the four "when this defends" families pay out a
+         `defBuff` — so `finishBlock` runs when the LAST sheet drains, which
+         is the one moment this function knows about and the caller does not.
+         It replaces the bespoke `mode: "defpay"` pause: one family's private
+         copy of this control flow, which is why the other three never got it.
+
+         THE MARKER IS DELETED BEFORE THE CALL, so a prompt queued by
+         `finishBlock` itself cannot re-enter it. */
+      if(done._wallPending){
+        const o = {...done}; delete o._wallPending;
+        return finishBlock(o);
+      }
+      return done;
+    }
     const [p, ...rest] = q;
     /* `avail` USED TO BE PATCHED IN HERE as `you(s).res` — seat 0's
        floating resources, whoever the sheet was addressed to, and without
@@ -3696,7 +3713,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(pick) tryPlay(pick.card, pick.from, pick.idx, half);
   };
   const tryPlay = (card,from,idx,half) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="defpay"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3989,7 +4006,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      adds only the trainer's own busy-modes, which are not a rule about
      the ability: a sheet is open, so nothing else may start. */
   const handAbilityOK = (s, c) => {
-    if(["pay","arsenal","boostpick","fusepick","chargepick","defpay"].indexOf(s.mode) >= 0) return false;
+    if(["pay","arsenal","boostpick","fusepick","chargepick"].indexOf(s.mode) >= 0) return false;
     return DawnEffects.handAbilityOK(s, c);
   };
   /* THE PAYMENT, THE OPS **AND** THE DEFENCE BUFF ARE ALL SHARED (v4.53).
@@ -4001,7 +4018,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      judge refuse Rally the Coast Guard by name. `activateHandAbility`
      lands it now, so there is nothing here to route. */
   const activateHand = c => setG(s=>{
-    if(["pay","arsenal","boostpick","fusepick","chargepick","defpay"].indexOf(s.mode) >= 0) return s;
+    if(["pay","arsenal","boostpick","fusepick","chargepick"].indexOf(s.mode) >= 0) return s;
     const r = _EFX.activateHandAbility(s, c);
     if(r.why) return L(s, r.why + ".");
     return winCheck(openPrompt(r.game));
@@ -4487,7 +4504,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return newTurn(n);
   }
   const toggleBlock = (kind,v) => setG(s=>{
-    if(s.mode!=="block" || s.bphase!=="defend") return s;
+    /* `s.prompt` — see `takeIt`: while a sheet raised off this wall is live
+       the wall is final (v4.57). */
+    if(s.mode!=="block" || s.bphase!=="defend" || s.prompt) return s;
     if(kind==="h"){
       const c = you(s).hand.find(x=>x.uid===v);
       if(!c || c.def==null) return s;
@@ -4602,57 +4621,52 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     return foeStep(n);
   };
   const takeIt = () => setG(s=>{
-    if(s.mode!=="block") return s;
+    /* WHILE A SHEET IS LIVE THE WALL IS FINAL (v4.57). The pause below keeps
+       `mode: "block"` — there is no third `bphase` value and inventing one
+       for a UI pause would widen a two-value vocabulary — so without this
+       guard a second tap would re-scan the wall and queue every sheet again.
+       `judge.legal` already enforces exactly this at the table: a live
+       prompt freezes the game for both seats. `toggleBlock` is the other
+       block-phase action and asks it too, because `afterDefenders`'s own
+       comment is what the guard is protecting — "this is the moment the wall
+       is FINAL", so a defender must not be withdrawn after a sheet was built
+       from it. */
+    if(s.mode!=="block" || s.prompt) return s;
     const bcards = act(s).blockH.map(u=>act(s).hand.find(x=>x.uid===u)).filter(Boolean);
-    /* CLASH RESOLVES ON DEFENCE, AND IT IS `effects.resolveClash` NOW
-       (v3.94). Every clash card reads "When this defends, clash with the
-       attacking hero" — it fires when the card blocks, not when it is
-       played as an attack, which is where it used to live.
+    /* EVERY "WHEN THIS DEFENDS" TRIGGER, OUT OF THE ONE BODY (v4.57).
 
-       IT WAS 30 LINES HERE AND NOTHING AT THE TABLE. `judge.js` had one
-       mention of clash and it was a comment; seven pool cards print it and
-       all seven read `tier: full`. Three of the payoffs were inline
-       regexes over `.tx` — the token name, the defence bonus, the revealed
-       card's damage — which is v3.58's "a card special-cased" one mechanic
-       over. The parser reads them as `fx.clash` / `fx.clashReveal`.
+       This used to be `resolveClash` plus a hand-rolled `payCost` scan, and
+       nothing else — so of the four families that fire on a declared
+       defender, this wall reached TWO. Crash and Bash's `optCost` (3
+       records, Bravo's Guardian Block) and Washed Up Wave's `millCost` (1,
+       Gravy Bones' Arms) were offered on the wall the DUMMY raises and
+       never on the wall the PLAYER raises — which in the trainer is most of
+       the game. `effects.defendsTriggers` is the body; see its header for
+       why `afterDefenders` itself could not be called here.
 
-       THE DEFENCE BONUS IS NO LONGER A LOCAL. It rides as a `defMod`
-       keyed by uid (v3.89), so `defendValue` picks it up on both walls and
-       `finishBlock` needs to be told nothing — and it carries the window
-       Stonewall Impasse prints ("until end of turn"), which a local could
-       not express at all.
+       THE SEAT IS `actorOf(s)`, NOT `1 - actorOf(s)`. On this path the
+       player is the defender AND the actor; on the attacker's path the
+       actor is the attacker. The body takes it rather than deriving it,
+       because a derivation is right on one wall and wrong on the other. */
+    const dt = _EFX.defendsTriggers(s, actorOf(s), bcards,
+      act(s).blockG.map(i=>act(s).gear[i]).filter(Boolean));
+    /* THE WALL IS HELD OPEN UNTIL THE ANSWER LANDS (v4.57), and that is the
+       whole reason this was recorded rather than half-built. `finishBlock`
+       totals the wall and strikes the damage SYNCHRONOUSLY on the next
+       line, and two of the four families move what a defender is worth —
+       Washed Up Wave's `millCost` and Brothers in Arms' `payCost` both pay
+       out a `defBuff`. So a sheet queued here must be answered BEFORE the
+       total is struck, or the +{d} the player just paid for is not in it.
 
-       ON THIS PATH THE PLAYER IS THE DEFENDER AND THE ACTOR, so the seat
-       handed in is `actorOf(s)`; on the attacker's path `afterDefenders`
-       hands in `1 - actorOf`. Which cards defend is the caller's answer
-       either way. */
-    let clashState = _EFX.resolveClash(s, actorOf(s),
-      [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])]);
-    s = clashState;
-    /* PAY-COST DEFENDERS (Brothers in Arms) — "when this defends, you may
-       pay {cost}. If you do, +N{d}" has to be decided BEFORE damage is
-       struck, which is exactly why it cannot be a queued prompt (those
-       only drain after resolution — the wall Charge/Fusion/Look Tuff hit
-       earlier this session). Unlike those, this one gets the real thing:
-       pause into mode "defpay", ask for each declared defender that has
-       the ability, then finishBlock() picks up exactly where the no-pause
-       path always has. */
-    const declared = [...bcards, ...act(s).blockG.map(i=>act(s).gear[i])].filter(Boolean);
-    const payable = declared
-      .map(c=>({c, px:fxParse(c).payCost}))
-      .filter(({px})=>px && px.trigger==="defends");
-    if(payable.length){
-      /* NOTHING IS CARRIED ANY MORE (v4.53). This used to seed the cycle
-         with `{...s.defBonus}`, because an activated ability could raise
-         a defender before this point (Rally the Coast Guard) and an empty
-         start silently discarded a cost the player had already paid. The
-         map is `defMod` now — held on the SIDE, not on a per-cycle game
-         key — so nothing can be dropped by forgetting to carry it, which
-         is what a second record of a fact always eventually costs. */
-      return {...s, mode:"defpay",
-        defPayQueue: payable.map(({c,px})=>({uid:c.uid, name:c.name, cost:px.cost, ops:px.ops}))};
-    }
-    return finishBlock(s);
+       `_wallPending` IS THE MARKER AND `openPrompt` IS THE ONE PLACE THAT
+       KNOWS THE QUEUE IS EMPTY, so the resume lives there. It replaces the
+       bespoke `mode: "defpay"` pause, which was one family's own copy of
+       this control flow — and the queue may drain to nothing on its own
+       (Crash and Bash with no crush card in hand builds no sheet at all),
+       which is why the marker rides INTO the drain rather than being
+       checked after it. */
+    if(!dt.queued) return finishBlock(dt.game);
+    return openPrompt({...dt.game, _wallPending: true});
   });
   /* THE ANSWER RE-ENTERS `playRx`, which is what keeps ONE description of
      what playing a reaction does. A second body that paid and pushed
@@ -4662,34 +4676,26 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     setG(s => { if(s.mode==="rxaddpay" && s.rxAdd){ idx = s.rxAdd.idx; return {...s, mode:"block", rxAdd:null}; } return s; });
     if(idx != null) playRx(idx, !!pay);
   };
-  /* THE +{d} LANDS THROUGH `applyDefMod` (v4.53) — the one per-defender
-     map, which `defendValue` already counts on both boards, in place of
-     the `defBonus` game key this board kept for itself. `defBuffOf` is
-     the one extractor, because `runOps` only LOGS a `defBuff`. */
-  const confirmDefPay = pay => setG(s=>{
-    if(s.mode!=="defpay" || !(s.defPayQueue||[]).length) return s;
-    const [cur, ...rest] = s.defPayQueue;
-    let n = {...s};
-    if(pay && act(n).res >= cur.cost){
-      const ps = actMut(n);
-      ps.res = ps.res - cur.cost;
-      const dbAdd = DawnEffects.defBuffOf(cur.ops);
-      const otherOps = cur.ops.filter(o=>o[0]!=="defBuff");
-      if(otherOps.length) n = runOps(n, otherOps, cur.name);
-      n = L(n, `${cur.name}: paid ${cur.cost}${dbAdd?` — +${dbAdd}{d}`:""}.`);
-      if(dbAdd){
-        const dc = DawnEffects.defenderByUid(act(n), cur.uid);
-        if(dc) n = _EFX.applyDefMod(n, actorOf(n), dc, dbAdd, cur.name);
-      }
-    } else if(pay){
-      n = L(n, `${cur.name}: not enough floating to pay ${cur.cost}.`);
-    } else {
-      n = L(n, `${cur.name}: declined.`);
-    }
-    n.defPayQueue = rest;
-    if(rest.length) return {...n, mode:"defpay"};
-    return finishBlock({...n, mode:"block"});
-  });
+  /* `confirmDefPay` IS GONE (v4.57), AND A SECOND DEFECT WENT WITH IT.
+
+     It was this board's own pause for ONE of the four "when this defends"
+     families — `mode: "defpay"`, a queue, an action bar, a statusline and a
+     peek chip, all for `payCost` — which is exactly why the other three
+     never reached the wall the player raises. The shared `promptQ` carries
+     all four now and `PromptSheet` renders them, so `takeIt` pauses once and
+     `openPrompt` resumes once.
+
+     AND IT COULD ONLY PAY OUT OF FLOATING. It guarded `act(n).res >= cost`
+     with no pitch, and CR 4.4.3e takes every floating resource from BOTH
+     seats at every end phase — so on the opponent's turn, which is the only
+     turn this wall is raised on, the player holds 0 and the Pay button was
+     disabled. Brothers in Arms' printed +2{d}, built at v4.53 for this exact
+     wall, was therefore unreachable unless the player happened to have
+     overpaid for an instant in the same window. The shared sheet pitches on
+     demand (`applyAnswer`'s `autoPitch`, RULING 2026-08-01) — which is what
+     the DUMMY's wall has always done with the identical card.
+     WEAKER than printed, so the one-sided fairness sweep cannot see it, and
+     `tier: full` throughout, so coverage cannot either. */
   function newTurn(s){
     const hEntry = s.chain.length ? [{turn:s.turn,links:s.chain},...(s.chainHist||[])].slice(0,8) : (s.chainHist||[]);
     /* THE STAND-IN REFILL IS GONE (v2.71), and its removal is the whole
@@ -4816,7 +4822,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   const armor = you(g).gear.map((gr,i)=>({gr,i})).filter(x=>!["1h","2h","off","qvr"].includes(slotOf(x.gr).z));
   const is2H = handGear[0] && slotOf(handGear[0].gr).z==="2h";
   const featured = (g.mode==="stack" && g.pend) ? {card:g.pend.card, chip:"ON THE STACK — "+g.pend.total} : (g.mode==="boostpick" && g.pending) ? {card:g.pending.card, chip:"BOOST? — banish the top card"} : (g.mode==="fusepick" && g.pending) ? {card:g.pending.card, chip:"FUSION? — reveal a "+g.pending.types.join("/")+" card"} : (g.mode==="chargepick" && g.pending) ? {card:g.pending.card, chip:"CHARGE? — a card from hand to your soul"} : (g.mode==="pay" && g.pending) ? {card:g.pending.card, chip:"PAYING — PITCH "+Math.max(0,effCost(g.pending.card, you(g), costCtx(g, 0))-you(g).res)+" MORE"}
-    : (g.mode==="defpay" && (g.defPayQueue||[]).length) ? {card:[...you(g).hand, ...you(g).gear].find(c=>c.uid===g.defPayQueue[0].uid), chip:"PAY "+g.defPayQueue[0].cost+"? — "+g.defPayQueue[0].name}
     : g.featured;
   const prevLinks = g.chain.slice(0,-1).reverse();
   const gearBtn = (gr,i,extra,st) => {
@@ -5127,10 +5132,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               {g.mode==="rxaddpay" && g.rxAdd && <div className="statusline">
                 <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
               </div>}
-              {g.mode==="defpay" && (g.defPayQueue||[]).length>0 && <div className="statusline">
-                <b>{g.defPayQueue[0].name}</b> is defending — pay <b>{g.defPayQueue[0].cost}</b> for +{DawnEffects.defBuffOf(g.defPayQueue[0].ops)}{"{d}"}? You have {you(g).res} floating.
-                {g.defPayQueue.length>1 && <span> ({g.defPayQueue.length-1} more waiting.)</span>}
-              </div>}
               {(()=>{ /* v2.07: the engine tracks all of this; the board never showed it */
                 const pips = [];
                 if(you(g).amp>0)       pips.push(["amp "+you(g).amp, "on"]);
@@ -5314,11 +5315,6 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
               Charge {c ? c.name : "card"}</button>;
           })}
           <button className="a" onClick={()=>confirmCharge(null)}>No charge</button>
-        </>) : g.mode==="defpay" ? (<>
-          <button className="a go" disabled={you(g).res < ((g.defPayQueue||[])[0]?.cost||0)} onClick={()=>confirmDefPay(true)}>
-            Pay {(g.defPayQueue||[])[0]?.cost||0}
-          </button>
-          <button className="a" onClick={()=>confirmDefPay(false)}>Decline</button>
         </>) : g.mode==="splitpick" ? (<>
           {(g.splitPick?.halves||[]).map((h,i)=>
             <button key={i} className="a go" onClick={()=>confirmSplit(i)}>{h.name}</button>)}

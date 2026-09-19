@@ -280,8 +280,14 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      which has had a reader since v3.87, when what refused was four words of
      printed word order. Asking the engine is what corrected it (v3.69,
      v4.09), which is the second record this project has closed that way. */
-  assert.equal(n("open"),    7, "open count moved");
-  assert.equal(n("closed"), 15, "closed count moved");
+  /* 7 -> 6 AT v4.57: `trainer-blocks-wall-no-defends-body` was BUILT, and
+     closing it closed a SECOND defect the record did not name — the pause it
+     replaced paid out of FLOATING resources only, which CR 4.4.3e makes 0 on
+     the one turn that wall is ever raised. So Brothers in Arms' +2{d}, built
+     at v4.53 for this exact wall, was unreachable there. Second cycle running
+     in which a record's own stated reason was narrower than the defect. */
+  assert.equal(n("open"),    6, "open count moved");
+  assert.equal(n("closed"), 16, "closed count moved");
 });
 
 /* ============================================================
@@ -353,11 +359,26 @@ probe("paycost-defends-at-the-table", () => {
   assert.equal(E.defendValue(n.sides[1], card, {}) - printed, 2,
     "and the +{d} reaches `defendValue`, which is the one reader both walls use");
 
-  /* AND THE TRAINER STILL HAS ITS OWN PAUSE. A claim about `index.html`'s
-     babel blocks, which no drill can execute, pinned precisely enough
-     that neutering it breaks this test. */
-  assert.match(HTML, /px\.trigger\s*===\s*"defends"/, "the trainer's declared-wall scan");
-  assert.match(HTML, /mode:\s*"defpay"/, "…and the pause it opens");
+  /* AND THE TRAINER'S OWN PAUSE IS GONE (v4.57). This used to assert the
+     opposite — that `index.html` kept its own `defends` scan and its own
+     `mode: "defpay"` — which was true and was the OTHER gap:
+     `trainer-blocks-wall-no-defends-body`, one wall over. Both walls call
+     `effects.defendsTriggers` now and both sheets are the shared one, so
+     the trainer has no private copy of either. See `test/defwall.test.js`. */
+  /* COMMENTS STRIPPED. Both of these read the RAW source in their first
+     draft and both PASSED-then-FAILED on prose: the note recording the
+     retirement names `mode: "defpay"` in as many words, so a raw scan
+     reports the pause still there. v4.27's own defect, inside this probe,
+     and the control is routed through the scan rather than sitting beside
+     it (v4.32). */
+  const bare = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*/gm, "");
+  const ctl = "/* " + "defpay" + " */";
+  assert.equal(bare("x " + ctl + " y").indexOf("defpay"), -1, "the stripper works");
+  const live = bare(HTML);
+  assert.ok(!/px\.trigger\s*===\s*"defends"/.test(live),
+    "no hand-rolled defends scan survives in the trainer");
+  assert.ok(!/mode:\s*"defpay"/.test(live),
+    "…and no private pause either — the queue carries all four families");
 
   /* THE DESTROY VERB IS STILL WITHHELD, AND ON PURPOSE. Measured: no pool
      record prints a `defends` payCost carrying `destroySelf`, and
@@ -373,8 +394,13 @@ probe("paycost-defends-at-the-table", () => {
    goes red the day `takeIt` reaches `afterDefenders`, which is what forces
    the record to be deleted rather than left to rot (v4.02). */
 probe("trainer-blocks-wall-no-defends-body", () => {
-  /* THE PREMISE, DRIVEN: two pool families emit a `defends` trigger that
-     is NOT the payCost the trainer's own scan handles. */
+  /* TURNED ROUND AT v4.57. It used to assert the DEVIATION — that `takeIt`
+     never reached `afterDefenders` — and it went RED the moment the site
+     landed, which is exactly what an `open` record's probe is for (v4.02).
+     `closed` now, so it asserts the thing is BUILT.
+
+     THE PREMISE STAYS DRIVEN: two pool families emit a `defends` trigger
+     that is NOT the payCost the trainer's old scan handled. */
   const pool = require("../data/pool.json");
   const arr = Array.isArray(pool) ? pool : (pool.cards || Object.values(pool));
   const orphan = new Set();
@@ -388,40 +414,39 @@ probe("trainer-blocks-wall-no-defends-body", () => {
   }
   PR.fxReset();
   assert.deepEqual([...orphan].sort(), ["Crash and Bash", "Washed Up Wave"],
-    "the two families the trainer's player-blocks wall cannot offer");
+    "the two families that could not reach the player-blocks wall");
 
-  /* THE DEVIATION. `takeIt` is the player-blocks path and it calls
-     `resolveClash` and its own payCost scan — and never `afterDefenders`,
-     which is the body that carries all three families. The ATTACKER path
-     (`resolvePlay`) does call it, so the scan is bounded to the block
-     handler or it reports the wrong one. */
-  /* BOUNDED AT THE NEXT SAME-INDENT DECLARATION, never by a byte count.
-     A bound too WIDE hides findings and one too NARROW invents them
-     (v4.05), and the first draft of this probe used `i + 6000` — which
-     swallowed `confirmDefPay` and everything after it and reported the
-     deviation closed. */
+  /* THE BUILD. Bounded at the next same-indent declaration, never by a byte
+     count — a bound too WIDE hides findings and one too NARROW invents them
+     (v4.05), and this probe's own first draft used `i + 6000`, which
+     swallowed `confirmDefPay` and reported the deviation closed. */
   const i = HTML.indexOf("const takeIt = () => setG");
   assert.ok(i > 0, "takeIt moved — re-anchor this probe");
-  const j = HTML.indexOf("\n  const confirmDefPay", i);
+  const j = HTML.indexOf("\n  const ", i + 10);
   assert.ok(j > i, "the next declaration moved — re-anchor this probe");
-  /* AND COMMENTS ARE STRIPPED, WITH THE CONTROL ROUTED THROUGH THE SCAN
-     (v4.27, v4.32). This body's own prose names `afterDefenders` — "on
-     the attacker's path `afterDefenders` hands in 1 - actorOf" — so a raw
-     scan reports the deviation closed on the strength of a sentence
-     describing the OTHER path. The control is built by concatenation,
-     because written as a literal it would appear in THIS file rather than
-     in the one being scanned. */
+  /* COMMENTS STRIPPED, WITH THE STRIPPER'S CONTROL ROUTED THROUGH THE SCAN
+     (v4.27, v4.32). This body's prose names the shared function, so a raw
+     scan would pass on the strength of a sentence rather than a call. The
+     control is built by CONCATENATION, because written as a literal it would
+     appear in THIS file rather than in the one being scanned. */
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/[^\n]*/gm, "");
-  const ctrl = "/* " + "afterDefenders" + " */";
-  assert.equal(strip("x " + ctrl + " y").indexOf("afterDefenders"), -1,
+  const ctrl = "/* " + "defendsTriggers" + " */";
+  assert.equal(strip("x " + ctrl + " y").indexOf("defendsTriggers"), -1,
     "the stripper works, proved through the scan rather than beside it");
   const body = strip(HTML.slice(i, j));
-  assert.match(body, /_EFX\.resolveClash\(/, "the scan is alive: it finds the clash call");
-  assert.match(body, /px\.trigger\s*===\s*"defends"/,
-    "…and the ONE family this path does handle, which is what makes the other two a gap");
-  assert.ok(!/afterDefenders/.test(body),
-    "takeIt now reaches the shared defends body — the trainer's block wall has all three " +
-    "families, so close this record");
+  assert.match(body, /_EFX\.defendsTriggers\(s, actorOf\(s\),/,
+    "the block wall calls the ONE body, naming its OWN seat as the defender");
+  assert.ok(!/trigger\s*===\s*"defends"/.test(body),
+    "and keeps no private scan — that copy is what made the other three families a gap");
+  /* AND THE PAUSE IS THE HALF THIS RECORD SAID WOULD COST A CONTROL-FLOW
+     CHANGE. It was right; the change is `_wallPending`, which generalises
+     `defpay`'s private pause to the whole queue. */
+  assert.match(body, /return openPrompt\(\{\.\.\.dt\.game, _wallPending: true\}\);/,
+    "a queued sheet holds the wall until it is answered");
+  /* AGAINST THE STRIPPED SOURCE, for the reason two lines of this file's own
+     prose demonstrate: the note recording the retirement names the function. */
+  assert.ok(!strip(HTML).includes("confirmDefPay"),
+    "…and the family-specific pause it replaces is gone");
 });
 
 probe("layer-step-window", () => {

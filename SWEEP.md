@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-18 from `tools/audit.json`.
+Generated 2026-09-19 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 11 cards | understood ≠ built |
-| **Fail states** | 41 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 10 cards | understood ≠ built |
+| **Fail states** | 40 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -46,7 +46,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Plasma Barrel Shot** (part, 1/4 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
-- **V of the Vanguard** (part, 1/3 unread)
 - **Walk in My Shoes** (part, 1/2 unread)
 - **Wreck Havoc** (part, 1/2 unread)
 
@@ -69,10 +68,10 @@ can be overruled. Same discipline as the mention count.
 | Unread, effect unknown | 4 |
 | Earned value denied | 3 |
 | Ability inert — cost not modelled | 3 |
-| Displayed total is wrong | 2 |
+| Displayed total is wrong | 1 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 11 entries
+### WRONG — 10 entries
 
 - **Flamecall Awakening** (1) · tier `part` · fai
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
@@ -105,9 +104,6 @@ can be overruled. Same discipline as the mention count.
 - **Uphold Tradition** · tier `full` · enigma
   - *Keyword filed as no-op, but it has meaning* — The parser records "Cloaked" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it only 2 time(s). Your ruling describes real behaviour: CLOAKED - EQUIPPED FACE DOWN - SHOW CARD BACK ON THE PLAYERS BOARD INSTANT ABILITY - ALWAYS ACTIVE - COST 1 RESOURCE - POP UP - SHOW AURAS IN PLAY - SELECT 1 - ADD A +1 ATTACK POWER COUNTER TO IT
     > Cloaked
-- **V of the Vanguard** (2) · tier `part` · boltyn
-  - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
-    > Your attacks this combat chain get +1{p} for each Light card charged this way.
 - **Briar** · tier `hero` · briar
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > Essence of Earth and Lightning

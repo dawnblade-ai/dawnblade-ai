@@ -735,7 +735,21 @@ test("end phase — the untap happens HERE, not in next turn's setup", () => {
   const nt = HTML.slice(HTML.indexOf("function newTurn"), HTML.indexOf("uE(()=>{ if(g.over"));
   assert.ok(!/weaponUsed\s*=\s*\{\}/.test(nt),
     "newTurn must no longer untap — CR 4.4.3d puts it in the end phase");
-  const et = HTML.slice(HTML.indexOf("CR 4.4.3d"), HTML.indexOf("CR 4.4.3e"));
+  /* ANCHORED ON THE STEP MARKER, NOT ON THE RULE NUMBER (v4.57). Written
+     with the bare number this slice was 24,952 characters — it started on
+     PROSE 394 lines above the step (three comments cite CR 4.4.3d) and ran
+     through fifteen times the code it meant to read, so the one
+     `weaponUsed = {}` it found was the right one by COINCIDENCE. A bound
+     too wide reads exactly like a drill that passes (v4.05), and the
+     falsely-GREEN direction is the dangerous one: any untap anywhere in
+     those 400 lines would have satisfied it. The two siblings above
+     already spell the `" —"` the markers carry; this one did not, and what
+     made it visible was v4.57's own APP_VER comment citing the rule
+     number, which moved the slice's END above its start and turned it red.
+     Reword the prose, tighten the scan (v4.27, v4.32). */
+  const et = HTML.slice(HTML.indexOf("CR 4.4.3d —"), HTML.indexOf("CR 4.4.3e —"));
+  assert.ok(et.length > 200 && et.length < 4000,
+    "the slice is the one step, not a run into its neighbours — it was 24,952 chars");
   assert.match(et, /weaponUsed\s*=\s*\{\}/, "and the end phase must actually do it");
 });
 
@@ -988,8 +1002,17 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
      asserting. (It could become a behavioural drill now that execute is
      callable; that is a bigger change than repointing it.) */
   const EFFECTS = require("./helpers/extract.js").effects();
-  const body = EFFECTS.slice(EFFECTS.indexOf("const execute = (s,card,from,idx,opts)"),
-                             EFFECTS.indexOf("\n  /* ============================================================\n     THE LINK RESOLVES"));
+  /* BOUNDED AT THE NEXT SAME-INDENT DECLARATION (v4.05, v4.57). Bounded at
+     the "THE LINK RESOLVES" divider instead, this slice was 3,317 lines
+     where `execute` is 2,236 — it swallowed SEVEN later bodies
+     (`autoPitch`, `activateHandAbility`, `applyAnswer`, `fileAttack`,
+     `resolveClash`, `defendsTriggers`, `afterDefenders`), which is v4.05's
+     defect verbatim and `applyAnswer` swallowed for the second time. */
+  const _i = EFFECTS.indexOf("const execute = (s,card,from,idx,opts)");
+  assert.ok(_i > 0, "execute moved — repoint this drill deliberately");
+  const body = EFFECTS.slice(_i, _i + EFFECTS.slice(_i).search(/\n  const autoPitch = /));
+  assert.ok(body.length > 50000 && body.length < 180000,
+    "the slice is `execute`, not a run into its neighbours — it was 200,831 chars");
   /* the arithmetic that runs for every non-attack resolution. CR 5.3.5 — go
      again GAINS an action point; it is not a refund. For an action that is
      spend-then-gain (the familiar "kept"); for an instant it is a genuine
@@ -1006,9 +1029,32 @@ test("action point — resolution charges an action, not an instant (CR 8.1.1)",
   + "rather than being folded into a ternary");
   assert.ok(!/ga \? act\(n\)\.ap : act\(n\)\.ap-1/.test(body),
     "the old ternary charged every non-attack, instants included");
-  /* the ONE bare -1 left in execute is the phantasm teardown, and it is an
-     ATTACK being popped: the point was spent on play and its go again never
-     resolves, so there is nothing to gain back. */
+  assert.ok(!/actMut\(n\)\.ap = act\(n\)\.ap - 1;/.test(body),
+    "and `execute` charges NOTHING bare — every point it settles goes through "
+  + "the composed line above, so a bare charge here is an instant paying like an action");
+});
+
+test("action point — the ONE bare charge is phantasm's, and it is in `afterDefenders`", () => {
+  /* THIS ASSERTION USED TO BE MADE ABOUT `execute`, AND IT WAS ABOUT A
+     DIFFERENT FUNCTION (v4.57). Its own comment read "the ONE bare -1 left
+     in execute is the phantasm teardown" — measured, `execute` contains no
+     bare charge at all, and neither the charge nor the phantasm test it is
+     ordered against is in it. Both live in `afterDefenders`, 1,015 lines
+     past where `execute` ends, and the drill reached them only because its
+     end anchor sat seven functions away.
+
+     THE CLAIM IS REAL AND IT IS MADE HERE NOW. A popped attack's point was
+     spent on PLAY and its go again never resolves, so there is nothing to
+     gain back — which is the one place a bare charge is right. And the
+     count is what carries it: bounded wide, a bare charge appearing in any
+     of those seven bodies turned this red for an unrelated reason, and one
+     DELETED here while another appeared there kept it green. */
+  const EFFECTS = require("./helpers/extract.js").effects();
+  const i = EFFECTS.indexOf("  const afterDefenders = (s, wall, gearWall) =>");
+  assert.ok(i > 0, "afterDefenders moved — repoint this drill deliberately");
+  const body = EFFECTS.slice(i, i + EFFECTS.slice(i).search(/\n  \/\* =+\n     THE LINK RESOLVES/));
+  assert.ok(body.length > 1000 && body.length < 12000,
+    "the slice is the one body, not a run into its neighbours");
   const bare = body.match(/actMut\(n\)\.ap = act\(n\)\.ap - 1;/g) || [];
   assert.equal(bare.length, 1, "only phantasm's attack teardown may charge bare");
   assert.ok(body.indexOf("hasKw(card,\"phantasm\")") < body.indexOf("actMut(n).ap = act(n).ap - 1;"),

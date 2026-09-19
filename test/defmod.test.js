@@ -76,15 +76,22 @@ test("exactly ONE site tests for the op kind", () => {
     "`defBuffOf` is it; a second test for the kind is a second copy of the filter");
   /* AND THE TRAINER ASKS IT RATHER THAN KEEPING ITS OWN. */
   const htm = strip(SRC("index.html"));
-  assert.match(htm, /DawnEffects\.defBuffOf\(/, "the trainer's defpay cycle asks the shared body");
+  assert.match(htm, /DawnEffects\.defBuffOf\(/, "the trainer's played-reaction paths ask the shared body");
   /* THE COMPLEMENT IS NOT A COPY. `filter(o => o[0] !== "defBuff")` is a
      different operation — "run everything else" — and every extraction
      needs one. What must not exist twice is the SUM. */
   assert.ok(!/o\[0\]==="defBuff"\)\.reduce/.test(htm.replace(/\s+/g, "")),
     "and hand-rolls no second copy of the SUM — there were six across two files");
-  assert.equal((htm.match(/DawnEffects\.defBuffOf\(/g) || []).length, 4,
-    "four callers: the two played-reaction paths, the defpay cycle, and the sheet's own label — " +
-    "a number on screen that differs from the number charged is the sev-2 category (v4.00)");
+  /* TWO CALLERS SINCE v4.57, AND THAT IS A DEPARTURE RATHER THAN A DROP.
+     It read FOUR: the two played-reaction paths, plus the `defpay` cycle
+     and that sheet's own label. `confirmDefPay` is gone — the trainer's
+     block wall queues into the SHARED `pay` sheet now, whose label and
+     whose payout are `prompts.js`' and `applyAnswer`'s — so the two that
+     left are two fewer hand-rolled readers, not two fewer askers. A name
+     leaving a census is as deliberate an edit as one arriving (v4.12). */
+  assert.equal((htm.match(/DawnEffects\.defBuffOf\(/g) || []).length, 2,
+    "two callers, both played-reaction paths — a number on screen that differs "
+    + "from the number charged is the sev-2 category (v4.00)");
 });
 
 /* ---- THE LOOKUP ------------------------------------------------------- */
@@ -238,11 +245,16 @@ test("the pool's `defends` families are exactly these, and each has a site", {sk
   assert.deepEqual(uniq(fam.millCost), ["Washed Up Wave"]);
   /* AND ALL THREE ARE SCANNED IN ONE LOOP. Pinning the readers alone
      cannot see a family leaving the list (v4.29), so the source half asks
-     for all three inside the body that receives the wall. */
+     for all three inside the body that receives the wall — which since
+     v4.57 is `defendsTriggers`, the one body BOTH walls call. Anchored
+     there rather than at `afterDefenders`: that function is now one of two
+     callers, and a scan of a caller cannot say the other one is covered. */
   const code = strip(SRC("engine/effects.js"));
-  const i = code.indexOf("const afterDefenders = (s, wall, gearWall) =>");
-  assert.ok(i > 0, "afterDefenders moved — re-anchor this drill");
-  const body = code.slice(i, code.indexOf("const linkPumps", i));
+  const i = code.indexOf("const defendsTriggers = (s, defSeat, wall, gearWall) =>");
+  assert.ok(i > 0, "defendsTriggers moved — re-anchor this drill");
+  const body = code.slice(i, code.indexOf("const afterDefenders", i));
+  assert.ok(body.length > 200 && body.length < 9000,
+    "the slice is the one body, not a run into its neighbour (v4.05)");
   for(const k of ["payCost", "optCost", "millCost"])
     assert.ok(new RegExp('dfx\\.' + k).test(body), k + " is scanned off the declared wall");
 });

@@ -5506,6 +5506,104 @@ function makeEffects(ctx){
     return {...n, actor: keepActor};
   };
 
+  /* ---- "WHEN THIS DEFENDS" IS ONE BODY, AND THE TRAINER HAD TWO WALLS
+     (v4.57) ------------------------------------------------------------
+
+     This was the tail of `afterDefenders`, which is the ATTACKER's path:
+     `execute` declares, the wall is raised against it, and that function
+     runs phantasm and then these triggers. The trainer has a SECOND wall —
+     when the PLAYER blocks, `takeIt` totals it — and that one reached
+     `resolveClash` and a hand-rolled `payCost` scan and nothing else, so
+     **Crash and Bash's `optCost` (3 records) and Washed Up Wave's
+     `millCost` (1) were never offered on the wall the player raises.**
+     v3.01's shape with the boards swapped, recorded as
+     `trainer-blocks-wall-no-defends-body` since v4.53.
+
+     IT COULD NOT SIMPLY CALL `afterDefenders`, and that is why the fix is
+     an extraction rather than a call. That function opens
+     `const card = d ? d.card : (n.pend && n.pend.card); if(!card) return n;`
+     — and on the trainer's block path there IS no attacking card, because
+     `foeSwing` fabricates the swing as the `[3,4,5]` escalation. So the
+     call would have returned immediately, doing nothing, and looked
+     exactly like a fix (v3.50). What needs the card is PHANTASM alone;
+     these triggers are about the DEFENDERS.
+
+     THE SEAT IS THE CALLER'S ANSWER, exactly as the wall is. On the
+     attacker's path the actor is the attacker, so the defender is
+     `1 - actorOf`; on the trainer's block path the player is the defender
+     AND the actor. A body that derived it would be right on one wall and
+     wrong on the other — `tapFoeHero`'s inversion (v3.48).
+
+     IT DOES NOT DRAIN. `openPrompt` is the caller's, because what happens
+     after the sheet differs: the attacker's path goes on to a reaction
+     window where nothing is totalled, and the block path has to hold the
+     wall open until the answer lands. See `_wallPending` in `index.html`. */
+  const defendsTriggers = (s, defSeat, wall, gearWall) => {
+    let n = {...s};
+    /* CLASH IS A "WHEN THIS DEFENDS" TRIGGER TOO, and it fires here for
+       the same reason the others do: this is the moment the wall is
+       FINAL. Before the prompts, because a clash creates a token and
+       moves a defender's value, and a sheet opened first would resolve
+       against a board the clash has not yet changed.
+
+       BOTH KINDS OF DEFENDER, hand and gear — Stonewall Impasse is
+       EQUIPMENT, and it is one of the four records v3.90 found that
+       neither board could reach. */
+    n = resolveClash(n, defSeat, [...(wall || []), ...(gearWall || [])]);
+    let queued = 0;
+    /* THE DECLARED EQUIPMENT IS A SECOND ARGUMENT, NOT A WIDER `wall`
+       (v3.90). The comment above pins `wall` as "the declared
+       NON-EQUIPMENT cards; phantasm reads no other kind", and that is a
+       CONTRACT — widening it to serve a new reader would change what
+       phantasm looks at, silently, for the sake of a card phantasm has
+       nothing to do with.
+
+       FOUR POOL RECORDS PRINT "when this defends" ON GEAR — the two
+       Unity pieces (answered at the wall by their own reader),
+       Stonewall Impasse and Washed Up Wave — and until now NEITHER
+       board reached any of them: judge's wall is built from the hand
+       alone and the trainer's site filters gear out. A trigger with no
+       caller looks exactly like a trigger that works (v3.50). */
+    for(const dc of [...(wall || []), ...(gearWall || [])]){
+      const dfx = fxParse(dc);
+      /* A MODAL OPTIONAL COST (v3.90) — Washed Up Wave. Its sibling
+         Jittery Bones prints the identical cost on the `attacks`
+         trigger; one reader, two sites, exactly as `optCost` keeps. */
+      if(dfx.millCost && dfx.millCost.trigger === "defends"){
+        n.promptQ = [...(n.promptQ||[]), millCostSpec(dfx.millCost, dc, defSeat)];
+        queued++;
+      }
+      /* AND THE PAY-COST FAMILY (v4.53) — Brothers in Arms, "when this
+         defends, you may pay {r}. If you do, it gets +2{d}", live in
+         Kayo's and Gravy Bones' lists at three pitches and scanned by
+         `index.html` ALONE since it was built. At the TABLE the sheet
+         was never shown and the card blocked for its printed 3 with a
+         printed line of play that did not exist there — v3.01's shape,
+         and v4.52 recorded it rather than half-building it.
+
+         IT IS NOT `offerPayCost`'s SHAPE and that is why it waited:
+         that body scans the GEAR and the ARENA for a WATCHER, and a
+         declared defender is in neither — it is a card in the wall,
+         which this function already receives. So the scan is here,
+         beside the two `defends` families that were already in it.
+
+         THE `defBuff` PAYLOAD RIDES AS `defUid`, because `runOps`
+         only LOGS one (`defBuffOf`'s header) and the number has to
+         reach what the card is WORTH at the wall, which is
+         `defendValue`'s `defMod` (v3.89, v3.90). */
+      if(dfx.payCost && dfx.payCost.trigger === "defends"){
+        n.promptQ = [...(n.promptQ||[]),
+          Object.assign(payCostSpec(dfx.payCost, dc, defSeat), {defUid: dc.uid})];
+        queued++;
+      }
+      const oc = dfx.optCost;
+      if(!oc || oc.trigger !== "defends") continue;
+      n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
+      queued++;
+    }
+    return {game: n, queued};
+  };
+
   const afterDefenders = (s, wall, gearWall) => {
     let n = {...s};
     const d = n._declared;
@@ -5593,74 +5691,14 @@ function makeEffects(ctx){
        their opponent's blocker — the self/foe pairing `selfPayOr` and
        `payOr` already keep apart. */
     {
-      const defSeat = 1 - actorOf(n);
-      /* CLASH IS A "WHEN THIS DEFENDS" TRIGGER TOO, and it fires here for
-         the same reason the others do: this is the moment the wall is
-         FINAL. Before the prompts, because a clash creates a token and
-         moves a defender's value, and a sheet opened first would resolve
-         against a board the clash has not yet changed.
-
-         BOTH KINDS OF DEFENDER, hand and gear — Stonewall Impasse is
-         EQUIPMENT, and it is one of the four records v3.90 found that
-         neither board could reach. */
-      n = resolveClash(n, defSeat, [...(wall || []), ...(gearWall || [])]);
-      let queued = 0;
-      /* THE DECLARED EQUIPMENT IS A SECOND ARGUMENT, NOT A WIDER `wall`
-         (v3.90). The comment above pins `wall` as "the declared
-         NON-EQUIPMENT cards; phantasm reads no other kind", and that is a
-         CONTRACT — widening it to serve a new reader would change what
-         phantasm looks at, silently, for the sake of a card phantasm has
-         nothing to do with.
-
-         FOUR POOL RECORDS PRINT "when this defends" ON GEAR — the two
-         Unity pieces (answered at the wall by their own reader),
-         Stonewall Impasse and Washed Up Wave — and until now NEITHER
-         board reached any of them: judge's wall is built from the hand
-         alone and the trainer's site filters gear out. A trigger with no
-         caller looks exactly like a trigger that works (v3.50). */
-      for(const dc of [...(wall || []), ...(gearWall || [])]){
-        const dfx = fxParse(dc);
-        /* A MODAL OPTIONAL COST (v3.90) — Washed Up Wave. Its sibling
-           Jittery Bones prints the identical cost on the `attacks`
-           trigger; one reader, two sites, exactly as `optCost` keeps. */
-        if(dfx.millCost && dfx.millCost.trigger === "defends"){
-          n.promptQ = [...(n.promptQ||[]), millCostSpec(dfx.millCost, dc, defSeat)];
-          queued++;
-        }
-        /* AND THE PAY-COST FAMILY (v4.53) — Brothers in Arms, "when this
-           defends, you may pay {r}. If you do, it gets +2{d}", live in
-           Kayo's and Gravy Bones' lists at three pitches and scanned by
-           `index.html` ALONE since it was built. At the TABLE the sheet
-           was never shown and the card blocked for its printed 3 with a
-           printed line of play that did not exist there — v3.01's shape,
-           and v4.52 recorded it rather than half-building it.
-
-           IT IS NOT `offerPayCost`'s SHAPE and that is why it waited:
-           that body scans the GEAR and the ARENA for a WATCHER, and a
-           declared defender is in neither — it is a card in the wall,
-           which this function already receives. So the scan is here,
-           beside the two `defends` families that were already in it.
-
-           THE `defBuff` PAYLOAD RIDES AS `defUid`, because `runOps`
-           only LOGS one (`defBuffOf`'s header) and the number has to
-           reach what the card is WORTH at the wall, which is
-           `defendValue`'s `defMod` (v3.89, v3.90). */
-        if(dfx.payCost && dfx.payCost.trigger === "defends"){
-          n.promptQ = [...(n.promptQ||[]),
-            Object.assign(payCostSpec(dfx.payCost, dc, defSeat), {defUid: dc.uid})];
-          queued++;
-        }
-        const oc = dfx.optCost;
-        if(!oc || oc.trigger !== "defends") continue;
-        n.promptQ = [...(n.promptQ||[]), optCostSpec(oc, dc, defSeat, false)];
-        queued++;
-      }
+      const r = defendsTriggers(n, 1 - actorOf(n), wall, gearWall);
+      n = r.game;
       /* DRAIN ONLY IF THIS FIRED. A blanket `openPrompt` here opens
          whatever else happened to be waiting in the queue, mid-combat, and
          a live sheet stops the game for both seats — three drills stalled
          at the damage step on cards that print no defends trigger at all.
          A prompt is drained by whoever queued it. */
-      if(queued) n = openPrompt(n);
+      if(r.queued) n = openPrompt(n);
     }
     return n;
   };
@@ -7043,18 +7081,19 @@ function makeEffects(ctx){
                   `${sp(act(n))} winter`);
   }
 
-  return {runOps, execute, afterDefenders, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
+  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack, afterDiscard, payAddCost, fileAttack, allyDeath,
           linkPumps, linkPayload, attackRx, preventDamage, autoPitch, applyAnswer,
           activateHandAbility, foeTurnIce, takeInstantNext,
-          /* EXPOSED FOR THE TRAINER'S OWN WALL (v4.53). `defendValue` is
-             module-level and has read `defMod` since v3.89; the WRITER is
-             in here because it logs. `index.html`'s `confirmDefPay` is the
-             one caller outside this file — the player-blocks wall, which
-             reaches no shared `defends` body (see `tools/approx.js`:
-             `trainer-blocks-wall-no-defends-body`). Exposed rather than
-             copied: a second `defMod` writer is the exact shape v4.53
-             deleted. */
-          applyDefMod,
+          /* `applyDefMod` IS NO LONGER EXPOSED (v4.57). It was exposed at
+             v4.53 for exactly one outside caller — `index.html`'s
+             `confirmDefPay`, the trainer's own pause for one of the four
+             "when this defends" families — and that reason was the gap
+             `trainer-blocks-wall-no-defends-body` recorded. The block wall
+             calls `defendsTriggers` now and the +{d} lands through
+             `applyAnswer`'s `defUid`, which is the same one body, so the
+             export has no caller. A name leaving a surface is as deliberate
+             an edit as one arriving (v4.12), and an export nothing calls is
+             a global that reads like a rule (v3.77, v4.11, v4.47). */
           /* EXPOSED FOR HEAVE (v4.05). `heave` is module-level — it returns
              `{game,msgs,ops}` rather than threading `n` — so it could not
              reach this closure, and v3.71 recorded it as "a THIRD site that

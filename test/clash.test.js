@@ -354,7 +354,7 @@ test("driven at the TABLE: a declared clash card resolves its clash", {skip}, ()
 
 /* ---- 3b. THE TRAINER CALLS THE SHARED BODY --------------------------- */
 
-test("the trainer's block path calls `resolveClash` and reads no card text",
+test("the trainer's block path reaches `resolveClash` through the shared body, and reads no card text",
      {skip}, () => {
   /* `takeIt` is a React closure and no drill can reach it, so this is a
      SOURCE guard — the same shape `staunch.test.js` uses for the trainer's
@@ -363,13 +363,32 @@ test("the trainer's block path calls `resolveClash` and reads no card text",
 
      BOTH DIRECTIONS OF COMBAT NEED IT. `afterDefenders` covers the one
      where the player attacks and the dummy blocks; `takeIt` is the other,
-     which is most of the trainer. */
+     which is most of the trainer.
+
+     IT CALLS `defendsTriggers` NOW, NOT `resolveClash` DIRECTLY (v4.57).
+     Clash was the only one of the four "when this defends" families this
+     wall ever reached, which is exactly the defect v4.53 recorded: the
+     shared body carries all four, so calling it is strictly more than
+     calling the clash half — and the assertion is widened rather than
+     relaxed, because `resolveClash` must still be reached with this
+     seat's own answer, one layer in. */
   const fs = require("fs"), path = require("path");
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, "");
   const code = strip(html);
-  assert.match(code, /_EFX\.resolveClash\(s, actorOf\(s\),/,
+  assert.match(code, /_EFX\.defendsTriggers\(s, actorOf\(s\),/,
     "takeIt must hand the shared body its wall and the DEFENDER's seat");
+  assert.ok(!/_EFX\.resolveClash\(/.test(code),
+    "and no longer reaches past it to the clash half alone — that is how the "
+    + "other three families came to be missing from this wall");
+  const efx = strip(fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8"));
+  const i = efx.indexOf("const defendsTriggers = (s, defSeat, wall, gearWall) =>");
+  assert.ok(i > 0, "defendsTriggers moved — re-anchor this drill");
+  assert.match(efx.slice(i, efx.indexOf("const afterDefenders", i)),
+    /resolveClash\(n, defSeat,/,
+    "the shared body runs the clash on the caller's seat, before the sheets — "
+    + "a clash moves a defender's value, so a prompt answered first resolves "
+    + "against a board the clash has not yet changed");
   /* and the three inline readers are gone */
   assert.ok(!/the winner creates\?/.test(code), "the token regex is the parser's now");
   assert.ok(!/if you win, this gets/.test(code), "and the defence bonus");

@@ -116,25 +116,40 @@ test("the keyword list is CLOSED — an unknown word still refuses", () => {
 
 /* ---- 3. THE DEFENDS TRIGGER, ON BOTH BOARDS ------------------------- */
 
-test("the defends trigger fires from afterDefenders — the shared body", () => {
+test("the defends trigger fires from `defendsTriggers` — the one body BOTH walls call", () => {
   /* A schedule is written per board (v3.01), so the thing that matters is
-     that this one is NOT: `afterDefenders` is where phantasm already
-     lives, it already takes the wall as the CALLER's answer, and both
-     boards already call it. Comments stripped. */
+     that this one is NOT. It used to be anchored at `afterDefenders`, and
+     that was only ever HALF the claim: v4.53 measured that the trainer
+     raises TWO walls and only the attacker's path reached that function,
+     so Crash and Bash's `optCost` and Washed Up Wave's `millCost` were
+     never offered on the wall the player raises. The four families live in
+     `defendsTriggers` since v4.57 and both walls call it. Anchored there
+     rather than at either caller: a scan of one caller cannot say the
+     other is covered. Comments stripped. */
   const fs = require("fs"), path = require("path");
   const src = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), "utf8");
-  const i = src.indexOf("const afterDefenders = (s, wall, gearWall) =>");
-  assert.ok(i > 0, "afterDefenders moved — re-anchor this drill");
-  const body = src.slice(i, src.indexOf("THE LINK RESOLVES, IN THREE PIECES", i))
+  const i = src.indexOf("const defendsTriggers = (s, defSeat, wall, gearWall) =>");
+  assert.ok(i > 0, "defendsTriggers moved — re-anchor this drill");
+  const body = src.slice(i, src.indexOf("const afterDefenders", i))
     /* COMMENTS STRIPPED. The prose right above this trigger EXPLAINS that
        judge holds its declarations on `blockH`, so an unstripped scan
        reports the explanation as the violation — the same prose
        false-positive `test/sync.test.js` documents. */
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  assert.ok(body.length > 200 && body.length < 9000,
+    "the slice is the one body, not a run into its neighbour (v4.05)");
   assert.match(body, /trigger !== "defends"/, "the trigger is read here");
   assert.ok(!/blockH|k\s*===\s*"def"/.test(body),
     "and the wall is still the caller's answer — reading either board's shape "
     + "is how phantasm came to work on one board and not the other");
+  /* BOTH CALLERS, or the extraction is a relocation. */
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(html, /_EFX\.defendsTriggers\(s, actorOf\(s\),/,
+    "the trainer's block wall asks it with its OWN seat — the player defends AND acts there");
+  const after = src.slice(src.indexOf("const afterDefenders"));
+  assert.match(after, /defendsTriggers\(n, 1 - actorOf\(n\),/,
+    "and the attacker's path asks it with the defender's — `tapFoeHero`'s inversion (v3.48)");
 });
 
 test("it is addressed to the DEFENDER, never the actor", {skip}, () => {

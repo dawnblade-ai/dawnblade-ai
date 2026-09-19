@@ -57,6 +57,12 @@ const ANCHORS = [
   ["autoPitch",    "  const autoPitch = (s, cost, keepUid) => {",     "effects"],
   ["applyAnswer",  "  const applyAnswer = (s, prompt) => {",          "effects"],
   ["fileAttack",   "  const fileAttack = (s2, card, from) => {",      "effects"],
+  /* v4.57 LIFTED THE FOUR "when this defends" FAMILIES OUT of
+     `afterDefenders` so the trainer's second wall could reach them, and the
+     new body is anchored for `linkPumps`/`linkPayload`'s reason: without it
+     `fileAttack`'s slice swallows it and `afterDefenders` reports green
+     while sixty lines that used to be inside it sit unscanned (v2.53). */
+  ["defendsTriggers","  const defendsTriggers = (s, defSeat, wall, gearWall) => {", "effects"],
   ["afterDefenders","  const afterDefenders = (s, wall, gearWall) => {",  "effects"],
   /* v2.77 split the link's resolution into two shared pieces so a caller
      can put its OWN wall and its own damage routing between them. Both
@@ -72,7 +78,7 @@ const ANCHORS = [
      LAST slice, and a stale one throws rather than silently scanning
      nothing (v2.53's lesson — a ledger that stops scanning a body keeps
      reporting it green). */
-  ["__endEffects", "  return {runOps, execute, afterDefenders, resolveClash, resolveStack,", "effects"],
+  ["__endEffects", "  return {runOps, execute, afterDefenders, defendsTriggers, resolveClash, resolveStack,", "effects"],
   /* --- index.html: what is still a closure inside Battle ---------------
      playRx is a BOUNDARY, not a rules function: with runOps and execute
      gone from this file, dummyDefence would otherwise slice all the way
@@ -124,14 +130,19 @@ const ANCHORS = [
   ["foeStep",      "  function foeStep(s){"],
   ["foeVanilla",   "  function foeVanilla(s){"],
   ["foeEnd",       "  function foeEnd(s){"],
-  /* finishBlock/confirmDefPay (v2.39) are new, not in RULES_FNS — the
-     ledger covers exactly the seven the roadmap names, deliberately not
-     grown here — but they still need their own anchors or their bodies
-     would be silently swallowed into takeIt's slice (finishBlock, defined
-     just before it) or newTurn's (confirmDefPay, defined just after). */
+  /* finishBlock (v2.39) is new, not in RULES_FNS — the ledger covers
+     exactly the seven the roadmap names, deliberately not grown here — but
+     it still needs its own anchor or its body would be silently swallowed
+     into takeIt's slice, being defined just before it.
+
+     `confirmDefPay` LEFT THIS LIST AT v4.57, and that is the deliberate
+     edit an anchor list exists to force. It was the trainer's own pause for
+     ONE of the four "when this defends" families, and it is retired: the
+     shared `promptQ` carries all four now, `takeIt` holds the wall with
+     `_wallPending` and `openPrompt` resumes `finishBlock`. A name leaving a
+     ledger is as deliberate an edit as one arriving (v4.12). */
   ["finishBlock",  "  const finishBlock = (s) => {"],
   ["takeIt",       "  const takeIt = () => setG(s=>{"],
-  ["confirmDefPay","  const confirmDefPay = pay => setG(s=>{"],
   ["newTurn",      "  function newTurn(s){"],
   ["__end",        "  const toks = ["]
 ];
