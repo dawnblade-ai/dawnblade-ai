@@ -68,6 +68,20 @@ test("the printed line reads, and the NAME keeps its capitalisation", () => {
   P.fxReset();
 });
 
+test("the OPTIONAL sheet's title tells the player they may decline", () => {
+  /* IN A TRAINING SIM THE FEED IS THE LESSON (v3.60), and the sheet's title
+     is where a player learns whether a choice is theirs. `min: 0` is what
+     makes *Choose none* appear and the HINT says so in words; the title's
+     question mark is the same fact at a glance, and it is the half a
+     sabotage can swap without touching either. Pinned as the PAIRING rather
+     than as the string, so a reword that keeps the distinction passes. */
+  const opt  = P.classifyClause("you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle");
+  const mand = P.classifyClause("search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle");
+  const t = r => r.ops[0][1].title;
+  assert.match(t(opt), /\?$/, "an optional search must read as a question");
+  assert.doesNotMatch(t(mand), /\?$/, "a mandatory one must not — it is not being asked");
+});
+
 test("a printed `search` with no `you may` is MANDATORY", () => {
   P.fxReset();
   const r = P.classifyClause(
