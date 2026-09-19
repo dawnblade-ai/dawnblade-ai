@@ -124,7 +124,20 @@ deliberately, 32 → 33.
   each, driven, no refusal and no violation. CR 4.5.3 has no deck-out loss, so
   it is v3.80's recorded shape a second time and not an engine defect. What the
   old engine had instead was an infinite card supply.
-- **31 sabotages, 31 bite.**
+- **25 sabotages, 25 bite — and FOUR of the first pass were silent, of which
+  TWO were unexpressible and two were real drill gaps.** The unexpressible pair
+  aimed at the new `risen` check against an already-repinned floor, where the set
+  is EMPTY and no weakening of the assertion can be seen (v3.62); the expressible
+  form is to make the FLOOR stale, which bites and names the right half. The two
+  real gaps are now drills: **the route counter's regex was pinned nowhere
+  against the engine's own phrase** (v3.81 — rewriting it to a word `effects.js`
+  does not print was silent across the whole suite, and pinning the route SET
+  cannot see that), and **an unreadable search subject falling through to an
+  empty filter** touched nothing, which over a hidden ORDERED zone is v3.53's
+  sev-3. Seven more of the first pass were **NOT APPLIED** rather than silent —
+  anchors written from the shape I remembered rather than the one in the file
+  (v4.09), and the harness said so instead of reporting SILENT, which is v4.37's
+  rule working.
 
 ## v4.57 — the wall the player raises, and a payment nobody could afford
 

@@ -944,6 +944,23 @@ it cannot — Phoenix Flame is an attack action card, which `rxAllowed` refuses 
 both reaction windows. Drilled, so the day something changes that, somebody
 decides.
 
+### A SABOTAGE AGAINST A CENSUS WITH NOTHING TO REPORT PROVES NOTHING (v4.58)
+
+Two of this version's sabotages aimed at the new `risen` check in
+`test/coverage.test.js` and came back SILENT — **because the floor had just
+been repinned, so `risen` is EMPTY and no weakening of an assertion over an
+empty set can be observed.** v3.62's rule, and v4.55 records the same shape
+one census over (*a census with no faults cannot express a weakened check on
+its own*). **The expressible form is to sabotage the DATA**: make the floor
+stale by hand and the drill bites, naming the risen half specifically.
+
+**AND SEVEN MORE WERE NOT APPLIED RATHER THAN SILENT**, every one an anchor
+written from the shape I remembered instead of the one in the file — four-space
+indentation where the file has two, a two-line anchor eleven branches share,
+an inverse anchor another branch already prints verbatim. **The harness said
+so** instead of reporting SILENT, which is v4.37's rule doing exactly its job:
+a sabotage that cannot be applied is not evidence that a drill is weak.
+
 ### THE FLOOR MUST NOT BE STALE, AND ONE OF THEM WAS (v4.58)
 
 `test/coverage.test.js` was one-directional by design: it fails when a card
