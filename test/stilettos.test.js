@@ -400,8 +400,13 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      reading the diff: V of the Vanguard went `part` -> `full` when the
      standing-grant anchor learned the window's other printed position, so
      `full` 748 -> 749 and `part` 38 -> 37 with `none` untouched. Exactly
-     one record moves, which is the measurement that version rests on. */
-  assert.deepEqual(tiers, {full: 749, part: 37, none: 11});
+     one record moves, which is the measurement that version rests on.
+     RE-PINNED AGAIN AT v4.58, after reading the diff: Flamecall Awakening
+     went `part` -> `full` when the pick reader learned the DECK as a source
+     zone, so `full` 749 -> 750 and `part` 37 -> 36 with `none` untouched.
+     One record again, and the audit's unique-card count moves with it
+     (395 -> 396 full, 10 -> 9 part). */
+  assert.deepEqual(tiers, {full: 750, none: 11, part: 36});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

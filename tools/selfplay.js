@@ -274,6 +274,19 @@ function play(g, limit, opts){
            So the number stays a 0 that says something true, like v4.41's
            own counter and v4.29's forced-exit half. */
         if(/back into .* deck — shuffled/.test(line)) events.push(["hood", line]);
+        /* THE DECK SEARCH, AND UNLIKE THE HOOD IT GENUINELY FIRES (v4.58).
+           v3.84's rule: when you build a route, go and count how often it
+           fires — and this one can, because Flamecall Awakening is a DECK
+           CARD rather than a loadout choice, so nothing has to pick it.
+
+           THE PHRASE IS THE ENGINE'S OWN (v3.81), and it is the SHUFFLE
+           rather than the pick: the shuffle is the half that fires whether
+           or not a card was taken, so a counter spelling the pick reports
+           only the accepts and reads as a route half-built. `sparring.act`
+           declines nothing here — the search is free and finding Phoenix
+           Flame is strictly better than not — but the DECLINE path is real
+           on the trainer, and counting the shuffle covers both. */
+        if(/: .* deck is shuffled\./.test(line)) events.push(["search", line]);
         /* THE +1{p} PLACEMENT, AND GLISTEN'S DELAYED WIPE (v4.44).
            v3.84's rule: when you build a route, go and count how often it
            fires. The PHRASE is the engine's own in both cases (v3.81) — a

@@ -74,7 +74,7 @@ test("every event kind selfplay emits is pinned", () => {
     "MALFORMED", "SECOND-PERSON",
     "ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost", "fusion", "gold",
     "hitnext",
-    "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "tap", "ward",
+    "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "tap", "ward",
   ]);
 });
 
@@ -132,7 +132,14 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
 const ROUTES_PINNED = ["ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
                        "fusion", "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
-                       "powctr", "reaction", "tap", "ward"];
+                       "powctr", "reaction", "search", "tap", "ward"];
+/* +search v4.58 — Flamecall Awakening's deck search, and it belongs on the
+   ROUTE side because a number there means a feature FIRED (v4.17). Measured:
+   8 firings in 14 Fai games, so unlike `hood` — whose 0 is about the LOADOUT
+   — this one is genuinely driven. The counter spells the SHUFFLE rather than
+   the pick, because the shuffle is the half that happens whether or not a
+   card was taken; a counter on the pick would report only the accepts and
+   read as a route half-built. */
 
 test("faults and routes partition the emitted kinds", () => {
   assert.deepEqual([...SP.FAULTS].sort(), FAULTS_PINNED);

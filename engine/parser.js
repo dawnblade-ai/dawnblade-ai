@@ -420,6 +420,33 @@ const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
 const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
 const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
+/* A DECK SEARCH (v4.58) — Flamecall Awakening. It is the SAME pick with a
+   different SOURCE ZONE, and the zone is the whole of what makes it a
+   different mechanic: a graveyard is public and unordered, a deck is HIDDEN
+   and ORDERED. Looking at it is the point of a search; the printed SHUFFLE
+   is what pays for having looked, because without it the controller has
+   learned their remaining deck order permanently — strictly stronger than
+   printed, and not a small thing in a game whose opt and `lookOrder` exist
+   to manage exactly that (v3.72).
+
+   READ WHOLE OR REFUSE (v2.29). The DISPOSITION is part of the anchor, not
+   stripped and defaulted: measured over the pinned pool exactly TWO records
+   print a deck search and they dispose of the found card DIFFERENTLY —
+
+     Flamecall Awakening   "reveal it, put it into your HAND, then shuffle"
+     Arakni, Trap-Door     "BANISH it FACE-DOWN, then shuffle"  (refuses)
+
+   so a reader that dropped the tail would send a face-down banish to the
+   hand. Trap-Door's refusal is recorded with its blocker NAMED (the
+   disposition, plus an "if it's a trap you may play it" rider on a second
+   sentence) rather than half-built: half-building a disposition is worse
+   than the honest gap (v3.23).
+
+   AND THE REVEAL COSTS NOTHING TO BUILD, because `applyPrompt` already
+   names the moved card in `msgs` and the feed is read by BOTH seats
+   (v2.83) — which is what a printed reveal IS. A second line would be two
+   records of one fact. */
+const RX_DECK_SEARCH = /^(you may )?search your deck for (.+), reveal it, put it into your hand, then shuffle$/;
 /* SHUFFLE-AND-REDRAW (Hope Merchant's Hood) — and "ANY NUMBER OF" IS IN
    THE ANCHOR, not left to the subject reader. `pickSubject` answers NULL
    for "any number of cards" (measured), so a rule that handed it the whole
@@ -2836,6 +2863,26 @@ function classifyClause(raw){
       title: may ? "Return a card from your graveyard to your hand?"
                  : "Return a card from your graveyard to your hand",
       hint: may ? "Optional — choose none to decline." : undefined}]]);
+  }
+  /* THE DECK SEARCH — see RX_DECK_SEARCH's header for why the disposition
+     is anchored and why the shuffle is the price of looking.
+
+     `shuffleAfter` IS NOT `shuffleDraw`. Hope Merchant's Hood's flag
+     shuffles AND draws what was put back, gated on `picked.length`; this
+     one draws NOTHING (the found card is already moving to hand) and fires
+     WHETHER OR NOT a card was taken, because the sheet showed the
+     controller their matching cards in deck ORDER either way. Reusing the
+     Hood's flag would hand a search a free card and let a decline keep the
+     order it just learned — wrong in both directions at once. */
+  if(m=c.match(RX_DECK_SEARCH)){
+    const filter = pickSubject(cased(RX_DECK_SEARCH, 2, m[2]));
+    if(!filter) return null;
+    const may = !!m[1];
+    return R([["pickPrompt", {zone:"deck", to:"hand", filter,
+      min: may ? 0 : 1, max:1, shuffleAfter:true,
+      title: may ? "Search your deck?" : "Search your deck",
+      hint: may ? "Optional — choose none to decline. Your deck is shuffled either way."
+                : "Your deck is shuffled afterwards."}]]);
   }
   /* "THIS ENTERS THE ARENA WITH A +1{p} COUNTER" (v3.57) — the same
      counter vocabulary as `ctrPut`, aimed at the card itself as it

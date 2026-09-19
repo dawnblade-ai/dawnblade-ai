@@ -36,10 +36,31 @@ test("pool coverage — no card degrades below the pinned baseline", {skip: !rea
   }
   assert.deepEqual(unresolved, [], "every pool card must resolve against the database");
 
-  const degraded = [];
+  const degraded = [], risen = [];
   for(const [key, tier] of Object.entries(baseline)){
     if(seen[key] == null) continue; // card left the pool — baseline entry is stale, not a failure
     if(rank[seen[key]] < rank[tier]) degraded.push(`${key}: ${tier} -> ${seen[key]}`);
+    if(rank[seen[key]] > rank[tier]) risen.push(`${key}: ${tier} -> ${seen[key]}`);
   }
   assert.deepEqual(degraded, [], "parser change degraded previously scripted cards");
+
+  /* AND THE FLOOR MUST NOT BE STALE — the other half of the same census
+     (v4.58). This drill was one-directional: a card ABOVE its pinned floor
+     passes silently, so a floor that was never repinned is a guard switched
+     off for exactly that card and nothing says so.
+
+     MEASURED: v4.56 built V of the Vanguard to `full` and did not run
+     `--write-baseline`, so `v of the vanguard|2` sat pinned at `part` for
+     two versions. A regression on that one card from `full` back to `part`
+     would have passed this file perfectly.
+
+     It is the same rule CLAUDE.md already states about `--write-baseline`
+     ("only once you've reviewed the diff") with nothing enforcing the second
+     half, and v4.12's *a census that only ever goes up is half a census*
+     read from the other side. It goes RED at the moment a tier RISES, which
+     is exactly when the author should read the audit diff and repin — one
+     extra step in a chain that already documents it. */
+  assert.deepEqual(risen, [],
+    "a card now reads ABOVE its pinned floor, so the floor is stale and cannot catch a "
+    + "regression on it. Read the AUDIT.md diff, then: node tools/audit.js --write-baseline");
 });

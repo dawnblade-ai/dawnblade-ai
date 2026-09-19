@@ -21,6 +21,9 @@
 
    IT CAME BACK CLEAN over 32 legs of real Flesh and Blood — 35 fields,
    all named — and a clean result is worth having PROVED (v3.97, v4.00).
+   (That was the v4.42 reading. The count is a PIN rather than a constant:
+   `drive` names it and the first drill asserts it, so re-derive it from
+   there rather than from this sentence — v4.17.)
 
    THE SET IS SAMPLE-DEPENDENT, AND THAT IS HANDLED RATHER THAN IGNORED.
    Sixteen legs reach 32 fields and thirty-two reach 35, so a pin taken
@@ -81,8 +84,10 @@ const stripComments = src => src
   .replace(/^\s*\/\/.*$/gm, "");
 const PROMPTS = stripComments(RAW);
 
-/* 32 legs: each entrant against the next and against the fourth along,
-   with the seed naming the pairing. Deterministic, ~1.5s.
+/* The ring is each entrant against the next and against the fourth along,
+   with the seed naming the pairing, plus one leg named in `drive` for the
+   row it keeps. Deterministic, ~1.5s. The COUNT is asserted by the first
+   drill; do not restate it here (v4.17).
 
    WHAT 32 LEGS REACH IS A MEASUREMENT, AND ONE SPEC SITE IS OUTSIDE IT.
    The tags that arrive are pay 52 · pick 78 · soak 51 · opt 23 · modal 3,
@@ -122,6 +127,28 @@ const drive = () => {
       const r = T.leg(E[i], E[j], "spec-" + i + "-" + j, 0);
       legs++; if(r && r.threw) threw++;
     }
+  /* THE 33rd LEG IS NAMED, AND IT IS THE ANSWER TO A ROW THIS CENSUS LOST
+     (v4.58). The colour-gate fix stopped Blaze Headlong gaining a free
+     action point off its own play, so `sparring.act` plays a different game
+     and the ring above stopped reaching a `ctrPut` sheet with two or more
+     candidates — `ctrStamp` LEFT the set.
+
+     The wrong answer is to drop it from the pin. A CENSUS THAT LOSES A ROW
+     READS EXACTLY LIKE ONE WITH NOTHING TO REPORT (v3.81, v4.07), and
+     v4.44's `optional` is the worked example from the other side: a member
+     that cannot leave the set can never be watched leaving it, so v3.53's
+     consumer-stopped-obeying was unwatchable for that field. v4.42 recorded
+     this file's own answer when a field is unreached — *the honest widening
+     is MORE LEGS, not a looser claim* — and v4.48 discharged its reach limit
+     in the other direction, by the engine moving. This is the same rule with
+     the sign flipped.
+
+     MEASURED rather than guessed: every pairing outside the ring was driven
+     and Enigma v Dash is the first that reaches it (Re-Charge! is Dash's).
+     It brings NO other field with it, which is why the pinned set below is
+     unchanged at 38 — a widening that moved the pin would be a fixture
+     change wearing a fix's clothes. */
+  { const r = T.leg(E[8], E[3], "spec-8-3", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -140,7 +167,8 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 32, "the leg count moved; the pinned field set is taken at 32");
+  assert.equal(legs, 33, "the leg count moved; the pinned field set is taken at 33 "
+    + "(32 in the ring, plus the named leg that keeps `ctrStamp` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
     + "census built on it reports ZERO exactly as a missing feature does (v3.81)");
@@ -153,8 +181,14 @@ test("every spec field that reaches prompts.js is pinned", () => {
     "amount", "arsStamp", "avail", "banStamp", "by", "cards", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
-    "ops", "optional", "options", "playThisTurn", "side", "spendCtr", "src", "tag",
-    "tapHero", "tapUid", "taps", "title", "to", "zone",
+    "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
+    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "zone",
+  /* +shuffleAfter v4.58 — Flamecall Awakening's deck search, and THIS
+     CENSUS IS WHERE ITS LIVENESS WAS FIRST PROVED. The field arrived on the
+     same 32 deterministic legs with no new leg written, which means Fai
+     really does search his deck in a driven game rather than the route
+     being latent. It is `shuffleDraw`'s SIBLING, not a widening: it draws
+     nothing and it fires whether or not a card was taken. */
   /* +avail +spendCtr v4.48, AND NEITHER IS A NEW QUEUE SITE. The set is
      sample-dependent — this file's own header says so — and v4.48 changed
      what three attacks are WORTH, from a flat +1 to the printed multiplier,

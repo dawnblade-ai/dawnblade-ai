@@ -300,6 +300,18 @@ function buildPrompt(game, spec){
          touch (a shuffle here would consume the replay stream from a
          function whose contract is that it runs no effects). */
       shuffleDraw: !!spec.shuffleDraw,
+      /* AND `shuffleAfter` IS ITS SIBLING, NOT A WIDENING OF IT (v4.58).
+         Flamecall Awakening searches the DECK — a hidden, ORDERED zone — so
+         the printed shuffle is what pays for having looked, and it differs
+         from the Hood's on both axes that matter: it draws NOTHING (the
+         found card is already on its way to hand) and it fires WHETHER OR
+         NOT a card was taken, because the sheet showed the controller their
+         matching cards in deck order either way. Folded into `shuffleDraw`
+         a search would hand out a free card AND let a decline keep the
+         order it had just learned — the eighth field to prove v2.34's rule,
+         and dropped here the shuffle simply never happens while the feed
+         says the card was found. */
+      shuffleAfter: !!spec.shuffleAfter,
       title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
       hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
   }

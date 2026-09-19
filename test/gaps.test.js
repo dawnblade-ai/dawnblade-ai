@@ -49,20 +49,31 @@ test("it finds something — a scan aimed at the wrong shape passes by finding n
   const out = run();
   assert.match(out, /pick from a zone/, "the largest family must still match");
   const n = +(out.match(/(\d+)\s+pick from a zone/) || [])[1];
-  /* A DRILL THAT NAMES A COUNT ROTS WHEN THE COUNT IS THE WORK (v3.53,
-     where a dossier drill hardcoded a card name and failed the moment
-     that card was closed — for the best possible reason). The floor
-     dropped 5 -> 3 at v4.01, when Compass of Sunken Depths and Halo of
-     Illumination LEFT the family by being built. Lowering it is the
-     deliberate edit; what it must never become is zero, because a
-     pattern that stops matching also reports zero and the two look
-     identical in a report. */
-  assert.ok(n >= 3, "the `pick` family collapsing to a handful means a pattern rotted: " + n);
+  /* THE FLOOR IS DERIVED NOW, BECAUSE IT HAD ROTTED TWICE FOR THE BEST
+     POSSIBLE REASON (v4.58). A drill that names a count rots when the count
+     IS the work (v3.53): it read 5, dropped to 3 at v4.01 when Compass of
+     Sunken Depths and Halo of Illumination left the family by being BUILT,
+     and dropped again to 2 at v4.58 when Flamecall Awakening did. A third
+     hardcoded number would rot the same way — v4.21's rule, so the check
+     is the property rather than the magnitude.
+
+     WHAT MUST BE TRUE IS THAT THE PRINTED COUNT EQUALS THE CARDS LISTED.
+     A pattern that stops matching reports zero, which is indistinguishable
+     from a codebase with nothing left (v3.81); a heading printed
+     unconditionally over an empty roll call is the other direction. Both
+     are caught by asking the report to agree with itself, and neither
+     needs a number anybody has to remember to lower. */
+  const roll = (out.match(/pick from a zone[\s\S]*?\n\s*\n/) || [""])[0];
+  const listed = roll.split("\n").filter(l => /·|^\s{6}[A-Z]/.test(l) && !/needs:/.test(l))
+                     .join(" · ").split("·").map(x => x.trim()).filter(Boolean);
+  assert.ok(n >= 1,
+    "the `pick` family matched NOTHING — a rotted pattern reports zero exactly "
+    + "as a finished family does, so this is the one reading that is ambiguous");
+  assert.equal(listed.length, n,
+    "the printed count and the roll call must agree — got " + n + " vs ["
+    + listed.join(", ") + "]. A heading over an empty list cannot be told from "
+    + "a heading printed unconditionally");
   assert.match(out, /ONE clause away/, "the one-clause count is the reason to read this at all");
-  /* AND THE FAMILY MUST STILL NAME CARDS. A count with no roll call
-     beneath it cannot be told from a heading printed unconditionally. */
-  assert.match(out, /pick from a zone[\s\S]{0,400}·/,
-    "the family must still list the cards it claims");
 });
 
 test("a stale read is VISIBLE, not silent", {skip}, () => {

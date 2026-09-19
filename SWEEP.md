@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 10 cards | understood ≠ built |
-| **Fail states** | 40 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 9 cards | understood ≠ built |
+| **Fail states** | 39 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -41,7 +41,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Ice Eternal** (part, 2/4 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Crown of Dichotomy** (part, 1/2 unread)
-- **Flamecall Awakening** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
 - **Plasma Barrel Shot** (part, 1/4 unread)
 - **Roaring Beam** (part, 1/2 unread)
@@ -63,23 +62,16 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| Choice never offered | 5 |
-| No schedule to fire on | 4 |
+| Choice never offered | 4 |
 | Unread, effect unknown | 4 |
-| Earned value denied | 3 |
+| No schedule to fire on | 3 |
 | Ability inert — cost not modelled | 3 |
+| Earned value denied | 2 |
 | Displayed total is wrong | 1 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 10 entries
+### WRONG — 9 entries
 
-- **Flamecall Awakening** (1) · tier `part` · fai
-  - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
-    > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
-  - *Choice never offered* — A decision that belongs to a player is never offered; the engine silently takes one branch.
-    > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
-  - *Earned value denied* — The player earned this and does not get it. Visible and honest — they can see the card did nothing.
-    > When this attacks, if you've played another red card this turn, you may search your deck for a Phoenix Flame, reveal it, put it into your hand, then shuffle.
 - **Ice Eternal** (3) · tier `part` · iyslander
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
     > Then if this was fused, deal arcane damage to that hero equal to the number of Frostbites they control.

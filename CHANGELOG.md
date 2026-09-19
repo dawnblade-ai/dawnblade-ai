@@ -1,3 +1,131 @@
+## v4.58 — "another" must not count the card asking, and the search that found it
+
+> *"When this attacks, if you've played **another red card** this turn, you may
+> search your deck for a Phoenix Flame, reveal it, put it into your hand, then
+> shuffle."* — FLAMECALL AWAKENING, Fai's
+>
+> *"If you've played **another blue card** this turn, transcend."*
+> — five Mystic instants, Enigma's
+
+**SEVEN POOL RECORDS GATE ON A COLOUR AND EVERY ONE SATISFIED ITS OWN GATE.**
+`execute` incremented `hist.red`/`hist.blue` off the card's own pitch **four
+hundred lines above the condition loop that reads them**, so `(hist.red||0) > 0`
+was true because the asking card had just made it 1. Measured: all seven print
+**"ANOTHER"**, and every one is the colour it asks about — two Fai, five Enigma —
+so the printed word was dropped on all of them.
+
+**BLAZE HEADLONG IS THE SHARPEST: its payload is GO AGAIN**, which is an action
+point (CR 5.3.5) and this file's own *"most valuable keyword in the game to get
+wrong"*. It was gained on every play with no other red card down. The five blue
+ones are TRANSCEND, which flips the card to Inner Chi and returns it to hand — an
+engine-granted card loop that never stopped.
+
+**NO TOOL HERE COULD SEE IT.** All seven read `tier: full`, because the clause IS
+consumed; and `COND-BYPASSED` needs an unconditional TWIN to compare a gate
+against, so a gate that is PRESENT and always TRUE leaves the one-sided fairness
+sweep nothing to compare — v3.57's lesson and v4.19's, about a gate that is
+decoration rather than one that vanished.
+
+**AND THE ENGINE ALREADY KNEW THE RULE AND APPLIED IT TO ONE COUNTER.**
+`hist.non` and `hist.playTy` (v3.38) are both recorded AFTER the card resolves
+and BOTH carry a comment saying exactly this, and the condition evaluator's own
+comment three lines above the colour rows says these *"count a pitch VALUE and
+say 'another'"*. **A recorded reason sitting beside the defect it describes**
+(v3.69).
+
+**IT SITS AFTER THE LOOP RATHER THAN BESIDE `hist.non`**, because that site is
+inside the NON-ATTACK branch and both Fai records are ATTACKS — an attack's
+`fx.ops` ride to resolution and never reach it. After the loop is reached by
+every play, so **the counter is still incremented for the NEXT card**, which is
+the half that must not regress and is asserted in both directions. And
+`CONDONHIT_CONDS` does not list a colour, so no hit-time evaluator can ask it
+later in the same resolution (v3.96) — measured, so the ordering question is only
+ever about the declaration loop.
+
+### A DECK SEARCH IS A PICK OUT OF A HIDDEN, ORDERED ZONE
+
+> *"…you may search your deck for a Phoenix Flame, reveal it, put it into your
+> hand, then shuffle."*
+
+**IT NEEDED NO MACHINERY** (v3.58, v3.73): `pickPrompt` has read a zone, a
+destination and a filter since `prompts.js` was written, and `moveCards` has
+routed a pick to and from the deck since v4.43. What was missing is one sentence
+in the parser — the same shape as the Hood, whose recorded blocker named a zone
+move the engine already had (v4.43).
+
+**THE PRINTED SHUFFLE IS WHAT PAYS FOR LOOKING**, so `shuffleAfter` is
+`shuffleDraw`'s SIBLING rather than a widening of it: **it draws nothing, and it
+fires WHETHER OR NOT a card was taken.** Dropped, a *"you may"* search becomes a
+free look at an ordered deck and the card knows its own top for the rest of the
+game — which is stronger than printed in the one way a pick can be. Eighth field
+to prove v2.34's rule (a spec only carries fields `buildPrompt` knows about), and
+its liveness was proved by `test/speccensus.test.js`'s own 32 legs with no new leg
+written: **Fai really does search in a driven game.**
+
+**THE DISPOSITION IS IN THE ANCHOR, READ WHOLE OR REFUSED** (v2.29). *"reveal it,
+put it into your hand, then shuffle"* is matched as one phrase, so a search that
+puts the card anywhere else, or that does not shuffle, refuses rather than reading
+as this one — five near-miss dispositions are drilled. **`min` is the printed
+"you may"**, so the sheet gets its *Choose none* and a decline still shuffles.
+
+**AND TRAP-DOOR'S BLOCKER IS NAMED RATHER THAN GUESSED.** The pool's other deck
+search is Arakni's Agent, which prints *"search your deck for a card, put it into
+your arsenal face-down"* — a different destination, a different face and a bare
+`card` subject `pickSubject` refuses on purpose (v3.53). It stays `skip`.
+
+### THE FLOOR MUST NOT BE STALE, AND ONE OF THEM WAS
+
+`test/coverage.test.js` was one-directional: it fails when a card drops BELOW its
+pinned floor and **passes silently when a card sits above it** — so a floor nobody
+repinned is a guard switched off for exactly that card, with nothing saying so.
+Measured: **v4.56 built V of the Vanguard to `full` and did not run
+`--write-baseline`**, so `v of the vanguard|2` sat pinned at `part` for two
+versions and a regression on it would have passed. It asks both directions now —
+v4.12's *a census that only ever goes up is half a census*, read from the other
+side, and the rule CLAUDE.md already states about `--write-baseline` with
+something finally enforcing its second half.
+
+### A CENSUS THAT LOSES A ROW READS LIKE ONE WITH NOTHING TO REPORT
+
+The colour fix changed what the policy plays, so `test/speccensus.test.js`'s 32
+deterministic legs stopped reaching a `ctrPut` sheet with two candidates and
+`ctrStamp` LEFT the pinned set. **The wrong answer is to drop it from the pin**
+(v3.81, v4.07) — v4.44's `optional` is the worked example from the other side, a
+member that cannot leave the set and so can never be watched leaving it. v4.42
+recorded this file's own answer when a field is unreached: *the honest widening is
+MORE LEGS, not a looser claim.* Every pairing outside the ring was driven and
+**Enigma v Dash is the first that reaches it**; it brings no other field with it,
+so the pinned set of 38 is unchanged and the leg count is a PIN that moved
+deliberately, 32 → 33.
+
+### Measured
+
+- **Exactly 1 record's parse moves, `part` → `full`** — Flamecall Awakening,
+  the pool's last `part` card that was one clause away in a hero's deck.
+  **396 full / 9 part / 0 none** (was 395/10/0); records 750/36/11; floor
+  re-pinned after reading the audit diff, which is one card plus the stale
+  V of the Vanguard entry above.
+- The colour move changes **no parse at all** — it is an ordering inside
+  `execute` — and it moves no coverage number, which is the point: the clause
+  was read throughout.
+- **The new route is DRIVEN**: `search` fires **14 times in 210 games**, unlike
+  `hood`'s honest 0 (v4.43), because Flamecall Awakening is a deck card rather
+  than a loadout choice. Both halves of `test/tourney.test.js`'s partition pinned.
+- **The ladder at three seeds moves every hero INSIDE the band** — the largest
+  mean move is Fai −3.3 against a band of median 3 and max 9, and every
+  interval overlaps, so NOISE by the standing rule (v4.40). The one directional
+  reading is Enigma −1.0 with `chi` collapsing **180 → 54**, which is the
+  transcend fix landing rather than a balance change: her Mystic instants no
+  longer flip to Inner Chi on every play.
+- **And it produced one STALL, which is a genuine DRAW rather than a livelock.**
+  `enigma-gravy-0` at v4.57 transcended **4** times and killed on turn 33; at
+  v4.58 the gate refuses **5** times, both decks empty, and the board locks with
+  neither seat holding a weapon or a playable card — 1,318 turns at ~3 steps
+  each, driven, no refusal and no violation. CR 4.5.3 has no deck-out loss, so
+  it is v3.80's recorded shape a second time and not an engine defect. What the
+  old engine had instead was an infinite card supply.
+- **31 sabotages, 31 bite.**
+
 ## v4.57 — the wall the player raises, and a payment nobody could afford
 
 > *"**Instant** - Reveal a card with 6 or more {p} from your hand: …"*

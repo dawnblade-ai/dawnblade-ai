@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.57
+**Current version:** v4.58
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2911 drills** at v4.57.
+This is `node --test "test/*.test.js"` — **2930 drills** at v4.58.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -850,6 +850,165 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### "ANOTHER" MUST NOT COUNT THE CARD ASKING (v4.58)
+
+> *"When this attacks, if you've played **another red card** this turn, you may
+> search your deck for a Phoenix Flame…"* — FLAMECALL AWAKENING, Fai's
+>
+> *"If you've played **another blue card** this turn, transcend."*
+> — five Mystic instants, Enigma's
+
+**SEVEN POOL RECORDS GATE ON A COLOUR AND EVERY ONE SATISFIED ITS OWN GATE.**
+`execute` incremented `hist.red`/`hist.blue` off the card's own pitch **four
+hundred lines above the condition loop that reads them**, so `(hist.red||0) > 0`
+was true because the asking card had just made it 1. Measured: all seven print
+**"ANOTHER"** and every one **is** the colour it asks about — a blue card asking
+about RED would never have counted itself, so that half is pinned too, because a
+record arriving that asks about the other colour is one this fix does not move.
+
+**BLAZE HEADLONG IS THE SHARPEST — its payload is GO AGAIN**, an action point
+(CR 5.3.5), this file's own *"most valuable keyword in the game to get wrong"*,
+gained on every play. The five blue ones are TRANSCEND, which flips the card to
+Inner Chi and returns it to hand: **an engine-granted card loop that never
+stopped**, and it was worth 126 of the ladder's 180 Chi payments.
+
+**NO TOOL HERE COULD SEE IT.** All seven read `tier: full`, because the clause IS
+consumed; and `COND-BYPASSED` needs an unconditional TWIN to compare a gate
+against, so a gate that is PRESENT and always TRUE leaves the one-sided sweep
+nothing to compare — v3.57's lesson and v4.19's, about a gate that is decoration
+rather than one that vanished.
+
+**AND THE ENGINE ALREADY KNEW THE RULE AND APPLIED IT TO ONE COUNTER.**
+`hist.non` and `hist.playTy` (v3.38) are both recorded AFTER the card resolves
+and BOTH carry a comment saying exactly this, and the condition evaluator's own
+comment three lines above the colour rows says these *"count a pitch VALUE and
+say 'another'"*. **A recorded reason sitting beside the defect it describes**
+(v3.69).
+
+**IT SITS AFTER THE LOOP RATHER THAN BESIDE `hist.non`**, because that site is
+inside the NON-ATTACK branch and both Fai records are ATTACKS — an attack's
+`fx.ops` ride to resolution and never reach it. After the loop is reached by
+every play, so **the counter is still incremented for the NEXT card**, the half
+that must not regress, asserted both directions. `CONDONHIT_CONDS` names no
+colour, so no hit-time evaluator can ask it later in the same resolution (v3.96)
+— measured, which is what makes the ordering question only ever about the
+declaration loop.
+
+**IT WAS FOUND BY A FIXTURE FOR A DIFFERENT CARD.** The deck-search drill
+asserted Flamecall's gate refuses with no red card played, and it did not.
+**v3.72's rule: building a SOURCE makes a defect reachable that was wrong the
+whole time it could not be reached** — and v4.49's Gun for the sixth time,
+making a mechanic legible is what finds what is wrong with it.
+
+**AND THE DRILL'S BLUE HALF NEEDED `H.db()`, WHICH ITS RED HALF DOES NOT.** A
+transcend FLIPS the card to Inner Chi and `effects.js` resolves that record
+through `getDb()`; without it the flip minted nothing and `hist.trans` read 0 on
+BOTH rows — **which reads exactly like the gate refusing correctly.** v3.71's
+sentence (a drill that drives a reduced engine reports on the reduced one) and
+v4.09's *check your own fixture*.
+
+### A DECK SEARCH IS A PICK OUT OF A HIDDEN, ORDERED ZONE (v4.58)
+
+**IT NEEDED NO MACHINERY** (v3.58, v3.73): `pickPrompt` has read a zone, a
+destination and a filter since `prompts.js` was written, and `moveCards` has
+routed a pick to and from the deck since v4.43. What was missing is one sentence
+in the parser — the Hood's shape exactly, whose recorded blocker named a zone
+move the engine already had.
+
+**THE PRINTED SHUFFLE IS WHAT PAYS FOR LOOKING.** `shuffleAfter` is
+`shuffleDraw`'s SIBLING rather than a widening of it: **it draws nothing, and it
+fires WHETHER OR NOT a card was taken.** Dropped, a *"you may"* search becomes a
+free look at an ordered deck and its controller knows their own top for the rest
+of the game — stronger than printed in the one way a pick can be. **Eighth field
+to prove v2.34's rule**, and its liveness was proved by `test/speccensus.test.js`
+rather than by a new drill: the field arrived on the same 32 deterministic legs
+with no leg written, so **Fai really does search in a driven game.**
+
+**THE DISPOSITION IS IN THE ANCHOR, READ WHOLE OR REFUSED** (v2.29). *"reveal
+it, put it into your hand, then shuffle"* is one phrase, so a search that puts
+the card anywhere else, or that does not shuffle, REFUSES rather than reading as
+this one; five near-miss dispositions are drilled. **`min` is the printed "you
+may"**, so the sheet gets its *Choose none* and a decline still shuffles.
+
+**AND TRAP-DOOR'S BLOCKER IS NAMED RATHER THAN GUESSED.** The pool's other deck
+search is Arakni's Agent: *"search your deck for a card, put it into your
+arsenal face-down"* — a different destination, a different FACE (v3.69) and a
+bare `card` subject `pickSubject` refuses on purpose (v3.53). It stays `skip`,
+and the two records are pinned as the whole family.
+
+**THE DELAY IS UNOBSERVABLE, AND THAT IS MEASURED RATHER THAN ASSUMED.** A bare
+*"when this attacks"* fires at DECLARATION (CR 7.2, v4.08) and this one does; the
+question is whether the searched card can be played before the damage step, and
+it cannot — Phoenix Flame is an attack action card, which `rxAllowed` refuses in
+both reaction windows. Drilled, so the day something changes that, somebody
+decides.
+
+### THE FLOOR MUST NOT BE STALE, AND ONE OF THEM WAS (v4.58)
+
+`test/coverage.test.js` was one-directional by design: it fails when a card
+drops BELOW its pinned floor and **passes silently when a card sits above it** —
+so a floor nobody repinned is a guard switched off for exactly that card, with
+nothing saying so. Measured: **v4.56 built V of the Vanguard to `full` and did
+not run `--write-baseline`**, so `v of the vanguard|2` sat pinned at `part` for
+two versions, and a regression on that one card would have passed the file
+perfectly.
+
+It asks both directions now — **v4.12's *a census that only ever goes up is half
+a census*, read from the other side** — and it is the rule this file already
+states about `--write-baseline` (*"only once you've reviewed the diff"*) with
+something finally enforcing the second half. It goes RED at the moment a tier
+RISES, which is exactly when the author should read the audit diff and repin.
+
+### A CENSUS THAT LOSES A ROW READS LIKE ONE WITH NOTHING TO REPORT (v4.58)
+
+The colour fix changed what `sparring.act` plays, so `test/speccensus.test.js`'s
+32 deterministic legs stopped reaching a `ctrPut` sheet with two candidates and
+**`ctrStamp` LEFT the pinned set**. The wrong answer is to drop it from the pin
+(v3.81, v4.07) — **v4.44's `optional` is the worked example from the other
+side**, a member that cannot leave the set and so can never be watched leaving
+it, which left v3.53's consumer-stopped-obeying unwatchable for that field.
+
+v4.42 recorded this file's own answer when a field is unreached: **the honest
+widening is MORE LEGS, not a looser claim**, and v4.48 discharged its reach limit
+in the other direction by the engine moving. This is the same rule with the sign
+flipped. **Measured rather than guessed**: every pairing outside the ring was
+driven and Enigma v Dash is the first that reaches it. It brings NO other field
+with it, so the pinned set of 38 is unchanged and only the LEG COUNT moves,
+32 → 33 — a widening that moved the pin would be a fixture change wearing a
+fix's clothes.
+
+### A SECOND REAL DRAW, AND WHAT THE OLD ENGINE HAD INSTEAD (v4.58)
+
+The colour fix produced **one stall in 630 games**, where v4.57 had none — and
+`stalls` is one of the three numbers this file tells a reader to read first.
+Driven at the same seed on both sides:
+
+| | v4.57 | v4.58 |
+|---|---|---|
+| transcends | **4** | 0 |
+| *"no other blue card"* refusals | 0 | **5** |
+| outcome | seat 0 kills on turn 33 | 1,318 turns, no winner |
+
+**IT IS A GENUINE DRAW, NOT A LIVELOCK, AND THE TEST IS THE STEP RATE.** v4.54's
+livelock sat at ONE turn for 4,000 steps; this is 4,000 steps across 1,318 turns
+— about three, which is pass·pass·end-phase. Driven 60 rounds further: no
+refusal, no violation, the turn counter advancing normally, both decks EMPTY,
+and neither seat holding a weapon or a playable card (Enigma's three gear pieces
+include Cosmo, which turns ward AURAS into weapons, and her board is empty; her
+one hand card is a non-attack needing that board; her arsenal holds a **Block**
+card, which by type has no play). CR 4.5.3 has no deck-out loss, so **v3.80's
+recorded shape a second time** rather than an engine defect.
+
+**WHAT THE OLD ENGINE HAD INSTEAD WAS AN INFINITE CARD SUPPLY.** The game only
+ever ended because transcend fired on every play. A stall appearing is the fix
+landing; a stall that is a draw is not a bug to fix by inventing a rule.
+
+**AND MY FIRST PROBE REPORTED A POLICY REFUSAL THAT DOES NOT EXIST**, because it
+tested `out.ok` on a `reduce` that returns `{state}` / `{error}`. It printed
+*"REFUSED seat1: undefined"* eighteen times — a refusal is always a bug in
+`sparring.js` by its own contract, so this is the most expensive kind of wrong
+fixture. v4.09, again: check your own fixture, and check it by asking the file.
 
 ### THE SECOND WALL, AND A PAYMENT NOBODY COULD AFFORD (v4.57)
 

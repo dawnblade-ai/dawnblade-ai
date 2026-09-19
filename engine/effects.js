@@ -2896,10 +2896,11 @@ function makeEffects(ctx){
     }
     if(bAct(n).viseraiPassive && /runeblade/i.test(card.tt||"") && act(n).hist.non>0){ n = mkRune(n, 1); n=L(n,`Viserai's rite — a non-attack already down, so this Runeblade card conjures a Runechant (now ${runeCount(act(n))}).`); }
     const preHP = foe(n).hp;
-    /* colour is pitch: red 1, yellow 2, blue 3 — several rulings key off
-       "another blue/red card this turn" */
-    if(card.pitch===3) actMut(n).hist = {...act(n).hist, blue:(act(n).hist.blue||0)+1};
-    if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
+    /* THE COLOUR COUNTERS USED TO BE INCREMENTED HERE, 460 LINES ABOVE THE
+       CONDITION THAT READS THEM, AND EVERY CARD THEREFORE SATISFIED ITS OWN
+       GATE (v4.58). See `bumpColour` below the condition loop: all seven
+       pool records that ask print "ANOTHER", so the printed word was dropped
+       on every one of them. */
     const attacking = isAttack(card) || from==="weapon" || from==="ally" || from==="aura";
     /* THE GO AGAIN ON AN ACTIVATED-ABILITY LINE IS THE ABILITY'S (v3.44).
        Limpit prints "Action - {r}, {t}: Attack. Go again"; the clause
@@ -3492,6 +3493,45 @@ function makeEffects(ctx){
       else if(op[0]==="piercing" && attacking) n._condPierce = (n._condPierce||0)+op[1];
       else n = runOps(n,[op],card.name);
     });
+    /* ---- "ANOTHER" MUST NOT COUNT THE CARD ASKING (v4.58) -------------
+       Colour is pitch: red 1, yellow 2, blue 3. This used to run 460 lines
+       ABOVE the condition loop that reads it, so a red card's own play
+       incremented `hist.red` before its own gate was asked and
+       `(hist.red||0) > 0` was satisfied BY THE CARD ITSELF.
+
+       MEASURED: SEVEN POOL RECORDS ASK A COLOUR CONDITION AND ALL SEVEN
+       PRINT "ANOTHER" — and every one is the colour it asks about, so the
+       printed word was dropped on all of them. Blaze Headlong is the
+       sharpest: "if you've played another red card this turn, this gets GO
+       AGAIN", which is an action point (CR 5.3.5), gained on every play with
+       no other red card. The five blue ones are transcend.
+
+       NO TOOL HERE COULD SEE IT. All seven read `tier: full`, because the
+       clause IS consumed; and `COND-BYPASSED` needs an unconditional TWIN to
+       compare a gate against, so a gate that is PRESENT and always true
+       leaves the fairness sweep nothing to compare — v3.57's lesson and
+       v4.19's, about a gate that is decoration rather than one that vanished.
+
+       THE ENGINE ALREADY KNEW THE RULE AND APPLIED IT TO ONE COUNTER.
+       `hist.non` (the non-attack branch) and `hist.playTy` (v3.38) are both
+       recorded AFTER the card resolves and BOTH carry a comment saying
+       "ANOTHER must not count the card asking" — and the condition
+       evaluator's own comment three lines above the colour rows says these
+       "count a pitch VALUE and say 'another'". A recorded reason sitting
+       beside the defect it describes (v3.69).
+
+       IT SITS AFTER THE LOOP RATHER THAN BESIDE `hist.non`, because that
+       site is inside the NON-ATTACK branch and both cards this fixes are
+       ATTACKS — an attack's `fx.ops` ride to resolution and it never reaches
+       there. After the loop is reached by every play, so the counter is
+       still incremented for the NEXT card either way, which is the half that
+       must not regress.
+
+       AND `CONDONHIT_CONDS` DOES NOT LIST `red`/`blue`, so no hit-time
+       evaluator can ask this later in the same resolution — measured, so the
+       ordering question is only ever about the declaration loop. */
+    if(card.pitch===3) actMut(n).hist = {...act(n).hist, blue:(act(n).hist.blue||0)+1};
+    if(card.pitch===1) actMut(n).hist = {...act(n).hist, red:(act(n).hist.red||0)+1};
     /* ---- THE LATE "…THIS WAY" PASS, ONE BODY, BOTH BRANCHES (v3.62) --
        `execute` evaluates `fx.conds` BEFORE it runs the card's ops, so a
        condition asking what its own resolution just did reads an empty
@@ -5021,6 +5061,38 @@ function makeEffects(ctx){
          a training sim IS the lesson (v3.60). */
       n = L(n, `${p.src || "Shuffle"}: ${back} card${back === 1 ? "" : "s"} back into ${sp(act(n))} deck — shuffled.`);
       n = runOps(n, [["draw", back]], p.src || "");
+    }
+    /* AND A DECK SEARCH SHUFFLES FOR HAVING LOOKED (v4.58).
+
+       UNCONDITIONAL ON `r.picked`, WHICH IS THE WHOLE DIFFERENCE FROM
+       `shuffleDraw` ABOVE. The sheet showed the controller every matching
+       card in DECK ORDER, so the information was taken whether or not a
+       card was; `applyPrompt`'s decline path returns before it sets
+       `picked`, so keying off the result would let a decline keep the order
+       it had just learned. The flag is on the PROMPT, so this asks the
+       prompt.
+
+       AND IT DRAWS NOTHING. The found card is already moving to hand
+       through `moveCards`, so a draw here is a second card the printed
+       line never grants — v2.30's VALUE-DOUBLED, one zone over.
+
+       THE RNG IS STORED BACK (rng.js's founding discipline): `rngShuffle`
+       is pure and returns a new stream beside the array, and a dropped
+       store makes the NEXT shuffle in the match repeat this one, which no
+       single-game drill can see. It is the ASKED side's deck, because the
+       actor is borrowed to `p.side` for this whole body.
+
+       THE FEED SAYS SO, and it names the seat rather than a verb: `sp`
+       inflects the possessive so seat 0 reads "your deck" and a named hero
+       keeps its apostrophe-s (v4.22). In a training sim the sequence IS
+       the lesson (v3.60) — the card was named one line up by the pick
+       itself, which is what the printed REVEAL is, so this line says only
+       what the shuffle did. */
+    if(p.tag === "pick" && p.shuffleAfter){
+      const sh = rngShuffle(n.rng, act(n).deck || []);
+      n.rng = sh.rng;
+      actMut(n).deck = sh.arr;
+      n = L(n, `${p.src || "Search"}: ${sp(act(n))} deck is shuffled.`);
     }
     /* A `defBuff` IN AN ANSWERED PAYLOAD IS THE NAMED DEFENDER'S (v4.53).
        `runOps` only LOGS one, so it is lifted out here and landed on the
