@@ -1513,6 +1513,10 @@ var PROMPT_ZONES = DawnPrompts.PROMPT_ZONES, promptZone = DawnPrompts.promptZone
     promptToggleSel = DawnPrompts.promptToggleSel, promptChoose = DawnPrompts.promptChoose,
     promptReady = DawnPrompts.promptReady, moveCards = DawnPrompts.moveCards,
     promptTakeBack = DawnPrompts.promptTakeBack,
+    promptSideZone = DawnPrompts.promptSideZone,
+    promptMatchSet = DawnPrompts.promptMatchSet,
+    promptPickPool = DawnPrompts.promptPickPool,
+    promptPickAskable = DawnPrompts.promptPickAskable,
     promptDeclineSpec = DawnPrompts.promptDecline,
     applyPrompt = DawnPrompts.applyPrompt;
 var cdnImg = DawnCards.cdnImg, toNum = DawnCards.toNum,
@@ -3903,6 +3907,22 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     { const _jb = fx.daggerJab;
       if(_jb && !DawnEffects.jabTargets(act(s), _jb.filter, (s.pend && s.pend.card || {}).uid).length)
         return L(s, `${card.name.replace(/ — ability$/, "")} targets a ${_jb.sub} off the active chain link, and you control none.`); }
+    /* AND A PICK WITH NOTHING TO CHOOSE IS A COST PAID FOR A LOG LINE
+       (v4.59). Halo of Illumination and Hope Merchant's Hood both print
+       "destroy this" and open a pick from the HAND, so an empty hand
+       shattered the piece and showed no sheet; Crown of Dichotomy needs
+       BOTH its printed targets out of the graveyard. Refusing after the
+       ability resolves costs the player the piece for a play that does
+       nothing — v2.04's mirror, which v4.49 states in as many words.
+       `parser.abPickSpec` is the one reader and `judge.abCostWhy` asks the
+       same question of the same side, through the same predicate
+       `buildPrompt` itself refuses on. */
+    { const _pk = DawnParser.abPickSpec(card);
+      if(_pk && !promptPickAskable(promptPickPool(act(s), _pk), _pk)){
+        const _zw = DawnPrompts.promptZoneWord(_pk.zone || "hand");
+        return L(s, _pk.filters
+          ? `${card.name.replace(/ — ability$/, "")} needs BOTH its targets, and your ${_zw} cannot supply them.`
+          : `${card.name.replace(/ — ability$/, "")} has nothing to choose in your ${_zw}.`); } }
     if(fx.addCost && fx.addCost.discard){
       const avail = act(s).hand.length - (from==="hand" ? 1 : 0);
       if(avail < fx.addCost.discard) return L(s, `${card.name}: additional cost needs ${fx.addCost.discard} to discard — hand's too thin.`);

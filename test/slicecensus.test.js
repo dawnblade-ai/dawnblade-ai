@@ -190,6 +190,14 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
   assert.deepEqual(by, {
     "index.html": 14,
     "engine/build.js": 1,
+    /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
+       names the new `filters` field (v2.34's rule, ninth field) and that
+       `promptZone` DELEGATES to `promptSideZone` rather than keeping a second
+       copy of the three zone shapes. Both are claims about `prompts.js`, so
+       the census gains a third source file — which is exactly the row this
+       drill exists to make visible (v3.81, v4.07: a census that silently
+       gains or loses a row reads like one with nothing to report). */
+    "engine/prompts.js": 2,
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
     "DERIVED:lit": 1
@@ -206,13 +214,25 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
   const rows = census().filter(r => r.w > 8000)
     .map(r => r.tf + " " + r.f + " " + r.w).sort();
   assert.deepEqual(rows, [
+    /* +dichotomy AT v4.59: `buildPrompt`'s PICK BRANCH, anchored at the
+       branch rather than at the function — at the declaration it read the
+       `opt` branch too (13,303 chars for a claim about one field), which is
+       a bound too wide reading exactly like a drill that passes (v4.57). */
+    "dichotomy.test.js engine/prompts.js 11759",
     "dorinthea.test.js index.html 8550",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
-    "priority.test.js index.html 15440",
-    "priority.test.js index.html 15440",
+    "priority.test.js index.html 16557",
+    "priority.test.js index.html 16557",
     "priority.test.js index.html 8550"
-  ], "a slice over 8,000 characters moved — read it before repinning, and check "
+  ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
+        being read is a guard switched off). Both rows are
+        `tryPlay` -> `confirmPay` — anchored on the body's own declaration and
+        bounded at the NEXT one, which is the safe form — and the growth is
+        v4.59's new activation legality, inserted INTO `tryPlay` beside the
+        four costs it sits with. The anchors still bound the body the drill
+        names, which is the question this census exists to ask. */
+     "a slice over 8,000 characters moved — read it before repinning, and check "
    + "the anchors still bound the body the drill NAMES (v4.57)");
 });
 

@@ -227,6 +227,35 @@ function abCostWhy(sd, ab){
   if(ab._buildSteam && (((sd.counters || {})[ab._steamFor] || {}).steam || 0) > 0)
     return ab.name.replace(" — build steam", "")
          + " already carries a steam counter — building another does nothing";
+  /* ---- AND A PICK WITH NOTHING TO CHOOSE (v4.59) ---------------------
+     `buildPrompt` answers null on an empty candidate pool — a prompt
+     politely declining to show nothing — and that is right THERE and wrong
+     at the activation, because by then the cost is paid. MEASURED: five
+     pool activation lines open a pick, and three of them were spending for
+     a log line — Fai's {r}{r}{r} and his once-per-turn on an empty
+     graveyard, Halo of Illumination and Hope Merchant's Hood DESTROYING
+     THEMSELVES on an empty hand, and Crown of Dichotomy (v4.59's own) on a
+     graveyard that cannot supply BOTH its printed targets.
+
+     That is the paragraph above's rule rather than a new one: an unpayable
+     cost is INERT (v2.04) and a PAID cost that does nothing is the player
+     losing value for a play the rules should have refused (v3.11, v4.49).
+
+     THE LEGALITY ASKS EXACTLY WHAT THE SHEET WILL ASK — the same pool
+     function and the same predicate `buildPrompt` refuses on, so the two
+     cannot disagree about whether there is anything to choose; the rule
+     `abDiscardCost`'s row above already follows with `promptFilter`. And
+     Blaze's own by-name refusal (v3.39) stays, because it asks the SHARPER
+     question: what the energy pool can afford, which no candidate scan
+     knows. */
+  const _pk = PR.abPickSpec(ab);
+  if(_pk && !PM.promptPickAskable(PM.promptPickPool(sd, _pk), _pk)){
+    const _zw = PM.promptZoneWord(_pk.zone || "hand");
+    return _pk.filters
+      ? ab.name + " needs BOTH its targets, and " + GM.sp(sd) + " " + _zw
+        + " cannot supply them"
+      : ab.name + " has nothing to choose in " + GM.sp(sd) + " " + _zw;
+  }
   return null;
 }
 function rxTargetWhy(g, sd, ab, want){

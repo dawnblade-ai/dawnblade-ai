@@ -159,6 +159,60 @@ module.exports = [
     "action points spent": 0,
     "the board is clean": 0
   }
+},
+
+{
+  name: "the Crown puts BOTH targets back, in the order the player taps them",
+  why: "v4.59 — \"Put target Runeblade attack action card AND target Runeblade " +
+       "non-attack action card from your graveyard on top of your deck in any " +
+       "order.\" `RX_GY_DECK`'s single-target reader could not have it (a greedy " +
+       "capture swallowed \"and target …\"), so `parseHeroPower` refused the line " +
+       "and `build.equipPiece` built the piece NO powCard — inert on both boards. " +
+       "And one filter cannot say \"one of each\": read as the union it accepts " +
+       "TWO attacks, deleting the printed second target.",
+  run(c){
+    const gr = Object.assign({}, c.card("Crown of Dichotomy", 0), {uid: 41});
+    c.P.fxReset(); B.equipPiece(gr); c.P.fxReset();
+    const atk = Object.assign({}, c.card("Arcanic Shockwave", 1), {uid: 701});
+    const non = Object.assign({}, c.card("Malefic Incantation", 1), {uid: 702});
+    const board = grave => c.acting(c.state(
+      {gear: [gr], hand: [], grave: grave, deck: [Object.assign({}, c.card("Wounding Blow", 1), {uid: 600})],
+       res: 9, ap: 1}, {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3}));
+    /* THE ORDER IS THE DECISION, so it is driven BOTH WAYS. A reader that
+       always put the attack on top would pass one of these rows perfectly. */
+    const run = first => {
+      let n = c.reduce(board([atk, non]), {t: "activate", uid: 41, from: "gear"}, 0);
+      const at = nm => n.prompt.cards.findIndex(x => x.name === nm);
+      const other = first === atk.name ? non.name : atk.name;
+      n = c.reduce(n, {t: "promptSel", i: at(first)}, 0);
+      n = c.reduce(n, {t: "promptSel", i: at(other)}, 0);
+      return c.reduce(n, {t: "promptConfirm"}, 0);
+    };
+    const a = run(atk.name), b = run(non.name);
+    /* AND THE PIECE CANNOT BE SPENT FOR NOTHING. With only one of the two
+       types in the graveyard the sheet would skip itself, so the activation
+       is refused BEFORE the destroy — v2.04's mirror (v3.11, v4.49). */
+    const half = board([atk]);
+    return {
+      "the piece has an ability at all":      !!gr.powCard,
+      "deck top, attack tapped first":        a.sides[0].deck.map(x => x.name).slice(0, 2).join(" then "),
+      "deck top, non-attack tapped first":    b.sides[0].deck.map(x => x.name).slice(0, 2).join(" then "),
+      "cards left in the graveyard":          a.sides[0].grave.length,
+      "the Crown is destroyed by its cost":   !!a.sides[0].gear.find(x => x.uid === 41).destroyed,
+      "resources left of 9":                  a.sides[0].res,
+      "one type only — refused":              String(c.J.legal(half, {t: "activate", uid: 41, from: "gear"}, 0) || "ALLOWED")
+                                                .replace(/^.*needs BOTH/, "needs BOTH")
+    };
+  },
+  want: {
+    "the piece has an ability at all": true,
+    "deck top, attack tapped first": "Arcanic Shockwave then Malefic Incantation",
+    "deck top, non-attack tapped first": "Malefic Incantation then Arcanic Shockwave",
+    "cards left in the graveyard": 0,
+    "the Crown is destroyed by its cost": true,
+    "resources left of 9": 8,
+    "one type only — refused": "needs BOTH its targets, and your graveyard cannot supply them"
+  }
 }
 
 ];

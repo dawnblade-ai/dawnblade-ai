@@ -165,15 +165,36 @@ test("the pool emits `shuffleDraw` from EXACTLY ONE record, and the census is bo
     ["Arakni, Trap-Door", "Flamecall Awakening", "Hope Merchant's Hood"]);
 });
 
-test("it is the pool's FIRST multi-card pick — every other `pickPrompt` is max 1", () => {
+test("EVERY multi-card bound the parser emits is pinned — there are two families", () => {
   /* MEASURED FROM THE SOURCE, because the claim is about the parser's
-     whole `pickPrompt` family rather than about one card. A second
-     `maxAll` arriving is a deliberate edit here. */
-  const src = fs.readFileSync(path.join(__dirname, "..", "engine", "parser.js"), "utf8");
+     whole `pickPrompt` family rather than about one card.
+
+     IT SAID "THE FIRST, AND EVERY OTHER PICK IS max 1" UNTIL v4.59, AND
+     THAT STOPPED BEING TRUE. Crown of Dichotomy prints two targets in one
+     sentence, so its bound is `filters.length` — a SECOND multi-card
+     family, with a different rule: `maxAll` means "as many as the pool
+     holds" and `filters` means "exactly one matching each printed target".
+     Both are pinned, so a THIRD is a deliberate edit, and pinning only the
+     Hood's could never have seen this one arrive (v4.12: a name arriving is
+     as deliberate an edit as one leaving).
+
+     AND IT IS SCANNED WITH COMMENTS STRIPPED, because v4.59's own comment
+     in `parser.js` had to spell what the union bound WOULD be and the raw
+     scan read it as code — v4.27's `failstates.js` counting a keyword named
+     in a comment, v4.32 and v4.44 the same thing inside a drill. The prose
+     was reworded too (this project's standing answer), and the stripper is
+     the guard that makes the next one harmless. */
+  const raw = fs.readFileSync(path.join(__dirname, "..", "engine", "parser.js"), "utf8");
+  const src = raw.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
+  /* THE STRIPPER'S CONTROL GOES BOTH WAYS (v4.32, v4.44): it really strips,
+     and it has not eaten the code the census is about. */
+  assert.ok(!src.includes("/*"), "the comment stripper is not stripping");
+  assert.ok(src.includes("pickPrompt"), "…and it has eaten the code it was meant to read");
   const maxes = (src.match(/max: *\d+/g) || []).map(s => s.replace(/\D/g, ""));
   assert.deepEqual([...new Set(maxes)], ["1"],
-    "a numeric max other than 1 means a second multi-card pick exists");
-  assert.equal((src.match(/maxAll: *true/g) || []).length, 1);
+    "a numeric max other than 1 means a third multi-card family exists");
+  assert.equal((src.match(/maxAll: *true/g) || []).length, 1, "one `maxAll` emitter");
+  assert.equal((src.match(/filters: *\[/g) || []).length, 1, "one `filters` emitter");
 });
 
 /* =====================================================================

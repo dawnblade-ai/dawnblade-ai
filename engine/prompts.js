@@ -37,12 +37,34 @@ const {isAttack, printedKw, arcAmount} = P;
    holds wrappers rather than cards, so both are normalised on read. */
 const PROMPT_ZONES = ["hand","deck","grave","banish","soul","pitch","arsenal","board","gear"];
 
-function promptZone(game, side, zone){
-  const s = game.sides[side];
+/* WHAT A PLAYER CALLS A ZONE (v4.59). The state keys are field names and
+   one of them is not a word anybody says: this module's own default hint
+   read "From your grave." on every pick that did not supply its own, and
+   `abCostWhy`'s new refusal needed the same noun on both boards. In a
+   training sim the feed is the lesson (v3.60, v4.24), and two spellings of
+   one noun across two boards is the mirror the no-mirror rule exists to
+   stop — so it is ONE reader here, where the zone vocabulary already lives.
+
+   IT IS TOTAL OVER `PROMPT_ZONES` AND THE FALLBACK IS THE KEY. Exactly one
+   key differs today, which is why this is not a table of nine rows nobody
+   reads (v4.11, v4.50: unclaimed vocabulary is dead code that reads like a
+   rule) — and a zone whose key is already the word needs no entry. */
+const promptZoneWord = z => z === "grave" ? "graveyard" : String(z || "");
+
+/* WHAT IS IN ONE ZONE OF ONE SIDE. Split out of `promptZone` (v4.59) so a
+   caller holding only a SIDE can ask the same question: `judge.abCostWhy`
+   takes `(sd, ab)` and has no game to index, and the alternative was a
+   synthetic `{sides:[sd]}` at the call site or a second copy of the three
+   zone shapes. `promptZone` is still the one reader — this is its body, the
+   way `faceUpArsenal` was exposed rather than duplicated (v4.05). */
+function promptSideZone(s, zone){
   if(!s) return [];
   if(zone === "arsenal") return s.arsenal ? [s.arsenal] : [];
   if(zone === "board") return (s.board||[]).map(b=>b && b.card).filter(Boolean);
   return s[zone] || [];
+}
+function promptZone(game, side, zone){
+  return promptSideZone(game.sides[side], zone);
 }
 
 /* Selection filters read printed card FIELDS — type text, pitch, cost,
@@ -138,6 +160,85 @@ function promptFilter(spec){
   };
 }
 
+/* ---- TWO TARGETS IN ONE SENTENCE (v4.59) ----------------------------
+   > "Put target Runeblade attack action card AND target Runeblade
+   >  non-attack action card from your graveyard on top of your deck in
+   >  any order." — CROWN OF DICHOTOMY, the pool's ONLY record naming two
+   >  targets in one sentence (measured over 797)
+
+   A LIST of filters, and what it asks is a PERFECT MATCHING: every filter
+   covered by a DISTINCT card. That is the whole difference between reading
+   this card and dropping a printed restriction — folded into ONE filter
+   (the union, `max: 2`) the sheet happily accepts TWO attacks, which the
+   printed line does not permit. v2.30's arrow buff landing on a sword and
+   v3.31's swallowed tail, one prompt variant over, and the direction that
+   steals games.
+
+   "EVERY CARD MATCHES SOMETHING" IS THE WRONG TEST AND PASSES THE BUG.
+   Two Runeblade attacks each match the attack filter, so a per-card scan
+   answers TRUE while the non-attack filter goes uncovered. It is Kuhn's
+   augmenting path rather than a pair of loops, so a third target needs no
+   second body — and with an empty `filters` it answers TRUE, which is what
+   keeps every existing single-`filter` caller on exactly the path it was
+   on. */
+/* ---- WOULD A PICK HAVE ANYTHING TO ASK? (v4.59) ---------------------
+   `buildPrompt` has answered null for an empty candidate pool since this
+   module was written, which is how a prompt politely skips itself instead
+   of showing an empty sheet. That is right there and WRONG at the
+   ACTIVATION: measured, FIVE pool activation lines have a pick as their
+   payload, and for three of them the cost is paid and the sheet then skips
+   — Fai's three resources and his once-per-turn on an empty graveyard, and
+   the Halo and the Hood DESTROYING THEMSELVES on an empty hand. v2.04 made
+   an unpayable cost INERT on purpose; v4.49 states the mirror, that a PAID
+   cost which does nothing is the player losing value for a play the rules
+   should have refused first (v3.11).
+
+   SO THE PREDICATE IS SHARED RATHER THAN RESTATED. `abCostWhy` and the
+   trainer both ask the same two questions `buildPrompt` asks, off the same
+   pool, so the legality and the sheet cannot disagree about whether there
+   is anything to choose — the rule `abDiscardCost` already follows with
+   `promptFilter`. Blaze's own by-name refusal (v3.39) stays and is
+   STRONGER: it also asks what the energy pool can afford, which is a
+   dynamic bound no candidate scan can know.
+
+   THE POOL TAKES A SIDE, not a game, because `abCostWhy` is handed
+   `(sd, ab)` and has none — `promptSideZone`'s reason, one layer up. */
+function promptPickPool(sd, spec){
+  const filters = spec.filters && spec.filters.length ? spec.filters : null;
+  const pass = filters ? (c => filters.some(f => promptFilter(f)(c)))
+                       : promptFilter(spec.filter);
+  return (spec.cards ? spec.cards.filter(Boolean)
+                     : promptSideZone(sd, spec.zone || "hand")).filter(pass);
+}
+function promptPickAskable(pool, spec){
+  if(!pool.length) return false;
+  const filters = spec.filters && spec.filters.length ? spec.filters : null;
+  return !filters || promptMatchSet(pool, filters);
+}
+
+function promptMatchSet(cards, filters){
+  if(!filters || !filters.length) return true;
+  const list = (cards||[]).filter(Boolean);
+  const ok = filters.map(f => {
+    const t = promptFilter(f);
+    const out = [];
+    list.forEach((c, i) => { if(t(c)) out.push(i); });
+    return out;
+  });
+  const owner = new Array(list.length).fill(-1);
+  const assign = (fi, seen) => {
+    for(const ci of ok[fi]){
+      if(seen[ci]) continue;
+      seen[ci] = true;
+      if(owner[ci] < 0 || assign(owner[ci], seen)){ owner[ci] = fi; return true; }
+    }
+    return false;
+  };
+  for(let fi = 0; fi < filters.length; fi++)
+    if(!assign(fi, new Array(list.length).fill(false))) return false;
+  return true;
+}
+
 /* Turn a queued spec into a live prompt, or null when there is nothing to
    ask — an empty zone, a cost that cannot be met. Returning null is how a
    prompt politely skips itself instead of showing an empty sheet. */
@@ -174,9 +275,21 @@ function buildPrompt(game, spec){
        from the opponent's ARSENAL and their ALLIES together, which is two
        zones, and teaching `promptZone` a synthetic third would put a rules
        decision inside a module that is meant to stay data-driven. */
-    const pool = (spec.cards ? spec.cards.filter(Boolean) : promptZone(game, side, zone))
-      .filter(promptFilter(spec.filter));
-    if(!pool.length) return null;
+    /* THE CANDIDATE POOL IS THE UNION WHEN THE CARD NAMES SEVERAL TARGETS
+       (v4.59), because a card that is only ever legal for the second
+       target must still be offered. What stops the player taking two of
+       the first is `promptReady`'s perfect matching, not this filter.
+
+       AND AN UNSATISFIABLE SHEET IS REFUSED RATHER THAN BUILT. `judge.legal`
+       freezes the game for BOTH seats while a prompt is live, so a sheet
+       whose Confirm can never light is a hard LIVELOCK — v4.44's finding,
+       which is why the table got a sheet at all. Both boards refuse the
+       ACTIVATION first, through this same predicate; this is the second line
+       of the same defence and it is needed for v2.04's reason, that `reduce`
+       is fed by JSON off a wire. */
+    const filters = spec.filters && spec.filters.length ? spec.filters : null;
+    const pool = promptPickPool(game.sides[side] || {}, spec);
+    if(!promptPickAskable(pool, spec)) return null;
     /* "ANY NUMBER OF CARDS" IS RESOLVED HERE, AGAINST THE POOL THIS
        FUNCTION HAS ALREADY FILTERED (v4.43). Hope Merchant's Hood is the
        pool's first multi-card pick — every other `pickPrompt` in the
@@ -186,10 +299,26 @@ function buildPrompt(game, spec){
        saw (v3.39, v3.92), and supplying it at the queue site would be a
        second place that has to re-derive the same filter. The clamp is
        already here; "all of them" is just the clamp with no other bound. */
-    const max = Math.min(spec.maxAll ? pool.length : (spec.max != null ? spec.max : 1), pool.length);
-    const min = Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
+    /* WITH `filters` THE COUNT IS THE LIST'S LENGTH AND NOTHING ELSE
+       (v4.59). "Target X and target Y" names exactly two, so deriving both
+       bounds from the list leaves no way for a spec's `min`/`max` to
+       disagree with the matching rule that gates Confirm — two records of
+       one fact (v3.61), and the record that would drift is the one nobody
+       reads. */
+    const max = filters ? filters.length
+      : Math.min(spec.maxAll ? pool.length : (spec.max != null ? spec.max : 1), pool.length);
+    const min = filters ? filters.length
+      : Math.max(0, Math.min(spec.min != null ? spec.min : max, max));
     return {...base, zone: spec.cards ? null : zone, cards:pool, min, max,
       to: spec.to || null, optional: min === 0,
+      /* A SPEC ONLY CARRIES FIELDS `buildPrompt` KNOWS ABOUT (v2.34's
+         `arsStamp` rule, and this is the NINTH field to prove it, now with
+         `test/speccensus.test.js` standing behind it). Dropped here, the
+         perfect matching has nothing to match against: `promptReady` falls
+         back to `sel.length >= min`, Confirm lights on any two cards, and
+         Crown of Dichotomy puts TWO Runeblade attacks back — the printed
+         second target silently deleted. */
+      filters,
       /* THE "IF YOU DO" RIDER. A pick with `min:0` is an OPTIONAL COST —
          "you may banish an aura from your graveyard. If you do, deal 1
          arcane damage" — and these ops are the "if you do" half. They are
@@ -312,8 +441,12 @@ function buildPrompt(game, spec){
          and dropped here the shuffle simply never happens while the feed
          says the card was found. */
       shuffleAfter: !!spec.shuffleAfter,
-      title: spec.title || (max === 1 ? "Choose a card" : "Choose up to " + max),
-      hint: spec.hint || ("From your " + zone + (spec.to ? " → " + spec.to : "") + ".")};
+      /* "UP TO" IS A LIE FOR A MULTI-TARGET PICK, and this sheet's own
+         Confirm is gated on the matching — so the default says what it is
+         actually waiting for rather than a bound (v4.59). */
+      title: spec.title || (filters ? ("Choose " + filters.length + " cards")
+                                    : max === 1 ? "Choose a card" : "Choose up to " + max),
+      hint: spec.hint || ("From your " + promptZoneWord(zone) + (spec.to ? " → " + spec.to : "") + ".")};
   }
   /* ============================================================
      ALLOC — THE SIXTH VARIANT, AND THE ONE THAT APPORTIONS (v4.44)
@@ -610,7 +743,21 @@ function promptDecline(prompt){
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
-  if(prompt.tag === "pick") return prompt.sel.length >= prompt.min;
+  /* A PERFECT MATCHING, WHERE THE CARD NAMED SEVERAL TARGETS (v4.59). The
+     count alone is not the rule: two Runeblade attacks are two cards and
+     cover ONE of Crown of Dichotomy's two printed targets, so `sel.length`
+     lights Confirm on a selection the printed line forbids. Equal counts
+     make `promptMatchSet` a perfect matching on both sides.
+
+     AND THE DISABLED CONFIRM IS WHY THE HINT SAYS "one of each". A dead
+     control reads as a broken screen rather than as a rule (v2.83), so the
+     sheet has to say what it is waiting for. */
+  if(prompt.tag === "pick"){
+    if(prompt.filters)
+      return prompt.sel.length === prompt.filters.length
+          && promptMatchSet(prompt.sel.map(i=>prompt.cards[i]), prompt.filters);
+    return prompt.sel.length >= prompt.min;
+  }
   if(prompt.tag === "modal") return prompt.choice != null;
   if(prompt.tag === "pay") return prompt.choice != null;
   /* CR 1.4.5 makes declaring a target mandatory — no confirm until chosen. */
@@ -776,6 +923,18 @@ function applyPrompt(game, prompt){
       (prompt.to ? " → " + prompt.to
                  : prompt.zone ? " revealed" : " chosen") +
       (prompt.zone ? " from " + prompt.zone : "") + ".");
+    /* AND WHERE THE ORDER IS THE DECISION, SAY WHAT IT WAS (v4.59). Crown
+       of Dichotomy prints "in any order", `promptToggleSel` pushes onto
+       `sel` in TAP ORDER and `moveCards`' deckTop branch front-inserts the
+       list — so the first card tapped is the first card drawn, and the
+       player has just made a choice the shared line above does not report.
+       In a training sim the feed is the lesson (v3.60).
+
+       MEASURED: every other `pickPrompt` that puts cards on top of a deck
+       is `max: 1`, so this reaches nothing else in the pool today. */
+    if(prompt.to === "deckTop" && picked.length > 1)
+      out.msgs.push("On top of the deck: " + picked[0].name + " first, then "
+        + picked.slice(1).map(c=>c.name).join(", ") + ".");
     /* PAID. The cards moved, so the rider resolves. */
     out.ops = prompt.ops || [];
     /* AND THE PRICE IS ONLY CHARGED WHEN SOMETHING WAS ACTUALLY TAKEN.
@@ -923,6 +1082,7 @@ function applyPrompt(game, prompt){
   return out;
 }
 
-return {PROMPT_ZONES, promptZone, promptFilter, buildPrompt,
+return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter, promptMatchSet,
+        promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, moveCards, applyPrompt};
 });

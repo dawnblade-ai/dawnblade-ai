@@ -418,6 +418,19 @@ function quotedOnHit(txt){
 const RX_FOE_TOP  = /^put (.+) from their hand on top of their deck$/;
 const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
 const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
+/* TWO TARGETS IN ONE SENTENCE (v4.59) — Crown of Dichotomy, and MEASURED
+   over 797 records it is the pool's ONLY one. Lazy captures, because a
+   greedy first group swallows "and target …" and hands `pickSubject` a
+   phrase it rightly refuses — which is how this card came to read `part`.
+
+   "IN ANY ORDER" IS IN THE ANCHOR AND IS NOT DECORATION. It is the phrase
+   that makes the ORDER the controller's choice, and the order is what the
+   sheet asks for: without it the printed line says nothing about which
+   card is drawn first, so a sheet that asked would be inventing a decision.
+   READ WHOLE OR REFUSE (v2.29) — a variant printing the pair without the
+   phrase refuses here rather than being read as this one, which is weaker
+   than printed and visible in the audit. */
+const RX_GY_DECK2 = /^put target (.+?) and target (.+?) from your graveyard on (?:the )?(top|bottom) of your deck in any order$/;
 const RX_GY_HAND  = /^(you may )?return (.+) from your graveyard to your hand$/;
 const RX_RETRIEVE = /^(you may )?retrieve (.+) from your graveyard$/;
 /* A DECK SEARCH (v4.58) — Flamecall Awakening. It is the SAME pick with a
@@ -2831,6 +2844,47 @@ function classifyClause(raw){
      the bottom". Written as one reader because they are one sentence with
      one word different — two readers here is the drift this file names on
      nearly every page. */
+  /* AND THE TWO-TARGET FORM IS READ FIRST (v4.59). It cannot be a widening
+     of the reader below: ONE filter covering both subjects is the union,
+     and a union bounded at two accepts two Runeblade ATTACKS — the printed
+     second target silently deleted, which is v3.31's swallowed tail in the
+     direction that steals games. `filters` is a LIST and `promptReady` asks
+     for a PERFECT MATCHING, so one of each is the only legal answer.
+
+     EACH SUBJECT GOES THROUGH `pickSubject`, so no vocabulary is invented
+     and an unreadable HALF refuses the WHOLE clause (v2.29) rather than
+     leaving the card holding one target it never printed alone.
+
+     IT NEEDS NO NEW MACHINERY BEYOND THE MATCHING (v3.58, v3.73): `sel` has
+     been an array in TAP ORDER since `prompts.js` was written and
+     `moveCards`' deckTop branch front-inserts the list, so the printed "in
+     any order" IS the selection order — the first card tapped is the first
+     card drawn.
+
+     AND IT CREATES A LEGALITY THAT DID NOT EXIST. Measured, NO activation
+     line in the pool had a pick as its payload before this one, so an
+     ability whose sheet cannot be satisfied — an empty graveyard, on turn
+     one — would destroy the piece, spend {r} and the action point, and skip
+     the sheet. v2.04's mirror, which v4.49 states in as many words: a PAID
+     cost that does nothing is the player losing value for a play the rules
+     should have refused first. `abPickTargets` is the one reader and both
+     boards refuse it (v3.11). */
+  if(m=c.match(RX_GY_DECK2)){
+    /* THE SUBJECTS KEEP THEIR PRINTED CAPITALISATION, and the HINT is why
+       it matters twice over: `cased` exists so `pickSubject`'s named-card
+       branch can see a proper noun (v3.53), and this sheet also prints the
+       two subjects back to the player, where "runeblade" reads as a typo. */
+    const subA = cased(RX_GY_DECK2, 1, m[1]), subB = cased(RX_GY_DECK2, 2, m[2]);
+    const fA = pickSubject(subA), fB = pickSubject(subB);
+    if(!fA || !fB) return null;
+    const top2 = m[3] === "top";
+    const where = top2 ? "top" : "the bottom";
+    return R([["pickPrompt", {zone:"grave", to: top2 ? "deckTop" : "deckBottom",
+      filters:[fA, fB],
+      title:"Put two cards from your graveyard on " + where + " of your deck",
+      hint:"One of each — " + subA + ", and " + subB + "."
+        + (top2 ? " The first you tap is the first you draw." : "")}]]);
+  }
   if(m=c.match(RX_GY_DECK)){
     const filter = pickSubject(cased(RX_GY_DECK, 1, m[1]));
     if(!filter) return null;
@@ -9022,6 +9076,45 @@ function gyFirstGaKw(sd){
   return null;
 }
 const abFlipUp = ab => !!(ab && ab._flipUp);
+/* ---- THE PICK AN ACTIVATION'S PAYLOAD OPENS (v4.59) -----------------
+   The pick SPEC for an ability whose payload opens one, else null.
+
+   MEASURED: FIVE POOL ACTIVATION LINES HAVE A PICK AS THEIR PAYLOAD, and
+   for three of them the cost was paid and the sheet then skipped itself —
+   `buildPrompt` answers null on an empty candidate pool, which is how a
+   prompt politely declines to show nothing, and that is right THERE and
+   wrong at the activation. Fai spent {r}{r}{r} and his once-per-turn on an
+   empty graveyard; Halo of Illumination and Hope Merchant's Hood DESTROYED
+   THEMSELVES on an empty hand. v2.04 made an unpayable cost INERT on
+   purpose; v4.49 states the mirror, that a PAID cost which does nothing is
+   the player losing value for a play the rules should have refused first
+   (v3.11). Crown of Dichotomy is the fourth and this version's own.
+
+   MY FIRST CENSUS SAID THE FAMILY HAD ONE MEMBER, AND IT ASKED THE WRONG
+   THING: it parsed the whole printed LINE, which `classifyClause` files
+   `noop` as an activation, so every record came back with no pick and the
+   scan reported ZERO — indistinguishable from a pool with nothing in it
+   (v3.81, v4.07). `equipPiece` builds the powCard out of the PAYLOAD with
+   the cost prefix stripped, which is what this reader is handed. v4.09,
+   again: check your own fixture by asking the file.
+
+   IT IS READ, NOT STAMPED. Every cost flag beside it is a stamp `build.js`
+   puts on the powCard, and that is right for a COST — the legality has to
+   know the price before anything parses the payload. This fact lives IN the
+   payload, so `execute` derives it from the same `fxParse` call; a stamp
+   would be a second record of one fact (v3.61) and the one that drifts is
+   the one nobody reads. `gyFirstGaKw` three lines up reads its own answer
+   the same way. */
+function abPickSpec(ab){
+  /* THE NAME IS THE MEMO KEY, so `fxParse` throws without one — and this is
+     reached from `judge.legal`, a surface fed by JSON off a wire whose
+     contract is that it never throws (`fuzz.test.js`). Every other `ab*`
+     reader beside it reads a stamp and cannot. */
+  if(!ab || typeof ab.name !== "string") return null;
+  const fx = fxParse(ab);
+  const op = (fx.ops || []).find(o => o[0] === "pickPrompt" && o[1]);
+  return op ? op[1] : null;
+}
 /* THE CHI AN ACTIVATION COSTS (v4.54), or 0. One reader, for the reason
    `abSoulCost` and its siblings each have one: a cost read in one place
    and re-derived in another is two descriptions of one price (v3.79,
@@ -9217,6 +9310,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

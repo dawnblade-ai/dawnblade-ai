@@ -324,7 +324,13 @@ test("exactly ONE pool piece prints both an attack and an ability", {skip}, () =
     if(P.isWeapon(gr)) both.push(c.name); else abOnly++;
   }
   assert.deepEqual(both, ["Plasma Barrel Shot"], "the set with BOTH routes moved");
-  assert.equal(abOnly, 32, "and the count with an ability alone moved");
+  /* 32 -> 33 AT v4.59, deliberately: reading Crown of Dichotomy's payload is
+     what made `parseHeroPower` answer for it, so `equipPiece` builds it a
+     powCard where before it built none (v3.47's shape, EIGHTH outing — the
+     route is created by reading the payload, not by wiring anything). This
+     half of the pin is exactly what sees that, and pinning the BOTH set
+     alone could not (v4.17, v4.12). */
+  assert.equal(abOnly, 33, "and the count with an ability alone moved");
 });
 
 test("a PAID cost that resolves to nothing is refused first", {skip}, () => {

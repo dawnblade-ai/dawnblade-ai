@@ -149,6 +149,21 @@ const drive = () => {
      unchanged at 38 — a widening that moved the pin would be a fixture
      change wearing a fix's clothes. */
   { const r = T.leg(E[8], E[3], "spec-8-3", 0); legs++; if(r && r.threw) threw++; }
+  /* AND THE 34th IS THE SAME RULE A SECOND TIME (v4.59). Generalising the
+     activation-pick legality means Fai's hero ability is refused when his
+     graveyard holds no Phoenix Flame — three resources and his once-per-turn
+     were being spent on a sheet that skipped itself — so he plays a
+     different game and the ring's own Fai legs stopped reaching Flamecall
+     Awakening's deck search. `shuffleAfter` LEFT the set, exactly as
+     `ctrStamp` did one version ago and for the same kind of reason: the
+     ENGINE moved, and this census is sample-dependent by construction.
+
+     MORE LEGS, NOT A LOOSER CLAIM (v4.42, v4.58). Measured: nine pairings
+     outside the ring reach it and Iyslander v Fai is the first; every field
+     it brings is already pinned, so the set below is unchanged at 38 and
+     only the leg count moves. A widening that moved the pin would be a
+     fixture change wearing a fix's clothes. */
+  { const r = T.leg(E[1], E[7], "spec-1-7", 0); legs++; if(r && r.threw) threw++; }
 };
 
 /* BOUND A FUNCTION AT THE NEXT SAME-LEVEL DECLARATION, NEVER AT A CHAR
@@ -167,8 +182,9 @@ const fnBody = name => {
 
 test("the driven census is alive — the legs really ran", () => {
   drive();
-  assert.equal(legs, 33, "the leg count moved; the pinned field set is taken at 33 "
-    + "(32 in the ring, plus the named leg that keeps `ctrStamp` in it — see `drive`)");
+  assert.equal(legs, 34, "the leg count moved; the pinned field set is taken at 34 "
+    + "(32 in the ring, plus the two named legs that keep `ctrStamp` and "
+    + "`shuffleAfter` in it — see `drive`)");
   assert.equal(threw, 0,
     "a leg threw — `leg` reports that as `threw: true` rather than raising, so a "
     + "census built on it reports ZERO exactly as a missing feature does (v3.81)");
