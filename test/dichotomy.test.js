@@ -820,3 +820,37 @@ test("`autoAnswer` ANSWERS a multi-target sheet — a refusal is a policy bug", 
   assert.ok(top.indexOf("Malefic Incantation") >= 0,
     "the policy put back two attacks — the printed second target is deleted: " + top.join(", "));
 });
+
+test("the SHEET's tag for a multi-target pick is its POSITION, not a tick", () => {
+  /* `sel` is tap-ordered and the order is the decision this card offers, so
+     "✓ chosen" on both cards tells the player nothing about which one they
+     will draw first — the hint states the rule and this states what they have
+     actually chosen. ONE shared component, so both boards get it (v2.50).
+
+     A SOURCE PIN, because `PromptSheet` is JSX and this project has no
+     renderer in `test/` — `phasebar.test.js` and `priority.test.js` pin
+     layout the same way, and v4.44's own render count states the reach of
+     such a scan rather than pretending it drives one. Its sabotage came back
+     SILENT on the first pass precisely because nothing asserted it.
+
+     BOUNDED AT THE TAG ITSELF (v4.05, v4.57): anchored at the component the
+     slice would be 2,000 characters for a claim about one span. */
+  const raw = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const i = raw.indexOf('{p.tag==="pick" && sel && <span className="ptag">');
+  assert.ok(i > 0, "the pick tag moved — re-anchor this drill");
+  const tag = raw.slice(i, raw.indexOf("</span>}", i));
+  assert.ok(tag.length < 200, "the slice widened past the one span it names");
+  assert.match(tag, /p\.filters \? ord\(p\.sel\.indexOf\(i\)\)/,
+    "a multi-target pick must show its POSITION — otherwise the order the "
+    + "player chose is invisible on the one screen they choose it on");
+  assert.match(tag, /"✓ chosen"/, "…and an ordinary pick still shows the tick");
+  /* AND `ord` EXISTS, or the render throws rather than reading wrongly. */
+  /* WRITTEN FROM THE FILE, NOT FROM THE SHAPE I REMEMBERED — the first draft
+     of this pattern spelled `(k + 1) + "th"` where the source has `(k+1)+"th"`
+     and failed against a correct engine (v4.09, again). Whitespace-tolerant
+     for that reason; what is pinned is the ordinal table and the fallback. */
+  const ordLine = raw.slice(raw.indexOf("const ord ="), raw.indexOf("\n", raw.indexOf("const ord =")));
+  assert.match(ordLine, /\["1st"\s*,\s*"2nd"\s*,\s*"3rd"\]\s*\[k\]/,
+    "`ord` is gone, so the tag would throw on a `filters` sheet");
+  assert.match(ordLine, /\|\|.*"th"/, "…and it needs a fallback past the third");
+});

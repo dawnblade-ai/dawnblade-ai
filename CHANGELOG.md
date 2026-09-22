@@ -1,3 +1,174 @@
+## v4.59 — two targets in one sentence, and the pick family that was paid for a log line
+
+> *"**Action** - {r}, destroy this: Put target Runeblade attack action card **and**
+> target Runeblade non-attack action card from your graveyard on top of your deck
+> **in any order**."* — CROWN OF DICHOTOMY, Viserai's Head piece and Briar's
+
+**MEASURED OVER 797 RECORDS IT IS THE POOL'S ONLY CARD NAMING TWO TARGETS IN ONE
+SENTENCE**, and `RX_GY_DECK`'s single-target reader could not have it: the greedy
+`(.+)` swallowed *"and target …"* and `pickSubject` rightly refused the phrase.
+`tier: part` since the card was dealt.
+
+**READING THE PAYLOAD CREATED THE ROUTE — v3.47's shape, EIGHTH outing.**
+`parseHeroPower` refuses a line whose payload has no reader, so
+`build.equipPiece` built the piece **no powCard at all** and neither board could
+offer it. Nothing was wired; one sentence was read.
+
+**ONE FILTER CANNOT SAY "ONE OF EACH".** Folded into the union with a bound of
+two, the sheet accepts two Runeblade **ATTACKS** — the printed second target
+silently deleted, which is v2.30's arrow buff on a sword and v3.31's swallowed
+tail in the direction that steals games. So `filters` is a **LIST** and
+`promptReady` asks for a **PERFECT MATCHING**. *"Every card matches something"* is
+the wrong test and **passes the bug** — two attacks each match the attack filter
+while the non-attack target goes uncovered — which is why it is Kuhn's augmenting
+path rather than a pair of loops, and why a third target would need no second
+body.
+
+**AND IT NEEDED NOTHING ELSE** (v3.58, v3.73). `promptToggleSel` has pushed onto
+`sel` in **TAP ORDER** since `prompts.js` was written and `moveCards`' deckTop
+branch front-inserts the list — so the printed *"in any order"* **is** the
+selection order: the first card tapped is the first card drawn. Driven **both
+ways**, because a reader that always put the attack on top passes one of the two
+rows perfectly (v3.26). *"In any order"* is in the ANCHOR too, and it is not
+decoration: without it the printed line says nothing about which card is drawn
+first, so a sheet that asked would be inventing a decision (v2.29).
+
+**AND BUILDING IT FOUND A FAMILY NOBODY HAD CENSUSED.** `buildPrompt` answers
+null on an empty candidate pool — a prompt politely declining to show nothing,
+which is right THERE and wrong at the **ACTIVATION**, because by then the cost is
+paid. Measured, **five pool activation lines open a pick and THREE were spending
+for a log line**:
+
+| card | cost | was |
+|---|---|---|
+| **Fai** | {r}{r}{r} + his once-per-turn | spent on an empty graveyard |
+| **Halo of Illumination** | {r}, **destroy this** | shattered on an empty hand |
+| **Hope Merchant's Hood** | **destroy this** | shattered on an empty hand |
+| **Crown of Dichotomy** | {r}, **destroy this** | this version's own |
+
+v2.04 made an unpayable cost **INERT** on purpose; v4.49 states the mirror, that
+a **PAID** cost which does nothing is the player losing value for a play the
+rules should have refused first (v3.11). `parser.abPickSpec` is the one reader,
+`abCostWhy` the one body both boards call (v3.99), and the predicate is the one
+`buildPrompt` itself refuses on — so the sheet and the legality cannot disagree
+about whether there is anything to choose. **Blaze's by-name refusal stays**
+(v3.39): it asks the sharper question, what the energy pool can **afford**, which
+is a dynamic bound no candidate scan knows — two different questions rather than
+two records of one fact (v3.61).
+
+**MY FIRST CENSUS SAID THE FAMILY HAD ONE MEMBER, AND IT ASKED THE WRONG THING.**
+It parsed the whole printed **LINE**, which `classifyClause` files `noop` as an
+activation — so every record came back with no pick and the scan reported
+**ZERO**, indistinguishable from a pool with nothing in it (v3.81, v4.07).
+`equipPiece` builds the powCard out of the **PAYLOAD** with the cost prefix
+stripped. v4.09, again: check your own fixture by asking the file.
+
+**AN UNSATISFIABLE SHEET IS ALSO REFUSED AT `buildPrompt`, AND THAT IS A
+LIVELOCK GUARD.** `judge.legal` freezes the game for BOTH seats while a prompt is
+live (v4.44), so a sheet whose Confirm can never light is a hard stop for both
+players — and `reduce` is fed by JSON off a wire (v2.04), so the second line of
+defence is not optional.
+
+**THREE SMALL READERS, EACH ONE BODY.** `promptSideZone` is `promptZone`'s body,
+split out so a caller holding only a SIDE can ask the same question —
+`abCostWhy` takes `(sd, ab)` and has no game to index, and the alternative was a
+synthetic `{sides:[sd]}` at the call site (v4.05: expose the reader rather than
+duplicating it). `promptPickPool` and `promptPickAskable` are what `buildPrompt`
+and both boards share. And **`promptZoneWord` had a second caller the moment it
+existed**: this module's own default hint read *"From your grave."* on every pick
+that supplies none — the state keys are field names and one of them is not a word
+anybody says (v3.60, v4.24).
+
+**THE SUBJECTS KEEP THEIR PRINTED CAPITALISATION, AND THE HINT IS WHY IT MATTERS
+TWICE.** `cased` exists so `pickSubject`'s named-card branch can see a proper noun
+(v3.53), and this sheet prints both subjects back to the player, where
+*"runeblade"* reads as a typo. The Confirm is **disabled** until the matching is
+met, so the hint is what tells the player why — a dead control reads as a broken
+screen rather than as a rule (v2.83).
+
+**NO ROUTE COUNTER IS ADDED, AND THAT IS ABOUT THE LOADOUT — FIFTH OUTING**
+(v4.43's Hood, v4.49's Gun, v4.52's Stilettos, v4.55's Robe). `defaultPicks`
+ranks armour by printed defence and both lists hold Blade Beckoner Helm at **1**
+against this piece at **0**, so the Crown is never worn in a driven game. A
+number that can only read 0 because of the loadout is a number about the loadout
+(v4.24, v4.29, v4.41, v4.52), and a counter that cannot see its own event is
+v4.46's defect. A player picks it on the loadout screen, which is the route the
+drills seat explicitly — and the premise is a **drill**.
+
+**FOUR CENSUSES MOVED AND EVERY PIN WAS READ FIRST.**
+
+- `test/speccensus.test.js` **33 → 34 legs**. Fai's new refusal changed his game
+  and the ring's own Fai legs stopped reaching Flamecall Awakening's deck search,
+  so **`shuffleAfter` LEFT the set** — v4.58's `ctrStamp` one version on, and the
+  answer is the same: **more legs, not a looser claim** (v4.42). Measured, nine
+  pairings outside the ring reach it and Iyslander v Fai is the first; every field
+  it brings is already pinned, so the set stays 38 and only the leg count moves.
+- `test/gunroute.test.js` **32 → 33** pieces with an ability alone — the half of
+  that pin that sees a name ARRIVING (v4.12, v4.17).
+- `test/slicecensus.test.js` gains **two rows and a third source file**
+  (`engine/prompts.js`), and `priority.test.js`'s `tryPlay` slice goes
+  **15,440 → 16,557** because the new legality sits inside `tryPlay` beside the
+  four costs it belongs with. Both anchors still bound the body the drill names,
+  which is the question that census exists to ask (v4.57).
+- `test/hood.test.js`'s *"the pool's FIRST multi-card pick"* claim is retired for
+  the honest one: **two families, both pinned** — `maxAll` means *as many as the
+  pool holds* and `filters` means *exactly one matching each printed target*, so
+  a third is a deliberate edit. **And it is scanned with comments stripped**,
+  because v4.59's own comment in `parser.js` had to spell what the union bound
+  would be and the raw scan read it as code (v4.27, v4.32, v4.44). The prose was
+  reworded too — this project's standing answer — and the stripper is what makes
+  the next one harmless.
+
+**`WIRE_V` GOES 11 → 12, AND IT COVERS v4.58's OMISSION TOO.** The live
+`prompt` gains `filters`, and v4.58 added `shuffleAfter` to a pick without
+bumping. `prompt` is a GAME_KEY that ships WHOLE, so this is v4.56's case
+exactly — the digest covers the zone and side-field LISTS and cannot see a
+shape change inside a value those lists carry uninterned — and `hash`
+fingerprints the whole rules state, so the moment such a sheet opens a v11
+peer and a v12 peer hash differently and `diffPaths` names `/prompt/filters`,
+a field neither of them can do anything about. **That blind spot is why the
+earlier omission was silent**, which is the half of v4.26's own finding still
+open: a forgotten bump fails no drill. Declaring the prompt's field set as a
+ledger the digest could cover is its own piece of work; until then every
+prompt-shape change is a bump by hand and `wire.js`'s header is where it is
+recorded.
+
+**AND THE SHEET'S TAG IS THE POSITION, NOT A TICK.** `sel` is tap-ordered and
+the order is the decision this card offers, so *"✓ chosen"* on both cards tells
+the player nothing about which one they will draw first. A `filters` pick shows
+`1st` / `2nd` instead — one shared component, so both boards get it.
+
+**AND WHAT THE CR SAYS ABOUT A PARTIALLY-LEGAL TARGET SET IS NOT SOURCED
+HERE.** `rules.fabtcg.com` is unreachable from this sandbox and the repo
+carries no verbatim quote, so reading it either way would be restating a rule
+from memory — which `crindex.js`'s own contract forbids. With one of the two
+types in the graveyard and not the other the activation is REFUSED rather than
+resolving the half available, which is conservative under BOTH readings: it
+denies a play the controller might be owed (weaker than printed and visible,
+v2.29's direction) and it never destroys the piece for a partial payout.
+`multi-target-pick-all-or-nothing` in `tools/approx.js`, `stated`, with a
+driven probe that goes RED the day partial resolution is built.
+
+**AND `autoAnswer` HAD TO BE TOLD, OR THE POLICY PROPOSES AN ILLEGAL ACTION.**
+Its `pick` branch selected cards until `sel.length >= min`, which on this sheet
+can be two Runeblade **ATTACKS** — `legal` then refuses the confirm, and a
+refusal is always a bug in the policy by `sparring.js`'s own contract; proposed
+again every tick it is v4.54's livelock. `promptMatchAssign` is the same body
+`promptReady` gates Confirm on, so the answer and the test cannot disagree.
+**Latent, and that is why it had to be READ rather than counted**: the Crown is
+never worn in a driven game, so the ladder reports 0 refusals either way
+(v3.50, from the other end). The family is swept — `pick` is the only one of
+`autoAnswer`'s six tags where the two could disagree.
+
+Measured: **exactly 1 record's parse moves, `part` → `full`** (750 → 751 full,
+36 → 35 part, `none` untouched; the audit's unique-card count 396 → 397 full,
+9 → 8 part), floor re-pinned after reading the diff; **the ladder at three seeds
+moves every hero inside the noise band** — the largest mean move is 0.7 against a
+median band of 3 and every interval overlaps, so NOISE by the standing rule
+(v4.40) — with the stall count unchanged at the one Enigma-Gravy draw v4.58
+recorded; fairness CLEAN, `UNFAIR` 0, `crindex --check` green, the anchor sets
+unchanged, both `text/babel` blocks compile.
+
 ## v4.58 — "another" must not count the card asking, and the search that found it
 
 > *"When this attacks, if you've played **another red card** this turn, you may
