@@ -595,7 +595,29 @@ const APPROX = {
   why:"ROADMAP-MULTIPLAYER.md's deliberate Phase B position. It is not fixable by "+
       "redaction, because a peer that cannot see the state cannot run the reducer; "+
       "hidden information needs Phase C's authoritative server. Do NOT present the "+
-      "current layer as cheat-resistant."}
+      "current layer as cheat-resistant."},
+
+"multi-target-pick-all-or-nothing": {
+  status:"stated", cr:"CR 1.4.5", board:"both", since:"v4.59", swept:"v4.59",
+  claim:"A pick that names SEVERAL printed targets is all-or-nothing: with one of "+
+        "Crown of Dichotomy's two types in the graveyard and not the other, the "+
+        "activation is REFUSED rather than resolving the half that is available.",
+  why:"WHAT THE CR SAYS ABOUT A PARTIALLY-LEGAL TARGET SET IS NOT SOURCED HERE. "+
+      "rules.fabtcg.com is unreachable from this sandbox and the repo carries no "+
+      "verbatim quote about it, so reading it either way would be restating a rule "+
+      "from memory — which `crindex.js`'s own contract forbids (its gloss is "+
+      "HARVESTED from quotes already in the source). "+
+      "SO THE DIRECTION IS THE CONSERVATIVE ONE, and it is conservative under BOTH "+
+      "readings: refusing DENIES a play the controller might be owed (weaker than "+
+      "printed and visible, the direction v2.29 chooses for everything it cannot "+
+      "read), and it never DESTROYS the piece for a partial payout, which is the "+
+      "v2.04/v4.49 mirror this version was built around. The piece survives, so "+
+      "the play is still there on a later turn. "+
+      "THE ALTERNATIVE IS A PROMPT SHAPE, not a relaxation: `promptReady` would "+
+      "have to ask for a matching over the filters the zone CAN cover, which is a "+
+      "different readiness rule per board state and is the kind of half-built value "+
+      "change v3.23 says is worse than the honest gap. Crown of Dichotomy is the "+
+      "pool's only multi-target pick, so nothing else is waiting on it."}
 
 };
 

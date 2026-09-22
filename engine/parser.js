@@ -419,9 +419,20 @@ const RX_FOE_TOP  = /^put (.+) from their hand on top of their deck$/;
 const RX_FOE_GY   = /^banish target (.+) from an opposing hero'?s graveyard$/;
 const RX_GY_DECK  = /^put target (.+) from your graveyard on (?:the )?(top|bottom) of your deck$/;
 /* TWO TARGETS IN ONE SENTENCE (v4.59) — Crown of Dichotomy, and MEASURED
-   over 797 records it is the pool's ONLY one. Lazy captures, because a
-   greedy first group swallows "and target …" and hands `pickSubject` a
-   phrase it rightly refuses — which is how this card came to read `part`.
+   over 797 records it is the pool's ONLY one. What made the card read `part`
+   is the SINGLE-target reader below: its `(.+)` swallowed the whole phrase,
+   "and target …" included, and `pickSubject` rightly refused it.
+
+   THE LAZY CAPTURES HERE BUY NOTHING ON THIS CARD, AND THAT IS MEASURED
+   RATHER THAN ASSUMED. The printed clause contains exactly one
+   " and target ", so a greedy group backtracks to the same split and the two
+   answer BYTE-IDENTICALLY — a sabotage to greedy came back SILENT, which is
+   v3.62's rule (a sabotage that cannot express its bug proves nothing). They
+   part only on a THREE-target clause, where greedy reads "A and target B" as
+   the first subject and lazy reads "A" — and `pickSubject` refuses BOTH, so
+   the clause refuses either way. Lazy is kept as the faithful reading of
+   "the shortest subject that reaches ` and target `", and the premise is a
+   drill so the next reader is not left thinking it is load-bearing.
 
    "IN ANY ORDER" IS IN THE ANCHOR AND IS NOT DECORATION. It is the phrase
    that makes the ORDER the controller's choice, and the order is what the

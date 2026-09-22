@@ -2317,6 +2317,12 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}
      placed — so the per-card tally is a count and not a tick, and the
      rail must be able to show two on one permanent. */
   const put = i => p.tag==="alloc" ? p.sel.filter(j=>j===i).length : 0;
+  /* AND A MULTI-TARGET PICK'S TAG IS ITS POSITION, NOT A TICK (v4.59). Crown
+     of Dichotomy prints "in any order" and `sel` is tap-ordered, so the
+     ORDER is the decision the card offers — "✓ chosen" on both cards tells
+     the player nothing about which one they will draw first. The hint says
+     the rule; this says what they have actually chosen. */
+  const ord = k => ["1st","2nd","3rd"][k] || (k+1)+"th";
   return <div className="psheet">
     <div className="ph"><span className="pt">{p.title}</span>
       <span className="psrc">{p.src}</span>
@@ -2338,7 +2344,8 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}
             onClick={tap}>
             <CardFrame card={c} className="sm"/>
             {p.tag==="opt" && <span className="ptag">{down ? "bottom" : "top "+topOrder}</span>}
-            {p.tag==="pick" && sel && <span className="ptag">✓ chosen</span>}
+            {p.tag==="pick" && sel && <span className="ptag">
+              {p.filters ? ord(p.sel.indexOf(i)) : "✓ chosen"}</span>}
             {p.tag==="alloc" && n>0 && <span className="ptag">+{n}</span>}
           </button>;
         })}

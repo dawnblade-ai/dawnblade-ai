@@ -216,8 +216,23 @@ function promptPickAskable(pool, spec){
   return !filters || promptMatchSet(pool, filters);
 }
 
-function promptMatchSet(cards, filters){
-  if(!filters || !filters.length) return true;
+/* THE ASSIGNMENT ITSELF, not merely whether one exists (v4.59). One body,
+   because `judge.autoAnswer` has to ANSWER the sheet and not only judge an
+   answer: its pick branch selected cards until `sel.length >= min`, which on a
+   multi-target sheet can be two Runeblade ATTACKS — and then `promptConfirm`
+   is refused by `judge.legal`, which is a REFUSAL, and a refusal is always a
+   bug in the policy by `sparring.js`'s own contract. Proposed again every
+   tick, that is v4.54's livelock exactly.
+
+   LATENT TODAY AND MEASURED: `defaultPicks` never wears the Crown, so no
+   driven game opens the sheet — which is why the ladder reports 0 refusals
+   either way and why this had to be read rather than counted (v3.50).
+
+   THE ORDER IS THE FILTERS' PRINTED ORDER, which is deterministic and is not
+   a judgement about card text (v2.46: a ranking that leaves ties unbroken is
+   a desync waiting to happen). */
+function promptMatchAssign(cards, filters){
+  if(!filters || !filters.length) return [];
   const list = (cards||[]).filter(Boolean);
   const ok = filters.map(f => {
     const t = promptFilter(f);
@@ -235,9 +250,16 @@ function promptMatchSet(cards, filters){
     return false;
   };
   for(let fi = 0; fi < filters.length; fi++)
-    if(!assign(fi, new Array(list.length).fill(false))) return false;
-  return true;
+    if(!assign(fi, new Array(list.length).fill(false))) return null;
+  const pick = new Array(filters.length).fill(-1);
+  owner.forEach((fi, ci) => { if(fi >= 0) pick[fi] = ci; });
+  return pick;
 }
+/* A FUNCTION DECLARATION, not a const arrow: `promptPickAskable` sits ABOVE
+   this in the file and calls it, and this file's own history has a note about
+   a `const` arrow in the temporal dead zone (v3.12's `quotedOnHit`). Hoisted,
+   the order in the file cannot matter. */
+function promptMatchSet(cards, filters){ return !!promptMatchAssign(cards, filters); }
 
 /* Turn a queued spec into a live prompt, or null when there is nothing to
    ask — an empty zone, a cost that cannot be met. Returning null is how a
@@ -1082,7 +1104,8 @@ function applyPrompt(game, prompt){
   return out;
 }
 
-return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter, promptMatchSet,
+return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
+        promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
         promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, moveCards, applyPrompt};
 });

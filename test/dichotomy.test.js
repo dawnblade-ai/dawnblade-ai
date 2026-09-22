@@ -688,3 +688,135 @@ test("`promptPickPool` honours CALLER-SUPPLIED candidates", () => {
   assert.deepEqual(PM.promptPickPool(sd, {cards: theirs, filter: {}}).map(c => c.name), ["n1"],
     "`spec.cards` must win over the zone");
 });
+
+test("the LAZY captures buy nothing on this card, and that is measured", () => {
+  /* A SABOTAGE TO GREEDY CAME BACK SILENT, and it was the sabotage that could
+     not express its bug rather than a weak drill (v3.62). The printed clause
+     holds exactly one " and target ", so a greedy group backtracks to the same
+     split and both quantifiers answer BYTE-IDENTICALLY.
+
+     SO THE PREMISE IS RECORDED HERE instead, or the next reader is left
+     thinking the `?` is load-bearing — v4.50 deleted a rung that could not
+     express its own bug and made its premise a drill; this one cannot be
+     deleted (there is no simpler regex), so it is pinned. */
+  const lazy   = /^put target (.+?) and target (.+?) from your graveyard on (?:the )?(top|bottom) of your deck in any order$/;
+  const greedy = /^put target (.+) and target (.+) from your graveyard on (?:the )?(top|bottom) of your deck in any order$/;
+  const cap = rx => { const m = LINE.match(rx); return m && [m[1], m[2], m[3]]; };
+  assert.deepEqual(cap(lazy), ["Runeblade attack action card", "Runeblade non-attack action card", "top"]);
+  assert.deepEqual(cap(greedy), cap(lazy),
+    "they differ on this card now, so the quantifier IS load-bearing — say so above");
+  /* WHERE THEY DO PART, BOTH STILL REFUSE. A three-target clause splits
+     differently under each, and `pickSubject` cannot read either compound —
+     which is what keeps an unreadable third target out (v2.29). */
+  const three = "put target A and target B and target C from your graveyard on top of your deck in any order";
+  assert.notDeepEqual(three.match(lazy)[1], three.match(greedy)[1],
+    "fixture: a three-target clause is where the quantifiers disagree");
+  assert.equal(P.classifyClause(three), null, "and the clause refuses either way");
+});
+
+test("a `filters` prompt survives the wire, which is what the bump is ABOUT", () => {
+  /* `WIRE_V` went 11 -> 12 because the live `prompt` gained a field and
+     `hash` fingerprints the whole rules state — so a v11 peer and a v12 peer
+     hash differently the moment such a sheet opens, and `diffPaths` names
+     `/prompt/filters`, a field neither of them can fix (v4.26, v4.56).
+
+     THIS ASSERTS THE OTHER HALF: that the field really does ride. A bump for a
+     field the wire drops would be a version number with nothing behind it. */
+  const W = require("../engine/wire.js");
+  assert.equal(W.WIRE_V, 12, "the bump moved — say what changed in wire.js's header");
+  const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
+  g.prompt = sheet([RATK("a1"), RNON("n1")]);
+  assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");
+  /* `decode` ANSWERS THE GAME, not a wrapper — checked rather than assumed
+     (v4.09), because a wrapper key would make the assertion below read a
+     `filters` that is simply undefined on both sides. */
+  const back = W.decode(W.encode(g));
+  assert.ok(back && back.sides, "decode's shape moved — re-anchor this drill");
+  assert.deepEqual(back.prompt.filters, FILT,
+    "`filters` did not survive the round trip, so the sheet a peer rebuilds "
+    + "cannot say \"one of each\" and Confirm lights on two attacks");
+  assert.equal(W.hash(back), W.hash(g),
+    "the fingerprint moved across a round trip — every action would read as a desync");
+});
+
+test("the matcher agrees with brute force on EVERY small case", () => {
+  /* THE ONE PIECE OF REAL ALGORITHM THIS VERSION ADDS, so it is checked
+     against the definition rather than against two cards. `promptMatchSet`
+     asks whether every filter can be given a DISTINCT card; brute force
+     enumerates the assignments. Exhaustive over 1..3 filters and 0..4 cards
+     and every possible matches-matrix between them — deterministic, because a
+     randomised property test is not reproducible and this project's drills
+     are (v2.26).
+
+     THE MATRIX IS EXPRESSED THROUGH A REAL FILTER, not a stub: `promptFilter`
+     reads `name` as a REGEX, so an alternation names exactly the set of cards
+     a row matches. That keeps the drill driving the engine's own matcher
+     (v3.56: ask the function that holds the reader) instead of a copy. */
+  const cards = n => Array.from({length: n}, (_, i) => card("c" + i));
+  const rowFilter = row => ({name: row.length ? "^(" + row.map(i => "c" + i).join("|") + ")$" : "^$"});
+  const brute = (ok, n) => {
+    const used = new Array(n).fill(false);
+    const go = fi => {
+      if(fi === ok.length) return true;
+      for(const ci of ok[fi]){ if(used[ci]) continue; used[ci] = true;
+        if(go(fi + 1)) return true; used[ci] = false; }
+      return false;
+    };
+    return go(0);
+  };
+  let cases = 0, trues = 0;
+  for(let nF = 1; nF <= 3; nF++) for(let nC = 0; nC <= 4; nC++){
+    const cs = cards(nC);
+    for(let mask = 0; mask < (1 << (nF * nC)); mask++){
+      const ok = [];
+      for(let f = 0; f < nF; f++){
+        const row = [];
+        for(let c = 0; c < nC; c++) if(mask & (1 << (f * nC + c))) row.push(c);
+        ok.push(row);
+      }
+      const want = brute(ok, nC);
+      const got = PM.promptMatchSet(cs, ok.map(rowFilter));
+      assert.equal(got, want,
+        "filters " + JSON.stringify(ok) + " over " + nC + " cards: got " + got + ", want " + want);
+      cases++; if(want) trues++;
+    }
+  }
+  /* BOTH ANSWERS ARE EXERCISED, or the drill passes by only ever seeing one
+     (v3.98: ask for the refusal too). */
+  assert.ok(cases > 5000, "only " + cases + " cases — the enumeration collapsed");
+  assert.ok(trues > cases / 10 && trues < cases * 9 / 10,
+    trues + " of " + cases + " answered TRUE — one branch is barely reached");
+});
+
+test("`autoAnswer` ANSWERS a multi-target sheet — a refusal is a policy bug", {skip}, () => {
+  /* `sparring.act` hands a live prompt to `judge.autoAnswer`, and its pick
+     branch took the first `min` cards — which on this sheet can be two
+     Runeblade ATTACKS. `judge.legal` then refuses `promptConfirm`, and a
+     refusal is ALWAYS a bug in the policy by `sparring.js`'s own contract;
+     proposed again every tick it is v4.54's livelock.
+
+     LATENT, AND THAT IS WHY IT HAD TO BE READ RATHER THAN COUNTED (v3.50):
+     `defaultPicks` never wears the Crown, so no driven game opens this sheet
+     and the ladder reports 0 refusals either way.
+
+     THE FIXTURE PUTS THE TWO ATTACKS FIRST, because with one of each in card
+     order the old branch happened to answer correctly — a fixture that cannot
+     express the bug proves nothing (v3.62). */
+  let s = J.reduce(board([ATK1(), ATK2(), NON1()]), ACT, 0).state;
+  assert.ok(s.prompt, "no sheet opened");
+  const names = s.prompt.cards.map(c => c.name);
+  assert.deepEqual(names.slice(0, 2).sort(), ["Amplify the Arknight", "Arcanic Shockwave"],
+    "fixture: the two attacks really are the first two candidates");
+  for(let i = 0; i < 6 && s.prompt; i++){
+    const a = J.autoAnswer(s);
+    assert.ok(a, "the policy has no answer for its own sheet — that is a livelock");
+    assert.equal(J.legal(s, a, s.prompt.side || 0), null,
+      "the policy proposed an illegal action: " + JSON.stringify(a));
+    s = J.reduce(s, a, s.prompt.side || 0).state;
+  }
+  assert.equal(s.prompt, null, "the sheet never resolved");
+  /* AND THE ANSWER IS LEGAL BY THE CARD, not merely accepted: one of each. */
+  const top = s.sides[0].deck.slice(0, 2).map(c => c.name);
+  assert.ok(top.indexOf("Malefic Incantation") >= 0,
+    "the policy put back two attacks — the printed second target is deleted: " + top.join(", "));
+});

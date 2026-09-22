@@ -239,7 +239,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      Chi. Unreachable in this pool and that is MEASURED — {c} has one
      claimant in 797 records and it prints Once per Turn — so the record
      carries the measurement and the probe asserts the deviation. */
-  assert.equal(Object.keys(APPROX).length, 37, "record count moved");
+  /* 37 -> 38 AT v4.59: `multi-target-pick-all-or-nothing`. */
+  assert.equal(Object.keys(APPROX).length, 38, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -253,7 +254,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 12 -> 13 stated AT v4.47: `arena-ability-policy-declines`. */
   /* 13 -> 14 AT v4.49: `steam-build-powcard-handwritten`. */
   /* 14 -> 15 AT v4.54: `chi-floating-is-a-bound`. */
-  assert.equal(n("stated"), 15, "stated count moved");
+  /* 15 -> 16 AT v4.59: `multi-target-pick-all-or-nothing`. What the CR says
+     about a partially-legal target set is not SOURCED here — the site is
+     unreachable from this sandbox and the repo carries no verbatim quote — so
+     the direction is the conservative one under both readings and the record
+     is what forces the decision the day somebody can check. */
+  assert.equal(n("stated"), 16, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -667,6 +673,31 @@ probe("gear-sweep-timing", () => {
 /* CR 4.4.1 gives nobody priority in the end phase, so heave is offered at
    the arsenal step instead. The observable is that `heaveOffer` answers
    and `beginEndPhase` does not make the offer itself. */
+probe("multi-target-pick-all-or-nothing", () => {
+  /* DRIVEN, and it asserts the DEVIATION — so it goes RED the day somebody
+     builds partial resolution, which is what a `stated` record is for (v4.02).
+     The piece SURVIVING is half the claim: refusing before the destroy is the
+     whole reason this direction is the conservative one. */
+  const db = H.db();
+  if(!db) return;
+  const ent = (n, p, uid) => Object.assign({}, C.resolveEntry(db, {name: n, p: p, code: null, q: 1}), {uid});
+  const gr = Object.assign({}, C.resolveEntry(db, {name: "Crown of Dichotomy", p: 0, code: null, q: 1}), {uid: 41});
+  const BD = require("../engine/build.js");
+  PR.fxReset(); BD.equipPiece(gr); PR.fxReset();
+  const board = grave => Object.assign(
+    H.state({gear: [gr], hand: [], grave: grave, deck: [ent("Wounding Blow", 1, 600)], res: 9, ap: 1},
+      {hp: 20}, {actor: 0, turnPlayer: 0, turn: 3}),
+    {phase: "action", step: "layer", priority: 0, passed: []});
+  const half = board([ent("Arcanic Shockwave", 1, 701)]);
+  const why = J.legal(half, {t: "activate", uid: 41, from: "gear"}, 0);
+  assert.ok(why, "the half-available activation is allowed — partial resolution exists now, "
+    + "so this record is stale: read it and close it");
+  assert.match(String(why), /BOTH its targets/);
+  const out = J.reduce(half, {t: "activate", uid: 41, from: "gear"}, 0);
+  const kept = ((out.state || half).sides[0].gear || []).find(x => x.uid === 41);
+  assert.ok(!kept.destroyed, "the piece was destroyed by a refused activation");
+});
+
 probe("heave-window", () => {
   assert.equal(typeof E.heaveOffer, "function", "heaveOffer is gone");
   assert.equal(typeof E.heave, "function", "heave is gone");

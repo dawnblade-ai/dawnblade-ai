@@ -313,7 +313,14 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      that the shape and the number moved together. */
   let h = 5381;
   for(let i = 0; i < shape.length; i++) h = ((h * 33) ^ shape.charCodeAt(i)) >>> 0;
-  assert.equal(W.WIRE_V, 11,
+  /* 11 -> 12 AT v4.59, AND THE DIGEST DELIBERATELY DOES NOT MOVE. The change
+     is a field on the live PROMPT (`filters`, and v4.58's `shuffleAfter`,
+     which was not bumped for) — a GAME_KEY that ships WHOLE, so it is inside
+     a value the zone and side-field lists carry uninterned and this digest
+     cannot see it. v4.56 bumped for the same kind of change and said so; what
+     is still open is that a FORGOTTEN bump of that kind fails no drill, which
+     is the half of v4.26's finding this pin cannot reach. */
+  assert.equal(W.WIRE_V, 12,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

@@ -153,8 +153,25 @@
    `picked` and `multi`, so it re-offers nothing and charges only what the
    last answer named — silently weaker than printed; and a v10 client
    reading a v11 link finds no `chargedPitch`, so every "if a yellow card
-   is charged this way" rider answers FALSE. Refused at the handshake. */
-const WIRE_V = 11;
+   is charged this way" rider answers FALSE. Refused at the handshake.
+
+   11 -> 12 AT v4.59: the live PROMPT gains `filters` (Crown of Dichotomy's
+   two printed targets) — and `shuffleAfter`, which v4.58 added to a pick and
+   did not bump for. `prompt` is a GAME_KEY that ships WHOLE, so this is
+   v4.56's case exactly: the digest covers the zone and side-field LISTS and
+   cannot see a shape change inside a value those lists ship uninterned.
+   `hash` fingerprints the whole rules state, so the moment such a sheet opens
+   a v11 peer and a v12 peer hash differently and `diffPaths` names
+   `/prompt/filters` — a field neither of them can do anything about. Refused
+   at the handshake instead.
+
+   AND THAT IS WHY v4.58's OMISSION WAS SILENT. This blind spot is named in
+   v4.56's paragraph above and nothing enforces it, which is the half of
+   v4.26's own finding that is still open: a bump that is forgotten fails no
+   drill. Declaring the prompt's field set as a ledger the digest could cover
+   is its own piece of work; until then every prompt-shape change is a bump by
+   hand, and this line is where it is recorded. */
+const WIRE_V = 12;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

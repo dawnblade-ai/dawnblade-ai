@@ -534,7 +534,22 @@ function autoAnswer(g){
   /* CR 1.4.5 makes a target mandatory, so there is no declining it. */
   if(p.tag === "target") return p.choice == null ? {t: "promptChoose", choice: 0} : {t: "promptConfirm"};
   if(p.tag === "pick"){
-    if((p.sel || []).length < (p.min || 0)){
+    /* A MULTI-TARGET SHEET'S ANSWER IS AN ASSIGNMENT, NOT A COUNT (v4.59).
+       Taking the first `min` cards can cover ONE of two printed targets twice
+       — two Runeblade attacks for Crown of Dichotomy — and `legal` then
+       refuses the confirm. A refusal is always a bug in the policy
+       (`sparring.js`'s own contract), and proposed again every tick it is
+       v4.54's livelock. `promptMatchAssign` is the same body `promptReady`
+       gates Confirm on, so the answer and the test cannot disagree.
+
+       `want` cannot be null here: `buildPrompt` refuses to build an
+       unsatisfiable sheet, which is drilled — so this asks for it rather than
+       inventing a fallback for a state that cannot exist. */
+    if(p.filters){
+      const want = PM.promptMatchAssign(p.cards || [], p.filters);
+      if(want) for(const ci of want)
+        if((p.sel || []).indexOf(ci) < 0) return {t: "promptSel", i: ci};
+    } else if((p.sel || []).length < (p.min || 0)){
       for(let i = 0; i < (p.cards || []).length; i++)
         if((p.sel || []).indexOf(i) < 0) return {t: "promptSel", i};
     }
