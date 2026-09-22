@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.59"; /* v4.59 - TWO TARGETS IN ONE SENTENCE. Crown of Dichotomy names a Runeblade attack AND a Runeblade non-attack out of the graveyard, and one filter cannot say "one of each" - read as the union the sheet accepts two attacks, deleting the printed second target. The tap order is the printed "in any order". And building it found a family: five activation lines open a pick, and three were paying their cost for a log line - Fai on an empty graveyard, the Halo and the Hood destroying themselves on an empty hand. See CHANGELOG.md. */
+window.APP_VER = "4.60"; /* v4.60 - A RESTRICTION WITH NO READER. "Defense reactions can't be played to this chain link" (Widowmaker, Wreck Havoc - six records, two precon lists) was filed as a no-op whose reason stopped being true when the reaction step got a caller, and nothing on either board read it. It is a card fact now, derived off the open link, refused by one body at all three doors. The narrower "from arsenal" wording still refuses, on purpose. And eleven comments across five files named a trainer function that left the file at v2.71. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1892,7 +1892,7 @@ const oppMut = n => { n.sides = [n.sides[0], {...n.sides[1]}]; return n.sides[1]
    they resolve relative to s.actor instead of a hardcoded slot 0. The Mut
    helpers delegate to youMut/oppMut so there is exactly ONE clone path.
    Migrate RULES functions (runOps, execute, resolveStack, newTurn, takeIt,
-   tryPlay, foeSwing) to act/foe; leave the UI on you/opp. test/actor.test.js
+   tryPlay) to act/foe; leave the UI on you/opp. test/actor.test.js
    fails if a migrated function still reaches for you(/opp(. */
 const actorOf = s => s.actor||0;
 const act    = s => s.sides[actorOf(s)];
@@ -2781,7 +2781,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     _opening:foeFirst
    };
    /* THE OPENING SWING CANNOT HAPPEN HERE ANY MORE (v2.63), and the reason
-      is the temporal dead zone. `foeSwing` is a hoisted function
+      is the temporal dead zone. The swing was a hoisted function
       declaration, so CALLING it from this initializer always worked — but
       what it does changed: with a real hero in seat 1 it now plays a real
       card, which reaches for `gy` and `_EFX`, both `const`s declared
@@ -2837,7 +2837,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      reach it. This is only the merge.
 
      Declared as a hoisted FUNCTION, not a const arrow, for the same reason
-     `foeSwing` is: the useState initializer that builds `initial` runs
+     `foeStep` is: the useState initializer that builds `initial` runs
      before this point in the source and has to be able to call it. */
   function withPriority(n){
     try {
@@ -2926,7 +2926,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      Actor-relative like its neighbour above, so ONE predicate answers for
      either seat: `act`/`bAct` read whoever is resolving, and the opponent
      is asked by borrowing the actor (`{...n, actor:1}`) exactly as
-     `foePlay` borrows it around `runOps`. */
+     `foeEnd` borrows it around the end phase. */
   const playIfOk = (st, card) => {
     const pif = fxParse(card).playIf;
     if(!pif) return true;
@@ -3286,6 +3286,23 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       const want = DawnParser.qualLabel(fx.selfQ);
       return L(s, `${c.name} targets ${want} — ${s.pend&&s.pend.card ? s.pend.card.name : "this attack"} isn't one.`);
     }
+    /* AND THE LINK CAN CLOSE THIS WINDOW ALTOGETHER (v4.60). Widowmaker
+       and Wreck Havoc print "defense reactions can't be played to this
+       chain link", and until v4.60 the clause was a `noop` with no reader
+       on EITHER board. `drxBarWhy` is the one body, shared with judge and
+       with the arsenal door below.
+
+       LATENT HERE, AND MEASURED RATHER THAN ASSUMED: this door is only
+       reachable in `mode:"block"`, which `foeVanilla` enters with the swing
+       fabricated as the [3,4,5] escalation, so there is no attacking card
+       to print the restriction (the target check above passes `s.pend`
+       for the same reason and is the same measurement). The site exists
+       because a rule that lives on one board is this project's recurring
+       defect (v3.01), and it is drilled with a synthetic `pend`. */
+    if(!inAtk){
+      const drxBar = DawnParser.drxBarWhy(s.pend && s.pend.card, c);
+      if(drxBar) return L(s, drxBar);
+    }
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — float resources before the window opens.`);
     /* ASK ONLY WHEN THERE IS A REAL CHOICE — enough floating for BOTH the
@@ -3358,6 +3375,14 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     if(!rxAllowed(c, "defense-reaction")) return L(s, isAR(c)
       ? `${c.name} is an attack reaction — only the attacking player may play one.`
       : `${c.name} isn't a defense reaction or an instant.`);
+    /* THE SAME BAR, AT THE ARSENAL DOOR (v4.60) — one body, every door
+       (`drxBarWhy`). It is the door Release the Tension's narrower
+       "…from arsenal this chain link" would reach, which is why that
+       wording is deliberately refused in the parser rather than folded
+       into this one: read here as an unrestricted bar it would close the
+       HAND door too, which is stronger than printed. */
+    const drxBarA = DawnParser.drxBarWhy(s.pend && s.pend.card, c);
+    if(drxBarA) return L(s, drxBarA);
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
     const dbuff = DawnEffects.defBuffOf(fx.ops);
@@ -4052,7 +4077,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
   });
   /* AN ALLY ATTACKS THROUGH THE ONE COMBAT PATH (v3.44).
 
-     This used to be a FABRICATION, in the same family as `foeSwing`'s
+     This used to be a FABRICATION, in the same family as `foeVanilla`'s
      [3,4,5]: it took the ally's printed power straight off the opposing
      hero's life. No cost was charged though every ally prints one, `{t}`
      and `Once per Turn` were collapsed into one blanket `spent`, the
@@ -4202,7 +4227,8 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
      on the wrong trigger for five versions, and the reason effects keyed
      to the opponent's turn had nothing to expire on. It is actor-relative
      throughout and `foeEnd` runs it with the actor borrowed to seat 1,
-     exactly the way foePlay borrows it for a card's own effects.
+     exactly the way the solo mirror borrowed it for a card's own effects
+     before v2.83 burned it.
 
      Everything that genuinely DIFFERS by seat is named as a difference
      rather than as a second copy: the invented fatigue loss stays seat
@@ -5914,7 +5940,7 @@ function Pregame({h, seed, onSeated, onBack}){
 
    Roadmap Phase B step 7, wired through to a screen. The rules layer
    underneath is engine/actions.js's BLANK action set, not the card pool:
-   `foeSwing` still fabricates the dummy's swing as [3,4,5][(turn-1)%3],
+   `foeVanilla` still fabricates the dummy's swing as [3,4,5][(turn-1)%3],
    so seat 1 has no action phase and two hero decks cannot yet cross the
    wire. That is Phase A step 4 plus the judge.js reducer extraction, and
    it is rules work rather than network work — see CLAUDE.md. What this

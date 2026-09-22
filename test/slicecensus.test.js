@@ -188,7 +188,7 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
   const by = {};
   for(const r of census()) by[r.f] = (by[r.f] || 0) + 1;
   assert.deepEqual(by, {
-    "index.html": 14,
+    "index.html": 16,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
@@ -198,6 +198,12 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        drill exists to make visible (v3.81, v4.07: a census that silently
        gains or loses a row reads like one with nothing to report). */
     "engine/prompts.js": 2,
+    /* 14 -> 16 index.html AT v4.60: `test/drx.test.js` takes the trainer's
+       TWO reaction doors (`playRx` from hand, `playRxA` from arsenal) — both
+       ask the shared `drxBarWhy`, and the whole point of that drill is that
+       one board is not allowed to have the rule and the other not (v3.01).
+       They are sliced ONCE at module level and shared by two tests, because
+       two copies of one slice is exactly the drift this census watches. */
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
     "DERIVED:lit": 1
@@ -219,12 +225,22 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        `opt` branch too (13,303 chars for a claim about one field), which is
        a bound too wide reading exactly like a drill that passes (v4.57). */
     "dichotomy.test.js engine/prompts.js 11759",
-    "dorinthea.test.js index.html 8550",
+    /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
+       `playRx`, anchored on its own declaration and bounded at `playRxA`, the
+       next one, which is the safe form. READ FIRST (v4.57: a pin edited
+       without being read is a guard switched off): the growth is v4.60's
+       defence-reaction bar inserted INTO that body beside the printed-target
+       restriction it sits with, plus two characters from renaming a dead
+       trainer function in the comment beside it (`foeSwing` -> `foeVanilla`,
+       see test/actor.test.js). The anchors still bound the body all three
+       drills name. */
+    "dorinthea.test.js index.html 9523",
+    "drx.test.js index.html 9523",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
     "priority.test.js index.html 16557",
     "priority.test.js index.html 16557",
-    "priority.test.js index.html 8550"
+    "priority.test.js index.html 9523"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

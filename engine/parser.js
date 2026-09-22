@@ -3280,8 +3280,68 @@ function classifyClause(raw){
     return R([["selfDestruct","end"]]);
   if(/^damage that would be dealt by this can'?t be prevented$/.test(c))
     return R([["unpreventable",1]]);
+  /* ---- "DEFENSE REACTIONS CAN'T BE PLAYED TO THIS CHAIN LINK" (v4.60) --
+     Widowmaker x3 (Azalea's) and Wreck Havoc x3 (Dorinthea's), and until
+     now the clause was filed:
+
+         NOOP("the dummy plays no defence reactions — nothing to deny yet")
+
+     A reason that STOPPED BEING TRUE (v3.69, v4.33, v4.43). v4.03 built
+     the whole reaction step and gave `sparring.act` a caller for it — the
+     ladder plays 824 defence reactions per 630 games — so the sentence was
+     false at the TABLE from that version on, while staying true of the
+     trainer, whose opponent fabricates its swing (v3.16's shape: a noop
+     describing a SIBLING board).
+
+     NO TOOL HERE COULD SEE IT, and that is three blindnesses rather than
+     two. Coverage counts a `noop` as ACCOUNTED FOR — the no-op blind spot
+     this project calls the first place to look. The one-sided fairness
+     sweep looks for a card STRONGER than printed, and a restriction on the
+     OPPONENT dropped is the other direction. And `test/noopvoice.test.js`
+     grades a reason's VOICE — version numbers, filenames, identifiers —
+     and cannot see one that is factually STALE.
+
+     IT IS A CARD FACT, NOT AN OP, so it rides as `fx.noDrx` and is
+     answered where the play is decided — `parser.drxBarWhy`, one body both
+     boards call. `fx.gyFirstGa` four rules up is the shape verbatim, and
+     v4.01's rule comes with it: a clause-level field only exists if the
+     clause loop FORWARDS it.
+
+     AND AN OP WOULD BE WRONG RATHER THAN MERELY DIFFERENT. An attack
+     card's `fx.ops` ride to RESOLUTION (v4.08) — hundreds of lines after
+     the defend and reaction steps this restriction governs — so a
+     restriction pushed as an op is a restriction that arrives once the
+     window it closes has already shut.
+
+     "THIS CHAIN LINK" IS `pend`'s OWN LIFETIME, which is why nothing is
+     banked and nothing expires: judge replaces `pend` at every
+     declaration and clears it at the close, so the restriction is DERIVED
+     off the open link (`wardValue`'s rule, v4.34; `runeCount`'s, v2.23).
+     A side field would need the per-link sweep `blockH`/`blockG` get in
+     `strike` (v2.46) and a `WIRE_V` bump for a fact the link already
+     carries.
+
+     THE THIRD PRINTED WORDING IS NARROWER AND IS DELIBERATELY REFUSED.
+     Release the Tension x3 (Azalea's, and she decks Widowmaker too) grants
+     "Defense reactions can't be played FROM ARSENAL this chain link" as a
+     quoted ability on her next arrow attack. Read by this anchor it would
+     bar a defence reaction from the HAND as well — STRONGER than printed,
+     the direction that steals games — so the anchor stops short of it and
+     the card keeps the honest `fx.quotedUnread` flag v3.41 built for
+     exactly this. `tools/approx.js` carries the gap with a driven probe;
+     the zone is not a parameter here, because vocabulary with no claimant
+     is dead rules code that reads like a rule (v4.11, v4.52).
+
+     "CARDS" AND "REACTIONS" MEAN THE SAME THING TO THIS ENGINE, MEASURED.
+     In the CR the bare plural also covers a defence-reaction ABILITY; over
+     797 records the pool prints ZERO of them (`classifyClause` guards
+     `Action -`, `Instant -` and `Attack Reaction -` and there is no fourth
+     prefix), and `abWindow` has no such window to answer. So `isDR` — the
+     printed TYPE — is the whole of what either wording can reach here, and
+     an INSTANT played in the defence window is not a defence reaction and
+     is correctly untouched. */
   if(/^defense reaction(?: card)?s can'?t be played (?:to )?this(?:'s)? chain link$/.test(c))
-    return NOOP("the dummy plays no defence reactions — nothing to deny yet");
+    return R([["noop", "static — read in the reaction window, off fx.noDrx"]], {noDrx: true});
   /* TWO `enterCounters` RULES STOOD HERE AND THE OP WAS DEAD (v4.23).
      `runOps` stashed it as `_enterCounters` and NOTHING read that field,
      ever — while the verse count the clause describes was recovered by a
@@ -5775,6 +5835,11 @@ function fxParse(card){
        `run`, the card went `part -> full`, and NOTHING was built. That is
        the no-op blind spot arriving through the front door. */
     if(r.gyFirstGa) fx.gyFirstGa = r.gyFirstGa;
+    /* v4.60, the same rule one field over: "defense reactions can't be
+       played to this chain link" is a CARD FACT read by `drxBarWhy` at the
+       play, so without this line the clause reports `run` and bars nothing
+       — v4.01's no-op blind spot arriving through the front door. */
+    if(r.noDrx) fx.noDrx = true;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
@@ -8945,6 +9010,50 @@ function rxAllowed(c, win){
   return inst;
 }
 
+/* ---- AND THE LINK CAN CLOSE THE DEFENCE WINDOW (v4.60) --------------
+   "Defense reactions can't be played to this chain link." — Widowmaker
+   x3, Azalea's; "Defense reaction cards can't be played this chain
+   link." — Wreck Havoc x3, Dorinthea's. Nine records print the family
+   and six of them are these two cards, live in two precon lists.
+
+   `rxAllowed` above answers the CARD half of "may this be played here"
+   and cannot answer this one: the restriction is a fact about the OPEN
+   LINK, not about the card being played. So it takes the attacking card
+   as its own argument — the caller's answer, like the wall (v3.11), the
+   incoming attack (v3.24) and the game's half of a cost (v3.96). A
+   caller that says nothing bars nothing, which is weaker than printed
+   and visible, never the reverse.
+
+   ONE BODY BECAUSE THREE DOORS ASK IT — `judge.legal` and the trainer's
+   two (`playRx` from hand, `playRxA` from arsenal). It returns the
+   SENTENCE rather than a boolean for the reason v4.59's
+   `promptZoneWord` exists: two spellings of one refusal across two
+   boards is the mirror the no-mirror rule is for, and in a training sim
+   the feed is the lesson (v3.60, v4.24) — the line names the card that
+   closed the window, so a player learns why rather than being told no.
+
+   IT IS DERIVED, NEVER BANKED (v2.23, v4.34, v4.54). "This chain link"
+   is exactly `pend`'s lifetime — judge replaces it at every declaration
+   and clears it at the close — so there is no side field, no sweep and
+   no `WIRE_V` bump.
+
+   THE TRAINER'S HALF IS LATENT AND THAT IS MEASURED, not assumed. Its
+   two doors are only reachable in `mode:"block"`, which `foeVanilla`
+   enters with the swing FABRICATED as the [3,4,5] escalation — no card,
+   so nothing can print the restriction (both doors already pass
+   `atkCard: null` into `defendValue`, which is the same measurement from
+   the other end). The site still exists on that board, because a rule
+   that lives on one board is this project's recurring defect (v3.01),
+   and it is drilled with a synthetic `pend` (v3.73). */
+function drxBarred(atkCard){
+  return !!(atkCard && fxParse(atkCard).noDrx);
+}
+function drxBarWhy(atkCard, c){
+  if(!c || !isDR(c) || !drxBarred(atkCard)) return null;
+  return c.name + " is a defence reaction, and " + atkCard.name
+       + " says none can be played to this chain link.";
+}
+
 /* ---- WHAT COSTS AN ACTION POINT (CR 8.1.1 / 8.1.6) ------------------
    CR 8.1.1 — "An action card/activated ability has the additional
    asset-cost of one action point to play/activate."
@@ -9313,7 +9422,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
   PER_COUNT, DEF_PER, perCountKey, chainHits, pickSubject, attackQual, markRed, costCtx, qualMatches, abWindow, defCap, defCounts, isBlockCard,
         nextTurnTax, nextTurnDebuff, nextTurnHas, nextTurnBars, qualLabel, attackTail, isSplit, splitHalves, splitFx, splitCostsAP, isNonAtkActionCard, isActionCard, costOffFor, heaveOf,
         classifyClause, fxParse, fxReset, playableFromZone, playsAsInstant, asInstantCond, asInstantMet, arcAmount, parseHeroPower, parseHandAbility, runeRed, boardRed, effCost,
-        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, rxPump,
+        DECL_OPS, dracLinks, weaponCost, payTrigger, OFFER_TRIGGERS, allyAttack, auraWeaponGrant, wardValue, wardBearers, wardTotal, auraAttackOf, abilityGa, attackLineGa, perTurnCleared, tapsToActivate, instantAbilityReady, hasKw, isAR, isDR, isRx, isInstantT, costsAP, rxAllowed, drxBarred, drxBarWhy, rxPump,
         idleCounterWipes, rustedThrough,
         isAtkActionCard, phantasmPops, zonePow, pow6, kwGated, hasKwNow, printedKw,
         crankCost, fusionOffer, chargeOffer,

@@ -5,7 +5,7 @@
 
    ---- WHY THIS EXISTS -------------------------------------------------
 
-   The trainer's rules know there is a dummy. `foeSwing` fabricates the
+   The trainer's rules know there is a dummy. `foeVanilla` fabricates the
    opponent's attack as `[3,4,5][(turn-1)%3]` and `dummyDefence` picks the
    blocks itself, so "the opponent" is not a seat somebody occupies — it
    is a branch inside the rules. That is why a second human has nowhere to

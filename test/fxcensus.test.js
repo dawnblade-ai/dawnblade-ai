@@ -75,7 +75,7 @@ const emitted = () => {
   return [...set].sort();
 };
 
-/* THE SEVEN FIELDS READ THROUGH A `parser.js` READER, and the reader named.
+/* THE FIELDS READ THROUGH A `parser.js` READER, and the reader named.
    Pinned as PAIRS rather than as a list of field names: the claim is not
    "something somewhere reads it" but "THIS function does, and a consumer
    calls THIS function". A field whose reader loses its last caller fails
@@ -85,6 +85,7 @@ const VIA_READER = {
   auraWeapon:    "auraAttackOf",
   gyFirstGa:     "gyFirstGaKw",
   handWipe:      "isHandWipe",
+  noDrx:         "drxBarWhy",
   rustDestroy:   "rustedThrough",
   wipePowIfIdle: "idleCounterWipes",
 };
@@ -115,7 +116,7 @@ test("every `fx.*` field the pool emits is pinned", () => {
     "ctrTick", "daggerJab", "deckFaceUp", "defDebuff", "defGrant", "defLimit",
     "defSelf", "dr", "emptyDies", "fusionCost", "ga", "gaQ", "gyFirstGa",
     "handAbility", "handWipe", "hitCounter", "hitWatch", "lifeTie", "millCost", "modes",
-    "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
+    "noDrx", "noEquipDefend", "onAtk", "onAtkHero", "onDeath", "onDestroy", "onHit",
     "onHitHero", "onLeave", "ops", "optCost", "payCost", "perm", "playIf",
     "playable", "powFormula", "quotedUnread", "rustDestroy", "self", "selfQ",
     "tapCost", "tier", "wipePowIfIdle",
@@ -127,6 +128,13 @@ test("every `fx.*` field the pool emits is pinned", () => {
      and so has no play moment to bank at. Consumed by `effects.tieGrantOf`,
      which `lifeAhead`/`lifeBehind` call — the ONE pair every cross-seat
      life comparison goes through. */
+  /* +noDrx v4.60 — "Defense reaction(s| cards) can't be played (to) this
+     chain link", Widowmaker x3 and Wreck Havoc x3. It was filed `noop`
+     with a reason that stopped being true at v4.03 (`sparring.act` plays
+     824 defence reactions per 630 games) and had NO reader on either
+     board. Read through `drxBarWhy`, which both boards' play gates call
+     and which answers off the OPEN LINK — "this chain link" is `pend`'s
+     own lifetime, so nothing is banked and nothing expires. */
   /* +powFormula v4.49 — a printed BASE-POWER DEFINITION ("this card's {p}
      is equal to 1 plus the number of times you've boosted this combat
      chain"). It replaced an inline regex over raw text in `build.js` that

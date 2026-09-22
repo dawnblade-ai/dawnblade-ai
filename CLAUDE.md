@@ -851,6 +851,125 @@ CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
 
+### A RESTRICTION WITH NO READER ON EITHER BOARD (v4.60)
+
+> *"**Defense reactions can't be played to this chain link.**"* — WIDOWMAKER ×3,
+> Azalea's · *"**Defense reaction cards can't be played this chain link.**"* —
+> WRECK HAVOC ×3, Dorinthea's
+
+Six records, two precon lists, and the clause was filed
+`NOOP("the dummy plays no defence reactions — nothing to deny yet")`.
+
+**A REASON THAT STOPPED BEING TRUE** (v3.69, v4.33, v4.43). **v4.03 built the
+reaction step and gave `sparring.act` a caller for it** — the ladder plays 824
+defence reactions per 630 games — so the sentence was false at the TABLE from
+that version on while staying true of the trainer, whose opponent fabricates its
+swing. v3.16's shape: **a noop describing a SIBLING board.**
+
+**THREE BLINDNESSES, NOT TWO.** Coverage counts a `noop` as ACCOUNTED FOR (this
+file's own *"first place to look"*); the one-sided sweep looks for a card
+STRONGER than printed and a dropped restriction on the OPPONENT is the other
+direction; and **`test/noopvoice.test.js` grades a reason's VOICE — version
+numbers, filenames, identifiers — and cannot see one that is factually STALE.**
+That census is what a reader would expect to catch this, and it is looking at a
+different property.
+
+**IT IS A CARD FACT, AND AN OP WOULD HAVE BEEN WRONG RATHER THAN MERELY
+DIFFERENT.** An attack's `fx.ops` ride to RESOLUTION (v4.08), hundreds of lines
+after the defend and reaction steps this governs — so a restriction pushed as an
+op arrives once the window it closes has already shut. `fx.noDrx` is the shape
+`fx.gyFirstGa` already uses, and v4.01's rule comes with it: **a clause-level
+field only exists if the clause loop FORWARDS it.**
+
+**"THIS CHAIN LINK" IS `pend`'s OWN LIFETIME**, so nothing is banked and nothing
+expires — judge replaces `pend` at every declaration and clears it at the close
+(`wardValue`'s rule, v4.34; `runeCount`'s, v2.23). A side field would have needed
+the per-link sweep `blockH`/`blockG` get in `strike` (v2.46) **and** a `WIRE_V`
+bump, for a fact the link already carries.
+
+**`drxBarWhy` IS ONE BODY AND THREE DOORS ASK IT** — `judge.legal`, and the
+trainer's `playRx` (hand) and `playRxA` (arsenal). It returns the **SENTENCE**
+rather than a boolean, for v4.59's `promptZoneWord` reason: two spellings of one
+refusal across two boards is the mirror the no-mirror rule is for, and the line
+**names the card that closed the window** because in a training sim the feed is
+the lesson (v3.60, v4.24). Refused **before the card leaves the hand**, beside
+`nextTurnBars` and v3.11's target restriction.
+
+**THE POLICY NEEDED NO CHANGE** — `sparring.act` filters every proposal through
+`judge.legal`, so it inherits the rule and passes instead. That is its own
+contract (a refusal is always a bug in the policy) paying for itself.
+
+**THE TRAINER'S HALF IS LATENT, MEASURED RATHER THAN ASSUMED.** Both doors are
+only reachable in `mode:"block"`, which `foeVanilla` enters with the swing
+fabricated as `[3,4,5]` — no card, so nothing can print the restriction, and the
+same measurement from the other end is that both doors already hand
+`defendValue` a null attacking card. The site exists anyway (v3.01), drilled with
+a synthetic `pend` (v3.73).
+
+**THE THIRD WORDING IS NARROWER AND IS DELIBERATELY REFUSED.** The note this
+version was planned from said TWO cards; measured it is **three cards, nine
+records** (v4.09, and the note was mine, two days old). Release the Tension ×3
+grants *"…can't be played **FROM ARSENAL** this chain link"* as a quoted ability,
+which restricts one ZONE — read by the unconditional anchor it would bar a
+defence reaction from the **HAND** too, which is stronger than printed and is
+v2.30's arrow buff on a sword one restriction over. So the anchor stops short, the
+card keeps `fx.quotedUnread` (v3.41), and **the zone is not a parameter**: with
+only the two unconditional records reading it would have no claimant, which is
+dead rules code that reads like a rule (v4.11, v4.52). What it waits on is
+`quotedRider`, which requires `sub.onHit` by construction, so carrying a static
+restriction there means widening the rider shape for all FOUR grant families that
+share it. `drx-bar-from-arsenal-unread`, `stated`, with a driven probe — and the
+near-miss is a **REAL pool card**, in the hero who decks both halves (v4.18).
+
+**"CARDS" AND "REACTIONS" MEAN THE SAME THING HERE, MEASURED.** In the CR the
+bare plural also covers a defence-reaction ABILITY; over 797 records the pool
+prints **ZERO** (`classifyClause` guards `Action -`, `Instant -` and
+`Attack Reaction -`, with no fourth prefix) and `abWindow` has no such window to
+answer. `isDR` — the printed TYPE — is the whole of what either wording can reach,
+and an INSTANT played in the defence window is not a defence reaction.
+
+Measured: **exactly 6 records' parse moves, 0 tiers** (751 / 35 / 11 unchanged, so
+no floor repin and the audit diff is one timestamp line plus one clause marker);
+the ladder moves **one game in 630** (arakni 79 → 78, dorinthea 75 → 76) against a
+band of median 3, everything else identical, stalls unchanged. **The route's
+evidence is the counter it REMOVES** — `reaction` 824 → 816, eight defence
+reactions denied, with `layer` and `crush` following — and **no route counter is
+added**, because the event is a REFUSAL that logs nothing, so a counter could only
+read 0 (v4.46, v4.24, v4.57).
+
+### A RETIRED FUNCTION NAMED AS A LIVE ONE, ELEVEN TIMES (v4.60)
+
+**FOUND BY WRITING ONE.** v4.60 needed to say which trainer function enters
+`mode:"block"`, copied `foeSwing` out of the surrounding prose, and its own drill
+then failed to find it in the file. `foeSwing` was decomposed at **v2.71** into
+`foeStep` / `foeVanilla` / `foeWindowOrEnd` / `endPhaseCF`; `foePlay` went with the
+solo mirror at v2.81 and its closures were burned at v2.83.
+
+**AND `test/actor.test.js` HAS RECORDED BOTH SINCE, naming `foeVanilla` as the
+escalation's home in as many words.** So the ledger knew, and **eleven shipped
+comments across five files went on naming the dead ones in the PRESENT TENSE for
+eighty-nine versions** — `judge.js`'s two-combat-paths diagram, `sparring.js`'s
+opening paragraph, two sites in `effects.js`, one in `tools/approx.js` and five in
+`index.html`. v2.53's rule one step out: **an ANCHOR naming a deleted function
+keeps reporting green, and PROSE naming one sends the next reader hunting a
+function that is not there** (v4.09 — this project's own comments are the most
+convincing source of a name that does not exist).
+
+**A PIN, NOT A TENSE CHECK.** Whether a sentence describes today or recounts
+history is not mechanically decidable, and a scan flagging every mention would sit
+red on every ship — which is how `UNFAIR` came to read 1 for nineteen versions. So
+`RETIRED_NAMES` is a pinned SET and membership is the judgement: **a name goes in
+it when it has a live SUCCESSOR to redirect to**, so there is no reason to write
+the dead one again and the history lives in `CHANGELOG.md` and in that ledger.
+
+**`allySwing` IS DELIBERATELY NOT IN IT, AND IS THE WORKED EXAMPLE.** Retired at
+v3.44, every remaining site past tense by construction, and the ally route has no
+single successor function to name instead — deleting the word would make the
+history vaguer for no gain. Its sites are pinned by COUNT with a **per-site** tense
+cue, because a file-wide check passes on the first past-tense sentence whatever the
+others say (v3.26) — **and the count was THREE where I had written two from
+memory**, which is v4.09 for the third time in one version.
+
 ### TWO TARGETS IN ONE SENTENCE (v4.59)
 
 > *"Action - {r}, destroy this: Put target Runeblade attack action card **and**

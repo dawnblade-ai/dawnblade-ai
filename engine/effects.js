@@ -479,7 +479,7 @@ function makeEffects(ctx){
      "As an additional cost to play this, discard a random card." The body
      below existed TWICE, verbatim, in `execute`'s attack and non-attack
      branches — and a third caller was needed, which is what surfaced it:
-     the solo mirror's `foePlay` charged the cost on NEITHER path, so seat
+     the solo mirror charged the cost on NEITHER path, so seat
      1 played Savage Feast and simply never discarded. A printed drawback
      skipped is sev-3, and it is the one place the mirror was STRONGER
      than printed.
@@ -1418,7 +1418,7 @@ function makeEffects(ctx){
 
            judge.js   `pend`, whoever declared it — one combat path, so the
                       test is that the link belongs to the OTHER seat
-           trainer    `incoming`, a scalar set by foeSwing/foePlay, because
+           trainer    `incoming`, a scalar set by `foeVanilla`, because
                       seat 1's swing there never opens a `pend` at all
 
          The one corner where this differs from the old line: an incoming
@@ -4936,16 +4936,17 @@ function makeEffects(ctx){
        consequence landed on seat 0 whoever was asked.
 
        It went live the moment seat 1 played real cards: `afterDiscard`
-       queues Beaten Trackers' modal with `side: actorOf(n)`, `foePlay`
-       hands the actor back without draining the queue, and the sheet was
+       queues Beaten Trackers' modal with `side: actorOf(n)`, the solo
+       mirror handed the actor back without draining the queue, and the sheet was
        then answered by the PLAYER — who paid nothing, because
        `destroyGear` looked for seat 1's uid in seat 0's gear and skipped
        (its `return` exits one op, not the option), and still collected the
        `["ap",1]`. A free action point every game, and the opponent kept
        the iron it was printed to destroy.
 
-       Borrowing the actor for the whole body is what `foePlay` already
-       does around `runOps`; it also makes the arsenal tail below, which is
+       Borrowing the actor for the whole body is what the solo mirror did
+       around `runOps` (burned at v2.83 — `test/actor.test.js` is the ledger
+       for what left the file); it also makes the arsenal tail below, which is
        written on `act`/`actMut`, correct for seat 1 rather than only for
        seat 0. Handed back before `winCheck`/`openPrompt`. */
     const pSide = p.side || 0, pWasActor = n.actor || 0;
@@ -5595,7 +5596,7 @@ function makeEffects(ctx){
      an extraction rather than a call. That function opens
      `const card = d ? d.card : (n.pend && n.pend.card); if(!card) return n;`
      — and on the trainer's block path there IS no attacking card, because
-     `foeSwing` fabricates the swing as the `[3,4,5]` escalation. So the
+     `foeVanilla` fabricates the swing as the `[3,4,5]` escalation. So the
      call would have returned immediately, doing nothing, and looked
      exactly like a fix (v3.50). What needs the card is PHANTASM alone;
      these triggers are about the DEFENDERS.

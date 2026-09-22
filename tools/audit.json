@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-22T00:55:12.252Z",
- "appVer": "4.59",
+ "generated": "2026-09-22T23:54:27.962Z",
+ "appVer": "4.60",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -6412,7 +6412,7 @@
    "clauses": [
     {
      "t": "Defense reactions can't be played to this chain link.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "If this is defended by fewer than 2 cards, it gets +3{p}.",
@@ -6987,7 +6987,7 @@
    "clauses": [
     {
      "t": "Defense reaction cards can't be played this chain link.",
-     "st": "noop"
+     "st": "run"
     },
     {
      "t": "When this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal.",

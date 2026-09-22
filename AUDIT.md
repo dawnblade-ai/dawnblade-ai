@@ -1,6 +1,6 @@
 # DAWNBLADE POOL AUDIT
 
-Generated 2026-09-22T00:55:12.252Z · app v4.59 · data sage-v13 · db 797 records
+Generated 2026-09-22T23:54:27.962Z · app v4.60 · data sage-v13 · db 797 records
 
 ## Summary
 
@@ -224,7 +224,7 @@ The fix for any of these is always to teach `classifyClause`/`fxParse`, never to
 
 ### Wreck Havoc (pitch 1) — part · [dorinthea]
 - type: Generic Action - Attack
-- ○ Defense reaction cards can't be played this chain link.
+- ▶ Defense reaction cards can't be played this chain link.
 - — When this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal.
 
 ## Flags on otherwise fully-scripted cards

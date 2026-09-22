@@ -361,3 +361,108 @@ test("engine/sides.js exports no seat-hardcoded you/foe", () => {
   assert.equal(S.foe, undefined,
     "sides.js must not export `foe` — it would collide with the trainer's actor-relative foe()");
 });
+
+/* ============================================================
+   A RETIRED FUNCTION MUST NOT BE NAMED AS A LIVE ONE (v4.60)
+
+   This file has recorded since v2.71 that `foeSwing` is GONE — decomposed
+   into `foeStep` / `foeVanilla` / `foeWindowOrEnd` / `endPhaseCF` — and
+   named `foeVanilla` as the escalation's home in as many words. `foePlay`
+   went with the solo mirror at v2.81 and its closures were burned at
+   v2.83, and that is recorded here too.
+
+   ELEVEN SHIPPED COMMENTS ACROSS FIVE FILES WENT ON NAMING THEM ANYWAY,
+   in the PRESENT TENSE, for eighty-nine versions — `judge.js`'s own
+   two-combat-paths diagram, `sparring.js`'s opening paragraph, two sites
+   in `effects.js`, one in `tools/approx.js` and five in `index.html`. So
+   the ledger knew and the prose it corrects never read it, which is
+   v2.53's rule one step out: an ANCHOR naming a deleted function keeps
+   reporting green, and PROSE naming one sends the next reader hunting a
+   function that is not there (v4.09 — this project's own comments are the
+   most convincing source of a name that does not exist).
+
+   FOUND BY WRITING ONE. v4.60 needed to say which trainer function enters
+   `mode:"block"`, copied the name out of the surrounding prose, and its
+   own drill then failed to find it in the file.
+
+   WHY A PIN RATHER THAN A TENSE CHECK: whether a sentence describes today
+   or recounts history is not mechanically decidable, and a scan that
+   flagged every mention would sit red on every ship — which is how
+   `UNFAIR` came to read 1 for nineteen versions. So the SET is pinned,
+   and membership is the judgement: a name goes in it when it has a live
+   SUCCESSOR to redirect to, so there is no reason to write the dead one
+   again and the history lives in CHANGELOG.md and in this file.
+
+   `allySwing` IS DELIBERATELY NOT IN THE SET, and that is the worked
+   example of the rule. It was retired at v3.44 and its two remaining
+   sites are past tense BY CONSTRUCTION ("this used to be a FABRICATION…",
+   "the trainer had one, and it was…") — and the ally route has no single
+   successor function to name instead, so deleting the word would make the
+   history vaguer for no gain. It is measured rather than assumed: a drill
+   below pins its site COUNT and checks each site individually for a
+   past-tense cue — and the count was THREE where I had written two from
+   memory, which is v4.09 for the third time in one version. A file-wide
+   tense check would have passed on the first past-tense sentence in the
+   file whatever the other two said (v3.26).
+   ============================================================ */
+const RETIRED_NAMES = {
+  /* name: the live successor a reader should be sent to */
+  foeSwing: "foeStep / foeVanilla / foeWindowOrEnd / endPhaseCF (v2.71)",
+  foePlay:  "nothing — the solo mirror retired at v2.81, burned at v2.83",
+};
+
+test("no shipped file names a retired trainer function", () => {
+  const files = ["index.html", "engine/judge.js", "engine/effects.js",
+                 "engine/parser.js", "engine/sparring.js", "engine/game.js",
+                 "engine/build.js", "engine/prompts.js", "engine/local.js",
+                 "tools/approx.js", "tools/audit.js"];
+  const bad = [];
+  for(const f of files){
+    const src = fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+    for(const [nm, to] of Object.entries(RETIRED_NAMES))
+      if(new RegExp("\\b" + nm + "\\b").test(src)) bad.push(f + " names " + nm + " — say " + to);
+  }
+  assert.deepEqual(bad, [],
+    "a shipped comment names a function that left the file. Reword the prose "
+    + "(this project's standing answer) rather than adding the name back:\n  "
+    + bad.join("\n  "));
+});
+
+test("and the control: the scan can see a name that IS there", () => {
+  /* Without this the whole check passes against a regex that matches
+     nothing, which is the shape v4.00 and v3.81 both record — a scan aimed
+     wrong fails by finding nothing exactly as a clean codebase does. */
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  for(const live of ["foeStep", "foeVanilla", "foeEnd"])
+    assert.match(html, new RegExp("\\b" + live + "\\b"),
+      "the successor " + live + " is not in index.html — the retirement note "
+      + "above is pointing at a name that does not exist either");
+  assert.equal(/\bfoeSwingButNotReally\b/.test(html), false,
+    "the scan matches a name nothing mentions and proves nothing");
+});
+
+test("`allySwing` is named only where it is said to be GONE", () => {
+  /* The exemption above, as a measurement rather than a sentence. Two
+     sites, both past tense; a THIRD means somebody has started describing
+     today's code with a name that left at v3.44, and the judgement this
+     file makes about the set has to be re-made. */
+  const sites = [];
+  for(const f of ["index.html", "engine/judge.js"]){
+    const src = fs.readFileSync(path.join(__dirname, "..", f), "utf8");
+    const rx = /\ballySwing\b/g; let m;
+    while((m = rx.exec(src))) sites.push({f, at: m.index,
+      near: src.slice(Math.max(0, m.index - 90), m.index + 90)});
+  }
+  assert.equal(sites.length, 3,
+    "the `allySwing` site count moved — read the new site and decide whether "
+    + "it is history (leave it) or a claim about today (reword it, and consider "
+    + "putting the name in RETIRED_NAMES)");
+  /* EACH SITE, not the file: a file-wide test passes as soon as ANY sentence
+     in it is past tense, which is v3.26's coincident-fixture trap one scan
+     over. The cue is checked in the 90 characters either side of the name. */
+  const PAST = /used to|had one, and it was|took the printed|fabricated/;
+  for(const s2 of sites)
+    assert.ok(PAST.test(s2.near),
+      s2.f + " names allySwing with no past-tense cue beside it: …"
+      + s2.near.replace(/\s+/g, " ") + "…");
+});

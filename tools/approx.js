@@ -90,7 +90,7 @@ const APPROX = {
     since: "v4.53",
     swept: "v4.57",
     claim: "The trainer has TWO walls and only one of them reached a shared `defends` body. When the PLAYER attacks, `resolvePlay` calls `afterDefenders`, which runs all four families. When the PLAYER BLOCKS — which in the trainer is most of the game — `takeIt` called `resolveClash` and its own hand-rolled `payCost` scan and nothing else, so Crash and Bash's `optCost` (3 records) and Washed Up Wave's `millCost` (1) were never offered on the wall the player raises. BUILT AT v4.57: `effects.defendsTriggers` is the one body, both walls call it, and the bespoke `mode: \"defpay\"` pause is retired.",
-    why: "IT COULD NOT SIMPLY CALL `afterDefenders`, and that is why the fix is an extraction rather than a call — a distinction this record did not draw. That function opens `if(!card) return n;` and on the trainer's block path there IS no attacking card, because `foeSwing` fabricates the swing as the [3,4,5] escalation. So the call would have returned immediately, doing nothing, and looked exactly like a fix (v3.50). What needs the card is PHANTASM alone; the four families are about the DEFENDERS. THE SEAT IS THE CALLER'S ANSWER, exactly as the wall is: `1 - actorOf` on the attacker's path, `actorOf` on the block path, so a derived seat is right on one wall and wrong on the other (v3.48). THE PAUSE was the real cost the record named, and it generalised rather than growing: `takeIt` holds the wall with `_wallPending` and `openPrompt` — the one place that knows the queue is empty — resumes `finishBlock`, which replaces `defpay`'s whole private copy of that control flow (a mode, a queue, an action bar, a statusline and a peek chip, for one family). AND CLOSING IT CLOSED A SECOND DEFECT THE RECORD DID NOT NAME: `confirmDefPay` paid out of FLOATING resources only, and CR 4.4.3e takes every floating resource from BOTH seats at every end phase — so on the opponent's turn, the only turn this wall is raised on, the player held 0 and the Pay button was disabled. Brothers in Arms' printed +2{d}, built at v4.53 for this exact wall, was unreachable unless the player happened to have overpaid for an instant in the same window. The shared sheet pitches on demand (RULING 2026-08-01), which is what the DUMMY's wall has always done with the identical card."
+    why: "IT COULD NOT SIMPLY CALL `afterDefenders`, and that is why the fix is an extraction rather than a call — a distinction this record did not draw. That function opens `if(!card) return n;` and on the trainer's block path there IS no attacking card, because `foeVanilla` fabricates the swing as the [3,4,5] escalation. So the call would have returned immediately, doing nothing, and looked exactly like a fix (v3.50). What needs the card is PHANTASM alone; the four families are about the DEFENDERS. THE SEAT IS THE CALLER'S ANSWER, exactly as the wall is: `1 - actorOf` on the attacker's path, `actorOf` on the block path, so a derived seat is right on one wall and wrong on the other (v3.48). THE PAUSE was the real cost the record named, and it generalised rather than growing: `takeIt` holds the wall with `_wallPending` and `openPrompt` — the one place that knows the queue is empty — resumes `finishBlock`, which replaces `defpay`'s whole private copy of that control flow (a mode, a queue, an action bar, a statusline and a peek chip, for one family). AND CLOSING IT CLOSED A SECOND DEFECT THE RECORD DID NOT NAME: `confirmDefPay` paid out of FLOATING resources only, and CR 4.4.3e takes every floating resource from BOTH seats at every end phase — so on the opponent's turn, the only turn this wall is raised on, the player held 0 and the Pay button was disabled. Brothers in Arms' printed +2{d}, built at v4.53 for this exact wall, was unreachable unless the player happened to have overpaid for an instant in the same window. The shared sheet pitches on demand (RULING 2026-08-01), which is what the DUMMY's wall has always done with the identical card."
   },
 
 /* ---- A. THE RULES MACHINE — the two-player question ---------------- */
@@ -617,7 +617,32 @@ const APPROX = {
       "have to ask for a matching over the filters the zone CAN cover, which is a "+
       "different readiness rule per board state and is the kind of half-built value "+
       "change v3.23 says is worse than the honest gap. Crown of Dichotomy is the "+
-      "pool's only multi-target pick, so nothing else is waiting on it."}
+      "pool's only multi-target pick, so nothing else is waiting on it."},
+
+"drx-bar-from-arsenal-unread": {
+  status:"stated", cr:"CR 8.1.3a", board:"both", since:"v4.60", swept:"v4.60",
+  claim:"Release the Tension x3 grants \"Defense reactions can't be played FROM "+
+        "ARSENAL this chain link\" as a quoted ability on your next arrow attack, "+
+        "and that narrower form is deliberately REFUSED. v4.60 built the two "+
+        "unconditional wordings (Widowmaker, Wreck Havoc); this one still reads "+
+        "nothing, and the card keeps `fx.quotedUnread` so the audit names it.",
+  why:"READING IT WITH THE UNCONDITIONAL ANCHOR WOULD BE STRONGER THAN PRINTED. "+
+      "The clause restricts one ZONE; taken by the reader v4.60 built it would bar "+
+      "a defence reaction played from the HAND as well, which the card never says — "+
+      "the direction that steals games, and v2.30's arrow-buff-on-a-sword one "+
+      "restriction over. So the anchor stops short of it and the refusal is visible. "+
+      "AND THE ZONE IS NOT CARRIED AS A PARAMETER, on purpose: with only the two "+
+      "unconditional records reading, a `zone` field on the bar would have no "+
+      "claimant, which is dead rules code that reads like a rule (v4.11, v4.52). "+
+      "WHAT IT WAITS ON IS `quotedRider`, NOT THE ZONE. That body requires "+
+      "`sub.onHit` — it is an ON-HIT reader by construction — and this rider is a "+
+      "static restriction, so carrying it means widening the rider shape for all "+
+      "FOUR grant families that share it (`buffQ`, `gaNextQ`, `instantNextQ`, "+
+      "`costOff`). That is its own piece of work with its own blast radius, and "+
+      "half-building it is worse than the honest gap (v3.23). "+
+      "IT IS LIVE RATHER THAN LATENT: Azalea decks Release the Tension AND "+
+      "Widowmaker, so one hero holds both halves of the family and the narrow one "+
+      "is the half that does nothing."}
 
 };
 

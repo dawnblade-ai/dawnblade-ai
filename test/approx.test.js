@@ -240,7 +240,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      claimant in 797 records and it prints Once per Turn — so the record
      carries the measurement and the probe asserts the deviation. */
   /* 37 -> 38 AT v4.59: `multi-target-pick-all-or-nothing`. */
-  assert.equal(Object.keys(APPROX).length, 38, "record count moved");
+  /* 38 -> 39 AT v4.60: `drx-bar-from-arsenal-unread`. */
+  assert.equal(Object.keys(APPROX).length, 39, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -259,7 +260,11 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      unreachable from this sandbox and the repo carries no verbatim quote — so
      the direction is the conservative one under both readings and the record
      is what forces the decision the day somebody can check. */
-  assert.equal(n("stated"), 16, "stated count moved");
+  /* 16 -> 17 AT v4.60: `drx-bar-from-arsenal-unread` — the NARROWER third
+     wording of the family v4.60 built. Read by the unconditional anchor it
+     would bar a defence reaction from the HAND too, which is stronger than
+     printed, so it refuses and the card keeps the `quotedUnread` flag. */
+  assert.equal(n("stated"), 17, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -696,6 +701,34 @@ probe("multi-target-pick-all-or-nothing", () => {
   const out = J.reduce(half, {t: "activate", uid: 41, from: "gear"}, 0);
   const kept = ((out.state || half).sides[0].gear || []).find(x => x.uid === 41);
   assert.ok(!kept.destroyed, "the piece was destroyed by a refused activation");
+});
+
+probe("drx-bar-from-arsenal-unread", () => {
+  /* DRIVEN, and it asserts the DEVIATION, so it goes RED the day the narrower
+     wording is read — which is what a `stated` record is for (v4.02).
+
+     THREE HALVES, because a probe that only checks the refusal cannot tell a
+     deliberate narrowing from a reader that is simply broken: the two
+     unconditional wordings must still READ, the narrow one must NOT, and the
+     card must still report its rider unread so nothing claims it works. */
+  assert.equal(PR.classifyClause(
+    "defense reactions can't be played from arsenal this chain link"), null,
+    "the 'from arsenal' wording now reads — this record is stale, and the thing "
+    + "to check is whether the ZONE is carried or whether the bar has quietly "
+    + "widened onto the HAND door too");
+  const yes = PR.classifyClause("defense reactions can't be played to this chain link");
+  assert.equal(yes && yes.noDrx, true,
+    "the unconditional wording stopped reading — the deviation this record "
+    + "describes is no longer the narrow one");
+  const db = H.db();
+  if(!db) return;
+  PR.fxReset();
+  const rt = C.resolveEntry(db, {name: "Release the Tension", p: 1, code: null, q: 1});
+  const fx = PR.fxParse(rt);
+  assert.equal(!!fx.noDrx, false, "Release the Tension now carries the bar");
+  assert.ok((fx.quotedUnread || []).some(q => /from arsenal/.test(q)),
+    "its unread rider is no longer reported — the gap has gone quiet, which is "
+    + "worse than the gap (v3.41)");
 });
 
 probe("heave-window", () => {

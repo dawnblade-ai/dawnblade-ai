@@ -24,7 +24,7 @@
    CR procedure through two unrelated bodies of code:
 
      you attack   tryPlay -> execute -> dummyDefence -> mode:"stack" -> resolveStack
-     they attack  foeSwing -> mode:"block" -> toggleBlock -> finishBlock -> takeIt
+     they attack  foeVanilla -> mode:"block" -> toggleBlock -> finishBlock -> takeIt
 
    One of them fabricates the attack as `[3,4,5][(turn-1)%3]`; the other
    auto-picks the blocks. Neither can serve a second human, and a rule
@@ -1136,7 +1136,7 @@ function legal(g, a, seat){
        attack at the table was refused with "no such equipment".
 
        The trainer had one, and it was a FABRICATION in the same family as
-       `foeSwing`'s [3,4,5]: `allySwing` took the printed power straight
+       `foeVanilla`'s [3,4,5]: `allySwing` took the printed power straight
        off the hero's life, charging no cost, ignoring `{t}` versus `Once
        per Turn`, dropping the printed go again, and never opening a
        defend step — an unblockable 7 from Swabbie, every turn, for free.
@@ -1485,6 +1485,31 @@ function playableWhy(g, seat, c, win, zone){
       return c.name + " targets " + want + " — "
            + ((g.pend && g.pend.card) ? g.pend.card.name : "this attack") + " isn't one";
     }
+  }
+
+  /* AND THE LINK ITSELF CAN CLOSE THE DEFENCE WINDOW (v4.60).
+
+     "Defense reactions can't be played to this chain link" — Widowmaker
+     and Wreck Havoc, nine records with the family and six with these two,
+     live in Azalea's and Dorinthea's lists. The clause was filed `noop`
+     with a reason that stopped being true at v4.03, when this board got a
+     reaction step and `sparring.act` got a caller for it, and NOTHING on
+     either board read it: the restriction had no reader at all.
+
+     `PR.drxBarWhy` is the one body, here and at the trainer's two doors,
+     and it answers off the OPEN LINK — "this chain link" is `pend`'s own
+     lifetime, replaced at every declaration and cleared at the close, so
+     there is nothing to bank and nothing to sweep.
+
+     REFUSED BEFORE THE CARD LEAVES THE HAND, like `nextTurnBars` above
+     and v3.11's printed target restriction: a defence reaction refused
+     after it has resolved is a player losing a card to a play the rules
+     never allowed. `sparring.act` filters every proposal through this
+     function, so the policy inherits the rule and cannot propose a
+     refusal (its own contract). */
+  if(open.indexOf("defense-reaction") >= 0){
+    const barred = PR.drxBarWhy(g.pend && g.pend.card, c);
+    if(barred) return barred;
   }
 
   /* A PLAY YOU CANNOT PAY FOR IS NOT A LEGAL PLAY. Resources come from
