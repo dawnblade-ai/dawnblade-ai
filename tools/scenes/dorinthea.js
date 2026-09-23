@@ -158,5 +158,61 @@ module.exports = [
     "and LEVEL is not behind — the test is strict": 17
   }
 }
+,
 
+{
+  name: "Wreck Havoc turns their arsenal over, and takes only what it names",
+  why: "v4.62 — the pool's LAST `part` deck card. Its clause 2 refused " +
+       "entirely, and the diagnostic that found the gap is this project's " +
+       "cheapest run from the head end (v3.79, v4.43): hand the same " +
+       "trigger a payload that already has a reader and it parses in full, " +
+       "hero gate and all. So the trigger and the printed \"you may\" were " +
+       "never the blocker and BOTH halves of the payload were. Neither " +
+       "needed new machinery — `faceUpArsenal` has turned an arsenal card " +
+       "and fired its triggers since v3.71 and `foeArsDestroy` has emptied " +
+       "the other seat's arsenal since v3.96 — so what is new is the SEAT " +
+       "(the turn is the opponent's, so the actor is borrowed and handed " +
+       "back), the printed TYPE filter, and the OFFER, which v4.61 made " +
+       "possible by giving the optional modal a Decline control. " +
+       "THE ROW THAT BITES IS THE NON-MATCHING CARD: a reader that " +
+       "ignored the printed type destroys it too, and the two readings " +
+       "agree on every Defense Reaction in the pool (v3.26, v3.98).",
+  run(c){
+    const dr    = c.card("Sigil of Suffering", 1, 901);
+    const other = c.card("Spire Sniping", 2, 902);
+    const play = ars => {
+      const g = c.state({name: "Dorinthea", res: 9, ap: 9, deck: [{uid: 940, name: "F"}]},
+                        {name: "Them", hp: 20, arsenal: ars ? Object.assign({}, ars) : null,
+                         deck: [{uid: 941, name: "T"}, {uid: 942, name: "T2"}]},
+                        {actor: 0, turnPlayer: 0, turn: 3, builds: [{}, {}]});
+      /* the payload rides on `fx.onHitHero`, so drive `runOps` at the op the
+         parse actually emits rather than re-deriving it here */
+      const fx = c.P.fxParse(c.card("Wreck Havoc", 3));
+      return c.ops(g, fx.onHitHero, "Wreck Havoc");
+    };
+    /* THE OFFER IS A SHEET, so each row answers it the way a player would. */
+    const take = g => g.prompt ? c.reduce(c.reduce(g, {t: "promptChoose", choice: 0}, g.prompt.side),
+                                          {t: "promptConfirm"}, g.prompt.side) : g;
+    const drOut    = take(c.open(play(dr)));
+    const otherOut = take(c.open(play(other)));
+    const emptyOut = take(c.open(play(null)));
+    return {
+      "a defence reaction is destroyed":        drOut.sides[1].arsenal,
+      "…into THEIR graveyard, not banished":    drOut.sides[1].grave.map(x => x.name).join(","),
+      "anything else is turned up and lives":   otherOut.sides[1].arsenal
+                                                  ? otherOut.sides[1].arsenal.name : null,
+      "…face up, so both players can see it":   !!(otherOut.sides[1].arsenal || {})._faceUp,
+      "…and nothing reaches the graveyard":     otherOut.sides[1].grave.length,
+      "an empty arsenal offers nothing at all": !!emptyOut.prompt
+    };
+  },
+  want: {
+    "a defence reaction is destroyed": null,
+    "…into THEIR graveyard, not banished": "Sigil of Suffering",
+    "anything else is turned up and lives": "Spire Sniping",
+    "…face up, so both players can see it": true,
+    "…and nothing reaches the graveyard": 0,
+    "an empty arsenal offers nothing at all": false
+  }
+}
 ];

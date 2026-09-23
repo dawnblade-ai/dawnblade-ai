@@ -204,6 +204,14 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
        one board is not allowed to have the rule and the other not (v3.01).
        They are sliced ONCE at module level and shared by two tests, because
        two copies of one slice is exactly the drift this census watches. */
+    /* +1 AT v4.62, A FOURTH SOURCE FILE, READ FIRST: `wreckhavoc.test.js`
+       slices `millCostSpec` out of `engine/effects.js` to pin the premise
+       that widening the optional modal's floor to ONE mode moved no pool
+       record — that builder is the engine's only setter of `optional` and it
+       always supplies two modes, so nothing written before v4.62 can reach
+       the new branch. A measurement about a BUILDER has to read the builder
+       (v4.32: the pool is the wrong oracle for what a builder builds). */
+    "engine/effects.js": 1,
     "DERIVED:TABLE": 1,
     "DERIVED:bar": 1,
     "DERIVED:lit": 1

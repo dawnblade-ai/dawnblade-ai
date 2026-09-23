@@ -409,8 +409,13 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      reading the diff: Crown of Dichotomy went `part` -> `full` when the pick
      reader learned that one printed sentence can name TWO targets, so
      `full` 750 -> 751 and `part` 36 -> 35 with `none` untouched. One
-     record, again. */
-  assert.deepEqual(tiers, {full: 751, none: 11, part: 35});
+     record, again. RE-PINNED AGAIN AT v4.62, after reading the diff: all
+     THREE Wreck Havoc printings went `part` -> `full` when the cross-seat
+     arsenal turn and the type-filtered destroy landed, so `full` 751 -> 754
+     and `part` 35 -> 32 with `none` untouched. Three records this time,
+     because that card is decked at three pitches — and the audit's
+     UNIQUE-card count moves by one with it (397 -> 398 full, 8 -> 7 part). */
+  assert.deepEqual(tiers, {full: 754, none: 11, part: 32});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

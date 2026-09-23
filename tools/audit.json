@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-23T13:16:53.187Z",
- "appVer": "4.61",
+ "generated": "2026-09-23T14:05:46.038Z",
+ "appVer": "4.62",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 397,
-  "part": 8,
+  "full": 398,
+  "part": 7,
   "none": 0
  },
  "heroes": {
@@ -6981,7 +6981,7 @@
    "gkw": [],
    "symbols": [],
    "mentions": [],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -6991,12 +6991,10 @@
     },
     {
      "t": "When this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "When this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Defense reaction cards can't be played this chain link.\nWhen this hits a hero, you may turn a card in their arsenal face-up, then destroy a defense reaction in their arsenal.",

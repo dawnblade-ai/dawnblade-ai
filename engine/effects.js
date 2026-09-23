@@ -53,7 +53,7 @@ const {arsEmpty, arsFree, classifyClause, clean, costsAP, effCost,
        fxParse, hasKw, printedKw, isAttack, isAR, norm, qualMatches, rxPump, runeCount,
        allyAttack, abilityGa, attackLineGa,
        isFrostbite, frostCount, isFrailty, frailtyCount,
-       pow6, zonePow, isAtkActionCard, phantasmPops, defCap, wardValue, wardBearers} = P;
+       pow6, zonePow, isAtkActionCard, isDR, phantasmPops, defCap, wardValue, wardBearers} = P;
 const {resolveEntry} = C;
 
 /* ---- THE CONDITIONS THAT CANNOT BE ANSWERED AT DECLARATION (v3.71) ----
@@ -1015,8 +1015,30 @@ function makeEffects(ctx){
           ? {...g, curDef: Math.max(0, ((g.curDef!=null?g.curDef:g.def)||0) + v)} : g);
         n = L(n, `${srcName}: ${worst.name} takes a ${v}{d} counter.`);
       }
+      /* THE PRINTED SUBJECT, WHERE THE CARD NAMES ONE (v4.62). Wreck Havoc
+         destroys "a DEFENSE REACTION in their arsenal" and this op destroys
+         whatever is there, so the restriction has to be enforced HERE — the
+         parser cannot see which card the arsenal holds at resolution. The key
+         comes off `ARS_DESTROY_TYPES`, a closed vocabulary, and a key this
+         body does not know REFUSES rather than falling through: `reduce` is
+         fed by JSON off a wire (v2.04), and falling through would destroy any
+         card at all, which is the unrestricted reading the parser is anchored
+         to avoid (v3.53's sev-3, one zone over).
+
+         `isDR` IS THE PRINTED TYPE, off the structured array — "Reaction"
+         contains "action" (v2.44), so a `tt` scan claims a Defense Reaction's
+         own type line for an Action. And a subject the card does NOT name is
+         `op[2] == null`, which keeps every existing caller unrestricted. */
       else if(k==="foeArsDestroy"){
         if(!foe(n).arsenal){ n = L(n, `${srcName}: ${sp(foe(n))} arsenal is empty.`); return; }
+        if(op[2] != null){
+          const want = {dr: isDR}[op[2]];
+          if(!want){ n = L(n, `${srcName}: the printed restriction cannot be read — nothing is destroyed.`); return; }
+          if(!want(foe(n).arsenal)){
+            n = L(n, `${srcName}: ${foe(n).arsenal.name} is not what the card names — it survives.`);
+            return;
+          }
+        }
         const a = foe(n).arsenal;
         foeMut(n).arsenal = null;
         foeMut(n).grave = [...gy(n.turn, a), ...foe(n).grave];
@@ -1026,6 +1048,38 @@ function makeEffects(ctx){
            event from the two ends of it; the reader accepts both. */
         n._tookWay = [...(n._tookWay||[]), a];
         n = L(n, `${srcName}: ${a.name} is destroyed in ${sp(foe(n))} arsenal.`);
+      }
+      /* ---- TURNING THE OTHER SEAT'S ARSENAL CARD FACE UP (v4.62) ------
+         Wreck Havoc's first half. It needed NO new machinery (v3.58, v3.73):
+         `faceUpArsenal` has turned whatever is in the arsenal, fired its
+         triggers and written the feed line since v3.71, and v3.72 taught it
+         that TURNING IS NOT PUTTING — `from: "arsenal"` is the turn, so a
+         put-only trigger sits it out and only Spire Sniping's "put OR TURNED"
+         can fire.
+
+         THE ACTOR IS BORROWED, NOT A SEAT PARAMETER, and that is the whole
+         reason the body needs no change: it reads `act(n).arsenal`, writes
+         through `actMut`, and runs each `arsenalUp` op through `runOps` at
+         the AMBIENT actor — and every one of those belongs to the card's
+         CONTROLLER rather than to whoever turned it. A seat argument would
+         fix the first two and leave the third firing the opponent's trigger
+         for the attacker (v3.46's `allyDeath` inversion). Handed straight
+         back, or every rule after this in the same resolution runs for the
+         wrong hero.
+
+         THE ALREADY-UP CASE SAYS SO. `faceUpArsenal` returns early and
+         silently on a card that is already face up — right for its own
+         callers, and in a training sim a line of play that quietly does
+         nothing is the lesson lost (v3.60, v4.46), so it is named here.
+         Azalea's arrows can leave one face up, so this is reachable. */
+      else if(k==="foeArsUp"){
+        const cur = foe(n).arsenal;
+        if(!cur){ n = L(n, `${srcName}: ${sp(foe(n))} arsenal is empty — nothing to turn.`); return; }
+        if(cur._faceUp){ n = L(n, `${srcName}: ${cur.name} is already face up in ${sp(foe(n))} arsenal.`); return; }
+        const was = actorOf(n);
+        n = {...n, actor: 1 - was};
+        n = faceUpArsenal(n, [], srcName, "arsenal");
+        n = {...n, actor: was};
       }
       /* BANISHING FROM THE OPPONENT'S ARSENAL (v3.96) — the twin of
          `foeArsDestroy` two lines up, and the distinction is REAL: a
@@ -1690,6 +1744,45 @@ function makeEffects(ctx){
          THE ZONE IS READ OFF THE SIDE BY NAME, so a spec naming a zone
          that seat does not have finds nothing and says so, rather than
          throwing inside a reducer whose contract is that it never does. */
+      /* ---- A COSTLESS "YOU MAY", OFFERED (v4.62) ----------------------
+         "When this hits a hero, YOU MAY turn a card in their arsenal
+          face-up, then destroy a defense reaction in their arsenal."
+
+         THE POOL'S OTHER OPTIONAL SHAPES ALL CARRY A PRICE — `optCost` a
+         card out of a zone, `payCost` resources, `millCost` a modal choice
+         between two of them, `chargeCost` a card to the soul — and the
+         machinery is built around the cost being the thing that is offered.
+         This one has NO price: both halves are effects on the opponent, so
+         what is offered is the payload itself.
+
+         IT IS A ONE-MODE OPTIONAL MODAL, which `buildPrompt` will build
+         only because v4.61 gave that sheet a Decline control and v4.62 gave
+         it a floor of one. The alternatives were both worse: a `pay` sheet
+         with `cost: 0` would have to invent a fifth verb for `payVerb` and
+         say "paid 0", and a `pick` over the opponent's arsenal would RENDER
+         the card being decided about — which is the whole cost of the
+         clause, so the sheet would hand the controller the information for
+         free and the decision would stop being one.
+
+         THE MODES' `label` IS THE PRINTED LINE IN PLAIN ENGLISH, supplied
+         by the parser, because `applyPrompt` puts it straight into the feed
+         ("Mode chosen: …") and in a training sim the feed is the lesson
+         (v3.60, v4.24, v4.46). No `payVerb` branch, no new spec field and
+         so no `WIRE_V` bump — the modal's shape is unchanged.
+
+         THE POLICY TAKES IT, and that falls out rather than being decided
+         here: `judge.autoAnswer` answers a modal with `choice: 0`. v4.24's
+         standing rule is to DECLINE a price this policy cannot weigh, and a
+         play with no price at all is not that case. */
+      else if(k==="mayOffer"){
+        const spec = v || {};
+        if(!spec.ops || !spec.ops.length){ n = L(n, `${srcName}: nothing to offer.`); return; }
+        n.promptQ = [...(n.promptQ||[]), {
+          tag:"modal", side:actorOf(n), src:srcName, optional:true,
+          options:[{label: spec.label || "Do it", ops: spec.ops}],
+          title: spec.title || `${srcName} — take it?`,
+          hint: spec.hint || "Optional. Decline and nothing resolves."}];
+      }
       else if(k==="foePick"){
         const spec = v || {};
         const zone = spec.zone || "hand";

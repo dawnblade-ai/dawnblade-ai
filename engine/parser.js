@@ -515,6 +515,15 @@ const RX_SHUF_DRAW = /^shuffle any number of (.+) from your hand into your deck,
    records' parse moves, all Malefic Incantation, and no pool record
    prints "put a verse counter on …" for `ctrPut` to newly claim. */
 const CTR_KINDS = {"steam":"steam", "rust":"rust", "aim":"aim", "+1{p}":"pow", "verse":"verse"};
+/* WHAT A FILTERED ARSENAL DESTROY MAY NAME (v4.62). Wreck Havoc prints
+   "destroy a DEFENSE REACTION in their arsenal" and the unrestricted
+   `foeArsDestroy` sits two rules away, so an open reading is that op wearing
+   a restriction it does not enforce — v2.30's arrow buff on a sword, one zone
+   over. The vocabulary is CLOSED for `CTR_KINDS`' reason: a printed word only
+   belongs here once something CONSUMES it, and `runOps` refuses a key it does
+   not know rather than destroying whatever is there (v2.04 — `reduce` is fed
+   by JSON off a wire). Measured over 797 records the pool prints one subject. */
+const ARS_DESTROY_TYPES = {"defense reaction": "dr", "defence reaction": "dr"};
 const CTR_WORDS = {a:1, an:1, one:1, two:2, three:3, four:4, five:5, six:6};
 const RX_CTR_PUT = /^put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (.+)$/;
 /* WHAT A COUNTER CLAUSE MAY NAME, AND WHY AN EMPTY ANSWER REFUSES (v4.44).
@@ -1858,6 +1867,66 @@ function classifyClause(raw){
     return R([["foeGearDef", -(+m[1])]]);
   if(/^destroy a card in their arsenal$/.test(c))
     return R([["foeArsDestroy", 1]]);
+  /* ---- TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62) ----
+     "When this hits a hero, YOU MAY turn a card in their arsenal face-up,
+      THEN destroy a defense reaction in their arsenal."  — WRECK HAVOC x3
+
+     THE POOL'S LAST `part` DECK CARD, and the diagnostic that found the gap
+     is this project's cheapest, run from the head end (v3.79, v4.43): hand
+     the same trigger a payload that HAS a reader and
+     `when this hits a hero, destroy a card in their arsenal` parses in
+     full — so the trigger, the hero qualifier and the "you may" were never
+     the blocker and BOTH halves of the payload were. Ninth outing of
+     v3.47's shape: reading the payload is what creates the route.
+
+     ONE CLAUSE, TWO OPS, AND NO STATE THREADED BETWEEN THEM. "Then" is
+     SEQUENCING rather than a gate, and the arsenal holds one card, so the
+     destroy re-reads the same object the turn just exposed — `runOps`
+     already sequences, and two ops that each stand alone beat a compound
+     op that has to describe both (v3.71's rule from the other end: a
+     whole-card reader is for when state genuinely has to cross).
+
+     THE "YOU MAY" IS THE WHOLE COMPOUND, so it wraps both ops rather than
+     only the turn: read as "you may [turn], then [destroy]" the modal
+     governs the sentence, and offering the destroy after a declined turn
+     would destroy a card the controller was never shown. `mayOffer` is the
+     costless offer (there is no price here at all — v4.24's standing rule
+     is about a price this policy cannot weigh, and a play with none is not
+     that case), and it is a ONE-MODE OPTIONAL MODAL, which `buildPrompt`
+     builds only because v4.61 gave that sheet a Decline control and this
+     version gave it a floor of one.
+
+     WHY IT IS A REAL DECISION RATHER THAN A DOMINATED ONE, MEASURED:
+     turning their card face up fires their own turn-legal arsenal trigger,
+     and the pool prints exactly one — SPIRE SNIPING, whose "put OR TURNED
+     face-up" is the only wording `faceUpArsenal` lets a turn reach (v3.72).
+     So accepting can hand the opponent a look at their own deck, and the
+     controller cannot see which card it is before choosing. Contrast
+     ENTANGLING SHOT, the family's other member: its printed "you may {t}
+     target hero" is taken unconditionally because tapping an opponent's
+     hero can never help them (v3.48's ruling is that narrow), so declining
+     is strictly DOMINATED — v4.23's reprieve, and both halves are drilled
+     so the difference is measured rather than assumed.
+
+     THE SUBJECT IS A CLOSED VOCABULARY AND AN UNKNOWN ONE REFUSES THE
+     WHOLE CLAUSE (v2.29, v3.53, v3.55). Read loose, "destroy a <anything>
+     in their arsenal" is the unrestricted `foeArsDestroy` two lines up
+     wearing a restriction it does not enforce — which is v2.30's arrow
+     buff on a sword, one zone over. Measured over 797 records the pool
+     prints this one subject. */
+  /* AND THE ANCHOR IS WRITTEN AGAINST THE LEVELLED CLAUSE (v3.71, v3.99).
+     The card prints "face-up" and `SYNONYMS` rewrites it to "face up"
+     before `classifyClause` sees a word, so the printed spelling matches
+     NOTHING and looks exactly like a pattern that is simply wrong — which
+     is what the first draft of this rule did. That table is the first place
+     to look when a rule you verified in isolation does nothing. */
+  if(m = c.match(/^you may turn a card in their arsenal face up, then destroy an? (.+?) in their arsenal$/)){
+    const kind = ARS_DESTROY_TYPES[m[1]];
+    if(!kind) return null;
+    return R([["mayOffer", {
+      label: "Turn their arsenal card face up, then destroy a " + m[1],
+      ops: [["foeArsUp", 1], ["foeArsDestroy", 1, kind]]}]]);
+  }
   /* BANISH IS NOT DESTROY (v3.96). Mark of the Funnel Web prints the same
      sentence one verb over, and the verb is the whole difference: a
      destroyed card reaches the GRAVEYARD, where `retrieve` and every

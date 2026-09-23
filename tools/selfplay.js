@@ -326,6 +326,20 @@ function play(g, limit, opts){
            pool records across six cards, live in Iyslander's and Briar's
            lists. v3.84: when you build a route, go and count. */
         if(/is fused \(Fusion\)/.test(line))        events.push(["fusion", line]);
+        /* WRECK HAVOC'S OFFER, TAKEN (v4.62). The route is a costless
+           "you may", so what is worth counting is the times a seat ACCEPTED
+           it — `applyPrompt` puts the chosen mode's own label into the feed
+           and this card's is unique in the pool, which is the whole reason
+           to spell the EVENT rather than a word (v3.81, v4.46: "un-TAPS"
+           contains "taps"). The destroy's own line is shared with Loot the
+           Arsenal and Wee Wrecking Ball, so counting THAT would be a number
+           about three cards standing on one line (v4.25).
+
+           AND IT IS `arsflip`, NOT `arsturn`: `arsTurn` is BRAVO's op kind
+           (v3.72) and one letter of case away from it meaning a different
+           thing is the same-name-different-meaning trap `KNOWN_COLLISIONS`
+           polices, one file over. */
+        if(/Turn their arsenal card face up/.test(line)) events.push(["arsflip", line]);
         /* LEAVING THE ARENA (v4.29). "When this leaves the arena, X"
            fired on two of the arena's seven exits, and both were exits a
            card SCHEDULES FOR ITSELF. This counts the times a card actually

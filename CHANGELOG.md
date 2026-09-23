@@ -1,3 +1,172 @@
+## v4.62 — turn it over, then take it if it is what you feared
+
+> *"Defense reaction cards can't be played this chain link.*
+> *When this hits a hero, **YOU MAY** turn a card in their arsenal face-up,
+> **THEN** destroy a defense reaction in their arsenal."*
+> — WRECK HAVOC ×3, Dorinthea's
+
+**THE POOL'S LAST `part` DECK CARD.** Its first clause was built at v4.60;
+this is the second, and with it every deck card in the pool reads in full
+(audit **397 → 398** unique cards `full`, **8 → 7** `part`, `none` still 0).
+
+**THE DIAGNOSTIC IS THIS PROJECT'S CHEAPEST, RUN FROM THE HEAD END** (v3.79,
+v4.43). Hand the SAME trigger a payload that already has a reader:
+
+| handed | `classifyClause` answers |
+|---|---|
+| `when this hits a hero, destroy a card in their arsenal` | `onHit`, `heroOnly`, in full |
+| the real clause | **`null`** |
+
+So the trigger, the hero gate and the printed *"you may"* were never the
+blocker and **both halves of the payload were**. Ninth outing of v3.47's
+shape: reading the payload is what creates the route.
+
+**NEITHER HALF NEEDED NEW MACHINERY** (v3.58, v3.73). `faceUpArsenal` has
+turned an arsenal card, fired its triggers and written the feed line since
+v3.71, and v3.72 taught it that **TURNING IS NOT PUTTING** — `from:
+"arsenal"` is the turn, so a put-only trigger sits it out and only Spire
+Sniping's *"put OR turned face-up"* can fire. `foeArsDestroy` has emptied the
+other seat's arsenal since v3.96. What was new is three things.
+
+### THE SEAT IS BORROWED, NOT THREADED (v4.62)
+
+`faceUpArsenal` reads `act(n).arsenal`, writes through `actMut`, **and runs
+each `arsenalUp` op through `runOps` at the AMBIENT actor** — and every one
+of those belongs to the card's CONTROLLER rather than to whoever turned it.
+A seat argument would fix the first two and leave the third firing the
+opponent's trigger for the attacker, which is v3.46's `allyDeath` inversion.
+So the actor is borrowed for the call and **handed straight back**, or every
+rule after it in the same resolution runs for the wrong hero.
+
+That is measurable rather than theoretical: **Spire Sniping is the pool's
+only card a TURN can trigger**, and its payload is a reorder of its
+controller's own top two (v4.59's `lookOrder`). Read at the ambient actor,
+the attacker would look at their own deck.
+
+### THE PRINTED TYPE IS ENFORCED AT RESOLUTION, AND IT IS A CLOSED VOCABULARY
+
+The parser cannot see which card the arsenal holds when the trigger fires, so
+the filter rides on the op and `runOps` tests it. `isDR` is the **printed
+type off the structured array** — *"Reaction"* contains *"action"* (v2.44),
+so a `tt` scan claims a Defense Reaction's own type line for an Action.
+
+**AN UNKNOWN KEY REFUSES RATHER THAN FALLING THROUGH.** `reduce` is fed by
+JSON off a wire (v2.04), and falling through destroys ANY card in the
+arsenal — which is the unrestricted `foeArsDestroy` two rules away wearing a
+restriction it does not enforce, v2.30's arrow buff on a sword one zone over.
+The vocabulary is closed for `CTR_KINDS`' reason: a printed word belongs there
+once something CONSUMES it. Measured over 797 records, the pool prints this
+one subject, and the bare *"destroy a card in their arsenal"* keeps its own
+three claimants unmoved (the filter is opt-in, v3.58).
+
+### A COSTLESS "YOU MAY", AND WHY IT IS A ONE-MODE OPTIONAL MODAL
+
+**EVERY OTHER OPTIONAL SHAPE IN THIS ENGINE CARRIES A PRICE** — `optCost` a
+card out of a zone, `payCost` resources, `millCost` a modal choice between two
+of them, `chargeCost` a card to the soul — and the machinery is built around
+the cost being the thing offered. Here there is no price at all: both halves
+land on the opponent, so what is offered is the **payload**.
+
+`buildPrompt`'s floor of two modes is right for a MANDATORY modal (a forced
+choice among one is a tap that teaches nothing, v3.55) and exactly wrong for
+an OPTIONAL one, where the alternative is not a second mode but declining —
+the same distinction an optional `pick` already makes with `min: 0` over a
+single candidate. So the floor is `spec.optional ? 1 : 2`, **measured before
+it was widened** (v3.33): `millCostSpec` is the engine's only other setter of
+`optional` and it always supplies two modes, so nothing written before this
+version can reach the new branch, and a mandatory single-mode modal is still
+refused — which is the half that keeps the floor meaning something.
+
+**AND IT IS ONLY ANSWERABLE BECAUSE OF v4.61.** That version found the
+optional modal had no Decline control on either board; without it this sheet
+would open with one button and no way out, which is the printed *"you may"*
+made mandatory again.
+
+**THE TWO ALTERNATIVES WERE BOTH WORSE.** A `pay` sheet with `cost: 0` would
+need a fifth verb for `payVerb` and otherwise say *"paid 0"*; and a `pick`
+over the opponent's arsenal would **RENDER the card being decided about** —
+which is the entire cost of the clause, so the sheet would hand the
+controller the information for free and the decision would stop being one.
+
+**NO NEW SPEC FIELD AND SO NO `WIRE_V` BUMP**: the modal's shape is
+unchanged, `applyPrompt` already puts the chosen mode's label into the feed,
+and the label is the printed line in plain English because in a training sim
+the feed is the lesson (v3.60, v4.24, v4.46).
+
+**THE POLICY TAKES IT, AND THAT FALLS OUT RATHER THAN BEING DECIDED HERE.**
+`judge.autoAnswer` answers a modal with `choice: 0`. v4.24's standing rule is
+to DECLINE a price this policy cannot weigh, and a play with no price is not
+that case — so unlike v4.52's Stilettos and v4.55's Robe, this route is
+genuinely driven in a real game.
+
+### WHY IT IS A REAL DECISION AND ENTANGLING SHOT IS NOT (v4.62)
+
+The pool prints exactly **two** costless *"you may"* payloads and they are
+treated differently, on a measurement rather than a preference:
+
+| card | printed | treatment |
+|---|---|---|
+| **Entangling Shot** | *"you may {t} target hero"* | **taken without asking** — tapping an opponent's hero can never help them (v3.48's ruling is that narrow), so declining is strictly DOMINATED (v4.23's reprieve) |
+| **Wreck Havoc** | this clause | **offered** — turning their card face up fires their own turn-legal arsenal trigger, and the controller cannot see which card it is before choosing |
+
+Pinned as a SET, so a third arriving is a decision somebody makes rather than
+a default (v3.35, v4.17).
+
+### AND THE FIRST DRAFT OF THE READER MATCHED NOTHING (v3.71's TRAP)
+
+The card prints **`face-up`** and `SYNONYMS` rewrites it to **`face up`**
+before `classifyClause` sees a word — so the anchor spelling the printed
+hyphen matched nothing and looked exactly like a pattern that is simply
+wrong. **That table is the first place to look when a rule you verified in
+isolation does nothing**, and it is CLAUDE.md's own standing advice, paid for
+again.
+
+**THREE MORE OF THIS VERSION'S FIXTURES WERE WRONG BEFORE THE ENGINE WAS**,
+each a named shape: a census of the printed subject matched the BARE *"card"*
+too and so reported Loot the Arsenal and Wee Wrecking Ball (v4.07, a scan
+aimed at the wrong shape); `judge.autoAnswer` takes the **GAME**, not a
+prompt, and handed a prompt it answers `null` — which reads exactly like a
+policy that declines (v4.09); and a scan for the new op read `fx.ops` when
+the payload rides in `fx.onHitHero`, because *"a hero"* is part of the trigger
+(v3.45) — so it reported an EMPTY set, which reads exactly like a pool with
+nothing in it (v3.81).
+
+Measured: **exactly 3 records move, all Wreck Havoc, `part` → `full`** (pool
+751 → 754 full, 35 → 32 part; audit 397 → 398 full, 8 → 7 part), floor
+re-pinned after reading the diff — the card leaves the partial list entirely
+and nothing else moves; **the ladder's summary block is BYTE-IDENTICAL on
+both sides**, run rather than reasoned about (v4.43), and the route is
+genuinely driven: the new `arsflip` counter reads **15 in 210 games**, and on
+the ladder's own seeds those 15 accepts break down as **1 destroy, 13 turned
+up and survived, 1 empty arsenal, 1 already face up** — all four branches
+reached, with one destroyed card in 210 games changing no outcome. Scenes
+99 → 100 (a Dorinthea scene whose sharpest row is the NON-matching card);
+fairness CLEAN; UNFAIR 0; `crindex --check` clean; both `text/babel` blocks
+compile.
+
+### 21 SABOTAGES WRITTEN, 20 APPLIED AND ALL 20 BITE (v4.62)
+
+**THREE OF THE FIRST PASS CAME BACK SILENT AND ALL THREE WERE MY DRILLS**
+(v3.62), each closed by a better fixture rather than by weakening a claim:
+
+- **reading the TURN as a PUT** was silent because every fixture used Spire
+  Sniping, whose *"put OR turned face-up"* fires either way — a fixture where
+  two things coincide has tested neither (v3.26). **Swift Shot** is the card
+  that bites: a PUT-only trigger granting **go again**, so the wrong reading
+  hands the OPPONENT an action point off an attack aimed at them.
+- **`mayOffer` with an empty op list** is a wire guard (v2.04) no pool record
+  can reach, so it is drilled synthetically (v3.73) rather than deleted — the
+  alternative is a sheet whose one button runs nothing, a dead control (v2.83).
+- **the route counter widened to `/arsenal/`** was silent because nothing
+  pinned its phrase against the engine's. That is v3.81's rule and v4.46's
+  `tap` with the sign flipped; both spellings are pinned against each other
+  now, and a fifth sabotage confirms it by rewording the LABEL instead.
+
+**AND ONE COULD NOT BE APPLIED AT ALL** — its inverse anchor appeared twice
+(`arsTurn` and `foeArsUp` both call `faceUpArsenal` the same way), and the
+harness said so rather than reporting SILENT, which is v4.37's rule doing
+exactly its job.
+
 ## v4.61 — an answer the module accepted, with no control that sends it
 
 > *"When this attacks, **YOU MAY** discard a card **OR** destroy the top card of

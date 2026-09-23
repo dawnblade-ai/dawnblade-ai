@@ -101,7 +101,11 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
 
 test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip}, () => {
   const r = report();
-  assert.equal(r.dispatched, 89, "runOps's op vocabulary moved");
+  /* 89 -> 91 AT v4.62: `mayOffer` (a costless "you may", offered as a
+     one-mode optional modal) and `foeArsUp` (the cross-seat arsenal turn),
+     both emitted by Wreck Havoc's clause and both with a `runOps` case.
+     Moving this number is a deliberate edit in both places (v4.17). */
+  assert.equal(r.dispatched, 91, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

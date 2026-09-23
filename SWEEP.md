@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 8 cards | understood ≠ built |
-| **Fail states** | 38 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 7 cards | understood ≠ built |
+| **Fail states** | 37 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -45,7 +45,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
 - **Walk in My Shoes** (part, 1/2 unread)
-- **Wreck Havoc** (part, 1/2 unread)
 
 ## 4. Fail states — how cards go WRONG at the table
 
@@ -62,8 +61,8 @@ can be overruled. Same discipline as the mention count.
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
 | Unread, effect unknown | 4 |
-| Choice never offered | 3 |
 | No schedule to fire on | 3 |
+| Choice never offered | 2 |
 | Ability inert — cost not modelled | 2 |
 | Earned value denied | 2 |
 | Displayed total is wrong | 1 |
@@ -107,7 +106,7 @@ can be overruled. Same discipline as the mention count.
   - *Earned value denied* — This penalty lands on the OPPONENT, so skipping it denies the player a payoff and spares the opponent a cost.
     > Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.
 
-### LOST VALUE — 29 entries
+### LOST VALUE — 28 entries
 
 - **Act of Glory** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 11 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
@@ -188,5 +187,5 @@ can be overruled. Same discipline as the mention count.
 - **Tension in the Air** (1) · tier `full` · lyath
   - *Keyword filed as no-op — but the trainer names it (verify)* — The parser records "Suspense" as doing nothing, so this card reports as fully scripted from coverage alone. The trainer names it 11 times, so it is probably enforced by name (phantasm is: fxParse calls it a no-op and the trainer still pops the attack). Verify it is carried, not just mentioned.Your ruling describes real behaviour: just like the other 'counters' these are often represented by dice and 'tick' down at the beginning of the turn. unlike steam-powered it is destroyed immediately when it has none. The effect activates when the aura is de
     > Suspense
-- … and 4 more (see the station)
+- … and 3 more (see the station)
 

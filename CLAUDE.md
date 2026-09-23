@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3006 drills** at v4.61.
+This is `node --test "test/*.test.js"` — **3029 drills** at v4.62.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,114 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62)
+
+> *"When this hits a hero, **YOU MAY** turn a card in their arsenal face-up,
+> **THEN** destroy a defense reaction in their arsenal."*
+> — WRECK HAVOC ×3, Dorinthea's
+
+**THE POOL'S LAST `part` DECK CARD**, and with it every deck card in the pool
+reads in full (audit **397 → 398** unique `full`, **8 → 7** `part`).
+
+**THE DIAGNOSTIC IS THIS PROJECT'S CHEAPEST, RUN FROM THE HEAD END** (v3.79,
+v4.43): handed `when this hits a hero, destroy a card in their arsenal`,
+`classifyClause` answers in full — `onHit`, `heroOnly`, the lot — and handed
+the real clause it answers **null**. So the trigger, the hero gate and the
+printed *"you may"* were never the blocker and **both halves of the payload
+were.** Ninth outing of v3.47's shape.
+
+**NEITHER HALF NEEDED NEW MACHINERY** (v3.58, v3.73): `faceUpArsenal` has
+turned an arsenal card and fired its triggers since v3.71 (and v3.72 taught it
+that **TURNING IS NOT PUTTING** — only Spire Sniping's *"put OR turned"* can
+fire on a turn), and `foeArsDestroy` has emptied the other seat's arsenal
+since v3.96.
+
+**THE SEAT IS BORROWED, NOT THREADED.** `faceUpArsenal` reads `act(n).arsenal`,
+writes through `actMut`, **and runs each `arsenalUp` op through `runOps` at the
+AMBIENT actor** — and every one of those belongs to the card's CONTROLLER. A
+seat argument fixes the first two and leaves the third firing the opponent's
+trigger for the attacker, which is v3.46's `allyDeath` inversion; so it is
+borrowed for the call and **handed straight back**. Measurable rather than
+theoretical: Spire Sniping's payload is a reorder of its controller's own top
+two (v4.59), so at the ambient actor the attacker would look at their own deck.
+
+**THE PRINTED TYPE IS ENFORCED AT RESOLUTION AND THE VOCABULARY IS CLOSED.**
+The parser cannot see which card the arsenal holds when the trigger fires, so
+the filter rides on the op. `isDR` is the printed type off the **structured
+array** — *"Reaction"* contains *"action"* (v2.44). **An unknown key REFUSES
+rather than falling through**: `reduce` is fed by JSON off a wire (v2.04) and
+falling through destroys ANY card, which is the unrestricted `foeArsDestroy`
+two rules away wearing a restriction it does not enforce (v2.30's arrow buff on
+a sword, one zone over). Measured: one printed subject in 797 records, and the
+bare form keeps its three claimants unmoved.
+
+### A COSTLESS "YOU MAY" IS A ONE-MODE OPTIONAL MODAL (v4.62)
+
+**EVERY OTHER OPTIONAL SHAPE HERE CARRIES A PRICE** — `optCost` a card out of
+a zone, `payCost` resources, `millCost` a modal between two of them,
+`chargeCost` a card to the soul — and the machinery is built around the cost
+being the thing offered. This has none: both halves land on the opponent, so
+what is offered is the **payload**.
+
+`buildPrompt`'s floor of two modes is right for a MANDATORY modal (a forced
+choice among one is a tap that teaches nothing, v3.55) and exactly wrong for an
+OPTIONAL one, where the alternative is not a second mode but declining — the
+distinction an optional `pick` already makes with `min: 0` over a single
+candidate. The floor is `spec.optional ? 1 : 2`, **measured before it was
+widened** (v3.33): `millCostSpec` is the only other setter of `optional` and it
+always supplies two modes, so nothing written before this version reaches the
+new branch, and a mandatory single-mode modal is still refused — the half that
+keeps the floor meaning something.
+
+**IT IS ONLY ANSWERABLE BECAUSE OF v4.61**, which found that sheet had no
+Decline control on either board. Without it this opens with one button and no
+way out — the printed *"you may"* made mandatory again.
+
+**THE TWO ALTERNATIVES WERE BOTH WORSE.** A `pay` sheet with `cost: 0` needs a
+fifth `payVerb` and otherwise says *"paid 0"*; a `pick` over the opponent's
+arsenal **RENDERS the card being decided about**, which is the entire cost of
+the clause — the sheet would hand the controller the information for free and
+the decision would stop being one. **No new spec field, so no `WIRE_V` bump.**
+
+**THE POLICY TAKES IT, AND THAT FALLS OUT** — `judge.autoAnswer` answers a
+modal with `choice: 0`. v4.24's rule is to decline a price this policy cannot
+weigh, and a play with no price is not that case, so unlike v4.52's Stilettos
+and v4.55's Robe this route is genuinely driven: **`arsflip` reads 15 in 210
+games**, and on the ladder's own seeds those 15 break down as **1 destroy, 13
+turned up and survived, 1 empty arsenal, 1 already face up** — all four
+branches reached, with one destroyed card in 210 games changing no outcome
+(the ladder's summary block is byte-identical on both sides).
+
+**WHY ENTANGLING SHOT IS NOT OFFERED, MEASURED.** The pool prints exactly TWO
+costless *"you may"* payloads. Tapping an opponent's hero can never help them
+(v3.48's ruling is that narrow), so declining Entangling Shot is strictly
+DOMINATED and it is taken without asking (v4.23's reprieve); turning their
+arsenal card over fires their own trigger, and the controller cannot see which
+card it is. Pinned as a SET, so a third arriving is a decision rather than a
+default.
+
+**AND THE FIRST DRAFT OF THE READER MATCHED NOTHING** — the card prints
+`face-up` and `SYNONYMS` levels it to `face up` before `classifyClause` sees a
+word, which is v3.71's trap and this file's own standing advice: **that table
+is the first place to look when a rule you verified in isolation does
+nothing.** Three more fixtures were wrong before the engine was: a subject
+census that matched the bare *"card"* and so named Loot the Arsenal and Wee
+Wrecking Ball (v4.07); `judge.autoAnswer` takes the **GAME** and answers `null`
+for a prompt, which reads exactly like a policy that declines (v4.09); and a
+scan for the new op that read `fx.ops` when the payload rides in
+`fx.onHitHero` (v3.45), reporting an empty set (v3.81).
+
+**21 SABOTAGES WRITTEN, 20 APPLIED, 20 BITE.** Three of the first pass came
+back silent and all three were my drills: the TURN-as-PUT sabotage needed a
+PUT-ONLY trigger to bite (**Swift Shot**, whose go again the wrong reading
+hands to the OPPONENT), `mayOffer`'s empty-payload guard is a wire guard no
+pool record can reach and is drilled synthetically rather than deleted, and the
+route counter had no pin against the engine's phrase — v3.81's rule, and a
+fifth sabotage rewords the LABEL to confirm the pair. One more could not be
+APPLIED, because its inverse anchor appeared twice (`arsTurn` and `foeArsUp`
+call `faceUpArsenal` identically), and the harness said so rather than
+reporting SILENT (v4.37).
 
 ### AN ANSWER THE MODULE ACCEPTS WITH NO CONTROL THAT SENDS IT (v4.61)
 
@@ -9763,6 +9871,7 @@ returns `null` and it politely skips itself instead of showing an empty sheet.
 | `pick` | choose cards from a zone | `zone`, `to`, `filter`, `min`, `max` | retrieve, reload, graveyard picks, fusion reveals, Arcane Twining |
 | `pick` + `filters` | choose ONE CARD MATCHING EACH of several printed targets | `filters` (a LIST; the bounds come off its length) | Crown of Dichotomy (v4.59) |
 | `modal` | choose one printed mode | `options:[{label,ops}]` | Pummel, meld |
+| `modal` + `optional` | …or refuse it — and with **ONE** mode that is a costless *"you may"* | `options` of length 1 | Wreck Havoc (v4.62) |
 | `pay` | pay a cost, or decline | `cost`, `avail`, `ops` | Look Tuff, Cold Snap, crank, heave, and the whole "If you do, …" family |
 | `reveal` | information both players see | `cards` or `zone`+`n` | Ravenous Rabble, Knucklehead, intimidate's random pick |
 | `alloc` | **apportion** N counters over M permanents | `cards`, `n`, `filter`, `ctrStamp` | Glisten (v4.44) |
@@ -9782,7 +9891,12 @@ that teaches nothing (v3.55).
 
 `min:0` makes a `pick` optional and adds a **Choose none** button, and
 `optional: true` does the same for a `modal` — a printed *"you may A or B"*
-that must be refusable. **THE FIELD IS NOT THE CONTROL, AND FOR FOUR DOZEN
+that must be refusable. **AND IT LOWERS THE FLOOR TO ONE MODE** (v4.62): two
+is right for a MANDATORY modal, because a forced choice among one is a tap
+that teaches nothing (v3.55), and exactly wrong for an optional one, where
+the alternative is not a second mode but declining — so a costless
+*"you may X"* is one mode plus Decline, which is what a `pick` with `min: 0`
+over a single candidate already is. **THE FIELD IS NOT THE CONTROL, AND FOR FOUR DOZEN
 VERSIONS IT WAS ALL THERE WAS** (v4.61): every layer honoured `optional` and
 the shared sheet rendered no button, so the four pool records that print one
 were spent every time. When you add a field that makes an answer legal, go

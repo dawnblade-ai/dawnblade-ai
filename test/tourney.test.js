@@ -72,7 +72,8 @@ test("the emitted-kind scan is alive", () => {
 test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
-    "ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost", "fusion", "gold",
+    "ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
+    "fusion", "gold",
     "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "tap", "ward",
   ]);
@@ -129,7 +130,13 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    v4.46 found `tap` reporting 335 firings of which every single one was
    the end phase announcing an UNTAP. What this version built is a Chi
    being SPENT, and `execute` prints that line nowhere else. */
-const ROUTES_PINNED = ["ally", "allyatk", "chi", "crush", "ctrWipe", "death", "defmod",
+/* +arsflip v4.62 — Wreck Havoc's costless "you may", and it belongs on the
+   ROUTE side because a number there means a feature FIRED (v4.17). It counts
+   the times a seat ACCEPTED the offer, spelled as the chosen mode's own
+   printed label, which is unique in the pool: the DESTROY's line is shared
+   with Loot the Arsenal and Wee Wrecking Ball, so a counter on that would be
+   a number about three cards standing on one line (v4.25, v3.81). */
+const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
                        "fusion", "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "search", "tap", "ward"];

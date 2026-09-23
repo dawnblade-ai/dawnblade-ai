@@ -519,7 +519,19 @@ function buildPrompt(game, spec){
   }
   if(spec.tag === "modal"){
     const options = (spec.options||[]).filter(Boolean);
-    if(options.length < 2) return null;
+    /* A SINGLE MODE IS A REAL QUESTION WHEN IT CAN BE REFUSED (v4.62).
+       The floor of two is right for a MANDATORY modal — a forced choice
+       among one is a tap that teaches nothing (v3.55) — and exactly wrong
+       for an OPTIONAL one, where the printed line is "you may X" and the
+       alternative is not a second mode but declining. It is the same
+       distinction an optional `pick` already makes: `min: 0` over a single
+       candidate opens a sheet, because "Choose none" is the other answer.
+
+       MEASURED BEFORE WIDENING (v3.33): `millCostSpec` is the engine's
+       only builder that sets `optional` and it always supplies two modes,
+       so no pool record moves — and a mandatory single-mode modal is still
+       refused, which is the half that keeps the floor meaning something. */
+    if(options.length < (spec.optional ? 1 : 2)) return null;
     /* A MODE CAN BE OPTIONAL (v3.90). "You may discard a card OR destroy
        the top card of your deck" is a CHOICE the player may also refuse,
        and a modal with no way out would make a "you may" mandatory —
