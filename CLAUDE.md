@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **2973 drills** at v4.59.
+This is `node --test "test/*.test.js"` — **3006 drills** at v4.61.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -287,6 +287,15 @@ drill that passed.**
    A slice that widens has started reading its neighbours; v4.57 found two,
    one of which was asserting about a different function than the one the
    drill names. See "EVERY SOURCE SLICE A DRILL TAKES".
+6f. **Prompt controls** (`test/promptctl.test.js`) — every answer the prompt
+   module ACCEPTS, against a control on the shared sheet that can send it,
+   both directions. `speccensus` asks whether `buildPrompt` names every field
+   a spec carries and `judge.test.js` whether the table can send every action
+   `PROMPT_ACTIONS` accepts; **neither asked whether the SHEET has a
+   control**, which is how v3.90's optional modal went four dozen versions
+   unrefusable on both boards. It also pins `promptChoose`'s answer
+   vocabulary — see "AN ANSWER THE MODULE ACCEPTS WITH NO CONTROL THAT SENDS
+   IT".
 7. **Marker sweep** — grep for the new identifiers to confirm every edit landed.
 
 Slower path, needs network the first time, run before shipping any card-text
@@ -850,6 +859,140 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### AN ANSWER THE MODULE ACCEPTS WITH NO CONTROL THAT SENDS IT (v4.61)
+
+> *"When this attacks, **YOU MAY** discard a card **OR** destroy the top card
+> of your deck. If that card has watery grave, this gets **go again**."*
+> — JITTERY BONES ×3 · WASHED UP WAVE ×1, Gravy Bones'
+
+**v3.90 BUILT `optional` ON A MODAL AND WROTE DOWN WHY** — *"a modal with no
+way out would make a 'you may' MANDATORY — stronger than printed, and the
+free-ability rule v2.04 fixed read from the other end."* **Every layer
+honoured it but the one the player touches.** `buildPrompt` carries the
+field, `promptDecline` gates on it, `promptChoose` records the answer,
+`promptReady` lets a declined sheet confirm, `applyPrompt` runs nothing,
+`judge.PROMPT_ACTIONS` accepts the action, both boards wire `onDecline`, and
+`test/mill.test.js` has DRIVEN the decline through `judge.reduce` since
+v3.90. **The SHEET rendered the modes and nothing else** — so Confirm stayed
+dark until a mode was chosen and the only answer either board could send was
+to pay.
+
+**FOUR RECORDS, TWO CARDS, ONE DECK, EVERY ONE `tier: full`**, so a printed
+choice was spent every time it was offered: a card discarded or a deck milled
+on the player's behalf, which is the losing trade this project refuses to
+make quietly (v3.09, v4.33).
+
+**v3.50's SENTENCE FOR THE SEVENTH TIME, WITH A BUTTON AS THE MISSING
+CALLER** — and v4.44's shape one control over. That version found the table
+had no prompt sheet at all and made `PromptSheet` the one body both boards
+render, which is exactly why this is a **ZERO**-board defect rather than a
+one-board one, and why the fix is four lines in one place.
+
+**NO INSTRUMENT HERE COULD SEE IT.** Coverage counts the clause CONSUMED; a
+player who cannot decline is **WEAKER** than printed, the direction the
+one-sided sweep is built not to look in; and **`judge.autoAnswer` answers a
+modal with `choice: 0`**, so the ladder never declines one — byte-identical
+at 210 games on both sides, which is the honest read rather than a clean
+bill.
+
+**IT IS A `popt` BESIDE THE MODES**, because for a modal declining IS a
+choice (`promptDecline` is literally `promptChoose(p, "decline")`), so it
+highlights and confirms exactly as a mode does — the treatment the `pay`
+sheet has always given its own Decline. **And it goes through `onDecline`,
+never `onPick("decline")`**: that is the only route carrying the `optional`
+gate, so a mandatory modal stays mandatory even if this guard is widened.
+
+### AN ANSWER THIS FUNCTION ACCEPTS IS AN ANSWER A WIRE CAN SEND (v4.61)
+
+`promptChoose` passed `choice` through for all three variants unread, and
+`judge.reduce`'s own case forwards `a.choice` with no validation either — so
+`reduce` is fed by JSON off a wire (v2.04) and **three answers nothing
+printed were accepted**: a **MANDATORY** modal declined (the printed cost
+skipped and the rider not resolved); a mode index past the end, which left
+`options[99]` undefined so the sheet resolved saying *"Mode chosen:
+undefined"* and ran **NO ops** — a play paid for that does nothing, v4.49's
+rule inverted; and a target index past the candidates, where **CR 1.4.5**
+makes the declaration MANDATORY.
+
+**THE VOCABULARY IS CHECKED, NEVER THE VALUE'S WORTH.** A `pay` decline is
+always legal (the printed *"unless they pay"* branch) and whether the seat
+can afford *"pay"* is `applyAnswer`'s, which pitches on demand (RULING
+2026-08-01) — refusing it here would deny a payment the rules allow. What is
+refused is a word or an index the sheet could never have produced.
+**`promptIndexOK` is ONE body for both indexed answers**, because a mode and
+an attack-target are the same question about one shape — a position in a list
+the sheet rendered — and two copies is where one stops checking the upper
+bound. It takes a numeric STRING (JSON carries both) and refuses `true`,
+`null`, `""` and `1.5`. **It refuses by returning the prompt UNCHANGED**,
+never by throwing: `legal` never throws and `reduce` never mutates on refusal
+(`fuzz.test.js`), and an unanswered sheet leaves Confirm dark, which is the
+state the player is already in. The mandatory half is **LATENT and
+MEASURED** — `millCostSpec` is the engine's only builder that sets
+`optional` — so it is synthetic with the optional one as its positive
+control (v3.73, v3.98).
+
+### `test/promptctl.test.js` — EVERY ANSWER HAS A CONTROL (v4.61)
+
+v4.21's rule, and **no existing census asked this question.**
+`test/speccensus.test.js` asks whether `buildPrompt` NAMES every field a spec
+carries (`optional` is in that set and always was);
+`test/judge.test.js` asks whether the table can SEND every action
+`PROMPT_ACTIONS` accepts. Neither asks whether the **SHEET** has a control
+for every answer the **MODULE** accepts, which is where this lived.
+
+**THE ACCEPTANCE IS DRIVEN AND ONLY THE PRESENCE IS SCANNED**, because a
+React component inside a `text/babel` block cannot be loaded in Node. It
+drives `promptDecline` over a real `buildPrompt` prompt of all **EIGHT**
+variants and pins which accept one **BOTH DIRECTIONS** (v4.12, v4.17) — a
+shape that quietly stops accepting a decline is a printed *"you may"* made
+mandatory again — then asserts a control exists for exactly those four and
+for **none** of the other four, because a dead control reads as a broken
+screen rather than as a rule (v2.83).
+
+**IT KNOWS BOTH ROUTES TO A DECLINE**: `pick`, `alloc` and now `modal` go
+through `promptDecline`, and the `pay` sheet reaches
+`promptChoose(p, "decline")` directly. A census that knew one would report
+the `pay` sheet as having no way out — v4.00's false POSITIVE, in the
+instrument for it.
+
+**THE BOUNDS ARE STRUCTURAL, AND THAT IS THE SECOND THING THIS FILE
+LEARNED.** A quote-aware brace walk ended early **twice** — on an apostrophe
+in a COMMENT (*"Gravy Bones' list"*) and, once comments were stripped, on one
+in JSX **TEXT** (*"opponent's call"*), because to a counter tracking quotes
+both open a string that swallows every brace until the next apostrophe.
+`html-balance.test.js`'s pre-neutralize list one drill over, and **a bound
+that ends early reads exactly like a clean scan** (v3.81, v4.07) — it only
+failed loudly because the assertions ask for something PRESENT. The component
+is bounded at the first column-0 closing brace and each tag's region at its
+next sibling guard (v4.57's safer form), the widths are pinned as data, and
+the stripper's control is routed THROUGH the scan (v4.32), built by
+concatenation because written as a literal it would be a comment in the file
+doing the reading.
+
+**22 SABOTAGES, 20 BITE — AND BOTH SILENCES ARE CORRECT AND RECORDED.**
+Neutering `promptDecline`'s own `optional` gate is silent because
+`promptChoose` now refuses the word one layer down, which is where the
+sabotage that DOES bite proves the rule lives: v4.52's lesson with the
+layers swapped, and v4.44's `optional` from the other side — a redundancy
+that cannot be observed is RECORDED rather than deleted, because
+`promptDecline`'s contract is its own and making it depend on `promptChoose`
+for correctness is a coupling. And planting a CR rule number in this
+version's `APP_VER` comment — v4.57's own defect, reproduced on purpose — is
+silent because that version re-anchored `test/priority.test.js` on the step
+markers' em dash. **A sabotage aimed at a fixed bug coming back silent is the
+fix holding**, and it is worth running because nothing else re-checks it.
+
+**AND THREE FIXTURES WERE WRONG BEFORE THE ENGINE WAS**, each a named shape:
+the first slice walked from the first `{` after the component's NAME, which is
+its **props destructuring**, so it read the signature and stopped; `opt` reads
+the deck off the **GAME** rather than the spec, so an empty deck made
+`buildPrompt` answer null and the variant **fell out of the census** (v4.58's
+lost row, caught only because the drill asks for every variant to be PRESENT);
+and `promptDecline` for a `pick`/`alloc` CLEARS the selection, so on a sheet
+with nothing selected it is textually a no-op and the first draft reported
+both as refusing a decline — **a fixture that cannot tell acceptance from
+refusal** (v3.62).
 
 ### A RESTRICTION WITH NO READER ON EITHER BOARD (v4.60)
 
@@ -9637,9 +9780,15 @@ one object over). A single candidate never reaches it — `ctrPut`'s fast
 path places the lot, because a sheet offering one forced choice is a tap
 that teaches nothing (v3.55).
 
-`min:0` makes a `pick` optional and adds a **Choose none** button. `to` is the
-destination zone and accepts `deckTop` / `deckBottom` as well as the named zones;
-omit it and the pick is a reveal that moves nothing.
+`min:0` makes a `pick` optional and adds a **Choose none** button, and
+`optional: true` does the same for a `modal` — a printed *"you may A or B"*
+that must be refusable. **THE FIELD IS NOT THE CONTROL, AND FOR FOUR DOZEN
+VERSIONS IT WAS ALL THERE WAS** (v4.61): every layer honoured `optional` and
+the shared sheet rendered no button, so the four pool records that print one
+were spent every time. When you add a field that makes an answer legal, go
+and check the sheet can SEND it — `test/promptctl.test.js` is the standing
+census. `to` is the destination zone and accepts `deckTop` / `deckBottom` as
+well as the named zones; omit it and the pick is a reveal that moves nothing.
 
 **`target` IS A SEVENTH TAG AND IS NOT IN THAT TABLE** — it is documented
 under "Attack targets (CR 1.4.5)" below, because it is the one variant whose

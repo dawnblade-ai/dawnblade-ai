@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.60"; /* v4.60 - A RESTRICTION WITH NO READER. "Defense reactions can't be played to this chain link" (Widowmaker, Wreck Havoc - six records, two precon lists) was filed as a no-op whose reason stopped being true when the reaction step got a caller, and nothing on either board read it. It is a card fact now, derived off the open link, refused by one body at all three doors. The narrower "from arsenal" wording still refuses, on purpose. And eleven comments across five files named a trainer function that left the file at v2.71. See CHANGELOG.md. */
+window.APP_VER = "4.61"; /* v4.61 - AN ANSWER THE MODULE ACCEPTED WITH NO CONTROL THAT SENDS IT. An OPTIONAL modal could be declined by the prompt module, by promptDecline, by the reducer and by a drill - and the one sheet both boards render offered no button, so Jittery Bones' and Washed Up Wave's printed "you may discard a card OR destroy the top card of your deck" was spent every time it was offered (four records, all reading full). The control is there now, and promptChoose validates its answer: a mandatory modal cannot be declined off a wire, and an out-of-range mode or attack-target index is refused rather than resolved. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -2357,6 +2357,38 @@ function PromptSheet({p, me, onToggle, onPick, onTakeBack, onDecline, onConfirm}
           {o.label || String(o)}
         </button>
       ))}
+      {/* AN OPTIONAL MODAL HAD NO WAY OUT ON EITHER BOARD (v4.61).
+
+          v3.90 built `optional` so a "you may … OR …" could be refused,
+          in its own words: "a modal with no way out would make a 'you
+          may' MANDATORY — stronger than printed, and the free-ability
+          rule v2.04 fixed read from the other end." The module honoured
+          it, `promptDecline` gated it, `judge.reduce` accepted the
+          action and `test/mill.test.js` drove all three — and THIS
+          SHEET, the one body both boards render, offered no control, so
+          `promptReady` held Confirm dark until a mode was chosen and the
+          only answer either board could send was to pay.
+
+          Four pool records, two cards, Gravy Bones' list, every one
+          `tier: full`: Jittery Bones' "you may discard a card OR
+          destroy the top card of your deck" and Washed Up Wave's, so a
+          printed choice was spent every time it was offered. v3.50's
+          sentence with a BUTTON as the missing caller.
+
+          IT IS A `popt` BESIDE THE MODES, not a footer button like
+          `pick`'s "Choose none", because for a modal declining IS a
+          choice — `promptDecline` is literally `promptChoose(p,
+          "decline")` — so it highlights and confirms exactly as a mode
+          does, which is the treatment the `pay` sheet below already
+          gives its own Decline.
+
+          AND IT GOES THROUGH `onDecline`, never `onPick("decline")`:
+          `promptDecline` carries the `optional` gate, so a mandatory
+          modal cannot be refused even if this guard is ever widened. */}
+      {p.optional &&
+        <button className={"popt"+(p.choice==="decline"?" on":"")} onClick={go(onDecline)}>
+          Decline<span className="sub">neither mode resolves</span>
+        </button>}
     </div>}
 
     {p.tag==="pay" && <div className="pmodal">

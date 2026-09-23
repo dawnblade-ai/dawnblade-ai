@@ -1,3 +1,171 @@
+## v4.61 — an answer the module accepted, with no control that sends it
+
+> *"When this attacks, **YOU MAY** discard a card **OR** destroy the top card of
+> your deck. If that card has watery grave, this gets **go again**."*
+> — JITTERY BONES ×3, Gravy Bones'
+>
+> *"When this defends, **you may** … If that card has watery grave, this gets
+> +2{d}."* — WASHED UP WAVE ×1, the same list
+
+**v3.90 BUILT `optional` ON A MODAL AND WROTE DOWN WHY, IN AS MANY WORDS:**
+
+> *"a modal with no way out would make a 'you may' MANDATORY — stronger than
+> printed, and the free-ability rule v2.04 fixed read from the other end."*
+
+**AND EVERY LAYER HONOURED IT BUT THE ONE THE PLAYER TOUCHES.**
+`buildPrompt` carries the field, `promptDecline` gates on it, `promptChoose`
+records the answer, `promptReady` lets a declined sheet confirm, `applyPrompt`
+runs nothing, `judge.PROMPT_ACTIONS` accepts the action, both boards wire
+`onDecline`, and `test/mill.test.js` has driven all of it since v3.90 —
+**including the decline, through `judge.reduce`.** The **SHEET** rendered the
+modes and nothing else. `promptReady` holds Confirm dark until a mode is chosen,
+so **the only answer either board could send was to pay.**
+
+**FOUR RECORDS, TWO CARDS, ONE DECK, EVERY ONE `tier: full`.** So a printed
+choice was spent every single time it was offered — a card discarded or a deck
+milled on the player's behalf, which is the losing trade this project refuses to
+make quietly (v3.09's `selfPayOr`, v4.33's charge).
+
+**v3.50's SENTENCE FOR THE SEVENTH TIME, WITH A BUTTON AS THE MISSING CALLER.**
+And v4.44's shape one control over: that version found the table had no prompt
+sheet at all and built `PromptSheet` as the one body both boards render — which
+is exactly why this is a ZERO-board defect rather than a one-board one, and why
+fixing it is four lines in one place.
+
+**NO INSTRUMENT HERE COULD SEE IT.** Coverage counts the clause CONSUMED, so all
+four read `full`; a player who cannot decline is **WEAKER** than printed, which
+is the direction the one-sided fairness sweep is built not to look in; and
+**`judge.autoAnswer` answers a modal with `choice: 0`**, so the ladder never
+declines one and 630 games a version report nothing. The ladder is **BYTE-
+IDENTICAL at three runs on both sides**, run rather than reasoned about (v4.43),
+and that is the honest read: the instrument cannot reach it.
+
+**IT IS A `popt` BESIDE THE MODES, NOT A FOOTER BUTTON.** For a modal, declining
+IS a choice — `promptDecline` is literally `promptChoose(p, "decline")` — so it
+highlights and confirms exactly as a mode does, which is the treatment the `pay`
+sheet below it has always given its own Decline. **And it goes through
+`onDecline`, never `onPick("decline")`**, because `promptDecline` is the only
+route carrying the `optional` gate: a mandatory modal stays mandatory even if
+this guard is ever widened.
+
+### AN ANSWER THIS FUNCTION ACCEPTS IS AN ANSWER A WIRE CAN SEND (v4.61)
+
+`promptChoose` passed `choice` straight through for all three variants, unread,
+and `judge.reduce`'s own case forwards `a.choice` with no validation either — so
+`reduce` is fed by JSON off a wire (v2.04) and **three answers nothing printed
+were accepted**:
+
+| answer | was |
+|---|---|
+| modal, `"decline"` | a **MANDATORY** modal declined — the printed cost skipped and the rider not resolved, while `promptDecline` has gated exactly that on `optional` since v3.90 |
+| modal, `99` | `options[99]` is undefined, so the sheet resolves saying *"Mode chosen: undefined"* and runs **NO ops** — a play paid for that does nothing, v4.49's rule inverted |
+| target, `99` | **CR 1.4.5** makes the declaration MANDATORY, so an out-of-range index is a swing at no attack-target at all |
+
+**THE VOCABULARY IS WHAT IS CHECKED, NOT THE VALUE'S WORTH.** A `pay` sheet's
+decline is always legal (it is the printed *"unless they pay"* branch), and
+whether the seat can afford *"pay"* is `applyAnswer`'s — it pitches on demand
+(RULING 2026-08-01), so refusing here would deny a payment the rules allow.
+What is refused is a word or an index the sheet could never have produced.
+**`promptIndexOK` is ONE body for both indexed answers**, because a mode and an
+attack-target are the same question about the same shape — a position in a list
+the sheet rendered — and two copies is where one of them stops checking the
+upper bound. It accepts a numeric STRING (JSON carries both) and refuses
+`true`, `null`, `""` and `1.5`.
+
+**IT REFUSES BY RETURNING THE PROMPT UNCHANGED, never by throwing:**
+`judge.legal`'s contract is that it never throws and `reduce`'s that it never
+mutates on refusal (`fuzz.test.js`), and an unanswered sheet leaves Confirm
+dark — which is the state the player is already in.
+
+**THE MANDATORY-MODAL HALF IS LATENT AND MEASURED**: `millCostSpec` is the
+engine's **only** builder that sets `optional`, so no pool record produces a
+mandatory modal and the drill is synthetic on purpose (v3.73), with the optional
+one beside it as the positive control.
+
+### `test/promptctl.test.js` — EVERY ANSWER THE MODULE ACCEPTS HAS A CONTROL (v4.61)
+
+v4.21's rule: when you fix a member of a family, census the family. **No
+existing census asks this question.** `test/speccensus.test.js` asks whether
+`buildPrompt` NAMES every field a spec carries — `optional` is in that set and
+always was. `test/judge.test.js` asks whether the table can SEND every action
+`PROMPT_ACTIONS` accepts. Neither asks whether the **SHEET** has a control for
+every answer the **MODULE** accepts, which is precisely where this lived.
+
+**THE ACCEPTANCE IS DRIVEN AND ONLY THE PRESENCE IS SCANNED**, because a React
+component inside a `text/babel` block cannot be loaded in Node. So the census
+drives `promptDecline` over a real `buildPrompt` prompt of every one of the
+**eight** variants and pins which shapes accept a decline **BOTH DIRECTIONS**
+(v4.12, v4.17) — pinning the accepting shapes alone cannot see one LEAVING the
+set, and a shape that quietly stops accepting a decline is a printed *"you may"*
+made mandatory again. It then asserts a control exists for exactly those four
+and for none of the other four, because **a dead control reads as a broken
+screen rather than as a rule** (v2.83).
+
+**IT KNOWS BOTH ROUTES TO A DECLINE.** `pick`, `alloc` and now `modal` go
+through `promptDecline`; the `pay` sheet reaches `promptChoose(p, "decline")`
+directly. A census that knew one would report the `pay` sheet as having no way
+out — v4.00's false POSITIVE, in the instrument for it.
+
+**AND THE SCAN'S REACH IS STATED, BECAUSE A BLIND SPOT IS PART OF ITS CLAIM**
+(v4.44, v4.50, v4.57). It cannot tell a live render from a dead one —
+`if(false && <button …>)` keeps the text intact (v4.00, verbatim) — so it
+refuses that one shape by name, and every acceptance claim beside it is driven.
+
+**THE BOUNDS ARE STRUCTURAL, AND THAT IS THE SECOND THING THIS FILE LEARNED.**
+A quote-aware brace walk was the obvious way to slice the sheet and it ended
+early **twice** — once on an apostrophe in a COMMENT (*"Gravy Bones' list"*) and
+again, after the comments were stripped, on one in JSX TEXT (*"opponent's
+call"*), because to a counter tracking quotes both open a string that swallows
+every brace until the next apostrophe. That is `html-balance.test.js`'s
+pre-neutralize list arriving one drill over, and **a bound that ends early reads
+exactly like a clean scan** (v3.81, v4.07) — it only failed loudly because the
+assertions ask for something PRESENT. So the component is bounded at the first
+column-0 closing brace and each tag's region at its next sibling guard, which is
+v4.57's safer form; the widths are pinned as data, and the stripper's control is
+routed THROUGH the scan (v4.32) and built by concatenation, because written as a
+literal it would be a comment in the file doing the reading.
+
+**AND THREE OF THIS VERSION'S FIXTURES WERE WRONG BEFORE THE ENGINE WAS**, each
+a shape this project already names:
+
+- the first slice walked from the first `{` after the component's NAME, which is
+  its **props destructuring** — so it read the signature and stopped.
+- `opt` reads the deck off the **GAME** rather than the spec, so an empty deck
+  made `buildPrompt` answer null and the variant **fell out of the census** —
+  v4.58's census-that-loses-a-row, caught only because the drill asks for every
+  variant to be PRESENT.
+- `promptDecline` for a `pick` and an `alloc` CLEARS the selection, so on a
+  sheet with **nothing selected** it is textually a no-op and the first draft
+  reported both as refusing a decline: **a fixture that cannot tell acceptance
+  from refusal** (v3.62). Each shape is offered a selection first.
+
+### TWO SABOTAGES CAME BACK SILENT AND BOTH ARE THE POINT (v4.61)
+
+**22 sabotages, 20 bite.**
+
+Neutering **`promptDecline`'s own `optional` gate** is silent because
+`promptChoose` now refuses the word one layer down — which is exactly where
+the sabotage that DOES bite proves the rule lives. v4.52's lesson with the
+layers swapped (there a drill asked the gate instead of the reader), and
+v4.44's `optional` from the other side: a redundancy that cannot be observed
+is **RECORDED rather than deleted**, because `promptDecline`'s contract is
+its own and making it depend on `promptChoose`'s validation for correctness
+is a coupling. The drill pins which layer carries it, so the day the lower
+gate moves, something says where.
+
+Planting a **CR rule number in this version's `APP_VER` comment** — v4.57's
+own defect, reproduced on purpose — is silent because that version
+re-anchored `test/priority.test.js` on the step markers' em dash rather than
+on a bare citation. **A sabotage aimed at a fixed bug coming back silent is
+the fix holding**, and it is worth running because nothing else re-checks it.
+
+Measured: **no pool record's parse or tier moves** (audit 397 / 8 / 0 and the
+pool's 751 / 35 / 11 both unchanged — no reader changed, so no floor repin and
+the audit diff is one timestamp line, v4.18); the **ladder is BYTE-IDENTICAL**
+on both sides at 210 games, run rather than reasoned about (v4.43);
+`npm test` **3006 drills, 0 fail, 5 skipped**; scenes 99/0; fairness CLEAN;
+UNFAIR 0; `crindex --check` clean; both `text/babel` blocks compile.
+
 ## v4.60 — a restriction with no reader, and eleven comments naming a dead function
 
 > *"**Defense reactions can't be played to this chain link.** If this is defended

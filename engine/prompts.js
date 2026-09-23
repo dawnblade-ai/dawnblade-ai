@@ -726,11 +726,58 @@ function promptToggleSel(prompt, i){
   }
   return prompt;
 }
+/* AN ANSWER THIS FUNCTION ACCEPTS IS AN ANSWER A WIRE CAN SEND (v4.61).
+
+   It passed `choice` straight through for all three variants, unread and
+   unchecked, and `judge.reduce`'s `promptChoose` case forwards `a.choice`
+   with no validation of its own — so `reduce` is fed by JSON off a wire
+   (v2.04) and three answers nothing printed were accepted:
+
+     modal, choice "decline"   a MANDATORY modal declined — the printed
+                               cost skipped and the rider not resolved,
+                               while `promptDecline` has gated exactly
+                               that on `optional` since v3.90
+     modal, choice 99          `options[99]` is undefined, so the sheet
+                               resolves saying "Mode chosen: undefined"
+                               and runs NO ops — a paid-for play that
+                               does nothing, v4.49's rule inverted
+     target, choice 99         CR 1.4.5 makes the declaration MANDATORY,
+                               so an out-of-range index is a swing at no
+                               attack-target at all
+
+   THE VOCABULARY IS WHAT IS CHECKED, NOT THE VALUE'S WORTH. A `pay`
+   sheet's decline is always legal (it is the printed "unless they pay"
+   branch), and whether the seat can afford "pay" is `applyAnswer`'s —
+   it pitches on demand (RULING 2026-08-01), so refusing here would
+   deny a payment the rules allow. What is refused is a word or an index
+   the sheet could never have produced.
+
+   IT REFUSES BY RETURNING THE PROMPT UNCHANGED, never by throwing:
+   `judge.legal`'s contract is that it never throws and `reduce`'s that
+   it never mutates on refusal (`fuzz.test.js`), and an unanswered sheet
+   leaves Confirm dark — which is the state the player is already in. */
 function promptChoose(prompt, choice){
   if(!prompt) return prompt;
-  if(prompt.tag === "modal" || prompt.tag === "pay" || prompt.tag === "target")
-    return {...prompt, choice};
+  if(prompt.tag === "modal"){
+    if(choice === "decline") return prompt.optional ? {...prompt, choice} : prompt;
+    return promptIndexOK(choice, prompt.options) ? {...prompt, choice: +choice} : prompt;
+  }
+  if(prompt.tag === "pay")
+    return (choice === "pay" || choice === "decline") ? {...prompt, choice} : prompt;
+  if(prompt.tag === "target")
+    return promptIndexOK(choice, prompt.cards) ? {...prompt, choice: +choice} : prompt;
   return prompt;
+}
+/* ONE BODY FOR BOTH INDEXED ANSWERS, because a mode and an attack-target
+   are the same question about the same shape — a position in a list the
+   sheet rendered — and two copies is where one of them stops checking the
+   upper bound. `+choice` is compared against the parse so a numeric STRING
+   off a wire is accepted (JSON carries both) while `true`, `null` and
+   `"1x"` are not. */
+function promptIndexOK(choice, list){
+  const i = +choice;
+  return choice !== null && choice !== "" && typeof choice !== "boolean"
+      && Number.isInteger(i) && i >= 0 && i < ((list || []).length);
 }
 /* DECLINING IS A CHOICE, NOT A CANCEL (moved here v2.77).
 
