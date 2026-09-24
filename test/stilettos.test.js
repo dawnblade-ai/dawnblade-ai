@@ -418,8 +418,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      RE-PINNED AGAIN AT v4.63, after reading the diff: Plasma Barrel Shot
      went `part` -> `full` when its steam line got a reader and its
      hand-written powCard retired, so `full` 754 -> 755 and `part` 32 -> 31
-     with `none` untouched. One record (398 -> 399 full, 7 -> 6 part). */
-  assert.deepEqual(tiers, {full: 755, none: 11, part: 31});
+     with `none` untouched. One record (398 -> 399 full, 7 -> 6 part).
+     RE-PINNED AGAIN AT v4.64, after reading the diff: Roaring Beam went
+     `part` -> `full` when its soul gate, its return to hand and its charge
+     made as an effect each got a reader, so `full` 755 -> 756 and `part`
+     31 -> 30. One record (399 -> 400 full, 6 -> 5 part). */
+  assert.deepEqual(tiers, {full: 756, none: 11, part: 30});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

@@ -1,3 +1,91 @@
+## v4.64 — return it, then charge
+
+> *"Create a Courage token.*
+> *If there are no cards in your soul, return this to its owner's hand, then
+> **charge** your soul. (Put a card from your hand under your hero.)"*
+> — ROARING BEAM, SBL032, Boltyn's
+
+**THE HANDOFF'S SECOND ITEM, AND IT WAS THREE READERS, NOT ONE.** The head-end
+diagnostic (v3.79, v4.43) answered **null** for the gate, for the return and
+for the charge, each alone — so none of the three was the blocker and all of
+them were. Measured over 797 records, Roaring Beam is the pool's ONLY claimant
+of every one of them. Audit **399 → 400** unique cards `full`, **6 → 5**
+`part`; pool records **755 → 756 / 31 → 30 / 11**.
+
+**THE PRINTING SETTLED WHAT "CHARGE" MEANS AS AN EFFECT** — twelfth time
+reading the card first has paid. The database carries no reminder text; the
+SBL032 face prints *"(Put a card from your hand under your hero.)"*. Every
+other charge in the pool is an additional COST, settled before the card
+resolves and refusable (v4.33). This one happens AFTER and prints no *"you
+may"*, so it is a **mandatory pick, hand → soul**, queued behind the return.
+
+**"THEN" IS LOAD-BEARING.** The card is back in the hand before the charge
+asks, so it is one of the cards that may be charged — a player whose hand is
+otherwise empty charges Roaring Beam itself. Prompts drain at the tail of
+`execute`, by which time the card has been filed into the hand, so the order
+falls out of the queue rather than being arranged.
+
+### ONE BODY CREDITS BOTH ROUTES A CARD IS CHARGED
+
+The cost route has recorded `hist.charged`, written the feed line and fired
+the charged card's own *"when this is charged to your soul"* trigger since
+v4.41. An effect charge that only MOVED the card would leave "if you've
+charged this turn" false and Banneret of Salvation's trigger silent — a card
+in the soul that was never charged. **`creditCharge`** is that half, extracted
+unchanged; the cost route and `applyAnswer` both call it, and each keeps its
+own zone move. The pick spec carries `charge: true` (sixth field to prove
+v2.34's rule — dropped, the card moves and is never credited).
+
+**AND THE LADDER SAYS IT FIRES**: `hitnext` **2 → 7** over 630 games — Banneret
+charged by Roaring Beam and its trigger arming — and the `charge` field
+arrived in `test/speccensus.test.js` on the existing 34 legs with no leg
+written, so Boltyn really plays the card into an empty soul in a driven game.
+
+### BUILDING IT ON THE FILING SITE FOUND TRANSCEND'S DEFECT
+
+`execute` said *"undo the grave push made above"* — and **the push was
+below**. The filter ran against a graveyard that did not yet hold the card;
+twenty lines further down it was filed anyway. **Driven: A Drop in the Ocean
+left Inner Chi in the hand AND itself in the graveyard** — one card in two
+zones under two uids (Inner Chi is minted fresh), which `invariants.js`
+cannot see, because it censuses by uid.
+
+Both "instead of the graveyard" cases are a **skip at the push** now, never an
+undo of it, and a drill drives the transcended card with an unmet-gate control
+beside it (a filing site that never files passes the positive half perfectly).
+
+**`returnSelf` IS `transcend`'s SHAPE** — stashed, because the card has not
+reached the zone it is leaving when its own ops run — **keyed by uid**, so a
+stash can only ever match the card that set it, and **cleared with the
+resolution**, which a drill drives with a stale stash naming the same card.
+`runOps` needs the resolving card to know what "this" is, so it uses v4.63's
+opt-in fourth argument and refuses without one.
+
+### MEASURED
+
+- **exactly 1 pool record's parse moves**; `runOps`' vocabulary **92 → 94**;
+  the condition census **53 → 54** (`soulEmpty`); the second-person ledger
+  **52 → 54** — both new literals are the charge sheet's title and hint,
+  prompt text addressed to the asked seat (the case that ledger records as
+  correct), while the feed half names the seat;
+- **`WIRE_V` 12 → 13** by hand: every pick prompt now carries `charge`, so
+  two peers on either side hash differently the moment any pick sheet opens
+  (v4.59's case). A drill asserts the field survives the round trip;
+- **the ladder at three seeds on both sides**: every hero's wins inside the
+  band (Gravy 28 → 27, Lyath 14 → 13, everyone else identical), and **stalls
+  1 → 3** — both new ones Boltyn v Gravy, one per chair, and both **genuine
+  draws**, driven rather than assumed (v4.58): both decks and both hands
+  empty, both heroes at 1 life, Boltyn's weapon swinging for 0 without a
+  charge, the turn counter advancing at ~9 steps a turn. CR 4.5.3 has no
+  deck-out loss (v3.80);
+- **17 sabotages, 17 applied, 17 bite** — one needed rewriting before it
+  could be applied, because its revert anchor was `return n;` and the file
+  holds dozens (v4.36, v4.37: the harness said so rather than reporting it
+  SILENT). And one bug was mine before the engine's: the first draft compared
+  `n._returnSelf === card.uid`, which is `undefined === undefined` for a card
+  with no uid, and **unfiled every uid-less fixture in the suite** —
+  `asinstant.test.js` caught it by asking where its card went.
+
 ## v4.63 — the Gun's second line is read, not paraphrased
 
 > *"Action - {r}{r}: If this has no steam counters, put a steam counter on

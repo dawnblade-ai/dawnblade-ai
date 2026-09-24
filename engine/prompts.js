@@ -378,6 +378,9 @@ function buildPrompt(game, spec){
          module runs no effects, so `applyAnswer` asks the class and runs
          them (v2.17's whole contract). */
       classRider: spec.classRider || null,
+      /* v4.64, Roaring Beam: dropped, the card moves but is never CREDITED
+         as a charge. Data, not ops — `applyAnswer` credits it. */
+      charge: !!spec.charge,
       /* A SPEC ONLY CARRIES FIELDS THIS FUNCTION KNOWS ABOUT (v2.34's
          `arsStamp` rule, and this is the fourth field to prove it). Left
          off, every arsenal put arrives FACE DOWN — including the three

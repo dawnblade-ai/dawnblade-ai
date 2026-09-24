@@ -194,11 +194,14 @@ test("the driven census is alive — the legs really ran", () => {
 test("every spec field that reaches prompts.js is pinned", () => {
   drive();
   assert.deepEqual([...reached].sort(), [
-    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "cost", "costRider",
+    "amount", "arsStamp", "avail", "banStamp", "by", "cards", "charge", "cost", "costRider",
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
     "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "zone",
+  /* +charge v4.64 — Roaring Beam's charge made as an EFFECT, and it arrived
+     on the same 34 legs with no leg written, so Boltyn really does play it
+     into an empty soul in a driven game: the route is not latent. */
   /* +shuffleAfter v4.58 — Flamecall Awakening's deck search, and THIS
      CENSUS IS WHERE ITS LIVENESS WAS FIRST PROVED. The field arrived on the
      same 32 deterministic legs with no new leg written, which means Fai

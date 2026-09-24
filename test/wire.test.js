@@ -320,7 +320,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      cannot see it. v4.56 bumped for the same kind of change and said so; what
      is still open is that a FORGOTTEN bump of that kind fails no drill, which
      is the half of v4.26's finding this pin cannot reach. */
-  assert.equal(W.WIRE_V, 12,
+  /* 12 -> 13 AT v4.64, and again the digest does not move: the PICK prompt
+     gained `charge`, inside the same whole-shipped value. Recorded in
+     wire.js's header, where every bump of this kind is. */
+  assert.equal(W.WIRE_V, 13,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

@@ -860,6 +860,34 @@ function makeEffects(ctx){
     return {...n, actor: was};
   };
 
+  /* ---- WHAT A CHARGE CREDITS, WHOEVER PUT THE CARD THERE (v4.64) ------
+     One body for the two routes a card is charged: the additional COST
+     (v4.33, settled in `execute`) and the EFFECT (Roaring Beam, a pick
+     answered in `applyAnswer`). The zone move is each route's own — the
+     cost moves the card itself, the pick's is `moveCards` — and everything
+     that makes it a CHARGE rather than a card that merely reached the soul
+     is here, so the two cannot disagree about it.
+
+     THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a zone both
+     players can read, so the charge is public.
+
+     "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) is `boostBanish`'s site one
+     cost over (v3.56): the CHARGED card's own trigger. Banneret of
+     Salvation is the pool's only record and it is Boltyn's, who decks three
+     cards that print the charge — so the card and its enabler are in the
+     same box, which is the sign v3.54 names that the loop was designed. IT
+     IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S: read off the card
+     being PLAYED it would fire whenever Banneret pays for something else,
+     which is the opposite card. IT FIRES PER CHARGED CARD, because two
+     cards charged is two triggers. */
+  const creditCharge = (s, picked) => {
+    let n = s;
+    actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
+    n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
+    const _cs = fxParse(picked).chargeSoul;
+    if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
+    return n;
+  };
   /* `srcCard` IS OPT-IN (v4.63), and only `execute` passes it: it is the
      card RESOLVING, which is what a "this" in its own payload names. Every
      other caller — a prompt's rider, a leave payout, an attack's ops riding
@@ -1858,6 +1886,33 @@ function makeEffects(ctx){
          by a uid whose permanent never arrives if the play is refused
          further down. */
       else if(k==="ctrSelf"){ n._ctrSelf = v; }
+      /* ---- "RETURN THIS TO ITS OWNER'S HAND" (v4.64) -------------------
+         Roaring Beam. STASHED, NOT APPLIED — `transcend`'s shape exactly:
+         the card has not reached the zone it is leaving when its own ops
+         run, so `execute` files it into the HAND instead of the graveyard
+         at the one site that files it. Only the resolving card can be
+         "this", so a caller that did not name one refuses. */
+      else if(k==="returnSelf"){
+        if(!srcCard){ n = L(n, `${srcName}: nothing to return.`); return; }
+        n._returnSelf = srcCard.uid;
+      }
+      /* ---- CHARGE, AS AN EFFECT (v4.64) ---------------------------------
+         "(Put a card from your hand under your hero.)" — SBL032's reminder
+         text. Every other charge in the pool is an additional COST, settled
+         before the card resolves (v4.33); this one is MANDATORY and
+         happens after, so it is a PICK out of the hand into the soul,
+         queued — never inline — so the card has finished resolving and,
+         for Roaring Beam, is already back in the hand it may be charged
+         from. `charge: true` rides on the spec so `applyAnswer` credits the
+         charge through the same body the cost site uses (`creditCharge`):
+         `hist.charged` for "if you've charged this turn", and the charged
+         card's OWN "when this is charged to your soul" trigger. */
+      else if(k==="charge"){
+        n.promptQ = [...(n.promptQ||[]), {tag:"pick", side:actorOf(n), src:srcName,
+          zone:"hand", to:"soul", min:1, max:1, charge:true,
+          title:"Charge your soul",
+          hint:"Put a card from your hand under your hero."}];
+      }
       /* ---- A COUNTER ON THE PERMANENT THE ABILITY BELONGS TO (v4.63) ----
          Plasma Barrel Shot: "…put a steam counter on it", where "it" is the
          Gun. NOT `ctrSelf`, which stamps a card ENTERING the arena at the
@@ -3226,24 +3281,7 @@ function makeEffects(ctx){
         chargedWay.push({pitch: picked.pitch, ty: picked.ty || []});
         actMut(n).soul = [picked, ...act(n).soul];
         actMut(n).hand = act(n).hand.filter(c2 => c2.uid !== picked.uid);
-        actMut(n).hist = {...act(n).hist, charged:(act(n).hist.charged||0)+1};
-        /* THE FEED NAMES THE CARD (v2.83) — it left a hidden hand for a
-           zone both players can read, so the charge is public. */
-        n = L(n, `${sv(act(n), "charge")} ${picked.name} into ${sp(act(n))} hero's soul (Charge).`);
-        /* ---- "WHEN THIS IS CHARGED TO YOUR SOUL" (v4.41) -------------
-           `boostBanish`'s site one cost over (v3.56): the CHARGED card's
-           own trigger, fired at the one place a card goes to the soul as
-           an additional cost. Banneret of Salvation is the pool's only
-           record and it is Boltyn's, who decks three cards that print the
-           charge — so the card and its enabler are in the same box, which
-           is the sign v3.54 names that the loop was designed.
-
-           IT IS THE CHARGED CARD'S TEXT, NOT THE PLAYED CARD'S (v3.56):
-           read off the card being PLAYED it would fire whenever Banneret
-           pays for something else, which is the opposite card. IT FIRES
-           PER CHARGED CARD, because two cards charged is two triggers. */
-        const _cs = fxParse(picked).chargeSoul;
-        if(_cs && _cs.length) n = runOps(n, _cs, picked.name);
+        n = creditCharge(n, picked);
       }
     }
     n._chgWay = chargedWay;
@@ -3311,6 +3349,11 @@ function makeEffects(ctx){
        left to accumulate it is the NEXT card's condition reading a
        discard it never caused. */
     n._tookWay = [];
+    /* A RETURN-TO-HAND IS THIS CARD'S (v4.64). Left from a resolution
+       that never reached the filing site it would send the NEXT card
+       home; it is keyed by uid besides, so it could only ever match
+       the card that set it. */
+    delete n._returnSelf;
     n._kwGrant = [];        // cleared with _discWay, and for the same reason
     /* A KEYWORD THE ARSENAL STAMPED ON THIS CARD (v3.71). Azalea's hero
        ability grants dominate to an ARROW it turns face up, and the grant
@@ -3526,6 +3569,8 @@ function makeEffects(ctx){
            asks about the SPECIFIC card just charged as THIS card's own cost
            (chargedWay is filled above, before this loop runs). */
         : cond==="charged" ? (act(n).hist.charged||0)>0
+        /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam. */
+        : cond==="soulEmpty" ? (act(n).soul||[]).length === 0
         /* "IF A YELLOW CARD IS CHARGED THIS WAY" asks whether AT LEAST ONE
            was (v4.56) — the article is "a", and with a multi charge the
            answer is a membership test over what the cost paid rather than
@@ -3589,6 +3634,7 @@ function makeEffects(ctx){
         isDraconic:"this isn't Draconic",
         pitchOverBase:"nothing in your pitch zone beats its base power",
         charged:"you didn't charge your hero's soul this turn",
+        soulEmpty:`${sp(act(n))} hero's soul already holds a card`,
         fused:"no qualifying card in hand to reveal for Fusion",
         /* NAMED, NOT SECOND-PERSON. These reach `L`, which writes the feed
            BOTH seats read — so the subject is the trap card the message
@@ -4630,9 +4676,33 @@ function makeEffects(ctx){
         }
       }
       if(fx.onHit.length) n = L(n, `${card.name}: on-hit clauses need an attack — skipped.`);
-      /* RULING: a transcended card returns to hand as Inner Chi instead of
-         going to the graveyard — undo the grave push made above. */
-      if(n._transcended){ delete n._transcended; actMut(n).grave = act(n).grave.filter(x=>x.uid!==card.uid); }
+      /* RULING: a transcended card returns to hand as Inner Chi INSTEAD of
+         going to the graveyard.
+
+         THIS USED TO "UNDO THE GRAVE PUSH MADE ABOVE" — AND THE PUSH WAS
+         BELOW (v4.64). The filter ran against a graveyard that did not yet
+         hold the card, and the push twenty lines further down then filed
+         it anyway: driven, A Drop in the Ocean left Inner Chi in the hand
+         AND itself in the graveyard. One card, two zones — under two uids,
+         so the census could not see it (Inner Chi is minted fresh). Found
+         by building the second "instead of the graveyard" on the same
+         site, Roaring Beam's return to hand. So both are SKIPS at the push
+         now, never an undo of it: `_offGrave` is read where the card is
+         filed. */
+      /* `!= null` FIRST: a card with no uid would otherwise match an
+         unset stash, `undefined === undefined`, and never be filed —
+         which is exactly what the first draft did to every uid-less
+         fixture in the suite. */
+      const _ret = n._returnSelf != null && n._returnSelf === card.uid;
+      const _offGrave = !!n._transcended || _ret;
+      if(n._transcended) delete n._transcended;
+      if(_ret){
+        delete n._returnSelf;
+        if(from === "hand" || from === "arsenal"){
+          actMut(n).hand = [...act(n).hand, card];
+          n = L(n, `${card.name} returns to ${sp(act(n))} hand.`);
+        }
+      }
       if(fx.perm){
         /* RULING: several auras scrub themselves at the top of your next turn
            (Booze!, Goon Beatdown, Pyroglyphic Protection). Carry the schedule
@@ -4660,7 +4730,7 @@ function makeEffects(ctx){
            for verse exactly as it does for steam, so there is one storage
            and one reader — the same deletion v3.82 made of `sd.rune`. */
         actMut(n).board=[...act(n).board,{card,kind:fx.perm,spent:false,uid:card.uid,sd:_sd,susp:_susp}]; if(fx.perm==="aura") actMut(n).hist={...act(n).hist, aura:(act(n).hist.aura||0)+1}; n=L(n,`${card.name} enters play (${fx.perm})${_susp?` with ${_susp} suspense counters — it pays out when it leaves`:""}.`); }
-      else if(from==="hand"||from==="arsenal") actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
+      else if((from==="hand"||from==="arsenal") && !_offGrave) actMut(n).grave=[...gy(n.turn, card),...act(n).grave];
       else if(from==="grave"||from==="banish") actMut(n).banish=[card,...act(n).banish];
       actMut(n).hist = {...act(n).hist, non:act(n).hist.non+1};
       n = briarLightning(n);
@@ -5390,6 +5460,14 @@ function makeEffects(ctx){
        IT FIRES ONLY WHEN A CARD ACTUALLY MOVED. An empty hand puts
        nothing, and a reward for a cost that was not paid is the
        free-ability bug v2.04 fixed. */
+    /* ---- A CHARGE MADE AS AN EFFECT (v4.64) ---------------------------
+       The pick moved the card into the soul; `creditCharge` is what makes
+       that a CHARGE — the same body the additional-cost route calls, so
+       "if you've charged this turn" and Banneret's own trigger read one
+       record whichever route put the card there. Only a card that MOVED
+       is credited: an empty hand charges nothing and triggers nothing. */
+    if(p.tag === "pick" && p.charge && (r.picked||[]).length)
+      for(const got of r.picked) n = creditCharge(n, got);
     if(p.tag === "pick" && p.classRider && (r.picked||[]).length){
       const got = r.picked[0];
       if(promptFilter({ty: p.classRider.cls})(got)){

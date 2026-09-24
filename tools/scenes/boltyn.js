@@ -534,5 +534,58 @@ module.exports = [
     "…with the printed window": "chain"
   }
 }
+,
+
+/* ---- v4.64 — ROARING BEAM: RETURN IT, THEN CHARGE -------------------- */
+{
+  name: "Roaring Beam comes home into an empty soul, and then charges it",
+  why: "Its second clause read NOTHING — the soul gate, the return and the " +
+       "charge each refused, and it is the pool's only record of all three. " +
+       "The SBL032 printing is what says charge as an EFFECT means \"put a " +
+       "card from your hand under your hero\" — mandatory, and after the " +
+       "return, so the card just returned may be the one charged. And a " +
+       "charge made this way is a CHARGE: Boltyn's own \"if you've charged " +
+       "this turn\" must see it. Building it on the filing site found that a " +
+       "transcended card was filed to the graveyard as well as flipped.",
+  run(c){
+    const atk = c.card("Raging Onslaught", 1, "atk1");
+    const drive = soul => {
+      c.P.fxReset();
+      const rb = c.card("Roaring Beam", 2, "rb1");
+      const g = Object.assign(c.state({res: 9, ap: 1, hand: [rb, c.card("Wounding Blow", 1, "w1")],
+                                       soul: soul ? [c.card("Raging Onslaught", 2, "s1")] : []},
+                                      {}, {turn: 3, actor: 0, turnPlayer: 0}),
+        {phase: "action", step: "reaction", priority: 0, passed: [], stack: [], chain: [],
+         pend: {card: atk, total: 5, by: 0, from: "hand"}});
+      return c.exec(g, rb, "hand", 0, {});
+    };
+    const empty = drive(false), full = drive(true);
+    const cand = (empty.prompt && empty.prompt.cards || []).map(x => x.uid).sort().join(",");
+    const idx = (empty.prompt && empty.prompt.cards || []).findIndex(x => x.uid === "rb1");
+    const after = c.answer(empty, idx);
+    const has = (zone, g) => (g.sides[0][zone] || []).some(x => x.uid === "rb1");
+    return {
+      "empty soul: it is back in the hand":        has("hand", empty),
+      "…and not in the graveyard as well":         has("grave", empty),
+      "…and the charge offers it":                 cand,
+      "charging it puts it under the hero":        has("soul", after),
+      "…counted as a charge":                      after.sides[0].hist.charged,
+      "a soul that holds a card: filed as usual":  has("grave", full),
+      "…with nothing to charge":                   !!(full.prompt && full.prompt.charge),
+      "the Courage token lands either way":
+        [empty, full].every(g => g.sides[0].board.some(b => /courage/i.test(b.card.name)))
+    };
+  },
+  want: {
+    "empty soul: it is back in the hand": true,
+    "…and not in the graveyard as well": false,
+    "…and the charge offers it": "rb1,w1",
+    "charging it puts it under the hero": true,
+    "…counted as a charge": 1,
+    "a soul that holds a card: filed as usual": true,
+    "…with nothing to charge": false,
+    "the Courage token lands either way": true
+  }
+}
 
 ];

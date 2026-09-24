@@ -232,7 +232,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        branch rather than at the function — at the declaration it read the
        `opt` branch too (13,303 chars for a claim about one field), which is
        a bound too wide reading exactly like a drill that passes (v4.57). */
-    "dichotomy.test.js engine/prompts.js 11759",
+    /* 11,759 -> 11,931 AT v4.64, READ FIRST: still the pick branch, bounded
+       at the next variant; the growth is the `charge` field Roaring Beam's
+       effect-charge rides on, inserted beside `classRider`. */
+    "dichotomy.test.js engine/prompts.js 11931",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited

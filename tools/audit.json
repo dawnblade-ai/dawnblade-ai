@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-24T17:53:54.343Z",
- "appVer": "4.62",
+ "generated": "2026-09-24T18:09:28.319Z",
+ "appVer": "4.63",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 399,
-  "part": 6,
+  "full": 400,
+  "part": 5,
   "none": 0
  },
  "heroes": {
@@ -11534,7 +11534,7 @@
    "mentions": [
     "charge"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -11544,12 +11544,10 @@
     },
     {
      "t": "If there are no cards in your soul, return this to its owner's hand, then charge your soul.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "If there are no cards in your soul, return this to its owner's hand, then charge your soul."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Create a Courage token.\nIf there are no cards in your soul, return this to its owner's hand, then charge your soul.",

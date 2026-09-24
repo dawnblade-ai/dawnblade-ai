@@ -1154,6 +1154,12 @@ function classifyClause(raw){
       if(!/^(?:this|it)\b/.test(cond)) return null;
       return Object.assign(rest,{onHit:true, heroOnly: /\bhits?\s+(?:a\s+)?(?:marked\s+)?hero\b|\bhits?\s+them\b/.test(cond)});
     }
+    /* "IF THERE ARE NO CARDS IN YOUR SOUL" (v4.64) — Roaring Beam, the
+       pool's only record, asked at the moment the card resolves. The
+       SOUL is the charged cards under the hero, `sd.soul`, and nothing
+       else; "your hero's soul" is the same zone spelled the long way
+       (v4.48's two charge spellings). */
+    if(/^there are no cards in your (?:hero'?s? )?soul$/.test(cond)) return Object.assign(rest,{cond:"soulEmpty"});
     if(/another attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"atk"});
     if(/another non-attack action card this turn/.test(cond)) return Object.assign(rest,{cond:"non"});
     if(/6 or more \{p\}[^.]*pitch zone/.test(cond)) return Object.assign(rest,{cond:"pitch6"});
@@ -2897,6 +2903,30 @@ function classifyClause(raw){
   /* RULING (Under Loop): on hit it recycles instead of hitting the graveyard,
      and the combat chain stays open. Written as the bare payload so the
      if/when handler above applies the onHit wrapper itself. */
+  /* ---- "RETURN THIS TO ITS OWNER'S HAND, THEN CHARGE YOUR SOUL" (v4.64) --
+     > "Create a Courage token. If there are no cards in your soul, return
+     >  this to its owner's hand, then CHARGE your soul. (Put a card from
+     >  your hand under your hero.)"         — ROARING BEAM, SBL032, Boltyn's
+
+     The database prints no reminder text and the SBL032 face does, and it
+     settles what "charge" means as an EFFECT — every other charge in the
+     pool is an additional COST (v4.33), paid before the card resolves.
+     Here it happens after, and nothing makes it optional: a card from your
+     hand goes under your hero. TWELFTH time reading the printing first.
+
+     "THEN" IS LOAD-BEARING. The card goes to the hand FIRST, so it is one
+     of the cards the charge may take — a player whose hand is otherwise
+     empty charges Roaring Beam itself. So the two are ONE reading in
+     printed order, never two clauses, and the charge is a PICK queued
+     behind the return: prompts drain at the tail of `execute`, by which
+     time the card is back in hand.
+
+     THE WHOLE SENTENCE OR NOTHING (v2.29). Measured over 797 records, it
+     is the pool's only "return this to … hand" and its only charge as an
+     effect; a bare half of either would be vocabulary with no claimant,
+     which is dead rules code that reads like a rule (v4.52). */
+  if(/^return this to (?:its owner'?s?|your) hand, then charge your (?:hero'?s? )?soul$/.test(c))
+    return R([["returnSelf", 1], ["charge", 1]]);
   if(/^put (?:it|this) on the bottom of (?:its owner'?s?|your) deck$/.test(c))
     return R([["bottomSelf",1]]);
   /* RULING 2026-07-25: transcend flips the card over — it BECOMES Inner Chi

@@ -1648,7 +1648,13 @@ test("the second-person debt in the shared semantics does not grow", () => {
      sheet says "YOUR hero stays tapped until YOUR untap step" — a prompt
      is addressed to ONE SIDE (`spec.side` since v2.17), and the seat being
      asked is the seat "you" names. Its FEED half names the seat. */
-  assert.ok(lits.length <= 52,
+  /* 52 -> 54 AT v4.64, AND BOTH ARE PROMPT TEXT AGAIN. Roaring Beam's
+     charge sheet is titled "Charge YOUR soul" and hinted "Put a card from
+     YOUR hand under YOUR hero" — the card's own reminder text, addressed to
+     `spec.side`, the seat being asked. Its FEED half names the seat
+     ("<name> charges <card> into <name>'s hero's soul"), through `creditCharge`,
+     the same body the cost route has always spoken with. */
+  assert.ok(lits.length <= 54,
     `second-person literals in effects.js rose to ${lits.length} — the shared feed is read by both seats`);
   /* AND IT MUST NOT PASS BY FINDING NOTHING: if the scan ever stops
      matching, an empty result reads as a clean file. */

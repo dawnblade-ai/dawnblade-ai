@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.63
+**Current version:** v4.64
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3048 drills** at v4.63.
+This is `node --test "test/*.test.js"` — **3060 drills** at v4.64.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,31 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A CHARGE IS WHAT IT CREDITS, NOT WHERE THE CARD WENT (v4.64)
+
+> *"If there are no cards in your soul, return this to its owner's hand,
+> then **charge** your soul. (Put a card from your hand under your hero.)"*
+> — ROARING BEAM, SBL032
+
+**CHARGE AS AN EFFECT IS MANDATORY AND COMES AFTER**; charge as a cost is
+refusable and comes before (v4.33). The printing settled it. It is a pick,
+hand → soul, queued behind the return — so the card just returned may be the
+one charged, which is what the printed *"then"* says.
+
+**`creditCharge` IS THE ONE BODY** for what makes a card in the soul a
+CHARGE — `hist.charged`, the feed line, the charged card's own *"when this is
+charged"* trigger. The cost route and the effect route each move the card
+their own way and both call it. **A card that reached the soul without being
+credited is a charge nothing can see.** (Halo of Illumination prints *"put a
+card from your hand into your soul"* without the word, and is deliberately
+NOT credited: whether that counts as charging is not sourced here.)
+
+**"UNDO THE PUSH MADE ABOVE" WAS BELOW.** Transcend's filter ran before the
+graveyard push it undid, so a transcended card sat in the hand as Inner Chi
+AND in the graveyard — two zones, two uids, invisible to the census. Both
+"instead of the graveyard" cases are a SKIP at the push now. **When a comment
+says a step happens above, check the line numbers.**
 
 ### A PARAPHRASE THAT DROPPED THE GATE, AND THE BOARD THAT NEVER ASKED (v4.63)
 

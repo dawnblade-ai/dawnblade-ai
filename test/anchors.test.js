@@ -107,8 +107,11 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      Moving this number is a deliberate edit in both places (v4.17).
      91 -> 92 AT v4.63: `ctrSrc`, a counter on the permanent the resolving
      ability belongs to, emitted by Plasma Barrel Shot's steam line — the
-     line a hand-written powCard paraphrased for fourteen versions. */
-  assert.equal(r.dispatched, 92, "runOps's op vocabulary moved");
+     line a hand-written powCard paraphrased for fourteen versions.
+     92 -> 94 AT v4.64: `returnSelf` and `charge`, Roaring Beam's clause —
+     a card filed into the hand instead of the graveyard, and a charge
+     made as an EFFECT (a pick hand -> soul) rather than as a cost. */
+  assert.equal(r.dispatched, 94, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

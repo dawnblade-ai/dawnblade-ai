@@ -127,8 +127,13 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* A CENSUS THAT QUIETLY STOPPED FINDING ANYTHING would pass by finding
      nothing, which is the failure mode this whole file guards against. */
   const {conds} = poolConds();
-  assert.equal(conds.size, 53,
-    "53 distinct conditions across the pool. A 54th is fine — add it here AND " +
+  /* 53 -> 54 AT v4.64: `soulEmpty` — Roaring Beam's "if there are no
+     cards in your soul", the pool's only claimant, answered in the main
+     loop off `sd.soul`. (v4.63's `noCtr:steam` is not in this count: it
+     lives only on an equipment POWCARD, which this card-level census never
+     parses — the reverse-direction drill below is the one that sees it.) */
+  assert.equal(conds.size, 54,
+    "54 distinct conditions across the pool. A 55th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +
@@ -151,7 +156,7 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
   /* spot checks, so the count cannot be met by a scan that
      collected the wrong thing */
   for(const c of ["auras3", "way:dealtFused", "chargedPitch2", "hasGa", "chainLinkGe4",
-                  "drac2", "drac3", "drac4"])
+                  "drac2", "drac3", "drac4", "soulEmpty"])
     assert.ok(conds.has(c), c + " must be in the census");
 });
 

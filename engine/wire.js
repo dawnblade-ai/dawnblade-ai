@@ -170,8 +170,15 @@
    v4.26's own finding that is still open: a bump that is forgotten fails no
    drill. Declaring the prompt's field set as a ledger the digest could cover
    is its own piece of work; until then every prompt-shape change is a bump by
-   hand, and this line is where it is recorded. */
-const WIRE_V = 12;
+   hand, and this line is where it is recorded.
+
+   12 -> 13 AT v4.64: every live PICK prompt gains `charge` (Roaring Beam's
+   charge made as an effect — the answer is CREDITED as a charge, not just
+   moved into the soul). `buildPrompt` writes it on every pick, `false` when
+   unset, so a v12 peer and a v13 peer hash differently the moment ANY pick
+   sheet opens. The same case as the bump above, by hand for the same
+   reason. */
+const WIRE_V = 13;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
