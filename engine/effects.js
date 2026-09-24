@@ -1730,9 +1730,12 @@ function makeEffects(ctx){
          `prompts.js` reads ONE side. So the candidates are supplied and
          the move is done here, the pattern v3.03's freeze established.
 
-         `buildPrompt` returns null with fewer than two candidates, so a
-         single legal card is taken without a sheet and an empty hand
-         asks nothing. */
+         An empty candidate list is refused on the line below and queues
+         nothing. A SINGLE legal card still opens a one-card sheet: a pick
+         refuses only an EMPTY pool (`promptPickAskable`), and nothing here
+         takes the lone card on the player's behalf the way `ctrPut`'s fast
+         path does (v3.55). Measured at v4.62; this comment said otherwise
+         for many versions. */
       /* ONE BODY FOR EVERY CROSS-SEAT PICK. Brain Freeze reaches into their
          HAND and puts a card on their deck; Pass Over reaches into their
          GRAVEYARD and banishes. Same shape — candidates from over there,
@@ -1867,10 +1870,10 @@ function makeEffects(ctx){
          The candidates span TWO zones — the opponent's arsenal and their
          allies — so they are supplied to `prompts.js` rather than read
          from one, the way an attack-target's already are. The choice is
-         the FREEZING player's, so the sheet is addressed to the actor,
-         and `buildPrompt` returns null with fewer than two candidates, so
-         a single legal choice skips the sheet instead of asking a
-         question with one answer.
+         the FREEZING player's, so the sheet is addressed to the actor.
+         An empty list queues nothing; a SINGLE legal choice still opens a
+         one-card sheet, because a pick refuses only an empty pool — the
+         earlier claim that it skipped itself was never true of a pick.
 
          WHAT FREEZE STOPS, honestly: a frozen arsenal card cannot be
          played — `parser.playableFromZone` refuses it on both boards. The

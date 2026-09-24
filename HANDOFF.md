@@ -1,4 +1,135 @@
-# Handoff — Dawnblade, at v4.49 · READ THE PRINTED CARD
+# Handoff — Dawnblade, at v4.62 · THE PLAN FOR THE NEXT THREAD
+
+## ⚠ WHERE THINGS STAND — RE-DERIVED 2026-09-24, NOT QUOTED
+
+The last thread ran v4.60 → v4.62. **Every deck card in the pool now
+reads something, and 398 of 405 read in full.** That means Phase C's
+"one clause away" list is down to seven cards, and every one of them
+is blocked on something named, not on reading.
+
+| instrument | reads | re-derive with |
+|---|---|---|
+| drills | **3029 tests · 0 fail · 5 skipped** (the 5 are `drift.test.js`, deliberately) | `npm test 2>&1 \| grep -E '^# (tests\|pass\|fail\|skipped)'` |
+| scenes | 100 pass · 0 fail | `npm run scenes` |
+| audit | unique deck cards **398 full · 7 part · 0 none**; pool records 754 / 32 / 11 | `npm run audit` then read `AUDIT.md` |
+| fairness | CLEAN | `npm run fairness` |
+| sweep | **UNFAIR 0** | `npm run sweep` |
+| approx ledger | 39 records: **17 stated · 6 open · 16 closed** | `node tools/approx.js` |
+| anchors | 161 return sites, 15 never reached · 91 op kinds, 86 claimed | `npm run anchors` |
+| crindex | `--check` rc 0 | `node tools/crindex.js --check` |
+| gaps | 405 · 398 full · **7 unfinished · 6 one clause away** | `npm run gaps` |
+
+**THE NEW PRECONS ARE STILL UNPUBLISHED UPSTREAM.** Measured today,
+six days past the announced 2026-09-18 street date: the-fab-cube
+`develop`'s `csvs/english/set.csv` still lists **15** Silver Age sets,
+with no SAT and no SBW. The street date is a calendar hint and never the
+oracle (v4.32). `test/drift.test.js`'s fifth probe goes RED on its own
+when they land, so it needs no action until then.
+
+**DEPLOY.** `origin/main` carries every loaded engine module and
+`.nojekyll`. **The live URL is unreachable from this sandbox (egress
+returns 000)**, so the deploy is verified only up to "the pushed commit
+is complete". CI's post-push curl is the half that sees Pages.
+
+## ⚠ THE PLAN — IN ORDER, WITH THE REASON FOR THE ORDER
+
+### 0 · Warm up by re-deriving, not by reading this
+
+Run the table above before trusting any number in it. A live count is
+true only when it is taken (v4.17). If anything moved, find out why
+before starting new work.
+
+### 1 · The seven unfinished deck cards — cheapest first
+
+Each is in exactly one precon. That makes every one of them LIVE; none is
+latent.
+
+| card | hero | the unread clause | what blocks it | call |
+|---|---|---|---|---|
+| **Plasma Barrel Shot** | Dash | *"Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again"* | the steam-build powCard is **written by hand** in `equipPiece`. `classifyClause` reads neither the put, nor the gate, nor the whole line (`steam-build-powcard-handwritten`, stated) | **DO FIRST.** It needs three readers and no machinery (`ctrPut` exists; `abCostWhy` already refuses the paid no-op). The handwritten powCard retires, and the record's probe goes red, which is its job |
+| **Roaring Beam** | Boltyn | *"If there are no cards in your soul, return this to its owner's hand, then **charge** your soul."* | unmeasured. Run the v3.79/v4.43 diagnostic FIRST: hand `classifyClause` each half separately. Likely candidates are a card returning ITSELF to hand at resolution (instead of the graveyard) and charge as an EFFECT, where every current charge is a COST | **SECOND.** Drive it before scoping it. "then charge" may charge THIS card, back from the hand it just reached, so read the printing before booking the question |
+| **Topsy Turvy** | Arakni (Head) | *"Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom."* | a **replacement effect**, turn-windowed and naming *"a deck"*, so it covers BOTH seats and is game state rather than side state | **THIRD.** Census every deck-top WRITER before building (v4.21: fix the family). `moveCards`' deckTop branch, Brain Freeze's `foePick`, Boulder Drop's crush rider, Crown of Dichotomy, and whatever the census adds. The expiry needs a step-(8) sweep **counted by `held`** (v4.07). A game key means a `WIRE_V` bump (v4.26) |
+| **Jack Be Quick** | Briar | *"When this hits a hero, {u} an ally they control, then **steal** it until the end of this action phase."* | a **control change**. Nothing moves an object between SIDES today, and the census, `invariants.js` and the wire all assume a permanent's side is fixed | **RECORD, DON'T BUILD** unless you have a whole version for it. Open an approx record with a driven probe (v4.02). Half-building a control change is v3.23's worst case |
+| **Walk in My Shoes** | Lyath | Crush: *"…until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."* | `crush-halving-rider`, open. `build.halveCard` halves at the DEAL on purpose (v3.78: thirty base-value readers is thirty chances to miss one). A halving that STARTS mid-game and ENDS is the shape that argument ruled out | **LEAVE REFUSED** until someone designs a single base-value choke point. The refusal is honest and visible |
+| **Beckoning Haunt** | Viserai (Chest) | *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand."* | `x-cost`, open. No X machinery exists | **LEAVE REFUSED**, but note it is the cheapest X card: X is COUPLED to the choice (the aura's printed cost), which is Blaze's v3.39 shape. There, X was settled by the pick and no number was ever asked for. If X gets built, build it here first |
+| **Ice Eternal** | Iyslander | *"Create X Frostbite tokens under target hero's control"* plus a fused rider | `x-cost`, with a FREE X (`XX`), which is the hard kind | **LEAVE REFUSED**. A free X needs a number prompt; reading one token would be weaker than printed and would read `full` |
+
+### 2 · The CR items — the thread's actual goal, and the two left open
+
+The brief is *"the battle facilitated between two players EXACTLY as the
+CR dictates"*. Two `open` records are pure CR fidelity:
+
+- **`layer-step-window` (CR 7.1.2).** An attack goes straight onto the
+  chain; in the CR it sits on the stack first and both seats may respond
+  before it becomes a chain link. `priority.js` already has the hooks
+  (`queueEmpty`). **Measure the observable difference before building.**
+  The ATTACK step opens an equivalent instant window right after
+  (verified at v2.45), so find a pool card whose answer differs between
+  "on the stack" and "on the chain" first. If none exists, the record
+  stays `open` with that measurement written in, and that counts as the
+  deliverable. The blast radius is every drill that declares an attack,
+  plus the whole ladder, so run `npm run play '' '' 3` on BOTH sides
+  (v4.40).
+- **`simultaneous-trigger-order` (CR 4.1.8a).** The controller orders
+  simultaneous triggers, and this engine fixes the order. Start with an
+  instrument, not a rule: add a `selfplay.js` counter for a resolution
+  that fires two or more triggers for one seat, and count collisions over
+  210 games. `ward-spend-order` (stated) is the same decision one family
+  over. If they are built, build them together, as one prompt shape (an
+  ordering is a `pick` with `max: all` whose ORDER is the answer, and
+  `promptToggleSel` already records tap order, as v4.59 found).
+
+### 3 · Instrument and doc debt — small, and each one a lead
+
+- **A pick with ONE candidate still opens a sheet.** Two comments in
+  `effects.js` (`foePick`, `freeze`) claimed `buildPrompt` refuses fewer
+  than two candidates. It refuses only an EMPTY pool, and the comments
+  were corrected in this commit after driving it. Whether a
+  forced-choice-of-one should skip the sheet is v3.55's rule (*"a sheet
+  offering one forced choice is a tap that teaches nothing"*), but it is
+  a behaviour change on both boards. **Measure first**: count one-card
+  pick sheets in 210 games, then decide.
+- **The prompt-shape wire digest (v4.59).** Every prompt-shape change is
+  still a `WIRE_V` bump BY HAND, and a forgotten bump fails no drill.
+  Declaring the prompt's field set as a ledger the digest covers closes
+  v4.26's half that is still open.
+- **`drx-bar-from-arsenal-unread`** (Release the Tension ×3). The fix
+  is to widen `quotedRider`, which requires `sub.onHit` by construction,
+  to carry a static restriction. Four grant families share that shape,
+  so census them before widening (v4.21).
+- **The 15 dead anchors** in `npm run anchors`. Each is a lead, not a
+  finding (v4.50). Ask v4.48's question of each one: does the pool print
+  a near-miss, and does something ELSE read it wrongly?
+
+### 4 · The longer arcs — not for a thread with no phone
+
+- **Phase A: retire `Battle`.** It is sequenced with **E (tuning)**:
+  retiring it retires the TUNED `[3,4,5]` escalation, and the table's
+  dummy is untuned (see v3.51's measurement). That is a play session,
+  not a drill session.
+- **The UI pass** belongs to the user, via Claude Fable on desktop,
+  guided by `UI-GUIDE.md`. Don't compete with it; if engine work changes
+  a control, say so in `CHANGELOG.md` where that pass will read it.
+- **SAT / SBW.** Wait for upstream. `data/newsets.json` holds the lists
+  and `drift.test.js` watches the wire.
+- **Supabase** stays deferred to desktop.
+
+## THE METHOD, UNCHANGED, BECAUSE IT KEEPS PAYING
+
+Measure the blast radius both ways, whole-pool, before and after.
+Sabotage every new drill, and check the sabotage APPLIED and CAN EXPRESS
+the bug (v4.62 went 21 written, 20 applied, 20 bite, and all three
+first-pass silences were the drills'). Drive it, don't grep it. Read the
+printed card before booking a question. Census what reaches a dispatcher
+and pin the SET. Both halves, or the drill proves nothing. **A tier
+that says `part` on a card that works is a lead.** **`SYNONYMS` is the
+first place to look when a rule you verified in isolation does nothing**
+(v4.62's first draft matched nothing for exactly this reason).
+
+---
+
+# (v4.49 handoff, kept below)
+
 
 ## ⚠ WHAT LANDED, IN ONE PARAGRAPH
 
