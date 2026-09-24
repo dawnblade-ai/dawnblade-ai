@@ -46,7 +46,7 @@ const SOURCES = {
    drill below enforces exactly that. */
 const ANCHORS = [
   /* --- engine/effects.js: the ported card semantics -------------------- */
-  ["runOps",       "  const runOps = (s, ops, srcName) => {",  "effects"],
+  ["runOps",       "  const runOps = (s, ops, srcName, srcCard) => {",  "effects"],
   ["execute",      "  const execute = (s,card,from,idx,opts) => {", "effects"],
   /* BOUNDARIES, not rules functions — the same role `playRx` plays below.
      Without them `execute`'s slice runs all the way to `linkPumps` and

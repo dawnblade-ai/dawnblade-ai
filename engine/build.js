@@ -672,8 +672,29 @@ function equipPiece(gr){
          off the LEVELLED clause now and `effects.js` strikes the base from
          it, with the +1{p} counters riding on top the way the aura branch
          beside it always has. */
-      if(wc && wc.needSteam){ gr.pow=true; gr.powCard={name:gr.name+" — build steam",pitch:0,cost:2,power:null,def:null,tt:"Equipment Ability",kw:["Go again"],tx:"Action - {r}{r}: Put a steam counter on this. Go again.",_buildSteam:true,_steamFor:gr.uid,ga:true,img:gr.img,dbImg:gr.dbImg,_gearArt:true,uid:"gp"+gr.uid}; }
+      /* THE HAND-WRITTEN STEAM POWCARD IS GONE (v4.63). It stood here for
+         fourteen versions — "Action - {r}{r}: Put a steam counter on this.
+         Go again.", cost 2, `_buildSteam`, `_steamFor` — because nothing
+         could read the printed line, which is v3.58's inline-reader shape
+         (a card special-cased by its own words) and was recorded as
+         `steam-build-powcard-handwritten`. The printed text it paraphrased
+         also DROPPED THE GATE ("If this has no steam counters"), which
+         `effects.js` then re-imposed by reading the stamp — two records of
+         one printed condition. The line is read now, through the ordinary
+         ability builder below. */
     }
+    /* A WEAPON THAT SWINGS AND ALSO PRINTS A NON-ATTACK ABILITY (v4.63).
+       Measured over the pinned pool: Plasma Barrel Shot is the ONLY weapon
+       with two activation lines — its swing ("…: Attack") and its steam
+       line — so `parseHeroPower` handed the WHOLE text answers for the
+       swing, which it (rightly) refuses. The ability's own line is handed
+       over instead, and it is chosen as the one activation line whose
+       payload is NOT a bare Attack, so a weapon carrying one line builds
+       exactly what it built before. */
+    const _lines = (gr.tx||"").split(/\n+/).map(l=>clean(l));
+    const _isAb = l => /^(?:once per turn )?(?:attack reaction|action|instant)\s*[-—]/i.test(l);
+    const _wLine = isWeapon(gr) && gr.tx
+      ? (_lines.find(l => _isAb(l) && !/:\s*attack\b/i.test(l)) || null) : null;
     /* A WEAPON CAN CARRY A NON-ATTACK ACTIVATED ABILITY (v2.34). Death
        Dealer is a Bow whose printed ability puts an arrow face up into your
        arsenal — it is not a weapon attack, so `weaponCost` (which requires
@@ -682,15 +703,14 @@ function equipPiece(gr){
        only an ability the arsenal reader actually recognises, so no other
        weapon quietly grows a second button nothing is wired to run. */
     const _armed = isWeapon(gr) && gr.tx && ARS_PUT.test(gr.tx);
-    if((!isWeapon(gr) || _armed) && gr.tx){ const pw=parseHeroPower(gr.tx, true);
+    if((!isWeapon(gr) || _armed || _wLine) && gr.tx){ const pw=parseHeroPower(_wLine || gr.tx, true);
     if(pw){ gr.pow=pw;
     /* The ability's WHOLE printed line, not just its first sentence.
        Knucklehead reads "Action - Destroy this: Roll a 6-sided die. Until
        end of turn, your base {i} is the number rolled." — parseHeroPower
        stops at the period, which orphaned the rider so it never fired.
        Strip the cost prefix off the line and keep the rest. */
-    const _abLine = (gr.tx||"").split(/\n+/).map(l=>clean(l))
-      .find(l=>/^(?:once per turn )?(?:attack reaction|action|instant)\s*[-—]/i.test(l)) || "";
+    const _abLine = _wLine || _lines.find(_isAb) || "";
     const _effFull = _abLine.replace(/^[^:]*:\s*/, "") || pw.eff;
     /* `_attackRx` IS THE WINDOW, and it is the third flag of its kind
        beside `_instant` and `sd`. It is not a printed type — the powCard's

@@ -241,6 +241,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      carries the measurement and the probe asserts the deviation. */
   /* 37 -> 38 AT v4.59: `multi-target-pick-all-or-nothing`. */
   /* 38 -> 39 AT v4.60: `drx-bar-from-arsenal-unread`. */
+  /* 39 holds AT v4.63: `steam-build-powcard-handwritten` was BUILT and is
+     `steam-build-powcard-read` — renamed, closed, probe turned round. */
   assert.equal(Object.keys(APPROX).length, 39, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -264,7 +266,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      wording of the family v4.60 built. Read by the unconditional anchor it
      would bar a defence reaction from the HAND too, which is stronger than
      printed, so it refuses and the card keeps the `quotedUnread` flag. */
-  assert.equal(n("stated"), 17, "stated count moved");
+  /* 17 -> 16 AT v4.63: `steam-build-powcard-handwritten` was BUILT — its
+     probe went RED the moment the three readers landed, which is the
+     reversal a `stated` record exists to force (v4.02). */
+  assert.equal(n("stated"), 16, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -298,7 +303,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      at v4.53 for this exact wall, was unreachable there. Second cycle running
      in which a record's own stated reason was narrower than the defect. */
   assert.equal(n("open"),    6, "open count moved");
-  assert.equal(n("closed"), 16, "closed count moved");
+  /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. */
+  assert.equal(n("closed"), 17, "closed count moved");
 });
 
 /* ============================================================
@@ -975,33 +981,57 @@ probe("spellvoid-x", () => {
 
 /* Walk in My Shoes' crush rider halves the opponent's base values for a
    turn and has no reader — so it arms no next-turn entry. */
-probe("steam-build-powcard-handwritten", () => {
-  /* A `stated` PROBE ASSERTS THE DEVIATION, so it goes red the day the
-     clause is read (v4.02). Both halves: the payload genuinely has NO
-     reader (which is why the hand-written powCard is there), and the
-     BEHAVIOUR is nonetheless right — the printed gate is enforced. */
-  for(const t of ["put a steam counter on this", "put a steam counter on it",
-                  "if this has no steam counters, put a steam counter on it"])
-    assert.equal(PR.classifyClause(t), null,
-      "`" + t + "` has a reader now — the hand-written powCard can go");
-  assert.equal(PR.parseHeroPower(
-    "Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again",
-    true), null, "parseHeroPower reads the line now — build the powCard from it");
+probe("steam-build-powcard-read", () => {
+  /* A `closed` PROBE ASSERTS THE THING IS **BUILT**, so it goes red when it
+     REGRESSES (v4.02). The `stated` probe this replaces asserted the three
+     readers were missing and went red the moment v4.63 built them — which
+     is the whole point of the two directions.
 
-  /* AND IT IS ONE CARD. `needSteam` is what makes `equipPiece` write the
-     piece, so the set is the measurement the record rests on. */
+     THE WHOLE SENTENCE READS, AS A GATE AND AN OP. */
+  assert.deepEqual(PR.classifyClause("if this has no steam counters, put a steam counter on it"),
+    {status: "run", ops: [["ctrSrc", {kind: "steam", n: 1, label: "steam"}]], cond: "noCtr:steam"});
+  /* AND THE PRONOUN ALONE STILL REFUSES — the pool prints "on it" meaning
+     three OTHER objects (Crow's Nest's arrow, a created token, a sharpened
+     sword), so a bare reading would guess. `on this` has no claimant and
+     no reader, which is v4.52's rule about unclaimed vocabulary. */
+  for(const t of ["put a steam counter on this", "put a steam counter on it"])
+    assert.equal(PR.classifyClause(t), null, "`" + t + "` must not be read without its gate");
+  const pw = PR.parseHeroPower(
+    "Action - {r}{r}: If this has no steam counters, put a steam counter on it. Go again", true);
+  assert.ok(pw && pw.cost === 2 && pw.ga === true && pw.kind === "action",
+    "parseHeroPower answers the printed line: cost 2, go again, action speed");
+
+  /* IT IS STILL ONE CARD — the measurement the named shape rests on. */
   const steam = pool().filter(c => { const wc = PR.weaponCost(c.tx || "");
     return !!(wc && wc.needSteam); }).map(c => c.name).sort();
-  assert.deepEqual(steam, ["Plasma Barrel Shot"],
-    "the set of `needSteam` records moved — the hand-written powCard now serves more than one card");
+  assert.deepEqual(steam, ["Plasma Barrel Shot"], "the set of `needSteam` records moved");
 
-  /* THE CLAUSE IS REPORTED UNREAD, which is the whole of what makes this
-     honest rather than hidden. */
+  /* THE CARD REPORTS FINISHED, and the powCard is the ordinary builder's —
+     no hand-written text and no stamp for anything to read instead. */
   PR.fxReset();
-  const fx = PR.fxParse(pool().find(c => c.name === "Plasma Barrel Shot"));
-  assert.equal(fx.tier, "part", "the card reports unfinished");
-  const cl = (fx.clauses || []).find(x => /put a steam counter/i.test(x.t));
-  assert.ok(cl && cl.st === "skip", "and its steam-build clause reads `skip`");
+  const card = one("Plasma Barrel Shot");
+  assert.equal(PR.fxParse(card).tier, "full", "the card reads in full");
+  const gr = {...card, uid: 41}; BL.equipPiece(gr);
+  assert.ok(gr.powCard, "the piece has its ability");
+  assert.equal(gr.powCard._buildSteam, undefined, "no hand-written stamp");
+  assert.equal(gr.powCard.tx, "If this has no steam counters, put a steam counter on it. Go again",
+    "the powCard carries the PRINTED line, cost prefix stripped");
+
+  /* DRIVEN, BOTH HALVES OF THE GATE, through the real reducer. */
+  H.db(); PR.fxReset();
+  const g0 = {...H.state({res: 20, ap: 9, gear: [gr], counters: {}}, {},
+                         {turn: 3, actor: 0, turnPlayer: 0}),
+              stack: [], chain: [], boostChain: 0,
+              phase: "action", step: "layer", priority: 0, passed: []};
+  let out = J.reduce(g0, {t: "activate", uid: "gp41"}, 0);
+  assert.ok(!out.error, "the first activation is legal: " + out.error);
+  assert.equal(((out.state.sides[0].counters || {})[41] || {}).steam, 1,
+    "and it puts the counter on the GUN, keyed by the piece's uid");
+  const again = {...out.state,
+    sides: out.state.sides.map((s, i) => i === 0 ? {...s, weaponUsed: {}, ap: 9} : s)};
+  out = J.reduce(again, {t: "activate", uid: "gp41"}, 0);
+  assert.ok(out.error && /already carries a steam counter/.test(out.error),
+    "a second is refused BEFORE it is paid, off the same parse");
 });
 
 probe("charged-this-way-count", () => {

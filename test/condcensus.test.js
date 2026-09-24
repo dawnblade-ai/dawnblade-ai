@@ -474,8 +474,14 @@ test("every condition the main loop ANSWERS has an emitter, or is pinned", {skip
      so. The day a powCard emits one on its own this fails and somebody
      re-reads the reach, which is what a premise-as-a-drill buys (v4.44)
      over a sentence nothing checks (v3.41). */
+  /* AND AT v4.63 IT DID. Plasma Barrel Shot's steam line is read now, and
+     "if this has no steam counters" is a gate that lives ONLY on the
+     equipment powCard — the card's own parse files the activation line
+     `noop` (the powCard is its reader), so the card leg can never see it.
+     That is exactly the reach this sentence said the legs were kept for,
+     and it is why the pin was a SET rather than "empty forever". */
   const cardLeg = allEmittedConds({card: 1});
-  assert.deepEqual([...emitted].filter(c => !cardLeg.has(c)).sort(), [],
+  assert.deepEqual([...emitted].filter(c => !cardLeg.has(c)).sort(), ["noCtr:steam"],
     "a condition only a powCard emits — the legs now carry the census");
   /* THE DEEP WALK DOES CARRY ONE, so it is not redundant: `way:took` lives
      inside a GRANTED ability's rider (v3.95), which a top-level `fx.conds`

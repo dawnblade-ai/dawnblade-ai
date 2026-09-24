@@ -860,7 +860,12 @@ function makeEffects(ctx){
     return {...n, actor: was};
   };
 
-  const runOps = (s, ops, srcName) => {
+  /* `srcCard` IS OPT-IN (v4.63), and only `execute` passes it: it is the
+     card RESOLVING, which is what a "this" in its own payload names. Every
+     other caller — a prompt's rider, a leave payout, an attack's ops riding
+     to resolution — passes nothing, and an op that needs it refuses with a
+     feed line rather than guessing which permanent was meant. */
+  const runOps = (s, ops, srcName, srcCard) => {
     let n = {...s};
     ops.forEach(op=>{
       const [k,v] = op;
@@ -1853,6 +1858,20 @@ function makeEffects(ctx){
          by a uid whose permanent never arrives if the play is refused
          further down. */
       else if(k==="ctrSelf"){ n._ctrSelf = v; }
+      /* ---- A COUNTER ON THE PERMANENT THE ABILITY BELONGS TO (v4.63) ----
+         Plasma Barrel Shot: "…put a steam counter on it", where "it" is the
+         Gun. NOT `ctrSelf`, which stamps a card ENTERING the arena at the
+         board-placement site; this piece is already there, so the counter
+         lands now, in the one `counters` bag keyed by the piece's uid —
+         which is what the swing's `needSteam` cost spends. */
+      else if(k==="ctrSrc"){
+        const u = P.abSourceUid(act(n), srcCard);
+        if(u == null){ n = L(n, `${srcName}: nothing to put a counter on.`); return; }
+        const cur = (act(n).counters||{})[u] || {};
+        actMut(n).counters = {...(act(n).counters||{}), [u]: {...cur, [v.kind]: (cur[v.kind]||0) + v.n}};
+        const _pn = String(srcName||"").replace(/ — ability$/, "");
+        n = L(n, `${_pn}: ${v.n === 1 ? "a" : v.n} ${v.label} counter${v.n === 1 ? "" : "s"} on it.`);
+      }
       /* RULING (Under Loop): recycles on hit instead of hitting the graveyard;
          the combat chain stays open either way. */
       else if(k==="bottomSelf"){
@@ -3471,6 +3490,16 @@ function makeEffects(ctx){
            v3.57's rule, read from the other end: when you build a source,
            ask which conditions it just made reachable. */
         : cond==="aim" ? ((act(n).counters[card.uid]||{}).aim||0) > 0
+        /* "IF THIS HAS NO <K> COUNTERS" (v4.63) — Plasma Barrel Shot's steam
+           line. "This" is the PIECE the ability belongs to, found back off
+           the powCard's `gp`/`bp` uid by `abSourceUid`, which is the same
+           reader `ctrSrc` puts the counter with and `abCtrGateFails` refuses
+           with — three sites, one answer to "which permanent". A powCard
+           whose piece is gone has nothing to ask, and answers FALSE. */
+        : /^noCtr:/.test(cond) ? (() => {
+            const u = P.abSourceUid(act(n), card);
+            return u != null && (((act(n).counters||{})[u]||{})[cond.slice(6)]||0) === 0;
+          })()
         : /^auras\d+$/.test(cond) ? (act(n).board||[]).filter(b=>b.kind==="aura").length >= +cond.slice(5)
         : cond==="hasArsenal" ? !!act(n).arsenal
         : cond==="seismic" ? (act(n).board||[]).some(b=>/seismic surge/i.test((b.card&&b.card.name)||""))
@@ -3580,6 +3609,9 @@ function makeEffects(ctx){
         || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
         || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
         || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
+        /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
+           as `pow` inside the engine and nobody at the table says that. */
+        || (/^noCtr:/.test(cond) ? `it already carries a ${P.ctrLabel(cond.slice(6))} counter` : null)
         || (dracN!=null ? `only ${dracLinks} Draconic chain link${dracLinks===1?"":"s"}, needs ${dracN}` : cond);
       if(!met){ n = L(n, `${card.name}: condition not met (${why}).`); return; }
       if(instead){ insteadKinds.add(op[0]);
@@ -3587,7 +3619,7 @@ function makeEffects(ctx){
       if(op[0]==="ga") ga = true;
       else if(op[0]==="self" && attacking) n._condSelf = (n._condSelf||0)+op[1];
       else if(op[0]==="piercing" && attacking) n._condPierce = (n._condPierce||0)+op[1];
-      else n = runOps(n,[op],card.name);
+      else n = runOps(n,[op],card.name,card);
     });
     /* ---- "ANOTHER" MUST NOT COUNT THE CARD ASKING (v4.58) -------------
        Colour is pitch: red 1, yellow 2, blue 3. This used to run 460 lines
@@ -4375,7 +4407,6 @@ function makeEffects(ctx){
       n._declared = {card, total, declNote};
       return n;
     } else {
-      if(card._buildSteam){ const tgt=card._steamFor, cur=(act(n).counters[tgt]||{}); if((cur.steam||0)===0){ actMut(n).counters={...act(n).counters,[tgt]:{...cur,steam:1}}; n=L(n,`${card.name.replace(" — build steam","")}: steam counter built.`); } else n=L(n,"It already carries a steam counter."); }
       if(fx.addCost && fx.addCost.discard && act(n).hand.length){
         n = payAddCost(n, card, fx).game;
       }
@@ -4402,7 +4433,7 @@ function makeEffects(ctx){
          spent — and `judge.legal`'s `rxTargetWhy` refuses an illegal
          target before the card ever leaves the hand, so the only way to
          reach that refusal is a stale action off the wire. */
-      n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name);
+      n = runOps(n, _rxRoute ? [] : fx.ops.filter(o=>!insteadKinds.has(o[0]) && !preRan.has(o)), card.name, card);
       /* ---- "IF THIS DEALS DAMAGE, YOU MAY {t} YOUR HERO" (v3.91) -----
          Turn to Mindfire, and the offer can only be made once the card's
          own ops have run — `_dmgWay` is set inside `arcaneHit`'s

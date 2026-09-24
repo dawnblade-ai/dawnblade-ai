@@ -157,7 +157,7 @@ function opCensus(){
      bound too WIDE hides a finding and one too narrow invents one
      (v4.05, both directions in one release). */
   const efx = fs.readFileSync(path.join(ROOT, "engine", "effects.js"), "utf8");
-  const at = efx.indexOf("const runOps = (s, ops, srcName) => {");
+  const at = efx.indexOf("const runOps = (s, ops, srcName, srcCard) => {");
   if(at < 0) throw new Error("runOps not found in effects.js");
   const rest = efx.slice(at + 10);
   const end = rest.match(/\n  (?:const|function|let|var|\/\* -)/);

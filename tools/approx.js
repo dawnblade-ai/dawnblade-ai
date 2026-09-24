@@ -363,28 +363,31 @@ const APPROX = {
       "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+
       "versions."},
 
-"steam-build-powcard-handwritten": {
-  status:"stated", cr:null, board:"both", since:"v4.49", swept:"v4.49",
-  claim:"Plasma Barrel Shot's steam-build ability is a powCard `build.js` writes "+
-        "BY HAND — cost, text and all — rather than one `parseHeroPower` read off "+
-        "the printed line. Its real clause reads `skip`.",
-  why:"THE PAYLOAD HAS NO READER AT ALL, which is why the hand-written piece is "+
-      "there: measured, `classifyClause` answers null for \"put a steam counter on "+
-      "this\", for \"put a steam counter on it\" and for the whole gated line, and "+
-      "`parseHeroPower` refuses the line for its condition. Building it properly "+
-      "needs THREE readers — a self-subject for `ctrPut`, a new `noSteam` "+
-      "condition, and a second conditional shape in `parseHeroPower`, which this "+
-      "file's own rule says not to relax. So it is v3.58's inline-reader shape "+
-      "left standing on purpose, and it is one card: Plasma Barrel Shot is the "+
-      "pool's only `needSteam` record.\n"+
-      "WHAT IS NOT WRONG is the behaviour. The printed gate (\"if this has NO "+
-      "steam counters\") is honoured by `effects.js` at resolution, and v4.49 made "+
-      "it a LEGALITY too in `abCostWhy` — before that the ability charged {r}{r} "+
-      "and an action point to log \"it already carries a steam counter\", which is "+
-      "v2.04's rule inverted: an unpayable cost is rightly INERT, a PAID cost that "+
-      "does nothing is the player losing value for a play the rules should have "+
-      "refused. So the gap is that the CLAUSE is unread and the card reports "+
-      "`part` — honest, visible, and the tier says so."},
+"steam-build-powcard-read": {
+  status:"closed", cr:null, board:"both", since:"v4.49", swept:"v4.63",
+  claim:"Plasma Barrel Shot's steam-build ability is built by the ordinary "+
+        "ability builder off its OWN printed line. BUILT AT v4.63: the hand-"+
+        "written powCard `build.js` carried from v4.49 is gone, the clause "+
+        "reads, and the card reports `full`.",
+  why:"WHAT THE RECORD SAID, AND WHAT ASKING THE ENGINE FOUND. It was "+
+      "`steam-build-powcard-handwritten` (stated): the payload had no reader, "+
+      "so `equipPiece` wrote the powCard by hand — cost, text and all, and "+
+      "the text it wrote DROPPED THE PRINTED GATE (\"Put a steam counter on "+
+      "this\"), which `effects.js` then re-imposed by reading a `_buildSteam` "+
+      "stamp. Two records of one printed condition (v3.61). Its three named "+
+      "readers are built: a whole-clause rule reads \"if this has no <K> "+
+      "counters, put a <K> counter on it\" — WHOLE, because the handler that "+
+      "splits on the first comma hands \"on it\" over with no antecedent — "+
+      "as `ctrSrc` behind a `noCtr:<K>` gate; `parseHeroPower` accepts that as "+
+      "a fourth NAMED conditional shape; and `equipPiece` hands a weapon's "+
+      "non-attack activation line to the ordinary builder.\n"+
+      "AND RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01). v4.49 wrote the "+
+      "paid-no-op refusal into `judge.abCostWhy` and said both boards call it; "+
+      "the TRAINER's `tryPlay` never did, so a second activation there still "+
+      "charged {r}{r} for a log line. `parser.abCtrGateFails` is the one "+
+      "reader now, both boards ask it, and it reads the same `fx.conds` the "+
+      "condition loop resolves, so the refusal and the resolution cannot "+
+      "disagree about the gate."},
 
 "charged-this-way-count": {
   status:"closed", cr:null, board:"both", since:"v4.48", swept:"v4.56",

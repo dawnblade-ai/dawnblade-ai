@@ -307,6 +307,59 @@ module.exports = [
     "then the swing is legal": null,
     "and building a SECOND is refused before it is paid": true
   }
+},
+
+/* ---- v4.63 — THE STEAM LINE IS READ, NOT PARAPHRASED ---------------- */
+{
+  name: "the Gun's steam cycle runs off its own printed line: build, swing, build",
+  why: "For fourteen versions the steam-build ability was a powCard " +
+       "`build.js` wrote BY HAND — \"Put a steam counter on this. Go " +
+       "again.\" — which dropped the printed gate (\"If this has no steam " +
+       "counters\") and had `effects.js` re-impose it off a stamp. The line " +
+       "reads now, as a gated `ctrSrc` on the PIECE. What the card is FOR is " +
+       "the cycle: a counter built is a counter a swing spends, and a spent " +
+       "one lets the build run again. A put keyed by the powCard's own uid " +
+       "would build a counter the swing can never find, and a gate read off " +
+       "the powCard would never refuse — so the round trip is the observable.",
+  run(c){
+    const B = require("../../engine/build.js");
+    c.P.fxReset();
+    const gr = Object.assign({}, c.card("Plasma Barrel Shot", 0), {uid: 41});
+    B.equipPiece(gr);
+    const g0 = Object.assign(c.acting(c.state(
+      {res: 20, ap: 9, gear: [gr], counters: {}}, {},
+      {turn: 3, actor: 0, turnPlayer: 0})), {chain: [], boostChain: 0});
+    const steam = g => (((g.sides[0].counters || {})[41]) || {}).steam || 0;
+    const b1 = c.J.reduce(g0, {t: "activate", uid: "gp41"}, 0);
+    const sw = b1.state && c.J.reduce(Object.assign({}, b1.state, {sides: b1.state.sides.map(
+      (s, i) => i === 0 ? Object.assign({}, s, {weaponUsed: {}}) : s)}),
+      {t: "activate", uid: 41, target: "hero"}, 0);
+    /* THE SWING OPENS A COMBAT CHAIN, and an ACTION-speed ability has no
+       window while one is open — so the chain is closed by hand here. What
+       this scene watches is the counter, which the swing spent at
+       declaration; driving a whole defend step would test the defender's
+       policy instead (v3.85: a fixture driven through a policy is one the
+       policy can consume). */
+    const closed = sw && sw.state && Object.assign({}, sw.state, {
+      pend: null, stack: [], chain: [], chainCards: [], passed: [],
+      phase: "action", step: "layer", priority: 0,
+      sides: sw.state.sides.map((s, i) => i === 0 ? Object.assign({}, s, {weaponUsed: {}}) : s)});
+    const b2 = closed && c.J.reduce(closed, {t: "activate", uid: "gp41"}, 0);
+    return {
+      "the ability carries its printed text":  gr.powCard.tx,
+      "after the first build":                 b1.error || steam(b1.state),
+      "the swing declares":                    sw.error || !!sw.state.pend,
+      "…and spends the counter":               sw.error || steam(sw.state),
+      "so the build runs again":               b2.error || steam(b2.state)
+    };
+  },
+  want: {
+    "the ability carries its printed text": "If this has no steam counters, put a steam counter on it. Go again",
+    "after the first build": 1,
+    "the swing declares": true,
+    "…and spends the counter": 0,
+    "so the build runs again": 1
+  }
 }
 
 ];

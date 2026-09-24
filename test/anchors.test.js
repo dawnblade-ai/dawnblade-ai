@@ -104,8 +104,11 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
   /* 89 -> 91 AT v4.62: `mayOffer` (a costless "you may", offered as a
      one-mode optional modal) and `foeArsUp` (the cross-seat arsenal turn),
      both emitted by Wreck Havoc's clause and both with a `runOps` case.
-     Moving this number is a deliberate edit in both places (v4.17). */
-  assert.equal(r.dispatched, 91, "runOps's op vocabulary moved");
+     Moving this number is a deliberate edit in both places (v4.17).
+     91 -> 92 AT v4.63: `ctrSrc`, a counter on the permanent the resolving
+     ability belongs to, emitted by Plasma Barrel Shot's steam line — the
+     line a hand-written powCard paraphrased for fourteen versions. */
+  assert.equal(r.dispatched, 92, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

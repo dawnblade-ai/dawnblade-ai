@@ -51,7 +51,7 @@ const A = JSON.parse(fs.readFileSync(AUDIT, "utf8"));
    field. It is a two-minute script and it moved two of five. */
 const FAMILIES = [
   ["pick from a zone", /from your graveyard|from an opposing hero's graveyard|search your deck|from your (?:hand|deck) (?:into|face-up)|shuffle .* into your deck/i,
-   "RE-MEASURED v4.58 by asking the parser rather than remembering (v4.09): four of the five things this line used to name are BUILT — the graveyard readers (v3.53/v3.54), the hand->soul put (v4.01), the shuffle-redraw (v4.43) and the deck SEARCH (v4.58). What is left is exactly two: an X-cost subject (Beckoning Haunt, refused on purpose across this engine) and a TWO-TARGET pick with a printed order (Crown of Dichotomy)"],
+   "RE-MEASURED v4.58 by asking the parser rather than remembering (v4.09): four of the five things this line used to name are BUILT — the graveyard readers (v3.53/v3.54), the hand->soul put (v4.01), the shuffle-redraw (v4.43) and the deck SEARCH (v4.58). What is left is exactly ONE, re-measured v4.63: an X-cost subject (Beckoning Haunt, refused on purpose across this engine). The TWO-TARGET pick this line also named was BUILT at v4.59 (Crown of Dichotomy) and the sentence outlived it by four versions"],
   ["counters on a permanent", /counter[s]? on\b|has an? \w+ counter|enters the arena with a \+/i,
    "the targeted put landed in v3.53 (`ctrPut`); what is left is a TRIGGER each — boost-banish, arrow-put, enters-with, and a reader for 'if this has an aim counter'"],
   ["create a token on a trigger", /create an? [A-Z]/,

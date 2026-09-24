@@ -246,8 +246,8 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "drx.test.js index.html 9523",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
-    "priority.test.js index.html 16557",
-    "priority.test.js index.html 16557",
+    "priority.test.js index.html 17343",
+    "priority.test.js index.html 17343",
     "priority.test.js index.html 9523"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
@@ -255,7 +255,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
         bounded at the NEXT one, which is the safe form — and the growth is
         v4.59's new activation legality, inserted INTO `tryPlay` beside the
         four costs it sits with. The anchors still bound the body the drill
-        names, which is the question this census exists to ask. */
+        names, which is the question this census exists to ask.
+        16,557 -> 17,343 AT v4.63, READ FIRST, and it is the same shape: the
+        trainer's `tryPlay` gained the paid-no-op refusal judge had carried
+        alone since v4.49 (`parser.abCtrGateFails`), inserted beside the
+        pick legality. Still `tryPlay` -> `confirmPay`. */
      "a slice over 8,000 characters moved — read it before repinning, and check "
    + "the anchors still bound the body the drill NAMES (v4.57)");
 });

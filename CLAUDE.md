@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.62
+**Current version:** v4.63
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3029 drills** at v4.62.
+This is `node --test "test/*.test.js"` — **3048 drills** at v4.63.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,46 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PARAPHRASE THAT DROPPED THE GATE, AND THE BOARD THAT NEVER ASKED (v4.63)
+
+> *"Action - {r}{r}: If this has no steam counters, put a steam counter on
+> it. Go again"* — PLASMA BARREL SHOT, Dash's
+
+**FOURTEEN VERSIONS OF A POWCARD WRITTEN BY HAND.** `equipPiece` built this
+ability as `"Put a steam counter on this. Go again."` because nothing read
+the printed line — and the paraphrase DROPPED the printed gate, which
+`effects.js` and `judge.abCostWhy` then each re-imposed off a `_buildSteam`
+stamp. Two records of one printed condition (v3.61), both hand-written. The
+line reads now and the stamp is gone; audit **398 → 399** `full`.
+
+**A PRONOUN WHOSE ANTECEDENT IS THE GATE IS READ WHOLE.** The if/when
+handler splits on the first comma and hands *"put a steam counter on IT"*
+over alone, and the pool prints that pronoun meaning three OTHER objects. So
+the reader sits ABOVE the handler and reads both halves at once — `ctrSrc`
+behind `noCtr:<K>` — and the pronoun alone still refuses. v2.33's trap,
+answered by reading rather than guessing.
+
+**`ctrSrc` IS NOT `ctrSelf`, AND `abSourceUid` IS THE ONE ANSWER TO "WHICH
+PERMANENT IS THIS".** One stamps a card ENTERING the arena; the other puts a
+counter on the piece a resolving ability BELONGS to, found back off its
+`gp`/`bp` uid — the match `execute` had written inline three times. It
+answers the piece's real uid, never a sliced prefix (v4.49). `runOps` takes
+the resolving card as an OPT-IN fourth argument that only `execute` passes,
+so a rider or a leave payout refuses rather than guessing.
+
+**AND RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01).** v4.49 put the
+paid-no-op refusal in `judge.abCostWhy` and wrote that both boards call it —
+the trainer's `tryPlay` never did, and still charged {r}{r} for a log line.
+`parser.abCtrGateFails` is the one reader now, asked by both, off the same
+`fx.conds` the condition loop resolves. **When you retire a stamp, grep for
+every reader of it AND for every board that should have been one.**
+
+**THREE DEAD HALVES IN A NAMED SHAPE.** `parseHeroPower`'s fourth shape first
+asked for a `noCtr:` gate, a present gate and no on-hit flag beside *"every
+op is `ctrSrc`"* — and `ctrSrc` has one emitter, which always carries that
+gate, while an ungated run is accepted by the ordinary guard anyway. All
+three came back SILENT and are deleted (v4.11); the premise is a drill.
 
 ### TURN IT OVER, THEN TAKE IT IF IT IS WHAT YOU FEARED (v4.62)
 

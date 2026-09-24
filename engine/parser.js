@@ -886,6 +886,46 @@ function classifyClause(raw){
     return R([["hitCounter", ORDINAL[m[1]], +m[2]]]);
   if(/^at the beginning of your end phase, if this hasn'?t hit this turn, remove all \+\d+\s*\{p\} counters from it$/.test(c))
     return R([["wipePowIfIdle"]]);
+  /* ---- "IF THIS HAS NO <K> COUNTERS, PUT A <K> COUNTER ON IT" (v4.63) --
+     > "Action - {r}{r}: If this has no steam counters, put a steam
+     >  counter on it. Go again"             — PLASMA BARREL SHOT, Dash's
+
+     The pool's only record of the shape, and for fourteen versions its
+     powCard was WRITTEN BY HAND in `build.equipPiece` — cost, text and
+     all — because nothing here read a word of it (`classifyClause`
+     answered null for the whole line and for each half). v3.58's
+     inline-reader shape, left standing and recorded
+     (`steam-build-powcard-handwritten`).
+
+     IT IS A WHOLE-CLAUSE READER, ABOVE THE if/when HANDLER, AND THE
+     REASON IS "IT". That handler splits on the first comma and hands the
+     payload over alone, where "put a steam counter on IT" has no
+     antecedent — the pool prints that pronoun meaning the ARROW that was
+     put (Crow's Nest), the TOKEN just created (Spectral Manifestations)
+     and the SWORD sharpened (Edict of Steel's reminder). Inside this one
+     sentence the gate's subject is the only noun before it, so "it" is
+     THIS, and the only place that can see both halves at once is here.
+     v2.33's Bull's Eye Bracers trap, answered by reading the sentence
+     whole rather than guessing the pronoun.
+
+     `ctrSrc` IS NOT `ctrSelf`. That one stamps counters on a card that
+     is ENTERING the arena, applied at the board-placement site; this one
+     puts them on a permanent that is ALREADY THERE — the piece the
+     resolving ability belongs to, found back off its `gp`/`bp` uid by
+     `abSourceUid`. Two events, two ops (v3.40's rule).
+
+     THE GATE IS A CONDITION, NOT A PROPERTY OF THE OP, so `execute`'s
+     condition loop is what decides whether it runs — which is the
+     machinery every other printed "if" already rides on, and what lets
+     the legality (`abCtrGateFails`) read the SAME parse rather than a
+     stamp. Both kinds go through the closed `CTR_KINDS` vocabulary in
+     the GUARD (v3.57): an unknown kind falls through to refuse. */
+  if((m=c.match(/^if this has no ([a-z+{}0-9-]+) counters?, put (a|an|one|two|three|four|five|six|\d+) ([a-z+{}0-9-]+) counters? on (?:it|this)$/))
+     && CTR_KINDS[m[1]] && CTR_KINDS[m[3]]){
+    const cn = CTR_WORDS[m[2]] != null ? CTR_WORDS[m[2]] : parseInt(m[2], 10);
+    if(cn > 0) return R([["ctrSrc", {kind: CTR_KINDS[m[3]], n: cn, label: m[3]}]],
+                        {cond: "noCtr:" + CTR_KINDS[m[1]]});
+  }
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
     /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
        `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
@@ -7358,8 +7398,26 @@ function parseHeroPower(tx, allowDestroy){
      v2.04 fixed. The two readers ask the same question, so the offer and
      the resolution cannot disagree. */
   const _jabM = m[4].trim().match(JAB_HEAD);
+  /* THE SELF-COUNTER FILL IS THE FOURTH (v4.63) — "If this has no steam
+     counters, put a steam counter on it". Its reader is `classifyClause`'s
+     own whole-clause rule, which answers with the gate as a CONDITION, and
+     that is exactly what the guard below refuses by design. A NAMED shape,
+     never a relaxation: the powCard carries the ability's whole printed
+     line and `execute` re-reads it, so the gate is honoured by the
+     condition loop, and the legality asks the same parse
+     (`abCtrGateFails`). Accepted only when every op the clause emits is a
+     `ctrSrc` — the one shape measured, on the one pool record that prints
+     it — and THAT IS THE WHOLE TEST. The first draft also asked for a
+     `noCtr:` gate, a present gate and no on-hit flag, and all three came
+     back SILENT under sabotage: `ctrSrc` has exactly one emitter, the
+     whole-clause rule, which always carries that gate and never an on-hit
+     one, and an UNGATED run is accepted by the ordinary guard below anyway.
+     A guard that cannot refuse anything is dead code that reads like a rule
+     (v4.11), so the PREMISE is a drill instead (test/steamline.test.js) and
+     a second emitter fails a test rather than quietly reaching this door. */
+  const ctrFill = !!(eff && eff.status === "run" && eff.ops.every(o => o[0] === "ctrSrc"));
   const arsPut = ARS_PUT.test(m[4]) || CYC_BOTTOM.test(m[4].trim()) || ARS_TURN.test(m[4].trim())
-              || !!(_jabM && optFilter(_jabM[1].trim()));
+              || !!(_jabM && optFilter(_jabM[1].trim())) || ctrFill;
   if(!arsPut && (!eff || eff.status!=="run" || eff.cond || eff.onHit)) return null;
   const after = t.slice(m.index + m[0].length);
   const ga = /^\.?\s*go again/i.test(after);
@@ -9304,6 +9362,72 @@ function abPickSpec(ab){
   const op = (fx.ops || []).find(o => o[0] === "pickPrompt" && o[1]);
   return op ? op[1] : null;
 }
+/* ---- WHICH PERMANENT IS "THIS" FOR A RESOLVING ABILITY (v4.63) --------
+   An equipment ability resolves as a powCard keyed `"gp"+uid` and an arena
+   permanent's as `"bp"+uid` (v2.71's namespacing, so neither collides with
+   a real card) — so when its text says "this", the object meant is the
+   PIECE, and the counter bag is keyed by the piece's uid, not the powCard's.
+   `execute` has matched the powCard back to its piece inline at three sites
+   (`("gp"+x.uid) === card.uid`); this is that match as ONE reader, matched
+   the same way, because a real uid is a NUMBER and slicing the prefix off
+   would hand back a string that looks right and keys differently in a
+   `find` (v4.49's own first draft).
+
+   Anything else answers its OWN uid: a card asking about itself — the
+   `aim` condition's reading (v3.72). A powCard whose piece is gone answers
+   null, which every caller treats as "nothing to put a counter on". */
+function abSourceUid(sd, card){
+  if(!card) return null;
+  const u = card.uid;
+  if(typeof u === "string" && /^gp/.test(u)){
+    const e = ((sd && sd.gear) || []).find(x => x && ("gp" + x.uid) === u);
+    return e ? e.uid : null;
+  }
+  if(typeof u === "string" && /^bp/.test(u)){
+    const e = ((sd && sd.board) || []).find(x => x && ("bp" + x.uid) === u);
+    return e ? e.uid : null;
+  }
+  return u == null ? null : u;
+}
+/* ---- A PAID ABILITY WHOSE WHOLE PAYLOAD SITS BEHIND A GATE IT FAILS -----
+   (v4.63, the legality v4.49 wrote against a hand-written stamp.)
+
+   Plasma Barrel Shot's steam line prints "IF THIS HAS NO STEAM COUNTERS,
+   put a steam counter on it" — so activating it with one already there
+   charges {r}{r} and the action point to do nothing. v2.04's mirror: an
+   unpayable cost is rightly INERT, a PAID cost that does nothing is the
+   player losing value for a play the rules should have refused first
+   (v3.11, v4.49).
+
+   IT READS THE SAME PARSE `execute` RESOLVES, so the offer and the
+   resolution cannot disagree about when the gate is met — which is the
+   whole reason the `_buildSteam` stamp it replaces is gone. Answers the
+   printed LABEL of the first failing kind, or null.
+
+   DELIBERATELY NARROW: only a parse with NO unconditional op and every
+   gate a `noCtr:` one. Anything wider is a judgement about whether a
+   partly-live payload is "nothing", which is not this reader's to make.
+   The go again rides as a keyword and is not a payload — it returns the
+   action point and never the resources. The name is the memo key, so an
+   unnamed ability answers null rather than throwing (`abPickSpec`'s
+   reason: this is reached from `judge.legal`). */
+function abCtrGateFails(sd, ab){
+  if(!ab || typeof ab.name !== "string") return null;
+  const fx = fxParse(ab);
+  const cs = fx.conds || [];
+  if((fx.ops || []).length || !cs.length) return null;
+  if(!cs.every(x => /^noCtr:/.test(x.cond) && x.op && x.op[0] === "ctrSrc")) return null;
+  const u = abSourceUid(sd, ab);
+  if(u == null) return null;
+  const bag = ((sd && sd.counters) || {})[u] || {};
+  const held = cs.filter(x => (bag[x.cond.slice(6)] || 0) > 0);
+  if(held.length !== cs.length) return null;
+  return ctrLabel(held[0].cond.slice(6));
+}
+/* A COUNTER KIND'S PRINTED SPELLING — `CTR_KINDS` read backwards, so the
+   feed says "+1{p}" where the bag says `pow`. One table, two directions:
+   a second hand-written list of labels is how the two drift. */
+const ctrLabel = k => Object.keys(CTR_KINDS).find(w => CTR_KINDS[w] === k) || k;
 /* THE CHI AN ACTIVATION COSTS (v4.54), or 0. One reader, for the reason
    `abSoulCost` and its siblings each have one: a cost read in one place
    and re-derived in another is two descriptions of one price (v3.79,
@@ -9499,6 +9623,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abSourceUid, abCtrGateFails, ctrLabel, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

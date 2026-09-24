@@ -1,6 +1,6 @@
 # The Sweep
 
-Generated 2026-09-23 from `tools/audit.json`.
+Generated 2026-09-24 from `tools/audit.json`.
 The card stack is empty — every pool card has a ruling. These are the
 axes it never covered.
 
@@ -8,8 +8,8 @@ axes it never covered.
 |---|---|---|
 | Hero abilities | 2 heroes, 2 unread clauses | never charged by the stack |
 | Tokens | 2 | 1 barely named in the trainer |
-| Ruled but not built | 7 cards | understood ≠ built |
-| **Fail states** | 37 entries, 0 break a rule | how cards go *wrong* at the table |
+| Ruled but not built | 6 cards | understood ≠ built |
+| **Fail states** | 36 entries, 0 break a rule | how cards go *wrong* at the table |
 
 ## 1. Hero abilities
 
@@ -41,7 +41,6 @@ Cards whose ruling exists but which still do not resolve in full.
 - **Ice Eternal** (part, 2/4 unread)
 - **Beckoning Haunt** (part, 1/2 unread)
 - **Jack Be Quick** (part, 1/3 unread)
-- **Plasma Barrel Shot** (part, 1/4 unread)
 - **Roaring Beam** (part, 1/2 unread)
 - **Topsy Turvy** (part, 1/2 unread)
 - **Walk in My Shoes** (part, 1/2 unread)
@@ -60,15 +59,15 @@ can be overruled. Same discipline as the mention count.
 | category | entries |
 |---|---|
 | Keyword filed as no-op — but the trainer names it (verify) | 28 |
-| Unread, effect unknown | 4 |
 | No schedule to fire on | 3 |
+| Unread, effect unknown | 3 |
 | Choice never offered | 2 |
 | Ability inert — cost not modelled | 2 |
 | Earned value denied | 2 |
 | Displayed total is wrong | 1 |
 | Keyword filed as no-op, but it has meaning | 1 |
 
-### WRONG — 9 entries
+### WRONG — 8 entries
 
 - **Ice Eternal** (3) · tier `part` · iyslander
   - *Displayed total is wrong* — This modifies power, defense or damage. Unread, the total shown to the player is arithmetically wrong — and they will trust it.
@@ -80,9 +79,6 @@ can be overruled. Same discipline as the mention count.
 - **Jack Be Quick** (1) · tier `part` · briar
   - *No schedule to fire on* — A delayed or continuous effect (CR 6.3/6.4) with nowhere to live — it fires early, late, or never. This is the 'macro' register the rulings keep asking for.
     > When this hits a hero, {u} an ally they control, then steal it until the end of this action phase.
-- **Plasma Barrel Shot** · tier `part` · dash
-  - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
-    > Action - {r}{r}: If this has no steam counters, put a steam counter on it
 - **Roaring Beam** (2) · tier `part` · boltyn
   - *Unread, effect unknown* — Part of this card resolves and part is unread, so the outcome is some unknown fraction of the printed card.
     > If there are no cards in your soul, return this to its owner's hand, then charge your soul.

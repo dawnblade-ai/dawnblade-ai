@@ -1,3 +1,111 @@
+## v4.63 — the Gun's second line is read, not paraphrased
+
+> *"Action - {r}{r}: If this has no steam counters, put a steam counter on
+> it. Go again"* — PLASMA BARREL SHOT, Dash's
+
+**THE POOL'S CHEAPEST REMAINING `part` DECK CARD, AND THE HANDOFF'S FIRST
+ITEM.** For fourteen versions `build.equipPiece` wrote this ability BY HAND —
+`"Action - {r}{r}: Put a steam counter on this. Go again."`, cost 2, a
+`_buildSteam` stamp, a `_steamFor` uid — because `classifyClause` answered
+null for the whole line and for each half. v3.58's inline-reader shape (a
+card special-cased by its own words), recorded as
+`steam-build-powcard-handwritten`. Audit **398 → 399** unique cards `full`,
+**7 → 6** `part`; pool records **754 → 755 / 32 → 31 / 11**.
+
+**AND THE PARAPHRASE DROPPED THE PRINTED GATE.** "Put a steam counter on
+this" says nothing about *"if this has no steam counters"*, so `effects.js`
+re-imposed the gate off the stamp and `judge.abCostWhy` refused off the stamp
+too — **two records of one printed condition** (v3.61), both written by the
+same hand that wrote the text. The stamp is gone; both read the parse.
+
+### THE THREE READERS THE RECORD NAMED
+
+| reader | what it reads |
+|---|---|
+| `classifyClause` — a WHOLE-CLAUSE rule above the if/when handler | *"if this has no \<K\> counters, put \<N\> \<K\> counters on it"* → `ctrSrc` behind a `noCtr:<K>` gate |
+| `parseHeroPower` — a FOURTH NAMED conditional shape | a run whose every op is `ctrSrc` |
+| `equipPiece` — a weapon's non-attack activation line | handed to the ordinary builder instead of the whole text |
+
+**WHOLE, BECAUSE OF "IT".** The if/when handler splits on the first comma and
+hands the payload over alone, where *"put a steam counter on IT"* has no
+antecedent — and the pool prints that pronoun meaning three OTHER objects
+(Crow's Nest's arrow, Spectral Manifestations' token, Edict of Steel's
+sword). Inside this sentence the gate's subject is the only noun before it.
+v2.33's Bull's Eye Bracers trap, answered by reading the sentence whole
+rather than guessing the pronoun; the pronoun ALONE still refuses.
+
+**`ctrSrc` IS NOT `ctrSelf`** (v3.40: two events, two records). `ctrSelf`
+stamps a card ENTERING the arena, applied at the board-placement site;
+`ctrSrc` puts counters on a permanent ALREADY THERE — the piece the resolving
+ability belongs to, found back off its `gp`/`bp` uid by
+**`parser.abSourceUid`**, which is the inline `("gp"+x.uid) === card.uid`
+match `execute` has written at three sites, as one reader. It answers the
+piece's REAL uid (a number), never the sliced prefix — v4.49's own first
+draft keyed a counter by a string that looked right and found nothing.
+
+**`runOps` TAKES THE RESOLVING CARD AS AN OPT-IN FOURTH ARGUMENT** (v3.58),
+and only `execute` passes it. A rider, a leave payout or an attack's ops
+riding to resolution pass nothing, and `ctrSrc` there refuses with a feed
+line rather than guessing which permanent "it" meant.
+
+**BOTH KINDS ARE READ OFF THE LINE AND BOTH GO THROUGH THE CLOSED `CTR_KINDS`
+VOCABULARY IN THE GUARD** (v3.55, v3.57). The one pool record prints *"a"*
+and *"steam"* twice, so a hardcoded 1 or a gate that copied the put's kind is
+SILENT against it — a synthetic printing *"no aim counters … two +1{p}
+counters"* is what sees both (v3.32, v3.73).
+
+### RETIRING THE STAMP FOUND A ONE-BOARD RULE (v3.01)
+
+v4.49 put the paid-no-op refusal in `judge.abCostWhy` and wrote that *"both
+boards call it"*. **The trainer's `tryPlay` never did** — it has its own
+mirrored checks for every other activation cost and not this one — so a
+second activation there still charged {r}{r} and the action point for a log
+line. `parser.abCtrGateFails` is the one reader now and both boards ask it,
+off the same `fx.conds` `execute`'s condition loop resolves, so the refusal
+and the resolution cannot disagree about when the gate is met.
+
+**IT IS DELIBERATELY NARROW**: a parse with NO unconditional op and EVERY
+gate a `noCtr:` one that the source already fails. A second gate still live,
+or an unconditional draw beside the gate, is a play and is not refused.
+The feed names the counter by its PRINTED spelling (`parser.ctrLabel`,
+`CTR_KINDS` read backwards), so a `pow` counter says *"+1{p}"*.
+
+### WHAT THE SABOTAGE PASS FOUND
+
+**22 written, 22 applied. 16 of the first 20 bit, and all four silences
+were mine** — and a fifth turned up in the second pass, of the same kind as
+the fourth. Three were fixtures that could not express the bug (v3.62): the
+one pool record puts ONE counter on an EMPTY bag behind ONE gate with NO
+other payload, so "set" and "add" agree, "any gate held" and "every gate
+held" agree, and an unconditional op is never there to be ignored — three
+synthetics see them now. **The fourth was a guard that could not refuse
+anything**: `parseHeroPower`'s named shape first asked for a `noCtr:` gate,
+a present gate and no on-hit flag beside "every op is `ctrSrc`" — and
+`ctrSrc` has exactly one emitter, which always carries that gate, while an
+ungated run is accepted by the ordinary guard anyway. Three dead halves,
+deleted (v4.11), and the PREMISE is a drill: every `ctrSrc` the pool emits,
+over records AND equipment powCards, rides behind a `noCtr:` gate.
+
+### MEASURED
+
+- **exactly 1 pool record's parse moves** (Plasma Barrel Shot, `part` →
+  `full`) and **0** whole-record `parseHeroPower` answers move — its whole
+  text still matches the SWING line first, which is why `equipPiece` hands
+  the ability line over explicitly;
+- **the ladder is BYTE-IDENTICAL**, run on both sides rather than reasoned
+  about (v4.43) — and that is about the LOADOUT: `defaultPicks` takes the 2H
+  Talishar, so a driven game never wears the Gun (v4.49's own finding). The
+  route is driven by `test/steamline.test.js`, the ledger probe and a new
+  Dash scene that runs the whole cycle — build, swing, build again;
+- `condcensus`'s *"a condition only a powCard emits"* pin moved **[] →
+  [`noCtr:steam`]**, which is exactly the reach it said the powCard legs were
+  kept for; `runOps`' vocabulary **91 → 92**; the approximation ledger
+  **17 → 16 stated, 16 → 17 closed**, the record renamed
+  `steam-build-powcard-read` with its probe turned round (v4.02);
+- `npm run gaps` said one of its two remaining `pick` gaps was Crown of
+  Dichotomy, which v4.59 built — corrected. **A sentence that states a gap
+  outlives the gap unless somebody re-derives it** (v4.17).
+
 ## v4.62 — turn it over, then take it if it is what you feared
 
 > *"Defense reaction cards can't be played this chain link.*

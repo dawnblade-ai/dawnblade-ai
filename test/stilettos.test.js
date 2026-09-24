@@ -414,8 +414,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      arsenal turn and the type-filtered destroy landed, so `full` 751 -> 754
      and `part` 35 -> 32 with `none` untouched. Three records this time,
      because that card is decked at three pitches — and the audit's
-     UNIQUE-card count moves by one with it (397 -> 398 full, 8 -> 7 part). */
-  assert.deepEqual(tiers, {full: 754, none: 11, part: 32});
+     UNIQUE-card count moves by one with it (397 -> 398 full, 8 -> 7 part).
+     RE-PINNED AGAIN AT v4.63, after reading the diff: Plasma Barrel Shot
+     went `part` -> `full` when its steam line got a reader and its
+     hand-written powCard retired, so `full` 754 -> 755 and `part` 32 -> 31
+     with `none` untouched. One record (398 -> 399 full, 7 -> 6 part). */
+  assert.deepEqual(tiers, {full: 755, none: 11, part: 31});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

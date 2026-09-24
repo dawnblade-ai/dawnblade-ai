@@ -174,6 +174,10 @@ test("the TRAINER has always asked the same question", {skip: false}, () => {
   assert.match(html, /isWeapon\(gr\)&&!gr\.destroyed/,
     "the trainer's swing route is power-gated");
   const bld = fs.readFileSync(__dirname + "/../engine/build.js", "utf8");
-  assert.match(bld, /if\(\(!isWeapon\(gr\) \|\| _armed\) && gr\.tx\)/,
+  /* TWO NAMED DOORS BESIDE IT, and both are narrow: `_armed` (v2.34, an
+     arsenal put on a weapon) and `_wLine` (v4.63, a weapon that ALSO prints
+     a non-attack activation line — measured, Plasma Barrel Shot alone). The
+     predicate the route is decided off is still `isWeapon`. */
+  assert.match(bld, /if\(\(!isWeapon\(gr\) \|\| _armed \|\| _wLine\) && gr\.tx\)/,
     "and build.js decides the ability route off the same predicate");
 });

@@ -202,13 +202,11 @@ function abCostWhy(sd, ab){
     return ab.name + " costs " + (/^[aeiou]/i.test(_sub) ? "an " : "a ") + _sub
          + " discarded, and " + sd.name + " holds none";
   }
-  /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49) ------------------
+  /* ---- A PAID COST THAT RESOLVES TO NOTHING (v4.49, re-read v4.63) ---
      Plasma Barrel Shot's steam-build ability prints "Action - {r}{r}: IF
-     THIS HAS NO STEAM COUNTERS, put a steam counter on it" and
-     `effects.js` honours that gate at RESOLUTION — it logs "It already
-     carries a steam counter" and puts nothing. So activating it with a
-     counter already on the piece charged {r}{r} AND the action point for
-     a log line.
+     THIS HAS NO STEAM COUNTERS, put a steam counter on it" — so activating
+     it with a counter already on the piece charged {r}{r} AND the action
+     point for a log line.
 
      v2.04 SETTLED THE OPPOSITE CASE AND THIS IS ITS MIRROR. An UNPAYABLE
      cost is deliberately INERT rather than free; a PAID cost that does
@@ -217,16 +215,14 @@ function abCostWhy(sd, ab){
      that reason (v3.11), and `fuzz.test.js` holds the property it rests
      on: `legal` and `reduce` must agree.
 
-     THE LEGALITY ASKS WHAT THE RESOLUTION ASKS, and no card text is read
-     here — `equipPiece` stamps `_steamFor` and `effects.js` reads the same
-     counter bag, so the two cannot disagree about when the gate is met.
-     Whether the printed clause itself is READ is a separate and open
-     question (`steam-build-powcard-handwritten` in tools/approx.js): the
-     powCard's text is hand-written by `equipPiece`, which is v3.58's
-     inline-reader shape, and the real payload has no parser reader at all. */
-  if(ab._buildSteam && (((sd.counters || {})[ab._steamFor] || {}).steam || 0) > 0)
-    return ab.name.replace(" — build steam", "")
-         + " already carries a steam counter — building another does nothing";
+     IT ASKS THE PARSE NOW, NOT A STAMP. Until v4.63 this read `_buildSteam`
+     and `_steamFor` off a powCard `equipPiece` wrote BY HAND, because the
+     printed line had no reader; `parser.abCtrGateFails` reads the same
+     `fx.conds` `execute`'s condition loop resolves, so the refusal and the
+     resolution cannot disagree about when the printed gate is met. */
+  { const _g = PR.abCtrGateFails(sd, ab);
+    if(_g) return ab.name.replace(/ — ability$/, "")
+         + " already carries a " + _g + " counter — its ability does nothing while it does"; }
   /* ---- AND A PICK WITH NOTHING TO CHOOSE (v4.59) ---------------------
      `buildPrompt` answers null on an empty candidate pool — a prompt
      politely declining to show nothing — and that is right THERE and wrong
