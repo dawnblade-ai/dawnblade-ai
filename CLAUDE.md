@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.68
+**Current version:** v4.69
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3099 drills** at v4.68.
+This is `node --test "test/*.test.js"` — **3105 drills** at v4.69.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### THE SAME CARDS IS NOT THE SAME GAME (v4.69)
+
+Both table handshakes compared `DATA_VER` alone while net.js's refusal said
+*"check APP_VER / DATA_VER"*. Replaying sixteen v4.68 logs on v4.67 from the
+same opening, **2 of 16 diverged**, with the same card data and the same
+`WIRE_V`. **`lobby.buildId(appVer, dataVer)` is the one spelling** and the
+trainer hands the same `TABLE_BUILD` to both handshakes
+(`test/buildid.test.js`). **When a message names what it checks, check it
+checks that.** It also means a forgotten `WIRE_V` bump can no longer desync
+two releases, which is why v4.59's prompt-field ledger is not built.
 
 ### A CHOICE OF ONE IS CONFIRMED ON THE SPOT (v4.68)
 

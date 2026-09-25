@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.68"; /* v4.68 - a mandatory pick with exactly one candidate is confirmed without a sheet, on both boards. See CHANGELOG.md. */
+window.APP_VER = "4.69"; /* v4.69 - the table handshakes compare the release as well as the card data. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6146,6 +6146,9 @@ function TableScreen({onBack, onSeated}){
 /* Tagged frames. `ch` names the protocol; `m` is that protocol's own
    message, untouched, so neither module has to know the other exists. */
 const CH_LOBBY = "lobby", CH_NET = "net";
+/* THE BUILD BOTH HANDSHAKES COMPARE (v4.69): the release and the card data,
+   spelled by the lobby module so the two sites cannot disagree. */
+const TABLE_BUILD = DawnLobby.buildId(window.APP_VER, window.DATA_VER);
 
 function TableRoom({table, host, code, db, onExit}){
   /* `mySeat`, NOT `seat`. engine/priority.js exports a `seat` helper
@@ -6192,11 +6195,12 @@ function TableRoom({table, host, code, db, onExit}){
         else netQ.current.push(f.m);
       }
     });
-    /* Say hello immediately. The card-data check has to settle before a
+    /* Say hello immediately. The build check has to settle before a
        hero is chosen, because a skew means the two phones would resolve
-       the same deck list into different cards — silently, and
-       consistently enough that a state hash cannot describe it usefully. */
-    say(DawnLobby.hello(mySeat, DATA_VER));
+       the same deck list into different cards, or the same play into
+       different rules — silently, and consistently enough that a state
+       hash cannot describe it usefully. The release is half of it (v4.69). */
+    say(DawnLobby.hello(mySeat, TABLE_BUILD));
     return ()=>{ try{ table.close(); }catch(_){} };
   },[]);
 
@@ -6510,8 +6514,9 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
       legal:  DawnJudge.legal,
       catalog,
       /* Pins what "the same game" means at the handshake. The lobby has
-         already checked it, so this is the belt to that braces. */
-      build:  DATA_VER,
+         already checked it, so this is the belt to that braces — and it is
+         the SAME value, or the belt checks a different thing (v4.69). */
+      build:  TABLE_BUILD,
       state:  host ? match.g : null,
       send:   m => table.send({ch:CH_NET, m}),
       onState: st => { setG(st); setNote(null); audit(st); },

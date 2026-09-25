@@ -50,7 +50,8 @@ before starting new work.
 > cycle waits on a RULING (see the ledger's `simultaneous-trigger-order`).
 > Jack Be Quick **RECORDED at v4.68** (`control-change-steal`, open, driven
 > probe). §3's one-card pick sheets **DONE at v4.68** — measured at 114 per
-> 210 games, now confirmed on the spot on both boards.
+> 210 games, now confirmed on the spot on both boards. §3's wire digest
+> **DISCHARGED at v4.69** by putting the release in the table handshake.
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
@@ -100,10 +101,12 @@ CR dictates"*. Two `open` records are pure CR fidelity:
   offering one forced choice is a tap that teaches nothing"*), but it is
   a behaviour change on both boards. **Measure first**: count one-card
   pick sheets in 210 games, then decide.
-- **The prompt-shape wire digest (v4.59).** Every prompt-shape change is
-  still a `WIRE_V` bump BY HAND, and a forgotten bump fails no drill.
-  Declaring the prompt's field set as a ledger the digest covers closes
-  v4.26's half that is still open.
+- ~~**The prompt-shape wire digest (v4.59).**~~ **DISCHARGED AT v4.69
+  another way.** Looking at the handshake found that it compared
+  `DATA_VER` alone, so two RELEASES could be seated together (measured: 2
+  of 16 replayed games diverge between v4.67 and v4.68). The build
+  identity carries the release now, which covers every shape a ledger
+  would have listed and more. The hand bump stays as the second guard.
 - **`drx-bar-from-arsenal-unread`** (Release the Tension ×3). The fix
   is to widen `quotedRider`, which requires `sub.onHit` by construction,
   to carry a static restriction. Four grant families share that shape,

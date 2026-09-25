@@ -144,7 +144,7 @@ test("a hero cannot be changed after both seats have chosen", () => {
 test("mismatched card data FAULTS the lobby before a card is resolved", () => {
   const {s} = run([L.hello(0, "sage-v11"), L.hello(1, "sage-v10")]);
   assert.equal(L.stepOf(s), "fault");
-  assert.match(s.fault, /card data differs/);
+  assert.match(s.fault, /different builds/);
   assert.match(s.fault, /sage-v11/);
   assert.match(s.fault, /sage-v10/);
 });

@@ -1,3 +1,44 @@
+## v4.69 — the same cards is not the same game
+
+**THE REFUSAL MESSAGE AND THE COMPARISON DISAGREED.** net.js's handshake
+refuses a build mismatch with *"check APP_VER / DATA_VER on both clients"*,
+and both callers handed it `DATA_VER` alone — as did the lobby's HELLO,
+the check that runs first. So two phones one release apart agreed on every
+card, were seated together, and had nothing to say when they came apart.
+
+**MEASURED BY REPLAYING, NOT ARGUED.** Sixteen v4.68 self-play games were
+recorded as action logs and replayed on the v4.67 reducer from the same
+opening state. **2 of 16 diverge**, both at Fai's one-card pick, which v4.68
+confirms on the spot and v4.67 opens as a sheet. Same `DATA_VER`, same
+`WIRE_V`: nothing either handshake compared could tell them apart. And that
+is not a quirk of one version. Every release changes a rule, so any two
+releases can do this.
+
+**`lobby.buildId(appVer, dataVer)` IS THE ONE SPELLING** of what "the same
+build" means at a table, and the trainer builds it once (`TABLE_BUILD`)
+and hands the SAME value to both handshakes. A belt that checks something
+different from its braces is how the message and the comparison came apart
+in the first place. The lobby's fault now names both builds and says to
+reload both pages.
+
+**AND IT DISCHARGES MOST OF A HANDOFF ITEM.** v4.59 recorded that a
+forgotten `WIRE_V` bump for a shape change inside a whole-shipped value
+(a prompt field, a layer kind, a game key) fails no drill, and proposed a
+prompt-field ledger the digest could cover. With the release in the
+handshake, two peers whose shapes could differ are two releases, refused
+before a snapshot crosses, and `decode`'s only caller is on the far side of
+that handshake. That covers every shape, including ones no ledger would
+list. So the ledger is not built. A same-release dev pair still leans on
+the hand bump, and `wire.js`'s header says so.
+
+### MEASURED
+
+- **no pool record's parse or tier moves**, and no rules changed;
+- **5 sabotages, 5 applied, 5 bite**: `buildId` dropping the release, the
+  trainer's `TABLE_BUILD` reverting to `DATA_VER`, each handshake site
+  reverting to `DATA_VER` on its own, and the lobby never comparing;
+- **3105 drills**, 0 fail, 5 skipped.
+
 ## v4.68 — a choice of one is not a choice
 
 **THE MEASUREMENT CAME FIRST, AND IT WAS LOPSIDED.** Over 210 driven games,

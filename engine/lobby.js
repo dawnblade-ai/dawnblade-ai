@@ -7,7 +7,8 @@
    are four agreements to reach, and until now there were none: the table
    screen connected and dropped straight into `actions.js`'s blank decks.
 
-     1. do both clients resolve the same cards?   (DATA_VER)
+     1. do both clients run the same RULES over the same cards?
+                                                  (APP_VER + DATA_VER, v4.69)
      2. which hero is each seat piloting?
      3. who takes the first turn?                 (the throw, CR-adjacent)
      4. what did each seat sideboard?
@@ -140,13 +141,23 @@ function reduce(s, m){
        one failure a state hash cannot describe usefully. Refusing before
        a card is resolved is the difference between "your opponent is on
        older card data" and "/sides/1/deck/17/uid". */
+    /* AND THE RULES, NOT ONLY THE CARDS (v4.69). Until then both callers
+       handed this `DATA_VER` alone, while net.js's own refusal message said
+       "check APP_VER / DATA_VER" — so two phones one release apart paired
+       up, agreed on every card, and desynced on the first rule that
+       differed. Measured by replaying sixteen v4.68 self-play logs on v4.67
+       from the same opening: 2 of 16 diverge, both at Fai's one-card pick,
+       which one build confirms on the spot and the other shows as a sheet.
+       Every release changes a rule, so the identity is `buildId`: both
+       halves, one spelling. */
     case MSG.HELLO: {
       if(s.builds[m.seat] != null) return no("seat " + m.seat + " has already said hello", true);
       const builds = s.builds.slice();
       builds[m.seat] = m.build == null ? null : String(m.build);
       let n = {...s, builds};
       if(builds[0] != null && builds[1] != null && builds[0] !== builds[1])
-        n = {...n, fault: "card data differs — seat 0 holds " + builds[0] + ", seat 1 holds " + builds[1]};
+        n = {...n, fault: "the two phones run different builds — seat 0 runs " + builds[0] +
+                          ", seat 1 runs " + builds[1] + ". Reload the page on both."};
       return {state: n, error: null};
     }
 
@@ -245,6 +256,11 @@ function matchSpec(s){
    exactly as it caught `mySeat` and `tapTwice`'s `act`. The message type
    string stays "board" because that is what it is on the wire. */
 const hello = (seat, build) => ({t: MSG.HELLO, v: LOBBY_V, seat, build});
+
+/* WHAT "THE SAME BUILD" MEANS AT A TABLE (v4.69) — the release AND the card
+   data, in one spelling both handshakes are handed. `DATA_VER` alone keys the
+   card cache and says nothing about the rules the cards run inside. */
+const buildId = (appVer, dataVer) => "v" + appVer + " · " + dataVer;
 const hero  = (seat, key)   => ({t: MSG.HERO,  v: LOBBY_V, seat, key});
 const throwIt = (seat, round, pick) => ({t: MSG.THROW, v: LOBBY_V, seat, round, pick});
 const seating = (seat, choice)   => ({t: MSG.SEAT,  v: LOBBY_V, seat, choice});
@@ -264,5 +280,5 @@ function waitingOn(s){
 }
 
 return {LOBBY_V, MSG, STEPS, newLobby, stepOf, reduce, matchSpec,
-        waitingOn, hello, hero, throwIt, seating, sideboard};
+        waitingOn, hello, buildId, hero, throwIt, seating, sideboard};
 });

@@ -189,6 +189,17 @@
    act on. (v4.06's `costTax` added a game key of the same kind and did not
    bump; later bumps have since covered it, and this line is where the rule
    is now written down.) */
+/* AND AT v4.69 THE HAZARD ABOVE STOPPED BEING THE ONLY GUARD. The blind
+   spot is real — a forgotten bump for a shape change inside a whole-shipped
+   value still fails no drill — but the handshake now compares the RELEASE
+   as well as the card data (`lobby.buildId`), and `decode`'s one caller is
+   net.js, on the far side of that handshake. So two peers that could differ
+   in a prompt's shape are two releases, and they are refused before a
+   snapshot crosses. A forgotten bump is now a missing second guard rather
+   than a desync, which is why the prompt-field ledger v4.59 proposed is not
+   built: the release comparison covers every shape, including the ones no
+   ledger would have listed. Bump by hand anyway — it is cheap, and it is the
+   only guard a same-release dev pair has. */
 /* 14 -> 15 AT v4.66: `stack` gains a layer KIND — a play held there until
    both seats pass (`{k: "play", card, zone, decl, res, …}`), carrying a whole
    card and its settled declarations. `stack` is a game key that ships whole,
