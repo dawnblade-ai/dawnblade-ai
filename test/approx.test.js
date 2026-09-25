@@ -246,7 +246,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 39 -> 40 AT v4.66: `layer-step-window` was built and renamed
      `play-held-on-the-stack`, and `instant-speed-plays-resolve-on-play`
      records what the table stack still collapses. */
-  assert.equal(Object.keys(APPROX).length, 40, "record count moved");
+  /* 40 -> 41 AT v4.68: `control-change-steal`, Jack Be Quick. */
+  assert.equal(Object.keys(APPROX).length, 41, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -309,7 +310,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      in which a record's own stated reason was narrower than the defect. */
   /* 6 -> 5 AT v4.66: `layer-step-window` was BUILT and is
      `play-held-on-the-stack`, closed with its probe turned round. */
-  assert.equal(n("open"),    5, "open count moved");
+  /* 5 -> 6 AT v4.68: `control-change-steal`, recorded rather than
+     half-built (HANDOFF's call). */
+  assert.equal(n("open"),    6, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. */
   assert.equal(n("closed"), 18, "closed count moved");
@@ -521,6 +524,30 @@ probe("instant-speed-plays-resolve-on-play", () => {
   assert.deepEqual(out.state.stack || [], [],
     "an INSTANT now rests on the stack — the response-to-a-response half is built " +
     "and the record must move");
+});
+
+/* THE POOL'S ONLY CONTROL CHANGE (v4.68). Driven: Jack Be Quick hits a
+   hero whose side holds an ally, and the ally is still theirs afterwards.
+   The day the steal is built this goes red and the record must move. */
+probe("control-change-steal", () => {
+  H.db();
+  const c = (nm, p, uid) => ({...H.card(nm, p), uid});
+  const ally = {...c("Swabbie", 2, "al"), life: 3};
+  let g = {...H.state({res: 9, ap: 1, hand: [c("Jack Be Quick", 1, "jbq")]},
+                      {hand: [], board: [{card: ally, kind: "ally", spent: true, uid: "al", life: 3}]},
+                      {turn: 3, actor: 0, turnPlayer: 0}),
+           phase: "action", step: "layer", priority: 0, passed: [false, false],
+           stack: [], chain: [], chainCards: []};
+  const hp = g.sides[1].hp;
+  let n = H.drain(J.reduce(g, {t: "play", uid: "jbq", from: "hand"}, 0).state);
+  for(let i = 0; i < 20 && n.step !== "resolution" && n.priority != null; i++){
+    if(n.prompt){ n = J.reduce(n, J.autoAnswer(n), n.prompt.side || 0).state; continue; }
+    n = J.reduce(n, {t: "pass"}, n.priority).state;
+  }
+  assert.ok(n.sides[1].hp < hp, "fixture: Jack Be Quick never HIT the hero, so its clause was never reached");
+  assert.ok(n.sides[1].board.some(b => b.uid === "al"),
+    "the ally left its controller — a steal has been built and the record must move");
+  assert.ok(!n.sides[0].board.some(b => b.uid === "al"), "…and it is not on the thief's board");
 });
 
 /* CR 4.1.8a hands the order of simultaneous triggers to the turn-player.

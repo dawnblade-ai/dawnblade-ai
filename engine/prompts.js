@@ -824,6 +824,34 @@ function promptDecline(prompt){
   return prompt;
 }
 
+/* A SHEET WITH NOTHING TO DECIDE (v4.68) — a MANDATORY pick over exactly
+   ONE candidate. v3.55's rule is that a sheet offering one forced choice
+   is a tap that teaches nothing, and `buildPrompt` could not apply it:
+   answering null there SKIPS the spec, so the card the printed line moves
+   would never move. So this answers the sheet instead, and both boards'
+   `openPrompt` confirm it on the spot through the one `applyAnswer`.
+
+   MEASURED BEFORE BUILDING: 114 such sheets in 210 driven games, 108 of
+   them Fai's hero power over a graveyard holding one Phoenix Flame.
+
+   EXACTLY ONE, NOT "as many as the minimum". Two candidates for two slots
+   onto the top of a deck is still a decision — the ORDER is the answer
+   (v4.59). An OPTIONAL pick over one card is a real choice too (take it or
+   decline), so `min` must be at least one.
+
+   NO `filters` GUARD, AND THAT IS MEASURED RATHER THAN FORGOTTEN. A sheet
+   naming two targets cannot reach here with one candidate — `buildPrompt`
+   refuses it as unsatisfiable — and one naming ONE target over one card is
+   exactly the forced case. The premise is a drill (`forcedpick.test.js`),
+   so a guard written here could only be dead rules code (v4.11).
+   Returns the selection, or null. */
+function promptForcedSel(prompt){
+  const p = prompt;
+  if(!p || p.tag !== "pick") return null;
+  if(!(p.min >= 1) || !Array.isArray(p.cards) || p.cards.length !== 1) return null;
+  return [0];
+}
+
 /* Can this be confirmed as it stands? */
 function promptReady(prompt){
   if(!prompt) return false;
@@ -1197,5 +1225,6 @@ function applyPrompt(game, prompt){
 return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
-        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, moveCards, applyPrompt};
+        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel,
+        moveCards, applyPrompt};
 });

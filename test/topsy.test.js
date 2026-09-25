@@ -50,7 +50,11 @@ const board = (flip, you, foe) => {
 };
 const answer = (g, pick) => {
   let n = J.openPrompt(g);
-  assert.ok(n.prompt, "fixture: no sheet opened");
+  /* ONE MANDATORY CANDIDATE IS CONFIRMED ON THE SPOT (v4.68), through the
+     same `applyAnswer` a Confirm reaches — so the same writer answers, and
+     every drill below still asserts WHERE the card went, which a fixture
+     that moved nothing cannot satisfy in either direction. */
+  if(!n.prompt) return n;
   for(const i of pick || []) n = J.reduce(n, {t: "promptSel", i}, n.prompt.side).state;
   return J.reduce(n, {t: "promptConfirm"}, n.prompt.side).state;
 };

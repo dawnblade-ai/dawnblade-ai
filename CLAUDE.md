@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.67
+**Current version:** v4.68
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3090 drills** at v4.67.
+This is `node --test "test/*.test.js"` — **3099 drills** at v4.68.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,28 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A CHOICE OF ONE IS CONFIRMED ON THE SPOT (v4.68)
+
+v3.55's rule (*a sheet offering one forced choice is a tap that teaches
+nothing*) lived only in `ctrPut`'s fast path. Measured: **114 pick sheets in
+210 games** were a mandatory choice among one card, 108 of them Fai's.
+`prompts.promptForcedSel` is the reader, and both boards' `openPrompt`
+confirm a forced sheet through the one `applyAnswer`, with the rest of the
+queue behind it. **`buildPrompt` answering null is NOT the same thing** — that
+SKIPS the spec, so the printed move never happens.
+
+**FORCED MEANS A MANDATORY `pick` OVER EXACTLY ONE CARD.** Two cards for two
+deck slots is an ORDER (v4.59), and an optional pick over one card is the
+printed "you may" — both still ask. **A drill about a SHEET needs two legal
+candidates now**; a drill about a WRITER can take the forced answer, because
+it reaches the same writer. `test/forcedpick.test.js` holds both halves and
+pins the trainer's call as a whole conditional (v4.55).
+
+**JACK BE QUICK'S STEAL IS RECORDED, NOT BUILT** (`control-change-steal`,
+open). Nothing moves an object between SIDES, and a stolen ally is
+controlled by one seat and owned by the other — half-building it files a
+dead ally into the wrong graveyard (v3.23).
 
 ### A DRILL THAT BUILDS AN UNREACHABLE STATE CAN DECIDE A RULE (v4.67)
 

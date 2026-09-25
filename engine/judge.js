@@ -482,6 +482,11 @@ function openPrompt(g){
   const [p, ...rest] = q;
   const live = PM.buildPrompt(g, p);
   if(!live) return openPrompt({...g, promptQ: rest});
+  /* NOTHING TO DECIDE (v4.68) — one mandatory candidate is confirmed on the
+     spot, through the same `applyAnswer` a Confirm tap reaches, which then
+     drains the rest of the queue. See `prompts.promptForcedSel`. */
+  const forced = PM.promptForcedSel(live);
+  if(forced) return withEffects({...g, promptQ: rest}, (fx, s) => fx.applyAnswer(s, {...live, sel: forced}));
   return {...g, promptQ: rest, prompt: live};
 }
 

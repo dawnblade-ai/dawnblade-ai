@@ -33,12 +33,16 @@ const card = (nm, p) => C.resolveEntry(H.db(), {name: nm, p: p == null ? 0 : p, 
 
 /* Iyslander with Cold Snap in hand; the opponent holding an arsenal card
    and whatever resources the case needs. */
-function table(oppRes){
+function table(oppRes, withAlly){
   H.db();
   const cs = {...card("Cold Snap", 3), uid: "cs1"};
   const ars = {...card("Ice Bolt", 1), uid: "ar1"};
+  /* A SECOND OBJECT TO FREEZE, or there is no choice to make: since v4.68
+     a mandatory pick over ONE candidate is taken without a sheet. */
+  const board = withAlly ? [{card: {...card("Swabbie", 2), uid: "al1"}, kind: "ally",
+                             spent: false, uid: "al1", life: 3}] : [];
   let g = H.state({name: "Iyslander", res: 9, ap: 3, hand: [cs], deck: [{uid: "d1", name: "F"}]},
-                  {name: "Them", res: oppRes, arsenal: ars, deck: [{uid: "d2", name: "F2"}]},
+                  {name: "Them", res: oppRes, arsenal: ars, board, deck: [{uid: "d2", name: "F2"}]},
                   {actor: 0, turnPlayer: 0, seed: "cold"});
   return {...g, phase: "action", step: "layer", priority: 0, passed: [], turn: 4};
 }
@@ -69,19 +73,19 @@ test("paying it off means no freeze at all", {skip}, () => {
 /* ---- THE FREEZE -------------------------------------------------------- */
 
 test("declining hands the CHOICE to the caster, over the DECLINER's objects", {skip}, () => {
-  let n = J.reduce(table(0), {t: "play", uid: "cs1", from: "hand"}, 0).state;
+  let n = J.reduce(table(0, true), {t: "play", uid: "cs1", from: "hand"}, 0).state;
   n = answer(n, "decline");
   assert.equal(n.prompt.tag, "pick");
   assert.equal(n.prompt.side, 0, "the Cold Snap player chooses — the elseOps' actor is the OTHER seat");
-  assert.deepEqual(n.prompt.cards.map(c => c.name), ["Ice Bolt"],
+  assert.deepEqual(n.prompt.cards.map(c => c.name).sort(), ["Ice Bolt", "Swabbie"],
     "and the candidates are the DECLINER's objects, not the caster's");
 });
 
 test("a frozen card cannot be played, and the judge names the reason", {skip}, () => {
   let n = J.reduce(table(0), {t: "play", uid: "cs1", from: "hand"}, 0).state;
   n = answer(n, "decline");
-  n = J.reduce(n, {t: "promptSel", i: 0}, 0).state;
-  n = answer(n, null);
+  /* ONE OBJECT IS NO CHOICE (v4.68): the arsenal is frozen without a sheet. */
+  assert.equal(n.prompt, null, "a forced choice of one opened a sheet");
 
   const froze = n.sides[1].arsenal;
   assert.equal(froze._frozenBy, 0, "the mark records WHOSE freeze it is — the thaw reads it back");
@@ -97,8 +101,8 @@ test("a frozen card cannot be played, and the judge names the reason", {skip}, (
 test("it lifts at the start of the FREEZING player's turn, and nobody else's", {skip}, () => {
   let n = J.reduce(table(0), {t: "play", uid: "cs1", from: "hand"}, 0).state;
   n = answer(n, "decline");
-  n = J.reduce(n, {t: "promptSel", i: 0}, 0).state;
-  n = answer(n, null);
+  /* ONE OBJECT IS NO CHOICE (v4.68): the arsenal is frozen without a sheet. */
+  assert.equal(n.prompt, null, "a forced choice of one opened a sheet");
   assert.equal(n.sides[1].arsenal._frozenBy, 0, "frozen before we start — or this proves nothing");
 
   /* THE WRONG SEAT'S TURN DOES NOT LIFT IT. Without this the drill passes

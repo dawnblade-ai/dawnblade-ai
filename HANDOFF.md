@@ -48,6 +48,9 @@ before starting new work.
 > MEASURED at v4.67 — it found the boost pair in the wrong order (fixed);
 > the record stays open with the census, and Arakni's same-end-phase brood
 > cycle waits on a RULING (see the ledger's `simultaneous-trigger-order`).
+> Jack Be Quick **RECORDED at v4.68** (`control-change-steal`, open, driven
+> probe). §3's one-card pick sheets **DONE at v4.68** — measured at 114 per
+> 210 games, now confirmed on the spot on both boards.
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.

@@ -108,9 +108,10 @@ test("driven: an ally attacks, is untapped, and attacks again", {skip}, () => {
   assert.equal(g.sides[0].board[0].spent, true, "the attack taps it");
   assert.equal(g.sides[1].hp, 13, "and lands for 7");
 
+  /* ONE ALLY IS NOT A DECISION (v4.68): the printed target is chosen on
+     the spot, through the same `applyAnswer` a Confirm reaches. */
   g = H.execute(g, piece.powCard, "hero", 0, {});
-  assert.ok(g.prompt && g.prompt.tag === "pick", "the ability must ask which ally");
-  g = H.fx(g, (f, n) => f.applyAnswer(n, {...n.prompt, sel: [0]}));
+  assert.ok(!g.prompt, "a sheet over the only ally there is — a tap that teaches nothing");
   assert.equal(g.sides[0].board[0].spent, false, "untapped");
   assert.equal(g.sides[0].board[0].sd, "end", "and carrying the printed clock");
 

@@ -1,3 +1,82 @@
+## v4.68 — a choice of one is not a choice
+
+**THE MEASUREMENT CAME FIRST, AND IT WAS LOPSIDED.** Over 210 driven games,
+**114 pick sheets** were a MANDATORY choice among exactly **one** card.
+**108** of them were Fai's hero ability over a graveyard holding a single
+Phoenix Flame. v3.55's rule says a sheet offering one forced choice is a tap
+that teaches nothing, and until now that rule lived only in `ctrPut`'s own
+fast path.
+
+**`buildPrompt` COULD NOT APPLY IT.** Answering null there SKIPS the spec, so
+the card the printed line moves would never move. The rule is a reader
+instead: `prompts.promptForcedSel`. Both boards' `openPrompt` ask it and
+confirm a forced sheet through the one `applyAnswer` a Confirm tap reaches,
+with the rest of the queue behind it. So the payout, the feed line and the
+drain are the same body either way.
+
+**WHAT IS FORCED, BOTH DIRECTIONS:**
+
+| sheet | forced? | why |
+|---|---|---|
+| mandatory pick, one candidate | **yes** | nothing to decide |
+| mandatory pick, two candidates | no | a choice |
+| two cards for two slots onto a deck | no | the ORDER is the answer (v4.59) |
+| optional pick (`min: 0`), one candidate | no | the printed "you may" is the decision |
+| modal, pay, opt, target, alloc, soak | no | only a `pick` |
+
+**NO `filters` GUARD, AND THAT IS MEASURED.** A sheet naming two targets
+cannot reach the reader with one candidate, because `buildPrompt` refuses it
+as unsatisfiable (v4.59). A sheet naming ONE target over one card is exactly
+the forced case. The first draft carried the guard anyway; it could not
+express a bug, so it is deleted and the premise is a drill (v4.11).
+
+**SEVEN DRILLS NEEDED A SECOND CANDIDATE, AND NONE WAS WEAKENED.** Where a
+drill was about the SHEET (Brain Freeze's filter, Halo of Illumination's
+rider, Cold Snap handing the choice to the caster), it got a second legal
+card so there is still something to ask. Where a drill was about the WRITER
+(Topsy Turvy's four deck-top routes, Scuttle Toes' untap), the forced answer
+reaches the same writer and the drill's positional assertions still bite in
+both directions. Brain Freeze gained a drill for the forced half on the real
+card, a cross-seat pick over the other seat's hand.
+
+**THE LADDER IS BYTE-IDENTICAL AT THREE SEEDS ON BOTH SIDES**, and that is
+the policy: `judge.autoAnswer` already took index 0 of a one-card sheet. What
+moves is the table a PERSON sits at, which no ladder number can see.
+
+**FOR THE UI PASS:** a one-card mandatory pick no longer opens a sheet on
+either board. The card moves and the feed says so.
+
+### JACK BE QUICK IS RECORDED, NOT BUILT
+
+> *"When this hits a hero, {u} an ally they control, then **steal** it until
+> the end of this action phase."* — JACK BE QUICK, Briar's
+
+**`control-change-steal`, `open`, with a driven probe.** Measured over 797
+records it is the pool's only control-changing card. Nothing moves an object
+between SIDES today: the census, `invariants.js`, the wire's side ledger and
+every `act`/`foe` helper assume a permanent's side is fixed. A stolen ally
+must be CONTROLLED by one seat and OWNED by the other (it goes to its owner's
+graveyard if it dies), untapped, able to attack for the thief, and handed
+back at the end of the action phase. Moving the entry across without the
+owner is v3.23's worst case: a card that works until it dies and then files
+into the wrong graveyard.
+
+The probe drives the real card into a hero with an ally on the defender's
+board and asserts the ally never left. A simulated steal turns it red, which
+is the record's job (v4.02). Ledger **40 → 41**, open **5 → 6**.
+
+### MEASURED
+
+- **no pool record's parse or tier moves**; the audit diff is one timestamp;
+- **the ladder at three seeds is byte-identical on both sides**, stalls 3
+  (v4.64's two Boltyn v Gravy draws plus the Enigma v Gravy one);
+- **8 sabotages, 8 applied, 8 bite**: forced over many, forced over an
+  optional pick, judge never forcing, judge re-queuing the forced spec (a
+  target pick that moves nothing then fires forever), the trainer never
+  forcing, the trainer dropping the queue, the wrong index, and a simulated
+  steal against the Jack Be Quick probe;
+- **3099 drills**, 0 fail, 5 skipped.
+
 ## v4.67 — refill it before the clock ticks
 
 > *"Once per turn, when you boost a card, remove a steam counter from this and

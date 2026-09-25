@@ -124,7 +124,12 @@ function answer(cls){
     ty: cls === "light" ? ["Light", "Action"] : ["Generic", "Action"], tx: "", kw: [], gkw: []};
   const deckTop = {name: "Drawn", uid: "d1", pitch: 1, tt: "Generic Action",
                    ty: ["Generic", "Action"], tx: "", kw: [], gkw: []};
-  let g = H.state({name: "Boltyn", res: 9, ap: 1, hand: [card], deck: [deckTop], soul: []},
+  /* A SECOND CARD IN HAND, or there is nothing to choose and the pick is
+     confirmed on the spot (v4.68) — this drill is about the SHEET's answer
+     reaching the rider, so it needs a sheet. */
+  const keep = {name: "Kept Card", uid: "c2", pitch: 3, tt: "Generic Action",
+                ty: ["Generic", "Action"], tx: "", kw: [], gkw: []};
+  let g = H.state({name: "Boltyn", res: 9, ap: 1, hand: [keep, card], deck: [deckTop], soul: []},
                   {name: "Bob", hp: 20}, {turn: 3, turnPlayer: 0});
   g = Object.assign({}, g, {phase: "action", step: "layer", builds: [{}, {}]});
   g = unwrap(H.fx(g, (fx, s) => fx.runOps(s,
@@ -132,7 +137,9 @@ function answer(cls){
                      classRider: {cls: "light", ops: [["draw", 1]]}}]], "Halo of Illumination")));
   g = H.J.openPrompt(g);
   assert.ok(g.prompt, "the sheet opened");
-  g = H.J.reduce(g, {t: "promptSel", i: 0}, 0).state;
+  const i = g.prompt.cards.findIndex(x => x.uid === "c1");
+  assert.ok(i >= 0, "fixture: the card under test is not offered");
+  g = H.J.reduce(g, {t: "promptSel", i}, 0).state;
   g = H.J.reduce(g, {t: "promptConfirm"}, 0).state;
   return g;
 }
@@ -141,8 +148,8 @@ test("driven: a Light card goes to the soul AND draws", {skip}, () => {
   const g = answer("light");
   assert.deepEqual(g.sides[0].soul.map(c => c.name), ["Light Card"],
     "the chosen card is in the soul");
-  assert.equal(g.sides[0].hand.length, 1, "…and the rider drew one back");
-  assert.equal(g.sides[0].hand[0].name, "Drawn");
+  assert.deepEqual(g.sides[0].hand.map(c => c.name).sort(), ["Drawn", "Kept Card"],
+    "…and the rider drew one back");
   assert.match(said(g), /is light — the rider fires/i);
 });
 
@@ -150,7 +157,7 @@ test("driven: a non-Light card goes to the soul and draws NOTHING", {skip}, () =
   const g = answer("plain");
   assert.deepEqual(g.sides[0].soul.map(c => c.name), ["Plain Card"],
     "the put is unconditional — only the DRAW is gated");
-  assert.equal(g.sides[0].hand.length, 0, "no card drawn");
+  assert.deepEqual(g.sides[0].hand.map(c => c.name), ["Kept Card"], "no card drawn");
   assert.equal(g.sides[0].deck.length, 1, "…and the deck is untouched");
   assert.match(said(g), /is not light — no rider/i);
 });

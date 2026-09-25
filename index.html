@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.67"; /* v4.67 - a boost at one steam counter refills the Hyper Driver before its own clock ticks, so the Driver survives. See CHANGELOG.md. */
+window.APP_VER = "4.68"; /* v4.68 - a mandatory pick with exactly one candidate is confirmed without a sheet, on both boards. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -1512,6 +1512,7 @@ var PROMPT_ZONES = DawnPrompts.PROMPT_ZONES, promptZone = DawnPrompts.promptZone
     promptFilter = DawnPrompts.promptFilter, buildPrompt = DawnPrompts.buildPrompt,
     promptToggleSel = DawnPrompts.promptToggleSel, promptChoose = DawnPrompts.promptChoose,
     promptReady = DawnPrompts.promptReady, moveCards = DawnPrompts.moveCards,
+    promptForcedSel = DawnPrompts.promptForcedSel,
     promptTakeBack = DawnPrompts.promptTakeBack,
     promptSideZone = DawnPrompts.promptSideZone,
     promptMatchSet = DawnPrompts.promptMatchSet,
@@ -3037,6 +3038,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        late-binding fix; see the `pay` and `soak` branches there. */
     const live = buildPrompt(s, p);
     if(!live) return openPrompt({...s, promptQ:rest});
+    /* NOTHING TO DECIDE (v4.68) — see `prompts.promptForcedSel`. Confirmed
+       through the same `applyAnswer` the Confirm button reaches. */
+    { const forced = promptForcedSel(live);
+      if(forced) return _EFX.applyAnswer({...s, promptQ:rest}, {...live, sel: forced}); }
     /* SEAT 1 ANSWERS ITS OWN SOAK (v2.74). A prompt addressed to side 1
        has always been ANSWERED by the human — v2.65 fixed where the
        consequences landed, not who decided — and for the five older
