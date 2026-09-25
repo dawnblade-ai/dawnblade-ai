@@ -859,11 +859,17 @@ function moveCards(game, side, from, to, cards){
   else if(from === "board") s.board = (s.board||[]).filter(b=>!(b && b.card && ids.has(b.card.uid)));
   else s[from] = (s[from]||[]).filter(c=>!ids.has(c.uid));
   if(to){
-    if(to === "arsenal") s.arsenal = cards[0] || s.arsenal;
-    else if(to === "board") s.board = [...(s.board||[]), ...cards.map(c=>({card:c, kind:"item", spent:false, uid:c.uid}))];
-    else if(to === "deckBottom") s.deck = [...(s.deck||[]), ...cards];
-    else if(to === "deckTop") s.deck = [...cards, ...(s.deck||[])];
-    else s[to] = [...cards, ...(s[to]||[])];
+    /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy's replacement
+       sends it to the bottom instead, and the pick's own order is kept.
+       Resolved ONCE, above the chain, so every branch reads the same
+       answer: a second `if` below the chain restarts it, and every
+       arsenal and board move then falls through to the list branch too. */
+    const _to = to === "deckTop" ? P.deckTopTo(game) : to;
+    if(_to === "arsenal") s.arsenal = cards[0] || s.arsenal;
+    else if(_to === "board") s.board = [...(s.board||[]), ...cards.map(c=>({card:c, kind:"item", spent:false, uid:c.uid}))];
+    else if(_to === "deckBottom") s.deck = [...(s.deck||[]), ...cards];
+    else if(_to === "deckTop") s.deck = [...cards, ...(s.deck||[])];
+    else s[_to] = [...cards, ...(s[_to]||[])];
   }
   sides[side] = s;
   return {...game, sides};
@@ -973,11 +979,25 @@ function applyPrompt(game, prompt){
     /* THE ONE LINE THAT SEPARATES A REORDER FROM AN OPT (v3.71): the
        toggled cards go UNDER the kept ones and stay in the top N, rather
        than to the bottom of the deck. */
-    s.deck = prompt.keepTop
-      ? [...keep, ...bottom, ...(s.deck||[]).slice(prompt.cards.length)]
-      : [...keep, ...(s.deck||[]).slice(prompt.cards.length), ...bottom];
+    /* UNDER TOPSY TURVY NOTHING GOES BACK ON TOP (v4.65). Opt's own
+       reminder text says the kept cards are PUT on top, and a reorder puts
+       them BACK — both are the event the replacement names — so every card
+       looked at goes to the bottom: the kept ones first, then the ones sent
+       there anyway. That relative order is a STATED APPROXIMATION — the
+       player would choose it — and it is MEASURED as unobservable: no pool
+       record reads the bottom of a deck, so the order only surfaces for a
+       seat that draws through every card above it. */
+    const _flip = P.deckTopTo(game) === "deckBottom";
+    const _rest = (s.deck||[]).slice(prompt.cards.length);
+    s.deck = _flip ? [..._rest, ...keep, ...bottom]
+      : prompt.keepTop
+      ? [...keep, ...bottom, ..._rest]
+      : [...keep, ..._rest, ...bottom];
     sides[side] = s;
-    out.msgs.push(prompt.keepTop
+    if(_flip) out.msgs.push((prompt.src ? prompt.src + " — " : "")
+      + "nothing may be put on top of a deck this turn, so " + [...keep, ...bottom].map(c=>c.name).join(", ")
+      + " go" + (keep.length + bottom.length === 1 ? "es" : "") + " to the bottom.");
+    else out.msgs.push(prompt.keepTop
       ? ((prompt.src ? prompt.src + " — " : "") + "the top " + prompt.cards.length
          + " go back as " + [...keep, ...bottom].map(c=>c.name).join(", ") + ".")
       : ("Opt — " +
@@ -994,6 +1014,9 @@ function applyPrompt(game, prompt){
        without re-opening the v2.04 free-ability bug. */
     if(!picked.length){ out.msgs.push(who + " chose nothing."); return out; }
     if(prompt.to) out.game = moveCards(game, side, prompt.zone, prompt.to, picked);
+    if(prompt.to === "deckTop" && P.deckTopTo(game) === "deckBottom")
+      out.msgs.push("Nothing may be put on top of a deck this turn — " + picked.map(c=>c.name).join(", ")
+        + (picked.length === 1 ? " goes" : " go") + " to the bottom instead.");
     /* THE CHOICE, STRUCTURALLY. It used to be reported in `msgs` alone, so
        a caller that needed to know WHICH card was chosen had to parse
        prose — and asserting on log prose is the thing this project has
@@ -1003,8 +1026,13 @@ function applyPrompt(game, prompt){
        feed line that lies: Cold Snap's freeze picks across the opponent's
        arsenal and their allies, and the default zone label read "revealed
        from hand". */
+    /* …AND THE DESTINATION IT NAMES IS WHERE THE CARDS WENT (v4.65), not
+       where the spec aimed them: under Topsy Turvy a deck-top pick lands on
+       the bottom, and a line saying "→ deckTop" beside the one saying
+       "to the bottom instead" is the feed contradicting itself. */
+    const _dest = prompt.to === "deckTop" ? P.deckTopTo(game) : prompt.to;
     out.msgs.push(picked.map(c=>c.name).join(", ") +
-      (prompt.to ? " → " + prompt.to
+      (prompt.to ? " → " + _dest
                  : prompt.zone ? " revealed" : " chosen") +
       (prompt.zone ? " from " + prompt.zone : "") + ".");
     /* AND WHERE THE ORDER IS THE DECISION, SAY WHAT IT WAS (v4.59). Crown
@@ -1016,7 +1044,7 @@ function applyPrompt(game, prompt){
 
        MEASURED: every other `pickPrompt` that puts cards on top of a deck
        is `max: 1`, so this reaches nothing else in the pool today. */
-    if(prompt.to === "deckTop" && picked.length > 1)
+    if(prompt.to === "deckTop" && picked.length > 1 && P.deckTopTo(game) === "deckTop")
       out.msgs.push("On top of the deck: " + picked[0].name + " first, then "
         + picked.slice(1).map(c=>c.name).join(", ") + ".");
     /* PAID. The cards moved, so the rider resolves. */

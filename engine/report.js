@@ -157,6 +157,12 @@ function build(g, ctx){
       cards: list(g.prompt.cards).map(c => c.name), sel: g.prompt.sel, choice: g.prompt.choice} : null,
     promptQ: list(g.promptQ).map(p => p.tag + ":" + (p.src || "")),
     lastRoll: g.lastRoll, lastDmg: g.lastDmg, flags: g.flags, over: g.over,
+    /* THE GAME'S OWN "THIS TURN" MODIFIERS (v4.65). They name no seat, so
+       `seat()` below cannot carry them — and each one changes what a card
+       does in a way that reads as a bug when nobody says it is live: a card
+       sent to the BOTTOM of a deck under Topsy Turvy, a card costing one
+       more under Hyper Inflation. Named with the card that made them. */
+    turnMods: {costTax: g.costTax || 0, deckFlip: g.deckFlip || null},
 
     sides: sides.map(seat),
     /* Kept for the trainer's own vocabulary, and because a reader

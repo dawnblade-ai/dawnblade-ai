@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.64
+**Current version:** v4.65
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3060 drills** at v4.64.
+This is `node --test "test/*.test.js"` — **3078 drills** at v4.65.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,39 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A REPLACEMENT OVER A ZONE MOVE IS ONE READER EVERY WRITER ASKS (v4.65)
+
+> *"Until end of turn, if one or more cards would be put on top of a deck,
+> instead they're put on the bottom."* — TOPSY TURVY, Arakni's Head
+
+**"A DECK" NAMES NO SEAT, SO IT IS GAME STATE** — `game.deckFlip`, `costTax`'s
+shape (v4.06), and `parser.deckTopTo(game)` is the ONE reader. Every writer
+that puts a card on top of a deck asks it: `moveCards`, `moveFoe`,
+`foeHandToDeck`, and the opt/reorder application. **Opt is a writer because
+the printing says so** — SAZ005 reads *"PUT THEM ON THE TOP"*.
+`test/topsy.test.js` censuses front-inserts across the engine and the trainer,
+so a new writer that forgets the question fails a drill (v4.21: fix the
+family). Every writer is driven with the flip set AND unset, because a writer
+that ignores the flag passes one half and a writer that always sends cards
+down passes the other.
+
+**A VALUE RESOLVED MID-CHAIN RESTARTS THE CHAIN.** The first draft put
+`const _to = …` between two `else if` branches of `moveCards`; the statement
+ended the chain, and every arsenal and board move fell through to the final
+list write as well — thirteen drills red. **Resolve a value ABOVE the chain
+that branches on it.**
+
+**A NEW TOP-LEVEL GAME KEY IS A `WIRE_V` BUMP** (13 → 14). The zone digest
+cannot see a key inside the game object, which is the prompt-field blind spot
+one layer out; `costTax` went unbumped at v4.06 and the rule is written in
+`wire.js`'s header now. **And `report.js` names it** under `turnMods`, because
+a card that went to the bottom reads as a bug when nobody says why.
+
+**THE FEED NAMES WHERE THE CARDS WENT, NOT WHERE THE SPEC AIMED THEM** — the
+one drill in the file that reads prose, because the state is identical either
+way (v3.60). The ladder is byte-identical because `defaultPicks` wears Prey
+Spotters (1 defence) over Topsy Turvy (0), which is pinned as a premise.
 
 ### A CHARGE IS WHAT IT CREDITS, NOT WHERE THE CARD WENT (v4.64)
 

@@ -41,6 +41,10 @@ before starting new work.
 
 ### 1 · The seven unfinished deck cards — cheapest first
 
+> **PROGRESS (this thread):** Plasma Barrel Shot **DONE at v4.63**, Roaring
+> Beam **DONE at v4.64**, Topsy Turvy **DONE at v4.65** — audit 401 full /
+> 4 part. The four left are the RECORD / LEAVE rows below. Next is §2.
+
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
 

@@ -1034,8 +1034,14 @@ function makeEffects(ctx){
         if(!foe(n).hand.length){ n = L(n, `${srcName}: ${sp(foe(n))} hand is empty.`); return; }
         const top = foe(n).hand[foe(n).hand.length-1];
         foeMut(n).hand = foe(n).hand.slice(0,-1);
-        foeMut(n).deck = [top, ...foe(n).deck];
-        n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
+        /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy. */
+        if(P.deckTopTo(n) === "deckBottom"){
+          foeMut(n).deck = [...foe(n).deck, top];
+          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand — and nothing may be put on top of a deck this turn, so it goes to the bottom.`);
+        } else {
+          foeMut(n).deck = [top, ...foe(n).deck];
+          n = L(n, `${srcName}: ${top.name} is forced from ${sp(foe(n))} hand back on top of their deck.`);
+        }
       }
       else if(k==="foeGearDef"){
         /* A -1{d} COUNTER SITS ON THE PIECE, so it travels between turns
@@ -2253,6 +2259,15 @@ function makeEffects(ctx){
           n = L(n, `${act(n).name}: every ${who} gets +${amt}{p} `
                  + (op[3] === "chain" ? "for the rest of this combat chain." : "this turn."));
         }
+      }
+      /* TOPSY TURVY (v4.65) — "until end of turn, if one or more cards
+         would be put on top of a deck, instead they're put on the bottom".
+         GAME STATE, because "a deck" names no seat; the value is the
+         source's NAME so the end-phase sweep can say what ended. Every
+         deck-top writer asks `parser.deckTopTo`. */
+      else if(k==="deckFlip"){
+        n.deckFlip = srcName || "a replacement";
+        n = L(n, `${String(srcName||"").replace(/ — ability$/, "")}: until end of turn, a card that would be put on top of a deck is put on the bottom instead.`);
       }
       else if(k==="costTax"){ n.costTax = (n.costTax||0)+v; n = L(n, `Cards cost ${n.costTax} more for the rest of this turn.`); }
       else if(k==="dracNext"){ actMut(n).dracNext = true; n = L(n, "Your next attack this chain counts as Draconic."); }
@@ -5592,7 +5607,10 @@ function makeEffects(ctx){
          rather than at the queue site is that the queue site was already
          telling the truth. */
       const from = p.moveFoe.from || "hand";
-      const to   = p.moveFoe.to   || "deckTop";
+      /* A DECK-TOP PUT ASKS `deckTopTo` (v4.65) — Topsy Turvy's replacement
+         sends it to the bottom, and the feed line below says where it went. */
+      const _to0 = p.moveFoe.to || "deckTop";
+      const to   = _to0 === "deckTop" ? P.deckTopTo(n) : _to0;
       if(((foe(n)[from])||[]).some(x => x.uid === got.uid)){
         const fs = foeMut(n);
         fs[from] = (fs[from]||[]).filter(x => x.uid !== got.uid);
@@ -9098,6 +9116,23 @@ function beginEndPhase(game, seat, db){
   if(n.costTax){
     msgs.push("The inflation subsides \u2014 cards cost their printed price again.");
     n = Object.assign({}, n, {costTax: 0});
+  }
+  /* (8c) TOPSY TURVY'S WINDOW CLOSES (v4.65). "Until end of turn", and the
+     card is an INSTANT, so the turn it ends with is whichever one it was
+     made in — this runs at every turn's end phase, both boards, so the
+     seat does not matter. The key is DELETED rather than zeroed: absent is
+     the default state, so an unused table carries nothing extra.
+     CLEARED AT THE BEGINNING OF THE END PHASE rather than at its close, and
+     that is MEASURED rather than assumed: no end-phase step puts a card on
+     top of a deck (Inertia's wipe and CR 4.4.3c's pitch return both go to
+     the BOTTOM), so the two moments cannot be told apart in this pool. It
+     sits outside step (8)'s `held` gate on purpose, beside `costTax`, so it
+     expires on every turn and not only on one where a side grant does
+     (v4.07). */
+  if(n.deckFlip){
+    msgs.push("The replacement ends \u2014 a card put on top of a deck stays on top again.");
+    n = Object.assign({}, n);
+    delete n.deckFlip;
   }
 
   /* (9) THE BROOD — ARAKNI'S AGENTS OF CHAOS (v3.76) ------------------

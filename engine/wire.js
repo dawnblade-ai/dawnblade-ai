@@ -177,8 +177,19 @@
    moved into the soul). `buildPrompt` writes it on every pick, `false` when
    unset, so a v12 peer and a v13 peer hash differently the moment ANY pick
    sheet opens. The same case as the bump above, by hand for the same
-   reason. */
-const WIRE_V = 13;
+   reason.
+
+   13 -> 14 AT v4.65: the GAME gains a top-level key, `deckFlip` — Topsy
+   Turvy's "until end of turn, a card put on top of a deck goes to the
+   bottom instead". It is absent unless the card was activated, so it ships
+   as part of the game object and the zone digest cannot see it, which is
+   the same blind spot as a prompt field. A v13 peer carries the key through
+   and never reads it: every deck-top put lands on TOP there and on the
+   BOTTOM here, and the first one desyncs the pair on a field neither can
+   act on. (v4.06's `costTax` added a game key of the same kind and did not
+   bump; later bumps have since covered it, and this line is where the rule
+   is now written down.) */
+const WIRE_V = 14;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

@@ -1,3 +1,90 @@
+## v4.65 — nothing goes back on top
+
+> *"Instant - Destroy this: Until end of turn, if one or more cards would be
+> put on top of a deck, instead they're put on the bottom."*
+> — TOPSY TURVY, PEN276, Arakni's Head
+
+**THE POOL'S ONLY REPLACEMENT EFFECT OVER A ZONE MOVE.** The line read nothing,
+so `parseHeroPower` refused it and `build.equipPiece` built the piece no
+powCard at all — v3.47's shape, ninth outing: reading the payload is what
+creates the route. Audit **400 → 401** unique cards `full`, **5 → 4** `part`;
+pool records **756 → 757 / 30 → 29 / 11**; ability-only pieces **33 → 34**.
+
+**"A DECK" NAMES NO SEAT, SO IT IS GAME STATE** — Hyper Inflation's `costTax`
+shape (v4.06). `game.deckFlip` holds the source's name and is absent
+otherwise; `parser.deckTopTo(game)` is the ONE reader and answers `deckTop`
+or `deckBottom`. The reader is anchored on the whole printed sentence, so
+*"your deck"*, a different destination and a missing window all refuse.
+
+**EVERY WRITER ASKS, AND EACH IS DRIVEN BOTH WAYS** — flip set and unset,
+because a writer that ignores the flag passes the unset half and one that
+always sends cards down passes the set half:
+
+| writer | card |
+|---|---|
+| `moveCards`' deck-top branch | Memorial Ground, Crown of Dichotomy |
+| `moveFoe` | Brain Freeze (their card, their deck) |
+| `foeHandToDeck` | Boulder Drop's crush rider |
+| the opt / reorder application | every opt, Spire Sniping |
+
+**OPT IS A WRITER, AND THE PRINTING IS WHY.** SAZ005's reminder text reads
+*"you may PUT THEM ON THE TOP and/or bottom in any order"*, so a card kept on
+top is a card PUT there, and Spire Sniping's *"put them BACK"* is the same
+event. Under the flip every card looked at goes to the bottom. Their relative
+order there is a STATED approximation — the player would choose it — and it is
+measured as unobservable: no pool record reads the bottom of a deck.
+
+**A CENSUS OF FRONT-INSERTS.** `test/topsy.test.js` scans the engine and the
+trainer for every assignment to a `deck` whose new array does not start with a
+spread of a deck, and requires `deckTopTo` within the lines above it — so a
+fifth writer arriving without the question fails a drill. Its reach is stated
+(a literal array on the right-hand side), and the opt branch, which builds its
+array in a variable, is pinned by name.
+
+### A VALUE RESOLVED MID-CHAIN RESTARTS THE CHAIN
+
+The first draft of `moveCards` put `const _to = …` between the `board` branch
+and the `deckBottom` one. A declaration cannot sit inside an `else if` chain,
+so the chain RESTARTED there — and every arsenal and board move fell through
+to the final `else` and wrote a list zone as well. **Thirteen drills went
+red** (reload, the arsenal face-up family, three Azalea scenes). The value is
+resolved once, above the chain, and every branch reads it. A sabotage that
+reintroduces the split bites three drills.
+
+### THE FEED SAYS WHERE THE CARDS WENT
+
+The shared pick line printed `→ deckTop` beside *"…to the bottom instead"*,
+and v4.59's *"On top of the deck: A first, then B"* would have claimed a draw
+order for cards that went down. Both name the RESOLVED destination now. Game
+state is identical either way, so this is the one drill in the file that reads
+prose, with v3.60's reason written beside it.
+
+### THE WINDOW, THE WIRE, THE REPORT
+
+- **Cleared at the beginning of the end phase** (step 8c), outside step 8's
+  `held` gate beside `costTax`, so it expires every turn (v4.07). The end of
+  the turn and the start of its end phase cannot be told apart in this pool:
+  no end-phase step puts a card on top of a deck.
+- **`WIRE_V` 13 → 14.** A new top-level game key ships inside the game object,
+  which the zone digest cannot see. `costTax` added one at v4.06 without a
+  bump; the rule is written down in `wire.js`'s header now. A round-trip drill
+  proves the key rides and that two peers disagreeing about it hash apart.
+- **The bug report names it** under `turnMods`, with `costTax` — a card sent
+  to the bottom reads as a bug when nobody says the replacement is live.
+
+### THE LADDER CANNOT SEE IT, AND THAT IS THE LOADOUT
+
+Byte-identical at three seeds on both sides. `defaultPicks` ranks by printed
+defence, so Arakni's head goes to Prey Spotters (1) over Topsy Turvy (0) —
+v4.43's Hood, fifth outing. The premise is a drill, and an Arakni scene drives
+the activation, both seats' writers and the expiry.
+
+**20 SABOTAGES, 20 BITE.** The first pass had one silent, and it was the feed
+line above. The scene's first draft was wrong before the engine was: the
+helper answers a prompt that is already OPEN, and a queued pick needs
+`c.open` first — without it the pick never happened and the scene reported the
+deck unchanged.
+
 ## v4.64 — return it, then charge
 
 > *"Create a Courage token.*

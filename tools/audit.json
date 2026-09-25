@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-24T18:09:28.319Z",
- "appVer": "4.63",
+ "generated": "2026-09-25T03:02:10.962Z",
+ "appVer": "4.65",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 400,
-  "part": 5,
+  "full": 401,
+  "part": 4,
   "none": 0
  },
  "heroes": {
@@ -9400,24 +9400,22 @@
    "mentions": [
     "arcane barrier"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Arcane Barrier 1",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom",
    "tx": "Instant - Destroy this: Until end of turn, if one or more cards would be put on top of a deck, instead they're put on the bottom.\nArcane Barrier 1",
    "flags": []
   },

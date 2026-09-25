@@ -213,6 +213,12 @@ const GAME_KEYS = [
      `effects.beginEndPhase`; before v4.06 it was written by one line and
      read by nothing at all. */
   "costTax",
+  /* TOPSY TURVY'S REPLACEMENT (v4.65) — "if one or more cards would be put
+     on top of a DECK, instead they're put on the bottom". "A deck" names no
+     seat, so it is the game's, for `costTax`'s reason one line up. Read by
+     `parser.deckTopTo`, which every deck-top writer asks; swept at the end
+     phase by `effects.beginEndPhase`. */
+  "deckFlip",
   /* the side whose effect is RESOLVING (ROADMAP-MULTIPLAYER.md Phase A step 1).
      Distinct from turnPlayer: a defence reaction resolves for the defender
      during the attacker's turn. Shared, not per-side — it names one of the two

@@ -110,8 +110,10 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      line a hand-written powCard paraphrased for fourteen versions.
      92 -> 94 AT v4.64: `returnSelf` and `charge`, Roaring Beam's clause —
      a card filed into the hand instead of the graveyard, and a charge
-     made as an EFFECT (a pick hand -> soul) rather than as a cost. */
-  assert.equal(r.dispatched, 94, "runOps's op vocabulary moved");
+     made as an EFFECT (a pick hand -> soul) rather than as a cost.
+     94 -> 95 AT v4.65: `deckFlip`, Topsy Turvy's replacement — a game-level
+     record that every deck-top put asks through `parser.deckTopTo`. */
+  assert.equal(r.dispatched, 95, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

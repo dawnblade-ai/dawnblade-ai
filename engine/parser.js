@@ -926,6 +926,22 @@ function classifyClause(raw){
     if(cn > 0) return R([["ctrSrc", {kind: CTR_KINDS[m[3]], n: cn, label: m[3]}]],
                         {cond: "noCtr:" + CTR_KINDS[m[1]]});
   }
+  /* ---- "UNTIL END OF TURN, IF ONE OR MORE CARDS WOULD BE PUT ON TOP OF A
+     DECK, INSTEAD THEY'RE PUT ON THE BOTTOM" (v4.65) — TOPSY TURVY, Arakni's
+     Head piece, the pool's only replacement effect over a ZONE MOVE.
+
+     IT IS ONE OP AND IT IS GAME STATE. "A deck" names no seat, so it covers
+     BOTH decks — Hyper Inflation's `costTax` shape (v4.06) rather than a side
+     grant — and `parser.deckTopTo` is the ONE reader every writer that puts
+     a card on top of a deck asks. The window is printed ("until end of
+     turn") and is swept at the end phase of whichever turn it was made in;
+     the card is an Instant, so that can be the opponent's.
+
+     READ WHOLE, ABOVE THE if/when HANDLER: the clause OPENS with its window,
+     and the "if … instead" inside it is the replacement's own shape rather
+     than a gate on a payload. Both apostrophe spellings read (v3.36). */
+  if(/^until end of turn, if one or more cards would be put on top of a deck, instead (?:they'?re|they are) put on the bottom$/.test(c))
+    return R([["deckFlip", 1]]);
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
     /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
        `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
@@ -9392,6 +9408,22 @@ function abPickSpec(ab){
   const op = (fx.ops || []).find(o => o[0] === "pickPrompt" && o[1]);
   return op ? op[1] : null;
 }
+/* ---- WHERE A CARD "PUT ON TOP OF A DECK" ACTUALLY GOES (v4.65) --------
+   Topsy Turvy prints a REPLACEMENT: "if one or more cards would be put on
+   top of a deck, instead they're put on the bottom". So every writer that
+   puts a card on top of a deck asks this, and there is one answer — the
+   moment one writer asks and another does not, the replacement holds for
+   Memorial Ground and not for an opt, which is two rules for one event
+   (v3.17: the event is one body, or it is not an event). The census of
+   writers is a drill (test/topsy.test.js), so a sixth arriving fails it
+   rather than quietly putting a card on top under the flip.
+
+   OPT IS ONE OF THEM, AND THE PRINTING IS WHY. SAZ005 prints opt's reminder
+   text — "(Look at the top 2 cards of your deck. You may PUT THEM ON THE
+   TOP and/or bottom in any order.)" — so a card kept on top is a card PUT
+   on top. Spire Sniping's "put them BACK in any order" is the same event.
+   The CR site is unreachable from this sandbox; the printing is not. */
+const deckTopTo = game => (game && game.deckFlip) ? "deckBottom" : "deckTop";
 /* ---- WHICH PERMANENT IS "THIS" FOR A RESOLVING ABILITY (v4.63) --------
    An equipment ability resolves as a powCard keyed `"gp"+uid` and an arena
    permanent's as `"bp"+uid` (v2.71's namespacing, so neither collides with
@@ -9653,6 +9685,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abSourceUid, abCtrGateFails, ctrLabel, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

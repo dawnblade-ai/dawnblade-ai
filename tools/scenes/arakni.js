@@ -476,6 +476,49 @@ module.exports = [
     "declining marks nobody":             false,
     "…and keeps the dagger":              false
   }
+},
+
+{
+  name: "Topsy Turvy sends every deck-top put to the bottom until the turn ends",
+  why: "The pool's only replacement effect over a zone move, and it names " +
+       "\"a deck\", so it binds both seats. Its line read nothing and the " +
+       "piece had no ability at all; building it meant censusing every writer " +
+       "that puts a card on top of a deck, because a writer that forgets to " +
+       "ask puts the card on top anyway. The first draft of the zone move " +
+       "restarted its own else-if chain, and every arsenal put fell through " +
+       "to a list write as well — which only driving the real moves found.",
+  run(c){
+    c.H.db(); c.P.fxReset();
+    const tt = c.card("Topsy Turvy", 0, 77); B.equipPiece(tt);
+    const deck = pre => [1, 2, 3].map(i => c.card("Raging Onslaught", 1, pre + i));
+    const g = Object.assign(c.state({res: 9, ap: 1, gear: [tt], deck: deck("m"),
+                                     grave: [c.card("Wounding Blow", 1, "gy1")]},
+                                    {deck: deck("t"), hand: [c.card("Brutal Assault", 1, "h1")]},
+                                    {turn: 3, actor: 0, turnPlayer: 0}),
+      {phase: "action", step: "layer", priority: 0, passed: [], stack: [], chain: []});
+    const on = c.reduce(g, {t: "activate", uid: "gp77"}, 0);
+    /* THEIR card, forced from hand onto their deck (Boulder Drop's rider). */
+    const theirs = c.ops(on, [["foeHandToDeck", 1]], "scene");
+    /* MY card, picked from my graveyard onto my deck (Memorial Ground's). */
+    const mine = c.answer(c.open(Object.assign({}, on,
+      {promptQ: [{tag: "pick", side: 0, src: "scene", zone: "grave", to: "deckTop", min: 1, max: 1}]})), 0);
+    const ended = c.E.beginEndPhase(on, 0, c.H.db()).game;
+    const last = sd => (sd.deck[sd.deck.length - 1] || {}).uid;
+    return {
+      "activating it destroys the piece":        !!on.sides[0].gear[0].destroyed,
+      "their forced put lands on the bottom":    last(theirs.sides[1]),
+      "…not on top":                             theirs.sides[1].deck[0].uid,
+      "my pick lands on the bottom too":         last(mine.sides[0]),
+      "the replacement is gone at the end phase": "deckFlip" in ended
+    };
+  },
+  want: {
+    "activating it destroys the piece":        true,
+    "their forced put lands on the bottom":    "h1",
+    "…not on top":                             "t1",
+    "my pick lands on the bottom too":         "gy1",
+    "the replacement is gone at the end phase": false
+  }
 }
 
 ];

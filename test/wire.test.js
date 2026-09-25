@@ -323,7 +323,10 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 12 -> 13 AT v4.64, and again the digest does not move: the PICK prompt
      gained `charge`, inside the same whole-shipped value. Recorded in
      wire.js's header, where every bump of this kind is. */
-  assert.equal(W.WIRE_V, 13,
+  /* 13 -> 14 AT v4.65: the GAME gained a top-level key (`deckFlip`, Topsy
+     Turvy's replacement). A game key ships inside the game object, which
+     this digest does not cover either, so again it does not move. */
+  assert.equal(W.WIRE_V, 14,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,
