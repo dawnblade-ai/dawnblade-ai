@@ -201,9 +201,11 @@ test("driven: boosting with Crankshaft on top fires ITS trigger", {skip}, () => 
     "Crankshaft is banished off the top of the deck to pay for the boost");
   /* TWO TRIGGERS FIRE ON ONE BOOST as of v4.23, and the fixture has to
      tell them apart (v3.26). The Driver's own clock REMOVES a counter and
-     pays {r}; Crankshaft PUTS one on. The clock goes FIRST (see
-     `ctrClock`'s call site), so from 2 the Driver reads 2 -> 1 -> 2.
-     Dropping Crankshaft's trigger reads 1; dropping the clock reads 3. */
+     pays {r}; Crankshaft PUTS one on. The put goes FIRST since v4.67 (see
+     `ctrClock`'s call site), so from 2 the Driver reads 2 -> 3 -> 2 — the
+     same as the old order at two counters, which is why the row that
+     tells the orders apart is the ONE-counter row below. Dropping
+     Crankshaft's trigger reads 1; dropping the clock reads 3. */
   assert.equal((n.sides[0].counters.hd1 || {}).steam, 2,
     "and the trigger it prints fires — from the DECK, on a card its " +
     "controller never played");
@@ -223,21 +225,51 @@ test("driven: boosting with Crankshaft on top fires ITS trigger", {skip}, () => 
                     deck: [Object.assign({}, H.card("Crankshaft", 1), {uid: "cr1"}),
                            {uid: "d2", name: "Filler"}],
                     board: [{card: drv2, kind: "item", spent: false, uid: "hd1"}],
-                    counters: {}},
+                    counters: {hd1: {steam: 1}}},
                    {name: "Them", deck: [{uid: "d3", name: "T"}]},
                    {actor: 0, turnPlayer: 0, seed: "bb", turn: 4});
   g2 = {...g2, phase: "action", step: "layer", priority: 0, passed: [], _doBoost: true};
   let m = J.reduce(g2, {t: "play", uid: "src1", from: "hand"}, 0).state;
   const resBefore2 = m.sides[0].res;
   m = J.reduce(m, {t: "boost", yes: true}, 0).state;
+  /* THE ONE COUNT THE ORDER DECIDES (v4.67). This row used to hold an
+     EMPTY bag — a Driver on the board with no counters, which no game can
+     reach (the drill below says why) — and it was the whole reason v4.23
+     ticked first. At ONE counter, which a game reaches every third boost,
+     ticking first empties the Driver and destroys it before Crankshaft can
+     put anything on it. Put first: 1 -> 2 -> 1, and it is still there. */
   assert.equal((m.sides[0].counters.hd1 || {}).steam, 1,
-    "an empty bag removes nothing, so Crankshaft's counter lands and STAYS — " +
-    "the order is what keeps the permanent the boost is refilling alive");
-  assert.equal(m.sides[0].res, resBefore2 - 1,
-    "and \"if you do\" is load-bearing — no removal, no {r}");
+    "at one counter the put must land before the clock ticks — 1 -> 2 -> 1");
   assert.ok(m.sides[0].board.some(b => b.uid === "hd1"),
-    "and it is still on the board: ticking after the put would have emptied " +
-    "the bag and destroyed it on the very boost that refilled it");
+    "and the Driver is still on the board: ticking first empties it and " +
+    "destroys it on the very boost that was refilling it");
+  assert.equal(m.sides[0].res, resBefore2 - 1 + 1,
+    "and the clock still paid its {r} — the order changes the survivor, never the resources");
+});
+
+test("PREMISE: nothing but a Hyper Driver's own clock takes a steam counter off it", {skip}, () => {
+  /* WHY PUTTING FIRST IS DOMINANT (v4.67). The order only matters at one
+     counter, where it saves the Driver, and at zero — where ticking first
+     would win. Zero is unreachable only because every steam remover in
+     the pool removes from ITS OWN permanent, so the Driver's clock is the
+     one thing that can empty it, and "when this has none" destroys it on
+     the spot. A card that takes a steam counter off ANOTHER permanent
+     fails here, and the order has to be re-measured. */
+  const pool = require("../data/pool.json");
+  const hits = {};
+  for(const r of pool){
+    const m = String(r.functional_text || "").match(/remove[^.]*steam counter[^.:]*/gi);
+    if(m) hits[r.name] = m.map(x => x.replace(/\*/g, "").trim());
+  }
+  assert.deepEqual(Object.keys(hits).sort(),
+    ["Boom Grenade", "Golden Cog", "Hyper Driver", "Plasma Barrel Shot"]);
+  for(const [nm, ls] of Object.entries(hits))
+    for(const l of ls) assert.match(l, /from (?:it|this)\b/, nm + " removes a steam counter from something else: " + l);
+  /* AND DASH DECKS ONE DRIVER, so the put never waits behind a sheet. */
+  const W = require("./helpers/extract.js").loadData();
+  const drivers = W.DECKS.dash.split("\n").filter(l => /\|Hyper Driver\|/.test(l))
+    .reduce((t, l) => t + parseInt(l.split("|")[0], 10), 0);
+  assert.equal(drivers, 1, "a second Hyper Driver puts Crankshaft's put behind a sheet that drains after the tick");
 });
 
 test("THE TRIGGER BELONGS TO THE BANISHED CARD, not the played one", {skip}, () => {

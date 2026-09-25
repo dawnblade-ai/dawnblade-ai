@@ -44,7 +44,10 @@ before starting new work.
 > **PROGRESS (this thread):** Plasma Barrel Shot **DONE at v4.63**, Roaring
 > Beam **DONE at v4.64**, Topsy Turvy **DONE at v4.65** — audit 401 full /
 > 4 part. The four left are the RECORD / LEAVE rows below. §2's layer step
-> **BUILT at v4.66** (`play-held-on-the-stack`, closed). Next: trigger order.
+> **BUILT at v4.66** (`play-held-on-the-stack`, closed). Trigger order
+> MEASURED at v4.67 — it found the boost pair in the wrong order (fixed);
+> the record stays open with the census, and Arakni's same-end-phase brood
+> cycle waits on a RULING (see the ledger's `simultaneous-trigger-order`).
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.

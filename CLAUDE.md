@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.66
+**Current version:** v4.67
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3088 drills** at v4.66.
+This is `node --test "test/*.test.js"` — **3090 drills** at v4.67.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,17 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A DRILL THAT BUILDS AN UNREACHABLE STATE CAN DECIDE A RULE (v4.67)
+
+v4.23 fixed the order of Hyper Driver's clock and Crankshaft's put as
+tick-first, and the reasoning held for exactly one state: a Driver ON THE
+BOARD WITH NO COUNTERS. Its drill built that state, and no game can reach it
+(every steam remover in the pool removes from its own permanent). At ONE
+counter, which a game reaches every third boost, tick-first destroyed the
+Driver. **When an order, a default or a tie-break is justified by a fixture,
+ask whether a game can reach that fixture** — and pin the premise that says
+it can't, so the day it can, the choice is re-measured.
 
 ### A PLAY WAITS FOR THE OTHER SEAT (v4.66)
 
@@ -4749,9 +4760,11 @@ dominated.
 **THE ORDER OF TWO TRIGGERS ON ONE BOOST IS A DECISION, SAID OUT LOUD.**
 Crankshaft and Big Bertha PUT a steam counter on a Hyper Driver and the
 Driver's clock REMOVES one; both fire on one event and CR 4.1.8a gives
-the order to the controller, which this project does not model. The clock
-ticks FIRST, because one running after them would spend the counter they
-just placed and destroy the permanent they were refilling.
+the order to the controller, which this project does not model. **v4.23
+ticked the clock FIRST and was wrong** (corrected v4.67): its reasoning held
+only for a Driver on the board with NO counters, which no game can reach.
+At one counter, tick-first destroys the Driver before the put lands, so the
+put goes first. See v4.67.
 
 **"WHEN THIS HAS NONE" IS A TRIGGER, NOT A STANDING STATE TEST**, so it
 is asked at the removal that could have emptied the bag — which is what

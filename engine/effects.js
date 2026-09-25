@@ -4109,23 +4109,33 @@ function makeEffects(ctx){
            engine never expired. It is LIVE in Dash's deck.
 
            AFTER THE BANISH AND THE CHAIN INCREMENT, because the clause is
-           printed about a boost that has HAPPENED — and BEFORE the
-           banished card's own trigger, which is a decision rather than an
-           accident. Both fire on one event, and CR 4.1.8a gives the
-           ORDER to the controller (this project models no trigger
-           ordering, so one has to be picked and said out loud). Ticking
-           first is the order a controller would choose every time:
-           Crankshaft and Big Bertha exist to PUT a steam counter on a
-           Hyper Driver, and a clock that ran after them would spend the
-           counter they just placed and destroy the permanent they were
-           refilling. The total {r} is identical either way — one per
-           counter — so the only thing the order decides is whether the
-           card the deck is built around survives.
+           printed about a boost that has HAPPENED — and AFTER the banished
+           card's own trigger (v4.67), which is a decision rather than an
+           accident. Both fire on one event and CR 4.1.8a gives the ORDER to
+           the controller, so one has to be picked and said out loud.
+
+           v4.23 PICKED THE WRONG ONE, AND ITS OWN DRILL IS WHY. It ticked
+           first, reasoning that a clock running after Crankshaft would spend
+           the counter just placed and destroy the Driver — true of the one
+           state its drill built, a Driver ON THE BOARD WITH NO COUNTERS, and
+           that state is unreachable: the Driver enters with 3, and every
+           steam remover in the pool removes from ITS OWN permanent, so only
+           this clock can empty a Driver and the "when this has none" it
+           triggers destroys it at once. In every state a game can reach the
+           order matters at exactly ONE counter — tick first and the Driver
+           empties and is destroyed before the put can land; put first and it
+           goes 1 -> 2 -> 1 and survives — and the {r} is identical either
+           way. So putting first is the order a controller would choose every
+           time (v4.23's reprieve argument, applied correctly), and it is
+           what a boost at one counter was costing Dash: the card the deck is
+           built around. Measured unreachable on the ladder only because the
+           policy declines boost (v4.24). A second Driver would put the put
+           behind a sheet that drains after this line; Dash decks ONE, and a
+           drill says so.
 
            AND AN EMPTY BAG DOES NOT SPEND THE ALLOWANCE (`ctrClock`
            continues before the latch), so a tick that found nothing can
            still fire on a later boost the same turn. */
-        n = ctrClock(n, "boost");
         /* "WHEN THIS IS BANISHED FROM BOOSTING, …" (v3.56) — a trigger that
            fires from the DECK, on a card its controller never played.
            Three pool records print it and their payload has read since
@@ -4145,6 +4155,7 @@ function makeEffects(ctx){
           n = runOps(n, bb, top.name);
           declNote += ` ${top.name}'s boost trigger fires.`;
         }
+        n = ctrClock(n, "boost");
       }
       /* MANDIBLE CLAW'S RIDER IS THE PARSER'S NOW (v3.58). It used to be
          an inline regex here — one card special-cased by name, with the

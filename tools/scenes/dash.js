@@ -360,6 +360,40 @@ module.exports = [
     "…and spends the counter": 0,
     "so the build runs again": 1
   }
+},
+
+{
+  name: "A boost at one steam counter refills the Hyper Driver before its clock ticks",
+  why: "Crankshaft's put and the Driver's own clock fire on the same boost, and " +
+       "CR 4.1.8a gives the order to Dash. v4.23 ticked first on the strength of " +
+       "a drill built around a Driver with NO counters, which no game can reach; " +
+       "at ONE counter ticking first empties the Driver and destroys it before " +
+       "the put lands. The order a player would always choose is put first.",
+  run(c){
+    const drive = steam => {
+      const hd = c.card("Hyper Driver", 0, "hd1");
+      const g = Object.assign(c.state({res: 9, ap: 3, hand: [c.card("Jump Start", 1, "js")],
+                                       deck: [c.card("Crankshaft", 1, "cr1"), c.card("Raging Onslaught", 1, "x")],
+                                       board: [{card: hd, kind: "item", spent: false, uid: "hd1"}],
+                                       counters: {hd1: {steam}}},
+                                      {}, {turn: 3, actor: 0, turnPlayer: 0}),
+        {phase: "action", step: "layer", priority: 0, passed: [], stack: [], chain: []});
+      let n = c.reduce(g, {t: "play", uid: "js", from: "hand"}, 0);
+      if(n.pending && n.pending.kind === "boost") n = c.reduce(n, {t: "boost", yes: true}, 0);
+      return c.H.drain(n);
+    };
+    const one = drive(1), two = drive(2);
+    return {
+      "at one counter the Driver survives":  one.sides[0].board.some(b => b.uid === "hd1"),
+      "…holding one counter":                (one.sides[0].counters.hd1 || {}).steam,
+      "at two it holds two, as before":      (two.sides[0].counters.hd1 || {}).steam
+    };
+  },
+  want: {
+    "at one counter the Driver survives": true,
+    "…holding one counter": 1,
+    "at two it holds two, as before": 2
+  }
 }
 
 ];

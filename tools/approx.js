@@ -135,13 +135,28 @@ const APPROX = {
       "plays, which is `execute`'s play/resolve split."},
 
 "simultaneous-trigger-order": {
-  status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.02",
+  status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.67",
   claim:"Simultaneous triggers resolve in a fixed printed order. CR 4.1.8a hands "+
         "the order to the turn-player.",
   why:"`beginEndPhase` is six steps in a fixed order and the order is load-bearing "+
       "for reasons that are NOT the CR's (rust before the idle wipe before the "+
       "gear sweep — specific readers first). Letting a player reorder them would "+
-      "need a prompt in a phase where CR 4.4.1 gives nobody priority."},
+      "need a prompt in a phase where CR 4.4.1 gives nobody priority. "+
+      "MEASURED AT v4.67, FAMILY BY FAMILY, because a generic instrument cannot "+
+      "tell an order that DECIDES something from one that does not. BOOST: "+
+      "Hyper Driver's clock and Crankshaft/Big Bertha's put fire on one boost, "+
+      "and v4.23 fixed the order as tick-first on the strength of a Driver with "+
+      "NO counters — unreachable, since every steam remover in the pool removes "+
+      "from its own permanent. At ONE counter tick-first destroyed the Driver; "+
+      "put-first is weakly dominant in every reachable state and is now the "+
+      "order (drilled, with the premise pinned). END PHASE: the only step pair "+
+      "whose order changes an outcome is Inertia against a heave, recorded as "+
+      "`heave-window`; ward spends are `ward-spend-order`. ONE OPEN QUESTION IS "+
+      "NOT AN ORDER AT ALL: Arakni's brood step returns an Agent and then lets "+
+      "Arakni become one again IN THE SAME END PHASE. Whether a trigger can fire "+
+      "for a hero who was not the hero when that end phase began is a question "+
+      "about which triggers EXIST at the event, and nothing here sources an "+
+      "answer — it waits on a ruling rather than a guess."},
 
 "prevention-target-and-source": {
   status:"stated", cr:null, board:"both", since:"v3.67", swept:"v4.36",

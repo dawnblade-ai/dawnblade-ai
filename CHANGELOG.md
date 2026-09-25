@@ -1,3 +1,58 @@
+## v4.67 — refill it before the clock ticks
+
+> *"Once per turn, when you boost a card, remove a steam counter from this and
+> gain {r}."* — HYPER DRIVER · *"When this is banished from boosting, put a
+> steam counter on a Hyper Driver you control."* — CRANKSHAFT, BIG BERTHA
+
+**MEASURING TRIGGER ORDER FOUND A WRONG ORDER.** The plan for CR 4.1.8a was
+to measure first, and a generic collision counter cannot tell an order that
+DECIDES something from one that does not. So the families were taken one at
+a time. The boost pair is the one the code already named — and it was wrong.
+
+**v4.23 TICKED FIRST, AND ITS OWN DRILL IS WHY.** It reasoned that a clock
+running after Crankshaft would spend the counter just placed and destroy the
+Driver. That is true of exactly one state, a Driver **on the board with no
+counters**, and the drill built that state. No game can reach it. The Driver
+enters with 3, and every steam remover in the pool (Boom Grenade, Golden Cog,
+Hyper Driver, Plasma Barrel Shot) removes from **its own** permanent. So only
+the Driver's clock can empty it, and "when this has none" destroys it at once.
+
+| counters | tick first | put first |
+|---|---|---|
+| **1** | 1 → 0, **destroyed**, the put finds nothing | 1 → 2 → **1, survives** |
+| 2+ | same | same |
+| resources | {r} | {r} |
+
+Driven, the old order destroyed Dash's only Hyper Driver on any boost at one
+counter, and told Crankshaft *"You control nothing that can take a steam
+counter."* Put-first is weakly dominant in every reachable state, which is
+v4.23's reprieve argument applied correctly: the order a player would always
+choose. WEAKER than printed, so the one-sided sweep was blind.
+
+**THE PREMISE IS A DRILL.** The four steam removers are pinned as a set, each
+removing "from it" or "from this". A card that takes a steam counter off
+another permanent fails, because then zero is reachable and the order has to
+be re-measured. So is **Dash decking ONE Hyper Driver**: a second would put
+Crankshaft's put behind a sheet that drains after the tick, which this
+version does not build.
+
+**THE LADDER IS BYTE-IDENTICAL**, because the policy declines boost (v4.24).
+84 Dash games reached the collision zero times. The scene and the drill drive
+it instead.
+
+### THE REST OF THE ORDER QUESTION, MEASURED
+
+`simultaneous-trigger-order` stays `open` with the census written in. Only
+two end-phase pairs change an outcome, and both are already records:
+Inertia against a heave (`heave-window`) and ward spends
+(`ward-spend-order`).
+
+**AND ONE QUESTION IS NOT ABOUT ORDER AT ALL.** Arakni's brood step returns
+an Agent and then lets Arakni become one again in the same end phase. Can a
+trigger fire for a hero who wasn't the hero when that end phase began?
+That's about which triggers exist at the event, and nothing here sources an
+answer. It is recorded as waiting on a ruling rather than decided.
+
 ## v4.66 — a play waits for the other seat
 
 > **CR 7.1.2** — the attack goes on the stack as a layer, and players get
