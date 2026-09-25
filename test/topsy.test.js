@@ -228,7 +228,7 @@ test("the flag survives the wire, which is what the bump is ABOUT", {skip}, () =
      field the wire drops is a version number with nothing behind it
      (dichotomy.test.js's rule). */
   const W = require("../engine/wire.js");
-  assert.equal(W.WIRE_V, 14);
+  assert.ok(W.WIRE_V >= 14, "the bump for `deckFlip` was undone");
   const g = board(true);
   const back = W.decode(W.encode(g));
   assert.equal(back.deckFlip, g.deckFlip, "`deckFlip` did not survive the round trip");

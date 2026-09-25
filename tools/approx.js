@@ -95,16 +95,44 @@ const APPROX = {
 
 /* ---- A. THE RULES MACHINE — the two-player question ---------------- */
 
-"layer-step-window": {
-  status:"open", cr:"CR 7.1.2", board:"both", since:"v2.45", swept:"v4.02",
-  claim:"An attack goes straight onto the combat chain. In the CR it sits on the "+
-        "stack as a layer first, and both seats may respond before it becomes a "+
-        "chain link.",
-  why:"Needs the stack/queue, which priority.js already has hooks for "+
-      "(`queueEmpty`, `passOutcome`'s `resolve-layer`). The WINDOW itself is not "+
-      "lost — the ATTACK step immediately after opens an equivalent instant "+
-      "window for both seats — so what is missing is the distinction between "+
-      "'on the stack' and 'on the chain', which no card in this pool asks about."},
+"play-held-on-the-stack": {
+  status:"closed", cr:"CR 7.1.2", board:"table", since:"v2.45", swept:"v4.66",
+  claim:"A card played at action speed (an attack, a non-attack action, a weapon, "+
+        "ally or aura attack, an `Action -` ability) RESTS on the stack as a layer at "+
+        "the table and resolves only when both seats have passed on it (CR 7.1.2, CR "+
+        "4.2.2), so the opponent always gets a window between a card being played and "+
+        "it resolving. BUILT AT v4.66; this record was `layer-step-window`.",
+  why:"THE OLD RECORD SAID NO CARD ASKED, AND THAT WAS MEASURED FALSE. Over 210 driven "+
+      "games, 319 plays dealt damage inside the action that played them and 12 landed on "+
+      "a seat holding an instant prevention it never had a window to play — Oasis Respite "+
+      "against Photon Splicing and Emeritus Scolding, Toe the Line against Arcane Twining, "+
+      "Oasis Respite against Viserai's Runechants and Briar's Path of Same Ends (whose go "+
+      "again is gated on that very damage). The attack step's window came AFTER the damage "+
+      "had landed, so it was not equivalent. THE WHOLE `execute` IS DEFERRED, NOT SPLIT: "+
+      "it interleaves every cost with the resolution across two thousand lines of shared "+
+      "locals, so `judge.holdPlay` parks the settled declarations on the layer, lifts a "+
+      "card out of its zone onto the stack (where the census sees it), and locks the "+
+      "seat's floating resources with it; `resolveHeld` puts everything back and runs the "+
+      "card exactly as before. WHEN NOBODY CAN ANSWER IT RESOLVES AT ONCE, and that is not "+
+      "an approximation: a seat with no legal action can only pass. `someoneCanRespond` "+
+      "asks `legal` itself, as each seat, so the window opens exactly when an answer exists."},
+
+"instant-speed-plays-resolve-on-play": {
+  status:"stated", cr:"CR 4.2.2", board:"table", since:"v4.66", swept:"v4.66",
+  claim:"Three halves of the stack are still collapsed at the table. An INSTANT or a "+
+        "REACTION resolves the moment it is played, so the other seat can answer the card "+
+        "it answered but not the answer itself. A when-this-attacks trigger resolves as "+
+        "the attack becomes a chain link, with no window of its own. And while an "+
+        "action-speed play waits on the stack, its controller's FLOATING resources wait "+
+        "with it, so any left over after its cost cannot pay for an answer in that window.",
+  why:"The first two are responses to responses, and the window each is played in stays "+
+      "open after it — `P.reset` hands priority straight back — so the line of play they "+
+      "cost is the rarer one. The third is the price of deferring `execute` whole rather "+
+      "than splitting it: the exact cost is charged inside `execute`, and reserving a "+
+      "second reading of it here would be v3.80's three-cost-readers bug. It is weaker "+
+      "than printed and visible, since a seat can still pitch for an answer. Built "+
+      "together, the first two are a real stack of resolving LAYERS rather than of held "+
+      "plays, which is `execute`'s play/resolve split."},
 
 "simultaneous-trigger-order": {
   status:"open", cr:"CR 4.1.8a", board:"both", since:"v2.45", swept:"v4.02",

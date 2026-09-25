@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.65
+**Current version:** v4.66
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3078 drills** at v4.65.
+This is `node --test "test/*.test.js"` — **3088 drills** at v4.66.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,37 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A PLAY WAITS FOR THE OTHER SEAT (v4.66)
+
+**THE TABLE HOLDS A PLAY AT ACTION SPEED ON THE STACK** until both seats pass
+(CR 7.1.2, CR 4.2.2). The old ledger record called the distinction one "no
+card in this pool asks about". Measured, 12 of 319 same-action damage events
+in 210 games hit a seat holding an instant prevention with no window to
+play it.
+
+- **`execute` is deferred whole, never split.** `judge.holdPlay` lifts the
+  card onto the stack, parks the settled declarations (`HELD_DECL`) and
+  locks the seat's floating resources on the layer; `resolveHeld` puts them
+  back and calls `commitPlay` again. When you add a declaration that rides
+  on the state into `execute`, **add it to `HELD_DECL`** or a held play
+  drops it.
+- **An unusable window resolves at once**, and `someoneCanRespond` asks
+  `legal` as each seat. Not an approximation: a seat that cannot act can
+  only pass.
+- **Action speed needs an empty stack** (`priority.speedAllowed`) and
+  `endTurn` refuses over a waiting card.
+- **The census counts the stack**, lifted cards only. An activation's piece
+  never leaves its zone.
+- **Drills that read the board after a play call `H.drain`** — real precons
+  carry instant gear, so most plays at the table now wait. Asserting on the
+  board without draining reads a card that has not resolved yet.
+- **A probe for a window needs a seat that can use it.** The old probe drove
+  an opening hand with no answer in it, and stayed green through the build.
+
+**STILL COLLAPSED, AND RECORDED:** instants and reactions resolve on play;
+when-this-attacks triggers have no window of their own; leftover floating
+resources wait with the held card. `instant-speed-plays-resolve-on-play`.
 
 ### A REPLACEMENT OVER A ZONE MOVE IS ONE READER EVERY WRITER ASKS (v4.65)
 
@@ -7151,9 +7182,9 @@ v3.98's qualifier census one tool over.
 **THE `prose` BUCKET IS WHERE THE UNBUILT RULES LIVE**, and it went 6 → 4
 because the approximation ledger's drills reached two of them. A rule cited
 only in documentation is one this project has written ABOUT and never
-encoded; the layer-step window (CR 7.1.2) is the worked example, and it is
-`drill-only` now — pinned by a probe that asserts the deviation and fails
-the day it is built.
+encoded; the layer-step window (CR 7.1.2) was the worked example — it sat
+in `drill-only`, pinned by a probe asserting the deviation, until v4.66
+BUILT it and moved it to `guarded`.
 
 **AND WRITING THAT DRILL MOVED THE INDEX.** Its first draft spelled two
 section pointers in a header comment — prose, in a file the scan classifies
@@ -10674,14 +10705,12 @@ Omitting it means the hero, always a legal choice (CR 1.4.5a).
 
 Still deliberately not modelled, and each is honest rather than hidden:
 
-- **the layer-step window (CR 7.1.2)**. An attack goes straight onto the
-  chain; in the CR it sits on the stack first and both seats may respond
-  before it becomes a chain link. Needs the stack/queue, which
-  `priority.js` already has hooks for (`queueEmpty`). **The window itself
-  is not lost** — the ATTACK step immediately after opens an equivalent
-  instant window for both seats, verified in a driven game, so what is
-  missing is the distinction between "on the stack" and "on the chain",
-  which no Phase 1 rule asks about.
+- ~~**the layer-step window (CR 7.1.2)**~~ **BUILT AT v4.66.** The claim
+  here was that the attack step's window is equivalent and "no Phase 1
+  rule asks about" the difference. Measured, it was not equivalent: a
+  when-this-attacks trigger and a non-attack's damage had ALREADY landed
+  by then. See "A PLAY WAITS FOR THE OTHER SEAT". What is still collapsed
+  is `instant-speed-plays-resolve-on-play` (stated).
 - **the START phase is passed through, not skipped.** `P.endTurn` leaves
   the incoming seat in `phase:"start"` and `endPhaseAfterArsenal` moves
   them on in the same breath, so no state ever RESTS there. That is

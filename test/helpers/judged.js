@@ -99,4 +99,20 @@ const fx = (g, body) => J.withEffects(g, body);
 const runOps  = (g, ops, src) => fx(g, (f, n) => f.runOps(n, ops, src));
 const execute = (g, c, from, idx, o) => fx(g, (f, n) => f.execute(n, c, from, idx, o));
 
-module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J };
+/* A PLAY AT ACTION SPEED RESTS ON THE STACK (v4.66) whenever either seat
+   could answer it — so a drill that plays one and then reads the board
+   has to let it resolve first, exactly as two players passing would.
+   Both seats pass until no held play is left; nothing else is answered,
+   so a drill that wants to RESPOND does so before calling this. */
+function drain(g){
+  let n = g;
+  for(let i = 0; i < 12 && (n.stack || []).some(l => l && l.k === "play"); i++){
+    if(n.priority == null) break;
+    const out = J.reduce(n, {t: "pass"}, n.priority);
+    if(out.error) break;
+    n = out.state;
+  }
+  return n;
+}
+
+module.exports = { hasDb, db, card, tok, side, state, fx, runOps, execute, RNG, J, drain };

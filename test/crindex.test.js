@@ -61,9 +61,10 @@ const by = (rs, v) => rs.filter(r => r.verdict === v).map(r => r.rule).sort();
 test("crindex — the verdict counts are pinned", () => {
   const rs = idx();
   assert.equal(rs.length, 63, "the number of distinct CR rules this project cites moved");
-  assert.equal(by(rs, "guarded").length,   50, "guarded count moved");
+  /* 50 -> 51 guarded and 6 -> 5 drill-only AT v4.66: CR 7.1.2, built. */
+  assert.equal(by(rs, "guarded").length,   51, "guarded count moved");
   assert.equal(by(rs, "UNGUARDED").length,  3, "UNGUARDED count moved");
-  assert.equal(by(rs, "drill-only").length, 6, "drill-only count moved");
+  assert.equal(by(rs, "drill-only").length, 5, "drill-only count moved");
   assert.equal(by(rs, "prose").length,      4, "prose count moved");
 });
 
@@ -86,19 +87,17 @@ test("crindex — the prose-only set is pinned, and it is where the unbuilt rule
     "the set of rules cited ONLY in documentation moved. A rule leaving this set " +
     "has been encoded (good — check it gained a drill too); a rule arriving has " +
     "been written about and not built, and belongs in tools/approx.js.");
-  /* AND THE LAYER-STEP RULE HAS LEFT `prose` FOR `drill-only` — cited by no
-     engine code, because it is not built, and now pinned by the drill that
-     asserts the deviation. The ledger and the index must not be able to
-     disagree about which rule that is. */
+  /* AND THE LAYER-STEP RULE IS GUARDED NOW (v4.66). It sat in `drill-only`
+     for as long as it was unbuilt — cited by no engine code, pinned by the
+     probe that asserted the deviation. Building it is what moved it, and the
+     ledger record for it moved in the same edit, so the two cannot disagree
+     about which rule was built. */
   const A = require("../tools/approx.js");
-  const lay = A.APPROX["layer-step-window"].cr.replace(/^CR /, "");
-  assert.ok(by(rs, "drill-only").includes(lay),
-    "the ledger's layer-step record cites a rule the index no longer files as " +
-    "drill-only — either it was built (delete the record) or the probe stopped " +
-    "driving it");
-  assert.ok(!by(rs, "guarded").includes(lay),
-    "the layer step is now cited in ENGINE code — it is being built, and the " +
-    "ledger record must move");
+  const lay = A.APPROX["play-held-on-the-stack"];
+  assert.equal(lay.status, "closed", "the layer-step record must say it is built");
+  const rule = lay.cr.replace(/^CR /, "");
+  assert.ok(by(rs, "guarded").includes(rule),
+    "the layer-step rule is no longer cited by engine code AND a drill — it regressed");
 });
 
 test("crindex --check passes, and it is the gate that could not before", () => {

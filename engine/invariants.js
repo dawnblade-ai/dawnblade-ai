@@ -143,6 +143,17 @@ function check(game){
     const uid = uidOf(card);
     if(uid != null) all.push({uid, zone: "chain", idx: i, name: nameOf(card)});
   });
+  /* AND SO IS THE STACK (v4.66). A card played at action speed now rests
+     there as a layer at the table, having left its hand, arsenal,
+     graveyard or banished zone — so it is in no side zone either. Only a
+     LIFTED card counts: an activation leaves its piece where it is, and
+     counting that piece here as well would report every held swing as a
+     card in two zones. */
+  (game.stack || []).forEach((l, i) => {
+    if(!(l && l.k === "play" && l.lifted)) return;
+    const uid = uidOf(l.card);
+    if(uid != null) all.push({uid, zone: "stack", idx: i, name: nameOf(l.card)});
+  });
   const byUid = new Map();
   for(const rec of all){
     if(!byUid.has(rec.uid)) byUid.set(rec.uid, []);

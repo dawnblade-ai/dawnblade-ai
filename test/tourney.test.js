@@ -74,7 +74,7 @@ test("every event kind selfplay emits is pinned", () => {
     "MALFORMED", "SECOND-PERSON",
     "ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
     "fusion", "gold",
-    "hitnext",
+    "held", "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "tap", "ward",
   ]);
 });
@@ -138,7 +138,7 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    a number about three cards standing on one line (v4.25, v3.81). */
 const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
-                       "fusion", "gold", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
+                       "fusion", "gold", "held", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "search", "tap", "ward"];
 /* +search v4.58 — Flamecall Awakening's deck search, and it belongs on the
    ROUTE side because a number there means a feature FIRED (v4.17). Measured:

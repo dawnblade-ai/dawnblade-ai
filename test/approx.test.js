@@ -243,7 +243,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 38 -> 39 AT v4.60: `drx-bar-from-arsenal-unread`. */
   /* 39 holds AT v4.63: `steam-build-powcard-handwritten` was BUILT and is
      `steam-build-powcard-read` — renamed, closed, probe turned round. */
-  assert.equal(Object.keys(APPROX).length, 39, "record count moved");
+  /* 39 -> 40 AT v4.66: `layer-step-window` was built and renamed
+     `play-held-on-the-stack`, and `instant-speed-plays-resolve-on-play`
+     records what the table stack still collapses. */
+  assert.equal(Object.keys(APPROX).length, 40, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -269,7 +272,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 17 -> 16 AT v4.63: `steam-build-powcard-handwritten` was BUILT — its
      probe went RED the moment the three readers landed, which is the
      reversal a `stated` record exists to force (v4.02). */
-  assert.equal(n("stated"), 16, "stated count moved");
+  /* 16 -> 17 AT v4.66: `instant-speed-plays-resolve-on-play` — what the
+     table stack still collapses, recorded the version it was built. */
+  assert.equal(n("stated"), 17, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -302,9 +307,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      the one turn that wall is ever raised. So Brothers in Arms' +2{d}, built
      at v4.53 for this exact wall, was unreachable there. Second cycle running
      in which a record's own stated reason was narrower than the defect. */
-  assert.equal(n("open"),    6, "open count moved");
-  /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. */
-  assert.equal(n("closed"), 17, "closed count moved");
+  /* 6 -> 5 AT v4.66: `layer-step-window` was BUILT and is
+     `play-held-on-the-stack`, closed with its probe turned round. */
+  assert.equal(n("open"),    5, "open count moved");
+  /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
+     `play-held-on-the-stack`. */
+  assert.equal(n("closed"), 18, "closed count moved");
 });
 
 /* ============================================================
@@ -466,32 +474,53 @@ probe("trainer-blocks-wall-no-defends-body", () => {
     "…and the family-specific pause it replaces is gone");
 });
 
-probe("layer-step-window", () => {
-  /* CHECK YOUR OWN FIXTURE (v3.82, and this one bit). The first draft drove
-     `effects.execute` and asserted `stack` was empty — but `stack` is the
-     TRAINER's representation of the chain display, so it came back holding
-     an `{k:"atk"}` layer and the probe reported the deviation closed. The
-     question is about the TABLE's turn structure, so it has to be asked of
-     `judge.reduce`. */
-  let g = table();
-  while(g.arsenalFor != null) g = J.reduce(g, {t:"arsenal", uid:null}, g.arsenalFor).state;
-  assert.equal(g.step, "layer", "a fresh action phase no longer opens in the layer step");
-  const seat = g.turnPlayer;
-  const c = g.sides[seat].hand.find(x => PR.isAttack(x));
-  assert.ok(c, "fixture: the opening hand holds no attack");
-  let n = J.reduce(g, {t:"play", uid:c.uid, from:"hand"}, seat).state;
-  n = settle(n, c.uid);
-  /* THE DEVIATION, DRIVEN: one action took the step from `layer` to
-     `attack` with the card already a chain link and nothing on the stack.
-     In the CR it would rest as a layer first and both seats could respond
-     before it became one. */
-  assert.equal(n.step, "attack",
-    "declaring an attack no longer goes straight to the attack step — a layer " +
-    "window may have been built, and the record must move");
-  assert.equal((n.chainCards || []).length, 1, "the attack is not on the chain");
-  assert.deepEqual(n.stack || [], [],
-    "the attack now rests on the stack as a layer — CR 7.1.2 is BUILT and the " +
-    "ledger record must be deleted");
+/* BUILT AT v4.66, AND THE PROBE IS TURNED ROUND. It was `layer-step-window`,
+   `open`, and asserted the DEVIATION — one action took the step from `layer`
+   to `attack` with nothing on the stack. It stayed green through the build
+   because its fixture (an opening hand) held no instant-speed answer, and a
+   window nobody can use resolves at once: CR-identical, and invisible to that
+   probe. What tells the two engines apart is a seat that CAN answer. */
+const stackTable = (defHand) => {
+  H.db();
+  const c = (nm, p, uid) => ({...H.card(nm, p), uid});
+  return {...H.state({res: 9, ap: 1, hand: [c("Raging Onslaught", 1, "atk")]},
+                     {res: 9, hand: defHand.map((x, i) => c(x[0], x[1], "d" + i))},
+                     {turn: 3, actor: 0, turnPlayer: 0}),
+          phase: "action", step: "layer", priority: 0, passed: [false, false],
+          stack: [], chain: [], chainCards: []};
+};
+probe("play-held-on-the-stack", () => {
+  let n = J.reduce(stackTable([["Oasis Respite", 1]]), {t: "play", uid: "atk", from: "hand"}, 0).state;
+  const top = (n.stack || [])[n.stack.length - 1];
+  assert.ok(top && top.k === "play" && top.card.uid === "atk",
+    "an attack the defender could answer went straight to the chain — the layer step regressed");
+  assert.equal((n.chainCards || []).length, 0, "…and it is not a chain link yet");
+  assert.ok(!n.sides[0].hand.some(x => x.uid === "atk"), "…and it has left the hand for the stack");
+  /* THE WINDOW IS REAL: the defender answers BEFORE it resolves. */
+  n = J.reduce(n, {t: "pass"}, 0).state;
+  assert.equal(n.priority, 1, "the defender never got priority over the waiting card");
+  assert.equal(J.legal(n, {t: "play", uid: "d0", from: "hand"}, 1), null,
+    "the defender's instant is not playable in the window");
+  /* CONTROL: with nothing to answer it, it resolves at once — the one
+     outcome a window nobody can use has. */
+  const quiet = J.reduce(stackTable([]), {t: "play", uid: "atk", from: "hand"}, 0).state;
+  assert.equal(quiet.step, "attack", "an unanswerable play waited anyway");
+  assert.deepEqual(quiet.stack || [], []);
+});
+
+/* THE HALVES STILL COLLAPSED (v4.66). An instant resolves on the spot, so
+   the probe plays one while the other seat holds an instant-speed answer
+   and finds nothing on the stack afterwards. The day instants are held,
+   this goes red and the record must move. */
+probe("instant-speed-plays-resolve-on-play", () => {
+  const g = stackTable([["Oasis Respite", 1]]);
+  const c = {...H.card("Oasis Respite", 1), uid: "mine"};
+  const g2 = J.put(g, 0, s => ({...s, hand: [c, ...s.hand]}));
+  const out = J.reduce(g2, {t: "play", uid: "mine", from: "hand"}, 0);
+  assert.equal(out.error, null, "fixture: the instant was refused — " + out.error);
+  assert.deepEqual(out.state.stack || [], [],
+    "an INSTANT now rests on the stack — the response-to-a-response half is built " +
+    "and the record must move");
 });
 
 /* CR 4.1.8a hands the order of simultaneous triggers to the turn-player.

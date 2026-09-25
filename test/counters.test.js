@@ -278,7 +278,9 @@ function play(boardCards){
                   {name: "Them", deck: [{uid: "d2", name: "T2"}]},
                   {actor: 0, turnPlayer: 0, seed: "ctr", turn: 4});
   g = {...g, phase: "action", step: "layer", priority: 0, passed: []};
-  return J.reduce(g, {t: "play", uid: "src1", from: "hand"}, 0).state;
+  /* Energy Potion on the board is an INSTANT ability Dash could answer
+     with, so the play waits on the stack (v4.66) until both seats pass. */
+  return H.drain(J.reduce(g, {t: "play", uid: "src1", from: "hand"}, 0).state);
 }
 
 test("one legal target takes the counter with no sheet", {skip}, () => {

@@ -1,3 +1,103 @@
+## v4.66 — a play waits for the other seat
+
+> **CR 7.1.2** — the attack goes on the stack as a layer, and players get
+> priority before it becomes a chain link. **CR 4.2.2** — the top layer
+> resolves when all players pass in succession.
+
+**THE LEDGER SAID NO CARD ASKED, AND THAT WAS MEASURED FALSE.**
+`layer-step-window` (open since v2.45) argued that the attack step's window
+was equivalent, so "on the stack" versus "on the chain" was a distinction
+"no card in this pool asks about". Driven over 210 games: **319 plays dealt
+damage inside the action that played them, and 12 of those landed on a seat
+holding an instant prevention it never had a window to play.** Oasis Respite
+against Photon Splicing and Emeritus Scolding, Toe the Line against Arcane
+Twining, Oasis Respite against Viserai's Runechants and Briar's Path of Same
+Ends, whose go again is gated on that very damage. The attack step's window
+opened AFTER the damage. It was not equivalent.
+
+**THE TABLE NOW HOLDS A PLAY ON THE STACK.** Everything played at action
+speed rests there: an attack, a non-attack action, a weapon, ally or aura
+attack, and an `Action -` ability. It resolves when both seats pass, so the
+other seat always gets its window first. `judge.holdPlay` is the one body.
+
+**THE WHOLE `execute` IS DEFERRED, NOT SPLIT.** It interleaves every cost
+with the resolution across two thousand lines of shared locals, and a split
+through the middle of that is a rewrite no drill could certify. So the play
+is held instead:
+
+| held on the layer | why |
+|---|---|
+| the card, LIFTED out of hand/arsenal/graveyard/banish | it is on the stack. `invariants.js` censuses the stack now, or a held card is in no zone |
+| the settled declarations (`_half`, `_doBoost`, `_addPaid`, `_fuseUid`, `_chargeUids`) | a charge chosen at play is paid at resolution |
+| the seat's floating resources | or they are spent twice in the window |
+
+`resolveHeld` puts everything back and calls `commitPlay` again, which runs
+`execute` exactly as before. An activation leaves its piece where it is and
+is not lifted.
+
+**A WINDOW NOBODY CAN USE RESOLVES AT ONCE, AND THAT IS NOT AN
+APPROXIMATION.** A seat with no legal action can only pass, so the window has
+one outcome, and this produces it. `someoneCanRespond` asks **`legal` itself,
+as each seat**. A drill proves affordability counts: an instant the defender
+cannot pay for opens nothing, and the same hand with one resource does.
+
+**ACTION SPEED NEEDS AN EMPTY STACK** — `priority.speedAllowed`, so the
+turn-player cannot stack a second attack on their own first. `endTurn` is
+refused over a waiting card, because CR 4.3.4 ends the phase only on an
+empty stack. Nothing reached either rule before: the table's stack was
+always empty in the action phase.
+
+**THE POLICY PASSES, AND NOT BECAUSE IT WAS TOLD TO.** `sparring.act`
+proposes only at action speed and in the reaction step, and a waiting card
+leaves both seats an instant-speed window in neither. A guard saying so came
+back SILENT under sabotage and was deleted (v4.11); the premise is a drill.
+**The ladder's win counts are byte-identical at three seeds**, which is what
+proves the hold is transparent to a seat that never answers. The table held
+**9,317** plays in 630 games, about 15 a game, because most decks carry an
+instant gear ability.
+
+**WHAT IS STILL COLLAPSED IS RECORDED**, as `instant-speed-plays-resolve-on-play`
+(stated, with a driven probe):
+- an instant or reaction resolves on the spot, so the answer itself can't be answered;
+- a when-this-attacks trigger has no window of its own;
+- floating resources left over after the held card's cost wait with it.
+
+The ledger moves to **40 records: 17 stated · 5 open · 18 closed**, and
+CR 7.1.2 moves from `drill-only` to `guarded` (51 guarded).
+
+### A PROBE THAT STAYED GREEN THROUGH ITS OWN BUILD
+
+The old probe drove an opening hand and asserted the attack reached the
+chain in one action. It still passed after the build, because an opening
+hand held no instant-speed answer and an unusable window resolves at once.
+**A probe for a window needs a seat that can use it.** The turned-round
+probe hands the defender Oasis Respite.
+
+### TWO COUNTERS THAT MEASURED WORDS
+
+- **`crush` read `/\bcrush\b/i`**, so it counted every pitch of Cartilage
+  Crush or Crush the Weak and the arsenal grant that SAYS "has crush". It
+  moved 909 → 947 here for no reason but a new line naming more cards. It
+  spells the rider running now (`— crush:`) and reads **232**. v4.46's
+  `tap` defect, one counter over.
+- **`held`** is new and counts windows that opened. Both phrases are pinned
+  against the engine's own, both ways (v3.81).
+
+### FOR THE UI PHASE
+
+**A HUMAN PASSES OFTEN NOW.** The CR gives the player who played a card
+priority first, so a seat holding any instant ability is asked to pass after
+its own play. Online clients default to passing your own priority unless you
+hold it. That is a UI setting (the engine stays CR-exact), and it is the
+first thing the table UI will want.
+
+`WIRE_V` **14 → 15** — a held layer is a new shape inside `stack`, which
+ships whole. **16 sabotages, 16 bite**, after the first pass came back with
+three silent. One was a fixture that refused the second attack for its COST
+rather than its speed (the locked resources left nothing to pitch). The other
+two were dead guards, deleted: the policy's pass and a `delete` that
+`commitPlayBoosted` already does.
+
 ## v4.65 — nothing goes back on top
 
 > *"Instant - Destroy this: Until end of turn, if one or more cards would be

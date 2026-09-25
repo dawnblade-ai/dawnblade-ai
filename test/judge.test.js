@@ -157,8 +157,12 @@ function drive(g, o){
       }
     }
     if(did) continue;
+    /* NOT OVER A CARD STILL ON THE STACK (v4.66). A play at action speed
+       rests there while either seat could answer it, and ending the turn
+       over it is refused — CR 4.3.4 ends the phase only on an EMPTY stack.
+       Passing is what lets it resolve, so the driver passes. */
     if(g.phase === "action" && pri === g.turnPlayer && !g.chainOpen && g.step === "layer"
-       && send({t: "endTurn"}, pri)) continue;
+       && !(g.stack || []).length && send({t: "endTurn"}, pri)) continue;
     send({t: "pass"}, pri);
   }
   return {g, trace, errs};
@@ -513,7 +517,8 @@ test("CR 1.4.5 — an ally in the arena is an attack-target, and a bogus one is 
 
 test("CR 7.3.2a — an attack on an ally cannot be blocked, and never touches the hero", {skip}, () => {
   const {g, ally, atk, seat, def} = withAlly("ally-hit");
-  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state;
+  /* the attack waits on the stack while either seat could answer it (v4.66) */
+  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
   assert.equal(n.pend.target.kind, "ally", "the target was not carried onto the chain link");
 
   n = J.reduce(n, {t: "pass"}, n.priority).state;
@@ -538,7 +543,7 @@ test("CR 7.3.2a — an attack on an ally cannot be blocked, and never touches th
 
 test("targeting the hero with an ally on the board still works normally", {skip}, () => {
   const {g, atk, seat, def} = withAlly("hero-hit");
-  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: "hero"}, seat).state;
+  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: "hero"}, seat).state);
   assert.equal(n.pend.target.kind, "hero");
   n = J.reduce(n, {t: "pass"}, n.priority).state;
   n = J.reduce(n, {t: "pass"}, n.priority).state;
@@ -730,7 +735,7 @@ test("an AURA played from hand enters the arena, not the graveyard", {skip}, () 
   assert.ok(card, "no aura in the pool — the drill cannot bite");
   const out = J.reduce(g2, {t: "play", uid: card.uid, from: "hand"}, seat);
   assert.equal(out.error, null, "a legal aura was refused: " + out.error);
-  const n = out.state;
+  const n = H.drain(out.state);
   assert.ok((n.sides[seat].board || []).some(b => b.uid === card.uid),
     `${card.name} did not enter the arena — the player paid for it and never received it`);
   assert.ok(!(n.sides[seat].grave || []).some(c => c.uid === card.uid),
@@ -1096,7 +1101,7 @@ test("CR 4.4.3c — a pitched card goes to the BOTTOM of its owner's deck", {ski
   const p = J.pendingOf(n);
   const fuel = n.sides[seat].hand.find(x => x.uid !== c.uid && x.pitch > 0);
   n = J.reduce(n, {t: "paySel", uid: fuel.uid}, seat).state;
-  n = J.reduce(n, {t: "payConfirm"}, seat).state;
+  n = H.drain(J.reduce(n, {t: "payConfirm"}, seat).state);
 
   /* it is in the pitch zone now, and nowhere else */
   assert.ok((n.sides[seat].pitch || []).some(x => x.uid === fuel.uid), "the pitched card is not in the pitch zone");

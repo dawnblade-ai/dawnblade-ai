@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.65"; /* v4.65 - Topsy Turvy works: until end of turn every card that would go on top of a deck, opt and reorder included, goes to the bottom instead, on both seats. See CHANGELOG.md. */
+window.APP_VER = "4.66"; /* v4.66 - at the table a card played at action speed now waits on the stack until both seats pass, so an opponent holding an instant can answer it before it resolves. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -6909,6 +6909,11 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                     <button onClick={()=>fire({t:"arsenal",uid:null})}>skip</button></div>
                 : g.phase==="end" ? <div className="statusline">End phase — {them.name} is finishing their turn.</div>
                 : defending ? <div className="statusline">Defend step — tap hand &amp; equipment to declare · incoming <b>{g.pend?g.pend.total:0}</b></div>
+                /* A CARD WAITING ON THE STACK (v4.66) — CR 7.1.2 / 4.2.2. It
+                   resolves when both seats pass, and the one thing either may
+                   do first is answer at instant speed. Said so, or the pause
+                   reads as a stuck game. */
+                : (g.stack||[]).some(l=>l&&l.k==="play") ? <div className="statusline"><b>{(g.stack||[]).filter(l=>l&&l.k==="play").slice(-1)[0].label}</b> — {mine({t:"pass"}) ? "answer at instant speed, or pass to let it resolve" : "waiting on "+them.name.split(",")[0]}</div>
                 : myTurn ? <div className="statusline">{g.step==="layer" ? <span>Your window — play, or pass</span>
                     : <span>{g.step} step — react from floating <b>{me.res}</b> or pass</span>}</div>
                 : <div className="statusline">Waiting on {them.name} — {g.phase} / {g.step}</div>}

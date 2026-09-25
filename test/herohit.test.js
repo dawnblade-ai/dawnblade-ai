@@ -155,7 +155,7 @@ test("the SAME attack fires on a hero and not on an ally", {skip}, () => {
   const has = sd => (sd.board || []).some(b => new RegExp(tokName, "i").test(b.card.name));
 
   /* --- at the ALLY --- */
-  let a = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state;
+  let a = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
   assert.equal(a.pend.target.kind, "ally", "the target must reach the chain link");
   a = toResolution(a);
   assert.equal(a.sides[def].hp, g.sides[def].hp,
@@ -167,7 +167,7 @@ test("the SAME attack fires on a hero and not on an ally", {skip}, () => {
     "and the feed must say why, or the player learns the wrong rule");
 
   /* --- at the HERO, same board, same card --- */
-  let h = J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state;   /* no target = the hero */
+  let h = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand"}, seat).state);   /* no target = the hero */
   h = toResolution(h);
   assert.ok(h.sides[def].hp < g.sides[def].hp, "the hero took the damage");
   assert.ok(has(h.sides[def]), "the hero-gated payload must STILL fire on a hero hit");
@@ -358,7 +358,7 @@ function allyBoard(seed, allyRe, pick, atkHero){
 test("driven at the TABLE: Oysten's Gold goes to the player who lost it", {skip}, () => {
   const {g, ally, atk, seat, def} =
     allyBoard("oysten", /Oysten/, (c, a) => P.isAttack(c) && (c.power || 0) >= a.life);
-  let n = J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state;
+  let n = H.drain(J.reduce(g, {t: "play", uid: atk.uid, from: "hand", target: ally.uid}, seat).state);
   n = toResolution(n);
   const gold = si => (n.sides[si].board || []).filter(b => /gold/i.test(b.card.name)).length;
   assert.equal(gold(def), 1, "the ally's controller gets the token its card prints");

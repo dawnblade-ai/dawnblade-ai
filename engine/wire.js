@@ -189,7 +189,13 @@
    act on. (v4.06's `costTax` added a game key of the same kind and did not
    bump; later bumps have since covered it, and this line is where the rule
    is now written down.) */
-const WIRE_V = 14;
+/* 14 -> 15 AT v4.66: `stack` gains a layer KIND — a play held there until
+   both seats pass (`{k: "play", card, zone, decl, res, …}`), carrying a whole
+   card and its settled declarations. `stack` is a game key that ships whole,
+   so the digest cannot see it; a v14 peer holds no such layer and resolves
+   every play on the spot, so the two diverge on the first play either seat
+   could answer. By hand, for the same reason as the two bumps above. */
+const WIRE_V = 15;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------
