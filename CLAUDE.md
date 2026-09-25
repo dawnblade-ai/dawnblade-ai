@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.70
+**Current version:** v4.71
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3113 drills** at v4.70.
+This is `node --test "test/*.test.js"` — **3128 drills** at v4.71.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,22 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### AN X THE CHOICE SETTLES, AND AN X NOTHING CHARGED (v4.71)
+
+Beckoning Haunt's *"{x}{x}{r}, destroy this: Return target aura with cost X
+…"* reads now: X is the chosen aura's cost (Blaze's shape, v3.39). **And
+`parseHeroPower` used to read `{x}{x}{r}` as cost 1**, so the X pips are
+counted (`x`, stamped `_xPips` by all three builders) and COUPLED: X pips
+with no settling pick refuse, and so does a pick that settles an unpriced X.
+**`parser.abPickBound(sd, ab, ctx)` is the one reader of what is
+affordable**, asked by both boards' legality with the game's half of the
+fixed cost. The queue site bounds the sheet off the resolving powCard, and
+the answer charges X per pip, never pitching the aura it returned. The class
+word before "(non-)attack action card" is now a closed vocabulary
+(`ACTION_CLASSES`: wizard, runeblade), after "target" read as one. Choices
+made at resolution rather than activation are recorded as
+`activation-choices-at-resolution`.
 
 ### A GRANTED BAR RIDES ON THE PUMP AND ASKS THE ZONE (v4.70)
 

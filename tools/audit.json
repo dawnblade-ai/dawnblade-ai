@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-25T22:30:11.348Z",
- "appVer": "4.70",
+ "generated": "2026-09-25T22:48:06.736Z",
+ "appVer": "4.71",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 401,
-  "part": 4,
+  "full": 402,
+  "part": 3,
   "none": 0
  },
  "heroes": {
@@ -2551,24 +2551,22 @@
    "mentions": [
     "guardwell"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
     {
      "t": "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.",
-     "st": "skip"
+     "st": "noop"
     },
     {
      "t": "Guardwell",
      "st": "noop"
     }
    ],
-   "skipped": [
-    "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand."
-   ],
+   "skipped": [],
    "weaponCost": null,
-   "eqAbility": null,
+   "eqAbility": "destroy: Return target aura with cost X from your graveyard to your hand [XX+1r]",
    "tx": "Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand.\nGuardwell",
    "flags": []
   },

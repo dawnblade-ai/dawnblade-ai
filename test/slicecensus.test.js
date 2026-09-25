@@ -235,7 +235,10 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 11,759 -> 11,931 AT v4.64, READ FIRST: still the pick branch, bounded
        at the next variant; the growth is the `charge` field Roaring Beam's
        effect-charge rides on, inserted beside `classRider`. */
-    "dichotomy.test.js engine/prompts.js 11931",
+    /* 11,931 -> 12,276 AT v4.71, READ FIRST: still the pick branch; the
+       growth is Beckoning Haunt's `xPay`, beside the counter cost it
+       twins. */
+    "dichotomy.test.js engine/prompts.js 12276",
     /* 8,550 -> 9,523 AT v4.60, and now THREE files take the same slice —
        `playRx`, anchored on its own declaration and bounded at `playRxA`, the
        next one, which is the safe form. READ FIRST (v4.57: a pin edited
@@ -253,8 +256,11 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     "drx.test.js index.html 9516",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
-    "priority.test.js index.html 17343",
-    "priority.test.js index.html 17343",
+    /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
+       `abPickBound` in the pick legality it extends. */
+    "priority.test.js index.html 17784",
+    "priority.test.js index.html 17784",
     "priority.test.js index.html 9516"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are

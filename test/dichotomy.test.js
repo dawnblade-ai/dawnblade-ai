@@ -78,7 +78,7 @@ test("the pool prints exactly ONE sentence naming two targets", () => {
   assert.deepEqual([...new Set(hits)], ["Crown of Dichotomy"]);
 });
 
-test("FIVE activation lines open a pick, and THREE were paid for a log line", {skip}, () => {
+test("SIX activation lines open a pick (FIVE until v4.71), and THREE were paid for a log line", {skip}, () => {
   /* THE MEASUREMENT THE NEW LEGALITY RESTS ON, AND MY FIRST ONE SAID THE
      FAMILY HAD ONE MEMBER. It parsed the whole printed LINE, which
      `classifyClause` files `noop` as an activation — so every record came
@@ -117,7 +117,11 @@ test("FIVE activation lines open a pick, and THREE were paid for a log line", {s
         if(op[0] === "pickPrompt") seen.push(m.n + (op[1] && op[1].filters ? " [two targets]" : ""));
     }
   }
+  /* SIX AT v4.71: Beckoning Haunt joined when its X cost read — and it is
+     the member that needs the SHARPER question Blaze's needs, because an
+     aura it cannot pay X for is not a choice (`parser.abPickBound`). */
   assert.deepEqual([...new Set(seen)].sort(), [
+    "Beckoning Haunt",
     "Blaze, Firemind",
     "Crown of Dichotomy [two targets]",
     "Fai",
@@ -332,7 +336,10 @@ test("`filters` is a spec field `buildPrompt` NAMES (v2.34, ninth field)", () =>
      field. A bound too wide reads exactly like a drill that passes. */
   const body = src.slice(src.indexOf("if(spec.tag === \"pick\"){"),
                          src.indexOf("ALLOC — THE SIXTH VARIANT"));
-  assert.ok(body.length > 200 && body.length < 12000, "re-anchor this slice");
+  /* < 12,000 -> < 12,500 AT v4.71, READ FIRST: still the pick branch,
+     bounded at the next variant; the growth is Beckoning Haunt's `xPay`
+     field, inserted beside the counter cost it is the twin of. */
+  assert.ok(body.length > 200 && body.length < 12500, "re-anchor this slice");
   assert.match(body, /\bfilters,/, "`buildPrompt` must put `filters` on the prompt");
   const s = sheet([RATK("a1"), RNON("n1")]);
   assert.deepEqual(s.filters, FILT, "and it must arrive on the live prompt");
@@ -728,7 +735,8 @@ test("a `filters` prompt survives the wire, which is what the bump is ABOUT", ()
      rides, which the next lines assert whatever the number is. 13 -> 14 AT
      v4.65 (Topsy Turvy's `deckFlip` game key), the same kind again. */
   /* 15 -> 16 AT v4.69 (`pend.noDrx`, a `buffQ` entry's `src`). */
-  assert.equal(W.WIRE_V, 16, "the bump moved — say what changed in wire.js's header");
+  /* 16 -> 17 AT v4.71 (a pick prompt's `xPay`). */
+  assert.equal(W.WIRE_V, 17, "the bump moved — say what changed in wire.js's header");
   const g = H.state({grave: [RATK("a1"), RNON("n1")], res: 9, ap: 1}, {}, {actor: 0, turn: 3});
   g.prompt = sheet([RATK("a1"), RNON("n1")]);
   assert.ok(g.prompt && g.prompt.filters, "fixture: the sheet carries the field");

@@ -1,3 +1,91 @@
+## v4.71 — an X the choice settles, and an X nothing charged
+
+> *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from
+> your graveyard to your hand."* — BECKONING HAUNT, Viserai's Arms piece
+
+**HANDOFF CALLED IT THE CHEAPEST X CARD, AND IT WAS.** X is the returned
+aura's own printed cost, so the pick settles it and nobody names a number.
+That is Blaze's shape (v3.39), in resources instead of counters. The sheet
+offers only the auras the seat can pay for, and the answer charges X once
+per `{x}` pip, pitching on demand but never pitching the aura it just
+returned.
+
+**READING IT FOUND A FREE X FIRST.** The v3.79/v4.43 diagnostic, run from
+the cost end: handed `{x}{x}{r}` with a payload it could read,
+`parseHeroPower` answered **cost 1**. The `{x}` pips were never counted.
+It was latent only because the payload refused, so reading the payload on
+its own would have shipped the aura back for `{r}`. This is Enigma's `{c}`
+(v4.54) one symbol over. The pips are counted now (`x`) and **coupled**: X
+pips with no pick to settle them refuse, and so does a pick that settles an
+X the cost never prices. Measured: the pool prints exactly one activation
+cost with `{x}`.
+
+**TWO FACTS, TWO PLACES, BOTH NAMED.** The pips are a COST, so they are
+stamped on the powCard (`_xPips`) by all three builders (v3.63's rule, sixth
+outing). The coupling lives in the PAYLOAD (`xOf: "cost"`), so it is read.
+`parser.abPickBound(sd, ab, ctx)` is the one reader of which auras are
+affordable, asked by `judge.abCostWhy` and the trainer's `tryPlay` with the
+game's half of the fixed cost (v3.96). So an activation with nothing
+affordable is refused by name before the chest is destroyed (v4.59's rule).
+At resolution, the queue site bounds the sheet the same way, off the
+resolving powCard (v4.63's opt-in `srcCard`). An unaffordable answer off a
+wire is inert, never free (v2.04).
+
+**"TARGET" WAS READ AS A CLASS.** The graveyard-to-hand reader captured
+*"target aura"* whole, and `optFilter`'s leading-class branch took any word
+as a class. So *"target"* built a filter matching nothing, and so would a
+pitch colour (*"a red attack action card"*). v4.09 closed the bare-"card"
+branch for exactly this and left this one open. **Measured over the pool
+and every powCard: `wizard` and `runeblade` are the only words in that
+position**, so `ACTION_CLASSES` is closed to them and 0 records move.
+
+**AND THE CHOICE IS MADE AT RESOLUTION, WHICH IS NOW RECORDED.** Every
+activation pick in the pool opens when the ability resolves, not when it is
+activated. Since v4.66 the table holds an Action-speed activation on the
+stack, so the other seat answers before the target (and, here, X) is chosen.
+`activation-choices-at-resolution`, `stated`, with a driven probe. Declaring
+at activation needs the choice as a pending before payment, across every
+activation pick.
+
+### THE DEAD ANCHORS, ASKED v4.48's QUESTION
+
+All fifteen of `npm run anchors`' never-reached readers already carry a
+reason in `test/anchors.test.js`, except two listed without one:
+
+- **the second draw-then-discard-random rule was dead by CONSTRUCTION.**
+  Every string it matched, the rule above matches first, so it could never
+  answer. Deleted; the subsumption is a drill over the wordings it was
+  written for (0 of 797 records move);
+- **the standalone random discard is printed once, inside an ADDITIONAL
+  COST** that the cost reader claims first. It is a latent reader with a
+  correct anchor, the `{t} your hero` shape, and is named now.
+
+### `npm run gaps` HAS NO FAMILY LEFT
+
+Beckoning Haunt was the last card in "pick from a zone". The three unfinished
+cards are unclustered (Ice Eternal, Jack Be Quick, Walk in My Shoes). The
+drill that asked for the largest family's members had recorded why it would
+rot, and it did. `tools/gaps.js` now hands its `FAMILIES` over when
+required, and each pattern is held against the printed clause of a card that
+left it by being built. The report's own drill asks that every bucket it
+prints lists as many cards as it counts.
+
+### MEASURED
+
+- **exactly 1 record moves, `part` → `full`** (audit **401 → 402 full,
+  4 → 3 part**), floor repinned after reading the diff;
+- **the ladder at three seeds is inside the band on every hero** (Viserai
+  15.7 → 14.7 with overlapping intervals, NOISE), stalls 3 unchanged. The
+  route is LIVE: across Viserai's 28 legs at seed 0 he activates the piece
+  **18 times and X is always 0**, because every aura he decks costs 0.
+  The drills drive X = 1 and X = 2;
+- approx ledger **41 → 42 records, 16 → 17 stated**; `x-cost` narrows to
+  the free X (Ice Eternal); `WIRE_V` **16 → 17** (a pick's `xPay`);
+- **15 sabotages, 15 bite** after one fixture fix: the legality drill's
+  numbers never crossed a multiple of the pip count, so a bound that forgot
+  the fixed `{r}` came back SILENT (v3.62);
+- **3128 drills**, 0 fail, 5 skipped.
+
 ## v4.70 — the arsenal door, and only the arsenal door
 
 > *"Your next arrow attack this turn gets +3{p} and **\"Defense reactions

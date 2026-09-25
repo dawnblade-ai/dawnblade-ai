@@ -263,7 +263,10 @@ test("both activation branches ask the SAME cost body", {skip}, () => {
      refuses, which is the sev-1 category wearing a legal move's clothes;
      the count is a PIN, so a fourth activation route is a deliberate edit
      in both places (v4.32's own rule about a pinned number). */
-  assert.equal((src.match(/= abCostWhy\(sd, ab\)/g) || []).length, 3,
+  /* AND EACH HANDS IT THE GAME'S HALF OF THE COST (v4.71), which Beckoning
+     Haunt's X bound needs: the fixed part is read the way the charge reads
+     it (v3.80), so the legality and the price cannot disagree. */
+  assert.equal((src.match(/= abCostWhy\(sd, ab, PR\.costCtx\(g, seat\)\)/g) || []).length, 3,
     "…called from ALL THREE activation branches — hero, gear and arena");
   assert.equal((src.match(/PR\.abSoulCost\(/g) || []).length, 1,
     "and the readers are asked in that body ONLY — a second site is the drift");

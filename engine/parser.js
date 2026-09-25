@@ -2509,9 +2509,13 @@ function classifyClause(raw){
      paid, and the "if a 6+ card is discarded this way" riders hanging off
      that discard then read an unrelated graveyard instead. Ordered BEFORE
      the plain draw so the compound form is claimed by the compound rule. */
+  /* ONE RULE, NOT TWO (v4.70). A second compound rule stood here spelling
+     only "…discard N random cards", and every string it matched the rule
+     above matches first — its optional "cards at" group empty — so it could
+     never answer. `npm run anchors` listed it among the fifteen never
+     reached; asked why, it is dead by CONSTRUCTION rather than by the pool,
+     which is v4.11's dead rules code. The subsumption is a drill. */
   if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) (?:cards? at )?random(?: cards?)?/))
-    return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
-  if(m=c.match(/draws? (a|an|one|two|three|\d+) cards?,? (?:then |and (?:then )?)discards? (a|an|one|two|three|\d+) random cards?/))
     return R([["draw",num(m[1])],["discardRandom",num(m[2])]]);
   if(m=c.match(/^discards? (a|an|one|two|three|\d+) random cards?$/)) return R([["discardRandom",num(m[1])]]);
   /* THE SAME BUG AS THE COMMENT ABOVE, ONE WORDING OVER (v3.60). The
@@ -3096,15 +3100,31 @@ function classifyClause(raw){
      the direction that steals games. X-costs are refused across this
      engine on purpose (Ice Eternal); this is that refusal arriving through
      the subject reader rather than as a special case. */
+  /* …AND AT v4.71 IT READS, BECAUSE X IS SETTLED BY THE CHOICE. "Target
+     aura with cost X" against an {x}{x}{r} cost is Blaze's shape (v3.39):
+     the player picks an aura and X is that aura's own printed cost, so no
+     number is ever asked for. `xOf` names what X is read off; the cost's
+     own X pips ride on the powCard (`_xPips`), and `parseHeroPower`
+     refuses a line whose pips and whose coupling do not come together —
+     an X cost with nothing to settle it would be read as FREE.
+
+     "TARGET" IS PRINTED AND IS NOT PART OF THE SUBJECT. The graveyard-to-
+     deck reader above consumes it in its own pattern; this one captured
+     it, and `optFilter` read it as a CLASS. */
   if(m=c.match(RX_GY_HAND)){
-    const filter = pickSubject(cased(RX_GY_HAND, 2, m[2]));
+    let sub = cased(RX_GY_HAND, 2, m[2]).replace(/^target\s+/i, "");
+    const xm = sub.match(/^(.+?) with cost x$/i);
+    if(xm) sub = xm[1];
+    const filter = pickSubject(sub);
     if(!filter) return null;
     const may = !!m[1];
-    return R([["pickPrompt", {zone:"grave", to:"hand", filter,
+    return R([["pickPrompt", Object.assign({zone:"grave", to:"hand", filter,
       min: may ? 0 : 1, max:1,
-      title: may ? "Return a card from your graveyard to your hand?"
-                 : "Return a card from your graveyard to your hand",
-      hint: may ? "Optional — choose none to decline." : undefined}]]);
+      title: xm ? "Return an aura from your graveyard — X is its cost"
+         : may ? "Return a card from your graveyard to your hand?"
+               : "Return a card from your graveyard to your hand",
+      hint: xm ? "Only what you can pay for is offered." : may ? "Optional — choose none to decline." : undefined},
+      xm ? {xOf: "cost"} : {})]]);
   }
   /* THE DECK SEARCH — see RX_DECK_SEARCH's header for why the disposition
      is anchored and why the shuffle is the price of looking.
@@ -3930,6 +3950,17 @@ const JAB_KILL = /^destroy the (.+?)$/i;
    So a third word appearing in this position must be a deliberate edit
    here rather than something the reader quietly claims. */
 const CARD_CLASSES = /^(?:assassin|shadow)$/;
+/* …AND THE CLASS BEFORE "(NON-)ATTACK ACTION CARD" IS CLOSED TOO (v4.71).
+   v3.39 consumed ANY leading word there as a class, so "TARGET attack
+   action card" read as a card of class "target" — a filter matching
+   nothing, which is an unpayable cost or an empty pick dressed as a legal
+   one, and "a RED attack action card" would read a pitch as a class the
+   same way. v4.09 closed the bare-"card" branch above for exactly this
+   reason and left this one open. MEASURED over the pinned pool and every
+   powCard the builders make: the words printed in this position are
+   `wizard` and `runeblade`, nothing else — so a third is a deliberate edit
+   here, and until then it refuses (weaker than printed and visible). */
+const ACTION_CLASSES = /^(?:wizard|runeblade)$/;
 
 /* A FILTER WHOSE BOUND ONLY ONE QUEUE SITE CAN RESOLVE (v3.92).
    `costLtDrac` is supplied by the `hits` optional-cost site out of the
@@ -4055,7 +4086,7 @@ function optFilter(phrase){
   let cls = null;
   if(!CLS_SUBJECTS.test(low)){
     const cm2 = low.match(/^([a-z]+) (.+)$/);
-    if(cm2 && CLS_SUBJECTS.test(cm2[2])){ cls = cm2[1]; low = cm2[2]; }
+    if(cm2 && CLS_SUBJECTS.test(cm2[2]) && ACTION_CLASSES.test(cm2[1])){ cls = cm2[1]; low = cm2[2]; }
     /* AND A CLASS MAY QUALIFY A BARE "CARD" (v4.09) — "an ASSASSIN
        card". The bare subject still refuses on its own; what makes this
        one readable is the class, so the vocabulary is closed and the
@@ -7438,6 +7469,21 @@ function parseHeroPower(tx, allowDestroy){
   const csym = (costStr.match(/\{c\}/gi)||[]).length;
   const cost = dm ? +dm[1] : rsym + csym;
   const eff = classifyClause(m[4]);
+  /* AN X PIP IS PAID PER X, AND X MUST BE SETTLED BY THE PAYLOAD (v4.71).
+     The count above sees no digit and no {r} in "{x}{x}", so Beckoning
+     Haunt's "{x}{x}{r}" read as COST 1 — X silently FREE. Latent only
+     because its payload refused; reading the payload without this would
+     have shipped the free X, which is Enigma's {c} story (v4.54) one
+     symbol over.
+
+     So the pips are COUNTED (`x`) and COUPLED: a cost with X pips is read
+     only when its payload is a pick whose choice settles X (`xOf`), and a
+     payload that settles an X nothing charges is refused too. Measured:
+     the pool prints exactly ONE activation cost with {x}. */
+  const xsym = (costStr.match(/\{x\}/gi)||[]).length;
+  const xPick = !!(eff && eff.status === "run"
+    && (eff.ops || []).some(o => o[0] === "pickPrompt" && o[1] && o[1].xOf));
+  if(!!xsym !== xPick) return null;
   /* THE ARSENAL PUT IS THE ONE CONDITIONAL SHAPE THIS READER ACCEPTS (v2.34).
      Bull's Eye Bracers and Death Dealer both print "If you have no cards in
      your arsenal, you may put an arrow card ... into your arsenal", so
@@ -7499,11 +7545,12 @@ function parseHeroPower(tx, allowDestroy){
   const ga = /^\.?\s*go again/i.test(after);
   return Object.assign({cost, ga, sd:!!sd, kind, eff:m[4].trim(),
     label:(sd?"destroy: ":(m[1]?"once/turn: ":""))+m[4].trim()
-          +(cost?" ["+cost+(csym?"c":"r")+"]":"")+(ga?" · go again":"")},
+          +(xsym ? " [" + "X".repeat(xsym) + (cost ? "+" + cost + "r" : "") + "]"
+                 : cost?" ["+cost+(csym?"c":"r")+"]":"")+(ga?" · go again":"")},
     /* OPT-IN, like every other named cost this reader answers (v3.58): a
        key present on every ability would churn the drills that `deepEqual`
        this shape for no card that can read it. */
-    csym ? {chi: csym} : {});
+    csym ? {chi: csym} : {}, xsym ? {x: xsym} : {});
 }
 /* ---- A CARD IN YOUR HAND WITH AN ACTIVATED ABILITY -------------------
    `parseHeroPower` deliberately REFUSES a discard/banish/sacrifice cost —
@@ -9453,6 +9500,25 @@ const abFlipUp = ab => !!(ab && ab._flipUp);
    would be a second record of one fact (v3.61) and the one that drifts is
    the one nobody reads. `gyFirstGaKw` three lines up reads its own answer
    the same way. */
+/* THE PICK A LEGALITY ASKS ABOUT, WITH ITS X BOUND (v4.71). Beckoning
+   Haunt's X is the chosen aura's cost and is paid once per X pip, so an
+   aura the seat cannot pay for is not a legal choice — Blaze's `arcLe`
+   (v3.39), in resources rather than counters. What the seat can raise is
+   the floating pool plus the hand's pitch, less the FIXED part of the cost
+   the activation charges first; `ctx` is the game's half of that cost
+   (v3.96), and a caller that supplies none gets the side's alone. Both
+   boards ask this, so the refusal and the sheet cannot disagree about which
+   auras are affordable. A pick with no X answers exactly `abPickSpec`. */
+const handPitch = sd => ((sd && sd.hand) || []).reduce((t, c) => t + ((c && c.pitch) || 0), 0);
+function abPickBound(sd, ab, ctx){
+  const spec = abPickSpec(ab);
+  if(!spec || !spec.xOf) return spec;
+  const per = (ab && ab._xPips) || 0;
+  const fixed = effCost(ab, sd || {}, ctx);
+  const avail = ((sd && sd.res) || 0) + handPitch(sd) - fixed;
+  const bound = per > 0 ? Math.floor(Math.max(0, avail) / per) : -1;
+  return Object.assign({}, spec, {filter: Object.assign({}, spec.filter || {}, {costLe: bound})});
+}
 function abPickSpec(ab){
   /* THE NAME IS THE MEMO KEY, so `fxParse` throws without one — and this is
      reached from `judge.legal`, a surface fed by JSON off a wire whose
@@ -9740,6 +9806,6 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         isFrailty, frailtyCount,
         arcaneBarrier, spellvoid, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
-        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
+        chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};
 });

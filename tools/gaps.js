@@ -27,12 +27,6 @@
 const fs = require("fs");
 const path = require("path");
 
-const AUDIT = path.join(__dirname, "audit.json");
-if(!fs.existsSync(AUDIT)){
-  console.error("no tools/audit.json — run `npm run audit` first");
-  process.exit(1);
-}
-const A = JSON.parse(fs.readFileSync(AUDIT, "utf8"));
 
 /* Each family is [label, pattern, what it needs]. Ordered: a card lands in
    the FIRST that matches, so the more specific shapes come first.
@@ -51,7 +45,7 @@ const A = JSON.parse(fs.readFileSync(AUDIT, "utf8"));
    field. It is a two-minute script and it moved two of five. */
 const FAMILIES = [
   ["pick from a zone", /from your graveyard|from an opposing hero's graveyard|search your deck|from your (?:hand|deck) (?:into|face-up)|shuffle .* into your deck/i,
-   "RE-MEASURED v4.58 by asking the parser rather than remembering (v4.09): four of the five things this line used to name are BUILT — the graveyard readers (v3.53/v3.54), the hand->soul put (v4.01), the shuffle-redraw (v4.43) and the deck SEARCH (v4.58). What is left is exactly ONE, re-measured v4.63: an X-cost subject (Beckoning Haunt, refused on purpose across this engine). The TWO-TARGET pick this line also named was BUILT at v4.59 (Crown of Dichotomy) and the sentence outlived it by four versions"],
+   "EMPTY SINCE v4.71: every shape this line named is BUILT — the graveyard readers (v3.53/v3.54), the hand->soul put (v4.01), the shuffle-redraw (v4.43), the deck SEARCH (v4.58), the TWO-TARGET pick (v4.59) and last the X-cost subject (Beckoning Haunt, v4.71, X settled by the choice). A card landing here now is a new shape"],
   ["counters on a permanent", /counter[s]? on\b|has an? \w+ counter|enters the arena with a \+/i,
    "the targeted put landed in v3.53 (`ctrPut`); what is left is a TRIGGER each — boost-banish, arrow-put, enters-with, and a reader for 'if this has an aim counter'"],
   ["create a token on a trigger", /create an? [A-Z]/,
@@ -61,6 +55,21 @@ const FAMILIES = [
   ["a granted / conditional keyword", /\b(?:it|this) (?:gets|gains|has) \b/i,
    "rider plumbing — hasKwNow / quotedRider"],
 ];
+
+/* THE FAMILIES ARE READABLE AS DATA (v4.71). Every family emptied by being
+   BUILT — Beckoning Haunt was the last card in "pick from a zone" — so the
+   report's own output can no longer prove a pattern is alive: an empty
+   bucket and a rotted pattern both print nothing (v3.81). Required as a
+   module, this hands the patterns over and prints nothing, so a drill can
+   hold each one against the printed clause of a card that left it. */
+if(require.main !== module){ module.exports = {FAMILIES}; return; }
+
+const AUDIT = path.join(__dirname, "audit.json");
+if(!fs.existsSync(AUDIT)){
+  console.error("no tools/audit.json — run `npm run audit` first");
+  process.exit(1);
+}
+const A = JSON.parse(fs.readFileSync(AUDIT, "utf8"));
 
 const rows = [];
 for(const k of Object.keys(A.cards || {})){

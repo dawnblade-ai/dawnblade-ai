@@ -247,7 +247,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `play-held-on-the-stack`, and `instant-speed-plays-resolve-on-play`
      records what the table stack still collapses. */
   /* 40 -> 41 AT v4.68: `control-change-steal`, Jack Be Quick. */
-  assert.equal(Object.keys(APPROX).length, 41, "record count moved");
+  /* 41 -> 42 AT v4.71: `activation-choices-at-resolution`. */
+  assert.equal(Object.keys(APPROX).length, 42, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -277,7 +278,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      table stack still collapses, recorded the version it was built. */
   /* 17 -> 16 stated, 18 -> 19 closed AT v4.69: `drx-bar-from-arsenal-unread`
      was BUILT and is `drx-bar-from-arsenal-read`, its probe turned round. */
-  assert.equal(n("stated"), 16, "stated count moved");
+  /* 16 -> 17 AT v4.71: `activation-choices-at-resolution`. */
+  assert.equal(n("stated"), 17, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -997,6 +999,33 @@ probe("trainer-attack-target", () => {
    ============================================================ */
 
 /* An X cost and an X quantity are refused rather than guessed. */
+probe("activation-choices-at-resolution", () => {
+  /* DRIVEN AT THE TABLE, and it asserts the DEVIATION: Beckoning Haunt's
+     activation is HELD on the stack for the other seat's window with no
+     target and no X chosen, and the pick opens only once it resolves. The
+     day the choice is declared at activation, the held layer carries it
+     (or a sheet opens first) and this goes red. */
+  const db = H.db();
+  if(!db) return;
+  const B = require("../engine/build.js");
+  const cc = (nm, p, uid) => ({...C.resolveEntry(db, {name: nm, p, code: null, q: 1}), uid});
+  const haunt = cc("Beckoning Haunt", 0, 41); B.equipPiece(haunt);
+  let g = {...H.state({res: 9, ap: 1, gear: [haunt],
+                       grave: [cc("Waning Vengeance", 1, "wv"), cc("Malefic Incantation", 1, "mi")]},
+                      {res: 9, hand: [cc("Oasis Respite", 1, "oas")]},
+                      {turn: 3, actor: 0, turnPlayer: 0}),
+           phase: "action", step: "layer", priority: 0, passed: [false, false],
+           stack: [], chain: [], chainCards: []};
+  const n = J.reduce(g, {t: "activate", uid: 41, from: "gear"}, 0).state;
+  const layer = (n.stack || []).find(l => l && l.k === "play");
+  assert.ok(layer, "the activation was not held for the other seat's window — re-measure this record");
+  assert.ok(!n.prompt, "a sheet opened at ACTIVATION — the choice is declared now; this record is stale");
+  assert.ok(!JSON.stringify(layer.decl || {}).match(/"(?:wv|mi)"/),
+    "the held layer carries a chosen target — declared at activation; this record is stale");
+  const r = H.drain(n);
+  assert.ok(r.prompt && r.prompt.tag === "pick", "the pick no longer opens when the ability resolves");
+});
+
 probe("x-cost", () => {
   const ice = byName("Ice Eternal")[0];
   assert.ok(ice, "Ice Eternal left the pool");

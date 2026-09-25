@@ -1879,6 +1879,24 @@ function makeEffects(ctx){
           spec.filter = Object.assign({}, spec.filter, {arcLe: held});
           spec.ctrHeld = held;
         }
+        /* …AND AN X PAID IN RESOURCES (v4.71), the same rule one currency
+           over. Beckoning Haunt's X is the chosen aura's cost, paid once per
+           {x} pip; the pips ride on the RESOLVING powCard, which only
+           `execute` hands this function (v4.63's opt-in fourth argument).
+           The fixed part is already paid, so the bound is the floating pool
+           plus the hand's pitch. A pick that settles an X nothing prices is
+           refused rather than read as free (v2.04). */
+        if(v && v.xOf){
+          const per = (srcCard && srcCard._xPips) || 0;
+          if(!(per > 0)){ n = L(n, `${srcName}: X has no price to settle — nothing is returned.`); return; }
+          const avail = (act(n).res || 0) + P.handPitch(act(n));
+          spec.filter = Object.assign({}, spec.filter, {costLe: Math.floor(avail / per)});
+          /* THE PARSE'S NAME FOR IT DOES NOT TRAVEL: a spec only carries
+             fields `buildPrompt` reads (v2.34, `test/speccensus.test.js`),
+             and `xPay` is the one it reads. */
+          spec.xPay = {per, of: v.xOf};
+          delete spec.xOf;
+        }
         n.promptQ = [...(n.promptQ||[]), spec];
       }
       /* RELOAD — CR: only legal while the arsenal is EMPTY, and no type
@@ -5179,6 +5197,15 @@ function makeEffects(ctx){
   const applyAnswer = (s, prompt) => {
     const p = prompt;
     if(!p || !promptReady(p)) return s;
+    /* AN X THE SEAT CANNOT PAY IS NOT AN ANSWER (v4.71). The queue site
+       bounds the sheet to what is affordable, so no sheet a board renders
+       can reach this; it is here because `reduce` is fed by JSON off a
+       wire (v2.04) — an unpayable cost is INERT, never free. */
+    if(p.tag === "pick" && p.xPay){
+      const ch = (p.cards || [])[(p.sel || [])[0]];
+      const sdP = (s.sides || [])[p.side || 0] || {};
+      if(ch && p.xPay.per * (ch.cost || 0) > (sdP.res || 0) + P.handPitch(sdP)) return s;
+    }
     const r = applyPrompt({...s, prompt:null}, p);
     let n = r.game;
     n.prompt = null;
@@ -5216,6 +5243,21 @@ function makeEffects(ctx){
     if(r.pay > 0){
       if(act(n).res < r.pay){ const paid = autoPitch(n, r.pay, null); if(paid) n = paid; }
       const ps = actMut(n); ps.res = Math.max(0, ps.res - r.pay);
+    }
+    /* …AND THE X THE CHOICE SETTLED (v4.71). Beckoning Haunt: X is the
+       returned aura's printed cost, paid once per {x} pip, pitching on
+       demand (RULING 2026-08-01) — and never pitching the aura it just
+       returned, which is in the hand by now. The guard at the top of this
+       function has already refused an answer the seat cannot pay. */
+    if(p.tag === "pick" && p.xPay && (r.picked || []).length){
+      const chosen = r.picked[0];
+      const amt = p.xPay.per * ((chosen && chosen.cost) || 0);
+      if(amt > 0){
+        if(act(n).res < amt){ const paid = autoPitch(n, amt, chosen.uid); if(paid) n = paid; }
+        const ps = actMut(n); ps.res = Math.max(0, ps.res - amt);
+      }
+      n = L(n, `${String(p.src || "").replace(/ — ability$/, "")}: X is ${(chosen && chosen.cost) || 0}`
+             + ` — ${amt} paid for ${chosen.name}.`);
     }
     /* THE TAP IS PAID BEFORE THE RIDER RUNS (v3.33), for the reason
        Frostbite's order is a whole ruling: the permanent that pays is

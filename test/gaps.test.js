@@ -45,34 +45,44 @@ test("it reports the unfinished cards, and the families PARTITION them", {skip},
     "families + unclustered must sum to the unfinished count — got " + buckets.join("+"));
 });
 
-test("it finds something — a scan aimed at the wrong shape passes by finding nothing", {skip}, () => {
-  const out = run();
-  assert.match(out, /pick from a zone/, "the largest family must still match");
-  const n = +(out.match(/(\d+)\s+pick from a zone/) || [])[1];
-  /* THE FLOOR IS DERIVED NOW, BECAUSE IT HAD ROTTED TWICE FOR THE BEST
-     POSSIBLE REASON (v4.58). A drill that names a count rots when the count
-     IS the work (v3.53): it read 5, dropped to 3 at v4.01 when Compass of
-     Sunken Depths and Halo of Illumination left the family by being BUILT,
-     and dropped again to 2 at v4.58 when Flamecall Awakening did. A third
-     hardcoded number would rot the same way — v4.21's rule, so the check
-     is the property rather than the magnitude.
+test("the families are ALIVE — each matches the clause of a card that left it", () => {
+  /* EVERY FAMILY EMPTIED BY BEING BUILT (v4.71). This drill used to ask the
+     report for its largest family, and its own comment recorded why that
+     rotted: the count IS the work (v3.53, v4.58). With Beckoning Haunt, the
+     last one left, so the report can no longer prove a pattern is alive —
+     an empty bucket and a rotted pattern both print nothing (v3.81).
 
-     WHAT MUST BE TRUE IS THAT THE PRINTED COUNT EQUALS THE CARDS LISTED.
-     A pattern that stops matching reports zero, which is indistinguishable
-     from a codebase with nothing left (v3.81); a heading printed
-     unconditionally over an empty roll call is the other direction. Both
-     are caught by asking the report to agree with itself, and neither
-     needs a number anybody has to remember to lower. */
-  const roll = (out.match(/pick from a zone[\s\S]*?\n\s*\n/) || [""])[0];
-  const listed = roll.split("\n").filter(l => /·|^\s{6}[A-Z]/.test(l) && !/needs:/.test(l))
-                     .join(" · ").split("·").map(x => x.trim()).filter(Boolean);
-  assert.ok(n >= 1,
-    "the `pick` family matched NOTHING — a rotted pattern reports zero exactly "
-    + "as a finished family does, so this is the one reading that is ambiguous");
-  assert.equal(listed.length, n,
-    "the printed count and the roll call must agree — got " + n + " vs ["
-    + listed.join(", ") + "]. A heading over an empty list cannot be told from "
-    + "a heading printed unconditionally");
+     SO EACH PATTERN IS HELD AGAINST A PRINTED CLAUSE IT EXISTS TO CATCH,
+     taken from a card that was in it and left by being built. That is the
+     property the old drill was reaching for, with no magnitude in it. */
+  const {FAMILIES} = require("../tools/gaps.js");
+  const CONTROL = {
+    "pick from a zone":            "Return target aura with cost X from your graveyard to your hand.",
+    "counters on a permanent":     "Put three +1{p} counters on target sword you control.",
+    "create a token on a trigger": "When this hits a hero, create a Gold token.",
+    "\"you may …, if you do …\"": "When this defends, you may pay {r}. If you do, it gets +2{d}.",
+    "a granted / conditional keyword": "If it's fused, it gets go again.",
+  };
+  assert.deepEqual(FAMILIES.map(f => f[0]).sort(), Object.keys(CONTROL).sort(),
+    "the family list moved — give the new one a control clause here");
+  for(const [label, re] of FAMILIES)
+    assert.ok(re.test(CONTROL[label]), label + " no longer matches the clause it was written for");
+  /* and requiring it printed nothing and read no audit, or a drill would
+     depend on a build artifact to ask about a pattern */
+  assert.ok(Array.isArray(FAMILIES) && FAMILIES.length === 5);
+});
+
+test("every bucket the report prints lists exactly as many cards as it counts", {skip}, () => {
+  /* A heading printed over an empty roll call, or a roll call that lost a
+     name, reads exactly like a correct report (v3.81). Held for every bucket
+     that prints — the families that have members and `unclustered`. */
+  const out = run();
+  const heads = [...out.matchAll(/^\s*(\d+)\s{2}(\S[^\n]*?)(?:\s{3}—[^\n]*)?\n(?:\s{6}needs:[^\n]*\n)?\s{6}([^\n]*)$/gm)];
+  assert.ok(heads.length >= 1, "the report printed no bucket at all — the scan found nothing");
+  for(const h of heads){
+    const listed = h[3].split("·").map(x => x.trim()).filter(Boolean);
+    assert.equal(listed.length, +h[1], h[2].trim() + ": " + h[1] + " counted, [" + listed.join(", ") + "] listed");
+  }
   assert.match(out, /ONE clause away/, "the one-clause count is the reason to read this at all");
 });
 

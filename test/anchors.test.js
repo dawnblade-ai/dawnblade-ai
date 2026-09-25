@@ -88,13 +88,16 @@ test("every parser reading the pool never reaches is pinned", {skip}, () => {
        which is why this half is coverage and the op census is not. */
     "if(m=c.match(/(?:target )?defending card (?:gains?|gets?) \\+(\\d+)\\s*(?:\\{d\\}|defense)/)) return R([[\"defBuff\",+m[1]]]);",
     "if(m=c.match(/^(?:this|it) gets -(\\d+)\\s*\\{p\\}$/)) return R([[\"atkMinus\",+m[1]]]);",
+    /* THE STANDALONE RANDOM DISCARD IS PRINTED ONCE, and inside an
+       ADDITIONAL COST ("As an additional cost to play this, discard a random
+       card"), which the cost reader claims before this one is asked — the
+       `{t} your hero` shape above, one verb over. Named at v4.70. */
     "if(m=c.match(/^discards? (a|an|one|two|three|\\d+) random cards?$/)) return R([[\"discardRandom\",num(m[1])]]);",
     "if(m=c.match(/gains? (\\d+)\\s*(?:\\{r\\}|resource)/)) return R([[\"res\",+m[1]]]);",
     "return NOOP(\"clash payoff — the clash block creates this for whoever wins\");",
     "return NOOP(\"clash payoff — the defence step applies this when you win\");",
     "return NOOP(\"clash — resolved when this blocks, off the clash keyword\");",
     "return NOOP(\"reveal payoff — fires if this is the card revealed on a winning clash\");",
-    "return R([[\"draw\",num(m[1])],[\"discardRandom\",num(m[2])]]);",
     "return R([[\"soulSpend\", num(m[1]), sub.ops]]);",
   ].sort());
 });
@@ -237,4 +240,23 @@ test("the two per-count anchors the pool never printed are gone", () => {
     [["perEquipDef", 1]]);
   assert.deepEqual(P.classifyClause("this gets +1{p} for each time you have boosted this combat chain").ops,
     [["perBoost", 1]]);
+});
+
+test("the draw-then-discard-random rule SUBSUMES the spelling v4.70 deleted", () => {
+  /* The deleted rule answered "…then discard N random cards" and could
+     never be reached, because this one matches every string it did. The
+     premise is DRIVEN over the wordings that rule was written for, so a
+     narrowing of the survivor fails here instead of silently dropping the
+     cost (the v3.60 bug: five Kayo rows drew for free). */
+  const P = require("../engine/parser.js");
+  for(const t of ["draw a card then discard a random card",
+                  "draw a card, then discard a random card",
+                  "draw two cards and then discard two random cards",
+                  "draws a card then discards a random card",
+                  "draw a card, then discard a card at random"]){
+    const r = P.classifyClause(t);
+    assert.ok(r && r.status === "run", t + " no longer reads");
+    assert.deepEqual(r.ops.map(o => o[0]), ["draw", "discardRandom"],
+      t + " lost its printed discard — the cost silently deleted");
+  }
 });

@@ -330,7 +330,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      which ships whole — outside this digest, again. */
   /* 15 -> 16 AT v4.69: `pend.noDrx` and a `buffQ` entry's `src` — inside
      whole-shipped values again, so the digest does not move. */
-  assert.equal(W.WIRE_V, 16,
+  /* 16 -> 17 AT v4.71: a pick prompt's `xPay` — whole-shipped again. */
+  assert.equal(W.WIRE_V, 17,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

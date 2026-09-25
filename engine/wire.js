@@ -211,7 +211,10 @@
    `buffQ` entry gains `src`, the card that granted it. Both are opt-in and
    both sit inside whole-shipped values, so by hand — and, since this same
    version, behind a handshake that already refuses two releases. */
-const WIRE_V = 16;
+/* 16 -> 17 AT v4.71: a pick prompt may carry `xPay` (Beckoning Haunt's X,
+   paid per pip when the pick settles it). Opt-in, inside a whole-shipped
+   value — by hand, behind a handshake that already refuses two releases. */
+const WIRE_V = 17;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

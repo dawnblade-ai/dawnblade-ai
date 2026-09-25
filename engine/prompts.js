@@ -397,6 +397,11 @@ function buildPrompt(game, spec){
       ctrSpend: spec.ctrSpend || null,
       ctrHeld: spec.ctrHeld != null ? spec.ctrHeld : null,
       playThisTurn: !!spec.playThisTurn,
+      /* AN X SETTLED BY THE CHOICE (v4.71) — Beckoning Haunt pays X once per
+         pip, X being the chosen aura's cost. The same rule as the counter
+         cost above: data, never ops, and dropped here the aura comes back
+         for FREE. OPT-IN, so no other pick changes shape (v3.58). */
+      ...(spec.xPay ? {xPay: spec.xPay} : {}),
       /* THE BANISH RIDER'S STAMP (v3.92) — data the answer applies to the
          card that MOVED. A spec only carries fields `buildPrompt` knows
          about (v2.34, v3.33, v3.53), so a field threaded through and

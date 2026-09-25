@@ -403,14 +403,35 @@ const APPROX = {
 /* ---- B. CARD SEMANTICS -------------------------------------------- */
 
 "x-cost": {
-  status:"open", cr:null, board:"both", since:"v2.32", swept:"v4.02",
-  claim:"An X cost or an X quantity is REFUSED rather than read. Ice Eternal "+
-        "prints cost XX and 'create X Frostbite tokens'.",
+  status:"open", cr:null, board:"both", since:"v2.32", swept:"v4.71",
+  claim:"A FREE X — one the player names — is REFUSED rather than read. Ice "+
+        "Eternal prints cost XX and 'create X Frostbite tokens'. (Beckoning "+
+        "Haunt's X was BUILT at v4.71: it is COUPLED to the aura it returns, so "+
+        "the pick settles it, the sheet offers only what the seat can pay, and "+
+        "`parseHeroPower` refuses X pips no pick settles.)",
   why:"Creating ONE token for a card that charges for X is quietly weaker than "+
       "printed — which coverage reads as `full` and the one-sided fairness sweep "+
       "cannot see. Refusing leaves it a visible gap. Blaze's 'remove X energy "+
       "counters' is NOT this shape (v3.39): X is settled by the card the player "+
       "picks, so the coupling lives in the filter and no X machinery is needed."},
+
+"activation-choices-at-resolution": {
+  status:"stated", cr:"CR 1.4.5", board:"both", since:"v2.17", swept:"v4.71",
+  claim:"The target (and, for Beckoning Haunt, the X) of an ACTIVATED ability is "+
+        "chosen when it RESOLVES, through the pick sheet its payload queues. In the "+
+        "CR both are declared when the ability is activated, before anyone may "+
+        "respond. Recorded at v4.71, when an X cost made the choice part of the "+
+        "PRICE: the fixed part is paid on activation and X when the pick settles it.",
+  why:"Every activation pick in the pool works this way (Fai, Halo of "+
+      "Illumination, Hope Merchant's Hood, Crown of Dichotomy, Blaze, and now "+
+      "Beckoning Haunt), and the legality asks the same pool the sheet will, so "+
+      "an activation with no legal choice is refused before its cost is paid "+
+      "(v4.59). What differs is observable only in the window between: since "+
+      "v4.66 the table holds an Action-speed activation on the stack, so the "+
+      "other seat answers without knowing the target, and the controller "+
+      "chooses after seeing that answer. Declaring at activation needs the "+
+      "choice as a PENDING before payment (boost's and fusion's shape), which "+
+      "is its own piece of work across every activation pick."},
 
 "spellvoid-x": {
   status:"stated", cr:null, board:"both", since:"v2.32", swept:"v4.02",

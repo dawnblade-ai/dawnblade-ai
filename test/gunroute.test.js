@@ -331,8 +331,10 @@ test("exactly ONE pool piece prints both an attack and an ability", {skip}, () =
      half of the pin is exactly what sees that, and pinning the BOTH set
      alone could not (v4.17, v4.12). 33 -> 34 AT v4.65 for the same
      reason: Topsy Turvy's payload got a reader, so its "Instant - {t}:"
-     line builds a powCard — ninth outing of that shape. */
-  assert.equal(abOnly, 34, "and the count with an ability alone moved");
+     line builds a powCard — ninth outing of that shape. 34 -> 35 AT v4.71:
+     Beckoning Haunt, whose X cost read once X was settled by the choice
+     — tenth. */
+  assert.equal(abOnly, 35, "and the count with an ability alone moved");
 });
 
 test("a PAID cost that resolves to nothing is refused first", {skip}, () => {

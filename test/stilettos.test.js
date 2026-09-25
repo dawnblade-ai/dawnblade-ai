@@ -426,8 +426,11 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      AGAIN AT v4.65, after reading the diff: Topsy Turvy went `part` ->
      `full` when its deck-top replacement got a reader, and with it a
      powCard, so `full` 756 -> 757 and `part` 30 -> 29. One record
-     (400 -> 401 full, 5 -> 4 part). */
-  assert.deepEqual(tiers, {full: 757, none: 11, part: 29});
+     (400 -> 401 full, 5 -> 4 part). RE-PINNED AGAIN AT v4.71, after
+     reading the diff: Beckoning Haunt went `part` -> `full` when its X cost
+     was coupled to the aura it returns, so `full` 757 -> 758 and `part`
+     29 -> 28. One record (401 -> 402 full, 4 -> 3 part). */
+  assert.deepEqual(tiers, {full: 758, none: 11, part: 28});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

@@ -198,7 +198,12 @@ test("every spec field that reaches prompts.js is pinned", () => {
     "ctrHeld", "ctrSpend", "ctrStamp", "destroyUid", "elseOps", "equipStamp",
     "faceUp", "filter", "hint", "jab", "lateGa", "max", "min", "moveFoe", "n",
     "ops", "optional", "options", "playThisTurn", "shuffleAfter", "side", "spendCtr",
-    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "zone",
+    "src", "tag", "tapHero", "tapUid", "taps", "title", "to", "xPay", "zone",
+  /* +xPay v4.71 — Beckoning Haunt's X, paid once per {x} pip for the aura
+     the pick returns. It arrived on the same 34 legs with no leg written,
+     so Viserai really does activate the piece in a driven game. The parse's
+     own `xOf` is deleted at the queue site so that only the field
+     `buildPrompt` reads travels (v2.34). */
   /* +charge v4.64 — Roaring Beam's charge made as an EFFECT, and it arrived
      on the same 34 legs with no leg written, so Boltyn really does play it
      into an empty soul in a driven game: the route is not latent. */

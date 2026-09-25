@@ -154,7 +154,7 @@ const abWindow = ab => PR.abWindow(ab);
    ONE BODY, BOTH BRANCHES, and the same three readers the trainer asks —
    a cost read in one place and re-derived in another is two descriptions
    of one price (v3.79, v3.86). */
-function abCostWhy(sd, ab){
+function abCostWhy(sd, ab, ctx){
   const _sc = PR.abSoulCost(ab);
   if(_sc && (sd.soul || []).length < _sc)
     return ab.name + " costs " + _sc + " from the soul, and " + sd.name
@@ -244,9 +244,16 @@ function abCostWhy(sd, ab){
      Blaze's own by-name refusal (v3.39) stays, because it asks the SHARPER
      question: what the energy pool can afford, which no candidate scan
      knows. */
-  const _pk = PR.abPickSpec(ab);
+  /* …WITH ITS X BOUND (v4.71). Beckoning Haunt's X is the chosen aura's
+     cost, so an aura the seat cannot pay for is not a choice at all —
+     `abPickBound` is the one reader, and `ctx` is the game's half of the
+     fixed cost (v3.96) its callers already hold. */
+  const _pk = PR.abPickBound(sd, ab, ctx);
   if(_pk && !PM.promptPickAskable(PM.promptPickPool(sd, _pk), _pk)){
     const _zw = PM.promptZoneWord(_pk.zone || "hand");
+    if(_pk.xOf && PM.promptPickAskable(PM.promptPickPool(sd, PR.abPickSpec(ab)), PR.abPickSpec(ab)))
+      return ab.name + ": nothing in " + GM.sp(sd) + " " + _zw
+           + " has a cost X that " + sd.name + " can pay " + (ab._xPips || 0) + " times";
     return _pk.filters
       ? ab.name + " needs BOTH its targets, and " + GM.sp(sd) + " " + _zw
         + " cannot supply them"
@@ -1085,7 +1092,7 @@ function legal(g, a, seat){
       /* THE SOUL BANISH (v3.74), THE FLIP (v3.99) AND THE NAMED BOARD
          PERMANENT (v3.86) — one body, because the GEAR branch below has
          to ask exactly the same three and asked none of them. */
-      { const why = abCostWhy(sd, ab); if(why) return why; }
+      { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, ab))
         return ab.name + " can't be activated — " + gate.why;
@@ -1199,7 +1206,7 @@ function legal(g, a, seat){
            `heroRec.tx` (v3.48, v4.46). */
         if(PR.tapsToActivate(b.card.tx || "") && b.spent)
           return b.card.name + " is tapped until your end phase";
-        { const why = abCostWhy(sd, ab); if(why) return why; }
+        { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
         const bgate = PR.fxParse(ab).activateIf;
         if(bgate && !E.activateIfOk({...g, actor: seat}, bgate, b))
           return b.card.name + " can't be activated — " + bgate.why;
@@ -1312,7 +1319,7 @@ function legal(g, a, seat){
       if((sd.weaponUsed || {})[ab.uid]) return piece.name + "'s ability is spent this turn";
       /* THE COSTS PAID OUT OF SOMEWHERE THE POWCARD CANNOT SEE (v3.99).
          This branch asked NONE of them until now — see `abCostWhy`. */
-      { const why = abCostWhy(sd, ab); if(why) return why; }
+      { const why = abCostWhy(sd, ab, PR.costCtx(g, seat)); if(why) return why; }
       const gate = PR.fxParse(ab).activateIf;
       if(gate && !E.activateIfOk({...g, actor: seat}, gate, piece))
         return piece.name + " can't be activated — " + gate.why;

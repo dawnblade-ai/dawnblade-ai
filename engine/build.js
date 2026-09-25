@@ -446,6 +446,12 @@ function heroAbilities(heroRec, displayName, code){
        hand, nothing about gear or the arena, so all three builders
        stamp it. v3.63's rule, FIFTH outing. */
     heroPow.chi ? {_chiCost: heroPow.chi} : {},
+    /* AN X COST'S PIPS (v4.71) — Beckoning Haunt's "{x}{x}". The fixed part
+       is `cost`; the X part is paid when the pick settles X, so the count
+       rides here or nothing charges it. ZONE-AGNOSTIC (X is paid out of
+       resources), so all three builders stamp it — v3.63's rule, SIXTH
+       outing. */
+    heroPow.x ? {_xPips: heroPow.x} : {},
     /* FAI — "this ability costs {r} less to activate for each DRACONIC
        CHAIN LINK you control" (v3.86). A DYNAMIC reduction: it depends on
        the chain, which is game state rather than a fact about the side,
@@ -629,7 +635,8 @@ function boardPow(b){
        discard: `parser.chiFloating` reads the side's pitch zone and
        hand, nothing about gear or the arena, so all three builders
        stamp it. v3.63's rule, FIFTH outing. */
-    pw.chi ? {_chiCost: pw.chi} : {});
+    pw.chi ? {_chiCost: pw.chi} : {},
+    pw.x ? {_xPips: pw.x} : {});      /* v4.71, see the hero builder */
 }
 
 /* ---- WHAT MAKES A RESOLVED RECORD AN EQUIPPED PIECE (v4.15) --------
@@ -762,7 +769,8 @@ function equipPiece(gr){
          discard: `parser.chiFloating` reads the side's pitch zone and
          hand, nothing about gear or the arena, so all three builders
          stamp it. v3.63's rule, FIFTH outing. */
-      pw.chi ? {_chiCost: pw.chi} : {}); } }
+      pw.chi ? {_chiCost: pw.chi} : {},
+      pw.x ? {_xPips: pw.x} : {}); } }   /* v4.71 — Beckoning Haunt's own builder */
   /* IT MUTATES AND RETURNS. The loadout loop discards the value and the
      runtime equip needs it, which is the whole reason this body left the
      `forEach` — a second copy that only returned would drift. */

@@ -52,7 +52,11 @@ before starting new work.
 > probe). §3's one-card pick sheets **DONE at v4.68** — measured at 114 per
 > 210 games, now confirmed on the spot on both boards. §3's wire digest
 > **DISCHARGED at v4.69** by putting the release in the table handshake.
-> §3's Release the Tension bar **BUILT at v4.70**.
+> §3's Release the Tension bar **BUILT at v4.70**. Beckoning Haunt **BUILT at
+> v4.71** (X settled by the choice; a free-X defect in `parseHeroPower` found
+> and closed on the way), and §3's dead anchors asked v4.48's question: one
+> deleted as dead by construction, one named. Three deck cards remain
+> unfinished: Jack Be Quick (recorded), Walk in My Shoes and Ice Eternal.
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
