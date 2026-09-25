@@ -275,7 +275,9 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      reversal a `stated` record exists to force (v4.02). */
   /* 16 -> 17 AT v4.66: `instant-speed-plays-resolve-on-play` — what the
      table stack still collapses, recorded the version it was built. */
-  assert.equal(n("stated"), 17, "stated count moved");
+  /* 17 -> 16 stated, 18 -> 19 closed AT v4.69: `drx-bar-from-arsenal-unread`
+     was BUILT and is `drx-bar-from-arsenal-read`, its probe turned round. */
+  assert.equal(n("stated"), 16, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -315,7 +317,7 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   assert.equal(n("open"),    6, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. */
-  assert.equal(n("closed"), 18, "closed count moved");
+  assert.equal(n("closed"), 19, "closed count moved");
 });
 
 /* ============================================================
@@ -765,32 +767,28 @@ probe("multi-target-pick-all-or-nothing", () => {
   assert.ok(!kept.destroyed, "the piece was destroyed by a refused activation");
 });
 
-probe("drx-bar-from-arsenal-unread", () => {
-  /* DRIVEN, and it asserts the DEVIATION, so it goes RED the day the narrower
-     wording is read — which is what a `stated` record is for (v4.02).
-
-     THREE HALVES, because a probe that only checks the refusal cannot tell a
-     deliberate narrowing from a reader that is simply broken: the two
-     unconditional wordings must still READ, the narrow one must NOT, and the
-     card must still report its rider unread so nothing claims it works. */
-  assert.equal(PR.classifyClause(
-    "defense reactions can't be played from arsenal this chain link"), null,
-    "the 'from arsenal' wording now reads — this record is stale, and the thing "
-    + "to check is whether the ZONE is carried or whether the bar has quietly "
-    + "widened onto the HAND door too");
+probe("drx-bar-from-arsenal-read", () => {
+  /* TURNED ROUND AT v4.69: it asserts the BUILD now, in the three halves the
+     stated probe asked about — the narrow wording reads WITH ITS ZONE (never
+     `true`, which would bar the hand), the unconditional one is unchanged,
+     and the card's grant carries the bar where the rider was unread. */
+  const narrow = PR.classifyClause("defense reactions can't be played from arsenal this chain link");
+  assert.equal(narrow && narrow.noDrx, "arsenal",
+    "the 'from arsenal' wording regressed — refused again, or widened onto the HAND door");
   const yes = PR.classifyClause("defense reactions can't be played to this chain link");
-  assert.equal(yes && yes.noDrx, true,
-    "the unconditional wording stopped reading — the deviation this record "
-    + "describes is no longer the narrow one");
+  assert.equal(yes && yes.noDrx, true, "the unconditional wording stopped reading");
   const db = H.db();
   if(!db) return;
   PR.fxReset();
   const rt = C.resolveEntry(db, {name: "Release the Tension", p: 1, code: null, q: 1});
   const fx = PR.fxParse(rt);
-  assert.equal(!!fx.noDrx, false, "Release the Tension now carries the bar");
-  assert.ok((fx.quotedUnread || []).some(q => /from arsenal/.test(q)),
-    "its unread rider is no longer reported — the gap has gone quiet, which is "
-    + "worse than the gap (v3.41)");
+  const op = fx.ops.find(o => o[0] === "buffNext");
+  assert.deepEqual(op && op[3], {noDrx: "arsenal"}, "the grant no longer carries the bar");
+  const dr = C.resolveEntry(db, {name: "Put in Context", p: 3, code: null, q: 1});
+  const link = {card: {name: "Arrow", tt: "Ranger Action - Arrow Attack", power: 3, tx: ""},
+                noDrx: [{from: "arsenal", src: "Release the Tension"}]};
+  assert.ok(PR.drxBarWhy(link, dr, "arsenal"), "the granted bar no longer closes the arsenal");
+  assert.equal(PR.drxBarWhy(link, dr, "hand"), null, "the granted bar closes the HAND — stronger than printed");
 });
 
 probe("heave-window", () => {

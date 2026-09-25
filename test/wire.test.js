@@ -328,7 +328,9 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
      this digest does not cover either, so again it does not move. */
   /* 14 -> 15 AT v4.66: a held play is a new layer KIND inside `stack`,
      which ships whole — outside this digest, again. */
-  assert.equal(W.WIRE_V, 15,
+  /* 15 -> 16 AT v4.69: `pend.noDrx` and a `buffQ` entry's `src` — inside
+     whole-shipped values again, so the digest does not move. */
+  assert.equal(W.WIRE_V, 16,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

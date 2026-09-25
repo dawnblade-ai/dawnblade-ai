@@ -104,6 +104,25 @@ const {advValue} = A;
 const {buildPrompt, applyPrompt, promptReady, promptFilter} = PR;
 const rngRoll = R.roll, rngInt = R.int, rngShuffle = R.shuffle;
 
+/* WHAT A GRANT'S RIDER DOES, IN THE WORDS THE FEED USES (v4.69). The line
+   read ", and it goes again if it hits" for EVERY rider — true of Warrior's
+   Valor and false of Yo Ho Ho!'s Gold, the Loot cards' discard and destroy,
+   Weave Lightning's fused go again and Release the Tension's bar. In a
+   training sim the feed is the lesson (v3.60), so a line that names the
+   wrong ability teaches the wrong card. Pure, and it names only what the
+   rider carries; anything else is "a granted ability" rather than a guess. */
+function riderWords(r){
+  if(!r) return "";
+  if(r.noDrx) return r.noDrx === true
+    ? ", and no defence reaction can be played to its chain link"
+    : ", and no defence reaction can be played from arsenal to its chain link";
+  if(r.gaIf === "fused") return ", and it goes again if it was fused";
+  const hit = [...(r.onHit || []), ...(r.onHitHero || [])];
+  if(hit.length === 1 && hit[0][0] === "ga" && !(r.condOnHit || []).length)
+    return ", and it goes again if it hits";
+  return ", and a granted ability";
+}
+
 /* THE CONTEXT. Every name here is a closure the moved bodies call and
    that this module cannot own: the logger, the actor helpers, the card
    database, the uid counters, the hero build and the trainer’s own
@@ -1353,11 +1372,17 @@ function makeEffects(ctx){
            names that one card and the qualifier is a CONDITION on it
            rather than a restriction on which card the grant waits for.
            OPT-IN, so every existing entry keeps its shape (v3.58). */
+        /* A STATIC RIDER (v4.69) NAMES ITS SOURCE ON THE ENTRY. Release the
+           Tension's bar lands on another card's link, and the refusal it
+           produces there must name the card that granted it — so the name
+           is stamped here, where it is known, and opt-in so every other
+           entry keeps its shape (v3.58). */
         if(op[2] || op[3]){
           actMut(n).buffQ = [...(act(n).buffQ||[]),
-            Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {})];
+            Object.assign({amt:v, q:op[2]||null, rider:op[3]||null}, op[4] ? {once:true} : {},
+                          op[3] && op[3].noDrx ? {src: srcName} : {})];
           const who = op[2] ? P.qualLabel(op[2]).replace(/^an? /, "") : "attack";
-          n=L(n,`Next ${who} +${v}${op[3]?", and it goes again if it hits":""}.`); }
+          n=L(n,`Next ${who}${v ? " +" + v : ""}${riderWords(op[3])}.`); }
         else { actMut(n).buffNext+=v; n=L(n,`Next attack +${v}.`); }
       }
       /* ---- THE DELAYED ON-HIT GRANT (v4.41) --------------------------
@@ -3860,6 +3885,12 @@ function makeEffects(ctx){
          rides as `condOnHit` entries, the shape `fx.condOnHit` already
          uses, and is re-checked at the hit rather than at declaration. */
       const qRiderCond = _qr.reduce((a2,b)=>a2.concat(b.rider.condOnHit||[]), []);
+      /* AND A STATIC ONE LANDS ON THE LINK (v4.69). Release the Tension's
+         "defense reactions can't be played from arsenal this chain link" is
+         about the chain link THIS attack opens, so it rides into `pend` —
+         whose lifetime is that link — and `drxBarWhy` reads it there. */
+      const qNoDrx = _qr.filter(b=>b.rider.noDrx)
+        .map(b=>({from: b.rider.noDrx === true ? null : b.rider.noDrx, src: b.src || null}));
       if(qRider.length) n = L(n, `${card.name} carries a granted ability into the chain.`);
       /* AND A RIDER CAN GRANT GO AGAIN ON A FACT ABOUT THE PLAY (v4.13).
          Weave Lightning's "if it's FUSED, it gets go again" is about the
@@ -4309,7 +4340,7 @@ function makeEffects(ctx){
          and that this play IS an attack), so the answer travels with the
          link rather than being re-derived over there — v3.24's rule about
          an argument threaded through two call sites. */
-      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], chargedWay, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
+      n.pend = {card, from, by: actorOf(n), defCap: _cap || null, total, ga, _qCtx: qCtx, ops:fx.ops.filter(o=>o[0]!=="reveal"&&o[0]!=="revPitch"&&o[0]!=="revColorPitch"&&o[0]!=="payOrLose"&&o[0]!=="perBoost"&&o[0]!=="perChainHit"&&o[0]!=="perEquipDef"&&o[0]!=="piercing"&&!preRan.has(o)), onHit:[...fx.onHit, ...qRider, ...gaRider, ...smRider], onHitHero:[...(fx.onHitHero||[]), ...qRiderHero, ...gaRiderHero], condOnHit:[...(fx.condOnHit||[]), ...qRiderCond], ...(qNoDrx.length ? {noDrx: qNoDrx} : {}), chargedWay, fused, lateConds:fx.conds.filter(x=>isLateCond(x.cond)), lateOps:[...fx.ops.filter(o=>o[0]==="perEquipDef"||o[0]==="piercing"), ...(_pierce ? [["piercing", _pierce]] : [])], runeOnHit};
       n.stack = [{k:"atk", label:`${card.name} — attack ${total}`}];
       /* ---- "WHEN THIS ATTACKS A HERO, …" FIRES AT DECLARATION (v3.46) --
          An attacks-trigger goes on the stack ABOVE the attack that

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.69
+**Current version:** v4.70
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3105 drills** at v4.69.
+This is `node --test "test/*.test.js"` — **3113 drills** at v4.70.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,18 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A GRANTED BAR RIDES ON THE PUMP AND ASKS THE ZONE (v4.70)
+
+Release the Tension grants its next arrow *"Defense reactions can't be played
+from arsenal this chain link."* `noDrx` is `true` (every zone) or the zone
+NAME, `parser.quotedStatic` reads the static rider beside the on-hit
+`quotedRider` (not a widening of it), the collecting arrow carries it onto
+`pend.noDrx`, and **`drxBarWhy(link, card, from)` is asked by all three doors
+with their own zone**. The narrow bar never closes the hand; that is the
+half v4.60's refusal protected, and a drill drives it. The grant's feed line
+now names what its rider does (`riderWords`); it used to say "goes again if
+it hits" for every rider.
 
 ### THE SAME CARDS IS NOT THE SAME GAME (v4.69)
 

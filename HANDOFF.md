@@ -52,6 +52,7 @@ before starting new work.
 > probe). §3's one-card pick sheets **DONE at v4.68** — measured at 114 per
 > 210 games, now confirmed on the spot on both boards. §3's wire digest
 > **DISCHARGED at v4.69** by putting the release in the table handshake.
+> §3's Release the Tension bar **BUILT at v4.70**.
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
@@ -107,10 +108,10 @@ CR dictates"*. Two `open` records are pure CR fidelity:
   of 16 replayed games diverge between v4.67 and v4.68). The build
   identity carries the release now, which covers every shape a ledger
   would have listed and more. The hand bump stays as the second guard.
-- **`drx-bar-from-arsenal-unread`** (Release the Tension ×3). The fix
-  is to widen `quotedRider`, which requires `sub.onHit` by construction,
-  to carry a static restriction. Four grant families share that shape,
-  so census them before widening (v4.21).
+- ~~**`drx-bar-from-arsenal-unread`**~~ **BUILT AT v4.70** without
+  widening `quotedRider`: a second narrow reader (`quotedStatic`) beside it,
+  the zone as a value on `noDrx`, and every door naming its zone. Now
+  `drx-bar-from-arsenal-read`, closed.
 - **The 15 dead anchors** in `npm run anchors`. Each is a lead, not a
   finding (v4.50). Ask v4.48's question of each one: does the pool print
   a near-miss, and does something ELSE read it wrongly?

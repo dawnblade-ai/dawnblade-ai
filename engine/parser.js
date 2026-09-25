@@ -408,6 +408,26 @@ function quotedOnHit(txt){
   return r ? r.ops : null;
 }
 
+/* A GRANTED ABILITY THAT IS A STATIC RESTRICTION, NOT A TRIGGER (v4.69).
+   `quotedRider` is an ON-HIT reader by construction — it requires
+   `sub.onHit` — and Release the Tension grants its arrow attack "Defense
+   reactions can't be played from arsenal this chain link", which fires on
+   nothing: it holds for as long as that link is open. So it is a second,
+   narrow reader beside the first rather than a widening of it, and it
+   answers only for the one static the engine has a reader for (`noDrx`,
+   `drxBarWhy`'s field). Anything else stays unread and the card keeps
+   `fx.quotedUnread`, which is the honest report (v3.41).
+
+   MEASURED BEFORE BUILDING: over the pinned pool, exactly TWO records'
+   quoted riders were unread, and this is one of them — the other is
+   Display Loyalty's attacks-trigger, a different family. */
+function quotedStatic(txt){
+  const q = quotedText(txt);
+  if(q == null) return null;
+  const sub = classifyClause(q);
+  return sub && sub.status === "run" && sub.noDrx ? {noDrx: sub.noDrx} : null;
+}
+
 /* THE PICK SHAPES, NAMED ONCE. Each is matched twice — against the
    lowercased clause for the shape, and against the raw clause to recover
    the subject's printed capitalisation (see `cased` inside
@@ -2641,7 +2661,9 @@ function classifyClause(raw){
        the rider is simply absent — the pump still lands, and the audit
        still reports the clause honestly. */
     const ro = quotedRider(c);
-    const rider = ro ? (ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}) : null;
+    /* …OR A STATIC ONE (v4.69), which rides on the same entry and lands on
+       the collecting attack's LINK rather than in its on-hit list. */
+    const rider = ro ? (ro.heroOnly ? {onHitHero: ro.ops} : {onHit: ro.ops}) : quotedStatic(c);
     const op = ["buffNext", +m[3]];
     if(q || rider) op[2] = q || null;
     if(rider) op[3] = rider;
@@ -3495,8 +3517,16 @@ function classifyClause(raw){
      printed TYPE — is the whole of what either wording can reach here, and
      an INSTANT played in the defence window is not a defence reaction and
      is correctly untouched. */
-  if(/^defense reaction(?: card)?s can'?t be played (?:to )?this(?:'s)? chain link$/.test(c))
-    return R([["noop", "static — read in the reaction window, off fx.noDrx"]], {noDrx: true});
+  /* …AND AT v4.69 THE NARROW WORDING READS, WITH ITS ZONE AS A VALUE.
+     Release the Tension is the claimant the note above was waiting for, so
+     the zone stops being vocabulary with no reader: `noDrx` is `true` for a
+     bar on every zone and the ZONE NAME for a bar on one, and `drxBarWhy`
+     asks the zone the defence reaction is being played FROM. The narrow
+     form still cannot bar the hand — that is the half the refusal existed
+     to protect, and a drill drives it. */
+  if(m = c.match(/^defense reaction(?: card)?s can'?t be played (?:(from arsenal) )?(?:to )?this(?:'s)? chain link$/))
+    return R([["noop", "static — read in the reaction window, off fx.noDrx"]],
+             {noDrx: m[1] ? "arsenal" : true});
   /* TWO `enterCounters` RULES STOOD HERE AND THE OP WAS DEAD (v4.23).
      `runOps` stashed it as `_enterCounters` and NOTHING read that field,
      ever — while the verse count the clause describes was recovered by a
@@ -5994,7 +6024,7 @@ function fxParse(card){
        played to this chain link" is a CARD FACT read by `drxBarWhy` at the
        play, so without this line the clause reports `run` and bars nothing
        — v4.01's no-op blind spot arriving through the front door. */
-    if(r.noDrx) fx.noDrx = true;
+    if(r.noDrx) fx.noDrx = r.noDrx;
     /* A DROPPED QUOTED ABILITY MUST NOT REPORT AS READ (v3.40).
 
        `quotedOnHit` returns null on a payload it cannot read, and v3.10
@@ -6521,7 +6551,7 @@ function fxParse(card){
     if(cl.st !== "run") return;
     const low = levelIdiom(clean(cl.t).toLowerCase().replace(/\.$/,"").replace(/^-\s*/,""));
     const q = quotedText(low);
-    if(q == null || quotedOnHit(low)) return;
+    if(q == null || quotedOnHit(low) || quotedStatic(low)) return;
     /* A QUOTED ABILITY THE AURA-WEAPON GRANT CONSUMED HAS A READER
        (v3.84). This flag asks exactly one question — "is there a reader
        for this quoted ability" — and `auraWeaponGrant` is one: it hands
@@ -9218,13 +9248,38 @@ function rxAllowed(c, win){
    the other end). The site still exists on that board, because a rule
    that lives on one board is this project's recurring defect (v3.01),
    and it is drilled with a synthetic `pend` (v3.73). */
-function drxBarred(atkCard){
-  return !!(atkCard && fxParse(atkCard).noDrx);
+/* THE LINK, NOT THE CARD, AND THE ZONE IT IS PLAYED FROM (v4.69).
+
+   Two sources can close the window, and only one of them is printed on the
+   card on the link. Widowmaker prints its own bar; Release the Tension
+   GRANTS one to "your next arrow attack", so the bar rides on the pump to
+   whichever arrow collects it and lands on that attack's `pend` as
+   `noDrx: [{from, src}]` — "this chain link" is `pend`'s lifetime either way.
+
+   AND THE ZONE IS THE CALLER'S ANSWER (v3.24): the granted bar names the
+   ARSENAL, so the question is where the defence reaction is being played
+   FROM. A caller that says nothing gets no narrow bar — weaker than printed
+   and visible — and the unconditional one bars every zone as before.
+
+   Answers `{src}` — the card the refusal should name — or null. */
+function drxBarred(link, from){
+  if(!link) return null;
+  const own = link.card ? fxParse(link.card).noDrx : null;
+  if(own === true || (own && own === from)) return {src: link.card.name, from: own === true ? null : own};
+  for(const b of link.noDrx || [])
+    if(b && (b.from == null || b.from === from)) return {src: b.src || link.card && link.card.name, from: b.from};
+  return null;
 }
-function drxBarWhy(atkCard, c){
-  if(!c || !isDR(c) || !drxBarred(atkCard)) return null;
-  return c.name + " is a defence reaction, and " + atkCard.name
-       + " says none can be played to this chain link.";
+function drxBarWhy(link, c, from){
+  if(!c || !isDR(c)) return null;
+  const bar = drxBarred(link, from);
+  if(!bar) return null;
+  const onto = link.card && bar.src !== link.card.name ? " on " + link.card.name : "";
+  return bar.from
+    ? c.name + " is in an arsenal, and " + bar.src + onto
+      + " says no defence reaction can be played from arsenal to this chain link."
+    : c.name + " is a defence reaction, and " + bar.src + onto
+      + " says none can be played to this chain link.";
 }
 
 /* ---- WHAT COSTS AN ACTION POINT (CR 8.1.1 / 8.1.6) ------------------

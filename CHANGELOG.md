@@ -1,3 +1,69 @@
+## v4.70 — the arsenal door, and only the arsenal door
+
+> *"Your next arrow attack this turn gets +3{p} and **\"Defense reactions
+> can't be played from arsenal this chain link.\"**"* — RELEASE THE TENSION,
+> Azalea's
+
+**v4.60 REFUSED THIS ON PURPOSE AND RECORDED WHAT IT WAITED ON.** Read by
+the unconditional anchor Widowmaker and Wreck Havoc use, the bar would close
+the HAND door too, which is stronger than printed. And the rider reader,
+`quotedRider`, is an ON-HIT reader by construction, while this rider fires on
+nothing: it holds for as long as the link is open.
+`drx-bar-from-arsenal-unread` stayed `stated` with a probe asserting the
+refusal. **That probe went red the day this landed**, which is its job
+(v4.02).
+
+**BOTH HALVES WERE ANSWERED NARROWLY:**
+
+| the record said | built as |
+|---|---|
+| the zone must not be a parameter with no claimant (v4.11) | it has one now: `noDrx` is `true` (every zone) or the zone NAME |
+| `quotedRider` would need widening for four grant families | it isn't. `parser.quotedStatic` is a second, narrow reader beside it, answering only for the one static the engine can read |
+
+**THE BAR RIDES ON THE PUMP AND LANDS ON THE LINK.** The grant is a `buffQ`
+entry like any qualified pump; its rider carries `noDrx`, and `runOps` stamps
+the granting card's name on the entry as `src`. The arrow that collects it
+carries the bar onto its `pend` as `noDrx: [{from, src}]`. "This chain link"
+is `pend`'s lifetime, so nothing is swept. A non-arrow attack leaves the
+grant waiting (v2.30), and the arrow that takes it SPENDS it.
+
+**`drxBarWhy(link, card, from)` ASKS THE LINK AND THE ZONE.** All three doors
+(`judge.legal`, the trainer's `playRx` and `playRxA`) name their own zone. A
+door that names none gets no narrow bar, which is weaker than printed and
+visible (v3.24). The refusal names the card that granted the bar and the
+arrow it rides on.
+
+**AND THE FEED LINE NAMED THE WRONG ABILITY FOR EVERY RIDER.** `runOps`'
+grant line read *", and it goes again if it hits"* whatever the rider was.
+That was true of Warrior's Valor and false of Yo Ho Ho!'s Gold, both Loot
+cards, Weave Lightning's fused go again, and this bar. The Loot cards also
+printed *"+0"*. `riderWords` names what the rider carries and says *"a
+granted ability"* for anything else rather than guessing.
+
+**THE LADDER IS BYTE-IDENTICAL, AND THAT IS THE POLICY.** Measured across
+the 60 legs Azalea sits in at seed 0: Release the Tension is played **13
+times and the bar lands 0 times**. After it, the policy plays Take Aim,
+Scout the Periphery or Drop the Anchor, never an arrow in the same turn, so
+the grant expires unspent. The table drills drive the arrow directly, both
+halves, plus the non-arrow control.
+
+**ONE SABOTAGE CAME BACK SILENT, AND IT WAS A LATENT PATH.** A card printing
+the narrow bar on ITSELF has no pool claimant, so ignoring the zone there
+failed nothing. A synthetic card that prints it is the drill (v3.73). Two
+more could not be applied at first because their revert anchors were not
+unique; the harness said so rather than reporting them SILENT (v4.37).
+
+### MEASURED
+
+- **no tier moves**; the audit's flagged-card count goes **15 → 14**
+  (Release the Tension leaves), and the pool's unread quoted riders go
+  **4 → 1** (Display Loyalty's attacks-trigger, a different family);
+- approx ledger **17 → 16 stated, 18 → 19 closed**
+  (`drx-bar-from-arsenal-read`);
+- `WIRE_V` **15 → 16** by hand (`pend.noDrx`, a `buffQ` entry's `src`);
+- **12 sabotages, 12 bite** after the synthetic drill and two re-anchors;
+- **3113 drills**, 0 fail, 5 skipped.
+
 ## v4.69 — the same cards is not the same game
 
 **THE REFUSAL MESSAGE AND THE COMPARISON DISAGREED.** net.js's handshake

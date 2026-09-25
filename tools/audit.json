@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-25T22:19:01.101Z",
- "appVer": "4.69",
+ "generated": "2026-09-25T22:30:11.348Z",
+ "appVer": "4.70",
  "dataVer": "sage-v13",
  "dbCount": 797,
  "poolUnique": 405,
@@ -6131,9 +6131,7 @@
    "weaponCost": null,
    "eqAbility": null,
    "tx": "Your next arrow attack this turn gets +3{p} and \"Defense reactions can't be played from arsenal this chain link.\"\nGo again",
-   "flags": [
-    "granted ability in quotes has NO reader: \"defense reactions can't be played from arsenal this chain link.\" — the head parses, this does not"
-   ]
+   "flags": []
   },
   "ridge rider shot|1": {
    "name": "Ridge Rider Shot",

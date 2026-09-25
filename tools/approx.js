@@ -683,30 +683,24 @@ const APPROX = {
       "change v3.23 says is worse than the honest gap. Crown of Dichotomy is the "+
       "pool's only multi-target pick, so nothing else is waiting on it."},
 
-"drx-bar-from-arsenal-unread": {
-  status:"stated", cr:"CR 8.1.3a", board:"both", since:"v4.60", swept:"v4.60",
+"drx-bar-from-arsenal-read": {
+  status:"closed", cr:"CR 8.1.3a", board:"both", since:"v4.60", swept:"v4.69",
   claim:"Release the Tension x3 grants \"Defense reactions can't be played FROM "+
-        "ARSENAL this chain link\" as a quoted ability on your next arrow attack, "+
-        "and that narrower form is deliberately REFUSED. v4.60 built the two "+
-        "unconditional wordings (Widowmaker, Wreck Havoc); this one still reads "+
-        "nothing, and the card keeps `fx.quotedUnread` so the audit names it.",
-  why:"READING IT WITH THE UNCONDITIONAL ANCHOR WOULD BE STRONGER THAN PRINTED. "+
-      "The clause restricts one ZONE; taken by the reader v4.60 built it would bar "+
-      "a defence reaction played from the HAND as well, which the card never says — "+
-      "the direction that steals games, and v2.30's arrow-buff-on-a-sword one "+
-      "restriction over. So the anchor stops short of it and the refusal is visible. "+
-      "AND THE ZONE IS NOT CARRIED AS A PARAMETER, on purpose: with only the two "+
-      "unconditional records reading, a `zone` field on the bar would have no "+
-      "claimant, which is dead rules code that reads like a rule (v4.11, v4.52). "+
-      "WHAT IT WAITS ON IS `quotedRider`, NOT THE ZONE. That body requires "+
-      "`sub.onHit` — it is an ON-HIT reader by construction — and this rider is a "+
-      "static restriction, so carrying it means widening the rider shape for all "+
-      "FOUR grant families that share it (`buffQ`, `gaNextQ`, `instantNextQ`, "+
-      "`costOff`). That is its own piece of work with its own blast radius, and "+
-      "half-building it is worse than the honest gap (v3.23). "+
-      "IT IS LIVE RATHER THAN LATENT: Azalea decks Release the Tension AND "+
-      "Widowmaker, so one hero holds both halves of the family and the narrow one "+
-      "is the half that does nothing."}
+        "ARSENAL this chain link\" as a quoted ability on your next arrow attack. "+
+        "BUILT AT v4.69: the narrow wording reads with its ZONE as a value "+
+        "(`noDrx: \"arsenal\"`), rides on the pump as a static rider "+
+        "(`parser.quotedStatic`), lands on the collecting arrow's `pend`, and "+
+        "`drxBarWhy(link, card, from)` asks the zone the defence reaction is played "+
+        "from — so the arsenal is barred and the HAND is not.",
+  why:"Recorded at v4.60 as `stated` with a probe asserting the refusal, which went "+
+      "RED the day the reader landed — the reversal a `stated` record exists to force "+
+      "(v4.02). The two things it named were both answered narrowly: the ZONE became a "+
+      "parameter because it finally had a claimant (v4.11's objection was about "+
+      "vocabulary with none), and `quotedRider` was NOT widened — a second reader "+
+      "for the one static the engine can read sits beside it, so the four grant "+
+      "families' on-hit shape is untouched. Measured before building: exactly two "+
+      "pool records carried an unread quoted rider, and the other (Display "+
+      "Loyalty's attacks-trigger) is a different family."}
 
 };
 

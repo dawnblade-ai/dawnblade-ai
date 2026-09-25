@@ -206,7 +206,12 @@
    so the digest cannot see it; a v14 peer holds no such layer and resolves
    every play on the spot, so the two diverge on the first play either seat
    could answer. By hand, for the same reason as the two bumps above. */
-const WIRE_V = 15;
+/* 15 -> 16 AT v4.69: `pend` gains `noDrx` (a granted "defense reactions
+   can't be played from arsenal this chain link", Release the Tension's) and a
+   `buffQ` entry gains `src`, the card that granted it. Both are opt-in and
+   both sit inside whole-shipped values, so by hand — and, since this same
+   version, behind a handshake that already refuses two releases. */
+const WIRE_V = 16;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

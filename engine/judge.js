@@ -1514,7 +1514,7 @@ function playableWhy(g, seat, c, win, zone){
      function, so the policy inherits the rule and cannot propose a
      refusal (its own contract). */
   if(open.indexOf("defense-reaction") >= 0){
-    const barred = PR.drxBarWhy(g.pend && g.pend.card, c);
+    const barred = PR.drxBarWhy(g.pend, c, zone);
     if(barred) return barred;
   }
 

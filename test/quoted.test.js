@@ -32,10 +32,11 @@ test("an unreadable quoted ability is RECORDED, not silently dropped", {skip}, (
      the same `auras3` gate) has always parsed, so the card reported `full`
      before v3.40 with a printed ability doing nothing.
 
-     RELEASE THE TENSION IS THE CONTROL, and it is a genuine refusal: its
-     quoted ability is a RESTRICTION on the opponent ("defense reactions
-     can't be played from arsenal this chain link"), which this engine has
-     no schedule for. */
+     DISPLAY LOYALTY IS THE CONTROL, and it is a genuine refusal: its
+     quoted ability triggers on ATTACKS rather than on hits, a schedule
+     this reader cannot express. (Release the Tension was the control until
+     v4.69, when its RESTRICTION got a reader — `parser.quotedStatic` — and
+     left the list the way a record should.) */
   const g = fx("Goon Tactics", 3);
   assert.deepEqual(g.quotedUnread || [], [], "its rider reads now");
   assert.deepEqual((g.condOnHit || []).map(x => [x.cond, x.op]),
@@ -43,10 +44,12 @@ test("an unreadable quoted ability is RECORDED, not silently dropped", {skip}, (
     "and it rides behind the SAME gate its head does — a granted ability " +
     "whose grant is conditional is `condOnHit`, never a plain on-hit (v3.10)");
 
-  const r = fx("Release the Tension", 1);
+  const r = fx("Display Loyalty", 1);
   assert.equal((r.quotedUnread || []).length, 1,
     "the control: a rider with genuinely no reader is still recorded by name");
   assert.equal((r.onHit || []).length, 0, "and genuinely does not fire");
+  const rt = fx("Release the Tension", 1);
+  assert.deepEqual(rt.quotedUnread || [], [], "Release the Tension's rider reads now (v4.69)");
 });
 
 test("the TIER still tells the truth about the HEAD", {skip}, () => {
@@ -78,10 +81,14 @@ test("the closing quote is matched to the OPENING one", {skip}, () => {
      the quote: "defense reactions can't be played…" captured `defense
      reactions can`, which then fails to parse for a reason that is not the
      card's — and the audit printed that truncation as the finding. */
+  /* THE FIXTURE MOVED AT v4.69: Release the Tension's rider READS now, and
+     that is the stronger proof — the reader is anchored at both ends
+     ("…can't be played from arsenal this chain link$"), so a capture that
+     stopped at the apostrophe ("defense reactions can") could not read. */
   const r = fx("Release the Tension", 1);
-  assert.deepEqual(r.quotedUnread,
-    ["defense reactions can't be played from arsenal this chain link."],
-    "the whole quoted text, apostrophe and all");
+  const op = (r.ops || []).find(o => o[0] === "buffNext");
+  assert.deepEqual(op && op[3], {noDrx: "arsenal"},
+    "the whole quoted text, apostrophe and all — a truncated capture reads nothing");
 });
 
 test("the audit FLAGS every recorded one, by name", {skip}, () => {
@@ -104,14 +111,15 @@ test("the audit FLAGS every recorded one, by name", {skip}, () => {
      refusals: a trigger this engine has no schedule for (Display Loyalty
      fires on ATTACKS), and a RESTRICTION on the opponent (Release the
      Tension). */
-  for(const nm of ["Display Loyalty", "Release the Tension"])
+  for(const nm of ["Display Loyalty"])
     assert.ok(new RegExp("\\*\\*" + nm + "\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
       nm + " must be flagged in the generated AUDIT.md — run `npm run audit` if this is stale");
   /* AND THE ONE THAT LEFT IS NOT FLAGGED ANY MORE. Without this the drill
      passes on an engine where the flag stopped being produced at all —
      a census that finds nothing (v3.21's rule, and this file's own). */
-  assert.ok(!new RegExp("\\*\\*Goon Tactics\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
-    "Goon Tactics' rider reads now, so the flag must be gone");
+  for(const nm of ["Goon Tactics", "Release the Tension"])
+    assert.ok(!new RegExp("\\*\\*" + nm + "\\*\\*[^\\n]*granted ability in quotes has NO reader").test(md),
+      nm + "'s rider reads now (v3.96, v4.69), so the flag must be gone");
 });
 
 test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {skip}, () => {
@@ -137,11 +145,12 @@ test("the pool-wide count is PINNED, so a new one cannot arrive unnoticed", {ski
      the RULING (user, 2026-08-25) on what tapping a hero means gave that
      payload a reader. The flag asks "is there a reader" (v3.41), so
      building one is exactly how a record leaves this list. */
+  /* FOUR -> ONE AT v4.69: Release the Tension's three records left when its
+     static restriction got a reader (`quotedStatic`). */
   assert.deepEqual(found.sort(), [
     "Display Loyalty p1",
-    "Release the Tension p1", "Release the Tension p2", "Release the Tension p3"
-  ], "four records print a quoted ability with no reader. A FIFTH means upstream added one " +
-     "or a reader regressed; a THIRD means one was built — either way, a deliberate edit here. " +
+  ], "one record prints a quoted ability with no reader. A SECOND means upstream added one " +
+     "or a reader regressed; NONE means one was built — either way, a deliberate edit here. " +
      "GOON TACTICS LEFT AT v3.96, when `foeDeckDestroy` was built — the foe twin of the " +
      "`deckDestroy` v3.90 wrote for Jittery Bones' cost. Display Loyalty stays for a " +
      "different reason and it is not a payload: its rider triggers on ATTACKS rather than " +

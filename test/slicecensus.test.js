@@ -245,13 +245,17 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
        trainer function in the comment beside it (`foeSwing` -> `foeVanilla`,
        see test/actor.test.js). The anchors still bound the body all three
        drills name. */
-    "dorinthea.test.js index.html 9523",
-    "drx.test.js index.html 9523",
+    /* 9,523 -> 9,516 AT v4.69, READ FIRST: `playRx`'s bar call became
+       `drxBarWhy(s.pend, c, "hand")` — the link and the door's zone rather
+       than the link's card — seven characters shorter. Same body, same
+       anchors. */
+    "dorinthea.test.js index.html 9516",
+    "drx.test.js index.html 9516",
     "phasebar.test.js index.html 15953",
     "phasebar.test.js index.html 62489",
     "priority.test.js index.html 17343",
     "priority.test.js index.html 17343",
-    "priority.test.js index.html 9523"
+    "priority.test.js index.html 9516"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are
         `tryPlay` -> `confirmPay` — anchored on the body's own declaration and

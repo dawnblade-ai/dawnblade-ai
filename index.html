@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.69"; /* v4.69 - the table handshakes compare the release as well as the card data. See CHANGELOG.md. */
+window.APP_VER = "4.70"; /* v4.70 - Release the Tension's granted bar closes the arsenal door on its arrow's chain link, and not the hand. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -3337,7 +3337,7 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        because a rule that lives on one board is this project's recurring
        defect (v3.01), and it is drilled with a synthetic `pend`. */
     if(!inAtk){
-      const drxBar = DawnParser.drxBarWhy(s.pend && s.pend.card, c);
+      const drxBar = DawnParser.drxBarWhy(s.pend, c, "hand");
       if(drxBar) return L(s, drxBar);
     }
     const cost = c.cost||0;
@@ -3414,11 +3414,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
       : `${c.name} isn't a defense reaction or an instant.`);
     /* THE SAME BAR, AT THE ARSENAL DOOR (v4.60) — one body, every door
        (`drxBarWhy`). It is the door Release the Tension's narrower
-       "…from arsenal this chain link" would reach, which is why that
-       wording is deliberately refused in the parser rather than folded
-       into this one: read here as an unrestricted bar it would close the
+       "…from arsenal this chain link" reaches (v4.69), which is why each
+       door NAMES its zone: read as an unrestricted bar it would close the
        HAND door too, which is stronger than printed. */
-    const drxBarA = DawnParser.drxBarWhy(s.pend && s.pend.card, c);
+    const drxBarA = DawnParser.drxBarWhy(s.pend, c, "arsenal");
     if(drxBarA) return L(s, drxBarA);
     const cost = c.cost||0;
     if(act(s).res < cost) return L(s, `${c.name} costs ${cost} — not enough floating.`);
