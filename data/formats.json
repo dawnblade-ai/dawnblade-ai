@@ -1,0 +1,40 @@
+{
+  "_README": [
+    "WHAT THIS GAME PLAYS, STATED AS DATA. Dawnblade is a fan-made sub-format",
+    "of Flesh and Blood's Silver Age, declared by the project owner on",
+    "2026-09-26. Its pool is FROZEN at the fifteen Chapter 1-3 precons as",
+    "printed, and it does NOT follow Silver Age's rolling ban list or its",
+    "seasonal hero bench: a card Silver Age has since banned, or a hero it has",
+    "benched, stays legal here. That is a choice about which game this is, not",
+    "an oversight, and `test/formats.test.js` holds it.",
+    "",
+    "THE SILVER AGE LEGALITY BLOCK IS `null`, AND THAT IS A STATEMENT.",
+    "Recording which pool cards Silver Age has banned needs the official",
+    "announcements, and every source for them was blocked by this project's",
+    "cloud sandbox on 2026-09-26. An empty list would read as 'nothing is",
+    "banned', which is false; `null` reads as 'not yet recorded'. The research",
+    "is a desktop task (DESKTOP-TASKS.md). When it is done, fill `banned` and",
+    "`benched` with sourced entries; the drill checks every name against the",
+    "pool, so a typo fails rather than silently marking nothing."
+  ],
+  "dawnblade": {
+    "name": "Dawnblade",
+    "kind": "a fan-made sub-format of Silver Age",
+    "declared": "2026-09-26",
+    "pool": "the fifteen Silver Age Chapter 1-3 preconstructed decks exactly as printed (window.DECKS), plus the tokens and Demi-Heroes their cards create",
+    "heroes": ["arakni", "azalea", "blaze", "boltyn", "bravo", "briar", "dash", "dorinthea", "enigma", "fai", "gravy", "iyslander", "kayo", "lyath", "viserai"],
+    "legality": "every card and every hero in the pool is legal, whatever Silver Age's own ban list or hero bench says",
+    "rules": "the Flesh and Blood Comprehensive Rules as this engine encodes them; every stated deviation is a record in tools/approx.js"
+  },
+  "silverAge": {
+    "_why": [
+      "Silver Age's legality is recorded BESIDE the format, never inside it:",
+      "it is information a player may want (which of these cards would they",
+      "not be allowed at a Silver Age event) and it changes every season, while",
+      "Dawnblade's pool does not."
+    ],
+    "banned": null,
+    "benched": null,
+    "pending": "desktop task — see DESKTOP-TASKS.md, 'Silver Age legality'"
+  }
+}

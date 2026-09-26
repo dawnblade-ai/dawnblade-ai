@@ -1,5 +1,12 @@
 # Handoff — Dawnblade, at v4.62 · THE PLAN FOR THE NEXT THREAD
 
+> **STALE BELOW THIS LINE — the code is at v4.76 (2026-09-26).** v4.63–v4.75
+> shipped to `main` as PR #1: every deck card in the pool now reads in full
+> (audit 405 / 0). v4.76 declares **Dawnblade a fan-made Silver Age format**
+> (`data/formats.json`). Work that needs the open web is in
+> **`DESKTOP-TASKS.md`**. Read `CHANGELOG.md` from the top for what changed;
+> this file gets rewritten at the end of the current thread.
+
 ## ⚠ WHERE THINGS STAND — RE-DERIVED 2026-09-24, NOT QUOTED
 
 The last thread ran v4.60 → v4.62. **Every deck card in the pool now

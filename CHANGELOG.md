@@ -1,3 +1,39 @@
+## v4.76 — Dawnblade, a fan-made Silver Age format
+
+**THE GAME NAMES ITSELF.** Dawnblade is now declared a fan-made sub-format
+of Silver Age. Its pool is **frozen** at the fifteen Chapter 1–3 precons
+exactly as printed, and it does not follow Silver Age's rolling ban list or
+its seasonal hero bench. Silver Age has since moved on: the search leads
+say Reaping Blade (Viserai's) and Entwine Lightning (Briar's) were banned,
+Brand with Cinderclaw (Fai's) was banned and then unbanned, and Kayo and
+Briar have each been benched for a season. All of them stay legal here.
+That is a statement about which game this is, and it is written as data
+(`data/formats.json`), held by a drill (`test/formats.test.js`), stated in
+the README, and shown to the player under the lobby buttons.
+
+**SILVER AGE'S OWN LEGALITY IS RECORDED BESIDE THE FORMAT, AND IT IS `null`
+FOR NOW.** Every source for the ban list was blocked by the cloud sandbox:
+fabtcg.com, fabtcg.gg, fabtcgmeta, fabrary, cardsrealm and Star City
+Games. Search snippets are not good enough for card names, and an empty
+list would claim nothing is banned. So the research is a **desktop task**
+(`DESKTOP-TASKS.md`), with the unverified leads, the announcements to read
+and the exact shape the answer must take. The drill checks every name the
+list will carry against the pool, so a typo fails rather than silently
+marking nothing. 7 sabotages, 7 bite, plus a positive control showing that
+a correctly sourced entry passes.
+
+**THE SEPTEMBER RULES UPDATE IS RECORDED, NOT BUILT.** The snippets say
+equipment and weapons are now revealed before main decks are chosen
+(effective 2026-09-18). That would split the lobby's sideboard step, and
+the exact order is what the article settles. The Comprehensive Rules
+v2.14.0 (2026-06-10) diff against `CR-INDEX.md` is a desktop task of its
+own.
+
+**THE TWO NEW PRECONS ARE STILL UNBUILDABLE.** This was re-measured eight
+days after the street date. the-fab-cube's `develop` still lists the same
+15 Silver Age sets and has 0 SAT and 0 SBW printings, so
+`data/newsets.json` records the date. A street date is not publication.
+
 ## v4.75 — Spellvoid X counts the links its wearer controls
 
 > *"**Spellvoid X**, where X is the number of chain links you control."*

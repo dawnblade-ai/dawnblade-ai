@@ -8,6 +8,19 @@ a table and play a second person over a room code.
 
 ---
 
+## The Dawnblade format
+
+**Dawnblade is a fan-made sub-format of Silver Age.** Its pool is the fifteen
+Silver Age Chapter 1–3 preconstructed decks exactly as printed, and it does not
+follow Silver Age's rolling ban list or its seasonal hero bench. A card Silver
+Age has since banned, or a hero it has benched, is still legal here. The
+definition lives in [`data/formats.json`](data/formats.json).
+
+This is a fan project. It is not affiliated with or endorsed by Legend Story
+Studios. Flesh and Blood and its cards belong to them.
+
+---
+
 ## What it is
 
 Dawnblade is built for a phone. Three flick screens — the opponent's board, the

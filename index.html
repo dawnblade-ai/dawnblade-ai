@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.75"; /* v4.75 - Spellvoid X counts the chain links its wearer controls when the arcane damage is dealt. See CHANGELOG.md. */
+window.APP_VER = "4.76"; /* v4.76 - Dawnblade is declared a fan-made Silver Age format, with its pool frozen at the fifteen precons as printed. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -7323,6 +7323,11 @@ function App(){
         <HeroGrid best={best} onPick={p=>setHero(p&&p.random ? {...HEROES[Math.floor(Math.random()*HEROES.length)], mystery:true} : p)} db={db} selected={hero}/>
         {hero && <button className="battlebtn clip" disabled={db.status!=="ready"} onClick={()=>setLoHero({...hero, seed:Date.now()})}><span>{db.status==="ready"?"Battle":"Forging…"}</span></button>}
         <button className="bigbtn alt" style={{marginTop:8}} onClick={()=>setTable("find")}>Find an opponent</button>
+        {/* THE FORMAT, SAID WHERE A PLAYER LOOKS (v4.76). Dawnblade does not
+            follow Silver Age's rolling ban list or its hero bench — see
+            data/formats.json — so a player who knows Silver Age is told why
+            a card they cannot bring to an event is legal here. */}
+        <p className="note" style={{textAlign:"center",marginTop:10}}>Dawnblade is a fan-made Silver Age format: the fifteen Chapter 1–3 precons exactly as printed, and every card in them is legal here — even ones Silver Age has since banned.</p>
         <VsStrip hero={hero} db={db}/>
         {hero && !hero.mystery && <HeroSheet h={hero} db={db} best={best} onBack={()=>setHero(null)} onFight={h=>setFighting(h)}/>}
         {hero && hero.mystery && <p className="note" style={{textAlign:"center"}}>Fate holds the card — your fighter is revealed at preparation.</p>}

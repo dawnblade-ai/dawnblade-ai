@@ -58,9 +58,10 @@
   "sbwPrintings": 0,
   "checkedOn": [
    "2026-09-07",
-   "2026-09-11"
+   "2026-09-11",
+   "2026-09-26"
   ],
-  "_note": "re-measured 2026-09-11, one week before the announced street date: every number below is UNCHANGED — 15 Silver Age sets, 4952 records, 0 printings for either set, and all 15 blocking names still absent."
+  "_note": "re-measured 2026-09-11, one week before the announced street date: every number below is UNCHANGED — 15 Silver Age sets, 4952 records, 0 printings for either set, and all 15 blocking names still absent. Re-measured again 2026-09-26, EIGHT DAYS AFTER the street date: still UNCHANGED — set.csv lists the same 15 Silver Age sets and nothing from Usurp the Shadow Throne, card.json holds 4952 records and 0 SAT / 0 SBW printings. A street date is not publication."
  },
  "prism": {
   "set": "SAT",
