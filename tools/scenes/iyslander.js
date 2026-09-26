@@ -149,6 +149,50 @@ module.exports = [
     "…and it is addressed to their seat": 1,
     "unfused, nobody is asked": false
   }
+},
+
+{
+  name: "Ice Eternal asks for X before the payment, and X is what it creates",
+  why: "v4.72 — the pool's only X-cost card was REFUSED for seventy " +
+       "versions, and the reason recorded was wrong about which half was " +
+       "missing: its printed cost is \"XX\" and the database carries no " +
+       "number for it, so `effCost` priced it at ZERO — a free card at any " +
+       "X. Reading the mint alone would have shipped that. X is declared " +
+       "BEFORE the payment (a cost cannot be a queued prompt, v3.34), the " +
+       "bound is what the seat could raise, and an undeclared X creates " +
+       "nothing — inert, never free (v2.04).",
+  run(c){
+    const table = () => {
+      const ie = Object.assign(c.card("Ice Eternal", 3), {uid: "ie"});
+      return Object.assign(c.state({res: 4, ap: 1, hand: [ie]},
+                                   {hp: 20, hand: [], board: [], res: 0},
+                                   {turn: 3, actor: 0, turnPlayer: 0}),
+        {phase: "action", step: "layer", priority: 0, passed: [false, false],
+         stack: [], chain: [], chainCards: []});
+    };
+    const asked = c.reduce(table(), {t: "play", uid: "ie", from: "hand"}, 0);
+    const at = x => c.H.drain(c.reduce(asked, {t: "xval", x}, 0));
+    const frosts = sd => (sd.board || []).filter(b => /^frostbite$/i.test(b.card.name)).length;
+    const two = at(2), none = at(0);
+    return {
+      "the play is asked for X first":        asked.pending && asked.pending.kind,
+      "…bounded by what 4 resources pay":     asked.pending && asked.pending.max,
+      "X = 2 makes Frostbites under THEM":    frosts(two.sides[1]),
+      "…none under her":                      frosts(two.sides[0]),
+      "…and costs XX = 4":                    4 - two.sides[0].res,
+      "X = 0 makes none and costs nothing":   [frosts(none.sides[1]), none.sides[0].res],
+      "unfused, the arcane rider stays quiet": two.sides[1].hp
+    };
+  },
+  want: {
+    "the play is asked for X first": "xval",
+    "…bounded by what 4 resources pay": 2,
+    "X = 2 makes Frostbites under THEM": 2,
+    "…none under her": 0,
+    "…and costs XX = 4": 4,
+    "X = 0 makes none and costs nothing": [0, 4],
+    "unfused, the arcane rider stays quiet": 20
+  }
 }
 
 ];

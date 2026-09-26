@@ -402,18 +402,22 @@ const APPROX = {
 
 /* ---- B. CARD SEMANTICS -------------------------------------------- */
 
-"x-cost": {
-  status:"open", cr:null, board:"both", since:"v2.32", swept:"v4.71",
-  claim:"A FREE X — one the player names — is REFUSED rather than read. Ice "+
-        "Eternal prints cost XX and 'create X Frostbite tokens'. (Beckoning "+
-        "Haunt's X was BUILT at v4.71: it is COUPLED to the aura it returns, so "+
-        "the pick settles it, the sheet offers only what the seat can pay, and "+
-        "`parseHeroPower` refuses X pips no pick settles.)",
-  why:"Creating ONE token for a card that charges for X is quietly weaker than "+
-      "printed — which coverage reads as `full` and the one-sided fairness sweep "+
-      "cannot see. Refusing leaves it a visible gap. Blaze's 'remove X energy "+
-      "counters' is NOT this shape (v3.39): X is settled by the card the player "+
-      "picks, so the coupling lives in the filter and no X machinery is needed."},
+"x-cost-declared": {
+  status:"closed", cr:null, board:"both", since:"v2.32", swept:"v4.72",
+  claim:"Both X costs in the pool are BUILT. Beckoning Haunt's X is COUPLED to the "+
+        "aura it returns (v4.71): the pick settles it and the sheet offers only "+
+        "what the seat can pay. Ice Eternal's X is FREE (v4.72): the player "+
+        "DECLARES it before the payment — judge's `xval` pending, the trainer's "+
+        "`xpick` mode — every value up to what the seat could raise is offered, "+
+        "`effCost` prices it off the card's `cx`, and the declared X decides how "+
+        "many Frostbites the mint creates.",
+  why:"Until v4.72 this record was `open` and REFUSED the free X, for a reason it "+
+      "carried in its own text: creating ONE token for a card that charges for X "+
+      "is quietly weaker than printed, which coverage reads as `full` and the "+
+      "one-sided fairness sweep cannot see. Refusing kept it a visible gap; the "+
+      "declaration is what removed the reason. The property it protected is kept "+
+      "— the parse carries the LETTER X, and a mint with no declared X creates "+
+      "NONE, so an X nothing paid for is inert rather than free (v2.04)."},
 
 "activation-choices-at-resolution": {
   status:"stated", cr:"CR 1.4.5", board:"both", since:"v2.17", swept:"v4.71",
@@ -434,12 +438,15 @@ const APPROX = {
       "is its own piece of work across every activation pick."},
 
 "spellvoid-x": {
-  status:"stated", cr:null, board:"both", since:"v2.32", swept:"v4.02",
+  status:"stated", cr:null, board:"both", since:"v2.32", swept:"v4.72",
   claim:"Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain "+
         "links you control' is refused; the piece keeps its printed Arcane "+
         "Barrier 1.",
-  why:"Same refusal as Ice Eternal's, plus the chain belongs to the ATTACKER "+
-      "rather than to the hero being hit. NOTE — THE NOOP'S OWN REASON WAS STALE "+
+  why:"The X here is a live COUNT of chain links, not a declared cost — and the "+
+      "chain belongs to the ATTACKER rather than to the hero being hit, so "+
+      "reading it would be inventing whose chain it means. (Until v4.72 this "+
+      "said 'same refusal as Ice Eternal's'; that X is a declared cost and "+
+      "reads now, which is why the two are different questions.) NOTE — THE NOOP'S OWN REASON WAS STALE "+
       "and is corrected at v4.02: it read 'the dummy throws only fists', a "+
       "training prop retired at v2.71, while plain spellvoid and arcane barrier "+
       "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+

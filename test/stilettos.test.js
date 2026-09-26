@@ -429,8 +429,12 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      (400 -> 401 full, 5 -> 4 part). RE-PINNED AGAIN AT v4.71, after
      reading the diff: Beckoning Haunt went `part` -> `full` when its X cost
      was coupled to the aura it returns, so `full` 757 -> 758 and `part`
-     29 -> 28. One record (401 -> 402 full, 4 -> 3 part). */
-  assert.deepEqual(tiers, {full: 758, none: 11, part: 28});
+     29 -> 28. One record (401 -> 402 full, 4 -> 3 part). RE-PINNED AGAIN
+     AT v4.72, after reading the diff: Ice Eternal went `part` -> `full`
+     when its free X was declared before the payment and its fused rider
+     read, so `full` 758 -> 759 and `part` 28 -> 27. One record (402 -> 403
+     full, 3 -> 2 part). */
+  assert.deepEqual(tiers, {full: 759, none: 11, part: 27});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

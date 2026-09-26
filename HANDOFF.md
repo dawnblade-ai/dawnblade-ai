@@ -55,8 +55,10 @@ before starting new work.
 > §3's Release the Tension bar **BUILT at v4.70**. Beckoning Haunt **BUILT at
 > v4.71** (X settled by the choice; a free-X defect in `parseHeroPower` found
 > and closed on the way), and §3's dead anchors asked v4.48's question: one
-> deleted as dead by construction, one named. Three deck cards remain
-> unfinished: Jack Be Quick (recorded), Walk in My Shoes and Ice Eternal.
+> deleted as dead by construction, one named. Ice Eternal **BUILT at
+> v4.72** (a free X declared before the payment; its `XX` had been priced at
+> ZERO). Two deck cards remain unfinished: Jack Be Quick (recorded) and
+> Walk in My Shoes (audit 403 full / 2 part).
 
 Each is in exactly one precon. That makes every one of them LIVE; none is
 latent.
@@ -69,7 +71,7 @@ latent.
 | **Jack Be Quick** | Briar | *"When this hits a hero, {u} an ally they control, then **steal** it until the end of this action phase."* | a **control change**. Nothing moves an object between SIDES today, and the census, `invariants.js` and the wire all assume a permanent's side is fixed | **RECORD, DON'T BUILD** unless you have a whole version for it. Open an approx record with a driven probe (v4.02). Half-building a control change is v3.23's worst case |
 | **Walk in My Shoes** | Lyath | Crush: *"…until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."* | `crush-halving-rider`, open. `build.halveCard` halves at the DEAL on purpose (v3.78: thirty base-value readers is thirty chances to miss one). A halving that STARTS mid-game and ENDS is the shape that argument ruled out | **LEAVE REFUSED** until someone designs a single base-value choke point. The refusal is honest and visible |
 | **Beckoning Haunt** | Viserai (Chest) | *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from your graveyard to your hand."* | `x-cost`, open. No X machinery exists | **LEAVE REFUSED**, but note it is the cheapest X card: X is COUPLED to the choice (the aura's printed cost), which is Blaze's v3.39 shape. There, X was settled by the pick and no number was ever asked for. If X gets built, build it here first |
-| **Ice Eternal** | Iyslander | *"Create X Frostbite tokens under target hero's control"* plus a fused rider | `x-cost`, with a FREE X (`XX`), which is the hard kind | **LEAVE REFUSED**. A free X needs a number prompt; reading one token would be weaker than printed and would read `full` |
+| **Ice Eternal** | Iyslander | *"Create X Frostbite tokens under target hero's control"* plus a fused rider | `x-cost`, with a FREE X (`XX`), which is the hard kind | **BUILT AT v4.72.** The record hid the sharper defect: `XX` carries no number, so the card priced at 0. X is a card field (`cx`), asked as an `xval` pending before the payment, and the fused rider is a late `way:fused` gate over `arcaneCount`. `x-cost-declared`, closed |
 
 ### 2 · The CR items — the thread's actual goal, and the two left open
 

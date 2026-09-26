@@ -214,7 +214,13 @@
 /* 16 -> 17 AT v4.71: a pick prompt may carry `xPay` (Beckoning Haunt's X,
    paid per pip when the pick settles it). Opt-in, inside a whole-shipped
    value — by hand, behind a handshake that already refuses two releases. */
-const WIRE_V = 17;
+/* 17 -> 18 AT v4.72: `pending` gains a KIND (`xval`, Ice Eternal's X,
+   declared before the payment) and the game a declaration, `_x`, which also
+   rides in a held play's `decl` (`judge.HELD_DECL`). A v17 peer answers no
+   `xval` and plays the card with X unset — so its mint creates NONE where
+   ours creates X — and the pair desyncs on the first Ice Eternal. Whole-
+   shipped values again: by hand, behind the release handshake. */
+const WIRE_V = 18;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

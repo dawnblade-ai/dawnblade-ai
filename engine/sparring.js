@@ -230,6 +230,14 @@ function payAction(g, seat, p, o){
      is a complete answer to "you may", and declining can never make the
      seat stronger than printed. */
   if(p.kind === "addPay") return {t: "addPay", yes: false};
+  /* X — THE LARGEST THE SEAT CAN PAY (v4.72). Not v4.24's decline: the
+     seat has already chosen to play the card, and an X card at X = 0 is a
+     card spent for nothing — Ice Eternal's whole effect is X Frostbites.
+     The question left is only its SIZE, and the bound is a printed number
+     the pending carries (`legal` checks the answer against it), so this
+     reads no card text. Weighing X against the resources a later play
+     might want is a judgement about the hand this policy does not make. */
+  if(p.kind === "xval") return {t: "xval", x: p.max || 0};
   /* ---- A CHI COST ASKS A SECOND QUESTION OF THE SAME PITCH (v4.54) ---
      Enigma's ability prints "{c}{c}{c}", and a Chi pays a {c} cost where
      a resource point does not. `pitchPick` ranks on printed pitch, so a

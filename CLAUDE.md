@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.71
+**Current version:** v4.72
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3128 drills** at v4.71.
+This is `node --test "test/*.test.js"` — **3148 drills** at v4.72.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,41 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A FREE X, DECLARED BEFORE THE PAYMENT (v4.72)
+
+> *"Create X Frostbite tokens under target hero's control. Then if this was
+> fused, deal arcane damage to that hero equal to the number of Frostbites
+> they control."* — ICE ETERNAL, cost **XX**
+
+**THE RECORD SAID "NOTHING MODELS AN X COST" AND THE CARD WAS FREE.** The
+database carries no number for `XX`, so `cost: null` read as 0. Reading the
+mint alone would have shipped X Frostbites for nothing. That is v4.71's
+Beckoning Haunt one route over. **When a record refuses a PAYLOAD, check
+what the COST reads as first.**
+
+**X IS A CARD FIELD AND A DECLARATION, NEVER A PARSE.** `cx` counts the X in
+the printed cost on both loaders (`DATA_VER` `sage-v14`). The number is the
+player's, declared as an `xval` **pending** before the payment (a cost is
+never a queued prompt, v3.34), and it rides on the STATE as `_x`, never on
+the action. So a crafted `play` carrying its own `x` is still asked.
+`costCtx.x` hands it to every `effCost` reader. The bound is what the seat
+could raise, never counting the card being paid for. `_x` is in `HELD_DECL`
+and is cleared on commit, cancel and resolution. **An Action clears
+`HELD_DECL` twice**, so the "commit keeps `_x`" sabotage is silent against
+Ice Eternal, and a synthetic X **instant** is what reaches it.
+
+**AN UNDECLARED X MINTS NONE.** Inert, never free (v2.04).
+
+**"THEN IF THIS WAS FUSED" IS `way:fused`, A LATE GATE**, because its payload
+(`arcaneCount`) counts every Frostbite the target controls **after** the
+mint. The main loop runs before the ops (v3.60) and would count the board
+without them. A `then if` whose gate is not fusion refuses.
+
+**THE POLICY ANSWERS THE LARGEST X, AND IT COSTS FUSION, MEASURED.** Fused
+plays went 10 of 21 → 1 of 20, because maximum X pitches the Ice card the
+reveal needed. Recorded rather than tuned: weighing the two is a judgement
+about the hand `sparring.js` does not make. `WIRE_V` 17 → 18.
 
 ### AN X THE CHOICE SETTLES, AND AN X NOTHING CHARGED (v4.71)
 
@@ -13070,12 +13105,13 @@ it carded effects only once the engine can actually read them.
   followed at v4.04 and it was real.** `effects.isInertia` matched the
   token by NAME; `parser.isHandWipe` reads its printed clause now, the
   token reports `full`, and the pinned token set went 8 -> 7.
-- **Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.** Its
-  printed cost is `XX`; nothing here models an X cost, so `create X ... tokens` is
-  REFUSED rather than read as one. Creating a single token for a card that charges
-  for X is quietly weaker than printed — which coverage reads as `full`, and the
-  fairness sweep is one-sided against the other direction.
-- **`Spellvoid X` (Mask of the Swarming Claw) is refused for the same reason** —
+- ~~**Ice Eternal is the pool's only X-cost card and is deliberately unbuilt.**~~
+  **BUILT AT v4.72.** The record's reason was true and hid the sharper defect:
+  the printed `XX` carries no number in the database, so `effCost` priced the
+  card at ZERO. X is a card field (`cx`), declared before the payment as an
+  `xval` pending, and an undeclared X creates nothing. See "A FREE X,
+  DECLARED BEFORE THE PAYMENT".
+- **`Spellvoid X` (Mask of the Swarming Claw) is refused on its own reason** —
   "where X is the number of chain links you control", and the chain belongs to the
   attacker rather than to the hero being hit. The piece keeps its printed Arcane
   Barrier 1. **PLAIN spellvoid and plain arcane barrier are LIVE and the

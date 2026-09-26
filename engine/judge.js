@@ -297,6 +297,7 @@ const ACTIONS = [
   "charge",      /* {uid|null}   put that card into your soul, or decline   */
   "addPay",      /* {yes}        pay an optional additional cost, or decline */
   "split",       /* {half}       declare which half of a split card is played */
+  "xval",        /* {x}          declare X for a card whose cost prints X (v4.72) */
   "defend",      /* {uid}        toggle a defender (hand card or gear)    */
   "pass",        /*              pass priority — CR 4.2.2                 */
   "arsenal",     /* {uid|null}   end-phase step (b); null leaves it empty */
@@ -332,7 +333,7 @@ const ACTIONS = [
 
    Exported so a board can be held to covering all of them rather than to
    remembering — the next kind added walks into the same fallback. */
-const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge"];
+const PENDING_KINDS = ["pay", "boost", "addPay", "split", "fuse", "charge", "xval"];
 const PROMPT_ACTIONS = ["promptSel", "promptChoose", "promptConfirm", "promptDecline",
                         "promptTakeBack"];
 
@@ -817,6 +818,17 @@ function legal(g, a, seat){
     return null;
   }
   if(a.t === "split") return "nothing is asking which half";
+  /* X IS AN INTEGER THE SEAT CAN PAY FOR (v4.72). The bound is carried on
+     the pending — computed when the question was asked, off the same
+     ceiling a payment would reach — so a wire answer past it is refused
+     rather than opening a payment nobody can finish. */
+  if(p && p.kind === "xval"){
+    if(a.t !== "xval") return "declare X for " + p.card.name + " first";
+    if(!Number.isInteger(a.x) || a.x < 0 || a.x > p.max)
+      return "X must be a whole number from 0 to " + p.max;
+    return null;
+  }
+  if(a.t === "xval") return "nothing is asking for X";
   if(p && p.kind === "addPay"){
     /* NO SEAT TEST HERE. A `pending` belongs to ONE seat and the general
        gate above this block already refuses the other with "Opponent is
@@ -2212,6 +2224,7 @@ function reduce(g, a, seat){
     case "payConfirm":n = doPayConfirm(n, seat); break;
     case "payCancel": n = doPayCancel(n, seat); break;
     case "split":     n = doSplit(n, a, seat); break;
+    case "xval":      n = doXval(n, a, seat); break;
     case "addPay":    n = doAddPay(n, a, seat); break;
     case "boost":     n = doBoost(n, a, seat); break;
     case "fuse":      n = doFuse(n, a, seat); break;
@@ -2253,6 +2266,27 @@ function doPlay(g, a, seat){
         c0.name + " is a split card — " + at(g, seat).name + " declares "
         + hs.map(h => h.name).join(" or ")
         + (PR.hasKw(c0, "meld") ? ", or melds both." : "."));
+    }
+  }
+  /* HOW MUCH IS X? (v4.72) — declared before the payment for the reason
+     the split half is: the price depends on it, so a player cannot be asked
+     to pitch before they have said what they are paying for. Ice Eternal
+     prints "XX", and its whole effect is X Frostbites.
+
+     THE BOUND IS WHAT THE SEAT COULD RAISE — the floating pool plus every
+     pitch value in hand but this card's own, less the price at X = 0 (a
+     tax still applies) — divided by the X count. It rides on the pending
+     so the answer is checked against the bound the question was asked
+     with. X = 0 is always offered: the card is legal to play for nothing. */
+  {
+    const sdx = at(g, seat);
+    const cx0 = zone === "arsenal" ? sdx.arsenal : (sdx[zone] || [])[find(sdx[zone] || [], a.uid)];
+    if(cx0 && cx0.cx && g._x == null){
+      const base = effCost(cx0, sdx, PR.costCtx(g, seat));
+      const max = Math.max(0, Math.floor(((sdx.res || 0) + payCeiling(sdx, cx0) - base) / cx0.cx));
+      return say({...g, pending: {kind: "xval", seat, card: cx0, from: zone,
+                                  target: a.target, max, per: cx0.cx}},
+        cx0.name + " costs X " + cx0.cx + " times — " + sdx.name + " declares X (0 to " + max + ").");
     }
   }
   /* CR 1.4.5 — the attack-target, resolved now and carried through the
@@ -2510,7 +2544,15 @@ function doPayCancel(g, seat){
      which shipped in v2.18 because the field was written as a top-level
      game key and the side kept its old value. */
   let n = put(g, seat, s => ({...s, paySel: []}));
-  return say({...n, pending: null}, "Payment cancelled.");
+  /* AND THE DECLARATIONS GO WITH IT (v4.72). A split card's half and an X
+     card's X are settled BEFORE the payment and ride on the state; left
+     there after a cancel, the next play of that card skips its question
+     and uses the old answer. Latent for the half (both split cards cost 0,
+     so no payment ever opens for them) and REACHABLE for X, whose whole
+     cost is 2X. Nothing has been spent, so nothing is kept. */
+  n = {...n, pending: null};
+  for(const k of HELD_DECL) delete n[k];
+  return say(n, "Payment cancelled.");
 }
 
 function doPayConfirm(g, seat){
@@ -2594,9 +2636,9 @@ function commitPlayBoosted(g, card, zone, seat, window, target, doBoost, addPaid
                          card, zone, seat, window, target);
   if(out && (out._doBoost !== undefined || out._addPaid !== undefined
           || out._half !== undefined || out._fuseUid !== undefined
-          || out._chargeUids !== undefined)){
+          || out._chargeUids !== undefined || out._x !== undefined)){
     const n = {...out}; delete n._doBoost; delete n._addPaid; delete n._half;
-    delete n._fuseUid; delete n._chargeUids; return n;
+    delete n._fuseUid; delete n._chargeUids; delete n._x; return n;
   }
   return out;
 }
@@ -2709,7 +2751,8 @@ function maybeFuse(g, card, zone, seat, window, target){
   return say({...g, pending: {kind: "fuse", seat, card, from: zone, window, target,
                               types: offer.types, uids: offer.uids}},
     card.name + " has " + offer.types.join("/") + " fusion — " + at(g, seat).name
-    + " may reveal a " + offer.types.join("/") + " card from hand.");
+    + " may reveal " + (/^[aeiou]/i.test(offer.types[0] || "") ? "an " : "a ")
+    + offer.types.join("/") + " card from hand.");
 }
 
 function doFuse(g, a, seat){
@@ -2761,6 +2804,16 @@ function doSplit(g, a, seat){
   const half = (a.half === "both" || a.half === 1) ? a.half : 0;
   const n = {...g, pending: null, _half: half};
   return doPlay(n, {t: "play", uid: p.card.uid, from: p.from, target: p.target, half}, seat);
+}
+
+/* X rides to `execute` on the state, like the split half — `effCost`
+   reads it through `costCtx` and the token op reads it for the quantity. */
+function doXval(g, a, seat){
+  const p = g.pending;
+  const n = say({...g, pending: null, _x: a.x}, at(g, seat).name + " declares X = " + a.x + ".");
+  /* The answer rides on the STATE (`_x`), never on the action — so a play
+     arriving off a wire with an `x` of its own is still asked. */
+  return doPlay(n, {t: "play", uid: p.card.uid, from: p.from, target: p.target}, seat);
 }
 
 function doAddPay(g, a, seat){
@@ -2822,7 +2875,7 @@ function doBoost(g, a, seat){
    outcome of the window is the one this produces. It is also what keeps
    the change invisible to every game in which neither seat holds an
    instant-speed answer. */
-const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids"];
+const HELD_DECL = ["_half", "_doBoost", "_addPaid", "_fuseUid", "_chargeUids", "_x"];
 const HELD_LIFT = {hand: 1, arsenal: 1, grave: 1, banish: 1};
 /* WHICH PLAYS WAIT: everything at ACTION speed. A card played in the
    action window, a weapon swing, an ally's or an aura's attack, and an

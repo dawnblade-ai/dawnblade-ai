@@ -115,8 +115,11 @@ test("`runOps`'s vocabulary and what the pool emits are pinned both ways", {skip
      a card filed into the hand instead of the graveyard, and a charge
      made as an EFFECT (a pick hand -> soul) rather than as a cost.
      94 -> 95 AT v4.65: `deckFlip`, Topsy Turvy's replacement — a game-level
-     record that every deck-top put asks through `parser.deckTopTo`. */
-  assert.equal(r.dispatched, 95, "runOps's op vocabulary moved");
+     record that every deck-top put asks through `parser.deckTopTo`.
+     95 -> 96 AT v4.72: `arcaneCount`, Ice Eternal's fused rider — arcane
+     equal to a count of named tokens under the target's control, counted
+     when the rider RESOLVES because the same card just made them. */
+  assert.equal(r.dispatched, 96, "runOps's op vocabulary moved");
   /* DISPATCHED WITH NO EMITTER — the `perBoost` shape. Three have a
      producer that is not the parser and are named for it; two have none
      anywhere and are latent readers whose printed wording the pool only

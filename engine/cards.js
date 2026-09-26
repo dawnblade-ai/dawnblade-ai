@@ -94,6 +94,9 @@ function resolveEntry(db, e, prefer){
        different card, consistently. A split card that arrives without
        `hz` is one whose halves nobody can tell apart. */
     hz: card ? !!card.hz : false,
+    /* AND THE X IN ITS COST (v4.72) — opt-in, so no other card changes
+       shape. Dropped here, Ice Eternal's XX is free. */
+    ...(card && card.cx ? {cx: card.cx} : {}),
     pitch: card&&card.p!=null ? card.p : (e.p||0),
     cost: card?card.c:null, power: card?card.pw:null, def: card?card.d:null,
     /* An ally's LIFE. The database calls it `health` (mapDbCard puts it on
@@ -182,6 +185,11 @@ function mapDbCard(c){
        survives — the structured `ty` array flattens both faces into a
        single list (v2.39). */
     hz:!!c.played_horizontally,
+    /* HOW MANY X THE PRINTED COST CARRIES (v4.72). Ice Eternal prints
+       "XX", which `toNum` reads as no cost at all — so the price of the
+       pool's only free-X card was simply not in the record, and nothing
+       could charge it. Absent on every other card. */
+    cx:(String(c.cost||"").match(/x/gi)||[]).length||undefined,
     ty:(c.types||[]).slice(),
     kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
     tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet

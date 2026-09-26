@@ -248,6 +248,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      records what the table stack still collapses. */
   /* 40 -> 41 AT v4.68: `control-change-steal`, Jack Be Quick. */
   /* 41 -> 42 AT v4.71: `activation-choices-at-resolution`. */
+  /* 42 holds AT v4.72: `x-cost` was BUILT and is `x-cost-declared` —
+     renamed, closed, probe turned round. */
   assert.equal(Object.keys(APPROX).length, 42, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -316,10 +318,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `play-held-on-the-stack`, closed with its probe turned round. */
   /* 5 -> 6 AT v4.68: `control-change-steal`, recorded rather than
      half-built (HANDOFF's call). */
-  assert.equal(n("open"),    6, "open count moved");
+  /* 6 -> 5 AT v4.72: `x-cost` was BUILT — the free X is declared before
+     the payment — and its probe went red the moment the mint read X. */
+  assert.equal(n("open"),    5, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
-     `play-held-on-the-stack`. */
-  assert.equal(n("closed"), 19, "closed count moved");
+     `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`. */
+  assert.equal(n("closed"), 20, "closed count moved");
 });
 
 /* ============================================================
@@ -1026,15 +1030,26 @@ probe("activation-choices-at-resolution", () => {
   assert.ok(r.prompt && r.prompt.tag === "pick", "the pick no longer opens when the ability resolves");
 });
 
-probe("x-cost", () => {
+/* CLOSED AT v4.72 — the probe turned round (v4.02). It asserted the
+   refusal for seventy versions; it now DRIVES the declaration at the table
+   and asserts the declared X is what the mint creates. */
+probe("x-cost-declared", () => {
   const ice = byName("Ice Eternal")[0];
   assert.ok(ice, "Ice Eternal left the pool");
-  const fx = PR.fxParse(ice);
-  const mints = (fx.ops || []).filter(o => o[0] === "token");
-  assert.deepEqual(mints, [],
-    "an X quantity is now read as a token mint — either X costs are BUILT (delete " +
-    "the record) or a card is being created for free");
-  assert.notEqual(fx.tier, "full", "Ice Eternal reports fully scripted with an unread X");
+  H.db();
+  const ie = {...H.card("Ice Eternal", 3), uid: "ie"};
+  assert.equal(ie.cx, 2, "the X count on the printed cost stopped being carried");
+  const g = {...H.state({res: 4, ap: 1, hand: [ie]}, {hand: []}, {turn: 3, actor: 0, turnPlayer: 0}),
+             phase: "action", step: "layer", priority: 0, passed: [false, false],
+             stack: [], chain: [], chainCards: []};
+  const r = J.reduce(g, {t: "play", uid: "ie", from: "hand"}, 0);
+  assert.ok(!r.error, String(r.error));
+  assert.equal(r.state.pending && r.state.pending.kind, "xval",
+    "no X was asked for — a free X is being read as something");
+  const n = H.drain(J.reduce(r.state, {t: "xval", x: 2}, 0).state);
+  assert.equal(n.sides[1].board.filter(b => /frostbite/i.test(b.card.name)).length, 2,
+    "the declared X is not what the mint creates");
+  assert.equal(n.sides[0].res, 0, "X = 2 was not charged twice");
 });
 
 /* Mask of the Swarming Claw's parametrised spellvoid is refused; the

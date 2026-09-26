@@ -259,8 +259,13 @@ test("the WIDEST slices are pinned, so one growing is a deliberate edit", () => 
     /* 17,343 -> 17,784 AT v4.71, READ FIRST: still `tryPlay` ->
        `confirmPay`; the growth is Beckoning Haunt's X bound, asked through
        `abPickBound` in the pick legality it extends. */
-    "priority.test.js index.html 17784",
-    "priority.test.js index.html 17784",
+    /* 17,784 -> 18,579 AT v4.72, READ FIRST: still `tryPlay` ->
+       `confirmPay`; the growth is the X declaration (`xpick`), inserted
+       after the split-card declaration it mirrors. The signature is
+       unchanged — the answer rides on the state as `_x` — so every anchor on
+       `tryPlay` still finds the body it names. */
+    "priority.test.js index.html 18579",
+    "priority.test.js index.html 18579",
     "priority.test.js index.html 9516"
   ], /* 15,440 -> 16,557 AT v4.59, READ FIRST (v4.57: a pin edited without
         being read is a guard switched off). Both rows are

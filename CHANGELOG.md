@@ -1,3 +1,71 @@
+## v4.72 — a free X, declared before the payment
+
+> *"Create X Frostbite tokens under target hero's control. Then if this was
+> fused, deal arcane damage to that hero equal to the number of Frostbites
+> they control."* — ICE ETERNAL, cost **XX**, Iyslander's
+
+**THE POOL'S ONLY FREE-X CARD, REFUSED FOR SEVENTY VERSIONS — AND THE
+RECORDED REASON NAMED THE WRONG HALF.** `x-cost` said nothing here models an
+X cost, so the mint was refused rather than read as one. True, and it hid
+the sharper defect: the printed cost is `XX`, the database carries **no
+number** for it, and `effCost` read `cost: null` as **0**. Reading the mint
+alone would have shipped a card that makes X Frostbites for nothing. v4.71's
+Beckoning Haunt was the same free X one route over. This is the diagnostic
+from the cost end again.
+
+**X IS A CARD FIELD, CHARGED ONCE PER X.** `cx` counts the X in the printed
+cost, on both copies of the loader (`cards.js` and the phone's `mapDbCard`,
+v2.48). It is opt-in, so a card with no X carries no field (v3.58).
+`DATA_VER` → `sage-v14`. `effCost` adds `cx * x`. The declared X is the
+game's half of the cost (`costCtx.x`, off `g._x`), so every reader that
+already asks `costCtx` prices it (v3.96).
+
+**THE QUESTION COMES BEFORE THE PAYMENT.** A cost cannot be a queued prompt
+(v3.34), so X is a `pending` (`xval`, `PENDING_KINDS` +1). The order is
+**xval → pay → fuse**. The bound is what the seat could raise:
+`floor((res + payCeiling − base) / cx)`, never counting the card being paid
+for. `legal` accepts only a whole number in range, because `reduce` is fed
+by JSON off a wire (v2.04). The answer rides on the **state**, never the
+action, so a crafted `play` carrying its own `x` is still asked. The
+trainer's `xpick` mode offers the same bound. `_x` is in `HELD_DECL`
+(v4.66) and is cleared on commit, cancel and resolution, or the next X card
+skips the question.
+
+**AN UNDECLARED X CREATES NONE.** The mint carries the letter and the play
+decides the number. A state that reaches the op with no declaration makes
+no tokens: inert, never free (v2.04).
+
+**"THEN IF THIS WAS FUSED" IS A LATE GATE.** The rider counts every
+Frostbite the target controls, **after** the mint. Answered in the main
+condition loop it would count the board before the tokens land. It is
+`way:fused`, answered by `thisWayMet` in the late pass (v3.60), and the
+payload is `arcaneCount`: count a named token under the same seat the mint
+targeted. The reader is narrow on purpose. A `then if` whose gate is not
+fusion refuses rather than being answered as fusion (v2.29). An unfused play
+says so in the feed.
+
+**TWO SMALL FEED FIXES FROM DRIVING IT.** The fusion offer read *"a ice
+card"*, and now reads *"an ice card"*. The unfused rider now says it did not
+fire, where before it was silent.
+
+**THE POLICY ANSWERS WITH THE LARGEST X.** v4.24's decline does not apply:
+the seat has already chosen to play the card, and X = 0 is a card spent for
+nothing. **It costs fusion, and that is measured rather than changed.**
+Maximum X pitches the Ice card that fusion would have revealed, so fused
+Ice Eternals went **10 of 21 → 1 of 20**. Weighing X against the reveal is a
+judgement about the hand this policy does not make.
+
+Measured: **1 record moves, `part` → `full`** (402 → 403 full, 3 → 2 part),
+and the floor was repinned after reading the diff. `WIRE_V` **17 → 18** for
+the new pending kind and the `_x` declaration. The approximation record
+`x-cost` is **closed** as `x-cost-declared`, with its probe turned round.
+`spellvoid-x` keeps its own reason, which no longer borrows this card's. At
+three seeds on both sides: refusals 0, violations 0, stalls 3 on both.
+Iyslander went 16.0 → 17.7, but the intervals overlap, so this is noise
+(v4.40). **23 sabotages, 23 bite.** One was silent on the first pass
+because an Action clears `HELD_DECL` twice; a synthetic X instant now
+reaches it. A new Iyslander scene fails against a free X.
+
 ## v4.71 — an X the choice settles, and an X nothing charged
 
 > *"Action - {x}{x}{r}, destroy this: Return target aura with cost X from

@@ -1336,6 +1336,17 @@ function makeEffects(ctx){
          before the fix, five arcane through arcane-ward 3 AND shield 3
          dealt five. `arcaneHit` is where every one of them now applies. */
       else if(k==="arcane"){ const total=v+act(n).amp; actMut(n).amp=0; n=arcaneHit(n, 1-actorOf(n), total, srcName); }
+      /* "ARCANE DAMAGE EQUAL TO THE NUMBER OF <TOKENS> THEY CONTROL" (v4.72)
+         — Ice Eternal's fused rider. Counted when the op RUNS, which the late
+         pass puts after the tokens the card just created, then dealt as an
+         ordinary arcane op so every prevention and the amp apply (v4.35). */
+      else if(k==="arcaneCount"){
+        const who = v && v.side === "self" ? act(n) : foe(n);
+        const cnt = (who.board || []).filter(b => b && b.card && b.card.name === (v && v.name)).length;
+        if(!cnt){ n = L(n, `${srcName}: ${who.name} controls no ${v && v.name} — no arcane is dealt.`); return; }
+        n = L(n, `${srcName}: ${cnt} ${v.name}${cnt === 1 ? "" : "s"} under ${who.name}'s control.`);
+        n = runOps(n, [["arcane", cnt]], srcName, srcCard);
+      }
       /* The damage that SURVIVED a soak prompt, landing on the hero that
          was asked — the actor at prompt-confirm time is the threatened
          side (promptConfirm borrows `p.side`). That is the whole reason it
@@ -1695,6 +1706,13 @@ function makeEffects(ctx){
            entirely. `enterWithCounters` is the one body, and the seat is
            the RECIPIENT's rather than the actor's, because a token can be
            minted under the opponent's control. */
+        /* AN "X" QUANTITY IS THE DECLARED X (v4.72) — Ice Eternal's, settled
+           by the `xval` pending and riding on the state beside the split
+           half. Nothing declared creates NONE: an X nobody paid for is
+           inert, never free (v2.04). */
+        const _q = op[2] === "X" ? (Number.isInteger(n._x) ? n._x : 0) : (op[2] || 1);
+        if(!(_q > 0)){ n = L(n, `${srcName}: X is 0 — no ${rec.name} is created.`); return; }
+        op = [op[0], op[1], _q].concat(op.slice(3));
         const _tseat = side === "foe" ? 1 - actorOf(n) : actorOf(n), _minted = [];
         for(let i=0;i<(op[2]||1);i++){
           const tok = {...rec, uid:"tok"+tokSeq()};
@@ -3786,7 +3804,12 @@ function makeEffects(ctx){
         if(!/^way:/.test(cond)) continue;
         if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay,
                               took: nn._tookWay, fused})){
-          nn = L(nn, `${card.name}: nothing matching happened this way — the bonus skips.`);
+          /* A fusion gate says what it asked (v4.72): "nothing matching
+             happened this way" is the right line for a discard or a hit
+             and a riddle for a card that was simply not fused. */
+          nn = L(nn, cond === "way:fused"
+            ? `${card.name} was not fused — its rider does not fire.`
+            : `${card.name}: nothing matching happened this way — the bonus skips.`);
           continue;
         }
         if(op[0] === "ga"){ grantGa(); nn = L(nn, `${card.name}: it happened this way — go again.`); }
@@ -8783,6 +8806,10 @@ function thisWayMet(cond, trace){
      opposing SEAT, so arcane in this engine never reaches an ally. If a
      route to one is ever built, this gate needs the target back. */
   if(cond === "way:dealtFused") return (t.dmg||0) > 0 && !!t.fused;
+  /* "THEN IF THIS WAS FUSED" (v4.72) — Ice Eternal. The gate is a fact about
+     the PLAY, and it is late only because the printed "then" orders its
+     payload after the card's own ops (the Frostbites it counts). */
+  if(cond === "way:fused") return !!t.fused;
   /* AN UNKNOWN `way:` ANSWERS FALSE — a condition added to the parser and
      forgotten here leaves the card weaker than printed and visible, which
      is the safe direction (v3.26's rule, and this function is NAMED so

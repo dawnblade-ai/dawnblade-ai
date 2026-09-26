@@ -131,9 +131,13 @@ test("the emitted SET is pinned, so a new condition is a deliberate edit", {skip
      cards in your soul", the pool's only claimant, answered in the main
      loop off `sd.soul`. (v4.63's `noCtr:steam` is not in this count: it
      lives only on an equipment POWCARD, which this card-level census never
-     parses — the reverse-direction drill below is the one that sees it.) */
-  assert.equal(conds.size, 54,
-    "54 distinct conditions across the pool. A 55th is fine — add it here AND " +
+     parses — the reverse-direction drill below is the one that sees it.)
+     54 -> 55 AT v4.72: `way:fused` — Ice Eternal's "Then if this was fused,
+     …", a gate on a rider that must be answered AFTER the card's own ops
+     have minted the tokens it counts, so it is a `way:` condition answered
+     by `thisWayMet` in the late pass rather than by the main loop. */
+  assert.equal(conds.size, 55,
+    "55 distinct conditions across the pool. A 56th is fine — add it here AND " +
     "give it an evaluator, which is the whole point of this file. It went 48 -> 49 " +
     "at v3.97 (`way:dealtFused`) and 49 -> 51 at v3.99 (`hasGa` and `chainLinkGe4` — " +
     "two keyword-gated lines whose gate the loose matchers were eating): this drill " +

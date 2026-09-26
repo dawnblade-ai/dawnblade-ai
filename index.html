@@ -806,7 +806,7 @@ img{display:block;max-width:100%}
    ============================================================ */
 window.CDN = "https://legendstory-production-s3-public.s3.amazonaws.com/media/cards/normal/";
 window.DBSRC = "https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json";
-window.APP_VER = "4.71"; /* v4.71 - Beckoning Haunt returns an aura whose cost is its X, and an X cost no pick settles is no longer read as free. See CHANGELOG.md. */
+window.APP_VER = "4.72"; /* v4.72 - Ice Eternal asks for X before its payment and creates that many Frostbites, where its XX cost was read as free. See CHANGELOG.md. */
 /* HOW SEATING IS DECIDED. "coin" is a TESTING AFFORDANCE (user, 2026-08-08):
    the rock-paper-scissors throw is fine at a table and slow when you are
    starting your ninth Kayo game of the afternoon, and its ties replay, so a
@@ -823,7 +823,7 @@ window.APP_VER = "4.71"; /* v4.71 - Beckoning Haunt returns an aura whose cost i
    rule, not a feature of throwing hands. A coin that seated you directly
    would be a rules change wearing a convenience hat. */
 window.THROW_MODE = "coin";   /* "coin" (fast) | "rps" (the real thing) */
-window.DATA_VER = "sage-v13"; /* v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
+window.DATA_VER = "sage-v14"; /* v4.72: cards carry `cx`, the X count of a printed "XX" cost — a warm sage-v13 cache has none, so Ice Eternal's X would be free. v3.76: the loader keeps DEMI-HERO records by type, the way it already keeps tokens. Arakni prints "you become a random Agent of Chaos" and the six Agents are Demi-Heroes no deck lists, so a warm sage-v12 cache has none of them and her hero ability finds nothing to become. v3.34: cards carry `hz` (`played_horizontally`), which is the database SAYING a card is a SPLIT card — two halves on one card, told apart by `tt`, playable one or both (Meld). A warm sage-v11 cache has no `hz` on any card, so both split cards would silently keep running BOTH halves for free with no choice offered. v2.44: cards carry `ty`, the STRUCTURED type array. `tt` is a display string and the two disagree on 5 database records — it calls Den of the Spider an "Action Defense Reaction", and a reaction cannot be an action. A warm sage-v10 cache has no `ty` on any card, so every type question would fall back to parsing the display string. v2.35: cards carry `prs` (image per SET), which is what lets a card resolve to its Silver Age printing instead of the database's arbitrary first — a warm sage-v9 cache has no `prs` at all and every card would fall back. v2.23: resolveEntry now carries an ally's `life` (the DB's `health`). It used to drop it, so allies had no life and could not be attacked at all — a warm sage-v8 cache has no life on any ally. v2.13: Crouching Tiger + Inner Chi join NEEDED — a warm sage-v7 cache has neither */
 window.DUMMY_GEAR = ["Ironrot Helm","Ironrot Plate","Ironrot Gauntlet","Ironrot Legs"];
 /* The dummy's 30-card pile: [name, pitch, copies]. Every one is a real
    Silver-Age-legal Generic attack action with NO rules text, chosen on
@@ -1642,6 +1642,8 @@ function useCardDB(){
                survives — the structured `ty` array flattens both faces into a
                single list (v2.39). */
             hz:!!c.played_horizontally,
+            /* mirrors cards.js (v4.72): the X count of Ice Eternal's "XX". */
+            cx:(String(c.cost||"").match(/x/gi)||[]).length||undefined,
             ty:(c.types||[]).slice(),
             kw:(c.card_keywords||[]), gkw:(c.granted_keywords||[]),
             tx:c.functional_text_plain||c.functional_text||"", pr:prints, prs:bySet
@@ -3666,6 +3668,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
        `_doBoost` and `_addPaid`; leaving it there would play the next
        split card as whatever the last one chose, without asking. */
     if(n._half !== undefined){ n = {...n}; delete n._half; }
+    /* AND X (v4.72), for the identical reason — left on the state, the next
+       X card would be played at this one's X without asking. */
+    if(n._x !== undefined){ n = {...n}; delete n._x; }
     /* AND THE FUSION ANSWER IS SPENT TOO (v4.27), for `_half`'s reason:
        left on the state the next fusion card is played as whatever the
        last one revealed, without asking. */
@@ -3784,8 +3789,17 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     setG(s => { if(s.mode==="splitpick" && s.splitPick){ pick = s.splitPick; return {...s, mode:"act", splitPick:null}; } return s; });
     if(pick) tryPlay(pick.card, pick.from, pick.idx, half);
   };
+  /* X, DECLARED (v4.72) — the same re-entry, for the same reason: one
+     description of what playing a card does. The answer rides on the
+     state as `_x`, beside `_half`, so `tryPlay`'s signature is the one
+     every other door already calls (no pool card is both split and X). */
+  const confirmX = x => {
+    let pick = null;
+    setG(s => { if(s.mode==="xpick" && s.xPick){ pick = s.xPick; return {...s, mode:"act", xPick:null, _x:x}; } return s; });
+    if(pick) tryPlay(pick.card, pick.from, pick.idx);
+  };
   const tryPlay = (card,from,idx,half) => setG(s=>{
-    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
+    if(s.over||s.mode==="block"||s.mode==="arsenal"||s.mode==="stack"||s.mode==="boostpick"||s.mode==="fusepick"||s.mode==="chargepick"||s.mode==="splitpick"||s.mode==="xpick"||s.mode==="rxaddpay"||s.mode==="foeturn") return s;
     if(s.inspect){ setZoom(card); return s; }
     if(s.mode==="pay"){
       if(from!=="hand" || (s.pending&&s.pending.from==="hand"&&s.pending.idx===idx)) return s;
@@ -3815,6 +3829,18 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                  meld:hasKw(card,"meld")}},
         `${card.name} is a split card — play ${hs.map(h=>h.name).join(" or ")}`
         + `${hasKw(card,"meld")?", or meld both":""}.`);
+    }
+    /* HOW MUCH X? — declared before the payment (v4.72), judge's `xval`
+       pending on this board. The bound is what the seat could raise less
+       the price at X = 0, per X in the printed cost, and every value up to
+       it is a button — so a choice the payment would refuse is never
+       offered. */
+    if(card.cx && s._x == null){
+      const base = effCost(card, act(s), costCtx(s, actorOf(s)));
+      const ceil = act(s).res + act(s).hand.reduce((t, c, i) => t + (from==="hand" && i===idx ? 0 : (c.pitch||0)), 0);
+      const max = Math.max(0, Math.floor((ceil - base) / card.cx));
+      return L({...s, mode:"xpick", xPick:{card, from, idx, name:card.name, max, per:card.cx}},
+        `${card.name} costs X ${card.cx} times — declare X (0 to ${max}).`);
     }
     if(isRx(card))
       return L(s, `${card.name} is ${isAR(card)?"an attack":"a defense"} reaction — it can only be played in the reaction step`
@@ -4065,7 +4091,10 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
     n = L(n, `Pitched ${pitched.map(c=>c.name).join(", ")} for ${gain}.`);
     return maybeCharge(n, s.pending.card, s.pending.from, pendIdx);
   });
-  const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; return n; });
+  /* A CANCELLED PAYMENT TAKES ITS DECLARATIONS WITH IT (v4.72) — the half
+     and X are settled before the payment, and left behind they answer the
+     next play of that card without asking. */
+  const cancelPay = () => setG(s=>{ const n = {...s, mode:"act", pending:null}; youMut(n).paySel = []; delete n._half; delete n._x; return n; });
 
   /* THE ACTIVATED ABILITY OF A CARD IN THE ARENA — `build.boardPow`
      (v2.35, SHARED at v4.47).
@@ -5232,6 +5261,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
                 {(g.splitPick.halves||[]).map((h,i)=><span key={i}> <b>{h.name}</b> ({h.tt}).</span>)}
                 {g.splitPick.meld && <span> Meld plays both.</span>}
               </div>}
+              {g.mode==="xpick" && g.xPick && <div className="statusline">
+                <b>{g.xPick.name}</b> costs X {g.xPick.per} times — how much is X? You can pay up to X = {g.xPick.max}.
+              </div>}
               {g.mode==="rxaddpay" && g.rxAdd && <div className="statusline">
                 <b>{g.rxAdd.name}</b> — pay <b>{g.rxAdd.cost}</b> more as an additional cost? You have {you(g).res} floating.
               </div>}
@@ -5422,6 +5454,9 @@ function Battle({h,cfg,first,db,onExit,onRecord}){
           {(g.splitPick?.halves||[]).map((h,i)=>
             <button key={i} className="a go" onClick={()=>confirmSplit(i)}>{h.name}</button>)}
           {g.splitPick?.meld && <button className="a" onClick={()=>confirmSplit("both")}>Meld both</button>}
+        </>) : g.mode==="xpick" ? (<>
+          {Array.from({length: ((g.xPick&&g.xPick.max)||0) + 1}, (_, x) =>
+            <button key={x} className={"a"+(g.xPick&&x===g.xPick.max?" go":"")} onClick={()=>confirmX(x)}>X = {x}{x ? " · pay "+(x*((g.xPick&&g.xPick.per)||1)) : ""}</button>)}
         </>) : g.mode==="rxaddpay" ? (<>
           <button className="a go" onClick={()=>confirmRxAdd(true)}>Pay {g.rxAdd?g.rxAdd.cost:0} more</button>
           <button className="a" onClick={()=>confirmRxAdd(false)}>Decline</button>
@@ -6587,6 +6622,7 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
   const split  = kindIs("split");
   const fuse   = kindIs("fuse");
   const charge = kindIs("charge");
+  const xval   = kindIs("xval");
   const theirPay  = g.pending && g.pending.seat !== mySeat;
   const myArsStep = g.phase === "end" && g.arsenalFor === mySeat;
   const defending = DawnPriority.canDeclareDefenders(g, mySeat);
@@ -7112,6 +7148,14 @@ function TableBoard({match, mySeat, host, code, db, table, netRef, netQ, onExit,
                 <button key={i} className="a go" onClick={()=>fire({t:"split",half:i})}>{h}</button>)}
               {DawnParser.hasKw(split.card,"meld") &&
                 <button className="a" onClick={()=>fire({t:"split",half:"both"})}>Meld both</button>}
+            </>
+          /* HOW MUCH X (v4.72) — Ice Eternal's "XX". Asked before the
+             payment, because the price is X twice over; one button per value
+             the seat can pay, so a choice the rules would refuse is never
+             offered (a dead control reads as a broken screen, v2.83). */
+          : xval ? <>
+              {Array.from({length: (xval.max||0) + 1}, (_, x) =>
+                <button key={x} className={"a"+(x===xval.max?" go":"")} onClick={()=>fire({t:"xval",x})}>X = {x}{x ? " · pay "+(x*(xval.per||1)) : ""}</button>)}
             </>
           /* AN OPTIONAL ADDITIONAL COST. No Cancel, for boost's reason:
              the play is committed and "no" is a complete answer. */

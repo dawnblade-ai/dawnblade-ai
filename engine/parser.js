@@ -962,6 +962,40 @@ function classifyClause(raw){
      than a gate on a payload. Both apostrophe spellings read (v3.36). */
   if(/^until end of turn, if one or more cards would be put on top of a deck, instead (?:they'?re|they are) put on the bottom$/.test(c))
     return R([["deckFlip", 1]]);
+  /* "THEN IF …" (v4.72) — ICE ETERNAL, the pool's only clause that opens
+     with "Then": "Then if this was fused, deal arcane damage to that hero
+     equal to the number of Frostbites they control."
+
+     THE LEADING "THEN" DEFEATED THE HANDLER BELOW, AND THE GATE WENT WITH
+     IT. Measured: "then if this was fused, draw a card" answered an
+     UNCONDITIONAL draw — a loose matcher claimed the payload and the
+     condition vanished, which is the one shape the fairness sweep cannot
+     see (v3.57). Latent only because Ice Eternal's payload had no reader;
+     building that reader without this would have shipped a free fused
+     rider (v3.72: a source makes a latent defect reachable).
+
+     "THEN" ORDERS THE PAYLOAD AFTER THE SENTENCE BEFORE IT, and `execute`
+     answers `fx.conds` BEFORE it runs `fx.ops` (v3.60) — so the gate rides
+     as a LATE condition (`way:`), the one pass that runs after the ops,
+     and the Frostbites the first sentence created are there to be counted.
+     Only a gate that pass can answer is accepted; anything else REFUSES
+     rather than dropping its condition. */
+  if(m = c.match(/^then (if [^,:]+[,:] ?.+)$/)){
+    const inner = classifyClause(cased(/^then (if [^,:]+[,:] ?.+)$/, 1, m[1]));
+    if(!inner || inner.status !== "run" || inner.cond !== "fused" || inner.onHit) return null;
+    return Object.assign({}, inner, {cond: "way:fused"});
+  }
+  /* "DEAL ARCANE DAMAGE TO THAT HERO EQUAL TO THE NUMBER OF <TOKENS> THEY
+     CONTROL" (v4.72) — the amount is a COUNT of a named permanent on the
+     damaged hero's board, taken when the op runs. "That hero" is the target
+     the sentence before named, which on this card is the opponent — the
+     same reading the token under "target hero's control" gets. The NAME
+     keeps its printed capitalisation (v3.53) and the plural is dropped;
+     `runOps` counts board entries by that name. */
+  if(m = c.match(/^deal arcane damage to (?:that hero|them) equal to the number of ([a-z][a-z' -]*?)s they control$/)){
+    const nm = cased(/^deal arcane damage to (?:that hero|them) equal to the number of ([A-Za-z][A-Za-z' -]*?)s they control$/i, 1, m[1]);
+    return R([["arcaneCount", {name: nm.charAt(0).toUpperCase() + nm.slice(1), side: "foe"}]]);
+  }
   if(m=c.match(/^(?:if|when|while) ([^,:]+)[,:] ?(.+)$/)){
     /* THE RECURSION CARRIES THE RAW TAIL (v4.22). `m` was matched against
        `c`, which is LOWERCASED — so recursing on `m[2]` hands the inner
@@ -2198,9 +2232,12 @@ function classifyClause(raw){
     return R([["payOrLose", +m[1], cost]]);
   }
   /* the clash block reads this off the card and applies it to the block */
-  /* THE PARAMETRISED PRINTING IS REFUSED WITH THE REST OF THE X FAMILY
-     (Ice Eternal), because the chain belongs to the ATTACKER rather than
-     to the hero being hit. The piece keeps its printed Arcane Barrier 1.
+  /* THE PARAMETRISED PRINTING IS REFUSED, because the chain belongs to
+     the ATTACKER rather than to the hero being hit. The piece keeps its
+     printed Arcane Barrier 1. (It used to say "with the rest of the X
+     family (Ice Eternal)" — and at v4.72 Ice Eternal's X READS, because
+     that X is a DECLARED cost. This one is a live count over somebody
+     else's chain, which is a different question and still refused.)
 
      THE REASON HERE USED TO READ "the dummy throws only fists" — a
      training prop retired at v2.71, and false twice over: PLAIN spellvoid
@@ -2209,7 +2246,7 @@ function classifyClause(raw){
      plays a real hero deck. A noop must describe the clause in front of it
      (v3.16) and its reason must describe a world that still exists. */
   if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
-    return NOOP("X is refused, as Ice Eternal's is — the chain belongs to the attacker, not to the hero being hit");
+    return NOOP("X would count chain links, and the chain belongs to the attacker, not to the hero being hit");
   /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
      This was a NOOP reading "the end phase already destroys it at 3
      counters" — a reason that named a payload living in ONE board's end
@@ -3097,9 +3134,10 @@ function classifyClause(raw){
      {x}{x}{r} cost; `optFilter` cannot consume "with cost x", so the whole
      subject fails to read and the clause stays unclaimed. Reading it as a
      bare "aura" would drop a printed restriction — the v3.31 shape, and
-     the direction that steals games. X-costs are refused across this
-     engine on purpose (Ice Eternal); this is that refusal arriving through
-     the subject reader rather than as a special case. */
+     the direction that steals games. X-costs were refused across this
+     engine on purpose until v4.71/v4.72 built both kinds; this was that
+     refusal arriving through the subject reader rather than as a special
+     case. */
   /* …AND AT v4.71 IT READS, BECAUSE X IS SETTLED BY THE CHOICE. "Target
      aura with cost X" against an {x}{x}{r} cost is Blaze's shape (v3.39):
      the player picks an aura and X is that aura's own printed cost, so no
@@ -3596,9 +3634,13 @@ function classifyClause(raw){
        one-sided against and coverage reads as `full` because the clause was
        consumed. Refusing leaves it a visible gap until X-costs exist. It is
        the only X card in the pool, so this costs nothing else. */
-    if(m[1]==="x") return null;
+    /* …AND FROM v4.72 IT READS AS "X", NOT AS A NUMBER. The X cost exists
+       now (`cx` on the card, declared through the `xval` pending), so the
+       quantity is resolved in `runOps` off the DECLARED X — and a token op
+       carrying "X" with nothing declared creates NONE. An X nothing paid
+       for is inert, never free (v2.04). */
     const QTY = {a:1, an:1, one:1, two:2, three:3};
-    const qty = QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
+    const qty = m[1]==="x" ? "X" : QTY[m[1]]!=null ? QTY[m[1]] : +m[1];
     /* WHOSE BOARD. Two printed shapes say "the opponent's", and they are
        read separately because they are different sentences:
 
@@ -7762,7 +7804,9 @@ const chiCeiling = (sd, self) => !sd ? 0 : chiFloating(sd)
    less {h} than your opponent") is outside this pool, and it prints the
    grant in its text rather than relying on the index.
 
-   AN "X" AMOUNT IS REFUSED, exactly as Ice Eternal's is. Mask of the
+   AN "X" AMOUNT IS REFUSED here. (It used to say "exactly as Ice
+   Eternal's is" — that X is a declared COST and reads from v4.72; this
+   one is a live count, which is a different question.) Mask of the
    Swarming Claw prints "Spellvoid X, where X is the number of chain links
    you control" — a dynamic value, and the chain in question belongs to
    whoever is attacking rather than to the frozen hero, so guessing it
@@ -7981,7 +8025,12 @@ function effCost(c,sd,o){
      still a tax. `costTax` is the GAME's (v4.06), beside the two side
      taxes, and it reaches every caller because all of them ask `costCtx`
      (v3.96, v4.00). */
-  return Math.max(0,(c.cost||0)-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
+  /* AN X COST IS PART OF THE PRINTED COST (v4.72) — Ice Eternal's "XX" is
+     `cx` 2, and X is the DECLARED value riding on the game (`costCtx`), so
+     it is inside the floor like any printed cost, where a discount can
+     reach it. A caller that says nothing prices X at 0. */
+  const xPart = (c && c.cx) ? c.cx * (o.x || 0) : 0;
+  return Math.max(0,(c.cost||0)+xPart-runeRed(c)*runeCount(sd)-boardRed(c,sd)-costOffFor(c,sd)-dyn)
        + frostCount(sd) + nextTurnTax(sd) + (o.costTax || 0);
 }
 
@@ -8013,6 +8062,9 @@ function costCtx(g, seat){
              long as the op has existed: a no-op wearing a number (v3.55),
              with a feed line telling the player it had worked. */
           costTax: +(g.costTax || 0),
+          /* THE DECLARED X (v4.72), settled by the `xval` pending before the
+             payment and stripped with the other declarations after it. */
+          x: +(g._x || 0),
           foeMarked: !!(g.pend && (((g.sides || [])[1 - i]) || {}).marked)};
 }
 
