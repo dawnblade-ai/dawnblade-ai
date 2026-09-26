@@ -813,7 +813,7 @@ function makeEffects(ctx){
        {r}. `buildPrompt` drops anything they cannot afford and returns
        null when there is nothing worth asking, so a hero with no iron
        never sees a sheet. */
-    const soaks = P.arcaneSoaks(sd());
+    const soaks = P.arcaneSoaks(sd(), {links: P.linksControlled(n, seat)});
     if(left > 0 && soaks.length){
       /* NO `avail` ON THE SPEC — buildPrompt works it out from the live
          state when the sheet is actually raised. Three Runechants queue

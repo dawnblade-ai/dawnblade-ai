@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.74
+**Current version:** v4.75
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3182 drills** at v4.74.
+This is `node --test "test/*.test.js"` — **3189 drills** at v4.75.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,46 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### SPELLVOID X — THE CARD ANSWERED ITS OWN REFUSAL (v4.75)
+
+> *"**Spellvoid X**, where X is the number of chain links you control."*
+> — MASK OF THE SWARMING CLAW, Fai's Head piece
+
+Refused since v2.32 because *"the chain belongs to the ATTACKER rather than
+to the hero being hit"*. **That is true, and it is exactly what the printed
+"you CONTROL" answers**: a chain link is controlled by the player whose
+attack it is, and every link on a chain is the turn-player's. So X counts
+the wearer's own links while they are attacking, and is 0 on the opponent's
+turn.
+
+**WHEN A REFUSAL'S REASON IS A FACT, CHECK WHETHER THE CARD ALREADY STATES
+IT.** A true premise is not the same thing as an unreadable card. Here the
+printed text supplied the missing half of the reasoning.
+
+- **`parser.linksControlled(g, seat)` is the one reader.** It counts the
+  resolved `kind:"atk"` links on the strip (an arcane entry is not a link,
+  v4.39), plus one for a `pend` the seat declared. The attack being answered
+  is a link from its declaration (CR 7.2) and joins the strip only when it
+  resolves (v3.99).
+- **The count is the caller's answer, and never stored in the parse**
+  (`name|pitch` memo, v3.39). `arcaneSoaks(sd, {links})` offers it, and a
+  caller that says nothing gets 0.
+- **One spelling of the where-clause.** `SPELLVOID_X` is read by the clause
+  reader and by `spellvoidX`, and a printed `Spellvoid N` is never an X.
+
+Measured: no tier moves (the line was already a `noop`); the ladder is
+byte-identical because `defaultPicks` wears the Blade Beckoner Helm (1) over
+the Mask (0), which is the fifth loadout-shaped zero; 8 sabotages, 8 bite.
+
+**A GENERATED REPORT IS NOT DOCUMENTATION.** `tools/crindex.js` read
+`SWEEP.md` as docs, and that report cites CR rules inside a category label
+printed once per broken card. So the index's rule total moved with the
+POOL's health (63 → 61 the day the last "no schedule" card was built).
+v4.02 excluded the index's own report by name; the family is recognised by
+its `Generated` header now, and the set is pinned. **Ask what a corpus
+READS, not what it found**: the reports cite nothing today, so a citation
+check passes with them included.
 
 ### A CONTROL CHANGE, OWNERSHIP FIRST (v4.74)
 
@@ -13194,10 +13234,10 @@ it carded effects only once the engine can actually read them.
   card at ZERO. X is a card field (`cx`), declared before the payment as an
   `xval` pending, and an undeclared X creates nothing. See "A FREE X,
   DECLARED BEFORE THE PAYMENT".
-- **`Spellvoid X` (Mask of the Swarming Claw) is refused on its own reason** —
-  "where X is the number of chain links you control", and the chain belongs to the
-  attacker rather than to the hero being hit. The piece keeps its printed Arcane
-  Barrier 1. **PLAIN spellvoid and plain arcane barrier are LIVE and the
+- ~~**`Spellvoid X` (Mask of the Swarming Claw) is refused on its own reason**~~ —
+  **READ AT v4.75.** The reason was true and the card answers it: "you CONTROL"
+  means the wearer's own links, so X counts them on the wearer's turn and is 0 on
+  the opponent's. See "SPELLVOID X — THE CARD ANSWERED ITS OWN REFUSAL". **PLAIN spellvoid and plain arcane barrier are LIVE and the
   keyword ledger said otherwise until v4.02**: both were `inert-dummy` on a
   reason naming a training prop retired at v2.71, while `parser.arcaneSoaks`
   has offered them at the point arcane damage is dealt, from the SHARED

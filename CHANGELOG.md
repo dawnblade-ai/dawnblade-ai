@@ -1,3 +1,71 @@
+## v4.75 — Spellvoid X counts the links its wearer controls
+
+> *"**Spellvoid X**, where X is the number of chain links you control."*
+> — MASK OF THE SWARMING CLAW, Fai's Head piece
+
+**REFUSED SINCE v2.32, ON A TRUE REASON THAT THE CARD ANSWERS ITSELF.** The
+record said *"the chain belongs to the ATTACKER rather than to the hero
+being hit"*, so reading X would mean inventing whose chain it is. That is
+true, and the printed words **"you control"** settle it. A chain link is
+controlled by the player whose attack it is, and every link on a chain is
+the turn-player's. So X is the wearer's own links while they are attacking,
+and 0 on the opponent's turn. Arcane damage reaches a hero on either
+turn, since an opponent's instant can burn them in the middle of their own
+swing. That is the case in which the Mask is worth more than its printed
+Arcane Barrier 1.
+
+- **`parser.linksControlled(game, seat)`** is the one reader. It counts the
+  resolved attack links on the strip, where an arcane entry is not a link
+  (v4.39). The attack being answered is a chain link from its declaration
+  (CR 7.2) but joins the strip only when it resolves (v3.99), so it is
+  counted off `pend`.
+- **The count is the game's**, taken when the arcane damage is dealt, and
+  never stored in the parse, because `fxParse` memoizes on `name|pitch`
+  (v3.39).
+- **`arcaneSoaks` takes it as the caller's answer.** A caller that says
+  nothing gets 0, and a Spellvoid 0 is not offered: weaker than printed,
+  and visible.
+- **One spelling of the where-clause** (`SPELLVOID_X`), read by the clause
+  reader and by `spellvoidX`. A different X (*"the number of cards in your
+  hand"*) is not a link count, and a printed `Spellvoid N` is never an X.
+- The noop's reason is written in the player's voice (v4.24).
+
+Measured:
+- **No tier moves.** The line was already accounted for as a `noop`, so the
+  audit diff is one timestamp line and no floor was repinned.
+- The approximation record `spellvoid-x` (stated) is **closed** as
+  `spellvoid-x-read`, with its probe turned round to drive an arcane hit
+  into a wearer holding one link.
+- **The ladder is byte-identical at three seeds on both sides.** That
+  result is about the LOADOUT: `defaultPicks` gives Fai the Blade Beckoner
+  Helm (printed defence 1) over the Mask (0), so no driven game wears it.
+  This is the fifth time that has happened (the Hood, the Gun, the
+  Stilettos, the Robe, now this). The accept path is driven end to end
+  instead, by `test/spellvoidx.test.js` (7 drills).
+- **8 sabotages, 8 bite.** One needed a unique revert anchor on the second
+  attempt, and the harness said so rather than reporting SILENT (v4.37).
+
+### AND THE CR INDEX WAS COUNTING A REPORT'S POPULATION
+
+Regenerating `SWEEP.md` for this release took **"Ruled but not built" to 0
+cards**. Every card built this cycle left its WRONG block, and so did the
+rules for continuous and delayed effects. Those two were cited only by
+`failstates.js`'s *"no schedule to fire on"* category label, which is
+printed once per broken card, so
+`tools/crindex.js` counted them as documentation for exactly as long as
+some card was broken.
+
+v4.02 excluded the index's own report by name and left the family.
+**Generated reports are recognised by their header now** (`AUDIT.md`,
+`CARD_PROGRESS.md`, `CR-INDEX.md`, `STACK.md`, `SWEEP.md`), none is read,
+and the set is pinned: rule total **63 → 61**, prose **4 → 2**. The drill
+asks what the corpus READS rather than what it found, because the reports
+cite nothing today and the v4.02-shaped sabotage was silent against a
+citation check (v4.58's census with nothing to report). 3 sabotages, 3
+bite. And the drill's first draft named the two rules in a comment, which
+put them straight back into the index. That is v4.02's own trap, so the
+prose was reworded.
+
 ## v4.74 — a control change, ownership first
 
 > *"When this hits a hero, {u} an ally they control, then steal it until

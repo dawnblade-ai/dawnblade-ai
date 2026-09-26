@@ -2258,12 +2258,15 @@ function classifyClause(raw){
     return R([["payOrLose", +m[1], cost]]);
   }
   /* the clash block reads this off the card and applies it to the block */
-  /* THE PARAMETRISED PRINTING IS REFUSED, because the chain belongs to
-     the ATTACKER rather than to the hero being hit. The piece keeps its
-     printed Arcane Barrier 1. (It used to say "with the rest of the X
-     family (Ice Eternal)" — and at v4.72 Ice Eternal's X READS, because
-     that X is a DECLARED cost. This one is a live count over somebody
-     else's chain, which is a different question and still refused.)
+  /* THE PARAMETRISED PRINTING READS AT v4.75. It was refused on the
+     grounds that "the chain belongs to the attacker rather than to the
+     hero being hit" — which is true, and is exactly what the printed "YOU
+     CONTROL" answers: a chain link is controlled by the player whose
+     attack it is (every link on a chain is the turn-player's), so X is
+     the Mask-wearer's links while they are the one attacking, and 0 on
+     the opponent's turn. `linksControlled` counts it off the game at the
+     moment the arcane damage is dealt — never in the parse, which is
+     memoized on `name|pitch` (v3.39) — and `arcaneSoaks` offers it.
 
      THE REASON HERE USED TO READ "the dummy throws only fists" — a
      training prop retired at v2.71, and false twice over: PLAIN spellvoid
@@ -2271,8 +2274,8 @@ function classifyClause(raw){
      from the shared body, so both boards pay it), and at the table seat 1
      plays a real hero deck. A noop must describe the clause in front of it
      (v3.16) and its reason must describe a world that still exists. */
-  if(/^spellvoid x, where x is the number of chain links you control$/.test(c))
-    return NOOP("X would count chain links, and the chain belongs to the attacker, not to the hero being hit");
+  if(SPELLVOID_X.test(c))
+    return NOOP("X is the number of chain links you control, counted when the arcane damage is dealt");
   /* RUST IS A CLOCK, AND IT IS THE CARD'S OWN NUMBER (v3.17).
      This was a NOOP reading "the end phase already destroys it at 3
      counters" — a reason that named a payload living in ONE board's end
@@ -7850,19 +7853,44 @@ const kwAmount = (c, kw) => {
 };
 const arcaneBarrier = c => kwAmount(c, "arcane barrier");
 const spellvoid     = c => kwAmount(c, "spellvoid");
+/* SPELLVOID X (v4.75) — Mask of the Swarming Claw, the pool's only
+   printing. ONE spelling of the printed where-clause, asked by the clause
+   reader (so the line is accounted for) and by `spellvoidX` (so the soak
+   is offered): two copies of one pattern is v3.41's `quotedText`. */
+const SPELLVOID_X = /^spellvoid x, where x is the number of chain links you control$/;
+function spellvoidX(c){
+  if(!c || kwAmount(c, "spellvoid") !== null) return false;
+  return String(c.tx || "").split(/\n+/).some(l => SPELLVOID_X.test(clean(l).toLowerCase().replace(/\.\s*$/, "")));
+}
+/* HOW MANY CHAIN LINKS A SEAT CONTROLS, NOW. A chain link is controlled by
+   the player whose ATTACK it is, and one chain is one turn-player's: the
+   links already resolved are on the display strip (`kind:"atk"` — arcane
+   entries are not links), and the attack being answered is a chain link
+   from the moment it is declared (CR 7.2) but joins the strip only when
+   `linkPayload` resolves it (v3.99), so it is counted off `pend`. */
+function linksControlled(g, seat){
+  if(!g) return 0;
+  const p = g.pend;
+  const mine = p ? (p.by == null ? g.turnPlayer === seat : p.by === seat) : g.turnPlayer === seat;
+  if(!mine) return 0;
+  return (g.chain || []).filter(l => l && l.kind === "atk").length + (p ? 1 : 0);
+}
 
 /* Every piece of iron this side is wearing that could soak an arcane hit,
    with what it would cost. A DESTROYED piece protects nothing — equipment
    wears rather than leaving, so the flag has to be read here the same way
    `exposedZones` reads it. Returned as data so the prompt layer can offer
    them without knowing a single card name. */
-function arcaneSoaks(sd){
+function arcaneSoaks(sd, o){
   const out = [];
   for(const p of ((sd && sd.gear) || [])){
     if(!p || p.destroyed) continue;
     const ab = arcaneBarrier(p);
     if(ab) out.push({uid: p.uid, name: p.name, kind: "barrier", amount: ab, cost: ab});
-    const sv = spellvoid(p);
+    /* X IS THE CALLER'S ANSWER (v4.75): the links this seat controls, off
+       the game. A caller that says nothing gets 0, and a Spellvoid 0 is
+       not offered — weaker than printed and visible. */
+    const sv = spellvoidX(p) ? ((o && o.links) || 0) : spellvoid(p);
     if(sv) out.push({uid: p.uid, name: p.name, kind: "spellvoid", amount: sv, cost: 0});
   }
   /* A TOTAL ORDER, ties broken on uid. An unordered list is a desync
@@ -9882,7 +9910,7 @@ return {norm, isAttack, isArrow, isWeapon, hasGA, arcaneDmg, num, clean, optFilt
         crankCost, fusionOffer, chargeOffer,
         isRunechant, runeCount, isAura, auraCount, isFrostbite, frostCount,
         isFrailty, frailtyCount,
-        arcaneBarrier, spellvoid, arcaneSoaks,
+        arcaneBarrier, spellvoid, spellvoidX, linksControlled, arcaneSoaks,
         ARS_PUT, ARS_STAMP, arsCap, arsCount, arsFree, arsEmpty,
         chiValue, chiSum, chiFloating, chiCeiling, abChiCost, abSoulCost, abSelfBanish, abDestroyBoard, abDiscardCost, abFlipUp, abPickSpec, abPickBound, handPitch, abSourceUid, abCtrGateFails, ctrLabel, deckTopTo, isCloaked, boardEntryNamed, isEphemeral, isHandWipe, gyFirstGaKw,
         CARD_OVERRIDES};

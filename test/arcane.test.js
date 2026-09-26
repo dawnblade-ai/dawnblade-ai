@@ -117,16 +117,19 @@ test("Arcane Barrier and Spellvoid are read off REAL cards, with their numbers",
   assert.equal(P.arcaneBarrier(halo), 0);
 });
 
-test("an X amount is REFUSED, not guessed", {skip}, () => {
+test("an X amount is never a PRINTED number — it is the game's answer, or nothing", {skip}, () => {
+  /* REFUSED UNTIL v4.75, and this drill said so. X is "the number of chain
+     links you control": a live count the CALLER supplies (`links`), never a
+     number read off the keyword — so `spellvoid` still answers null for it,
+     and a caller that says nothing is offered the barrier alone. */
   const mask = gear("Mask of the Swarming Claw", "g4");
   assert.deepEqual(mask.kw, ["Arcane Barrier 1", "Spellvoid X"], "fixture drifted");
-  assert.equal(P.spellvoid(mask), null,
-    "'Spellvoid X, where X is the number of chain links you control' is dynamic, and the " +
-    "chain belongs to whoever is ATTACKING rather than to the frozen hero — guessing it " +
-    "would be inventing a rule");
+  assert.equal(P.spellvoid(mask), null, "X was read as a printed number");
   assert.equal(P.arcaneBarrier(mask), 1, "and it keeps the barrier it prints");
-  const soaks = P.arcaneSoaks({gear: [mask]});
-  assert.deepEqual(soaks.map(s => s.kind), ["barrier"], "only the readable half is offered");
+  assert.deepEqual(P.arcaneSoaks({gear: [mask]}).map(s => s.kind), ["barrier"],
+    "a caller that names no link count was offered a Spellvoid");
+  assert.deepEqual(P.arcaneSoaks({gear: [mask]}, {links: 2}).map(s => s.kind + " " + s.amount),
+    ["spellvoid 2", "barrier 1"], "the game's count was not offered");
 });
 
 test("a DESTROYED piece protects nothing", {skip}, () => {

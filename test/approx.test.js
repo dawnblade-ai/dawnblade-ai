@@ -254,7 +254,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      `crush-halving-rider-read`, and `halving-reads-every-zone` records what
      both halvings stamp. */
   /* 43 holds AT v4.74: `control-change-steal` was BUILT and is
-     `control-change-steal-built` — renamed, closed, probe turned round. */
+     `control-change-steal-built` — renamed, closed, probe turned round.
+     43 holds AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
   assert.equal(Object.keys(APPROX).length, 43, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
@@ -287,7 +288,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      was BUILT and is `drx-bar-from-arsenal-read`, its probe turned round. */
   /* 16 -> 17 AT v4.71: `activation-choices-at-resolution`. */
   /* 17 -> 18 AT v4.73: `halving-reads-every-zone`. */
-  assert.equal(n("stated"), 18, "stated count moved");
+  /* 18 -> 17 AT v4.75: `spellvoid-x` was BUILT and is `spellvoid-x-read`. */
+  assert.equal(n("stated"), 17, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -332,8 +334,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
      `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
      20 -> 21 AT v4.73: `crush-halving-rider-read`. 21 -> 22 AT v4.74:
-     `control-change-steal-built`. */
-  assert.equal(n("closed"), 22, "closed count moved");
+     `control-change-steal-built`. 22 -> 23 AT v4.75: `spellvoid-x-read`. */
+  assert.equal(n("closed"), 23, "closed count moved");
 });
 
 /* ============================================================
@@ -1075,15 +1077,30 @@ probe("x-cost-declared", () => {
 /* Mask of the Swarming Claw's parametrised spellvoid is refused; the
    piece keeps its printed Arcane Barrier. DRIVEN through `arcaneSoaks`,
    which is the one reader that offers a soak. */
-probe("spellvoid-x", () => {
+/* BUILT AT v4.75, AND THE PROBE IS TURNED ROUND. The old probe asked
+   `arcaneSoaks(sd)` with no game at all — so X read 0 and the piece offered
+   its barrier alone whatever the engine did. It PASSED against the build,
+   which is v2.80's hand-written state answering its own question, and it
+   is DRIVEN now: an arcane hit through `runOps` on the Mask-wearer's turn,
+   with one link resolved and one being answered. */
+probe("spellvoid-x-read", () => {
   const mask = byName("Mask of the Swarming Claw")[0];
   assert.ok(mask, "Mask of the Swarming Claw left the pool");
-  const sd = S.makeSide({id:0});
-  sd.gear = [{...mask, uid:5}];
-  const soaks = PR.arcaneSoaks(sd);
-  const kinds = soaks.map(s => s.kind).sort();
-  assert.deepEqual(kinds, ["barrier"],
-    "the piece now offers a spellvoid soak — X is being read, and the record must move");
+  H.db();
+  const hit = (turnPlayer, by) => {
+    /* ONE floating resource, so the paid barrier is offerable in both
+       halves — with none, a sheet holding only an unaffordable barrier is
+       never raised, and the negative half reads like nothing at all. */
+    let g = H.state({hp: 20, gear: [{...mask, uid: "mk"}], res: 1, hand: []}, {hp: 20, res: 9},
+                    {turn: 3, actor: 1, turnPlayer});
+    g = {...g, pend: {by, total: 3, card: {name: "Probe Swing"}}, chain: [{kind: "atk"}, {kind: "arc"}]};
+    const q = (H.runOps(g, [["arcane", 3]], "Probe Bolt").promptQ || []).find(p => p.tag === "soak");
+    return q ? q.options.map(o => o.kind + " " + o.amount).sort() : [];
+  };
+  assert.deepEqual(hit(0, 0), ["barrier 1", "spellvoid 2"],
+    "on the wearer's own turn X is the links they control — one resolved, one being answered");
+  assert.deepEqual(hit(1, 1), ["barrier 1"],
+    "on the OPPONENT's turn the wearer controls no chain link, so X is 0 and nothing is offered");
   /* THE OTHER HALF: plain spellvoid and plain arcane barrier are LIVE.
      The keyword ledger called both `inert-dummy` until v4.02, on a reason
      — "the dummy deals only physical" — that named a training prop

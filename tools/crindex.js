@@ -104,6 +104,14 @@ function glossAt(txt, at) {
 
 function lineOf(txt, at) { return txt.slice(0, at).split("\n").length; }
 
+/* Which root *.md files are GENERATED reports: a "Generated" line in the
+   first five lines, which every report writer here puts in its header. */
+const GENERATED = (() => {
+  const md = fs.readdirSync(ROOT).filter(f => f.endsWith(".md")).sort();
+  const isGen = f => /\bGenerated\b/.test(fs.readFileSync(path.join(ROOT, f), "utf8").split("\n").slice(0, 5).join("\n"));
+  return { reports: md.filter(isGen), docs: md.filter(f => !isGen(f)) };
+})();
+
 /* ── the corpus, split by what a citation there MEANS ─────────────────── */
 const GROUPS = [
   { key: "engine", label: "engine",  files: fs.readdirSync(path.join(ROOT, "engine")).filter(f => f.endsWith(".js")).map(f => "engine/" + f) },
@@ -121,8 +129,18 @@ const GROUPS = [
      A SCAN THAT READS ITS OWN OUTPUT IS THE NO-MIRROR RULE INSIDE ONE
      TOOL — the same family as a source guard aimed at the wrong file
      (v3.00) or a report that rots against the code it describes (v3.52). */
-  { key: "docs",  label: "docs",     files: fs.readdirSync(ROOT)
-      .filter(f => f.endsWith(".md") && f !== "CR-INDEX.md") },
+  /* AND NO GENERATED REPORT IS AN INPUT EITHER (v4.75). v4.02 excluded
+     this tool's own output by name and left the family: `SWEEP.md`,
+     `AUDIT.md`, `STACK.md` and `CARD_PROGRESS.md` are written by other
+     tools, and what they cite is a CATEGORY LABEL printed once per broken
+     card. The continuous- and delayed-effect rules were in this index only because `failstates.js`'s
+     "no schedule to fire on" label named them, and they left the day that
+     category emptied — a rule total that moved with how many cards
+     happened to be broken, which is a number about the POOL rather than
+     about which rules the source cites. A report is recognised by the
+     header every generator writes, not by a list of names (v4.21: fix the
+     family, and a new report must not have to be remembered). */
+  { key: "docs",  label: "docs",     files: GENERATED.docs },
 ];
 
 const rules = new Map();  // rule -> {rule, sites:{engine:[],trainer:[],drill:[],docs:[]}, gloss}
@@ -171,7 +189,7 @@ all.sort(cmp);
 const by = v => all.filter(r => r.verdict === v);
 
 if (process.argv.includes("--json")) {
-  console.log(JSON.stringify({ rules: all }, null, 2));
+  console.log(JSON.stringify({ rules: all, reports: GENERATED.reports, docsRead: GROUPS.find(g => g.key === "docs").files }, null, 2));
   process.exit(0);
 }
 

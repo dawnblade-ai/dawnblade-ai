@@ -437,20 +437,19 @@ const APPROX = {
       "choice as a PENDING before payment (boost's and fusion's shape), which "+
       "is its own piece of work across every activation pick."},
 
-"spellvoid-x": {
-  status:"stated", cr:null, board:"both", since:"v2.32", swept:"v4.72",
+"spellvoid-x-read": {
+  status:"closed", cr:null, board:"both", since:"v2.32", swept:"v4.75",
   claim:"Mask of the Swarming Claw's 'Spellvoid X, where X is the number of chain "+
-        "links you control' is refused; the piece keeps its printed Arcane "+
-        "Barrier 1.",
-  why:"The X here is a live COUNT of chain links, not a declared cost — and the "+
-      "chain belongs to the ATTACKER rather than to the hero being hit, so "+
-      "reading it would be inventing whose chain it means. (Until v4.72 this "+
-      "said 'same refusal as Ice Eternal's'; that X is a declared cost and "+
-      "reads now, which is why the two are different questions.) NOTE — THE NOOP'S OWN REASON WAS STALE "+
-      "and is corrected at v4.02: it read 'the dummy throws only fists', a "+
-      "training prop retired at v2.71, while plain spellvoid and arcane barrier "+
-      "have been paid at the point arcane damage is dealt (`arcaneSoaks`) for "+
-      "versions."},
+        "links you control' is READ: `parser.linksControlled` counts the links the "+
+        "wearer controls at the moment arcane damage is dealt, and `arcaneSoaks` "+
+        "offers a Spellvoid of that size beside the printed Arcane Barrier 1.",
+  why:"Until v4.75 this was refused on the grounds that the chain belongs to the "+
+      "ATTACKER rather than to the hero being hit. That is true, and it is exactly "+
+      "what the printed 'you control' answers: every link on a chain is the "+
+      "turn-player's, so X is the wearer's links on their own turn and 0 on the "+
+      "opponent's. The attack being answered is a link from its declaration (CR 7.2) "+
+      "and joins the display strip only when it resolves, so it is counted off "+
+      "`pend`. The count is taken off the game, never stored in the parse."},
 
 "steam-build-powcard-read": {
   status:"closed", cr:null, board:"both", since:"v4.49", swept:"v4.63",

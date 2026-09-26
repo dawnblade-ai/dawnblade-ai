@@ -620,8 +620,9 @@ Banneret of Salvation**, whose Solflare rider is the same shape.
   amount; the ledger says `partial` and the engine approximates it as
   `amp > 0` (`surge-approximated` in `tools/approx.js`).
 
-Spellvoid was checked and is already correctly `partial`: the plain form
-is live and the X printing is refused, recorded as `spellvoid-x`.
+Spellvoid is `live` as of v4.75: the plain form since v4.02, and the X
+printing reads now (`spellvoid-x-read`, closed). "Chain links you control"
+are the wearer's own links, so X is 0 on the opponent's turn.
 
 ### TWO RULINGS STILL WANTED FROM THE USER
 
