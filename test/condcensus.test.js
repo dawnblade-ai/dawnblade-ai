@@ -40,7 +40,9 @@ const SRC = fs.readFileSync(path.join(__dirname, "..", "engine", "effects.js"), 
    site that reads it), so the evaluator matches them with a pattern and a
    literal-branch scan cannot see them. */
 const PATTERNED = [
-  /^chargedPitch\d+$/, /^pitchBlue\d+$/, /^pitchCost\d+$/, /^surgeOver\d+$/,
+  /* (`surgeOver\d+` LEFT at v4.77: surge is `way:dealtOverN`, answered
+     off the damage that landed, so the pattern had no evaluator left.) */
+  /^chargedPitch\d+$/, /^pitchBlue\d+$/, /^pitchCost\d+$/,
   /^hit\d+$/, /^auras\d+$/, /^drac\d+$/, /^way:/, /^atkNamed:/, /^playedCls:/
 ];
 

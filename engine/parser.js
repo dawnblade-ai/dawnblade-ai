@@ -1675,7 +1675,7 @@ function classifyClause(raw){
      its base" reduces exactly to "is there a live Amp bonus queued right
      now". Evaluated before the arcane op runs and consumes it. */
   if(m=c.match(/^surge\s*[-—]\s*if this deals more than (\d+) damage,\s*(.+)$/i))
-    return GATED(m[2], "surgeOver"+m[1]);
+    return GATED(m[2], "way:dealtOver"+m[1]);
   /* ---- QUICKSTRIKE AND RUPTURE (v3.99) ------------------------------
      The last two keyword-gated lines in the pool whose GATE was being
      eaten, and both fail STRONGER than printed — the direction that

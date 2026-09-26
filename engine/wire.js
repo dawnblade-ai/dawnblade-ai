@@ -220,7 +220,13 @@
    `xval` and plays the card with X unset — so its mint creates NONE where
    ours creates X — and the pair desyncs on the first Ice Eternal. Whole-
    shipped values again: by hand, behind the release handshake. */
-const WIRE_V = 18;
+/* 18 -> 19 AT v4.77: a soak prompt carries `wayRider` — what waits on a
+   deferred arcane hit landing ("if damage is dealt this way", surge, Turn to
+   Mindfire's tap), settled when the sheet is answered — and the game a
+   resolution trace (`_dmgDeferred`). A v18 peer drops the rider and answers
+   those gates FALSE against a barrier-wearer, so the pair desyncs on the
+   first one. Whole-shipped values: by hand, behind the release handshake. */
+const WIRE_V = 19;
 const PROTO  = "dawnblade/1";
 
 /* ---- the zone ledger -------------------------------------------------

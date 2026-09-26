@@ -333,7 +333,8 @@ test("WIRE_V moves when the payload shape moves, and only then", () => {
   /* 16 -> 17 AT v4.71: a pick prompt's `xPay` — whole-shipped again. */
   /* 17 -> 18 AT v4.72: a pending KIND (`xval`) and a game declaration
      (`_x`) — both inside whole-shipped values, so the digest holds. */
-  assert.equal(W.WIRE_V, 18,
+  /* 18 -> 19 AT v4.77: a soak prompt's `wayRider` — whole-shipped again. */
+  assert.equal(W.WIRE_V, 19,
     "WIRE_V moved — if the payload shape moved with it, update the digest below " +
     "in the same edit and say what changed in the header");
   assert.equal(h, 1095617619,

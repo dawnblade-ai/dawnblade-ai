@@ -166,7 +166,7 @@ test("'instead' is read inside a KEYWORD gate too — the v2.66 class", () => {
      "this chain link, instead it gains +6{p}.", "reprise"],
     ["High Tide - If there are 2 or more blue cards in your pitch zone, " +
      "instead it gains +6{p}.", "pitchBlue2"],
-    ["Surge - If this deals more than 3 damage, instead it gains +6{p}.", "surgeOver3"]
+    ["Surge - If this deals more than 3 damage, instead it gains +6{p}.", "way:dealtOver3"]
   ]){
     const fx = P.fxParse({name:"FS kwgate "+cond, pitch:1, tt:"Warrior Attack Reaction",
       def:3, cost:1, tx:"Target weapon attack gains +4{p}.\n"+tx});

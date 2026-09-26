@@ -534,13 +534,19 @@ const APPROX = {
       "Crouching Tiger, which prints 0 power and no defence, so that half is "+
       "unobservable and pinned as a premise."},
 
-"surge-approximated": {
-  status:"stated", cr:null, board:"both", since:"v3.70", swept:"v4.02",
-  claim:"The Surge condition is evaluated as `amp > 0` rather than as the arcane "+
-        "damage actually dealt.",
-  why:"`partial` counts as built for an UPSIDE and never for a drawback (v3.00), "+
-      "and surge is an upside. Both pool records read `full` and the difference is "+
-      "observable only where an amp is held and the damage is then prevented."},
+"surge-dealt-read": {
+  status:"closed", cr:null, board:"both", since:"v3.70", swept:"v4.77",
+  claim:"Surge ('if this deals more than N damage') is a late `way:dealtOverN` "+
+        "condition, answered off the arcane damage that actually LANDED, after every "+
+        "prevention — and when the hit waits on an arcane-barrier sheet, it is answered "+
+        "when that sheet is.",
+  why:"Until v4.77 it was evaluated as `amp > 0`, BEFORE the damage, which surged "+
+      "off an amp whose extra point a ward or a barrier then prevented (stronger than "+
+      "printed). Closing it found the shape it shares with every 'if damage is dealt "+
+      "this way' card: a hit DEFERRED into a soak sheet had not landed when the late "+
+      "pass asked, so their riders read FALSE against any hero wearing a barrier, "+
+      "declined or not. Those conditions now ride on the sheet (`wayRider`) and are "+
+      "settled in `applyAnswer`."},
 
 "auto-pitch-discard": {
   status:"stated", cr:null, board:"trainer", since:"v2.04", swept:"v4.02",

@@ -736,7 +736,8 @@ test("rulings — High Tide reads as a named-keyword-gated condition (Swiftwater
 test("rulings — Surge reads as a named-keyword-gated condition (Aether Quickening)", () => {
   const r = cc("Surge - If this deals more than 2 damage, it gets go again.");
   assert.equal(r.status, "run");
-  assert.equal(r.cond, "surgeOver2");
+  /* a LATE condition since v4.77 — answered off the damage that landed */
+  assert.equal(r.cond, "way:dealtOver2");
   assert.deepEqual(r.ops, [["ga"]]);
 });
 

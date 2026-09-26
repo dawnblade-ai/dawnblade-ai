@@ -489,7 +489,12 @@ function openPrompt(g){
   if(!q.length) return q === g.promptQ && !g.prompt ? g : {...g, prompt: null, promptQ: []};
   const [p, ...rest] = q;
   const live = PM.buildPrompt(g, p);
-  if(!live) return openPrompt({...g, promptQ: rest});
+  if(!live){
+    /* A LAPSED SOAK STILL LANDS ITS DAMAGE (v4.77) — `prompts.promptLapse`. */
+    const lapse = PM.promptLapse(g, p);
+    if(lapse) return withEffects({...g, promptQ: rest}, (fx, s) => fx.applyAnswer(s, lapse));
+    return openPrompt({...g, promptQ: rest});
+  }
   /* NOTHING TO DECIDE (v4.68) — one mandatory candidate is confirmed on the
      spot, through the same `applyAnswer` a Confirm tap reaches, which then
      drains the rest of the queue. See `prompts.promptForcedSel`. */

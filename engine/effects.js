@@ -388,6 +388,38 @@ function makeEffects(ctx){
     return L(n, "Go again, granted after the attack resolved — CR 5.3.5 hands the action point back.");
   }
 
+  /* ---- "…THIS WAY", ANSWERED WHEN A DEFERRED HIT LANDS (v4.77) -------
+     The other half of `holdWayRider` in `execute`. The rider belongs to
+     the card that DEALT the damage, and the soak sheet was answered by the
+     hero being HIT — so the dealer's seat is borrowed for the payload and
+     handed straight back (v3.46's `allyDeath` inversion, one answer over).
+
+     GO AGAIN IS SETTLED WHERE IT CAN STILL BE: on the attack's own `pend`
+     when the card is still the live chain link (Path of Same Ends, whose
+     trigger fires at declaration), otherwise as the action point itself —
+     CR 5.3.5's "gains 1 action point", which is what v3.93's late grant
+     already rests on. A non-attack settled its point long before the sheet
+     was answered. */
+  function settleWayRider(s, R, through){
+    if(!R) return s;
+    const was = actorOf(s);
+    let n = {...s, actor: R.seat};
+    const dealt = Math.max(0, through || 0);
+    for(const {cond, op} of (R.conds || [])){
+      if(!thisWayMet(cond, {dmg: dealt, fused: R.fused})){ n = L(n, wayMissLine(R.card, cond)); continue; }
+      if(op[0] === "ga"){
+        const pd = n.pend;
+        if(pd && pd.card && pd.card.name === R.card && pd.by === R.seat) n = {...n, pend: {...pd, ga: true}};
+        else actMut(n).ap = act(n).ap + 1;
+        n = L(n, `${R.card}: its damage landed — go again.`);
+      }
+      else n = runOps(n, [op], R.card);
+    }
+    if(R.tapSpec && dealt > 0 && !act(n).heroTapped)
+      n = {...n, promptQ: [...(n.promptQ||[]), R.tapSpec]};
+    return {...n, actor: was};
+  }
+
   const afterDiscard = (s, taken, opts) => {
     let n = s;
     const b = bAct(n);
@@ -828,6 +860,10 @@ function makeEffects(ctx){
       const spec = {tag:"soak", side:seat, src:srcName, amount:left, options:soaks, by:1-seat};
       if(buildPrompt(n, spec)){
         n.promptQ = [...(n.promptQ||[]), spec];
+        /* COUNTED, because "…if damage is dealt THIS WAY" cannot be answered
+           until the sheet is (v4.77): the late pass hands its conditions to
+           this spec rather than judging a hit that has not landed. */
+        n._dmgDeferred = (n._dmgDeferred || 0) + 1;
         return n;                    /* the damage rides out on the answer */
       }
     }
@@ -3466,6 +3502,7 @@ function makeEffects(ctx){
       n = L(n, `${card.name} came out of the arsenal with ${card._arsKw.join(" and ")}.`);
     }
     n._dmgWay  = 0;         // and so is the damage trace, for the same reason again
+    n._dmgDeferred = 0;     // …and how many of this card's hits wait on a soak sheet (v4.77)
     n._arsWay  = 0;         // …and the cross-seat arsenal count (v3.88)
     n._costWay = [];        // …and what an optional cost consumed (v3.90)
     /* IS THIS CARD GOING TO RESOLVE ONTO THE LINK? (v3.89) Two routes
@@ -3680,11 +3717,6 @@ function makeEffects(ctx){
         : /^hit\d+$/.test(cond) ? (n.chain||[]).filter(l=>l.dmg>0).length >= +cond.slice(3)
         /* HIGH TIDE: blue is pitch value 3 throughout this engine. */
         : /^pitchBlue\d+$/.test(cond) ? act(n).pitch.filter(c=>c.pitch===3).length >= +cond.match(/\d+/)[0]
-        /* SURGE: Amp is the only mechanic that can push a non-attack arcane
-           effect above its own printed base, so "will this deal more than
-           its base" reduces to "is an Amp bonus live right now" — checked
-           before the arcane op below consumes it. */
-        : /^surgeOver\d+$/.test(cond) ? act(n).amp>0
         /* THE FOUR TRAPS ASK ABOUT THE ATTACK COMING AT YOU (v3.08), which
            is a different object from the one every condition above reads.
 
@@ -3750,7 +3782,6 @@ function makeEffects(ctx){
            CARD is missing, in the printed capitalisation the clause used,
            not "condition not met (board:spectral shield)". */
         || (/^board:/.test(cond) ? `no ${cond.replace(/^board:/, "").replace(/\b[a-z]/g, ch => ch.toUpperCase())} on ${sp(act(n))} board` : null)
-        || (/^surgeOver(\d+)$/.test(cond) ? `didn't deal more than ${cond.match(/\d+/)[0]} damage` : null)
         || (/^chargedPitch(\d)$/.test(cond) ? `the card charged this way wasn't the right colour` : null)
         /* the counter's PRINTED spelling, never the bag key — "+1{p}" reads
            as `pow` inside the engine and nobody at the table says that. */
@@ -3820,21 +3851,49 @@ function makeEffects(ctx){
        an action point (CR 5.3.5) that the surrounding code tracks in a
        local, and on the attack path it has already been copied into
        `pend` — so each caller says how to apply it. */
+    /* A HIT THAT WAITS ON A SOAK SHEET HAS NOT LANDED YET (v4.77).
+       `arcaneHit` defers the damage into the arcane-barrier answer whenever
+       the hero being hit could pay for a barrier, so at this point the trace
+       reads 0 for a hit that may be about to land in full — and every
+       "…if damage is dealt this way" was answered FALSE against a hero
+       wearing a barrier, even one who then declined it. Six pool cards in
+       three precons (Aether Icevein, Polar Cap, Aether Quickening, Open the
+       Flood Gates, Path of Same Ends, Turn to Mindfire), all weaker than
+       printed, all `tier: full`. So a condition about DEALT damage is handed
+       to the sheet the damage waits on, and `settleWayRider` answers it when
+       the sheet is. Every other `way:` fact is already true here. */
+    const holdWayRider = (nn, add) => {
+      const q = nn.promptQ || [];
+      let at = -1;
+      for(let i = q.length - 1; i >= 0; i--)
+        if(q[i] && q[i].tag === "soak" && q[i].src === card.name && q[i].by === actorOf(nn)){ at = i; break; }
+      if(at < 0) return null;
+      /* NO "DAMAGE ALREADY LANDED" FIELD, and that is measured: every card
+         that reaches here deals exactly ONE arcane instance, so what landed
+         before the sheet is always 0 (`test/waydealt.test.js` pins the
+         premise). A field that can only read 0 is dead rules code (v4.11). */
+      const prev = q[at].wayRider || {card: card.name, seat: actorOf(nn), fused: !!fused, conds: []};
+      const rider = {...prev,
+                     conds: [...prev.conds, ...(add.conds || [])],
+                     tapSpec: add.tapSpec || prev.tapSpec || null};
+      return {...nn, promptQ: q.map((sp, i) => i === at ? {...sp, wayRider: rider} : sp)};
+    };
     const runWayConds = (nn, grantGa) => {
+      const held = [];
       for(const {cond, op} of fx.conds){
         if(!/^way:/.test(cond)) continue;
+        if(/^way:dealt/.test(cond) && (nn._dmgDeferred || 0) > 0){ held.push({cond, op}); continue; }
         if(!thisWayMet(cond, {disc: nn._discWay, dmg: nn._dmgWay, ars: nn._arsWay,
                               took: nn._tookWay, fused})){
-          /* A fusion gate says what it asked (v4.72): "nothing matching
-             happened this way" is the right line for a discard or a hit
-             and a riddle for a card that was simply not fused. */
-          nn = L(nn, cond === "way:fused"
-            ? `${card.name} was not fused — its rider does not fire.`
-            : `${card.name}: nothing matching happened this way — the bonus skips.`);
+          nn = L(nn, wayMissLine(card.name, cond));
           continue;
         }
         if(op[0] === "ga"){ grantGa(); nn = L(nn, `${card.name}: it happened this way — go again.`); }
         else nn = runOps(nn, [op], card.name);
+      }
+      if(held.length){
+        const h = holdWayRider(nn, {conds: held});
+        if(h) nn = L(h, `${card.name}: whether its damage lands waits on the arcane barrier.`);
       }
       return nn;
     };
@@ -4611,13 +4670,16 @@ function makeEffects(ctx){
 
          `cost: 0` because the price is the TAP, not resources — the same
          reason a counter cost and a soul banish both read cost 0. */
-      if(fx.tapCost && fx.tapCost.when === "dealt"
-         && (n._dmgWay || 0) > 0 && !act(n).heroTapped){
-        n.promptQ = [...(n.promptQ||[]), {
+      if(fx.tapCost && fx.tapCost.when === "dealt" && !act(n).heroTapped){
+        const tapSpec = {
           tag: "pay", side: actorOf(n), src: card.name, cost: 0,
           tapHero: true, ops: fx.tapCost.ops,
           title: "Tap " + act(n).name + " to power " + card.name + "?",
-          hint: "The cost is the tap itself — your hero stays tapped until your untap step."}];
+          hint: "The cost is the tap itself — your hero stays tapped until your untap step."};
+        /* A HIT WAITING ON A BARRIER SHEET OFFERS THE TAP WHEN IT LANDS (v4.77). */
+        const h = (n._dmgWay || 0) === 0 && (n._dmgDeferred || 0) > 0 ? holdWayRider(n, {tapSpec}) : null;
+        if(h) n = h;
+        else if((n._dmgWay || 0) > 0) n.promptQ = [...(n.promptQ||[]), tapSpec];
       }
       /* ---- THE LATE CONDITION PASS (v3.60) ---------------------------
          "…this way" asks what THIS card's own resolution just did, so it
@@ -5450,6 +5512,11 @@ function makeEffects(ctx){
       }
     }
     if(_ops.length) n = runOps(n, _ops, p.src || "prompt");
+    /* A DEFERRED HIT HAS LANDED — ANSWER WHAT WAITED ON IT (v4.77). */
+    if(p.tag === "soak" && p.wayRider){
+      const taken = (_ops.find(o => o[0] === "arcTaken") || [])[1] || 0;
+      n = settleWayRider(n, p.wayRider, taken);
+    }
     /* AND A CARD THAT LEFT THE ARENA PAYS FOR LEAVING IT (v4.29).
        `prompts.js` runs no effects and touches no resources — that is the
        contract that makes it drillable without a deck, and it is right —
@@ -8943,11 +9010,29 @@ const CONDONHIT_CONDS = [
 ];
 const condOnHitKnown = cond => CONDONHIT_CONDS.some(rx => rx.test(String(cond || "")));
 
+/* WHAT A MISSED "…THIS WAY" GATE SAYS, in the player's words (v4.72,
+   v4.77). One body for the immediate pass and the deferred one, so the two
+   cannot word the same miss differently. */
+function wayMissLine(name, cond){
+  if(cond === "way:fused") return `${name} was not fused — its rider does not fire.`;
+  const om = String(cond||"").match(/^way:dealtOver(\d+)$/);
+  if(om) return `${name} didn't deal more than ${om[1]} damage — its surge does not fire.`;
+  return `${name}: nothing matching happened this way — the bonus skips.`;
+}
+
 function thisWayMet(cond, trace){
   const t = trace || {};
   const pm = String(cond||"").match(/^way:discardPitch(\d+)$/);
   if(pm) return (t.disc||[]).some(c => c && (c.pitch||0) === +pm[1]);
   if(cond === "way:dealt") return (t.dmg||0) > 0;
+  /* SURGE (v4.77) — "if this deals MORE THAN N damage". Answered off the
+     damage that actually LANDED (the trace is recorded inside `arcaneHit`'s
+     `left > 0` branch, after every prevention), never off a prediction. It
+     used to read `amp > 0` before the op ran, which is wrong both ways: an
+     amp whose damage is then prevented surged anyway, and a hit deferred
+     into an arcane-barrier sheet was judged before it landed. */
+  const om = String(cond||"").match(/^way:dealtOver(\d+)$/);
+  if(om) return (t.dmg||0) > +om[1];
   /* "IF 2 OR MORE CARDS ARE PUT INTO ARSENALS THIS WAY" (v3.88). The
      THRESHOLD is the card's own printed number, carried in the condition
      name — a literal 2 here is right for this printing and silently wrong

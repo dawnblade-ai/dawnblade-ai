@@ -13,7 +13,7 @@ Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
 and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.76
+**Current version:** v4.77
 
 ---
 
@@ -193,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3193 drills** at v4.76.
+This is `node --test "test/*.test.js"` — **3207 drills** at v4.77.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -867,6 +867,36 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### DAMAGE IS JUDGED WHEN IT LANDS (v4.77)
+
+> *"**Surge** - If this deals more than 2 damage, it gets **go again**."*
+> — AETHER QUICKENING, Blaze's
+
+**THREE DEFECTS, ONE SHAPE: a question about damage asked before the damage
+had landed.** Six cards across Iyslander, Blaze and Briar, all `tier: full`.
+
+- **Surge read a prediction** (`amp > 0`, before the op ran). It is a late
+  `way:dealtOverN` now, off the trace `arcaneHit` records inside `left > 0`,
+  so CR 7.5.5 governs it for free.
+- **A hit DEFERRED into an arcane-barrier sheet had not landed** when the
+  late pass asked, so every *"if damage is dealt this way"* read FALSE against
+  any barrier-wearer, declined or not. The conditions ride on that sheet as
+  `wayRider` and `applyAnswer` settles them at the DEALER's seat (borrowed
+  and handed back). Go again goes on the live `pend` if the card is still the
+  link, otherwise it is the action point (CR 5.3.5).
+- **A soak sheet that LAPSED took its damage with it.** Options bind at build
+  time, so paying for the first of three Runechant soaks left the other two
+  unaskable, and the drain dropped them with their damage.
+  `prompts.promptLapse` resolves a lapsed soak as its default answer, on
+  **both** drains. **When a variant carries its PAYLOAD in its answer,
+  "nothing to ask" is not "nothing to do".**
+
+**WHEN A NEW ANSWER-TIME FIELD RIDES A PROMPT, THE SPEC CENSUS SAYS WHETHER IT
+IS LIVE.** `wayRider` arrived on the 34 driven legs with no leg written, so
+the barrier deferral happens in real games. Two premises are drills (no `way:`
+gate carries `instead`; each of the six deals one arcane instance), and a
+field that could only read 0 was deleted rather than kept (v4.11).
 
 ### SPELLVOID X — THE CARD ANSWERED ITS OWN REFUSAL (v4.75)
 

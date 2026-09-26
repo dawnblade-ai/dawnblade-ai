@@ -678,6 +678,9 @@ function buildPrompt(game, spec){
          fields this function knows about — and `arcTaken` credits the
          dealer, who is NOT the side answering this sheet. */
       by: spec.by != null ? spec.by : null,
+      /* WHAT WAITS ON THIS HIT LANDING (v4.77) — "…if damage is dealt this
+         way" on the card that dealt it, settled by `effects.applyAnswer`. */
+      wayRider: spec.wayRider || null,
       title: spec.title || (amount + " arcane incoming"),
       hint: spec.hint || "Tap what you want to spend. Barriers cost resources and stay; " +
         "spellvoid destroys the piece. Take none and the damage lands in full."};
@@ -855,6 +858,37 @@ function promptForcedSel(prompt){
   if(!p || p.tag !== "pick") return null;
   if(!(p.min >= 1) || !Array.isArray(p.cards) || p.cards.length !== 1) return null;
   return [0];
+}
+
+/* A SHEET THAT CANNOT BE ASKED IS NOT A PAYLOAD THAT CANNOT LAND (v4.77).
+
+   `buildPrompt` answering null is how a pointless sheet skips itself, and for
+   every variant but one that is exactly right: nothing rides in the answer.
+   A SOAK IS THE EXCEPTION. `arcaneHit` DEFERS the arcane damage into the soak
+   answer, so the damage is the payload — and the soak's options are bound at
+   BUILD time (v2.75), which means a sheet that was worth asking when it was
+   queued can be worth nothing by the time it is drained. Three Runechants
+   queue three soaks; paying for the first spends the hero's only resource;
+   the second and third now offer nothing, `buildPrompt` answers null, the
+   drain skips them — and TWO POINTS OF ARCANE DAMAGE NEVER LANDED. Stronger
+   than printed for the hero being hit, which is the direction that steals
+   games, and `buildPrompt`'s own soak comment names the three-Runechant case
+   while guarding the OTHER half of it (an unpayable barrier offered).
+
+   So a lapsed soak resolves as its DEFAULT ANSWER — take it all — through the
+   same `applyAnswer` a Confirm reaches, on both boards. Returns that answer,
+   or null for a spec that lapses harmlessly. The `pay` variant never builds
+   null (an "unless they pay" toll always shows), and measured, no other
+   variant carries a payload in its answer. */
+function promptLapse(game, spec){
+  if(!spec || spec.tag !== "soak" || !((spec.amount || 0) > 0)) return null;
+  if(buildPrompt(game, spec)) return null;
+  const side = spec.side != null ? spec.side : 0;
+  return {tag: "soak", side, src: spec.src || "", cards: [], sel: [], down: [],
+          amount: spec.amount, avail: 0, options: [],
+          by: spec.by != null ? spec.by : null,
+          wayRider: spec.wayRider || null,
+          title: spec.amount + " arcane incoming", hint: "Nothing left to spend — it lands in full."};
 }
 
 /* Can this be confirmed as it stands? */
@@ -1230,6 +1264,6 @@ function applyPrompt(game, prompt){
 return {PROMPT_ZONES, promptZoneWord, promptZone, promptSideZone, promptFilter,
         promptMatchSet, promptMatchAssign,
         promptPickPool, promptPickAskable, buildPrompt,
-        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel,
+        promptToggleSel, promptChoose, promptDecline, promptTakeBack, promptReady, promptForcedSel, promptLapse,
         moveCards, applyPrompt};
 });
