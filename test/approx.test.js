@@ -250,7 +250,10 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 41 -> 42 AT v4.71: `activation-choices-at-resolution`. */
   /* 42 holds AT v4.72: `x-cost` was BUILT and is `x-cost-declared` —
      renamed, closed, probe turned round. */
-  assert.equal(Object.keys(APPROX).length, 42, "record count moved");
+  /* 42 -> 43 AT v4.73: `crush-halving-rider` was BUILT and is
+     `crush-halving-rider-read`, and `halving-reads-every-zone` records what
+     both halvings stamp. */
+  assert.equal(Object.keys(APPROX).length, 43, "record count moved");
   /* 10 -> 12 stated AT v4.34: `ward-spend-order` (the CR gives the
      controller the order two wards apply in) and `ward-does-not-stop-
      arcane` (unchanged by that version and recorded rather than left as
@@ -281,7 +284,8 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
   /* 17 -> 16 stated, 18 -> 19 closed AT v4.69: `drx-bar-from-arsenal-unread`
      was BUILT and is `drx-bar-from-arsenal-read`, its probe turned round. */
   /* 16 -> 17 AT v4.71: `activation-choices-at-resolution`. */
-  assert.equal(n("stated"), 17, "stated count moved");
+  /* 17 -> 18 AT v4.73: `halving-reads-every-zone`. */
+  assert.equal(n("stated"), 18, "stated count moved");
   /* 9 -> 8 open, 8 -> 9 closed AT v4.26: `trainer-fatigue-loss` was
      built. That is the reversal a `stated`/`open` record exists to force
      (v4.02) — its probe went RED the moment the gap closed, and closing
@@ -320,10 +324,12 @@ test("the ledger's shape is pinned — moving a record is a deliberate edit", ()
      half-built (HANDOFF's call). */
   /* 6 -> 5 AT v4.72: `x-cost` was BUILT — the free X is declared before
      the payment — and its probe went red the moment the mint read X. */
-  assert.equal(n("open"),    5, "open count moved");
+  /* 5 -> 4 AT v4.73: `crush-halving-rider` was BUILT. */
+  assert.equal(n("open"),    4, "open count moved");
   /* 16 -> 17 AT v4.63: `steam-build-powcard-read`. 17 -> 18 AT v4.66:
-     `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`. */
-  assert.equal(n("closed"), 20, "closed count moved");
+     `play-held-on-the-stack`. 19 -> 20 AT v4.72: `x-cost-declared`.
+     20 -> 21 AT v4.73: `crush-halving-rider-read`. */
+  assert.equal(n("closed"), 21, "closed count moved");
 });
 
 /* ============================================================
@@ -1192,15 +1198,16 @@ probe("charged-this-way-count", () => {
     "perChargedLight"), 1, "only the Light card counts");
 });
 
-probe("crush-halving-rider", () => {
-  /* THE FIRST DRAFT PASSED VACUOUSLY. It read `(fx.crush && fx.crush.ops)`
-     and filtered for a halve op — but Walk in My Shoes sets no `fx.crush`
-     AT ALL, so the filter ran over `[]` and the assertion held whatever
-     the engine did. ASK FOR THE REFUSAL (v3.98), and carry the control
-     that tells a working reader from a dead one.
-
-     MEASURED over the pinned pool: twelve cards print a `Crush -` rider,
-     ELEVEN are read, and this is the one that refuses. */
+/* BUILT AT v4.73, AND THE PROBE IS TURNED ROUND. It asserted that Walk in
+   My Shoes was the one refused crush rider of twelve; the day the rider
+   read, that went red — which is the reversal an `open` record exists to
+   force (v4.02). It now asserts the whole family READS, and drives the
+   halving through `runOps` so a parse that armed nothing cannot pass. */
+probe("crush-halving-rider-read", () => {
+  /* THE FIRST DRAFT OF THE OLD PROBE PASSED VACUOUSLY — it filtered an
+     `fx.crush` the card did not set. Ask the clause STATUS, and carry the
+     control. MEASURED over the pinned pool: twelve cards print a `Crush -`
+     rider and all twelve are read now. */
   const rows = [];
   const seen = new Set();
   for(const c of pool()){
@@ -1209,16 +1216,40 @@ probe("crush-halving-rider", () => {
     rows.push({name:c.name, st:cl.st, armed: !!PR.fxParse(c).crush});
   }
   assert.equal(rows.length, 12, "the number of pool cards printing a Crush rider moved");
-  const refused = rows.filter(r => r.st !== "run").map(r => r.name);
-  assert.deepEqual(refused, ["Walk in My Shoes"],
-    "the set of REFUSED crush riders moved — if this one was built, the record " +
-    "must move; if another joined it, that is a regression");
-  /* THE CONTROL: a reader that refused everything would pass the line above
-     perfectly. Boulder Drop's rider is read and armed. */
-  const ctrl = rows.find(r => r.name === "Boulder Drop");
-  assert.ok(ctrl && ctrl.st === "run" && ctrl.armed,
-    "the control crush rider stopped being read — this probe can no longer tell " +
-    "a refusal from a dead reader");
+  assert.deepEqual(rows.filter(r => r.st !== "run").map(r => r.name), [],
+    "a crush rider stopped being read");
+  const wims = rows.find(r => r.name === "Walk in My Shoes");
+  assert.ok(wims && wims.armed, "Walk in My Shoes' rider reads but arms no crush payload");
+  /* DRIVEN: the rider's op halves THEIR attack action card NOW, and not
+     their non-attack. A parse that armed an op nothing runs passes above. */
+  const swing = {name:"Probe Swing", tt:"Generic Action - Attack", ty:["Generic","Action","Attack"],
+                 tx:"", kw:[], power:6, def:3, pitch:1, cost:0, uid:"ps"};
+  const other = {name:"Probe Rite", tt:"Generic Action", ty:["Generic","Action"],
+                 tx:"", kw:[], def:3, pitch:1, cost:0, uid:"pr"};
+  const g = H.runOps(H.state({}, {hand:[swing, other]}, {turn:3}),
+                     (PR.fxParse(H.card("Walk in My Shoes", 2)).crush || {}).ops || [], "Walk in My Shoes");
+  const hand = g.sides[1].hand;
+  assert.deepEqual([hand[0].power, hand[0].def], [3, 2], "their attack action card was not halved on the spot");
+  assert.equal(hand[1].def, 3, "a NON-attack action card was halved — the card names attack action cards");
+});
+
+/* A halving of cards a hero CONTROLS stamps every zone that hero holds.
+   The deviation: a card sitting in a HAND is halved, where the CR's
+   "control" reaches the chain and the defenders. Goes RED the day the
+   halving is narrowed to controlled zones — and then this record moves. */
+probe("halving-reads-every-zone", () => {
+  const swing = {name:"Probe Held", tt:"Generic Action - Attack", ty:["Generic","Action","Attack"],
+                 tx:"", kw:[], power:6, def:3, pitch:1, cost:0, uid:"ph"};
+  const sd = H.side({hand:[swing], deck:[{...swing, uid:"pd"}], nextTurn:[{kind:"halveBase", amt:0, ready:false}]});
+  const out = E.restampHalving(sd);
+  assert.equal(out.hand[0].power, 3, "a card in HAND is no longer halved — the record must move");
+  assert.equal(out.deck[0].power, 3, "a card in the DECK is no longer halved — the record must move");
+  /* the minted-card half: the pool's only attack action card an effect
+     creates prints nothing a halving can move. */
+  const tiger = H.card("Crouching Tiger", 0);
+  assert.ok(PR.isAtkActionCard(tiger));
+  assert.ok(!(tiger.power > 1) && !(tiger.def > 1),
+    "Crouching Tiger now prints a value a halving would move — a card minted mid-window is not stamped");
 });
 
 /* Surge is evaluated as `amp > 0` rather than as the arcane damage

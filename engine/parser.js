@@ -1976,6 +1976,19 @@ function classifyClause(raw){
      text one level up. Like Chokeslam it lasts the whole phase. */
   if(m=c.match(/^they can'?t play attack action cards with (\d+) or less base \{p\} during their next action phase$/))
     return R([["foeNextTurn", "noSmallAtk", +m[1]]]);
+  /* WALK IN MY SHOES — the fifth of the five, and the only one whose
+     window opens NOW rather than at their next turn: "UNTIL the end of
+     their next turn" covers the rest of this turn too. So the entry rides
+     the same `nextTurn` schedule for its END alone (armed at their turn,
+     dropped at their end phase) and `effects.restampHalving` applies it
+     the moment it is pushed.
+
+     THE WHOLE PRINTED SHAPE OR NOTHING (v2.29): the subject is attack
+     action cards, both symbols are named, and the rounding is printed —
+     a variant rounding DOWN, or halving {p} alone, refuses rather than
+     reading as this one. */
+  if(/^until the end of their next turn, the base \{p\} and \{d\} of attack action cards they control are halved, rounded up$/.test(c))
+    return R([["foeNextTurn", "halveBase", 0]]);
 
   if(/^they put a card from their hand on top of their deck$/.test(c))
     return R([["foeHandToDeck", 1]]);

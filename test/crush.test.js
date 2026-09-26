@@ -110,7 +110,7 @@ test("the threshold is the card's printed number, not a literal 4", {skip}, () =
     "a card printing 6 must carry 6");
 });
 
-test("FOUR of the five next-turn riders are built; ONE still refuses", {skip}, () => {
+test("all FIVE next-turn riders are built — the last came due at v4.73", {skip}, () => {
   H.db();
   /* `heroOnly` joined `fx.crush` at v3.45. It is READ, not assumed: the
      reader's own anchor requires the printed words "damage to a hero", so
@@ -134,10 +134,15 @@ test("FOUR of the five next-turn riders are built; ONE still refuses", {skip}, (
   assert.deepEqual(crushOf("Crush the Weak"), {n: 4, ops: [["foeNextTurn", "noSmallAtk", 3]], heroOnly: true},
     "a deferred PLAY BAR, with the threshold read off the clause rather than a literal");
 
-  assert.equal(crushOf("Walk in My Shoes"), undefined,
-    "Walk in My Shoes must not claim a rider it cannot run — halving base {p} AND base {d} "
-    + "for a whole turn is a modifier on every attack action card they control, which is "
-    + "neither a cap nor a gate and has nowhere to live");
+  /* THE LAST ONE REFUSED FOR THIRTY-FOUR VERSIONS, and this assertion
+     carried the reason in its own text: halving base {p} AND base {d} for a
+     whole turn is a modifier on every attack action card they control, with
+     nowhere to live. v4.73 gave it the CARD to live on — the deal-time
+     halving's own home (v3.78), re-stamped when the window opens and when
+     it closes — and the refusal went red the day it was built, which is
+     what a recorded refusal is for (v3.38). */
+  assert.deepEqual(crushOf("Walk in My Shoes"), {n: 4, ops: [["foeNextTurn", "halveBase", 0]], heroOnly: true},
+    "a turn-scoped HALVING, live from the crush to the end of their next turn");
 });
 
 test("the DEBUFFS are FIRST-only; the RESTRICTIONS are whole-phase — by print", {skip}, () => {

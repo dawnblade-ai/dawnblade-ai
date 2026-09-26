@@ -433,8 +433,11 @@ test(gate("exactly ONE pool record moves, and every sibling is unchanged"), () =
      AT v4.72, after reading the diff: Ice Eternal went `part` -> `full`
      when its free X was declared before the payment and its fused rider
      read, so `full` 758 -> 759 and `part` 28 -> 27. One record (402 -> 403
-     full, 3 -> 2 part). */
-  assert.deepEqual(tiers, {full: 759, none: 11, part: 27});
+     full, 3 -> 2 part). RE-PINNED AGAIN AT v4.73, after reading the diff:
+     Walk in My Shoes went `part` -> `full` when its crush rider's
+     turn-scoped halving got a reader, so `full` 759 -> 760 and `part`
+     27 -> 26. One record (403 -> 404 full, 2 -> 1 part). */
+  assert.deepEqual(tiers, {full: 760, none: 11, part: 26});
   assert.deepEqual([...carriers.allyDiesOrPhantasm], ["Silent Stilettos"]);
   /* PINNED BOTH SIDES (v4.17) — pinning the new trigger alone cannot see
      a record LEAVING one of the others, which is what merging two

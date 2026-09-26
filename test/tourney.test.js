@@ -73,7 +73,7 @@ test("every event kind selfplay emits is pinned", () => {
   assert.deepEqual(EMITTED, [
     "MALFORMED", "SECOND-PERSON",
     "ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod", "destroycost",
-    "fusion", "gold",
+    "fusion", "gold", "halve",
     "held", "hitnext",
     "hitwatch", "hood", "jab", "layer", "leave", "powctr", "reaction", "search", "tap", "ward",
   ]);
@@ -136,9 +136,13 @@ const FAULTS_PINNED = ["MALFORMED", "SECOND-PERSON"];
    printed label, which is unique in the pool: the DESTROY's line is shared
    with Loot the Arsenal and Wee Wrecking Ball, so a counter on that would be
    a number about three cards standing on one line (v4.25, v3.81). */
+/* +halve v4.73 — Walk in My Shoes' turn-scoped halving, OPENED. A ROUTE,
+   because a number there means a feature fired (v4.17), and its own counter
+   because `crush` counts every rider on one shared prefix. Measured: 23
+   windows in 84 Lyath games. */
 const ROUTES_PINNED = ["ally", "allyatk", "arsflip", "chi", "crush", "ctrWipe", "death", "defmod",
                        "destroycost",
-                       "fusion", "gold", "held", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
+                       "fusion", "gold", "halve", "held", "hitnext", "hitwatch", "hood", "jab", "layer", "leave",
                        "powctr", "reaction", "search", "tap", "ward"];
 /* +search v4.58 — Flamecall Awakening's deck search, and it belongs on the
    ROUTE side because a number there means a feature FIRED (v4.17). Measured:

@@ -1,12 +1,12 @@
 {
- "generated": "2026-09-26T14:56:59.008Z",
- "appVer": "4.72",
+ "generated": "2026-09-26T15:13:15.456Z",
+ "appVer": "4.73",
  "dataVer": "sage-v14",
  "dbCount": 797,
  "poolUnique": 405,
  "tiers": {
-  "full": 403,
-  "part": 2,
+  "full": 404,
+  "part": 1,
   "none": 0
  },
  "heroes": {
@@ -14085,7 +14085,7 @@
    "mentions": [
     "crush"
    ],
-   "tier": "part",
+   "tier": "full",
    "approx": false,
    "playable": true,
    "clauses": [
@@ -14095,12 +14095,10 @@
     },
     {
      "t": "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",
-     "st": "skip"
+     "st": "run"
     }
    ],
-   "skipped": [
-    "Crush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up."
-   ],
+   "skipped": [],
    "weaponCost": null,
    "eqAbility": null,
    "tx": "If this has {p} greater than its base, it gets +1{p}.\nCrush - When this deals 4 or more damage to a hero, until the end of their next turn, the base {p} and {d} of attack action cards they control are halved, rounded up.",

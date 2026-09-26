@@ -505,15 +505,35 @@ const APPROX = {
       "ARRAY. Second recorded refusal this project has discharged by asking "+
       "which of its two stated halves was actually the blocker."},
 
-"crush-halving-rider": {
-  status:"open", cr:null, board:"both", since:"v3.29", swept:"v4.02",
-  claim:"Walk in My Shoes' crush rider halves the base {p} and {d} of the "+
-        "opponent's cards for a turn, and has no reader.",
-  why:"The other four next-turn crush riders landed at v3.29 (two debuffs) and "+
-      "v3.30 (two restrictions). This one needs Lyath's halving (v3.78) aimed at "+
-      "the OTHER seat for one turn — `halveCard` runs once at the DEAL, which is "+
-      "the whole of its safety argument, so a turn-scoped halving is a different "+
-      "mechanism rather than the same one pointed elsewhere."},
+"crush-halving-rider-read": {
+  status:"closed", cr:null, board:"both", since:"v3.29", swept:"v4.73",
+  claim:"All twelve crush riders in the pool are read. Walk in My Shoes' rider "+
+        "halves the base {p} and {d} of the opponent's attack action cards from "+
+        "the crush to the end of their next turn: `effects.restampHalving` "+
+        "re-stamps their cards when the window opens and when it closes.",
+  why:"Until v4.73 this record was `open`, and its reason was that `halveCard` "+
+      "runs once at the DEAL, which is the whole of its safety argument (thirty "+
+      "base-value readers is thirty chances to miss one). The build keeps that "+
+      "argument: the value still lives on the CARD, so every reader sees it "+
+      "untold, and only the two moments the window changes re-stamp it. The "+
+      "count is derived off the side's own `nextTurn` schedule, so two crushes "+
+      "quarter and nested ceilings compose in either order."},
+
+"halving-reads-every-zone": {
+  status:"stated", cr:null, board:"both", since:"v3.78", swept:"v4.73",
+  claim:"A halving of the base {p} and {d} of cards a hero CONTROLS is applied to "+
+        "the card objects in every zone that hero holds — hand, deck, arsenal, "+
+        "graveyard, banish, pitch, soul — not only to the cards on the chain or "+
+        "defending.",
+  why:"Lyath's own static (v3.78) and Walk in My Shoes (v4.73) both stamp the "+
+      "card rather than threading a flag through every reader of a base value, "+
+      "and a card in a hand is held rather than controlled. The observable "+
+      "difference is a card whose power is read while it sits in a hidden or "+
+      "resting zone — a discard or reveal asking for 6 or more {p} (Kayo's "+
+      "family) reads the halved number. A card minted during a window is not "+
+      "stamped; the pool's only attack action card an effect creates is "+
+      "Crouching Tiger, which prints 0 power and no defence, so that half is "+
+      "unobservable and pinned as a premise."},
 
 "surge-approximated": {
   status:"stated", cr:null, board:"both", since:"v3.70", swept:"v4.02",

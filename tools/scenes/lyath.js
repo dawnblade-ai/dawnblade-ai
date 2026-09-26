@@ -234,6 +234,54 @@ module.exports = [
     "he is never BEHIND on a tie": false,
     "they are never AHEAD on a tie": false
   }
+},
+
+{
+  name: "Walk in My Shoes halves THEIR attack action cards from the crush to the end of their next turn",
+  why: "v4.73 — the last of twelve crush riders, refused for thirty-four " +
+       "versions because `halveCard` runs once at the DEAL and a halving " +
+       "that starts and ends mid-game had nowhere to live. It lives on the " +
+       "CARD, exactly as the deal leaves it, re-stamped when the window " +
+       "opens and when it closes — so every reader of a base value sees it " +
+       "untold. \"UNTIL the end of their next turn\" includes the rest of " +
+       "this one: the halving is live at the crush, not armed for later.",
+  run(c){
+    const swing = (u, pw, df) => ({name: "Their Swing " + u, tt: "Generic Action - Attack",
+      ty: ["Generic", "Action", "Attack"], tx: "", kw: [], power: pw, def: df, pitch: 1, cost: 0, uid: u});
+    const rite = {name: "Their Rite", tt: "Generic Action", ty: ["Generic", "Action"],
+      tx: "", kw: [], def: 3, pitch: 1, cost: 0, uid: "tr"};
+    const game = buff => {
+      c.P.fxReset();
+      const w = c.card("Walk in My Shoes", 2, "w");
+      let g = Object.assign(c.state({res: 3, ap: 1, hand: [w], buffNext: buff},
+        {hp: 20, res: 0, hand: [swing("t1", 6, 3), rite], deck: [swing("t3", 5, 2)], board: []},
+        {turn: 3, actor: 0, turnPlayer: 0}),
+        {phase: "action", step: "layer", priority: 0, passed: [false, false],
+         stack: [], chain: [], chainCards: []});
+      g = c.H.drain(c.reduce(g, {t: "play", uid: "w", from: "hand"}, 0));
+      for(let i = 0; i < 40 && !(g.chain || []).length; i++) g = c.reduce(g, {t: "pass"}, g.priority);
+      return g;
+    };
+    const hit = game(1), miss = game(0);
+    const hand = hit.sides[1].hand;
+    const after = c.E.beginEndPhase(c.E.armNextTurn(hit, 1).game, 1).game.sides[1].hand;
+    return {
+      "5 to the hero crushes":                     20 - hit.sides[1].hp,
+      "their 6-power attack is halved on the spot": [hand[0].power, hand[0].def],
+      "…the card they will draw too":             hit.sides[1].deck[0].power,
+      "…and their non-attack is untouched":        hand[1].def,
+      "3 to the hero halves nothing":              miss.sides[1].hand[0].power,
+      "the end of their next turn restores it":    [after[0].power, after[0].def]
+    };
+  },
+  want: {
+    "5 to the hero crushes": 5,
+    "their 6-power attack is halved on the spot": [3, 2],
+    "…the card they will draw too": 3,
+    "…and their non-attack is untouched": 3,
+    "3 to the hero halves nothing": 6,
+    "the end of their next turn restores it": [6, 3]
+  }
 }
 
 ];

@@ -5,7 +5,7 @@ pilots a real hero deck against an iron-armored training dummy, with an AI advis
 ("Claude's call") reading the board.
 
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.72
+**Current version:** v4.73
 
 ---
 
@@ -185,7 +185,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3148 drills** at v4.72.
+This is `node --test "test/*.test.js"` — **3166 drills** at v4.73.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
@@ -859,6 +859,46 @@ is a decision the card offers.
 CARRIES THE TALENT IT ASKS FOR** — so the self-exclusion guard is latent
 and its sabotage is silent against every real fixture. A synthetic Ice
 card that prints Ice Fusion is what sees it (v3.73).
+
+### A HALVING THAT STARTS AND ENDS MID-GAME (v4.73)
+
+> *"Crush - When this deals 4 or more damage to a hero, until the end of
+> their next turn, the base {p} and {d} of attack action cards they control
+> are halved, rounded up."* — WALK IN MY SHOES, Lyath's
+
+**THE LAST OF TWELVE CRUSH RIDERS, REFUSED FOR THIRTY-FOUR VERSIONS**, and
+the reason was good: `build.halveCard` halves Lyath's own cards once, at the
+DEAL, because thirty readers of a base value is thirty chances to miss one
+(v3.78). **The build keeps that argument rather than dropping it.** The value
+still lives ON THE CARD, so every reader (the declaration, `defendValue`, the
+`pumped` base, Crush the Weak's threshold, the policy, the display) sees it
+without being told. What is new is only that `effects.restampHalving`
+re-stamps the victim's attack action cards at the two moments the window
+changes: when the crush pushes it, and when their end phase drops it.
+
+**"UNTIL" IS NOT "DURING".** The other four next-turn riders are ARMED and do
+nothing until their turn. This one is live at the crush, so the entry rides
+`nextTurn` for its END alone: armed at their turn start, dropped in step (7)
+of their end phase.
+
+**THE COUNT IS DERIVED OFF THE SCHEDULE, NEVER BANKED.** Two crushes quarter,
+and the first to close leaves the second standing. Nested ceilings compose,
+so neither the order two windows opened in nor Lyath's own deal-time halving
+in a mirror can change the answer. `_unhalvedPow`/`_unhalvedDef` hold the
+value before any window, are opt-in (v3.58), and leave with the last window.
+
+**AND THE TRAINER NEVER ARMED SEAT 1.** `armNextTurn` was called at seat 0's
+turn start only, so an entry aimed at the dummy never armed and so never
+EXPIRED. That was harmless while every kind waited on a swing the dummy
+fabricates, and would have been a PERMANENT halving here. `foeBegin` arms it
+now.
+
+**EVERY ZONE IS STAMPED, AND THAT IS STATED** (`halving-reads-every-zone`):
+the CR's "control" reaches the chain and the defenders, and a card in a hand
+is held. Lyath's own static has always read the same way. A card minted
+mid-window is not stamped, and that is unobservable: the pool's only attack
+action card an effect creates is Crouching Tiger, which prints 0 power and
+no defence (pinned as a premise).
 
 ### A FREE X, DECLARED BEFORE THE PAYMENT (v4.72)
 
@@ -7456,9 +7496,10 @@ desync), and `report.js`'s `seat()`. The symmetry ledger moved 39 → 40,
 deliberately: a field arriving is as deliberate an edit as one leaving.
 
 **THREE OF THE FIVE STILL REFUSED** at v3.29 — the two RESTRICTIONS
-landed in v3.30 (below), and **ONE still refuses**: Walk in My Shoes
-halves base {p} and {d} for a turn. Claiming it would file a card `full`
-that does nothing.
+landed in v3.30 (below), and **ONE still refused**: Walk in My Shoes
+halves base {p} and {d} for a turn. Claiming it would have filed a card
+`full` that did nothing. **BUILT AT v4.73** — see "A HALVING THAT STARTS
+AND ENDS MID-GAME".
 
 ### THE FACE OF AN ARSENAL PUT IS THE CALLER'S ANSWER (v3.69)
 

@@ -1044,7 +1044,15 @@ function makeEffects(ctx){
          their turn would fire immediately, which is a turn early. */
       else if(k==="foeNextTurn"){
         foeMut(n).nextTurn = [...(foe(n).nextTurn||[]), {kind:v, amt:op[2]||0, ready:false}];
-        n = L(n, `${srcName}: ${sv(foe(n), "feel")} it next turn.`);
+        /* A HALVING IS LIVE THE MOMENT IT IS PUSHED (v4.73) — "UNTIL the
+           end of their next turn" includes the rest of this one, so the
+           entry schedules only the END. Every other kind waits, armed. */
+        if(v === "halveBase"){
+          const fs = foeMut(n);
+          Object.assign(fs, restampHalving(fs));
+          n = L(n, `${srcName}: the base power and defence of ${sp(foe(n))} attack action cards are halved, rounded up, until the end of their next turn.`);
+        } else
+          n = L(n, `${srcName}: ${sv(foe(n), "feel")} it next turn.`);
       }
       else if(k==="foeHandToDeck"){
         /* WHICH card is an approximation and always was: the printed text
@@ -7614,6 +7622,76 @@ function resolveInertia(game, seat){
    that one because `tickSuspense` returns early when nothing is
    suspended — piggybacking there would arm nothing on most turns, which
    is the quiet half of "a schedule is written per board". */
+/* A HALVING THAT STARTS AND ENDS MID-GAME (v4.73) — Walk in My Shoes.
+
+   "Until the end of their next turn, the base {p} and {d} of attack
+   action cards they control are halved, rounded up."
+
+   v3.78 halves Lyath's own cards ONCE, AT THE DEAL, and its whole safety
+   argument is that the deal is one place: thirty readers of a card's base
+   value is thirty chances to miss one. This keeps that argument rather
+   than abandoning it. The value lives on the CARD, exactly as the deal
+   leaves it, so every reader — the declaration, `defendValue`, the
+   `pumped` base, Crush the Weak's threshold, phantasm's popper, the
+   sparring policy, the display — sees the halved number without being
+   told. What is new is only that it is RE-STAMPED at the two moments the
+   window changes: when the crush pushes it, and when their end phase
+   drops it.
+
+   THE COUNT IS DERIVED, NEVER BANKED (`runeCount`'s rule, v2.23): the
+   number of live halvings is the number of `halveBase` entries on the
+   side's own schedule, so two crushes quarter and the first to expire
+   leaves one halving standing. Nested ceilings compose — ceil(ceil(p/2)/2)
+   is ceil(p/4) — so the order two windows opened in cannot matter, and
+   neither can Lyath's own deal-time halving in a mirror: `_unhalvedPow`
+   holds the value BEFORE any window, which for a Lyath deck is already
+   the dealt half.
+
+   OPT-IN (v3.58): the stamp is written only where a value MOVES and is
+   deleted when the last window closes, so a card no window touched keeps
+   its exact shape.
+
+   EVERY ZONE THE SIDE HOLDS, and that is the stated approximation
+   (`halving-reads-every-zone`): the CR's "cards they control" are the
+   ones on the chain or defending, and a card in hand or deck is held
+   rather than controlled. Lyath's deal-time static already reads every
+   zone the same way (v3.78), and the observable difference is a card
+   whose power is read while it sits in a hand or a graveyard. */
+const HALVE_ZONES = ["deck","hand","pitch","grave","banish","soul","board","gear"];
+function halveN(v, k){
+  let x = v;
+  for(let i = 0; i < k; i++) x = Math.ceil(x / 2);
+  return x;
+}
+function restampCard(c, k){
+  if(!c || !P.isAtkActionCard(c)) return c;
+  const pw = c._unhalvedPow != null ? c._unhalvedPow : c.power;
+  const df = c._unhalvedDef != null ? c._unhalvedDef : c.def;
+  const out = Object.assign({}, c);
+  delete out._unhalvedPow; delete out._unhalvedDef;
+  if(typeof pw === "number" && pw > 0){
+    const h = halveN(pw, k);
+    out.power = h;
+    if(h !== pw) out._unhalvedPow = pw;
+  }
+  if(typeof df === "number" && df > 0){
+    const h = halveN(df, k);
+    out.def = h;
+    if(h !== df) out._unhalvedDef = df;
+  }
+  return out;
+}
+function restampHalving(sd){
+  const k = ((sd && sd.nextTurn) || []).filter(e => e && e.kind === "halveBase").length;
+  const out = {};
+  for(const z of HALVE_ZONES){
+    if(Array.isArray(sd[z])) out[z] = sd[z].map(x =>
+      (x && x.card) ? Object.assign({}, x, {card: restampCard(x.card, k)}) : restampCard(x, k));
+  }
+  if(sd.arsenal) out.arsenal = restampCard(sd.arsenal, k);
+  return out;
+}
+
 function armNextTurn(game, seat){
   const sides = (game.sides || []).slice();
   const sd = Object.assign({}, sides[seat]);
@@ -9128,8 +9206,14 @@ function beginEndPhase(game, seat, db){
     if(live.length){
       const sides = n.sides.slice();
       sides[seat] = Object.assign({}, sd, {nextTurn: (sd.nextTurn||[]).filter(e => e && !e.ready)});
+      /* A HALVING ENDS HERE (v4.73), and its cards are re-stamped off
+         what is LEFT on the schedule — a second window opened by a later
+         crush still holds. */
+      const halved = live.some(e => e.kind === "halveBase");
+      if(halved) sides[seat] = Object.assign({}, sides[seat], restampHalving(sides[seat]));
       n = Object.assign({}, n, {sides});
       msgs.push(nameOf(seat) + ": " + live.length + " lingering effect(s) expire with the turn.");
+      if(halved) msgs.push(nameOf(seat) + ": attack action cards are back to their full base power and defence.");
     }
   }
 
@@ -9487,6 +9571,6 @@ function payPolicy(live, sd){
   return true;
 }
 
-return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
+return {makeEffects, jabTargets, CTX_KEYS, defBuffOf, defenderByUid, defPerCount, powPer, tieGrantOf, lifeAhead, lifeBehind, CONDONHIT_CONDS, condOnHitKnown, leavePayout, CONDONLEAVE_CONDS, condOnLeaveMet, defendValue, defSelfMet, armNextTurn, restampHalving, pendPumped, rxPumpTotal, thawFrost, thawFreeze, resolveInertia, tickSuspense, sweepArena, sweepGear, thisWayMet, heaveOffer, heave, beginEndPhase, closeChainGrants, settleIntellect,
         activateIfOk, handAbilityOK, soakPolicy, payPolicy};
 });

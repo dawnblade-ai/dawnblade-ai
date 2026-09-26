@@ -1,3 +1,61 @@
+## v4.73 — a halving that starts and ends mid-game
+
+> *"Crush - When this deals 4 or more damage to a hero, until the end of
+> their next turn, the base {p} and {d} of attack action cards they control
+> are halved, rounded up."* — WALK IN MY SHOES, Lyath's
+
+**THE LAST OF TWELVE CRUSH RIDERS.** It refused from v3.29 on a stated
+reason: `build.halveCard` halves Lyath's own cards once, at the DEAL,
+because thirty readers of a base value is thirty chances to miss one
+(v3.78). A halving that starts and ends mid-game looked like the shape that
+argument ruled out.
+
+**THE BUILD KEEPS THE ARGUMENT.** The value still lives on the CARD, exactly
+as the deal leaves it, so every reader sees it without being told.
+`effects.restampHalving` re-stamps the victim's attack action cards at the
+two moments the window changes: when the crush pushes it, and when their
+end phase drops it.
+
+- **"Until" is not "during".** The other four next-turn riders are armed
+  and wait. This one is live at the crush, so its `nextTurn` entry
+  schedules only the END.
+- **The count is derived off the schedule.** Two crushes quarter, and the
+  first to close leaves the second standing. Nested ceilings compose, so
+  the order windows open in, and Lyath's own deal-time halving in a mirror,
+  cannot change the answer.
+- **Attack action cards only**, off the structured array. A non-attack, a
+  defence reaction (*"Reaction"* contains *"action"*, v2.44) and a weapon
+  keep their numbers. Rounded up, so a 1 stays 1.
+- **The stamp is opt-in** (`_unhalvedPow`/`_unhalvedDef`) and leaves with
+  the last window.
+
+**THE TRAINER NEVER ARMED SEAT 1.** `armNextTurn` ran at your turn start
+only, so any entry aimed at the dummy never armed and so never expired.
+That was harmless while every kind waited on a swing the dummy fabricates.
+This one would have been a PERMANENT halving. `foeBegin` arms it now, and
+the dummy's lingering effects expire at its end phase like yours.
+
+**RECORDED:** `halving-reads-every-zone` (stated). The CR's "control" reaches
+the chain and the defenders; a card in a hand is held. Lyath's own static
+has always read every zone the same way. A card minted mid-window is not
+stamped, which is unobservable: the pool's only attack action card an
+effect creates is Crouching Tiger, which prints nothing a halving moves.
+`crush-halving-rider` is closed as `crush-halving-rider-read`, with its
+probe turned round.
+
+Measured:
+- **1 record moves, `part` → `full`** (403 → 404 full, 2 → 1 part). The
+  floor was repinned after reading the diff. Jack Be Quick is now the only
+  deck card that does not read in full, and it is recorded.
+- A new `halve` route counter reads **30 in 630 games**, spelled on the
+  line only this rider prints, because `crush` counts every rider on one
+  shared prefix.
+- At three seeds on both sides: refusals 0, violations 0, stalls 3.
+  Lyath went 5·3·4 → 4·3·6; the intervals overlap, so this is noise
+  (v4.40). Every other hero moved within the band.
+- **21 sabotages, 21 bite.** A Lyath scene fails against a halving that
+  waits for their turn.
+
 ## v4.72 — a free X, declared before the payment
 
 > *"Create X Frostbite tokens under target hero's control. Then if this was

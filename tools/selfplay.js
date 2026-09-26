@@ -383,6 +383,14 @@ function play(g, limit, opts){
            invisible there. The phrase is the engine's own (v3.81) and
            test/ward.test.js pins the two spellings against each other. */
         if(/destroys itself — ward soaks/.test(line)) events.push(["ward", line]);
+        /* WALK IN MY SHOES' HALVING, OPENED (v4.73). The last crush rider
+           of twelve, and the one `crush` above cannot tell apart — every
+           rider prints " — crush:", so this spells the EVENT the halving
+           alone prints (v3.81, v4.46). It counts windows OPENED; the close
+           is a line in their end phase and a game that ends mid-window
+           never prints it, which is a fact about the game rather than the
+           route. test/walkinmyshoes.test.js pins the two spellings together. */
+        if(/are halved, rounded up, until the end of their next turn/.test(line)) events.push(["halve", line]);
         /* v4.37 — a DESTROY-COST sheet answered. Both outcomes are
            counted, because the seat DECLINES by standing rule (v4.24: a
            price this policy cannot weigh is not no price), so a counter

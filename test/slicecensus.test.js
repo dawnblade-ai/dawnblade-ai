@@ -188,7 +188,12 @@ test("which SOURCE FILE each slice reads is pinned, or the resolver is unwatched
   const by = {};
   for(const r of census()) by[r.f] = (by[r.f] || 0) + 1;
   assert.deepEqual(by, {
-    "index.html": 16,
+    /* 16 -> 17 AT v4.73, READ FIRST: `walkinmyshoes.test.js` slices the
+       trainer's `foeBegin`, bounded at `foeStep` — its next declaration, the
+       safe form — to pin that seat 1's turn start ARMS its `nextTurn`
+       schedule. Only one board seats the dummy, so the claim is about the
+       trainer's source by construction. */
+    "index.html": 17,
     "engine/build.js": 1,
     /* +2 AT v4.59, READ FIRST: `dichotomy.test.js` pins that `buildPrompt`
        names the new `filters` field (v2.34's rule, ninth field) and that
