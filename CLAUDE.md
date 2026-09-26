@@ -4,8 +4,16 @@ A single-file browser game: a Flesh and Blood sparring simulator where the playe
 pilots a real hero deck against an iron-armored training dummy, with an AI advisor
 ("Claude's call") reading the board.
 
+**It plays DAWNBLADE, a fan-made sub-format of Silver Age (declared 2026-09-26).**
+The pool is FROZEN at the fifteen Chapter 1–3 precons as printed, and it does
+NOT follow Silver Age's rolling ban list or its seasonal hero bench: a card
+Silver Age has banned stays legal here. That is `data/formats.json`, held by
+`test/formats.test.js`. **Do not "fix" a banned card out of a deck list.**
+Silver Age's own legality is recorded BESIDE the format (`silverAge.banned`),
+and is `null` until the desktop task in `DESKTOP-TASKS.md` fills it.
+
 **Live at:** https://dawnblade-ai.github.io/dawnblade-ai/ (GitHub Pages)
-**Current version:** v4.75
+**Current version:** v4.76
 
 ---
 
@@ -185,7 +193,7 @@ Fast path, no network, run on every change:
 ```
 npm test
 ```
-This is `node --test "test/*.test.js"` — **3189 drills** at v4.75.
+This is `node --test "test/*.test.js"` — **3193 drills** at v4.76.
 `# skipped` must read **0** with a live database cached, and **5** without
 one: those five are `test/drift.test.js`, which reads the live wire on
 purpose. Anything else skipping means a fixture went missing. **The
